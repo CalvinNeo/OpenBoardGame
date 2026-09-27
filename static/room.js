@@ -2189,6 +2189,7 @@ function resetRoomState() {
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
+  if (typeof updateHiveConfigRow === "function") updateHiveConfigRow();
   if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();

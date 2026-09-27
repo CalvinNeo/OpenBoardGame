@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "hive": {
+    "scripts": ["/static/games/hive.js?v=3"],
+    "styles": ["/static/games/hive.css?v=3"],
+    "markup": "/static/games/hive.html?v=3",
+    "panel": "hivePanel",
+    "header": "showHiveHeaderActions"
+  },
   "cheaty_mages": {
     "scripts": [
       "/static/games/cheaty_mages.js?v=2"
@@ -13,10 +20,10 @@ const GAME_ASSETS = {
   },
   "las_vegas": {
     "scripts": [
-      "/static/games/las_vegas.js?v=2"
+      "/static/games/las_vegas.js?v=3"
     ],
     "styles": [
-      "/static/las_vegas.css?v=1"
+      "/static/las_vegas.css?v=2"
     ],
     "markup": "/static/games/las_vegas.html?v=1",
     "panel": "lasVegasPanel",
@@ -239,12 +246,13 @@ const GAME_ASSETS = {
   },
   "hanabi": {
     "scripts": [
-      "/static/games/hanabi.js?v=app_v4"
+      "/static/games/hanabi.js?v=app_v5"
     ],
     "styles": [],
     "panel": "hanabiPanel",
-    "markup": "/static/games/hanabi.html?v=1",
-    "styleFragments": "/static/games/hanabi.css?v=1"
+    "header": "showHanabiHeaderActions",
+    "markup": "/static/games/hanabi.html?v=2",
+    "styleFragments": "/static/games/hanabi.css?v=2"
   },
   "the_gang": {
     "scripts": [
@@ -693,6 +701,13 @@ const GAME_ASSETS = {
     "panel": "eternalDecksPanel",
     "header": "showEternalDecksHeaderActions",
     "markup": "/static/games/eternal_decks.html?v=2"
+  },
+  "grand_austria_hotel": {
+    "scripts": ["/static/games/grand_austria_hotel.js?v=1"],
+    "styles": ["/static/games/grand_austria_hotel.css?v=1"],
+    "panel": "grandAustriaPanel",
+    "header": "showGrandAustriaHeaderActions",
+    "markup": "/static/games/grand_austria_hotel.html?v=1"
   },
   "ponzi_scheme": {
     "scripts": [

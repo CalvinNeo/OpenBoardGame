@@ -1,0 +1,131 @@
+.hive-panel {
+  --hive-ink: #e8efe9;
+  --hive-muted: #a7bdb2;
+  --hive-gold: #f3c466;
+  --hive-border: #385c4e;
+  color: var(--hive-ink);
+  min-width: 0;
+  padding: 14px;
+  background: #10281f;
+  border-radius: 16px;
+  scroll-margin-top: 70px;
+}
+.hive-panel *, .hive-dialog * { box-sizing: border-box; }
+.hive-panel button, .hive-dialog button { margin: 0; min-height: 36px; padding: 7px 12px; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+.hive-panel button:focus-visible, .hive-board [role="button"]:focus-visible { outline: 3px solid var(--hive-gold); outline-offset: 3px; }
+.hive-heading, .hive-board-toolbar, .hive-section-heading, .hive-selection-bar, .hive-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hive-heading { margin-bottom: 14px; flex-wrap: wrap; }
+.hive-heading h2 { margin: 3px 0 0; color: var(--hive-ink); font-size: 27px; letter-spacing: .06em; }
+.hive-heading h2 span { font-size: 16px; font-weight: 400; color: var(--hive-muted); letter-spacing: .08em; }
+.hive-eyebrow { font-size: 10px; letter-spacing: .17em; color: var(--hive-gold); }
+.hive-tools { display: flex; flex-shrink: 0; gap: 5px; }
+.hive-tools button { background: #254237; color: #e8efe9; border: 1px solid var(--hive-border); }
+.hive-tools button[aria-pressed="true"] { background: #80612d; border-color: var(--hive-gold); }
+.hive-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.hive-player { min-width: 0; padding: 11px 13px; border: 1px solid var(--hive-border); background: #18342b; border-radius: 12px; }
+.hive-player.hive-active { border-color: var(--hive-gold); box-shadow: inset 3px 0 var(--hive-gold); }
+.hive-player-name { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.hive-player-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hive-player-name small { flex-shrink: 0; color: var(--hive-muted); font-size: 10px; }
+.hive-side { flex: 0 0 15px; width: 15px; height: 15px; border-radius: 50%; border: 1px solid #92a89d; }
+.hive-side-white { background: #f4efdd; }
+.hive-side-black { background: #172124; }
+.hive-player-stats { margin-top: 7px; display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 12px; color: var(--hive-muted); }
+.hive-player-stock { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 7px; font-size: 13px; }
+.hive-player-stock span { white-space: nowrap; }
+.hive-danger { color: #ffc47f; }
+.hive-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, 250px); gap: 12px; align-items: start; }
+.hive-board-card, .hive-reserve-card { border: 1px solid var(--hive-border); border-radius: 14px; background: #132d25; min-width: 0; overflow: hidden; }
+.hive-board-toolbar { padding: 10px 12px; background: #1d392f; min-height: 58px; }
+#hiveTurn { font-size: 13px; overflow-wrap: anywhere; min-width: 0; }
+.hive-board { display: block; width: 100%; height: clamp(300px, 48vh, 510px); touch-action: none; user-select: none; background: radial-gradient(ellipse at 50% 38%, #254a3a, #152d25); cursor: grab; }
+.hive-board.hive-panning { cursor: grabbing; }
+.hive-hex { stroke-width: 1.6; stroke: #899486; fill: #efeada; filter: drop-shadow(0 3px 1px #0005); }
+.hive-tile-black .hive-hex { fill: #222f30; stroke: #758b7d; }
+.hive-tile text { pointer-events: none; text-anchor: middle; dominant-baseline: middle; }
+.hive-tile .hive-insect { font-size: 25px; }
+.hive-tile .hive-piece-label { fill: #253d30; font-size: 10px; font-weight: 600; }
+.hive-tile-black .hive-piece-label { fill: #e0e9dd; }
+.hive-tile .hive-stack-count { font-size: 10px; fill: #f3c466; font-weight: 700; paint-order: stroke; stroke: #163027; stroke-width: 3px; }
+.hive-tile [data-hive-queen] { fill: #f3c466; stroke: #786638; stroke-width: 1; }
+.hive-tile.hive-selectable { cursor: pointer; }
+.hive-tile.hive-selectable:hover .hive-hex { stroke: #f3c466; stroke-width: 3; }
+.hive-tile.hive-selected .hive-hex { stroke: #ffd06d; stroke-width: 4; }
+.hive-tile.hive-last .hive-hex { stroke: #83c4aa; stroke-width: 3; }
+.hive-target { fill: #b6e3bb18; stroke: #97c8a4; stroke-dasharray: 5 4; stroke-width: 1.7; cursor: pointer; }
+.hive-target:hover, .hive-target.hive-preview { fill: #efc56a3b; stroke: #ffd579; stroke-width: 3; }
+.hive-landing { fill: #f6cd79; stroke: #18372d; stroke-width: 2; pointer-events: none; }
+.hive-selection-bar { padding: 10px 12px; min-height: 60px; border-top: 1px solid var(--hive-border); }
+#hiveSelection { min-width: 0; font-size: 12px; color: #bfd1c4; overflow-wrap: anywhere; }
+#hiveConfirm { background: #f1c66e; color: #172c23; border: 1px solid #e9bd60; flex-shrink: 0; font-weight: 700; }
+.hive-panel button:disabled { opacity: .42; cursor: default; }
+.hive-sidebar { display: grid; gap: 10px; min-width: 0; }
+.hive-reserve-card { padding: 12px; }
+.hive-section-heading h3 { margin: 0; font-size: 14px; color: var(--hive-ink); }
+#hiveReserveCount { font-size: 12px; color: var(--hive-muted); }
+.hive-reserve { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+.hive-panel .hive-reserve-piece { min-width: 0; padding: 9px 5px; display: grid; grid-template-columns: 1fr auto; gap: 4px; background: #284438; border: 1px solid #486456; border-radius: 10px; text-align: center; color: #e8efe9; }
+.hive-reserve-piece:first-child { grid-column: 1 / -1; }
+.hive-reserve-piece .hive-reserve-icon { font-size: 24px; grid-column: 1 / -1; line-height: 1.15; }
+.hive-reserve-piece .hive-reserve-name { font-size: 12px; }
+.hive-reserve-piece .hive-reserve-number { color: var(--hive-gold); font-size: 12px; padding-right: 3px; }
+.hive-reserve-piece[aria-pressed="true"] { border-color: #f3c466; box-shadow: inset 0 0 0 1px #f3c466; background: #4c5033; }
+.hive-hint { margin: 10px 0 0; color: var(--hive-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.hive-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.hive-actions button { background: #243e34; color: var(--hive-ink); border: 1px solid var(--hive-border); }
+.hive-history { background: #18342b; border: 1px solid var(--hive-border); border-radius: 10px; min-width: 0; padding: 10px 12px; }
+.hive-history summary { font-size: 12px; cursor: pointer; }
+.hive-history:not([open]) ol { display: none; }
+.hive-history ol { margin: 9px 0 0; padding: 0 0 0 22px; max-height: 155px; overflow-y: auto; font-size: 12px; color: var(--hive-muted); }
+.hive-history li { padding: 4px 0; overflow-wrap: anywhere; }
+.hive-result { border: 1px solid #d0a656; background: #403b23; border-radius: 10px; padding: 12px 15px; margin-bottom: 12px; overflow-wrap: anywhere; }
+.hive-result strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.hive-result p { margin: 0; font-size: 12px; color: #e4d8b3; }
+.hive-draw-offer { padding: 10px; background: #344532; border: 1px solid #8aa665; border-radius: 10px; font-size: 12px; overflow-wrap: anywhere; }
+.hive-draw-offer .hive-tools { margin-top: 8px; }
+.hive-tooltip { position: fixed; z-index: 10000; max-width: min(290px, calc(100vw - 24px)); width: max-content; padding: 10px 12px; border-radius: 9px; background: #f5f0df; color: #21392c; border: 1px solid #bdc7a8; box-shadow: 0 4px 20px #0005; pointer-events: none; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-line; }
+.hive-panel.hive-explaining [data-hive-explain] { outline: 2px dashed #eac874; outline-offset: 2px; cursor: help; }
+.hive-panel.hive-explaining .hive-board [data-hive-explain] .hive-hex { stroke: #eac874; stroke-dasharray: 4 3; }
+.hive-panel.hive-explaining button:disabled { pointer-events: auto; }
+.hive-dialog { color: #e8efe9; background: #18352a; border: 1px solid #617d66; border-radius: 16px; padding: 20px; width: min(620px, calc(100vw - 28px)); max-height: min(80vh, 750px); overflow-y: auto; overflow-wrap: anywhere; }
+.hive-dialog::backdrop { background: #07160fbd; }
+.hive-dialog-header { margin-bottom: 15px; position: sticky; top: -20px; padding: 8px 0; background: #18352a; z-index: 1; }
+.hive-dialog-header h2 { margin: 0; font-size: 20px; min-width: 0; }
+.hive-dialog-header button { flex-shrink: 0; }
+#hiveDialogBody { font-size: 14px; line-height: 1.65; }
+#hiveDialogBody h3 { font-size: 15px; margin: 17px 0 5px; color: #f3c466; }
+#hiveDialogBody p { margin: 8px 0; }
+#hiveDialogBody ul { padding-left: 20px; }
+#hiveDialogBody a { color: #e4ca8f; }
+.hive-opening-option { display: flex; gap: 7px; align-items: center; font-size: 13px; }
+.hive-opening-option input { flex-shrink: 0; width: auto; margin: 0; }
+@media (max-width: 850px) {
+  .hive-layout { grid-template-columns: minmax(0, 1fr); }
+  .hive-sidebar { grid-template-columns: minmax(0, 1fr); }
+  .hive-reserve { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .hive-reserve-piece:first-child { grid-column: auto; }
+  .hive-panel .hive-reserve-piece { padding: 7px 3px; gap: 3px; grid-template-columns: 1fr; }
+  .hive-reserve-piece .hive-reserve-number { padding: 0; }
+  .hive-board { height: clamp(270px, 42vh, 400px); }
+  .hive-hint { margin-top: 7px; }
+  .hive-layout { gap: 8px; }
+}
+@media (max-width: 450px) {
+  .hive-panel { padding: 9px; border-radius: 12px; }
+  .hive-heading { gap: 8px; margin-bottom: 10px; }
+  .hive-heading h2 { font-size: 22px; }
+  .hive-heading h2 span { font-size: 13px; }
+  .hive-eyebrow { font-size: 8px; letter-spacing: .08em; }
+  .hive-heading .hive-tools button { padding: 7px 8px; font-size: 12px; }
+  .hive-players { gap: 6px; margin-bottom: 8px; }
+  .hive-player { padding: 9px; }
+  .hive-player-name { flex-wrap: wrap; gap: 5px; }
+  .hive-player-name strong { max-width: calc(100% - 22px); font-size: 12px; }
+  .hive-player-name small { margin-left: 20px; }
+  .hive-player-stats { font-size: 10px; gap: 5px; }
+  .hive-player-stock { font-size: 11px; gap: 3px 7px; }
+  .hive-board-toolbar, .hive-selection-bar { padding: 8px; gap: 7px; }
+  .hive-board-toolbar .hive-tools button { padding: 5px 9px; min-height: 32px; }
+  .hive-reserve-card { padding: 9px; }
+  .hive-reserve-piece .hive-reserve-name { font-size: 11px; }
+}

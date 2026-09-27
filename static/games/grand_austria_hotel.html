@@ -1,0 +1,14 @@
+<template data-game-target="grandAustriaHeaderActions" data-game-mode="contents">
+  <button id="grandAustriaHelp" type="button">Help</button>
+  <button id="grandAustriaExplain" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="grandAustriaPanel" data-game-mode="contents">
+  <div id="grandAustriaRoot" class="gah-root"></div>
+  <div id="grandAustriaTip" class="gah-tip" role="status" hidden></div>
+</template>
+<template data-game-target="grandAustriaDialog" data-game-mode="replace">
+  <dialog id="grandAustriaDialog" class="gah-dialog" aria-labelledby="grandAustriaDialogTitle">
+    <div class="gah-dialog-head"><h2 id="grandAustriaDialogTitle"></h2><button id="grandAustriaClose" type="button">Close</button></div>
+    <div id="grandAustriaDialogBody"></div>
+  </dialog>
+</template>

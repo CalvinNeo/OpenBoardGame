@@ -54,6 +54,9 @@
 .lv-casino-select small { font-size: .51rem; color: var(--lv-muted); letter-spacing: .08em; }
 .lv-casino-select b { color: var(--lv-gold); font-size: 1.1rem; font-family: Georgia, serif; }
 .lv-prize { font-size: clamp(.8rem, 1.4vw, 1.05rem); color: var(--lv-gold); text-align: right; min-width: 0; }
+.lv-prize > span { display: inline-flex; flex-direction: column; gap: 3px; }
+.lv-prize small { font-size: .56rem; line-height: 1.4; font-weight: 400; color: var(--lv-muted); }
+.lv-prize strong { white-space: nowrap; }
 .lv-color-0 { --lv-player: #ed8b85; }
 .lv-color-1 { --lv-player: #80bedf; }
 .lv-color-2 { --lv-player: #e4c06c; }
@@ -67,7 +70,15 @@
 .lv-banknotes { min-height: 40px; align-content: center; padding: 9px 0 8px; }
 .lv-banknotes > span, .lv-wallet-notes > span { display: inline-flex; min-width: 0; }
 .lv-banknote { display: inline-block; border: 1px solid #587467; background: #2b4843; color: #daf0c8; font-size: .66rem; line-height: 1.6; border-radius: 3px; padding: 1px 5px; white-space: nowrap; }
-.lv-casino-label { display: flex; justify-content: space-between; gap: 4px; padding: 6px 0; border-top: 1px solid var(--lv-line); color: var(--lv-muted); font-size: .57rem; line-height: 1.5; }
+.lv-banknotes > span { flex: 1 1 80px; max-width: 100%; }
+.lv-banknotes .lv-banknote { display: flex; flex-direction: column; gap: 2px; width: 100%; min-width: 0; padding: 5px 6px; white-space: normal; }
+.lv-note-amount { white-space: nowrap; font-weight: 600; }
+.lv-note-status { color: #c1d3c6; font-size: .59rem; }
+.lv-note-recipient { display: flex; align-items: baseline; gap: 5px; font-size: .65rem; }
+.lv-note-recipient > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.lv-banknote.is-returned { border-color: #53646a; background: #25383e; color: #c0cbd0; }
+.lv-banknote.is-returned .lv-note-status { color: #a2b5ba; }
+.lv-casino-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; padding: 6px 0; border-top: 1px solid var(--lv-line); color: var(--lv-muted); font-size: .57rem; line-height: 1.5; }
 .lv-casino-label > span { color: var(--lv-gold); }
 .lv-occupants { display: grid; gap: 4px; }
 .lv-occupant { display: grid; grid-template-columns: 7px minmax(0, 1fr) auto; grid-template-areas: "dot name count" ". payout payout"; gap: 1px 5px; align-items: center; padding: 4px 5px; border-radius: 5px; background: rgba(9, 24, 31, .32); font-size: .68rem; line-height: 1.4; }

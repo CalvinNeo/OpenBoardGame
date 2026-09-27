@@ -75,6 +75,8 @@ function emitRoomStart() {
     payload.config = getTakeTimeConfig();
   } else if (currentGameType === "eternal_decks") {
     payload.config = getEternalDecksConfig();
+  } else if (currentGameType === "hive" && typeof getHiveConfig === "function") {
+    payload.config = getHiveConfig();
   } else if (currentGameType === "ponzi_scheme") {
     payload.config = getPonziSchemeConfig();
   } else if (currentGameType === "cryptid") {
@@ -382,6 +384,7 @@ function renderRoomState(state) {
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
+  if (typeof updateHiveConfigRow === "function") updateHiveConfigRow();
   if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();

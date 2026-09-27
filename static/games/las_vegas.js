@@ -21,9 +21,10 @@
         dice: "骰子(🎲)：每人每轮拥有 8 枚自己的骰子。每回合掷出全部剩余骰子，选择一个点数全部放入同号赌场。颜色对应玩家，骰子数量决定赌场排名。",
         neutral: "白骰(⚪)是独立的中立参与者，所有玩家放出的白骰合并计数，并且参与平手与排名。中立方拿到的奖金回到牌库底。2 人每人加 4 枚白骰；3／4 人每人加 2 枚。3 人局每轮先自动投放另外 2 枚白骰。",
         money: "钞票(💵)的面额为 $10,000–$90,000，共 54 张。每轮按赌场顺序发到各自至少 $50,000。结算时，骰子数最多的有效参与者拿最高面额的一张，依此类推。K 表示千美元。",
+        prize: "奖池合计(💵)是这个赌场所有钞票的总额，每位有效参与者最多拿一张。例如 $90K + $30K 合计 $120K，只有一人获奖时，他拿 $90K，剩下的 $30K 回收。K 表示千美元。投骰期间奖池金额不变，轮末才发钱；结算后的原奖池仅用于回顾。",
         ties: "平手取消(✕)：同一赌场里，骰子数量相同的所有参与者都取消领奖资格，包括低位平手和白骰(⚪)。剩下的参与者按骰子数从多到少领奖；无人领取的钞票(💵)回到牌库底。",
-        payout: "奖金预览(💵)按当前盘面的骰子数计算；选中点数后，该赌场显示放置后的预计结果。所有人用完骰子前，奖金归属仍可能改变。轮末才正式支付，每位有效参与者每个赌场最多拿一张钞票。",
-        returned: "回收(↩)：没有有效玩家领取的钞票(💵)，以及中立方(⚪)取得的钞票，都会回到牌库底。这里保留结算时的金额快照，不代表仍可领取。",
+        payout: "奖金预览(💵)按当前盘面的骰子数计算；选中点数后，该赌场显示放置后的预计结果。每张钞票旁标明预计由谁领取，所有人用完骰子前仍可能改变。轮末才正式支付，每位有效参与者每个赌场最多拿一张钞票。已发放表示钞票已经计入获奖玩家的累计奖金。",
+        returned: "回收(↩)：没有有效玩家领取的钞票(💵)，以及中立方白骰(⚪)取得的钞票，都会在轮末回到牌库底。预计回收仍可能随骰子排名变化；已回收表示本轮已经结算，保留的钞票仅用于回顾，不再可领取。",
         player: "玩家栏显示剩余骰子(🎲)、持有钞票(💵)张数和当前行动者。赢得的钞票面朝下保存，其他人的金额在终局前保密。玩家颜色仅用于辨认，姓名始终同时显示。",
         private: "私有奖金(🔒)：只有你能查看自己的钞票(💵)面额和累计金额。其他玩家只能看到张数；已公开的历史收入仍可在 Activity 中查看。",
         next: "Next Round 表示你已看完本轮结算。所有席位分别确认后才能继续，第四轮也需要全员确认后进入终局。机器人(🤖)只确认自身，断线真人需重连确认。",
@@ -89,6 +90,7 @@
             <h3>准备与回合</h3><p>每人每轮 8 枚自己的骰子，首轮先手随机，以后每轮先手按座位轮转。54 张钞票洗混：$10,000／$40,000／$50,000 各 6 张，$20,000／$30,000 各 8 张，$60,000／$70,000／$80,000／$90,000 各 5 张。每轮按赌场 1–6 顺序发钞票，直到各赌场至少有 $50,000。</p>
             <p>轮到你时，Roll Dice 掷出全部剩余骰子，选择一个点数，再用 Place Dice 把该点数的全部骰子放入同号赌场。不能只放一部分，也不能重新掷骰或跳过。轮到下一位仍有骰子的玩家，直至所有人放完。</p>
             <h3>平手与领奖</h3><p>${explanations.ties} 有效参与者按骰子数从多到少，依次取得赌场剩余最高面额的一张钞票，直到钞票或参与者用完。例如骰子数为 5、3、3、1 时，两个 3 同时取消资格，5 和 1 依次领奖。</p>
+            <p>${explanations.prize} 每张钞票下方显示预计归属；结算后改为已发放或已回收，等待所有人确认后才发下一轮的新钞票。</p>
             <p>钞票面朝下保留，自己可查看面额和总额，其他人只见张数。公开领取奖金的历史仍可查看。${explanations.next} ${explanations.total}</p>
             <h3>可选白骰变体 · 2–4 人</h3><p>${explanations.neutral} 白骰与自己的骰子一起掷，同点数必须一起放；允许只放白骰。白骰不属于投放它的玩家，所有白骰合并成一个中立参与者。</p>
             <h3>图标与 Controls</h3><p>骰子(🎲)表示剩余数量，钞票(💵)表示奖金，私有奖金(🔒)只对自己可见，平手取消(✕)不能领奖，回收(↩)表示回牌库，胜者(🏆)表示最终第一名。K 表示千美元。${explanations.bot}</p>
@@ -109,22 +111,33 @@
     }
 
     function renderCasino(original) {
-        const casino = projectedCasino(original);
+        const settled = view.phase === "round_end" || view.game_over;
+        const snapshot = view.round_summary?.casinos.find(item => item.face === original.face);
+        const casino = settled && snapshot ? snapshot : projectedCasino(original);
         const preview = selected === casino.face && allowed("place");
         const canSelect = allowed("place") && rollCount(casino.face) > 0;
         const occupants = view.players.filter(item => casino.dice[item.player_id] > 0).map(item => [item.player_id, casino.dice[item.player_id]]);
         if (casino.neutral_dice > 0) occupants.push(["__neutral__", casino.neutral_dice]);
         occupants.sort((a, b) => b[1] - a[1]);
-        const settled = view.phase === "round_end" || view.game_over;
-        const snapshot = view.round_summary?.casinos.find(item => item.face === casino.face);
+        const notes = casino.banknotes.slice().sort((a, b) => b - a);
+        const totalTip = `${notes.length} 张钞票(💵)，合计 ${money(sum(notes))}；每人最多领取一张。K 表示千美元。${settled ? "本轮已结算，这里保留原奖池供回顾。" : "轮末才发放奖金，投骰期间奖池金额不变。"}`;
         return `<article class="lv-casino ${preview ? "is-selected" : ""}">
-            <div class="lv-casino-heading"><button type="button" class="lv-casino-select" data-lv-face="${casino.face}" data-lv-explain="casino" aria-label="Casino ${casino.face}${canSelect ? ', select dice' : ''}" aria-pressed="${preview}" ${!canSelect ? "disabled" : ""}>${dice(casino.face)}<span><small>CASINO</small><b>${String(casino.face).padStart(2, "0")}</b></span></button><strong class="lv-prize">${info(shortMoney(sum(casino.banknotes)), "money")}</strong></div>
-            <div class="lv-banknotes">${casino.banknotes.slice().sort((a, b) => b - a).map(note => info(`<span class="lv-banknote">💵 ${shortMoney(note)}</span>`, "money")).join("")}</div>
-            <div class="lv-casino-label">${preview ? "After placement" : settled ? "Final allocation" : "Current payout"}${preview ? info("预览", "payout") : ""}</div>
+            <div class="lv-casino-heading"><button type="button" class="lv-casino-select" data-lv-face="${casino.face}" data-lv-explain="casino" aria-label="Casino ${casino.face}${canSelect ? ', select dice' : ''}" aria-pressed="${preview}" ${!canSelect ? "disabled" : ""}>${dice(casino.face)}<span><small>CASINO</small><b>${String(casino.face).padStart(2, "0")}</b></span></button><div class="lv-prize">${info(`<small>${settled ? "原奖池" : "奖池合计"}</small><strong>${shortMoney(sum(notes))}</strong>`, "prize", totalTip)}</div></div>
+            <div class="lv-banknotes">${notes.map((note, index) => {
+                // Match by rank, not amount: equal-value banknotes may have different recipients.
+                const payout = casino.payouts[index];
+                const awarded = payout && payout.player_id !== "__neutral__";
+                const status = awarded ? (settled ? "已发放" : "预计领取") : settled ? "已回收" : payout ? "预计回收" : "暂无人领取";
+                const recipient = awarded ? playerName(payout.player_id) : payout ? "白骰 ⚪" : "";
+                const detail = `这是一张 ${money(note)} 的钞票(💵)。${status}${recipient ? `：${recipient}` : ""}。${settled ? "本轮已结算，这里保留分配记录。" : "轮末才正式结算，每位有效参与者最多拿一张；无人领取或白骰取得的钞票回牌库底。"}`;
+                const destination = awarded ? `<span class="lv-player-dot lv-color-${playerColor(payout.player_id)}" aria-hidden="true"></span>` : "↩";
+                return info(`<span class="lv-banknote ${awarded ? "is-awarded" : "is-returned"}"><b class="lv-note-amount">💵 ${shortMoney(note)}</b><span class="lv-note-status">${status}</span>${recipient ? `<span class="lv-note-recipient">${destination}<span>${esc(recipient)}</span></span>` : ""}</span>`, awarded ? "payout" : "returned", detail);
+            }).join("")}</div>
+            <div class="lv-casino-label">${preview ? "放置后 · 预计奖金" : settled ? "已结算 · 实得奖金" : "当前排名 · 预计奖金"}${info("每人最多 1 张", "prize")}</div>
             <div class="lv-occupants">${occupants.map(([id, count]) => {
                 const tied = casino.tied_players.includes(id), payout = casino.payouts.find(item => item.player_id === id);
                 return `<div class="lv-occupant ${tied ? "is-tied" : ""}"><span class="lv-player-dot lv-color-${playerColor(id)}" aria-hidden="true"></span><span class="lv-occupant-name">${esc(playerName(id))}</span>${info(`<b class="lv-dice-count">${count}🎲</b>`, id === "__neutral__" ? "neutral" : "dice")}<span class="lv-payout">${tied ? info("✕ 平手", "ties") : payout ? info(`${id === "__neutral__" ? "↩ " : ""}${shortMoney(payout.amount)}`, id === "__neutral__" ? "returned" : "payout") : info("—", "payout", "有效参与者超过钞票(💵)张数，因此当前没有可分配奖金。")}</span></div>`;
-            }).join("") || '<div class="lv-empty-casino">等待骰子入场</div>'}</div>
+            }).join("") || `<div class="lv-empty-casino">${settled ? "本轮无人投骰" : "等待骰子入场"}</div>`}</div>
             ${settled && snapshot?.returned.length ? `<div class="lv-returned">${info(`↩ 回收 ${snapshot.returned.map(shortMoney).join(" · ")}`, "returned")}</div>` : ""}
         </article>`;
     }

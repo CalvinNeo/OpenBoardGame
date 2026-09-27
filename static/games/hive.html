@@ -1,0 +1,37 @@
+<template data-game-target="hiveConfigBox" data-game-mode="contents">
+  <div class="game-config-title">🐝 Hive · Classic</div>
+  <div class="row compact-row"><label for="hiveDifficulty">AI level</label><select id="hiveDifficulty"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></div>
+  <label class="hive-opening-option"><input id="hiveTournament" type="checkbox" /> Tournament Opening · no first-turn Queen</label>
+</template>
+<template data-game-target="hivePanel" data-game-mode="contents">
+  <div class="hive-heading">
+    <div><span class="hive-eyebrow">A SMALL WORLD. A DEEP GAME.</span><h2 tabindex="0" data-hive-tip="Hive · 围住对方蜂后（🐝），保护自己的蜂后。">🐝 HIVE <span>昆虫棋</span></h2></div>
+    <div class="hive-tools"><button id="hiveHelp" type="button">Help</button><button id="hiveExplain" type="button" aria-pressed="false">Explain</button></div>
+  </div>
+  <div id="hivePlayers" class="hive-players"></div>
+  <div id="hiveResult" class="hive-result hidden" role="status"></div>
+  <div class="hive-layout">
+    <section class="hive-board-card" aria-label="Hive board">
+      <div class="hive-board-toolbar">
+        <div id="hiveTurn" aria-live="polite"></div>
+        <div class="hive-tools"><button type="button" id="hiveZoomOut" data-hive-explain="Zoom out to see more of the hive." aria-label="Zoom out">−</button><button type="button" id="hiveFit" data-hive-explain="Fit the whole hive and all currently highlighted destinations inside the board.">Fit</button><button type="button" id="hiveZoomIn" data-hive-explain="Zoom in to inspect individual insects and stacks." aria-label="Zoom in">+</button></div>
+      </div>
+      <svg id="hiveBoard" class="hive-board" viewBox="-240 -180 480 360" aria-label="Hexagonal Hive board. Drag to pan; select an insect and then a highlighted hex.">
+        <defs><pattern id="hiveDots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="1" fill="#547366" opacity=".25" /></pattern></defs>
+        <rect x="-100000" y="-100000" width="200000" height="200000" fill="url(#hiveDots)" />
+        <g id="hiveTiles"></g>
+      </svg>
+      <div class="hive-selection-bar"><span id="hiveSelection" role="status">Choose an insect.</span><button type="button" id="hiveConfirm" data-hive-explain="Confirm the previewed placement or move. Nothing changes until you confirm." disabled>Confirm</button></div>
+    </section>
+    <aside class="hive-sidebar">
+      <section class="hive-reserve-card"><div class="hive-section-heading"><h3 id="hiveReserveTitle">Your insects</h3><span id="hiveReserveCount" data-hive-tip="Insects still available to place from your reserve." tabindex="0"></span></div><div id="hiveReserve" class="hive-reserve"></div><p id="hiveHint" class="hive-hint"></p></section>
+      <div id="hiveDrawOffer" class="hive-draw-offer hidden"></div>
+      <div class="hive-actions"><button id="hivePass" type="button" data-hive-explain="Pass only when you have no legal placement or movement. You cannot pass voluntarily." disabled>Pass</button><button id="hiveOfferDraw" type="button" data-hive-explain="Offer a draw. The game ends in a draw only if the other player accepts." disabled>Offer Draw</button></div>
+      <details class="hive-history"><summary>Move history</summary><ol id="hiveLog" aria-label="Move history"></ol></details>
+    </aside>
+  </div>
+  <div id="hiveTooltip" class="hive-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="hiveDialog" data-game-mode="replace">
+  <dialog id="hiveDialog" class="hive-dialog" aria-labelledby="hiveDialogTitle"><div class="hive-dialog-header"><h2 id="hiveDialogTitle">Hive</h2><button id="hiveDialogClose" type="button">Close</button></div><div id="hiveDialogBody"></div></dialog>
+</template>

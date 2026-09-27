@@ -444,7 +444,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova") or key != "seed"},
+                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -563,7 +563,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": "sell"}
     if game_type == "red_doors":
         return {"type": "resolve"}
-    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia"):
+    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia", "grand_austria_hotel"):
         return {"type": action.get("type")}
     if game_type == "catan_starfarers" and action.get("type") in {
         "discard_resources",

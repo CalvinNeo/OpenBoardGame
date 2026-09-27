@@ -1,181 +1,140 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+/* Loaded into the matching style.css group; keep responsive rules in this slot. */
 @media all, obg-game-hanabi-1 {
-
-.hanabi-tableau {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.hanabi-stack {
-  border-radius: 6px;
-  padding: 6px 10px;
-  min-width: 70px;
-  text-align: center;
-  font-weight: 600;
-  color: #222;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.hanabi-stack[data-color="red"] {
-  background: #ffd7d7;
-}
-
-.hanabi-stack[data-color="yellow"] {
-  background: #fff2b3;
-}
-
-.hanabi-stack[data-color="green"] {
-  background: #d8f2d8;
-}
-
-.hanabi-stack[data-color="blue"] {
-  background: #d7e9ff;
-}
-
-.hanabi-stack[data-color="white"] {
-  background: #f2f2f2;
-}
-
-.hanabi-card {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 6px;
-  width: 120px;
-  background: #fafafa;
-  font-size: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hanabi-card.selected {
-  border-color: #2f6fed;
-  box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.15);
-}
-
-.hanabi-card.unknown {
-  background: #f0f0f0;
-}
-
-.hanabi-card[data-color="red"] {
-  border-color: #e17070;
-}
-
-.hanabi-card[data-color="yellow"] {
-  border-color: #d6b94f;
-}
-
-.hanabi-card[data-color="green"] {
-  border-color: #6aaa64;
-}
-
-.hanabi-card[data-color="blue"] {
-  border-color: #5b8ad0;
-}
-
-.hanabi-card[data-color="white"] {
-  border-color: #b6b6b6;
-}
-
-.hanabi-card-title {
-  font-weight: 600;
-}
-
-.hanabi-card-known,
-.hanabi-card-notes {
-  font-size: 11px;
-  color: #444;
-}
-
-.hanabi-card-notes {
-  color: #666;
-}
-
-.hanabi-radio-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.hanabi-radio {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.hanabi-radio input {
-  margin: 0;
-}
-
-.hanabi-radio-red {
-  background: #ffe1e1;
-  border-color: #e17070;
-}
-
-.hanabi-radio-yellow {
-  background: #fff2b3;
-  border-color: #d6b94f;
-}
-
-.hanabi-radio-green {
-  background: #d8f2d8;
-  border-color: #6aaa64;
-}
-
-.hanabi-radio-blue {
-  background: #d7e9ff;
-  border-color: #5b8ad0;
-}
-
-.hanabi-radio-white {
-  background: #f2f2f2;
-  border-color: #b6b6b6;
-}
-
-.hanabi-discard-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  margin-bottom: 8px;
-}
-
-.hanabi-discard-table th,
-.hanabi-discard-table td {
-  border: 1px solid #e0e0e0;
-  padding: 4px 6px;
-  text-align: center;
-}
-
-.hanabi-discard-table th {
-  background: #f4f4f4;
-  font-weight: 600;
-}
-
-.hanabi-log {
-  border: 1px solid #e3e3e3;
-  background: #fafafa;
-  border-radius: 6px;
-  padding: 6px;
-  max-height: 180px;
-  overflow-y: auto;
-  font-size: 12px;
-}
-
-.hanabi-log-entry {
-  padding: 2px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.hanabi-log-entry:last-child {
-  border-bottom: none;
-}
+  #hanabiPanel {
+    --hanabi-border: #dce4ed;
+    --hanabi-muted: #526277;
+    color: #233247;
+    font-size: 14px;
+    line-height: 1.4;
+    min-width: 0;
+  }
+  #hanabiPanel [hidden] { display: none !important; }
+  #hanabiPanel *, .hanabi-dialog * { min-width: 0; }
+  #hanabiPanel h3 { margin: 0; font-size: 16px; }
+  #hanabiPanel button, #hanabiPanel select, .hanabi-dialog button {
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #233247;
+    font: inherit;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #hanabiPanel button:disabled { color: #697789; background: #edf1f5; cursor: default; }
+  #hanabiPanel button.action-allowed { border-color: #6688ca; background: #eef4ff; color: #204d97; }
+  #hanabiPanel :focus-visible, .hanabi-dialog :focus-visible { outline: 3px solid #4c83d6; outline-offset: 2px; }
+  .hanabi-toolbar, .hanabi-tools, .hanabi-turn-row, .hanabi-section-heading, .hanabi-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .hanabi-toolbar { margin-bottom: 10px; flex-wrap: wrap; }
+  .hanabi-tools { justify-content: flex-end; flex-wrap: wrap; }
+  #hanabiPanel .hanabi-tools button { padding: 7px 10px; }
+  .hanabi-turn-row { flex-wrap: wrap; margin-bottom: 8px; overflow-wrap: anywhere; }
+  #hanabiTurn { flex: 1 1 160px; font-weight: 600; }
+  #hanabiTurn.hanabi-your-turn { color: #2453a0; }
+  #hanabiFinalTurns { padding: 3px 8px; border-radius: 6px; background: #fff3d8; font-size: 12px; }
+  .hanabi-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .hanabi-stats > div { padding: 7px 8px; border: 1px solid var(--hanabi-border); border-radius: 9px; background: #f8fafc; }
+  .hanabi-stats span { display: block; color: var(--hanabi-muted); font-size: 12px; }
+  .hanabi-stats strong { display: block; font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; }
+  .hanabi-result { padding: 12px; margin-top: 10px; border-radius: 9px; background: #fff3d8; overflow-wrap: anywhere; }
+  .hanabi-tableau { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 10px 0; }
+  #hanabiPanel [data-color="red"] { --hanabi-color: #d04e58; --hanabi-tint: #fff0f0; }
+  #hanabiPanel [data-color="yellow"] { --hanabi-color: #a67a10; --hanabi-tint: #fff8d9; }
+  #hanabiPanel [data-color="green"] { --hanabi-color: #368253; --hanabi-tint: #eef9f1; }
+  #hanabiPanel [data-color="blue"] { --hanabi-color: #437bbf; --hanabi-tint: #edf5ff; }
+  #hanabiPanel [data-color="white"] { --hanabi-color: #818b9a; --hanabi-tint: #f5f6f8; }
+  .hanabi-stack { display: grid; justify-items: center; gap: 2px; padding: 6px 3px; border: 1px solid var(--hanabi-color); border-radius: 9px; background: var(--hanabi-tint); }
+  .hanabi-stack-color { display: flex; align-items: center; gap: 3px; font-size: 12px; white-space: nowrap; }
+  .hanabi-stack strong { font-size: 24px; line-height: 1.1; }
+  .hanabi-stack-next { font-size: 12px; color: var(--hanabi-muted); }
+  .hanabi-workspace { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "hand clue" "others clue"; grid-template-rows: auto 1fr; gap: 12px; align-items: start; }
+  #hanabiOwnSection { grid-area: hand; }
+  .hanabi-team-section { grid-area: clue; }
+  #hanabiOtherHands { grid-area: others; margin-top: 0; }
+  .hanabi-spectator .hanabi-workspace { grid-template-areas: "others clue"; grid-template-rows: auto; }
+  .hanabi-section { border: 1px solid var(--hanabi-border); border-radius: 12px; padding: 12px; background: #fbfcfe; }
+  .hanabi-section-heading { margin-bottom: 10px; flex-wrap: wrap; }
+  .hanabi-muted { color: var(--hanabi-muted); font-size: 12px; overflow-wrap: anywhere; }
+  .hanabi-hand { display: grid; grid-template-columns: repeat(var(--hanabi-hand-size, 5), minmax(0, 1fr)); gap: 6px; }
+  #hanabiPanel .hanabi-card { display: flex; flex-direction: column; align-items: stretch; gap: 5px; width: 100%; padding: 6px 4px; border: 1px solid var(--hanabi-color, #c6d2e1); border-radius: 8px; background: var(--hanabi-tint, #edf2fa); color: #233247; text-align: center; font-size: 12px; }
+  #hanabiPanel button.hanabi-card { cursor: pointer; }
+  #hanabiPanel .hanabi-card.selected { outline: 2px solid #3266bf; outline-offset: 1px; background: #e4efff; }
+  #hanabiPanel .hanabi-card.hanabi-clue-match { box-shadow: inset 0 0 0 2px #d3971b; }
+  .hanabi-card-index { color: var(--hanabi-muted); font-size: 12px; line-height: 1; }
+  .hanabi-card-face { display: flex; align-items: center; justify-content: center; gap: 2px; min-height: 32px; font-size: 22px; line-height: 1.2; }
+  .hanabi-card-rank { font-size: 27px; font-weight: 700; }
+  .hanabi-card-knowledge { display: grid; gap: 5px; border-top: 1px solid #cbd5e1; padding-top: 6px; }
+  .hanabi-possible-colors, .hanabi-possible-ranks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; justify-items: center; gap: 1px; }
+  .hanabi-color-dot { display: block; width: 7px; height: 7px; border: 1px solid var(--hanabi-color); border-radius: 50%; background: var(--hanabi-color); }
+  .hanabi-color-dot[data-color="white"] { background: #fff; }
+  .hanabi-ruled-out { opacity: .26; text-decoration: line-through; }
+  .hanabi-color-dot.hanabi-ruled-out { background: transparent; }
+  .hanabi-possible-ranks { font-size: 12px; line-height: 1; }
+  .hanabi-selection { min-height: 20px; margin: 8px 0; font-size: 12px; color: var(--hanabi-muted); overflow-wrap: anywhere; }
+  .hanabi-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .hanabi-target-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 10px; }
+  #hanabiPanel #hanabiTargetSelect { width: 100%; text-overflow: ellipsis; font-size: 16px; }
+  .hanabi-clue-types { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 8px 0 4px; padding: 0; border: 0; }
+  .hanabi-clue-types label { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; cursor: pointer; }
+  #hanabiPanel input[type="radio"] { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; accent-color: #3266bf; }
+  .hanabi-clue-values { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+  .hanabi-clue-value { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 48px; padding: 4px 1px; border: 1px solid var(--hanabi-color, #cbd5e1); border-radius: 8px; background: var(--hanabi-tint, #fff); font-size: 12px; cursor: pointer; }
+  .hanabi-clue-value:has(input:checked) { outline: 2px solid #3266bf; outline-offset: 1px; }
+  .hanabi-clue-value:has(input:focus-visible) { outline: 3px solid #3266bf; }
+  #hanabiPanel .hanabi-clue-value input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .hanabi-clue-value-symbol { font-size: 20px; line-height: 1.2; }
+  .hanabi-clue-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 10px; }
+  .hanabi-players { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 4px 8px 8px; }
+  .hanabi-player { padding: 8px; border: 1px solid var(--hanabi-border); border-radius: 9px; }
+  .hanabi-player-heading { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; overflow-wrap: anywhere; }
+  .hanabi-player-heading strong { flex: 1; }
+  .hanabi-player-heading span { color: var(--hanabi-muted); font-size: 12px; }
+  .hanabi-details { border: 1px solid var(--hanabi-border); border-radius: 9px; background: #fff; margin-top: 10px; }
+  .hanabi-details summary { padding: 10px; min-height: 44px; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+  .hanabi-count { margin-left: 4px; color: var(--hanabi-muted); font-size: 12px; font-weight: 400; }
+  .hanabi-reference { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; }
+  .hanabi-discard-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+  .hanabi-discard-table th, .hanabi-discard-table td { padding: 7px 2px; text-align: center; border-top: 1px solid var(--hanabi-border); overflow-wrap: anywhere; }
+  .hanabi-discard-table th:first-child { width: 26%; }
+  .hanabi-discard-table .hanabi-discard-lost { background: #ffebeb; color: #962831; font-weight: 700; }
+  .hanabi-log { max-height: 200px; overflow-y: auto; overscroll-behavior: contain; padding: 0 10px 8px; font-size: 12px; overflow-wrap: anywhere; }
+  .hanabi-log-entry { padding: 6px 0; border-top: 1px solid var(--hanabi-border); }
+  .hanabi-dialog { width: min(560px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: calc(100dvh - 32px); padding: 18px; border: 1px solid #cbd5e1; border-radius: 14px; background: #fff; color: #233247; overflow: auto; overscroll-behavior: contain; font: 14px/1.6 Arial, sans-serif; overflow-wrap: anywhere; }
+  .hanabi-dialog::backdrop { background: rgb(20 35 58 / 48%); }
+  .hanabi-dialog-heading { align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+  .hanabi-dialog-heading h2 { font-size: 19px; margin: 5px 0 0; }
+  .hanabi-dialog-heading button { flex-shrink: 0; }
+  .hanabi-dialog p { margin: 0 0 12px; }
+  .hanabi-tooltip { position: fixed; z-index: 1500; width: max-content; max-width: min(320px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 9px; background: #243247; color: #fff; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 16px #0002; pointer-events: none; overflow-wrap: anywhere; }
+  #hanabiPanel.hanabi-explaining [data-hanabi-explain] { outline: 2px dashed #3b82f6; outline-offset: 2px; cursor: help; }
+  #hanabiPanel.hanabi-explaining [data-hanabi-explain] * { cursor: help; }
+  #hanabiExplainBtn[aria-pressed="true"] { background: #dbeafe; border-color: #3b82f6; }
+  .hanabi-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  @media (max-width: 1100px) {
+    .hanabi-workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hand" "clue" "others"; grid-template-rows: auto; }
+    .hanabi-spectator .hanabi-workspace { grid-template-areas: "clue" "others"; }
+    .hanabi-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 600px) {
+    .hanabi-workspace { gap: 10px; }
+    .hanabi-section { padding: 10px 8px; }
+    .hanabi-hand { gap: 5px; }
+    .hanabi-stats > div { padding: 6px; }
+    .hanabi-stats strong { font-size: 19px; }
+    .hanabi-players, .hanabi-reference { grid-template-columns: minmax(0, 1fr); }
+    .hanabi-reference { gap: 0; }
+  }
+  @media (max-width: 360px) {
+    #hanabiPanel .hanabi-card { padding: 6px 2px; }
+    .hanabi-hand { gap: 4px; }
+    .hanabi-card-face { flex-direction: column; gap: 0; font-size: 18px; }
+    .hanabi-card-rank { font-size: 24px; }
+    .hanabi-stack-color { flex-direction: column; gap: 1px; }
+    .hanabi-tableau { gap: 4px; }
+    .hanabi-stats { gap: 4px; }
+    .hanabi-stats > div { padding: 6px 4px; }
+  }
 }

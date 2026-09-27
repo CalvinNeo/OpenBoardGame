@@ -203,6 +203,10 @@ function renderGameState(data) {
     if (typeof renderLasVegasGameState === "function") renderLasVegasGameState(data);
     return;
   }
+  if (gameType === "hive") {
+    if (typeof renderHiveGameState === "function") renderHiveGameState(data);
+    return;
+  }
   if (gameType === "for_sale") {
     renderForSaleGameState(data);
     return;
@@ -329,6 +333,10 @@ function renderGameState(data) {
   }
   if (gameType === "eternal_decks") {
     renderEternalDecksGameState(data);
+    return;
+  }
+  if (gameType === "grand_austria_hotel") {
+    if (typeof renderGrandAustriaGameState === "function") renderGrandAustriaGameState(data);
     return;
   }
   if (gameType === "ponzi_scheme") {

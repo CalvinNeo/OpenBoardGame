@@ -1,56 +1,75 @@
 <template data-game-target="hanabiPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Current Turn: <span id="hanabiTurn">-</span></div>
-                <div>Clues: <span id="hanabiClues">-</span></div>
-                <div>Fuses: <span id="hanabiFuses">-</span></div>
-                <div>Deck: <span id="hanabiDeck">-</span></div>
-              </div>
-              <div class="row">
-                <div>Score: <span id="hanabiScore">-</span></div>
-                <div>Final Turns: <span id="hanabiFinalTurns">-</span></div>
-                <div>End: <span id="hanabiEndReason">-</span></div>
-              </div>
-
-              <h3>Tableau</h3>
-              <div id="hanabiTableau" class="hanabi-tableau"></div>
-
-              <h3>Discard Stats</h3>
-              <div id="hanabiDiscardStats" class="hanabi-discard-stats"></div>
-
-              <h3>Your Hand</h3>
-              <div id="hanabiHand" class="hand"></div>
-              <div class="row">
-                <div>Selected Card: <span id="hanabiSelectedCard">-</span></div>
-                <button id="hanabiClearSelection">Clear</button>
-              </div>
-
-              <h3>Actions</h3>
-              <div class="row actions">
-                <button id="hanabiPlayBtn">Play</button>
-                <button id="hanabiDiscardBtn">Discard</button>
-              </div>
-              <div class="row actions mobile-field-grid">
-                <label for="hanabiTargetSelect">Clue Target</label>
-                <select id="hanabiTargetSelect"></select>
-                <label>Clue Type</label>
-                <div id="hanabiClueTypeGroup" class="hanabi-radio-group">
-                  <label class="hanabi-radio">
-                    <input type="radio" name="hanabiClueType" value="color" checked />
-                    <span>Color</span>
-                  </label>
-                  <label class="hanabi-radio">
-                    <input type="radio" name="hanabiClueType" value="rank" />
-                    <span>Number</span>
-                  </label>
-                </div>
-                <label>Value</label>
-                <div id="hanabiClueValueGroup" class="hanabi-radio-group"></div>
-                <button id="hanabiClueBtn">Give Clue</button>
-              </div>
-
-              <h3>Players</h3>
-              <div id="hanabiPlayers"></div>
-
-              <h3>Game Log</h3>
-              <div id="hanabiLog" class="hanabi-log"></div>
-            </template>
+  <div class="hanabi-toolbar" id="hanabiHeaderActions">
+    <h3>🎆 Hanabi</h3>
+    <div class="hanabi-tools">
+      <button id="hanabiHelpBtn" type="button">📖 Help</button>
+      <button id="hanabiExplainBtn" type="button" aria-pressed="false">🔎 Explain</button>
+    </div>
+  </div>
+  <div class="hanabi-turn-row">
+    <div id="hanabiTurn" role="status">Waiting for the game to start</div>
+    <span id="hanabiFinalTurns" hidden data-hanabi-explain="final" data-hanabi-tip="Final Turns (⏳): the game ends when this optional countdown reaches zero." tabindex="0"></span>
+  </div>
+  <div class="hanabi-stats">
+    <div data-hanabi-explain="clues" data-hanabi-tip="Clues (💡): spend one to tell a teammate a color or number." tabindex="0"><span>💡 Clues</span><strong id="hanabiClues">–</strong></div>
+    <div data-hanabi-explain="fuses" data-hanabi-tip="Fuses (❤️): a failed play costs one. At zero, the game ends." tabindex="0"><span>❤️ Fuses</span><strong id="hanabiFuses">–</strong></div>
+    <div data-hanabi-explain="deck" data-hanabi-tip="Deck (🃏): cards left to draw after playing or discarding." tabindex="0"><span>🃏 Deck</span><strong id="hanabiDeck">–</strong></div>
+    <div data-hanabi-explain="score" data-hanabi-tip="Score (⭐): the total height of the five fireworks, up to 25." tabindex="0"><span>⭐ Score</span><strong id="hanabiScore">–</strong></div>
+  </div>
+  <div id="hanabiResult" class="hanabi-result" role="status" hidden></div>
+  <section class="hanabi-fireworks" aria-label="Fireworks">
+    <div id="hanabiTableau" class="hanabi-tableau"></div>
+  </section>
+  <div class="hanabi-workspace">
+    <section id="hanabiOwnSection" class="hanabi-section" aria-labelledby="hanabiHandTitle">
+      <div class="hanabi-section-heading"><h3 id="hanabiHandTitle">Your Hand</h3><span id="hanabiHandNote" class="hanabi-muted" data-hanabi-tip="Your cards face away from you. Only received clues are shown." tabindex="0">Clues only</span></div>
+      <div id="hanabiHand" class="hanabi-hand" aria-label="Your cards"></div>
+      <div id="hanabiSelectedCard" class="hanabi-selection" role="status">Select a card</div>
+      <div class="hanabi-actions">
+        <button id="hanabiPlayBtn" type="button" data-hanabi-explain="play" disabled>🎆 Play</button>
+        <button id="hanabiDiscardBtn" type="button" data-hanabi-explain="discard" disabled>♻️ Discard</button>
+      </div>
+    </section>
+    <section class="hanabi-section hanabi-team-section" aria-labelledby="hanabiClueTitle">
+      <div class="hanabi-section-heading"><h3 id="hanabiClueTitle">Give a Clue</h3><span class="hanabi-muted" data-hanabi-tip="Giving a clue costs one clue token (💡)." tabindex="0">−1 💡</span></div>
+      <div class="hanabi-target-row">
+        <label for="hanabiTargetSelect">To</label>
+        <select id="hanabiTargetSelect" data-hanabi-explain="target" aria-label="Clue target"></select>
+      </div>
+      <div id="hanabiTargetHand" class="hanabi-hand" aria-label="Clue target's hand"></div>
+      <fieldset id="hanabiClueTypeGroup" class="hanabi-clue-types" data-hanabi-explain="clue">
+        <legend class="hanabi-sr-only">Clue type</legend>
+        <label><input type="radio" name="hanabiClueType" value="color" checked /> Color</label>
+        <label><input type="radio" name="hanabiClueType" value="rank" /> Number</label>
+      </fieldset>
+      <div id="hanabiClueValueGroup" class="hanabi-clue-values" role="radiogroup" aria-label="Clue value" data-hanabi-explain="clue"></div>
+      <div class="hanabi-clue-footer">
+        <span id="hanabiCluePreview" class="hanabi-muted" role="status"></span>
+        <button id="hanabiClueBtn" type="button" data-hanabi-explain="clue" disabled>💡 Give Clue</button>
+      </div>
+    </section>
+    <details id="hanabiOtherHands" class="hanabi-details">
+      <summary data-hanabi-explain="players">Other Hands <span id="hanabiOtherCount" class="hanabi-count"></span></summary>
+      <div id="hanabiPlayers" class="hanabi-players"></div>
+    </details>
+  </div>
+  <div class="hanabi-reference">
+    <details class="hanabi-details">
+      <summary data-hanabi-explain="discards">♻️ Discards <span id="hanabiDiscardCount" class="hanabi-count">0</span></summary>
+      <div id="hanabiDiscardStats"></div>
+    </details>
+    <details class="hanabi-details">
+      <summary data-hanabi-explain="log">📜 Game Log</summary>
+      <div id="hanabiLog" class="hanabi-log" tabindex="0" aria-label="Game log"></div>
+    </details>
+  </div>
+  <dialog id="hanabiDialog" class="hanabi-dialog" aria-labelledby="hanabiDialogTitle">
+    <div class="hanabi-dialog-heading"><h2 id="hanabiDialogTitle">Help</h2><button id="hanabiDialogClose" type="button">Close</button></div>
+    <div id="hanabiDialogBody"></div>
+    <div id="hanabiConfirmActions" class="hanabi-actions" hidden>
+      <button id="hanabiConfirmPlay" type="button">Play Anyway</button>
+      <button id="hanabiCancelPlay" type="button">Cancel</button>
+    </div>
+  </dialog>
+  <div id="hanabiTooltip" class="hanabi-tooltip" role="tooltip" hidden></div>
+</template>

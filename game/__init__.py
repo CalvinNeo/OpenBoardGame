@@ -36,11 +36,13 @@ from game.gizmos import GizmosGame
 from game.guandan import GuandanGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
+from game.hive import HiveGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
 from game.in_a_grove import InAGroveGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
+from game.grand_austria_hotel import GrandAustriaHotelGame
 from game.kobayakawa import KobayakawaGame
 from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
@@ -116,6 +118,7 @@ __all__ = [
     "GuandanGame",
     "HalliGalliGame",
     "HanabiGame",
+    "HiveGame",
     "CoyoteGame",
     "CyberPicturesGame",
     "DecryptoGame",
@@ -126,6 +129,7 @@ __all__ = [
     "InAGroveGame",
     "IsleOfSkyeGame",
     "IstanbulGame",
+    "GrandAustriaHotelGame",
     "KobayakawaGame",
     "KronologicGame",
     "LostCodeGame",

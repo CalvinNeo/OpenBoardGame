@@ -47,6 +47,7 @@ from game.gizmos import GizmosGame
 from game.guandan import GuandanGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
+from game.hive import HiveGame, ACTION_SCHEMA as HIVE_ACTION_SCHEMA, CONFIG_SCHEMA as HIVE_CONFIG_SCHEMA
 from game.high_society import HighSocietyGame
 from game.hot_streak import HotStreakGame
 from game.impression_flower import ImpressionFlowerGame
@@ -54,6 +55,8 @@ from game.incan_gold import IncanGoldGame
 from game.in_a_grove import InAGroveGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
+from game.grand_austria_hotel import GrandAustriaHotelGame
+from game.grand_austria_hotel_data import ACTION_SCHEMA as GRAND_AUSTRIA_ACTION_SCHEMA, CONFIG_SCHEMA as GRAND_AUSTRIA_CONFIG_SCHEMA
 from game.kobayakawa import KobayakawaGame
 from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
@@ -108,6 +111,32 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=GrandAustriaHotelGame.game_id, name="Grand Austria Hotel", name_zh="奥地利大饭店",
+        min_players=2, max_players=4, turn_mode="turn",
+        action_schema=GRAND_AUSTRIA_ACTION_SCHEMA, config_schema=GRAND_AUSTRIA_CONFIG_SCHEMA,
+        module=GrandAustriaHotelGame, serialize=GrandAustriaHotelGame.serialize,
+        deserialize=GrandAustriaHotelGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=HiveGame.game_id,
+        name="Hive",
+        name_zh="昆虫棋",
+        min_players=HiveGame.min_players,
+        max_players=HiveGame.max_players,
+        turn_mode="turn",
+        action_schema=HIVE_ACTION_SCHEMA,
+        config_schema=HIVE_CONFIG_SCHEMA,
+        module=HiveGame,
+        serialize=HiveGame.serialize,
+        deserialize=HiveGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

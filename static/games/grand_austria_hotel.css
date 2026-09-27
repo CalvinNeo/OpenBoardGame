@@ -1,0 +1,163 @@
+.gah-root, .gah-root *, .gah-dialog, .gah-dialog * { box-sizing: border-box; min-width: 0; }
+.gah-root { --gah-ink:#382b29; --gah-wine:#703b42; --gah-gold:#a88242; --gah-paper:#fcf8ef; color:var(--gah-ink); font:14px/1.4 Georgia,"Microsoft YaHei",serif; background:#ede5d7; border-radius:16px; padding:16px; max-width:100%; }
+.gah-root button, .gah-root input, .gah-root select, .gah-dialog button { font:inherit; }
+.gah-root button { color:var(--gah-ink); background:#fffaf0; border:1px solid #cdbb9d; border-radius:8px; padding:7px 10px; white-space:normal; overflow-wrap:anywhere; cursor:pointer; box-shadow:0 2px 0 #382b2908; }
+.gah-root button:hover:not(:disabled) { border-color:var(--gah-gold); background:#fff; }
+.gah-root button:disabled { opacity:.48; cursor:default; }
+.gah-root button:focus-visible, .gah-root [tabindex]:focus-visible { outline:3px solid #956b31; outline-offset:2px; }
+.gah-root .gah-primary { background:var(--gah-wine); color:#fff; border-color:var(--gah-wine); }
+.gah-root .gah-primary:hover:not(:disabled) { background:#543038; color:#fff; }
+.gah-root .gah-selected { outline:3px solid #a88242; outline-offset:-3px; background:#fff3d7; }
+.gah-root h2, .gah-root h3, .gah-root p { margin:0; }
+.gah-root h3 { font-size:15px; }
+.gah-brand { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:2px 2px 12px; border-bottom:1px solid #cdbb9d; }
+.gah-brand h2 { font-size:24px; color:var(--gah-wine); letter-spacing:.02em; }
+.gah-kicker { text-transform:uppercase; font:10px/1.5 sans-serif; letter-spacing:.22em; color:#806343; }
+.gah-round { text-align:right; font:13px/1.7 sans-serif; }
+.gah-round strong { color:var(--gah-wine); font-size:18px; }
+.gah-players { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:7px; margin:12px 0; }
+.gah-player { display:flex; flex-direction:column; text-align:left; gap:4px; }
+.gah-player-name { display:flex; justify-content:space-between; gap:8px; overflow-wrap:anywhere; }
+.gah-player.gah-active { border-color:var(--gah-wine); box-shadow:inset 3px 0 var(--gah-wine); }
+.gah-player-stats { font-size:13px; display:flex; flex-wrap:wrap; gap:8px; }
+.gah-shared { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:12px; }
+.gah-box { background:var(--gah-paper); border:1px solid #d8cdbb; border-radius:12px; padding:12px; min-width:0; }
+.gah-heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-bottom:9px; }
+.gah-small { font:12px/1.5 sans-serif; color:#796b5f; overflow-wrap:anywhere; }
+.gah-dice { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:7px; }
+.gah-root .gah-die { display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 3px; }
+.gah-die-face { font-family:"Segoe UI Symbol",sans-serif; font-size:28px; line-height:1.15; }
+.gah-die-count { font-size:12px; color:#7b5832; }
+.gah-die-icons { font-size:18px; line-height:1.25; }
+.gah-market { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
+.gah-market > div { display:flex; flex-direction:column; }
+.gah-market .gah-card { width:100%; flex:1; }
+.gah-root .gah-card { display:flex; flex-direction:column; text-align:left; gap:5px; padding:7px; border-top:4px solid var(--gah-color,#ba9770); min-height:114px; }
+.gah-red { --gah-color:#b94c50; --gah-tint:#f9e7e3; }
+.gah-blue { --gah-color:#387ca1; --gah-tint:#e5f2f6; }
+.gah-yellow { --gah-color:#b58b21; --gah-tint:#faf1cd; }
+.gah-green { --gah-color:#588658; --gah-tint:#e8f2df; }
+.gah-card-top { display:flex; justify-content:space-between; gap:3px; font:12px/1.3 sans-serif; }
+.gah-card-name { font-size:12px; line-height:1.25; min-height:30px; overflow-wrap:anywhere; }
+.gah-order { display:flex; flex-wrap:wrap; gap:4px; font-size:15px; }
+.gah-order span { display:inline-flex; align-items:center; gap:2px; }
+.gah-order .gah-served { opacity:.35; text-decoration:line-through; }
+.gah-card-reward { font-size:11px; line-height:1.4; color:#766447; margin-top:auto; overflow-wrap:anywhere; }
+.gah-card-cost { display:block; text-align:center; font:11px/1.5 sans-serif; margin-top:5px; }
+.gah-command { border:1px solid #ae8c61; background:#fffaf0; border-left:4px solid var(--gah-wine); border-radius:10px; margin:12px 0; padding:12px; }
+.gah-command-title { font-weight:bold; font-size:15px; color:var(--gah-wine); }
+.gah-command-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:9px; }
+.gah-command-row > label { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font:13px sans-serif; }
+.gah-command-row input[type=checkbox] { width:16px; height:16px; margin:0; }
+.gah-command-row select { max-width:100%; padding:6px; background:white; border:1px solid #cdbb9d; border-radius:6px; }
+.gah-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:7px; max-height:230px; overflow-y:auto; padding:3px; margin-top:8px; }
+.gah-options button { text-align:left; font-size:13px; }
+.gah-options button small { display:block; margin-top:4px; font-size:11px; color:#706357; line-height:1.5; }
+.gah-confirmation { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; border-top:1px solid #e0d4c3; padding-top:9px; }
+.gah-confirmation p { flex:1 1 180px; overflow-wrap:anywhere; }
+.gah-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+.gah-hotel { padding:12px 14px; background:linear-gradient(90deg,#ece0cb 0,#faf4e7 12%,#faf4e7 88%,#ece0cb 100%); border:1px solid #bd9e6c; border-radius:8px; }
+.gah-hotel-title { text-align:center; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:#775d3d; margin-bottom:10px; overflow-wrap:anywhere; }
+.gah-floor { display:grid; grid-template-columns:24px repeat(5,minmax(0,1fr)); gap:5px; margin-bottom:5px; align-items:stretch; }
+.gah-floor-label { display:flex; flex-direction:column; justify-content:center; align-items:center; font:10px/1.5 sans-serif; color:#755d40; }
+.gah-root .gah-room { border:2px solid var(--gah-color); border-radius:10px 10px 4px 4px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 1px; background:var(--gah-tint); min-height:55px; gap:2px; }
+.gah-room.gah-unprepared { opacity:.58; background:transparent; border-style:dashed; }
+.gah-room.gah-occupied { background:var(--gah-color); color:white; }
+.gah-room.gah-available { box-shadow:0 0 0 2px #a8824280; opacity:1; }
+.gah-room-number { font:11px/1 sans-serif; }
+.gah-room-symbol { font-size:16px; line-height:1.2; }
+.gah-room small { font:9px sans-serif; }
+.gah-groups { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; font:11px/1.6 sans-serif; }
+.gah-groups span { padding:3px 6px; background:#fff8; border-radius:4px; }
+.gah-kitchen { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; margin-bottom:9px; }
+.gah-resource { text-align:center; background:#eee5d7; border-radius:8px; padding:6px 2px; font:13px/1.5 sans-serif; }
+.gah-resource b { font-size:19px; }
+.gah-resource span { display:block; font-size:11px; }
+.gah-cafe { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+.gah-cafe .gah-card { min-height:128px; }
+.gah-cafe .gah-empty { border:1px dashed #cbbb9e; border-radius:8px; display:grid; place-items:center; color:#a99679; font-size:25px; min-height:128px; }
+.gah-staff { margin-top:12px; }
+.gah-staff summary { cursor:pointer; padding:8px 0; font-weight:bold; }
+.gah-staff-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:6px; max-height:265px; overflow-y:auto; padding:3px; }
+.gah-root .gah-staff-card { text-align:left; display:flex; flex-direction:column; gap:4px; font-size:12px; padding:8px; }
+.gah-staff-card strong { color:#755027; }
+.gah-staff-card small { color:#6c6054; font-size:11px; line-height:1.5; }
+.gah-public { margin-top:12px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+.gah-goal { display:flex; flex-direction:column; gap:6px; font-size:12px; padding:8px; }
+.gah-goal-text { overflow-wrap:anywhere; }
+.gah-emperors { display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
+.gah-emperors span { flex:1 1 180px; padding:7px 9px; border:1px solid #d8cdbb; border-radius:7px; background:#f8f1e2; font:12px/1.5 sans-serif; }
+.gah-emperors .gah-past { opacity:.55; }
+.gah-log { margin-top:12px; }
+.gah-log summary { cursor:pointer; font:12px sans-serif; }
+.gah-log ol { max-height:150px; overflow-y:auto; padding-left:22px; font:12px/1.8 sans-serif; }
+.gah-review { background:#fff5de; border:1px solid #b99051; border-radius:10px; padding:12px; margin:12px 0; }
+.gah-review-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; margin-top:10px; }
+.gah-review-player { padding:8px; background:white; border-radius:6px; overflow-wrap:anywhere; }
+.gah-review-player strong { color:var(--gah-wine); }
+.gah-review-player dl { display:grid; grid-template-columns:1fr auto; gap:3px 8px; margin:6px 0 0; font:12px/1.5 sans-serif; }
+.gah-review-player dd { margin:0; }
+.gah-dialog { width:min(620px,calc(100vw - 28px)); max-width:calc(100vw - 28px); max-height:85dvh; overflow-y:auto; padding:20px; border:1px solid #b99a6c; border-radius:14px; background:#fffaf0; color:#382b29; font:14px/1.7 Georgia,"Microsoft YaHei",serif; box-shadow:0 20px 80px #0005; overflow-wrap:anywhere; }
+.gah-dialog::backdrop { background:#241a25a8; }
+.gah-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.gah-dialog-head h2 { font-size:21px; margin:0; color:#703b42; }
+.gah-dialog h3 { font-size:16px; color:#703b42; }
+.gah-dialog-head button { border:1px solid #ccb58f; border-radius:7px; background:#fff; padding:6px 12px; }
+.gah-dialog li { margin-bottom:7px; }
+.gah-tip { position:fixed; z-index:10050; width:max-content; max-width:min(310px,calc(100vw - 24px)); background:#392c2e; color:white; border-radius:8px; padding:9px 12px; font:12px/1.6 sans-serif; pointer-events:none; overflow-wrap:anywhere; box-shadow:0 5px 20px #0003; }
+.gah-root.gah-explaining [data-gah-explain] { outline:2px dashed #397ead; outline-offset:2px; cursor:help; opacity:1; }
+.gah-root [data-gah-tip] { cursor:help; }
+@media(max-width:1000px) {
+  .gah-shared { grid-template-columns:1fr; }
+  .gah-dice { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  .gah-market .gah-card { min-height:95px; }
+}
+@media(max-width:650px) {
+  .gah-root { padding:10px; border-radius:10px; font-size:13px; }
+  .gah-brand h2 { font-size:20px; }
+  .gah-brand { align-items:flex-start; gap:5px; }
+  .gah-kicker { font-size:9px; letter-spacing:.12em; }
+  .gah-round { font-size:11px; }
+  .gah-round strong { font-size:16px; }
+  .gah-players { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .gah-player-name, .gah-player-stats { font-size:11px; gap:4px; }
+  .gah-box { padding:9px; }
+  .gah-layout { grid-template-columns:1fr; }
+  .gah-shared { gap:8px; }
+  .gah-dice { gap:4px; }
+  .gah-root .gah-die { padding:5px 1px; }
+  .gah-die-face { font-size:24px; }
+  .gah-die-icons { font-size:15px; }
+  .gah-die-count { font-size:10px; }
+  .gah-market { gap:4px; }
+  .gah-root .gah-market .gah-card { padding:5px 3px; gap:4px; }
+  .gah-card-top { font-size:10px; }
+  .gah-market .gah-card-name { font-size:10px; min-height:38px; }
+  .gah-market .gah-order { font-size:12px; gap:2px; }
+  .gah-market .gah-card-reward { display:none; }
+  .gah-command { padding:9px; }
+  .gah-command-row { gap:6px; }
+  .gah-command-row > button { flex:1 1 auto; }
+  .gah-command-row select { font-size:12px; }
+  .gah-options { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:210px; }
+  .gah-options button { font-size:12px; padding:7px; }
+  .gah-hotel { padding:9px; }
+  .gah-floor { grid-template-columns:20px repeat(5,minmax(0,1fr)); }
+  .gah-room { min-height:53px; }
+  .gah-cafe { gap:6px; }
+  .gah-staff-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .gah-public { grid-template-columns:1fr; }
+  .gah-goal { flex-direction:row; align-items:center; justify-content:space-between; }
+  .gah-goal-text { flex:1; }
+  .gah-emperors span { flex-basis:100%; }
+}
+@media(prefers-reduced-motion:no-preference) {
+  .gah-root button { transition:background .12s,border-color .12s; }
+}
+@media(max-width:380px) {
+  .gah-dice { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .gah-root .gah-die { flex-direction:row; justify-content:center; flex-wrap:wrap; gap:4px; }
+  .gah-die-icons { font-size:16px; }
+  .gah-market { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .gah-market .gah-card-name { font-size:11px; min-height:28px; }
+}
