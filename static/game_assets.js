@@ -717,11 +717,11 @@ const GAME_ASSETS = {
     "markup": "/static/games/eternal_decks.html?v=2"
   },
   "grand_austria_hotel": {
-    "scripts": ["/static/games/grand_austria_hotel.js?v=2"],
-    "styles": ["/static/games/grand_austria_hotel.css?v=2"],
+    "scripts": ["/static/games/grand_austria_hotel.js?v=3"],
+    "styles": ["/static/games/grand_austria_hotel.css?v=3"],
     "panel": "grandAustriaPanel",
     "header": "showGrandAustriaHeaderActions",
-    "markup": "/static/games/grand_austria_hotel.html?v=1"
+    "markup": "/static/games/grand_austria_hotel.html?v=2"
   },
   "ponzi_scheme": {
     "scripts": [

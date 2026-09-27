@@ -10,6 +10,10 @@
 .gah-root .gah-selected { outline:3px solid #a88242; outline-offset:-3px; background:#fff3d7; }
 .gah-root h2, .gah-root h3, .gah-root p { margin:0; }
 .gah-root h3 { font-size:15px; }
+#grandAustriaHelpBtn, #grandAustriaExplainBtn { color:#703b42; background:#fffaf0; border:1px solid #cdbb9d; border-radius:8px; cursor:pointer; }
+#grandAustriaHelpBtn:hover, #grandAustriaExplainBtn:hover { background:#f3e5cd; border-color:#a88242; }
+#grandAustriaExplainBtn[aria-pressed="true"] { color:#fff; background:#376d95; border-color:#376d95; box-shadow:0 0 0 3px #376d9526; }
+#grandAustriaHelpBtn:focus-visible, #grandAustriaExplainBtn:focus-visible { outline:3px solid #956b31; outline-offset:2px; }
 .gah-brand { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:2px 2px 12px; border-bottom:1px solid #cdbb9d; }
 .gah-brand h2 { font-size:24px; color:var(--gah-wine); letter-spacing:.02em; }
 .gah-kicker { text-transform:uppercase; font:10px/1.5 sans-serif; letter-spacing:.22em; color:#806343; }
@@ -53,8 +57,18 @@
 .gah-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:7px; max-height:230px; overflow-y:auto; padding:3px; margin-top:8px; }
 .gah-options button { text-align:left; font-size:13px; }
 .gah-options button small { display:block; margin-top:4px; font-size:11px; color:#706357; line-height:1.5; }
-.gah-confirmation { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; border-top:1px solid #e0d4c3; padding-top:9px; }
-.gah-confirmation p { flex:1 1 180px; overflow-wrap:anywhere; }
+.gah-selection-host { display:grid; position:relative; min-width:0; isolation:isolate; }
+.gah-selection-content, .gah-selection-overlay { grid-area:1 / 1; min-width:0; }
+.gah-selection-overlay { z-index:2; display:grid; place-items:center; padding:12px; border-radius:10px; background:rgba(52,37,35,.38); }
+.gah-selection-sheet { display:flex; flex-direction:column; gap:8px; width:100%; max-width:460px; padding:12px; border:1px solid #b59872; border-radius:9px; background:rgba(255,250,240,.96); box-shadow:0 5px 18px #30201b26; overflow-wrap:anywhere; }
+.gah-selection-title { color:var(--gah-wine); font:600 12px/1.4 sans-serif; }
+.gah-selection-meta { font:12px/1.5 sans-serif; }
+.gah-selection-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:2px; }
+.gah-selection-actions > :only-child { grid-column:1 / -1; }
+.gah-selection-sheet .gah-command-row { margin-top:0; }
+.gah-selection-sheet .gah-command-row > label { flex:1 1 150px; }
+.gah-selection-sheet .gah-command-row select { min-width:0; }
+.gah-selection-sheet .gah-command-row input { flex-shrink:0; }
 .gah-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
 .gah-hotel { padding:12px 14px; background:linear-gradient(90deg,#ece0cb 0,#faf4e7 12%,#faf4e7 88%,#ece0cb 100%); border:1px solid #bd9e6c; border-radius:8px; }
 .gah-hotel-title { text-align:center; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:#775d3d; margin-bottom:10px; overflow-wrap:anywhere; }
@@ -81,9 +95,18 @@
 .gah-staff { margin-top:12px; }
 .gah-staff summary { cursor:pointer; padding:8px 0; font-weight:bold; }
 .gah-staff-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:6px; max-height:265px; overflow-y:auto; padding:3px; }
-.gah-root .gah-staff-card { text-align:left; display:flex; flex-direction:column; gap:4px; font-size:12px; padding:8px; }
+.gah-root .gah-staff-card { text-align:left; display:flex; flex-direction:column; font-size:12px; border:1px solid #cdbb9d; border-radius:8px; background:#fffaf0; overflow-wrap:anywhere; }
+.gah-root .gah-staff-select { display:flex; flex:1; flex-direction:column; gap:5px; width:100%; padding:9px; border:0; border-radius:8px; box-shadow:none; text-align:left; font-size:12px; }
+.gah-staff-select del { color:#85756a; margin-left:4px; }
 .gah-staff-card strong { color:#755027; }
 .gah-staff-card small { color:#6c6054; font-size:11px; line-height:1.5; }
+.gah-staff-meta { display:flex; align-items:center; flex-wrap:wrap; gap:5px; padding:0 8px 8px; }
+.gah-staff-timing { display:inline-block; align-self:flex-start; max-width:100%; padding:4px 7px; border-radius:5px; font:600 11px/1.5 "Microsoft YaHei",sans-serif; overflow-wrap:anywhere; }
+.gah-timing-round { background:#e0ecfa; color:#285582; }
+.gah-timing-once { background:#fbeacb; color:#805513; }
+.gah-timing-permanent { background:#e3efdf; color:#365f35; }
+.gah-timing-end { background:#efe2f1; color:#704377; }
+.gah-staff-used { color:#85756a; font:11px/1.5 sans-serif; }
 .gah-public { margin-top:12px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
 .gah-goal { display:flex; flex-direction:column; gap:6px; font-size:12px; padding:8px; }
 .gah-goal-text { overflow-wrap:anywhere; }
@@ -107,7 +130,7 @@
 .gah-dialog-head button { border:1px solid #ccb58f; border-radius:7px; background:#fff; padding:6px 12px; }
 .gah-dialog li { margin-bottom:7px; }
 .gah-tip { position:fixed; z-index:10050; width:max-content; max-width:min(310px,calc(100vw - 24px)); background:#392c2e; color:white; border-radius:8px; padding:9px 12px; font:12px/1.6 sans-serif; pointer-events:none; overflow-wrap:anywhere; box-shadow:0 5px 20px #0003; }
-.gah-root.gah-explaining [data-gah-explain] { outline:2px dashed #397ead; outline-offset:2px; cursor:help; opacity:1; }
+.gah-root.gah-explaining [data-gah-explain]:not([inert] *) { outline:2px dashed #397ead; outline-offset:2px; cursor:help; opacity:1; }
 .gah-root [data-gah-tip] { cursor:help; }
 @media(max-width:1000px) {
   .gah-shared { grid-template-columns:1fr; }
@@ -143,6 +166,8 @@
   .gah-command-row select { font-size:12px; }
   .gah-options { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:210px; }
   .gah-options button { font-size:12px; padding:7px; }
+  .gah-selection-overlay { padding:8px; }
+  .gah-selection-sheet { padding:10px; }
   .gah-hotel { padding:9px; }
   .gah-floor { grid-template-columns:20px repeat(5,minmax(0,1fr)); }
   .gah-room { min-height:53px; }
