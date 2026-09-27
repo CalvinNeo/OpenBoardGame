@@ -1,15 +1,15 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "challengers": {
-    "scripts": ["/static/games/challengers.js?v=1"],
-    "styles": ["/static/games/challengers.css?v=1"],
+    "scripts": ["/static/games/challengers.js?v=3"],
+    "styles": ["/static/games/challengers.css?v=3"],
     "markup": "/static/games/challengers.html?v=1",
     "panel": "challengersPanel",
     "header": "showChallengersHeaderActions"
   },
   "dune_imperium": {
-    "scripts": ["/static/games/dune_imperium.js?v=1"],
-    "styles": ["/static/games/dune_imperium.css?v=1"],
+    "scripts": ["/static/games/dune_imperium.js?v=2"],
+    "styles": ["/static/games/dune_imperium.css?v=2"],
     "markup": "/static/games/dune_imperium.html?v=1",
     "panel": "duneImperiumPanel",
     "header": "showDuneImperiumHeaderActions"

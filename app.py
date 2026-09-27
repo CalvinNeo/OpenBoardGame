@@ -1,4 +1,6 @@
 import asyncio
+import contextvars
+import functools
 import inspect
 import json
 import logging
@@ -1069,6 +1071,16 @@ async def _leave_session(sid: str) -> None:
     await _emit_room_list_update()
 
 
+async def _run_bot_search(function, *args, **kwargs):
+    """Keep bot computation off the event loop, including on Python 3.8."""
+    to_thread = getattr(asyncio, "to_thread", None)
+    if to_thread is not None:
+        return await to_thread(function, *args, **kwargs)
+    context = contextvars.copy_context()
+    call = functools.partial(context.run, function, *args, **kwargs)
+    return await asyncio.get_running_loop().run_in_executor(None, call)
+
+
 async def _maybe_run_bots(room: Room) -> None:
     if room.bot_running or room.status != "in_game" or not room.game_state:
         return
@@ -1116,7 +1128,7 @@ async def _maybe_run_bots(room: Room) -> None:
                     candidate_state_version = room.state_version
                     try:
                         if room.game_type == "guandan":
-                            action = await asyncio.to_thread(
+                            action = await _run_bot_search(
                                 game_module.bot_move,
                                 state,
                                 candidate.player_id,
@@ -1125,14 +1137,14 @@ async def _maybe_run_bots(room: Room) -> None:
                         else:
                             params = inspect.signature(game_module.bot_move).parameters
                             if "progress_callback" in params:
-                                action = await asyncio.to_thread(
+                                action = await _run_bot_search(
                                     game_module.bot_move,
                                     state,
                                     candidate.player_id,
                                     progress_callback=progress_callback,
                                 )
                             else:
-                                action = await asyncio.to_thread(game_module.bot_move, state, candidate.player_id)
+                                action = await _run_bot_search(game_module.bot_move, state, candidate.player_id)
                     except Exception:
                         logger.exception(
                             "bot_move failed room=%s game=%s player=%s",

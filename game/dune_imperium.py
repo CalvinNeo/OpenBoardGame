@@ -73,9 +73,20 @@ def _recruit(state: Dict, pid: str, count: int) -> int:
     p = state["players"][pid]
     actual = min(count, 12 - p["garrison"] - p["troops"])
     p["garrison"] += actual
-    if state["turn"] and state["turn"]["mode"] == "agent" and state["current_turn"] == pid:
-        state["turn"]["recruited"] += actual
+    if state["phase"] == "agent" and state["current_turn"] == pid:
+        if state["turn"] and state["turn"]["mode"] == "agent":
+            state["turn"]["recruited"] += actual
+        elif not state["turn"]:
+            state["pre_turn"]["recruited"] += actual
     return actual
+
+
+def _deployed(state: Dict, pid: str, amount: int) -> None:
+    if state["phase"] == "agent" and state["current_turn"] == pid:
+        turn = state["turn"] or state["pre_turn"]
+        turn["deployed"] += amount
+        if amount:
+            turn["baron_checked"] = False
 
 
 def strength(player: Dict) -> int:
@@ -318,9 +329,11 @@ def _resolve_effect(state: Dict, e: Dict) -> None:
         for uid in _purchasable(state, pid):
             cost = _card(state, uid)["cost"]
             if cost <= 3:
-                options.append({"card": uid, "top": False})
+                options.append({"card": uid, "top": False, "spice": 0})
+                if p["recruitment"] and state["turn"] and state["turn"]["mode"] == "reveal":
+                    options.append({"card": uid, "top": True, "spice": 0})
             if cost <= 5 and p["spice"] >= 2:
-                options.append({"card": uid, "top": True})
+                options.append({"card": uid, "top": True, "spice": 2})
         if options:
             _prompt(state, e, options)
     elif kind == "double_cross":
@@ -386,11 +399,10 @@ def _choose(state: Dict, value) -> None:
     elif kind in ("deploy", "deployment"):
         p["garrison"] -= value
         p["troops"] += value
+        _deployed(state, pid, value)
         if state["turn"] and state["turn"]["mode"] == "agent" and pid == state["current_turn"]:
-            state["turn"]["deployed"] += value
             if kind == "deployment":
                 state["turn"]["normal_deployed"] += value
-            state["turn"]["baron_checked"] = False
     elif kind == "retreat":
         p["troops"] -= value
         p["garrison"] += value
@@ -423,13 +435,13 @@ def _choose(state: Dict, value) -> None:
     elif kind == "bindu" and value:
         state["bindu_pass"] = True
     elif kind == "bypass":
-        if value["top"]:
-            p["spice"] -= 2
+        p["spice"] -= value["spice"]
         _acquire(state, pid, value["card"], value["top"])
     elif kind == "double_cross":
         state["players"][value]["troops"] -= 1
         if p["garrison"] + p["troops"] < 12:
             p["troops"] += 1
+            _deployed(state, pid, 1)
     elif kind == "snooper":
         if value == "draw":
             _draw(state, pid, 1)
@@ -445,20 +457,28 @@ def _settle(state: Dict) -> None:
         _resolve_effect(state, state["interrupts"].pop(0))
     if state["choice"] or state["effects"]:
         return
+    for item in state["intrigue_resolving"]:
+        p = state["players"][item["owner"]]
+        target = p["intrigue_active"] if item["delayed"] else state["intrigue_discard"]
+        target.append(item["card"])
+    state["intrigue_resolving"] = []
     turn = state["turn"]
     if state["bindu_pass"]:
         state["bindu_pass"] = False
         _next_turn(state)
+        return
     elif turn and turn["mode"] == "agent":
         if turn["deployment_offered"] != turn["recruited"]:
             turn["deployment_offered"] = turn["recruited"]
             if SPACES[turn["space"]]["combat"]:
                 allowance = max(0, turn["recruited"] + 2 - turn["normal_deployed"])
                 _resolve_effect(state, dict(effect("deployment", amount=allowance), owner=state["current_turn"], source=None))
-        elif not turn["baron_checked"]:
+    if state["phase"] == "agent" and not state["choice"]:
+        turn = state["turn"] or state["pre_turn"]
+        p = state["players"][state["current_turn"]]
+        if not turn["baron_checked"] and turn["deployed"] >= 4:
             turn["baron_checked"] = True
-            p = state["players"][state["current_turn"]]
-            if p["leader"] == "baron" and not p["baron_used"] and turn["deployed"] >= 4:
+            if p["leader"] == "baron" and not p["baron_used"]:
                 _resolve_effect(state, dict(effect("baron_power"), owner=state["current_turn"], source=None))
 
 
@@ -514,7 +534,7 @@ def _intrigue_available(state: Dict, pid: str, key: str) -> bool:
             return False
         if timing == "start" and (state["started"] or turn):
             return False
-        if key in ("urgent_mission", "dispatch_envoy", "infiltrate") and turn and turn["mode"] == "reveal":
+        if key in ("dispatch_envoy", "infiltrate") and turn:
             return False
     elif timing == "win":
         if phase != "rewards" or state["combat_winner"] != pid:
@@ -614,8 +634,8 @@ def _agent(state: Dict, pid: str, action: Dict) -> None:
     p["hand"].remove(uid)
     p["played"].append(uid)
     state["occupied"][space_id].append({"owner": pid, "agent": agent})
-    state["turn"] = {"mode": "agent", "space": space_id, "card": uid, "recruited": 0, "deployed": 0,
-            "deployment_offered": -1, "normal_deployed": 0, "baron_checked": False}
+    state["turn"] = dict(state["pre_turn"], mode="agent", space=space_id, card=uid,
+                         deployment_offered=-1, normal_deployed=0)
     state["started"] = True
     p["envoy"] = p["infiltrate"] = False
     icon = SPACES[space_id]["icon"]
@@ -635,7 +655,7 @@ def _agent(state: Dict, pid: str, action: Dict) -> None:
 
 def _reveal(state: Dict, pid: str) -> None:
     p = state["players"][pid]
-    state["turn"] = {"mode": "reveal"}
+    state["turn"] = dict(state["pre_turn"], mode="reveal")
     state["started"] = True
     p["revealed"], p["hand"] = p["hand"], []
     p["persuasion"] += 2 * int(p["council"])
@@ -648,6 +668,7 @@ def _reveal(state: Dict, pid: str) -> None:
 def _next_turn(state: Dict) -> None:
     pid = state["current_turn"]
     state["turn"] = None
+    state["pre_turn"] = {"recruited": 0, "deployed": 0, "baron_checked": False}
     state["started"] = False
     order = state["order"]
     idx = order.index(pid)
@@ -682,7 +703,8 @@ def _hagal_turn(state: Dict) -> None:
         card = _hagal_draw(state)
         space_id = card["space"]
         if space_id == "harvest":
-            options = [s for s in state["spice_bonus"] if not state["occupied"][s] and state["spice_bonus"][s] > 0]
+            options = [s for s in state["spice_bonus"] if not state["occupied"][s] and state["spice_bonus"][s] > 0
+                       and not any(b["space"] == s for b in state["blocked"])]
             if not options:
                 continue
             space_id = max(options, key=lambda s: (state["spice_bonus"][s], {"great_flat": 3, "hagga_basin": 2, "imperial_basin": 1}[s]))
@@ -789,6 +811,7 @@ def _start_round(state: Dict) -> None:
     state["round"] += 1
     state["phase"] = "agent"
     state["turn"] = None
+    state["pre_turn"] = {"recruited": 0, "deployed": 0, "baron_checked": False}
     state["started"] = False
     state["occupied"] = {s: [] for s in SPACES}
     state["blocked"] = []
@@ -849,6 +872,7 @@ class DuneImperiumGame:
                  "random_step": 0, "order": [p["player_id"] for p in players], "players": {}, "round": 0,
                  "first": 0, "phase": "leader", "current_turn": players[-1]["player_id"], "turn": None,
                  "revision": 0, "effects": [], "choice": None, "interrupts": [], "started": False, "bindu_pass": False,
+                 "pre_turn": {"recruited": 0, "deployed": 0, "baron_checked": False}, "intrigue_resolving": [],
                  "cards": {}, "market": [], "market_deck": [], "reserve": {k: [] for k in RESERVE}, "trashed": [],
                  "intrigue_cards": {}, "intrigue_deck": [], "intrigue_discard": [], "intrigue_played": [],
                  "alliances": {f: None for f in FACTIONS}, "occupied": {s: [] for s in SPACES}, "blocked": [],
@@ -872,7 +896,7 @@ class DuneImperiumGame:
                  "leader": None, "spice": 0, "water": 1, "solari": 0, "vp": 1 if len(players) == 4 else 0,
                  "garrison": 3, "troops": 0, "swords": 0, "persuasion": 0, "discount": 0,
                  "influence": {f: 0 for f in FACTIONS}, "deck": [], "hand": [], "discard": [], "played": [], "revealed": [],
-                 "intrigues": [], "reserved": [], "agents": ["agent1", "agent2"], "council": False, "swordmaster": False,
+                 "intrigues": [], "intrigue_active": [], "reserved": [], "agents": ["agent1", "agent2"], "council": False, "swordmaster": False,
                  "envoy": False, "infiltrate": False, "recruitment": False, "done": False,
                  "baron_factions": [], "baron_used": False, "reveal_order": 0}
             p["deck"] = [make_card(k) for k in STARTER for _ in range(CARDS[k]["count"])]
@@ -902,6 +926,10 @@ class DuneImperiumGame:
             for space_id, troops, swords, count in HAGAL_CARDS:
                 state["hagal_deck"] += [{"space": space_id, "troops": troops, "swords": swords} for _ in range(count)]
             _shuffle(state, state["hagal_deck"])
+        first_players = list(range(len(players)))
+        _shuffle(state, first_players)
+        state["first"] = first_players[0]
+        state["current_turn"] = _round_order(state)[-1]
         return state
 
     @staticmethod
@@ -937,7 +965,7 @@ class DuneImperiumGame:
             if p["leader"] == "rabban":
                 p["spice"] += 1
                 p["solari"] += 1
-            waiting = [i for i in reversed(state["order"]) if not state["players"][i]["leader"]]
+            waiting = [i for i in reversed(_round_order(state)) if not state["players"][i]["leader"]]
             if waiting:
                 state["current_turn"] = waiting[0]
             else:
@@ -967,7 +995,8 @@ class DuneImperiumGame:
             data = INTRIGUES[key]
             _pay(p, data["cost"])
             p["intrigues"].remove(uid)
-            state["intrigue_discard"].append(uid)
+            state["intrigue_resolving"].append({"owner": pid, "card": uid,
+                                                "delayed": key in ("charisma", "recruitment_mission")})
             state["intrigue_played"].append({"player_id": pid, "card": key, "round": state["round"]})
             if key == "tiebreaker":
                 _gain(state, pid, {"spice": 10} if state["phase"] == "endgame" else {"swords": 2})
@@ -989,6 +1018,8 @@ class DuneImperiumGame:
                     p["reserved"] = []
                     p["done"] = True
                     p["persuasion"] = 0
+                    state["intrigue_discard"] += p["intrigue_active"]
+                    p["intrigue_active"] = []
                     state["reveal_counter"] += 1
                     p["reveal_order"] = state["reveal_counter"]
                 elif pid == state["order"][state["first"]]:
@@ -1027,6 +1058,9 @@ class DuneImperiumGame:
             row = {k: copy.deepcopy(p[k]) for k in ("name", "seat", "is_bot", "leader", "spice", "water", "solari", "vp", "garrison", "troops", "swords", "persuasion", "influence", "council", "swordmaster", "done", "baron_used")}
             row.update(player_id=pid, deck_count=len(p["deck"]), hand_count=len(p["hand"]), intrigue_count=len(p["intrigues"]),
                        agents=list(p["agents"]), strength=strength(p), discard=list(p["discard"]), played=list(p["played"]), revealed=list(p["revealed"]), reserved=list(p["reserved"]))
+            row["active_intrigues"] = [state["intrigue_cards"][uid] for uid in p["intrigue_active"]]
+            if p["baron_used"]:
+                row["baron_factions"] = list(p["baron_factions"])
             visible.update(p["discard"] + p["played"] + p["revealed"] + p["reserved"])
             if pid == viewer_id:
                 row.update(hand=list(p["hand"]), intrigues=[{"id": i, "kind": state["intrigue_cards"][i]} for i in p["intrigues"]],

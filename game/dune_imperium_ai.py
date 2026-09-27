@@ -202,7 +202,7 @@ def choose_move(view: Dict) -> Optional[Dict]:
         if mode == "bindu":
             return 0 if value else 1
         if mode == "bypass":
-            return purchase_value(value["card"]) - resource("spice", 2) * value["top"]
+            return purchase_value(value["card"]) - resource("spice", value["spice"]) + int(value["top"])
         if mode == "double_cross":
             return next(p["strength"] for p in opponents if p["player_id"] == value)
         if mode == "snooper":
@@ -245,7 +245,7 @@ def choose_move(view: Dict) -> Optional[Dict]:
                 return 0
             value = sum(effect_value(e) for e in d["effects"]) - sum(resource(k, n) for k, n in d["cost"].items())
             if key in ("dispatch_envoy", "infiltrate"):
-                return -10  # Save access tricks until the usual options are exhausted.
+                return 30 if own["agents"] and own["hand"] and not any(x["type"] == "agent" for x in moves) else -10
             if key == "urgent_mission":
                 return 70 if own["hand_count"] >= 2 and not own["agents"] else -10
             if key in ("charisma", "recruitment_mission"):

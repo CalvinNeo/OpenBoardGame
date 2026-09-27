@@ -62,6 +62,13 @@ def _base(state: Dict, uid: str) -> int:
     return min(7, state["round"]) if _kind(state, uid) == "cyborg" else _card(state, uid)["power"]
 
 
+def _effect(state: Dict, pid: str, uid: str) -> str:
+    # Hologram additions stay in the Robot deck, but have blank abilities.
+    # This follows the designer-confirmed online ruling documented in 124.md.
+    card = _card(state, uid)
+    return "none" if pid == ROBOT_ID and card["set"] != "robot" else card["effect"]
+
+
 def _new_card(state: Dict, kind: str, level: Optional[str] = None) -> str:
     uid = f"ch{len(state['cards']) + 1}"
     state["cards"][uid] = {"kind": kind, "level": level or CARDS[kind]["level"]}
@@ -112,20 +119,21 @@ def card_power(state: Dict, match: Dict, pid: str, entry: Dict, attacking: bool)
     """Immediate bonuses are snapshots; bench and flag effects are live auras."""
     uid = entry["id"]
     card = _card(state, uid)
+    effect = _effect(state, pid, uid)
     lane = match["lanes"][pid]
     power = _base(state, uid) + entry["bonus"]
     if attacking:
         power += entry["attack_bonus"]
-        if card["effect"] == "gangster":
+        if effect == "gangster":
             power += 2
-        if card["effect"] == "knight":
+        if effect == "knight":
             power += len(state["players"][_opponent(match, pid)]["trophies"])
     else:
-        power += {"skeleton": 1, "treasure": 2}.get(card["effect"], 0)
-        if card["effect"] == "illusionist":
+        power += {"skeleton": 1, "treasure": 2}.get(effect, 0)
+        if effect == "illusionist":
             power += max(0, 6 - len(_bench_names(state, lane)))
     for bench_uid in lane["bench"]:
-        effect = _card(state, bench_uid)["effect"]
+        effect = _effect(state, pid, bench_uid)
         if effect == "blacksmith" and card["set"] == "city":
             power += 1
         elif effect == "vendor" and card["set"] == "funfair":
@@ -180,7 +188,7 @@ def _market_to_lane(state: Dict, match: Dict, pid: str, level: str, count: int, 
 
 
 def _immediate(state: Dict, match: Dict, pid: str, uid: str) -> None:
-    effect = _card(state, uid)["effect"]
+    effect = _effect(state, pid, uid)
     lane = match["lanes"][pid]
     other_id = _opponent(match, pid)
     other = match["lanes"][other_id]
@@ -252,7 +260,7 @@ def _immediate(state: Dict, match: Dict, pid: str, uid: str) -> None:
 def _loss_effect(state: Dict, match: Dict, pid: str) -> None:
     lane = match["lanes"][pid]
     uid = lane["field"][-1]["id"]
-    effect = _card(state, uid)["effect"]
+    effect = _effect(state, pid, uid)
     if effect == "prince":
         lane["field"].pop()
         lane["exhaust"].append(uid)
@@ -273,7 +281,7 @@ def _loss_effect(state: Dict, match: Dict, pid: str) -> None:
 
 def _flag_effect(state: Dict, match: Dict, pid: str) -> None:
     uid = match["lanes"][pid]["field"][-1]["id"]
-    effect = _card(state, uid)["effect"]
+    effect = _effect(state, pid, uid)
     if effect in ("clown", "heroine"):
         _fans(state, pid, 2 if effect == "clown" else 3, match)
     elif effect == "cowboy":
@@ -577,6 +585,13 @@ def _card_view(state: Dict, uid: str) -> Dict:
     return {**CARDS[_kind(state, uid)], "id": uid, "level": state["cards"][uid]["level"], "power": _base(state, uid)}
 
 
+def _lane_card_view(state: Dict, pid: str, uid: str) -> Dict:
+    card = _card_view(state, uid)
+    if pid == ROBOT_ID and card["set"] != "robot":
+        card.update(effect="none", description="Robot 使用这张普通牌时忽略能力，保留基础战力、名称与系列。")
+    return card
+
+
 def _choice_view(state: Dict, choice: Dict) -> Dict:
     return {"kind": choice["kind"], "min": choice["min"], "max": choice["max"],
             "optional": bool(choice.get("optional")), "source": _card_view(state, choice["source"]),
@@ -659,7 +674,7 @@ class ChallengersGame:
 
     @staticmethod
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
-        cfg = copy.deepcopy(config or {})
+        cfg = copy.deepcopy({} if config is None else config)
         if not _CONFIG.is_valid(cfg) or any(type(cfg[key]) is not int for key in ("seed", "robot_level") if key in cfg):
             raise ValueError("Invalid Challengers configuration.")
         if not 1 <= len(players) <= 8:
@@ -697,8 +712,10 @@ class ChallengersGame:
         seats = list(ids)
         if len(ids) % 2:
             robot = list(ROBOT_STARTER)
-            upgrades = [cid for cid, card in CARDS.items() if card["level"] == "R" or
-                        (len(ids) == 1 and cfg.get("solo_special") and card["level"] == "SOLO")]
+            upgrades = [cid for cid, card in CARDS.items()
+                        if card["level"] == "R" or
+                        (len(ids) == 1 and cfg.get("solo_special") and card["level"] == "SOLO")
+                        for _ in range(card["copies"])]
             _shuffle(state, upgrades)
             level = state["config"]["robot_level"]
             for i, kind in enumerate(("alpha", "beta", "good_bot", "champ_bot"), start=2):
@@ -778,11 +795,11 @@ class ChallengersGame:
         for match in state["matches"]:
             lanes = {}
             for pid, lane in match["lanes"].items():
-                field = [{**_card_view(state, e["id"]), "bonus": e["bonus"],
+                field = [{**_lane_card_view(state, pid, e["id"]), "bonus": e["bonus"],
                           "total_power": card_power(state, match, pid, e, match["holder"] != pid)} for e in lane["field"]]
                 power = field[-1]["total_power"] if field and match["holder"] == pid else sum(c["total_power"] for c in field)
-                lanes[pid] = {"field": field, "bench": [_card_view(state, uid) for uid in lane["bench"]],
-                              "exhaust": [_card_view(state, uid) for uid in lane["exhaust"]],
+                lanes[pid] = {"field": field, "bench": [_lane_card_view(state, pid, uid) for uid in lane["bench"]],
+                              "exhaust": [_lane_card_view(state, pid, uid) for uid in lane["exhaust"]],
                               "draw_count": len(lane["draw"]), "power": power,
                               "bench_count": len(_bench_names(state, lane))}
             pending = match["pending"]

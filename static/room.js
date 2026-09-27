@@ -756,6 +756,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  challengers: 1.79,
   las_vegas: 1.17,
   for_sale: 1.25,
   cheaty_mages: 1.61,
