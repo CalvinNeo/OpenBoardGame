@@ -1,0 +1,14 @@
+<template data-game-target="odinHeaderActions" data-game-mode="contents">
+  <button id="odinHelpBtn" type="button" aria-haspopup="dialog" aria-controls="odinDialog">Help</button>
+  <button id="odinExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="odinPanel" data-game-mode="contents">
+  <div id="odinRoot" class="od-root"></div>
+  <div id="odinTip" class="od-tip" role="status" hidden></div>
+</template>
+<template data-game-target="odinDialog" data-game-mode="replace">
+  <dialog id="odinDialog" class="od-dialog" aria-labelledby="odinDialogTitle">
+    <div class="od-dialog-head"><h2 id="odinDialogTitle"></h2><button id="odinClose" type="button">Close</button></div>
+    <div id="odinDialogBody"></div>
+  </dialog>
+</template>

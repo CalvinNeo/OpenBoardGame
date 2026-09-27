@@ -808,30 +808,11 @@ class TexasHoldemGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
+        if not TexasHoldemGame.get_legal_actions(state, bot_id):
             return None
-        if bot_id not in state["players"]:
-            return None
-        phase = state.get("phase")
-        if phase == "hand_end":
-            legal = TexasHoldemGame.get_legal_actions(state, bot_id)
-            if "rebuy" in legal:
-                return {"type": "rebuy"}
-            if "next_hand" in legal:
-                return {"type": "next_hand"}
-            return None
-        if state.get("current_turn") != bot_id:
-            return None
-        legal = TexasHoldemGame.get_legal_actions(state, bot_id)
-        if not legal:
-            return None
-        if "check" in legal:
-            return {"type": "check"}
-        if "call" in legal:
-            return {"type": "call"}
-        if "fold" in legal:
-            return {"type": "fold"}
-        return {"type": "all_in"}
+        from game.texas_holdem_ai import choose_action
+
+        return choose_action(TexasHoldemGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
