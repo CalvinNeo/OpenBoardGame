@@ -210,7 +210,7 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("function arkNovaFootprintAt", script)
         self.assertIn("function arkNovaPlacementAtAnchor", script)
         self.assertIn("arkNovaSetBuildPreview(cellId, placement ? placement.rotation", script)
-        self.assertIn("Choose one anchor hex on Map 0", script)
+        self.assertIn("Choose one anchor hex on the zoo map", script)
         self.assertIn("petting_zoo: [[0, 0], [0, -1], [1, -2]]", script)
         self.assertIn("reptile_house: [[0, 0], [0, -1], [1, -1], [2, -2], [2, -1]]", script)
         self.assertIn("large_bird_aviary: [[0, 0], [0, -1], [1, -2], [1, -1], [2, -1]]", script)
@@ -273,7 +273,7 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("function arkNovaPendingBuildingType", script)
         self.assertIn('{ building_type: arkNovaPendingBuildingType(pending) }', script)
         self.assertIn('pendingType === "place_free_building" ? { skip: true }', script)
-        self.assertIn("Choose one anchor hex on Map 0", script)
+        self.assertIn("Choose one anchor hex on the zoo map", script)
 
     def test_pending_choice_is_integrated_into_plan_action(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
@@ -292,7 +292,8 @@ class ArkNovaIntegrationTests(unittest.TestCase):
 
     def test_server_errors_use_the_active_game_type(self) -> None:
         script = (ROOT / "static" / "room.js").read_text(encoding="utf-8")
-        self.assertIn('if (currentGameType === "ark_nova"', script)
+        self.assertIn('currentGameType === "ark_nova"', script)
+        self.assertIn('window.showArkNovaError(data.message)', script)
         self.assertNotIn('if (gameType === "ark_nova"', script)
 
     def test_mobile_map_has_contextual_rotate_control(self) -> None:

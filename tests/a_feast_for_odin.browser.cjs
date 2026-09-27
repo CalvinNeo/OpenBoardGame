@@ -158,6 +158,12 @@ async function intercept(page) {
           }
           await page.locator('[data-od-action="board:0"]').click();
         }
+        if(key==='action') {
+          for(const category of ['build','hunt','market','craft','trade','sail','occupation']) {
+            await page.locator(`[data-od-action="group:${category}"]`).click();
+            await bounds(page,`${category} ${width}`);checks++;
+          }
+        }
         if(['upgrade','pillage','occupation'].includes(key)) {
           const choice=page.locator('.od-console [data-od-action^="move:"]:not(:disabled)').first();
           await choice.click();await bounds(page,`${key} selection ${width}`);checks++;
@@ -194,6 +200,11 @@ async function intercept(page) {
     assert.deepEqual(await page.evaluate(()=>odinCaptured.at(-1).action),{type:'place',revision:fixtures.action.revision,board:0,good:'rune',x:0,y:10,rotation:1,flip:true});
     await render(page,'action');await page.locator('[data-od-action="good:rune"]').click();
     await page.locator('.od-wordmark').click();assert.equal(await page.locator('.od-placement').count(),0);
+    await render(page,'feast');
+    await page.locator('.od-feast .od-options button').first().click();
+    assert.equal(await page.locator('.od-feast .od-selection').count(),1);
+    await page.locator('.od-feast').getByRole('button',{name:'Confirm',exact:true}).click();
+    assert.equal(await page.evaluate(()=>odinCaptured.at(-1).action.type),'serve');
     await render(page,'review');await page.getByRole('button',{name:'Next Round',exact:true}).click();
     assert.equal(await page.evaluate(()=>odinCaptured.at(-1).action.type),'next_round');
 

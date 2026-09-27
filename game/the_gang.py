@@ -301,6 +301,7 @@ def _card_view(card: Dict) -> Dict:
 
 
 def _deal_hole_cards(state: Dict) -> None:
+    state["bot_ranked"] = []
     deck = state.get("deck", [])
     for pid in state.get("turn_order", []):
         hand = [deck.pop(), deck.pop()]
@@ -310,6 +311,7 @@ def _deal_hole_cards(state: Dict) -> None:
 
 
 def _deal_community(state: Dict, count: int) -> None:
+    state["bot_ranked"] = []
     deck = state.get("deck", [])
     cards = state.setdefault("community_cards", [])
     for _ in range(count):
@@ -342,6 +344,15 @@ def _next_ready_all(state: Dict) -> bool:
 
 def _set_rank_default(state: Dict) -> None:
     state["ranking"] = list(state.get("turn_order", []))
+
+
+def _record_bot_rank(state: Dict, player_id: str) -> None:
+    """Remember applied decisions, never mutate state inside a bot search."""
+    if not state.get("player_meta", {}).get(player_id, {}).get("is_bot"):
+        return
+    ranked = state.setdefault("bot_ranked", [])
+    if player_id not in ranked:
+        ranked.append(player_id)
 
 
 def _update_hand_cache(state: Dict) -> None:
@@ -688,6 +699,7 @@ class TheGangGame:
         tokens = state.get("tokens", 0)
 
         if phase == "preflop":
+            actions.append("move_rank")
             if not state["players"][player_id].get("reveal_ready"):
                 actions.append("reveal_next")
             if tokens > 0:
@@ -748,6 +760,7 @@ class TheGangGame:
                 if pdata.get("reveal_ready"):
                     return [], "already ready"
                 pdata["reveal_ready"] = True
+                _record_bot_rank(state, player_id)
                 if not _reveal_ready_all(state):
                     return [], None
                 _reset_reveal_ready(state)
@@ -762,6 +775,7 @@ class TheGangGame:
                 if pdata.get("reveal_ready"):
                     return [], "already ready"
                 pdata["reveal_ready"] = True
+                _record_bot_rank(state, player_id)
                 if not _reveal_ready_all(state):
                     return [], None
                 _reset_reveal_ready(state)
@@ -776,6 +790,7 @@ class TheGangGame:
                 if pdata.get("reveal_ready"):
                     return [], "already ready"
                 pdata["reveal_ready"] = True
+                _record_bot_rank(state, player_id)
                 if not _reveal_ready_all(state):
                     return [], None
                 _reset_reveal_ready(state)
@@ -791,7 +806,7 @@ class TheGangGame:
             return [], "invalid phase"
 
         if action_type == "move_rank":
-            if phase not in ("flop", "turn", "river"):
+            if phase not in ("preflop", "flop", "turn", "river"):
                 return [], "invalid phase"
             target_id = action.get("player_id")
             to_index = action.get("to_index")
@@ -803,6 +818,16 @@ class TheGangGame:
                 return [], "unknown target"
             if not _can_move_rank(state, player_id, target_id, to_index):
                 return [], "target locked"
+            _record_bot_rank(state, player_id)
+            # An explicit placement of a bot by a human also counts as its
+            # decision this street, so it does not undo the human's correction.
+            if not state.get("player_meta", {}).get(player_id, {}).get("is_bot"):
+                _record_bot_rank(state, target_id)
+            current_index = state["ranking"].index(target_id)
+            to_index = max(0, min(to_index, len(state["ranking"]) - 1))
+            if current_index == to_index:
+                return [], None
+            _reset_reveal_ready(state)
             if any(pdata.get("ready") for pdata in state.get("players", {}).values()):
                 for pdata in state.get("players", {}).values():
                     pdata["ready"] = False
@@ -821,6 +846,7 @@ class TheGangGame:
                 return [], "invalid phase"
             pdata = state["players"][player_id]
             pdata["ready"] = not pdata.get("ready")
+            _record_bot_rank(state, player_id)
             _update_lock_timer(state)
             events.append(
                 {
@@ -879,6 +905,11 @@ class TheGangGame:
                 return [], "target has no cards"
             unrevealed = [card for card in hand if not card.get("revealed")]
             card = random.choice(unrevealed or hand)
+            if not card.get("revealed"):
+                state["bot_ranked"] = []
+                _reset_reveal_ready(state)
+                _reset_ready(state)
+                _update_lock_timer(state)
             card["revealed"] = True
             events.append(
                 {
@@ -989,20 +1020,28 @@ class TheGangGame:
             return None
         phase = state.get("phase")
 
+        if phase in ("preflop", "flop", "turn", "river") and bot_id not in state.get("bot_ranked", []):
+            from game.the_gang_ai import choose_bot_rank
+
+            view = TheGangGame.get_public_view(state, bot_id)
+            target_index = choose_bot_rank(view)
+            if target_index != state["ranking"].index(bot_id):
+                return {"type": "move_rank", "player_id": bot_id, "to_index": target_index, "delay_ms": 450}
+
         if phase in ("preflop", "flop", "turn"):
             if state["players"][bot_id].get("reveal_ready"):
                 return None
-            return {"type": "reveal_next", "delay_ms": random.randint(400, 900)}
+            return {"type": "reveal_next", "delay_ms": 550}
 
         if phase == "river":
             if not state["players"][bot_id].get("ready"):
-                return {"type": "toggle_ready", "delay_ms": random.randint(300, 700)}
+                return {"type": "toggle_ready", "delay_ms": 400}
             return None
 
         if phase == "showdown":
             if state["players"][bot_id].get("next_ready"):
                 return None
-            return {"type": "next_round", "delay_ms": random.randint(600, 1200)}
+            return {"type": "next_round", "delay_ms": 700}
 
         return None
 

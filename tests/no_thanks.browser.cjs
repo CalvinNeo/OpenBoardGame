@@ -45,7 +45,7 @@ async function render(page, key) {
 }
 async function bounds(page, label) {
   const result = await page.evaluate(() => {
-    const bad = [...document.querySelectorAll('#noThanksPanel *, #noThanksDialog *')].filter(el => {
+    const bad = [...document.querySelectorAll('#noThanksPanel *, #noThanksDialog *, #noThanksHeaderActions *, #mobileExplainSlot *')].filter(el => {
       const r = el.getBoundingClientRect();
       const style = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && (r.left < -1 || r.right > innerWidth + 1 ||
@@ -63,6 +63,19 @@ async function pointClick(page, locator, touch = false) {
   else await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2);
 }
 
+async function checkHeaderPlacement(page, mobile) {
+  await page.waitForFunction(mobile => document.getElementById('noThanksExplainBtn').parentElement.id ===
+    (mobile ? 'mobileExplainSlot' : 'noThanksHeaderActions'), mobile);
+  assert.equal(await page.locator('#noThanksHelpBtn').evaluate(el => el.parentElement.id), 'noThanksHeaderActions');
+  assert.equal(await page.locator('#noThanksHeaderActions').evaluate(el => !!el.parentElement.matches('.game-panel > .panel-header')), true);
+  assert.equal(await page.locator('#noThanksPanel #noThanksHelpBtn, #noThanksPanel #noThanksExplainBtn').count(), 0);
+  assert.equal(await page.locator('#noThanksExplainBtn').count(), 1);
+  assert.equal(await page.locator('#noThanksHelpBtn').count(), 1);
+  assert.equal(await page.locator('#noThanksExplainBtn').getAttribute('aria-label'), 'Explain');
+  assert.equal(await page.locator('#noThanksHelpBtn').evaluate(el => getComputedStyle(el, '::before').content), '"?"');
+  assert.equal(await page.locator('#noThanksExplainBtn').evaluate(el => getComputedStyle(el, '::before').borderTopStyle), 'solid');
+}
+
 (async () => {
   const browser = await chromium.launch({channel: process.env.BROWSER_CHANNEL || 'chrome', headless: true});
   const errors = [];
@@ -74,9 +87,11 @@ async function pointClick(page, locator, touch = false) {
     await page.goto(base);
     await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
     assert.equal(await page.locator('#noThanksPanel').evaluate(el => el.children.length), 0);
+    assert.equal(await page.locator('#noThanksHeaderActions').evaluate(el => el.children.length), 0);
     assert.equal(await page.locator('script[src*="games/no_thanks.js"]').count(), 0);
     await page.evaluate(() => socket.emit('room:create', {name: 'No Thanks QA', game_type: 'no_thanks'}));
     await page.waitForFunction(() => currentGameType === 'no_thanks' && isGameAssetsLoaded('no_thanks'));
+    await checkHeaderPlacement(page, false);
     assert.equal(await page.locator('#noThanksConfigBox').isVisible(), true);
     await page.locator('#noThanksRounds').selectOption('2');
     for (const count of [2, 3]) {
@@ -103,6 +118,7 @@ async function pointClick(page, locator, touch = false) {
     await page.waitForFunction(before => isGameAssetsLoaded('no_thanks') && lastGameStatePayload?.view.turn_number === before.turn, before);
     assert.equal(await page.evaluate(() => roomId), before.room);
     assert.equal(await page.locator('#noThanksPanel').isVisible(), true);
+    await checkHeaderPlacement(page, false);
     await page.evaluate(() => { window.noThanksTestActions = []; sendAction = action => noThanksTestActions.push(action); });
 
     await render(page, 'playing');
@@ -111,31 +127,39 @@ async function pointClick(page, locator, touch = false) {
     assert.equal(await page.locator('.no-thanks-player-scores').filter({hasText: '🔒'}).count(), 6);
     await bounds(page, 'desktop');
     await page.locator('#noThanksPanel').screenshot({path: `${output}/desktop.png`});
-    await page.locator('#noThanksHelp').click();
+    await page.locator('.game-panel').screenshot({path: `${output}/desktop-header.png`});
+    await page.locator('#noThanksHelpBtn').click();
     assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), true);
     assert.match(await page.locator('#noThanksDialogBody').textContent(), /仍由你行动/);
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), false);
 
     // Both live controls and disabled controls explain without submitting actions.
-    await page.locator('#noThanksExplain').click();
+    await page.locator('#noThanksExplainBtn').click();
     await page.locator('#noThanksTake').click();
     assert.match(await page.locator('#noThanksDialogBody').textContent(), /仍由你继续行动/);
     assert.equal(await page.evaluate(() => noThanksTestActions.length), 0);
-    assert.equal(await page.locator('#noThanksExplain').getAttribute('aria-pressed'), 'false');
+    assert.equal(await page.locator('#noThanksExplainBtn').getAttribute('aria-pressed'), 'false');
     await page.locator('#noThanksDialogClose').click();
     await render(page, 'forced');
     assert.equal(await page.locator('#noThanksPass').isDisabled(), true);
-    await page.locator('#noThanksExplain').click();
+    await page.locator('#noThanksExplainBtn').click();
     await pointClick(page, page.locator('#noThanksPass'));
     assert.match(await page.locator('#noThanksDialogBody').textContent(), /没有筹码/);
     await page.keyboard.press('Escape');
-    await page.locator('#noThanksExplain').click();
+    await page.locator('#noThanksExplainBtn').click();
     await page.evaluate(() => { window.noThanksProbeCount = 0; const button = document.createElement('button'); button.id = 'noThanksProbe'; button.textContent = 'Probe'; button.onclick = () => noThanksProbeCount++; document.getElementById('noThanksPanel').append(button); });
     await page.locator('#noThanksProbe').click();
     assert.equal(await page.evaluate(() => noThanksProbeCount), 0);
     await page.keyboard.press('Escape');
     await page.locator('#noThanksProbe').evaluate(el => el.remove());
+
+    await page.locator('#noThanksExplainBtn').click();
+    await page.locator('#noThanksRemaining').click();
+    assert.match(await page.locator('#noThanksDialogTitle').textContent(), /Deck/);
+    assert.match(await page.locator('#noThanksDialogBody').textContent(), /不包括桌面当前牌/);
+    assert.equal(await page.evaluate(() => noThanksTestActions.length), 0);
+    await page.keyboard.press('Escape');
 
     await render(page, 'opening');
     await page.locator('#noThanksPass').click();
@@ -158,8 +182,10 @@ async function pointClick(page, locator, touch = false) {
     assert.match(await page.locator('#noThanksResult').textContent(), /wins|win/);
     await page.locator('#noThanksPanel').screenshot({path: `${output}/finished.png`});
 
+    await page.evaluate(() => setRoomControlsCollapsed(true));
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({width, height: 950});
+      await checkHeaderPlacement(page, width <= 900);
       for (const key of ['opening', 'playing', 'waiting', 'spectator', 'review', 'ready', 'finished']) {
         await render(page, key);
         await bounds(page, `${width} ${key}`);
@@ -172,14 +198,25 @@ async function pointClick(page, locator, touch = false) {
       if (width <= 390) {
         await render(page, 'playing');
         await page.locator('#noThanksPanel').screenshot({path: `${output}/mobile-${width}.png`});
-        await page.locator('#noThanksHelp').click();
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({path: `${output}/mobile-header-${width}.png`});
+        await page.locator('#noThanksHelpBtn').click();
         await bounds(page, `${width} help`);
         if (width === 390) await page.locator('#noThanksDialog').screenshot({path: `${output}/help.png`});
         await page.keyboard.press('Escape');
       }
     }
     await page.setViewportSize({width: 390, height: 950});
+    await checkHeaderPlacement(page, true);
+    await page.reload();
+    await page.waitForFunction(() => isGameAssetsLoaded('no_thanks') && lastGameStatePayload?.game_type === 'no_thanks');
+    await checkHeaderPlacement(page, true);
+    await page.evaluate(() => { window.noThanksTestActions = []; sendAction = action => noThanksTestActions.push(action); });
     await render(page, 'playing');
+    await page.locator('.no-thanks-player').last().scrollIntoViewIfNeeded();
+    assert.equal(await page.locator('#roomControlsPanel').evaluate(el => getComputedStyle(el).position), 'fixed');
+    const docked = await page.locator('#noThanksExplainBtn').boundingBox();
+    assert(docked.y >= 0 && docked.y + docked.height < 100, 'Explain stays in the fixed mobile Room Controls bar when scrolling');
     await pointClick(page, page.locator('#noThanksPot'), true);
     assert.equal(await page.locator('#noThanksTooltip').isVisible(), true);
     assert.match(await page.locator('#noThanksTooltip').textContent(), /Pot/);
@@ -188,17 +225,37 @@ async function pointClick(page, locator, touch = false) {
     await page.waitForTimeout(3200);
     assert.equal(await page.locator('#noThanksTooltip').isVisible(), false);
     await render(page, 'forced');
-    await page.locator('#noThanksExplain').tap();
+    await page.locator('#noThanksExplainBtn').tap();
     await pointClick(page, page.locator('#noThanksPass'), true);
     assert.match(await page.locator('#noThanksDialogBody').textContent(), /没有筹码/);
     await page.locator('#noThanksDialogClose').tap();
 
+    await page.locator('#noThanksExplainBtn').tap();
+    const collapsed = await page.locator('#roomControlsPanel').evaluate(el => el.classList.contains('collapsed'));
+    await page.locator('#roomControlsToggleBtn').tap();
+    assert.equal(await page.locator('#roomControlsPanel').evaluate(el => el.classList.contains('collapsed')), collapsed);
+    await page.locator('#noThanksExplainBtn').tap();
+    assert.equal(await page.locator('#noThanksExplainBtn').getAttribute('aria-pressed'), 'false');
+
     await page.evaluate(() => {
-      setGamePanelVisibility('cabo');
+      setGamePanelVisibility('poison');
     });
     assert.equal(await page.locator('#noThanksTooltip').isVisible(), false);
     assert.equal(await page.locator('#noThanksConfigBox').isVisible(), false);
     assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), false);
+    assert.equal(await page.locator('#noThanksHeaderActions').isVisible(), false);
+    assert.equal(await page.locator('#noThanksExplainBtn').isVisible(), false);
+    assert.equal(await page.locator('#mobileExplainSlot #noThanksExplainBtn').count(), 0);
+
+    // Enter another actual game, then leave it. The old Explain button must not linger.
+    await page.evaluate(() => socket.emit('room:create', {name: 'Header switch QA', game_type: 'poison'}));
+    await page.waitForFunction(() => currentGameType === 'poison' && isGameAssetsLoaded('poison'));
+    await page.waitForFunction(() => document.getElementById('mobileExplainSlot').querySelector('#poisonExplainBtn'));
+    assert.equal(await page.locator('#noThanksHelpBtn').isVisible(), false);
+    assert.equal(await page.locator('#noThanksExplainBtn').isVisible(), false);
+    await page.locator('#leaveBtn').click();
+    await page.waitForFunction(() => !roomId);
+    assert.equal(await page.locator('#mobileExplainSlot button').count(), 0);
     assert.deepEqual(errors, []);
     console.log(`No Thanks! browser checks passed; screenshots in ${output}`);
   } finally {

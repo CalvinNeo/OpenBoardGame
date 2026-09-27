@@ -85,6 +85,65 @@ async function pointClick(page, locator) {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
+async function exerciseLiveRoom(browser) {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('https://fonts.googleapis.com/**', route => route.abort());
+    async function botsReady(phase) {
+        await page.waitForFunction(expected => {
+            const view = lastGameStatePayload?.view;
+            return view?.phase === expected && view.players.filter(player => player.is_bot).length === 3 &&
+                view.players.filter(player => player.is_bot).every(player => expected === 'river' ? player.ready : player.reveal_ready);
+        }, phase, { timeout: 30000 });
+    }
+    try {
+        await page.goto(base);
+        await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+        await page.evaluate(() => socket.emit('room:create', { name: 'Gang QA', game_type: 'the_gang' }));
+        await page.waitForFunction(() => currentGameType === 'the_gang' && isGameAssetsLoaded('the_gang'));
+        for (let count = 2; count <= 4; count++) {
+            await page.evaluate(() => socket.emit('room:add_bot', { room_id: roomId }));
+            await page.waitForFunction(expected => currentRoomState.players.length === expected, count);
+        }
+        await page.evaluate(() => socket.emit('room:ready', { room_id: roomId, ready: true }));
+        await page.waitForFunction(() => !document.getElementById('startBtn').disabled);
+        await page.locator('#startBtn').click();
+        await botsReady('preflop');
+        assert.equal(await page.locator('#gangRanking select:enabled').count(), 4);
+        const ownIndex = await page.evaluate(() => lastGameStatePayload.view.ranking.indexOf(playerId));
+        const direction = ownIndex > 0 ? -1 : 1;
+        await page.locator('.gang-slot').nth(ownIndex).locator('.gang-move').nth(direction < 0 ? 0 : 1).click();
+        await page.waitForFunction(index => lastGameStatePayload.view.ranking.indexOf(playerId) === index, ownIndex + direction);
+        const humanOrder = await page.evaluate(() => lastGameStatePayload.view.ranking);
+        await botsReady('preflop');
+        assert.deepEqual(await page.evaluate(() => lastGameStatePayload.view.ranking), humanOrder);
+        assert.equal(await page.locator('#gangRevealBtn').isEnabled(), true);
+        for (const next of ['flop', 'turn', 'river']) {
+            await page.locator('#gangRevealBtn').click();
+            await botsReady(next);
+        }
+        await page.locator('#gangReadyBtn').click();
+        await page.waitForFunction(() => lastGameStatePayload.view.phase === 'showdown', null, { timeout: 10000 });
+        assert.equal(await page.locator('#gangRoundSummary').isVisible(), true);
+        await page.waitForFunction(() => lastGameStatePayload.view.players.filter(player => player.is_bot).every(player => player.next_ready));
+        assert.equal(await page.evaluate(() => lastGameStatePayload.view.phase), 'showdown');
+        await page.locator('#gangNextRoundBtn').click();
+        await botsReady('preflop');
+        // A reload also restores the new legal actions and the bots' settled decisions.
+        await page.reload();
+        await botsReady('preflop');
+        await page.waitForFunction(() => isGameAssetsLoaded('the_gang'));
+        assert.equal(await page.locator('#gangRanking select:enabled').count(), 4);
+        assert.deepEqual(errors, []);
+        await page.evaluate(() => new Promise(resolve => socket.emit('room:leave', { room_id: roomId }, resolve)));
+        console.log('PASS: live human + three bots, preflop reorder, all streets, showdown pause and reconnect.');
+    } finally {
+        await context.close();
+    }
+}
+
 (async () => {
     const browser = await chromium.launch({ channel: 'chrome', headless: true });
     const errors = [];
@@ -93,6 +152,7 @@ async function pointClick(page, locator) {
     page.on('pageerror', error => errors.push(error.message));
     await page.route('https://fonts.googleapis.com/**', route => route.abort());
     try {
+        await exerciseLiveRoom(browser);
         await page.goto(base);
         await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
         assert.equal(await page.locator('#theGangPanel').evaluate(el => el.children.length), 0);
@@ -121,7 +181,9 @@ async function pointClick(page, locator) {
 
         await render(page, 'preflop');
         assert.equal(await page.locator('#gangCommunity .is-placeholder').count(), 5);
-        assert.equal(await page.locator('#gangRanking select:enabled').count(), 0);
+        assert.equal(await page.locator('#gangRanking select:enabled').count(), 6);
+        await page.locator('.gang-slot').first().getByRole('button', { name: 'Move Alex down one rank' }).click();
+        assert.deepEqual(await page.evaluate(() => gangTestActions.pop()), { type: 'move_rank', player_id: 'p0', to_index: 1 });
         await page.locator('#gangMulliganBtn').click();
         assert.deepEqual(await page.evaluate(() => gangTestActions.pop()), { type: 'mulligan' });
         await page.locator('#gangRevealBtn').click();

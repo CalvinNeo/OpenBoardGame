@@ -133,7 +133,7 @@
       "id": "special_enclosure",
       "type": "special_enclosure",
       "short_label": "SPECIAL",
-      "label": "Build one special enclosure for free, following normal building rules",
+      "label": "Build one special enclosure for free, even with Build I; marked II spaces still require Build II",
       "timing": "immediate_once"
     },
     {

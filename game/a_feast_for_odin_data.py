@@ -59,7 +59,7 @@ for _key, (_name, _icon, _rows, _sword, _price, _forge) in SPECIALS.items():
     GOODS[_key] = {"name": _name, "icon": _icon, "color": "blue", "cells": shape(_rows),
                    "width": len(_rows[0]), "height": len(_rows), "sword": _sword, "price": _price,
                    "forge": _forge, "special": True, "points": 2 if _key == "crown" else 0, "upgrade": None}
-for _key, _name, _icon in (("silver", "银币", "🪙"), ("wood", "木材", "🪵"), ("stone", "石头", "🪨"), ("ore", "矿石", "🔷")):
+for _key, _name, _icon in (("silver", "银币", "💰"), ("wood", "木材", "🌲"), ("stone", "石头", "⛰️"), ("ore", "矿石", "🔷")):
     GOODS[_key] = {"name": _name, "icon": _icon, "color": _key, "cells": [[0, 0]], "width": 1, "height": 1,
                    "sword": 0, "points": 0, "upgrade": None}
 WEAPONS = {"bow": {"name": "弓箭", "icon": "🏹"}, "snare": {"name": "陷阱", "icon": "🪤"},
@@ -224,20 +224,20 @@ def occupation(key: str, name: str, number: str, points: int, text: str, **effec
 # Selected, individually verified effects. Each dark card has two separately
 # identified copies in this digital deck; duplicate effects stack explicitly.
 occupation("tanner", "制革匠", "47a", 2, "随时用 1 腌肉(🥓) 换 1 兽皮(🟩)。", start=True, trade=exchange({"salt_meat": 1}, {"hide": 1}))
-occupation("tutor", "家庭教师", "52a", 0, "随时支付 1 银币(🪙)，打出一张职业(📜)。", start=True, tutor=True)
-occupation("farm_shop", "农场店主", "53b", 1, "随时支付 1 银币(🪙)，把一块橙色食物升为红色。", start=True, shop=True)
+occupation("tutor", "家庭教师", "52a", 0, "随时支付 1 银币(💰)，打出一张职业(📜)。", start=True, tutor=True)
+occupation("farm_shop", "农场店主", "53b", 1, "随时支付 1 银币(💰)，把一块橙色食物升为红色。", start=True, shop=True)
 occupation("hunter", "熟练猎人", "153a", 2, "每次掷骰行动最多掷 4 次。", start=True, rolls=4)
-occupation("lumberjack", "伐木工", "154a", 2, "每次主行动获得至少 2 木材(🪵)，额外获得 1 银币(🪙)。", start=True, hook="wood2")
-occupation("refuge", "移民助手", "170a", 0, "每次移民少支付 2 银币(🪙)，最低为 0。", start=True, migration_discount=2)
-occupation("craft_leader", "工艺主管", "8a", 1, "收入前，工艺行动格上至少有 5 名自己的工人(🧑‍🌾)，获得 1 鲸油(🛢️)。", start=True, hook="craft5")
-occupation("clear_mind", "清醒者", "160a", 2, "宴会未食用蜂蜜酒(🍺)时，获得 1 银币(🪙)，可用于本次宴会。", start=True, hook="no_mead")
-occupation("peddler", "小贩", "1A", 0, "牲畜市场每次主行动的银币(🪙)总价减少 1。", livestock_discount=1)
-occupation("miller", "磨坊主", "7A", 3, "宴会后，库存每份谷物(🌾)给 1 银币(🪙)，最多 2。", hook="grain")
-occupation("milkman", "挤奶工", "10A", 1, "立即：如有绵羊(🐑)，得到牛奶(🥛)与银币(🪙)各 1；如有牛(🐄)，再得到各 1。", immediate="milkman")
+occupation("lumberjack", "伐木工", "154a", 2, "每次主行动获得至少 2 木材(🌲)，额外获得 1 银币(💰)。", start=True, hook="wood2")
+occupation("refuge", "移民助手", "170a", 0, "每次移民少支付 2 银币(💰)，最低为 0。", start=True, migration_discount=2)
+occupation("craft_leader", "工艺主管", "8a", 1, "收入前，工艺行动格上至少有 5 名自己的工人(👷)，获得 1 鲸油(🛢️)。", start=True, hook="craft5")
+occupation("clear_mind", "清醒者", "160a", 2, "宴会未食用蜂蜜酒(🍺)时，获得 1 银币(💰)，可用于本次宴会。", start=True, hook="no_mead")
+occupation("peddler", "小贩", "1A", 0, "牲畜市场每次主行动的银币(💰)总价减少 1。", livestock_discount=1)
+occupation("miller", "磨坊主", "7A", 3, "宴会后，库存每份谷物(🌾)给 1 银币(💰)，最多 2。", hook="grain")
+occupation("milkman", "挤奶工", "10A", 1, "立即：如有绵羊(🐑)，得到牛奶(🥛)与银币(💰)各 1；如有牛(🐄)，再得到各 1。", immediate="milkman")
 occupation("orient", "东方旅者", "17A", 0, "立即：把一块货物升级到同形状蓝色货物。", immediate="orient")
-occupation("miner", "矿工", "22A", 1, "立即：每艘长船(🚢)获得石头(🪨)、矿石(🔷)与银币(🪙)各 1。", immediate="miner")
-occupation("housekeeper", "管家", "23A", 1, "立即：每座石屋或长屋(🏠)获得 2 银币(🪙)。", immediate="houses")
-occupation("outfitter", "捕鲸装备商", "24A", 2, "立即：每艘商船(⛵)给 1 鲸油(🛢️)，每艘捕鲸艇(🛶)给 1 木材(🪵)。", immediate="outfitter")
+occupation("miner", "矿工", "22A", 1, "立即：每艘长船(🚢)获得石头(⛰️)、矿石(🔷)与银币(💰)各 1。", immediate="miner")
+occupation("housekeeper", "管家", "23A", 1, "立即：每座石屋或长屋(🏠)获得 2 银币(💰)。", immediate="houses")
+occupation("outfitter", "捕鲸装备商", "24A", 2, "立即：每艘商船(⛵)给 1 鲸油(🛢️)，每艘捕鲸艇(🛶)给 1 木材(🌲)。", immediate="outfitter")
 occupation("fisher", "渔夫", "27A", 1, "立即：每艘捕鲸艇(🛶)给 1 鱼干(🐟)。", immediate="fisher")
 occupation("arms_supplier", "武器供应商", "32A", 2, "立即：拥有 0/1/2/3 及以上长船(🚢)，抽 0/2/5/10 张武器。", immediate="arms")
 occupation("breeder", "家畜繁殖师", "35A", 0, "立即：自己的绵羊(🐑)和牛(🐄)额外繁殖一次。", immediate="breed")
@@ -247,14 +247,14 @@ occupation("rune_carver", "符文雕刻师", "50A", 2, "随时用 1 符文石(�
 occupation("tradesman", "商人", "54A", 3, "随时用 1 银器(🍴)换 1 箱子(📦)或 1 丝绸(🪡)。", trades=[exchange({"silverware": 1}, {"chest": 1}), exchange({"silverware": 1}, {"silk": 1})])
 occupation("archer", "弓箭手", "13B", 1, "立即得到 1 弓箭(🏹)；狩猎骰点减 1。", immediate="bow", hunt_discount=1)
 occupation("oil_boiler", "炼油师", "140A", 2, "每次捕鲸成功，额外获得 1 鲸油(🛢️)。", hook="whale")
-occupation("antler", "鹿角商", "143B", 2, "每次狩猎成功，额外获得 1 银币(🪙)。", hook="hunt")
+occupation("antler", "鹿角商", "143B", 2, "每次狩猎成功，额外获得 1 银币(💰)。", hook="hunt")
 occupation("sled", "雪橇手", "146C", 0, "狩猎和布置陷阱的骰点减 1。", hunt_discount=1, snare_discount=1)
 occupation("priest", "祭司", "149A", 1, "每次海外贸易开始前，获得 1 鲸油(🛢️)。", hook="overseas")
-occupation("quarryman", "采石工", "156B", 2, "每次主行动取得至少 1 石头(🪨)，额外获得 1 银币(🪙)。", hook="stone1")
-occupation("carpenter", "木工大师", "40B", 3, "木材(🪵)可像银币一样，作为单格放入石屋与长屋(🏠)。", wood_house=True)
-occupation("tailor_master", "裁缝大师", "44B", 1, "随时用兽皮(🟩)、羊毛(🧶)、亚麻布(🧵)各 1 换衣服(👕)及 3 银币(🪙)。", trade=exchange({"hide": 1, "wool": 1, "linen": 1}, {"clothing": 1, "silver": 3}))
-occupation("pirate", "海盗", "45C", -1, "随时用 1 木材(🪵)与 6 银币(🪙)换 1 宝箱(🧰)。", trade=exchange({"wood": 1, "silver": 6}, {"treasure": 1}))
-occupation("stonemason", "石匠", "6B", 1, "从山地取得的每个石头(🪨)，额外给 1 银币(🪙)。", hook="mountain_stone")
+occupation("quarryman", "采石工", "156B", 2, "每次主行动取得至少 1 石头(⛰️)，额外获得 1 银币(💰)。", hook="stone1")
+occupation("carpenter", "木工大师", "40B", 3, "木材(🌲)可像银币一样，作为单格放入石屋与长屋(🏠)。", wood_house=True)
+occupation("tailor_master", "裁缝大师", "44B", 1, "随时用兽皮(🟩)、羊毛(🧶)、亚麻布(🧵)各 1 换衣服(👕)及 3 银币(💰)。", trade=exchange({"hide": 1, "wool": 1, "linen": 1}, {"clothing": 1, "silver": 3}))
+occupation("pirate", "海盗", "45C", -1, "随时用 1 木材(🌲)与 6 银币(💰)换 1 宝箱(🧰)。", trade=exchange({"wood": 1, "silver": 6}, {"treasure": 1}))
+occupation("stonemason", "石匠", "6B", 1, "从山地取得的每个石头(⛰️)，额外给 1 银币(💰)。", hook="mountain_stone")
 
 CONFIG_SCHEMA = {"type": "object", "properties": {"seed": {"type": "integer"}, "rounds": {"type": "integer", "enum": [6, 7], "default": 7}}, "additionalProperties": False}
 ACTION_SCHEMA = {"type": "object", "required": ["type", "revision"], "properties": {

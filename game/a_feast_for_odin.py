@@ -909,7 +909,7 @@ def _apply(state: Dict, pid: str, move: Dict) -> None:
             _gain(state, pid, {"oil": _hooks(p, "overseas")})
         if action["workers"] == 4 and p["hand"]:
             state["pending"].insert(0, effect("timing"))
-        _log(state, pid, f"🧑‍🌾 {action['workers']} · {action['name']}")
+        _log(state, pid, f"👷 {action['workers']} · {action['name']}")
     elif state["phase"] == "action" and state["current_turn"] == pid and state["pending"]:
         _resolve(state, pid, move)
     elif t == "pass":

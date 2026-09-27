@@ -6,12 +6,18 @@ import random
 from collections import Counter
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from game.ark_nova_maps import (MAPS, MAP_IDS, map_definition as _map_definition, map_cells as _map_cells,
-                                map_rewards as _map_rewards, map_ability as _map_ability,
-                                adjacent_to_feature as _adjacent_to_feature, enclosure_capacity as _enclosure_capacity,
-                                map_milestone as _map_milestone)
-
 from typing import Any, Callable, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
+
+from game.ark_nova_maps import (
+    MAPS,
+    adjacent_to_feature as _adjacent_to_feature,
+    enclosure_capacity as _enclosure_capacity,
+    map_ability as _map_ability,
+    map_cells as _map_cells,
+    map_definition as _map_definition,
+    map_milestone as _map_milestone,
+    map_rewards as _map_rewards,
+)
 
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets" / "ark_nova"
@@ -2125,6 +2131,7 @@ def _run_effect_queue(state: MutableMapping[str, Any], events: List[Dict[str, An
         state["effect_queue"] = []
         if effect_ref.get("type") == "core":
             _run_core_effect(state, effect_ref, events)
+            _check_map_worker_rewards(state, events)
             state["effect_queue"].extend(tail)
             _activate_next_choice(state)
             continue
@@ -2145,6 +2152,7 @@ def _run_effect_queue(state: MutableMapping[str, Any], events: List[Dict[str, An
         _consume_effect_events(state, result["events"], events)
         if result["state_updates"]:
             _deep_update(state, result["state_updates"])
+        _check_map_worker_rewards(state, events)
         if int(state.get("break_position", 0)) >= int(state.get("break_limit", 999)):
             state["break_due"] = True
             state.setdefault("break_triggered_by", str(effect_ref["player_id"]))
@@ -2691,6 +2699,11 @@ def _resume_if_clear(state: MutableMapping[str, Any], events: List[Dict[str, Any
                 state["display_dirty"] = False
             turn_player_id = str(deferred["player_id"])
             turn_player = _player(state, turn_player_id)
+            if _harbor_available(state, turn_player_id):
+                _queue_choice(state, {"choice_id": f"harbor-end-{turn_player_id}", "type": "map_harbor",
+                    "player_id": turn_player_id, "prompt": "Commercial Harbor: sell a card for 3 money, or finish your turn",
+                    "options": _choice_options(turn_player["hand"]), "min": 0, "max": 1, "allow_skip": True})
+                return
             has_venom = any(
                 int(card.get("venom_tokens", 0))
                 for card in turn_player.get("action_cards", {}).values()
@@ -3225,7 +3238,9 @@ def _advance_card_sequence(state: MutableMapping[str, Any], events: List[Dict[st
             return
     if sequence["interactive"] and sequence["played"] < sequence["maximum"]:
         options = _continue_card_options(state, sequence)
-        if options:
+        # Selling a card can fund a continuation that is not affordable yet.
+        # Keep the action open so the Harbor remains usable between cards.
+        if options or _harbor_available(state, player_id):
             _queue_choice(state, {
                 "choice_id": f"continue-{action_id}-{player_id}-{sequence['played']}",
                 "type": "continue_cards", "player_id": player_id,
@@ -4411,6 +4426,17 @@ def _resolve_choice(
             state["discard"].append(card_id)
         state["pending_choice"] = None
         events.append(_event("discard", player_id=player_id, card_ids=card_ids))
+    elif choice_type == "map_harbor":
+        if selected:
+            card_id = str(_selected_choice_value(selected[0]))
+            if card_id not in player["hand"] or not _harbor_available(state, player_id):
+                return "Commercial Harbor cannot sell that card"
+            player["hand"].remove(card_id)
+            player["money"] += 3
+            state["discard"].append(card_id)
+            events.append(_event("harbor", player_id=player_id, card_id=card_id, amount=3))
+        player["map"]["harbor_used"] = True
+        state["pending_choice"] = None
     elif choice_type == "map_extra_action":
         state["pending_choice"] = None
         if selected:
@@ -4957,7 +4983,7 @@ def _public_action_availability(
     a disabled action never has to be presented without an explanation.
     """
     legal = set(legal_actions)
-    action_types = (*ACTION_IDS, "gain_x", "skip_extra_action", "keep_initial_cards", "resolve_choice")
+    action_types = (*ACTION_IDS, "gain_x", "skip_extra_action", "keep_initial_cards", "choose_map", "use_harbor", "resolve_choice")
     player = state.get("players", {}).get(player_id)
     pending = state.get("pending_choice")
 
@@ -4973,6 +4999,8 @@ def _public_action_availability(
             return None
         if state.get("game_over"):
             return "The game is over."
+        if state.get("map_selection_pending"):
+            return "All players must choose their zoo maps before selecting opening hands."
         if player is None:
             return "This player is not part of the game."
         if player_id in state.get("setup_pending", []):
@@ -5221,6 +5249,21 @@ class ArkNovaGame:
                 player["money"] += 3
                 player["map"]["harbor_used"] = True
                 events.append(_event("harbor", player_id=player_id, card_id=card_id, amount=3))
+                pending = candidate.get("pending_choice")
+                if pending and pending.get("player_id") == player_id:
+                    if pending.get("type") == "map_harbor":
+                        candidate["pending_choice"] = None
+                        _resume_if_clear(candidate, events)
+                    elif pending.get("type") == "continue_cards":
+                        candidate["pending_choice"] = None
+                        _resume_if_clear(candidate, events)
+                    elif pending.get("type") == "discard_cards":
+                        pending["options"] = _choice_options(player["hand"])
+                        pending["min"] = min(int(pending["min"]), len(player["hand"]))
+                        pending["max"] = min(int(pending["max"]), len(player["hand"]))
+                        if not pending["min"]:
+                            candidate["pending_choice"] = None
+                            _resume_if_clear(candidate, events)
                 state.clear()
                 state.update(candidate)
                 return events, None

@@ -181,7 +181,7 @@ def _animal_can_use_building(
     if building_type == "standard_enclosure":
         if rules._building_occupied(building):
             return False
-        if int(building.get("size", 0)) < required:
+        if rules._enclosure_capacity(player, building) < required:
             return False
     elif int(building.get("used_capacity", 0)) + required > int(building.get("capacity", 0)):
         return False
@@ -955,6 +955,8 @@ def _main_candidates(
 ) -> List[Dict[str, Any]]:
     actions: List[Dict[str, Any]] = []
     allowed = set(legal)
+    if "use_harbor" in allowed:
+        actions.extend({"type": "use_harbor", "card_id": card_id} for card_id in state["players"][player_id]["hand"])
     if "cards" in allowed:
         actions.extend(_cards_candidates(state, player_id))
     if "build" in allowed:
@@ -1008,7 +1010,7 @@ def _pending_build_candidates(
     actions: List[Dict[str, Any]] = []
     if choice_type == "place_free_enclosure":
         size = int(pending.get("size", 2))
-        for cells in _all_placements(state, player_id, "standard_enclosure", size, limit=12):
+        for cells in _all_placements(state, player_id, pending.get("building_type", "standard_enclosure"), size, limit=12):
             actions.append(
                 {"type": "resolve_choice", "choice_id": choice_id, "selection": {"cells": cells}}
             )
