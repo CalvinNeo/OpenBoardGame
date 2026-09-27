@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "a_feast_for_odin": {
+    "scripts": ["/static/games/a_feast_for_odin.js?v=1"],
+    "styles": ["/static/games/a_feast_for_odin.css?v=1"],
+    "markup": "/static/games/a_feast_for_odin.html?v=1",
+    "panel": "odinPanel",
+    "header": "showOdinHeaderActions"
+  },
   "no_thanks": {
     "scripts": ["/static/games/no_thanks.js?v=1"],
     "styles": ["/static/games/no_thanks.css?v=1"],

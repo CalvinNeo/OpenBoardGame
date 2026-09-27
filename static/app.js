@@ -351,6 +351,10 @@ function renderGameState(data) {
     if (typeof renderGrandAustriaGameState === "function") renderGrandAustriaGameState(data);
     return;
   }
+  if (gameType === "a_feast_for_odin") {
+    if (typeof renderOdinGameState === "function") renderOdinGameState(data);
+    return;
+  }
   if (gameType === "orloj") {
     if (typeof renderOrlojGameState === "function") renderOrlojGameState(data);
     return;

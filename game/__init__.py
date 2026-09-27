@@ -1,3 +1,4 @@
+from game.a_feast_for_odin import AFeastForOdinGame
 from game.las_vegas import LasVegasGame
 from game.for_sale import ForSaleGame
 from game.cheaty_mages import CheatyMagesGame
@@ -86,6 +87,7 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "AFeastForOdinGame",
     "LasVegasGame",
     "ForSaleGame",
     "CheatyMagesGame",

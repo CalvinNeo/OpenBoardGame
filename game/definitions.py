@@ -1,3 +1,4 @@
+from game.a_feast_for_odin import AFeastForOdinGame, ACTION_SCHEMA as ODIN_ACTION_SCHEMA, CONFIG_SCHEMA as ODIN_CONFIG_SCHEMA
 from game.orloj import OrlojGame, ACTION_SCHEMA as ORLOJ_ACTION_SCHEMA, CONFIG_SCHEMA as ORLOJ_CONFIG_SCHEMA
 from game.las_vegas import LasVegasGame, ACTION_SCHEMA as LAS_VEGAS_ACTION_SCHEMA, CONFIG_SCHEMA as LAS_VEGAS_CONFIG_SCHEMA
 from game.for_sale import ForSaleGame, ACTION_SCHEMA as FOR_SALE_ACTION_SCHEMA, CONFIG_SCHEMA as FOR_SALE_CONFIG_SCHEMA
@@ -123,6 +124,15 @@ register_game(
         turn_mode="turn", action_schema=NO_THANKS_ACTION_SCHEMA,
         config_schema=NO_THANKS_CONFIG_SCHEMA, module=NoThanksGame,
         serialize=NoThanksGame.serialize, deserialize=NoThanksGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=AFeastForOdinGame.game_id, name="A Feast for Odin", name_zh="奥丁的盛宴",
+        min_players=1, max_players=4, turn_mode="turn",
+        action_schema=ODIN_ACTION_SCHEMA, config_schema=ODIN_CONFIG_SCHEMA,
+        module=AFeastForOdinGame, serialize=AFeastForOdinGame.serialize, deserialize=AFeastForOdinGame.deserialize,
     )
 )
 
