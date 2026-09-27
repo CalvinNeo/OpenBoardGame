@@ -1,3 +1,4 @@
+from game.orloj import OrlojGame, ACTION_SCHEMA as ORLOJ_ACTION_SCHEMA, CONFIG_SCHEMA as ORLOJ_CONFIG_SCHEMA
 from game.las_vegas import LasVegasGame, ACTION_SCHEMA as LAS_VEGAS_ACTION_SCHEMA, CONFIG_SCHEMA as LAS_VEGAS_CONFIG_SCHEMA
 from game.for_sale import ForSaleGame, ACTION_SCHEMA as FOR_SALE_ACTION_SCHEMA, CONFIG_SCHEMA as FOR_SALE_CONFIG_SCHEMA
 from game.cheaty_mages import (
@@ -113,6 +114,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=OrlojGame.game_id, name="Orloj: The Prague Astronomical Clock", name_zh="布拉格天文钟",
+        min_players=2, max_players=4, turn_mode="turn",
+        action_schema=ORLOJ_ACTION_SCHEMA, config_schema=ORLOJ_CONFIG_SCHEMA,
+        module=OrlojGame, serialize=OrlojGame.serialize, deserialize=OrlojGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

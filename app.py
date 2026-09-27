@@ -158,13 +158,6 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
-    if (_has_live_boomerang_save(source_room_id)
-            or _has_live_private_save(source_room_id, "challengers")
-            or _has_live_private_save(source_room_id, "love_letter")
-            or _has_live_private_save(source_room_id, "for_sale")
-            or _has_live_private_save(source_room_id, "cheaty_mages")
-            or _has_live_private_save(source_room_id, "las_vegas")):
-        raise HTTPException(status_code=403, detail="This game is still active. Reconnect to the existing room.")
     latest_path = _get_latest_save_path(source_room_id)
     if not latest_path:
         raise HTTPException(status_code=404, detail="save not found")
@@ -271,7 +264,7 @@ def _has_live_boomerang_save(source_room_id: str) -> bool:
 
 
 def _has_live_private_save(source_room_id: str, game_type: str) -> bool:
-    """Do not let a save export or clone bypass an active game's private view."""
+    """Check whether a save or any related restore belongs to an active game."""
     related_ids = {source_room_id}
     changed = True
     while changed:
@@ -447,7 +440,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers") or key != "seed"},
+                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -568,7 +561,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": "sell"}
     if game_type == "red_doors":
         return {"type": "resolve"}
-    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia", "grand_austria_hotel", "dune_imperium", "challengers"):
+    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia", "grand_austria_hotel", "dune_imperium", "challengers", "orloj"):
         return {"type": action.get("type")}
     if game_type == "catan_starfarers" and action.get("type") in {
         "discard_resources",
@@ -1867,6 +1860,9 @@ async def on_room_load(sid, data):
         )
     raw_status = payload.get("room_status")
     status = raw_status if isinstance(raw_status, str) and raw_status else "in_game"
+    # Resuming an old Challengers bot effect can also settle the final match.
+    if game_type == "challengers" and game_state.get("game_over"):
+        status = "game_over"
     try:
         state_version = int(payload.get("state_version") or 0)
     except (TypeError, ValueError):

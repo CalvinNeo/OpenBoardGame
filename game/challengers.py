@@ -474,6 +474,29 @@ def _automate_robot(state: Dict) -> None:
             raise ValueError("Robot match exceeded its action limit.")
 
 
+def _finish_opponent_choices(state: Dict) -> None:
+    """Finish a human's opponent's effects without waiting behind other parks."""
+    from game.challengers_ai import choose_action
+
+    for match in state["matches"]:
+        if all(state["players"][pid]["is_bot"] for pid in match["seats"]):
+            continue
+        for _ in range(32):
+            choice = match["pending"]
+            if match["status"] != "playing" or not choice or not state["players"][choice["player_id"]]["is_bot"]:
+                break
+            pid = choice["player_id"]
+            # Use the same private view and strategy as the room AI. Never draw
+            # another card here: that still requires the human's next click.
+            move = choose_action(ChallengersGame.get_public_view(state, pid))
+            if not move or move["type"] != "resolve":
+                raise ValueError("Bot could not resolve its card effect.")
+            _resolve_choice(state, match, move["card_ids"])
+            state["players"][pid]["revision"] += 1
+        else:
+            raise ValueError("Bot card effects exceeded their action limit.")
+
+
 def _schedule(seats: List[str]) -> List[List[List[str]]]:
     ring = list(seats)
     cycle = []
@@ -598,6 +621,7 @@ def _apply(state: Dict, pid: str, action: Dict) -> None:
             _start_round(state)
     player["revision"] += 1
     _automate_robot(state)
+    _finish_opponent_choices(state)
 
 
 def _card_view(state: Dict, uid: str) -> Dict:
@@ -859,4 +883,5 @@ class ChallengersGame:
     def deserialize(payload: Dict) -> Dict:
         result = copy.deepcopy(payload)
         validate_state(result)
+        _finish_opponent_choices(result)
         return result

@@ -1,12 +1,12 @@
 import asyncio
 import copy
+import json
 import unittest
 from tempfile import TemporaryDirectory
 
-from fastapi import HTTPException
-
 import app
-from game.challengers import ChallengersGame as Game
+from game.challengers import ChallengersGame as Game, _reveal
+from tests.test_challengers import battlefield
 from tests.test_room_session import DummySio
 
 
@@ -102,13 +102,15 @@ class ChallengersIntegrationTests(unittest.IsolatedAsyncioTestCase):
         await app.on_game_action("s-new", {"action": Game.bot_move(room.game_state, second.player_id)})
         self.assertEqual(room.game_state["round"], 2)
 
-    async def test_live_save_private_and_cold_restore_validated(self):
+    async def test_live_save_download_and_cold_restore_preserve_state(self):
         room = await self.room()
         room.auto_save = True
         app._save_room_state(room)
-        with self.assertRaises(HTTPException) as denied:
-            await app.download_room_save(room.room_id)
-        self.assertEqual(denied.exception.status_code, 403)
+        response = await app.download_room_save(room.room_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.media_type, "application/json")
+        with open(response.path, encoding="utf-8") as handle:
+            self.assertEqual(json.load(handle)["game_state"], room.game_state)
         before = set(app.ROOMS)
         await app.on_room_load("outsider", {"source_room_id": room.room_id})
         self.assertEqual(set(app.ROOMS), before)
@@ -119,6 +121,8 @@ class ChallengersIntegrationTests(unittest.IsolatedAsyncioTestCase):
         result = next(e["payload"] for e in app.sio.emits if e["event"] == "room:load_result")
         self.assertTrue(result["ok"])
         self.assertEqual(app.ROOMS[result["room_id"]].game_state, room.game_state)
+        restored_response = await app.download_room_save(room.room_id)
+        self.assertEqual(restored_response.path, response.path)
 
     async def test_bot_scheduler_waits_for_human_reveal_and_reconnect(self):
         room = await self.room(count=1, bots=1)
@@ -155,6 +159,26 @@ class ChallengersIntegrationTests(unittest.IsolatedAsyncioTestCase):
         await app.on_game_action("s-new", {"action": Game.bot_move(room.game_state, human.player_id)})
         await settled()
         self.assertIn(top, [entry["id"] for entry in room.game_state["matches"][0]["lanes"][bot.player_id]["field"]])
+
+    async def test_restored_bot_effect_can_finish_the_room(self):
+        state = battlefield({"draw": ["horse", "dog"]},
+                            {"field": ["clairvoyant"], "draw": ["newcomer", "horse"],
+                             "bench": ["cat", "pig", "pony", "parrot", "spider", "dog"]})
+        state["players"]["p0"].update(is_bot=False, fans=10)
+        _reveal(state, state["matches"][0], "p0")
+        self.assertIsNotNone(state["matches"][0]["pending"])
+        saved = app.Room(room_id="challengers-bot-effect", game_type="challengers", status="in_game",
+                         game_state=state, auto_save=True, players=[
+                             app.Player(player_id="p0", name="Captain", seat=0, socket_id=None),
+                             app.Player(player_id="p1", name="Bot 3", seat=1, socket_id=None, is_bot=True),
+                         ])
+        app._save_room_state(saved)
+        await app.on_room_load("restore", {"source_room_id": saved.room_id})
+        result = next(e["payload"] for e in app.sio.emits if e["event"] == "room:load_result")
+        self.assertTrue(result["ok"])
+        restored = app.ROOMS[result["room_id"]]
+        self.assertTrue(restored.game_state["game_over"])
+        self.assertEqual(restored.status, "game_over")
 
 
 if __name__ == "__main__":

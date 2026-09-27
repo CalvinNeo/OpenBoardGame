@@ -23,6 +23,14 @@ s['players']['p0']['is_bot']=False
 s['matches'][0].update(holder='p0',turn='p1')
 views['bot_reveal']=G.get_public_view(s,'p0')
 act(s,'p0','reveal_for_bot'); views['bot_reveal_next']=G.get_public_view(s,'p0')
+s=battlefield({'field':['dragon'],'draw':['dog']},{'draw':['juggler','newcomer','newcomer','horse']})
+s['players']['p0']['is_bot']=False
+s['players']['p1']['name']='Bot 3'
+s['matches'][0].update(holder='p0',turn='p1')
+views['bot_effect']=G.get_public_view(s,'p0')
+act(s,'p0','reveal_for_bot'); views['bot_effect_next']=G.get_public_view(s,'p0')
+assert views['bot_effect_next']['matches'][0]['choosing'] is None
+assert views['bot_effect_next']['legal_actions']==['reveal_for_bot']
 s=new_game(4)
 while s['phase']!='round_end':
  for pid in s['order']:
@@ -159,24 +167,25 @@ async function stableDraftHover(page) {
   assert.equal(await page.locator('.ch-card[aria-pressed="true"]').count(), 1);
 }
 
-async function botRevealControl(page, touch = false) {
-  await render(page, 'bot_reveal');
+async function botRevealControl(page, touch = false, key = 'bot_reveal') {
+  await render(page, key);
   const button = control(page, 'reveal_for_bot');
   assert.equal(await button.textContent(), 'Reveal for Bot');
   assert.equal(await control(page, 'reveal').count(), 0);
   const red = await button.evaluate(node => getComputedStyle(node).backgroundColor.match(/\d+/g).map(Number));
   assert.ok(red[0] > red[1] * 2 && red[0] > red[2] * 2, `Red button: ${red}`);
-  if (touch) {
+  if (touch && key === 'bot_reveal') {
     await page.screenshot({path: `${output}/mobile-bot-reveal.png`, fullPage: true});
     assert.ok((await page.locator('.ch-combat-controls').boundingBox()).height < 80);
   }
   await button[touch ? 'tap' : 'click']();
   assert.equal(await button.isDisabled(), true);
   await button.evaluate(node => node.click());
-  assert.deepEqual(await page.evaluate(() => challengersTestActions), [{type: 'reveal_for_bot', round: fixtures.bot_reveal.round, revision: fixtures.bot_reveal.revision}]);
-  await page.evaluate(view => renderGameState({room_id: 'challengers-layout', game_type: 'challengers', view}), fixtures.bot_reveal_next);
+  assert.deepEqual(await page.evaluate(() => challengersTestActions), [{type: 'reveal_for_bot', round: fixtures[key].round, revision: fixtures[key].revision}]);
+  await page.evaluate(view => renderGameState({room_id: 'challengers-layout', game_type: 'challengers', view}), fixtures[`${key}_next`]);
   assert.equal(await button.isEnabled(), true);
   assert.equal(await button.textContent(), 'Reveal for Bot');
+  assert.doesNotMatch(await page.locator('.ch-combat-controls').textContent(), /Waiting for|choosing/);
 }
 
 (async () => {
@@ -247,6 +256,7 @@ async function botRevealControl(page, touch = false) {
     await page.setViewportSize({width: 1440, height: 1100});
     await stableDraftHover(page);
     await botRevealControl(page);
+    await botRevealControl(page, false, 'bot_effect');
     await page.locator('#challengersExplainBtn').click();
     await control(page, 'reveal_for_bot').click();
     await page.locator('#challengersDialog[open]').waitFor();
@@ -302,6 +312,7 @@ async function botRevealControl(page, touch = false) {
     assert.ok(compact.arena < 400 && compact.field < 100 && compact.controls < 80, JSON.stringify(compact));
     console.log('PASS compact mobile arena:', JSON.stringify(compact));
     await botRevealControl(mobile, true);
+    await botRevealControl(mobile, true, 'bot_effect');
     await bounds(mobile, 'Mobile Reveal for Bot');
     await mobile.locator('.ch-player-stats [data-ch-tip]').first().tap();
     await mobile.locator('#challengersTip').waitFor({state: 'visible'});

@@ -1,9 +1,9 @@
 import copy
+import json
 import unittest
 from tempfile import TemporaryDirectory
 
 import app
-from fastapi import HTTPException
 from game.love_letter import LoveLetterGame as Game
 from tests.test_room_session import DummySio
 
@@ -95,13 +95,15 @@ class LoveLetterIntegrationTests(unittest.IsolatedAsyncioTestCase):
         await app.on_game_action("back1", {"action": {"type": "next_round", "round": 1}})
         self.assertEqual((state["phase"], state["round"]), ("play", 2))
 
-    async def test_live_save_cannot_reveal_hands_or_clone_and_cold_restore_works(self):
+    async def test_live_save_download_and_cold_restore_preserve_hands(self):
         room = await self.room()
         room.auto_save = True
         app._save_room_state(room)
-        with self.assertRaises(HTTPException) as raised:
-            await app.download_room_save(room.room_id)
-        self.assertEqual(raised.exception.status_code, 403)
+        response = await app.download_room_save(room.room_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.media_type, "application/json")
+        with open(response.path, encoding="utf-8") as handle:
+            self.assertEqual(json.load(handle)["game_state"], room.game_state)
         before = set(app.ROOMS)
         await app.on_room_load("outsider", {"source_room_id": room.room_id})
         self.assertEqual(set(app.ROOMS), before)
@@ -113,6 +115,8 @@ class LoveLetterIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result["ok"])
         self.assertEqual(app.ROOMS[result["room_id"]].game_state, room.game_state)
         self.assertTrue(app._has_live_private_save(room.room_id, "love_letter"))
+        restored_response = await app.download_room_save(room.room_id)
+        self.assertEqual(restored_response.path, response.path)
 
 
 if __name__ == "__main__":

@@ -43,6 +43,7 @@ from game.in_a_grove import InAGroveGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.grand_austria_hotel import GrandAustriaHotelGame
+from game.orloj import OrlojGame
 from game.kobayakawa import KobayakawaGame
 from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
@@ -130,6 +131,7 @@ __all__ = [
     "IsleOfSkyeGame",
     "IstanbulGame",
     "GrandAustriaHotelGame",
+    "OrlojGame",
     "KobayakawaGame",
     "KronologicGame",
     "LostCodeGame",

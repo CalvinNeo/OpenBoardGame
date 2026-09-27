@@ -347,6 +347,10 @@ function renderGameState(data) {
     if (typeof renderGrandAustriaGameState === "function") renderGrandAustriaGameState(data);
     return;
   }
+  if (gameType === "orloj") {
+    if (typeof renderOrlojGameState === "function") renderOrlojGameState(data);
+    return;
+  }
   if (gameType === "ponzi_scheme") {
     renderPonziSchemeGameState(data);
     return;

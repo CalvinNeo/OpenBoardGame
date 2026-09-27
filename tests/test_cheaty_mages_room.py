@@ -1,12 +1,12 @@
 import asyncio
 import copy
+import json
 import random
 import unittest
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import app
-from fastapi import HTTPException
 from game.cheaty_mages import CheatyMagesGame as Game
 from tests.test_room_session import DummySio
 
@@ -278,16 +278,18 @@ class CheatyMagesRoomTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(room.game_state["phase"], "betting")
         self.assertEqual(room.game_state["round"], round_number + 1)
 
-    async def test_live_saves_cannot_export_or_clone_and_cold_restore_keeps_secrets(self):
+    async def test_live_save_download_and_cold_restore_preserve_state(self):
         room = await self.make_room()
         player = self.acting_player(room)
         action = self.legal_move(room, player.player_id, "bet")
         await app.on_game_action(player.socket_id, {"action": action})
         room.auto_save = True
         app._save_room_state(room)
-        with self.assertRaises(HTTPException) as raised:
-            await app.download_room_save(room.room_id)
-        self.assertEqual(raised.exception.status_code, 403)
+        response = await app.download_room_save(room.room_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.media_type, "application/json")
+        with open(response.path, encoding="utf-8") as handle:
+            self.assertEqual(json.load(handle)["game_state"], room.game_state)
         before = set(app.ROOMS)
         await app.on_room_load("outsider", {"source_room_id": room.room_id})
         self.assertEqual(set(app.ROOMS), before)
@@ -303,13 +305,12 @@ class CheatyMagesRoomTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(Game.get_public_view(restored.game_state, player.player_id)["your_bets"],
                          action["slots"])
         self.assertTrue(app._has_live_private_save(room.room_id, "cheaty_mages"))
-        with self.assertRaises(HTTPException) as raised:
-            await app.download_room_save(room.room_id)
-        self.assertEqual(raised.exception.status_code, 403)
+        restored_response = await app.download_room_save(room.room_id)
+        self.assertEqual(restored_response.path, response.path)
         self.assertFalse(Game.get_public_view(restored.game_state, None)["your_hand"])
         self.assertFalse(Game.get_public_view(restored.game_state, None)["your_bets"])
 
-    async def test_second_cold_restore_protects_every_ancestor_save(self):
+    async def test_second_cold_restore_allows_ancestor_downloads_but_blocks_clones(self):
         original = await self.make_room()
         original.auto_save = True
         app._save_room_state(original)
@@ -330,9 +331,10 @@ class CheatyMagesRoomTests(unittest.IsolatedAsyncioTestCase):
         for source_id in (original_id, first_restore_id):
             with self.subTest(source_id=source_id):
                 self.assertTrue(app._has_live_private_save(source_id, "cheaty_mages"))
-                with self.assertRaises(HTTPException) as raised:
-                    await app.download_room_save(source_id)
-                self.assertEqual(raised.exception.status_code, 403)
+                response = await app.download_room_save(source_id)
+                self.assertEqual(response.status_code, 200)
+                with open(response.path, encoding="utf-8") as handle:
+                    self.assertEqual(json.load(handle)["game_state"], original.game_state)
                 before = set(app.ROOMS)
                 app.sio.emits.clear()
                 await app.on_room_load("outsider", {"source_room_id": source_id})

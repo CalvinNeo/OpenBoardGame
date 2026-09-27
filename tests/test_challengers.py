@@ -506,18 +506,53 @@ class ChallengersBotRevealTests(unittest.TestCase):
         state = battlefield({"draw": ["juggler", "newcomer", "newcomer", "horse"]},
                             {"field": ["dragon"], "draw": ["dog"]})
         state["players"]["p1"]["is_bot"] = False
-        act(state, "p1", "reveal_for_bot")
-        self.assertEqual(Game.get_legal_actions(state, "p1"), [])
-        self.assertIsNone(Game.get_public_view(state, "p1")["choice"])
         revision = state["players"]["p1"]["revision"]
-        candidate = Game.bot_move(state, "p0")
-        self.assertEqual(candidate["type"], "resolve")
-        self.assertIsNone(Game.apply_action(state, "p0", candidate)[1])
+        act(state, "p1", "reveal_for_bot")
+        self.assertIsNone(Game.get_public_view(state, "p1")["choice"])
+        self.assertIsNone(state["matches"][0]["pending"])
         self.assertGreater(state["players"]["p1"]["revision"], revision)
         self.assertEqual(Game.get_legal_actions(state, "p1"), ["reveal_for_bot"])
         self.assertIsNone(Game.bot_move(state, "p0"))
         self.assertEqual(len(state["matches"][0]["lanes"]["p0"]["draw"]), 3)
         validate_state(state)
+
+    def test_bot_loss_choice_finishes_with_human_attack(self):
+        state = battlefield({"draw": ["horse", "dog"]},
+                            {"field": ["clairvoyant"], "draw": ["newcomer", "horse"]})
+        state["players"]["p0"]["is_bot"] = False
+        state["players"]["p1"]["name"] = "Bot 3"
+        act(state, "p0", "reveal")
+        view = Game.get_public_view(state, "p0")
+        self.assertIsNone(view["matches"][0]["choosing"])
+        self.assertEqual(view["legal_actions"], ["reveal_for_bot"])
+        self.assertEqual(view["matches"][0]["lanes"]["p1"]["draw_count"], 2)
+        validate_state(state)
+
+    def test_human_ability_choice_still_requires_input(self):
+        state = battlefield({"draw": ["juggler", "newcomer", "newcomer", "horse"]},
+                            {"field": ["dragon"], "draw": ["dog"]})
+        state["players"]["p0"]["is_bot"] = False
+        act(state, "p0", "reveal")
+        view = Game.get_public_view(state, "p0")
+        self.assertEqual(view["legal_actions"], ["resolve"])
+        self.assertEqual(view["choice"]["kind"], "order")
+        self.assertEqual(view["matches"][0]["choosing"], "p0")
+
+    def test_restore_settles_old_bot_choice_without_revealing_another_card(self):
+        state = battlefield({"draw": ["juggler", "newcomer", "newcomer", "horse"]},
+                            {"field": ["dragon"], "draw": ["dog"]})
+        state["players"]["p1"]["is_bot"] = False
+        # Recreate a save made by the earlier deferred-bot-choice implementation.
+        _reveal(state, state["matches"][0], "p0")
+        before = copy.deepcopy(state)
+        restored = Game.deserialize(json.loads(json.dumps(Game.serialize(state))))
+        self.assertEqual(state, before)
+        view = Game.get_public_view(restored, "p1")
+        self.assertEqual(view["legal_actions"], ["reveal_for_bot"])
+        self.assertIsNone(view["matches"][0]["choosing"])
+        self.assertEqual(view["matches"][0]["lanes"]["p0"]["draw_count"], 3)
+        self.assertEqual(len(view["matches"][0]["lanes"]["p0"]["field"]), 1)
+        validate_state(restored)
 
     def test_bot_setup_card_waits_for_human_including_robot(self):
         for count in (1, 2):
@@ -575,6 +610,9 @@ class ChallengersBotRevealTests(unittest.TestCase):
                                 self.assertEqual(pid, "p0")
                                 proxy_reveals += 1
                             self.assertIsNone(Game.apply_action(state, pid, candidate)[1])
+                            human_match = next((m for m in state["matches"] if "p0" in m["seats"]), None)
+                            if human_match and human_match["status"] == "playing":
+                                self.assertTrue(Game.get_legal_actions(state, "p0"), "Human must not wait for a bot in an active match")
                             moved = True
                     self.assertTrue(moved, state["phase"])
                 self.assertTrue(state["game_over"])

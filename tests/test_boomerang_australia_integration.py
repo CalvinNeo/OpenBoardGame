@@ -1,9 +1,9 @@
 import copy
+import json
 import unittest
 from tempfile import TemporaryDirectory
 
 import app
-from fastapi import HTTPException
 from game.boomerang_australia import BoomerangAustraliaGame as Game
 from tests.test_room_session import DummySio
 
@@ -118,13 +118,15 @@ class BoomerangAustraliaIntegrationTests(unittest.IsolatedAsyncioTestCase):
         await app.on_game_action("s-new", {"action": {"type": "next_round", "round": 1}})
         self.assertEqual((room.game_state["round"], room.game_state["phase"]), (2, "draft"))
 
-    async def test_live_save_cannot_export_or_clone_hidden_hands(self):
+    async def test_live_save_download_and_cold_restore_preserve_hands(self):
         room = await self.room()
         room.auto_save = True
         app._save_room_state(room)
-        with self.assertRaises(HTTPException) as raised:
-            await app.download_room_save(room.room_id)
-        self.assertEqual(raised.exception.status_code, 403)
+        response = await app.download_room_save(room.room_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.media_type, "application/json")
+        with open(response.path, encoding="utf-8") as handle:
+            self.assertEqual(json.load(handle)["game_state"], room.game_state)
         before = set(app.ROOMS)
         await app.on_room_load("outsider", {"source_room_id": room.room_id})
         self.assertEqual(set(app.ROOMS), before)
@@ -138,8 +140,8 @@ class BoomerangAustraliaIntegrationTests(unittest.IsolatedAsyncioTestCase):
         restored = app.ROOMS[result["room_id"]]
         self.assertEqual(restored.game_state, room.game_state)
         self.assertTrue(app._has_live_boomerang_save(room.room_id))
-        with self.assertRaises(HTTPException):
-            await app.download_room_save(room.room_id)
+        restored_response = await app.download_room_save(room.room_id)
+        self.assertEqual(restored_response.path, response.path)
 
 
 if __name__ == "__main__":

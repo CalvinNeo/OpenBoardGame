@@ -1,11 +1,11 @@
 import asyncio
 import copy
+import json
 import unittest
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import app
-from fastapi import HTTPException
 from game.for_sale import ForSaleGame as Game
 from tests.test_room_session import DummySio
 
@@ -212,7 +212,7 @@ class ForSaleIntegrationTests(unittest.IsolatedAsyncioTestCase):
         await app.on_game_action("back1", {"action": {"type": "next_round", "round": round_number}})
         self.assertEqual((state["phase"], state["round"]), ("buy", round_number + 1))
 
-    async def test_live_save_cannot_export_or_clone_and_cold_restore_preserves_selection(self):
+    async def test_live_save_download_and_cold_restore_preserve_selection(self):
         room = await self.room()
         self.reach_selling(room)
         player = room.players[0]
@@ -222,9 +222,11 @@ class ForSaleIntegrationTests(unittest.IsolatedAsyncioTestCase):
         }})
         room.auto_save = True
         app._save_room_state(room)
-        with self.assertRaises(HTTPException) as raised:
-            await app.download_room_save(room.room_id)
-        self.assertEqual(raised.exception.status_code, 403)
+        response = await app.download_room_save(room.room_id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.media_type, "application/json")
+        with open(response.path, encoding="utf-8") as handle:
+            self.assertEqual(json.load(handle)["game_state"], room.game_state)
         before = set(app.ROOMS)
         await app.on_room_load("outsider", {"source_room_id": room.room_id})
         self.assertEqual(set(app.ROOMS), before)
@@ -238,9 +240,8 @@ class ForSaleIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(restored.game_state, room.game_state)
         self.assertEqual(Game.get_public_view(restored.game_state, player.player_id)["your_selection"], choice)
         self.assertTrue(app._has_live_private_save(room.room_id, "for_sale"))
-        with self.assertRaises(HTTPException) as raised:
-            await app.download_room_save(room.room_id)
-        self.assertEqual(raised.exception.status_code, 403)
+        restored_response = await app.download_room_save(room.room_id)
+        self.assertEqual(restored_response.path, response.path)
         before = set(app.ROOMS)
         await app.on_room_load("second-outsider", {"source_room_id": room.room_id})
         self.assertEqual(set(app.ROOMS), before)
