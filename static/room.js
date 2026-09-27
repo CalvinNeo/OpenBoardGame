@@ -2199,6 +2199,7 @@ function resetRoomState() {
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
+  if (typeof updateArkNovaConfigRow === "function") updateArkNovaConfigRow();
   if (typeof updateHanabiConfigRow === "function") updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();

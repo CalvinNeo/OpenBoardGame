@@ -19,7 +19,8 @@ from typing import Any
 
 
 ALLOWED_TERRAINS = {"land", "water", "rock"}
-ALLOWED_BONUSES = {"appeal", "card", "money", "x_token", "action_to_slot"}
+ALLOWED_BONUSES = {"appeal", "card", "money", "x_token", "action_to_slot", "reputation", "partner_zoo", "university", "sponsor", "multiplier"}
+EXTRA_SYMBOLS = {"reputation": "REP", "partner_zoo": "ZOO", "university": "UNI", "sponsor": "@", "multiplier": "×2", "determination": "↻", "special_enclosure": "⬡"}
 
 
 def _number(value: float) -> int | float:
@@ -191,6 +192,8 @@ def _bonus_label(bonus: dict[str, Any]) -> str:
         return f"Gain {bonus['amount']} appeal"
     if bonus_type == "action_to_slot":
         return f"After finishing, move any Action card to slot {bonus['slot']}"
+    if bonus_type in EXTRA_SYMBOLS:
+        return {"reputation": "Gain 1 reputation", "partner_zoo": "Take an available partner zoo", "university": "Take an available university", "sponsor": "Play a hand Sponsor by paying its level in money", "multiplier": "Place a multiplier on an Action card"}[bonus_type]
     raise ValueError(f"unsupported bonus: {bonus_type}")
 
 
@@ -242,6 +245,8 @@ def _render_bonus_icon(
                 '        <path d="M4-13h10v8M14-13L7-7" fill="none" stroke="#262a2d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
             ]
         )
+    if bonus_type in EXTRA_SYMBOLS:
+        lines.append(f'        <text x="0" y="2" style="fill:#242a2d;font-size:15px;font-weight:900;text-anchor:middle;dominant-baseline:middle">{EXTRA_SYMBOLS[bonus_type]}</text>')
     lines.append("      </g>")
     return lines
 
@@ -288,6 +293,8 @@ def _render_reward_icon(reward: dict[str, Any], center_x: float, center_y: float
             '        <path d="M-18 7h12M-12 1v12" stroke="#f7f2df" stroke-width="4"/>',
             "      </g>",
         ]
+    if reward_type in EXTRA_SYMBOLS:
+        return [f'      <text x="{center_x}" y="{center_y + 6}" style="font-size:22px;text-anchor:middle;fill:#242a2d">{EXTRA_SYMBOLS[reward_type]}</text>']
     raise ValueError(f"unsupported conservation reward: {reward_type}")
 
 
@@ -385,9 +392,17 @@ def render_svg(config: dict[str, Any]) -> str:
                 f'      <path d="M{_fmt(center_x-28)} {_fmt(center_y+22)}l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>'
             )
         if "build_requirement" in cell:
-            lines.extend(_render_build_requirement(center_x, center_y))
+            if "placement_bonus" in cell:
+                lines.append(f'      <text x="{center_x}" y="{center_y - 30}" class="ark-nova-map0-ii">II</text>')
+            else:
+                lines.extend(_render_build_requirement(center_x, center_y))
         if "placement_bonus" in cell:
             lines.extend(_render_bonus_icon(cell["placement_bonus"], center_x, center_y))
+        ability = config.get("ability", {})
+        if cell["id"] in ability.get("cells", []) and ability.get("type") != "silver_lake":
+            lines.append(f'      <text x="{center_x}" y="{center_y + 7}" style="font-size:24px;font-weight:900;text-anchor:middle;fill:#fff;stroke:#243b35;stroke-width:1">{html.escape(ability["symbol"])}</text>')
+        if cell["id"] in ability.get("connected_by", []):
+            lines.append(f'      <text x="{center_x}" y="{center_y + 8}" style="font-size:22px;font-weight:900;text-anchor:middle;fill:#394e86">{html.escape(ability["symbol"])}</text>')
         lines.append(
             f'      <text x="{_fmt(center_x)}" y="{_fmt(center_y)}" class="ark-nova-map0-debug-label">{cell["id"]}</text>'
         )
@@ -519,7 +534,11 @@ def render_svg(config: dict[str, Any]) -> str:
         '  <g id="ark-nova-map0-info" aria-label="Map information">'
     )
     lines[reference_panel_start:] = ["</svg>"]
-    return "\n".join(lines) + "\n"
+    svg = "\n".join(lines) + "\n"
+    if config["id"] != "map0":
+        svg = svg.replace("Ark Nova — Zoo Map 0", f'Ark Nova — {html.escape(config["name"])}')
+        svg = svg.replace("Zoo Map 0 with 58", f'{html.escape(config["name"])} with 58')
+    return svg
 
 
 def main() -> None:

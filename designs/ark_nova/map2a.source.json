@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "id": "map2a",
+  "name": "Map 2A · Outdoor Areas",
+  "recommended_level": "advanced",
+  "view_box": {
+    "width": 968,
+    "height": 680
+  },
+  "layout": {
+    "radius": 48,
+    "origin": {
+      "x": 300,
+      "y": 145
+    },
+    "column_lengths": [
+      6,
+      7,
+      6,
+      7,
+      6,
+      7,
+      6,
+      7,
+      6
+    ]
+  },
+  "terrain": {
+    "water": [
+      "A1",
+      "G1",
+      "H1",
+      "D5",
+      "E5",
+      "F5",
+      "F6"
+    ],
+    "rock": [
+      "A2",
+      "B3",
+      "A5",
+      "A6",
+      "B6",
+      "E1",
+      "F1",
+      "F3",
+      "I3"
+    ]
+  },
+  "placement_bonuses": [
+    {
+      "cell": "B2",
+      "type": "partner_zoo",
+      "amount": 1
+    },
+    {
+      "cell": "H2",
+      "type": "sponsor",
+      "amount": 1
+    },
+    {
+      "cell": "A3",
+      "type": "card",
+      "amount": 1
+    },
+    {
+      "cell": "F2",
+      "type": "card",
+      "amount": 1
+    },
+    {
+      "cell": "H4",
+      "type": "x_token",
+      "amount": 1
+    },
+    {
+      "cell": "H6",
+      "type": "action_to_slot",
+      "amount": 1,
+      "slot": 1
+    },
+    {
+      "cell": "B7",
+      "type": "reputation",
+      "amount": 1
+    }
+  ],
+  "build_ii_cells": [
+    "B1",
+    "C1",
+    "D1",
+    "C3",
+    "F4"
+  ],
+  "conservation_rewards": [
+    {
+      "id": "card_income",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck",
+      "timing": "immediate_and_each_break",
+      "short_label": "CARD",
+      "label": "Take 1 card within reputation range, or draw 1 card from the deck"
+    },
+    {
+      "id": "enclosure_2_income",
+      "type": "free_enclosure",
+      "size": 2,
+      "timing": "immediate_and_each_break",
+      "short_label": "SIZE 2",
+      "label": "Build a size-2 standard enclosure for free"
+    },
+    {
+      "id": "money_5_income",
+      "type": "money",
+      "amount": 5,
+      "timing": "immediate_and_each_break",
+      "short_label": "$5",
+      "label": "Gain 5 money"
+    },
+    {
+      "id": "conservation_1",
+      "type": "conservation",
+      "short_label": "1 CP",
+      "label": "Gain 1 conservation point",
+      "timing": "immediate_once",
+      "amount": 1
+    },
+    {
+      "id": "association_worker",
+      "type": "association_worker",
+      "amount": 1,
+      "timing": "immediate_once",
+      "short_label": "WORKER",
+      "label": "Gain 1 association worker"
+    },
+    {
+      "id": "money_12",
+      "type": "money",
+      "amount": 12,
+      "timing": "immediate_once",
+      "short_label": "$12",
+      "label": "Gain 12 money"
+    },
+    {
+      "id": "x_token_3",
+      "type": "x_token",
+      "amount": 3,
+      "timing": "immediate_once",
+      "short_label": "3 X",
+      "label": "Gain 3 X-tokens"
+    }
+  ],
+  "completion_bonus": {
+    "type": "appeal",
+    "amount": 7,
+    "condition": "all_buildable_spaces_covered"
+  },
+  "x_token_limit": 5,
+  "expected_counts": {
+    "total": 58,
+    "buildable": 42,
+    "land": 42,
+    "water": 7,
+    "rock": 9,
+    "placement_bonuses": 7,
+    "build_ii": 5
+  },
+  "source_notes": [
+    {
+      "kind": "official_layout",
+      "title": "Feuerland official alternate zoo maps 1A–8A",
+      "url": "https://www.feuerland-spiele.de/fileadmin/game/Arche_Nova/ArcheNova_ZooMap_Alternate_1_8a_DE_Web.pdf",
+      "page": 3,
+      "note": "Cell-by-cell transcription; SVG uses original vector artwork."
+    },
+    {
+      "kind": "rules_reference",
+      "title": "Official Ark Nova Glossary, Advanced Zoo Map Clarifications",
+      "url": "https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf",
+      "page": 8
+    }
+  ],
+  "name_zh": "户外区域",
+  "variant": "official_alternate",
+  "ability": {
+    "type": "outdoor_areas",
+    "cells": [
+      "F5"
+    ],
+    "symbol": "+2",
+    "description": "Standard enclosures adjacent to the Outdoor Areas have 2 extra spaces of capacity."
+  },
+  "milestones": {
+    "fourth_partner_zoo": 0,
+    "third_university": 2,
+    "last_worker": 1
+  }
+}

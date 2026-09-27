@@ -28,6 +28,9 @@ function emitRoomStart() {
   }
   const payload = { room_id: roomId };
   attachSkipValidation(payload);
+  if (currentGameType === "ark_nova" && typeof getArkNovaConfig === "function") {
+    payload.config = getArkNovaConfig();
+  }
   if (currentGameType === "draw_guess") {
     const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";
@@ -79,6 +82,8 @@ function emitRoomStart() {
     payload.config = getEternalDecksConfig();
   } else if (currentGameType === "no_thanks" && typeof getNoThanksConfig === "function") {
     payload.config = getNoThanksConfig();
+  } else if (currentGameType === "a_feast_for_odin" && typeof getOdinConfig === "function") {
+    payload.config = getOdinConfig();
   } else if (currentGameType === "hive" && typeof getHiveConfig === "function") {
     payload.config = getHiveConfig();
   } else if (currentGameType === "ponzi_scheme") {
@@ -395,6 +400,7 @@ function renderRoomState(state) {
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
+  if (typeof updateArkNovaConfigRow === "function") updateArkNovaConfigRow();
   updateCitadelsConfigRow();
   if (typeof updateHanabiConfigRow === "function") updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

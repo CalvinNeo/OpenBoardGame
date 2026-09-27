@@ -60,8 +60,8 @@
 .od-root .od-action { display:flex; flex-direction:column; justify-content:space-between; gap:5px; text-align:left; padding:9px; min-height:83px; }
 .od-action strong { font-size:12px; }
 .od-action small { font-size:10px; color:#bbcbca; }
-.od-action-top { display:flex; justify-content:space-between; gap:4px; align-items:flex-start; }
-.od-worker-cost { white-space:nowrap; color:var(--od-gold); font-size:11px; }
+.od-action-top { display:flex; flex-wrap:wrap; width:100%; justify-content:space-between; gap:4px; align-items:flex-start; }
+.od-worker-cost { white-space:nowrap; flex-shrink:0; color:var(--od-gold); font-size:11px; }
 .od-occupied { font-size:10px; color:#dac3a2; }
 .od-selection { padding:10px; margin:9px 0; background:#2d4747; border:1px solid var(--od-gold); border-radius:8px; display:grid; gap:8px; }
 .od-selection p { font-size:12px; }

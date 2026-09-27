@@ -35,6 +35,50 @@ def pending_state(kind, **kwargs):
 
 
 class OdinRulesTests(unittest.TestCase):
+    def test_every_action_resolves_without_deadlock(self):
+        for key in ACTIONS:
+            with self.subTest(action=key):
+                s = new_game(4)
+                s.update(current_turn="p0", round=7)
+                if key == "explore3":
+                    s["islands"][0]["kind"] = "newfoundland"
+                p = s["players"]["p0"]
+                p["workers"] = 12
+                p["stock"] = {g: 10 for g in GOODS if g not in SPECIALS}
+                p["ships"] = [{"kind": k, "ore": 0} for k in ("whaler", "knarr", "longship", "longship")]
+                p["hand"] = [k+":0" for k in ("milkman", "orient", "farmer", "archer")]
+                act(s, "p0", "occupy", space=key)
+                for _ in range(40):
+                    if not s["pending"]:
+                        break
+                    choices = Game.get_public_view(s, "p0")["moves"]
+                    move = next((m for m in choices if m["type"] not in ("skip", "fail", "reroll")), choices[0])
+                    _, error = Game.apply_action(s, "p0", move)
+                    self.assertIsNone(error, (key, move))
+                self.assertFalse(s["pending"], key)
+                self.assertTrue(s["active"]["used"], key)
+                act(s, "p0", "end_turn")
+                self.assertEqual(s["current_turn"], "p1")
+
+    def test_tutor_interrupt_restores_turn_queue_and_final_placement(self):
+        for phase in ("action", "final_placement"):
+            s = pending_state("upgrade", count=2, steps=1)
+            s["phase"] = phase
+            if phase == "final_placement":
+                s.update(pending=[], current_turn=None, active=None)
+            saved = copy.deepcopy({k: s[k] for k in ("phase", "current_turn", "active", "pending")})
+            p = s["players"]["p1"]
+            p["occupations"] = ["tutor:0"]
+            p["hand"] = ["orient:0"]
+            p["stock"] = {"silver": 1, "peas": 1}
+            act(s, "p1", "tutor", card="orient:0")
+            self.assertEqual(s["current_turn"], "p1")
+            self.assertEqual(Game.get_public_view(s, "p0")["moves"], [])
+            self.assertNotIn("interrupted_turn", Game.get_public_view(s, "p0"))
+            act(s, "p1", "upgrade", good="peas")
+            self.assertEqual({k: s[k] for k in saved}, saved)
+            self.assertEqual(s["players"]["p1"]["stock"]["rune"], 1)
+
     def test_setup_long_short_single_and_invalid(self):
         for rounds in (6, 7):
             for n in range(1, 5):
@@ -338,9 +382,9 @@ class OdinAITests(unittest.TestCase):
         self.assertIsNone(choose_move(Game.get_public_view(s, "watcher")))
 
     def test_complete_games_and_invariants(self):
-        for n, seed in ((1, 3), (2, 17), (3, 126), (4, 31)):
-            with self.subTest(players=n, seed=seed):
-                s = new_game(n, seed)
+        for n, seed, rounds in ((1, 3, 7), (2, 17, 7), (3, 126, 7), (4, 31, 7), (1, 17, 6), (4, 126, 6)):
+            with self.subTest(players=n, seed=seed, rounds=rounds):
+                s = new_game(n, seed, rounds)
                 for step in range(2500):
                     if s["game_over"]:
                         break
@@ -362,7 +406,7 @@ class OdinAITests(unittest.TestCase):
                         self.assertLessEqual(sum(ship["kind"] == "whaler" for ship in p["ships"]), 3)
                         self.assertLessEqual(sum(ship["kind"] != "whaler" for ship in p["ships"]), 4)
                 self.assertTrue(s["game_over"], (n, seed, step))
-                self.assertEqual(s["round"], 7)
+                self.assertEqual(s["round"], rounds)
                 self.assertEqual(len(s["result"]["scores"]), n)
 
 

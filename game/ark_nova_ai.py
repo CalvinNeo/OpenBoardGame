@@ -188,7 +188,7 @@ def _animal_can_use_building(
     if not rules._has_active_rule(player, "ignore_water_rock_rules"):
         adjacent = card.get("placement", {}).get("adjacent_to", {})
         for terrain in ("water", "rock"):
-            if rules._adjacent_terrain(building.get("cells", []), terrain) < int(adjacent.get(terrain, 0)):
+            if rules._adjacent_terrain(building.get("cells", []), terrain, player) < int(adjacent.get(terrain, 0)):
                 return False
     return True
 
@@ -361,7 +361,7 @@ def _placement_bonus_score(state: Mapping[str, Any], player_id: str, cells: Sequ
     for cell_id in cells:
         if cell_id in claimed:
             continue
-        bonus = rules.MAP_CELLS.get(cell_id, {}).get("placement_bonus", {})
+        bonus = rules._map_cells(state["players"][player_id]).get(cell_id, {}).get("placement_bonus", {})
         score += weights.get(str(bonus.get("type")), 0.0) * int(bonus.get("amount", 1))
     hand_animals = [
         rules.ANIMAL_CARDS[str(card_id)]
@@ -371,10 +371,10 @@ def _placement_bonus_score(state: Mapping[str, Any], player_id: str, cells: Sequ
     for card in hand_animals:
         adjacent = card.get("placement", {}).get("adjacent_to", {})
         score += 0.35 * min(
-            rules._adjacent_terrain(cells, "water"), int(adjacent.get("water", 0))
+            rules._adjacent_terrain(cells, "water", player), int(adjacent.get("water", 0))
         )
         score += 0.35 * min(
-            rules._adjacent_terrain(cells, "rock"), int(adjacent.get("rock", 0))
+            rules._adjacent_terrain(cells, "rock", player), int(adjacent.get("rock", 0))
         )
     return score
 
@@ -411,7 +411,7 @@ def _all_placements(
         return []
     axial_to_id = {
         (int(cell["axial"]["q"]), int(cell["axial"]["r"])): cell_id
-        for cell_id, cell in rules.MAP_CELLS.items()
+        for cell_id, cell in rules._map_cells(state["players"][player_id]).items()
     }
     found: Dict[Tuple[str, ...], List[str]] = {}
     for steps in range(6):
@@ -1207,6 +1207,8 @@ def choose_ark_nova_action(
     if not legal:
         return None
     _notify(progress_callback, "generating", 0.08, "Enumerating legal plans")
+    if "choose_map" in legal:
+        return {"type": "choose_map", "map_id": "map3a"}
     if "keep_initial_cards" in legal:
         candidates = _setup_candidates(state, player_id)
     elif "resolve_choice" in legal:

@@ -3744,6 +3744,18 @@ ARK_NOVA_ACTION_SCHEMA = {
     "oneOf": [
         {
             "type": "object",
+            "properties": {"type": {"const": "choose_map"}, "map_id": {"enum": ["map0", "map1a", "map2a", "map3a", "map4a", "map5a", "map6a"]}},
+            "required": ["type", "map_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "use_harbor"}, "card_id": {"type": "string", "pattern": "^[1-5][0-9]{2}$"}},
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
             "properties": {
                 "type": {"const": "keep_initial_cards"},
                 "card_ids": {
@@ -3958,6 +3970,7 @@ ARK_NOVA_CONFIG_SCHEMA = {
     "properties": {
         "seed": {"oneOf": [{"type": "integer"}, {"type": "string", "minLength": 1, "maxLength": 80}]},
         "map_id": {"const": "map0"},
+        "map_mode": {"enum": ["map0", "choose"], "default": "map0"},
     },
     "additionalProperties": False,
 }

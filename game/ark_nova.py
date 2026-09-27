@@ -6,6 +6,11 @@ import random
 from collections import Counter
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
+from game.ark_nova_maps import (MAPS, MAP_IDS, map_definition as _map_definition, map_cells as _map_cells,
+                                map_rewards as _map_rewards, map_ability as _map_ability,
+                                adjacent_to_feature as _adjacent_to_feature, enclosure_capacity as _enclosure_capacity,
+                                map_milestone as _map_milestone)
+
 from typing import Any, Callable, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 
 
@@ -433,6 +438,8 @@ def _printed_standard_enclosure_size(card: Mapping[str, Any]) -> int:
 def _card_conditions_met(
     player: Mapping[str, Any], card: Mapping[str, Any], *, ignore_count: int = 0
 ) -> bool:
+    if card.get("id") in ANIMAL_CARDS:
+        ignore_count += int(_map_ability(player, "research_institute"))
     failed = 0
     for condition in card.get("play", {}).get("conditions", []):
         if _condition_met(player, condition):
@@ -856,13 +863,13 @@ def _touches_building(occupancy: Mapping[str, str], cell_ids: Sequence[str]) -> 
     )
 
 
-def _adjacent_terrain(cell_ids: Sequence[str], terrain: str) -> int:
+def _adjacent_terrain(cell_ids: Sequence[str], terrain: str, player: Optional[Mapping[str, Any]] = None) -> int:
     own = set(cell_ids)
     neighbors = {
         neighbor
         for cell_id in cell_ids
-        for neighbor in MAP_CELLS[cell_id]["neighbors"]
-        if neighbor not in own and MAP_CELLS[neighbor].get("terrain") == terrain
+        for neighbor in _map_cells(player)[cell_id]["neighbors"]
+        if neighbor not in own and _map_cells(player)[neighbor].get("terrain") == terrain
     }
     return len(neighbors)
 
@@ -903,12 +910,12 @@ def _validate_building_placement(
         return "invalid building cells"
     if len(set(cell_ids)) != len(cell_ids):
         return "duplicate building cell"
-    if any(cell_id not in MAP_CELLS for cell_id in cell_ids):
+    if any(cell_id not in _map_cells(player) for cell_id in cell_ids):
         return "unknown map cell"
     may_cover_terrain = _has_active_rule(player, "ignore_water_rock_rules")
     if any(
-        not MAP_CELLS[cell_id].get("buildable")
-        and not (may_cover_terrain and MAP_CELLS[cell_id].get("terrain") in {"water", "rock"})
+        not _map_cells(player)[cell_id].get("buildable")
+        and not (may_cover_terrain and _map_cells(player)[cell_id].get("terrain") in {"water", "rock"})
         for cell_id in cell_ids
     ):
         return "building must use buildable land"
@@ -940,7 +947,7 @@ def _validate_building_placement(
         if footprint and not _matches_footprint(cell_ids, footprint):
             return "building cells do not match the component footprint"
 
-    if any(MAP_CELLS[cell_id].get("build_requirement") == "build_action_upgraded" for cell_id in cell_ids):
+    if any(_map_cells(player)[cell_id].get("build_requirement") == "build_action_upgraded" for cell_id in cell_ids):
         if _action_level(player, "build") != 2:
             return "Build II is required for a marked space"
 
@@ -960,8 +967,8 @@ def _validate_building_placement(
         }
         if any(
             _axial_distance(
-                (int(MAP_CELLS[cell_id]["axial"]["q"]), int(MAP_CELLS[cell_id]["axial"]["r"])),
-                (int(MAP_CELLS[kiosk_id]["axial"]["q"]), int(MAP_CELLS[kiosk_id]["axial"]["r"])),
+                (int(_map_cells(player)[cell_id]["axial"]["q"]), int(_map_cells(player)[cell_id]["axial"]["r"])),
+                (int(_map_cells(player)[kiosk_id]["axial"]["q"]), int(_map_cells(player)[kiosk_id]["axial"]["r"])),
             ) < 3
             for cell_id in cell_ids
             for kiosk_id in kiosk_cells
@@ -975,7 +982,7 @@ def _validate_building_placement(
         adjacent = placement_rules.get("adjacent_to", {})
         if not may_cover_terrain:
             for terrain in ("water", "rock"):
-                if _adjacent_terrain(cell_ids, terrain) < int(adjacent.get(terrain, 0)):
+                if _adjacent_terrain(cell_ids, terrain, player) < int(adjacent.get(terrain, 0)):
                     return f"unique building needs more adjacent {terrain}"
         if _border_space_count(cell_ids) < int(placement_rules.get("minimum_border_spaces", 0)):
             return "unique building needs more border spaces"
@@ -1019,7 +1026,7 @@ def _apply_placement_bonus(
     zoo_map = player["map"]
     if not copy_bonus and cell_id in zoo_map["claimed_bonuses"]:
         return
-    bonus = MAP_CELLS[cell_id].get("placement_bonus")
+    bonus = _map_cells(player)[cell_id].get("placement_bonus")
     if not bonus:
         return
     if not copy_bonus:
@@ -1032,6 +1039,10 @@ def _apply_placement_bonus(
         _gain_x(player, amount)
     elif bonus_type == "appeal":
         _apply_rewards(state, player_id, {"appeal": amount}, events, f"map:{cell_id}")
+    elif bonus_type == "reputation":
+        _apply_rewards(state, player_id, {"reputation": amount}, events, f"map:{cell_id}")
+    elif bonus_type in {"partner_zoo", "university", "sponsor", "multiplier"}:
+        _apply_bonus_token(state, player_id, bonus_type, events)
     elif bonus_type == "card":
         # Map 0's card icon is a choice, not a blind top-deck draw: the player
         # may take from the deck or from any display folder in reputation range.
@@ -1051,11 +1062,11 @@ def _apply_placement_bonus(
     events.append(_event("placement_bonus", player_id=player_id, cell_id=cell_id, bonus=copy.deepcopy(bonus)))
     if (
         allow_archaeologist
-        and MAP_CELLS[cell_id].get("border")
+        and _map_cells(player)[cell_id].get("border")
         and _has_active_rule(player, "duplicate_border_placement_bonus")
     ):
         available = [
-            other_id for other_id, other in MAP_CELLS.items()
+            other_id for other_id, other in _map_cells(player).items()
             if other.get("placement_bonus") and other_id not in zoo_map["occupancy"]
         ]
         if available:
@@ -1125,7 +1136,7 @@ def _place_building(
         _apply_rewards(state, player_id, {"appeal": 1}, events, "pavilion")
     placement_refs = []
     for cell_id in cells:
-        if state.get("choose_effect_order") and MAP_CELLS[cell_id].get("placement_bonus"):
+        if state.get("choose_effect_order") and _map_cells(player)[cell_id].get("placement_bonus"):
             placement_refs.append({"type": "core", "operation": "placement_bonus", "player_id": player_id,
                                    "cell_id": cell_id, "label": f"Map bonus: {cell_id}"})
         else:
@@ -1134,9 +1145,9 @@ def _place_building(
     for cell_id in cells:
         for terrain in ("water", "rock"):
             if any(
-                MAP_CELLS[neighbor].get("terrain") == terrain
+                _map_cells(player)[neighbor].get("terrain") == terrain
                 and neighbor not in zoo_map["occupancy"]
-                for neighbor in MAP_CELLS[cell_id]["neighbors"]
+                for neighbor in _map_cells(player)[cell_id]["neighbors"]
             ):
                 for sponsor_id in player.get("played_sponsors", []):
                     terrain_refs.extend(_sponsor_effect_refs(
@@ -1151,10 +1162,10 @@ def _place_building(
         state["effect_queue"].append({"type": "core", "operation": "move_animals",
                                       "player_id": player_id, "building_id": building_id, "moved": []})
     _queue_unique_follow_up(state, player_id, building.get("unique_card_id"))
-    buildable_land = {cell_id for cell_id, cell in MAP_CELLS.items() if cell.get("buildable")}
+    buildable_land = {cell_id for cell_id, cell in _map_cells(player).items() if cell.get("buildable")}
     if buildable_land.issubset(zoo_map["occupancy"]) and not zoo_map.get("completed"):
         zoo_map["completed"] = True
-        _apply_rewards(state, player_id, MAP0["completion_bonus"], events, "map_completion")
+        _apply_rewards(state, player_id, _map_definition(player)["completion_bonus"], events, "map_completion")
     _update_derived_metrics(player)
     events.append(_event("build", player_id=player_id, building=copy.deepcopy(building), free=free))
     return building
@@ -1198,14 +1209,14 @@ def _enclosure_for_animal(
     if building_type == "standard_enclosure":
         if _building_occupied(building):
             return building, option, "standard enclosure is occupied"
-        if int(building.get("size", 0)) < required:
+        if _enclosure_capacity(player, building) < required:
             return building, option, "standard enclosure is too small"
     elif int(building.get("used_capacity", 0)) + required > int(building.get("capacity", 0)):
         return building, option, "special enclosure has insufficient capacity"
     if not _has_active_rule(player, "ignore_water_rock_rules"):
         adjacency = card.get("placement", {}).get("adjacent_to", {})
         for terrain in ("water", "rock"):
-            if _adjacent_terrain(building["cells"], terrain) < int(adjacency.get(terrain, 0)):
+            if _adjacent_terrain(building["cells"], terrain, player) < int(adjacency.get(terrain, 0)):
                 return building, option, f"enclosure needs more adjacent {terrain}"
     return building, option, None
 
@@ -1319,15 +1330,15 @@ def _standard_enclosures_to_empty(player: Mapping[str, Any], card: Mapping[str, 
         return []
     sized = [building for building in player["map"].get("buildings", [])
              if building.get("building_type", building.get("type")) == "standard_enclosure"
-             and _building_occupied(building) and int(building.get("size", 0)) >= required]
+             and _building_occupied(building) and _enclosure_capacity(player, building) >= required]
     adjacency = card.get("placement", {}).get("adjacent_to", {})
     fitting = [building for building in sized if _has_active_rule(player, "ignore_water_rock_rules") or all(
-        _adjacent_terrain(building.get("cells", []), terrain) >= int(adjacency.get(terrain, 0))
+        _adjacent_terrain(building.get("cells", []), terrain, player) >= int(adjacency.get(terrain, 0))
         for terrain in ("water", "rock")
     )]
     candidates = fitting or sized
-    minimum = min((int(building["size"]) for building in candidates), default=0)
-    return [building for building in candidates if int(building["size"]) == minimum]
+    minimum = min((_enclosure_capacity(player, building) for building in candidates), default=0)
+    return [building for building in candidates if _enclosure_capacity(player, building) == minimum]
 
 
 def _release_enclosure_options(player: Mapping[str, Any], card: Mapping[str, Any]) -> List[Mapping[str, Any]]:
@@ -1383,7 +1394,7 @@ def _migration_options(state: Mapping[str, Any], ref: Mapping[str, Any]) -> List
         if not option or int(target.get("used_capacity", 0)) + int(option["required_spaces"]) > int(target["capacity"]):
             continue
         if not _has_active_rule(player, "ignore_water_rock_rules") and any(
-            _adjacent_terrain(target["cells"], terrain) < int(card.get("placement", {}).get("adjacent_to", {}).get(terrain, 0))
+            _adjacent_terrain(target["cells"], terrain, player) < int(card.get("placement", {}).get("adjacent_to", {}).get(terrain, 0))
             for terrain in ("water", "rock")
         ):
             continue
@@ -1464,13 +1475,13 @@ def _claim_map_reward(
     state: MutableMapping[str, Any], player_id: str, reward_id: str, events: List[Dict[str, Any]]
 ) -> None:
     player = _player(state, player_id)
-    if reward_id not in MAP_REWARDS:
-        raise ValueError("unknown Map 0 conservation reward")
+    if reward_id not in _map_rewards(player):
+        raise ValueError("unknown map conservation reward")
     if reward_id in player["claimed_map_rewards"]:
-        raise ValueError("Map 0 conservation reward already claimed")
+        raise ValueError("map conservation reward already claimed")
     if len(player["claimed_map_rewards"]) >= 7:
         raise ValueError("no conservation marker remains")
-    reward = MAP_REWARDS[reward_id]
+    reward = _map_rewards(player)[reward_id]
     player["claimed_map_rewards"].append(reward_id)
     player["conservation_markers_remaining"] = 7 - len(player["claimed_map_rewards"])
     reward_type = reward["type"]
@@ -1499,7 +1510,58 @@ def _claim_map_reward(
             events.append(_event(
                 "map_reward_no_target", player_id=player_id, reward_id=reward_id,
             ))
+    elif reward_type in {"sponsor", "university", "action_to_slot", "determination", "special_enclosure"}:
+        _apply_special_map_reward(state, player_id, reward, events)
     events.append(_event("map_reward", player_id=player_id, reward_id=reward_id))
+
+
+def _apply_special_map_reward(
+    state: MutableMapping[str, Any], player_id: str, reward: Mapping[str, Any], events: List[Dict[str, Any]],
+) -> None:
+    kind = reward["type"]
+    if kind in {"sponsor", "university"}:
+        _apply_bonus_token(state, player_id, kind, events)
+        return
+    if kind == "special_enclosure":
+        options = [kind for kind in sorted(SPECIAL_ENCLOSURES)
+                   if _find_placement(state, player_id, kind, BUILDING_SIZES[kind]) is not None]
+        if options:
+            _queue_choice(state, {"choice_id": f"map-special-{player_id}", "type": "map_special_enclosure",
+                                  "player_id": player_id, "prompt": "Choose a free special enclosure",
+                                  "options": _choice_options(options), "min": 0, "max": 1, "allow_skip": True})
+        return
+    for index in range(int(reward.get("amount", 1))):
+        pending = {"choice_id": f"map-{kind}-{player_id}-{index}", "type": kind if kind == "action_to_slot" else "map_extra_action",
+                   "player_id": player_id, "prompt": "Move an Action card to slot 1" if kind == "action_to_slot" else "Choose an additional action",
+                   "options": _choice_options(ACTION_IDS), "min": 0 if kind == "determination" else 1, "max": 1,
+                   "allow_skip": kind == "determination"}
+        queue = "effect_queue" if state.get("resolving_break") else "after_action_core_effects"
+        state.setdefault(queue, []).append({"type": "core", "operation": "choice", "player_id": player_id,
+                                            "choice": pending, "label": reward["label"]})
+
+
+def _map_income(player: Mapping[str, Any]) -> int:
+    if not _map_ability(player, "park_restaurant"):
+        return 0
+    return sum(_adjacent_to_feature(player, [cell], "park_restaurant") for cell in player["map"]["occupancy"])
+
+
+def _check_map_worker_rewards(state: MutableMapping[str, Any], events: List[Dict[str, Any]]) -> None:
+    for player_id, player in state["players"].items():
+        if player["association_workers_total"] == 4 and not player["map"].get("last_worker_rewarded"):
+            player["map"]["last_worker_rewarded"] = True
+            amount = _map_milestone(player, "last_worker")
+            if amount:
+                _apply_rewards(state, player_id, {"conservation": amount}, events, "map:last_worker")
+
+
+def _harbor_available(state: Mapping[str, Any], player_id: str) -> bool:
+    player = state["players"][player_id]
+    return bool(_map_ability(player, "commercial_harbor") and player.get("hand")
+                and not player["map"].get("harbor_used") and not state.get("resolving_break")
+                and not state.get("setup_pending") and not state.get("game_over")
+                and state.get("phase") in {"action", "pending_choice"}
+                and state.get("current_player") == player_id)
 
 
 def _queue_take_card_choice(state: MutableMapping[str, Any], player_id: str, source: str) -> None:
@@ -1952,7 +2014,9 @@ def _run_core_effect(
             _unique_building_choice(state, player_id, card)
     elif operation == "map_income":
         reward_id = str(ref["reward_id"])
-        reward = MAP_REWARDS[reward_id]
+        reward = _map_rewards(state["players"][player_id])[reward_id]
+        if reward["type"] in {"sponsor", "action_to_slot"}:
+            _apply_special_map_reward(state, player_id, reward, events)
         if reward["type"] == "card":
             _queue_take_card_choice(state, player_id, f"break-{state['break_count']}-{reward_id}")
         elif reward["type"] == "conservation":
@@ -1973,7 +2037,7 @@ def _run_core_effect(
         refs = [{"type": "core", "operation": "zoo_income", "player_id": player_id,
                  "label": "领取吸引力、贩售亭及固定收入"}]
         for reward_id in player.get("claimed_map_rewards", []):
-            reward = MAP_REWARDS[reward_id]
+            reward = _map_rewards(state["players"][player_id])[reward_id]
             if reward.get("timing") != "immediate_and_each_break":
                 continue
             if reward["type"] == "money":
@@ -1989,7 +2053,7 @@ def _run_core_effect(
         ])
     elif operation == "zoo_income":
         player = _player(state, player_id)
-        income = _appeal_income(int(player["appeal"])) + _kiosk_income(player) + int(player.get("permanent_income", 0))
+        income = _appeal_income(int(player["appeal"])) + _kiosk_income(player) + _map_income(player) + int(player.get("permanent_income", 0))
         player["money"] += income
         events.append(_event("income", player_id=player_id, amount=income))
     elif operation == "end_break":
@@ -2237,7 +2301,7 @@ def _kiosk_income(player: Mapping[str, Any]) -> int:
         adjacent_ids = {
             occupancy[neighbor]
             for cell_id in kiosk["cells"]
-            for neighbor in MAP_CELLS[cell_id]["neighbors"]
+            for neighbor in _map_cells(player)[cell_id]["neighbors"]
             if neighbor in occupancy and occupancy[neighbor] != kiosk["id"]
         }
         for building_id in adjacent_ids:
@@ -2522,6 +2586,7 @@ def _advance_after_turn(
         extra = queued_extra.pop(0)
         _start_extra_action(state, extra, events)
         return
+    state["players"][player_id]["map"].pop("harbor_used", None)
     final_round = state["final_round"]
     if not final_round.get("active"):
         trigger = _check_end_trigger(state, None if end_triggered_during_break else player_id)
@@ -2553,6 +2618,7 @@ def _advance_after_turn(
 
 def _resume_if_clear(state: MutableMapping[str, Any], events: List[Dict[str, Any]]) -> None:
     while not state.get("game_over"):
+        _check_map_worker_rewards(state, events)
         if state.get("requested_extra_action") and not state.get("pending_choice"):
             extra = state.pop("requested_extra_action")
             _suspend_for_extra_action(state, extra, events)
@@ -2995,6 +3061,9 @@ def _play_animal_card(
     else:
         _remove_display_card(state, card_id)
     required = int(option.get("required_spaces", 0))
+    tower_bonus = (building["building_type"] == "standard_enclosure" and not _building_occupied(building)
+                   and not option.get("shared_enclosure")
+                   and _adjacent_to_feature(player, building["cells"], "observation_tower"))
     building["occupied_by"].append(card_id)
     building["used_capacity"] = int(building.get("used_capacity", 0)) + required
     if building["building_type"] == "standard_enclosure":
@@ -3008,6 +3077,8 @@ def _play_animal_card(
     _recompute_tags(player)
     _update_derived_metrics(player)
     refs = _reward_effects(player_id, card.get("printed_rewards", {}), f"animal:{card_id}")
+    if tower_bonus:
+        refs.extend(_reward_effects(player_id, {"appeal": 2}, "map:observation_tower"))
     chosen = _active_rules(player, "chosen_animal_size")
     if chosen and _animal_size_class(card) == chosen[-1].get("size"):
         refs.extend(_reward_effects(player_id, {"appeal": int(chosen[-1].get("appeal", 0))}, "waza_special_assignment"))
@@ -3519,7 +3590,7 @@ def _take_partner_zoo(
         refs.append({"type": "core", "operation": "association_worker", "player_id": player_id,
                      "source": "third_partner_zoo", "label": "Activate an association worker"})
     elif len(player["partner_zoos"]) == 4:
-        refs.extend(_reward_effects(player_id, {"conservation": 3}, "fourth_partner_zoo"))
+        refs.extend(_reward_effects(player_id, {"conservation": _map_milestone(player, "fourth_partner_zoo")}, "fourth_partner_zoo"))
     _queue_association_tile_icon_effects(
         state, player_id, f"partner_zoo:{continent}", {continent: 1}, effects=refs,
     )
@@ -3554,7 +3625,7 @@ def _take_university(
     if len(player["universities"]) == 2:
         _queue_association_tile_upgrade(state, player_id, "university", effects=refs)
     elif len(player["universities"]) == 3:
-        refs.extend(_reward_effects(player_id, {"conservation": 2}, "third_university"))
+        refs.extend(_reward_effects(player_id, {"conservation": _map_milestone(player, "third_university")}, "third_university"))
     science_icons = int(university.get("science", 0))
     if science_icons:
         _queue_association_tile_icon_effects(
@@ -3633,12 +3704,12 @@ def _resolve_project_map_reward(
         _claim_map_reward(state, player_id, str(reward_id), events)
         return
     player = _player(state, player_id)
-    available = [value for value in MAP_REWARDS if value not in player["claimed_map_rewards"]]
+    available = [value for value in _map_rewards(player) if value not in player["claimed_map_rewards"]]
     _queue_choice(state, {
         "choice_id": f"map-reward-{player_id}-{len(player['supported_projects'])}",
         "type": "choose_map_reward", "player_id": player_id,
         "prompt": "Choose a Map 0 conservation reward",
-        "options": _choice_options(available, {value: MAP_REWARDS[value]["label"] for value in available}),
+        "options": _choice_options(available, {value: _map_rewards(player)[value]["label"] for value in available}),
         "min": 1, "max": 1,
     })
 
@@ -3656,10 +3727,10 @@ def _support_project(
     if markers_remaining <= 0:
         return "no conservation marker remains"
     reward_id = task.get("reward_id")
-    if reward_id and reward_id not in MAP_REWARDS:
-        return "unknown Map 0 conservation reward"
+    if reward_id and reward_id not in _map_rewards(player):
+        return "unknown map conservation reward"
     if reward_id in player["claimed_map_rewards"]:
-        return "Map 0 conservation reward already claimed"
+        return "map conservation reward already claimed"
     project_id = str(task.get("project_id") or task.get("project_card_id") or "")
     newly_added = False
     if project_id not in state["projects"]:
@@ -4340,6 +4411,23 @@ def _resolve_choice(
             state["discard"].append(card_id)
         state["pending_choice"] = None
         events.append(_event("discard", player_id=player_id, card_ids=card_ids))
+    elif choice_type == "map_extra_action":
+        state["pending_choice"] = None
+        if selected:
+            action_id = str(_selected_choice_value(selected[0]))
+            if action_id not in ACTION_IDS:
+                return "unknown action card"
+            state["requested_extra_action"] = {"player_id": player_id, "action": action_id,
+                "move_after": True, "allow_x_alternative": True, "optional": True}
+    elif choice_type == "map_special_enclosure":
+        state["pending_choice"] = None
+        if selected:
+            kind = str(_selected_choice_value(selected[0]))
+            if kind not in SPECIAL_ENCLOSURES or _find_placement(state, player_id, kind, BUILDING_SIZES[kind]) is None:
+                return "no legal placement for this special enclosure"
+            _queue_choice(state, {"choice_id": f"map-special-place-{player_id}", "type": "place_free_enclosure",
+                "player_id": player_id, "building_type": kind, "size": BUILDING_SIZES[kind],
+                "prompt": "Place the free special enclosure", "options": [], "min": 0, "max": 1, "allow_skip": True})
     elif choice_type == "action_to_slot":
         action_id = str(selected[0])
         if action_id not in player["action_cards"]:
@@ -4442,7 +4530,7 @@ def _resolve_choice(
             cells = value.get("cells") if isinstance(value, Mapping) else value
             if not isinstance(cells, list):
                 return "free enclosure choice requires cells"
-            spec = {"building_type": "standard_enclosure", "size": int(pending.get("size", 2)), "cells": cells}
+            spec = {"building_type": pending.get("building_type", "standard_enclosure"), "size": int(pending.get("size", 2)), "cells": cells}
             try:
                 _place_building(state, player_id, spec, events, free=True)
             except ValueError as exc:
@@ -4470,8 +4558,8 @@ def _resolve_choice(
     elif choice_type == "claim_placement_bonus":
         cell_id = str(selected[0])
         if (
-            cell_id not in MAP_CELLS
-            or not MAP_CELLS[cell_id].get("placement_bonus")
+            cell_id not in _map_cells(player)
+            or not _map_cells(player)[cell_id].get("placement_bonus")
             or cell_id in player["map"]["occupancy"]
         ):
             return "placement bonus is no longer available"
@@ -4516,12 +4604,12 @@ def _normalize_pending_choice(pending: Mapping[str, Any], effect_ref: Mapping[st
 
 def _update_derived_metrics(player: MutableMapping[str, Any]) -> None:
     occupancy = player["map"]["occupancy"]
-    buildable = {cell_id for cell_id, cell in MAP_CELLS.items() if cell.get("buildable")}
-    border_buildable = {cell_id for cell_id in buildable if MAP_CELLS[cell_id].get("border")}
+    buildable = {cell_id for cell_id, cell in _map_cells(player).items() if cell.get("buildable")}
+    border_buildable = {cell_id for cell_id in buildable if _map_cells(player)[cell_id].get("border")}
     empty_buildable = buildable - set(occupancy)
     connected_empty_border = sum(
         1 for cell_id in border_buildable - set(occupancy)
-        if any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"])
+        if any(neighbor in occupancy for neighbor in _map_cells(player)[cell_id]["neighbors"])
     )
     unseen = set(empty_buildable)
     empty_six_hex_regions = 0
@@ -4530,7 +4618,7 @@ def _update_derived_metrics(player: MutableMapping[str, Any]) -> None:
         frontier = list(component)
         while frontier:
             cell_id = frontier.pop()
-            for neighbor in MAP_CELLS[cell_id]["neighbors"]:
+            for neighbor in _map_cells(player)[cell_id]["neighbors"]:
                 if neighbor in unseen:
                     unseen.remove(neighbor)
                     component.add(neighbor)
@@ -4549,7 +4637,7 @@ def _update_derived_metrics(player: MutableMapping[str, Any]) -> None:
         side_entrance_adjacent = {
             occupancy[neighbor]
             for cell_id in side_entrance.get("cells", [])
-            for neighbor in MAP_CELLS[cell_id]["neighbors"]
+            for neighbor in _map_cells(player)[cell_id]["neighbors"]
             if neighbor in occupancy and occupancy[neighbor] != side_entrance["id"]
             and not (
                 by_id[occupancy[neighbor]].get("building_type") == "standard_enclosure"
@@ -4559,21 +4647,21 @@ def _update_derived_metrics(player: MutableMapping[str, Any]) -> None:
     terrain_metrics: Dict[str, int] = {}
     for terrain in ("water", "rock"):
         remaining = {
-            cell_id for cell_id, cell in MAP_CELLS.items()
+            cell_id for cell_id, cell in _map_cells(player).items()
             if cell.get("terrain") == terrain and cell_id not in occupancy
         }
         connected = {
             cell_id for cell_id in remaining
-            if any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"])
+            if any(neighbor in occupancy for neighbor in _map_cells(player)[cell_id]["neighbors"])
         }
         terrain_metrics[f"connected_{terrain}_hex_count"] = len(connected)
         terrain_metrics[f"isolated_{terrain}_hex_count"] = len(remaining - connected)
     bonus_cells = {
-        cell_id for cell_id, cell in MAP_CELLS.items() if cell.get("placement_bonus")
+        cell_id for cell_id, cell in _map_cells(player).items() if cell.get("placement_bonus")
     } - set(occupancy)
     connected_bonus = {
         cell_id for cell_id in bonus_cells
-        if any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"])
+        if any(neighbor in occupancy for neighbor in _map_cells(player)[cell_id]["neighbors"])
     }
     buildings = list(player["map"].get("buildings", []))
     building_metrics = {
@@ -4761,7 +4849,7 @@ def _find_placement(
         return None
     axial_to_id = {
         (int(cell["axial"]["q"]), int(cell["axial"]["r"])): cell_id
-        for cell_id, cell in MAP_CELLS.items()
+        for cell_id, cell in _map_cells(state["players"][player_id]).items()
     }
     for steps in range(6):
         rotated = _rotate_shape(footprint, steps)
@@ -4958,6 +5046,11 @@ class ArkNovaGame:
         if len(set(player_ids)) != len(player_ids):
             raise ValueError("duplicate player id")
         cfg = dict(config or {})
+        map_mode = cfg.get("map_mode", "map0")
+        if map_mode not in {"map0", "choose"}:
+            raise ValueError("unknown map mode")
+        if cfg.get("map_id", "map0") != "map0":
+            raise ValueError("use player map selection for advanced maps")
         seed = cfg.get("seed")
         rng = random.Random(seed)
 
@@ -4987,7 +5080,8 @@ class ArkNovaGame:
             "players": {},
             "current_player": player_ids[0],
             "current_turn": player_ids[0],
-            "phase": "setup",
+            "phase": "choose_map" if map_mode == "choose" else "setup",
+            "map_selection_pending": list(player_ids) if map_mode == "choose" else [],
             "setup_pending": list(player_ids),
             "deck": zoo_deck,
             "discard": [],
@@ -5045,17 +5139,20 @@ class ArkNovaGame:
         _migrate_state_in_place(state)
         if state.get("game_over") or player_id not in state.get("players", {}):
             return []
+        if state.get("map_selection_pending"):
+            return ["choose_map"] if player_id in state["map_selection_pending"] else []
         if player_id in state.get("setup_pending", []):
             return ["keep_initial_cards"]
         pending = state.get("pending_choice")
+        harbor = ["use_harbor"] if _harbor_available(state, player_id) else []
         if pending:
-            return ["resolve_choice"] if pending.get("player_id") == player_id else []
+            return (["resolve_choice"] if pending.get("player_id") == player_id else []) + harbor
         if state.get("phase") != "action" or state.get("current_player") != player_id:
             return []
         player = state["players"][player_id]
         forced = state.get("forced_action")
         if isinstance(forced, Mapping) and forced.get("player_id") == player_id:
-            return [str(forced.get("action"))] + (["skip_extra_action"] if forced.get("optional") else [])
+            return [str(forced.get("action"))] + (["skip_extra_action"] if forced.get("optional") else []) + harbor
         available_x = int(player.get("x_tokens", 0))
 
         def maximum_strength(action_id: str) -> int:
@@ -5074,7 +5171,7 @@ class ArkNovaGame:
             actions.append("sponsors")
         if player["x_tokens"] < MAX_X_TOKENS:
             actions.append("gain_x")
-        return actions
+        return actions + harbor
 
     @staticmethod
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
@@ -5095,6 +5192,38 @@ class ArkNovaGame:
         action_type = aliases.get(action_type, action_type)
 
         try:
+            if candidate.get("map_selection_pending"):
+                if player_id not in candidate["map_selection_pending"]:
+                    return [], "waiting for other players to choose maps"
+                if action_type != "choose_map":
+                    return [], "choose a zoo map first"
+                map_id = action.get("map_id")
+                if not isinstance(map_id, str) or map_id not in MAPS:
+                    return [], "unknown zoo map"
+                candidate["players"][player_id]["map"]["id"] = map_id
+                _update_derived_metrics(candidate["players"][player_id])
+                candidate["map_selection_pending"].remove(player_id)
+                if not candidate["map_selection_pending"]:
+                    candidate["phase"] = "setup"
+                events.append(_event("map_selected", player_id=player_id, map_id=map_id))
+                state.clear()
+                state.update(candidate)
+                return events, None
+            if action_type == "use_harbor":
+                if not _harbor_available(candidate, player_id):
+                    return [], "Commercial Harbor is not available"
+                player = candidate["players"][player_id]
+                card_id = action.get("card_id")
+                if not isinstance(card_id, str) or card_id not in player["hand"]:
+                    return [], "choose a hand card to sell"
+                player["hand"].remove(card_id)
+                candidate["discard"].append(card_id)
+                player["money"] += 3
+                player["map"]["harbor_used"] = True
+                events.append(_event("harbor", player_id=player_id, card_id=card_id, amount=3))
+                state.clear()
+                state.update(candidate)
+                return events, None
             if player_id in candidate.get("setup_pending", []):
                 if action_type != "keep_initial_cards":
                     return [], "must choose initial hand"
@@ -5332,6 +5461,9 @@ class ArkNovaGame:
                     ]
                 ),
                 "map": copy.deepcopy(player["map"]),
+                "map_name": _map_definition(player)["name"],
+                "map_income": _map_income(player),
+                "map_ability_active": _map_ability(player, _map_definition(player).get("ability", {}).get("type", "")),
                 "flock_available": any(item["id"] == "flock" for item in _animal_enclosures(player)),
             })
 
@@ -5339,6 +5471,11 @@ class ArkNovaGame:
             "game_id": ArkNovaGame.game_id, "you": viewer_id,
             "current_player": state.get("current_player"), "current_turn": state.get("current_player"),
             "phase": state.get("phase"), "setup_pending": list(state.get("setup_pending", [])),
+            "map_selection_pending": list(state.get("map_selection_pending", [])),
+            "map_mode": state.get("config", {}).get("map_mode", "map0"),
+            "map_options": [{"id": map_id, "name": data["name"], "name_zh": data.get("name_zh", "地图 0"),
+                             "description": data.get("ability", {}).get("description", "Intermediate map with generous placement and conservation bonuses.")}
+                            for map_id, data in MAPS.items()],
             "break_position": int(state.get("break_position", 0)), "break_limit": int(state.get("break_limit", 0)),
             "break_count": int(state.get("break_count", 0)), "deck_count": len(state.get("deck", [])),
             "discard_count": len(state.get("discard", [])), "display": display,
@@ -5352,15 +5489,17 @@ class ArkNovaGame:
             },
             "building_supply": copy.deepcopy(state.get("building_supply", {})),
             "players": players_view,
-            "your_hand": [_card_with_context(card_id, viewer) for card_id in (viewer or {}).get("hand", [])],
-            "your_final_cards": [_full_card(card_id) for card_id in (viewer or {}).get("final_cards", [])],
+            "your_hand": [] if state.get("map_selection_pending") else [_card_with_context(card_id, viewer) for card_id in (viewer or {}).get("hand", [])],
+            "your_final_cards": [] if state.get("map_selection_pending") else [_full_card(card_id) for card_id in (viewer or {}).get("final_cards", [])],
             "pending_choice": _public_choice(state.get("pending_choice"), viewer_id),
             "forced_action": copy.deepcopy(state.get("forced_action")),
             "multiplier_action": copy.deepcopy(state.get("multiplier_action")),
             "legal_actions": legal_actions,
             "action_availability": _public_action_availability(state, viewer_id, legal_actions),
             "action_definitions": copy.deepcopy(CARD_DATA["action_cards"]),
-            "map_definition": copy.deepcopy(MAP0),
+            "map_definition": copy.deepcopy(_map_definition(viewer)),
+            "map_definitions": {map_id: copy.deepcopy(MAPS[map_id]) for map_id in
+                                {player["map"]["id"] for player in state["players"].values()}},
             "final_round": copy.deepcopy(state.get("final_round", {})),
             "game_over": bool(state.get("game_over")), "scores": copy.deepcopy(state.get("scores", {})),
             "winner": list(state.get("winner", [])),

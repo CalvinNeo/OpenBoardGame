@@ -486,6 +486,8 @@ def _can_free(state: Dict, pid: str) -> bool:
         return False
     if state["phase"] not in ("action", "prepare", "feast", "final_placement"):
         return False
+    if state.get("interrupted_turn") and state["current_turn"] != pid:
+        return False
     if state["phase"] == "action" and state["current_turn"] == pid and state["pending"]:
         return False
     if state["phase"] == "feast" and pid in state["feast_done"]:
@@ -519,9 +521,7 @@ def _free_moves(state: Dict, pid: str) -> List[Dict]:
         if data.get("shop") and p["stock"].get("silver", 0):
             moves += [{"type": "shop", "good": g} for g, n in p["stock"].items() if n and GOODS[g]["color"] == "orange"]
     if _trait(p, "tutor") and p["stock"].get("silver", 0):
-        # Card resolutions use the turn queue, so a tutor is used on your turn.
-        if state["phase"] == "action" and state["current_turn"] == pid:
-            moves += [{"type": "tutor", "card": card} for card in p["hand"]]
+        moves += [{"type": "tutor", "card": card} for card in p["hand"]]
     return moves
 
 
@@ -618,6 +618,8 @@ def _settle(state: Dict) -> None:
             break
         _used(state, e)
         state["pending"].pop(0)
+    if not state["pending"] and state.get("interrupted_turn"):
+        state.update(state.pop("interrupted_turn"))
 
 
 def _play_occupation(state: Dict, pid: str, card: str) -> None:
@@ -938,6 +940,9 @@ def _apply(state: Dict, pid: str, move: Dict) -> None:
         _gain(state, pid, {GOODS[move["good"]]["upgrade"]: 1})
     elif t == "tutor":
         _pay(p, {"silver": 1})
+        if state["phase"] != "action" or state["current_turn"] != pid:
+            state["interrupted_turn"] = {k: state[k] for k in ("phase", "current_turn", "active", "pending")}
+            state.update(phase="action", current_turn=pid, active=None, pending=[])
         _play_occupation(state, pid, move["card"])
     elif t == "ready":
         state["ready"].append(pid)
@@ -996,6 +1001,7 @@ class AFeastForOdinGame:
         for values in (starters, deck, weapons, mountains):
             rng.shuffle(values)
         state = {"game_id": AFeastForOdinGame.game_id, "version": 1, "ruleset": "odin_digital_1", "seed": seed,
+                 "config": {"rounds": rounds},
                  "revision": 0, "phase": "action", "round": 1, "rounds": rounds, "order": ids,
                  "first_player": rng.choice(ids), "current_turn": None, "last_worker": None,
                  "players": {}, "player_meta": {}, "occupied": {}, "active": None, "pending": [],
@@ -1052,7 +1058,7 @@ class AFeastForOdinGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
-        private = {"seed", "_rng", "occupation_deck", "weapon_deck", "weapon_discard", "mountain_deck", "players", "player_meta"}
+        private = {"seed", "_rng", "occupation_deck", "weapon_deck", "weapon_discard", "mountain_deck", "players", "player_meta", "interrupted_turn"}
         view = {k: copy.deepcopy(v) for k, v in state.items() if k not in private}
         view["you"], view["players"] = viewer_id, []
         for pid in state["order"]:

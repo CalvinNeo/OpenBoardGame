@@ -260,6 +260,7 @@
   }
 
   const arkNovaUi = {
+    mapChoice: "map0",
     selectedAction: null,
     xTokens: 0,
     multiplierTokens: 0,
@@ -593,6 +594,7 @@
       panel.dataset.arkNovaMounted = "true";
       panel.innerHTML = `
         <div id="arkNovaStatus" class="arkn-status" aria-live="polite"></div>
+        <section id="arkNovaMapSelection" class="arkn-surface hidden"></section>
         <div class="arkn-public-board">
           <section class="arkn-surface arkn-tracks-surface" aria-labelledby="arkNovaTracksTitle">
             <div class="arkn-section-heading"><h3 id="arkNovaTracksTitle">Public tracks</h3><span id="arkNovaBreakStatus" class="arkn-kicker"></span></div>
@@ -637,6 +639,7 @@
               <div class="arkn-section-heading"><h3 id="arkNovaComposerTitle">Plan action</h3><span id="arkNovaComposerStatus" class="arkn-kicker">Server validated</span></div>
               <div id="arkNovaPending" class="arkn-pending-wrap"></div>
               <div id="arkNovaComposer"></div>
+              <div id="arkNovaHarbor"></div>
             </section>
           </aside>
         </div>
@@ -1383,6 +1386,53 @@
     return buildings;
   }
 
+  function arkNovaMapDefinition(view = arkNovaView, player = arkNovaViewedPlayer(view)) {
+    const id = arkNovaPlayerMap(player).id || "map0";
+    return view?.map_definitions?.[id] || view?.map_definition || {};
+  }
+
+  function arkNovaMapUrl(id) {
+    return `/static/assets/ark_nova/${/^map(?:0|[1-6]a)$/.test(id) ? id : "map0"}.svg?v=maps_v1`;
+  }
+
+  function arkNovaMapInfo(view = arkNovaView) {
+    const map = arkNovaMapDefinition(view);
+    const rewards = arkNovaAsArray(map.conservation_rewards);
+    const milestones = map.milestones || { fourth_partner_zoo: 3, third_university: 2, last_worker: 0 };
+    return `<div class="arkn-map-info-grid">
+      <section><h4>${arkNovaEscape(map.name || "Map 0")}</h4><p>${arkNovaEscape(map.ability?.description || "Intermediate zoo map with additional placement bonuses.")}</p></section>
+      <section><h4>Complete your zoo 🎟️</h4><p>Cover all ${arkNovaNumber(map.counts?.buildable, 39)} land spaces for 7 appeal. Water (🌊) and rock (🪨) count for adjacency and cannot normally be covered.</p></section>
+      <section><h4>Build II 🔨</h4><p>Upgrade Build before covering ${arkNovaEscape(arkNovaAsArray(map.build_ii_cells).join(", "))}.</p></section>
+      <section><h4>Conservation rewards 🛡️</h4><ul>${rewards.map((reward) => `<li>${reward.timing === "immediate_and_each_break" ? "↻" : "⚡"} ${arkNovaEscape(reward.label)}</li>`).join("")}</ul><p>↻ Immediately and every break. ⚡ Once when uncovered.</p></section>
+      <section><h4>Association bonuses 🤝</h4><p>Fourth partner zoo: ${milestones.fourth_partner_zoo} 🛡️. Third university: ${milestones.third_university} 🛡️. Last worker: ${milestones.last_worker} 🛡️.</p></section>
+    </div>`;
+  }
+
+  function arkNovaRenderMapSelection(view) {
+    const container = document.getElementById("arkNovaMapSelection");
+    const selecting = arkNovaAsArray(view.map_selection_pending).length > 0;
+    document.getElementById("arkNovaPanel")?.classList.toggle("is-map-selection", selecting);
+    container.classList.toggle("hidden", !selecting);
+    if (!selecting) return;
+    const canChoose = arkNovaCan("choose_map", view);
+    const selected = canChoose ? arkNovaUi.mapChoice : arkNovaPlayerMap(arkNovaYou(view)).id;
+    const options = arkNovaAsArray(view.map_options);
+    const map = options.find((entry) => entry.id === selected) || options[0];
+    container.innerHTML = `<div class="arkn-section-heading"><h3>🗺️ ${canChoose ? "Choose your zoo map" : "Map confirmed"}</h3><span class="arkn-kicker">${view.map_selection_pending.length} choosing</span></div>
+      <div class="arkn-map-choice-grid">${options.map((entry) => `<button type="button" class="arkn-map-choice ${entry.id === selected ? "is-selected" : ""}" data-arkn-map-id="${arkNovaEscape(entry.id)}" data-arkn-explain="choose_map" aria-pressed="${entry.id === selected}" ${canChoose ? "" : "disabled"}>
+        <img src="${arkNovaMapUrl(entry.id)}" alt="${arkNovaEscape(entry.name)} layout" loading="lazy"><strong>${arkNovaEscape(entry.name)}</strong><small>${arkNovaEscape(entry.name_zh)}</small></button>`).join("")}</div>
+      <div class="arkn-map-choice-footer"><p>${arkNovaEscape(map?.description || "")}</p>${canChoose ? '<button type="button" class="arkn-confirm" data-arkn-command="choose-map" data-arkn-explain="choose_map">Confirm map</button>' : '<span>Waiting for the other players…</span>'}</div>`;
+  }
+
+  function arkNovaRenderHarbor(view) {
+    const container = document.getElementById("arkNovaHarbor");
+    const available = arkNovaCan("use_harbor", view);
+    container.classList.toggle("hidden", !available);
+    if (!available) return;
+    const previous = container.querySelector("select")?.value;
+    container.innerHTML = `<div class="arkn-harbor-control" data-arkn-explain="harbor"><label for="arkNovaHarborCard">⚓ Commercial Harbor</label><select id="arkNovaHarborCard" aria-label="Hand card to sell">${arkNovaHand(view).map((card) => `<option value="${arkNovaEscape(arkNovaCardId(card))}" ${arkNovaCardId(card) === previous ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(card))}</option>`).join("")}</select><button type="button" data-arkn-command="use-harbor" data-arkn-explain="harbor">Sell · 💰3</button></div>`;
+  }
+
   function arkNovaRenderBuildings(view) {
     const container = document.getElementById("arkNovaBuildings");
     const xStorage = document.getElementById("arkNovaMapXStorage");
@@ -1394,10 +1444,20 @@
     const viewingOwnZoo = arkNovaViewingOwnZoo(view);
     const playerName = arkNovaPlayerName(viewedPlayer);
     const buildings = arkNovaBuildings(viewedPlayer);
-    if (title) title.textContent = viewingOwnZoo ? "Your zoo · Map 0" : `${playerName}'s zoo · Map 0`;
-    if (mapObject) mapObject.setAttribute("aria-label", `${playerName}'s Map 0 zoo board`);
+    const definition = arkNovaMapDefinition(view, viewedPlayer);
+    if (title) title.textContent = `${viewingOwnZoo ? "Your zoo" : `${playerName}'s zoo`} · ${definition.name || "Map 0"}`;
+    if (mapObject) {
+      mapObject.setAttribute("aria-label", `${playerName}'s ${definition.name || "Map 0"} zoo board`);
+      const mapId = definition.id || "map0";
+      if (mapObject.dataset.mapId !== mapId) {
+        mapObject.dataset.mapId = mapId;
+        arkNovaMapDocument = null;
+        document.getElementById("arkNovaMapLoading")?.classList.remove("hidden");
+        mapObject.data = arkNovaMapUrl(mapId);
+      }
+    }
     if (xStorage) {
-      const mapDefinition = view.map_definition || view.map || {};
+      const mapDefinition = definition;
       const limit = Math.max(1, arkNovaNumber(mapDefinition.x_token_limit, 5));
       xStorage.innerHTML = `<span aria-hidden="true">✕</span><small>${viewingOwnZoo ? "X-tokens" : `${arkNovaEscape(playerName)}'s X`}</small><b>${arkNovaResource(viewedPlayer, "x_tokens")} / ${limit}</b>`;
     }
@@ -1459,7 +1519,7 @@
   }
 
   function arkNovaMapCellDefinition(cellId, view = arkNovaView) {
-    const definition = view && (view.map_definition || view.map) || {};
+    const definition = arkNovaMapDefinition(view, arkNovaYou(view));
     return arkNovaAsArray(definition.cells).find((cell) => String(cell && cell.id) === String(cellId)) || null;
   }
 
