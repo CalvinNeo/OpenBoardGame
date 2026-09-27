@@ -1,45 +1,78 @@
 <template data-game-target="lostCodePanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="lostCodePhase">-</span></div>
-                <div>Round: <span id="lostCodeRound">-</span></div>
-                <div>Current Turn: <span id="lostCodeTurn">-</span></div>
-                <div>Mode: <span id="lostCodeModeLabel">-</span></div>
-              </div>
-              <div id="lostCodeHint" class="hint">-</div>
-
-              <h3>Dice 🎲</h3>
-              <div id="lostCodeDice" class="lost-code-chip-wrap"></div>
-
-              <h3>Controls</h3>
-              <div id="lostCodeControls" class="lost-code-controls"></div>
-
-              <h3>Players</h3>
-              <div id="lostCodePlayers" class="lost-code-player-list"></div>
-
-              <h3>Logs</h3>
-              <div id="lostCodeLogs" class="lost-code-log-grid"></div>
-
-              <h3>Shortcut Tokens</h3>
-              <div id="lostCodeTokenStatus" class="lost-code-token-list"></div>
-
-              <h3>Round Guesses</h3>
-              <div id="lostCodeGuesses" class="lost-code-guess-list"></div>
-            </template>
-<template data-game-target="lostCodeHelpModal" data-game-mode="replace"><div id="lostCodeHelpModal" class="modal hidden" aria-hidden="true">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h2>The Lost Code Help</h2>
-                  <button id="lostCodeHelpModalCloseBtn" type="button">Close</button>
-                </div>
-                <div class="modal-body" id="lostCodeHelpContent"></div>
-              </div>
-            </div></template>
-<template data-game-target="lostCodeExplainModal" data-game-mode="replace"><div id="lostCodeExplainModal" class="modal hidden" aria-hidden="true">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h2>The Lost Code Explain</h2>
-                  <button id="lostCodeExplainModalCloseBtn" type="button">Close</button>
-                </div>
-                <div class="modal-body" id="lostCodeExplainContent"></div>
-              </div>
-            </div></template>
+  <div class="lost-code-status" aria-label="Game status">
+    <div><span class="lost-code-eyebrow">Phase</span><strong id="lostCodePhase">Lobby</strong></div>
+    <div><span class="lost-code-eyebrow">Round</span><strong id="lostCodeRound">—</strong></div>
+    <div><span class="lost-code-eyebrow">Current turn</span><strong id="lostCodeTurn">—</strong></div>
+    <div><span class="lost-code-eyebrow">Mode</span><strong id="lostCodeModeLabel">—</strong></div>
+  </div>
+  <div id="lostCodePlayers" class="lost-code-player-list" aria-label="Scores"></div>
+  <div class="lost-code-workspace">
+    <section class="lost-code-card lost-code-action-card" aria-labelledby="lostCodeActionTitle">
+      <div class="lost-code-section-heading">
+        <h3 id="lostCodeActionTitle">🎲 Your turn</h3>
+        <span id="lostCodeTurnBadge" class="lost-code-badge">Waiting</span>
+      </div>
+      <div id="lostCodeHint" class="lost-code-hint" role="status"></div>
+      <div id="lostCodeDice" class="lost-code-dice" aria-label="Symbol dice"></div>
+      <div id="lostCodeControls" class="lost-code-controls"></div>
+    </section>
+    <section class="lost-code-card lost-code-clue-card" aria-labelledby="lostCodeClueTitle">
+      <div class="lost-code-section-heading">
+        <h3 id="lostCodeClueTitle">🔎 Code clues</h3>
+        <span id="lostCodeValueRange" class="lost-code-badge"></span>
+      </div>
+      <div id="lostCodeCluesHome">
+        <div id="lostCodeClueContent">
+          <div id="lostCodeLogs" class="lost-code-log-grid"></div>
+          <details id="lostCodeDiscardDetails" class="lost-code-details">
+            <summary>💎 Discarded stones <span id="lostCodeDiscardCount" class="lost-code-badge">0</span></summary>
+            <div id="lostCodeDiscards" class="lost-code-discards"></div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="lost-code-secondary">
+    <details id="lostCodeGuessDetails" class="lost-code-card lost-code-details" open>
+      <summary>📋 Round guesses <span id="lostCodeGuessCount" class="lost-code-badge">0</span></summary>
+      <div id="lostCodeGuesses" class="lost-code-guess-list"></div>
+    </details>
+    <details id="lostCodeTokenDetails" class="lost-code-card lost-code-details hidden">
+      <summary>⚡ Shortcut tokens</summary>
+      <div id="lostCodeTokenStatus" class="lost-code-token-list"></div>
+    </details>
+  </div>
+  <button id="lostCodeCluesBtn" class="lost-code-clues-toggle hidden" type="button" aria-controls="lostCodeCluesModal" aria-expanded="false">🔎 Clues</button>
+  <div id="lostCodeCluesModal" class="modal hidden lost-code-modal lost-code-clues-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lostCodeCluesDockTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="lostCodeCluesDockTitle">🔎 Code clues</h2>
+        <button id="lostCodeCluesCloseBtn" type="button">Close</button>
+      </div>
+      <div id="lostCodeCluesDockHost" class="modal-body"></div>
+    </div>
+  </div>
+  <div id="lostCodeTooltip" class="lost-code-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="lostCodeHelpModal" data-game-mode="replace">
+  <div id="lostCodeHelpModal" class="modal hidden lost-code-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lostCodeHelpTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="lostCodeHelpTitle">The Lost Code · Help</h2>
+        <button id="lostCodeHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="lostCodeHelpContent"></div>
+    </div>
+  </div>
+</template>
+<template data-game-target="lostCodeExplainModal" data-game-mode="replace">
+  <div id="lostCodeExplainModal" class="modal hidden lost-code-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lostCodeExplainTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="lostCodeExplainTitle">The Lost Code · Explain</h2>
+        <button id="lostCodeExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="lostCodeExplainContent"></div>
+    </div>
+  </div>
+</template>

@@ -1,154 +1,193 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+/* Loaded into the matching style.css group by loadGameStyleFragments. */
 @media all, obg-game-lost_code-1 {
+  #lostCodePanel, .lost-code-modal {
+    --lc-ink: #173f3c;
+    --lc-muted: #627672;
+    --lc-line: #d8e5df;
+    color: var(--lc-ink);
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  #lostCodePanel *, .lost-code-modal * { min-width: 0; }
+  #lostCodePanel button, .lost-code-modal button, .lost-code-header-btn {
+    min-height: 42px;
+    border: 1px solid #cbdcd5;
+    border-radius: 10px;
+    padding: 8px 12px;
+    background: #fff;
+    color: #244d47;
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+    touch-action: manipulation;
+    overflow-wrap: anywhere;
+  }
+  #lostCodePanel button:disabled { cursor: not-allowed; }
+  #lostCodePanel button:focus-visible, .lost-code-modal :focus-visible,
+  .lost-code-header-btn:focus-visible, #lostCodePanel summary:focus-visible,
+  #lostCodePanel [data-lost-code-tip]:focus-visible {
+    outline: 3px solid #d39b36;
+    outline-offset: 2px;
+  }
+  #lostCodePanel button.selected, #lostCodePanel button[aria-pressed="true"],
+  .lost-code-header-btn.active, #lostCodePanel .lost-code-primary {
+    background: #137c70;
+    border-color: #137c70;
+    color: #fff;
+  }
+  #lostCodePanel h3 { margin: 0; font-size: 16px; line-height: 1.35; }
+  .lost-code-status {
+    display: grid;
+    grid-template-columns: 1.1fr .7fr 1.5fr .8fr;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: #173f3c;
+    color: #fff;
+  }
+  .lost-code-status > div { display: grid; gap: 3px; align-content: start; }
+  .lost-code-status strong { font-size: 15px; }
+  .lost-code-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #b4d2c7; }
+  .lost-code-player-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
+  .lost-code-player-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 130px;
+    padding: 8px 10px;
+    border: 1px solid var(--lc-line);
+    border-radius: 10px;
+    background: #f6f9f6;
+  }
+  .lost-code-player-row.is-current { border-color: #137c70; background: #eaf5ef; }
+  .lost-code-player-name { flex: 1; }
+  .lost-code-score { flex-shrink: 0; font-weight: 700; white-space: nowrap; }
+  .lost-code-player-tag { font-size: 10px; color: #637a72; display: block; }
+  .lost-code-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .lost-code-card { padding: 16px; background: #fff; border: 1px solid var(--lc-line); border-radius: 14px; }
+  .lost-code-action-card { background: #fbfcf8; }
+  .lost-code-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .lost-code-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 7px; background: #edf3ed; color: #48665d; border-radius: 6px; }
+  .lost-code-hint { color: var(--lc-muted); font-size: 13px; margin-bottom: 12px; }
+  .lost-code-dice { display: grid; grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr) 12px minmax(0, 1fr) 30px; align-items: center; gap: 5px; margin-bottom: 16px; }
+  .lost-code-dice-empty { grid-column: 1 / -1; text-align: center; padding: 14px; border: 1px dashed #c5d9cd; border-radius: 12px; color: var(--lc-muted); }
+  #lostCodePanel .lost-code-die { display: grid; gap: 3px; justify-items: center; padding: 8px 4px; background: #fff; border: 1px solid #cfddd6; border-radius: 12px; color: var(--lc-ink); }
+  #lostCodePanel button.lost-code-die.selected { box-shadow: 0 0 0 2px #137c70; border-color: #137c70; background: #e9f5ef; color: var(--lc-ink); }
+  .lost-code-die-index { font-size: 10px; font-weight: 600; color: var(--lc-muted); }
+  .lost-code-dice-op { text-align: center; font-weight: 700; color: var(--lc-muted); }
+  .lost-code-symbol { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; font-size: 20px; line-height: 1; background: #eef3ee; }
+  .lost-code-symbol[data-symbol="bird_blue"] { background: #e1f0fb; }
+  .lost-code-symbol[data-symbol="jaguar_yellow"] { background: #fff1bd; }
+  .lost-code-symbol[data-symbol="chameleon_purple"] { background: #eee4fb; }
+  .lost-code-symbol[data-symbol="snake_green"] { background: #e0f1dc; }
+  .lost-code-symbol[data-symbol="human_pink"] { background: #fce5ee; }
+  .lost-code-symbol[data-symbol="bear_red"] { background: #fbe0db; }
+  .lost-code-die .lost-code-symbol { width: 38px; height: 38px; font-size: 26px; }
+  .lost-code-controls { display: grid; gap: 12px; }
+  .lost-code-control-label { font-size: 12px; font-weight: 700; color: #526d60; }
+  .lost-code-chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .lost-code-symbol-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  #lostCodePanel .lost-code-symbol-choice { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px; }
+  .lost-code-wheel-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  #lostCodePanel .lost-code-wheel { display: grid; justify-items: center; align-content: center; gap: 3px; padding: 7px 3px; font-size: 11px; }
+  .lost-code-wheel strong { font-size: 18px; white-space: nowrap; }
+  .lost-code-wheel-reward { color: #836115; font-size: 11px; }
+  .lost-code-wheel.selected .lost-code-wheel-reward { color: #fff2c9; }
+  .lost-code-range-strip { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+  #lostCodePanel .lost-code-range-cell { min-height: 38px; padding: 4px 0; font-size: 13px; border-radius: 7px; }
+  #lostCodePanel .lost-code-range-cell.in-range { background: #dff0e4; border-color: #8bbba7; }
+  #lostCodePanel .lost-code-range-cell.center { background: #137c70; border-color: #137c70; color: #fff; }
+  .lost-code-guess-submit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: stretch; }
+  .lost-code-range-preview { display: grid; align-content: center; font-size: 11px; color: var(--lc-muted); }
+  .lost-code-range-preview strong { color: var(--lc-ink); font-size: 24px; letter-spacing: -.03em; line-height: 1.2; }
+  .lost-code-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .lost-code-number-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .lost-code-empty { color: var(--lc-muted); font-size: 12px; padding: 8px 0; }
+  .lost-code-log-grid { width: 100%; }
+  .lost-code-log-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; table-layout: fixed; font-size: 14px; }
+  .lost-code-log-table th:first-child { width: 26%; }
+  .lost-code-log-table th, .lost-code-log-table td { text-align: center; padding: 7px 1px; }
+  .lost-code-log-table thead th { padding: 0 0 5px; }
+  .lost-code-log-table thead th:first-child { text-align: left; color: var(--lc-muted); font-size: 11px; font-weight: 400; }
+  .lost-code-log-table tbody th { text-align: left; padding-left: 7px; padding-right: 5px; font-weight: 600; font-size: 12px; }
+  .lost-code-log-table tbody th small { display: block; font-size: 10px; font-weight: 400; color: var(--lc-muted); }
+  .lost-code-log-table tbody tr > * { background: #f1f5f0; }
+  .lost-code-log-table tbody tr.is-you > * { background: #e4f1e7; }
+  .lost-code-log-table tbody tr > :first-child { border-radius: 7px 0 0 7px; }
+  .lost-code-log-table tbody tr > :last-child { border-radius: 0 7px 7px 0; }
+  .lost-code-log-table td { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .lost-code-log-table .lost-code-symbol { width: 26px; height: 30px; font-size: 19px; }
+  .lost-code-hidden-value { color: #749085; }
+  .lost-code-log-caption { color: var(--lc-muted); font-size: 11px; padding: 6px 0; }
+  .lost-code-details > summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 3px 0; }
+  .lost-code-details > summary .lost-code-badge { margin-left: 4px; }
+  .lost-code-details[open] > summary { margin-bottom: 10px; }
+  #lostCodeDiscardDetails { border-top: 1px solid var(--lc-line); padding-top: 10px; margin-top: 8px; }
+  .lost-code-discards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+  .lost-code-discard-line { display: flex; gap: 8px; align-items: center; padding: 7px; border-radius: 8px; background: #f3f6f1; }
+  .lost-code-discard-line small { display: block; color: var(--lc-muted); font-size: 10px; }
+  .lost-code-secondary { display: grid; gap: 12px; margin-top: 14px; }
+  .lost-code-guess-list, .lost-code-token-list { display: grid; gap: 6px; max-height: 265px; overflow-y: auto; overscroll-behavior: contain; }
+  .lost-code-token-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lost-code-token-line { display: flex; gap: 8px; align-items: center; padding: 8px; border: 1px solid var(--lc-line); border-radius: 8px; font-size: 12px; }
+  .lost-code-guess-line { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: #f3f6f2; font-size: 12px; }
+  .lost-code-guess-result { font-weight: 600; }
+  .lost-code-guess-result.correct { color: #167458; }
+  .lost-code-guess-result.wrong { color: #a64a32; }
+  .lost-code-final-form { display: grid; gap: 6px; }
+  .lost-code-final-row { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; padding: 6px; background: #f0f4ed; border-radius: 9px; }
+  .lost-code-final-label { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+  .lost-code-final-row select { width: 100%; min-height: 42px; padding: 6px 3px; border: 1px solid #c7d8cc; border-radius: 7px; background: #fff; color: var(--lc-ink); font-size: 16px; }
+  .lost-code-final-locked { grid-column: 2 / -1; font-size: 12px; }
+  #lostCodePanel .lost-code-clues-toggle { display: none; }
+  .lost-code-modal .modal-content { border-radius: 16px; max-width: 580px; max-height: min(86vh, 850px); }
+  body.lost-code-dialog-open { overflow: hidden; }
+  .lost-code-modal .modal-header { gap: 12px; padding: 12px 16px; }
+  .lost-code-modal h2 { font-size: 18px; }
+  .lost-code-modal .modal-header button { flex-shrink: 0; }
+  .lost-code-modal .modal-body { overscroll-behavior: contain; }
+  .lost-code-modal h3 { font-size: 16px; }
+  .lost-code-modal ul, .lost-code-modal ol { padding-left: 23px; }
+  .lost-code-modal li + li { margin-top: 6px; }
+  .lost-code-help-language { display: flex; justify-content: flex-end; gap: 8px; }
+  .lost-code-modal button.active { background: #137c70; color: #fff; }
+  .lost-code-explain-cost { display: inline-block; padding: 6px 10px; background: #edf5ed; border-radius: 8px; font-size: 12px; }
+  .lost-code-clues-modal { justify-content: flex-end; align-items: stretch; padding: 12px; z-index: 990; }
+  .lost-code-clues-modal .modal-content { width: min(100%, 410px); max-height: 100%; }
+  .lost-code-tooltip { position: fixed; z-index: 1100; max-width: min(280px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 9px; background: #173f3c; color: #fff; box-shadow: 0 5px 18px #173f3c26; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; pointer-events: none; }
+  body.lost-code-explain-mode [data-lost-code-explain-key].has-explanation { cursor: help; outline: 2px dashed #c68a23; outline-offset: 2px; }
 
-.lost-code-chip-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.lost-code-chip {
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
-  background: #ffffff;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-.lost-code-chip.selected {
-  border-color: #2563eb;
-  background: #dbeafe;
-}
-
-.lost-code-controls {
-  display: grid;
-  gap: 10px;
-}
-
-.lost-code-dice-op {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #334155;
-  padding: 0 2px;
-}
-
-.lost-code-dice-equals {
-  margin-left: 4px;
-}
-
-.lost-code-player-list,
-.lost-code-token-list,
-.lost-code-guess-list {
-  display: grid;
-  gap: 6px;
-}
-
-.lost-code-player-row,
-.lost-code-token-line,
-.lost-code-guess-line {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #f8fafc;
-  padding: 6px 10px;
-}
-
-.lost-code-player-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.lost-code-log-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.lost-code-log-card {
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  background: #ffffff;
-  padding: 10px;
-}
-
-.lost-code-log-title {
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.lost-code-slot-grid {
-  display: grid;
-  gap: 6px;
-}
-
-.lost-code-slot {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #f8fafc;
-  padding: 4px 8px;
-}
-
-.lost-code-slot-value {
-  font-weight: 700;
-}
-
-.lost-code-final-form {
-  display: grid;
-  gap: 8px;
-}
-
-.lost-code-final-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) repeat(3, minmax(56px, 72px));
-  gap: 6px;
-  align-items: center;
-}
-
-.lost-code-range-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(34px, 1fr));
-  gap: 4px;
-}
-
-.lost-code-range-cell {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #ffffff;
-  min-height: 34px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.lost-code-range-cell.edge-disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.lost-code-range-cell.in-range {
-  background: #dbeafe;
-  border-color: #93c5fd;
-}
-
-.lost-code-range-cell.center {
-  background: #2563eb;
-  border-color: #1d4ed8;
-  color: #ffffff;
-  font-weight: 700;
-}
-
-body.lost-code-explain-mode button.has-explanation {
-  cursor: help;
-  outline: 2px dashed #2563eb;
-  outline-offset: 2px;
-}
-
-.lost-code-header-btn.active {
-  background: #1d4ed8;
-  color: #ffffff;
-}
+  @media (hover: hover) {
+    #lostCodePanel button:hover:not(:disabled):not(.selected):not(.lost-code-primary) { background: #edf5ee; border-color: #6ca891; }
+  }
+  @media (max-width: 1100px) and (min-width: 901px), (max-width: 680px) {
+    .lost-code-workspace { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 680px) {
+    .lost-code-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 12px; gap: 9px 12px; }
+    .lost-code-status strong { font-size: 14px; }
+    .lost-code-card { padding: 12px; }
+    .lost-code-workspace { gap: 10px; }
+    .lost-code-player-list { margin: 8px 0 10px; }
+    .lost-code-player-row { flex-basis: 42%; padding: 6px 8px; font-size: 12px; }
+    .lost-code-hint { font-size: 12px; margin-bottom: 10px; }
+    .lost-code-dice { margin-bottom: 12px; }
+    .lost-code-secondary { margin-top: 10px; gap: 10px; padding-bottom: 42px; }
+    .lost-code-token-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #lostCodePanel .lost-code-clues-toggle { display: block; position: fixed; right: 0; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 190; width: 32px; min-height: 88px; padding: 10px 6px; writing-mode: vertical-rl; font-size: 12px; border-radius: 12px 0 0 12px; border-color: #137c70; background: #173f3c; color: #fff; box-shadow: 0 3px 12px #173f3c26; }
+    .lost-code-clues-modal { padding: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .lost-code-modal .modal-header { padding: 10px 12px; }
+    .lost-code-modal .modal-body { padding: 12px; }
+    .lost-code-modal h2 { font-size: 16px; }
+  }
+  @media (max-width: 360px) {
+    .lost-code-card { padding: 10px; }
+    .lost-code-log-table th:first-child { width: 25%; }
+    .lost-code-log-table .lost-code-symbol { width: 23px; font-size: 17px; }
+    .lost-code-wheel-grid { gap: 5px; }
+    .lost-code-final-row { gap: 4px; }
+    .lost-code-final-label { flex-direction: column; gap: 2px; }
+  }
 }

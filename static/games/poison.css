@@ -382,14 +382,14 @@ button.poison-cauldron.at-limit:not(.will-overflow) {
 
 .poison-hand {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 6px;
 }
 
 button.poison-hand-card {
   display: grid;
-  min-height: 106px;
-  padding: 5px;
+  min-height: 90px;
+  padding: 4px;
   place-items: center;
   color: inherit;
   border: 1px solid transparent;
@@ -424,7 +424,7 @@ button.poison-hand-card.is-selected {
 .poison-card-face {
   position: relative;
   display: grid;
-  width: min(72px, 100%);
+  width: min(60px, 100%);
   aspect-ratio: 5 / 7;
   overflow: hidden;
   place-items: center;
@@ -468,14 +468,14 @@ button.poison-hand-card.is-selected {
 
 .poison-card-marker {
   position: absolute;
-  top: 5px;
-  left: 6px;
-  font-size: 15px;
+  top: 4px;
+  left: 4px;
+  font-size: 12px;
   line-height: 1;
 }
 
 .poison-card-value {
-  font-size: clamp(27px, 4vw, 36px);
+  font-size: clamp(24px, 3.5vw, 30px);
   line-height: 1;
 }
 
@@ -496,8 +496,8 @@ button.poison-hand-card.is-selected {
 .poison-card-penalty {
   position: absolute;
   top: 4px;
-  right: 4px;
-  padding: 1px 3px;
+  right: 2px;
+  padding: 1px 2px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.24);
   font-size: 7px;
@@ -867,25 +867,26 @@ body.poison-explain-mode button.has-explanation[data-poison-explanation]:disable
   }
 
   .poison-hand {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 5px;
+    grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+    gap: 4px;
   }
 
   button.poison-hand-card {
-    min-height: 91px;
+    min-height: 78px;
     padding: 3px;
   }
 
   .poison-card-face {
-    width: min(61px, 100%);
+    width: min(52px, 100%);
   }
 
   .poison-card-value {
-    font-size: 27px;
+    font-size: 24px;
   }
 
   .poison-card-marker {
-    font-size: 12px;
+    left: 3px;
+    font-size: 10px;
   }
 
   .poison-summary-heading,

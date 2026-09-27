@@ -156,10 +156,15 @@ function renderLostCodeHelpContent() {
   const isZh = lostCodeHelpLanguage === "zh";
   const bodyHtml = isZh ? LOST_CODE_HELP_HTML_ZH : LOST_CODE_HELP_HTML_EN;
   lostCodeHelpContent.innerHTML = `
-    <div class="row actions" style="justify-content:flex-end;gap:8px;margin-bottom:10px;">
+    <div class="lost-code-help-language">
       <button id="lostCodeHelpLangZhBtn" type="button" ${isZh ? "class=\"active\"" : ""}>中文</button>
       <button id="lostCodeHelpLangEnBtn" type="button" ${isZh ? "" : "class=\"active\""}>English</button>
     </div>
+    <h3>${isZh ? "符号与界面" : "Symbols & interface"}</h3>
+    <p>${Object.entries(LOST_CODE_SYMBOLS).map(([symbol, entry]) => `${isZh ? entry.zh : entry.name} (${lostCodeSymbolLabel(symbol)})`).join(" · ")}</p>
+    <p>${isZh ? "骰子 (🎲) 决定本轮总和；分数 (🏁) 为胜利分；诅咒 (🗿) 会改变计分；捷径 (⚡) 锁定终局猜测。密码线索 (🔎) 展示各日志；问号 (?) 为你的隐藏石头；弃石 (💎) 是已经公开的旧数值。" : "Dice (🎲) determine the round sum. Score (🏁) means victory points (VP). Curse (🗿) modifies scoring; Shortcut (⚡) locks final guesses. Code clues (🔎) compare logs; a question mark (?) is your hidden stone. Discards (💎) are public old values."}</p>
+    <p>${isZh ? "轮盘 W1–W7 分别覆盖 1、2、3、4、5、7、10 个连续数字，猜中分别获得 5、4、3、3、2、2、1 分。选择轮盘，再点选区间中心，最后提交。终局每个符号选 1–3 个不同数字：猜中得 +5 / +2 / +1 分，猜错扣 2 分。" : "Wheels W1–W7 cover 1, 2, 3, 4, 5, 7 and 10 consecutive numbers, rewarding 5, 4, 3, 3, 2, 2 and 1 VP. Pick a wheel, then a range center, then submit. At final scoring, select 1–3 distinct numbers per symbol: a hit earns +5 / +2 / +1 VP; a miss loses 2 VP."}</p>
+    <p>${isZh ? "手机可通过右侧 Clues 打开线索抽屉。悬停或点击图标查看简短说明；点 Explain 后再点按钮或区域查看详细说明。对话框可用 Esc 或点击背景关闭。" : "On mobile, Clues opens the side drawer. Hover or tap an icon for a short tooltip. Choose Explain, then a button or area for details. Press Esc or click outside a dialog to close it."}</p>
     ${bodyHtml}
   `;
   const zhBtn = document.getElementById("lostCodeHelpLangZhBtn");
@@ -233,7 +238,7 @@ const LOST_CODE_BUTTON_EXPLANATIONS = {
   },
   exchange_symbol: {
     name: "Replace Symbol Stone",
-    description: "Discard current stone and draw same-symbol replacement. In the button label, (N) means how many stones remain in that symbol's draw pile. Active means you can replace with this symbol now; inactive means this symbol is currently unavailable (usually N = 0).",
+    description: "Discard your current stone (💎) and draw a replacement of the same symbol. The 'N left' label counts stones remaining in that draw pile. A disabled symbol has no replacement stones available.",
     cost: "Forced after wrong guess",
     costType: "penalty",
   },
@@ -251,703 +256,665 @@ const LOST_CODE_BUTTON_EXPLANATIONS = {
   },
 };
 
+const LOST_CODE_SYMBOLS = {
+  bird_blue: { icon: "🐦", color: "🔵", name: "Blue bird", short: "Bird", zh: "蓝鸟" },
+  jaguar_yellow: { icon: "🐆", color: "🟡", name: "Yellow jaguar", short: "Jaguar", zh: "黄豹" },
+  chameleon_purple: { icon: "🦎", color: "🟣", name: "Purple chameleon", short: "Lizard", zh: "紫变色龙" },
+  snake_green: { icon: "🐍", color: "🟢", name: "Green snake", short: "Snake", zh: "绿蛇" },
+  human_pink: { icon: "🧍", color: "🩷", name: "Pink human", short: "Human", zh: "粉人" },
+  bear_red: { icon: "🐻", color: "🔴", name: "Red bear", short: "Bear", zh: "红熊" },
+};
+const LOST_CODE_AREA_EXPLANATIONS = {
+  dice: ["Symbol dice (🎲)", "Add the values in your own log for these three symbols. Repeated symbols count again. Select a die to modify it when it is your turn."],
+  code_clues: ["Code clues (🔎)", "Each column is a symbol; each row is a player's or neutral log. Your own values stay hidden (?). Compare the visible values and discarded stones (💎) to deduce yours."],
+  discards: ["Discarded stones (💎)", "These old values are public and no longer in any log. The remaining count is the number of stones still in that symbol's draw pile."],
+  scores: ["Score (🏁) & Curse (🗿)", "Score is measured in victory points (VP). The green player card marks the current turn. A cursed player gains extra points for others' misses when correct, but loses the wheel's points when wrong."],
+  tokens: ["Shortcut tokens (⚡)", "A token locks 1–3 guesses for a symbol at final scoring. One, two or three locked numbers score +10, +4 or +2 on a hit; a miss scores −4. Removed tokens cannot be claimed."],
+  guesses: ["Round guesses (📋)", "Compare each player's wheel and submitted range. A check (✅) is a correct range, a cross (❌) is a miss, and an hourglass (⏳) means the result is pending."],
+  range_pick: ["Choose a range", "Tap the center of the range. Pale green numbers are included; the dark green number is the center. Disabled centers would extend the range below zero or above the maximum sum."],
+  final_number: ["Final guesses", "Choose up to three distinct numbers for each symbol. One, two or three numbers score +5, +2 or +1 on a hit; a miss or an empty guess scores −2. Shortcut (⚡) guesses are already locked."],
+};
 let lostCodeExplainMode = false;
+let lostCodeSuppressExplainClick = false;
+let lostCodeTooltipTimer = null;
+let lostCodeTooltipTarget = null;
+let lostCodeSelectionKey = "";
+let lostCodeFinalDraft = {};
+const lostCodeModalReturnFocus = new WeakMap();
+const lostCodePanelEl = document.getElementById("lostCodePanel");
+const lostCodeCluesModal = document.getElementById("lostCodeCluesModal");
+const lostCodeCluesBtn = document.getElementById("lostCodeCluesBtn");
+const lostCodeTooltipEl = document.getElementById("lostCodeTooltip");
 
-function lostCodeWheelMeaning(wheelId) {
-  const map = {
-    W1: { windowSize: 1, vp: 5, summary: "Single exact value. Highest reward, highest risk." },
-    W2: { windowSize: 2, vp: 4, summary: "2-number range. Very sharp guess with strong reward." },
-    W3: { windowSize: 3, vp: 3, summary: "3-number range. Balanced precision and reward." },
-    W4: { windowSize: 4, vp: 3, summary: "4-number range. Slightly safer than W3, same VP." },
-    W5: { windowSize: 5, vp: 2, summary: "5-number range. Stable medium-safety option." },
-    W6: { windowSize: 7, vp: 2, summary: "7-number range. Broad safety net, still 2 VP." },
-    W7: { windowSize: 10, vp: 1, summary: "10-number range. Safest and widest, lowest VP." },
-  };
-  return map[wheelId] || null;
+function lostCodeNode(tag, className, text) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text !== undefined) el.textContent = text;
+  return el;
 }
 
 function lostCodeCan(action) {
-  return Array.isArray(currentLostCodeView && currentLostCodeView.legal_actions)
-    && currentLostCodeView.legal_actions.includes(action);
+  return !!currentLostCodeView?.legal_actions?.includes(action);
 }
 
 function lostCodeFindPlayerName(playerId) {
-  if (!currentLostCodeView || !Array.isArray(currentLostCodeView.players)) {
-    return playerId || "-";
-  }
-  const player = currentLostCodeView.players.find((item) => item.player_id === playerId);
-  return player && player.name ? player.name : (playerId || "-");
+  return currentLostCodeView?.players?.find((item) => item.player_id === playerId)?.name || playerId || "—";
 }
 
 function lostCodeSymbolLabel(symbol) {
-  const map = {
-    bird_blue: "🐦🔵",
-    jaguar_yellow: "🐆🟡",
-    chameleon_purple: "🦎🟣",
-    snake_green: "🐍🟢",
-    human_pink: "🧍🩷",
-    bear_red: "🐻🔴",
-  };
-  return map[symbol] || symbol || "-";
+  const entry = LOST_CODE_SYMBOLS[symbol];
+  return entry ? entry.icon + entry.color : symbol || "—";
+}
+
+function lostCodeSymbolName(symbol) {
+  return LOST_CODE_SYMBOLS[symbol]?.name || symbol || "Unknown symbol";
+}
+
+function lostCodeTip(el, text) {
+  el.dataset.lostCodeTip = text;
+  el.setAttribute("aria-label", text);
+  if (!el.matches("button, select, summary")) el.tabIndex = 0;
+  return el;
+}
+
+function lostCodeSymbol(symbol, interactive = false) {
+  const el = lostCodeNode("span", "lost-code-symbol", LOST_CODE_SYMBOLS[symbol]?.icon || "?");
+  el.dataset.symbol = symbol;
+  if (interactive) el.setAttribute("aria-hidden", "true");
+  else {
+    lostCodeTip(el, `${lostCodeSymbolName(symbol)} (${lostCodeSymbolLabel(symbol)})`);
+    markLostCodeExplainable(el, `symbol:${symbol}`);
+  }
+  return el;
+}
+
+function lostCodeButton(text, explainKey, onClick, className = "") {
+  const button = lostCodeNode("button", className, text);
+  button.type = "button";
+  markLostCodeExplainable(button, explainKey);
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function lostCodeControlLabel(host, text) {
+  host.appendChild(lostCodeNode("div", "lost-code-control-label", text));
+}
+
+function markLostCodeExplainable(el, explainKey) {
+  if (!el || !explainKey) return;
+  el.dataset.lostCodeExplainKey = explainKey;
+  el.classList.toggle("has-explanation", lostCodeExplainMode);
 }
 
 function updateLostCodeExplainModeClasses(enabled) {
-  const elements = document.querySelectorAll("[data-lost-code-explain-key]");
-  elements.forEach((el) => {
-    el.classList.toggle("has-explanation", enabled);
-  });
-}
-
-function markLostCodeExplainable(button, explainKey) {
-  if (!button || !explainKey) return;
-  button.dataset.lostCodeExplainKey = explainKey;
-  if (lostCodeExplainMode) {
-    button.classList.add("has-explanation");
-  }
+  document.querySelectorAll("[data-lost-code-explain-key]").forEach((el) => el.classList.toggle("has-explanation", enabled));
 }
 
 function findLostCodeExplainButtonAtPoint(x, y) {
-  const elements = document.querySelectorAll("[data-lost-code-explain-key]");
-  for (const el of elements) {
-    const rect = el.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return el;
-    }
+  for (const el of document.elementsFromPoint(x, y)) {
+    const target = el.closest("[data-lost-code-explain-key]");
+    if (target) return target;
   }
   return null;
 }
 
-function showLostCodeButtonExplanation(explainKey) {
-  if (typeof explainKey === "string" && explainKey.startsWith("wheel_pick:")) {
-    const wheelId = explainKey.split(":")[1] || "";
-    const meaning = lostCodeWheelMeaning(wheelId);
-    if (meaning && lostCodeExplainModal && lostCodeExplainContent) {
-      lostCodeExplainContent.innerHTML = `
-        <div class="project-l-explain-card">
-          <h3>${wheelId} · Wheel Meaning</h3>
-          <p>${meaning.summary}</p>
-          <ul>
-            <li><strong>Button label format:</strong> ${wheelId} (${meaning.windowSize} / +${meaning.vp})</li>
-            <li><strong>Window size:</strong> ${meaning.windowSize} (you must submit exactly ${meaning.windowSize} contiguous numbers)</li>
-            <li><strong>Reward:</strong> +${meaning.vp} VP if your actual sum falls in the chosen range</li>
-            <li><strong>Trade-off:</strong> narrower window = harder hit, higher reward</li>
-          </ul>
-        </div>
-      `;
-      setModalVisible(lostCodeExplainModal, true);
-      return;
-    }
+function lostCodeSetModal(modal, visible) {
+  if (!modal) return;
+  hideLostCodeTooltip();
+  if (visible === !modal.classList.contains("hidden")) return;
+  if (visible) lostCodeModalReturnFocus.set(modal, document.activeElement);
+  setModalVisible(modal, visible);
+  document.body.classList.toggle("lost-code-dialog-open", [lostCodeHelpModal, lostCodeExplainModal, lostCodeCluesModal].some((item) => item && !item.classList.contains("hidden")));
+  if (visible) modal.querySelector("button")?.focus({ preventScroll: true });
+  else {
+    const previous = lostCodeModalReturnFocus.get(modal);
+    if (previous?.isConnected) previous.focus({ preventScroll: true });
+    lostCodeModalReturnFocus.delete(modal);
   }
-  const entry = LOST_CODE_BUTTON_EXPLANATIONS[explainKey];
-  if (!entry || !lostCodeExplainModal || !lostCodeExplainContent) return;
-  let costClass = "free";
-  if (entry.costType === "ap") costClass = "ap";
-  else if (entry.costType === "penalty") costClass = "penalty";
-  else if (entry.costType === "end") costClass = "end";
-  const phaseText = currentLostCodeView && currentLostCodeView.phase_detail
-    ? currentLostCodeView.phase_detail
-    : "-";
-  lostCodeExplainContent.innerHTML = `
-    <div class="project-l-explain-card">
-      <h3>${entry.name}</h3>
-      <p>${entry.description}</p>
-      <div class="project-l-explain-cost ${costClass}">${entry.cost}</div>
-      <div class="hint">Current phase: ${phaseText}</div>
-    </div>
-  `;
-  setModalVisible(lostCodeExplainModal, true);
+}
+
+function showLostCodeButtonExplanation(explainKey) {
+  if (!lostCodeExplainContent) return;
+  let entry = LOST_CODE_BUTTON_EXPLANATIONS[explainKey];
+  const area = LOST_CODE_AREA_EXPLANATIONS[explainKey];
+  if (area) entry = { name: area[0], description: area[1] };
+  if (explainKey.startsWith("symbol:")) {
+    const symbol = explainKey.slice(7);
+    entry = { name: `${lostCodeSymbolName(symbol)} (${lostCodeSymbolLabel(symbol)})`, description: `This symbol has one stone in each log. Its value is between 0 and ${currentLostCodeView?.max_symbol_value ?? 7}. Matching dice (🎲) use your own hidden value.` };
+  }
+  if (explainKey.startsWith("wheel_pick:")) {
+    const wheel = currentLostCodeView?.wheels?.find((item) => item.id === explainKey.slice(11));
+    if (wheel) entry = {
+      name: `${wheel.id} · Range wheel`,
+      description: `Covers ${wheel.window_size} consecutive number${wheel.window_size === 1 ? "" : "s"} and scores +${wheel.victory_points} VP (🏁) on a hit. A narrower range is harder to hit. Each wheel can be taken once per round.`,
+      cost: currentLostCodeView.available_wheel_ids.includes(wheel.id) ? "Available" : "Already taken",
+    };
+  }
+  if (!entry) return;
+  lostCodeExplainContent.replaceChildren(
+    lostCodeNode("h3", "", entry.name),
+    lostCodeNode("p", "", entry.description)
+  );
+  if (entry.cost) lostCodeExplainContent.appendChild(lostCodeNode("div", "lost-code-explain-cost", entry.cost));
+  lostCodeSetModal(lostCodeExplainModal, true);
 }
 
 function toggleLostCodeExplainMode() {
   lostCodeExplainMode = !lostCodeExplainMode;
+  hideLostCodeTooltip();
   document.body.classList.toggle("lost-code-explain-mode", lostCodeExplainMode);
   updateLostCodeExplainModeClasses(lostCodeExplainMode);
-  if (lostCodeExplainBtn) {
-    lostCodeExplainBtn.classList.toggle("active", lostCodeExplainMode);
-  }
+  lostCodeExplainBtn?.classList.toggle("active", lostCodeExplainMode);
+  lostCodeExplainBtn?.setAttribute("aria-pressed", String(lostCodeExplainMode));
 }
 
 function exitLostCodeExplainMode() {
   if (!lostCodeExplainMode) return;
-  lostCodeExplainMode = false;
-  document.body.classList.remove("lost-code-explain-mode");
-  updateLostCodeExplainModeClasses(false);
-  if (lostCodeExplainBtn) {
-    lostCodeExplainBtn.classList.remove("active");
-  }
+  toggleLostCodeExplainMode();
+}
+
+function hideLostCodeTooltip() {
+  window.clearTimeout(lostCodeTooltipTimer);
+  lostCodeTooltipTarget?.removeAttribute("aria-describedby");
+  lostCodeTooltipTarget = null;
+  lostCodeTooltipEl?.classList.add("hidden");
+}
+
+function showLostCodeTooltip(el) {
+  if (lostCodeExplainMode || !lostCodeTooltipEl || !el?.dataset.lostCodeTip) return;
+  hideLostCodeTooltip();
+  lostCodeTooltipTarget = el;
+  el.setAttribute("aria-describedby", "lostCodeTooltip");
+  lostCodeTooltipEl.textContent = el.dataset.lostCodeTip;
+  lostCodeTooltipEl.classList.remove("hidden");
+  const rect = el.getBoundingClientRect();
+  const box = lostCodeTooltipEl.getBoundingClientRect();
+  const left = Math.max(12, Math.min(rect.left + rect.width / 2 - box.width / 2, window.innerWidth - box.width - 12));
+  const top = rect.top >= box.height + 16 ? rect.top - box.height - 8 : Math.min(rect.bottom + 8, window.innerHeight - box.height - 12);
+  lostCodeTooltipEl.style.left = `${left}px`;
+  lostCodeTooltipEl.style.top = `${Math.max(12, top)}px`;
+  lostCodeTooltipTimer = window.setTimeout(hideLostCodeTooltip, 3000);
+}
+
+function setLostCodeCluesOpen(open) {
+  const content = document.getElementById("lostCodeClueContent");
+  const host = document.getElementById(open ? "lostCodeCluesDockHost" : "lostCodeCluesHome");
+  if (!content || !host || !lostCodeCluesModal) return;
+  host.appendChild(content);
+  lostCodeCluesBtn?.setAttribute("aria-expanded", String(open));
+  lostCodeSetModal(lostCodeCluesModal, open);
 }
 
 function clearLostCodeState() {
   exitLostCodeExplainMode();
+  hideLostCodeTooltip();
+  setLostCodeCluesOpen(false);
   currentLostCodeView = null;
   lostCodeSelectedDieIndex = 0;
   lostCodeSelectedWheelId = null;
   lostCodeSelectedRangeCenter = null;
   lostCodeShortcutGuesses = new Set();
-  if (lostCodePhaseLabel) lostCodePhaseLabel.textContent = "-";
-  if (lostCodeRoundLabel) lostCodeRoundLabel.textContent = "-";
-  if (lostCodeTurnLabel) lostCodeTurnLabel.textContent = "-";
-  if (lostCodeModeLabel) lostCodeModeLabel.textContent = "-";
-  if (lostCodeDiceEl) lostCodeDiceEl.innerHTML = "";
-  if (lostCodePlayersEl) lostCodePlayersEl.innerHTML = "";
-  if (lostCodeLogsEl) lostCodeLogsEl.innerHTML = "";
-  if (lostCodeHintEl) lostCodeHintEl.textContent = "-";
-  if (lostCodeControlsEl) lostCodeControlsEl.innerHTML = "";
-  if (lostCodeTokenEl) lostCodeTokenEl.innerHTML = "";
-  if (lostCodeGuessesEl) lostCodeGuessesEl.innerHTML = "";
-  if (lostCodeHelpModal) setModalVisible(lostCodeHelpModal, false);
-  if (lostCodeExplainModal) setModalVisible(lostCodeExplainModal, false);
+  lostCodeFinalDraft = {};
+  lostCodeSelectionKey = "";
+  [lostCodePhaseLabel, lostCodeRoundLabel, lostCodeTurnLabel, lostCodeModeLabel].forEach((el) => { if (el) el.textContent = "—"; });
+  [lostCodeDiceEl, lostCodePlayersEl, lostCodeLogsEl, lostCodeControlsEl, lostCodeTokenEl, lostCodeGuessesEl, document.getElementById("lostCodeDiscards")].forEach((el) => el?.replaceChildren());
+  if (lostCodeHintEl) lostCodeHintEl.textContent = "";
+  lostCodeCluesBtn?.classList.add("hidden");
+  document.getElementById("lostCodeTokenDetails")?.classList.add("hidden");
+  [lostCodeHelpModal, lostCodeExplainModal].forEach((modal) => { if (modal) setModalVisible(modal, false); });
+  document.body.classList.remove("lost-code-dialog-open");
 }
 
 function updateLostCodeConfigRow() {
   const showRow = currentRoomState && currentGameType === "lost_code" && currentRoomState.status === "lobby";
-  if (lostCodeConfigBox) {
-    lostCodeConfigBox.classList.toggle("hidden", !showRow);
-    lostCodeConfigBox.setAttribute("aria-hidden", (!showRow).toString());
-  }
-  if (showRow) {
-    renderLostCodeRoomState(currentRoomState);
-  }
+  lostCodeConfigBox?.classList.toggle("hidden", !showRow);
+  lostCodeConfigBox?.setAttribute("aria-hidden", String(!showRow));
+  if (showRow) renderLostCodeRoomState(currentRoomState);
 }
 
 function showLostCodeHeaderActions(show) {
-  if (!lostCodeHeaderActions) return;
-  lostCodeHeaderActions.style.display = show ? "flex" : "none";
+  if (lostCodeHeaderActions) lostCodeHeaderActions.style.display = show ? "flex" : "none";
   if (!show) {
     exitLostCodeExplainMode();
-    if (lostCodeHelpModal) setModalVisible(lostCodeHelpModal, false);
-    if (lostCodeExplainModal) setModalVisible(lostCodeExplainModal, false);
+    hideLostCodeTooltip();
+    setLostCodeCluesOpen(false);
+    [lostCodeHelpModal, lostCodeExplainModal].forEach((modal) => { if (modal) setModalVisible(modal, false); });
+    document.body.classList.remove("lost-code-dialog-open");
   }
 }
 
 function renderLostCodeRoomState(state) {
-  if (!state || currentGameType !== "lost_code" || state.status !== "lobby") {
-    return;
-  }
-  const mode = lostCodeModeSelect ? (lostCodeModeSelect.value || "standard") : "standard";
-  const withShortcut = !!(lostCodeShortcutToggle && lostCodeShortcutToggle.checked);
-  const withCurse = !!(lostCodeCurseToggle && lostCodeCurseToggle.checked);
-  if (lostCodePhaseLabel) lostCodePhaseLabel.textContent = "lobby";
-  if (lostCodeRoundLabel) lostCodeRoundLabel.textContent = "-";
-  if (lostCodeTurnLabel) lostCodeTurnLabel.textContent = "Not started";
-  if (lostCodeModeLabel) lostCodeModeLabel.textContent = mode;
-  if (lostCodeHintEl) {
-    lostCodeHintEl.textContent = `Config: ${mode}${withShortcut ? " + Deadly Shortcut" : ""}${withCurse ? " + Curse of the Temple" : ""}.`;
-  }
-  if (lostCodeControlsEl) {
-    lostCodeControlsEl.innerHTML = "";
-    const note = document.createElement("div");
-    note.className = "hint";
-    note.textContent = "Set mode/options in Room Controls, ready up, then Start Game.";
-    lostCodeControlsEl.appendChild(note);
-  }
+  if (!state || currentGameType !== "lost_code" || state.status !== "lobby") return;
+  clearLostCodeState();
+  const mode = lostCodeModeSelect?.value || "standard";
+  lostCodePhaseLabel.textContent = "Lobby";
+  lostCodeRoundLabel.textContent = "—";
+  lostCodeTurnLabel.textContent = "Not started";
+  lostCodeModeLabel.textContent = { standard: "Standard", intro: "Intro", x_race: "X-Race" }[mode] || mode;
+  document.getElementById("lostCodeActionTitle").textContent = "🎲 Get ready";
+  document.getElementById("lostCodeTurnBadge").textContent = "Lobby";
+  document.getElementById("lostCodeValueRange").textContent = mode === "x_race" ? "Values 0–8" : "Values 0–7";
+  document.getElementById("lostCodeDiscardCount").textContent = "0";
+  document.getElementById("lostCodeGuessCount").textContent = "0";
+  lostCodeHintEl.textContent = "Choose your options in Room Controls, then ready up.";
+  renderLostCodeDice({ dice_symbols: [] });
+  lostCodeLogsEl.appendChild(lostCodeNode("div", "lost-code-empty", "Your code clues appear when the game starts."));
+  lostCodeGuessesEl.appendChild(lostCodeNode("div", "lost-code-empty", "No guesses yet."));
 }
 
 function renderLostCodeDice(view) {
-  if (!lostCodeDiceEl) return;
-  lostCodeDiceEl.innerHTML = "";
-  const dice = Array.isArray(view.dice_symbols) ? view.dice_symbols : [];
+  lostCodeDiceEl.replaceChildren();
+  const dice = view.dice_symbols || [];
   if (!dice.length) {
-    const empty = document.createElement("div");
-    empty.className = "hint";
-    empty.textContent = "-";
-    lostCodeDiceEl.appendChild(empty);
+    lostCodeDiceEl.appendChild(lostCodeNode("div", "lost-code-dice-empty", "🎲  Three dice, one hidden sum"));
     return;
   }
+  const canModify = lostCodeCan("modify_die");
   dice.forEach((symbol, index) => {
-    if (index > 0) {
-      const plus = document.createElement("span");
-      plus.className = "lost-code-dice-op";
-      plus.textContent = "+";
-      lostCodeDiceEl.appendChild(plus);
-    }
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "lost-code-chip";
-    btn.textContent = `${index + 1}. ${lostCodeSymbolLabel(symbol)}`;
-    markLostCodeExplainable(btn, "dice_pick");
-    if (index === lostCodeSelectedDieIndex) {
-      btn.classList.add("selected");
-    }
-    if (lostCodeCan("modify_die")) {
-      btn.addEventListener("click", () => {
+    if (index) lostCodeDiceEl.appendChild(lostCodeNode("span", "lost-code-dice-op", "+"));
+    const die = canModify
+      ? lostCodeButton("", "dice_pick", () => {
         lostCodeSelectedDieIndex = index;
-        renderLostCodeDice(view);
-      });
+        renderLostCodeDice(currentLostCodeView);
+      }, "lost-code-die")
+      : lostCodeNode("div", "lost-code-die");
+    if (canModify) {
+      die.classList.toggle("selected", index === lostCodeSelectedDieIndex);
+      die.setAttribute("aria-pressed", String(index === lostCodeSelectedDieIndex));
+      die.setAttribute("aria-label", `Die ${index + 1}: ${lostCodeSymbolName(symbol)}. Select to change.`);
     } else {
-      btn.disabled = true;
+      lostCodeTip(die, `Die ${index + 1}: ${lostCodeSymbolName(symbol)} (${lostCodeSymbolLabel(symbol)})`);
+      markLostCodeExplainable(die, "dice");
     }
-    lostCodeDiceEl.appendChild(btn);
+    die.append(lostCodeSymbol(symbol, true), lostCodeNode("span", "lost-code-die-index", `DIE ${index + 1}`));
+    lostCodeDiceEl.appendChild(die);
   });
-  const equals = document.createElement("span");
-  equals.className = "lost-code-dice-op lost-code-dice-equals";
-  equals.textContent = "= ?";
-  lostCodeDiceEl.appendChild(equals);
+  lostCodeDiceEl.appendChild(lostCodeTip(lostCodeNode("span", "lost-code-dice-op", "= ?"), "Your total: add your hidden values for these three symbols, counting repeats."));
 }
 
 function renderLostCodePlayers(view) {
-  if (!lostCodePlayersEl) return;
-  lostCodePlayersEl.innerHTML = "";
-  const players = Array.isArray(view.players) ? view.players : [];
-  players.forEach((player) => {
-    const row = document.createElement("div");
-    row.className = "lost-code-player-row";
-    const role = [];
-    if (player.you) role.push("You");
-    if (player.player_id === view.cursed_player_id) role.push("🗿 Cursed");
-    const left = document.createElement("div");
-    left.textContent = `${player.name || player.player_id}${role.length ? ` (${role.join(" · ")})` : ""}`;
-    const right = document.createElement("div");
-    right.textContent = `🏁 ${player.score}`;
-    row.appendChild(left);
-    row.appendChild(right);
+  lostCodePlayersEl.replaceChildren();
+  (view.players || []).forEach((player) => {
+    const row = lostCodeNode("div", "lost-code-player-row");
+    row.classList.toggle("is-current", player.player_id === view.current_actor);
+    const name = lostCodeNode("div", "lost-code-player-name", player.name || player.player_id);
+    const tags = [];
+    if (player.you) tags.push("You");
+    if (player.player_id === view.current_actor) tags.push("Playing");
+    if (view.winner_ids?.includes(player.player_id)) tags.push("Winner");
+    if (tags.length) name.appendChild(lostCodeNode("span", "lost-code-player-tag", tags.join(" · ")));
+    row.appendChild(name);
+    if (player.player_id === view.cursed_player_id) row.appendChild(lostCodeTip(lostCodeNode("span", "", "🗿"), "Cursed: bonus points for a hit; lose your wheel's VP on a miss."));
+    row.appendChild(lostCodeTip(lostCodeNode("span", "lost-code-score", `🏁 ${player.score}`), `Score: ${player.score} victory points (VP).`));
+    markLostCodeExplainable(row, "scores");
     lostCodePlayersEl.appendChild(row);
   });
 }
 
 function renderLostCodeLogs(view) {
-  if (!lostCodeLogsEl) return;
-  lostCodeLogsEl.innerHTML = "";
-  const logs = Array.isArray(view.logs) ? view.logs : [];
-  logs.forEach((log) => {
-    const card = document.createElement("section");
-    card.className = "lost-code-log-card";
-    const title = document.createElement("div");
-    title.className = "lost-code-log-title";
-    title.textContent = log.owner_player_id
-      ? `${lostCodeFindPlayerName(log.owner_player_id)} Log`
-      : "Neutral Log";
-    card.appendChild(title);
-    const slots = document.createElement("div");
-    slots.className = "lost-code-slot-grid";
-    (log.slots || []).forEach((slot) => {
-      const item = document.createElement("div");
-      item.className = "lost-code-slot";
-      const symbol = document.createElement("div");
-      symbol.textContent = lostCodeSymbolLabel(slot.symbol);
-      const value = document.createElement("div");
-      value.className = "lost-code-slot-value";
-      value.textContent = slot.hidden_from_viewer ? "❓" : String(slot.value);
-      item.appendChild(symbol);
-      item.appendChild(value);
-      slots.appendChild(item);
-    });
-    card.appendChild(slots);
-    lostCodeLogsEl.appendChild(card);
+  lostCodeLogsEl.replaceChildren();
+  const table = lostCodeNode("table", "lost-code-log-table");
+  table.setAttribute("aria-label", "Visible and hidden symbol values by log");
+  const head = document.createElement("thead");
+  const heading = document.createElement("tr");
+  const label = lostCodeNode("th", "", "Log");
+  label.scope = "col";
+  heading.appendChild(label);
+  (view.active_symbols || []).forEach((symbol) => {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.appendChild(lostCodeSymbol(symbol));
+    heading.appendChild(cell);
   });
+  head.appendChild(heading);
+  table.appendChild(head);
+  const body = document.createElement("tbody");
+  let neutral = 0;
+  (view.logs || []).forEach((log) => {
+    const self = !!log.owner_player_id && log.owner_player_id === view.you;
+    const row = document.createElement("tr");
+    row.classList.toggle("is-you", self);
+    const owner = log.owner_player_id ? (self ? "You" : lostCodeFindPlayerName(log.owner_player_id)) : `Neutral ${++neutral}`;
+    const name = lostCodeNode("th", "", owner);
+    name.scope = "row";
+    if (self && !view.game_over) name.appendChild(lostCodeNode("small", "", "Hidden code"));
+    row.appendChild(name);
+    (view.active_symbols || []).forEach((symbol) => {
+      const slot = (log.slots || []).find((item) => item.symbol === symbol);
+      const hidden = !slot || slot.hidden_from_viewer;
+      const cell = lostCodeNode("td", hidden ? "lost-code-hidden-value" : "", hidden ? "?" : String(slot.value));
+      lostCodeTip(cell, `${owner} · ${lostCodeSymbolName(symbol)}: ${hidden ? "hidden from you" : slot.value}`);
+      markLostCodeExplainable(cell, "code_clues");
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  lostCodeLogsEl.appendChild(table);
+  lostCodeLogsEl.appendChild(lostCodeNode("div", "lost-code-log-caption", view.game_over ? "All codes revealed." : "Your ? values are hidden. Compare each symbol column."));
+  renderLostCodeDiscards(view);
+}
+
+function renderLostCodeDiscards(view) {
+  const host = document.getElementById("lostCodeDiscards");
+  const scroll = host.scrollTop;
+  host.replaceChildren();
+  const discards = view.discarded_stones || [];
+  document.getElementById("lostCodeDiscardCount").textContent = String(discards.length);
+  (view.active_symbols || []).forEach((symbol) => {
+    const values = discards.filter((item) => item.symbol === symbol).map((item) => item.old_stone?.value).filter(Number.isInteger).sort((a, b) => a - b);
+    const row = lostCodeNode("div", "lost-code-discard-line");
+    row.appendChild(lostCodeSymbol(symbol));
+    const numbers = lostCodeNode("div", "", values.length ? values.join(", ") : "—");
+    numbers.appendChild(lostCodeNode("small", "", `${view.draw_pile_counts?.[symbol] ?? 0} remaining`));
+    row.appendChild(numbers);
+    host.appendChild(row);
+  });
+  host.scrollTop = scroll;
 }
 
 function renderLostCodeTokenStatus(view) {
-  if (!lostCodeTokenEl) return;
-  lostCodeTokenEl.innerHTML = "";
+  lostCodeTokenEl.replaceChildren();
   const tokens = view.deadly_shortcut_tokens || {};
-  const symbols = Array.isArray(view.active_symbols) ? view.active_symbols : [];
-  symbols.forEach((symbol) => {
+  const relevant = Object.values(tokens).some((token) => !token.removed || token.taken_by);
+  document.getElementById("lostCodeTokenDetails").classList.toggle("hidden", !relevant);
+  if (!relevant) return;
+  (view.active_symbols || []).forEach((symbol) => {
     const token = tokens[symbol] || {};
-    const line = document.createElement("div");
-    line.className = "lost-code-token-line";
-    let text = `${lostCodeSymbolLabel(symbol)}: `;
-    if (token.removed) {
-      text += "removed";
-    } else if (token.taken_by) {
-      text += `taken by ${lostCodeFindPlayerName(token.taken_by)}`;
-    } else {
-      text += "available";
-    }
-    line.textContent = text;
+    const line = lostCodeNode("div", "lost-code-token-line");
+    line.appendChild(lostCodeSymbol(symbol));
+    const owner = token.taken_by ? lostCodeFindPlayerName(token.taken_by) : token.removed ? "Removed" : "Available";
+    const text = lostCodeNode("div", "", owner);
+    const self = view.players?.find((player) => player.you);
+    const commit = self?.shortcut_commits?.[symbol];
+    if (commit) text.appendChild(lostCodeNode("div", "", `🔒 ${commit.join(", ")}`));
+    line.appendChild(text);
     lostCodeTokenEl.appendChild(line);
   });
 }
 
 function renderLostCodeGuesses(view) {
-  if (!lostCodeGuessesEl) return;
-  lostCodeGuessesEl.innerHTML = "";
-  const formatResult = (result) => {
-    if (result === "correct") return "correct ✅";
-    if (result === "wrong" || result === "wrong_low" || result === "wrong_high") return "wrong ❌";
-    return result || "pending";
+  const scroll = lostCodeGuessesEl.scrollTop;
+  lostCodeGuessesEl.replaceChildren();
+  let count = 0;
+  const appendGuess = (playerId, guess) => {
+    count += 1;
+    const row = lostCodeNode("div", "lost-code-guess-line");
+    const name = lostCodeNode("span", "", lostCodeFindPlayerName(playerId));
+    const range = guess.min != null && guess.max != null ? `${guess.min}–${guess.max}` : "—";
+    const correct = guess.result === "correct";
+    const wrong = ["wrong", "wrong_low", "wrong_high"].includes(guess.result);
+    const result = lostCodeNode("span", `lost-code-guess-result ${correct ? "correct" : wrong ? "wrong" : ""}`, correct ? "✅ Hit" : wrong ? "❌ Miss" : "⏳");
+    lostCodeTip(result, correct ? "The submitted range was correct." : wrong ? "The submitted range missed." : "Waiting for the round result.");
+    row.append(name, lostCodeNode("span", "", `${guess.wheel_id || "—"} · ${range}`), result);
+    lostCodeGuessesEl.appendChild(row);
   };
-
-  const lastSummary = view.last_round_summary || {};
-  const summaryEntries = Array.isArray(lastSummary.entries) ? lastSummary.entries : [];
-  if (summaryEntries.length) {
-    const title = document.createElement("div");
-    title.className = "hint";
-    const roundText = Number.isInteger(lastSummary.round) ? `Round ${lastSummary.round}` : "Previous Round";
-    const dice = Array.isArray(lastSummary.dice_symbols)
-      ? lastSummary.dice_symbols.map((symbol) => lostCodeSymbolLabel(symbol)).join(" ")
-      : "";
-    title.textContent = dice ? `${roundText} resolved (${dice})` : `${roundText} resolved`;
-    lostCodeGuessesEl.appendChild(title);
-
-    summaryEntries.forEach((entry) => {
-      const row = document.createElement("div");
-      row.className = "lost-code-guess-line";
-      const wheel = entry.wheel_id || "-";
-      const range = entry.min !== undefined && entry.max !== undefined ? `[${entry.min}-${entry.max}]` : "-";
-      row.textContent = `${lostCodeFindPlayerName(entry.player_id)}: ${wheel} ${range} -> ${formatResult(entry.result)}`;
-      lostCodeGuessesEl.appendChild(row);
-    });
+  const guesses = Object.entries(view.guesses || {});
+  if (guesses.length) {
+    lostCodeGuessesEl.appendChild(lostCodeNode("div", "lost-code-control-label", `Round ${view.round}`));
+    guesses.forEach(([playerId, guess]) => appendGuess(playerId, guess));
   }
-
-  const guesses = view.guesses || {};
-  const players = Array.isArray(view.players) ? view.players : [];
-  const currentRows = [];
-  players.forEach((player) => {
-    const guess = guesses[player.player_id];
-    if (!guess) return;
-    const wheel = guess.wheel_id || "-";
-    const range = guess.min !== undefined && guess.max !== undefined ? `[${guess.min}-${guess.max}]` : "-";
-    currentRows.push(`${player.name || player.player_id}: ${wheel} ${range} -> ${formatResult(guess.result)}`);
-  });
-  if (currentRows.length) {
-    if (summaryEntries.length) {
-      const spacer = document.createElement("div");
-      spacer.className = "hint";
-      spacer.textContent = "Current round";
-      lostCodeGuessesEl.appendChild(spacer);
-    }
-    currentRows.forEach((text) => {
-      const row = document.createElement("div");
-      row.className = "lost-code-guess-line";
-      row.textContent = text;
-      lostCodeGuessesEl.appendChild(row);
-    });
+  const summary = view.last_round_summary || {};
+  // During exchange the current guesses already contain this same round.
+  if (summary.entries?.length && (summary.round !== view.round || !guesses.length)) {
+    const heading = lostCodeNode("div", "lost-code-control-label", `Round ${summary.round} · Resolved`);
+    lostCodeGuessesEl.appendChild(heading);
+    const dice = lostCodeNode("div", "lost-code-chip-wrap");
+    (summary.dice_symbols || []).forEach((symbol) => dice.appendChild(lostCodeSymbol(symbol)));
+    lostCodeGuessesEl.appendChild(dice);
+    summary.entries.forEach((entry) => appendGuess(entry.player_id, entry));
   }
-
-  if (!summaryEntries.length && !currentRows.length) {
-    const empty = document.createElement("div");
-    empty.className = "hint";
-    empty.textContent = "No resolved guesses yet.";
-    lostCodeGuessesEl.appendChild(empty);
-  }
+  if (!count) lostCodeGuessesEl.appendChild(lostCodeNode("div", "lost-code-empty", "Guesses appear as players submit."));
+  document.getElementById("lostCodeGuessCount").textContent = String(count);
+  lostCodeGuessesEl.scrollTop = scroll;
 }
 
 function renderLostCodeModifyControls(view, host) {
-  const symbolWrap = document.createElement("div");
-  symbolWrap.className = "lost-code-chip-wrap";
-  (view.active_symbols || []).forEach((symbol) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "lost-code-chip";
-    btn.textContent = lostCodeSymbolLabel(symbol);
-    markLostCodeExplainable(btn, "modify_symbol");
-    btn.addEventListener("click", () => {
-      sendAction({
-        type: "modify_die",
-        die_index: lostCodeSelectedDieIndex,
-        symbol,
-      });
+  if (lostCodeCan("modify_die")) {
+    lostCodeControlLabel(host, "Change the selected die to");
+    const symbols = lostCodeNode("div", "lost-code-symbol-options");
+    (view.active_symbols || []).forEach((symbol) => {
+      const button = lostCodeButton("", "modify_symbol", () => sendAction({ type: "modify_die", die_index: lostCodeSelectedDieIndex, symbol }), "lost-code-symbol-choice");
+      button.setAttribute("aria-label", `Change selected die to ${lostCodeSymbolName(symbol)}`);
+      button.append(lostCodeSymbol(symbol, true), lostCodeNode("span", "", LOST_CODE_SYMBOLS[symbol]?.short || symbol));
+      symbols.appendChild(button);
     });
-    symbolWrap.appendChild(btn);
-  });
-  host.appendChild(symbolWrap);
-  if (lostCodeCan("confirm_dice")) {
-    const confirmBtn = document.createElement("button");
-    confirmBtn.type = "button";
-    confirmBtn.textContent = "Confirm Dice";
-    markLostCodeExplainable(confirmBtn, "confirm_dice");
-    confirmBtn.addEventListener("click", () => sendAction({ type: "confirm_dice" }));
-    host.appendChild(confirmBtn);
+    host.appendChild(symbols);
   }
+  if (lostCodeCan("confirm_dice")) host.appendChild(lostCodeButton("Confirm dice", "confirm_dice", () => sendAction({ type: "confirm_dice" }), "lost-code-primary"));
 }
 
 function renderLostCodeShortcutControls(view, host) {
-  const symbol = view.shortcut_offer && view.shortcut_offer.symbol
-    ? view.shortcut_offer.symbol
-    : "?";
-  const title = document.createElement("div");
-  title.className = "hint";
-  title.textContent = `Shortcut offer: ${lostCodeSymbolLabel(symbol)}. Choose 1-3 numbers, or pass.`;
-  host.appendChild(title);
-
-  const numbers = document.createElement("div");
-  numbers.className = "lost-code-chip-wrap";
-  for (let value = 0; value <= Number(view.max_symbol_value || 7); value += 1) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "lost-code-chip";
-    btn.textContent = String(value);
-    markLostCodeExplainable(btn, "shortcut_number_toggle");
-    if (lostCodeShortcutGuesses.has(value)) btn.classList.add("selected");
-    btn.addEventListener("click", () => {
-      if (lostCodeShortcutGuesses.has(value)) {
-        lostCodeShortcutGuesses.delete(value);
-      } else if (lostCodeShortcutGuesses.size < 3) {
-        lostCodeShortcutGuesses.add(value);
-      }
-      renderLostCodeControls(view);
+  const symbol = view.shortcut_offer?.symbol;
+  lostCodeControlLabel(host, `${lostCodeSymbolName(symbol)} (${lostCodeSymbolLabel(symbol)}) · Pick up to 3 numbers`);
+  const numbers = lostCodeNode("div", "lost-code-number-options");
+  const buttons = [];
+  const update = () => {
+    buttons.forEach((button, value) => {
+      button.classList.toggle("selected", lostCodeShortcutGuesses.has(value));
+      button.setAttribute("aria-pressed", String(lostCodeShortcutGuesses.has(value)));
     });
-    numbers.appendChild(btn);
+    take.disabled = lostCodeShortcutGuesses.size < 1 || !lostCodeCan("take_shortcut");
+    take.textContent = lostCodeShortcutGuesses.size ? `Take token · ${lostCodeShortcutGuesses.size} picked` : "Take token";
+  };
+  for (let value = 0; value <= (view.max_symbol_value ?? 7); value += 1) {
+    const button = lostCodeButton(String(value), "shortcut_number_toggle", () => {
+      if (lostCodeShortcutGuesses.has(value)) lostCodeShortcutGuesses.delete(value);
+      else if (lostCodeShortcutGuesses.size < 3) lostCodeShortcutGuesses.add(value);
+      update();
+    });
+    buttons.push(button);
+    numbers.appendChild(button);
   }
-  host.appendChild(numbers);
-
-  const actionRow = document.createElement("div");
-  actionRow.className = "row actions";
-  const passBtn = document.createElement("button");
-  passBtn.type = "button";
-  passBtn.textContent = "Pass";
-  markLostCodeExplainable(passBtn, "shortcut_pass");
-  passBtn.addEventListener("click", () => sendAction({ type: "pass_shortcut" }));
-  actionRow.appendChild(passBtn);
-
-  const takeBtn = document.createElement("button");
-  takeBtn.type = "button";
-  takeBtn.textContent = "Take Token";
-  markLostCodeExplainable(takeBtn, "shortcut_take");
-  takeBtn.disabled = lostCodeShortcutGuesses.size < 1 || lostCodeShortcutGuesses.size > 3;
-  takeBtn.addEventListener("click", () => {
-    const guesses = Array.from(lostCodeShortcutGuesses).sort((a, b) => a - b);
-    sendAction({ type: "take_shortcut", guesses });
+  const actions = lostCodeNode("div", "lost-code-actions");
+  const pass = lostCodeButton("Pass", "shortcut_pass", () => sendAction({ type: "pass_shortcut" }));
+  pass.disabled = !lostCodeCan("pass_shortcut");
+  const take = lostCodeButton("Take token", "shortcut_take", () => sendAction({ type: "take_shortcut", guesses: [...lostCodeShortcutGuesses].sort((a, b) => a - b) }), "lost-code-primary");
+  actions.append(pass, take);
+  host.append(numbers, actions);
+  numbers.addEventListener("click", (event) => {
+    if (event.target !== numbers) return;
+    lostCodeShortcutGuesses.clear();
+    update();
   });
-  actionRow.appendChild(takeBtn);
-  host.appendChild(actionRow);
+  update();
 }
 
 function renderLostCodeWheelControls(view, host) {
-  const wheelRow = document.createElement("div");
-  wheelRow.className = "lost-code-chip-wrap";
-  const wheels = Array.isArray(view.wheels) ? view.wheels : [];
+  const wheels = view.wheels || [];
   const available = new Set(view.available_wheel_ids || []);
+  if (!available.has(lostCodeSelectedWheelId)) {
+    lostCodeSelectedWheelId = view.available_wheel_ids?.[0] || null;
+    lostCodeSelectedRangeCenter = null;
+  }
+  lostCodeControlLabel(host, "1 · Wheel range size (numbers)");
+  const wheelRow = lostCodeNode("div", "lost-code-wheel-grid");
   wheels.forEach((wheel) => {
-    if (!available.has(wheel.id)) return;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "lost-code-chip";
-    if (wheel.id === lostCodeSelectedWheelId) btn.classList.add("selected");
-    btn.textContent = `${wheel.id} (${wheel.window_size} / +${wheel.victory_points})`;
-    markLostCodeExplainable(btn, `wheel_pick:${wheel.id}`);
-    btn.addEventListener("click", () => {
+    const button = lostCodeButton("", `wheel_pick:${wheel.id}`, () => {
       lostCodeSelectedWheelId = wheel.id;
       lostCodeSelectedRangeCenter = null;
-      renderLostCodeControls(view);
-    });
-    wheelRow.appendChild(btn);
+      renderLostCodeControls(currentLostCodeView);
+      lostCodeControlsEl.querySelector(`[data-lost-code-wheel="${wheel.id}"]`)?.focus({ preventScroll: true });
+    }, "lost-code-wheel");
+    button.dataset.lostCodeWheel = wheel.id;
+    button.disabled = !available.has(wheel.id);
+    button.classList.toggle("selected", wheel.id === lostCodeSelectedWheelId);
+    button.setAttribute("aria-pressed", String(wheel.id === lostCodeSelectedWheelId));
+    button.setAttribute("aria-label", `${wheel.id}: ${wheel.window_size} numbers, +${wheel.victory_points} VP${button.disabled ? ", taken" : ""}`);
+    button.append(
+      lostCodeNode("span", "", wheel.id),
+      lostCodeNode("strong", "", String(wheel.window_size)),
+      lostCodeNode("span", "lost-code-wheel-reward", `+${wheel.victory_points} VP`)
+    );
+    wheelRow.appendChild(button);
   });
   host.appendChild(wheelRow);
-
   const wheel = wheels.find((item) => item.id === lostCodeSelectedWheelId);
-  const maxSum = Number(view.max_sum || 21);
-  if (!wheel) {
-    const hint = document.createElement("div");
-    hint.className = "hint";
-    hint.textContent = "Select a wheel first.";
-    host.appendChild(hint);
-    return;
-  }
-
-  const windowSize = Number(wheel.window_size || 1);
-  const leftSpan = Math.floor((windowSize - 1) / 2);
-  const rightSpan = windowSize - 1 - leftSpan;
-  const minCenter = leftSpan;
-  const maxCenter = maxSum - rightSpan;
-  const defaultCenter = minCenter <= maxCenter ? minCenter : 0;
-  if (!Number.isInteger(lostCodeSelectedRangeCenter) || lostCodeSelectedRangeCenter < minCenter || lostCodeSelectedRangeCenter > maxCenter) {
-    lostCodeSelectedRangeCenter = defaultCenter;
-  }
-
-  const strip = document.createElement("div");
-  strip.className = "lost-code-range-strip";
+  if (!wheel) return;
+  lostCodeControlLabel(host, "2 · Tap your range center");
+  const maxSum = view.max_sum ?? 21;
+  const left = Math.floor((wheel.window_size - 1) / 2);
+  const right = wheel.window_size - 1 - left;
+  if (lostCodeSelectedRangeCenter < left || lostCodeSelectedRangeCenter > maxSum - right) lostCodeSelectedRangeCenter = null;
+  const strip = lostCodeNode("div", "lost-code-range-strip");
+  const cells = [];
+  const preview = lostCodeNode("div", "lost-code-range-preview");
+  const previewValue = lostCodeNode("strong", "", "—");
+  const previewLabel = lostCodeNode("span", "", "Your sum range");
+  preview.setAttribute("aria-live", "polite");
+  preview.append(previewValue, previewLabel);
+  const submit = lostCodeButton("Submit guess", "wheel_submit", () => {
+    if (!Number.isInteger(lostCodeSelectedRangeCenter)) return;
+    sendAction({ type: "submit_guess", wheel_id: wheel.id, min: lostCodeSelectedRangeCenter - left, max: lostCodeSelectedRangeCenter + right });
+  }, "lost-code-primary");
+  const update = () => {
+    const selected = Number.isInteger(lostCodeSelectedRangeCenter);
+    cells.forEach((cell, value) => {
+      cell.classList.toggle("center", selected && value === lostCodeSelectedRangeCenter);
+      cell.classList.toggle("in-range", selected && value >= lostCodeSelectedRangeCenter - left && value <= lostCodeSelectedRangeCenter + right);
+      cell.setAttribute("aria-pressed", String(selected && value === lostCodeSelectedRangeCenter));
+    });
+    previewValue.textContent = selected ? `${lostCodeSelectedRangeCenter - left}–${lostCodeSelectedRangeCenter + right}` : "—";
+    previewLabel.textContent = selected ? `${wheel.window_size} ${wheel.window_size === 1 ? "number" : "numbers"} · +${wheel.victory_points} VP` : "Choose a range";
+    submit.disabled = !selected;
+  };
   for (let value = 0; value <= maxSum; value += 1) {
-    const cell = document.createElement("button");
-    cell.type = "button";
-    cell.className = "lost-code-range-cell";
-    cell.textContent = String(value);
-    const selectable = value >= minCenter && value <= maxCenter;
-    if (!selectable) {
-      cell.disabled = true;
-      cell.classList.add("edge-disabled");
-    } else {
-      cell.addEventListener("click", () => {
-        lostCodeSelectedRangeCenter = value;
-        renderLostCodeControls(view);
-      });
-    }
-    if (value === lostCodeSelectedRangeCenter) {
-      cell.classList.add("center");
-    }
-    const rangeMin = Number(lostCodeSelectedRangeCenter) - leftSpan;
-    const rangeMax = Number(lostCodeSelectedRangeCenter) + rightSpan;
-    if (value >= rangeMin && value <= rangeMax) {
-      cell.classList.add("in-range");
-    }
+    const cell = lostCodeButton(String(value), "range_pick", () => {
+      lostCodeSelectedRangeCenter = value;
+      update();
+    }, "lost-code-range-cell");
+    cell.disabled = value < left || value > maxSum - right;
+    cell.setAttribute("aria-label", cell.disabled ? `Center ${value} is outside the allowed range` : `Choose range ${value - left} to ${value + right}`);
+    cells.push(cell);
     strip.appendChild(cell);
   }
-  host.appendChild(strip);
-
-  const preview = document.createElement("div");
-  preview.className = "hint";
-  const min = Number(lostCodeSelectedRangeCenter) - leftSpan;
-  const max = Number(lostCodeSelectedRangeCenter) + rightSpan;
-  preview.textContent = `Range preview: [${min}-${max}] (center ${lostCodeSelectedRangeCenter}, width ${windowSize})`;
-  host.appendChild(preview);
-
-  const submitBtn = document.createElement("button");
-  submitBtn.type = "button";
-  submitBtn.textContent = "Submit Guess";
-  markLostCodeExplainable(submitBtn, "wheel_submit");
-  submitBtn.disabled = !(Number.isInteger(lostCodeSelectedRangeCenter) && minCenter <= maxCenter);
-  submitBtn.addEventListener("click", () => {
-    if (!wheel || !Number.isInteger(lostCodeSelectedRangeCenter)) return;
-    const submitMin = Number(lostCodeSelectedRangeCenter) - leftSpan;
-    const submitMax = Number(lostCodeSelectedRangeCenter) + rightSpan;
-    sendAction({ type: "submit_guess", wheel_id: wheel.id, min: submitMin, max: submitMax });
+  strip.addEventListener("click", (event) => {
+    if (event.target !== strip) return;
+    lostCodeSelectedRangeCenter = null;
+    update();
   });
-  host.appendChild(submitBtn);
+  const actions = lostCodeNode("div", "lost-code-guess-submit");
+  actions.append(preview, submit);
+  host.append(strip, actions);
+  update();
 }
 
 function renderLostCodeExchangeControls(view, host) {
-  const counts = view.draw_pile_counts || {};
-  const row = document.createElement("div");
-  row.className = "lost-code-chip-wrap";
+  lostCodeControlLabel(host, "Choose a symbol to replace");
+  const symbols = lostCodeNode("div", "lost-code-symbol-options");
   (view.active_symbols || []).forEach((symbol) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "lost-code-chip";
-    btn.textContent = `${lostCodeSymbolLabel(symbol)} (${counts[symbol] || 0})`;
-    markLostCodeExplainable(btn, "exchange_symbol");
-    btn.disabled = !Number(counts[symbol] || 0);
-    btn.addEventListener("click", () => sendAction({ type: "replace_stone", symbol }));
-    row.appendChild(btn);
+    const count = view.draw_pile_counts?.[symbol] || 0;
+    const button = lostCodeButton("", "exchange_symbol", () => sendAction({ type: "replace_stone", symbol }), "lost-code-symbol-choice");
+    button.disabled = !count;
+    button.setAttribute("aria-label", `Replace ${lostCodeSymbolName(symbol)}: ${count} stones remaining`);
+    const label = lostCodeNode("span", "", LOST_CODE_SYMBOLS[symbol]?.short || symbol);
+    label.appendChild(lostCodeNode("small", "lost-code-player-tag", `${count} left`));
+    button.append(lostCodeSymbol(symbol, true), label);
+    symbols.appendChild(button);
   });
-  host.appendChild(row);
-  if (lostCodeCan("skip_exchange")) {
-    const skipBtn = document.createElement("button");
-    skipBtn.type = "button";
-    skipBtn.textContent = "Skip Exchange";
-    markLostCodeExplainable(skipBtn, "exchange_skip");
-    skipBtn.addEventListener("click", () => sendAction({ type: "skip_exchange" }));
-    host.appendChild(skipBtn);
-  }
+  host.appendChild(symbols);
+  if (lostCodeCan("skip_exchange")) host.appendChild(lostCodeButton("Skip exchange", "exchange_skip", () => sendAction({ type: "skip_exchange" }), "lost-code-primary"));
 }
 
 function renderLostCodeFinalControls(view, host) {
-  const self = Array.isArray(view.players) ? view.players.find((player) => player.you) : null;
-  const shortcutCommits = (self && self.shortcut_commits) ? self.shortcut_commits : {};
-  const form = document.createElement("div");
-  form.className = "lost-code-final-form";
-
-  const selectors = {};
+  const commits = view.players?.find((player) => player.you)?.shortcut_commits || {};
+  lostCodeControlLabel(host, "Choose up to 3 numbers per symbol");
+  const form = lostCodeNode("div", "lost-code-final-form");
   (view.active_symbols || []).forEach((symbol) => {
-    if (shortcutCommits[symbol]) {
-      const fixed = document.createElement("div");
-      fixed.className = "lost-code-final-row";
-      fixed.textContent = `${lostCodeSymbolLabel(symbol)} locked by shortcut: ${shortcutCommits[symbol].join(", ")}`;
-      form.appendChild(fixed);
-      return;
-    }
-    const row = document.createElement("div");
-    row.className = "lost-code-final-row";
-    const label = document.createElement("div");
-    label.textContent = lostCodeSymbolLabel(symbol);
+    const row = lostCodeNode("div", "lost-code-final-row");
+    const label = lostCodeNode("div", "lost-code-final-label");
+    label.append(lostCodeSymbol(symbol), lostCodeNode("span", "", LOST_CODE_SYMBOLS[symbol]?.short || symbol));
     row.appendChild(label);
-    selectors[symbol] = [];
-    for (let idx = 0; idx < 3; idx += 1) {
-      const select = document.createElement("select");
-      const blank = document.createElement("option");
-      blank.value = "";
-      blank.textContent = "-";
-      select.appendChild(blank);
-      for (let value = 0; value <= Number(view.max_symbol_value || 7); value += 1) {
-        const option = document.createElement("option");
-        option.value = String(value);
-        option.textContent = String(value);
-        select.appendChild(option);
+    if (commits[symbol]) {
+      row.appendChild(lostCodeNode("div", "lost-code-final-locked", `🔒 ${commits[symbol].join(", ")} · Shortcut`));
+    } else {
+      if (!lostCodeFinalDraft[symbol]) lostCodeFinalDraft[symbol] = ["", "", ""];
+      for (let index = 0; index < 3; index += 1) {
+        const select = document.createElement("select");
+        select.dataset.lostCodeField = `${symbol}-${index}`;
+        select.setAttribute("aria-label", `${lostCodeSymbolName(symbol)}, guess ${index + 1}`);
+        markLostCodeExplainable(select, "final_number");
+        select.appendChild(new Option("—", ""));
+        for (let value = 0; value <= (view.max_symbol_value ?? 7); value += 1) select.appendChild(new Option(String(value), String(value)));
+        select.value = lostCodeFinalDraft[symbol][index];
+        select.addEventListener("change", () => { lostCodeFinalDraft[symbol][index] = select.value; });
+        row.appendChild(select);
       }
-      selectors[symbol].push(select);
-      row.appendChild(select);
     }
     form.appendChild(row);
   });
   host.appendChild(form);
-
-  const submitBtn = document.createElement("button");
-  submitBtn.type = "button";
-  submitBtn.textContent = "Submit Final Guesses";
-  markLostCodeExplainable(submitBtn, "final_submit");
-  submitBtn.addEventListener("click", () => {
+  host.appendChild(lostCodeButton("Submit final guesses", "final_submit", () => {
     const guesses = {};
-    Object.entries(selectors).forEach(([symbol, list]) => {
-      const picked = list
-        .map((select) => select.value)
-        .filter((value) => value !== "")
-        .map((value) => Number.parseInt(value, 10))
-        .filter((value, index, arr) => Number.isInteger(value) && arr.indexOf(value) === index);
-      guesses[symbol] = picked;
+    (view.active_symbols || []).forEach((symbol) => {
+      if (!commits[symbol]) guesses[symbol] = [...new Set((lostCodeFinalDraft[symbol] || []).filter((value) => value !== "").map(Number))];
     });
     sendAction({ type: "submit_final_guesses", guesses });
-  });
-  host.appendChild(submitBtn);
+  }, "lost-code-primary"));
 }
 
 function renderLostCodeControls(view) {
   if (!lostCodeControlsEl) return;
-  lostCodeControlsEl.innerHTML = "";
-
+  const focusField = document.activeElement?.dataset.lostCodeField;
+  lostCodeControlsEl.replaceChildren();
   if (lostCodeCan("roll_dice")) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = "Roll Dice";
-    markLostCodeExplainable(btn, "roll_dice");
-    btn.addEventListener("click", () => sendAction({ type: "roll_dice" }));
-    lostCodeControlsEl.appendChild(btn);
-    return;
-  }
-  if (lostCodeCan("pass_shortcut") || lostCodeCan("take_shortcut")) {
+    lostCodeControlsEl.appendChild(lostCodeButton("🎲 Roll dice", "roll_dice", () => sendAction({ type: "roll_dice" }), "lost-code-primary"));
+  } else if (lostCodeCan("pass_shortcut") || lostCodeCan("take_shortcut")) {
     renderLostCodeShortcutControls(view, lostCodeControlsEl);
-    return;
-  }
-  if (lostCodeCan("modify_die") || lostCodeCan("confirm_dice")) {
+  } else if (lostCodeCan("modify_die") || lostCodeCan("confirm_dice")) {
     renderLostCodeModifyControls(view, lostCodeControlsEl);
-    return;
-  }
-  if (lostCodeCan("submit_guess")) {
-    if (!lostCodeSelectedWheelId) {
-      const available = Array.isArray(view.available_wheel_ids) ? view.available_wheel_ids : [];
-      lostCodeSelectedWheelId = available.length ? available[0] : null;
-      lostCodeSelectedRangeCenter = null;
-    }
+  } else if (lostCodeCan("submit_guess")) {
     renderLostCodeWheelControls(view, lostCodeControlsEl);
-    return;
-  }
-  if (lostCodeCan("replace_stone") || lostCodeCan("skip_exchange")) {
+  } else if (lostCodeCan("replace_stone") || lostCodeCan("skip_exchange")) {
     renderLostCodeExchangeControls(view, lostCodeControlsEl);
-    return;
-  }
-  if (lostCodeCan("submit_final_guesses")) {
+  } else if (lostCodeCan("submit_final_guesses")) {
     renderLostCodeFinalControls(view, lostCodeControlsEl);
-    return;
   }
-
-  const hint = document.createElement("div");
-  hint.className = "hint";
-  hint.textContent = view.phase_detail || "Waiting for other players.";
-  lostCodeControlsEl.appendChild(hint);
+  if (focusField) {
+    // A room update must not discard an in-progress final guess or move focus.
+    Array.from(lostCodeControlsEl.querySelectorAll("[data-lost-code-field]"))
+      .find((el) => el.dataset.lostCodeField === focusField)?.focus({ preventScroll: true });
+  }
 }
 
 function openLostCodeHelpModal() {
-  if (!lostCodeHelpModal || !lostCodeHelpContent) return;
+  exitLostCodeExplainMode();
   renderLostCodeHelpContent();
-  setModalVisible(lostCodeHelpModal, true);
+  lostCodeSetModal(lostCodeHelpModal, true);
 }
 
 function renderLostCodeGameState(data) {
-  const view = data && data.view ? data.view : null;
+  const view = data?.view;
+  if (!view) { clearLostCodeState(); return; }
   currentLostCodeView = view;
-  if (!view) {
-    clearLostCodeState();
-    return;
-  }
   if (currentGameType !== "lost_code") {
     currentGameType = "lost_code";
     setGamePanelVisibility("lost_code");
   }
-  if (lostCodePhaseLabel) lostCodePhaseLabel.textContent = view.phase || "-";
-  if (lostCodeRoundLabel) lostCodeRoundLabel.textContent = `${view.round || "-"} / ${view.max_rounds || "-"}`;
-  if (lostCodeTurnLabel) lostCodeTurnLabel.textContent = view.current_actor_name || "-";
-  if (lostCodeModeLabel) lostCodeModeLabel.textContent = view.mode || "-";
-  if (lostCodeHintEl) lostCodeHintEl.textContent = view.phase_detail || "-";
-
+  const key = `${data.room_id || ""}:${view.you}:${view.round}:${view.phase}:${view.current_actor}:${view.shortcut_offer?.symbol || ""}`;
+  if (key !== lostCodeSelectionKey) {
+    lostCodeSelectionKey = key;
+    lostCodeSelectedDieIndex = 0;
+    lostCodeSelectedWheelId = null;
+    lostCodeSelectedRangeCenter = null;
+    lostCodeShortcutGuesses.clear();
+    lostCodeFinalDraft = {};
+  }
+  const phaseNames = { roll_dice: "Roll dice", modify_die: "Adjust dice", offer_shortcut_token: "Shortcut", choose_wheels: "Choose range", exchange_stones: "Replace stone", final_guess_submit: "Final guesses", game_over: "Game over" };
+  const isYourTurn = !!view.legal_actions?.length;
+  lostCodePhaseLabel.textContent = phaseNames[view.phase] || view.phase || "—";
+  lostCodeRoundLabel.textContent = `${view.round || "—"} / ${view.max_rounds || "—"}`;
+  lostCodeTurnLabel.textContent = view.game_over ? "Finished" : view.current_actor_name || "—";
+  lostCodeModeLabel.textContent = { standard: "Standard", intro: "Intro", x_race: "X-Race" }[view.mode] || view.mode || "—";
+  document.getElementById("lostCodeTurnBadge").textContent = view.game_over ? "Finished" : isYourTurn ? "Your turn" : "Waiting";
+  document.getElementById("lostCodeValueRange").textContent = `Values 0–${view.max_symbol_value ?? 7}`;
+  document.getElementById("lostCodeActionTitle").textContent = view.game_over ? "🏁 Final scores" : `🎲 ${phaseNames[view.phase] || "Round dice"}`;
+  let hint = view.phase_detail || "Waiting for the next move.";
+  if (isYourTurn && view.phase === "modify_die") hint = lostCodeCan("modify_die") ? "Select a die and change its symbol, or keep this roll." : "Die changed. Confirm to continue.";
+  if (isYourTurn && view.phase === "choose_wheels") hint = "Predict the sum of your own three hidden values.";
+  for (const symbol of Object.keys(LOST_CODE_SYMBOLS)) hint = hint.replaceAll(symbol, `${lostCodeSymbolName(symbol)} (${lostCodeSymbolLabel(symbol)})`);
+  lostCodeHintEl.textContent = hint;
+  lostCodeCluesBtn?.classList.remove("hidden");
   renderLostCodeDice(view);
   renderLostCodePlayers(view);
   renderLostCodeLogs(view);
@@ -957,98 +924,116 @@ function renderLostCodeGameState(data) {
   logGameEvents(data);
 }
 
-if (lostCodeHelpBtn) {
-  lostCodeHelpBtn.addEventListener("click", openLostCodeHelpModal);
+function lostCodeExplainExempt(target) {
+  return !!target.closest("#lostCodeHelpModal, #lostCodeExplainModal, #lostCodeHelpBtn, #lostCodeExplainBtn, #lostCodeCluesCloseBtn");
 }
-if (lostCodeExplainBtn) {
-  lostCodeExplainBtn.addEventListener("click", () => {
-    toggleLostCodeExplainMode();
-  });
-}
-if (lostCodeHelpModalCloseBtn) {
-  lostCodeHelpModalCloseBtn.addEventListener("click", () => {
-    if (lostCodeHelpModal) setModalVisible(lostCodeHelpModal, false);
-  });
-}
-if (lostCodeExplainModalCloseBtn) {
-  lostCodeExplainModalCloseBtn.addEventListener("click", () => {
-    if (lostCodeExplainModal) setModalVisible(lostCodeExplainModal, false);
-  });
-}
-if (lostCodeHelpModal) {
-  lostCodeHelpModal.addEventListener("click", (event) => {
-    if (event.target === lostCodeHelpModal) setModalVisible(lostCodeHelpModal, false);
-  });
-}
-if (lostCodeExplainModal) {
-  lostCodeExplainModal.addEventListener("click", (event) => {
-    if (event.target === lostCodeExplainModal) setModalVisible(lostCodeExplainModal, false);
-  });
-}
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && lostCodeExplainMode) {
-    exitLostCodeExplainMode();
+
+function lostCodeHandleExplain(event) {
+  if (currentGameType !== "lost_code") return;
+  if (event.type === "click" && lostCodeSuppressExplainClick) {
+    lostCodeSuppressExplainClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
     return;
   }
-  if (event.key !== "Escape") return;
-  if (lostCodeHelpModal && !lostCodeHelpModal.classList.contains("hidden")) {
-    setModalVisible(lostCodeHelpModal, false);
+  if (event.type === "pointerdown") lostCodeSuppressExplainClick = false;
+  if (!lostCodeExplainMode || lostCodeExplainExempt(event.target)) return;
+  const target = event.type === "pointerdown"
+    ? findLostCodeExplainButtonAtPoint(event.clientX, event.clientY)
+    : event.target.closest("[data-lost-code-explain-key]");
+  if (target) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    lostCodeSuppressExplainClick = event.type === "pointerdown";
+    exitLostCodeExplainMode();
+    showLostCodeButtonExplanation(target.dataset.lostCodeExplainKey);
+  } else if (event.target.closest("button, select, input, summary, a")) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
   }
-  if (lostCodeExplainModal && !lostCodeExplainModal.classList.contains("hidden")) {
-    setModalVisible(lostCodeExplainModal, false);
+}
+
+document.addEventListener("pointerdown", lostCodeHandleExplain, true);
+document.addEventListener("click", lostCodeHandleExplain, true);
+document.addEventListener("keydown", (event) => {
+  if (currentGameType !== "lost_code") return;
+  lostCodeSuppressExplainClick = false;
+  const openModal = [lostCodeExplainModal, lostCodeHelpModal, lostCodeCluesModal].find((modal) => modal && !modal.classList.contains("hidden"));
+  if (event.key === "Escape") {
+    event.preventDefault();
+    if (openModal === lostCodeCluesModal) setLostCodeCluesOpen(false);
+    else if (openModal) lostCodeSetModal(openModal, false);
+    else exitLostCodeExplainMode();
+    hideLostCodeTooltip();
+    return;
   }
+  if (event.key === "Tab" && openModal) {
+    const focusable = [...openModal.querySelectorAll('button:not(:disabled), select, summary, [tabindex="0"]')].filter((el) => el.getClientRects().length);
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !openModal.contains(document.activeElement))) {
+      event.preventDefault(); last?.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !openModal.contains(document.activeElement))) {
+      event.preventDefault(); first?.focus();
+    }
+  }
+  if (lostCodeExplainMode && !lostCodeExplainExempt(event.target) && ["Enter", " ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const target = event.target.closest("[data-lost-code-explain-key]");
+    if (target && ["Enter", " "].includes(event.key)) {
+      exitLostCodeExplainMode();
+      showLostCodeButtonExplanation(target.dataset.lostCodeExplainKey);
+    }
+  }
+}, true);
+
+lostCodeHelpBtn?.addEventListener("click", openLostCodeHelpModal);
+lostCodeExplainBtn?.setAttribute("aria-pressed", "false");
+lostCodeExplainBtn?.addEventListener("click", toggleLostCodeExplainMode);
+lostCodeCluesBtn?.addEventListener("click", () => setLostCodeCluesOpen(true));
+document.getElementById("lostCodeCluesCloseBtn")?.addEventListener("click", () => setLostCodeCluesOpen(false));
+[[lostCodeHelpModal, lostCodeHelpModalCloseBtn], [lostCodeExplainModal, lostCodeExplainModalCloseBtn], [lostCodeCluesModal, null]].forEach(([modal, close]) => {
+  const dismiss = () => modal === lostCodeCluesModal ? setLostCodeCluesOpen(false) : lostCodeSetModal(modal, false);
+  close?.addEventListener("click", dismiss);
+  modal?.addEventListener("click", (event) => { if (event.target === modal) dismiss(); });
 });
 
-document.addEventListener("pointerdown", (event) => {
-  if (!lostCodeExplainMode || currentGameType !== "lost_code") return;
-  const explainable = findLostCodeExplainButtonAtPoint(event.clientX, event.clientY);
-  if (explainable) {
-    event.preventDefault();
-    event.stopPropagation();
-    const explainKey = explainable.dataset.lostCodeExplainKey;
-    if (explainKey) {
-      showLostCodeButtonExplanation(explainKey);
-      exitLostCodeExplainMode();
-    }
-    return;
-  }
+lostCodePanelEl?.addEventListener("pointerover", (event) => {
+  if (event.pointerType === "touch") return;
+  const target = event.target.closest("[data-lost-code-tip]");
+  if (target && !target.contains(event.relatedTarget)) showLostCodeTooltip(target);
+});
+lostCodePanelEl?.addEventListener("pointerout", (event) => {
+  if (event.pointerType !== "touch" && event.target.closest("[data-lost-code-tip]") && !event.target.contains(event.relatedTarget)) hideLostCodeTooltip();
+});
+lostCodePanelEl?.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-lost-code-tip]");
+  if (target && !target.closest("button, select, summary")) showLostCodeTooltip(target);
+  else hideLostCodeTooltip();
+});
+lostCodePanelEl?.addEventListener("focusin", (event) => {
+  if (event.target.dataset.lostCodeTip) showLostCodeTooltip(event.target);
+});
+lostCodePanelEl?.addEventListener("focusout", hideLostCodeTooltip);
+window.addEventListener("scroll", hideLostCodeTooltip, true);
+window.addEventListener("resize", () => {
+  hideLostCodeTooltip();
+  if (window.innerWidth > 680 && lostCodeCluesModal && !lostCodeCluesModal.classList.contains("hidden")) setLostCodeCluesOpen(false);
+});
 
-  const button = event.target.closest("button");
-  if (!button) return;
-  if (button === lostCodeExplainBtn || button === lostCodeHelpBtn) return;
-  if (button === lostCodeHelpModalCloseBtn || button === lostCodeExplainModalCloseBtn) return;
-  event.preventDefault();
-  event.stopPropagation();
-}, true);
+[["lostCodeLogs", "code_clues"], ["lostCodeClueTitle", "code_clues"], ["lostCodeActionTitle", "dice"], ["lostCodeDiscards", "discards"], ["lostCodeTokenStatus", "tokens"], ["lostCodeGuesses", "guesses"]].forEach(([id, key]) => markLostCodeExplainable(document.getElementById(id), key));
+[lostCodeModeSelect, lostCodeShortcutToggle, lostCodeCurseToggle].forEach((el) => el?.addEventListener("change", () => {
+  if (currentRoomState) renderLostCodeRoomState(currentRoomState);
+}));
 
-document.addEventListener("click", (event) => {
-  if (!lostCodeExplainMode || currentGameType !== "lost_code") return;
-  const button = event.target.closest("button");
-  if (!button) return;
-  if (button === lostCodeExplainBtn || button === lostCodeHelpBtn) return;
-  if (button === lostCodeHelpModalCloseBtn || button === lostCodeExplainModalCloseBtn) return;
-  event.preventDefault();
-  event.stopPropagation();
-}, true);
-
-if (lostCodeModeSelect) {
-  lostCodeModeSelect.addEventListener("change", () => {
-    if (currentRoomState) renderLostCodeRoomState(currentRoomState);
-  });
+function initializeLostCodeUI() {
+  if (typeof currentRoomState !== "undefined" && currentRoomState) renderLostCodeRoomState(currentRoomState);
+  if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "lost_code") renderLostCodeGameState(lastGameStatePayload);
 }
-if (lostCodeShortcutToggle) {
-  lostCodeShortcutToggle.addEventListener("change", () => {
-    if (currentRoomState) renderLostCodeRoomState(currentRoomState);
-  });
-}
-if (lostCodeCurseToggle) {
-  lostCodeCurseToggle.addEventListener("change", () => {
-    if (currentRoomState) renderLostCodeRoomState(currentRoomState);
-  });
-}
-
 window.clearLostCodeState = clearLostCodeState;
 window.renderLostCodeGameState = renderLostCodeGameState;
 window.renderLostCodeRoomState = renderLostCodeRoomState;
 window.updateLostCodeConfigRow = updateLostCodeConfigRow;
 window.showLostCodeHeaderActions = showLostCodeHeaderActions;
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initializeLostCodeUI, { once: true });
+else initializeLostCodeUI();

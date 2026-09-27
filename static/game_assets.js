@@ -492,13 +492,13 @@ const GAME_ASSETS = {
   },
   "lost_code": {
     "scripts": [
-      "/static/games/lost_code.js?v=app_v4"
+      "/static/games/lost_code.js?v=app_v5"
     ],
     "styles": [],
     "panel": "lostCodePanel",
     "header": "showLostCodeHeaderActions",
-    "markup": "/static/games/lost_code.html?v=1",
-    "styleFragments": "/static/games/lost_code.css?v=1"
+    "markup": "/static/games/lost_code.html?v=2",
+    "styleFragments": "/static/games/lost_code.css?v=2"
   },
   "criminal_dance": {
     "scripts": [
@@ -658,7 +658,7 @@ const GAME_ASSETS = {
     "panel": "poisonPanel",
     "header": "showPoisonHeaderActions",
     "markup": "/static/games/poison.html?v=1",
-    "styleFragments": "/static/games/poison.css?v=1"
+    "styleFragments": "/static/games/poison.css?v=2"
   },
   "bohnanza_dice": {
     "scripts": [
