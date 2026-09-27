@@ -184,8 +184,6 @@
     else status=view.current_turn===view.you?"Your turn":`${pname(view.current_turn)} · ${phases[view.phase]}`;
     if(view.choice?.owner===view.you){
       content=`<p class="di-small">${esc(effectText(view.choice.effect))}${view.choice.peek?` · ${esc(sourceName(view.choice.peek))}`:""}</p><div class="di-actions">${moves("choose").map(m=>moveButton(m,choiceLabel(m.choice),"effect")).join("")}</div>`;
-    }else if(view.phase==="leader"){
-      content=`<div class="di-actions">${moves("leader").map(m=>moveButton(m,view.catalog.leaders[m.leader].name_zh,view.catalog.leaders[m.leader].passive+" 💍 "+view.catalog.leaders[m.leader].ring)).join("")}</div>`;
     }else if(view.phase==="baron"){
       content=`<div class="di-actions">${moves("baron").map(m=>moveButton(m,actionLabel(m),"仅自己可见的两个妙计派系，发动后各增加一影响力。")).join("")}</div>`;
     }else{
@@ -224,17 +222,21 @@
       ${view.phase==="round_end"?`<p class="di-small">${view.ready.length} / ${view.order.length} ready${view.final_round?" · Final round":""}</p>`:""}</section>`;
   }
   function renderLeaders() {
-    return `<div class="di-leaders">${Object.entries(view.catalog.leaders).map(([id,l])=>{
+    const status=pending?"Selecting…":view.current_turn===view.you?"Your turn · Click a leader to select":`${pname(view.current_turn)} · Choosing a leader`;
+    return `<section class="di-box di-leader-selection" aria-label="Leader selection"><div class="di-status" aria-live="polite">${esc(status)}</div><div class="di-leaders">${Object.entries(view.catalog.leaders).map(([id,l])=>{
       const move=moves("leader").find(m=>m.leader===id);
-      return `<button type="button" data-di-action="${move?"move":"info"}" ${move?`data-index="${view.moves.indexOf(move)}"`:""} ${explainAttr(l.passive+" 💍 "+l.ring)} ${pending?"disabled":""}><strong>${esc(l.name_zh)}</strong><small>${esc(l.name)}</small><p>${esc(l.passive)}</p><p>💍 ${esc(l.ring)}</p></button>`;
-    }).join("")}</div>`;
+      const owner=view.players.find(p=>p.leader===id);
+      return `<button type="button" class="di-leader ${owner?"di-leader-taken":""}" data-di-action="leader" data-leader="${esc(id)}" ${explainAttr(l.passive+" 💍 "+l.ring)} ${!move||pending?"disabled":""}>
+        <strong>${esc(l.name_zh)}</strong><small>${esc(l.name)}</small><span class="di-leader-ability">${esc(l.passive)}</span><span class="di-leader-ability">💍 ${esc(l.ring)}</span>
+        <span class="di-leader-status">${owner?`Selected by ${esc(owner.name)}`:pending&&selected?.leader===id?"Selecting…":move?"Select →":"Available"}</span></button>`;
+    }).join("")}</div></section>`;
   }
   function render() {
     if(!view)return;
     const main=view.phase==="leader"?renderLeaders():tab==="market"?renderMarket():tab==="history"?`<section class="di-box"><h3>Activity</h3><ol class="di-log">${view.log.slice().reverse().map(l=>`<li><b>R${l.round}</b> ${esc(l.text)}</li>`).join("")}</ol></section>`:renderBoard();
+    const table=view.phase==="leader"?main:`<div class="di-layout"><div class="di-main"><nav class="di-tabs" aria-label="Game view">${[["board","Board"],["market","Market"],["history","Activity"]].map(([id,label])=>`<button type="button" data-di-action="tab" data-tab="${id}" aria-pressed="${tab===id}" ${explainAttr(`View ${label}`)}>${label}</button>`).join("")}</nav>${renderConflict()}${main}</div><aside class="di-side">${renderActions()}${renderHand()}</aside></div>`;
     root.innerHTML=`<div class="di-hero"><div><h2 class="di-title">DUNE: IMPERIUM</h2><div class="di-subtitle">沙丘：帝国 · BASE GAME</div></div><div class="di-round"><strong>${view.round?`ROUND ${view.round} / 10`:"SETUP"}</strong>${esc(phases[view.phase])}</div></div>
-      <div class="di-players">${renderPlayers()}</div>${renderReport()}
-      <div class="di-layout"><div class="di-main"><nav class="di-tabs" aria-label="Game view">${[["board","Board"],["market","Market"],["history","Activity"]].map(([id,label])=>`<button type="button" data-di-action="tab" data-tab="${id}" aria-pressed="${tab===id}" ${explainAttr(`View ${label}`)}>${label}</button>`).join("")}</nav>${renderConflict()}${main}</div><aside class="di-side">${renderActions()}${renderHand()}</aside></div>`;
+      <div class="di-players">${renderPlayers()}</div>${renderReport()}${table}`;
     root.classList.toggle("di-explaining",explaining);
   }
   function submit() {
@@ -248,6 +250,7 @@
     if(target.disabled||explaining)return;
     const action=target.dataset.diAction;
     if(action==="confirm"){submit();return;}
+    if(action==="leader"){selected=moves("leader").find(m=>m.leader===target.dataset.leader);submit();return;}
     if(action==="cancel"){resetSelection();render();return;}
     if(action==="tab"){tab=target.dataset.tab;hideTip();render();return;}
     if(action==="region"){boardGroup=target.dataset.region;hideTip();render();return;}

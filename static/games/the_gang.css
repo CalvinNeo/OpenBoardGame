@@ -1,175 +1,260 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+/* Loaded into the matching style.css group by loadGameStyleFragments. */
 @media all, obg-game-the_gang-1 {
+    #theGangPanel {
+        --gang-ink: #21382e;
+        --gang-muted: #65756c;
+        --gang-green: #1c6049;
+        --gang-line: #dce3d9;
+        --gang-gold: #efce83;
+        container-type: inline-size;
+    }
 
-.gang-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+    .gang-game { color: var(--gang-ink); font-size: 14px; }
+    .gang-game *, .gang-game *::before, .gang-game *::after { min-width: 0; }
+    .gang-game h3, .gang-game p { margin: 0; }
+    .gang-game h3 { font-size: 15px; font-weight: 700; }
+    .gang-game button, .gang-game select {
+        min-height: 38px;
+        max-width: 100%;
+        border: 1px solid var(--gang-line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+        color: var(--gang-ink);
+        font: inherit;
+    }
+    .gang-game button { cursor: pointer; font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
+    .gang-game button:hover:not(:disabled) { background: #eaf2eb; border-color: #9ab5a5; }
+    .gang-game button:disabled, .gang-game select:disabled { opacity: .5; cursor: default; }
+    .gang-game :focus-visible { outline: 3px solid #bd9338; outline-offset: 3px; }
+    .gang-topbar, .gang-stats, .gang-stat, .gang-section-heading, .gang-table-heading, .gang-decision-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .gang-topbar { padding: 8px 0 18px; flex-wrap: wrap; }
+    .gang-level { display: grid; gap: 4px; }
+    .gang-level > strong { font-size: 26px; letter-spacing: -1px; }
+    .gang-eyebrow { font-size: 10px; letter-spacing: 1.8px; font-weight: 700; }
+    .gang-level .gang-eyebrow { color: var(--gang-muted); }
+    .gang-stats { gap: 22px; }
+    .gang-stat { gap: 8px; }
+    .gang-stat > span:first-child { font-size: 21px; }
+    .gang-stat small { display: block; margin-bottom: 3px; color: var(--gang-muted); font-size: 11px; }
+    .gang-stat strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+    .gang-mode { padding: 7px 11px; border: 1px solid var(--gang-line); border-radius: 30px; font-size: 12px; }
+    .gang-stages {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        list-style: none;
+        padding: 5px;
+        margin: 0 0 16px;
+        border: 1px solid var(--gang-line);
+        border-radius: 12px;
+        background: #f4f6f1;
+    }
+    .gang-stages li { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 3px; font-size: 12px; color: #728077; border-radius: 8px; }
+    .gang-stages li > span { display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 20px; border: 1px solid #d7ded6; border-radius: 50%; font-size: 10px; }
+    .gang-stages .is-current { background: var(--gang-green); color: #fff; font-weight: 700; }
+    .gang-stages .is-current > span { border-color: #8eaf9c; }
+    .gang-stages .is-complete { color: var(--gang-green); }
+    .gang-stages .is-complete > span { background: #e1eade; border-color: #e1eade; }
+    .gang-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(290px, 1fr); gap: 16px; align-items: start; }
+    .gang-table {
+        display: flex;
+        flex-direction: column;
+        align-self: stretch;
+        border: 1px solid #285643;
+        border-radius: 18px;
+        padding: 22px;
+        color: #f6f5e9;
+        background: radial-gradient(ellipse at 45% 30%, #28634f, #123c31 85%);
+        box-shadow: inset 0 0 0 5px #ffffff06, 0 5px 14px #1d3b2710;
+    }
+    .gang-table-heading { margin-bottom: 30px; }
+    .gang-table-heading h3 { font-size: 13px; font-weight: 500; color: #e2eade; }
+    .gang-phase { border: 1px solid #8ca99666; border-radius: 30px; padding: 5px 10px; font-size: 11px; color: #e0eade; }
+    .gang-cards { display: flex; gap: 9px; }
+    .gang-community { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; width: 100%; max-width: 470px; margin: auto auto 0; }
+    .gang-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        flex: 0 0 auto;
+        width: 64px;
+        aspect-ratio: 5 / 7;
+        padding: 7px;
+        border: 1px solid #ebede5;
+        border-radius: 8px;
+        background: #fffcf4;
+        color: #21352d;
+        box-shadow: 0 3px 5px #00000015;
+        line-height: 1;
+    }
+    .gang-community .gang-card { width: 100%; }
+    .gang-card.is-red { color: #b83d46; }
+    .gang-card-corner { display: flex; flex-direction: column; align-items: center; align-self: flex-start; gap: 2px; font-weight: 700; font-size: clamp(15px, 2cqi, 24px); }
+    .gang-card-corner small { font-size: .75em; }
+    .gang-card-suit { font-family: "Segoe UI Symbol", sans-serif; font-size: clamp(22px, 3.2cqi, 38px); align-self: flex-end; }
+    .gang-card.is-facedown, .gang-card.is-placeholder {
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #88aa9770;
+        background: repeating-linear-gradient(45deg, #ffffff04 0 3px, transparent 3px 8px), #214d40;
+        box-shadow: inset 0 0 0 4px #173d32;
+        color: #b5cdbd;
+    }
+    .gang-card.is-placeholder { background: #092c2529; box-shadow: none; border-style: dashed; }
+    .gang-card-back { font-size: 24px; opacity: .65; }
+    .gang-card.highlight { border-color: var(--gang-gold); box-shadow: 0 0 0 2px var(--gang-gold), 0 4px 8px #0002; }
+    .gang-street-labels { display: grid; grid-template-columns: 3fr 1fr 1fr; gap: 9px; width: 100%; max-width: 470px; margin: 10px auto 28px; color: #afc6b6; font-size: 9px; letter-spacing: 1.5px; text-align: center; }
+    .gang-street-labels > span { padding-top: 6px; border-top: 1px solid #87ac943f; }
+    .gang-your-hand { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 20px 0; border-top: 1px solid #97b7a63b; margin-top: auto; }
+    .gang-hand-caption { display: grid; gap: 8px; max-width: 50%; overflow-wrap: anywhere; }
+    .gang-hand-caption .gang-eyebrow { color: #c6d8c4; }
+    .gang-hand-caption > strong { font-size: 19px; color: #f3d99d; font-family: Georgia, serif; }
+    #gangHandOdds { font-size: 11px; color: #d5e3d8; }
+    #gangYourHand .gang-card { width: 70px; }
+    .gang-table-footer { display: flex; justify-content: space-between; gap: 10px; color: #b4c8bb; font-size: 10px; line-height: 1.5; margin-top: 8px; }
+    #gangCommunityCount { flex-shrink: 0; }
+    .gang-rank-panel { padding: 16px; border: 1px solid var(--gang-line); border-radius: 14px; background: #fafbf8; }
+    .gang-section-heading { margin-bottom: 12px; flex-wrap: wrap; gap: 6px 12px; }
+    .gang-caption { font-size: 11px; color: var(--gang-muted); line-height: 1.5; overflow-wrap: anywhere; }
+    .gang-ranking { display: grid; gap: 6px; }
+    .gang-slot { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 9px; align-items: center; border: 1px solid var(--gang-line); border-radius: 9px; background: #fff; padding: 6px 8px; }
+    .gang-slot.you { background: #edf3e9; border-color: #93ae92; }
+    .gang-rank-chip { display: grid; place-items: center; width: 28px; height: 28px; border: 1px dashed #a6b4a6; border-radius: 50%; color: #4e6956; font-size: 12px; font-weight: 700; background: #f0f3eb; }
+    .gang-slot:first-child .gang-rank-chip { background: #f7ebcb; border-color: #b29250; color: #765b22; }
+    .gang-rank-identity { display: grid; gap: 2px; }
+    .gang-game .gang-rank-select { width: 100%; min-height: 24px; padding: 1px 2px; border: 0; border-radius: 3px; background-color: transparent; font-size: 13px; font-weight: 600; text-overflow: ellipsis; }
+    .gang-game .gang-rank-select:disabled { opacity: 1; appearance: none; }
+    .gang-rank-status { font-size: 10px; color: var(--gang-muted); padding-left: 2px; }
+    .gang-rank-status.is-ready { color: #286348; }
+    .gang-rank-detail { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; }
+    .gang-rank-hand { display: none; gap: 3px; }
+    .gang-rank-hand .gang-card { width: 22px; aspect-ratio: auto; height: 22px; padding: 2px; border-radius: 3px; box-shadow: none; }
+    .gang-rank-hand .gang-card-corner { width: 100%; flex-direction: row; justify-content: space-between; gap: 0; font-size: 9px; height: 100%; }
+    .gang-rank-hand .gang-card-corner small { font-size: 8px; }
+    .gang-rank-hand .gang-card-suit { display: none; }
+    .gang-rank-hand .gang-card-back { font-size: 12px; }
+    .gang-rank-moves { display: flex; gap: 4px; }
+    .gang-game .gang-move { min-height: 34px; width: 32px; padding: 4px; font-size: 17px; background: #f6f8f3; }
+    .gang-ranking-hint { margin: 9px 0 0 !important; }
+    .gang-decision { border-top: 1px solid var(--gang-line); margin-top: 14px; padding-top: 14px; }
+    .gang-decision-heading { flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }
+    .gang-decision-heading > strong { font-size: 13px; }
+    .gang-ready-count { font-size: 10px; white-space: nowrap; color: var(--gang-green); font-weight: 600; }
+    .gang-main-actions { display: grid; margin-top: 11px; }
+    .gang-game .gang-primary { min-height: 44px; border-color: var(--gang-green); background: var(--gang-green); color: #fff; font-weight: 700; }
+    .gang-game .gang-primary:hover:not(:disabled) { background: #174b3b; border-color: #174b3b; }
+    .gang-game .gang-primary:disabled { opacity: 1; background: #e6ede2; border-color: #d7e1d1; color: #5f725f; }
+    .gang-tools { display: grid; gap: 8px; border-top: 1px solid var(--gang-line); padding-top: 12px; margin-top: 13px; }
+    .gang-tools-label { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; font-size: 9px; letter-spacing: 1px; color: var(--gang-muted); }
+    .gang-tools-label > span { letter-spacing: 0; font-size: 10px; }
+    .gang-tools > button, .gang-spy-controls { width: 100%; font-size: 12px; }
+    .gang-spy-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+    .gang-spy-controls select { width: 100%; text-overflow: ellipsis; }
+    .gang-timers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .gang-timers > span { border-radius: 5px; padding: 6px 8px; background: #edf0e6; font-size: 11px; }
+    .gang-timers strong { font-variant-numeric: tabular-nums; }
+    .gang-timers .is-urgent, #gangLockWrap { background: #fff0d0; color: #865c1e; }
+    .gang-crew, .gang-summary { grid-column: 1 / -1; }
+    .gang-crew { padding-top: 2px; }
+    .gang-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 9px; }
+    .gang-player-card { border: 1px solid var(--gang-line); border-radius: 10px; padding: 12px; background: #fafbf8; overflow-wrap: anywhere; }
+    .gang-player-card.you { background: #f0f5eb; border-color: #99b491; }
+    .gang-player-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+    .gang-player-name { font-size: 12px; font-weight: 600; }
+    .gang-you-tag { flex-shrink: 0; font-size: 9px; color: #54724e; letter-spacing: .6px; }
+    .gang-badge { color: var(--gang-muted); font-size: 10px; line-height: 1.4; margin-top: 5px; }
+    .gang-player-card.ready .gang-badge { color: var(--gang-green); }
+    .gang-player-hand { display: flex; gap: 6px; margin-top: 10px; }
+    .gang-player-hand .gang-card { width: 34px; padding: 4px; border-radius: 4px; }
+    .gang-player-hand .gang-card-corner { font-size: 11px; gap: 1px; }
+    .gang-player-hand .gang-card-corner small { display: none; }
+    .gang-player-hand .gang-card-suit { font-size: 14px; }
+    .gang-player-hand .gang-card-back { font-size: 15px; }
+    .gang-mission, .gang-explain-notice { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 10px 14px; border-radius: 9px; margin-bottom: 14px; background: #faf2dd; color: #785b23; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+    .gang-explain-notice { background: #eaf2ff; color: #295385; }
+    .gang-summary { border: 1px solid #b4cbb0; border-radius: 12px; background: #f2f7ed; padding: 16px; }
+    .gang-summary.is-failure { border-color: #e0c4b5; background: #fcf4ee; }
+    #gangRoundSummaryBody { font-size: 12px; color: var(--gang-muted); }
+    .gang-summary-list { display: grid; gap: 8px; max-height: 360px; overflow-y: auto; overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; }
+    .gang-summary-order { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 8px; }
+    .gang-summary-hands { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; padding-top: 6px; }
+    .gang-summary-hand { background: #ffffff99; border: 1px solid var(--gang-line); border-radius: 8px; padding: 9px; }
+    .gang-summary-hand > strong, .gang-summary-hand > span { display: block; }
+    .gang-summary-hand > span { color: var(--gang-muted); font-size: 11px; }
+    .gang-summary-hand .gang-player-hand { margin-top: 7px; }
+    .gang-tooltip { position: fixed; z-index: 2500; pointer-events: none; max-width: min(270px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 8px; background: #162f27; color: #fff; box-shadow: 0 4px 18px #0002; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+    .gang-header-btn { border: 1px solid #dce3d9; border-radius: 8px; background: #f4f7f0; color: #305642; cursor: pointer; }
+    .gang-header-btn.active { background: #dcebdd; border-color: #63886a; }
+    body.gang-explain-mode [data-gang-explain].has-explanation { outline: 2px dashed #5793d5; outline-offset: 2px; cursor: help; }
+    body.gang-explain-mode [data-gang-explain].has-explanation:hover { outline-style: solid; }
+    .gang-help-modal { width: 720px; max-width: 100%; }
+    .gang-help-content { max-height: 70vh; overflow-y: auto; line-height: 1.65; overflow-wrap: anywhere; }
+    .gang-help-content h3 { margin: 18px 0 6px; font-size: 15px; color: #20523e; }
+    .gang-help-content h3:first-child { margin-top: 0; }
+    .gang-help-content p { margin: 6px 0; }
+    .gang-help-content ul, .gang-help-content ol { padding-left: 22px; margin: 8px 0; }
+    .gang-help-content li { margin-bottom: 7px; }
+    .gang-explain-modal { width: 460px; max-width: 100%; }
+    #gangExplainContent { line-height: 1.65; overflow-wrap: anywhere; }
+    #gangExplainContent h4 { margin: 0 0 8px; color: #20523e; }
+    #gangExplainContent p { margin: 6px 0; font-size: 14px; }
+    #gangHelpModal .modal-header, #gangExplainModal .modal-header { gap: 12px; }
+    #gangHelpModal .modal-header h2, #gangExplainModal .modal-header h2 { font-size: 18px; overflow-wrap: anywhere; }
 
-.gang-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 6px 8px;
-  min-width: 44px;
-  text-align: center;
-  background: #fff;
-  font-weight: 600;
-}
-
-.gang-card.hidden {
-  background: #e5e7eb;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.gang-ranking {
-  display: grid;
-  gap: 6px;
-}
-
-.gang-slot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.gang-slot-label {
-  min-width: 64px;
-  font-weight: 600;
-}
-
-.gang-players {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.gang-player-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 8px 10px;
-  min-width: 200px;
-  background: #fff;
-}
-
-.gang-player-card.ready {
-  border-color: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
-}
-
-.gang-player-card.you {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-}
-
-.gang-player-hand {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.gang-badge {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.gang-summary-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-#theGangPanel .row.actions {
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.gang-card.highlight {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
-}
-
-/* The Gang Help/Explain */
-.gang-header-btn {
-  padding: 4px 10px;
-  font-size: 13px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #f9fafb;
-  cursor: pointer;
-}
-
-.gang-header-btn:hover {
-  background: #f3f4f6;
-}
-
-.gang-header-btn.active {
-  background: #dbeafe;
-  border-color: #3b82f6;
-  color: #1d4ed8;
-}
-
-body.gang-explain-mode button.has-explanation,
-body.gang-explain-mode select.has-explanation {
-  outline: 2px dashed #3b82f6;
-  outline-offset: 2px;
-  cursor: help;
-}
-
-body.gang-explain-mode button.has-explanation:hover,
-body.gang-explain-mode select.has-explanation:hover {
-  outline-color: #1d4ed8;
-  outline-style: solid;
-}
-
-.gang-help-modal {
-  max-width: 720px;
-}
-
-.gang-help-content {
-  max-height: 70vh;
-  overflow-y: auto;
-  line-height: 1.6;
-}
-
-.gang-help-content h3 {
-  margin: 16px 0 8px;
-  font-size: 16px;
-  color: #111827;
-}
-
-.gang-help-content h3:first-child {
-  margin-top: 0;
-}
-
-.gang-help-content ul,
-.gang-help-content ol {
-  margin: 8px 0;
-  padding-left: 20px;
-}
-
-.gang-help-content li {
-  margin-bottom: 6px;
-}
-
-.gang-explain-modal {
-  max-width: 480px;
-}
-
-#gangExplainContent h4 {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: #111827;
-}
-
-#gangExplainContent p {
-  margin: 6px 0;
-  color: #374151;
-}
-
-#gangExplainContent .hint {
-  color: #6b7280;
-  font-size: 12px;
-}
+    @container (max-width: 720px) {
+        .gang-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+        .gang-table { padding: 18px; }
+        .gang-table-heading { margin-bottom: 20px; }
+        .gang-community { max-width: 440px; }
+        .gang-street-labels { max-width: 440px; margin-bottom: 16px; }
+        .gang-card-corner { font-size: clamp(16px, 4cqi, 23px); }
+        .gang-card-suit { font-size: clamp(25px, 6cqi, 36px); }
+        .gang-your-hand { padding: 16px 0 8px; }
+        #gangYourHand .gang-card { width: 57px; }
+        .gang-hand-caption > strong { font-size: 18px; }
+        .gang-players { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .gang-rank-panel { padding: 14px; }
+        .gang-rank-hand { display: flex; }
+        .gang-crew { display: none; }
+    }
+    @container (max-width: 400px) {
+        .gang-topbar { padding: 4px 0 12px; gap: 10px; }
+        .gang-level > strong { font-size: 22px; }
+        .gang-eyebrow { font-size: 9px; letter-spacing: 1px; }
+        .gang-stats { gap: 10px; }
+        .gang-stat { gap: 5px; }
+        .gang-stat > span:first-child { font-size: 16px; }
+        .gang-stat small { font-size: 9px; }
+        .gang-stat strong { font-size: 13px; }
+        .gang-mode { padding: 5px 7px; font-size: 10px; }
+        .gang-stages { gap: 2px; padding: 4px; }
+        .gang-stages li { flex-direction: column; gap: 5px; font-size: 10px; padding: 5px 2px; }
+        .gang-stages li > span { width: 17px; height: 17px; flex-basis: 17px; }
+        .gang-table { padding: 14px 12px; border-radius: 12px; }
+        .gang-table-heading { margin-bottom: 18px; gap: 6px; }
+        .gang-table-heading h3 { font-size: 12px; }
+        .gang-community, .gang-cards { gap: 6px; }
+        .gang-community .gang-card { padding: 5px; border-radius: 5px; }
+        .gang-street-labels { gap: 6px; font-size: 8px; }
+        .gang-your-hand { gap: 14px; }
+        #gangYourHand .gang-card { width: 49px; padding: 5px; border-radius: 6px; }
+        .gang-hand-caption > strong { font-size: 16px; }
+        .gang-table-footer { font-size: 9px; gap: 8px; flex-wrap: wrap; }
+        .gang-rank-panel { padding: 12px; }
+        .gang-game h3 { font-size: 14px; }
+        .gang-slot { gap: 6px; padding: 5px 6px; }
+        .gang-game .gang-move { width: 36px; min-height: 36px; }
+        .gang-rank-moves { gap: 3px; }
+        .gang-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .gang-player-card { padding: 10px; }
+        .gang-summary { padding: 12px; }
+        .gang-summary-hands { grid-template-columns: minmax(0, 1fr); }
+    }
 }

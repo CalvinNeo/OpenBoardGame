@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "no_thanks": {
+    "scripts": ["/static/games/no_thanks.js?v=1"],
+    "styles": ["/static/games/no_thanks.css?v=1"],
+    "markup": "/static/games/no_thanks.html?v=1",
+    "panel": "noThanksPanel",
+    "header": "showNoThanksHeaderActions"
+  },
   "orloj": {
     "scripts": ["/static/games/orloj.js?v=3"],
     "styles": ["/static/games/orloj.css?v=3"],
@@ -15,8 +22,8 @@ const GAME_ASSETS = {
     "header": "showChallengersHeaderActions"
   },
   "dune_imperium": {
-    "scripts": ["/static/games/dune_imperium.js?v=2"],
-    "styles": ["/static/games/dune_imperium.css?v=2"],
+    "scripts": ["/static/games/dune_imperium.js?v=3"],
+    "styles": ["/static/games/dune_imperium.css?v=3"],
     "markup": "/static/games/dune_imperium.html?v=1",
     "panel": "duneImperiumPanel",
     "header": "showDuneImperiumHeaderActions"
@@ -277,13 +284,13 @@ const GAME_ASSETS = {
   },
   "the_gang": {
     "scripts": [
-      "/static/games/gang.js?v=app_v4"
+      "/static/games/gang.js?v=app_v5"
     ],
     "styles": [],
     "panel": "theGangPanel",
     "header": "showGangHeaderActions",
-    "markup": "/static/games/the_gang.html?v=1",
-    "styleFragments": "/static/games/the_gang.css?v=1"
+    "markup": "/static/games/the_gang.html?v=2",
+    "styleFragments": "/static/games/the_gang.css?v=2"
   },
   "cat_in_box": {
     "scripts": [
@@ -543,12 +550,13 @@ const GAME_ASSETS = {
   },
   "texas_holdem": {
     "scripts": [
-      "/static/games/texas_holdem.js?v=app_v4"
+      "/static/games/texas_holdem.js?v=app_v5"
     ],
     "styles": [],
     "panel": "texasHoldemPanel",
-    "markup": "/static/games/texas_holdem.html?v=1",
-    "styleFragments": "/static/games/texas_holdem.css?v=1"
+    "markup": "/static/games/texas_holdem.html?v=2",
+    "styleFragments": "/static/games/texas_holdem.css?v=2",
+    "header": "showTexasHoldemHeaderActions"
   },
   "yahtzee": {
     "scripts": [

@@ -275,6 +275,7 @@ def _reset_betting_round(state: Dict, first_player: Optional[str]) -> None:
 
 
 def _start_hand(state: Dict, advance_dealer: bool) -> None:
+    state["next_hand_ready"] = []
     state["hand_number"] += 1
     state["phase"] = "preflop"
     state["community_cards"] = []
@@ -523,6 +524,7 @@ class TexasHoldemGame:
             "acted_since_raise": [],
             "hand_number": 0,
             "last_hand_summary": None,
+            "next_hand_ready": [],
             "game_over": False,
             "game_start_time": time.time(),
         }
@@ -539,7 +541,10 @@ class TexasHoldemGame:
             actions = []
             if state["players"][player_id]["chips"] == 0:
                 actions.append("rebuy")
-            if len([pid for pid in state["turn_order"] if state["players"][pid]["chips"] > 0]) >= 2:
+            if (
+                player_id not in state.get("next_hand_ready", [])
+                and len([pid for pid in state["turn_order"] if state["players"][pid]["chips"] > 0]) >= 2
+            ):
                 actions.append("next_hand")
             return actions
         if state.get("current_turn") != player_id:
@@ -585,8 +590,14 @@ class TexasHoldemGame:
             if action_type == "next_hand":
                 if len([pid for pid in state["turn_order"] if state["players"][pid]["chips"] > 0]) < 2:
                     return [], "need at least 2 players with chips"
-                _start_hand(state, advance_dealer=True)
-                events.append({"type": "texas_holdem:next_hand", "payload": {"hand": state["hand_number"]}})
+                ready = state.setdefault("next_hand_ready", [])
+                if player_id in ready:
+                    return [], None
+                ready.append(player_id)
+                events.append({"type": "texas_holdem:ready", "payload": {"player_id": player_id}})
+                if set(ready) >= set(state["turn_order"]):
+                    _start_hand(state, advance_dealer=True)
+                    events.append({"type": "texas_holdem:next_hand", "payload": {"hand": state["hand_number"]}})
                 return events, None
             return [], "hand ended"
 
@@ -787,6 +798,7 @@ class TexasHoldemGame:
                 "max_raise_to": max_raise_to,
             },
             "last_hand_summary": state.get("last_hand_summary"),
+            "next_hand_ready": list(state.get("next_hand_ready", [])),
             "config": {
                 "starting_chips": state["config"]["starting_chips"],
                 "small_blind": state["config"]["small_blind"],
@@ -802,9 +814,10 @@ class TexasHoldemGame:
             return None
         phase = state.get("phase")
         if phase == "hand_end":
-            if state["players"][bot_id]["chips"] == 0:
+            legal = TexasHoldemGame.get_legal_actions(state, bot_id)
+            if "rebuy" in legal:
                 return {"type": "rebuy"}
-            if len([pid for pid in state["turn_order"] if state["players"][pid]["chips"] > 0]) >= 2:
+            if "next_hand" in legal:
                 return {"type": "next_hand"}
             return None
         if state.get("current_turn") != bot_id:

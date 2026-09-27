@@ -985,6 +985,7 @@
                       <input id="criminalDanceScoringToggle" type="checkbox" checked />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="noThanksConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="hiveConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="tactaConfigBox" aria-hidden="true">
                     <div class="game-config-title">TACTA</div>
@@ -1419,6 +1420,7 @@
             <div id="felixPanel" class="hidden felix-panel"></div>
 
             <div id="tactaPanel" class="hidden tacta-panel"></div>
+            <div id="noThanksPanel" class="hidden no-thanks-panel"></div>
             <div id="hivePanel" class="hidden hive-panel"></div>
 
             <div id="tucanoPanel" class="hidden tucano-panel"></div>
@@ -1594,8 +1596,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=39" defer></script>
-  <script src="/static/games/shared.js?v=app_v29" defer></script>
+  <script src="/static/game_assets.js?v=43" defer></script>
+  <script src="/static/games/shared.js?v=app_v30" defer></script>
+  <template id="noThanksDialog"></template>
   <template id="challengersDialog"></template>
   <template id="hiveDialog"></template>
   <template id="takeTimeDialog"></template>
@@ -1606,7 +1609,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v36" defer></script>
+  <script src="/static/app.js?v=app_v37" defer></script>
   <script src="/static/room.js?v=app_v58" defer></script>
 </body>
 </html>

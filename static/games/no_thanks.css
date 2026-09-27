@@ -1,0 +1,121 @@
+.no-thanks-panel {
+  --nt-ink: #303834;
+  --nt-muted: #66716b;
+  --nt-paper: #fffdf7;
+  --nt-border: #dfded3;
+  --nt-red: #b73e32;
+  --nt-green: #23634b;
+  color: var(--nt-ink);
+  background: #f2f0e6;
+  padding: clamp(12px, 2vw, 22px);
+  border: 1px solid #deddd0;
+  border-radius: 18px;
+  min-width: 0;
+  font-family: "Work Sans", Arial, sans-serif;
+}
+.no-thanks-panel *, .no-thanks-dialog *, #noThanksConfigBox * { box-sizing: border-box; min-width: 0; }
+.no-thanks-panel h2, .no-thanks-panel h3, .no-thanks-dialog h2 { margin: 0; }
+.no-thanks-panel button, .no-thanks-dialog button { margin: 0; min-height: 38px; padding: 8px 12px; border: 1px solid var(--nt-border, #d3d8ce); border-radius: 9px; background: #fffdf7; color: #303834; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
+.no-thanks-panel button:disabled { opacity: .45; cursor: default; }
+.no-thanks-panel :focus-visible, .no-thanks-dialog :focus-visible { outline: 3px solid #43876c; outline-offset: 3px; }
+.no-thanks-heading, .no-thanks-section-heading, .no-thanks-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.no-thanks-heading { margin-bottom: 18px; }
+.no-thanks-heading h2 { margin-top: 5px; font-size: clamp(23px, 3.3vw, 34px); letter-spacing: -.04em; line-height: 1.15; overflow-wrap: anywhere; }
+.no-thanks-heading h2 span { display: inline-block; font-size: 14px; font-weight: 400; letter-spacing: .1em; color: var(--nt-muted); margin-left: 7px; }
+.no-thanks-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .16em; color: var(--nt-muted); }
+.no-thanks-tools { display: flex; gap: 6px; }
+.no-thanks-tools button { font-size: 12px; }
+#noThanksExplain[aria-pressed="true"] { background: #303834; color: white; }
+.no-thanks-statusbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--nt-border); border-bottom: 1px solid var(--nt-border); font-size: 13px; margin-bottom: 14px; }
+#noThanksStatus { overflow-wrap: anywhere; }
+#noThanksRound { flex-shrink: 0; font-size: 11px; color: var(--nt-muted); }
+.no-thanks-table { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.no-thanks-offer, .no-thanks-personal { padding: 16px; background: var(--nt-paper); border: 1px solid var(--nt-border); border-radius: 13px; }
+.no-thanks-section-heading h3 { font-size: 13px; font-weight: 600; }
+.no-thanks-section-heading > span, .no-thanks-small { color: var(--nt-muted); font-size: 11px; overflow-wrap: anywhere; }
+.no-thanks-offer-content { display: grid; grid-template-columns: minmax(0, 155px) minmax(0, 1fr); gap: 22px; align-items: center; max-width: 330px; margin: 20px auto 16px; }
+.no-thanks-card { display: flex; flex-direction: column; justify-content: space-between; width: 100%; aspect-ratio: 3 / 4; padding: 14px; border-radius: 14px; background: var(--nt-red); color: #fff4dc; border: 5px solid #f4e0c7; box-shadow: 0 5px 0 #e6dfd1; }
+.no-thanks-card > strong { align-self: center; font-size: clamp(44px, 6vw, 66px); font-weight: 600; line-height: 1.1; }
+.no-thanks-card-corner, .no-thanks-card-foot { font-size: 10px; letter-spacing: .11em; font-weight: 600; }
+.no-thanks-card-foot { align-self: flex-end; }
+.no-thanks-card.is-finished { background: #3d6452; }
+.no-thanks-pot { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.no-thanks-pot > strong { font-size: 34px; font-variant-numeric: tabular-nums; }
+.no-thanks-pot > span:last-child { font-size: 12px; color: var(--nt-muted); }
+.no-thanks-chip-stack { font-size: 36px; line-height: 1.4; }
+.no-thanks-pot .no-thanks-eyebrow { text-align: center; overflow-wrap: anywhere; }
+.no-thanks-decision { min-height: 29px; font-size: 12px; text-align: center; color: var(--nt-muted); overflow-wrap: anywhere; line-height: 1.5; }
+.no-thanks-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.no-thanks-actions button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 61px; }
+.no-thanks-actions button span { font-size: 11px; font-weight: 400; }
+#noThanksPass { background: var(--nt-red); border-color: var(--nt-red); color: #fffdf7; }
+#noThanksTake { background: #303834; color: #fffdf7; border-color: #303834; }
+.no-thanks-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 24px 0 16px; }
+.no-thanks-stats > div { padding: 12px 5px; text-align: center; border: 1px solid var(--nt-border); border-radius: 10px; background: #f5f4ec; }
+.no-thanks-stats span { display: block; font-size: 11px; white-space: normal; }
+.no-thanks-stats strong { display: block; margin-top: 7px; font-size: 27px; font-variant-numeric: tabular-nums; }
+.no-thanks-stats .no-thanks-net { background: #e4efe6; border-color: #bdd2c1; color: var(--nt-green); }
+.no-thanks-preview { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-top: 1px dashed var(--nt-border); border-bottom: 1px dashed var(--nt-border); padding: 12px 0; font-size: 13px; }
+#noThanksDelta { font-size: 23px; font-variant-numeric: tabular-nums; }
+.no-thanks-good { color: var(--nt-green); }
+.no-thanks-cost { color: var(--nt-red); }
+.no-thanks-result { padding: 12px; margin-top: 12px; background: #e4efe6; border: 1px solid #bdd2c1; border-radius: 8px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.no-thanks-review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.no-thanks-review span { flex: 1 1 100px; font-size: 12px; color: var(--nt-muted); }
+#noThanksNext { background: var(--nt-green); color: white; }
+.no-thanks-history { margin-top: 14px; font-size: 12px; color: var(--nt-muted); }
+.no-thanks-history summary { cursor: pointer; padding: 5px 0; }
+.no-thanks-history ol { padding-left: 18px; margin: 8px 0 0; max-height: 145px; overflow-y: auto; overscroll-behavior: contain; }
+.no-thanks-history li { margin-bottom: 7px; padding-right: 5px; overflow-wrap: anywhere; line-height: 1.5; }
+.no-thanks-collections { margin-top: 18px; }
+.no-thanks-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 9px; margin-top: 10px; }
+.no-thanks-player { padding: 11px; border: 1px solid var(--nt-border); border-radius: 10px; background: #faf9f2; }
+.no-thanks-player.is-current { border-color: #bd4c3b; box-shadow: inset 3px 0 #bd4c3b; }
+.no-thanks-player.is-winner { border-color: #638a69; background: #edf3e7; }
+.no-thanks-player-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 7px; }
+.no-thanks-player-heading strong { font-size: 13px; overflow-wrap: anywhere; line-height: 1.4; }
+.no-thanks-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex: 0 0 auto; max-width: 75px; }
+.no-thanks-badges span { font-size: 9px; padding: 3px 5px; border-radius: 4px; background: #e7e9df; }
+.no-thanks-player-scores { display: flex; flex-wrap: wrap; gap: 5px 12px; font-size: 11px; color: var(--nt-muted); margin-top: 8px; }
+.no-thanks-runs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.no-thanks-run { display: flex; flex-wrap: wrap; gap: 3px; padding: 3px; border-radius: 6px; border: 1px solid #d2d8c7; background: #e9eddf; max-width: 100%; }
+.no-thanks-run span { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 33px; border-radius: 4px; background: #fdfbf3; color: #4f6549; font-size: 13px; font-weight: 600; }
+.no-thanks-run span:first-child { color: #fffdf7; background: #3c5749; }
+.no-thanks-empty { font-size: 11px; color: var(--nt-muted); padding: 5px 0; }
+#noThanksScoreRows { display: grid; gap: 7px; max-height: 200px; overflow-y: auto; margin-top: 8px; }
+.no-thanks-score-round { padding: 9px; background: var(--nt-paper); border-radius: 6px; line-height: 1.6; overflow-wrap: anywhere; }
+.no-thanks-score-round strong { display: block; }
+.no-thanks-explaining [data-no-thanks-explain] { outline: 2px dashed #ad5b21; outline-offset: 2px; cursor: help; }
+.no-thanks-tooltip { position: fixed; z-index: 20000; max-width: min(290px, calc(100vw - 24px)); padding: 9px 11px; border-radius: 8px; background: #26382f; color: #fffdf7; font-size: 12px; line-height: 1.5; box-shadow: 0 5px 20px #0003; overflow-wrap: anywhere; pointer-events: none; }
+.no-thanks-dialog { width: min(620px, calc(100vw - 28px)); max-height: calc(100dvh - 32px); padding: 22px; color: #303834; background: #fffdf7; border: 1px solid #dddacb; border-radius: 16px; overflow-y: auto; overflow-wrap: anywhere; }
+.no-thanks-dialog::backdrop { background: #18251ed0; }
+.no-thanks-dialog h2 { font-size: 20px; }
+.no-thanks-dialog h3 { font-size: 15px; margin: 18px 0 6px; }
+.no-thanks-dialog p { font-size: 14px; line-height: 1.8; margin: 9px 0; }
+.no-thanks-dialog-heading { margin-bottom: 16px; }
+.no-thanks-dialog-heading button { flex-shrink: 0; }
+.no-thanks-rule-example { padding: 12px; background: #eaf0e4; border-radius: 8px; }
+.no-thanks-config-row { display: flex; gap: 10px; align-items: center; }
+.no-thanks-config-row select { flex: 1; max-width: 220px; }
+@media (max-width: 900px) {
+  .no-thanks-table { grid-template-columns: minmax(0, 1fr); }
+  .no-thanks-stats { margin: 12px 0; }
+  .no-thanks-personal { padding: 12px 14px; }
+  .no-thanks-stats > div { padding: 8px 4px; }
+  .no-thanks-stats strong { font-size: 24px; margin-top: 4px; }
+  .no-thanks-preview { padding: 8px 0; }
+}
+@media (max-width: 480px) {
+  .no-thanks-heading { gap: 12px; margin-bottom: 12px; }
+  .no-thanks-heading h2 span { display: block; margin: 4px 0 0; font-size: 12px; }
+  .no-thanks-tools { gap: 4px; }
+  .no-thanks-tools button { padding: 7px 9px; min-height: 36px; }
+  .no-thanks-offer { padding: 12px; }
+  .no-thanks-offer-content { grid-template-columns: minmax(0, 120px) minmax(0, 1fr); gap: 14px; max-width: 265px; margin: 14px auto; }
+  .no-thanks-card { padding: 10px; }
+  .no-thanks-card > strong { font-size: 48px; }
+  .no-thanks-actions button { padding: 8px 5px; }
+  .no-thanks-actions strong { font-size: 13px; }
+  .no-thanks-players { grid-template-columns: minmax(0, 1fr); }
+  .no-thanks-dialog { padding: 16px; }
+}

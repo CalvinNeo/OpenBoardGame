@@ -1,129 +1,183 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-texas_holdem-1 {
-
-.texas-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+    #texasHoldemPanel {
+        --texas-ink: #18372e;
+        --texas-muted: #65746c;
+        --texas-line: #dce5de;
+        color: var(--texas-ink);
+        font-family: "Work Sans", Arial, sans-serif;
+        font-size: 14px;
+        min-width: 0;
+    }
+    #texasHoldemPanel [hidden] { display: none !important; }
+    #texasHoldemPanel button, #texasHoldemPanel input { font: inherit; }
+    #texasHoldemPanel button {
+        min-height: 40px;
+        min-width: 0;
+        padding: 8px 12px;
+        border: 1px solid var(--texas-line);
+        border-radius: 9px;
+        background: #fff;
+        color: var(--texas-ink);
+        font-weight: 600;
+        cursor: pointer;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        box-shadow: none;
+        line-height: 1.25;
+    }
+    #texasHoldemPanel button:hover:not(:disabled) { filter: brightness(.95); border-color: #789d87; }
+    #texasHoldemPanel button:disabled { opacity: .48; cursor: not-allowed; }
+    #texasHoldemPanel :focus-visible { outline: 3px solid #d8a953; outline-offset: 3px; }
+    .texas-toolbar, .texas-table-meta, .texas-tools, .texas-section-heading, .texas-ready-row, .texas-rebuy-row { display: flex; align-items: center; gap: 10px; }
+    .texas-toolbar { justify-content: space-between; flex-wrap: wrap; margin: 0 0 12px; }
+    .texas-table-meta { flex-wrap: wrap; font-size: 12px; }
+    .texas-hand-badge { background: #eaf0ea; border-radius: 6px; padding: 7px 9px; }
+    .texas-blinds { color: var(--texas-muted); }
+    .texas-tools { gap: 6px; }
+    #texasHoldemPanel .texas-tools button { min-height: 34px; padding: 6px 10px; font-size: 12px; }
+    .texas-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 235px); gap: 14px; align-items: start; }
+    .texas-play-area { display: grid; gap: 12px; min-width: 0; }
+    .texas-table {
+        padding: 18px 20px 14px;
+        border: 1px solid #31584a;
+        border-radius: 20px;
+        background: radial-gradient(ellipse at 50% 55%, #2c6751, #153f31);
+        box-shadow: inset 0 0 0 5px #ffffff06, 0 3px 8px #143c2912;
+        color: #fff8e9;
+    }
+    .texas-streets { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin: 0; padding: 0; list-style: none; }
+    .texas-streets li { padding: 0 0 8px; border-bottom: 2px solid #ffffff24; color: #a9c4b5; text-align: center; font-size: 11px; }
+    .texas-streets li.texas-street-done { border-color: #98b8a5; color: #deeadf; }
+    .texas-streets li[aria-current="step"] { border-color: #e6bd6d; color: #ffe0a1; font-weight: 600; }
+    .texas-pot { display: flex; align-items: center; flex-direction: column; gap: 5px; margin: 19px auto 15px; width: fit-content; max-width: 100%; overflow-wrap: anywhere; }
+    .texas-pot > span { letter-spacing: .16em; color: #bdd0c1; font-size: 10px; font-weight: 600; }
+    .texas-pot > strong { font-size: clamp(23px, 2.5vw, 32px); font-variant-numeric: tabular-nums; }
+    .texas-cards { display: flex; gap: 8px; min-width: 0; }
+    .texas-community { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 390px; gap: clamp(4px, 1vw, 10px); margin: 0 auto; }
+    .texas-card { width: 58px; min-width: 0; aspect-ratio: 5 / 7; padding: 6px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; background: #fffcf3; border: 1px solid #e6e2d7; border-radius: 7px; color: #242f32; box-shadow: 0 2px 3px #00000010; flex-shrink: 0; line-height: 1; }
+    .texas-community .texas-card { width: 100%; }
+    .texas-card.texas-red { color: #bb3346; }
+    .texas-card-rank { font-size: 21px; font-weight: 700; }
+    .texas-card-suit { align-self: flex-end; font-size: 26px; line-height: 1.2; }
+    .texas-card.texas-card-back { background: repeating-linear-gradient(45deg, #284e67, #284e67 4px, #315b73 4px, #315b73 6px); border: 3px solid #f0f1e8; align-items: center; justify-content: center; color: #dfeae7; }
+    .texas-card.texas-card-back span { font-size: 22px; }
+    .texas-card.texas-card-empty { border: 1px dashed #9dbdaa66; background: #0c302426; box-shadow: none; align-items: center; justify-content: center; color: #b1cbbb; }
+    .texas-card-empty span { font-size: 11px; }
+    .texas-table-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 16px; font-size: 11px; color: #c3d5c8; }
+    .texas-table-footer strong { color: #fff7e6; font-variant-numeric: tabular-nums; }
+    .texas-controls { border: 1px solid var(--texas-line); border-radius: 14px; padding: 14px; background: #fcfdfb; }
+    .texas-turn { padding: 9px 11px; border-radius: 7px; background: #edf1ed; color: #596c61; font-size: 13px; overflow-wrap: anywhere; }
+    .texas-turn.texas-your-turn { background: #e1eee3; color: #215a38; border-left: 3px solid #39894e; font-weight: 600; }
+    .texas-own-section { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, auto); gap: 14px; align-items: center; margin: 13px 0; }
+    .texas-own-hand { display: grid; gap: 6px; }
+    .texas-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .07em; color: var(--texas-muted); }
+    .texas-balance, .texas-call-info { display: flex; flex-direction: column; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+    .texas-balance > strong, .texas-call-info > strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+    .texas-call-info { text-align: right; }
+    .texas-muted { color: var(--texas-muted); font-size: 11px; }
+    .texas-main-actions { display: grid; grid-template-columns: .8fr 1.25fr 1fr; gap: 8px; }
+    #texasHoldemPanel .texas-primary { background: #276343; border-color: #276343; color: #fff; }
+    #texasHoldemPanel .texas-fold { background: #fff4f3; border-color: #f0d7d2; color: #9b4945; }
+    #texasHoldemPanel .texas-all-in { background: #fff7e9; border-color: #e7d1a6; color: #856028; }
+    #texasHoldemPanel .texas-raise { background: #e9eee5; border-color: #b6c6ab; color: #325234; }
+    .texas-bet-editor { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--texas-line); }
+    .texas-bet-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 8px; }
+    .texas-bet-row label { font-size: 12px; }
+    #texasBetInput { min-width: 0; width: 100%; height: 40px; background: #fff; border: 1px solid #bdcbbf; border-radius: 7px; padding: 6px 8px; color: var(--texas-ink); }
+    #texasBetInput[aria-invalid="true"] { border-color: #b23d31; }
+    #texasBetRange { width: 100%; min-width: 0; margin: 7px 0; padding: 0; height: 24px; accent-color: #377347; cursor: pointer; }
+    .texas-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    #texasHoldemPanel .texas-presets button { min-height: 32px; padding: 5px; font-size: 12px; }
+    #texasHoldemPanel .texas-presets button[aria-pressed="true"] { background: #e5efe2; border-color: #6d975f; }
+    .texas-bet-hint { margin: 8px 0 0; font-size: 11px; color: var(--texas-muted); min-height: 1.4em; overflow-wrap: anywhere; }
+    .texas-bet-hint.texas-invalid { color: #a1372d; }
+    .texas-rebuy-row { justify-content: space-between; flex-wrap: wrap; margin-top: 12px; font-size: 12px; }
+    .texas-feedback { font-size: 12px; margin: 10px 0 0; color: #934638; overflow-wrap: anywhere; }
 }
-
-.texas-card {
-  min-width: 44px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  text-align: center;
-  font-weight: 600;
-}
-
-.texas-card.red {
-  color: #dc2626;
-}
-
-.texas-card.black {
-  color: #111827;
-}
-
-.texas-card.hidden {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-}
-
 @media all, obg-game-texas_holdem-2 {
-
-.texas-players {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-}
-
-.texas-player-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: #f9fafb;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.texas-player-card.active {
-  border-color: #1f6feb;
-  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.2);
-}
-
-.texas-player-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px;
-  align-items: center;
-}
-
-.texas-player-name {
-  font-weight: 600;
-}
-
-.texas-player-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-  color: #4b5563;
-}
-
-.texas-player-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.texas-tag {
-  display: inline-block;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.texas-tag.role {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.texas-tag.all-in {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.texas-tag.folded {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.texas-summary-list {
-  margin-top: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
-}
-
-.texas-action-row input {
-  width: 120px;
-}
-
-@media (max-width: 720px) {
-  .texas-players {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  }
-
-  .texas-action-row input {
-    flex: 1;
-    min-width: 120px;
-  }
-}
+    .texas-seats { min-width: 0; border: 1px solid var(--texas-line); border-radius: 14px; padding: 12px; background: #f7f9f5; }
+    .texas-section-heading { justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 10px; }
+    #texasHoldemPanel .texas-section-heading h3 { font-size: 13px; margin: 0; font-weight: 600; }
+    .texas-players { display: grid; gap: 8px; max-height: 570px; overflow-y: auto; padding: 3px; margin: -3px; scrollbar-width: thin; }
+    .texas-player-card { border: 1px solid #dfe6dd; border-radius: 10px; padding: 10px; background: #fff; min-width: 0; }
+    .texas-player-card.texas-active { border-color: #508559; box-shadow: 0 0 0 1px #508559; background: #f4faef; }
+    .texas-player-card.texas-folded { background: #f2f3f0; }
+    .texas-player-name { font-weight: 600; font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+    .texas-player-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 5px; min-height: 18px; }
+    .texas-tag { font-size: 10px; padding: 2px 5px; border-radius: 4px; color: #58655d; background: #eaf0e8; line-height: 1.3; }
+    .texas-tag.texas-dealer { background: #e6dcc4; color: #6c5428; }
+    .texas-tag.texas-tag-active { background: #276343; color: #fff; }
+    .texas-tag.texas-tag-all-in { background: #fcf0d9; color: #8c6224; }
+    .texas-player-bottom { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-top: 8px; }
+    .texas-player-stack { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .texas-player-stack > small { color: var(--texas-muted); font-size: 10px; }
+    .texas-player-card .texas-cards { gap: 4px; flex-shrink: 0; }
+    .texas-player-card .texas-card { width: 30px; padding: 3px; border-radius: 4px; }
+    .texas-player-card .texas-card-rank { font-size: 12px; }
+    .texas-player-card .texas-card-suit { font-size: 15px; }
+    .texas-player-card .texas-card-back { border-width: 2px; }
+    .texas-player-card .texas-card-back span { font-size: 14px; }
+    .texas-player-payout { margin-top: 7px; font-size: 11px; color: #3b703f; overflow-wrap: anywhere; }
+    .texas-summary { background: #fffaf0; border: 1px solid #e4d1a7; border-radius: 12px; padding: 13px; }
+    #texasSummaryBody { font-size: 11px; color: #877046; }
+    .texas-summary-list { display: grid; gap: 9px; max-height: 250px; overflow-y: auto; scrollbar-width: thin; }
+    .texas-result-player { min-width: 0; border-bottom: 1px solid #ece1c9; padding-bottom: 9px; }
+    .texas-result-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: 12px; overflow-wrap: anywhere; }
+    .texas-result-heading > strong { min-width: 0; }
+    .texas-result-detail { margin-top: 4px; color: #756543; font-size: 11px; }
+    .texas-result-player .texas-cards { margin-top: 7px; gap: 5px; }
+    .texas-result-player .texas-card { width: 34px; padding: 4px; }
+    .texas-result-player .texas-card-rank { font-size: 13px; }
+    .texas-result-player .texas-card-suit { font-size: 17px; }
+    .texas-ready-row { justify-content: space-between; flex-wrap: wrap; margin-top: 12px; font-size: 12px; }
+    #texasReadyStatus { flex: 1; min-width: 100px; overflow-wrap: anywhere; }
+    .texas-explain-hint { font-size: 12px; padding: 10px; color: #355685; border-radius: 8px; background: #eaf2fc; }
+    #texasHoldemPanel.texas-explaining [data-texas-explain] { outline: 2px dashed #6899e1; outline-offset: 2px; cursor: help; }
+    #texasHoldemPanel.texas-explaining button[data-texas-explain]:disabled { cursor: help; opacity: .8; }
+    #texasHoldemPanel #texasExplainBtn[aria-pressed="true"] { background: #eaf2fc; border-color: #7398c7; }
+    .texas-dialog { width: min(580px, calc(100vw - 32px)); max-height: min(760px, calc(100dvh - 40px)); padding: 22px; border: 1px solid #cbd9cd; border-radius: 16px; color: #233c30; overflow-y: auto; box-shadow: 0 20px 80px #00000030; }
+    .texas-dialog::backdrop { background: #102d23a6; }
+    .texas-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    #texasHoldemPanel .texas-dialog-heading h2 { font-size: 19px; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+    #texasDialogClose { flex-shrink: 0; }
+    #texasDialogBody { line-height: 1.6; font-size: 14px; overflow-wrap: anywhere; }
+    #texasDialogBody p { margin: 0 0 14px; }
+    #texasDialogBody ol { padding-left: 24px; }
+    .texas-tooltip { position: fixed; z-index: 3000; max-width: min(300px, calc(100vw - 24px)); padding: 9px 12px; background: #18382e; color: #fff; border-radius: 8px; box-shadow: 0 3px 12px #0003; font-size: 12px; line-height: 1.4; pointer-events: none; overflow-wrap: anywhere; }
+    @media (max-width: 1150px) {
+        .texas-layout { grid-template-columns: minmax(0, 1fr); }
+        .texas-players { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 280px; }
+        .texas-community { max-width: 335px; }
+    }
+    @media (max-width: 600px) {
+        .texas-toolbar { gap: 8px; }
+        .texas-table-meta { gap: 7px; font-size: 11px; }
+        .texas-table { padding: 13px 12px 12px; border-radius: 14px; }
+        .texas-pot { margin: 14px auto 12px; }
+        .texas-community { max-width: 300px; }
+        .texas-layout, .texas-play-area { gap: 10px; }
+        .texas-controls { padding: 10px; }
+        .texas-own-section { grid-template-columns: auto minmax(0, 1fr) minmax(0, auto); gap: 10px; }
+        .texas-own-hand .texas-card { width: 43px; padding: 5px; }
+        .texas-own-hand .texas-cards { gap: 5px; }
+        .texas-own-hand .texas-card-rank { font-size: 18px; }
+        .texas-own-hand .texas-card-suit { font-size: 21px; }
+        .texas-balance > strong, .texas-call-info > strong { font-size: 16px; }
+        .texas-players { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 280px; }
+        .texas-player-card { padding: 8px; }
+        .texas-seats { padding: 10px; }
+        #texasHoldemPanel .texas-main-actions button { font-size: 12px; padding: 8px 5px; min-height: 42px; }
+        .texas-main-actions { gap: 6px; }
+        .texas-bet-row { gap: 6px; }
+        #texasHoldemPanel .texas-bet-row button { font-size: 12px; padding: 6px; }
+        .texas-dialog { padding: 16px; }
+    }
+    @media (max-width: 360px) {
+        .texas-table-meta { width: 100%; justify-content: space-between; }
+        .texas-tools { margin-left: auto; }
+        .texas-own-section { gap: 7px; }
+        .texas-balance > strong, .texas-call-info > strong { font-size: 14px; }
+        .texas-player-bottom { flex-wrap: wrap; }
+    }
 }

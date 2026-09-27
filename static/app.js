@@ -199,6 +199,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "no_thanks") {
+    if (typeof renderNoThanksGameState === "function") renderNoThanksGameState(data);
+    return;
+  }
   if (gameType === "challengers") {
     if (typeof renderChallengersGameState === "function") renderChallengersGameState(data);
     return;

@@ -50,6 +50,7 @@ from game.lost_code import LostCodeGame
 from game.love_letter import LoveLetterGame
 from game.manila import ManilaGame
 from game.nine_upper import NineUpperGame
+from game.no_thanks import NoThanksGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
@@ -138,6 +139,7 @@ __all__ = [
     "LoveLetterGame",
     "ManilaGame",
     "NineUpperGame",
+    "NoThanksGame",
     "PatchworkGame",
     "PerfectMismatchGame",
     "PointSaladGame",

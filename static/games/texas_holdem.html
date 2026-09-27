@@ -1,50 +1,63 @@
 <template data-game-target="texasHoldemPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="texasPhase">-</span></div>
-                <div>Hand: <span id="texasHand">-</span></div>
-                <div>Current Turn: <span id="texasTurn">-</span></div>
-              </div>
-              <div class="row">
-                <div>Pot: <span id="texasPot">-</span></div>
-                <div>Current Bet: <span id="texasCurrentBet">-</span></div>
-                <div>To Call: <span id="texasToCall">-</span></div>
-              </div>
-              <div class="row">
-                <div>Blinds: <span id="texasBlinds">-</span></div>
-                <div>Min Bet: <span id="texasMinBet">-</span></div>
-                <div>Min Raise To: <span id="texasMinRaiseTo">-</span></div>
-                <div>Max: <span id="texasMaxRaiseTo">-</span></div>
-              </div>
-
-              <h3>Community Cards</h3>
-              <div id="texasCommunityCards" class="texas-cards"></div>
-
-              <h3>Your Hand</h3>
-              <div id="texasYourHand" class="texas-cards"></div>
-
-              <h3>Actions</h3>
-              <div class="row actions texas-action-row">
-                <button id="texasFoldBtn">Fold</button>
-                <button id="texasCheckBtn">Check</button>
-                <button id="texasCallBtn">Call</button>
-                <button id="texasAllInBtn">All-in</button>
-              </div>
-              <div class="row actions texas-action-row">
-                <input id="texasBetInput" type="number" min="1" step="1" placeholder="Bet/Raise to" />
-                <button id="texasBetBtn">Bet</button>
-                <button id="texasRaiseBtn">Raise</button>
-              </div>
-              <div class="row actions texas-action-row">
-                <button id="texasNextHandBtn">Next Hand</button>
-                <button id="texasRebuyBtn">Rebuy</button>
-              </div>
-
-              <div id="texasSummary" class="round-notice hidden" aria-hidden="true">
-                <div class="round-notice-title">Last Hand</div>
-                <div id="texasSummaryBody" class="round-notice-body">-</div>
-                <div id="texasSummaryList" class="texas-summary-list"></div>
-              </div>
-
-              <h3>Players</h3>
-              <div id="texasPlayers" class="texas-players"></div>
-            </template>
+    <div class="texas-toolbar">
+        <div class="texas-table-meta">
+            <span class="texas-hand-badge" data-texas-explain="hand">Hand <strong id="texasHand">–</strong></span>
+            <span class="texas-blinds" data-texas-explain="blinds">Blinds <strong id="texasBlinds">–</strong></span>
+        </div>
+        <div id="texasHeaderActions" class="texas-tools">
+            <button id="texasHelpBtn" type="button">? Help</button>
+            <button id="texasExplainBtn" type="button" aria-pressed="false">🔎 Explain</button>
+        </div>
+    </div>
+    <p id="texasExplainHint" class="texas-explain-hint" role="status" hidden>Select a highlighted item to explain it. Esc to exit.</p>
+    <div class="texas-layout">
+        <div class="texas-play-area">
+            <section class="texas-table" aria-label="Poker table">
+                <ol id="texasStreets" class="texas-streets" aria-label="Hand progress" data-texas-explain="streets">
+                    <li data-street="preflop">Preflop</li><li data-street="flop">Flop</li><li data-street="turn">Turn</li><li data-street="river">River</li><li data-street="hand_end">Result</li>
+                </ol>
+                <div class="texas-pot" data-texas-explain="pot"><span id="texasPotCaption">TOTAL POT</span><strong>💰 <span id="texasPot">0</span></strong></div>
+                <div id="texasCommunityCards" class="texas-cards texas-community" aria-label="Community cards" data-texas-explain="community"></div>
+                <div class="texas-table-footer"><span id="texasPhase">Waiting to deal</span><span data-texas-explain="currentBet">Table bet <strong id="texasCurrentBet">–</strong></span></div>
+            </section>
+            <section id="texasSummary" class="texas-summary" aria-label="Hand result" hidden>
+                <div class="texas-section-heading"><h3>🏆 Hand result</h3><span id="texasSummaryBody"></span></div>
+                <div id="texasSummaryList" class="texas-summary-list" tabindex="0" aria-label="Payouts and best hands"></div>
+                <div class="texas-ready-row"><span id="texasReadyStatus" role="status"></span><button id="texasNextHandBtn" class="texas-primary" type="button" data-texas-explain="next_hand" disabled>Next Hand</button></div>
+            </section>
+            <section class="texas-controls" aria-label="Your hand and actions">
+                <div id="texasTurn" class="texas-turn" role="status">Waiting for the game to start</div>
+                <div id="texasOwnSection" class="texas-own-section">
+                    <div class="texas-own-hand"><div class="texas-eyebrow" data-texas-explain="hole">YOUR HAND</div><div id="texasYourHand" class="texas-cards" aria-label="Your hole cards"></div></div>
+                    <div class="texas-balance"><span class="texas-eyebrow" data-texas-explain="chips">YOUR CHIPS</span><strong id="texasYourChips">–</strong><span id="texasYourStatus" class="texas-muted"></span></div>
+                    <div class="texas-call-info" data-texas-explain="toCall"><span class="texas-eyebrow">TO CALL</span><strong id="texasToCall">–</strong></div>
+                </div>
+                <div id="texasBettingControls">
+                    <div class="texas-main-actions">
+                        <button id="texasFoldBtn" class="texas-fold" type="button" data-texas-explain="fold" disabled>Fold</button>
+                        <button id="texasCheckBtn" class="texas-primary" type="button" data-texas-explain="check" disabled>Check</button>
+                        <button id="texasCallBtn" class="texas-primary" type="button" data-texas-explain="call" hidden disabled>Call</button>
+                        <button id="texasAllInBtn" class="texas-all-in" type="button" data-texas-explain="all_in" disabled>All-in</button>
+                    </div>
+                    <div id="texasBetEditor" class="texas-bet-editor" data-texas-explain="amount">
+                        <div class="texas-bet-row"><label id="texasBetLabel" for="texasBetInput">Raise to</label><input id="texasBetInput" type="number" min="1" step="1" inputmode="numeric" aria-describedby="texasBetHint" disabled /><button id="texasBetBtn" class="texas-raise" type="button" data-texas-explain="bet" hidden disabled>Bet</button><button id="texasRaiseBtn" class="texas-raise" type="button" data-texas-explain="raise" disabled>Raise to</button></div>
+                        <input id="texasBetRange" class="texas-bet-range" type="range" min="1" max="1000" value="1" aria-label="Bet or raise total" disabled />
+                        <div class="texas-presets" aria-label="Quick bet sizes"><button type="button" data-texas-preset="min" data-texas-explain="minimum" disabled>Min</button><button type="button" data-texas-preset="half" data-texas-explain="halfPot" disabled>½ Pot</button><button type="button" data-texas-preset="pot" data-texas-explain="potBet" disabled>Pot</button><button type="button" data-texas-preset="max" data-texas-explain="maximum" disabled>Max</button></div>
+                        <p id="texasBetHint" class="texas-bet-hint" aria-live="polite"></p>
+                    </div>
+                </div>
+                <div id="texasRebuyRow" class="texas-rebuy-row" hidden><span>You have no chips left.</span><button id="texasRebuyBtn" type="button" data-texas-explain="rebuy" disabled>Rebuy</button></div>
+                <p id="texasFeedback" class="texas-feedback" role="status" hidden></p>
+            </section>
+        </div>
+        <section class="texas-seats" aria-label="Players at the table">
+            <div class="texas-section-heading"><h3>At the table</h3><span id="texasPlayerCount" class="texas-muted">0 players</span></div>
+            <div id="texasPlayers" class="texas-players" tabindex="0" aria-label="Player stacks and cards"></div>
+        </section>
+    </div>
+    <dialog id="texasDialog" class="texas-dialog" aria-labelledby="texasDialogTitle">
+        <div class="texas-dialog-heading"><h2 id="texasDialogTitle">Help</h2><button id="texasDialogClose" type="button">Close</button></div>
+        <div id="texasDialogBody"></div>
+    </dialog>
+    <div id="texasTooltip" class="texas-tooltip" role="tooltip" hidden></div>
+</template>

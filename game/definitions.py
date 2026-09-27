@@ -70,6 +70,7 @@ from game.love_letter import (
 )
 from game.manila import ManilaGame
 from game.nine_upper import NineUpperGame
+from game.no_thanks import NoThanksGame, ACTION_SCHEMA as NO_THANKS_ACTION_SCHEMA, CONFIG_SCHEMA as NO_THANKS_CONFIG_SCHEMA
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
@@ -114,6 +115,16 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=NoThanksGame.game_id, name="No Thanks!", name_zh="不了不了",
+        min_players=NoThanksGame.min_players, max_players=NoThanksGame.max_players,
+        turn_mode="turn", action_schema=NO_THANKS_ACTION_SCHEMA,
+        config_schema=NO_THANKS_CONFIG_SCHEMA, module=NoThanksGame,
+        serialize=NoThanksGame.serialize, deserialize=NoThanksGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

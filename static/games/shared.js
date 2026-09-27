@@ -77,6 +77,8 @@ function emitRoomStart() {
     payload.config = getTakeTimeConfig();
   } else if (currentGameType === "eternal_decks") {
     payload.config = getEternalDecksConfig();
+  } else if (currentGameType === "no_thanks" && typeof getNoThanksConfig === "function") {
+    payload.config = getNoThanksConfig();
   } else if (currentGameType === "hive" && typeof getHiveConfig === "function") {
     payload.config = getHiveConfig();
   } else if (currentGameType === "ponzi_scheme") {

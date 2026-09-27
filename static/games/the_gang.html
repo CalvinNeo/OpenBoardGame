@@ -1,62 +1,98 @@
-<template data-game-target="gangHelpModal" data-game-mode="replace"><section id="gangHelpModal" class="modal hidden" aria-hidden="true">
+<template data-game-target="gangHelpModal" data-game-mode="replace">
+  <section id="gangHelpModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="gangHelpTitle" aria-hidden="true">
     <div class="modal-content gang-help-modal">
       <div class="modal-header">
-        <h2>The Gang - Game Rules</h2>
+        <h2 id="gangHelpTitle">The Gang · How to play</h2>
         <button id="gangHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body gang-help-content" id="gangHelpContent"></div>
     </div>
-  </section></template>
-<template data-game-target="gangExplainModal" data-game-mode="replace"><section id="gangExplainModal" class="modal hidden" aria-hidden="true">
+  </section>
+</template>
+<template data-game-target="gangExplainModal" data-game-mode="replace">
+  <section id="gangExplainModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="gangExplainTitle" aria-hidden="true">
     <div class="modal-content gang-explain-modal">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2 id="gangExplainTitle">Explain</h2>
         <button id="gangExplainModalCloseBtn" type="button">Close</button>
       </div>
-      <div class="modal-body">
-        <div id="gangExplainContent"></div>
-      </div>
+      <div class="modal-body" id="gangExplainContent"></div>
     </div>
-  </section></template>
+  </section>
+</template>
 <template data-game-target="theGangPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="gangPhase">-</span></div>
-                <div>Level: <span id="gangLevel">-</span></div>
-                <div>Lives: <span id="gangLives">-</span></div>
-                <div>Tokens: <span id="gangTokens">-</span></div>
-              </div>
-              <div class="row">
-                <div>Mode: <span id="gangMode">-</span></div>
-                <div>Mission: <span id="gangMission">-</span></div>
-                <div>Timer: <span id="gangTimer">-</span></div>
-                <div>Lock: <span id="gangLockTimer">-</span></div>
-              </div>
-
-              <h3>Community Cards</h3>
-              <div id="gangCommunity" class="gang-cards"></div>
-
-              <h3>Ranking Track</h3>
-              <div id="gangRanking" class="gang-ranking"></div>
-
-              <div class="row actions">
-                <button id="gangRevealBtn">Reveal Next</button>
-                <button id="gangReadyBtn">Ready</button>
-                <button id="gangMulliganBtn">Mulligan (-1 token)</button>
-              </div>
-              <div class="row actions">
-                <label for="gangSpyTargetSelect">Spy Target</label>
-                <select id="gangSpyTargetSelect"></select>
-                <button id="gangSpyBtn">Spy (-1 token)</button>
-                <button id="gangNextRoundBtn">Next Round</button>
-                <button id="gangPlayAgainBtn">Play Again</button>
-              </div>
-
-              <div id="gangRoundSummary" class="round-notice hidden">
-                <div id="gangRoundSummaryTitle" class="round-notice-title">Round Summary</div>
-                <div id="gangRoundSummaryBody" class="round-notice-body">-</div>
-                <div id="gangRoundSummaryList" class="gang-summary-list"></div>
-              </div>
-
-              <h3>Players</h3>
-              <div id="gangPlayers" class="gang-players"></div>
-            </template>
+  <div class="gang-game">
+    <header class="gang-topbar">
+      <div class="gang-level" data-gang-explain="gangProgress" data-gang-tip="Clear the team's ranking to advance to the next level." tabindex="0">
+        <span class="gang-eyebrow">THE HEIST</span>
+        <strong>Level <span id="gangLevel">1</span></strong>
+      </div>
+      <div class="gang-stats">
+        <span class="gang-stat" data-gang-explain="gangLivesInfo" data-gang-tip="Shared lives. An unsuccessful round costs one life." tabindex="0"><span aria-hidden="true">❤️</span><span><small>Lives</small><strong id="gangLives">—</strong></span></span>
+        <span class="gang-stat" data-gang-explain="gangTokensInfo" data-gang-tip="Shared tokens pay for Mulligan and Spy." tabindex="0"><span aria-hidden="true">💰</span><span><small>Tokens</small><strong id="gangTokens">—</strong></span></span>
+        <span id="gangMode" class="gang-mode" data-gang-explain="gangModeInfo" tabindex="0">Normal</span>
+      </div>
+    </header>
+    <ol id="gangStages" class="gang-stages" aria-label="Round progress" data-gang-explain="gangStagesInfo">
+      <li data-gang-phase="preflop"><span>1</span>Deal</li>
+      <li data-gang-phase="flop"><span>2</span>Flop</li>
+      <li data-gang-phase="turn"><span>3</span>Turn</li>
+      <li data-gang-phase="river"><span>4</span>River</li>
+      <li data-gang-phase="showdown"><span>5</span>Result</li>
+    </ol>
+    <div id="gangMissionRow" class="gang-mission hidden" data-gang-explain="gangMissionInfo"><strong>🎯 Mission</strong><span id="gangMission"></span></div>
+    <div id="gangExplainNotice" class="gang-explain-notice hidden" role="status">Select a highlighted control or area to learn more. Esc to exit.</div>
+    <div class="gang-layout">
+      <section class="gang-table" aria-label="Poker table">
+        <div class="gang-table-heading">
+          <h3>Community cards</h3>
+          <span id="gangPhase" class="gang-phase">Deal</span>
+        </div>
+        <div id="gangCommunity" class="gang-cards gang-community" data-gang-explain="gangCommunityInfo" aria-label="Community cards"></div>
+        <div class="gang-street-labels" aria-hidden="true"><span>FLOP</span><span>TURN</span><span>RIVER</span></div>
+        <div class="gang-your-hand" data-gang-explain="gangHandInfo">
+          <div class="gang-hand-caption"><span class="gang-eyebrow" id="gangHandLabel">YOUR HAND</span><strong id="gangHandHint">Private cards</strong><span id="gangHandOdds" class="hidden"></span></div>
+          <div id="gangYourHand" class="gang-cards"></div>
+        </div>
+        <div class="gang-table-footer"><span id="gangTableNote">Only you can see your hole cards.</span><span id="gangCommunityCount">0 / 5 revealed</span></div>
+      </section>
+      <section class="gang-rank-panel" aria-labelledby="gangRankingTitle">
+        <div class="gang-section-heading"><h3 id="gangRankingTitle">Team ranking</h3><span class="gang-caption">Strongest first</span></div>
+        <div id="gangRanking" class="gang-ranking" data-gang-explain="gangRankingSlot"></div>
+        <p id="gangRankingHint" class="gang-caption gang-ranking-hint">Ranking opens after the flop.</p>
+        <div class="gang-decision">
+          <div class="gang-decision-heading"><strong id="gangActionTitle">Reveal the flop</strong><span id="gangReadyCount" class="gang-ready-count">0 / 0 ready</span></div>
+          <p id="gangActionHint" class="gang-caption" aria-live="polite"></p>
+          <div id="gangTimers" class="gang-timers hidden">
+            <span id="gangTimerWrap" class="hidden" data-gang-tip="The round locks automatically when this timer runs out." tabindex="0">⏱️ Time left <strong id="gangTimer">—</strong></span>
+            <span id="gangLockWrap" class="hidden" data-gang-tip="Everyone is ready. The team ranking will lock when the countdown ends." tabindex="0">🔒 Locking in <strong id="gangLockTimer">—</strong></span>
+          </div>
+          <div class="gang-main-actions">
+            <button id="gangRevealBtn" type="button" class="gang-primary" data-gang-explain="gangRevealBtn">Reveal flop →</button>
+            <button id="gangReadyBtn" type="button" class="gang-primary hidden" data-gang-explain="gangReadyBtn">Ready to lock ✓</button>
+            <button id="gangNextRoundBtn" type="button" class="gang-primary hidden" data-gang-explain="gangNextRoundBtn">Next Round →</button>
+            <button id="gangPlayAgainBtn" type="button" class="gang-primary hidden" data-gang-explain="gangPlayAgainBtn">Play Again</button>
+          </div>
+          <div id="gangTools" class="gang-tools">
+            <span class="gang-tools-label">TEAM TOOLS <span>💰 1 token each</span></span>
+            <button id="gangMulliganBtn" type="button" data-gang-explain="gangMulliganBtn">↻ Mulligan · redeal all hands</button>
+            <div id="gangSpyControls" class="gang-spy-controls hidden">
+              <label class="sr-only" for="gangSpyTargetSelect">Spy target</label>
+              <select id="gangSpyTargetSelect" data-gang-explain="gangSpyTargetSelect"></select>
+              <button id="gangSpyBtn" type="button" data-gang-explain="gangSpyBtn">👁️ Spy</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="gangRoundSummary" class="gang-summary hidden" aria-labelledby="gangRoundSummaryTitle">
+        <div class="gang-section-heading"><h3 id="gangRoundSummaryTitle">Round result</h3><span id="gangRoundSummaryBody"></span></div>
+        <div id="gangRoundSummaryList" class="gang-summary-list"></div>
+      </section>
+      <section class="gang-crew" aria-labelledby="gangCrewTitle">
+        <div class="gang-section-heading"><h3 id="gangCrewTitle">The crew</h3><span id="gangCrewCount" class="gang-caption"></span></div>
+        <div id="gangPlayers" class="gang-players"></div>
+      </section>
+    </div>
+  </div>
+  <div id="gangTooltip" class="gang-tooltip hidden" role="tooltip"></div>
+</template>

@@ -51,6 +51,13 @@ print(json.dumps(v))
     await p.waitForFunction(r=>lastGameStatePayload.view.revision>r,rev);
   }
   async function move(p,m) {
+    if(m.type==='leader') {
+      const rev=await p.evaluate(()=>lastGameStatePayload.view.revision);
+      await p.locator(`[data-di-action="leader"][data-leader="${m.leader}"]`).click();
+      await p.waitForFunction(r=>lastGameStatePayload.view.revision>r,rev);
+      assert.equal(await p.locator('[data-di-action="confirm"]').count(),0,'leader selection submits directly');
+      return;
+    }
     if(m.type==='agent') {
       await p.locator(`[data-di-action="card"][data-card="${m.card}"]`).first().click();
       await p.locator(`[data-di-action="space"][data-space="${m.space}"]`).click();
@@ -85,11 +92,38 @@ print(json.dumps(v))
     await a.evaluate(()=>socket.emit('room:start',{}));
     await a.waitForFunction(()=>lastGameStatePayload?.view.phase==='leader');
     const seatPages={};
-    for(const p of [a,b])seatPages[await p.evaluate(()=>lastGameStatePayload.view.you)]=p;
+    for(const p of [a,b]) {
+      await p.waitForFunction(()=>lastGameStatePayload?.view.phase==='leader');
+      seatPages[await p.evaluate(()=>lastGameStatePayload.view.you)]=p;
+      assert.equal(await p.locator('.di-leader-selection').count(),1,'one leader panel');
+      assert.equal(await p.locator('[data-di-action="leader"]').count(),8,'each leader appears once');
+      assert.equal(await p.locator('.di-side,.di-hand-section,.di-tabs,#duneImperiumActions').count(),0,'setup has no duplicate actions or empty hand');
+      const legal=await p.evaluate(()=>lastGameStatePayload.view.moves.filter(m=>m.type==='leader').length);
+      assert.equal(await p.locator('[data-di-action="leader"]:not(:disabled)').count(),legal,'only the current player can pick');
+    }
+    for(const width of [1280,768,393,320]) {
+      await a.setViewportSize({width,height:980});
+      await bounds(a,`${width}px leaders`);
+      await a.screenshot({path:path.join(out,`leaders-${width}.png`),fullPage:true});
+    }
+    await a.setViewportSize({width:1280,height:980});
     for(let i=0;i<2;i++){
       const pid=await a.evaluate(()=>lastGameStatePayload.view.current_turn);
       const p=seatPages[pid];
       await p.waitForFunction(pid=>lastGameStatePayload?.view.current_turn===pid,pid);
+      if(i===1) {
+        const taken=p.locator('.di-leader-taken');
+        assert.equal(await taken.count(),1);
+        assert(await taken.isDisabled(),'claimed leaders cannot be chosen again');
+        assert((await taken.innerText()).includes('Selected by'));
+        const rev=await p.evaluate(()=>lastGameStatePayload.view.revision);
+        await p.locator('#duneImperiumExplain').click();
+        await taken.scrollIntoViewIfNeeded();
+        const r=await taken.boundingBox();await p.mouse.click(r.x+r.width/2,r.y+r.height/2);
+        assert(await p.locator('#duneImperiumDialog').evaluate(e=>e.open),'claimed leaders support Explain');
+        assert.equal(await p.evaluate(()=>lastGameStatePayload.view.revision),rev,'Explain must not select a leader');
+        await p.keyboard.press('Escape');
+      }
       await move(p,await p.evaluate(()=>lastGameStatePayload.view.moves.find(m=>m.type==='leader')));
       await a.waitForFunction(n=>lastGameStatePayload.view.revision>=n,i+1);
     }
