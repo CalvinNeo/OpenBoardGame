@@ -263,6 +263,10 @@ def _settle(state: Dict) -> None:
         immediate |= kind == "produce" and "resource" in item
         if not immediate:
             break
+        # Even beneficial actions may be declined: moving a shared moon or
+        # reaching a royal scroll early can change a player's plan.
+        if kind not in ("vp", "rooster_step") and not item.get("accepted"):
+            break
         state["pending"].pop(0)
         if kind == "gain":
             for key, amount in item["items"].items():
@@ -286,7 +290,7 @@ def _settle(state: Dict) -> None:
             _produce(state, pid, item["resource"])
         elif kind == "mastery":
             if count > 1:
-                _queue(state, [effect("mastery", track=item["track"], count=count - 1)])
+                _queue(state, [effect("mastery", track=item["track"], count=count - 1, accepted=True)])
             _advance_mastery(state, pid, item["track"])
     if state["phase"] == "setup" and not state["pending"]:
         state["setup_index"] += 1
@@ -315,8 +319,10 @@ def _pending_moves(state: Dict, pid: str) -> List[Dict]:
     item = state["pending"][0]
     kind = item["kind"]
     moves = [] if item.get("mandatory") else [{"type": "skip"}]
+    if kind in ("gain", "repair", "rooster", "moon") or (kind in ("mastery", "produce") and ("track" in item or "resource" in item)):
+        return moves + [{"type": "accept"}]
     if kind == "bundle":
-        return [{"type": "resolve", "index": i} for i in range(len(item["effects"]))]
+        return moves + [{"type": "resolve", "index": i} for i in range(len(item["effects"]))]
     if kind == "upgrade":
         moves += [{"type": "upgrade", "track": key} for key in BASIC]
         if p["hammer_level"] < 2:
@@ -352,6 +358,8 @@ def _pending_moves(state: Dict, pid: str) -> List[Dict]:
                           for number in available_apostles((state["gears"] + steps) % 6) if number not in used]
     elif kind == "workshop":
         for i, key in enumerate(state["market"]):
+            if key is None:
+                continue
             card = WORKSHOPS[key]
             cost = {"paint": 1}
             cost[card["resource"]] = cost.get(card["resource"], 0) + 3 - i
@@ -505,8 +513,7 @@ def _workshop(state: Dict, pid: str, move: Dict) -> None:
         p["workshops"].insert(0, {"card": key, "assistant": None})
     else:
         p["workshops"].append({"card": key, "assistant": None})
-    if state["workshop_deck"]:
-        state["market"].insert(0, state["workshop_deck"].pop())
+    state["market"].insert(0, state["workshop_deck"].pop() if state["workshop_deck"] else None)
     _queue(state, rewards)
     _log(state, pid, f"扩建 {card['name']}")
 
@@ -640,13 +647,17 @@ def _apply(state: Dict, pid: str, move: Dict) -> None:
         if kind == "resolve":
             rewards = item["effects"]
             chosen = rewards.pop(move["index"])
+            chosen["accepted"] = True
             _queue(state, [chosen] + ([effect("bundle", effects=rewards)] if rewards else []))
+        elif kind == "accept":
+            item["accepted"] = True
+            _queue(state, [item])
         elif kind == "skip":
             pass
         elif kind == "choose":
             if item["kind"] == "forced_painter":
                 p["deviation"] += 1
-            _queue(state, [effect(move["option"])])
+            _queue(state, [effect(move["option"], accepted=True)])
         elif kind == "upgrade":
             _upgrade(p, move["track"])
         elif kind == "mastery":
@@ -723,7 +734,7 @@ class OrlojGame:
                  "order": ids, "current_turn": ids[0], "players": {}, "player_meta": {},
                  "hand": 0, "face": rng.randrange(12), "moon": 11, "gears": 0,
                  "clock_workers": [None] * 12, "sculptors": [None] * 4,
-                 "painter": 11, "calendar": copy.deepcopy(CALENDAR), "hammers": {"months": 0, "zodiac": 0},
+                 "painter": 11, "calendar": [copy.deepcopy(list(rewards)) for rewards in CALENDAR], "hammers": {"months": 0, "zodiac": 0},
                  "board": {}, "market": deck[:3], "workshop_deck": deck[3:],
                  "scroll_market": scrolls[:3 if len(ids) == 2 else 4],
                  "scroll_deck": scrolls[3 if len(ids) == 2 else 4:],

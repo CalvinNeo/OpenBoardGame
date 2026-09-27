@@ -133,6 +133,8 @@ def choose_move(view: Dict) -> Optional[Dict]:
         if kind == "workshop":
             affordable = []
             for i, key in enumerate(view["market"]):
+                if key is None:
+                    continue
                 card = WORKSHOPS[key]
                 cost = {"paint": 1}
                 cost[card["resource"]] = cost.get(card["resource"], 0) + 3 - i
@@ -207,6 +209,8 @@ def choose_move(view: Dict) -> Optional[Dict]:
             return value
         if kind == "resolve":
             return effect_value(pending["effects"][m["index"]]) + (2 if pending["effects"][m["index"]]["kind"] == "gain" else 0)
+        if kind == "accept":
+            return effect_value(pending)
         if kind == "choose":
             return effect_value({"kind": m["option"]})
         if kind == "upgrade":

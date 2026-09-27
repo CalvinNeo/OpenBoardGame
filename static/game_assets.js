@@ -1,8 +1,8 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "orloj": {
-    "scripts": ["/static/games/orloj.js?v=1"],
-    "styles": ["/static/games/orloj.css?v=1"],
+    "scripts": ["/static/games/orloj.js?v=2"],
+    "styles": ["/static/games/orloj.css?v=2"],
     "markup": "/static/games/orloj.html?v=1",
     "panel": "orlojPanel",
     "header": "showOrlojHeaderActions"

@@ -1,4 +1,4 @@
-"""Orloj mechanical data. Sources, digital component adaptations: /125.md.
+"""Orloj mechanical data. Sources, digital component adaptations: designs/125.md.
 
 No publisher artwork is distributed. The workshop combinations are an explicitly
 labelled digital deck; rules and all six hammer/assistant effects follow the book.
@@ -77,7 +77,7 @@ METRIC_NAMES = {"scrolls": "卷轴", "apostles": "已放使徒", "upgrades": "�
 PRIMARY_MULTIPLIER = dict(zip(METRICS, (3, 2, 2, 3, 3, 3)))
 ASSISTANTS = {
     "scholar": {"name": "学者", "text": "终局 +6 分"},
-    "engineer": {"name": "工程师", "text": "每次生产或锤子升级 +1 分"},
+    "engineer": {"name": "工程师", "text": "终局每次生产或锤子升级 +1 分"},
     "master": {"name": "大师", "text": "每条 IV 级学识轨 +4 分"},
     "carver": {"name": "雕刻家", "text": "每列已完成使徒 +5 分"},
     "calendar": {"name": "历法师", "text": "每个月份上的工人 +3 分"},
