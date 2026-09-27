@@ -18,6 +18,11 @@ views['trim']=G.get_public_view(s,'p0')
 s=battlefield({'draw':['juggler','cat','pig','pony','dog'],'bench':['talent','skeleton','ai']},{'field':['dragon'],'draw':['horse','dog'],'bench':['blacksmith','cat','pig','pony','parrot','spider']})
 views['match']=G.get_public_view(s,'p0')
 act(s,'p0','reveal'); views['choice']=G.get_public_view(s,'p0')
+s=battlefield({'field':['champion'],'draw':['dog']},{'draw':['newcomer','newcomer','horse']})
+s['players']['p0']['is_bot']=False
+s['matches'][0].update(holder='p0',turn='p1')
+views['bot_reveal']=G.get_public_view(s,'p0')
+act(s,'p0','reveal_for_bot'); views['bot_reveal_next']=G.get_public_view(s,'p0')
 s=new_game(4)
 while s['phase']!='round_end':
  for pid in s['order']:
@@ -124,6 +129,56 @@ async function selectionScroll(page, key, touch = false) {
   assert.equal(await page.locator('.ch-card[aria-pressed="true"]').count(), 0);
 }
 
+async function stableDraftHover(page) {
+  await render(page, 'draft');
+  const card = page.locator('[data-ch-card]').first();
+  await card.hover();
+  await card.evaluate(async node => { await Promise.all(node.getAnimations().map(animation => animation.finished)); });
+  const updates = await page.evaluate(async view => {
+    const card = document.querySelector('[data-ch-card]');
+    const background = getComputedStyle(card).backgroundColor;
+    const samples = [];
+    for (let i = 1; i <= 4; i++) {
+      view.players[1].fans += 1;
+      view.players[1].total += 1;
+      renderGameState({room_id: 'challengers-layout', game_type: 'challengers', view});
+      const current = document.querySelector('[data-ch-card]');
+      await new Promise(requestAnimationFrame);
+      samples.push({same: current === card, pressed: current.getAttribute('aria-pressed'),
+        stable: getComputedStyle(current).backgroundColor === background, animations: current.getAnimations().length});
+    }
+    return samples;
+  }, structuredClone(fixtures.draft));
+  assert.deepEqual(updates, Array(4).fill({same: true, pressed: 'false', stable: true, animations: 0}));
+  assert.match(await page.locator('.ch-player').nth(1).textContent(), /⭐ 4/);
+  // A socket push between press and release must not swallow the user's click.
+  await page.mouse.down();
+  await page.evaluate(view => renderGameState({room_id: 'challengers-layout', game_type: 'challengers', view}), fixtures.draft);
+  await page.mouse.up();
+  assert.equal(await card.getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('.ch-card[aria-pressed="true"]').count(), 1);
+}
+
+async function botRevealControl(page, touch = false) {
+  await render(page, 'bot_reveal');
+  const button = control(page, 'reveal_for_bot');
+  assert.equal(await button.textContent(), 'Reveal for Bot');
+  assert.equal(await control(page, 'reveal').count(), 0);
+  const red = await button.evaluate(node => getComputedStyle(node).backgroundColor.match(/\d+/g).map(Number));
+  assert.ok(red[0] > red[1] * 2 && red[0] > red[2] * 2, `Red button: ${red}`);
+  if (touch) {
+    await page.screenshot({path: `${output}/mobile-bot-reveal.png`, fullPage: true});
+    assert.ok((await page.locator('.ch-combat-controls').boundingBox()).height < 80);
+  }
+  await button[touch ? 'tap' : 'click']();
+  assert.equal(await button.isDisabled(), true);
+  await button.evaluate(node => node.click());
+  assert.deepEqual(await page.evaluate(() => challengersTestActions), [{type: 'reveal_for_bot', round: fixtures.bot_reveal.round, revision: fixtures.bot_reveal.revision}]);
+  await page.evaluate(view => renderGameState({room_id: 'challengers-layout', game_type: 'challengers', view}), fixtures.bot_reveal_next);
+  assert.equal(await button.isEnabled(), true);
+  assert.equal(await button.textContent(), 'Reveal for Bot');
+}
+
 (async () => {
   const browser = await chromium.launch({channel: process.env.BROWSER_CHANNEL || 'chrome', headless: true});
   const errors = [];
@@ -145,6 +200,7 @@ async function selectionScroll(page, key, touch = false) {
     await control(live, 'pick').click();
     await live.waitForFunction(() => lastGameStatePayload.view.picks_left < 2 || lastGameStatePayload.view.choice);
     // Complete one actual round through the controls, including bot dispatch.
+    let botReveals = 0;
     for (let i = 0; i < 180; i++) {
       const state = await live.evaluate(() => ({phase: lastGameStatePayload.view.phase, legal: lastGameStatePayload.view.legal_actions, choice: lastGameStatePayload.view.choice, revision: lastGameStatePayload.view.revision, over: lastGameStatePayload.view.game_over}));
       if (state.phase === 'round_end' || state.over) break;
@@ -157,6 +213,10 @@ async function selectionScroll(page, key, touch = false) {
       if (type === 'choose_level') await control(live, 'level').first().click();
       if (type === 'ready') await control(live, 'ready').click();
       if (type === 'reveal') await control(live, 'reveal').click();
+      if (type === 'reveal_for_bot') {
+        await control(live, 'reveal_for_bot').click();
+        botReveals += 1;
+      }
       if (type === 'resolve') {
         if (state.choice.optional || state.choice.min === 0) await control(live, 'skip').click();
         else {
@@ -167,6 +227,7 @@ async function selectionScroll(page, key, touch = false) {
       await live.waitForFunction(rev => lastGameStatePayload.view.revision !== rev || lastGameStatePayload.view.game_over, state.revision);
     }
     assert.equal(await live.evaluate(() => lastGameStatePayload.view.phase), 'round_end');
+    assert.ok(botReveals > 0, 'Human pressed Reveal for Bot in an actual room');
     await live.screenshot({path: `${output}/live-round-review.png`, fullPage: true});
     await live.waitForFunction(() => lastGameStatePayload.view.next_ready.length === 1);
     assert.equal(await live.evaluate(() => lastGameStatePayload.view.round), 1, 'Bot does not acknowledge for human');
@@ -183,6 +244,15 @@ async function selectionScroll(page, key, touch = false) {
       for (const key of Object.keys(fixtures)) { await render(page, key); await bounds(page, `${width}px ${key}`); }
     }
     console.log(`PASS ${Object.keys(fixtures).length * 6} responsive layouts`);
+    await page.setViewportSize({width: 1440, height: 1100});
+    await stableDraftHover(page);
+    await botRevealControl(page);
+    await page.locator('#challengersExplainBtn').click();
+    await control(page, 'reveal_for_bot').click();
+    await page.locator('#challengersDialog[open]').waitFor();
+    assert.match(await page.locator('#challengersDialogBody').textContent(), /Reveal for Bot/);
+    await page.keyboard.press('Escape');
+    console.log('PASS no idle hover flicker, uninterrupted clicks, red bot reveal and Explain');
     for (const width of [393, 1440]) {
       await page.setViewportSize({width, height: 900});
       for (const key of ['long_trim', 'long_exhaust', 'long_extra_pick']) await selectionScroll(page, key);
@@ -231,6 +301,8 @@ async function selectionScroll(page, key, touch = false) {
     }));
     assert.ok(compact.arena < 400 && compact.field < 100 && compact.controls < 80, JSON.stringify(compact));
     console.log('PASS compact mobile arena:', JSON.stringify(compact));
+    await botRevealControl(mobile, true);
+    await bounds(mobile, 'Mobile Reveal for Bot');
     await mobile.locator('.ch-player-stats [data-ch-tip]').first().tap();
     await mobile.locator('#challengersTip').waitFor({state: 'visible'});
     await mobile.locator('#challengersTip').waitFor({state: 'hidden', timeout: 4000});

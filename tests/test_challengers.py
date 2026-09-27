@@ -2,6 +2,7 @@ import copy
 import json
 import unittest
 from collections import Counter
+from unittest.mock import patch
 
 from game.challengers import (
     ChallengersGame as Game, ROBOT_ID, _begin_match, _card_view, _discard,
@@ -448,6 +449,137 @@ class ChallengersRulesTests(unittest.TestCase):
         view = Game.get_public_view(state, "p0")
         view["deck"].clear()
         self.assertEqual(len(state["players"]["p0"]["deck"]), 6)
+
+
+class ChallengersBotRevealTests(unittest.TestCase):
+    def test_human_reveals_one_bot_card_at_a_time(self):
+        state = battlefield({"draw": ["newcomer", "newcomer", "horse"]},
+                            {"field": ["champion"], "draw": ["dog"]})
+        state["players"]["p1"]["is_bot"] = False
+        self.assertEqual(Game.get_legal_actions(state, "p0"), [])
+        self.assertIsNone(Game.bot_move(state, "p0"))
+        self.assertEqual(Game.get_legal_actions(state, "p1"), ["reveal_for_bot"])
+        first = action(state, "p1", "reveal_for_bot")
+        self.assertIsNone(Game.apply_action(state, "p1", first)[1])
+        match = state["matches"][0]
+        self.assertEqual(len(match["lanes"]["p0"]["field"]), 1)
+        self.assertEqual(len(match["lanes"]["p0"]["draw"]), 2)
+        self.assertEqual(match["turn"], "p0")
+        before = copy.deepcopy(state)
+        self.assertIsNotNone(Game.apply_action(state, "p1", first)[1])
+        self.assertEqual(state, before)
+        act(state, "p1", "reveal_for_bot")
+        self.assertEqual(len(state["matches"][0]["lanes"]["p0"]["field"]), 2)
+        act(state, "p1", "reveal_for_bot")
+        self.assertEqual(state["matches"][0]["holder"], "p0")
+        self.assertEqual(Game.get_legal_actions(state, "p1"), ["reveal"])
+        validate_state(state)
+
+    def test_reveal_permission_follows_actual_opponent_and_turn(self):
+        state = battlefield({"draw": ["newcomer", "horse"]})
+        state["players"]["p1"]["is_bot"] = False
+        for pid, candidate in (("p0", action(state, "p0", "reveal")),
+                               ("p0", action(state, "p0", "reveal_for_bot")),
+                               ("p1", action(state, "p1", "reveal")),
+                               ("p1", action(state, "p1", "reveal_for_bot", player_id="p0")),
+                               ("visitor", action(state, "p1", "reveal_for_bot"))):
+            before = copy.deepcopy(state)
+            self.assertIsNotNone(Game.apply_action(state, pid, candidate)[1])
+            self.assertEqual(state, before)
+        state["players"]["p0"]["is_bot"] = False
+        self.assertEqual(Game.get_legal_actions(state, "p0"), ["reveal"])
+        self.assertEqual(Game.get_legal_actions(state, "p1"), [])
+        self.assertIsNotNone(Game.apply_action(state, "p1", action(state, "p1", "reveal_for_bot"))[1])
+        # A human in another park cannot flip either bot in this park.
+        state = new_game(4)
+        seats = state["matches"][0]["seats"]
+        for pid in seats:
+            state["players"][pid]["stage"] = "ready"
+        _begin_match(state, state["matches"][0])
+        other = next(pid for pid in state["order"] if pid not in seats)
+        state["players"][other]["is_bot"] = False
+        before = copy.deepcopy(state)
+        self.assertIsNotNone(Game.apply_action(state, other, action(state, other, "reveal_for_bot"))[1])
+        self.assertEqual(state, before)
+
+    def test_bot_resolves_own_effect_but_waits_for_next_reveal(self):
+        state = battlefield({"draw": ["juggler", "newcomer", "newcomer", "horse"]},
+                            {"field": ["dragon"], "draw": ["dog"]})
+        state["players"]["p1"]["is_bot"] = False
+        act(state, "p1", "reveal_for_bot")
+        self.assertEqual(Game.get_legal_actions(state, "p1"), [])
+        self.assertIsNone(Game.get_public_view(state, "p1")["choice"])
+        revision = state["players"]["p1"]["revision"]
+        candidate = Game.bot_move(state, "p0")
+        self.assertEqual(candidate["type"], "resolve")
+        self.assertIsNone(Game.apply_action(state, "p0", candidate)[1])
+        self.assertGreater(state["players"]["p1"]["revision"], revision)
+        self.assertEqual(Game.get_legal_actions(state, "p1"), ["reveal_for_bot"])
+        self.assertIsNone(Game.bot_move(state, "p0"))
+        self.assertEqual(len(state["matches"][0]["lanes"]["p0"]["draw"]), 3)
+        validate_state(state)
+
+    def test_bot_setup_card_waits_for_human_including_robot(self):
+        for count in (1, 2):
+            with self.subTest(count=count):
+                state = new_game(count)
+                state["players"]["p0"]["is_bot"] = False
+                bot = ROBOT_ID if count == 1 else "p1"
+                for pid, player in state["players"].items():
+                    for uid in player["offer"]:
+                        _discard(state, uid)
+                    player.update(offer=[], stage="trim" if pid == "p0" else "ready")
+                state["matches"][0]["seats"] = [bot, "p0"]
+                with patch("game.challengers._shuffle"):
+                    act(state, "p0", "ready", remove_ids=[])
+                match = state["matches"][0]
+                self.assertIsNone(match["holder"])
+                self.assertEqual(match["turn"], bot)
+                self.assertEqual(match["lanes"][bot]["field"], [])
+                self.assertEqual(Game.get_legal_actions(state, "p0"), ["reveal_for_bot"])
+                state = Game.deserialize(json.loads(json.dumps(Game.serialize(state))))
+                act(state, "p0", "reveal_for_bot")
+                self.assertEqual(state["matches"][0]["holder"], bot)
+                self.assertEqual(len(state["matches"][0]["lanes"][bot]["field"]), 1)
+                self.assertEqual(Game.get_legal_actions(state, "p0"), ["reveal"])
+                validate_state(state)
+
+    def test_robot_waits_after_human_captures_flag(self):
+        state = battlefield({"draw": ["horse", "horse"]},
+                            {"field": ["champion"], "draw": ["newcomer", "newcomer", "horse"]})
+        substitute_robot(state)
+        state["players"]["p0"]["is_bot"] = False
+        act(state, "p0", "reveal")
+        self.assertEqual(state["matches"][0]["turn"], ROBOT_ID)
+        self.assertEqual(len(state["matches"][0]["lanes"][ROBOT_ID]["draw"]), 3)
+        self.assertEqual(Game.get_legal_actions(state, "p0"), ["reveal_for_bot"])
+        act(state, "p0", "reveal_for_bot")
+        self.assertEqual(len(state["matches"][0]["lanes"][ROBOT_ID]["draw"]), 2)
+        self.assertEqual(Game.get_legal_actions(state, "p0"), ["reveal_for_bot"])
+        validate_state(state)
+
+    def test_mixed_tournaments_complete_with_human_pacing(self):
+        for count in (1, 2, 3, 4):
+            with self.subTest(count=count):
+                state = new_game(count, seed=124 + count)
+                state["players"]["p0"]["is_bot"] = False
+                proxy_reveals = 0
+                for _ in range(1400):
+                    if state["game_over"]:
+                        break
+                    moved = False
+                    for pid in state["order"]:
+                        candidate = Game.bot_move(state, pid)
+                        if candidate:
+                            if candidate["type"] == "reveal_for_bot":
+                                self.assertEqual(pid, "p0")
+                                proxy_reveals += 1
+                            self.assertIsNone(Game.apply_action(state, pid, candidate)[1])
+                            moved = True
+                    self.assertTrue(moved, state["phase"])
+                self.assertTrue(state["game_over"])
+                self.assertGreater(proxy_reveals, 0)
+                validate_state(state)
 
 
 class ChallengersAITests(unittest.TestCase):

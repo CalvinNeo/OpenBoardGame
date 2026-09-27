@@ -33,6 +33,7 @@
     ready: "选中要永久移除的牌，再点 Ready；不选任何牌即可原样参赛。同名牌共用替补席(🪑)，但牌组不限制六种。双方 Ready 后独立开始对战。",
     level: "A 为初级、B 为中级、C 为高级。每轮允许的等级和选牌张数不同，选择后本轮不能更换。",
     reveal: "Reveal 翻开牌顶一张，先处理能力，再比较战力(⚔️)。攻击可累加多张；达到防守战力就必须立即夺旗(🚩)，此后只有最后一张防守。",
+    reveal_for_bot: "Reveal for Bot 替你的 Bot / Robot 对手翻开一张牌，每张都由你点击推进。Bot 仍自动选择技能目标；能力处理完毕后再继续翻牌。",
     resolve: "选择卡牌能力的目标，再点 Confirm。顺序选择中的编号表示牌顶到牌底；可选能力可 Skip。看牌信息只有你能看到。",
     next: "本轮场面与奖杯(🏆)结果会保留到每个席位确认 Next Round。房间 AI 自动确认，真人及断线席位必须本人确认。",
     bench: "替补席(🪑)最多六种名称。同名牌叠放一格，即使等级不同。失旗时整叠进入替补席，放不下就输；替补能力逐张叠加。",
@@ -150,8 +151,10 @@
         ${view.finalists.length ? `<p class="ch-caption">🏁 决赛：${view.finalists.map(p => esc(name(p))).join(" · ")}</p>` : ""}
         <div class="ch-actions">${button(view.next_ready.includes(view.you) ? "Waiting for others" : "Next Round", "next", "next", !legal("next_round"), 'class="ch-primary"')}</div>
         <p class="ch-caption">${view.next_ready.length}/${view.players.filter(p => !p.robot).length} ready</p>`;
-    } else if (legal("reveal") || pending && pendingRevision !== null && view.legal_actions.includes("reveal")) {
-      body = `<div class="ch-status">⚔️ 轮到你进攻</div><div class="ch-actions">${button(pending ? "Revealing…" : "Reveal", "reveal", "reveal", !legal("reveal"), 'class="ch-primary"')}</div>`;
+    } else if (view.legal_actions.includes("reveal") || view.legal_actions.includes("reveal_for_bot")) {
+      const forBot = view.legal_actions.includes("reveal_for_bot");
+      const action = forBot ? "reveal_for_bot" : "reveal";
+      body = `<div class="ch-status">${forBot ? `🤖 ${esc(name(ownMatch()?.turn))} 进攻` : "⚔️ 轮到你进攻"}</div><div class="ch-actions">${button(pending ? "Revealing…" : forBot ? "Reveal for Bot" : "Reveal", action, action, !legal(action), `class="${forBot ? "ch-bot-reveal" : "ch-primary"}"`)}</div>`;
     } else {
       const match = ownMatch();
       const waiting = match?.choosing || match?.turn;
@@ -187,6 +190,30 @@
     }
   }
 
+  function syncContent(current, next) {
+    // Retain live card buttons: replacing them restarts hover transitions and
+    // can lose a click if a server update arrives between pointerdown and up.
+    const previous = [...current.childNodes];
+    const incoming = [...next.childNodes];
+    incoming.forEach((fresh, index) => {
+      const old = previous[index];
+      if (!old) { current.append(fresh); return; }
+      if (old.isEqualNode(fresh)) return;
+      const differentCardOrList = old.nodeType === Node.ELEMENT_NODE && fresh.nodeType === Node.ELEMENT_NODE &&
+        ["chCard", "chScroll", "chAction"].some(key => old.dataset[key] !== fresh.dataset[key]);
+      if (old.nodeName !== fresh.nodeName || differentCardOrList) {
+        old.replaceWith(fresh);
+      } else if (old.nodeType !== Node.ELEMENT_NODE) {
+        old.nodeValue = fresh.nodeValue;
+      } else {
+        [...old.attributes].forEach(attr => { if (!fresh.hasAttribute(attr.name)) old.removeAttribute(attr.name); });
+        [...fresh.attributes].forEach(attr => { if (old.getAttribute(attr.name) !== attr.value) old.setAttribute(attr.name, attr.value); });
+        syncContent(old, fresh);
+      }
+    });
+    previous.slice(incoming.length).forEach(node => node.remove());
+  }
+
   function render() {
     if (!view) { content.replaceChildren(); return; }
     const context = JSON.stringify([view.you, view.round, view.phase, view.stage, view.choice?.source.id, view.choice?.kind]);
@@ -197,9 +224,12 @@
     const drafting = ["choose_level", "pick", "trim"].includes(view.stage) && !view.game_over && view.phase !== "round_end";
     const own = view.players.find(p => p.player_id === view.you);
     const subtitle = view.game_over ? "TOURNAMENT COMPLETE" : view.round === 8 ? "THE GRAND FINAL" : drafting ? "BUILD YOUR TEAM. CAPTURE THE FLAG." : "HOLD THE FLAG. TAKE THE TROPHY.";
-    content.innerHTML = `<div class="ch-hero"><div><div class="ch-eyebrow">Challengers! / ${subtitle}</div><h2>冠军挑战者</h2><div class="ch-hero-sub">${view.sets.map(s => `<span ${tipAttrs(`${view.set_info[s].name}(${view.set_info[s].icon})：本局启用的卡牌系列`)}>${view.set_info[s].icon}</span>`).join(" ")} · ${view.players.filter(p => !p.robot).length} players${view.players.some(p => p.robot) ? " + Robot" : ""}</div></div><div class="ch-round"><strong>${view.round === 8 ? "🏆" : String(view.round).padStart(2, "0")}</strong><span>${view.round === 8 ? "FINAL" : "ROUND / 07"}</span></div></div>
+    const template = document.createElement("template");
+    template.innerHTML = `<div class="ch-hero"><div><div class="ch-eyebrow">Challengers! / ${subtitle}</div><h2>冠军挑战者</h2><div class="ch-hero-sub">${view.sets.map(s => `<span ${tipAttrs(`${view.set_info[s].name}(${view.set_info[s].icon})：本局启用的卡牌系列`)}>${view.set_info[s].icon}</span>`).join(" ")} · ${view.players.filter(p => !p.robot).length} players${view.players.some(p => p.robot) ? " + Robot" : ""}</div></div><div class="ch-round"><strong>${view.round === 8 ? "🏆" : String(view.round).padStart(2, "0")}</strong><span>${view.round === 8 ? "FINAL" : "ROUND / 07"}</span></div></div>
       <div class="ch-track">${Array.from({length: 8}, (_, i) => `<span class="${i + 1 === view.round ? "is-current" : i + 1 < view.round ? "is-past" : ""}" ${tipAttrs(i < 7 ? `第 ${i + 1} 轮：${["A×2", "A×2", "A×2 / B×1", "A×2 / B×2", "B×2", "B×2 / C×1", "C×2"][i]}` : "决赛：不抽新牌，可以移除牌")}>${i < 7 ? i + 1 : "🏆"}</span>`).join("")}</div>
       ${scoreHTML()}<div class="ch-layout${drafting ? "" : " ch-match-layout"}">${drafting ? `<div>${draftHTML()}</div>${deckHTML()}` : `<div>${arenaHTML()}</div><div>${controlsHTML()}${own && view.deck.length && view.phase !== "round_end" && !view.game_over ? deckHTML() : ""}</div>`}</div>`;
+    if (keepPosition) syncContent(content, template.content);
+    else content.replaceChildren(template.content);
     panel.classList.toggle("ch-explaining", explaining);
     if (keepPosition) {
       content.querySelectorAll("[data-ch-scroll]").forEach(node => {
@@ -253,6 +283,7 @@
       <h3>🃏 组牌与赛程</h3><p>每人以三张新人、一张天才、一张狗和一张冠军开始。城市必选，其他六个系列选五个。每轮选择等级，查看五张候选，逐张选择。每轮可以 Redraw 一次全部剩余候选，已选第一张后也可以重抽。选完后可移除任意数量牌，再 Ready。不同公园独立进行；配对表轮转，八席前七轮会遇到所有对手，较少席位循环配对。</p>
       <table><tr><th>轮次</th><th>可选等级 / 张数</th></tr>${["A × 2", "A × 2", "A × 2 或 B × 1", "A × 2 或 B × 2", "B × 2", "B × 2 或 C × 1", "C × 2"].map((t, i) => `<tr><td>${i + 1}</td><td>${t}</td></tr>`).join("")}</table>
       <h3>⚔️ 夺旗对战</h3><p>开局洗牌。第一轮随机决定先持旗者，之后由最高轮次奖杯的持有者先持旗，相同则随机。首张牌也执行效果。攻击方 Reveal 逐张翻牌，累计战力(⚔️)一旦达到防守战力立即夺旗。只有最后翻出的牌负责防守，之前的攻击牌压在下面，不再有战力或效果。</p>
+      <p>对手为 Bot / Robot 时，由你点击红色 Reveal for Bot 逐张替对手翻牌，Bot 先手的首张牌也由你推进。Bot 的组牌及技能目标仍自动选择；两个 Bot 之间的比赛自动进行。</p>
       <p>失旗时整叠牌进入六格替补席(🪑)，同名牌叠在同一格，等级 S/A/B/C 不影响同名判定。需要第七格，或者攻击方用尽牌库仍无法夺旗，便输掉比赛。疲劳区(💤)不限卡数，下一轮收回；永久移除的牌不会收回。S 起始牌移出游戏，其他移除牌进入相应等级的弃牌；等级牌堆耗尽时重洗弃牌。</p>
       <h3>✨ 效果时机</h3><p>普通效果翻出时处理；立即获得的战力奖励保留到这张牌失旗。攻击中能力只在本次攻击生效；持旗能力只在最上方牌持旗时生效。替补席能力持续生效，同名多张逐张叠加。失旗效果先于新持旗者的能力。选中时能力只在本轮选中那一次处理。必须执行的选择不能 Skip，可选能力能 Skip；排序编号从牌顶向下排列。</p>
       <h3>🏆 奖杯、粉丝与决赛</h3><p>每个公园每轮胜者获得奖杯(🏆)，其粉丝(⭐)价值逐轮增加。多人局奖杯分数仅本人可见，粉丝标记公开。第七轮结束公开全部分数，前二进入决赛；同分先比奖杯数量，再比最高轮次奖杯。决赛不选新牌，可以删牌，最终胜者成为冠军。其他人可观战。</p>
@@ -286,7 +317,7 @@
       if (action === "ready") submit({type: "ready", remove_ids: selected});
       if (action === "resolve") submit({type: "resolve", card_ids: selected});
       if (action === "skip") submit({type: "resolve", card_ids: []});
-      if (action === "reveal") submit({type: "reveal"});
+      if (action === "reveal" || action === "reveal_for_bot") submit({type: action});
       if (action === "next") submit({type: "next_round"});
       return;
     }

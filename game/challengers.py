@@ -24,7 +24,8 @@ ACTION_SCHEMA = {"oneOf": [
     _schema("choose_level", {"level": {"enum": ["A", "B", "C"]}}),
     _schema("pick", {"card_id": {"type": "string"}}),
     _schema("redraw", {}), _schema("resolve", {"card_ids": _IDS}),
-    _schema("ready", {"remove_ids": _IDS}), _schema("reveal", {}), _schema("next_round", {}),
+    _schema("ready", {"remove_ids": _IDS}), _schema("reveal", {}),
+    _schema("reveal_for_bot", {}), _schema("next_round", {}),
 ]}
 CONFIG_SCHEMA = {
     "type": "object", "properties": {
@@ -331,12 +332,23 @@ def _end_match(state: Dict, match: Dict, winner: str, reason: str) -> None:
             state["finalists"] = ranking[:2]
 
 
+def _reveal_controller(state: Dict, match: Dict, pid: str) -> str:
+    """A human controls the pace of both sides of a match against a bot."""
+    other = _opponent(match, pid)
+    if state["players"][pid]["is_bot"] and not state["players"][other]["is_bot"]:
+        return other
+    return pid
+
+
 def _attack_turn(state: Dict, match: Dict, pid: str) -> None:
     if not match["lanes"][pid]["draw"]:
         _end_match(state, match, _opponent(match, pid), "deck_empty")
     else:
         match["turn"] = pid
         state["players"][pid]["revision"] += 1
+        controller = _reveal_controller(state, match, pid)
+        if controller != pid:
+            state["players"][controller]["revision"] += 1
 
 
 def _pump(state: Dict, match: Dict) -> None:
@@ -443,8 +455,9 @@ def _begin_match(state: Dict, match: Dict) -> None:
     _shuffle(state, starters)
     starters.sort(key=lambda p: max([t["round"] for t in state["players"][p]["trophies"]], default=0), reverse=True)
     match["turn"] = starters[0]
-    # The first card is the setup reveal, including all of its immediate effects.
-    _reveal(state, match, starters[0])
+    # Bot setup reveals also wait for their human opponent to press the button.
+    if _reveal_controller(state, match, starters[0]) == starters[0]:
+        _reveal(state, match, starters[0])
 
 
 def _automate_robot(state: Dict) -> None:
@@ -453,6 +466,8 @@ def _automate_robot(state: Dict) -> None:
     for match in state["matches"]:
         for _ in range(400):
             if match["status"] != "playing" or match["turn"] != ROBOT_ID or match["pending"]:
+                break
+            if _reveal_controller(state, match, ROBOT_ID) != ROBOT_ID:
                 break
             _reveal(state, match, ROBOT_ID)
         else:
@@ -572,6 +587,10 @@ def _apply(state: Dict, pid: str, action: Dict) -> None:
         _begin_match(state, match)
     elif kind == "reveal":
         _reveal(state, match, pid)
+    elif kind == "reveal_for_bot":
+        attacker = match["turn"]
+        _reveal(state, match, attacker)
+        state["players"][attacker]["revision"] += 1
     elif kind == "next_round":
         state["next_ready"].append(pid)
         if set(state["next_ready"]) == set(state["order"]):
@@ -754,8 +773,9 @@ class ChallengersGame:
         if match and match["status"] == "playing":
             if match["pending"]:
                 return ["resolve"] if match["pending"]["player_id"] == player_id else []
-            if match["turn"] == player_id:
-                return ["reveal"]
+            attacker = match["turn"]
+            if attacker and _reveal_controller(state, match, attacker) == player_id:
+                return ["reveal" if attacker == player_id else "reveal_for_bot"]
         return []
 
     @staticmethod

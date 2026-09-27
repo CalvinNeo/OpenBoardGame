@@ -1,8 +1,8 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "challengers": {
-    "scripts": ["/static/games/challengers.js?v=4"],
-    "styles": ["/static/games/challengers.css?v=4"],
+    "scripts": ["/static/games/challengers.js?v=5"],
+    "styles": ["/static/games/challengers.css?v=5"],
     "markup": "/static/games/challengers.html?v=1",
     "panel": "challengersPanel",
     "header": "showChallengersHeaderActions"

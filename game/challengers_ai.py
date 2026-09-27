@@ -187,4 +187,6 @@ def choose_action(view: Dict) -> Optional[Dict]:
         return {**action, "type": "ready", "remove_ids": [c["id"] for c in view["deck"] if c["id"] not in keep]}
     if "reveal" in legal:
         return {**action, "type": "reveal"}
+    if "reveal_for_bot" in legal:
+        return {**action, "type": "reveal_for_bot"}
     raise ValueError(f"Unhandled Challengers action: {legal}")
