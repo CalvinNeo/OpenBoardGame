@@ -2649,6 +2649,7 @@ def _compute_lead_cheap_option_score(
         score -= 18.0 + _bomb_tier(combo) * 2.4
 
     score -= _lead_shared_pair_run_break_penalty(features, combo, state["level_rank"])
+    score -= _full_house_control_pair_penalty(state, player_id, cards, combo)
     score -= _lead_shared_opening_commitment_penalty(state, player_id, combo)
     score -= _lead_enemy_lane_exposure(state, player_id, combo)
 
@@ -3060,6 +3061,47 @@ def _control_group_break_penalty(hand: List[Dict], cards: List[int], level_rank:
             penalty += 1.1 + removed * 0.35 + control * 0.35
         elif before_count == 2 and strength >= 59 and removed == 1:
             penalty += 0.8 + control * 0.3
+    return penalty
+
+
+def _full_house_control_pair_penalty(
+    state: Dict, player_id: str, cards: List[int], combo: Dict,
+) -> float:
+    """Price a control pair spent as cargo, even when neither card is split off."""
+    if combo.get("type") != "full_house":
+        return 0.0
+    hand = state["players"][player_id]["hand"]
+    if len(cards) == len(hand):
+        return 0.0
+    level = state["level_rank"]
+    selected = set(cards)
+    groups: Dict[Tuple, int] = {}
+    for card in hand:
+        if card["id"] not in selected or _is_wild(card, level):
+            continue
+        key = (card.get("rank"), card.get("joker"))
+        groups[key] = groups.get(key, 0) + 1
+    penalty = 0.0
+    for (rank, joker), count in groups.items():
+        if count != 2:
+            continue
+        value = _point_order_value(rank, level, joker)
+        if value == combo.get("rank_value"):
+            continue  # This pair plus a wildcard is the triple, not the cargo.
+        if joker:
+            penalty = max(penalty, 24.0)
+        elif rank == level:
+            penalty = max(penalty, 22.0)
+        elif rank == 14:
+            penalty = max(penalty, 16.0)
+    if not state.get("current_trick"):
+        penalty *= 1.2
+    else:
+        leader = state["current_trick"].get("player_id")
+        if (leader and _team_of(state, leader) != _team_of(state, player_id)
+                and len(state["players"][leader]["hand"]) <= 2):
+            # Blocking an imminent finish can justify expensive cargo.
+            penalty *= 0.35
     return penalty
 
 
@@ -6811,23 +6853,19 @@ def _bomb_response_closeout_bonus(
     if seen_count < 12 and history_confidence < 0.55:
         return 0.0
 
-    followup_ids = _choose_lead_play(remaining, level_rank, config, state, player_id)
-    if not followup_ids or len(followup_ids) != len(remaining):
-        return 0.0
-
-    remaining_map = _map_hand_by_id(remaining)
-    followup_cards = [remaining_map[cid] for cid in followup_ids if cid in remaining_map]
-    followup_combo = _evaluate_combo(followup_cards, level_rank, config)
+    # Winning this bomb trick supplies the final lead. Once that whole hand is
+    # played its finish rank is recorded immediately; it need not beat replies.
+    # Recognize the residual combo directly, without another lead search.
+    followup_combo = _evaluate_combo(remaining, level_rank, config)
     if not followup_combo:
         return 0.0
 
     unknown_cards = _lead_unknown_pool_cards(state, player_id)
-    unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
+    unknown_total, rank_counts, _wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
     if not active_opponents:
         return 0.0
 
     bomb_hold_prob = 1.0
-    followup_hold_prob = 1.0
     for opp in active_opponents:
         overbomb_prob = _opponent_overbomb_reply_probability(
             state,
@@ -6840,32 +6878,7 @@ def _bomb_response_closeout_bonus(
         )
         bomb_hold_prob *= max(0.0, 1.0 - overbomb_prob)
 
-        same_type_prob = _opponent_same_type_reply_probability(
-            state,
-            opp,
-            followup_combo,
-            unknown_total,
-            rank_counts,
-            wild_count,
-            unknown_cards=unknown_cards,
-        )
-        bomb_reply_prob = _opponent_bomb_reply_probability(
-            state,
-            opp,
-            followup_combo,
-            unknown_total,
-            rank_counts,
-            joker_counts,
-            unknown_cards=unknown_cards,
-        )
-        followup_reply_prob = 1.0 - (1.0 - same_type_prob) * (1.0 - bomb_reply_prob)
-        followup_reply_prob = min(
-            1.0,
-            followup_reply_prob + _opponent_followup_reply_bias(state, opp, followup_combo),
-        )
-        followup_hold_prob *= max(0.0, 1.0 - followup_reply_prob)
-
-    closeout_prob = bomb_hold_prob * followup_hold_prob
+    closeout_prob = bomb_hold_prob
     if closeout_prob <= 0.0:
         return 0.0
 
@@ -10994,7 +11007,9 @@ def _determinize_state(
 
     config = det.get("config", {})
     sample_count = max(1, int(config.get("bot_determinize_samples", 5)))
-    remaining_budget = _deadline_remaining(deadline)
+    remaining_budget = getattr(_CORE_LOCAL, "determinize_sampling_budget", None)
+    if remaining_budget is None:
+        remaining_budget = _deadline_remaining(deadline)
     short_budget_threshold_ms = max(
         25.0,
         float(config.get("bot_determinize_short_budget_threshold_ms", 350)),
@@ -11188,6 +11203,12 @@ def _should_accept_mcts_override(
         return True
     if _mcts_action_key(heuristic_action) == _mcts_action_key(mcts_action):
         return True
+    search_status = state.get("_ai_eval_cache", {}).get("mcts_anytime", {})
+    if (search_status.get("fallback_to_reference")
+            or search_status.get("completed_depth") == 0):
+        # Re-evaluating sampled root hands without a reply is not evidence to
+        # overturn the completed public-information tactical decision.
+        return False
     if _retained_bomb_override_is_unsafe(state, bot_id, heuristic_action, mcts_action):
         return False
     if (
@@ -12057,6 +12078,13 @@ def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
         if len(cards) == len(hand):
             return 0.0
         combo_type = combo.get("type") or ""
+        if (combo_type in BOMB_TYPES
+                and _bomb_response_closeout_bonus(
+                    state, player_id, cards, combo, _remove_cards(hand, cards)
+                ) >= 8.0):
+            # A usable bomb plus a final whole hand is already a route out.
+            # Enemy hand length alone must not reward waiting with that route.
+            return 0.0
         uses_special = _cards_use_special_material(play_cards, state["level_rank"])
         material_cost = _response_material_cost(state, player_id, cards, combo)
         fragment_penalty = _group_fragment_penalty(hand, cards, state["level_rank"], combo)
@@ -12651,6 +12679,7 @@ def _mcts_score_actions(
 ) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
     root_candidate_count = 0
     completed_rounds = 0
+    cost_estimate: Dict = {}
 
     def store_status(
         stop_reason: str,
@@ -12667,6 +12696,7 @@ def _mcts_score_actions(
             "fallback_to_reference": fallback_to_reference,
             "candidates": root_candidate_count,
             "completed_rounds": completed_rounds,
+            "cost_estimate": dict(cost_estimate),
         }
 
     legal = GuandanGame.get_legal_actions(state, bot_id)
@@ -12927,6 +12957,10 @@ def _mcts_score_actions(
     # Reuse this small panel at every depth. A deeper result only replaces the
     # checkpoint after ALL root actions have finished on the SAME worlds.
     panel_size = min(sims_per, confidence_min_pairs)
+    cost_guard = deadline is not None and bool(cfg.get("bot_mcts_cost_guard", True))
+    minimum_depth = min(1, effective_depth)
+    determinize_seconds = 0.0
+    root_seconds: List[float] = []
     particles: List[Dict] = []
     published_scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     published_active_keys = {_mcts_action_key(action) for action in candidates}
@@ -12990,7 +13024,54 @@ def _mcts_score_actions(
             if round_idx < len(particles):
                 particle = particles[round_idx]
             else:
-                particle = _CORE._determinize_state(state, bot_id, rng, deadline)
+                probe_start = time.perf_counter()
+                particle_deadline = deadline
+                if cost_guard and not particles:
+                    # Bound the pilot itself. A single history-weighted world
+                    # must not spend the entire search budget before costing it.
+                    fraction = max(0.01, min(0.5, float(
+                        cfg.get("bot_mcts_cost_probe_fraction", 0.15)
+                    )))
+                    particle_deadline = probe_start + max(0.0, deadline - probe_start) * fraction
+                previous_sampling_budget = getattr(_CORE_LOCAL, "determinize_sampling_budget", None)
+                if cost_guard and not particles:
+                    # The pilot timeout only limits measurement. Keep the same
+                    # posterior proposal count/history model as the real budget.
+                    _CORE_LOCAL.determinize_sampling_budget = max(0.0, deadline - probe_start)
+                try:
+                    particle = _CORE._determinize_state(state, bot_id, rng, particle_deadline)
+                finally:
+                    if previous_sampling_budget is None:
+                        if hasattr(_CORE_LOCAL, "determinize_sampling_budget"):
+                            delattr(_CORE_LOCAL, "determinize_sampling_budget")
+                    else:
+                        _CORE_LOCAL.determinize_sampling_budget = previous_sampling_budget
+                probe_end = time.perf_counter()
+                determinize_seconds = max(determinize_seconds, probe_end - probe_start)
+                if cost_guard and not particles:
+                    remaining_seconds = max(0.0, deadline - probe_end)
+                    # Three paired worlds are required before a sampled result
+                    # can replace the reference. This is a measured lower bound,
+                    # before paying for any reply-tree or leaf evaluations.
+                    projected = determinize_seconds * max(0, panel_size - 1)
+                    cost_estimate.update(
+                        determinize_probe_ms=round(determinize_seconds * 1000.0, 3),
+                        probe_budget_ms=round((particle_deadline - probe_start) * 1000.0, 3),
+                        probe_complete=probe_end < particle_deadline,
+                        minimum_remaining_ms=round(projected * 1000.0, 3),
+                        remaining_ms=round(remaining_seconds * 1000.0, 3),
+                        minimum_depth=minimum_depth,
+                        required_worlds=panel_size,
+                    )
+                    if probe_end >= particle_deadline or projected > remaining_seconds:
+                        # A deadline-truncated pilot is not a completed posterior
+                        # sample. Discard it and retain the heuristic decision.
+                        stop_reason = "cost_guard"
+                        cost_estimate["reason"] = ("probe_deadline" if probe_end >= particle_deadline
+                                                   else "insufficient_world_budget")
+                        deadline_limited = True
+                        interrupted_depth = search_depth
+                        break
                 if round_idx < panel_size:
                     particles.append(particle)
             round_values: Dict[Tuple, float] = {}
@@ -13008,12 +13089,15 @@ def _mcts_score_actions(
                         stop_reason = "invalid_candidate"
                         interrupted_depth = search_depth
                         break
+                    evaluation_started = time.perf_counter()
                     value = _CORE._mcts_reply_tree_value(
                         det, bot_id, round_tree_ply,
                         max(1, effective_reply_width), round_rollout_depth,
                     )
                     if _deadline_expired(deadline):
                         raise _MctsSearchInterrupted
+                    if search_depth == 0:
+                        root_seconds.append(time.perf_counter() - evaluation_started)
                     round_values[key] = value
                     if attempted_visits % report_stride == 0:
                         _report_progress_scaled(
@@ -13060,6 +13144,27 @@ def _mcts_score_actions(
             published_active_keys = active_keys
             completed_depth = search_depth
             completed_rounds = round_idx
+
+            if cost_guard and search_depth == 0 and root_seconds:
+                # Use the slowest measured root leaf, not an assumed simulations
+                # per second constant. Even one reply per root needs another
+                # complete paired panel; deeper trees can only cost more.
+                pending_worlds = max(0, panel_size - len(particles))
+                pending_roots = (panel_size - round_idx + minimum_depth * panel_size) * len(candidates)
+                projected = (pending_worlds * determinize_seconds
+                             + max(0, pending_roots) * max(root_seconds))
+                remaining_seconds = max(0.0, deadline - time.perf_counter())
+                cost_estimate.update(
+                    root_leaf_ms=round(max(root_seconds) * 1000.0, 3),
+                    minimum_remaining_ms=round(projected * 1000.0, 3),
+                    remaining_ms=round(remaining_seconds * 1000.0, 3),
+                )
+                if projected > remaining_seconds:
+                    stop_reason = "cost_guard"
+                    cost_estimate["reason"] = "insufficient_reply_budget"
+                    deadline_limited = True
+                    interrupted_depth = search_depth
+                    break
 
             # A shallow ranking must not permanently remove an action that
             # could become best after an opponent's reply is examined.
@@ -13125,7 +13230,7 @@ def _mcts_score_actions(
             heuristic_values, heuristic_center, heuristic_scale, heuristic_weight,
             risk_lambda, 0, 0, effective_reply_width, confidence_z,
         )
-    confidence_ready = completed_depth is not None and all(
+    confidence_ready = stop_reason != "cost_guard" and completed_depth is not None and all(
         item[3].get("paired_count", 0) >= confidence_min_pairs
         for item in published_scored
         if _mcts_action_key(item[0]) in published_active_keys
@@ -14516,9 +14621,6 @@ def _compute_bot_score_components(
             teammate_lane_bomb_penalty = _bomb_overcall_teammate_lane_penalty(state, bot_id, cards, combo)
             if teammate_lane_bomb_penalty > 0.001:
                 components["respect_teammate_lane"] = -teammate_lane_bomb_penalty
-            closeout_bonus = _bomb_response_closeout_bonus(state, bot_id, cards, combo, remaining)
-            if closeout_bonus > 0.001:
-                components["bomb_closeout_ev"] = closeout_bonus
             short_enemy_bonus = _short_enemy_bomb_takeover_bonus(state, bot_id, cards, combo, remaining)
             if short_enemy_bonus > 0.001:
                 components["bomb_short_enemy_block"] = short_enemy_bonus
@@ -14547,6 +14649,9 @@ def _compute_bot_score_components(
             components["block_closeout"] = closeout_block
 
     if not current_trick:
+        control_pair = _full_house_control_pair_penalty(state, bot_id, cards, combo)
+        if control_pair > 0.001:
+            components["full_house_control_pair"] = -control_pair
         # Lead ranking has already populated the per-decision cache, so the
         # detailed score is reused here instead of computed a second time.
         lead_score = _lead_option_score(state, bot_id, cards)
@@ -15340,6 +15445,14 @@ def _shared_response_tactical_components(
         return dict(cached)
 
     components: Dict[str, float] = {}
+    control_pair = _full_house_control_pair_penalty(state, player_id, cards, combo)
+    if control_pair > 0.001:
+        components["full_house_control_pair"] = -control_pair
+    closeout = _bomb_response_closeout_bonus(
+        state, player_id, cards, combo, features.get("remaining") or [],
+    )
+    if closeout > 0.001:
+        components["bomb_closeout_ev"] = closeout
     teammate = _teammate_of(state, player_id)
     teammate_play = (state.get("trick_plays") or {}).get(teammate) if teammate else None
     teammate_can_retake = False

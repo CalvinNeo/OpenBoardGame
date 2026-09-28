@@ -260,7 +260,9 @@ class GuandanSharedTeammateWaitTests(unittest.TestCase):
                 action = guandan.GuandanGame.bot_move(state, "bot2")
             self.assertEqual(action["type"], "pass")
             explain = state["bot_explain"]["bot2"]
-            self.assertEqual(explain["method"], "mcts")
+            # A complete root-only panel still examined no replies, so auto
+            # now retains the heuristic method as well as its teammate wait.
+            self.assertEqual(explain["method"], "heuristic")
             self.assertEqual(explain["method_details"]["mcts_completed_depth"], 0)
             self.assertEqual(explain["method_details"]["mcts_completed_rounds"], 3)
 

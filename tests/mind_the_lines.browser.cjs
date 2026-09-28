@@ -28,7 +28,7 @@ fs.mkdirSync(output, {recursive: true});
       const bad = [...panel.querySelectorAll('*')].filter(n => {
         const r = n.getBoundingClientRect();
         if (!r.width || !r.height || n.closest('svg')) return false;
-        return r.right > innerWidth + 1 || r.left < -1;
+        return r.right > innerWidth + 1 || r.left < -1 || (n.clientWidth > 0 && n.scrollWidth > n.clientWidth + 2);
       }).map(n => n.id || n.className);
       return {page: document.documentElement.scrollWidth > innerWidth + 1, bad};
     });
@@ -163,9 +163,25 @@ fs.mkdirSync(output, {recursive: true});
     }
     assert.equal((await view(a)).game_over,true);
     await layout(a,'final-desktop'); await layout(b,'final-320');
+    const fixturePath=`${output}/views.json`;
+    if(fs.existsSync(fixturePath)) {
+      const fixtures=JSON.parse(fs.readFileSync(fixturePath,'utf8'));
+      for(const width of [1440,390,320]) {
+        await a.setViewportSize({width,height:960});
+        for(const [label,fixture] of Object.entries(fixtures)) {
+          await a.evaluate(fixture=>{
+            const copy=structuredClone(fixture);
+            copy.server_now_ms=Date.now();
+            if(copy.phase==='drawing')copy.deadline_ms=Date.now()+120000;
+            renderMindTheLinesGameState({game_type:'mind_the_lines',room_id:roomId,view:copy});
+          },fixture);
+          await layout(a,`eight-${label}-${width}`);
+        }
+      }
+    }
     assert.deepEqual(errors,[]);
     passed = true;
-    console.log('Mind the Lines browser checks passed: four rounds, two players, draft/reconnect, touch, rotation/undo, Help/Explain, result gate, desktop/390/320px.');
+    console.log('Mind the Lines browser checks passed: four rounds, draft/reconnect, touch, eraser/flip/rotate/undo, Help/Explain, touch hints, result gate, desktop/390/320px and available eight-player fixtures.');
   } finally {
     if (!passed) for (let i=0; i<contexts.length; i++) {
       const p=contexts[i].pages()[0];

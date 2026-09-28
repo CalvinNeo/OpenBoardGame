@@ -82,6 +82,8 @@ DEFAULT_CONFIG = {
     "bot_search_finalize_reserve_ms": 35,
     "bot_endgame_search_reserve_ratio": 0.5,
     "bot_mcts_time_ms": 220,
+    "bot_mcts_cost_guard": True,
+    "bot_mcts_cost_probe_fraction": 0.15,
     "bot_mcts_short_budget_threshold_ms": 350,
     "bot_mcts_short_budget_depth": 1,
     "bot_mcts_short_budget_tree_ply": 0,
@@ -2739,7 +2741,10 @@ class GuandanGame:
                     )
                     has_real_search = any(count > 0 for _, _, count, _ in (mcts_scores or []))
                     has_fast_path = any((stats or {}).get("fast_path") for _, _, _, stats in (mcts_scores or []))
-                    if not has_real_search and not has_fast_path:
+                    if (not has_fast_path and (
+                        not has_real_search or mcts_status.get("fallback_to_reference")
+                        or mcts_status.get("completed_depth") == 0
+                    )):
                         mcts_action = None
                         mcts_scores = None
                     mcts_accepted = False
@@ -2793,7 +2798,9 @@ class GuandanGame:
                         "mcts",
                         "full MCTS search",
                         target,
-                        "MCTS reached its deadline before completing the requested rollouts.",
+                        ("The search cost probe could not qualify a paired reply search within budget; the heuristic reference was kept."
+                         if mcts_status.get("stop_reason") == "cost_guard" else
+                         "MCTS reached its deadline before completing the requested rollouts."),
                     )
                 elif (
                     not decided
@@ -2887,6 +2894,7 @@ class GuandanGame:
                             "mcts_interrupted_depth": mcts_status.get("interrupted_depth"),
                             "mcts_budget_ms": mcts_budget_ms,
                             "mcts_stop_reason": mcts_status.get("stop_reason"),
+                            "mcts_cost_estimate": mcts_status.get("cost_estimate", {}),
                         }
                     )
                 timing_meta = {

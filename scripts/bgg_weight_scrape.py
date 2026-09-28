@@ -57,6 +57,11 @@ GAME_URLS = {
     "tacta": "https://boardgamegeek.com/boardgame/401636/tacta",
     "subtext": "https://boardgamegeek.com/boardgame/265684/subtext",
     "kronologic": "https://boardgamegeek.com/boardgame/402111/kronologic-paris-1920",
+    "a_feast_for_odin": "https://boardgamegeek.com/boardgame/177736/a-feast-for-odin",
+    "dune_imperium": "https://boardgamegeek.com/boardgame/316554/dune-imperium",
+    "mind_the_lines": "https://boardgamegeek.com/boardgame/419639/mind-the-lines",
+    "no_thanks": "https://boardgamegeek.com/boardgame/12942/no-thanks",
+    "power_grid": "https://boardgamegeek.com/boardgame/2651/power-grid",
     # word_decode is intentionally omitted: no BGG entry found as of 2026-09-22.
 }
 

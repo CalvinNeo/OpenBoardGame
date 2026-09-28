@@ -10,7 +10,8 @@ from game import guandan, guandan_ai
 class GuandanMctsLayerTests(unittest.TestCase):
     """Deterministic search scheduling tests; no wall-clock timing assertions."""
 
-    def _search(self, evaluate, *, sims=27, depth=2, tree_ply=1, clock=None):
+    def _search(self, evaluate, *, sims=27, depth=2, tree_ply=1, clock=None,
+                determinize_cost=0.0):
         players = [
             {"player_id": pid, "name": pid, "seat": seat, "is_bot": True}
             for seat, pid in enumerate(("bot", "opp", "mate", "opp2"))
@@ -29,6 +30,8 @@ class GuandanMctsLayerTests(unittest.TestCase):
         visits = []
 
         def determinize(_state, _bot, _rng, _deadline):
+            if clock is not None:
+                clock[0] += determinize_cost
             world = {"world": len(worlds), "phase": "playing"}
             worlds.append(world)
             return world
@@ -78,6 +81,77 @@ class GuandanMctsLayerTests(unittest.TestCase):
                 deadline=10.0 if clock is not None else None,
             )
         return picked, scored, state["_ai_eval_cache"]["mcts_anytime"], visits, worlds
+
+    def test_costly_world_probe_stops_before_rollouts_and_keeps_reference(self):
+        picked, _scores, status, visits, worlds = self._search(
+            lambda *_args: 999.0, clock=[0.0], determinize_cost=1.6,
+        )
+        self.assertEqual(picked, {"type": "play", "card_ids": [11]})
+        self.assertEqual(status["stop_reason"], "cost_guard")
+        self.assertTrue(status["fallback_to_reference"])
+        self.assertEqual(status["attempted"], 0)
+        self.assertEqual(visits, [])
+        self.assertEqual(len(worlds), 1)
+        self.assertEqual(status["cost_estimate"]["required_worlds"], 3)
+        self.assertEqual(status["cost_estimate"]["determinize_probe_ms"], 1600.0)
+        self.assertFalse(hasattr(guandan_ai._CORE_LOCAL, "determinize_sampling_budget"))
+
+    def test_expensive_root_panel_cannot_publish_an_unaffordable_search(self):
+        clock = [0.0]
+        def evaluate(_depth, _world, branch):
+            clock[0] += 0.6
+            return 999.0 if branch == 22 else 0.0
+        picked, _scores, status, visits, _worlds = self._search(
+            evaluate, clock=clock, determinize_cost=0.1,
+        )
+        self.assertEqual(status["stop_reason"], "cost_guard")
+        self.assertEqual(status["completed_depth"], 0)
+        self.assertEqual(len(visits), 3)
+        self.assertEqual(picked, {"type": "play", "card_ids": [11]})
+        cost = status["cost_estimate"]
+        self.assertGreater(cost["minimum_remaining_ms"], cost["remaining_ms"])
+
+    def test_cheap_probe_is_reused_and_search_still_finishes(self):
+        clock = [0.0]
+        def evaluate(depth, _world, branch):
+            clock[0] += 0.001
+            return 40.0 if depth > 0 and branch == 22 else 0.0
+        picked, _scores, status, visits, worlds = self._search(
+            evaluate, clock=clock, determinize_cost=0.01,
+        )
+        self.assertEqual(picked, {"type": "play", "card_ids": [22]})
+        self.assertEqual(status["completed_depth"], 2)
+        self.assertEqual(len(worlds), 3)
+        self.assertEqual(len(visits), 27)
+        self.assertFalse(status["fallback_to_reference"])
+
+    def test_probe_limit_does_not_change_posterior_proposals_or_history_model(self):
+        players = [{"player_id": str(seat), "name": str(seat), "seat": seat}
+                   for seat in range(4)]
+        state = guandan.GuandanGame.init_game({}, players)
+        with (
+            mock.patch.object(guandan_ai.time, "perf_counter", return_value=0.0),
+            mock.patch.object(guandan_ai._CORE_LOCAL, "determinize_sampling_budget", 2.0, create=True),
+            mock.patch.object(guandan_ai, "_pass_limit_penalty_for_hand", return_value=0.0),
+            mock.patch.object(guandan_ai, "_revealed_rank_cap_penalty_for_hand", return_value=0.0),
+            mock.patch.object(guandan_ai, "_public_action_line_penalty_for_hand", return_value=0.0),
+            mock.patch.object(guandan_ai, "_public_action_sequence_consistency_bonus", return_value=0.0) as history,
+        ):
+            # A 100ms measurement cap would normally choose only two cheap
+            # proposals; the full 2s search calls for five history-weighted ones.
+            guandan._determinize_state(state, "0", random.Random(0), deadline=0.1)
+        self.assertEqual(history.call_count, 15)
+
+    def test_root_only_result_cannot_override_completed_heuristic(self):
+        reference = {"type": "play", "card_ids": [11]}
+        challenger = {"type": "pass"}
+        for status in ({"completed_depth": 0, "completed_rounds": 100},
+                       {"completed_depth": 4, "fallback_to_reference": True}):
+            with self.subTest(status=status):
+                state = {"_ai_eval_cache": {"mcts_anytime": status}}
+                self.assertFalse(guandan._should_accept_mcts_override(
+                    state, "bot", reference, challenger, 4,
+                ))
 
     def test_all_candidates_share_worlds_and_advance_one_depth_at_a_time(self):
         _picked, scored, status, visits, worlds = self._search(

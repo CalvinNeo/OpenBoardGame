@@ -623,7 +623,7 @@ async function fetchGameList() {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), ROOM_REQUEST_TIMEOUT);
     try {
-      const response = await fetch("/api/games", { signal: controller.signal });
+      const response = await fetch("/api/games", { signal: controller.signal, cache: "no-store" });
       if (!response.ok) throw new Error(`Game list request failed (${response.status})`);
       const games = await response.json();
       if (!Array.isArray(games) || !games.length || games.some((game) =>
@@ -848,6 +848,11 @@ const GAME_WEIGHT = {
   felix: 1.40,
   tacta: 1.34,
   subtext: 1.29,
+  a_feast_for_odin: 3.87,
+  dune_imperium: 3.08,
+  mind_the_lines: 1.10,
+  no_thanks: 1.13,
+  power_grid: 3.25,
 };
 
 function getGameWeight(gameId) {
@@ -1204,6 +1209,8 @@ async function openCreateRoomModal() {
   syncGameTypeFilterButtons();
   showCreateRoomGameStep();
   setModalVisible(createRoomModal, true);
+  // A server update may have added games since this page was first opened.
+  cachedGameList = null;
   await applyGameFilters();
 }
 
