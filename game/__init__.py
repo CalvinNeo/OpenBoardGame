@@ -1,3 +1,4 @@
+from game.power_grid import PowerGridGame
 from game.a_feast_for_odin import AFeastForOdinGame
 from game.las_vegas import LasVegasGame
 from game.for_sale import ForSaleGame
@@ -87,6 +88,7 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "PowerGridGame",
     "AFeastForOdinGame",
     "LasVegasGame",
     "ForSaleGame",

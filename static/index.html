@@ -586,6 +586,7 @@
                   <div id="catanStarfarersRoomSetupRow" class="hidden">Setup: <span id="catanStarfarersRoomSetup">-</span> · Language: <span id="catanStarfarersRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
+                  <div class="game-config-card hidden" id="arkNovaConfigBox" aria-hidden="true"></div>
                   <div id="odinConfigMount"></div>
                   <div class="game-config-card hidden" id="inAGroveConfigBox" aria-hidden="true">
                     <div class="game-config-title">In a Grove</div>
@@ -986,6 +987,7 @@
                       <input id="criminalDanceScoringToggle" type="checkbox" checked />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="powerGridConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="noThanksConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="hiveConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="tactaConfigBox" aria-hidden="true">
@@ -1301,6 +1303,8 @@
             <div class="panel-header-actions" id="challengersHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="grandAustriaHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="odinHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="powerGridHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="noThanksHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="orlojHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="duneImperiumHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="cryptidHeaderActions" style="display: none;">
@@ -1423,6 +1427,7 @@
             <div id="felixPanel" class="hidden felix-panel"></div>
 
             <div id="tactaPanel" class="hidden tacta-panel"></div>
+            <div id="powerGridPanel" class="hidden power-grid-panel"></div>
             <div id="noThanksPanel" class="hidden no-thanks-panel"></div>
             <div id="hivePanel" class="hidden hive-panel"></div>
 
@@ -1599,8 +1604,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=45" defer></script>
-  <script src="/static/games/shared.js?v=app_v31" defer></script>
+  <script src="/static/game_assets.js?v=49" defer></script>
+  <script src="/static/games/shared.js?v=app_v32" defer></script>
+  <template id="powerGridDialog"></template>
   <template id="noThanksDialog"></template>
   <template id="challengersDialog"></template>
   <template id="hiveDialog"></template>
@@ -1613,7 +1619,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v38" defer></script>
+  <script src="/static/app.js?v=app_v39" defer></script>
   <script src="/static/room.js?v=app_v58" defer></script>
 </body>
 </html>

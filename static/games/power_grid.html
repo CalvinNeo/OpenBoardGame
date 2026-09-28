@@ -1,0 +1,38 @@
+<template data-game-target="powerGridConfigBox" data-game-mode="contents">
+  <div class="game-config-title">⚡ Power Grid · 电力公司</div>
+  <label class="pg-config-auto"><input id="powerGridAutoRegions" type="checkbox" checked> Automatic regions</label>
+  <div id="powerGridRegionChoices" class="pg-region-choices hidden"></div>
+  <p id="powerGridConfigHint" class="hint">Classic Germany · 2–6 players</p>
+</template>
+<template data-game-target="powerGridHeaderActions" data-game-mode="contents">
+  <button id="powerGridHelpBtn" type="button" aria-label="Help" title="Help">Help</button>
+  <button id="powerGridExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="powerGridPanel" data-game-mode="contents">
+  <header class="pg-heading"><div><span class="pg-eyebrow">THE ENERGY NETWORK · CLASSIC GERMANY</span><h2>POWER GRID <span>电力公司</span></h2></div><div id="powerGridRound" class="pg-round" data-pg-explain="steps" data-pg-tip="Round：当前轮次。Step：决定城市容纳量与补货速度。" tabindex="0">Round 1 · Step 1</div></header>
+  <div id="powerGridPhases" class="pg-phases" aria-label="Round phases"></div>
+  <div class="pg-status-line"><strong id="powerGridStatus" role="status" aria-live="polite">Waiting to start</strong><span id="powerGridThreshold" data-pg-explain="winning" data-pg-tip="🏁：触发终局的城市数；仍需有足够电厂与燃料才能获胜。" tabindex="0"></span></div>
+  <div id="powerGridStats" class="pg-stats"></div>
+  <div class="pg-mobile-tabs" role="group" aria-label="Board view"><button id="powerGridMapTab" type="button" data-pg-explain="network">Network</button><button id="powerGridMarketTab" type="button" data-pg-explain="market">Market</button></div>
+  <div class="pg-board">
+    <section class="pg-map-section" aria-label="German power network" data-pg-explain="network">
+      <div class="pg-section-heading"><h3>01 / THE NETWORK</h3><div class="pg-map-controls"><button id="powerGridZoomOut" type="button" aria-label="Zoom out" data-pg-explain="zoom">−</button><button id="powerGridZoomIn" type="button" aria-label="Zoom in" data-pg-explain="zoom">+</button><button id="powerGridFit" type="button" data-pg-explain="zoom">Fit</button></div></div>
+      <div class="pg-map-frame"><svg id="powerGridMap" viewBox="0 0 920 1230" role="img" aria-label="Germany city network; choose a city or use the city list"></svg></div>
+      <div id="powerGridMapLegend" class="pg-map-legend"></div>
+      <details class="pg-city-list"><summary>City list · build costs</summary><div id="powerGridCities"></div></details>
+    </section>
+    <div class="pg-workstation">
+      <section class="pg-market-section" aria-label="Power plant market"><div class="pg-section-heading"><h3>02 / POWER PLANTS</h3><span id="powerGridDeck" data-pg-explain="market" data-pg-tip="🂠：剩余电厂牌数，不显示牌库顺序。" tabindex="0"></span></div><div id="powerGridMarket" class="pg-market"></div></section>
+      <div id="powerGridResourceMarket" class="pg-resource-market" aria-label="Public fuel prices and stock"></div>
+      <section id="powerGridActionSection" class="pg-action-section" aria-label="Current action"><div class="pg-section-heading"><h3 id="powerGridActionTitle">YOUR MOVE</h3><span id="powerGridActionBadge"></span></div><div id="powerGridAction"></div></section>
+      <section class="pg-fleet-section" aria-label="Your power plants"><div class="pg-section-heading"><h3>03 / YOUR COMPANY</h3><span id="powerGridFuel" data-pg-explain="storage" tabindex="0"></span></div><div id="powerGridFleet" class="pg-fleet"></div></section>
+    </div>
+  </div>
+  <section id="powerGridReview" class="pg-review hidden" aria-label="Round results"><div class="pg-section-heading"><h3 id="powerGridReviewTitle">ROUND COMPLETE</h3><span id="powerGridReady"></span></div><div id="powerGridResults" class="pg-results"></div><div class="pg-review-footer"><span id="powerGridRefill"></span><button id="powerGridNext" type="button" data-pg-explain="next">Next Round</button></div></section>
+  <section class="pg-players-section" aria-label="Companies and player order"><div class="pg-section-heading"><h3>AT THE TABLE</h3><span data-pg-explain="order" data-pg-tip="竞拍发起顺序为正序；买资源和建设为逆序。当前叫价按座位顺时针。" tabindex="0">↔ Player order</span></div><div id="powerGridPlayers" class="pg-players"></div></section>
+  <details class="pg-log"><summary>Activity log</summary><ol id="powerGridLog"></ol></details>
+  <div id="powerGridTooltip" class="pg-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="powerGridDialog" data-game-mode="replace">
+  <dialog id="powerGridDialog" class="pg-dialog" aria-labelledby="powerGridDialogTitle"><div class="pg-section-heading"><h2 id="powerGridDialogTitle">Power Grid</h2><button id="powerGridDialogClose" type="button">Close</button></div><div id="powerGridDialogBody"></div></dialog>
+</template>

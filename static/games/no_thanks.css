@@ -23,9 +23,7 @@
 .no-thanks-heading h2 { margin-top: 5px; font-size: clamp(23px, 3.3vw, 34px); letter-spacing: -.04em; line-height: 1.15; overflow-wrap: anywhere; }
 .no-thanks-heading h2 span { display: inline-block; font-size: 14px; font-weight: 400; letter-spacing: .1em; color: var(--nt-muted); margin-left: 7px; }
 .no-thanks-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .16em; color: var(--nt-muted); }
-.no-thanks-tools { display: flex; gap: 6px; }
-.no-thanks-tools button { font-size: 12px; }
-#noThanksExplain[aria-pressed="true"] { background: #303834; color: white; }
+#noThanksExplainBtn[aria-pressed="true"] { background: #303834; color: white; }
 .no-thanks-statusbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--nt-border); border-bottom: 1px solid var(--nt-border); font-size: 13px; margin-bottom: 14px; }
 #noThanksStatus { overflow-wrap: anywhere; }
 #noThanksRound { flex-shrink: 0; font-size: 11px; color: var(--nt-muted); }
@@ -85,7 +83,7 @@
 #noThanksScoreRows { display: grid; gap: 7px; max-height: 200px; overflow-y: auto; margin-top: 8px; }
 .no-thanks-score-round { padding: 9px; background: var(--nt-paper); border-radius: 6px; line-height: 1.6; overflow-wrap: anywhere; }
 .no-thanks-score-round strong { display: block; }
-.no-thanks-explaining [data-no-thanks-explain] { outline: 2px dashed #ad5b21; outline-offset: 2px; cursor: help; }
+.no-thanks-panel.no-thanks-explaining [data-no-thanks-explain] { outline: 2px dashed #ad5b21; outline-offset: 2px; cursor: help; }
 .no-thanks-tooltip { position: fixed; z-index: 20000; max-width: min(290px, calc(100vw - 24px)); padding: 9px 11px; border-radius: 8px; background: #26382f; color: #fffdf7; font-size: 12px; line-height: 1.5; box-shadow: 0 5px 20px #0003; overflow-wrap: anywhere; pointer-events: none; }
 .no-thanks-dialog { width: min(620px, calc(100vw - 28px)); max-height: calc(100dvh - 32px); padding: 22px; color: #303834; background: #fffdf7; border: 1px solid #dddacb; border-radius: 16px; overflow-y: auto; overflow-wrap: anywhere; }
 .no-thanks-dialog::backdrop { background: #18251ed0; }
@@ -108,8 +106,6 @@
 @media (max-width: 480px) {
   .no-thanks-heading { gap: 12px; margin-bottom: 12px; }
   .no-thanks-heading h2 span { display: block; margin: 4px 0 0; font-size: 12px; }
-  .no-thanks-tools { gap: 4px; }
-  .no-thanks-tools button { padding: 7px 9px; min-height: 36px; }
   .no-thanks-offer { padding: 12px; }
   .no-thanks-offer-content { grid-template-columns: minmax(0, 120px) minmax(0, 1fr); gap: 14px; max-width: 265px; margin: 14px auto; }
   .no-thanks-card { padding: 10px; }

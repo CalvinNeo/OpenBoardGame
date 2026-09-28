@@ -158,6 +158,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_live_private_save(source_room_id, "power_grid"):
+        raise HTTPException(status_code=403, detail="This Power Grid game is still active. Reconnect to the existing room.")
     latest_path = _get_latest_save_path(source_room_id)
     if not latest_path:
         raise HTTPException(status_code=404, detail="save not found")
@@ -440,7 +442,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -553,6 +555,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "power_grid":
+        return {"type": action.get("type")}
     if game_type == "las_vegas" and action.get("type") == "royale_choose":
         return {"type": "royale_choose"}
     if game_type == "cheaty_mages":
@@ -1807,6 +1811,7 @@ async def on_room_load(sid, data):
         or _has_live_private_save(source_room_id, "love_letter")
         or _has_live_private_save(source_room_id, "for_sale")
         or _has_live_private_save(source_room_id, "cheaty_mages")
+        or _has_live_private_save(source_room_id, "power_grid")
         or _has_live_private_save(source_room_id, "las_vegas")
     ):
         await sio.emit("room:load_result", {"ok": False, "message": "This game is still active. Reconnect to the existing room."}, to=sid)

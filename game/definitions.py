@@ -1,3 +1,4 @@
+from game.power_grid import PowerGridGame, ACTION_SCHEMA as POWER_GRID_ACTION_SCHEMA, CONFIG_SCHEMA as POWER_GRID_CONFIG_SCHEMA
 from game.a_feast_for_odin import AFeastForOdinGame, ACTION_SCHEMA as ODIN_ACTION_SCHEMA, CONFIG_SCHEMA as ODIN_CONFIG_SCHEMA
 from game.orloj import OrlojGame, ACTION_SCHEMA as ORLOJ_ACTION_SCHEMA, CONFIG_SCHEMA as ORLOJ_CONFIG_SCHEMA
 from game.las_vegas import LasVegasGame, ACTION_SCHEMA as LAS_VEGAS_ACTION_SCHEMA, CONFIG_SCHEMA as LAS_VEGAS_CONFIG_SCHEMA
@@ -116,6 +117,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=PowerGridGame.game_id, name="Power Grid", name_zh="电力公司",
+        min_players=2, max_players=6, turn_mode="turn",
+        action_schema=POWER_GRID_ACTION_SCHEMA, config_schema=POWER_GRID_CONFIG_SCHEMA,
+        module=PowerGridGame, serialize=PowerGridGame.serialize, deserialize=PowerGridGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

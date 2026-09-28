@@ -32,7 +32,7 @@
 
   const ARK_NOVA_ACTIONS = {
     cards: { name: "Cards", icon: "🗂️", color: "cyan", description: "Advance Break, then draw cards or Snap one card from the display." },
-    build: { name: "Build", icon: "🔨", color: "orange", description: "Place one or more legal buildings on your Map 0 zoo board." },
+    build: { name: "Build", icon: "🔨", color: "orange", description: "Place one or more legal buildings on your zoo board." },
     animals: { name: "Animals", icon: "🐾", color: "green", description: "Play animal cards into suitable empty enclosures and resolve their abilities." },
     association: { name: "Association", icon: "🤝", color: "blue", description: "Assign workers to reputation, partner zoo, university, or conservation tasks." },
     sponsors: { name: "Sponsors", icon: "🏛️", color: "pink", description: "Play sponsor cards, or advance Break to gain money." },
@@ -61,7 +61,7 @@
   });
 
   // Printed enclosure pieces are fixed polyhexes. The first coordinate is the
-  // anchor selected on Map 0; pieces may rotate, but are never reflected.
+  // anchor selected on the zoo map; pieces may rotate, but are never reflected.
   const ARK_NOVA_BUILDING_FOOTPRINTS = Object.freeze({
     standard_enclosure_1: [[0, 0]],
     standard_enclosure_2: [[0, 0], [1, 0]],
@@ -137,15 +137,19 @@
   };
 
   const ARK_NOVA_EXPLANATIONS = {
+    choose_map: "Choose your zoo map (🗺️), then Confirm map. Each player chooses independently and may choose the same map. Everyone must confirm before the starting hands are revealed. A confirmed map cannot be changed during this game.",
+    preview_map: "Inspect the selected zoo map (🗺️) and its special ability before confirming your choice.",
+    harbor: "Once during your turn, after covering A6 on Commercial Harbor (⚓), discard one hand card to gain 3 money (💰). This does not use an Action card.",
+    finish_harbor: "Finish your turn without selling a card at Commercial Harbor (⚓). You may use the harbor again on your next turn.",
     action_card: "Choose one Action card. Its slot plus committed X-tokens determines the action strength. After the action, it moves to slot 1.",
     x_tokens: "Spend any number of your available X-tokens before an action for +1 strength each. Some action tables stop improving above strength 5, but Build, Association, and Sponsors can use higher totals.",
     multiplier_tokens: "Choose how many multiplier tokens on this Action card to spend. Each one repeats the complete action once; unused tokens remain on the card.",
     cards_draw: "Draw according to action strength and upgrade side. With Cards II, choose deck or an accessible display card one at a time, looking at each drawn card before deciding the next source.",
     cards_snap: "Snap takes one card from any display folder. It is only available at the strengths printed on your Cards action.",
-    build_type: "Choose the printed building piece, then select one anchor hex on Map 0. Its fixed footprint appears automatically.",
+    build_type: "Choose the printed building piece, then select one anchor hex on your zoo map. Its fixed footprint appears automatically.",
     rotate_footprint: "Rotate the fixed building piece clockwise around its selected anchor. Every orientation can be previewed; an invalid one is rejected only when you confirm it.",
     queue_building: "Add the selected footprint to this action. Upgraded Build may contain multiple different buildings within total strength.",
-    confirm_build: "Submit every queued building, committed X-tokens, and exact Map 0 cell IDs.",
+    confirm_build: "Submit every queued building, committed X-tokens, and the selected map spaces.",
     animal_card: "Select an Animal card from your hand, or from the display when your upgraded action and reputation allow it.",
     animal_enclosure: "Each animal needs an eligible enclosure with sufficient empty capacity and any required water or rock adjacency.",
     sponsor_card: "Select Sponsor cards whose combined strength fits this action. Upgraded Sponsors may also use cards in reputation range.",
@@ -201,7 +205,7 @@
             <div class="arkn-help-icon-item"><span aria-hidden="true">💧</span><p><strong>Water adjacency</strong>The occupied enclosure or unique building must touch the shown number of water spaces.</p></div>
             <div class="arkn-help-icon-item"><span aria-hidden="true">🪨</span><p><strong>Rock adjacency</strong>The occupied enclosure or unique building must touch the shown number of rock spaces.</p></div>
             <div class="arkn-help-icon-item"><span aria-hidden="true">↔</span><p><strong>Zoo-border adjacency</strong>The unique building must touch the shown number of border spaces.</p></div>
-            <div class="arkn-help-icon-item"><span aria-hidden="true">🧩</span><p><strong>Unique-building footprint</strong>The number shows how many Map 0 hexes that Sponsor building occupies.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🧩</span><p><strong>Unique-building footprint</strong>The number shows how many map hexes that Sponsor building occupies.</p></div>
             <div class="arkn-help-icon-item is-wide-symbols"><span aria-hidden="true">💰 🎪 🐐 🦎 🪶</span><p><strong>Building picker</strong>Kiosk, Pavilion, Petting zoo, Reptile house, and Large bird aviary. Here the surrounding building label—not the shared emoji alone—sets the meaning.</p></div>
             <div class="arkn-help-icon-item is-wide-symbols"><span aria-hidden="true">🤝 🌍 🏫</span><p><strong>Association items</strong>A partner-zoo requirement, a partner-zoo choice, and a university.</p></div>
           </div>
@@ -214,24 +218,8 @@
       <section><h4>🤝 Association</h4><p>Use active workers for reputation, partner zoos, universities, and conservation projects. Upgraded Association can combine different tasks and donate once.</p></section>
       <section><h4>🏛️ Sponsors</h4><p>Play Sponsor cards within the available strength, or advance Break and gain money. Sponsors can have immediate, ongoing, income, and end-game effects.</p></section>
       <section><h4>Break</h4><p>When the Break marker reaches its limit, finish the current action, reduce hands to their limits, refresh the display and association board, return workers, and collect income.</p></section>
-      <section><h4>Map 0</h4><p>Select a building and click one anchor hex; the complete printed footprint is placed automatically. Orange outlines are your current footprint; colored hexes are occupied. Choose another zoo above to inspect its public board.</p></section>
+      <section><h4>Zoo maps 🗺️</h4><p>With “Each player chooses”, choose from Map 0 and Maps 1A–6A before seeing your starting hand. Players may choose the same map. Use Preview map to inspect each ability; Confirm map locks your choice for this game.</p><p>Select a building and click one anchor hex; the complete printed footprint is placed automatically. Orange outlines are your current footprint; colored hexes are occupied. Choose another zoo above to inspect its public board.</p></section>
       <section><h4>Explain mode</h4><p>Choose <strong>Explain</strong>, then select any dashed control—even a disabled one—to learn what it does. Esc exits the mode.</p></section>
-    </div>`;
-
-  const ARK_NOVA_MAP_INFO_HTML = `
-    <div class="arkn-map-info-grid">
-      <section><h4>Complete Map 0</h4><p>Cover all 39 buildable land hexes to gain <strong>7 appeal</strong>. Water and rock normally cannot be covered, but they count for adjacency.</p></section>
-      <section><h4>Placement bonuses</h4><p>Bonus hexes can grant a card, money, an X-token, appeal, or move an Action card to slot 1 after the current action finishes.</p></section>
-      <section><h4>Build II spaces</h4><p>The marked G3 and H3 hexes require the Build action upgraded to side II.</p></section>
-      <section><h4>Conservation rewards</h4><p>The reward strip to the left belongs to the selected zoo board. Purple rewards repeat at each Break; yellow rewards resolve once.</p></section>
-      <section><h4>Map controls</h4><p>Select a building in Plan action, then choose one anchor hex for its fixed printed footprint. Orange outlines show the current draft; occupied hexes use the building color.</p></section>
-      <section><h4>X-token storage</h4><p>The selected zoo's current supply is shown beside the Map info button and in its player summary. A zoo may store up to 5 X-tokens.</p></section>
-      <div class="arkn-map-info-legend" aria-label="Map 0 terrain legend">
-        <span><i class="arkn-legend-land"></i>Buildable land</span>
-        <span><i class="arkn-legend-water"></i>Water</span>
-        <span><i class="arkn-legend-rock"></i>Rock</span>
-        <span><i class="arkn-legend-choice"></i>Selected footprint</span>
-      </div>
     </div>`;
 
   let arkNovaCurrentData = null;
@@ -244,6 +232,7 @@
   let arkNovaEventKeys = new Set();
   let arkNovaCardLookup = new Map();
   let arkNovaPendingOptions = [];
+  let arkNovaConfigRoom = "";
 
   function arkNovaDefaultAssociationDraft() {
     return {
@@ -545,10 +534,10 @@
 
   function arkNovaCan(actionType, view = arkNovaView) {
     if (!view || view.game_over) return false;
-    const pending = view.pending_choice || view.pending;
-    if (pending && actionType !== "resolve_choice" && actionType !== "keep_initial_cards") return false;
     const legal = arkNovaLegalTypes(view);
     if (arkNovaHasLegalActionsField(view)) return legal.has(actionType);
+    const pending = view.pending_choice || view.pending;
+    if (pending && actionType !== "resolve_choice" && actionType !== "keep_initial_cards") return false;
     if (actionType === "resolve_choice") {
       const owner = pending && pending.player_id;
       return !!pending && (!owner || String(owner) === String(view.you ?? view.player_id ?? ""));
@@ -619,12 +608,12 @@
               <h3 id="arkNovaMapTitle">Your zoo · Map 0</h3>
               <div class="arkn-map-tools">
                 <span id="arkNovaMapXStorage" class="arkn-map-x-storage" data-arkn-explain="x_tokens" title="Stored X-tokens"></span>
-                <button type="button" class="arkn-map-info-button" data-arkn-command="map-info" data-arkn-explain-bypass aria-label="Show Map 0 information">ⓘ Map info</button>
+                <button type="button" class="arkn-map-info-button" data-arkn-command="map-info" data-arkn-explain-bypass aria-label="Show zoo map information">ⓘ Map info</button>
               </div>
             </div>
             <div class="arkn-map-frame">
               <object id="arkNovaMapObject" class="arkn-map-object" type="image/svg+xml" data="${ARK_NOVA_MAP_URL}" aria-label="Interactive Map 0 zoo board"></object>
-              <div id="arkNovaMapLoading" class="arkn-map-loading">Loading Map 0…</div>
+              <div id="arkNovaMapLoading" class="arkn-map-loading">Loading zoo map…</div>
               <button id="arkNovaMapRotateButton" class="arkn-map-rotate-fab" type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" aria-label="Rotate selected building" aria-hidden="true" disabled><span aria-hidden="true">↻</span><b>Rotate</b></button>
             </div>
             <div id="arkNovaBuildings" class="arkn-building-list"></div>
@@ -736,7 +725,7 @@
     toast.textContent = message;
     toast.classList.add("is-visible");
     window.clearTimeout(arkNovaToast.timeout);
-    arkNovaToast.timeout = window.setTimeout(() => toast.classList.remove("is-visible"), 2400);
+    arkNovaToast.timeout = window.setTimeout(() => toast.classList.remove("is-visible"), 3000);
   }
 
   function showArkNovaError(message) {
@@ -1104,7 +1093,7 @@
       deck != null ? `<span class="arkn-status-chip"><small>Deck</small><b>${arkNovaEscape(deck)}</b></span>` : "",
       view.game_over ? `<span class="arkn-status-chip arkn-status-over"><b>Final scoring</b></span>` : "",
     ];
-    return `<div class="arkn-brand"><span class="arkn-brand-mark" aria-hidden="true">AN</span><span><strong>Ark Nova</strong><small>Map 0</small></span></div><div class="arkn-status-chips">${chips.join("")}</div>`;
+    return `<div class="arkn-brand"><span class="arkn-brand-mark" aria-hidden="true">AN</span><span><strong>Ark Nova</strong><small>${arkNovaEscape(arkNovaAsArray(view.map_selection_pending).length ? "Zoo map selection" : arkNovaMapDefinition(view, arkNovaYou(view) || arkNovaViewedPlayer(view)).name || "Zoo map")}</small></span></div><div class="arkn-status-chips">${chips.join("")}</div>`;
   }
 
   function arkNovaTrackMarkup(view, key, label, icon, maximum) {
@@ -1362,6 +1351,18 @@
     return Math.max(1, arkNovaNumber(building && building.size, arkNovaBuildingCells(building).length || 1));
   }
 
+  function arkNovaEnclosureCapacity(building, player = arkNovaYou(), view = arkNovaView) {
+    const size = arkNovaBuildingSize(building);
+    if (arkNovaBuildingType(building) !== "standard_enclosure") return arkNovaNumber(building.capacity, size);
+    const map = arkNovaMapDefinition(view, player);
+    if (map.ability?.type !== "outdoor_areas") return size;
+    const features = new Set(arkNovaAsArray(map.ability.cells));
+    const adjacent = arkNovaBuildingCells(building).some((id) =>
+      arkNovaAsArray(arkNovaAsArray(map.cells).find((cell) => cell.id === id)?.neighbors).some((neighbor) => features.has(neighbor))
+    );
+    return size + (adjacent ? 2 : 0);
+  }
+
   function arkNovaBuildingName(building) {
     const meta = arkNovaBuildingMeta(building);
     return arkNovaBuildingType(building) === "standard_enclosure"
@@ -1401,10 +1402,13 @@
     const milestones = map.milestones || { fourth_partner_zoo: 3, third_university: 2, last_worker: 0 };
     return `<div class="arkn-map-info-grid">
       <section><h4>${arkNovaEscape(map.name || "Map 0")}</h4><p>${arkNovaEscape(map.ability?.description || "Intermediate zoo map with additional placement bonuses.")}</p></section>
-      <section><h4>Complete your zoo 🎟️</h4><p>Cover all ${arkNovaNumber(map.counts?.buildable, 39)} land spaces for 7 appeal. Water (🌊) and rock (🪨) count for adjacency and cannot normally be covered.</p></section>
+      <section><h4>Complete your zoo 🎟️</h4><p>Cover all ${arkNovaNumber(map.counts?.buildable, 39)} land spaces for 7 appeal. Water (💧) and rock (🪨) count for adjacency and cannot normally be covered.</p></section>
       <section><h4>Build II 🔨</h4><p>Upgrade Build before covering ${arkNovaEscape(arkNovaAsArray(map.build_ii_cells).join(", "))}.</p></section>
-      <section><h4>Conservation rewards 🛡️</h4><ul>${rewards.map((reward) => `<li>${reward.timing === "immediate_and_each_break" ? "↻" : "⚡"} ${arkNovaEscape(reward.label)}</li>`).join("")}</ul><p>↻ Immediately and every break. ⚡ Once when uncovered.</p></section>
-      <section><h4>Association bonuses 🤝</h4><p>Fourth partner zoo: ${milestones.fourth_partner_zoo} 🛡️. Third university: ${milestones.third_university} 🛡️. Last worker: ${milestones.last_worker} 🛡️.</p></section>
+      <section><h4>Conservation rewards 🌿</h4><ul>${rewards.map((reward) => `<li>${reward.timing === "immediate_and_each_break" ? "↻" : "⚡"} ${arkNovaEscape(reward.label)}</li>`).join("")}</ul><p>↻ Immediately and every break. ⚡ Once when uncovered.</p></section>
+      <section><h4>Association bonuses 🤝</h4><p>Conservation (🌿): fourth partner zoo +${milestones.fourth_partner_zoo}, third university +${milestones.third_university}, last worker +${milestones.last_worker}.</p></section>
+      <section><h4>Map controls</h4><p>Select a building and an anchor hex, then rotate its fixed footprint if needed. Orange outlines show your draft. Tap any other space or reward to read its details; Explain also works on the map.</p></section>
+      <section><h4>X-token storage ✕</h4><p>This zoo can store up to ${arkNovaNumber(map.x_token_limit, 5)} X-tokens. Its current supply is shown beside Map info.</p></section>
+      <div class="arkn-map-info-legend" aria-label="Map terrain legend"><span><i class="arkn-legend-land"></i>Buildable land</span><span><i class="arkn-legend-water"></i>Water 💧</span><span><i class="arkn-legend-rock"></i>Rock 🪨</span><span><i class="arkn-legend-choice"></i>Selected footprint</span></div>
     </div>`;
   }
 
@@ -1415,13 +1419,15 @@
     container.classList.toggle("hidden", !selecting);
     if (!selecting) return;
     const canChoose = arkNovaCan("choose_map", view);
-    const selected = canChoose ? arkNovaUi.mapChoice : arkNovaPlayerMap(arkNovaYou(view)).id;
+    const you = arkNovaYou(view);
+    const selected = canChoose ? arkNovaUi.mapChoice : you ? arkNovaPlayerMap(you).id : null;
     const options = arkNovaAsArray(view.map_options);
     const map = options.find((entry) => entry.id === selected) || options[0];
-    container.innerHTML = `<div class="arkn-section-heading"><h3>🗺️ ${canChoose ? "Choose your zoo map" : "Map confirmed"}</h3><span class="arkn-kicker">${view.map_selection_pending.length} choosing</span></div>
+    const pendingNames = arkNovaPlayers(view).filter((player) => view.map_selection_pending.includes(arkNovaPlayerId(player))).map(arkNovaPlayerName);
+    container.innerHTML = `<div class="arkn-section-heading"><h3>🗺️ ${canChoose ? "Choose your zoo map" : you ? "Map confirmed" : "Players are choosing maps"}</h3><span class="arkn-kicker">${view.map_selection_pending.length} choosing</span></div>
       <div class="arkn-map-choice-grid">${options.map((entry) => `<button type="button" class="arkn-map-choice ${entry.id === selected ? "is-selected" : ""}" data-arkn-map-id="${arkNovaEscape(entry.id)}" data-arkn-explain="choose_map" aria-pressed="${entry.id === selected}" ${canChoose ? "" : "disabled"}>
-        <img src="${arkNovaMapUrl(entry.id)}" alt="${arkNovaEscape(entry.name)} layout" loading="lazy"><strong>${arkNovaEscape(entry.name)}</strong><small>${arkNovaEscape(entry.name_zh)}</small></button>`).join("")}</div>
-      <div class="arkn-map-choice-footer"><p>${arkNovaEscape(map?.description || "")}</p>${canChoose ? '<button type="button" class="arkn-confirm" data-arkn-command="choose-map" data-arkn-explain="choose_map">Confirm map</button>' : '<span>Waiting for the other players…</span>'}</div>`;
+        <img src="${arkNovaMapUrl(entry.id)}" alt="${arkNovaEscape(entry.name)} layout" loading="lazy"><strong>${arkNovaEscape(entry.name)}</strong><small>${arkNovaEscape(entry.name_zh)}${entry.id === selected ? " · ✓ Selected" : ""}</small></button>`).join("")}</div>
+      <div class="arkn-map-choice-footer"><div role="status"><strong>${arkNovaEscape(map?.name || "Zoo maps")}</strong><p>${canChoose ? "Confirm your map before choosing your starting hand." : `Waiting for ${arkNovaEscape(pendingNames.join(", "))}…`}</p></div><div class="arkn-map-choice-actions"><button type="button" data-arkn-command="preview-map" data-arkn-explain="preview_map">Preview map</button>${canChoose ? '<button type="button" class="arkn-confirm" data-arkn-command="choose-map" data-arkn-explain="choose_map">Confirm map</button>' : ""}</div></div>`;
   }
 
   function arkNovaRenderHarbor(view) {
@@ -1430,7 +1436,7 @@
     container.classList.toggle("hidden", !available);
     if (!available) return;
     const previous = container.querySelector("select")?.value;
-    container.innerHTML = `<div class="arkn-harbor-control" data-arkn-explain="harbor"><label for="arkNovaHarborCard">⚓ Commercial Harbor</label><select id="arkNovaHarborCard" aria-label="Hand card to sell">${arkNovaHand(view).map((card) => `<option value="${arkNovaEscape(arkNovaCardId(card))}" ${arkNovaCardId(card) === previous ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(card))}</option>`).join("")}</select><button type="button" data-arkn-command="use-harbor" data-arkn-explain="harbor">Sell · 💰3</button></div>`;
+    container.innerHTML = `<div class="arkn-harbor-control"><label for="arkNovaHarborCard">⚓ Commercial Harbor</label><select id="arkNovaHarborCard" aria-label="Hand card to sell" data-arkn-explain="harbor">${arkNovaHand(view).map((card) => `<option value="${arkNovaEscape(arkNovaCardId(card))}" ${arkNovaCardId(card) === previous ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(card))}</option>`).join("")}</select><button type="button" data-arkn-command="use-harbor" data-arkn-explain="harbor">Sell · 💰3</button></div>`;
   }
 
   function arkNovaRenderBuildings(view) {
@@ -1452,7 +1458,11 @@
       if (mapObject.dataset.mapId !== mapId) {
         mapObject.dataset.mapId = mapId;
         arkNovaMapDocument = null;
-        document.getElementById("arkNovaMapLoading")?.classList.remove("hidden");
+        const loading = document.getElementById("arkNovaMapLoading");
+        if (loading) {
+          loading.textContent = `Loading ${definition.name || "zoo map"}…`;
+          loading.classList.remove("hidden");
+        }
         mapObject.data = arkNovaMapUrl(mapId);
       }
     }
@@ -1472,14 +1482,15 @@
       });
       const cells = arkNovaBuildingCells(building);
       const size = arkNovaBuildingSize(building);
+      const capacity = arkNovaEnclosureCapacity(building, viewedPlayer, view);
       const usedCapacity = Math.max(0, arkNovaNumber(building.used_capacity, occupants.length));
       const selected = id && id === String(arkNovaUi.selectedBuildingId || "");
       const status = arkNovaBuildingType(building) === "standard_enclosure"
-        ? `${building.occupied ?? occupants.length > 0 ? "Occupied" : "Empty"} · size ${size}`
+        ? `${building.occupied ?? occupants.length > 0 ? "Occupied" : "Empty"} · size ${size}${capacity > size ? ` · capacity ${capacity}` : ""}`
         : arkNovaBuildingIsEnclosure(building)
         ? `${usedCapacity} / ${size} capacity${animalNames.length ? ` · 🐾 ${animalNames.join(", ")}` : " · empty"}`
         : `${cells.length || size} hex${(cells.length || size) === 1 ? "" : "es"}`;
-      return `<button type="button" class="arkn-building-chip ${selected ? "is-selected" : ""}" data-arkn-building-id="${arkNovaEscape(id)}" aria-pressed="${selected}" title="Highlight ${arkNovaEscape(arkNovaBuildingName(building))} on Map 0" style="--arkn-building-color:${arkNovaEscape(meta.color || "#7e8c85")}">
+      return `<button type="button" class="arkn-building-chip ${selected ? "is-selected" : ""}" data-arkn-building-id="${arkNovaEscape(id)}" aria-pressed="${selected}" title="Highlight ${arkNovaEscape(arkNovaBuildingName(building))} on the zoo map" style="--arkn-building-color:${arkNovaEscape(meta.color || "#7e8c85")}">
         <i aria-hidden="true">${meta.icon}</i><span><b>${arkNovaEscape(arkNovaBuildingName(building))}</b><small>${arkNovaEscape(status)}</small><em>${arkNovaEscape(cells.join(" · "))}</em></span>
       </button>`;
     }).join("") : `<div class="arkn-empty arkn-empty-inline">${viewingOwnZoo ? "No buildings yet. Your first building must touch the zoo edge." : "No buildings in this zoo yet."}</div>`;
@@ -1592,6 +1603,13 @@
       }
       .ark-nova-map0-cell.is-covered { opacity: 1; }
       .ark-nova-map0-cell.is-valid { cursor: crosshair; }
+      [data-cell-id].has-explanation, [data-reward-id].has-explanation { cursor: help; }
+      [data-cell-id].has-explanation .ark-nova-map0-hex,
+      [data-reward-id].has-explanation > rect {
+        stroke: #5dd2de !important;
+        stroke-dasharray: 6 4;
+        stroke-width: 3 !important;
+      }
       .arkn-runtime-building-label { pointer-events: none; }
       .arkn-runtime-building-label rect {
         fill: rgba(13, 32, 25, .91);
@@ -1812,8 +1830,8 @@
 
   function arkNovaBuildPreviewIssue(view = arkNovaView, cells = arkNovaUi.buildCells, outside = arkNovaUi.buildOutside) {
     const required = arkNovaFootprintOffsets(view).length;
-    if (!arkNovaUi.buildAnchor) return "Choose one anchor hex on Map 0.";
-    if (outside) return `This orientation extends ${outside} hex${outside === 1 ? "" : "es"} outside Map 0.`;
+    if (!arkNovaUi.buildAnchor) return "Choose one anchor hex on your zoo map.";
+    if (outside) return `This orientation extends ${outside} hex${outside === 1 ? "" : "es"} outside the zoo map.`;
     if (cells.length !== required) return `This orientation needs ${required} different map hexes.`;
     const unavailable = cells.find((cellId) => !arkNovaCellIsBuildable(cellId, view));
     if (unavailable) return `${unavailable} is water, rock, or otherwise unavailable for this building.`;
@@ -1924,6 +1942,11 @@
     const loading = document.getElementById("arkNovaMapLoading");
     if (loading) loading.classList.toggle("hidden", !!arkNovaMapDocument);
     if (!arkNovaMapDocument) return;
+    if (arkNovaMapDocument.documentElement.dataset.arkNovaBound) {
+      arkNovaApplyMapState();
+      return;
+    }
+    arkNovaMapDocument.documentElement.dataset.arkNovaBound = "true";
     arkNovaEnsureMapRuntimeStyle();
     arkNovaMapDocument.querySelectorAll("[data-cell-id]").forEach((cell) => {
       cell.addEventListener("click", () => arkNovaHandleMapCell(cell.dataset.cellId));
@@ -1934,7 +1957,40 @@
         }
       });
     });
+    arkNovaMapDocument.querySelectorAll("[data-reward-id]").forEach((reward) => {
+      reward.setAttribute("role", "button");
+      reward.setAttribute("tabindex", "0");
+      reward.setAttribute("aria-label", reward.querySelector("title")?.textContent || reward.dataset.rewardId);
+      reward.addEventListener("click", () => arkNovaInspectMapElement(reward));
+      reward.addEventListener("keydown", (keyEvent) => {
+        if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+          keyEvent.preventDefault();
+          arkNovaInspectMapElement(reward);
+        }
+      });
+    });
+    arkNovaMapDocument.addEventListener("keydown", arkNovaHandleKeydown);
+    arkNovaSyncMapExplain();
     arkNovaApplyMapState();
+  }
+
+  function arkNovaInspectMapElement(element) {
+    if (!element) return;
+    let message = element.getAttribute("aria-label") || element.querySelector("title")?.textContent || "Zoo map";
+    const ability = arkNovaMapDefinition().ability;
+    if (ability && [...arkNovaAsArray(ability.cells), ...arkNovaAsArray(ability.connected_by)].includes(element.dataset.cellId)) {
+      message += `. ${ability.description}`;
+    }
+    if (arkNovaExplainMode) {
+      arkNovaExitExplainMode();
+      arkNovaOpenModal("Map details", `<div class="arkn-explanation"><span>?</span><p>${arkNovaEscape(message)}</p></div>`, "explain");
+    } else arkNovaToast(message);
+  }
+
+  function arkNovaSyncMapExplain() {
+    arkNovaMapDocument?.querySelectorAll("[data-cell-id], [data-reward-id]").forEach((element) => {
+      element.classList.toggle("has-explanation", arkNovaExplainMode);
+    });
   }
 
   function arkNovaUpdateMapRotateButton(drafting) {
@@ -2028,7 +2084,8 @@
   }
 
   function arkNovaHandleMapCell(cellId) {
-    if (arkNovaExplainMode) return;
+    const element = arkNovaMapDocument?.querySelector(`[data-cell-id="${CSS.escape(String(cellId))}"]`);
+    if (arkNovaExplainMode) return arkNovaInspectMapElement(element);
     const viewedPlayer = arkNovaViewedPlayer(arkNovaView);
     const occupied = arkNovaOccupiedCells(arkNovaView, viewedPlayer, arkNovaViewingOwnZoo()).get(String(cellId));
     if (occupied) {
@@ -2044,6 +2101,7 @@
         arkNovaRenderBuildings(arkNovaView);
         arkNovaApplyMapState();
       }
+      if (arkNovaUi.selectedAction !== "build") arkNovaInspectMapElement(element);
       return;
     }
     if (!arkNovaViewingOwnZoo()) {
@@ -2336,7 +2394,7 @@
     const selectedLabel = arkNovaUi.buildCells.join(" · ");
     const footprintLabel = selectedLabel
       ? `${selectedLabel}${outsideLabel}`
-      : arkNovaUi.buildAnchor ? `Anchor ${arkNovaUi.buildAnchor}${outsideLabel}` : "Choose one anchor hex on Map 0";
+      : arkNovaUi.buildAnchor ? `Anchor ${arkNovaUi.buildAnchor}${outsideLabel}` : "Choose one anchor hex on your zoo map";
     return `<div class="arkn-map-draft ${issue ? "is-invalid" : ""}"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} map hexes${outsideLabel} · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaEscape(footprintLabel)}</output>${issue ? `<em>⚠ ${arkNovaEscape(issue)} You may keep rotating or add it to the plan; confirmation will reject it until fixed.</em>` : ""}</div>`;
   }
 
@@ -2344,7 +2402,7 @@
     if (!arkNovaUi.buildQueue.length) return `<div class="arkn-empty arkn-empty-inline">No buildings queued.</div>`;
     return `<ol class="arkn-plan-list">${arkNovaUi.buildQueue.map((building) => {
       const meta = ARK_NOVA_BUILDINGS[building.building_type] || { name: arkNovaTitle(building.building_type), icon: "⬡" };
-      return `<li class="${building.invalid_reason ? "is-invalid" : ""}"><span>${meta.icon}</span><b>${arkNovaEscape(meta.name)}</b><small>${arkNovaEscape(building.cells.join(", ") || "Outside Map 0")}${building.invalid_reason ? `<em>⚠ ${arkNovaEscape(building.invalid_reason)}</em>` : ""}</small></li>`;
+      return `<li class="${building.invalid_reason ? "is-invalid" : ""}"><span>${meta.icon}</span><b>${arkNovaEscape(meta.name)}</b><small>${arkNovaEscape(building.cells.join(", ") || "Outside zoo map")}${building.invalid_reason ? `<em>⚠ ${arkNovaEscape(building.invalid_reason)}</em>` : ""}</small></li>`;
     }).join("")}</ol>`;
   }
 
@@ -2415,7 +2473,7 @@
     const required = Math.max(0, arkNovaNumber(option.required_spaces));
     if (type === "standard_enclosure") {
       if (building.occupied ?? occupants.length > 0) return `${arkNovaBuildingName(building)} is occupied.`;
-      if (arkNovaBuildingSize(building) < required) return `${arkNovaBuildingName(building)} is too small; ${arkNovaCardName(card)} needs size ${required}.`;
+      if (arkNovaEnclosureCapacity(building) < required) return `${arkNovaBuildingName(building)} is too small; ${arkNovaCardName(card)} needs size ${required}.`;
     } else {
       const capacity = Math.max(0, arkNovaNumber(building.capacity, arkNovaBuildingSize(building)));
       const used = Math.max(0, arkNovaNumber(building.used_capacity));
@@ -2479,7 +2537,9 @@
       const emptyOption = compatibleEnclosures.length ? "Choose compatible enclosure" : "No compatible enclosure available";
       return `<label data-arkn-explain="animal_enclosure"><span><b>🐾 ${arkNovaEscape(arkNovaCardName(card))}</b><small>#${arkNovaEscape(id)}</small></span><select data-arkn-enclosure-for="${arkNovaEscape(id)}"><option value="">${emptyOption}</option>${compatibleEnclosures.map((building) => {
         const buildingId = arkNovaBuildingId(building);
-        return `<option value="${arkNovaEscape(buildingId)}" ${buildingId === selectedEnclosure ? "selected" : ""}>${arkNovaEscape(arkNovaBuildingName(building))} · ${arkNovaBuildingCells(building).join(", ")}</option>`;
+        const capacity = arkNovaEnclosureCapacity(building);
+        const extraCapacity = capacity > arkNovaBuildingSize(building) ? ` · capacity ${capacity}` : "";
+        return `<option value="${arkNovaEscape(buildingId)}" ${buildingId === selectedEnclosure ? "selected" : ""}>${arkNovaEscape(arkNovaBuildingName(building))}${extraCapacity} · ${arkNovaBuildingCells(building).join(", ")}</option>`;
       }).join("")}</select></label>`;
     }).join("")}</div>`;
   }
@@ -2692,7 +2752,7 @@
         ? `<fieldset class="arkn-university-picker"><legend>Wildcard tokens · one per card</legend>${wildTokens.map((token) => `<label class="arkn-check-row"><input type="checkbox" name="arkNovaAssociationWildToken" value="${token.id}" ${arkNovaAssociationWildIds(draft).includes(token.id) ? "checked" : ""}><span><b>${arkNovaEscape(arkNovaCardName(token.card))}</b><small>${token.count} left · spend one for an icon</small></span></label>`).join("")}</fieldset>`
         : "";
       const mapRewards = arkNovaAvailableMapRewards(view);
-      const rewardField = `<label><span>Map 0 reward</span><select id="arkNovaAssociationReward"><option value="">Choose an uncovered reward</option>${mapRewards.map((reward) => `<option value="${arkNovaEscape(reward.id)}" ${String(draft.reward_id) === String(reward.id) ? "selected" : ""}>${arkNovaEscape(reward.short_label || reward.label || reward.id)} · ${arkNovaEscape(reward.label || "")}</option>`).join("")}</select></label>`;
+      const rewardField = `<label><span>Map reward</span><select id="arkNovaAssociationReward"><option value="">Choose an uncovered reward</option>${mapRewards.map((reward) => `<option value="${arkNovaEscape(reward.id)}" ${String(draft.reward_id) === String(reward.id) ? "selected" : ""}>${arkNovaEscape(reward.short_label || reward.label || reward.id)} · ${arkNovaEscape(reward.label || "")}</option>`).join("")}</select></label>`;
       const projectOptions = projects.map((card) => `<option value="${arkNovaEscape(arkNovaCardId(card))}" ${String(draft.project_id) === arkNovaCardId(card) ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(card))} · ${arkNovaEscape(arkNovaProjectSourceLabel(card))}</option>`).join("");
       return `<label><span>Project</span><select id="arkNovaAssociationProject"><option value="">Choose project</option>${projectOptions}</select></label><label><span>Support tier</span><select id="arkNovaAssociationSlot">${slotOptions}</select></label>${releaseField}${wildField}${rewardField}`;
     }
@@ -2760,7 +2820,7 @@
         return issue ? `${issue} Keep rotating, or add it and fix it before final confirmation.` : "Click “Add building” to add the highlighted footprint to your plan.";
       }
       if (arkNovaUi.buildQueue.length) return arkNovaBuildPlanIssue() || "Finish the building plan before submitting.";
-      return "Choose a building, then click a highlighted Map 0 hex to place it.";
+      return "Choose a building, then click a highlighted map hex to place it.";
     }
     if (actionType === "animals") {
       return arkNovaAnimalPlanIssue() || arkNovaAnimalStrengthIssue() || "Finish the animal plan before submitting.";
@@ -2823,7 +2883,7 @@
       return;
     }
     if (!arkNovaIsMyTurn(view)) {
-      container.innerHTML = `<div class="arkn-waiting"><span>⏳</span><strong>Another zoo is acting</strong><p>You can inspect cards, Map 0, tracks, and Explain controls while you wait.</p></div>`;
+      container.innerHTML = `<div class="arkn-waiting"><span>⏳</span><strong>Another zoo is acting</strong><p>You can inspect cards, zoo maps, tracks, and Explain controls while you wait.</p></div>`;
       return;
     }
     if (!arkNovaUi.selectedAction) {
@@ -2882,6 +2942,11 @@
       arkNovaUi.pendingSelection.clear();
       return;
     }
+    if (pending.type === "map_harbor" && arkNovaCan("resolve_choice", view)) {
+      arkNovaPendingOptions = [];
+      container.innerHTML = `<section class="arkn-pending" aria-labelledby="arkNovaPendingTitle"><div class="arkn-pending-copy"><span>⚓</span><div><h3 id="arkNovaPendingTitle">Commercial Harbor</h3><p>Sell a hand card below, or finish your turn.</p></div></div><div class="arkn-pending-actions"><button type="button" data-arkn-command="skip-choice" data-arkn-explain="finish_harbor">Finish turn</button></div></section>`;
+      return;
+    }
     const pendingMap = arkNovaPendingMapChoice(view);
     if (pendingMap) {
       arkNovaPendingOptions = [];
@@ -2903,7 +2968,7 @@
         ? `Build free ${buildingMeta.name}`
         : "Confirm footprint";
       container.innerHTML = `<section class="arkn-pending" aria-labelledby="arkNovaPendingTitle">
-        <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || fallbackTitle)}</h3><p>Choose one anchor hex on Map 0; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
+        <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || fallbackTitle)}</h3><p>Choose one anchor hex on your zoo map; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
         ${buildingPicker}
         ${arkNovaBuildDraftMarkup(view)}
         <div class="arkn-pending-actions"><button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildAnchor ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>${arkNovaEscape(confirmLabel)}</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice" data-arkn-explain="pending_choice">${["continue_cards", "move_animals"].includes(pending.type) ? "Finish" : "Skip"}</button>` : ""}</div>
@@ -3069,6 +3134,7 @@
     arkNovaReconcileDraft(view);
     panel.classList.remove("hidden");
     document.getElementById("arkNovaStatus").innerHTML = arkNovaStatusMarkup(view);
+    arkNovaRenderMapSelection(view);
     arkNovaRenderPending(view);
     arkNovaRenderTracks(view);
     arkNovaRenderDisplay(view);
@@ -3078,6 +3144,7 @@
     arkNovaRenderBuildings(view);
     arkNovaRenderHand(view);
     arkNovaRenderComposer(view);
+    arkNovaRenderHarbor(view);
     arkNovaCaptureEvents(data, view);
     arkNovaRenderLog();
     arkNovaApplyMapState();
@@ -3237,7 +3304,7 @@
       }
       const rewardId = String(arkNovaUi.associationDraft.reward_id || "");
       if (!rewardId || !arkNovaAvailableMapRewards(arkNovaView).some((reward) => String(reward.id) === rewardId)) {
-        return arkNovaToast("Choose an uncovered Map 0 conservation reward.");
+        return arkNovaToast("Choose an uncovered map conservation reward.");
       }
       draft.project_id = arkNovaUi.associationDraft.project_id;
       draft.slot = slot;
@@ -3339,7 +3406,23 @@
 
   function arkNovaHandleCommand(command) {
     if (!arkNovaView) return;
-    if (command === "map-info") return arkNovaOpenModal("Map 0 information", ARK_NOVA_MAP_INFO_HTML, "map-info");
+    if (command === "map-info") return arkNovaOpenModal(arkNovaMapDefinition().name || "Zoo map", arkNovaMapInfo(), "map-info");
+    if (command === "preview-map") {
+      const selected = arkNovaCan("choose_map") ? arkNovaUi.mapChoice : arkNovaPlayerMap(arkNovaYou()).id;
+      const options = arkNovaAsArray(arkNovaView.map_options);
+      const map = options.find((entry) => entry.id === selected) || options[0];
+      if (map) arkNovaOpenModal(map.name, `<div class="arkn-map-preview"><img src="${arkNovaMapUrl(map.id)}" alt="${arkNovaEscape(map.name)} layout"><p>${arkNovaEscape(map.description)}</p></div>`, "map-preview");
+      return;
+    }
+    if (command === "choose-map") {
+      if (arkNovaCan("choose_map")) arkNovaSend({ type: "choose_map", map_id: arkNovaUi.mapChoice });
+      return;
+    }
+    if (command === "use-harbor") {
+      const cardId = document.getElementById("arkNovaHarborCard")?.value;
+      if (cardId && arkNovaCan("use_harbor")) arkNovaSend({ type: "use_harbor", card_id: cardId });
+      return;
+    }
     if (command === "x-minus") arkNovaUi.xTokens = Math.max(0, arkNovaUi.xTokens - 1);
     else if (command === "x-plus") arkNovaUi.xTokens += 1;
     else if (command === "multiplier-minus") arkNovaUi.multiplierTokens = Math.max(0, arkNovaUi.multiplierTokens - 1);
@@ -3386,6 +3469,13 @@
   function arkNovaHandlePanelClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || arkNovaExplainMode) return;
+    const mapButton = target.closest("[data-arkn-map-id]");
+    if (mapButton && arkNovaCan("choose_map")) {
+      arkNovaUi.mapChoice = mapButton.dataset.arknMapId;
+      arkNovaRenderMapSelection(arkNovaView);
+      document.querySelector(`[data-arkn-map-id="${CSS.escape(arkNovaUi.mapChoice)}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     const info = target.closest("[data-arkn-card-info]");
     if (info) return arkNovaShowCardDetail(info.dataset.arknCardInfo);
     const zooButton = target.closest("[data-arkn-view-zoo]");
@@ -3510,6 +3600,7 @@
     arkNovaExplainMode = !arkNovaExplainMode;
     document.body.classList.toggle("arkn-explain-mode", arkNovaExplainMode);
     document.querySelectorAll("[data-arkn-explain]").forEach((control) => control.classList.toggle("has-explanation", arkNovaExplainMode));
+    arkNovaSyncMapExplain();
     const button = document.getElementById("arkNovaExplainBtn");
     if (button) {
       button.classList.toggle("active", arkNovaExplainMode);
@@ -3522,6 +3613,7 @@
     arkNovaExplainMode = false;
     document.body.classList.remove("arkn-explain-mode");
     document.querySelectorAll("[data-arkn-explain]").forEach((control) => control.classList.remove("has-explanation"));
+    arkNovaSyncMapExplain();
     const button = document.getElementById("arkNovaExplainBtn");
     if (button) {
       button.classList.remove("active");
@@ -3599,10 +3691,14 @@
     arkNovaEventKeys.clear();
     arkNovaCardLookup.clear();
     arkNovaUi.viewedPlayerId = null;
+    arkNovaUi.mapChoice = "map0";
     arkNovaResetDraft();
     arkNovaExitExplainMode();
     arkNovaCloseModal();
     const panel = arkNovaEnsureShell();
+    panel.classList.remove("is-map-selection");
+    document.getElementById("arkNovaMapSelection")?.classList.add("hidden");
+    document.getElementById("arkNovaHarbor")?.classList.add("hidden");
     panel.querySelectorAll("#arkNovaStatus, #arkNovaPending, #arkNovaTracks, #arkNovaDisplay, #arkNovaProjects, #arkNovaPlayers, #arkNovaActionCards, #arkNovaComposer, #arkNovaBuildings, #arkNovaViewedZooCards, #arkNovaHandChoice, #arkNovaHand, #arkNovaPlayed, #arkNovaLog").forEach((node) => { node.innerHTML = ""; });
     arkNovaApplyMapState();
   }
@@ -3626,7 +3722,7 @@
       const status = document.getElementById("arkNovaStatus");
       const composer = document.getElementById("arkNovaComposer");
       if (status) {
-        status.innerHTML = `<div class="arkn-brand"><span class="arkn-brand-mark" aria-hidden="true">AN</span><span><strong>Ark Nova</strong><small>Map 0</small></span></div><div class="arkn-status-chips"><span class="arkn-status-chip arkn-status-over"><b>View unavailable</b></span></div>`;
+        status.innerHTML = `<div class="arkn-brand"><span class="arkn-brand-mark" aria-hidden="true">AN</span><span><strong>Ark Nova</strong><small>Zoo map</small></span></div><div class="arkn-status-chips"><span class="arkn-status-chip arkn-status-over"><b>View unavailable</b></span></div>`;
       }
       if (composer) {
         composer.innerHTML = `<div class="arkn-waiting"><span>!</span><strong>The latest game view could not be displayed</strong><p>Wait for the next update or refresh this page. Your confirmed game state is safe on the server.</p></div>`;
@@ -3639,10 +3735,28 @@
   window.showArkNovaError = showArkNovaError;
   window.renderArkNovaGameState = renderArkNovaGameState;
   window.ensureArkNovaPanel = arkNovaEnsureShell;
+  window.getArkNovaConfig = () => ({
+    map_mode: currentRoomState?.status !== "lobby" && arkNovaView
+      ? arkNovaView.map_mode || "map0"
+      : document.getElementById("arkNovaMapMode")?.value || "map0",
+  });
+  window.updateArkNovaConfigRow = () => {
+    const box = document.getElementById("arkNovaConfigBox");
+    if (!box) return;
+    const visible = currentGameType === ARK_NOVA_GAME_TYPE && currentRoomState?.status === "lobby";
+    box.classList.toggle("hidden", !visible);
+    box.setAttribute("aria-hidden", String(!visible));
+    if (visible && arkNovaConfigRoom !== currentRoomState.room_id) {
+      arkNovaConfigRoom = currentRoomState.room_id;
+      document.getElementById("arkNovaMapMode").value = currentRoomState.game_config?.map_mode === "choose" ? "choose" : "map0";
+    }
+  };
 
   document.addEventListener("pointerdown", arkNovaHandleExplainPointer, true);
   document.addEventListener("click", arkNovaHandleExplainClick, true);
   document.addEventListener("error", arkNovaHandleCardArtError, true);
   document.addEventListener("keydown", arkNovaHandleKeydown);
   arkNovaEnsureShell();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", window.updateArkNovaConfigRow, { once: true });
+  else window.updateArkNovaConfigRow();
 })();

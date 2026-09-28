@@ -2,15 +2,18 @@
   <div class="game-config-title">🔴 No Thanks! · 不了不了</div>
   <div class="no-thanks-config-row"><label for="noThanksRounds">Rounds</label><select id="noThanksRounds"><option value="1">1 · Single game</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
 </template>
+<template data-game-target="noThanksHeaderActions" data-game-mode="contents">
+  <button id="noThanksHelpBtn" type="button" aria-label="Help" title="Help">Help</button>
+  <button id="noThanksExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
+</template>
 <template data-game-target="noThanksPanel" data-game-mode="contents">
   <header class="no-thanks-heading">
     <div><span class="no-thanks-eyebrow">LESS IS MORE</span><h2>NO THANKS! <span>不了不了</span></h2></div>
-    <div class="no-thanks-tools"><button id="noThanksHelp" type="button">Help</button><button id="noThanksExplain" type="button" aria-pressed="false">Explain</button></div>
   </header>
-  <div class="no-thanks-statusbar"><span id="noThanksStatus" role="status" aria-live="polite">Waiting to start</span><span id="noThanksRound" data-no-thanks-tip="Round：本局编号。多局时累计分最低者获胜。" tabindex="0">Round —</span></div>
+  <div class="no-thanks-statusbar"><span id="noThanksStatus" role="status" aria-live="polite">Waiting to start</span><span id="noThanksRound" data-no-thanks-explain="round" data-no-thanks-tip="Round：本局编号。多局时累计分最低者获胜。" tabindex="0">Round —</span></div>
   <div class="no-thanks-table">
     <section class="no-thanks-offer" aria-label="Current offer">
-      <div class="no-thanks-section-heading"><h3>On the table</h3><span id="noThanksRemaining" tabindex="0" data-no-thanks-tip="Deck（🂠）：尚未翻开的牌数；另有 9 张牌被暗移除。">🂠 — left</span></div>
+      <div class="no-thanks-section-heading"><h3>On the table</h3><span id="noThanksRemaining" tabindex="0" data-no-thanks-explain="deck" data-no-thanks-tip="Deck（🂠）：尚未翻开的牌数；另有 9 张牌被暗移除。">🂠 — left</span></div>
       <div class="no-thanks-offer-content">
         <div id="noThanksCard" class="no-thanks-card" tabindex="0" data-no-thanks-explain="card" data-no-thanks-tip="Card（🃏）：数字是罚分；连号的一段只计最小数字。"><span class="no-thanks-card-corner" aria-hidden="true">NO</span><strong id="noThanksCardValue">?</strong><span class="no-thanks-card-foot" aria-hidden="true">THANKS!</span></div>
         <div class="no-thanks-pot" tabindex="0" data-no-thanks-explain="pot" data-no-thanks-tip="Pot（🔴）：当前牌上的筹码，拿牌时一并收走，每枚在结算时抵 1 分。"><span class="no-thanks-eyebrow">COMES WITH</span><div class="no-thanks-chip-stack" aria-hidden="true">🔴</div><strong id="noThanksPot">0</strong><span>chips</span></div>
@@ -19,10 +22,10 @@
       <div class="no-thanks-actions"><button id="noThanksPass" type="button" data-no-thanks-explain="pass" disabled><strong>No Thanks!</strong><span>Pay 1 🔴</span></button><button id="noThanksTake" type="button" data-no-thanks-explain="take" disabled><strong>Take Card</strong><span id="noThanksTakeLabel">Collect the offer</span></button></div>
     </section>
     <aside class="no-thanks-personal">
-      <div class="no-thanks-section-heading"><h3 id="noThanksPersonalTitle">Your position</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-tip="Lower is better（↓）：牌是罚分，筹码抵分，负分也有效。">↓ Lower is better</span></div>
+      <div class="no-thanks-section-heading"><h3 id="noThanksPersonalTitle">Your position</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-explain="score" data-no-thanks-tip="Lower is better（↓）：牌是罚分，筹码抵分，负分也有效。">↓ Lower is better</span></div>
       <div class="no-thanks-stats">
         <div tabindex="0" data-no-thanks-explain="chips" data-no-thanks-tip="Chips（🔴）：只有你可查看自己的筹码，结算时全部公开。"><span>Chips 🔴</span><strong id="noThanksYourChips">—</strong></div>
-        <div tabindex="0" data-no-thanks-explain="runs" data-no-thanks-tip="Card points（🃏）：各连续段的最小数字之和。"><span>Cards 🃏</span><strong id="noThanksYourCards">—</strong></div>
+        <div tabindex="0" data-no-thanks-explain="cards" data-no-thanks-tip="Cards（🃏）：各连续段的最小数字之和。"><span>Cards 🃏</span><strong id="noThanksYourCards">—</strong></div>
         <div class="no-thanks-net" tabindex="0" data-no-thanks-explain="score" data-no-thanks-tip="Net（＝）：本局牌面分 − 剩余筹码数。"><span>Net ＝</span><strong id="noThanksYourNet">—</strong></div>
       </div>
       <div id="noThanksPreview" class="no-thanks-preview" tabindex="0" data-no-thanks-explain="delta" data-no-thanks-tip="Take change（Δ）：拿牌后的净分变化，已包括连号和收回筹码；越低越好。">Take change Δ <strong id="noThanksDelta">—</strong></div>

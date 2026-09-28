@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "power_grid": {
+    "scripts": ["/static/games/power_grid.js?v=2"],
+    "styles": ["/static/games/power_grid.css?v=2"],
+    "markup": "/static/games/power_grid.html?v=2",
+    "panel": "powerGridPanel",
+    "header": "showPowerGridHeaderActions"
+  },
   "a_feast_for_odin": {
     "scripts": ["/static/games/a_feast_for_odin.js?v=2"],
     "styles": ["/static/games/a_feast_for_odin.css?v=2"],
@@ -8,9 +15,9 @@ const GAME_ASSETS = {
     "header": "showOdinHeaderActions"
   },
   "no_thanks": {
-    "scripts": ["/static/games/no_thanks.js?v=1"],
-    "styles": ["/static/games/no_thanks.css?v=1"],
-    "markup": "/static/games/no_thanks.html?v=1",
+    "scripts": ["/static/games/no_thanks.js?v=2"],
+    "styles": ["/static/games/no_thanks.css?v=2"],
+    "markup": "/static/games/no_thanks.html?v=2",
     "panel": "noThanksPanel",
     "header": "showNoThanksHeaderActions"
   },
@@ -893,13 +900,14 @@ const GAME_ASSETS = {
   },
   "ark_nova": {
     "scripts": [
-      "/static/games/ark_nova.js?v=app_v24"
+      "/static/games/ark_nova.js?v=app_v25"
     ],
     "styles": [
-      "/static/ark_nova.css?v=app_v21"
+      "/static/ark_nova.css?v=app_v22"
     ],
     "panel": "arkNovaPanel",
-    "header": "showArkNovaHeaderActions"
+    "header": "showArkNovaHeaderActions",
+    "markup": "/static/games/ark_nova.html?v=1"
   },
   "gaia_project": {
     "scripts": [
