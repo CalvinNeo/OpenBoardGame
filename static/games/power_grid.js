@@ -11,16 +11,17 @@
   let view = null, pending = false, pendingTimer, signature = "", phaseSignature = "", configSignature = "";
   let selectedPlant = null, selectedCity = null, chosenPlants = [], hybridCoal = 0, bidValue = 0;
   let cart = emptyFuel(), keep = emptyFuel(), explaining = false, suppressClick = false, suppressTimer;
-  let tipTimer, previousFocus, mapBounds, mapBox, mapKey = "", drag = null;
+  let tipTimer, previousFocus, mapBounds, mapBox, mapKey = "", mapRenderSize = "", mapLayoutScale = null, mapAspect = 1, mapXScale = 1.6, drag = null;
 
   const explanations = {
     steps:["Round / Step", "每轮进行竞拍、买资源、建网、供电。Step 1／2／3 每城分别允许 1／2／3 家公司。达到门槛的整段建设结束后才进入 Step 2；抽到 Step 3 卡后在下一阶段生效。"],
     order:["Player order · 行动顺序", "每轮按 Cities（🏠，已连接城市数）排序，平手看最高电厂编号。顺序领先者先发起竞拍、后买资源和建城。拍卖内叫价按座位顺时针进行。首轮拍卖后重新排序。"],
     market:["Power plants（🏭）· 电厂市场", "Step 1／2 只有上排最低的 4 张可竞拍，下排为未来市场；Step 3 全部 6 张可买。电厂编号也是最低出价。每轮最多买 1 厂，首轮必须购买。售出立即补牌；过时电厂会淘汰。Deck（🂠）不含 Step 3 卡。"],
-    auction:["Auction / Bid（🔨）", "点现货电厂，输入起拍价，点击 Start Auction。已开始竞拍时可加价，必须高于当前价且付得起。只有最后赢家付款。竞拍中 Pass 只退出当前电厂；无人竞拍时 Pass 表示本轮不再购买。首轮不能跳过购买。"],
+    auction:["Auction（🔨） / Bid（💰）", "点现货电厂，用 −／+ 调整 Bid（💰，叫价），每次 1 💰，再点击 Start Auction。默认显示最低合法叫价，不能减到最低价以下或加到余额以上。已开始竞拍时点击 Raise Bid 加价，必须高于当前价且付得起。只有最后赢家付款。竞拍中 Pass 只退出当前电厂；无人竞拍时 Pass 表示本轮不再购买。首轮不能跳过购买。"],
     resources:["Fuel market · 资源市场", "Coal（🟤，煤）、Oil（⚫，油）、Garbage（🟡，垃圾）、Uranium（🔴，铀）从便宜到贵买入。价格随库存变化。用 +／− 选数量，Buy Fuel 一次购买；可以买多次，再点 Done。Step 和人数决定补货量，总组件有限。"],
     storage:["Fuel storage · 燃料储存", "每座电厂可储存一次燃料需求的两倍，只能存兼容类型。Hybrid（🟤⚫，混合厂）的煤和油共享容量。公司资源池自动安排储位，等价于规则允许的自由调配。Clean energy（🌿，清洁电厂）不需要也不能储存燃料。"],
     network:["Cities（🏠）· 城市网络", "点城市或展开 City list 选择目标，再点 Build。首城只付占位费，后续付从已有任一城市出发的最短线路费用，再加占位 10／15／20 💰。可以途经已满或尚未购买的城市，但不能途经未启用区域；一个城市不能重复建。"],
+    connection:["Line cost（💰）· 线路费用", "线路上的浅橙色矩形数字是这段线路的费用（💰），圆形数字是 Cities（🏠，城市）编号。0 表示这段线路免费。标签错开时由短引线指向对应线路；悬停或点击可查看两端城市与费用。建设时系统累加最短路径上的线路费用，再加城市占位费。"],
     zoom:["Map controls", "拖动地图平移，+／− 缩放，Fit 显示全部可用区域。手机触摸由地图接管，松手或取消后停止；拖动不会误选城市。也可使用 City list 查看名称和精确建造费用。"],
     power:["Power（⚡）· 供电", "点选自己的电厂，选择混合厂消耗的煤数（其余消耗油），再确认 Run Plants。每厂只能运行一次，必须消耗完整燃料；可以少发或完全不发。收入按实际供电城市数计算，超过已连接城市的电力浪费。0 城也可领取 10 💰。"],
     replace:["Replace plant · 更换电厂", "2 人最多 4 厂，其余人数最多 3 厂。购入超额电厂后，点选一座旧厂退役（不能退役刚购买的电厂），用资源控件决定保留量。保留量必须符合剩余电厂容量，多余资源回到供应堆。"],
@@ -35,9 +36,9 @@
     <h3>准备与规模</h3><p>每人 50 💰。地图选相连区域，每区 7 城。8 座起始电厂为 3–10 号，13 号在牌库顶，Step 3 卡在底部；其余洗牌并按人数暗移除。只显示本人现金（其他人为 🔒）；电厂、城市与燃料公开。</p>
     <table><thead><tr><th>Players</th><th>Regions</th><th>Removed</th><th>Plant limit</th><th>Step 2</th><th>Finish 🏁</th></tr></thead><tbody><tr><td>2</td><td>3</td><td>8</td><td>4</td><td>10</td><td>21</td></tr><tr><td>3</td><td>3</td><td>8</td><td>3</td><td>7</td><td>17</td></tr><tr><td>4</td><td>4</td><td>4</td><td>3</td><td>7</td><td>17</td></tr><tr><td>5</td><td>5</td><td>0</td><td>3</td><td>7</td><td>15</td></tr><tr><td>6</td><td>5</td><td>0</td><td>3</td><td>6</td><td>14</td></tr></tbody></table>
     <h3>1 · 顺序</h3><p>城市多的公司靠前，平手看最高电厂编号。首轮随机，首轮竞拍结束后重排。竞拍发起与供电使用正序；资源采购和建设使用逆序。</p>
-    <h3>2 · 竞拍 🔨</h3><p>选现货电厂起拍，价格不能低于编号。按座位顺时针加价或 Pass，最后一位支付叫价。每人每轮最多买 1 座；首轮必须买。当前拍卖 Pass 只退出这张牌；轮到发起拍卖时 Pass 会退出本轮所有后续拍卖。若别人赢了你发起的拍卖，你可再发起。超过电厂上限时必须退役一座旧厂，选择可保留的资源，多余燃料返回供应堆。</p>
+    <h3>2 · 竞拍 🔨</h3><p>选现货电厂起拍，价格不能低于编号。用 −／+ 调整 Bid（💰，叫价），每次 1 💰，默认最低合法叫价，上限为自己的余额，再点击 Start Auction 或 Raise Bid 确认。按座位顺时针加价或 Pass，最后一位支付叫价。每人每轮最多买 1 座；首轮必须买。当前拍卖 Pass 只退出这张牌；轮到发起拍卖时 Pass 会退出本轮所有后续拍卖。若别人赢了你发起的拍卖，你可再发起。超过电厂上限时必须退役一座旧厂，选择可保留的资源，多余燃料返回供应堆。</p>
     <h3>3 · 资源采购</h3><p>Coal（🟤，煤）、Oil（⚫，油）、Garbage（🟡，垃圾）、Uranium（🔴，铀）从便宜到贵购买。初始价格分别为 1／3／7／14 💰。每厂只存兼容燃料，最多为一次需求的两倍。Hybrid（🟤⚫，混合厂）混合储存煤油，共享容量。Clean energy（🌿，清洁电厂）无需燃料。公司燃料可在兼容电厂之间自由分配。</p>
-    <h3>4 · 建设网络</h3><p>首城只付占位费。后续城市需支付最短线路费用加占位费：同城第一／二／三家公司分别 10／15／20 💰。可以经过未建或已满城市，线路可跨越多城；不能经过未启用区域，也不能重复占同一城。每次延伸重新计算连接费，不永久占有已用线路。可建任意多城，也可跳过。选城后可见线路与费用，Build 确认。</p>
+    <h3>4 · 建设网络</h3><p>地图圆形数字为 Cities（🏠，城市）编号，浅橙色矩形数字为 Line cost（💰，该段线路费用），0 表示免费；缩略视图也显示费用。错开的标签用短引线连接对应线路，悬停／点击可查看两端城市。首城只付占位费。后续城市需支付最短线路费用加占位费：同城第一／二／三家公司分别 10／15／20 💰。可以经过未建或已满城市，线路可跨越多城；不能经过未启用区域，也不能重复占同一城。每次延伸重新计算连接费，不永久占有已用线路。可建任意多城，也可跳过。选城后可见线路与费用，Build 确认。</p>
     <h3>5 · 供电与收入</h3><p>选择要运行的电厂，每厂本轮最多一次，必须支付其完整燃料。混合厂的煤油合计达到需求即可。可少发或不发；按供电量和已有城市数中较小者领钱。0 城收入 10 💰。结算补货受供应堆实物数量限制。轮末所有人点击 Next Round 才继续。</p>
     <p>供电城市 → 收入 💰：${[10,22,33,44,54,64,73,82,90,98,105,112,118,124,129,134,138,142,145,148,150].map((n,i)=>`${i===20?"20+":i}→${n}`).join(" · ")}</p>
     <h3>Step 与电厂市场</h3><p>Step 1 每城最多一家。有人达到 Step 2 门槛时，完成整段建设后移除最低电厂并补一张，开放第二个位置。Step 1／2 的 8 张电厂分现货 4 张、未来 4 张；每轮无人买厂则淘汰最低，轮末最高厂沉底。编号不超过任何玩家网络城市数的市场电厂立即淘汰并补牌。</p>
@@ -73,10 +74,13 @@
     pending=false;clearTimeout(pendingTimer);
     if(view){renderMarket();renderFleet();renderAction();renderReview();}
   }
-  function hideTip(){clearTimeout(tipTimer);tooltip.classList.add("hidden");}
+  function clearLineHighlight(){byId("Map").querySelectorAll(".is-inspected").forEach(n=>n.classList.remove("is-inspected"));}
+  function hideTip(){clearTimeout(tipTimer);tooltip.classList.add("hidden");clearLineHighlight();}
   function showTip(target, auto=false){
     if(!target?.dataset.pgTip || explaining || dialog.open)return;
-    clearTimeout(tipTimer);tooltip.textContent=target.dataset.pgTip;tooltip.classList.remove("hidden");
+    clearTimeout(tipTimer);clearLineHighlight();
+    if(target.dataset.edge!==undefined)byId("Map").querySelector(`.pg-edge[data-edge="${target.dataset.edge}"]`)?.classList.add("is-inspected");
+    tooltip.textContent=target.dataset.pgTip;tooltip.classList.remove("hidden");
     const r=target.getBoundingClientRect(), t=tooltip.getBoundingClientRect();
     tooltip.style.left=`${Math.max(12,Math.min(r.left,innerWidth-t.width-12))}px`;
     tooltip.style.top=`${r.bottom+t.height+18<innerHeight?r.bottom+7:Math.max(12,r.top-t.height-7)}px`;
@@ -178,11 +182,24 @@
       if(!auction)box.append(node("p","pg-action-message",selectedPlant?`Plant #${selectedPlant} · minimum ${selectedPlant} 💰`:"Choose a plant from the current market."));
       const row=node("div","pg-inline-actions");
       if(minimum!=null){
-        const input=node("input");input.type="number";input.id="powerGridBid";input.min=minimum;input.max=player.money;input.step="1";input.value=Math.max(minimum,bidValue||0);input.disabled=pending;
-        const label=node("label","","Bid 💰");label.htmlFor=input.id;label.append(input);row.append(label);
-        const submit=button(auction?"Raise Bid":"Start Auction",()=>send(auction?"bid":"auction",auction?{amount:Number(input.value)}:{plant:selectedPlant,amount:Number(input.value)}),"auction",false,true);
-        const update=()=>{bidValue=Number(input.value);submit.disabled=!can(auction?"bid":"auction") || !Number.isInteger(bidValue) || bidValue<minimum || bidValue>player.money;};
-        input.addEventListener("input",update);update();row.append(submit);
+        row.classList.add("pg-bid-actions");
+        const kind=auction?"bid":"auction", control=node("div","pg-bid-control"), step=node("div","pg-stepper");
+        const output=explainable(node("output"),"auction");output.id="powerGridBid";output.setAttribute("aria-live","polite");
+        const label=explainable(node("label","","Bid 💰"),"auction","Bid（💰）：本次叫价，用 −／+ 每次调整 1 💰，确认后提交。");label.htmlFor=output.id;
+        bidValue=Math.max(minimum,Math.min(player.money,bidValue||minimum));
+        const adjust=delta=>{
+          if(!can(kind)||minimum>player.money)return;
+          bidValue=Math.max(minimum,Math.min(player.money,bidValue+delta));update();
+        };
+        const minus=button("−",()=>adjust(-1),"auction");minus.setAttribute("aria-label","Decrease bid");
+        const plus=button("+",()=>adjust(1),"auction");plus.setAttribute("aria-label","Increase bid");
+        const submit=button(auction?"Raise Bid":"Start Auction",()=>send(kind,auction?{amount:bidValue}:{plant:selectedPlant,amount:bidValue}),"auction",false,true);
+        const update=()=>{
+          output.value=bidValue;
+          const allowed=can(kind)&&bidValue>=minimum&&bidValue<=player.money;
+          minus.disabled=!allowed||bidValue<=minimum;plus.disabled=!allowed||bidValue>=player.money;submit.disabled=!allowed;
+        };
+        update();step.append(minus,output,plus);control.append(label,step);row.append(control,submit);
       }
       row.append(button("Pass",()=>send("pass"),"auction",!can("pass")));box.append(row);
     }else if(view.phase==="resources")renderResources(box);
@@ -213,36 +230,97 @@
 
   function svg(tag, attrs={}, value){const n=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));if(value!=null)n.textContent=value;return n;}
   function applyMapBox(){
-    if(!mapBox)return;
-    const map=byId("Map");map.setAttribute("viewBox",`${mapBox.x} ${mapBox.y} ${mapBox.w} ${mapBox.h}`);
-    const rect=map.getBoundingClientRect(),scale=Math.min(rect.width/mapBox.w,rect.height/mapBox.h);
-    if(!scale)return;
+    if(!mapBox||!view)return;
+    const map=byId("Map"),rect=map.getBoundingClientRect();
+    if(rect.width&&rect.height&&`${rect.width}:${rect.height}`!==mapRenderSize){renderMap();return;}
+    map.setAttribute("viewBox",`${mapBox.x} ${mapBox.y} ${mapBox.w} ${mapBox.h}`);
+    const scale=Math.min(rect.width/mapBox.w,rect.height/mapBox.h);
+    if(!scale||scale===mapLayoutScale)return;mapLayoutScale=scale;
     map.querySelectorAll(".pg-city-ring").forEach(n=>n.setAttribute("r",Math.max(21,9/scale)));
     map.querySelectorAll(".pg-city-number").forEach(n=>{n.style.fontSize=`${Math.max(21,10/scale)}px`;n.setAttribute("y",3.5/scale);});
     const detailed=(rect.width>=450 && scale>=.32)||scale>=.65;
     map.querySelectorAll(".pg-city-name").forEach(n=>{n.style.display=detailed?"":"none";n.style.fontSize=`${Math.max(24,10/scale)}px`;});
-    map.querySelectorAll(".pg-edge-label").forEach(n=>{n.style.display=detailed?"":"none";});
+    layoutLineCosts(scale);
+  }
+  function layoutLineCosts(scale){
+    const map=byId("Map"), cityById=Object.fromEntries(view.cities.map(c=>[c.id,{x:c.x*mapXScale*scale,y:c.y*scale}]));
+    const occupied=[], gap=1.5, radius=Math.max(21*scale,9);
+    const box=(x,y,w,h)=>({left:x-w/2-gap,right:x+w/2+gap,top:y-h/2-gap,bottom:y+h/2+gap});
+    const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+    for(const city of Object.values(cityById))occupied.push(box(city.x,city.y,2*radius,2*radius));
+    map.querySelectorAll(".pg-city-name,.pg-city-owner").forEach(n=>{
+      if(getComputedStyle(n).display==="none")return;
+      const bounds=n.getBBox(),city=cityById[n.parentElement.dataset.city];
+      occupied.push(box(city.x+(bounds.x+bounds.width/2)*scale,city.y+(bounds.y+bounds.height/2)*scale,bounds.width*scale,bounds.height*scale));
+    });
+    const bounds={left:mapBounds.x*scale+2,right:(mapBounds.x+mapBounds.w)*scale-2,top:mapBounds.y*scale+2,bottom:(mapBounds.y+mapBounds.h)*scale-2};
+    const fits=rect=>rect.left>=bounds.left&&rect.right<=bounds.right&&rect.top>=bounds.top&&rect.bottom<=bounds.bottom&&!occupied.some(other=>overlaps(rect,other));
+    // Place short connections first; their price tags have the least room to move.
+    const costs=[...map.querySelectorAll(".pg-edge-cost")].map(group=>{
+      const a=cityById[group.dataset.a],b=cityById[group.dataset.b];return {group,a,b,length:Math.hypot(b.x-a.x,b.y-a.y)};
+    }).sort((a,b)=>a.length-b.length);
+    costs.forEach(({group,a,b,length})=>{
+      const width=group.dataset.cost.length*7+8,height=17,dx=b.x-a.x,dy=b.y-a.y,candidates=[];
+      for(const t of [.5,.35,.65,.2,.8]){
+        const anchor={x:a.x+dx*t,y:a.y+dy*t};
+        for(const offset of [0,14,-14,25,-25,38,-38,55,-55]){
+          const x=anchor.x-dy/length*offset,y=anchor.y+dx/length*offset;
+          candidates.push({x,y,anchor,score:Math.abs(offset)*1.3+Math.abs(t-.5)*length,rect:box(x,y,width,height)});
+        }
+      }
+      candidates.sort((a,b)=>a.score-b.score);
+      let placement=candidates.find(c=>fits(c.rect));
+      // Very dense overview maps can use nearby open space without covering a city or another price.
+      if(!placement){
+        for(let y=bounds.top+height/2+gap;y<bounds.bottom-height/2-gap;y+=8){
+          for(let x=bounds.left+width/2+gap;x<bounds.right-width/2-gap;x+=8){
+            const rect=box(x,y,width,height);if(!fits(rect))continue;
+            const t=Math.max(.2,Math.min(.8,((x-a.x)*dx+(y-a.y)*dy)/(length*length)));
+            const anchor={x:a.x+dx*t,y:a.y+dy*t},score=Math.hypot(x-anchor.x,y-anchor.y)*1.3+Math.abs(t-.5)*length;
+            if(!placement||score<placement.score)placement={x,y,anchor,score,rect};
+          }
+        }
+      }
+      placement ||= candidates[0];occupied.push(placement.rect);
+      group.setAttribute("transform",`translate(${placement.x/scale} ${placement.y/scale})`);
+      const callout=map.querySelector(`.pg-edge-callout[data-edge="${group.dataset.edge}"]`),leader=callout.querySelector("line"),joint=callout.querySelector("circle");
+      Object.entries({x1:placement.anchor.x/scale,y1:placement.anchor.y/scale,x2:placement.x/scale,y2:placement.y/scale}).forEach(([key,value])=>leader.setAttribute(key,value));
+      Object.entries({cx:placement.anchor.x/scale,cy:placement.anchor.y/scale,r:1.5/scale}).forEach(([key,value])=>joint.setAttribute(key,value));
+      callout.style.display=Math.hypot(placement.x-placement.anchor.x,placement.y-placement.anchor.y)>1?"":"none";
+      const background=group.querySelector("rect");
+      Object.entries({x:-width/2/scale,y:-height/2/scale,width:width/scale,height:height/scale,rx:3/scale}).forEach(([key,value])=>background.setAttribute(key,value));
+      const label=group.querySelector("text");label.style.fontSize=`${11/scale}px`;label.setAttribute("y",3.7/scale);
+    });
   }
   function fitMap(){mapBox={...mapBounds};applyMapBox();}
   function zoom(factor){if(!mapBox)return;const w=Math.max(mapBounds.w/4,Math.min(mapBounds.w,mapBox.w*factor)), h=mapBounds.h*w/mapBounds.w;mapBox={x:mapBox.x+(mapBox.w-w)/2,y:mapBox.y+(mapBox.h-h)/2,w,h};clampMap();applyMapBox();}
   function clampMap(){mapBox.x=Math.max(mapBounds.x,Math.min(mapBounds.x+mapBounds.w-mapBox.w,mapBox.x));mapBox.y=Math.max(mapBounds.y,Math.min(mapBounds.y+mapBounds.h-mapBox.h,mapBox.y));}
   function selectCity(id){selectedCity=selectedCity===id?null:id;renderMap();renderAction();}
   function renderMap(){
-    const map=byId("Map"), previousScroll=byId("Cities").scrollTop;map.replaceChildren();
-    const key=view.cities.map(c=>c.id).join("|");
+    const map=byId("Map"), previousScroll=byId("Cities").scrollTop;map.replaceChildren();mapLayoutScale=null;
+    const rect=map.getBoundingClientRect();mapRenderSize=`${rect.width}:${rect.height}`;if(rect.width&&rect.height)mapAspect=rect.width/rect.height;
+    const xs=view.cities.map(c=>c.x),ys=view.cities.map(c=>c.y),height=Math.max(...ys)-Math.min(...ys)+160;
+    const horizontalPadding=(rect.width&&rect.height&&rect.width<450)?14*height/rect.height:80;
+    mapXScale=Math.max(.2,(height*mapAspect-2*horizontalPadding)/(Math.max(...xs)-Math.min(...xs)));
+    const key=view.cities.map(c=>c.id).join("|")+`:${mapXScale}`;
     if(key!==mapKey){
-      const xs=view.cities.map(c=>c.x*1.6),ys=view.cities.map(c=>c.y);
-      mapBounds={x:Math.min(...xs)-65,y:Math.min(...ys)-45,w:Math.max(...xs)-Math.min(...xs)+150,h:Math.max(...ys)-Math.min(...ys)+110};
-      mapKey=key;fitMap();
+      mapBounds={x:Math.min(...xs)*mapXScale-horizontalPadding,y:Math.min(...ys)-80,w:(Math.max(...xs)-Math.min(...xs))*mapXScale+2*horizontalPadding,h:height};
+      mapKey=key;mapBox={...mapBounds};
     }
-    const cityById=Object.fromEntries(view.cities.map(c=>[c.id,{...c,x:c.x*1.6}]));
+    const cityById=Object.fromEntries(view.cities.map(c=>[c.id,{...c,x:c.x*mapXScale}]));
     const path=view.build_quotes.find(q=>q.city===selectedCity)?.path||[];
-    for(const edge of view.edges){
+    const lines=svg("g"),leaders=svg("g"),costs=svg("g");map.append(lines,leaders,costs);
+    view.edges.forEach((edge,index)=>{
       const a=cityById[edge.a],b=cityById[edge.b];
       const highlighted=path.some((c,i)=>i && ((path[i-1]===a.id && c===b.id)||(path[i-1]===b.id && c===a.id)));
-      map.append(svg("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:`pg-edge${highlighted?" is-path":""}`}));
-      map.append(svg("text",{x:(a.x+b.x)/2,y:(a.y+b.y)/2-4,class:"pg-edge-label"},edge.cost));
-    }
+      lines.append(svg("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,"data-edge":index,class:`pg-edge${highlighted?" is-path":""}`}));
+      const description=`${a.name} ↔ ${b.name} · Line cost（💰）${edge.cost}`;
+      const badge=svg("g",{class:`pg-edge-cost${highlighted?" is-path":""}`,tabindex:"0","aria-label":description});
+      Object.assign(badge.dataset,{edge:String(index),a:edge.a,b:edge.b,cost:String(edge.cost),pgExplain:"connection",pgTip:description});
+      const callout=svg("g",{class:"pg-edge-callout","data-edge":index});callout.append(svg("line",{class:"pg-edge-leader"}),svg("circle",{class:"pg-edge-joint"}));leaders.append(callout);
+      badge.append(svg("rect",{class:"pg-edge-price"}),svg("text",{class:"pg-edge-label"},edge.cost));
+      badge.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showTip(badge,true);}});costs.append(badge);
+    });
     view.cities.forEach((original,index)=>{
       const c=cityById[original.id];
       const group=svg("g",{class:`pg-city${c.owners.includes(view.you)?" is-owned":""}${c.id===selectedCity?" is-selected":""}`,transform:`translate(${c.x} ${c.y})`,role:"button",tabindex:"0","aria-label":`${index+1}. ${c.name}, ${c.owners.length}/${view.step} companies`});
@@ -251,13 +329,14 @@
       group.dataset.pgTip=`${index+1}. ${c.name} · ${c.owners.length}/${view.step} companies${quote?` · Build ${quote.cost} 💰`:""}`;
       group.append(svg("circle",{r:33,fill:view.region_colors[c.region],opacity:.22}),svg("circle",{r:21,class:"pg-city-ring"}),svg("text",{y:5,class:"pg-city-number"},index+1));
       group.append(svg("text",{y:42,class:"pg-city-name"},c.name));
-      c.owners.forEach((pid,i)=>group.append(svg("circle",{cx:(i-(c.owners.length-1)/2)*15,cy:-26,r:7,fill:playerColor(pid),stroke:"#fffdf0","stroke-width":2})));
+      c.owners.forEach((pid,i)=>group.append(svg("circle",{cx:(i-(c.owners.length-1)/2)*15,cy:-26,r:7,class:"pg-city-owner",fill:playerColor(pid),stroke:"#fffdf0","stroke-width":2})));
       group.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectCity(c.id);}});map.append(group);
     });
     applyMapBox();
     const legend=byId("MapLegend");legend.replaceChildren();
     view.config.regions.forEach(r=>{const n=node("span","",regionNames[r]),dot=node("i","pg-dot");dot.style.background=view.region_colors[r];n.prepend(dot);legend.append(n);});
-    legend.append(explainable(node("span","","🔗 Costs · tap city numbers"),"network","🔗：每段线路费用；系统自动选最便宜路径。缩略图点数字查看城市名称，放大后显示名称与线路价格。"));
+    const cityLegend=explainable(node("span","","Cities 🏠"),"network","圆形数字是城市编号；点选或悬停查看名称，放大后显示名称。"),costLegend=explainable(node("span","","Line cost 💰"),"connection","浅橙色矩形数字是每段线路费用；0 表示免费，短引线指向对应线路。悬停或点击查看两端城市。");
+    cityLegend.prepend(node("i","pg-legend-city","1"));costLegend.prepend(node("i","pg-legend-cost","8"));legend.append(cityLegend,costLegend);
     const list=byId("Cities");list.replaceChildren();
     view.cities.forEach((c,i)=>{
       const q=view.build_quotes.find(x=>x.city===c.id), b=button("",()=>selectCity(c.id),"network");
@@ -303,7 +382,7 @@
   const map=byId("Map");
   map.addEventListener("pointerdown",e=>{
     if(explaining||!mapBox||drag)return;e.preventDefault();hideTip();
-    drag={id:e.pointerId,x:e.clientX,y:e.clientY,box:{...mapBox},city:e.target.closest("[data-city]")?.dataset.city,moved:false};
+    drag={id:e.pointerId,x:e.clientX,y:e.clientY,box:{...mapBox},city:e.target.closest("[data-city]")?.dataset.city,edge:e.target.closest(".pg-edge-cost")?.dataset.edge,moved:false};
     map.setPointerCapture(e.pointerId);
   });
   map.addEventListener("pointermove",e=>{
@@ -315,7 +394,7 @@
   function finishDrag(e){
     if(!drag||drag.id!==e.pointerId)return;const ended=drag;drag=null;map.classList.remove("is-dragging");
     if(map.hasPointerCapture(e.pointerId))map.releasePointerCapture(e.pointerId);
-    if(e.type==="pointerup"&&!ended.moved){if(ended.city){selectCity(ended.city);showTip(map.querySelector(`[data-city="${ended.city}"]`),true);}else{selectedCity=null;renderMap();renderAction();}}
+    if(e.type==="pointerup"&&!ended.moved){if(ended.city){selectCity(ended.city);showTip(map.querySelector(`[data-city="${ended.city}"]`),true);}else if(ended.edge!==undefined){showTip(map.querySelector(`.pg-edge-cost[data-edge="${ended.edge}"]`),true);}else{selectedCity=null;renderMap();renderAction();}}
   }
   ["pointerup","pointercancel","lostpointercapture"].forEach(type=>map.addEventListener(type,finishDrag));
   map.addEventListener("wheel",e=>{if(!view)return;e.preventDefault();zoom(e.deltaY>0?1.15:.87);},{passive:false});
@@ -334,7 +413,7 @@
   function clearSelection(){selectedPlant=null;selectedCity=null;chosenPlants=[];hybridCoal=0;cart=emptyFuel();if(view){renderMarket();renderFleet();renderMap();renderAction();}}
   panel.addEventListener("click",e=>{
     const target=e.target.closest("[data-pg-tip]");if(target)showTip(target,true);else hideTip();
-    if(!e.target.closest("button,input,label,summary,svg,[data-pg-tip],.pg-plant,.pg-resource-row"))clearSelection();
+    if(!e.target.closest("button,input,label,summary,svg,[data-pg-tip],.pg-plant,.pg-resource-row,.pg-bid-control"))clearSelection();
   });
   panel.addEventListener("pointerover",e=>{if(e.pointerType==="mouse")showTip(e.target.closest("[data-pg-tip]"));});
   panel.addEventListener("pointerout",e=>{if(e.pointerType==="mouse")hideTip();});

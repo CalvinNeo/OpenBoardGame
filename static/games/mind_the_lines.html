@@ -1,0 +1,43 @@
+<template data-game-target="mindTheLinesHeaderActions" data-game-mode="contents">
+  <button id="mindTheLinesHelpBtn" type="button">Help</button>
+  <button id="mindTheLinesExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="mindTheLinesConfigBox" data-game-mode="contents">
+  <div class="mind-config">
+    <label for="mindTheLinesDifficulty">Word set <select id="mindTheLinesDifficulty"><option value="easy">Easy</option><option value="hard">Hard</option></select></label>
+    <label for="mindTheLinesDuration">Drawing time <select id="mindTheLinesDuration"><option value="120">2 minutes · Standard</option><option value="180">3 minutes · Practice</option><option value="0">Untimed · Practice</option></select></label>
+  </div>
+</template>
+<template data-game-target="mindTheLinesPanel" data-game-mode="contents">
+  <div class="mind-game">
+    <div class="mind-heading"><div><span class="mind-eyebrow">MIND THE LINES</span><h2>出神入画</h2></div><div id="mindTheLinesStats" class="mind-stats"></div></div>
+    <div id="mindTheLinesStatus" class="mind-status" role="status" aria-live="polite"></div>
+    <div id="mindTheLinesEditorLayout" class="mind-editor-layout">
+      <section class="mind-editor" aria-label="Your drawing">
+        <div id="mindTheLinesWords" class="mind-secret"></div>
+        <div id="mindTheLinesBoardWrap" class="mind-board-wrap" data-mind-explain="board">
+          <svg id="mindTheLinesBoard" class="mind-board" viewBox="0 0 1000 1000" role="img" aria-label="Drawing board: trace the existing pale lines"></svg>
+          <div id="mindTheLinesBoardCover" class="mind-board-cover"></div>
+        </div>
+        <div class="mind-toolbar" role="toolbar" aria-label="Drawing tools">
+          <button id="mindTheLinesPen" type="button" data-mind-action="pen" data-mind-explain="pen" aria-pressed="true">✏️ Pen</button>
+          <button id="mindTheLinesEraser" type="button" data-mind-action="eraser" data-mind-explain="eraser" aria-pressed="false">Eraser</button>
+          <button id="mindTheLinesUndo" type="button" data-mind-action="undo" data-mind-explain="undo">↶ Undo</button>
+          <button id="mindTheLinesFlip" type="button" data-mind-action="flip" data-mind-explain="flip">↔ Flip</button>
+          <button id="mindTheLinesRotate" type="button" data-mind-action="rotate" data-mind-explain="rotate">↻ Rotate</button>
+        </div>
+        <div class="mind-editor-footer"><span id="mindTheLinesDraftStatus" class="mind-draft-status" aria-live="polite"></span><button id="mindTheLinesSubmit" type="button" class="mind-primary" data-mind-action="submit_drawing" data-mind-explain="submit">Submit</button></div>
+      </section>
+      <aside class="mind-sidebar"><div class="mind-note"><span class="mind-eyebrow">A PICTURE IN THE LINES</span><strong id="mindTheLinesStageTitle">Find your picture.</strong><p id="mindTheLinesStageHint"></p></div><button id="mindTheLinesReady" type="button" class="mind-primary" data-mind-action="ready" data-mind-explain="ready">Ready</button><div id="mindTheLinesPlayers" class="mind-players"></div></aside>
+    </div>
+    <div id="mindTheLinesOracleLayout" class="mind-oracle-layout" hidden>
+      <section class="mind-gallery-section"><div class="mind-section-heading"><h3>✏️ Gallery</h3><span class="mind-caption">Tap to enlarge</span></div><div id="mindTheLinesGallery" class="mind-gallery"></div></section>
+      <section class="mind-candidates-section"><div class="mind-section-heading"><h3 id="mindTheLinesCardsHeading">The oracle</h3><span id="mindTheLinesRemaining" class="mind-caption"></span></div><div id="mindTheLinesCards" class="mind-cards"></div><div id="mindTheLinesReview" class="mind-review"></div></section>
+    </div>
+    <div id="mindTheLinesResultPlayers" class="mind-result-players" hidden></div>
+  </div>
+</template>
+<template data-game-target="mindTheLinesDialog" data-game-mode="contents">
+  <dialog id="mindTheLinesModal" class="mind-dialog" aria-labelledby="mindTheLinesDialogTitle"><div class="mind-dialog-heading"><h2 id="mindTheLinesDialogTitle">Help</h2><button id="mindTheLinesDialogClose" type="button">Close</button></div><div id="mindTheLinesDialogBody" class="mind-dialog-body"></div></dialog>
+  <div id="mindTheLinesTip" class="mind-tip" role="status" hidden></div>
+</template>

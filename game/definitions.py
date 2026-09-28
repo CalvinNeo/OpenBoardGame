@@ -1,3 +1,4 @@
+from game.mind_the_lines import MindTheLinesGame, ACTION_SCHEMA as MIND_THE_LINES_ACTION_SCHEMA, CONFIG_SCHEMA as MIND_THE_LINES_CONFIG_SCHEMA
 from game.power_grid import PowerGridGame, ACTION_SCHEMA as POWER_GRID_ACTION_SCHEMA, CONFIG_SCHEMA as POWER_GRID_CONFIG_SCHEMA
 from game.a_feast_for_odin import AFeastForOdinGame, ACTION_SCHEMA as ODIN_ACTION_SCHEMA, CONFIG_SCHEMA as ODIN_CONFIG_SCHEMA
 from game.orloj import OrlojGame, ACTION_SCHEMA as ORLOJ_ACTION_SCHEMA, CONFIG_SCHEMA as ORLOJ_CONFIG_SCHEMA
@@ -117,6 +118,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=MindTheLinesGame.game_id, name="Mind the Lines", name_zh="出神入画",
+        min_players=2, max_players=8, turn_mode="simultaneous",
+        action_schema=MIND_THE_LINES_ACTION_SCHEMA, config_schema=MIND_THE_LINES_CONFIG_SCHEMA,
+        module=MindTheLinesGame, serialize=MindTheLinesGame.serialize, deserialize=MindTheLinesGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

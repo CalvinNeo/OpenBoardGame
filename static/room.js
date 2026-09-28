@@ -2080,6 +2080,7 @@ function resetRoomState() {
   if (typeof clearArkNovaState === "function") {
     clearArkNovaState();
   }
+  if (typeof clearMindTheLinesState === "function") clearMindTheLinesState();
   if (typeof clearCaboState === "function") clearCaboState();
   if (typeof clearFlip7State === "function") clearFlip7State();
   if (typeof clearHotStreakState === "function") {

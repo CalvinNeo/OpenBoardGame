@@ -160,6 +160,8 @@ async def download_room_save(source_room_id: str):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
     if _has_live_private_save(source_room_id, "power_grid"):
         raise HTTPException(status_code=403, detail="This Power Grid game is still active. Reconnect to the existing room.")
+    if _has_live_private_save(source_room_id, "mind_the_lines"):
+        raise HTTPException(status_code=403, detail="This Mind the Lines game is still active. Reconnect to the existing room.")
     latest_path = _get_latest_save_path(source_room_id)
     if not latest_path:
         raise HTTPException(status_code=404, detail="save not found")
@@ -218,6 +220,7 @@ class Room:
     six_nimmt_timeout_at_ms: Optional[int] = None
     fake_artist_timeout_at_ms: Optional[int] = None
     word_decode_timeout_at_ms: Optional[int] = None
+    mind_the_lines_timeout_key: Optional[tuple] = None
     bot_running: bool = False
     auto_save: bool = False
     schema_validation_enabled: bool = True
@@ -442,7 +445,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -506,6 +509,7 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
     _schedule_six_nimmt_timeout(room)
     _schedule_fake_artist_timeout(room)
     _schedule_word_decode_timeout(room)
+    _schedule_mind_the_lines_timeout(room)
     game_module = game_def.module
     for player in room.players:
         if player.socket_id is None:
@@ -555,6 +559,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "mind_the_lines":
+        return {"type": action.get("type")}
     if game_type == "power_grid":
         return {"type": action.get("type")}
     if game_type == "las_vegas" and action.get("type") == "royale_choose":
@@ -871,6 +877,43 @@ def _schedule_word_decode_timeout(room: Room) -> None:
     asyncio.create_task(_resolve(at_ms))
 
 
+def _schedule_mind_the_lines_timeout(room: Room) -> None:
+    """Lock saved drawings at the deadline even when players disconnect."""
+    state = room.game_state or {}
+    deadline = state.get("deadline_ms")
+    if (room.game_type != "mind_the_lines" or room.status != "in_game"
+            or state.get("phase") != "drawing" or not isinstance(deadline, int)):
+        room.mind_the_lines_timeout_key = None
+        return
+    key = (state.get("round_token"), deadline)
+    if room.mind_the_lines_timeout_key == key:
+        return
+    room.mind_the_lines_timeout_key = key
+
+    async def resolve() -> None:
+        while deadline > int(time.time() * 1000):
+            await asyncio.sleep(max(.001, (deadline - int(time.time() * 1000)) / 1000))
+        if (ROOMS.get(room.room_id) is not room or room.status != "in_game"
+                or room.mind_the_lines_timeout_key != key):
+            return
+        current = room.game_state or {}
+        if (current.get("phase") != "drawing"
+                or (current.get("round_token"), current.get("deadline_ms")) != key):
+            return
+        from game.mind_the_lines import MindTheLinesGame
+
+        events = MindTheLinesGame.resolve_timeout(current, int(time.time() * 1000))
+        if not events:
+            return
+        room.mind_the_lines_timeout_key = None
+        room.state_version += 1
+        _save_room_state(room)
+        await _emit_game_state(room, events)
+        await _maybe_run_bots(room)
+
+    asyncio.create_task(resolve())
+
+
 async def _send_error(sid: str, message: str) -> None:
     await sio.emit("system:error", {"message": message}, to=sid)
 
@@ -1181,7 +1224,18 @@ async def _maybe_run_bots(room: Room) -> None:
                     state = room.game_state
                     if state.get("game_over"):
                         break
-                if bot_action_state is not room.game_state or room.state_version != bot_action_state_version:
+                if bot_action_state is not room.game_state:
+                    continue
+                # Other artists save drafts continuously. Their updates do not
+                # invalidate this bot's independent drawing in the same round;
+                # the game still validates its own sequence, phase and deadline.
+                independent_drawing = (
+                    room.game_type == "mind_the_lines"
+                    and action_payload.get("type") == "submit_drawing"
+                    and state.get("phase") == "drawing"
+                    and action_payload.get("round_token") == state.get("round_token")
+                )
+                if room.state_version != bot_action_state_version and not independent_drawing:
                     continue
                 try:
                     events, error = game_module.apply_action(state, bot_player.player_id, action_payload)
@@ -1812,6 +1866,7 @@ async def on_room_load(sid, data):
         or _has_live_private_save(source_room_id, "for_sale")
         or _has_live_private_save(source_room_id, "cheaty_mages")
         or _has_live_private_save(source_room_id, "power_grid")
+        or _has_live_private_save(source_room_id, "mind_the_lines")
         or _has_live_private_save(source_room_id, "las_vegas")
     ):
         await sio.emit("room:load_result", {"ok": False, "message": "This game is still active. Reconnect to the existing room."}, to=sid)
@@ -1893,6 +1948,7 @@ async def on_room_load(sid, data):
         source_room_ids=source_ids,
     )
     ROOMS[room_id] = room
+    _schedule_mind_the_lines_timeout(room)
     await sio.emit(
         "room:load_result",
         {

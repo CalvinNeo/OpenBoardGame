@@ -199,6 +199,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "mind_the_lines") {
+    if (typeof renderMindTheLinesGameState === "function") renderMindTheLinesGameState(data);
+    return;
+  }
   if (gameType === "power_grid") {
     if (typeof renderPowerGridGameState === "function") renderPowerGridGameState(data);
     return;

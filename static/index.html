@@ -504,6 +504,7 @@
                     <option value="tacta">TACTA</option>
                     <option value="hive">Hive · 昆虫棋</option>
                     <option value="dune_imperium">Dune: Imperium · 沙丘：帝国</option>
+                    <option value="mind_the_lines">Mind the Lines · 出神入画</option>
                     <option value="subtext">Subtext</option>
                     <option value="tucano">Tucano</option>
                     <option value="witchs_brew">Witch's Brew</option>
@@ -987,6 +988,7 @@
                       <input id="criminalDanceScoringToggle" type="checkbox" checked />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="mindTheLinesConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="powerGridConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="noThanksConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="hiveConfigBox" aria-hidden="true"></div>
@@ -1303,6 +1305,7 @@
             <div class="panel-header-actions" id="challengersHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="grandAustriaHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="odinHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="mindTheLinesHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="powerGridHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="noThanksHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="orlojHeaderActions" style="display: none;"></div>
@@ -1427,6 +1430,7 @@
             <div id="felixPanel" class="hidden felix-panel"></div>
 
             <div id="tactaPanel" class="hidden tacta-panel"></div>
+            <div id="mindTheLinesPanel" class="hidden mind-the-lines-panel"></div>
             <div id="powerGridPanel" class="hidden power-grid-panel"></div>
             <div id="noThanksPanel" class="hidden no-thanks-panel"></div>
             <div id="hivePanel" class="hidden hive-panel"></div>
@@ -1604,8 +1608,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=49" defer></script>
-  <script src="/static/games/shared.js?v=app_v32" defer></script>
+  <script src="/static/game_assets.js?v=52" defer></script>
+  <script src="/static/games/shared.js?v=app_v33" defer></script>
+  <div id="mindTheLinesDialog"></div>
   <template id="powerGridDialog"></template>
   <template id="noThanksDialog"></template>
   <template id="challengersDialog"></template>
@@ -1619,7 +1624,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v39" defer></script>
-  <script src="/static/room.js?v=app_v58" defer></script>
+  <script src="/static/app.js?v=app_v40" defer></script>
+  <script src="/static/room.js?v=app_v59" defer></script>
 </body>
 </html>

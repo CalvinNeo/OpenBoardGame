@@ -1,8 +1,15 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "mind_the_lines": {
+    "scripts": ["/static/games/mind_the_lines.js?v=1"],
+    "styles": ["/static/games/mind_the_lines.css?v=1"],
+    "markup": "/static/games/mind_the_lines.html?v=1",
+    "panel": "mindTheLinesPanel",
+    "header": "showMindTheLinesHeaderActions"
+  },
   "power_grid": {
-    "scripts": ["/static/games/power_grid.js?v=2"],
-    "styles": ["/static/games/power_grid.css?v=2"],
+    "scripts": ["/static/games/power_grid.js?v=4"],
+    "styles": ["/static/games/power_grid.css?v=4"],
     "markup": "/static/games/power_grid.html?v=2",
     "panel": "powerGridPanel",
     "header": "showPowerGridHeaderActions"
