@@ -65,6 +65,8 @@
 .nm-allocation-row output { text-align: center; }
 .nm-result { border-top: 1px dashed #d8cb9e; margin-top: 12px; padding-top: 10px; display: grid; gap: 6px; font-size: 12px; line-height: 1.5; }
 .nm-result-row { display: flex; justify-content: space-between; gap: 8px; }
+.nm-result-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px; }
+.nm-result-name small { color: #65795f; font-size: 10px; }
 .nm-result-row strong { color: #277564; flex-shrink: 0; }
 .nm-review { display: grid; gap: 9px; margin-top: 12px; font-size: 11px; line-height: 1.5; }
 .nm-diary { background: #eef3e7; padding: 0; }

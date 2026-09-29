@@ -91,8 +91,16 @@
 前端按需加载，采用独立 HTML／CSS／JS。已实现 Help、Explain（包括灰色按钮与阻止原操作）、静态图标提示、Esc／空白取消选择、每轮全员 Next Round、自己结果突出显示、历史内部滚动，以及 RC 隐藏时的行动红框。
 
 验证记录：
-- 规则与房间测试、房间公共回归、注册顺序、标签及前端资源检查合计 59 项通过；随后补充机器人作业时间策略测试并复跑相关检查。
+- 规则 17 项、房间接入 6 项、机器人公共调度 2 项，以及房间公共回归、注册顺序、标签及前端资源 37 项，合计 62 项通过。
 - JavaScript 语法检查通过；BGG 权重抓取成功；已运行 `scripts/gen_dev_order.py`。
 - 真实浏览器通过创建房间、加入机器人、完整三人四周对局、秘密选点、双爱心分配、未参加回顾、周末及最终计分、刷新重连。
 - Help、禁用按钮 Explain、解释时阻止 RC 操作、Esc 与空白取消日期、手机提示三秒消失、RC 行动红框均已验证。
-- 1440px 桌面及 390px／320px 手机 DOM 检查无横向溢出；浏览器无 JavaScript 错误。最终多人布局检查结果将在收尾时补充。
+- 1440px 桌面及 390px／320px 手机 DOM 检查无横向溢出；六人上限布局同样通过。回顾区压紧称号显示并补齐分数、骰点提示。浏览器无 JavaScript 错误，已保存桌面与手机截图。
+
+复现命令：
+```sh
+python3 -m unittest tests.test_natsumemo tests.test_natsumemo_integration tests.test_bot_threading tests.test_room_session tests.test_game_dev_order tests.test_game_tags tests.test_frontend_style_assets
+node --check static/games/natsumemo.js
+python3 scripts/gen_dev_order.py
+python3 scripts/bgg_weight_scrape.py
+```

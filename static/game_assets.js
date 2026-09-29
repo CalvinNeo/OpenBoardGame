@@ -8,9 +8,9 @@ const GAME_ASSETS = {
     "header": "showGloomhavenHeaderActions"
   },
   "natsumemo": {
-    "scripts": ["/static/games/natsumemo.js?v=2"],
-    "styles": ["/static/games/natsumemo.css?v=2"],
-    "markup": "/static/games/natsumemo.html?v=2",
+    "scripts": ["/static/games/natsumemo.js?v=3"],
+    "styles": ["/static/games/natsumemo.css?v=3"],
+    "markup": "/static/games/natsumemo.html?v=3",
     "panel": "natsumemoPanel",
     "header": "showNatsumemoHeaderActions"
   },

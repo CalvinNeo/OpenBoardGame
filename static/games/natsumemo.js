@@ -15,6 +15,7 @@
     propose: ["Propose · 发起约定", "选择本周一段连续空档，再点击 Propose。日程冲突会自动使该玩家无法参加。你的提议不会替你自动选择 Join。空白处或 Esc 可以取消日期选择。"],
     respond: ["Join / Skip · 秘密决定", "Join（🙋）占用这次活动的全部日期；Skip（🏠）保留空档。所有有空的玩家，包括发起者，都秘密选择，全部提交后同时揭晓。提交后不能更改。"],
     contest: ["Dice · 秘密选点（🎲）", "桌游活动中，参加者秘密选择 1–6 点，全部锁定后一起揭晓。唯一最高者得最多分；并列最高者得较少分，其他参加者按牌面得分。这里是选点，不是随机掷骰。"],
+    dice: ["Dice · 活动骰点（🎲）", "这是活动揭晓后的骰点。桌游由参加者秘密选点；电玩和抓虫由系统随机掷骰。对应分数按当前活动牌计算。"],
     hearts: ["Friendship · 好感度（❤️）", "活动所得爱心（❤️）必须秘密分给本次同行的其他玩家。两颗可以给同一人，也可分给两人。期末分别比较大家给每位朋友的爱心，最多的给予者得 10 分，并列各得 5 分；零爱心并列同样按并列处理。线上允许继续记录超过纸张十格的爱心。"],
     homework: ["Homework · 暑假作业（✏️）", "作业进度是秘密信息。期末必须完成 25 页，每缺一页扣 10 分；第 26–30 页每页加 2 分。完成全部 30 页获得预习达人称号（🏅）。额外作业不再增加页数。"],
     study: ["Study · 周三学习会（📚）", "每周活动结束后，周三没有安排的人自动参加学习会。其他空日逐日掷骰写作业。前三周：1 点得 3 分与偷懒称号，2–5 点写 2 页，6 点写 3 页。第四周：1–2 点得 5 分与超级偷懒称号，3–5 点写 3 页，6 点写 4 页。具体骰子和页数只对本人显示。"],
@@ -164,8 +165,12 @@
       result.rows.forEach(row => {
         const line = el("div", `nm-result-row${row.player_id === view.you ? " is-you" : ""}`);
         const study = result.kind === "study" ? (result.participants.includes(row.player_id) ? " · 📚 学习会" : " · ✏️ 作业") : "";
-        line.append(el("span", "", `${name(row.player_id)}${row.player_id === view.you ? " · You" : ""}${study}${result.dice?.[row.player_id] ? ` · 🎲 ${result.dice[row.player_id]}` : ""}`), el("strong", "", `⭐ +${row.points}`)); area.append(line);
-        if (row.titles?.length) area.append(el("small", "", row.titles.map(id => `🏅 ${view.titles[id]}`).join(" · ")));
+        const who = el("span", "nm-result-name");
+        who.append(el("span", "", `${name(row.player_id)}${row.player_id === view.you ? " · You" : ""}`));
+        if (study) who.append(tip(el("small", "", study), "study"));
+        if (result.dice?.[row.player_id]) who.append(tip(el("span", "", `🎲 ${result.dice[row.player_id]}`), "dice"));
+        if (row.titles?.length) who.append(tip(el("small", "", row.titles.map(id => `🏅 ${view.titles[id]}`).join(" · ")), "titles"));
+        line.append(who, tip(el("strong", "", `⭐ +${row.points}`), "score")); area.append(line);
       });
       if (result.kind === "event") view.players.filter(player => !result.participants.includes(player.player_id)).forEach(player => {
         const line = el("div", `nm-result-row${player.player_id === view.you ? " is-you" : ""}`);
