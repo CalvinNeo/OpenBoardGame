@@ -912,6 +912,10 @@ body.guandan-explain-mode button.has-explanation:hover {
   font-variant-numeric: tabular-nums;
 }
 
+#guandanPanel .guandan-bot-progress-mcts .guandan-bot-progress-fill {
+  background: linear-gradient(90deg, #c084fc 0%, #7c3aed 100%);
+}
+
 #guandanPanel .guandan-bot-explain-btn {
   padding: 2px 5px;
   border: 1px solid #cbd6cf;

@@ -1,3 +1,4 @@
+from game.startups import StartupsGame, ACTION_SCHEMA as STARTUPS_ACTION_SCHEMA, CONFIG_SCHEMA as STARTUPS_CONFIG_SCHEMA
 from game.skull_king import SkullKingGame, ACTION_SCHEMA as SKULL_KING_ACTION_SCHEMA, CONFIG_SCHEMA as SKULL_KING_CONFIG_SCHEMA
 from game.deception import DeceptionGame, ACTION_SCHEMA as DECEPTION_ACTION_SCHEMA, CONFIG_SCHEMA as DECEPTION_CONFIG_SCHEMA
 from game.mind_the_lines import MindTheLinesGame, ACTION_SCHEMA as MIND_THE_LINES_ACTION_SCHEMA, CONFIG_SCHEMA as MIND_THE_LINES_CONFIG_SCHEMA
@@ -120,6 +121,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=StartupsGame.game_id, name="Startups", name_zh="初创公司",
+        min_players=3, max_players=7, turn_mode="turn",
+        action_schema=STARTUPS_ACTION_SCHEMA, config_schema=STARTUPS_CONFIG_SCHEMA,
+        module=StartupsGame, serialize=StartupsGame.serialize, deserialize=StartupsGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

@@ -199,6 +199,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "startups") {
+    if (typeof renderStartupsGameState === "function") renderStartupsGameState(data);
+    return;
+  }
   if (gameType === "skull_king") {
     if (typeof renderSkullKingGameState === "function") renderSkullKingGameState(data);
     return;

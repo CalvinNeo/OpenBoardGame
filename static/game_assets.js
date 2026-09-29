@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "startups": {
+    "scripts": ["/static/games/startups.js?v=2"],
+    "styles": ["/static/games/startups.css?v=2"],
+    "markup": "/static/games/startups.html?v=2",
+    "panel": "startupsPanel",
+    "header": "showStartupsHeaderActions"
+  },
   "skull_king": {
     "scripts": ["/static/games/skull_king.js?v=2"],
     "styles": ["/static/games/skull_king.css?v=2"],
@@ -408,13 +415,13 @@ const GAME_ASSETS = {
   },
   "guandan": {
     "scripts": [
-      "/static/games/guandan.js?v=app_v13"
+      "/static/games/guandan.js?v=app_v14"
     ],
     "styles": [],
     "panel": "guandanPanel",
     "header": "showGuandanHeaderActions",
     "markup": "/static/games/guandan.html?v=1",
-    "styleFragments": "/static/games/guandan.css?v=1"
+    "styleFragments": "/static/games/guandan.css?v=2"
   },
   "cabo": {
     "scripts": [
@@ -595,12 +602,13 @@ const GAME_ASSETS = {
   },
   "yahtzee": {
     "scripts": [
-      "/static/games/yahtzee.js?v=app_v5"
+      "/static/games/yahtzee.js?v=app_v6"
     ],
     "styles": [],
     "panel": "yahtzeePanel",
-    "markup": "/static/games/yahtzee.html?v=2",
-    "styleFragments": "/static/games/yahtzee.css?v=1"
+    "markup": "/static/games/yahtzee.html?v=3",
+    "styleFragments": "/static/games/yahtzee.css?v=2",
+    "header": "showYahtzeeHeaderActions"
   },
   "istanbul": {
     "scripts": [

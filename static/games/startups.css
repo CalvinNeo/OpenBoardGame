@@ -1,0 +1,130 @@
+.startups-panel { --su-ink: #203d36; --su-green: #235448; --su-line: #d7ddd2; color: var(--su-ink); min-width: 0; font-size: 14px; }
+.startups-panel *, .startups-dialog *, .startups-config * { box-sizing: border-box; min-width: 0; }
+.startups-panel h2, .startups-panel h3, .startups-panel p { margin: 0; }
+.startups-panel h3 { font-size: 15px; font-weight: 700; }
+.startups-panel button { font: inherit; min-height: 38px; padding: 8px 12px; border: 1px solid #bccdc3; border-radius: 8px; background: #fffdf7; color: var(--su-ink); white-space: normal; overflow-wrap: anywhere; }
+.startups-panel button:disabled { opacity: 1; color: #6a7970; background: #e8ece5; cursor: default; }
+.startups-panel button:focus-visible, .startups-panel [tabindex]:focus-visible { outline: 3px solid #ac7a34; outline-offset: 2px; }
+.startups-panel .startups-primary { color: #fffdf5; background: var(--su-green); border-color: var(--su-green); font-weight: 650; }
+.startups-panel .startups-primary:disabled { background: #dbe3db; color: #637269; border-color: #cad4c9; }
+.startups-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0 14px; }
+.startups-heading h2 { font: 700 clamp(26px, 4vw, 38px)/1.2 Georgia, serif; letter-spacing: -.035em; }
+.startups-heading h2 span { display: inline-block; margin-left: 10px; font: 500 14px/1.5 sans-serif; letter-spacing: .08em; }
+.startups-eyebrow { display: block; color: #738377; font-size: 9px; letter-spacing: .13em; line-height: 1.5; margin-bottom: 5px; }
+.startups-seal { display: grid; place-items: center; width: 45px; height: 45px; flex-shrink: 0; background: #e3ebcc; color: #4c633d; border-radius: 50%; font: 700 35px/1 Georgia, serif; }
+.startups-statusbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; background: #edf1e9; border: 1px solid var(--su-line); border-radius: 9px; }
+#startupsStatus { flex: 1 1 180px; overflow-wrap: anywhere; line-height: 1.45; }
+.startups-counters { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.startups-counters > span { padding: 4px 7px; border-radius: 5px; background: #fffdf7; }
+.startups-companies { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; margin: 12px 0; }
+.startups-company { --su-color: #577773; --su-wash: #eef5ef; border: 1px solid var(--su-line); border-top: 3px solid var(--su-color); border-radius: 6px; padding: 7px; background: var(--su-wash); }
+.startups-company-top { display: flex; justify-content: space-between; align-items: center; gap: 5px; font-weight: 700; }
+.startups-company-top > span:first-child { font-size: 22px; line-height: 1.2; }
+.startups-company > strong { display: block; font-size: 10px; line-height: 1.3; margin-top: 4px; overflow-wrap: anywhere; }
+.startups-marker-name { display: block; margin-top: 4px; color: #586858; font-size: 10px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.startups-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 290px); gap: 12px; align-items: start; }
+.startups-main { display: grid; gap: 12px; }
+.startups-market-box, .startups-hand-box, .startups-investors, .startups-review { border: 1px solid var(--su-line); border-radius: 12px; padding: 14px; background: #fafbf6; }
+.startups-market-box { background: #eaf0e3; }
+.startups-hand-box { background: #fffdf7; }
+.startups-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.startups-section-heading > span { font-size: 12px; }
+.startups-section-heading .startups-eyebrow { font-size: 9px; }
+#startupsDraw { flex-shrink: 0; }
+.startups-market, .startups-hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; align-content: start; }
+.startups-market { min-height: 143px; max-height: 300px; overflow-y: auto; padding: 3px; scrollbar-gutter: stable; }
+.startups-hand { grid-template-columns: repeat(4, minmax(0, 128px)); padding: 3px; }
+.startups-panel .startups-card { --su-color: #577773; --su-wash: #eef5ef; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 5px; padding: 8px; min-height: 137px; height: auto; border: 1px solid #d1d9ce; border-top: 4px solid var(--su-color); border-radius: 8px; background: linear-gradient(150deg, #fffef9 40%, var(--su-wash)); color: #254237; text-align: center; box-shadow: 0 2px 3px #32493012; }
+.startups-card-top { align-self: stretch; display: flex; justify-content: space-between; gap: 3px; align-items: center; color: var(--su-color); font-size: 12px; font-weight: 700; }
+.startups-card-icon { font-size: 29px; line-height: 1.25; }
+.startups-card-name { font-size: 11px; font-weight: 650; line-height: 1.25; overflow-wrap: anywhere; }
+.startups-card-coins { display: block; background: #f4e7b7; color: #64511c; font-size: 11px; padding: 3px 6px; border-radius: 20px; }
+.startups-panel .startups-card:disabled { background: linear-gradient(150deg, #fffef9 40%, var(--su-wash)); color: #254237; }
+.startups-panel .startups-card.is-blocked { opacity: .6; filter: saturate(.55); }
+.startups-panel .startups-card.is-selected { outline: 3px solid #367461; outline-offset: 0; box-shadow: 0 0 0 1px #367461; }
+.startups-panel .su-giraffe, .startups-dialog .su-giraffe { --su-color: #9c711e; --su-wash: #faf0cc; }
+.startups-panel .su-bowwow, .startups-dialog .su-bowwow { --su-color: #326b9d; --su-wash: #e0eefb; }
+.startups-panel .su-flamingo, .startups-dialog .su-flamingo { --su-color: #bd5576; --su-wash: #fae6ed; }
+.startups-panel .su-octo, .startups-dialog .su-octo { --su-color: #76548d; --su-wash: #f0e5f7; }
+.startups-panel .su-hippo, .startups-dialog .su-hippo { --su-color: #477c52; --su-wash: #e2f0dc; }
+.startups-panel .su-elephant, .startups-dialog .su-elephant { --su-color: #b85b37; --su-wash: #fbe8db; }
+.startups-empty { grid-column: 1 / -1; display: grid; place-content: center; text-align: center; gap: 8px; color: #788873; font-size: 12px; min-height: 134px; border: 1px dashed #bdcbb7; border-radius: 8px; padding: 15px; }
+.startups-empty > span { font-size: 26px; }
+.startups-hint { font-size: 12px; color: #71806f; line-height: 1.5; overflow-wrap: anywhere; }
+.startups-market-box > .startups-hint, .startups-hand-box > .startups-hint { margin-top: 9px; }
+.startups-capital { font-weight: 700; font-size: 17px !important; background: #f6edcd; padding: 6px 10px; border-radius: 7px; }
+.startups-selection { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--su-line); }
+.startups-selection > strong { overflow-wrap: anywhere; font-size: 12px; }
+.startups-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.startups-actions button { font-size: 12px; padding: 7px 11px; }
+.startups-players { display: grid; gap: 8px; }
+.startups-player { padding: 9px; background: #fff; border: 1px solid #dce2d7; border-radius: 8px; }
+.startups-player.is-current { border-color: #367461; box-shadow: inset 3px 0 #367461; background: #f0f7ed; }
+.startups-player.is-winner { border-color: #c29a36; background: #fff9e2; }
+.startups-player-heading { display: flex; align-items: start; flex-wrap: wrap; gap: 4px; }
+.startups-player-heading > strong { flex: 1 1 110px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.startups-player-heading > small { color: #74816e; font-size: 10px; }
+.startups-player-stats { display: flex; flex-wrap: wrap; gap: 5px 10px; margin: 6px 0; font-size: 12px; }
+.startups-shares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.startups-share { border-radius: 4px; padding: 4px 5px; background: var(--su-wash); font-size: 12px; line-height: 1.4; white-space: nowrap; }
+.startups-share.is-zero { opacity: .5; }
+.startups-review { background: #f9f4df; border-color: #d9c990; margin-bottom: 12px; }
+.startups-scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.startups-score { display: grid; gap: 5px; padding: 10px; background: #fffdf7; border: 1px solid #ded8bc; border-radius: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.startups-score > strong { font-size: 13px; }
+.startups-score-total { font: 700 26px/1.2 Georgia, serif; }
+.startups-settlement { margin-top: 12px; }
+.startups-settlement summary, .startups-history summary { cursor: pointer; font-size: 12px; font-weight: 650; }
+#startupsSettlements { display: grid; gap: 8px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+#startupsSettlements > div { font-size: 12px; padding: 8px; background: #fffdf7; border-radius: 6px; overflow-wrap: anywhere; line-height: 1.6; }
+.startups-history { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.startups-history details { border: 1px solid var(--su-line); border-radius: 8px; padding: 10px; background: #f7f9f2; }
+#startupsHistory, #startupsScoreHistory { max-height: 210px; overflow-y: auto; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; margin-bottom: 0; }
+#startupsHistory { padding-left: 20px; }
+#startupsHistory li { padding-bottom: 6px; }
+#startupsScoreHistory > div { border-bottom: 1px solid var(--su-line); padding: 7px 0; }
+.startups-tooltip { position: fixed; z-index: 15000; max-width: min(300px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 8px; background: #1c352df5; color: #fff; box-shadow: 0 4px 18px #0003; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; pointer-events: none; }
+.startups-panel.startups-explaining [data-su-explain] { cursor: help; outline: 2px dashed #3e8d9a; outline-offset: 1px; }
+.startups-dialog { width: min(660px, calc(100vw - 24px)); max-height: 85dvh; padding: 20px; border: 1px solid #a0b5a5; border-radius: 13px; background: #fffdf5; color: #203d36; overflow-y: auto; overflow-wrap: anywhere; }
+.startups-dialog::backdrop { background: #122e2699; }
+.startups-dialog-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #d7ddd2; }
+.startups-dialog-heading h2 { font: 700 23px/1.3 Georgia, serif; margin: 0; }
+.startups-dialog-heading button { flex-shrink: 0; }
+.startups-dialog h3 { font-size: 15px; margin: 20px 0 8px; }
+.startups-dialog p, .startups-dialog li { font-size: 14px; line-height: 1.7; }
+.startups-dialog ul { padding-left: 20px; }
+.startups-rule-example { padding: 12px; background: #e9f0e0; border-radius: 8px; }
+.startups-config { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.startups-config select { flex: 1 1 150px; width: auto; }
+@media (max-width: 860px) {
+  .startups-layout { grid-template-columns: minmax(0, 1fr); }
+  .startups-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .startups-panel { font-size: 13px; }
+  .startups-heading { padding-bottom: 10px; }
+  .startups-heading h2 span { font-size: 12px; margin-left: 5px; }
+  .startups-seal { width: 35px; height: 35px; font-size: 28px; }
+  .startups-companies { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 9px 0; }
+  .startups-company { padding: 5px 7px; }
+  .startups-company > strong { display: none; }
+  .startups-company-top > span:first-child { font-size: 19px; }
+  .startups-market-box, .startups-hand-box, .startups-investors, .startups-review { padding: 10px; }
+  .startups-hand { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .startups-hand[data-count="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .startups-hand[data-count="3"] .startups-card { padding: 6px 4px; }
+  .startups-hand[data-count="3"] .startups-card-top { font-size: 9px; gap: 1px; }
+  .startups-hand[data-count="3"] .startups-card-name { font-size: 10px; }
+  .startups-market { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 220px; min-height: 106px; }
+  .startups-empty { min-height: 100px; }
+  .startups-panel .startups-card { min-height: 116px; gap: 3px; padding: 6px 8px; }
+  .startups-card-icon { font-size: 25px; }
+  .startups-players { grid-template-columns: minmax(0, 1fr); }
+  .startups-shares { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+  .startups-share { text-align: center; padding: 4px 1px; font-size: 11px; white-space: normal; }
+  .startups-share > span { display: block; font-size: 10px; min-height: 14px; }
+  .startups-history { grid-template-columns: minmax(0, 1fr); }
+  .startups-scores { grid-template-columns: minmax(0, 1fr); }
+  .startups-dialog { padding: 15px; }
+  .startups-section-heading { margin-bottom: 9px; }
+}

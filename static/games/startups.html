@@ -1,0 +1,36 @@
+<template data-game-target="startupsConfigBox" data-game-mode="contents">
+  <div class="game-config-title">📈 Startups · 初创公司</div>
+  <div class="startups-config"><label for="startupsRounds">Match</label><select id="startupsRounds"><option value="1">Single round</option><option value="4">Four-round match</option></select></div>
+</template>
+<template data-game-target="startupsHeaderActions" data-game-mode="contents">
+  <button id="startupsHelpBtn" type="button">Help</button>
+  <button id="startupsExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="startupsPanel" data-game-mode="contents">
+  <header class="startups-heading"><div><span class="startups-eyebrow">SMALL COMPANIES. BIG AMBITIONS.</span><h2>Startups <span>初创公司</span></h2></div><span class="startups-seal" aria-hidden="true">↗</span></header>
+  <div class="startups-statusbar"><strong id="startupsStatus" role="status" aria-live="polite">Waiting to start</strong><div class="startups-counters"><span id="startupsRound" tabindex="0" data-su-explain="round" data-su-tip="Round：单局或四局赛；四局赛按排名获得积分。">Round —</span><span id="startupsDeck" tabindex="0" data-su-explain="deck" data-su-tip="Deck（🂠，牌堆）：最后一张抽出后，完成放牌再结算。">🂠 —</span></div></div>
+  <div id="startupsCompanies" class="startups-companies" aria-label="Companies and anti-monopoly markers"></div>
+  <section id="startupsReview" class="startups-review hidden" aria-label="Round results"><div class="startups-section-heading"><div><h3 id="startupsReviewTitle">Settlement</h3><p id="startupsReady" class="startups-hint"></p></div><button id="startupsNext" class="startups-primary" type="button" data-su-explain="next">Next Round</button></div><div id="startupsScores" class="startups-scores"></div><details class="startups-settlement"><summary>Company settlements</summary><div id="startupsSettlements"></div></details></section>
+  <div class="startups-layout">
+    <div class="startups-main">
+      <section class="startups-market-box" aria-label="Market">
+        <div class="startups-section-heading"><div><span class="startups-eyebrow">01 / TAKE A SHARE</span><h3>Market</h3></div><button id="startupsDraw" class="startups-primary" type="button" data-su-explain="draw" disabled>Draw · 💰 0</button></div>
+        <div id="startupsMarket" class="startups-market"></div>
+        <div id="startupsMarketSelection" class="startups-selection hidden"><strong id="startupsMarketLabel"></strong><div class="startups-actions"><button id="startupsTake" class="startups-primary" type="button" data-su-explain="take">Take Card</button><button id="startupsMarketCancel" type="button" data-su-explain="cancel">Cancel</button></div></div>
+        <p id="startupsMarketHint" class="startups-hint">The market starts empty.</p>
+      </section>
+      <section class="startups-hand-box" aria-label="Your hand">
+        <div class="startups-section-heading"><div><span class="startups-eyebrow">02 / MAKE YOUR MOVE</span><h3 id="startupsHandTitle">Your hand</h3></div><span id="startupsCapital" class="startups-capital" tabindex="0" data-su-explain="capital" data-su-tip="Capital（💰，资本）：支付抽牌费用；结算前每枚价值 1。">💰 —</span></div>
+        <div id="startupsHand" class="startups-hand"></div>
+        <div id="startupsHandSelection" class="startups-selection hidden"><strong id="startupsHandLabel"></strong><div class="startups-actions"><button id="startupsInvest" class="startups-primary" type="button" data-su-explain="invest">Invest</button><button id="startupsDiscard" type="button" data-su-explain="discard">To Market</button><button id="startupsHandCancel" type="button" data-su-explain="cancel">Cancel</button></div></div>
+        <p id="startupsHandHint" class="startups-hint">Your shares will appear here.</p>
+      </section>
+    </div>
+    <aside class="startups-investors" aria-label="Investors"><div class="startups-section-heading"><h3>Investors</h3><span tabindex="0" data-su-explain="portfolio" data-su-tip="Portfolio（📊，公开持股）：游戏中不包括隐藏手牌，结算时包含手牌。">📊 Holdings</span></div><div id="startupsPlayers" class="startups-players"></div></aside>
+  </div>
+  <div class="startups-history"><details><summary>Activity</summary><ol id="startupsHistory"></ol></details><details><summary>Score history</summary><div id="startupsScoreHistory"></div></details></div>
+  <div id="startupsTooltip" class="startups-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="startupsDialog" data-game-mode="replace">
+  <dialog id="startupsDialog" class="startups-dialog" aria-labelledby="startupsDialogTitle"><div class="startups-dialog-heading"><h2 id="startupsDialogTitle">Startups</h2><button id="startupsDialogClose" type="button">Close</button></div><div id="startupsDialogBody"></div></dialog>
+</template>

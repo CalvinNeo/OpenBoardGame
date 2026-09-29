@@ -5,6 +5,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .yahtzee-dice-container {
@@ -27,6 +28,7 @@
   gap: 2px;
   font-weight: 600;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .yahtzee-die.locked {
@@ -77,6 +79,21 @@
   margin-bottom: 6px;
 }
 
+.yahtzee-scorecard-header > div,
+.yahtzee-status > div {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.yahtzee-score-summary,
+.yahtzee-score-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
 .yahtzee-score-rows {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -95,6 +112,8 @@
   background: #ffffff;
   font-size: 12px;
   gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .yahtzee-score-row.upper {
@@ -130,5 +149,169 @@
   font-size: 11px;
   color: #6b7280;
   margin-left: 6px;
+}
+
+.yahtzee-score-part {
+  white-space: nowrap;
+  border-bottom: 1px dotted #9ca3af;
+}
+
+.yahtzee-score-row:focus-visible,
+[data-yahtzee-explain]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.yahtzee-explain-mode [data-yahtzee-explain] {
+  outline: 2px dashed #2563eb;
+  outline-offset: 0;
+  cursor: help;
+}
+
+#yahtzeeExplainBtn[aria-pressed="true"] {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1e40af;
+}
+
+.yahtzee-explain-notice {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+#yahtzeeDialog {
+  box-sizing: border-box;
+  width: min(640px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px #0f172a40;
+  color: #0f172a;
+  overflow: hidden;
+}
+
+#yahtzeeDialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+#yahtzeeDialog::backdrop {
+  background: #0f172a66;
+}
+
+.yahtzee-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.yahtzee-dialog-header h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 19px;
+  overflow-wrap: anywhere;
+}
+
+#yahtzeeDialogCloseBtn {
+  flex: 0 0 auto;
+}
+
+.yahtzee-dialog-body {
+  min-height: 0;
+  padding: 6px 18px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.yahtzee-dialog-body h3 {
+  margin: 18px 0 6px;
+  font-size: 15px;
+  color: #1d4ed8;
+}
+
+.yahtzee-dialog-body p {
+  margin: 10px 0;
+}
+
+.yahtzee-dialog-body ol {
+  padding-left: 22px;
+}
+
+.yahtzee-dialog-body li {
+  margin: 6px 0;
+}
+
+.yahtzee-dialog-body dt {
+  margin-top: 10px;
+  font-weight: 700;
+}
+
+.yahtzee-dialog-body dd {
+  margin-left: 0;
+  color: #475569;
+}
+
+.yahtzee-tooltip {
+  position: fixed;
+  z-index: 15000;
+  box-sizing: border-box;
+  max-width: min(300px, calc(100vw - 16px));
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  box-shadow: 0 5px 20px #0f172a26;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .yahtzee-dice {
+    gap: 6px;
+  }
+
+  .yahtzee-die {
+    width: 46px;
+    height: 48px;
+    padding: 4px 2px;
+  }
+
+  .yahtzee-die-lock {
+    padding: 2px 1px;
+    letter-spacing: 0;
+  }
+
+  .yahtzee-score-note {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .yahtzee-score-summary {
+    width: 100%;
+  }
+
+  .yahtzee-dialog-header {
+    padding: 12px;
+  }
+
+  .yahtzee-dialog-body {
+    padding: 4px 12px 14px;
+  }
 }
 }

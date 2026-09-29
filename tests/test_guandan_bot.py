@@ -2601,8 +2601,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
         self.assertIsInstance(captured.get("deadline"), float)
         self.assertIsInstance(captured.get("soft_deadline"), float)
-        self.assertAlmostEqual(captured["soft_deadline"] - started_at, 2.0, delta=0.1)
-        self.assertAlmostEqual(captured["deadline"] - started_at, 3.0, delta=0.1)
+        self.assertAlmostEqual(captured["soft_deadline"] - started_at, 6.0, delta=0.1)
+        self.assertAlmostEqual(captured["deadline"] - started_at, 6.0, delta=0.1)
 
     def test_auto_endgame_reserves_time_and_gives_it_to_minimax(self):
         state, big = self._make_state()
@@ -3340,7 +3340,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                          explain["method_details"].get("heuristic_candidates_total"))
         self.assertEqual(explain["method_details"].get("heuristic_candidates_total"),
                          len(guandan._list_hint_options(state, "bot")) + 1)
-        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+        self.assertEqual(explain["method"], "heuristic")
+        self.assertEqual(explain["method_details"]["mcts_gate"]["reason"],
+                         "large_hands_many_actions")
         self.assertFalse(explain["timing"].get("hard_deadline_reached"))
         self.assertTrue(explain["top"])
 
@@ -3364,7 +3366,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertGreater(takeover_bonus, 0.0)
         self.assertEqual(action, {"type": "play", "card_ids": [big_joker["id"]]})
         explain = state["bot_explain"]["bot"]
-        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+        self.assertEqual(explain["method"], "heuristic")
+        self.assertEqual(explain["method_details"]["mcts_gate"]["reason"],
+                         "large_hands_many_actions")
 
     def test_enemy_double_down_threat_uses_available_bomb(self):
         players = [
@@ -3614,9 +3618,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             0.0,
         )
         explain = state.get("bot_explain", {}).get("bot3", {})
-        # Full root scoring can now keep its own result after the MCTS check.
-        self.assertIn(explain.get("method"), {"heuristic", "mcts"})
-        self.assertIn("mcts_stop_reason", explain.get("method_details", {}))
+        # Broad searches over large hands now retain the heuristic decision.
+        self.assertEqual(explain["method"], "heuristic")
+        self.assertEqual(explain["method_details"]["mcts_gate"]["reason"],
+                         "large_hands_many_actions")
         self.assertEqual(explain.get("chosen", {}).get("cards"), chosen_labels)
 
     def test_bot_move_skips_mcts_on_lead_position(self):
@@ -3712,7 +3717,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertNotEqual(chosen_combo.get("type"), "single")
         self.assertNotEqual(chosen_labels, ["♦️4"])
 
-    def test_lead_prefers_natural_full_house_over_wild_three_pairs_when_reentry_exists(self):
+    def test_complete_opening_keeps_natural_house_ahead_of_wild_three_pairs(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
@@ -3771,8 +3776,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             state["players"][pid]["hand"] = deck[:27]
             del deck[:27]
 
+        # Compare the complete candidate set, independent of machine speed.
+        # The old two-second prefix chose 66633; complete reference scoring
+        # prefers the clean 5 while still ranking 66633 above wild 334455.
         real_random = random.Random
-        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+        with (
+            mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)),
+            mock.patch.object(guandan.time, "perf_counter", return_value=0.0),
+        ):
             action = guandan.GuandanGame.bot_move(state, "bot4")
 
         self.assertEqual(action.get("type"), "play")
@@ -3781,9 +3792,12 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
 
-        self.assertEqual(chosen_combo.get("type"), "full_house")
+        self.assertEqual(chosen_combo.get("type"), "single")
         self.assertFalse(chosen_combo.get("uses_wild"))
-        self.assertEqual(chosen_labels, ["♣️6", "♦️6", "♠️6", "♠️3", "♣️3"])
+        self.assertEqual(chosen_labels, ["♠️5"])
+        details = state["bot_explain"]["bot4"]["method_details"]
+        self.assertEqual(details["heuristic_stop_reason"], "candidates_exhausted")
+        self.assertEqual(details["heuristic_candidates_evaluated"], details["heuristic_candidates_total"])
 
         def ids_for(labels):
             ids = []
@@ -4586,8 +4600,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(history[0].get("card_ids"), [big["id"]])
         self.assertEqual(history[0].get("explain", {}).get("chosen", {}).get("cards"), ["🃏B"])
         timing = history[0].get("explain", {}).get("timing", {})
-        self.assertEqual(timing.get("budget_ms"), 2000.0)
-        self.assertEqual(timing.get("hard_budget_ms"), 3000.0)
+        self.assertEqual(timing.get("budget_ms"), 6000.0)
+        self.assertEqual(timing.get("hard_budget_ms"), 6000.0)
         self.assertIsInstance(timing.get("total_ms"), float)
         self.assertGreaterEqual(timing.get("total_ms"), 0.0)
         self.assertIn("heuristic", timing.get("stages_ms", {}))
@@ -5736,8 +5750,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             0.0,
         )
         self.assertEqual(
-            state["bot_explain"]["bot2"]["method_details"].get("mcts_stop_reason"),
-            "fast_path",
+            state["bot_explain"]["bot2"]["method_details"]["mcts_gate"]["reason"],
+            "large_hands_many_actions",
         )
 
     def test_heuristic_low_single_response_prefers_clean_singleton_over_split_pair(self):
@@ -10955,5 +10969,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIn(chosen_combo.get("type"), guandan.BOMB_TYPES)
         self.assertFalse(any(guandan._is_wild(card, state["level_rank"]) for card in chosen_cards))
         explain = state["bot_explain"]["bot4"]
-        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+        self.assertEqual(explain["method"], "heuristic")
+        self.assertEqual(explain["method_details"]["mcts_gate"]["reason"],
+                         "large_hands_many_actions")
         self.assertFalse(explain["timing"].get("hard_deadline_reached"))

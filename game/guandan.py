@@ -31,6 +31,8 @@ DEFAULT_CONFIG = {
     "bot_mcts_tree_ply": 2,
     "bot_mcts_reply_width": 2,
     "bot_mcts_root_width": 5,
+    "bot_mcts_large_hand_threshold": 18,
+    "bot_mcts_large_hand_max_actions": 3,
     "bot_mcts_risk_lambda": 0.28,
     "bot_mcts_early_stop_min_rounds": 4,
     "bot_mcts_early_stop_gap": 7.5,
@@ -76,8 +78,8 @@ DEFAULT_CONFIG = {
     "bot_heuristic_min_lead_deep_candidates": 3,
     "bot_heuristic_min_lead_rank_candidates": 16,
     "bot_heuristic_time_check_batch": 2,
-    "bot_think_time_ms": 2000,
-    "bot_think_overrun_ratio": 0.5,
+    "bot_think_time_ms": 6000,
+    "bot_think_overrun_ratio": 0.0,
     "bot_search_use_remaining_budget": True,
     "bot_search_finalize_reserve_ms": 35,
     "bot_endgame_search_reserve_ratio": 0.5,
@@ -1156,9 +1158,11 @@ def _materialize_rank_requirements(
     level_rank: int,
     requirements: List[Tuple[int, int]],
     limit: int = 1,
+    info: Optional[Dict] = None,
 ) -> List[List[int]]:
     """Keep a bounded set of residual-hand-distinct physical realizations."""
-    info = _hand_info(hand, level_rank)
+    if info is None:
+        info = _hand_info(hand, level_rank)
     wilds = list(info["wild_cards"])
     legacy_selected: List[int] = []
     for rank, count in requirements:
@@ -1256,6 +1260,7 @@ def _list_rank_group_options(
                 level_rank,
                 [(rank, size)],
                 materialization_limit,
+                info=info,
             )
         )
     if size == 2:
@@ -1271,12 +1276,22 @@ def _list_full_house_options(
 ) -> List[List[int]]:
     strength = _rank_strength(level_rank)
     base_info = _hand_info(hand, level_rank)
+    ranks = _ranks_sorted_by_strength(level_rank, ascending=True)
+    counts = {rank: len(cards) for rank, cards in base_info["normals_by_rank"].items()}
+    wild_count = len(base_info["wild_cards"])
     options: List[List[int]] = []
-    for triple_rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+    for triple_rank in ranks:
         if strength[triple_rank] <= threshold:
             continue
-        for pair_rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        triple_missing = max(0, 3 - counts.get(triple_rank, 0))
+        if triple_missing > wild_count:
+            continue
+        for pair_rank in ranks:
             if pair_rank == triple_rank:
+                continue
+            # Both groups share the same wildcards. These requirements cannot
+            # produce a physical realization, even with a wider materializer.
+            if triple_missing + max(0, 2 - counts.get(pair_rank, 0)) > wild_count:
                 continue
             options.extend(
                 _materialize_rank_requirements(
@@ -1284,6 +1299,7 @@ def _list_full_house_options(
                     level_rank,
                     [(triple_rank, 3), (pair_rank, 2)],
                     materialization_limit,
+                    info=base_info,
                 )
             )
         triple_variants = _materialize_rank_requirements(
@@ -1291,6 +1307,7 @@ def _list_full_house_options(
             level_rank,
             [(triple_rank, 3)],
             materialization_limit,
+            info=base_info,
         )
         for joker_key in ("jokers_small", "jokers_big"):
             joker_cards = list(base_info.get(joker_key, []))
@@ -1313,6 +1330,7 @@ def _list_straight_options(
 ) -> List[List[int]]:
     options: List[List[int]] = []
     hand_map = _map_hand_by_id(hand)
+    info = _hand_info(hand, level_rank)
     for seq, high_value in STRAIGHT_SEQUENCES:
         if high_value <= threshold:
             continue
@@ -1326,6 +1344,7 @@ def _list_straight_options(
             level_rank,
             [(rank, 1) for rank in seq],
             generation_limit,
+            info=info,
         )
         straight_variants: List[List[int]] = []
         for cards in variants:
@@ -1338,6 +1357,7 @@ def _list_straight_options(
                 level_rank,
                 [(rank, 1) for rank in seq],
                 2,
+                info=info,
             )
             for cards in fallback_variants:
                 combo = _evaluate_combo([hand_map[cid] for cid in cards], level_rank, {})
@@ -1362,6 +1382,7 @@ def _list_three_pairs_options(
     hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
 ) -> List[List[int]]:
     options: List[List[int]] = []
+    info = _hand_info(hand, level_rank)
     for start in range(2, 14):
         high_value = start + 2
         if high_value <= threshold or start + 2 > 14:
@@ -1373,6 +1394,7 @@ def _list_three_pairs_options(
                 level_rank,
                 [(rank, 2) for rank in seq],
                 materialization_limit,
+                info=info,
             )
         )
     return _dedupe_card_sets(options)
@@ -1382,6 +1404,7 @@ def _list_steel_plate_options(
     hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
 ) -> List[List[int]]:
     options: List[List[int]] = []
+    info = _hand_info(hand, level_rank)
     for start in range(2, 14):
         high_value = start + 1
         if high_value <= threshold or start + 1 > 14:
@@ -1393,6 +1416,7 @@ def _list_steel_plate_options(
                 level_rank,
                 [(rank, 3) for rank in seq],
                 materialization_limit,
+                info=info,
             )
         )
     return _dedupe_card_sets(options)
@@ -2443,7 +2467,7 @@ class GuandanGame:
         bot_mode = str(config.get("bot_mode", DEFAULT_CONFIG["bot_mode"]) or DEFAULT_CONFIG["bot_mode"]).strip().lower()
         if bot_mode not in {"auto", "heuristic", "nn"}:
             bot_mode = DEFAULT_CONFIG["bot_mode"]
-        think_budget_ms = max(40, int(config.get("bot_think_time_ms", 2000)))
+        think_budget_ms = max(40, int(config.get("bot_think_time_ms", DEFAULT_CONFIG["bot_think_time_ms"])))
         decision_deadline = decision_started_at + think_budget_ms / 1000.0
         try:
             overrun_ratio = float(
@@ -2897,6 +2921,9 @@ class GuandanGame:
                             "mcts_cost_estimate": mcts_status.get("cost_estimate", {}),
                         }
                     )
+                mcts_gate = state.get("_ai_eval_cache", {}).get("mcts_gate")
+                if mcts_gate:
+                    explain_method_meta["mcts_gate"] = dict(mcts_gate)
                 timing_meta = {
                     "budget_ms": float(think_budget_ms),
                     "hard_budget_ms": round(float(hard_budget_ms), 3),

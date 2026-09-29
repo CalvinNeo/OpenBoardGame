@@ -756,6 +756,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  startups: 1.58,
   orloj: 3.61,
   challengers: 1.79,
   las_vegas: 1.17,

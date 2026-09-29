@@ -2988,8 +2988,12 @@ def _play_structure_delta(hand: List[Dict], cards: List[int], level_rank: int) -
 
 def _rank_count_map(hand: List[Dict], level_rank: int) -> Dict[int, int]:
     counts: Dict[int, int] = {}
+    # Resolve the bound game's rules once, rather than through the thread-local
+    # proxy twice for every card in every residual-hand comparison.
+    is_joker = _CORE._is_joker
+    is_wild = _CORE._is_wild
     for card in hand:
-        if _is_joker(card) or _is_wild(card, level_rank):
+        if is_joker(card) or is_wild(card, level_rank):
             continue
         rank = card.get("rank")
         if rank is None:
@@ -2998,10 +3002,14 @@ def _rank_count_map(hand: List[Dict], level_rank: int) -> Dict[int, int]:
     return counts
 
 
-def _shape_transition_score(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    remaining = _remove_cards(hand, cards)
-    before_counts = _rank_count_map(hand, level_rank)
-    after_counts = _rank_count_map(remaining, level_rank)
+def _shape_transition_score(
+    hand: List[Dict], cards: List[int], level_rank: int,
+    counts: Optional[Tuple[Dict[int, int], Dict[int, int]]] = None,
+) -> float:
+    before_counts, after_counts = counts if counts is not None else (
+        _rank_count_map(hand, level_rank),
+        _rank_count_map(_remove_cards(hand, cards), level_rank),
+    )
     before_singletons = sum(1 for count in before_counts.values() if count == 1)
     after_singletons = sum(1 for count in after_counts.values() if count == 1)
 
@@ -3021,10 +3029,14 @@ def _shape_transition_score(hand: List[Dict], cards: List[int], level_rank: int)
     return score
 
 
-def _group_fragment_penalty(hand: List[Dict], cards: List[int], level_rank: int, combo: Optional[Dict]) -> float:
-    remaining = _remove_cards(hand, cards)
-    before_counts = _rank_count_map(hand, level_rank)
-    after_counts = _rank_count_map(remaining, level_rank)
+def _group_fragment_penalty(
+    hand: List[Dict], cards: List[int], level_rank: int, combo: Optional[Dict],
+    counts: Optional[Tuple[Dict[int, int], Dict[int, int]]] = None,
+) -> float:
+    before_counts, after_counts = counts if counts is not None else (
+        _rank_count_map(hand, level_rank),
+        _rank_count_map(_remove_cards(hand, cards), level_rank),
+    )
     combo_type = combo.get("type") if combo else None
     penalty = 0.0
     for rank, before_count in before_counts.items():
@@ -3041,10 +3053,14 @@ def _group_fragment_penalty(hand: List[Dict], cards: List[int], level_rank: int,
     return penalty
 
 
-def _control_group_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    remaining = _remove_cards(hand, cards)
-    before_counts = _rank_count_map(hand, level_rank)
-    after_counts = _rank_count_map(remaining, level_rank)
+def _control_group_break_penalty(
+    hand: List[Dict], cards: List[int], level_rank: int,
+    counts: Optional[Tuple[Dict[int, int], Dict[int, int]]] = None,
+) -> float:
+    before_counts, after_counts = counts if counts is not None else (
+        _rank_count_map(hand, level_rank),
+        _rank_count_map(_remove_cards(hand, cards), level_rank),
+    )
     penalty = 0.0
     for rank, before_count in before_counts.items():
         after_count = after_counts.get(rank, 0)
@@ -5499,6 +5515,35 @@ def _lead_special_material_penalty(
 
 
 def _lead_same_type_reentry_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+    # Conservation compares the same alternative repeatedly for different
+    # full houses. This scalar depends only on this ordered physical hand and
+    # the outgoing lane; it does not inspect opponents or sample hidden cards.
+    hand = state["players"][player_id]["hand"]
+    key = (
+        player_id,
+        state["level_rank"],
+        tuple((card["id"], card.get("rank"), card.get("suit"), card.get("joker")) for card in hand),
+        _cards_key(cards),
+        combo.get("type"),
+        _combo_numeric_value(combo),
+    )
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("lead_reentry_scores", {})
+    if key in cache:
+        return cache[key]
+    value = _compute_lead_same_type_reentry_bonus(state, player_id, cards, combo)
+    if not _deadline_expired():
+        cache[key] = value
+    return value
+
+
+def _compute_lead_same_type_reentry_bonus(
     state: Dict,
     player_id: str,
     cards: List[int],
@@ -9202,6 +9247,8 @@ def _decomposition_single_candidates(hand: List[Dict], level_rank: int) -> List[
 def _decomposition_local_value(hand: List[Dict], cards: List[int], combo: Dict, level_rank: int) -> float:
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    counts = (_rank_count_map(hand, level_rank),
+              _rank_count_map(_remove_cards(hand, cards), level_rank))
     combo_type = combo.get("type")
     type_base = {
         "straight_flush": 13.0,
@@ -9217,9 +9264,9 @@ def _decomposition_local_value(hand: List[Dict], cards: List[int], combo: Dict, 
     value = type_base.get(combo_type, 3.0)
     value += len(cards) * 1.08
     value -= 4.25
-    value += _shape_transition_score(hand, cards, level_rank) * 0.62
-    value -= _group_fragment_penalty(hand, cards, level_rank, combo) * 1.05
-    value -= _control_group_break_penalty(hand, cards, level_rank) * 0.92
+    value += _shape_transition_score(hand, cards, level_rank, counts) * 0.62
+    value -= _group_fragment_penalty(hand, cards, level_rank, combo, counts) * 1.05
+    value -= _control_group_break_penalty(hand, cards, level_rank, counts) * 0.92
 
     if combo_type == "single" and play_cards:
         card = play_cards[0]
@@ -9234,7 +9281,7 @@ def _decomposition_local_value(hand: List[Dict], cards: List[int], combo: Dict, 
             value -= 1.6 + (58 - single_value) * 0.24
         if not _is_joker(card) and not _is_wild(card, level_rank):
             rank = card.get("rank")
-            rank_count = _rank_count_map(hand, level_rank).get(rank, 0)
+            rank_count = counts[0].get(rank, 0)
             if rank_count > 1:
                 value -= 2.4 + (rank_count - 2) * 1.1
     else:
@@ -10509,6 +10556,24 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     # still recover an action family whose detailed heuristic score timed out.
     actions = _merge_action_candidates(cached_actions, expanded_actions)
     actions = _mcts_root_candidate_subset(state, bot_id, actions, width)
+    config = state.get("config", {})
+    largest_hand = max(
+        (len(state["players"][pid].get("hand", []))
+         for pid in state.get("turn_order", [])
+         if not state["players"][pid].get("finished")),
+        default=0,
+    )
+    # A small own hand can still hand the lead to an opponent with 27 cards.
+    # Until reply generation is cheaper, keep broad searches over such hands
+    # on the completed heuristic instead of spending the turn at depth zero.
+    if (largest_hand >= max(1, int(config.get("bot_mcts_large_hand_threshold", 18)))
+            and len(actions) > max(1, int(config.get("bot_mcts_large_hand_max_actions", 3)))):
+        state.setdefault("_ai_eval_cache", {})["mcts_gate"] = {
+            "reason": "large_hands_many_actions",
+            "largest_hand": largest_hand,
+            "candidates": len(actions),
+        }
+        return False
     play_actions = [action for action in actions if action.get("type") == "play"]
     has_pass = any(action.get("type") == "pass" for action in actions)
     if not play_actions:
@@ -16268,7 +16333,14 @@ def _build_bot_explain(
         _store_heuristic_scored_candidates(state, bot_id, depth, scored)
     scored.sort(key=lambda item: item[1], reverse=True)
     top = []
-    for cards, score, comps in scored[:3]:
+    comparisons = scored[:3]
+    if state.get("current_trick") and not any(cards is None for cards, _, _ in comparisons):
+        # Faster complete scoring can place several plays ahead of Pass. Keep
+        # the already evaluated alternative visible without rescoring it.
+        pass_entry = next((entry for entry in scored if entry[0] is None), None)
+        if pass_entry is not None:
+            comparisons.append(pass_entry)
+    for cards, score, comps in comparisons:
         comps_clean = {k: v for k, v in comps.items() if k != "total" and abs(v) > 0.001}
         top.append(
             {

@@ -158,6 +158,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "startups"):
+        raise HTTPException(status_code=403, detail="This Startups game is still active. Reconnect to the existing room.")
     if _has_unfinished_skull_king_save(source_room_id):
         raise HTTPException(status_code=403, detail="This Skull King game is still active. Reconnect to the existing room.")
     if _has_unfinished_deception_save(source_room_id):
@@ -297,20 +299,28 @@ def _has_live_private_save(source_room_id: str, game_type: str) -> bool:
 
 
 def _has_unfinished_skull_king_save(source_room_id: str) -> bool:
-    if _has_live_private_save(source_room_id, "skull_king"):
+    return _has_unfinished_private_save(source_room_id, "skull_king")
+
+
+def _has_unfinished_private_save(source_room_id: str, game_type: str) -> bool:
+    if _has_live_private_save(source_room_id, game_type):
         return True
     payload = _load_latest_save(source_room_id)
-    return bool(payload and payload.get("game_type") == "skull_king"
+    return bool(payload and payload.get("game_type") == game_type
                 and isinstance(payload.get("game_state"), dict)
                 and not payload["game_state"].get("game_over"))
 
 
 def _restore_skull_king_for_reconnect(room_id: str, player_id: str, token: str) -> Optional[Room]:
+    return _restore_private_card_game_for_reconnect(room_id, player_id, token, "skull_king")
+
+
+def _restore_private_card_game_for_reconnect(room_id: str, player_id: str, token: str, game_type: str) -> Optional[Room]:
     """Recover private hands from disk only for an authenticated original seat."""
     if not all(isinstance(value, str) for value in (room_id, player_id, token)) or not _is_safe_room_id(room_id):
         return None
     payload = _load_latest_save(room_id)
-    if not payload or payload.get("game_type") != "skull_king":
+    if not payload or payload.get("game_type") != game_type:
         return None
     saved_players, saved_state = payload.get("players"), payload.get("game_state")
     if not isinstance(saved_players, list) or not isinstance(saved_state, dict):
@@ -320,7 +330,7 @@ def _restore_skull_king_for_reconnect(room_id: str, player_id: str, token: str) 
                for raw in saved_players):
         return None
     try:
-        definition = _get_game_definition("skull_king")
+        definition = _get_game_definition(game_type)
         state = definition.deserialize(saved_state)
         players = [Player(
             player_id=raw["player_id"], name=raw["name"], seat=raw["seat"], socket_id=None,
@@ -333,7 +343,7 @@ def _restore_skull_king_for_reconnect(room_id: str, player_id: str, token: str) 
             return None
         definition.module.get_public_view(state, player_id)
         room = Room(
-            room_id=room_id, game_type="skull_king", game_config=dict(state["config"]),
+            room_id=room_id, game_type=game_type, game_config=dict(state["config"]),
             status="game_over" if state["game_over"] else "in_game", players=players,
             state_version=int(payload.get("state_version", 0)), game_state=state, auto_save=True,
             source_room_ids=[value for value in payload.get("source_room_ids", [])
@@ -548,7 +558,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("startups", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -648,14 +658,14 @@ def _bot_status_payload(room: Room) -> Dict:
     if room.game_type == "guandan" and room.game_state:
         config = room.game_state.get("config", {}) if isinstance(room.game_state, dict) else {}
         try:
-            think_budget_ms = int(config.get("bot_think_time_ms", 2000))
+            think_budget_ms = int(config.get("bot_think_time_ms", 6000))
         except (TypeError, ValueError):
-            think_budget_ms = 2000
+            think_budget_ms = 6000
         think_budget_ms = max(40, think_budget_ms)
         try:
-            overrun_ratio = float(config.get("bot_think_overrun_ratio", 0.5))
+            overrun_ratio = float(config.get("bot_think_overrun_ratio", 0.0))
         except (TypeError, ValueError):
-            overrun_ratio = 0.5
+            overrun_ratio = 0.0
         overrun_ratio = max(0.0, min(1.0, overrun_ratio))
         bot_status["think_budget_ms"] = think_budget_ms
         bot_status["think_hard_budget_ms"] = round(think_budget_ms * (1.0 + overrun_ratio), 3)
@@ -667,6 +677,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "startups":
+        return {"type": action.get("type")}
     if game_type == "skull_king":
         return {"type": action.get("type")}
     if game_type == "deception":
@@ -1582,6 +1594,8 @@ async def on_room_reconnect(sid, data):
     if not room:
         room = _restore_skull_king_for_reconnect(room_id, player_id, reconnect_token)
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "startups")
+    if not room:
         await _send_error(sid, "room not found")
         return
     player = _find_player(room, player_id)
@@ -1621,7 +1635,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("deception", "skull_king"):
+    if room.game_type in ("deception", "skull_king", "startups"):
         await _maybe_run_bots(room)
 
 
@@ -1979,6 +1993,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_private_save(source_room_id, "startups")
         or _has_unfinished_skull_king_save(source_room_id)
         or _has_unfinished_deception_save(source_room_id)
         or _has_live_private_save(source_room_id, "challengers")

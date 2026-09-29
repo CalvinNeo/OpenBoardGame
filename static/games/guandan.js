@@ -921,7 +921,7 @@ function getGuandanBotProgressValue() {
     return Math.max(0.0, Math.min(0.99, status.progress));
   }
   const startedAt = Number(status.started_at_ms || 0);
-  const thinkBudget = Math.max(40, Number(status.think_budget_ms || 2000));
+  const thinkBudget = Math.max(40, Number(status.think_budget_ms || 6000));
   if (!startedAt) {
     return 0.08;
   }
@@ -944,11 +944,14 @@ function getGuandanBotProgressMarkup(playerId) {
     return "";
   }
   const percent = Math.max(1, Math.min(99, Math.round(progress * 100)));
+  const isMcts = status.stage === "mcts";
+  const stageClass = isMcts ? " guandan-bot-progress-mcts" : "";
+  const label = isMcts ? "MCTS search" : "AI thinking";
   const title = [status.stage || "thinking", status.detail || "AI thinking"]
     .filter(Boolean)
     .join(": ");
   return `
-    <span class="guandan-bot-progress" aria-label="AI thinking ${percent}%" title="${title}">
+    <span class="guandan-bot-progress${stageClass}" aria-label="${label} ${percent}%" title="${title}">
       <span class="guandan-bot-progress-bar">
         <span class="guandan-bot-progress-fill" style="width:${percent}%"></span>
       </span>
@@ -1068,6 +1071,9 @@ const GUANDAN_HELP_TEXT = `
   <li>Receivers return a card ≤ 10 if possible.</li>
   <li>Two 🃏B in hand cancels tribute.</li>
 </ul>
+
+<h3>Bot Thinking</h3>
+<p>The progress bar is blue during evaluation and purple during MCTS search. Hover over the bar for the current stage.</p>
 `;
 
 const GUANDAN_BUTTON_EXPLANATIONS = {

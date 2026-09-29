@@ -82,6 +82,8 @@ function emitRoomStart() {
     payload.config = getTakeTimeConfig();
   } else if (currentGameType === "eternal_decks") {
     payload.config = getEternalDecksConfig();
+  } else if (currentGameType === "startups" && typeof getStartupsConfig === "function") {
+    payload.config = getStartupsConfig();
   } else if (currentGameType === "skull_king" && typeof getSkullKingConfig === "function") {
     payload.config = getSkullKingConfig();
   } else if (currentGameType === "deception" && typeof getDeceptionConfig === "function") {
