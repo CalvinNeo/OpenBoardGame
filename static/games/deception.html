@@ -1,0 +1,27 @@
+<template data-game-target="deceptionConfigBox" data-game-mode="contents">
+  <div class="game-config-title">🔎 Deception · 犯罪现场</div>
+  <div class="deception-config-row"><label for="deceptionCardCount">Cards per type</label><select id="deceptionCardCount"><option value="3">3 · Easy</option><option value="4" selected>4 · Standard</option><option value="5">5 · Hard</option></select></div>
+  <div class="deception-config-row"><label><input id="deceptionAccomplice" type="checkbox"> 帮凶 · Accomplice (6+)</label><label><input id="deceptionWitness" type="checkbox"> 目击者 · Witness (6+)</label></div>
+</template>
+<template data-game-target="deceptionHeaderActions" data-game-mode="contents">
+  <button id="deceptionHelpBtn" type="button">Help</button><button id="deceptionExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="deceptionPanel" data-game-mode="contents">
+  <header class="deception-heading"><div><span class="deception-eyebrow">HONG KONG · CASE FILE</span><h2>犯罪现场 <small>DECEPTION</small></h2></div><span id="deceptionRound" class="deception-round" tabindex="0" data-deception-explain="round" data-deception-tip="调查（🔎）：最多三轮。最后一位第三轮陈述结束即结案。">🔎 — / 3</span></header>
+  <div class="deception-status"><span id="deceptionStatus" role="status" aria-live="polite">Waiting to start</span><span id="deceptionBadgeCount" tabindex="0" data-deception-explain="badge" data-deception-tip="警徽（🛡️）：每个非法医玩家只有一次正式指认机会。">🛡️ —</span></div>
+  <details id="deceptionPrivate" class="deception-private"><summary data-deception-explain="role">🔒 Private briefing · Reveal</summary><div id="deceptionPrivateBody"></div></details>
+  <div id="deceptionResult" class="deception-result hidden" role="status"></div>
+  <div class="deception-workspace">
+    <div class="deception-forensics">
+      <section class="deception-section"><div class="deception-section-title"><h3>🔬 法医报告 <small>FORENSICS</small></h3><span id="deceptionForensicName"></span></div><div id="deceptionScenes" class="deception-scenes"></div><div id="deceptionLocationChoices"></div><div id="deceptionReplacement"></div><div id="deceptionDraft" class="deception-draft hidden"></div></section>
+      <div class="deception-controls"><button id="deceptionPresent" type="button" data-deception-explain="present" disabled>Begin Presentations</button><button id="deceptionFinish" type="button" data-deception-explain="finish" disabled>Finish Presentation</button><button id="deceptionNext" type="button" data-deception-explain="next" class="hidden" disabled>Next Round</button><span id="deceptionReady"></span></div>
+      <section class="deception-section deception-discussion"><div class="deception-section-title"><h3>💬 讨论 <small>DISCUSSION</small></h3><span id="deceptionSpeaker"></span></div><ol id="deceptionMessages" class="deception-messages" aria-label="Discussion"></ol><form id="deceptionChatForm"><label class="deception-sr-only" for="deceptionChatInput">Message</label><input id="deceptionChatInput" maxlength="300" autocomplete="off" placeholder="Message (max 300)" disabled><button id="deceptionSend" type="submit" data-deception-explain="chat" disabled>Send</button></form></section>
+    </div>
+    <section class="deception-section deception-evidence"><div class="deception-section-title"><h3>🗂️ 嫌疑人档案 <small>SUSPECTS</small></h3><span id="deceptionSelectionHint">选择一对牌</span></div><div id="deceptionPlayers" class="deception-players"></div></section>
+  </div>
+  <details class="deception-history"><summary>Case history</summary><ol id="deceptionHistory"></ol></details>
+  <div id="deceptionTooltip" class="deception-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="deceptionDialog" data-game-mode="replace">
+  <dialog id="deceptionDialog" class="deception-dialog" aria-labelledby="deceptionDialogTitle"><div class="deception-dialog-heading"><h2 id="deceptionDialogTitle">Deception</h2><button id="deceptionDialogClose" type="button">Close</button></div><div id="deceptionDialogBody"></div></dialog>
+</template>

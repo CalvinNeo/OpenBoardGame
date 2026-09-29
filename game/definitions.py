@@ -1,3 +1,4 @@
+from game.deception import DeceptionGame, ACTION_SCHEMA as DECEPTION_ACTION_SCHEMA, CONFIG_SCHEMA as DECEPTION_CONFIG_SCHEMA
 from game.mind_the_lines import MindTheLinesGame, ACTION_SCHEMA as MIND_THE_LINES_ACTION_SCHEMA, CONFIG_SCHEMA as MIND_THE_LINES_CONFIG_SCHEMA
 from game.power_grid import PowerGridGame, ACTION_SCHEMA as POWER_GRID_ACTION_SCHEMA, CONFIG_SCHEMA as POWER_GRID_CONFIG_SCHEMA
 from game.a_feast_for_odin import AFeastForOdinGame, ACTION_SCHEMA as ODIN_ACTION_SCHEMA, CONFIG_SCHEMA as ODIN_CONFIG_SCHEMA
@@ -5983,5 +5984,14 @@ register_game(
         module=KronologicGame,
         serialize=KronologicGame.serialize,
         deserialize=KronologicGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DeceptionGame.game_id, name="Deception: Murder in Hong Kong", name_zh="犯罪现场",
+        min_players=4, max_players=12, turn_mode="simultaneous",
+        action_schema=DECEPTION_ACTION_SCHEMA, config_schema=DECEPTION_CONFIG_SCHEMA,
+        module=DeceptionGame, serialize=DeceptionGame.serialize, deserialize=DeceptionGame.deserialize,
     )
 )

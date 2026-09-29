@@ -158,6 +158,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_deception_save(source_room_id):
+        raise HTTPException(status_code=403, detail="This Deception case is still active. Reconnect to the existing room.")
     if _has_live_private_save(source_room_id, "power_grid"):
         raise HTTPException(status_code=403, detail="This Power Grid game is still active. Reconnect to the existing room.")
     if _has_live_private_save(source_room_id, "mind_the_lines"):
@@ -290,6 +292,15 @@ def _has_live_private_save(source_room_id: str, game_type: str) -> bool:
         and room.game_state and not room.game_state.get("game_over")
         for room in ROOMS.values()
     )
+
+
+def _has_unfinished_deception_save(source_room_id: str) -> bool:
+    if _has_live_private_save(source_room_id, "deception"):
+        return True
+    payload = _load_latest_save(source_room_id)
+    return bool(payload and payload.get("game_type") == "deception"
+                and isinstance(payload.get("game_state"), dict)
+                and not payload["game_state"].get("game_over"))
 
 
 def _find_player(room: Room, player_id: str) -> Optional[Player]:
@@ -445,7 +456,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -524,7 +535,9 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
             "view": view,
             "events": (
                 filter_ark_nova_events(events or [], player.player_id)
-                if room.game_type == "ark_nova" else events or []
+                if room.game_type == "ark_nova" else
+                [event for event in (events or []) if event.get("type") != "bot:action"]
+                if room.game_type == "deception" else events or []
             ),
             "bot_status": bot_status,
         }
@@ -532,6 +545,9 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
 
 
 def _bot_status_payload(room: Room) -> Dict:
+    # A named bot thinking during secret crime selection would reveal the murderer.
+    if room.game_type == "deception":
+        return {"running": False, "player_id": None, "started_at_ms": None}
     bot_status = {
         "running": bool(room.bot_running and room.bot_player_id),
         "player_id": room.bot_player_id,
@@ -559,6 +575,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "deception":
+        return {"type": action.get("type")}
     if game_type == "mind_the_lines":
         return {"type": action.get("type")}
     if game_type == "power_grid":
@@ -1861,6 +1879,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_deception_save(source_room_id)
         or _has_live_private_save(source_room_id, "challengers")
         or _has_live_private_save(source_room_id, "love_letter")
         or _has_live_private_save(source_room_id, "for_sale")

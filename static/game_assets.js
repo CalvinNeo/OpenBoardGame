@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "deception": {
+    "scripts": ["/static/games/deception.js?v=1"],
+    "styles": ["/static/games/deception.css?v=1"],
+    "markup": "/static/games/deception.html?v=1",
+    "panel": "deceptionPanel",
+    "header": "showDeceptionHeaderActions"
+  },
   "mind_the_lines": {
     "scripts": ["/static/games/mind_the_lines.js?v=1"],
     "styles": ["/static/games/mind_the_lines.css?v=1"],

@@ -504,6 +504,7 @@
                     <option value="tacta">TACTA</option>
                     <option value="hive">Hive · 昆虫棋</option>
                     <option value="dune_imperium">Dune: Imperium · 沙丘：帝国</option>
+                    <option value="deception">Deception: Murder in Hong Kong · 犯罪现场</option>
                     <option value="mind_the_lines">Mind the Lines · 出神入画</option>
                     <option value="subtext">Subtext</option>
                     <option value="tucano">Tucano</option>
@@ -988,6 +989,7 @@
                       <input id="criminalDanceScoringToggle" type="checkbox" checked />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="deceptionConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="mindTheLinesConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="powerGridConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="noThanksConfigBox" aria-hidden="true"></div>
@@ -1305,6 +1307,7 @@
             <div class="panel-header-actions" id="challengersHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="grandAustriaHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="odinHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="deceptionHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="mindTheLinesHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="powerGridHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="noThanksHeaderActions" style="display: none;"></div>
@@ -1430,6 +1433,7 @@
             <div id="felixPanel" class="hidden felix-panel"></div>
 
             <div id="tactaPanel" class="hidden tacta-panel"></div>
+            <div id="deceptionPanel" class="hidden deception-panel"></div>
             <div id="mindTheLinesPanel" class="hidden mind-the-lines-panel"></div>
             <div id="powerGridPanel" class="hidden power-grid-panel"></div>
             <div id="noThanksPanel" class="hidden no-thanks-panel"></div>
@@ -1608,8 +1612,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=52" defer></script>
-  <script src="/static/games/shared.js?v=app_v33" defer></script>
+  <script src="/static/game_assets.js?v=53" defer></script>
+  <script src="/static/games/shared.js?v=app_v34" defer></script>
+  <template id="deceptionDialog"></template>
   <div id="mindTheLinesDialog"></div>
   <template id="powerGridDialog"></template>
   <template id="noThanksDialog"></template>
@@ -1624,7 +1629,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v40" defer></script>
+  <script src="/static/app.js?v=app_v41" defer></script>
   <script src="/static/room.js?v=app_v60" defer></script>
 </body>
 </html>

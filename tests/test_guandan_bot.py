@@ -653,7 +653,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         )
         self.assertEqual(rank_five_sizes, [4, 5])
 
-    def test_lead_empty_bomb_penalty_beats_residual_hand_value(self):
+    def test_lead_empty_bomb_penalty_prefers_intact_triple_and_keeps_control_pair(self):
         state = self._make_empty_lead_bomb_state()
         hand = state["players"]["bot3"]["hand"]
         labels_to_ids = {}
@@ -666,18 +666,17 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             labels_to_ids["♦️8"].pop(),
             labels_to_ids["♥️8"].pop(),
         ]
-        full_house_ids = [
+        triple_ids = [
             labels_to_ids["♥️9"].pop(),
             labels_to_ids["♦️9"].pop(),
             labels_to_ids["♣️9"].pop(),
-            labels_to_ids["♠️A"].pop(),
-            labels_to_ids["♣️A"].pop(),
         ]
 
         bomb_components = guandan._bot_score_components(state, "bot3", bomb_ids, depth=2)
-        full_house_components = guandan._bot_score_components(state, "bot3", full_house_ids, depth=2)
+        triple_components = guandan._bot_score_components(state, "bot3", triple_ids, depth=2)
 
-        self.assertLess(bomb_components["total"], full_house_components["total"])
+        # Keep the ordinary lead alternative without requiring AA as cargo.
+        self.assertLess(bomb_components["total"], triple_components["total"])
         self.assertIn("lead_empty_bomb", bomb_components)
         self.assertLess(bomb_components["lead_empty_bomb"], -5.0)
 
@@ -4435,7 +4434,12 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             del deck[:27]
 
         real_random = random.Random
-        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+        # This checks strategy, not which finalist fits a wall-clock prefix.
+        # Deadline scheduling has its own controlled-clock regression tests.
+        with (
+            mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)),
+            mock.patch.object(guandan.time, "perf_counter", return_value=0.0),
+        ):
             action = guandan.GuandanGame.bot_move(state, "bot3")
 
         self.assertEqual(action.get("type"), "play")

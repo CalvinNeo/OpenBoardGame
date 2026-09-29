@@ -13034,10 +13034,16 @@ def _mcts_score_actions(
                     )))
                     particle_deadline = probe_start + max(0.0, deadline - probe_start) * fraction
                 previous_sampling_budget = getattr(_CORE_LOCAL, "determinize_sampling_budget", None)
+                had_probe_deadline = hasattr(_CORE_LOCAL, "deadline")
+                previous_probe_deadline = getattr(_CORE_LOCAL, "deadline", None)
                 if cost_guard and not particles:
                     # The pilot timeout only limits measurement. Keep the same
                     # posterior proposal count/history model as the real budget.
                     _CORE_LOCAL.determinize_sampling_budget = max(0.0, deadline - probe_start)
+                    # The core adapter receives its deadline positionally here;
+                    # bind it explicitly so nested history/decomposition work
+                    # obeys the pilot limit too, not just the proposal loop.
+                    _CORE_LOCAL.deadline = _current_deadline(particle_deadline)
                 try:
                     particle = _CORE._determinize_state(state, bot_id, rng, particle_deadline)
                 finally:
@@ -13046,6 +13052,10 @@ def _mcts_score_actions(
                             delattr(_CORE_LOCAL, "determinize_sampling_budget")
                     else:
                         _CORE_LOCAL.determinize_sampling_budget = previous_sampling_budget
+                    if had_probe_deadline:
+                        _CORE_LOCAL.deadline = previous_probe_deadline
+                    elif hasattr(_CORE_LOCAL, "deadline"):
+                        delattr(_CORE_LOCAL, "deadline")
                 probe_end = time.perf_counter()
                 determinize_seconds = max(determinize_seconds, probe_end - probe_start)
                 if cost_guard and not particles:

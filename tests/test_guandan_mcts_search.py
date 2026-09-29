@@ -31,6 +31,7 @@ class GuandanMctsLayerTests(unittest.TestCase):
 
         def determinize(_state, _bot, _rng, _deadline):
             if clock is not None:
+                self.assertEqual(guandan_ai._current_deadline(), _deadline)
                 clock[0] += determinize_cost
             world = {"world": len(worlds), "phase": "playing"}
             worlds.append(world)

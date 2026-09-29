@@ -80,6 +80,8 @@ function emitRoomStart() {
     payload.config = getTakeTimeConfig();
   } else if (currentGameType === "eternal_decks") {
     payload.config = getEternalDecksConfig();
+  } else if (currentGameType === "deception" && typeof getDeceptionConfig === "function") {
+    payload.config = getDeceptionConfig();
   } else if (currentGameType === "mind_the_lines" && typeof getMindTheLinesConfig === "function") {
     payload.config = getMindTheLinesConfig();
   } else if (currentGameType === "power_grid" && typeof getPowerGridConfig === "function") {

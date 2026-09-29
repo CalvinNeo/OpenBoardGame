@@ -1,0 +1,95 @@
+.deception-panel { --dc-ink: #243c4c; --dc-muted: #687882; --dc-paper: #faf8f1; --dc-line: #d9dfdf; --dc-blue: #256783; --dc-orange: #965b22; color: var(--dc-ink); min-width: 0; font-size: 13px; }
+.deception-panel *, .deception-dialog *, #deceptionConfigBox * { box-sizing: border-box; min-width: 0; }
+.deception-panel button, .deception-panel input, .deception-dialog button { font: inherit; }
+.deception-panel button { white-space: normal; overflow-wrap: anywhere; min-height: 34px; padding: 7px 10px; border: 1px solid var(--dc-line); border-radius: 7px; background: #fff; color: var(--dc-ink); cursor: pointer; line-height: 1.35; }
+.deception-panel button:hover:not(:disabled) { border-color: var(--dc-blue); background: #eff6f8; }
+.deception-panel button:focus-visible, .deception-panel summary:focus-visible, .deception-panel [tabindex]:focus-visible { outline: 3px solid #52a3bd; outline-offset: 2px; }
+.deception-panel button:disabled { opacity: .48; cursor: default; }
+.deception-panel .deception-primary { background: var(--dc-ink); color: white; border-color: var(--dc-ink); }
+.deception-panel .deception-primary:hover:not(:disabled) { background: #345970; color: white; }
+.deception-heading, .deception-status, .deception-section-title, .deception-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.deception-heading { padding: 4px 0 13px; flex-wrap: wrap; }
+.deception-eyebrow { font-size: 10px; letter-spacing: .18em; color: var(--dc-muted); }
+.deception-heading h2 { margin: 5px 0 0; font-size: 26px; letter-spacing: .12em; }
+.deception-heading h2 small { font-size: 11px; letter-spacing: .1em; margin-left: 6px; }
+.deception-round { border: 1px solid var(--dc-line); padding: 7px 12px; border-radius: 8px; font-weight: 700; }
+.deception-status { padding: 10px 12px; color: #fff; background: var(--dc-ink); border-radius: 8px; flex-wrap: wrap; }
+.deception-status > span:first-child { flex: 1 1 180px; overflow-wrap: anywhere; }
+.deception-private { padding: 10px 12px; background: #edf2f4; margin: 10px 0; border: 1px solid #d5e0e4; border-radius: 8px; }
+.deception-private summary, .deception-history summary { cursor: pointer; font-weight: 650; }
+.deception-private p { margin: 8px 0 0; overflow-wrap: anywhere; line-height: 1.6; }
+.deception-workspace { display: grid; grid-template-columns: minmax(270px, .8fr) minmax(300px, 1.4fr); gap: 12px; align-items: start; }
+.deception-forensics { display: grid; gap: 10px; }
+.deception-section { border: 1px solid var(--dc-line); border-radius: 10px; background: var(--dc-paper); padding: 12px; }
+.deception-section-title { margin-bottom: 10px; flex-wrap: wrap; align-items: baseline; }
+.deception-section-title h3 { margin: 0; font-size: 14px; }
+.deception-section-title h3 small { display: block; font-size: 9px; letter-spacing: .12em; color: var(--dc-muted); margin: 3px 0 0 22px; }
+.deception-section-title > span { font-size: 11px; color: var(--dc-muted); overflow-wrap: anywhere; max-width: 100%; }
+.deception-scenes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.deception-scene { border: 1px solid #d3dedf; background: white; border-radius: 8px; overflow-wrap: anywhere; }
+.deception-panel .deception-scene-toggle { display: block; text-align: left; border: 0; width: 100%; padding: 9px; min-height: 70px; background: transparent; }
+.deception-scene-toggle strong { display: block; font-size: 12px; }
+.deception-scene-toggle span { display: block; font-size: 11px; color: var(--dc-blue); margin-top: 7px; line-height: 1.5; }
+.deception-scene.is-open { grid-column: 1 / -1; }
+.deception-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; padding: 0 8px 8px; }
+.deception-panel .deception-option { font-size: 12px; padding: 7px 4px; }
+.deception-panel .is-selected { background: #deedf2; border: 2px solid #287591; padding: 6px 9px; }
+.deception-panel .deception-option.is-selected { padding: 6px 3px; }
+.deception-marker { border-radius: 5px; background: #e7f0f3; padding: 7px 4px; text-align: center; font-size: 12px; }
+.deception-marker.is-marked { background: var(--dc-ink); color: white; }
+.deception-location { display: grid; gap: 7px; }
+.deception-panel .deception-location button { text-align: left; }
+.deception-location small { display: block; color: var(--dc-muted); margin-top: 4px; line-height: 1.5; }
+.deception-replacement { border-top: 1px dashed var(--dc-line); padding-top: 10px; margin-top: 10px; }
+.deception-replace-targets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin: 8px 0; }
+.deception-draft, .deception-pair-confirm { padding: 10px; margin-top: 9px; border: 1px solid #7b9baa; border-radius: 8px; background: #ecf3f5; overflow-wrap: anywhere; }
+.deception-draft p, .deception-pair-confirm p { margin: 0 0 8px; line-height: 1.55; }
+.deception-confirm-buttons, .deception-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.deception-confirm-buttons button, .deception-controls button { flex: 1 1 100px; }
+.deception-controls > span { flex-basis: 100%; font-size: 11px; color: var(--dc-muted); overflow-wrap: anywhere; }
+.deception-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 10px; max-height: 670px; overflow-y: auto; overscroll-behavior: contain; padding: 2px; scrollbar-gutter: stable; }
+.deception-suspect { background: #fff; border: 1px solid var(--dc-line); border-radius: 8px; padding: 9px; }
+.deception-suspect.is-speaking { border-color: #25748c; box-shadow: inset 0 0 0 1px #25748c; }
+.deception-suspect-header { display: flex; align-items: flex-start; gap: 7px; justify-content: space-between; margin-bottom: 8px; }
+.deception-suspect-name { overflow-wrap: anywhere; font-weight: 700; line-height: 1.5; }
+.deception-player-role { display: block; color: var(--dc-muted); font-size: 11px; font-weight: 400; }
+.deception-badge { flex-shrink: 0; font-size: 14px; }
+.deception-hand + .deception-hand { margin-top: 8px; }
+.deception-hand-title { font-size: 10px; font-weight: 700; letter-spacing: .04em; margin-bottom: 4px; color: var(--dc-blue); }
+.deception-hand.clues .deception-hand-title { color: var(--dc-orange); }
+.deception-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.deception-panel .deception-card { display: flex; align-items: center; gap: 4px; width: 100%; text-align: left; padding: 7px 5px; background: #f0f6f8; border-color: #d0e1e7; min-height: 46px; }
+.deception-panel .clues .deception-card { background: #fcf5eb; border-color: #eedec7; }
+.deception-card .deception-card-icon { flex-shrink: 0; font-size: 17px; }
+.deception-card .deception-card-label { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.deception-panel .deception-card.is-selected, .deception-panel .clues .deception-card.is-selected { background: #dceaf0; border: 2px solid #287591; padding: 6px 4px; }
+.deception-panel .deception-card.is-answer, .deception-panel .clues .deception-card.is-answer { background: #e1eee0; border: 2px solid #618757; padding: 6px 4px; }
+.deception-panel .deception-card:disabled { opacity: 1; color: var(--dc-ink); }
+.deception-panel .deception-witness-button { width: 100%; }
+.deception-messages { list-style: none; padding: 0; margin: 0 0 8px; height: 148px; overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; }
+.deception-messages li { padding: 6px 0; border-bottom: 1px solid #e7e9e6; line-height: 1.5; }
+.deception-messages strong { color: var(--dc-blue); }
+.deception-messages .deception-empty { color: var(--dc-muted); }
+#deceptionChatForm { display: flex; gap: 6px; }
+#deceptionChatInput { width: 0; flex: 1 1 0; border: 1px solid var(--dc-line); border-radius: 6px; padding: 8px; background: white; }
+#deceptionChatInput:disabled { background: #eee; }
+.deception-history { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--dc-line); border-radius: 8px; }
+.deception-history ol { max-height: 210px; overflow-y: auto; padding-left: 22px; margin-bottom: 0; }
+.deception-history li { padding: 5px; overflow-wrap: anywhere; line-height: 1.5; }
+.deception-result { border: 1px solid #96ad8d; background: #edf4e8; border-radius: 8px; padding: 12px; margin-bottom: 10px; overflow-wrap: anywhere; line-height: 1.6; }
+.deception-result strong { display: block; font-size: 17px; }
+.deception-tooltip { position: fixed; z-index: 1300; max-width: min(300px, calc(100vw - 24px)); background: #243c4c; color: #fff; font-size: 12px; padding: 9px 12px; border-radius: 8px; pointer-events: none; overflow-wrap: anywhere; box-shadow: 0 5px 18px #152c3d30; line-height: 1.5; }
+.deception-panel.deception-explaining [data-deception-explain] { outline: 2px dashed #3484a6; outline-offset: 2px; cursor: help; }
+.deception-dialog { width: min(650px, calc(100vw - 24px)); max-height: 85dvh; border: 1px solid #d9dfdf; border-radius: 14px; padding: 20px; color: #243c4c; background: #faf8f1; overflow-y: auto; overflow-wrap: anywhere; }
+.deception-dialog::backdrop { background: #152c3d80; }
+.deception-dialog-heading { align-items: start; }
+.deception-dialog h2 { font-size: 19px; margin: 0 0 12px; }
+.deception-dialog h3 { margin-bottom: 5px; }
+.deception-dialog p, .deception-dialog li { line-height: 1.7; }
+.deception-dialog button { flex-shrink: 0; }
+.deception-config-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 9px 0; }
+.deception-config-row label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.deception-config-row input[type=checkbox] { margin: 0; width: auto; }
+.deception-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 1000px) { .deception-workspace { grid-template-columns: minmax(0, 1fr); } .deception-forensics { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .deception-controls { grid-column: 1 / -1; grid-row: 2; } .deception-players { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 600px; } }
+@media (max-width: 600px) { .deception-heading h2 { font-size: 23px; } .deception-heading h2 small { display: block; margin: 6px 0 0; } .deception-forensics { grid-template-columns: minmax(0, 1fr); } .deception-controls { grid-row: auto; } .deception-section { padding: 9px; } .deception-players { grid-template-columns: minmax(0, 1fr); max-height: 520px; } .deception-suspect { padding: 9px; } .deception-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .deception-messages { height: 120px; } .deception-dialog { padding: 14px; } .deception-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

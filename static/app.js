@@ -199,6 +199,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "deception") {
+    if (typeof renderDeceptionGameState === "function") renderDeceptionGameState(data);
+    return;
+  }
   if (gameType === "mind_the_lines") {
     if (typeof renderMindTheLinesGameState === "function") renderMindTheLinesGameState(data);
     return;
