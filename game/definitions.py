@@ -1,3 +1,4 @@
+from game.maskmen import MaskmenGame, ACTION_SCHEMA as MASKMEN_ACTION_SCHEMA, CONFIG_SCHEMA as MASKMEN_CONFIG_SCHEMA
 from game.startups import StartupsGame, ACTION_SCHEMA as STARTUPS_ACTION_SCHEMA, CONFIG_SCHEMA as STARTUPS_CONFIG_SCHEMA
 from game.skull_king import SkullKingGame, ACTION_SCHEMA as SKULL_KING_ACTION_SCHEMA, CONFIG_SCHEMA as SKULL_KING_CONFIG_SCHEMA
 from game.deception import DeceptionGame, ACTION_SCHEMA as DECEPTION_ACTION_SCHEMA, CONFIG_SCHEMA as DECEPTION_CONFIG_SCHEMA
@@ -121,6 +122,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=MaskmenGame.game_id, name="Maskmen", name_zh="面具摔跤手",
+        min_players=2, max_players=6, turn_mode="turn",
+        action_schema=MASKMEN_ACTION_SCHEMA, config_schema=MASKMEN_CONFIG_SCHEMA,
+        module=MaskmenGame, serialize=MaskmenGame.serialize, deserialize=MaskmenGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

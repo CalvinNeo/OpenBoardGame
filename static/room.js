@@ -822,6 +822,7 @@ const GAME_WEIGHT = {
   yahtzee: 1.17,
   fake_artist: 1.09,
   manila: 2.04,
+  maskmen: 1.78,
   impression_flower: 1.00,
   isle_of_skye: 2.25,
   tagiron: 1.71,

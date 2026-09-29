@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "maskmen": {
+    "scripts": ["/static/games/maskmen.js?v=3"],
+    "styles": ["/static/games/maskmen.css?v=2"],
+    "markup": "/static/games/maskmen.html?v=2",
+    "panel": "maskmenPanel",
+    "header": "showMaskmenHeaderActions"
+  },
   "startups": {
     "scripts": ["/static/games/startups.js?v=2"],
     "styles": ["/static/games/startups.css?v=2"],
@@ -602,12 +609,12 @@ const GAME_ASSETS = {
   },
   "yahtzee": {
     "scripts": [
-      "/static/games/yahtzee.js?v=app_v6"
+      "/static/games/yahtzee.js?v=app_v7"
     ],
     "styles": [],
     "panel": "yahtzeePanel",
     "markup": "/static/games/yahtzee.html?v=3",
-    "styleFragments": "/static/games/yahtzee.css?v=2",
+    "styleFragments": "/static/games/yahtzee.css?v=3",
     "header": "showYahtzeeHeaderActions"
   },
   "istanbul": {

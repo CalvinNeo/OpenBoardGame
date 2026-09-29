@@ -158,6 +158,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "maskmen"):
+        raise HTTPException(status_code=403, detail="This Maskmen game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "startups"):
         raise HTTPException(status_code=403, detail="This Startups game is still active. Reconnect to the existing room.")
     if _has_unfinished_skull_king_save(source_room_id):
@@ -558,7 +560,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("startups", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("maskmen", "startups", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -1596,6 +1598,8 @@ async def on_room_reconnect(sid, data):
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "startups")
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "maskmen")
+    if not room:
         await _send_error(sid, "room not found")
         return
     player = _find_player(room, player_id)
@@ -1635,7 +1639,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("deception", "skull_king", "startups"):
+    if room.game_type in ("deception", "skull_king", "startups", "maskmen"):
         await _maybe_run_bots(room)
 
 
@@ -1993,6 +1997,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_private_save(source_room_id, "maskmen")
         or _has_unfinished_private_save(source_room_id, "startups")
         or _has_unfinished_skull_king_save(source_room_id)
         or _has_unfinished_deception_save(source_room_id)

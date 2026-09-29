@@ -78,6 +78,8 @@ DEFAULT_CONFIG = {
     "bot_heuristic_min_lead_deep_candidates": 3,
     "bot_heuristic_min_lead_rank_candidates": 16,
     "bot_heuristic_time_check_batch": 2,
+    # Performance target for complete heuristic scoring; remaining time bounds
+    # optional tree search. Never truncate the actual heuristic decision to fit.
     "bot_think_time_ms": 6000,
     "bot_think_overrun_ratio": 0.0,
     "bot_search_use_remaining_budget": True,
@@ -2556,7 +2558,8 @@ class GuandanGame:
             mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
             _progress("heuristic", 0.06, "Evaluating heuristic baseline")
             heuristic_started_at = time.perf_counter()
-            heuristic_action = _heuristic_best_action(state, bot_id, depth, deadline=heuristic_deadline)
+            with _guandan_ai.complete_heuristic_scoring():
+                heuristic_action = _heuristic_best_action(state, bot_id, depth, deadline=heuristic_deadline)
             _record_stage("heuristic", heuristic_started_at)
             heuristic_status = copy.deepcopy(
                 state.get("_ai_eval_cache", {}).get("heuristic_anytime") or {}

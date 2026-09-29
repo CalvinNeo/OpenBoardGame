@@ -153,8 +153,11 @@ function renderYahtzeeScorecards(view) {
     const header = document.createElement("div");
     header.className = "yahtzee-scorecard-header";
     const nameEl = document.createElement("div");
+    nameEl.className = "yahtzee-player-name";
     const nameLabel = player.name || player.player_id || "-";
     nameEl.textContent = player.player_id === view.you ? `${nameLabel} (You)` : nameLabel;
+    nameEl.tabIndex = 0;
+    nameEl.dataset.yahtzeeTip = nameEl.textContent;
     const totalEl = document.createElement("div");
     totalEl.className = "yahtzee-score-summary";
     const totalValue = Number.isInteger(player.total) ? player.total : 0;

@@ -1,0 +1,45 @@
+<template data-game-target="maskmenHeaderActions" data-game-mode="contents">
+  <button id="maskmenHelpBtn" type="button" title="Help">Help</button>
+  <button id="maskmenExplainBtn" type="button" title="Explain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="maskmenPanel" data-game-mode="contents">
+  <header class="maskmen-heading">
+    <div><div class="maskmen-eyebrow">THE STRENGTH IS IN YOUR HANDS</div><h2>MASKMEN <span>面具摔跤手</span></h2></div>
+    <div class="maskmen-season" id="maskmenSeason" tabindex="0" data-mm-explain="season" data-mm-tip="Season（赛季）：多人共 4 季；两人先赢 3 季。每季重新发牌并清空强弱关系。">Season —</div>
+  </header>
+  <div class="maskmen-statusbar"><strong id="maskmenStatus" role="status" aria-live="polite">Waiting to start</strong><span id="maskmenBout" tabindex="0" data-mm-explain="round" data-mm-tip="Round（小轮）：Pass 后本小轮不能再出牌；全员确认后清场。">Round —</span></div>
+  <div id="maskmenPlayers" class="maskmen-players" aria-label="Players"></div>
+  <section id="maskmenReview" class="maskmen-review hidden" aria-label="Round result">
+    <h3 id="maskmenResultTitle" tabindex="0" data-mm-explain="score" data-mm-tip="🏆 Winner：最终胜者。多人按总分和破平条件决定，两人先赢 3 赛季。"></h3><div id="maskmenScores" class="maskmen-scores"></div>
+    <div class="maskmen-review-actions"><span id="maskmenReady"></span><button id="maskmenNext" type="button" data-mm-explain="next">Next Round</button></div>
+  </section>
+  <div class="maskmen-layout">
+    <section class="maskmen-play-area" aria-label="Wrestling table and your hand">
+      <div class="maskmen-ring">
+        <div class="maskmen-section-heading"><h3>On the mat</h3><span id="maskmenTopLabel"></span></div>
+        <div id="maskmenMat" class="maskmen-mat"></div>
+        <div id="maskmenTrail" class="maskmen-trail" aria-label="This round's plays"></div>
+      </div>
+      <section class="maskmen-hand-area" aria-label="Your hand">
+        <div class="maskmen-section-heading"><h3 id="maskmenHandTitle">Your hand</h3><span id="maskmenHandCount" tabindex="0" data-mm-explain="hand" data-mm-tip="Cards（🂠，手牌）：只显示你自己的牌；同种面具按数量分组。"></span></div>
+        <div id="maskmenHand" class="maskmen-hand"></div>
+        <div id="maskmenSelection" class="maskmen-selection hidden">
+          <span id="maskmenSelectedLabel"></span><div id="maskmenCounts" class="maskmen-counts" aria-label="Number of cards"></div>
+          <button id="maskmenPlay" type="button" data-mm-explain="play">Play</button>
+        </div>
+        <div class="maskmen-turn-actions"><span id="maskmenHint"></span><button id="maskmenPass" type="button" data-mm-explain="pass" disabled>Pass 🏳️</button></div>
+      </section>
+    </section>
+    <aside class="maskmen-strength-area">
+      <div class="maskmen-section-heading"><h3>Strength board</h3><span tabindex="0" data-mm-explain="strength" data-mm-tip="Strength（强弱）：每行只列出该面具已知能击败的面具；空白不表示最弱。">Stronger → weaker</span></div>
+      <div id="maskmenStrength" class="maskmen-strength"></div>
+      <details class="maskmen-details"><summary>Compare all masks</summary><div id="maskmenMatrix" class="maskmen-matrix" aria-label="Strength comparison"></div><p class="maskmen-legend" tabindex="0" data-mm-explain="strength" data-mm-tip="✓：行胜列；×：行负列；?：未知；—：同种不能相互压制。">✓ Wins · × Loses · ? Unknown</p></details>
+      <details class="maskmen-details"><summary>Recent moves</summary><ol id="maskmenLog" class="maskmen-log"></ol></details>
+      <details id="maskmenScoreHistory" class="maskmen-details hidden"><summary>Season scores</summary><div id="maskmenHistory" class="maskmen-history"></div></details>
+    </aside>
+  </div>
+  <div id="maskmenTooltip" class="maskmen-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="maskmenDialog" data-game-mode="replace">
+  <dialog id="maskmenDialog" class="maskmen-dialog" aria-labelledby="maskmenDialogTitle"><div class="maskmen-dialog-heading"><h2 id="maskmenDialogTitle">Maskmen</h2><button id="maskmenDialogClose" type="button">Close</button></div><div id="maskmenDialogBody"></div></dialog>
+</template>

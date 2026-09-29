@@ -297,13 +297,42 @@
     letter-spacing: 0;
   }
 
-  .yahtzee-score-note {
-    margin-left: 0;
-    width: 100%;
+  .yahtzee-scorecard-header {
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  .yahtzee-player-name {
+    flex: 1 1 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .yahtzee-score-summary {
-    width: 100%;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .yahtzee-score-note {
+    display: inline;
+    margin-left: 0;
+    font-size: 10px;
+  }
+
+  .yahtzee-score-row {
+    height: 52px;
+    min-height: 52px;
+    padding: 4px 6px;
+    justify-content: space-between;
+    gap: 2px;
+    font-size: 11px;
+    line-height: 13px;
   }
 
   .yahtzee-dialog-header {

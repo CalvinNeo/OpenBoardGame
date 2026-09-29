@@ -4,7 +4,8 @@ import math
 import random
 import threading
 import time
-from typing import Callable, Dict, List, Optional, Tuple
+from contextlib import contextmanager
+from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
 BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
 STRUCTURED_RUNOUT_TYPES = ("full_house", "straight", "three_pairs", "steel_plate")
@@ -19,6 +20,21 @@ TOP_SINGLE_VALUE_MIN = 90
 UNKNOWN_PUBLIC_HAND_AFTER = 99.0
 
 _CORE_LOCAL = threading.local()
+
+
+@contextmanager
+def complete_heuristic_scoring() -> Iterator[None]:
+    """Finish the real decision; deadlines still bound subsequent tree search.
+
+    Wall-clock speed must not decide which root candidates or scoring terms
+    exist. Internal rollout callers can continue using the bounded selector.
+    """
+    previous = getattr(_CORE_LOCAL, "complete_heuristic", False)
+    _CORE_LOCAL.complete_heuristic = True
+    try:
+        yield
+    finally:
+        _CORE_LOCAL.complete_heuristic = previous
 
 
 def _get_core():
@@ -68,6 +84,8 @@ def call(core, name: str, *args, **kwargs):
 
 
 def _current_deadline(explicit: Optional[float] = None) -> Optional[float]:
+    if getattr(_CORE_LOCAL, "complete_heuristic", False):
+        return None
     inherited = getattr(_CORE_LOCAL, "deadline", None)
     if explicit is None:
         return inherited
@@ -3439,7 +3457,9 @@ def _lead_empty_bomb_penalty(
 
 
 def _cards_use_special_material(play_cards: List[Dict], level_rank: int) -> bool:
-    return any(_is_joker(card) or _is_wild(card, level_rank) for card in play_cards)
+    is_joker = _CORE._is_joker
+    is_wild = _CORE._is_wild
+    return any(is_joker(card) or is_wild(card, level_rank) for card in play_cards)
 
 
 def _response_value_tolerance(combo_type: str) -> int:
@@ -9244,11 +9264,25 @@ def _decomposition_single_candidates(hand: List[Dict], level_rank: int) -> List[
     return [cards for _, _, _, cards in singles_ranked]
 
 
-def _decomposition_local_value(hand: List[Dict], cards: List[int], combo: Dict, level_rank: int) -> float:
-    hand_map = _map_hand_by_id(hand)
+def _decomposition_local_value(
+    hand: List[Dict], cards: List[int], combo: Dict, level_rank: int,
+    context: Optional[Tuple[Dict[int, Dict], Dict[int, int], Dict[int, int]]] = None,
+) -> float:
+    if context is None:
+        hand_map = _map_hand_by_id(hand)
+        counts = (_rank_count_map(hand, level_rank),
+                  _rank_count_map(_remove_cards(hand, cards), level_rank))
+    else:
+        hand_map, before_counts, rank_by_id = context
+        after_counts = dict(before_counts)
+        for cid in set(cards):
+            rank = rank_by_id.get(cid)
+            if rank is not None:
+                after_counts[rank] -= 1
+                if not after_counts[rank]:
+                    del after_counts[rank]
+        counts = (before_counts, after_counts)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-    counts = (_rank_count_map(hand, level_rank),
-              _rank_count_map(_remove_cards(hand, cards), level_rank))
     combo_type = combo.get("type")
     type_base = {
         "straight_flush": 13.0,
@@ -9311,12 +9345,14 @@ def _decomposition_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[L
         for card in hand
     ))
     if cache is not None and key in cache:
-        return copy.deepcopy(cache[key])
+        # Combo descriptors contain only scalar values. Copy the two mutable
+        # containers explicitly instead of recursively visiting every scalar.
+        return [(list(cards), dict(combo), value) for cards, combo, value in cache[key]]
     result = _compute_decomposition_candidates(hand, level_rank)
     if cache is not None:
         if len(cache) >= 4096:
             cache.clear()
-        cache[key] = copy.deepcopy(result)
+        cache[key] = [(list(cards), dict(combo), value) for cards, combo, value in result]
     return result
 
 
@@ -9336,13 +9372,20 @@ def _compute_decomposition_candidates(hand: List[Dict], level_rank: int) -> List
     options.extend(_decomposition_single_candidates(hand, level_rank))
 
     hand_map = _map_hand_by_id(hand)
+    before_counts = _rank_count_map(hand, level_rank)
+    is_joker = _CORE._is_joker
+    is_wild = _CORE._is_wild
+    rank_by_id = {card["id"]: card["rank"] for card in hand
+                  if card.get("rank") is not None
+                  and not is_joker(card) and not is_wild(card, level_rank)}
+    context = (hand_map, before_counts, rank_by_id)
     by_type: Dict[str, List[Tuple[float, int, str, List[int], Dict]]] = {}
     for cards in _CORE._dedupe_card_sets(options):
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         combo = _evaluate_combo(play_cards, level_rank, config)
         if not combo:
             continue
-        local_value = _decomposition_local_value(hand, cards, combo, level_rank)
+        local_value = _decomposition_local_value(hand, cards, combo, level_rank, context)
         combo_type = combo.get("type") or "unknown"
         by_type.setdefault(combo_type, []).append(
             (
@@ -9555,13 +9598,14 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
         current_hand: List[Dict],
         cards: List[int],
         combo: Dict,
+        local_value: float,
         child: Dict[str, float],
     ) -> Dict[str, float]:
         hand_map = _map_hand_by_id(current_hand)
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         summary = _copy_hand_decomposition_summary(child)
         combo_type = combo.get("type") or "unknown"
-        summary["score"] = child["score"] + _decomposition_local_value(current_hand, cards, combo, level_rank)
+        summary["score"] = child["score"] + local_value
         summary["turns"] = child["turns"] + 1.0
         if combo_type == "single":
             summary["singles"] = child["singles"] + 1.0
@@ -9625,12 +9669,12 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
             )
             if best_key is None or choice_key > best_key:
                 best_key = choice_key
-                best_choice = (cards, combo, remaining)
+                best_choice = (cards, combo, remaining, local_value)
         if best_choice is None:
             return _empty_hand_decomposition_summary()
-        cards, combo, remaining = best_choice
+        cards, combo, remaining, local_value = best_choice
         child = search(remaining, ply + 1)
-        return apply_step(current_hand, cards, combo, child)
+        return apply_step(current_hand, cards, combo, local_value, child)
 
     summary = _copy_hand_decomposition_summary(search(hand, 0))
     if not timed_out and not _deadline_expired():
@@ -9670,15 +9714,14 @@ def _global_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dic
         current_hand: List[Dict],
         cards: List[int],
         combo: Dict,
+        local_value: float,
         child: Dict[str, float],
     ) -> Dict[str, float]:
         hand_map = _map_hand_by_id(current_hand)
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         summary = _copy_hand_decomposition_summary(child)
         combo_type = combo.get("type") or "unknown"
-        summary["score"] = child["score"] + _decomposition_local_value(
-            current_hand, cards, combo, level_rank
-        )
+        summary["score"] = child["score"] + local_value
         summary["turns"] = child["turns"] + 1.0
         if combo_type == "single":
             summary["singles"] = child["singles"] + 1.0
@@ -9773,14 +9816,14 @@ def _global_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dic
         best_summary = None
         best_key = None
         timed_out = False
-        for cards, combo, _local_value in branches:
+        for cards, combo, local_value in branches:
             if _deadline_expired():
                 timed_out = True
                 break
             remaining = _remove_cards(current_hand, cards)
             child, child_timed_out = search(remaining, child_budget)
             timed_out = timed_out or child_timed_out
-            summary = apply_step(current_hand, cards, combo, child)
+            summary = apply_step(current_hand, cards, combo, local_value, child)
             choice_key = summary_key(summary) + (
                 priority.get(combo.get("type") or "", 0),
                 len(cards),
@@ -15965,7 +16008,8 @@ def _bot_select_play(
         detailed_minimum if bounded_response else len(ordered_candidates)
     )
     eval_cache = state.setdefault("_ai_eval_cache", {})
-    soft_deadline = eval_cache.get("heuristic_soft_deadline", deadline)
+    soft_deadline = (None if getattr(_CORE_LOCAL, "complete_heuristic", False)
+                     else eval_cache.get("heuristic_soft_deadline", deadline))
     hard_deadline = _current_deadline(deadline)
     scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]] = []
     candidate_durations: List[float] = []
