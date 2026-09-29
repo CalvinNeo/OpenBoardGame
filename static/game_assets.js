@@ -1,9 +1,16 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "skull_king": {
+    "scripts": ["/static/games/skull_king.js?v=2"],
+    "styles": ["/static/games/skull_king.css?v=2"],
+    "markup": "/static/games/skull_king.html?v=1",
+    "panel": "skullKingPanel",
+    "header": "showSkullKingHeaderActions"
+  },
   "deception": {
-    "scripts": ["/static/games/deception.js?v=1"],
-    "styles": ["/static/games/deception.css?v=1"],
-    "markup": "/static/games/deception.html?v=1",
+    "scripts": ["/static/games/deception.js?v=3"],
+    "styles": ["/static/games/deception.css?v=3"],
+    "markup": "/static/games/deception.html?v=3",
     "panel": "deceptionPanel",
     "header": "showDeceptionHeaderActions"
   },
@@ -588,11 +595,11 @@ const GAME_ASSETS = {
   },
   "yahtzee": {
     "scripts": [
-      "/static/games/yahtzee.js?v=app_v4"
+      "/static/games/yahtzee.js?v=app_v5"
     ],
     "styles": [],
     "panel": "yahtzeePanel",
-    "markup": "/static/games/yahtzee.html?v=1",
+    "markup": "/static/games/yahtzee.html?v=2",
     "styleFragments": "/static/games/yahtzee.css?v=1"
   },
   "istanbul": {

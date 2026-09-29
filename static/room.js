@@ -850,6 +850,7 @@ const GAME_WEIGHT = {
   subtext: 1.29,
   a_feast_for_odin: 3.87,
   dune_imperium: 3.08,
+  deception: 1.59,
   mind_the_lines: 1.10,
   no_thanks: 1.13,
   power_grid: 3.25,
@@ -2207,6 +2208,7 @@ function resetRoomState() {
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
+  if (typeof updateYahtzeeConfigRow === "function") updateYahtzeeConfigRow();
   if (typeof updateArkNovaConfigRow === "function") updateArkNovaConfigRow();
   if (typeof updateHanabiConfigRow === "function") updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

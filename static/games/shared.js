@@ -71,6 +71,8 @@ function emitRoomStart() {
   } else if (currentGameType === "halli_galli") {
     const deckMode = halliDeckSelect ? halliDeckSelect.value || "base" : "base";
     payload.config = { deck_mode: deckMode };
+  } else if (currentGameType === "yahtzee" && typeof getYahtzeeConfig === "function") {
+    payload.config = getYahtzeeConfig();
   } else if (currentGameType === "gold_rush") {
     const mode = goldRushModeSelect ? goldRushModeSelect.value || "hand" : "hand";
     payload.config = { mode };
@@ -80,6 +82,8 @@ function emitRoomStart() {
     payload.config = getTakeTimeConfig();
   } else if (currentGameType === "eternal_decks") {
     payload.config = getEternalDecksConfig();
+  } else if (currentGameType === "skull_king" && typeof getSkullKingConfig === "function") {
+    payload.config = getSkullKingConfig();
   } else if (currentGameType === "deception" && typeof getDeceptionConfig === "function") {
     payload.config = getDeceptionConfig();
   } else if (currentGameType === "mind_the_lines" && typeof getMindTheLinesConfig === "function") {
@@ -406,6 +410,7 @@ function renderRoomState(state) {
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
+  if (typeof updateYahtzeeConfigRow === "function") updateYahtzeeConfigRow();
   if (typeof updateArkNovaConfigRow === "function") updateArkNovaConfigRow();
   updateCitadelsConfigRow();
   if (typeof updateHanabiConfigRow === "function") updateHanabiConfigRow();

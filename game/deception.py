@@ -6,7 +6,7 @@ import secrets
 from typing import Dict, List, Optional, Tuple
 
 from game.deception_data import (
-    CARDS_BY_ID, CAUSE, CLUES, LOCATIONS, MEANS, SCENES, TILES_BY_ID,
+    CAUSE, CLUES, LOCATIONS, MEANS, SCENES, TILES_BY_ID,
     public_card, public_tile,
 )
 
@@ -75,7 +75,10 @@ def _finish(state: Dict, team: str, reason: str) -> None:
 def _record(state: Dict, kind: str, **fields) -> Dict:
     entry = {'type': kind, 'round': state['round'], **fields}
     state['history'].append(entry)
-    state['history'] = state['history'][-120:]
+    # Keep forensic evidence and accusations even during a long text discussion.
+    message_indices = [i for i, item in enumerate(state['history']) if item['type'] == 'message']
+    if len(message_indices) > 120:
+        del state['history'][message_indices[0]]
     return entry
 
 

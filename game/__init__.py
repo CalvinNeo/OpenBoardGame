@@ -1,3 +1,4 @@
+from game.skull_king import SkullKingGame
 from game.deception import DeceptionGame
 from game.mind_the_lines import MindTheLinesGame
 from game.power_grid import PowerGridGame
@@ -90,6 +91,7 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "SkullKingGame",
     "DeceptionGame",
     "MindTheLinesGame",
     "PowerGridGame",

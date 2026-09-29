@@ -1,3 +1,16 @@
+<template data-game-target="yahtzeeConfigMount" data-game-mode="contents">
+  <div class="game-config-card hidden" id="yahtzeeConfigBox" aria-hidden="true">
+    <div class="game-config-title">Yahtzee</div>
+    <div class="row">
+      <label for="yahtzeeBotStrategySelect">🤖 Bot AI</label>
+      <select id="yahtzeeBotStrategySelect" aria-describedby="yahtzeeBotStrategyHint">
+        <option value="classic">Classic (original)</option>
+        <option value="dynamic_programming">Strategic (DP)</option>
+      </select>
+    </div>
+    <div class="hint" id="yahtzeeBotStrategyHint"></div>
+  </div>
+</template>
 <template data-game-target="yahtzeePanel" data-game-mode="contents">
               <div class="row">
                 <div>Phase: <span id="yahtzeePhase">-</span></div>

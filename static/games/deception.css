@@ -93,3 +93,12 @@
 .deception-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (max-width: 1000px) { .deception-workspace { grid-template-columns: minmax(0, 1fr); } .deception-forensics { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .deception-controls { grid-column: 1 / -1; grid-row: 2; } .deception-players { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 600px; } }
 @media (max-width: 600px) { .deception-heading h2 { font-size: 23px; } .deception-heading h2 small { display: block; margin: 6px 0 0; } .deception-forensics { grid-template-columns: minmax(0, 1fr); } .deception-controls { grid-row: auto; } .deception-section { padding: 9px; } .deception-players { grid-template-columns: minmax(0, 1fr); max-height: 520px; } .deception-suspect { padding: 9px; } .deception-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .deception-messages { height: 120px; } .deception-dialog { padding: 14px; } .deception-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.deception-discussion > summary { cursor: pointer; list-style: none; }
+.deception-discussion > summary::-webkit-details-marker { display: none; }
+.deception-discussion > summary::after { content: "+"; font-size: 17px; }
+.deception-discussion[open] > summary::after { content: "−"; }
+.deception-discussion:not([open]) > summary { margin-bottom: 0; }
+@media (max-width: 600px) { .deception-panel .deception-scene-toggle { min-height: 60px; padding: 7px; } }
+
+.deception-verdict { margin-bottom: 10px; padding: 9px 12px; border: 1px solid #e0c8bc; border-radius: 8px; color: #854b31; background: #fff4ed; overflow-wrap: anywhere; line-height: 1.5; }

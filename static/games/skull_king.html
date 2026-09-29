@@ -1,0 +1,31 @@
+<template data-game-target="skullKingConfigBox" data-game-mode="contents">
+  <div class="game-config-title">💀 Skull King · 骷髅王</div>
+  <div class="skull-king-config"><label for="skullKingSchedule">Voyage</label><select id="skullKingSchedule"><option value="standard">Standard · 10 rounds</option><option value="quick">Quick · 5 rounds × 5 cards</option></select></div>
+</template>
+<template data-game-target="skullKingHeaderActions" data-game-mode="contents">
+  <button id="skullKingHelpBtn" type="button" aria-label="Help" title="Help">Help</button>
+  <button id="skullKingExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="skullKingPanel" data-game-mode="contents">
+  <header class="skull-king-heading"><div><span class="skull-king-eyebrow">A BATTLE OF BIDS & TRICKS</span><h2>SKULL KING <span>骷髅王</span></h2></div><span class="skull-king-seal" aria-hidden="true">💀</span></header>
+  <div class="skull-king-statusbar"><span id="skullKingStatus" role="status" aria-live="polite">Waiting to start</span><div class="skull-king-counters"><span id="skullKingRound" tabindex="0" data-sk-explain="round" data-sk-tip="Round：每轮重新洗牌，默认共 10 轮。">Round —</span><span id="skullKingTrick" tabindex="0" data-sk-explain="trick" data-sk-tip="Trick（墩）：每人各出一张牌，赢家领下一墩。">Trick —</span></div></div>
+  <div class="skull-king-layout">
+    <div class="skull-king-main">
+      <section class="skull-king-table" aria-label="Current trick">
+        <div class="skull-king-section-heading"><h3>On deck</h3><span id="skullKingLead" tabindex="0" data-sk-explain="lead" data-sk-tip="Lead（首引）：数字牌必须跟首引花色，特殊牌可以随时出。">Lead —</span></div>
+        <div id="skullKingTrickCards" class="skull-king-trick-cards"></div>
+        <div id="skullKingTrickResult" class="skull-king-trick-result hidden" role="status"></div>
+      </section>
+      <section id="skullKingBidBox" class="skull-king-bid-box hidden" aria-label="Bid controls"><div class="skull-king-section-heading"><h3>Your bid</h3><span id="skullKingBidProgress" tabindex="0" data-sk-explain="bid" data-sk-tip="Bid（🎯，叫墩）：预测本轮赢几墩。所有人锁定后同时公开。"></span></div><div id="skullKingBids" class="skull-king-bids" role="group" aria-label="Choose your bid"></div><div class="skull-king-bid-confirm"><span id="skullKingBidHint">Choose how many tricks you will win.</span><button id="skullKingConfirmBid" type="button" data-sk-explain="bid" disabled>Confirm Bid</button></div></section>
+      <section id="skullKingReview" class="skull-king-review hidden" aria-label="Review results"><div><strong id="skullKingReviewTitle"></strong><span id="skullKingReady"></span></div><button id="skullKingNext" type="button" data-sk-explain="next" disabled>Next Round</button></section>
+      <section class="skull-king-hand-box" aria-label="Your hand"><div class="skull-king-section-heading"><h3 id="skullKingHandTitle">Your hand</h3><span id="skullKingTarget" tabindex="0" data-sk-explain="target" data-sk-tip="Target（🎯）：你的叫墩目标与已赢墩数。准确叫墩才能获得奖励。">🎯 —</span></div><div id="skullKingHand" class="skull-king-hand"></div><div id="skullKingSelection" class="skull-king-selection hidden"><strong id="skullKingSelectedLabel"></strong><div class="skull-king-play-actions"><button id="skullKingPlay" type="button" data-sk-explain="play">Play Card</button><button id="skullKingPirate" type="button" data-sk-explain="tigress">⚔️ Pirate</button><button id="skullKingEscape" type="button" data-sk-explain="tigress">🏳️ Escape</button><button id="skullKingCancel" type="button" data-sk-explain="cancel">Cancel</button></div></div><p id="skullKingHandHint" class="skull-king-hand-hint">Your cards will appear here.</p></section>
+    </div>
+    <aside class="skull-king-crew" aria-label="Players and scores"><div class="skull-king-section-heading"><h3>The crew</h3><span tabindex="0" data-sk-explain="score" data-sk-tip="Score（🏆）：累计分最高获胜。当前轮结算前不计入总分。">🏆 Score</span></div><div id="skullKingPlayers" class="skull-king-players"></div></aside>
+  </div>
+  <section id="skullKingRoundSummary" class="skull-king-round-summary hidden" aria-label="Round scores"><div class="skull-king-section-heading"><h3 id="skullKingSummaryTitle">Round scores</h3><span tabindex="0" data-sk-explain="bonus" data-sk-tip="Bonus（✨）：本轮叫墩准确时才兑现的额外奖励。">✨ Bonus</span></div><div id="skullKingScoreRows" class="skull-king-score-rows"></div></section>
+  <div class="skull-king-history"><details><summary>Trick history</summary><ol id="skullKingHistory"></ol></details><details><summary>Score history</summary><div id="skullKingScoreHistory"></div></details></div>
+  <div id="skullKingTooltip" class="skull-king-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="skullKingDialog" data-game-mode="replace">
+  <dialog id="skullKingDialog" class="skull-king-dialog" aria-labelledby="skullKingDialogTitle"><div class="skull-king-dialog-heading"><h2 id="skullKingDialogTitle">Skull King</h2><button id="skullKingDialogClose" type="button">Close</button></div><div id="skullKingDialogBody"></div></dialog>
+</template>

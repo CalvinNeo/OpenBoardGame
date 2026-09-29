@@ -1,0 +1,22 @@
+{
+  "format": "OBGYDP01",
+  "categories": [
+    "ones",
+    "twos",
+    "threes",
+    "fours",
+    "fives",
+    "sixes",
+    "three_kind",
+    "four_kind",
+    "full_house",
+    "small_straight",
+    "large_straight",
+    "yahtzee",
+    "chance"
+  ],
+  "entries": 1048576,
+  "sha256_uncompressed": "d7a8ce2515dca5ec3d0ea7afcc17eeb00d58d690638b36aa7aa25ad3cb3c6a2b",
+  "opening_expected_score": 254.49856567382812,
+  "objective": "maximum expected final score under game/yahtzee.py rules"
+}

@@ -504,6 +504,7 @@
                     <option value="tacta">TACTA</option>
                     <option value="hive">Hive · 昆虫棋</option>
                     <option value="dune_imperium">Dune: Imperium · 沙丘：帝国</option>
+                    <option value="skull_king">Skull King · 骷髅王</option>
                     <option value="deception">Deception: Murder in Hong Kong · 犯罪现场</option>
                     <option value="mind_the_lines">Mind the Lines · 出神入画</option>
                     <option value="subtext">Subtext</option>
@@ -588,6 +589,7 @@
                   <div id="catanStarfarersRoomSetupRow" class="hidden">Setup: <span id="catanStarfarersRoomSetup">-</span> · Language: <span id="catanStarfarersRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
+                  <div id="yahtzeeConfigMount"></div>
                   <div class="game-config-card hidden" id="arkNovaConfigBox" aria-hidden="true"></div>
                   <div id="odinConfigMount"></div>
                   <div class="game-config-card hidden" id="inAGroveConfigBox" aria-hidden="true">
@@ -989,6 +991,7 @@
                       <input id="criminalDanceScoringToggle" type="checkbox" checked />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="skullKingConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="deceptionConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="mindTheLinesConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="powerGridConfigBox" aria-hidden="true"></div>
@@ -1307,6 +1310,7 @@
             <div class="panel-header-actions" id="challengersHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="grandAustriaHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="odinHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="skullKingHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="deceptionHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="mindTheLinesHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="powerGridHeaderActions" style="display: none;"></div>
@@ -1433,6 +1437,7 @@
             <div id="felixPanel" class="hidden felix-panel"></div>
 
             <div id="tactaPanel" class="hidden tacta-panel"></div>
+            <div id="skullKingPanel" class="hidden skull-king-panel"></div>
             <div id="deceptionPanel" class="hidden deception-panel"></div>
             <div id="mindTheLinesPanel" class="hidden mind-the-lines-panel"></div>
             <div id="powerGridPanel" class="hidden power-grid-panel"></div>
@@ -1612,8 +1617,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=53" defer></script>
-  <script src="/static/games/shared.js?v=app_v34" defer></script>
+  <script src="/static/game_assets.js?v=58" defer></script>
+  <script src="/static/games/shared.js?v=app_v36" defer></script>
+  <template id="skullKingDialog"></template>
   <template id="deceptionDialog"></template>
   <div id="mindTheLinesDialog"></div>
   <template id="powerGridDialog"></template>
@@ -1629,7 +1635,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v41" defer></script>
-  <script src="/static/room.js?v=app_v60" defer></script>
+  <script src="/static/app.js?v=app_v42" defer></script>
+  <script src="/static/room.js?v=app_v62" defer></script>
 </body>
 </html>

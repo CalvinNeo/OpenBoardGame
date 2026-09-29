@@ -1,3 +1,4 @@
+from game.skull_king import SkullKingGame, ACTION_SCHEMA as SKULL_KING_ACTION_SCHEMA, CONFIG_SCHEMA as SKULL_KING_CONFIG_SCHEMA
 from game.deception import DeceptionGame, ACTION_SCHEMA as DECEPTION_ACTION_SCHEMA, CONFIG_SCHEMA as DECEPTION_CONFIG_SCHEMA
 from game.mind_the_lines import MindTheLinesGame, ACTION_SCHEMA as MIND_THE_LINES_ACTION_SCHEMA, CONFIG_SCHEMA as MIND_THE_LINES_CONFIG_SCHEMA
 from game.power_grid import PowerGridGame, ACTION_SCHEMA as POWER_GRID_ACTION_SCHEMA, CONFIG_SCHEMA as POWER_GRID_CONFIG_SCHEMA
@@ -119,6 +120,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=SkullKingGame.game_id, name="Skull King", name_zh="骷髅王",
+        min_players=2, max_players=8, turn_mode="turn",
+        action_schema=SKULL_KING_ACTION_SCHEMA, config_schema=SKULL_KING_CONFIG_SCHEMA,
+        module=SkullKingGame, serialize=SkullKingGame.serialize, deserialize=SkullKingGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(
@@ -2327,6 +2337,9 @@ YAHTZEE_ACTION_SCHEMA = {
 
 YAHTZEE_CONFIG_SCHEMA = {
     "type": "object",
+    "properties": {
+        "bot_strategy": {"type": "string", "enum": ["classic", "dynamic_programming"]},
+    },
     "additionalProperties": False,
 }
 

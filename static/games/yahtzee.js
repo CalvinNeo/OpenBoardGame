@@ -1,4 +1,9 @@
 let currentYahtzeeView = null;
+let yahtzeeConfigSignature = null;
+
+const yahtzeeConfigBox = document.getElementById("yahtzeeConfigBox");
+const yahtzeeBotStrategySelect = document.getElementById("yahtzeeBotStrategySelect");
+const yahtzeeBotStrategyHint = document.getElementById("yahtzeeBotStrategyHint");
 
 const yahtzeePhaseLabel = document.getElementById("yahtzeePhase");
 const yahtzeeRoundLabel = document.getElementById("yahtzeeRound");
@@ -10,6 +15,39 @@ const yahtzeeJokerBody = document.getElementById("yahtzeeJokerBody");
 const yahtzeeDice = document.getElementById("yahtzeeDice");
 const yahtzeeRollBtn = document.getElementById("yahtzeeRollBtn");
 const yahtzeeScorecards = document.getElementById("yahtzeeScorecards");
+
+function getYahtzeeConfig() {
+  return {
+    bot_strategy: yahtzeeBotStrategySelect.value === "dynamic_programming" ? "dynamic_programming" : "classic",
+  };
+}
+
+function updateYahtzeeConfigHint() {
+  yahtzeeBotStrategyHint.textContent = getYahtzeeConfig().bot_strategy === "dynamic_programming"
+    ? "Dynamic programming: plans keeps, rerolls and scoring for the highest expected final score, including bonuses. Applies to all bots."
+    : "Original AI: random rerolls, then the highest immediate score. Applies to all bots.";
+}
+
+function updateYahtzeeConfigRow() {
+  const visible = Boolean(currentRoomState && currentGameType === "yahtzee");
+  yahtzeeConfigBox.classList.toggle("hidden", !visible);
+  yahtzeeConfigBox.setAttribute("aria-hidden", String(!visible));
+  if (!visible) {
+    yahtzeeConfigSignature = null;
+    yahtzeeBotStrategySelect.value = "classic";
+    return;
+  }
+  const config = currentRoomState.status !== "lobby" && currentYahtzeeView
+    ? currentYahtzeeView.config || {}
+    : currentRoomState.game_config || {};
+  const signature = JSON.stringify([currentRoomState.room_id, config.bot_strategy || "classic"]);
+  if (signature !== yahtzeeConfigSignature) {
+    yahtzeeBotStrategySelect.value = config.bot_strategy === "dynamic_programming" ? "dynamic_programming" : "classic";
+    yahtzeeConfigSignature = signature;
+  }
+  yahtzeeBotStrategySelect.disabled = !["lobby", "game_over"].includes(currentRoomState.status);
+  updateYahtzeeConfigHint();
+}
 
 function formatYahtzeeCategoryLabel(view, category) {
   if (view && view.category_labels && view.category_labels[category]) {
@@ -263,6 +301,7 @@ function renderYahtzeeGameState(data) {
 
   renderYahtzeeDice(view);
   renderYahtzeeScorecards(view);
+  updateYahtzeeConfigRow();
   logGameEvents(data);
   updateYahtzeeActionButtons();
 }
@@ -275,3 +314,7 @@ if (yahtzeeRollBtn) {
 
 window.clearYahtzeeState = clearYahtzeeState;
 window.renderYahtzeeGameState = renderYahtzeeGameState;
+
+yahtzeeBotStrategySelect.addEventListener("change", updateYahtzeeConfigHint);
+// Assets can load after the room's first Socket.IO state has already arrived.
+updateYahtzeeConfigRow();

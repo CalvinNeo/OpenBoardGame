@@ -46,7 +46,7 @@ UPPER_VALUE_TO_CATEGORY = {
     6: "sixes",
 }
 
-DEFAULT_CONFIG: Dict = {}
+DEFAULT_CONFIG: Dict = {"bot_strategy": "classic"}
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -54,6 +54,8 @@ def _merge_config(config: Optional[Dict]) -> Dict:
     if config:
         for key, value in config.items():
             cfg[key] = value
+    if cfg["bot_strategy"] not in ("classic", "dynamic_programming"):
+        raise ValueError("bot_strategy must be classic or dynamic_programming")
     return cfg
 
 
@@ -480,6 +482,7 @@ class YahtzeeGame:
         return {
             "game_id": YahtzeeGame.game_id,
             "you": viewer_id,
+            "config": _merge_config(state.get("config")),
             "phase": state.get("phase"),
             "current_round": state.get("current_round"),
             "current_player": current_player,
@@ -499,6 +502,10 @@ class YahtzeeGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("config", {}).get("bot_strategy", "classic") == "dynamic_programming":
+            from game.yahtzee_ai import choose_action
+
+            return choose_action(state, bot_id)
         if state.get("game_over"):
             return None
         if bot_id not in state["players"]:

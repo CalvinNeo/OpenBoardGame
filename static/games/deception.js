@@ -59,6 +59,7 @@
   function dispatch(kind, fields = {}) {
     if (!available(kind)) return;
     pending = true;
+    if (["place_marker", "replace_scene"].includes(kind)) expandedTile = null;
     selected = {}; draft = null; replaceId = null;
     sendAction({type: kind, case_token: view.case_token, round: view.round, ...fields});
     clearTimeout(pendingTimer);
@@ -86,7 +87,7 @@
   function renderBoard() {
     if (!view) return;
     const board = byId("Scenes"); board.replaceChildren();
-    if (!view.scenes.length) board.append(node("p", "deception-empty", view.phase === "crime" ? "🔒 等待凶手秘密定案" : "📍 等待法医选择地点"));
+    if (!view.scenes.length) board.append(node("p", "deception-empty", view.game_over ? "📁 案件在报告发布前被破获。" : view.phase === "reversal" ? "👁️ 案件已破，等待目击者反转。" : view.phase === "crime" ? "🔒 等待凶手秘密定案" : "📍 等待法医选择地点"));
     for (const tile of view.scenes) {
       const open = expandedTile === tile.id;
       const section = node("article", `deception-scene${open ? " is-open" : ""}`);
@@ -204,7 +205,7 @@
     const messages = byId("Messages"), nearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 40, oldTop = messages.scrollTop;
     messages.replaceChildren();
     const chat = view.history.filter(e => e.type === "message");
-    if (!chat.length) messages.append(node("li", "deception-empty", "讨论将在第一枚标记后开放。"));
+    if (!chat.length) messages.append(node("li", "deception-empty", view.game_over ? "案件已结。" : view.phase === "reversal" ? "凶手与帮凶可讨论目击者身份。" : view.scenes.some(t => t.marker != null) ? "暂无讨论消息。" : "讨论将在第一枚标记后开放。"));
     for (const entry of chat) {
       const li = node("li"); li.append(node("strong", "", `${name(entry.player_id)}: `), document.createTextNode(entry.text)); messages.append(li);
     }
@@ -233,6 +234,9 @@
       const reasons = {solved: "两项证据均被正确指认。", badges_exhausted: "全部警徽已用尽，案件未破。", three_rounds: "三轮陈述结束，案件未破。", witness_found: "凶手成功找出目击者，反转获胜。", witness_safe: "凶手未找到目击者。"};
       if (view.game_over) result.append(node("div", "", reasons[view.end_reason]), node("div", "", `🏆 ${view.winner_ids.map(name).join("、")}`));
     }
+    const latestAccusation = view.accusations[view.accusations.length - 1];
+    byId("Verdict").classList.toggle("hidden", !latestAccusation || !!view.solution);
+    text("Verdict", latestAccusation ? historyText(latestAccusation) : "");
     renderPrivate(); renderBoard(); renderPlayers(); renderHistory();
   }
 
@@ -309,8 +313,8 @@
     view = null; pending = false; selected = {}; draft = null; replaceId = null; expandedTile = null; caseKey = null;
     clearTimeout(pendingTimer); clearTimeout(suppressTimer); suppressClick = false; setExplain(false);
     if (dialog.open) dialog.close(); byId("Private").open = false; byId("ChatInput").value = "";
-    ["Scenes", "Players", "Messages", "History", "PrivateBody", "LocationChoices", "Replacement", "Draft", "Result"].forEach(id => byId(id).replaceChildren());
-    ["Draft", "Result", "Next"].forEach(id => byId(id).classList.add("hidden"));
+    ["Scenes", "Players", "Messages", "History", "PrivateBody", "LocationChoices", "Replacement", "Draft", "Result", "Verdict"].forEach(id => byId(id).replaceChildren());
+    ["Draft", "Result", "Verdict", "Next"].forEach(id => byId(id).classList.add("hidden"));
     ["Present", "Finish", "Next", "Send", "ChatInput"].forEach(id => { byId(id).disabled = true; });
     text("Status", "Waiting to start"); text("Ready", "");
   }
@@ -345,6 +349,9 @@
     else if (typeof currentRoomState !== "undefined") syncConfig(currentRoomState);
   };
   function init() {
+    const mobileLayout = window.matchMedia("(max-width: 600px)");
+    byId("Discussion").open = !mobileLayout.matches;
+    mobileLayout.addEventListener("change", event => { byId("Discussion").open = !event.matches; });
     socket.on("room:state", syncConfig);
     socket.on("system:error", () => { pending = false; clearTimeout(pendingTimer); if (view) render(); });
     socket.on("disconnect", () => { pending = false; clearTimeout(pendingTimer); hideTip(); if (view) render(); });
