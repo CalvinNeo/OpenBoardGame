@@ -14,6 +14,9 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "mall_of_horror": "https://boardgamegeek.com/boardgame/16772/mall-of-horror",
+    "natsumemo": "https://boardgamegeek.com/boardgame/280811/natsumemo-natsumemo",
+    "the_crew": "https://boardgamegeek.com/boardgame/284083/the-crew-the-quest-for-planet-nine",
     "maskmen": "https://boardgamegeek.com/boardgame/159581/maskmen",
     "startups": "https://boardgamegeek.com/boardgame/223770/startups",
     "deception": "https://boardgamegeek.com/boardgame/156129/deception-murder-in-hong-kong",

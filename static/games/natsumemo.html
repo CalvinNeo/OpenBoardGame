@@ -1,0 +1,37 @@
+<template data-game-target="natsumemoHeaderActions" data-game-mode="contents">
+  <button id="natsumemoHelpBtn" type="button">Help</button>
+  <button id="natsumemoExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="natsumemoPanel" data-game-mode="contents">
+  <header class="nm-heading"><div><div class="nm-eyebrow">A MONTH TO REMEMBER</div><h2>暑假日记 <span>NATSUMEMO</span></h2></div><span class="nm-sun" aria-hidden="true">☀️</span></header>
+  <div class="nm-statusbar"><strong id="natsumemoStatus" role="status" aria-live="polite">Waiting to start</strong><span id="natsumemoProgress" data-nm-explain="weeks" tabindex="0">Week —</span></div>
+  <div class="nm-layout">
+    <section class="nm-calendar-box" aria-label="Summer calendar">
+      <div class="nm-section-heading"><h3>夏日约定 <span>Calendar</span></h3><div id="natsumemoWeeks" class="nm-weeks" aria-label="View week"></div></div>
+      <div id="natsumemoCalendar" class="nm-calendar"></div>
+      <div class="nm-legend"><span tabindex="0" data-nm-explain="calendar">🗓️ 日程</span><span tabindex="0" data-nm-explain="score">⭐ 充实度</span><span tabindex="0" data-nm-explain="titles">🏅 称号</span></div>
+      <details class="nm-details"><summary>Recent memories</summary><ol id="natsumemoHistory" class="nm-history"></ol></details>
+    </section>
+    <aside class="nm-sidebar">
+      <section class="nm-event-box" aria-label="Current activity">
+        <div class="nm-section-heading"><span class="nm-eyebrow" id="natsumemoCardLabel">SUMMER STARTS HERE</span><span id="natsumemoDuration" tabindex="0" data-nm-explain="calendar"></span></div>
+        <div class="nm-event-identity"><span id="natsumemoEmoji" class="nm-event-emoji" aria-hidden="true">🌻</span><div><h3 id="natsumemoEventName">准备放暑假</h3><span id="natsumemoDate"></span></div></div>
+        <p id="natsumemoRule" class="nm-card-rule" tabindex="0" data-nm-explain="activity"></p>
+        <div id="natsumemoControls" class="nm-controls"></div>
+        <div id="natsumemoResult" class="nm-result hidden"></div>
+        <div id="natsumemoReview" class="nm-review hidden"><span id="natsumemoReady"></span><button id="natsumemoNext" type="button" class="nm-primary" data-nm-explain="next">Next Round</button></div>
+      </section>
+      <details id="natsumemoDiary" class="nm-diary" open><summary>🔒 我的秘密日记 <span>Private</span></summary>
+        <div class="nm-diary-content"><div class="nm-section-heading"><strong id="natsumemoHomework" tabindex="0" data-nm-explain="homework">✏️ 0 / 25</strong><span id="natsumemoHomeworkScore" tabindex="0" data-nm-explain="homework"></span></div>
+        <div id="natsumemoPages" class="nm-pages" aria-label="Homework progress" tabindex="0" data-nm-explain="homework"></div>
+        <div id="natsumemoHearts" class="nm-hearts"></div><div id="natsumemoTitles" class="nm-titles"></div>
+        <details class="nm-details"><summary>Study results</summary><div id="natsumemoStudy" class="nm-history"></div></details></div>
+      </details>
+    </aside>
+  </div>
+  <section id="natsumemoFinal" class="nm-final hidden" aria-label="Final scores"><h3 id="natsumemoWinner"></h3><div id="natsumemoScores" class="nm-scorecards"></div><details class="nm-details"><summary>Friendship awards</summary><div id="natsumemoAwards" class="nm-history"></div></details></section>
+  <div id="natsumemoTooltip" class="nm-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="natsumemoDialog" data-game-mode="replace">
+  <dialog id="natsumemoDialog" class="nm-dialog" aria-labelledby="natsumemoDialogTitle"><div class="nm-dialog-heading"><h2 id="natsumemoDialogTitle">Natsumemo</h2><button id="natsumemoDialogClose" type="button">Close</button></div><div id="natsumemoDialogBody"></div></dialog>
+</template>

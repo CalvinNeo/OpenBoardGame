@@ -1,9 +1,37 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "gloomhaven": {
+    "scripts": ["/static/games/gloomhaven.js?v=3"],
+    "styles": ["/static/games/gloomhaven.css?v=2"],
+    "markup": "/static/games/gloomhaven.html?v=1",
+    "panel": "gloomhavenPanel",
+    "header": "showGloomhavenHeaderActions"
+  },
+  "natsumemo": {
+    "scripts": ["/static/games/natsumemo.js?v=2"],
+    "styles": ["/static/games/natsumemo.css?v=2"],
+    "markup": "/static/games/natsumemo.html?v=2",
+    "panel": "natsumemoPanel",
+    "header": "showNatsumemoHeaderActions"
+  },
+  "exploding_kittens": {
+    "scripts": ["/static/games/exploding_kittens.js?v=2"],
+    "styles": ["/static/games/exploding_kittens.css?v=2"],
+    "markup": "/static/games/exploding_kittens.html?v=1",
+    "panel": "explodingKittensPanel",
+    "header": "showExplodingKittensHeaderActions"
+  },
+  "mall_of_horror": {
+    "scripts": ["/static/games/mall_of_horror.js?v=2"],
+    "styles": ["/static/games/mall_of_horror.css?v=2"],
+    "markup": "/static/games/mall_of_horror.html?v=1",
+    "panel": "mallOfHorrorPanel",
+    "header": "showMallOfHorrorHeaderActions"
+  },
   "the_crew": {
-    "scripts": ["/static/games/the_crew.js?v=1"],
-    "styles": ["/static/games/the_crew.css?v=1"],
-    "markup": "/static/games/the_crew.html?v=1",
+    "scripts": ["/static/games/the_crew.js?v=3"],
+    "styles": ["/static/games/the_crew.css?v=3"],
+    "markup": "/static/games/the_crew.html?v=2",
     "panel": "theCrewPanel",
     "header": "showTheCrewHeaderActions"
   },
@@ -429,13 +457,13 @@ const GAME_ASSETS = {
   },
   "guandan": {
     "scripts": [
-      "/static/games/guandan.js?v=app_v14"
+      "/static/games/guandan.js?v=app_v15"
     ],
     "styles": [],
     "panel": "guandanPanel",
     "header": "showGuandanHeaderActions",
-    "markup": "/static/games/guandan.html?v=1",
-    "styleFragments": "/static/games/guandan.css?v=2"
+    "markup": "/static/games/guandan.html?v=2",
+    "styleFragments": "/static/games/guandan.css?v=3"
   },
   "cabo": {
     "scripts": [

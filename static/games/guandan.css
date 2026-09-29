@@ -1,6 +1,51 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-guandan-1 {
 
+#guandanSetupStep {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.guandan-config-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.guandan-timing-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.guandan-time-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  align-items: center;
+  gap: 8px;
+  max-width: 23rem;
+}
+
+.guandan-time-row input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#guandanSetupCreateBtn {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid #1d4ed8;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+}
+
 .guandan-player {
   padding: 2px 0;
 }

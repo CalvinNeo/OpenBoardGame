@@ -1,0 +1,29 @@
+<template data-game-target="mallOfHorrorHeaderActions" data-game-mode="contents">
+  <button id="mallOfHorrorHelpBtn" type="button">Help</button>
+  <button id="mallOfHorrorExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="mallOfHorrorPanel" data-game-mode="contents">
+  <header class="moh-heading">
+    <div><div class="moh-eyebrow">SURVIVAL IS A GROUP DECISION</div><h2>MALL OF HORROR <span>僵尸商场</span></h2></div>
+    <div id="mallOfHorrorRound" class="moh-round" tabindex="0" data-moh-explain="round" data-moh-tip="Round（轮次）：攻击全部结算后，所有玩家确认才开始下一轮。">ROUND 01</div>
+  </header>
+  <div class="moh-statusbar"><strong id="mallOfHorrorStatus" role="status" aria-live="polite">Waiting to start</strong><span id="mallOfHorrorChief" tabindex="0" data-moh-explain="chief"></span></div>
+  <div id="mallOfHorrorPlayers" class="moh-players" aria-label="Players"></div>
+  <div class="moh-layout">
+    <section class="moh-map-area" aria-label="Mall map">
+      <div class="moh-section-heading"><h3>MALL DIRECTORY</h3><span id="mallOfHorrorRemaining" tabindex="0" data-moh-explain="score"></span></div>
+      <div id="mallOfHorrorMap" class="moh-map"></div>
+      <section id="mallOfHorrorReview" class="moh-review hidden" aria-label="Round review"></section>
+      <details class="moh-history"><summary>Activity &amp; latest vote</summary><div id="mallOfHorrorVoteResult" class="moh-vote-result"></div><ol id="mallOfHorrorLog" class="moh-log" tabindex="0"></ol></details>
+    </section>
+    <aside class="moh-sidebar">
+      <section class="moh-command"><div class="moh-section-heading"><h3 id="mallOfHorrorActionTitle">Your move</h3><span id="mallOfHorrorStep" class="moh-step"></span></div><div id="mallOfHorrorControls" class="moh-controls" aria-label="Available actions"></div></section>
+      <section class="moh-intel"><div class="moh-section-heading"><h3>📹 Surveillance</h3><span id="mallOfHorrorIntelLabel"></span></div><div id="mallOfHorrorDice" class="moh-dice" tabindex="0" data-moh-explain="forecast"></div><div id="mallOfHorrorDestinations" class="moh-destinations"></div></section>
+      <section class="moh-hand-area"><div class="moh-section-heading"><h3 id="mallOfHorrorHandTitle">Your cards</h3><span id="mallOfHorrorDeck" tabindex="0" data-moh-explain="cards"></span></div><div id="mallOfHorrorHand" class="moh-hand" aria-label="Your private action cards"></div></section>
+    </aside>
+  </div>
+  <div id="mallOfHorrorTooltip" class="moh-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="mallOfHorrorDialog" data-game-mode="replace">
+  <dialog id="mallOfHorrorDialog" class="moh-dialog" aria-labelledby="mallOfHorrorDialogTitle"><div class="moh-dialog-heading"><h2 id="mallOfHorrorDialogTitle">Mall of Horror</h2><button id="mallOfHorrorDialogClose" type="button">Close</button></div><div id="mallOfHorrorDialogBody"></div></dialog>
+</template>

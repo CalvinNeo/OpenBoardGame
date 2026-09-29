@@ -17,6 +17,18 @@ const guandanBotModeRow = document.getElementById("guandanBotModeRow");
 const guandanBotModeSelect = document.getElementById("guandanBotModeSelect");
 const guandanNnCheckpointRow = document.getElementById("guandanNnCheckpointRow");
 const guandanNnCheckpointSelect = document.getElementById("guandanNnCheckpointSelect");
+const guandanThinkTimeInput = document.getElementById("guandanThinkTimeInput");
+const guandanMctsMaxTimeInput = document.getElementById("guandanMctsMaxTimeInput");
+const guandanMinimaxMaxTimeInput = document.getElementById("guandanMinimaxMaxTimeInput");
+const guandanTimingRows = document.getElementById("guandanTimingRows");
+const guandanSearchTimeRows = document.getElementById("guandanSearchTimeRows");
+const guandanSetupStep = document.getElementById("guandanSetupStep");
+const guandanConfigHelpBtn = document.getElementById("guandanConfigHelpBtn");
+const guandanConfigHome = document.createComment("Guandan settings home");
+if (guandanConfigBox) guandanConfigBox.before(guandanConfigHome);
+let guandanCreatingRoom = false;
+let guandanConfigRoomId = null;
+let guandanPreviousRoomConfig = null;
 let guandanCheckpointOptions = [];
 let guandanCheckpointOptionsLoaded = false;
 let guandanCheckpointOptionsLoading = false;
@@ -137,7 +149,12 @@ function fetchGuandanCheckpointOptions() {
 }
 
 function updateGuandanConfigRow() {
-  const showRow = currentRoomState && currentGameType === "guandan" && currentRoomState.status === "lobby";
+  const inLobby = currentRoomState && currentGameType === "guandan" && currentRoomState.status === "lobby";
+  if (!guandanCreatingRoom && inLobby && guandanConfigRoomId !== currentRoomState.room_id) {
+    applyGuandanRoomConfig(currentRoomState.game_config || {});
+    guandanConfigRoomId = currentRoomState.room_id;
+  }
+  const showRow = guandanCreatingRoom || inLobby;
   const mode = guandanBotModeSelect ? guandanBotModeSelect.value || GUANDAN_DEFAULT_BOT_MODE : GUANDAN_DEFAULT_BOT_MODE;
   const showCheckpoint = showRow && mode === "nn";
   if (guandanConfigBox) {
@@ -152,30 +169,82 @@ function updateGuandanConfigRow() {
     guandanNnCheckpointRow.classList.toggle("hidden", !showCheckpoint);
     guandanNnCheckpointRow.setAttribute("aria-hidden", (!showCheckpoint).toString());
   }
+  if (guandanTimingRows) guandanTimingRows.classList.toggle("hidden", mode === "nn");
+  if (guandanSearchTimeRows) guandanSearchTimeRows.classList.toggle("hidden", mode !== "auto");
   if (showCheckpoint && !guandanCheckpointOptionsLoaded && !guandanCheckpointOptionsLoading) {
     fetchGuandanCheckpointOptions();
   }
 }
 
-function getGuandanRoomConfig() {
+function getGuandanRoomConfig(validate = true) {
   const rawMode = guandanBotModeSelect ? guandanBotModeSelect.value || GUANDAN_DEFAULT_BOT_MODE : GUANDAN_DEFAULT_BOT_MODE;
   const botMode = ["auto", "heuristic", "nn"].includes(rawMode) ? rawMode : GUANDAN_DEFAULT_BOT_MODE;
   const checkpoint = guandanNnCheckpointSelect ? guandanNnCheckpointSelect.value || "" : "";
   const config = { bot_mode: botMode };
+  const timeInputs = botMode === "auto"
+    ? [guandanThinkTimeInput, guandanMctsMaxTimeInput, guandanMinimaxMaxTimeInput]
+    : botMode === "heuristic" ? [guandanThinkTimeInput] : [];
+  if (validate && timeInputs.some((input) => input && !input.reportValidity())) return null;
+  if (botMode !== "nn") {
+    config.bot_think_time_ms = Math.round(Number(guandanThinkTimeInput?.value || 6) * 1000);
+    if (botMode === "auto") {
+      config.bot_mcts_max_time_ms = guandanMctsMaxTimeInput?.value
+        ? Math.round(Number(guandanMctsMaxTimeInput.value) * 1000) : null;
+      config.bot_minimax_max_time_ms = guandanMinimaxMaxTimeInput?.value
+        ? Math.round(Number(guandanMinimaxMaxTimeInput.value) * 1000) : null;
+    }
+  }
   if (checkpoint) {
     config.bot_nn_checkpoint = checkpoint;
   }
   return config;
 }
 
-function resetGuandanRoomConfig() {
+function applyGuandanRoomConfig(config) {
   if (guandanBotModeSelect) {
-    guandanBotModeSelect.value = GUANDAN_DEFAULT_BOT_MODE;
+    guandanBotModeSelect.value = config.bot_mode || GUANDAN_DEFAULT_BOT_MODE;
   }
   if (guandanNnCheckpointSelect) {
-    guandanNnCheckpointSelect.value = GUANDAN_DEFAULT_NN_CHECKPOINT;
+    guandanNnCheckpointSelect.value = config.bot_nn_checkpoint || GUANDAN_DEFAULT_NN_CHECKPOINT;
   }
+  if (guandanThinkTimeInput) guandanThinkTimeInput.value = (config.bot_think_time_ms ?? 6000) / 1000;
+  if (guandanMctsMaxTimeInput) guandanMctsMaxTimeInput.value = config.bot_mcts_max_time_ms == null ? "" : config.bot_mcts_max_time_ms / 1000;
+  if (guandanMinimaxMaxTimeInput) guandanMinimaxMaxTimeInput.value = config.bot_minimax_max_time_ms == null ? "" : config.bot_minimax_max_time_ms / 1000;
+}
+
+function resetGuandanRoomConfig() {
+  guandanConfigRoomId = null;
+  applyGuandanRoomConfig({});
   renderGuandanCheckpointOptions();
+  updateGuandanConfigRow();
+}
+
+function showGuandanSetup() {
+  guandanPreviousRoomConfig = { roomId: currentRoomState?.room_id, config: getGuandanRoomConfig(false) };
+  guandanCreatingRoom = true;
+  applyGuandanRoomConfig({});
+  document.getElementById("guandanSetupSettings").appendChild(guandanConfigBox);
+  document.getElementById("createRoomGameStep").classList.add("hidden");
+  document.getElementById("createRoomGameStep").setAttribute("aria-hidden", "true");
+  document.getElementById("createRoomModalTitle").textContent = "Guandan · Bot thinking";
+  guandanSetupStep.classList.remove("hidden");
+  guandanSetupStep.setAttribute("aria-hidden", "false");
+  updateGuandanConfigRow();
+  guandanBotModeSelect.focus();
+}
+
+function hideGuandanSetup() {
+  if (!guandanCreatingRoom) return;
+  guandanCreatingRoom = false;
+  guandanSetupStep.classList.add("hidden");
+  guandanSetupStep.setAttribute("aria-hidden", "true");
+  guandanConfigHome.after(guandanConfigBox);
+  if (currentRoomState?.room_id === guandanPreviousRoomConfig?.roomId) {
+    applyGuandanRoomConfig(guandanPreviousRoomConfig?.config || {});
+  } else {
+    guandanConfigRoomId = null;
+  }
+  guandanPreviousRoomConfig = null;
   updateGuandanConfigRow();
 }
 
@@ -1073,6 +1142,12 @@ const GUANDAN_HELP_TEXT = `
 </ul>
 
 <h3>Bot Thinking</h3>
+<p>Choose bot thinking times when creating a room, or adjust them in the lobby before starting. Times are in seconds.</p>
+<ul>
+  <li><strong>Overall target</strong>: defaults to 6 seconds for a move. Heuristic evaluation always completes its full comparison, even if it takes longer.</li>
+  <li><strong>MCTS max</strong> and <strong>Endgame max</strong>: limit the time for each search, including its setup. Leave them blank for Auto, which uses the remaining overall time. An explicit maximum cannot exceed the time remaining for the move.</li>
+  <li>To allow a longer search, increase the overall target as well as that search's maximum. A maximum is a limit, not a required wait; a search can finish earlier. Large-hand, many-branch MCTS remains disabled.</li>
+</ul>
 <p>The progress bar is blue during evaluation and purple during MCTS search. Hover over the bar for the current stage.</p>
 `;
 
@@ -1814,6 +1889,13 @@ if (guandanBotModeSelect) {
   });
 }
 
+document.getElementById("guandanSetupBackBtn")?.addEventListener("click", showCreateRoomGameStep);
+document.getElementById("guandanSetupCreateBtn")?.addEventListener("click", () => {
+  const config = getGuandanRoomConfig();
+  if (config) createRoomForGame("guandan", config);
+});
+guandanConfigHelpBtn?.addEventListener("click", showGuandanHelpModal);
+
 window.addEventListener("resize", () => {
   if (guandanHandLayout === "compact") {
     scheduleGuandanCascadeLayout();
@@ -1944,7 +2026,7 @@ document.addEventListener("pointerdown", (e) => {
   }
 
   const button = e.target.closest("button");
-  if (button === guandanExplainBtn || button === guandanHelpBtn) return;
+  if (button === guandanExplainBtn || button === guandanHelpBtn || button === guandanConfigHelpBtn) return;
   if (button === guandanHelpModalCloseBtn || button === guandanExplainModalCloseBtn) return;
 
   if (button) {
@@ -1957,10 +2039,19 @@ document.addEventListener("click", (e) => {
   if (!guandanExplainMode) return;
   const button = e.target.closest("button");
   if (!button) return;
-  if (button === guandanExplainBtn || button === guandanHelpBtn) return;
+  if (button === guandanExplainBtn || button === guandanHelpBtn || button === guandanConfigHelpBtn) return;
   if (button === guandanHelpModalCloseBtn || button === guandanExplainModalCloseBtn) return;
   e.preventDefault();
   e.stopPropagation();
+}, true);
+
+window.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || !guandanCreatingRoom || !guandanHelpModal
+      || guandanHelpModal.classList.contains("hidden")) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  closeGuandanHelpModal();
+  guandanConfigHelpBtn?.focus();
 }, true);
 
 document.addEventListener("keydown", (e) => {

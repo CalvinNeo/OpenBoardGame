@@ -1,6 +1,10 @@
+from game.gloomhaven import GloomhavenGame, ACTION_SCHEMA as GLOOMHAVEN_ACTION_SCHEMA, CONFIG_SCHEMA as GLOOMHAVEN_CONFIG_SCHEMA
+from game.mall_of_horror import MallOfHorrorGame, ACTION_SCHEMA as MALL_OF_HORROR_ACTION_SCHEMA, CONFIG_SCHEMA as MALL_OF_HORROR_CONFIG_SCHEMA
+from game.exploding_kittens import ExplodingKittensGame, ACTION_SCHEMA as EXPLODING_KITTENS_ACTION_SCHEMA, CONFIG_SCHEMA as EXPLODING_KITTENS_CONFIG_SCHEMA
 from game.the_crew import TheCrewGame, ACTION_SCHEMA as THE_CREW_ACTION_SCHEMA, CONFIG_SCHEMA as THE_CREW_CONFIG_SCHEMA
 from game.maskmen import MaskmenGame, ACTION_SCHEMA as MASKMEN_ACTION_SCHEMA, CONFIG_SCHEMA as MASKMEN_CONFIG_SCHEMA
 from game.startups import StartupsGame, ACTION_SCHEMA as STARTUPS_ACTION_SCHEMA, CONFIG_SCHEMA as STARTUPS_CONFIG_SCHEMA
+from game.natsumemo import NatsumemoGame, ACTION_SCHEMA as NATSUMEMO_ACTION_SCHEMA, CONFIG_SCHEMA as NATSUMEMO_CONFIG_SCHEMA
 from game.skull_king import SkullKingGame, ACTION_SCHEMA as SKULL_KING_ACTION_SCHEMA, CONFIG_SCHEMA as SKULL_KING_CONFIG_SCHEMA
 from game.deception import DeceptionGame, ACTION_SCHEMA as DECEPTION_ACTION_SCHEMA, CONFIG_SCHEMA as DECEPTION_CONFIG_SCHEMA
 from game.mind_the_lines import MindTheLinesGame, ACTION_SCHEMA as MIND_THE_LINES_ACTION_SCHEMA, CONFIG_SCHEMA as MIND_THE_LINES_CONFIG_SCHEMA
@@ -126,6 +130,33 @@ from game.wriggle_roulette import WriggleRouletteGame
 
 register_game(
     GameDefinition(
+        game_id=MallOfHorrorGame.game_id, name="Mall of Horror", name_zh="僵尸商场",
+        min_players=3, max_players=6, turn_mode="simultaneous",
+        action_schema=MALL_OF_HORROR_ACTION_SCHEMA, config_schema=MALL_OF_HORROR_CONFIG_SCHEMA,
+        module=MallOfHorrorGame, serialize=MallOfHorrorGame.serialize, deserialize=MallOfHorrorGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=GloomhavenGame.game_id, name="Gloomhaven", name_zh="幽港迷城",
+        min_players=1, max_players=4, turn_mode="turn",
+        action_schema=GLOOMHAVEN_ACTION_SCHEMA, config_schema=GLOOMHAVEN_CONFIG_SCHEMA,
+        module=GloomhavenGame, serialize=GloomhavenGame.serialize, deserialize=GloomhavenGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ExplodingKittensGame.game_id, name="Exploding Kittens", name_zh="爆炸猫",
+        min_players=2, max_players=5, turn_mode="turn",
+        action_schema=EXPLODING_KITTENS_ACTION_SCHEMA, config_schema=EXPLODING_KITTENS_CONFIG_SCHEMA,
+        module=ExplodingKittensGame, serialize=ExplodingKittensGame.serialize, deserialize=ExplodingKittensGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
         game_id=TheCrewGame.game_id, name="The Crew (1 / 2)", name_zh="宇航员",
         min_players=2, max_players=5, turn_mode="turn",
         action_schema=THE_CREW_ACTION_SCHEMA, config_schema=THE_CREW_CONFIG_SCHEMA,
@@ -139,6 +170,15 @@ register_game(
         min_players=2, max_players=6, turn_mode="turn",
         action_schema=MASKMEN_ACTION_SCHEMA, config_schema=MASKMEN_CONFIG_SCHEMA,
         module=MaskmenGame, serialize=MaskmenGame.serialize, deserialize=MaskmenGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=NatsumemoGame.game_id, name="Natsumemo", name_zh="暑假日记",
+        min_players=3, max_players=6, turn_mode="simultaneous",
+        action_schema=NATSUMEMO_ACTION_SCHEMA, config_schema=NATSUMEMO_CONFIG_SCHEMA,
+        module=NatsumemoGame, serialize=NatsumemoGame.serialize, deserialize=NatsumemoGame.deserialize,
     )
 )
 
@@ -4655,6 +4695,9 @@ GUANDAN_CONFIG_SCHEMA = {
         "require_partner_not_last_for_a": {"type": "boolean"},
         "bot_mode": {"type": "string", "enum": ["auto", "heuristic", "nn"]},
         "bot_nn_checkpoint": {"type": "string", "maxLength": 240},
+        "bot_think_time_ms": {"type": "integer", "minimum": 40, "maximum": 120000},
+        "bot_mcts_max_time_ms": {"type": ["integer", "null"], "minimum": 25, "maximum": 120000},
+        "bot_minimax_max_time_ms": {"type": ["integer", "null"], "minimum": 25, "maximum": 120000},
     },
     "additionalProperties": False,
 }

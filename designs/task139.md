@@ -2,9 +2,17 @@
 
 ## 目标与资料
 
-在同一 `the_crew` 游戏入口支持 1 代《第九行星任务》和 2 代《深海任务》。创建房间时必须先选择版本，再选择起始任务；支持 2–5 人、房间机器人、断线重连和存档。两版共享吃墩内核，分别使用数字目标牌／多条件任务牌，不把第二版仅做成换皮。
+在同一 `the_crew` 游戏入口支持 1 代《第九行星任务》和 2 代《深海任务》。创建房间时只选择版本；房间内全员准备后，由房主点击 `Start Game` 选择起始关卡，再开始游戏。支持 2–5 人、房间机器人、断线重连和存档。两版共享吃墩内核，分别使用数字目标牌／多条件任务牌，不把第二版仅做成换皮。
 
-规则以发行商的 [1 代规则书](https://www.thamesandkosmos.com/manuals/full/691868_Crew_Manual.pdf)、[2 代规则书](https://www.thamesandkosmos.co.uk/wp-content/uploads/2021/02/691869_Crew_Deep-Sea_Manual.pdf) 为依据。任务日志对照 [1 代日志](https://www.64ouncegames.com/pages/the-crew-log-book)、[2 代日志](https://www.64ouncegames.com/pages/the-crew-mission-deep-sea)。深海 96 张任务卡的机械条件及 3／4／5 人难度以公开目录交叉核对，中文描述重新编写；不复制剧情、商业图片或现有项目的规则实现。
+## 选关与 Restart 调整方案
+
+- 建房只选择 1 / 2，版本在本房间固定。`Start Game` 打开房主专用选关弹窗，提供 Campaign / Custom、起始关卡及相应自定义参数；确认前不发牌。取消、Esc 或点击弹窗外返回原状态。
+- 游戏中及最终结算后，房主可点击 `Restart` 打开相同弹窗，默认当前关卡和参数。确认后在原房间切换关卡、重新洗牌、清空本局进度；保留全部席位、机器人和重连凭据。普通成员等待房主操作。
+- 服务端保存房主身份，座位调序不改变房主；临时断线保留身份，主动离房转给仍在线的真人成员。开始和 Restart 均校验房主权限，不能通过旧 Reopen 接口绕过。
+- Restart 携带房间与当前游戏实例标识。全部配置验证成功后原子替换状态，拒绝非法、重复或过期请求。使用新实例标识，避免旧出牌及机器人结果写入新局；存档版本持续增加，刷新与服务重启后恢复最新关卡。
+- 按 `FRONTEND.md` 保留英文操作、Help / Explain、Esc 关闭、焦点返回及手机无溢出布局。验证两版选关、非房主限制、取消不重开、同房换关、错误恢复、重连及存档。
+
+规则以发行商的 [1 代规则书](https://www.thamesandkosmos.com/manuals/full/691868_Crew_Manual.pdf)、[2 代规则书](https://www.thamesandkosmos.co.uk/wp-content/uploads/2021/02/691869_Crew_Deep-Sea_Manual.pdf) 为依据。任务日志对照 [1 代日志](https://www.64ouncegames.com/pages/the-crew-log-book)、[2 代官方日志扫描](https://c.tabletopia.com/games/mission-deep-sea/rules/logbook/en)；转录版本与扫描不符时采用扫描值。深海 96 张任务卡的机械条件及 3／4／5 人难度以公开目录交叉核对，中文描述重新编写；不复制剧情、商业图片或现有项目的规则实现。
 
 ## 规则与状态
 
@@ -37,4 +45,47 @@ Help 集中规则和当前关卡说明；Explain 捕获操作，仅高亮有说�
 
 ## 实施记录
 
-方案先行落盘；实现及验证结果完成后补充。
+方案先行落盘后已完成实现（2026-09-29）。
+
+- 建房选择 1 / 2，房主点击 Start Game 后选择 Campaign / Custom 和起始关卡；1 代 50 关、2 代 32 关全部录入，深海 96 张任务含 3／4／5 席难度。自由任务可设目标数／总难度、次序和通讯。
+- 服务端拆分为 `the_crew.py`（状态与动作）、`the_crew_data.py`（关卡与文字）、`the_crew_tasks.py`（条件判定）、`the_crew_ai.py`（公开信息机器人），原始机械数据位于 `game/assets/the_crew/`，附来源说明。
+- 实现双人明暗牌助手、秘密预测、求救交换、干扰／延迟／共享通讯、特殊分配、次序标记、5 人转交、全员墩回顾与任务回顾。指定成员与志愿者在任务栏显示。记录在重复尝试中保留，战役成功后自动推进。
+- 同时完成注册、标签、开发顺序、独立资源按需加载、活动存档防下载／克隆与原席位冷启动重连。BGG 目录权重使用第九行星条目，2026-09-29 查询值 1.9685，展示为 1.97。
+- Help／Explain 遵循 `FRONTEND.md` 和 `task40.md`；禁用牌可解释、无说明控件在解释模式不能触发，空白／Esc 取消选牌，手机提示 3 秒自动关闭。
+
+验证结果：
+
+```sh
+python3 -m unittest tests.test_the_crew tests.test_the_crew_integration \
+  tests.test_room_session tests.test_bot_threading tests.test_game_tags \
+  tests.test_game_names tests.test_game_dev_order \
+  tests.test_frontend_style_assets tests.test_frontend_script_names
+```
+
+78 项通过。其中关卡遍历覆盖 82 关 × 2／3／4／5 人共 328 种开局到结算流程；另覆盖任务判定边界、秘密信息、非法动作、确认屏障、JSON 恢复和房间接入。
+
+```sh
+python3 -m uvicorn app:app --host 127.0.0.1 --port 8139
+node tests/the_crew.browser.cjs
+```
+
+浏览器检查覆盖实际建房选版、真人与机器人对局、任务确认屏障、刷新重连、特殊操作、Help／Explain、触摸提示和 1440／768／390／320px 的 92 个状态；截图输出到 `build/the-crew-ui/`。脚本可通过 `PLAYWRIGHT_MODULE` 指向已有 Playwright 安装。
+
+线上约定明确显示在 Help：深海 14–16、26 关采用官方不限时替代条件；双人换牌由指挥官选择助手明牌；失败重试重新洗手牌和任务。机器人是只用可见信息的练习队友，不保证最优合作。
+
+### 选关流程调整实施记录（2026-09-29）
+
+- 建房仅选版本；房主点击 Start Game 后才打开独立选关弹窗，支持 Campaign / Custom。Restart 在游戏标题栏和房间操作区提供，复用选关弹窗并在原房间重新开局。取消、Esc 和点击弹窗外均不提交操作。
+- 新增并持久化房主身份；选关与 Restart 在服务端验证权限，座位调序和刷新不会改变房主。主动离房后转交在线真人，临时断线仍保留房主。
+- 重开保留成员、座位和重连凭据，重新生成牌局实例及随机种子；旧动作、重复提交和非法关卡不会影响新局。存档版本递增，冷启动恢复最新关卡。
+- 已验证 78 项规则、房间、机器人调度与公共前端资源检查；其中房间集成 11 项，包含第 1 版第 50 关、第 2 版第 32 关、非房主拒绝、非法配置、旧 Reopen 绕过、过期动作、连续重开及冷启动存档恢复。
+- 浏览器验证实际房主选关、同房 Restart 切至深海第 4 关、取消与刷新恢复、机器人对局、Help / Explain，以及 1440／768／390／320px 的 92 个对局视图和新增选关弹窗。截图位于 `build/the-crew-ui/`。
+
+本次相关测试命令：
+
+```sh
+python3 -m unittest tests.test_the_crew tests.test_the_crew_integration \
+  tests.test_room_session tests.test_bot_threading \
+  tests.test_frontend_style_assets tests.test_frontend_script_names
+node tests/the_crew.browser.cjs
+```

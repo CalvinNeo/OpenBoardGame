@@ -150,6 +150,36 @@ class GuandanPerformanceStrategyTests(unittest.TestCase):
         self.assertGreaterEqual(result["score"], 0.0)
         self.assertEqual(result["turn_gain"], 0.0)
 
+    def test_leaf_summary_cache_preserves_faces_order_and_level_without_aliasing(self):
+        hand = self.make_state(["♥️2", "♠️4", "♣️4", "♠️5", "♠️6", "♠️7"])["players"]["bot"]["hand"]
+        reference = guandan_ai._compute_fast_hand_decomposition_summary
+
+        def probe():
+            expected = reference(hand, 2)
+            first = guandan_ai._fast_hand_decomposition_summary(hand, 2)
+            self.assertEqual(first, expected)
+            first["score"] = 9999.0
+            duplicate = copy.deepcopy(hand)
+            for card in duplicate:
+                card["id"] += 108  # A determinized physical ID is not a face.
+            self.assertEqual(guandan_ai._fast_hand_decomposition_summary(duplicate, 2), expected)
+            changed = copy.deepcopy(hand)
+            wild = next(card for card in changed if guandan._is_wild(card, 2))
+            wild["suit"] = "spades"  # Same rank is no longer a wildcard.
+            for cards, level in ((changed, 2), (hand, 4), (list(reversed(hand)), 2)):
+                self.assertEqual(guandan_ai._fast_hand_decomposition_summary(cards, level),
+                                 reference(cards, level))
+
+        with (
+            mock.patch.object(guandan_ai, "_compute_fast_hand_decomposition_summary", wraps=reference) as compute,
+            mock.patch.object(guandan_ai, "_cache_probe", probe, create=True),
+        ):
+            guandan_ai.call(guandan, "_cache_probe")
+            self.assertEqual(compute.call_count, 4)
+            guandan_ai.call(guandan, "_cache_probe")
+            self.assertEqual(compute.call_count, 8)
+        self.assertFalse(hasattr(guandan_ai._CORE_LOCAL, "fast_decomposition_summaries"))
+
     def test_timeout_fallback_does_not_poison_complete_hand_or_candidate_caches(self):
         hand = self.make_state(["♠️6", "♥️6", "♣️6", "♦️6", "♠️8", "♣️8", "♠️J"])["players"]["bot"]["hand"]
         features = {"hand": hand, "remaining": hand[1:]}

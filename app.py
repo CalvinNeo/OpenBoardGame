@@ -158,6 +158,16 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "natsumemo"):
+        raise HTTPException(status_code=403, detail="This Natsumemo game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "exploding_kittens"):
+        raise HTTPException(status_code=403, detail="This Exploding Kittens game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "gloomhaven"):
+        raise HTTPException(status_code=403, detail="This Gloomhaven encounter is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "mall_of_horror"):
+        raise HTTPException(status_code=403, detail="This Mall of Horror game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "the_crew"):
+        raise HTTPException(status_code=403, detail="This The Crew mission is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "maskmen"):
         raise HTTPException(status_code=403, detail="This Maskmen game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "startups"):
@@ -241,12 +251,21 @@ class Room:
     bot_progress_emit_scheduled: bool = False
     bot_progress_last_emit_ms: int = 0
     source_room_ids: List[str] = field(default_factory=list)
+    host_player_id: Optional[str] = None
 
 
 ROOMS: Dict[str, Room] = {}
 SESSIONS: Dict[str, Dict] = {}
 DATA_DIR = ".data"
 ROOM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _room_host_player_id(room: Room) -> Optional[str]:
+    """Keep the creator's identity stable when seats move; support older saves."""
+    humans = [p for p in sorted(room.players, key=lambda p: p.seat) if not p.is_bot]
+    if not any(p.player_id == room.host_player_id for p in humans):
+        room.host_player_id = humans[0].player_id if humans else None
+    return room.host_player_id
 
 
 def _is_safe_room_id(room_id: str) -> bool:
@@ -348,6 +367,7 @@ def _restore_private_card_game_for_reconnect(room_id: str, player_id: str, token
             room_id=room_id, game_type=game_type, game_config=dict(state["config"]),
             status="game_over" if state["game_over"] else "in_game", players=players,
             state_version=int(payload.get("state_version", 0)), game_state=state, auto_save=True,
+            host_player_id=payload.get("host_player_id"),
             source_room_ids=[value for value in payload.get("source_room_ids", [])
                              if isinstance(value, str) and _is_safe_room_id(value)],
         )
@@ -431,6 +451,7 @@ def _save_room_state(room: Room) -> None:
             )),
             "game_type": room.game_type,
             "room_status": room.status,
+            "host_player_id": _room_host_player_id(room) if room.game_type == "the_crew" else room.host_player_id,
             "state_version": room.state_version,
             "saved_at": int(time.time()),
             "players": [
@@ -553,6 +574,7 @@ async def _emit_room_state(room: Room) -> None:
         "status": room.status,
         "game_type": room.game_type,
         "min_players": game_def.min_players if game_def else 1,
+        "host_player_id": _room_host_player_id(room) if room.game_type == "the_crew" else None,
         "max_players": game_def.max_players if game_def else len(room.players),
         "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
         "supports_memories": bool(game_def and any(
@@ -560,7 +582,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("maskmen", "startups", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -679,6 +701,14 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "natsumemo":
+        return {"type": action.get("type")}
+    if game_type == "exploding_kittens":
+        return {"type": action.get("type")}
+    if game_type == "mall_of_horror":
+        return {"type": action.get("type")}
+    if game_type in ("gloomhaven", "the_crew"):
+        return {"type": action.get("type")}
     if game_type == "startups":
         return {"type": action.get("type")}
     if game_type == "skull_king":
@@ -1232,6 +1262,11 @@ async def _leave_session(sid: str) -> None:
         player.connected = False
         player.socket_id = None
         player.last_seen = time.time()
+    if room.game_type == "the_crew" and room.host_player_id == player.player_id:
+        room.host_player_id = next((p.player_id for p in sorted(room.players, key=lambda p: p.seat)
+                                    if p.player_id != player.player_id and not p.is_bot and p.connected), None)
+        room.state_version += 1
+        _save_room_state(room)
     await _emit_room_state(room)
     await _emit_game_state(room)
     await _emit_room_list_update()
@@ -1496,6 +1531,7 @@ async def on_room_create(sid, data):
         game_type=game_def.game_id,
         game_config=dict(game_config),
         players=[player],
+        host_player_id=player_id if game_def.game_id == "the_crew" else None,
     )
     ROOMS[room_id] = room
     SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
@@ -1592,13 +1628,23 @@ async def on_room_reconnect(sid, data):
         return
     room = _get_room(room_id)
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "mall_of_horror")
+    if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "exploding_kittens")
+    if not room:
         room = _restore_deception_for_reconnect(room_id, player_id, reconnect_token)
     if not room:
         room = _restore_skull_king_for_reconnect(room_id, player_id, reconnect_token)
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "startups")
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "natsumemo")
+    if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "maskmen")
+    if room is None:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "gloomhaven")
+    if room is None:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "the_crew")
     if not room:
         await _send_error(sid, "room not found")
         return
@@ -1639,7 +1685,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("deception", "skull_king", "startups", "maskmen"):
+    if room.game_type in ("mall_of_horror", "deception", "skull_king", "startups", "natsumemo", "maskmen", "the_crew", "gloomhaven"):
         await _maybe_run_bots(room)
 
 
@@ -1827,6 +1873,16 @@ async def on_room_start(sid, data):
     if room.status not in ("lobby", "game_over"):
         await _send_error(sid, "game already started")
         return
+    if room.game_type == "the_crew":
+        if session.get("player_id") != _room_host_player_id(room):
+            await _send_error(sid, "Only the host can choose and start a mission.")
+            return
+        if room.status != "lobby":
+            await _send_error(sid, "Use Restart to choose another mission.")
+            return
+        if (data or {}).get("room_id", room.room_id) != room.room_id:
+            await _send_error(sid, "Room changed. Choose the mission again.")
+            return
     if len(room.players) < game_def.min_players:
         await _send_error(sid, "not enough players")
         return
@@ -1846,6 +1902,8 @@ async def on_room_start(sid, data):
     submitted_config = raw_config if isinstance(raw_config, dict) else {}
     config = dict(room.game_config)
     config.update(submitted_config)
+    if room.game_type == "the_crew":
+        config["edition"] = room.game_config.get("edition", 1)
     if room.status == "game_over" and not submitted_config and isinstance(room.game_state, dict):
         previous_config = room.game_state.get("config")
         if isinstance(previous_config, dict):
@@ -1870,7 +1928,54 @@ async def on_room_start(sid, data):
         await _send_error(sid, str(exc))
         return
     room.status = "in_game"
-    room.state_version = 1
+    room.state_version = room.state_version + 1 if room.game_type == "the_crew" else 1
+    if room.game_type == "the_crew":
+        room.game_config = dict(room.game_state["config"])
+    _save_room_state(room)
+    await _emit_room_state(room)
+    await _emit_game_state(room, [])
+    await _emit_room_list_update()
+    await _maybe_run_bots(room)
+
+
+@sio.on("the_crew:restart")
+async def on_the_crew_restart(sid, data):
+    session = SESSIONS.get(sid)
+    room = _get_room(session.get("room_id")) if session else None
+    if not room or room.game_type != "the_crew":
+        await _send_error(sid, "The Crew room not found.")
+        return
+    if session.get("player_id") != _room_host_player_id(room):
+        await _send_error(sid, "Only the host can restart and choose a mission.")
+        return
+    if room.status not in ("in_game", "game_over") or not room.game_state:
+        await _send_error(sid, "Game not active.")
+        return
+    if (not isinstance(data, dict) or data.get("room_id") != room.room_id
+            or data.get("game_token") != room.game_state.get("game_token")):
+        await _send_error(sid, "Game changed. Choose the mission again.")
+        return
+    selected = data.get("config")
+    if not isinstance(selected, dict) or "mission" not in selected:
+        await _send_error(sid, "Choose a mission before restarting.")
+        return
+    config = {**room.game_state["config"], **selected}
+    config["edition"] = room.game_state["config"]["edition"]
+    config.pop("seed", None)
+    definition = _get_game_definition("the_crew")
+    players = [{"player_id": p.player_id, "name": p.name, "seat": p.seat, "is_bot": p.is_bot}
+               for p in room.players]
+    try:
+        fresh_state = definition.module.init_game(config, players)
+    except (ValueError, TypeError) as exc:
+        await _send_error(sid, str(exc))
+        return
+    # Replacement is atomic and invalidates delayed actions/bot results from the
+    # previous game. Keep versions increasing so cold reconnect uses this save.
+    room.game_state = fresh_state
+    room.game_config = dict(fresh_state["config"])
+    room.status = "in_game"
+    room.state_version += 1
     _save_room_state(room)
     await _emit_room_state(room)
     await _emit_game_state(room, [])
@@ -1887,6 +1992,9 @@ async def on_room_reopen(sid, data=None):
     room = _get_room(session.get("room_id"))
     if not room:
         await _send_error(sid, "room not found")
+        return
+    if room.game_type == "the_crew":
+        await on_the_crew_restart(sid, data)
         return
     if room.status not in ("in_game", "game_over") or not room.game_state:
         await _send_error(sid, "game not active")
@@ -1997,8 +2105,13 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_private_save(source_room_id, "mall_of_horror")
+        or _has_unfinished_private_save(source_room_id, "gloomhaven")
+        or _has_unfinished_private_save(source_room_id, "exploding_kittens")
+        or _has_unfinished_private_save(source_room_id, "the_crew")
         or _has_unfinished_private_save(source_room_id, "maskmen")
         or _has_unfinished_private_save(source_room_id, "startups")
+        or _has_unfinished_private_save(source_room_id, "natsumemo")
         or _has_unfinished_skull_king_save(source_room_id)
         or _has_unfinished_deception_save(source_room_id)
         or _has_live_private_save(source_room_id, "challengers")
@@ -2086,6 +2199,7 @@ async def on_room_load(sid, data):
         auto_save=auto_save,
         source_room_id=payload.get("room_id", source_room_id),
         source_room_ids=source_ids,
+        host_player_id=payload.get("host_player_id"),
     )
     ROOMS[room_id] = room
     _schedule_mind_the_lines_timeout(room)

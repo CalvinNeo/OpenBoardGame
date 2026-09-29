@@ -1,11 +1,13 @@
 (() => {
   const byId = suffix => document.getElementById(`theCrew${suffix}`);
   const panel = byId("Panel"), header = byId("HeaderActions"), dialog = byId("Dialog"), tooltip = byId("Tooltip");
+  const missionDialog = byId("MissionDialog");
   const helperId = "__the_crew_helper__";
   const suits = {blue:["🔵", "◆", "Blue"], green:["🟢", "▲", "Green"], yellow:["🟡", "●", "Yellow"], pink:["🩷", "✦", "Pink"], trump:["🚀", "⬟", "Trump"]};
   const markers = {highest:"↑ Highest", lowest:"↓ Lowest", only:"＝ Only", unknown:"? Hidden"};
   const phases = {tokens:"Arrange task markers", responses:"Crew responses", assign:"Captain's decision", volunteer:"Choose a volunteer", draft:"Choose mission tasks", predict:"Lock your prediction", preflight:"Ready for departure", distress_vote:"Distress signal vote", exchange:"Choose a card to exchange", playing:"Play a card", trick_review:"Trick complete", mission_review:"Mission debrief", game_over:"Mission complete"};
   const explanations = {
+    restart:["Restart · 重新选关", "房主可在当前版本内重新选关。确认后重新发牌、清空本局进度，所有成员留在原房间；取消或 Esc 保留当前游戏。"],
     mission:["Mission · 任务", "全队共同完成所有目标；任何一项失败就需要重试。失败后所有人确认才重新发牌，成功后所有人确认才进入下一关。"],
     trick:["Trick · 墩", "从领出者开始，每席打一张。必须跟随领出的颜色；没有该颜色才可出其他牌。王牌（🚀／⚓）大于彩色牌，同类数值大的赢；没有王牌时，领出颜色数值大的赢。胜者收取整墩并领出下一墩。"],
     hand:["Hand · 手牌", "只有你能看到自己的手牌。蓝（🔵◆）、绿（🟢▲）、黄（🟡●）、粉（🩷✦）各 1–9，王牌（🚀／⚓）1–4。点选合法牌后 Play；空白或 Esc 取消选择。"],
@@ -28,6 +30,8 @@
   const help = `<h3>共同航行</h3><p>宇航员是限制交流的合作吃墩游戏。1 代《第九行星任务》共 50 关；2 代《深海任务》共 32 关、96 张不同条件的任务。所有目标达成才全队成功，任意目标失败则重试。游戏中不能自由谈论自己的牌，只能用规则允许的通讯和 Yes / No。</p><h3>牌与吃墩</h3><p>蓝（🔵◆）、绿（🟢▲）、黄（🟡●）、粉（🩷✦）各 1–9；1 代火箭（🚀）、2 代潜艇（⚓）是王牌 1–4。持王牌 4 的指挥官（👑 Captain）领出第一墩。必须跟随领出的花色，无该色才可垫牌或出王牌。王牌最大，否则领出色最大者赢墩、收取所有牌并领出下一墩。三席打 13 墩，多的一张不出。</p><h3>领取任务（📋 Tasks）</h3><p>通常从指挥官起轮流取一张。1 代必须由目标负责人收取指定牌；数字标记规定所有任务中的完成名次，箭头 &gt;、&gt;&gt; 等只限制相互次序，Ω 要最后完成。同墩完成多个任务时自动判断是否存在合法次序。2 代按人数精确凑齐总难度，目标涉及牌、墩数、比较、顺序和预测。初始任务少于席位时才可以 Pass，且一圈内必须分完。比较指挥官的任务禁止指挥官领取。特殊关卡会提供对应分配操作。</p><h3>通讯（📡 Communication）</h3><p>任务分完后、两墩之间，每人通常可公开一张彩色牌，标记当前该色最高（↑ Highest）、最低（↓ Lowest）或唯一（＝ Only）。只有一张时必须选 Only；不能通讯王牌。牌仍属于手牌，标记不会因后来手牌变化而更新。Hidden 只展示牌不展示标记，Shared 共用剩余次数。已打出的通讯牌会变淡。任务卡的秘密预测只能自己查看。</p><h3>双人助手（🂠 Helper）</h3><p>两位真人加 JARVIS／Tonoja，按三席计算难度。助手有七列牌，每列一暗一明；王牌 4 始终发给真人。指挥官代选任务及出牌，只看明牌跟色，整墩结束后才翻开下方牌。助手不能通讯，自己不需点击 Ready。</p><h3>求救（🆘 Distress）</h3><p>任务分配后、通讯和出牌前，可以提议统一向左或右交换一张非王牌。全员同意后秘密提交，同时结算。助手由指挥官选择明牌。每次尝试最多一次；本关后续重试仍保留求救标记，成功计次额外加 1。1 代五人第 25 关起另可转交一张任务。</p><h3>回顾与操作</h3><p>每墩和每关结束都等全员点击 Next Round／Continue／Retry；断线成员需重连。只提供最近一墩供回顾；尚未完成任务相关的收牌可以公开计数。点牌后再 Play，点空白或 Esc 取消。Help 集中规则；Explain 可点选查看说明，Esc 退出。静态图标悬停或手机点击显示提示。</p><h3>线上约定</h3><p>深海 14–16、26 关采用官方不限时替代条件。失败后重新洗手牌和任务牌；编号战役与 Custom 自由任务分开。机器人只看自己的手牌和公共信息，是练习队友，不保证最优合作。</p>`;
   let view = null, selected = null, signature = null, pending = false, pendingTimer, tipTimer, suppressTimer;
   let explaining = false, suppressClick = false, focusBeforeDialog = null, choices = {}, edition = 1;
+  let missionContext = null, focusBeforeMission = null;
+  const missionHelp = "<h3>选关与 Restart</h3><p>建房先选 1 / 2。全员准备后，房主点击 Start Game 选择战役关卡或自定义任务，再点击 Start Mission 发牌。游戏中房主可用 Restart 重新选关；确认后清空本局进度并重新发牌，成员和座位保留。取消或 Esc 不影响当前游戏。版本固定，切换版本需另建房间。</p>";
   const el = (tag, cls = "", value = "") => { const node = document.createElement(tag); node.className = cls; node.textContent = value; return node; };
   const text = (suffix, value) => { byId(suffix).textContent = value; };
   const name = pid => view?.players.find(p => p.player_id === pid)?.name || "—";
@@ -100,12 +104,11 @@
     const box = byId("Players"); box.replaceChildren();
     view.players.forEach(p => {
       const node = el("article", "the-crew-player"); node.classList.toggle("is-current", p.player_id === view.current_turn);
-      node.append(el("strong", "", `${p.player_id === view.captain ? "👑 " : ""}${p.name}`));
+      node.append(tip(el("strong", "", `${p.player_id === view.captain ? "👑 " : ""}${p.name}`), `${p.name}${p.player_id === view.captain ? " · Captain（👑 指挥官）" : ""}`, p.player_id === view.captain ? "captain" : "hand"));
       const flags = [p.player_id === view.you ? "You" : "", p.helper ? `Helper · ${name(view.captain)}` : p.is_bot ? "Bot" : "", view.ready.includes(p.player_id) ? "Ready ✓" : ""].filter(Boolean).join(" · ");
       node.append(el("small", "", flags || "Crew"));
       const stats = el("div", "the-crew-player-stats");
       stats.append(tip(el("span", "", `🂠 ${p.hand_count}`), "Cards（🂠）：剩余牌数。", p.helper ? "helper" : "hand"), tip(el("span", "", `🏆 ${p.won}`), "Tricks（🏆）：本次已经赢得的墩数。", "trick"));
-      if (p.player_id === view.captain) stats.append(tip(el("span", "", "👑"), "Captain（👑）：指挥官。", "captain"));
       node.append(stats); box.append(node);
     });
   }
@@ -128,12 +131,14 @@
   function renderTasks() {
     const box = byId("Tasks"), scroll = box.scrollTop; box.replaceChildren();
     text("TaskCount", `${view.tasks.filter(t => t.status === "complete").length} / ${view.tasks.length} ✓`);
-    text("MissionRule", view.spec.text); byId("MissionRule").dataset.tcTip = view.spec.text;
+    const assignment = view.target ? `指定成员：${name(view.target)}` : view.selected_members.length ? view.selected_members.map((p, i) => `${i ? "末墩" : "前四墩"}：${name(p)}`).join("；") : view.volunteers.length ? `志愿者：${view.volunteers.map(name).join("、")}` : "";
+    const rule = `${view.spec.text}${assignment ? `\n${assignment}` : ""}`;
+    text("MissionRule", rule); byId("MissionRule").dataset.tcTip = rule;
     view.tasks.forEach((t, index) => {
       const node = el("article", `the-crew-task is-${t.status || "hidden"}`); node.dataset.taskId = t.id;
       if (t.hidden) { node.append(tip(el("p", "", "🂠 Hidden task"), "指挥官指定成员后公开；逐张分配时只展示当前任务。", "assign")); box.append(node); return; }
       const meta = el("div", "the-crew-task-meta");
-      meta.append(el("strong", "", t.owner ? name(t.owner) : "Unassigned"), tip(el("span", "", t.token ? `${t.token === "omega" ? "Ω" : t.token} · Order` : t.cost ? `◆ ${t.cost}` : `#${index + 1}`), t.token ? "Order：次序标记。" : "Difficulty（◆）：按当前席位数计算的难度。", t.token ? "order" : "tasks"));
+      meta.append(el("strong", "", t.owner ? name(t.owner) : "Unassigned"), tip(el("span", "", t.token ? `${t.token === "omega" ? "Ω" : t.token} · Order` : t.cost ? `◆ ${t.cost}` : `#${index + 1}`), t.token ? "Order：次序标记。" : t.cost ? "Difficulty（◆）：按当前席位数计算的难度。" : "Task（#）：目标编号，不代表完成次序。", t.token ? "order" : "tasks"));
       const desc = tip(el("p", "", `${t.status === "complete" ? "✓ " : t.status === "failed" ? "✕ " : ""}${t.text}`), t.text, "tasks"); desc.dataset.tcDetail = t.text;
       node.append(meta, desc);
       if (t.kind === "predictTricks") node.append(tip(el("div", "the-crew-task-progress", t.prediction_locked ? `🔒 ${t.prediction === undefined ? "Secret prediction locked" : `Prediction: ${t.prediction}`}` : "Prediction required"), "Lock（🔒）：预测提交后不可更改。", "predict"));
@@ -175,9 +180,10 @@
     } else if (["responses", "volunteer"].includes(view.phase) && can("respond")) {
       const actors = view.phase === "volunteer" ? [view.current_turn] : view.controlled_seats.filter(p => !(p in view.responses));
       actors.forEach(actor => {
-        const row = el("div", "the-crew-control-row"); row.append(el("strong", "", `${name(actor)} · Willing?`));
+        const sick = view.spec.special === "sick";
+        const row = el("div", "the-crew-control-row"); row.append(el("strong", "", `${name(actor)} · ${sick ? "How do you feel?" : "Willing?"}`));
         const need = (view.spec.special === "two_volunteers" ? 2 : 1) - view.volunteers.length;
-        row.append(button("Yes", "respond", () => dispatch("respond", {actor, yes:true})), button("No", "respond", () => dispatch("respond", {actor, yes:false}), view.phase !== "volunteer" || view.volunteer_remaining > need)); box.append(row);
+        row.append(button(sick ? "Good" : "Yes", "respond", () => dispatch("respond", {actor, yes:true})), button(sick ? "Bad" : "No", "respond", () => dispatch("respond", {actor, yes:false}), view.phase !== "volunteer" || view.volunteer_remaining > need)); box.append(row);
       });
     } else if (view.phase === "assign" && view.assignable.length) {
       box.append(el("p", "", view.spec.special === "relay" ? (view.selected_members.length ? "Choose who wins only the last trick." : "Choose who wins only tricks 1–4.") : "Choose a crew member."));
@@ -213,11 +219,9 @@
       }
     } else if (view.phase === "playing") {
       box.append(el("p", "", can("play") ? `Choose a card from ${view.current_turn === helperId ? name(helperId) : "your hand"}.` : `Waiting for ${name(view.current_turn)}.`));
-      if (!selected) add("Play selected card", "play", {}, "play");
-      const disabled = box.querySelector("button"); if (!selected && disabled) disabled.disabled = true;
     }
     if (!box.children.length) box.append(el("p", "", "Waiting for the crew."));
-    if (view.phase === "responses" && Object.keys(view.responses).length) box.append(el("p", "", Object.entries(view.responses).map(([pid, yes]) => `${name(pid)}: ${yes ? "Yes" : "No"}`).join(" · ")));
+    if (view.phase === "responses" && Object.keys(view.responses).length) box.append(el("p", "", Object.entries(view.responses).map(([pid, yes]) => `${name(pid)}: ${view.spec.special === "sick" ? yes ? "Good" : "Bad" : yes ? "Yes" : "No"}`).join(" · ")));
     if (view.distress_active) box.append(tip(el("span", "", "🆘 Active · +1 counted attempt"), explanations.distress[1], "distress"));
   }
   function render() {
@@ -235,10 +239,10 @@
     clearTimeout(tipTimer); tooltip.textContent = target.dataset.tcTip; tooltip.classList.remove("hidden");
     const r = target.getBoundingClientRect(), box = tooltip.getBoundingClientRect();
     tooltip.style.left = `${Math.max(12, Math.min(r.left, innerWidth - box.width - 12))}px`;
-    tooltip.style.top = `${r.bottom + box.height + 12 < innerHeight ? r.bottom + 6 : Math.max(12, r.top - box.height - 6)}px`;
+    tooltip.style.top = `${Math.max(12, Math.min(innerHeight - box.height - 12, r.bottom + box.height + 12 < innerHeight ? r.bottom + 6 : r.top - box.height - 6))}px`;
     if (autoHide) tipTimer = setTimeout(hideTip, 3000);
   }
-  function setExplain(value) { explaining = value; panel.classList.toggle("the-crew-explaining", value); byId("ExplainBtn").setAttribute("aria-pressed", String(value)); hideTip(); }
+  function setExplain(value) { explaining = value; panel.classList.toggle("the-crew-explaining", value); header.classList.toggle("the-crew-explaining", value); byId("ExplainBtn").setAttribute("aria-pressed", String(value)); hideTip(); }
   function showDialog(title, body, html = false) {
     hideTip(); focusBeforeDialog = document.activeElement; text("DialogTitle", title);
     if (html) byId("DialogBody").innerHTML = body;
@@ -251,12 +255,12 @@
     if (!entry) return;
     setExplain(false); showDialog(entry[0], target.dataset.tcDetail || (key === "mission" ? `${view?.spec.text || ""} ${entry[1]}` : entry[1]));
   }
-  byId("HelpBtn").addEventListener("click", () => { setExplain(false); showDialog("The Crew · Game Rules", help, true); if (view) { byId("DialogBody").prepend(el("p", "", `Current mission: ${view.spec.text}`)); } });
+  byId("HelpBtn").addEventListener("click", () => { setExplain(false); showDialog("The Crew · Game Rules", missionHelp + help, true); if (view) { byId("DialogBody").prepend(el("p", "", `Current mission: ${view.spec.text}`)); } });
   byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
   byId("DialogClose").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus(); });
   dialog.addEventListener("click", event => { const r = dialog.getBoundingClientRect(); if (event.target === dialog && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) dialog.close(); });
-  const exempt = target => target.closest("#theCrewHelpBtn, #theCrewExplainBtn, #theCrewDialog");
+  const exempt = target => target.closest("#theCrewHelpBtn, #theCrewExplainBtn, #theCrewDialog, #theCrewMissionDialog");
   document.addEventListener("pointerdown", event => {
     suppressClick = false;
     if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
@@ -285,19 +289,90 @@
   document.addEventListener("scroll", hideTip, true); window.addEventListener("resize", hideTip); window.addEventListener("blur", hideTip);
 
   function updateSetup() {
-    const custom = byId("SetupMode").value === "custom";
-    ["Mission", "Count", "Difficulty", "Order", "Comm"].forEach(field => byId(`${field}Field`).classList.toggle("hidden", field === "Mission" ? custom : !custom || (field === "Difficulty" ? edition === 1 : ["Count", "Order"].includes(field) ? edition === 2 : false)));
     document.querySelectorAll("[data-the-crew-edition]").forEach(button => button.setAttribute("aria-pressed", String(Number(button.dataset.theCrewEdition) === edition)));
-    const mission = byId("SetupMission"), value = Number(mission.value) || 1; mission.replaceChildren();
-    for (let i = 1; i <= (edition === 1 ? 50 : 32); i++) { const option = el("option", "", `Mission ${i}`); option.value = i; mission.append(option); }
-    mission.value = Math.min(value, edition === 1 ? 50 : 32);
     text("SetupNote", edition === 1 ? "目标牌与次序任务。双人自动加入助手 JARVIS。" : "96 种任务，按席位数计算难度。双人自动加入助手 Tonoja。限时关卡采用官方不限时条件。");
   }
+  function updateMissionOptions() {
+    const missionEdition = missionContext?.edition || edition;
+    const custom = byId("SetupMode").value === "custom";
+    ["Mission", "Count", "Difficulty", "Order", "Comm"].forEach(field => byId(`${field}Field`).classList.toggle("hidden", field === "Mission" ? custom : !custom || (field === "Difficulty" ? missionEdition === 1 : ["Count", "Order"].includes(field) ? missionEdition === 2 : false)));
+    const mission = byId("SetupMission"), value = Number(mission.value) || 1; mission.replaceChildren();
+    for (let i = 1; i <= (missionEdition === 1 ? 50 : 32); i++) { const option = el("option", "", `Mission ${i}`); option.value = i; mission.append(option); }
+    mission.value = Math.min(value, missionEdition === 1 ? 50 : 32);
+  }
+  const isHost = () => currentRoomState?.game_type === "the_crew" && currentRoomState.host_player_id === playerId;
+  function missionBlockReason() {
+    if (!isHost()) return "Only the host can choose a mission.";
+    if (!socket.connected || !roomSessionReady) return "Reconnect to the room before choosing a mission.";
+    if (!missionContext || missionContext.roomId !== roomId) return "Room changed. Choose the mission again.";
+    if (missionContext.kind === "start") return getRoomStartReason();
+    if (!view || missionContext.gameToken !== view.game_token) return "Game changed. Choose the mission again.";
+    return "";
+  }
+  function syncRoomControls() {
+    const restart = byId("Restart");
+    const active = ["in_game", "game_over"].includes(currentRoomState?.status);
+    restart.classList.toggle("hidden", !isHost() || !active);
+    restart.disabled = !socket.connected || !roomSessionReady || !!pendingRoomRequest || !view;
+    if (!missionDialog.open) return;
+    const reason = missionBlockReason(), busy = !!pendingRoomRequest;
+    byId("MissionSubmit").disabled = busy || !!reason;
+    byId("MissionSubmit").title = reason;
+    text("MissionSubmit", busy ? "Starting..." : missionContext?.kind === "restart" ? "Restart Mission" : "Start Mission");
+    missionDialog.querySelectorAll("select").forEach(node => { node.disabled = busy; });
+    text("MissionAvailability", reason);
+  }
+  window.syncTheCrewRoomControls = syncRoomControls;
+  window.openTheCrewMissionPicker = (kind = "start") => {
+    if (!isHost() || !ensureRoomConnection()) return;
+    if (kind === "start" && getRoomStartReason()) { setRoomFeedback(getRoomStartReason(), true); return; }
+    if (kind === "restart" && (!view || !["in_game", "game_over"].includes(currentRoomState.status))) return;
+    if (missionDialog.open) return;
+    setExplain(false); hideTip(); if (dialog.open) dialog.close();
+    const config = {edition:1, ...(kind === "restart" ? view.config : currentRoomState.game_config)};
+    missionContext = {kind, roomId, edition:config.edition, gameToken:view?.game_token};
+    focusBeforeMission = document.activeElement;
+    byId("SetupMode").value = config.mode || "campaign";
+    byId("SetupCount").value = config.task_count || 3;
+    byId("SetupDifficulty").value = config.difficulty || 5;
+    byId("SetupOrder").value = config.order || "none";
+    byId("SetupComm").value = config.communication || "normal";
+    updateMissionOptions();
+    byId("SetupMission").value = kind === "restart" ? view.mission : config.mission || 1;
+    text("MissionDialogTitle", kind === "restart" ? "Restart · Choose a mission" : "Choose a mission");
+    text("MissionEdition", config.edition === 1 ? "🚀 1 · 第九行星任务 · 50 missions" : "🌊 2 · 深海任务 · 32 missions");
+    text("MissionNotice", kind === "restart" ? "Restart resets the current game. Everyone stays in this room." : "Choose a mission for your crew, then start the game.");
+    text("MissionError", "");
+    missionDialog.showModal(); syncRoomControls(); byId(byId("SetupMode").value === "campaign" ? "SetupMission" : "SetupMode").focus();
+  };
+  byId("Restart").addEventListener("click", () => window.openTheCrewMissionPicker("restart"));
+  byId("MissionClose").addEventListener("click", () => missionDialog.close());
+  missionDialog.addEventListener("close", () => {
+    missionContext = null;
+    if (focusBeforeMission?.isConnected) focusBeforeMission.focus();
+    focusBeforeMission = null;
+  });
+  missionDialog.addEventListener("click", event => {
+    const r = missionDialog.getBoundingClientRect();
+    if (event.target === missionDialog && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) missionDialog.close();
+  });
+  byId("MissionSubmit").addEventListener("click", () => {
+    const reason = missionBlockReason();
+    if (reason || pendingRoomRequest) { text("MissionError", reason); return; }
+    const config = {mode:byId("SetupMode").value, mission:Number(byId("SetupMission").value), task_count:Number(byId("SetupCount").value), difficulty:Number(byId("SetupDifficulty").value), order:byId("SetupOrder").value, communication:byId("SetupComm").value};
+    const payload = {room_id:missionContext.roomId, config};
+    const restarting = missionContext.kind === "restart";
+    if (restarting) payload.game_token = missionContext.gameToken;
+    else if (typeof attachSkipValidation === "function") attachSkipValidation(payload);
+    text("MissionError", "");
+    sendRoomRequest(restarting ? "the_crew:restart" : "room:start", payload, restarting ? "Restarting mission..." : "Starting mission...");
+    syncRoomControls();
+  });
   document.querySelectorAll("[data-the-crew-edition]").forEach(button => button.addEventListener("click", () => { edition = Number(button.dataset.theCrewEdition); updateSetup(); }));
   for (let i = 1; i <= 20; i++) { const option = el("option", "", i); option.value = i; byId("SetupDifficulty").append(option); }
-  byId("SetupDifficulty").value = 5; byId("SetupMode").addEventListener("change", updateSetup);
+  byId("SetupDifficulty").value = 5; byId("SetupMode").addEventListener("change", updateMissionOptions);
   byId("SetupBack").addEventListener("click", showCreateRoomGameStep);
-  byId("SetupCreate").addEventListener("click", () => createRoomForGame("the_crew", {edition, mode:byId("SetupMode").value, mission:Number(byId("SetupMission").value), task_count:Number(byId("SetupCount").value), difficulty:Number(byId("SetupDifficulty").value), order:byId("SetupOrder").value, communication:byId("SetupComm").value}));
+  byId("SetupCreate").addEventListener("click", () => createRoomForGame("the_crew", {edition}));
   window.showTheCrewSetup = () => {
     document.getElementById("createRoomModalTitle").textContent = "The Crew · 宇航员";
     ["createRoomGameStep", "forestShuffleLanguageStep", "catanStarfarersSetupStep"].forEach(id => { const node = document.getElementById(id); node.classList.add("hidden"); node.setAttribute("aria-hidden", "true"); });
@@ -314,16 +389,22 @@
     const incoming = JSON.stringify([data.room_id, data.view.game_token, data.view.attempt_id, data.view.step, data.view.you]);
     if (signature !== incoming) { selected = null; choices = {}; hideTip(); }
     if (signature !== incoming || view?.revision !== data.view.revision) { pending = false; clearTimeout(pendingTimer); }
-    signature = incoming; view = data.view; render();
+    signature = incoming; view = data.view;
+    if (missionDialog.open && missionContext?.kind === "restart" && missionContext.gameToken !== view.game_token) missionDialog.close();
+    render(); syncRoomControls();
   };
   window.clearTheCrewState = clearState;
-  window.showTheCrewHeaderActions = visible => { header.style.display = visible ? "flex" : "none"; if (!visible) clearState(); };
-  function syncRoom(state) { if (state?.game_type !== "the_crew" || state.status === "lobby") clearState(); }
+  window.showTheCrewHeaderActions = visible => { header.style.display = visible ? "flex" : "none"; if (!visible) { clearState(); if (missionDialog.open) missionDialog.close(); } syncRoomControls(); };
+  function syncRoom(state) {
+    if (state?.game_type !== "the_crew" || state.status === "lobby") clearState();
+    if (missionDialog.open && (!isHost() || state?.room_id !== missionContext?.roomId || (missionContext?.kind === "start" && state.status !== "lobby"))) missionDialog.close();
+    syncRoomControls();
+  }
   function sync() {
     socket.on("room:state", syncRoom);
-    socket.on("system:error", () => { pending = false; clearTimeout(pendingTimer); render(); });
-    socket.on("disconnect", () => { pending = false; clearTimeout(pendingTimer); render(); hideTip(); });
-    socket.on("connect", render);
+    socket.on("system:error", data => { pending = false; clearTimeout(pendingTimer); if (missionDialog.open) text("MissionError", data.message); render(); syncRoomControls(); });
+    socket.on("disconnect", () => { pending = false; clearTimeout(pendingTimer); render(); hideTip(); syncRoomControls(); });
+    socket.on("connect", () => { render(); syncRoomControls(); });
     if (typeof currentRoomState !== "undefined") syncRoom(currentRoomState);
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "the_crew") window.renderTheCrewGameState(lastGameStatePayload);
   }

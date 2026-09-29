@@ -56,12 +56,12 @@ button.the-crew-card:disabled { opacity:.64; }
 .the-crew-controls { background:#ffffff0a; border:1px solid var(--tc-line); border-radius:12px; padding:12px; display:grid; gap:9px; font-size:12px; }
 .the-crew-controls p { margin:0; color:#cedaeb; line-height:1.6; }
 .the-crew-controls label { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.the-crew-controls select, .the-crew-setup select { padding:7px 9px; border:1px solid #b8c6d5; border-radius:6px; background:#fff; color:#21354b; font:inherit; max-width:100%; }
+.the-crew-controls select, .the-crew-setup select, .the-crew-mission-dialog select { padding:7px 9px; border:1px solid #b8c6d5; border-radius:6px; background:#fff; color:#21354b; font:inherit; max-width:100%; }
 .the-crew-control-row { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
 .the-crew-review { border-top:1px solid var(--tc-line); padding-top:12px; margin-top:12px; display:grid; gap:6px; font-size:12px; line-height:1.55; }
 .the-crew-review strong { color:#ffe38c; font-size:15px; }
 .the-crew-objectives { background:#f6f4ed; color:#273747; border-radius:13px; padding:15px; }
-.the-crew-mission-rule { font-size:12px; line-height:1.65; padding-bottom:12px; color:#4a5c6a; }
+.the-crew-mission-rule { font-size:12px; line-height:1.65; padding-bottom:12px; color:#4a5c6a; white-space:pre-line; }
 .the-crew-tasks { display:grid; gap:8px; max-height:370px; overflow:auto; padding:3px; margin:-3px; scrollbar-width:thin; }
 .the-crew-task { padding:11px; border:1px solid #d6ddd9; border-radius:8px; background:white; display:grid; gap:7px; }
 .the-crew-task p { margin:0; font-size:13px; line-height:1.55; }
@@ -79,7 +79,7 @@ button.the-crew-card:disabled { opacity:.64; }
 .the-crew-journal ol { max-height:155px; overflow:auto; padding-left:20px; margin:10px 0 0; }
 .the-crew-journal li { padding:4px 0; font-size:11px; line-height:1.5; }
 .the-crew-tooltip { position:fixed; z-index:2000; background:#15293c; color:#fff; padding:10px 13px; border-radius:8px; font-size:12px; line-height:1.55; max-width:min(300px,calc(100vw - 24px)); box-shadow:0 6px 20px #0003; pointer-events:none; }
-.the-crew-panel.the-crew-explaining [data-tc-explain] { outline:2px dashed #79afff; outline-offset:2px; cursor:help !important; }
+.the-crew-panel.the-crew-explaining [data-tc-explain], #theCrewHeaderActions.the-crew-explaining [data-tc-explain] { outline:2px dashed #79afff; outline-offset:2px; cursor:help !important; }
 .the-crew-dialog { background:#f9faf7; color:#213549; border:1px solid #9cafbf; border-radius:15px; width:660px; max-width:calc(100vw - 24px); max-height:85dvh; padding:22px; overflow:auto; }
 .the-crew-dialog::backdrop { background:#091421b8; }
 .the-crew-dialog-heading { align-items:flex-start; position:sticky; top:-22px; padding:12px 0; background:#f9faf7; z-index:1; }
@@ -101,6 +101,14 @@ button.the-crew-card:disabled { opacity:.64; }
 .the-crew-setup-fields select { flex:1; min-width:100px; }
 .the-crew-setup-note { font-size:12px; line-height:1.6; color:#637489; }
 .the-crew-setup .the-crew-primary { background:#193f70; color:white; padding:11px 20px; }
+.the-crew-mission-dialog { width:560px; box-sizing:border-box; }
+.the-crew-mission-dialog .the-crew-dialog-heading { gap:16px; }
+.the-crew-mission-edition { color:#346283; padding:10px 12px; border:1px solid #d1dfe5; border-radius:8px; background:#eef4f6; }
+.the-crew-mission-error { color:#9d352f; }
+.the-crew-mission-dialog p:empty { display:none; }
+.the-crew-mission-dialog .the-crew-primary { display:block; width:100%; background:#193f70; color:white; padding:11px 16px; }
+.the-crew-mission-dialog .the-crew-primary:disabled { opacity:.5; cursor:default; }
+.the-crew-mission-dialog :is(button, select):focus-visible { outline:3px solid #4ea2ff; outline-offset:3px; }
 @media (max-width:900px) {
   .the-crew-panel { padding:14px; }
   .the-crew-layout { grid-template-columns:minmax(0,1fr); }
@@ -115,8 +123,11 @@ button.the-crew-card:disabled { opacity:.64; }
   .the-crew-heading h2 span { font-size:12px; }
   .the-crew-eyebrow { font-size:8px; letter-spacing:.08em; }
   .the-crew-mission-mark { font-size:10px; text-align:left; }
-  .the-crew-players { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+  .the-crew-players { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
   .the-crew-player { padding:7px 8px; }
+  .the-crew-player strong { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:11px; }
+  .the-crew-player small { font-size:9px; }
+  .the-crew-player-stats { gap:5px; font-size:11px; }
   .the-crew-hand-area, .the-crew-table { padding:10px; }
   .the-crew-hand, .the-crew-trick { gap:6px; }
   .the-crew-trick { grid-template-columns:repeat(auto-fit,minmax(34px,1fr)); }

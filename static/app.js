@@ -199,6 +199,18 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "mall_of_horror") {
+    if (typeof renderMallOfHorrorGameState === "function") renderMallOfHorrorGameState(data);
+    return;
+  }
+  if (gameType === "exploding_kittens") {
+    if (typeof renderExplodingKittensGameState === "function") renderExplodingKittensGameState(data);
+    return;
+  }
+  if (gameType === "gloomhaven") {
+    if (typeof renderGloomhavenGameState === "function") renderGloomhavenGameState(data);
+    return;
+  }
   if (gameType === "the_crew") {
     if (typeof renderTheCrewGameState === "function") renderTheCrewGameState(data);
     return;
@@ -209,6 +221,10 @@ function renderGameState(data) {
   }
   if (gameType === "startups") {
     if (typeof renderStartupsGameState === "function") renderStartupsGameState(data);
+    return;
+  }
+  if (gameType === "natsumemo") {
+    if (typeof renderNatsumemoGameState === "function") renderNatsumemoGameState(data);
     return;
   }
   if (gameType === "skull_king") {

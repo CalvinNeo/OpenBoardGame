@@ -26,6 +26,10 @@ function emitRoomStart() {
     setRoomFeedback("Game files are still loading. Please wait or use Retry if loading failed.");
     return;
   }
+  if (currentGameType === "the_crew" && typeof openTheCrewMissionPicker === "function") {
+    openTheCrewMissionPicker("start");
+    return;
+  }
   const payload = { room_id: roomId };
   attachSkipValidation(payload);
   if (currentGameType === "ark_nova" && typeof getArkNovaConfig === "function") {
@@ -220,6 +224,7 @@ function emitRoomStart() {
     };
   } else if (currentGameType === "guandan") {
     payload.config = typeof getGuandanRoomConfig === "function" ? getGuandanRoomConfig() : {};
+    if (!payload.config) return;
   } else if (currentGameType === "tacta") {
     const tactaConfig = typeof getTactaRoomConfig === "function" ? getTactaRoomConfig() : { mode: "standard" };
     if (!tactaConfig) {

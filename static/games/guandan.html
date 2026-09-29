@@ -1,3 +1,47 @@
+<template data-game-target="guandanSetupStep" data-game-mode="contents">
+  <button id="guandanSetupBackBtn" type="button" class="create-room-back-btn">← Back to games</button>
+  <div id="guandanSetupSettings"></div>
+  <button id="guandanSetupCreateBtn" type="button">Create Room</button>
+</template>
+<template data-game-target="guandanConfigBox" data-game-mode="contents">
+  <div class="guandan-config-heading">
+    <span class="game-config-title">Guandan · Bot thinking</span>
+    <button id="guandanConfigHelpBtn" type="button">Help</button>
+  </div>
+  <div class="row hidden" id="guandanBotModeRow">
+    <label for="guandanBotModeSelect">Bot Mode</label>
+    <select id="guandanBotModeSelect">
+      <option value="auto" selected>Auto</option>
+      <option value="heuristic">Heuristic</option>
+      <option value="nn">NN</option>
+    </select>
+  </div>
+  <div id="guandanTimingRows" class="guandan-timing-rows">
+    <div class="guandan-time-row">
+      <label for="guandanThinkTimeInput">Overall target (s)</label>
+      <input id="guandanThinkTimeInput" type="number" min="0.04" max="120" step="0.01" value="6" inputmode="decimal" required />
+    </div>
+    <div class="guandan-time-row">
+      <span>Heuristic</span><span class="hint">Full comparison</span>
+    </div>
+    <div id="guandanSearchTimeRows" class="guandan-timing-rows">
+      <div class="guandan-time-row">
+        <label for="guandanMctsMaxTimeInput">MCTS max (s)</label>
+        <input id="guandanMctsMaxTimeInput" type="number" min="0.025" max="120" step="0.001" placeholder="Auto" inputmode="decimal" aria-describedby="guandanSearchTimeHint" />
+      </div>
+      <div class="guandan-time-row">
+        <label for="guandanMinimaxMaxTimeInput">Endgame max (s)</label>
+        <input id="guandanMinimaxMaxTimeInput" type="number" min="0.025" max="120" step="0.001" placeholder="Auto" inputmode="decimal" aria-describedby="guandanSearchTimeHint" />
+      </div>
+      <span id="guandanSearchTimeHint" class="hint">Blank = Auto: use the remaining overall time.</span>
+    </div>
+    <span class="hint">Heuristic comparison always finishes, even beyond the target.</span>
+  </div>
+  <div class="row hidden" id="guandanNnCheckpointRow">
+    <label for="guandanNnCheckpointSelect">NN Checkpoint</label>
+    <select id="guandanNnCheckpointSelect"><option value="">Loading checkpoints...</option></select>
+  </div>
+</template>
 <template data-game-target="guandanHelpModal" data-game-mode="replace"><section id="guandanHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content guandan-help-modal">
       <div class="modal-header">

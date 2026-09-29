@@ -202,7 +202,7 @@ class GuandanReviewedRoundRegressionTests(unittest.TestCase):
         )
         self.assertEqual(auto_combo.get("type"), "heavenly")
 
-    def test_bot4_does_not_feed_low_single_to_seven_card_enemy_after_taking_lead(self):
+    def test_bot4_preserves_team_second_and_third_after_enemy_has_finished_first(self):
         state, _ = self._make_state(
             {
                 "calvin": [],
@@ -229,17 +229,23 @@ class GuandanReviewedRoundRegressionTests(unittest.TestCase):
         action = guandan.GuandanGame.bot_move(state, "bot4")
 
         self.assertEqual(action.get("type"), "play")
-        labels = sorted(
-            guandan._card_label(card)
-            for card in self._chosen_cards(state, "bot4", action)
-        )
-        self.assertIn(
-            labels,
-            [
-                sorted(["♦️2", "♠️2"]),
-                sorted(["♣️9", "♥️9", "♦️9"]),
-            ],
-        )
+        # The original assertion prohibited 4 and allowed the level pair.
+        # Complete continuations showed 4 retains a 2/3 finish (-1 level),
+        # while spending 22 first leaves a 2/4 finish (-2 levels). Validate
+        # the team objective instead of freezing that mistaken move preference.
+        _, error = guandan.GuandanGame.apply_action(state, "bot4", action)
+        self.assertIsNone(error)
+        for _ in range(80):
+            if state["phase"] == "round_end":
+                break
+            actor = state["current_turn"]
+            action = guandan.GuandanGame.bot_move(state, actor)
+            _, error = guandan.GuandanGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+        self.assertEqual(state["phase"], "round_end")
+        self.assertEqual(state["finish_order"][0], "calvin")
+        self.assertCountEqual(state["finish_order"][1:3], ["bot3", "bot4"])
+        self.assertEqual(state["finish_order"][3], "zhu")
 
     def test_bot3_does_not_pass_as_last_defender_against_six_card_enemy(self):
         state, available = self._make_state(

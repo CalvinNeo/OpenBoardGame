@@ -6,6 +6,19 @@
       <button type="button" data-the-crew-edition="1" aria-pressed="true"><span aria-hidden="true">🚀</span><strong>1 · 第九行星任务</strong><small>The Quest for Planet Nine · 50 missions</small></button>
       <button type="button" data-the-crew-edition="2" aria-pressed="false"><span aria-hidden="true">🌊</span><strong>2 · 深海任务</strong><small>Mission Deep Sea · 32 missions</small></button>
     </div>
+    <p class="the-crew-setup-note" id="theCrewSetupNote">两人游戏自动加入公开助手，由指挥官操控。</p>
+    <p class="the-crew-setup-note">The host chooses a mission after clicking Start Game.</p>
+    <button type="button" id="theCrewSetupCreate" class="the-crew-primary">Create Room</button>
+  </div>
+</template>
+<template data-game-target="theCrewHeaderActions" data-game-mode="contents">
+  <button id="theCrewRestart" class="hidden" type="button" title="Restart and choose a mission" data-tc-explain="restart">Restart</button>
+  <button id="theCrewHelpBtn" type="button" title="Help">Help</button><button id="theCrewExplainBtn" type="button" title="Explain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="theCrewMissionDialog" data-game-mode="replace">
+  <dialog id="theCrewMissionDialog" class="the-crew-dialog the-crew-mission-dialog" aria-labelledby="theCrewMissionDialogTitle" aria-describedby="theCrewMissionNotice">
+    <div class="the-crew-dialog-heading"><h2 id="theCrewMissionDialogTitle">Choose a mission</h2><button id="theCrewMissionClose" type="button">Cancel</button></div>
+    <p id="theCrewMissionEdition" class="the-crew-mission-edition"></p>
     <div class="the-crew-setup-fields">
       <label>Mode <select id="theCrewSetupMode"><option value="campaign">Campaign</option><option value="custom">Custom mission</option></select></label>
       <label id="theCrewMissionField">Start at <select id="theCrewSetupMission" aria-label="Starting mission"></select></label>
@@ -14,12 +27,11 @@
       <label id="theCrewOrderField" class="hidden">Task order <select id="theCrewSetupOrder"><option value="none">Any order</option><option value="numbered">Numbered</option><option value="relative">Relative &gt;</option></select></label>
       <label id="theCrewCommField" class="hidden">Communication <select id="theCrewSetupComm"><option value="normal">Normal</option><option value="hidden">Hidden marker</option><option value="none">None</option></select></label>
     </div>
-    <p class="the-crew-setup-note" id="theCrewSetupNote">两人游戏自动加入公开助手，由指挥官操控。</p>
-    <button type="button" id="theCrewSetupCreate" class="the-crew-primary">Create Room</button>
-  </div>
-</template>
-<template data-game-target="theCrewHeaderActions" data-game-mode="contents">
-  <button id="theCrewHelpBtn" type="button" title="Help">Help</button><button id="theCrewExplainBtn" type="button" title="Explain" aria-pressed="false">Explain</button>
+    <p id="theCrewMissionNotice" class="the-crew-setup-note"></p>
+    <p id="theCrewMissionAvailability" class="the-crew-setup-note" role="status" aria-live="polite"></p>
+    <p id="theCrewMissionError" class="the-crew-mission-error" role="status" aria-live="polite"></p>
+    <button id="theCrewMissionSubmit" type="button" class="the-crew-primary">Start Mission</button>
+  </dialog>
 </template>
 <template data-game-target="theCrewPanel" data-game-mode="contents">
   <header class="the-crew-heading"><div><div class="the-crew-eyebrow" id="theCrewEdition">THE QUEST FOR PLANET NINE</div><h2>THE CREW <span>宇航员</span></h2></div><div class="the-crew-mission-mark" id="theCrewMission" tabindex="0" data-tc-explain="mission" data-tc-tip="Mission（任务关卡）／Attempt（尝试次数）。全队共同成功或失败。">MISSION 01</div></header>

@@ -1,0 +1,40 @@
+<template data-game-target="gloomhavenHeaderActions" data-game-mode="contents">
+  <button id="gloomhavenHelpBtn" type="button">Help</button>
+  <button id="gloomhavenExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="gloomhavenPanel" data-game-mode="contents">
+  <header class="gh-heading"><div><div class="gh-eyebrow">A COMPANY OF MERCENARIES</div><h2>GLOOMHAVEN <span>幽港迷城</span></h2><p>战术遭遇版 · 六职业精简牌组 / 原创关卡</p></div><span id="gloomhavenRound" class="gh-badge" data-gh-explain="round" data-gh-tip="Round：每轮选择双卡，按先攻行动，全员确认后继续。" tabindex="0">Round —</span></header>
+  <div class="gh-status"><strong id="gloomhavenStatus" role="status" aria-live="polite">Waiting to start</strong><span id="gloomhavenScenarioName"></span></div>
+  <section id="gloomhavenSetup" class="gh-section hidden" aria-label="Party setup">
+    <div class="gh-row"><h3>Prepare your company</h3><span id="gloomhavenSetupReady"></span></div>
+    <div class="gh-settings"><label>Scenario <select id="gloomhavenScenarioSelect" data-gh-explain="scenario"></select></label><label>Difficulty <select id="gloomhavenDifficulty" data-gh-explain="scenario"><option value="0">0 · Easy</option><option value="1">1 · Standard</option><option value="2">2 · Hard</option></select></label></div>
+    <div id="gloomhavenSetupHeroes" class="gh-tabs"></div><div id="gloomhavenClasses" class="gh-classes"></div>
+    <div class="gh-row"><span class="gh-muted">Choose a class for each mercenary.</span><button id="gloomhavenReady" type="button" data-gh-explain="ready">Ready</button></div>
+  </section>
+  <div id="gloomhavenHeroes" class="gh-heroes" aria-label="Company"></div>
+  <section id="gloomhavenReview" class="gh-review hidden" aria-label="Round result"><div class="gh-row"><h3 id="gloomhavenResultTitle"></h3><span id="gloomhavenReadyCount"></span></div><div id="gloomhavenResults"></div><div id="gloomhavenRestOptions" class="gh-rest-options"></div><button id="gloomhavenNext" type="button" data-gh-explain="round">Next Round</button></section>
+  <div id="gloomhavenBattle" class="gh-layout hidden">
+    <section class="gh-map-section" aria-label="Encounter map">
+      <div class="gh-row"><h3>Encounter</h3><div id="gloomhavenRooms" class="gh-tabs"></div></div>
+      <div id="gloomhavenMap" class="gh-map" aria-label="Hex map"></div>
+      <div class="gh-legend"><span data-gh-tip="Hero（佣兵）：圆形标记；金框为当前行动者。" data-gh-explain="map" tabindex="0">🔵 佣兵</span><span data-gh-tip="Monster（怪物）：红色标记；★ 为精英。" data-gh-explain="monster" tabindex="0">🔴 怪物</span><span data-gh-tip="Trap（⚠️）：踏入受 2 + 难度 点伤害，随后移除。" data-gh-explain="map" tabindex="0">⚠️ 陷阱</span><span data-gh-tip="Door（🚪）：走入开门，揭示下一房间。" data-gh-explain="map" tabindex="0">🚪 门</span><span data-gh-tip="Difficult terrain（≋）：移动消耗 2 点；Jump（🪽）忽略额外消耗。" data-gh-explain="map" tabindex="0">≋ 困难地形</span></div>
+      <div id="gloomhavenElements" class="gh-elements" aria-label="Elements"></div>
+      <div id="gloomhavenQueue" class="gh-queue" aria-label="Initiative order"></div>
+      <div id="gloomhavenMonsterCards" class="gh-monster-cards"></div>
+      <div id="gloomhavenLastAttack" class="gh-last-attack hidden" data-gh-explain="attack" tabindex="0"></div>
+      <details class="gh-details"><summary>Recent actions</summary><ol id="gloomhavenLog" class="gh-log"></ol></details>
+    </section>
+    <section class="gh-command-section" aria-label="Your mercenaries and actions">
+      <div class="gh-row"><h3 id="gloomhavenHandTitle">Your mercenary</h3><div id="gloomhavenHeroTabs" class="gh-tabs"></div></div>
+      <div id="gloomhavenCommand" class="gh-command" role="status"></div>
+      <div id="gloomhavenSelectedAction" class="gh-selected-action hidden"></div>
+      <div id="gloomhavenActions" class="gh-actions"></div>
+      <div id="gloomhavenHand" class="gh-hand" aria-label="Ability cards"></div>
+      <details id="gloomhavenPiles" class="gh-details"><summary id="gloomhavenPileTitle">Discard &amp; lost cards</summary><div id="gloomhavenPileCards" class="gh-pile-cards"></div></details>
+    </section>
+  </div>
+  <div id="gloomhavenTooltip" class="gh-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="gloomhavenDialog" data-game-mode="replace">
+  <dialog id="gloomhavenDialog" class="gh-dialog" aria-labelledby="gloomhavenDialogTitle"><div class="gh-row"><h2 id="gloomhavenDialogTitle">Gloomhaven</h2><button id="gloomhavenDialogClose" type="button">Close</button></div><div id="gloomhavenDialogBody"></div></dialog>
+</template>

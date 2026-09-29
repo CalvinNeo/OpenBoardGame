@@ -55,10 +55,12 @@ _CORE = _CoreProxy()
 def call(core, name: str, *args, **kwargs):
     prev = _get_core()
     previous_candidates = getattr(_CORE_LOCAL, "decomposition_candidates", None)
+    previous_fast_summaries = getattr(_CORE_LOCAL, "fast_decomposition_summaries", None)
     if prev is not core:
         # Reuse exact physical subhands across greedy/global plans and finalists
         # within this call tree. Do not leak synthetic search IDs to another turn.
         _CORE_LOCAL.decomposition_candidates = {}
+        _CORE_LOCAL.fast_decomposition_summaries = {}
     had_deadline = hasattr(_CORE_LOCAL, "deadline")
     prev_deadline = getattr(_CORE_LOCAL, "deadline", None)
     requested_deadline = kwargs.get("deadline")
@@ -77,6 +79,10 @@ def call(core, name: str, *args, **kwargs):
                 delattr(_CORE_LOCAL, "decomposition_candidates")
             else:
                 _CORE_LOCAL.decomposition_candidates = previous_candidates
+            if previous_fast_summaries is None:
+                delattr(_CORE_LOCAL, "fast_decomposition_summaries")
+            else:
+                _CORE_LOCAL.fast_decomposition_summaries = previous_fast_summaries
         if had_deadline:
             _CORE_LOCAL.deadline = prev_deadline
         elif hasattr(_CORE_LOCAL, "deadline"):
@@ -1687,8 +1693,11 @@ def _bomb_tier_for_size(size: int) -> int:
     return size - 2
 
 
-def _find_straight_flush_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[int, List[int]]]:
-    info = _hand_info(hand, level_rank)
+def _find_straight_flush_candidates(
+    hand: List[Dict], level_rank: int, *, info: Optional[Dict] = None,
+) -> List[Tuple[int, List[int]]]:
+    if info is None:
+        info = _hand_info(hand, level_rank)
     candidates: List[Tuple[int, List[int]]] = []
     for suit in ("spades", "hearts", "clubs", "diamonds"):
         suit_map = info["normals_by_suit"].get(suit, {})
@@ -1731,9 +1740,11 @@ def _five_of_kind_prefers_four_bomb_with_kicker(hand: List[Dict], level_rank: in
 
 
 def _find_bomb_candidates(
-    hand: List[Dict], level_rank: int, materialization_limit: int = 1
+    hand: List[Dict], level_rank: int, materialization_limit: int = 1,
+    *, info: Optional[Dict] = None,
 ) -> List[Dict]:
-    info = _hand_info(hand, level_rank)
+    if info is None:
+        info = _hand_info(hand, level_rank)
     strength = _rank_strength(level_rank)
     wilds = list(info["wild_cards"])
     candidates: List[Dict] = []
@@ -1750,7 +1761,7 @@ def _find_bomb_candidates(
             }
         )
 
-    straight_flushes = _find_straight_flush_candidates(hand, level_rank)
+    straight_flushes = _find_straight_flush_candidates(hand, level_rank, info=info)
     for high_value, cards in straight_flushes:
         candidates.append(
             {
@@ -1773,6 +1784,7 @@ def _find_bomb_candidates(
                 level_rank,
                 [(rank, size)],
                 max(1, int(materialization_limit)),
+                info=info,
             )
             wild_ids = set(wilds)
             for cards in variants:
@@ -9362,13 +9374,14 @@ def _compute_decomposition_candidates(hand: List[Dict], level_rank: int) -> List
     if hand and _can_play_all(hand, level_rank, config, None):
         options.append([card["id"] for card in hand])
 
-    options.extend([cand["cards"] for cand in _find_bomb_candidates(hand, level_rank)])
-    options.extend(_list_steel_plate_options(hand, level_rank, 0))
-    options.extend(_list_three_pairs_options(hand, level_rank, 0))
-    options.extend(_list_straight_options(hand, level_rank, 0))
-    options.extend(_list_full_house_options(hand, level_rank, 0))
-    options.extend(_list_rank_group_options(hand, level_rank, 0, 3))
-    options.extend(_list_rank_group_options(hand, level_rank, 0, 2))
+    info = _hand_info(hand, level_rank)
+    options.extend([cand["cards"] for cand in _find_bomb_candidates(hand, level_rank, info=info)])
+    options.extend(_list_steel_plate_options(hand, level_rank, 0, info=info))
+    options.extend(_list_three_pairs_options(hand, level_rank, 0, info=info))
+    options.extend(_list_straight_options(hand, level_rank, 0, info=info))
+    options.extend(_list_full_house_options(hand, level_rank, 0, info=info))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 3, info=info))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 2, info=info))
     options.extend(_decomposition_single_candidates(hand, level_rank))
 
     hand_map = _map_hand_by_id(hand)
@@ -9443,6 +9456,26 @@ def _compute_decomposition_candidates(hand: List[Dict], level_rank: int) -> List
 
 def _fast_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
     """Linear-time structural tail estimate used by the bounded detailed search."""
+    cache = getattr(_CORE_LOCAL, "fast_decomposition_summaries", None)
+    if cache is None or not hand:
+        return _compute_fast_hand_decomposition_summary(hand, level_rank)
+    # The calculation uses faces, not physical IDs. Preserve card order as well
+    # so accumulation and tie ordering remain identical, including float bits.
+    key = (level_rank, tuple((card.get("rank"), card.get("suit"), card.get("joker"))
+                            for card in hand))
+    cached = cache.get(key)
+    if cached is not None:
+        return _copy_hand_decomposition_summary(cached)
+    result = _compute_fast_hand_decomposition_summary(hand, level_rank)
+    if len(cache) >= 4096:
+        cache.clear()
+    # This cache is separate from complete decompositions and lasts one call;
+    # a cheap leaf estimate can never replace a fully searched hand summary.
+    cache[key] = _copy_hand_decomposition_summary(result)
+    return result
+
+
+def _compute_fast_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
     if not hand:
         return _empty_hand_decomposition_summary()
 

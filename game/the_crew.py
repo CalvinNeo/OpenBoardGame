@@ -24,6 +24,8 @@ CONFIG_SCHEMA = {
         "communication": {"enum": ["normal", "hidden", "none"], "default": "normal"},
         "seed": {"oneOf": [{"type": "integer"}, {"type": "string", "minLength": 1, "maxLength": 80}]},
     }, "additionalProperties": False,
+    "allOf": [{"if": {"properties": {"edition": {"const": 2}, "mode": {"const": "campaign"}}, "required": ["edition"]},
+               "then": {"properties": {"mission": {"maximum": 32}}}}],
 }
 CONTEXT = {"game_token": {"type": "string"}, "attempt_id": {"type": "integer"}, "step": {"type": "integer"}}
 ACTION_FIELDS = {
@@ -154,7 +156,9 @@ def _draw_compatible_tasks(state: Dict) -> List[Dict]:
     # In a single draft round a seat cannot own conflicting first/only-last
     # objectives. Replace an objectively contradictory draw without an attempt.
     tasks = _draw_tasks(state)
-    if len(tasks) > len(state["seats"]): return tasks
+    special = state["spec"]["special"]
+    draft_seats = 2 if special == "two_volunteers" else len(state["seats"]) - int(special == "no_captain")
+    if special in ("free", "one_owner", "captain_or_one", "volunteer") or len(tasks) > draft_seats: return tasks
     seen, replacement = set(), copy.deepcopy(SEA_TASKS)
     _rng(state, "replacement").shuffle(replacement)
     for i, task in enumerate(tasks):
@@ -169,6 +173,14 @@ def _draw_compatible_tasks(state: Dict) -> List[Dict]:
             tasks[i] = copy.deepcopy(alt)
             needs = set()
         seen.update(needs)
+    # All three captain-comparison cards cannot be assigned in a mandatory
+    # single circuit: the captain has no legal first choice. Replace one card
+    # at the same cost, just as for contradictory first/last-trick tasks.
+    if (len(tasks) >= len(state["seats"]) and all(not t.get("captainMaySelect", True) for t in tasks)
+            and state["spec"]["special"] not in ("free", "two_volunteers", "one_owner", "captain_or_one", "volunteer", "no_captain")):
+        cost = tasks[0]["difficulty"][len(state["seats"]) - 3]
+        tasks[0] = next(copy.deepcopy(t) for t in replacement if t.get("captainMaySelect", True) and
+                        t["difficulty"][len(state["seats"]) - 3] == cost and t["id"] not in {x["id"] for x in tasks})
     return tasks
 
 
@@ -490,7 +502,8 @@ class TheCrewGame:
         elif phase == "draft":
             free = state["spec"]["special"] in ("free", "two_volunteers")
             if (free and any(_eligible_tasks(state, p) for p in controls)) or current in controls:
-                if any(_eligible_tasks(state, p) for p in controls) if free else _eligible_tasks(state, current): actions.append("take_task")
+                eligible = any(_eligible_tasks(state, p) for p in controls) if free else bool(_eligible_tasks(state, current))
+                if eligible: actions.append("take_task")
                 if not free and _can_pass(state): actions.append("pass_task")
         elif phase == "predict" and any(t["kind"] == "predictTricks" and t["owner"] in controls and t["id"] not in state["predictions"] for t in state["tasks"]): actions = ["predict"]
         elif phase == "preflight":

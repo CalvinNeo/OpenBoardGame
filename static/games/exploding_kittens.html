@@ -1,0 +1,43 @@
+<template data-game-target="explodingKittensHeaderActions" data-game-mode="contents">
+  <button id="explodingKittensHelpBtn" type="button" aria-label="Help" title="Help">Help</button>
+  <button id="explodingKittensExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="explodingKittensPanel" data-game-mode="contents">
+  <header class="ek-heading"><div><span class="ek-eyebrow">A LITTLE LUCK. NINE LIVES? JUST ONE.</span><h2>EXPLODING KITTENS <span>爆炸猫</span></h2></div><span class="ek-edition">ORIGINAL EDITION</span></header>
+  <div class="ek-status"><strong id="ekStatus" role="status" aria-live="polite">Waiting to start</strong><span id="ekDebt" data-ek-explain="turns" data-ek-tip="Turns（⚡）：本次仍需完成的回合；跳过或抽牌各完成一次。" tabindex="0">⚡ —</span></div>
+  <div id="ekPlayers" class="ek-players" aria-label="Players"></div>
+  <div class="ek-table">
+    <section class="ek-piles" aria-label="Table">
+      <div class="ek-section-title"><h3>THE TABLE</h3><span id="ekKittenCount" data-ek-explain="kittens" data-ek-tip="Exploding Kittens（💥）：仍在游戏中的爆炸猫，包括正在拆除的一张。" tabindex="0">💥 —</span></div>
+      <div class="ek-pile-grid">
+        <div id="ekDeck" class="ek-deck" data-ek-explain="deck" data-ek-tip="Draw pile（🂠）：牌堆顶抽一张结束一个回合。牌序隐藏，右侧 Draw Card 按钮执行抽牌。" tabindex="0"><span class="ek-eyebrow">DRAW PILE</span><span class="ek-deck-cat" aria-hidden="true">🐈</span><strong id="ekDeckCount">—</strong><span>cards left</span></div>
+        <button id="ekDiscard" class="ek-discard" type="button" data-ek-explain="discard"><span class="ek-eyebrow">DISCARD PILE</span><span id="ekDiscardEmoji" class="ek-discard-icon" aria-hidden="true">—</span><strong id="ekDiscardName">No cards yet</strong><span id="ekDiscardCount">View discard pile</span></button>
+      </div>
+      <details class="ek-history"><summary>Recent moves</summary><ol id="ekLog" aria-label="Recent moves"></ol></details>
+    </section>
+    <section class="ek-decision" aria-label="Current decision">
+      <div class="ek-section-title"><h3 id="ekDecisionTitle">YOUR NEXT MOVE</h3><span id="ekTurnNumber">Turn —</span></div>
+      <p id="ekPrompt" class="ek-prompt">Waiting for the table.</p>
+      <div id="ekPending" class="ek-pending hidden" data-ek-explain="reaction" tabindex="0"></div>
+      <div id="ekFuture" class="ek-future hidden"><div class="ek-section-title"><h3>🔮 YOUR PRIVATE PEEK</h3><span>Top → bottom</span></div><div id="ekFutureCards" class="ek-future-cards"></div></div>
+      <div id="ekComposer" class="ek-composer hidden">
+        <div id="ekSelectionLabel" class="ek-selection-label">Select cards below, or draw.</div>
+        <div id="ekTargetRow" class="ek-field hidden"><label for="ekTarget">Target</label><select id="ekTarget" aria-label="Target"></select></div>
+        <div id="ekRequestRow" class="ek-field hidden"><label for="ekRequest">Request</label><select id="ekRequest" aria-label="Requested card"></select></div>
+        <div class="ek-actions"><button id="ekPlay" type="button" data-ek-explain="play" disabled>Play Selected</button><button id="ekDraw" class="ek-primary" type="button" data-ek-explain="draw" disabled>Draw Card</button></div>
+      </div>
+      <div id="ekReactionActions" class="ek-actions hidden"><button id="ekPass" type="button" data-ek-explain="pass" disabled>Pass</button><button id="ekNope" class="ek-purple" type="button" data-ek-explain="nope" disabled>🙅 Nope</button></div>
+      <div id="ekGiveArea" class="hidden"><div class="ek-selection-label">Select one card from your hand.</div><button id="ekGive" class="ek-wide" type="button" data-ek-explain="give" disabled>Give Selected</button></div>
+      <button id="ekContinue" class="ek-wide hidden" type="button" data-ek-explain="future" disabled>Continue</button>
+      <button id="ekDefuse" class="ek-wide ek-green hidden" type="button" data-ek-explain="defuse" disabled>🧯 Defuse</button>
+      <div id="ekInsertArea" class="hidden"><div class="ek-field"><label for="ekPosition">Position</label><select id="ekPosition" aria-label="Secret insertion position" data-ek-explain="reinsert"></select></div><div class="ek-actions ek-placement-shortcuts"><button id="ekTop" type="button" data-ek-explain="reinsert">Top</button><button id="ekBottom" type="button" data-ek-explain="reinsert">Bottom</button></div><button id="ekReinsert" class="ek-wide ek-green" type="button" data-ek-explain="reinsert" disabled>Place Secretly</button></div>
+      <div id="ekReview" class="hidden"><div id="ekReady" class="ek-selection-label"></div><button id="ekNext" class="ek-wide" type="button" data-ek-explain="next" disabled>Next Round</button></div>
+      <div id="ekResult" class="ek-result hidden" data-ek-explain="winner" tabindex="0"></div>
+    </section>
+  </div>
+  <section class="ek-hand-section" aria-label="Your hand"><div class="ek-section-title"><h3 id="ekHandTitle">YOUR HAND</h3><span data-ek-explain="hand" data-ek-tip="Hand（🔒）：仅你可查看牌面。点选同名牌可组两张／三张组合；点空白或 Esc 取消。" tabindex="0">🔒 Private</span></div><div id="ekHand" class="ek-hand"></div></section>
+  <div id="ekTooltip" class="ek-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="explodingKittensDialog" data-game-mode="replace">
+  <dialog id="explodingKittensDialog" class="ek-dialog" aria-labelledby="ekDialogTitle"><div class="ek-dialog-heading"><h2 id="ekDialogTitle">Exploding Kittens</h2><button id="ekDialogClose" type="button">Close</button></div><div id="ekDialogBody"></div></dialog>
+</template>

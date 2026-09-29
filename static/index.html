@@ -107,6 +107,7 @@
           <div id="gameListEmpty" class="hint game-list-empty hidden" role="status">🎲 No games match your filters.</div>
         </div>
         <div id="theCrewSetupStep" class="hidden" aria-hidden="true"></div>
+        <div id="guandanSetupStep" class="hidden" aria-hidden="true"></div>
         <div id="forestShuffleLanguageStep" class="forest-shuffle-language-step hidden" aria-hidden="true">
           <button id="forestShuffleLanguageBackBtn" class="create-room-back-btn" type="button">← Back to games</button>
           <div class="forest-shuffle-language-hero">
@@ -506,6 +507,9 @@
                     <option value="hive">Hive · 昆虫棋</option>
                     <option value="dune_imperium">Dune: Imperium · 沙丘：帝国</option>
                     <option value="startups">Startups · 初创公司</option>
+                    <option value="natsumemo">Natsumemo · 暑假日记</option>
+                    <option value="mall_of_horror">Mall of Horror · 僵尸商场</option>
+                    <option value="gloomhaven">Gloomhaven · 幽港迷城</option>
                     <option value="the_crew">The Crew (1 / 2) · 宇航员</option>
                     <option value="maskmen">Maskmen · 面具摔跤手</option>
                     <option value="skull_king">Skull King · 骷髅王</option>
@@ -629,23 +633,7 @@
                       <span class="hint">Show the number of characters while guessing.</span>
                     </div>
                   </div>
-                  <div class="game-config-card hidden" id="guandanConfigBox" aria-hidden="true">
-                    <div class="game-config-title">Guandan</div>
-                    <div class="row hidden" id="guandanBotModeRow">
-                      <label for="guandanBotModeSelect">Bot Mode</label>
-                      <select id="guandanBotModeSelect">
-                        <option value="auto" selected>Auto</option>
-                        <option value="heuristic">Heuristic</option>
-                        <option value="nn">NN</option>
-                      </select>
-                    </div>
-                    <div class="row hidden" id="guandanNnCheckpointRow">
-                      <label for="guandanNnCheckpointSelect">NN Checkpoint</label>
-                      <select id="guandanNnCheckpointSelect">
-                        <option value="">Loading checkpoints...</option>
-                      </select>
-                    </div>
-                  </div>
+                  <div class="game-config-card hidden" id="guandanConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="blitzSketchConfigBox" aria-hidden="true">
                     <div class="game-config-title">Blitz Sketch</div>
                     <div class="row hidden" id="blitzSketchDrawTimeRow">
@@ -1317,13 +1305,17 @@
             <div class="panel-header-actions" id="odinHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="yahtzeeHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="startupsHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="natsumemoHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="mallOfHorrorHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="theCrewHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="gloomhavenHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="maskmenHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="skullKingHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="deceptionHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="mindTheLinesHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="powerGridHeaderActions" style="display: none;"></div>
-            <div class="panel-header-actions" id="noThanksHeaderActions" style="display: none;"></div>
+              <div class="panel-header-actions" id="explodingKittensHeaderActions" style="display: none;"></div>
+              <div class="panel-header-actions" id="noThanksHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="orlojHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="duneImperiumHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="cryptidHeaderActions" style="display: none;">
@@ -1447,12 +1439,16 @@
 
             <div id="tactaPanel" class="hidden tacta-panel"></div>
             <div id="startupsPanel" class="hidden startups-panel"></div>
+            <div id="natsumemoPanel" class="hidden natsumemo-panel"></div>
+            <div id="mallOfHorrorPanel" class="hidden mall-of-horror-panel"></div>
             <div id="theCrewPanel" class="hidden the-crew-panel"></div>
+            <div id="gloomhavenPanel" class="hidden gloomhaven-panel"></div>
             <div id="maskmenPanel" class="hidden maskmen-panel"></div>
             <div id="skullKingPanel" class="hidden skull-king-panel"></div>
             <div id="deceptionPanel" class="hidden deception-panel"></div>
             <div id="mindTheLinesPanel" class="hidden mind-the-lines-panel"></div>
             <div id="powerGridPanel" class="hidden power-grid-panel"></div>
+            <div id="explodingKittensPanel" class="hidden ek-panel"></div>
             <div id="noThanksPanel" class="hidden no-thanks-panel"></div>
             <div id="hivePanel" class="hidden hive-panel"></div>
 
@@ -1629,16 +1625,21 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=68" defer></script>
-  <script src="/static/games/shared.js?v=app_v37" defer></script>
+  <script src="/static/game_assets.js?v=80" defer></script>
+  <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
+  <template id="natsumemoDialog"></template>
+  <template id="mallOfHorrorDialog"></template>
   <template id="theCrewDialog"></template>
+  <template id="theCrewMissionDialog"></template>
+  <template id="gloomhavenDialog"></template>
   <template id="maskmenDialog"></template>
   <template id="skullKingDialog"></template>
   <template id="deceptionDialog"></template>
   <div id="mindTheLinesDialog"></div>
   <template id="powerGridDialog"></template>
+  <template id="explodingKittensDialog"></template>
   <template id="noThanksDialog"></template>
   <template id="challengersDialog"></template>
   <template id="hiveDialog"></template>
@@ -1651,7 +1652,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v45" defer></script>
-  <script src="/static/room.js?v=app_v66" defer></script>
+  <script src="/static/app.js?v=app_v49" defer></script>
+  <script src="/static/room.js?v=app_v71" defer></script>
 </body>
 </html>

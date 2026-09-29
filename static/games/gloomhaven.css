@@ -1,0 +1,118 @@
+.gloomhaven-panel { --gh-ink:#26353c; --gh-muted:#697770; --gh-line:#d5d4c6; --gh-copper:#976242; background:#edece1; color:var(--gh-ink); border:1px solid #d5d4c6; border-radius:16px; padding:clamp(12px,2vw,24px); min-width:0; }
+.gloomhaven-panel *, .gh-dialog * { box-sizing:border-box; min-width:0; }
+.gloomhaven-panel h2,.gloomhaven-panel h3,.gh-dialog h2 { margin:0; }
+.gloomhaven-panel button,.gh-dialog button { min-height:36px; padding:8px 11px; border:1px solid #bfc2b7; border-radius:7px; background:#fffdf5; color:#26353c; font-size:12px; line-height:1.35; white-space:normal; overflow-wrap:anywhere; margin:0; }
+.gloomhaven-panel button:disabled { opacity:.44; cursor:default; }
+.gloomhaven-panel button:hover:not(:disabled) { background:#e5e8df; }
+.gloomhaven-panel button[aria-pressed="true"] { background:#304a53; color:#fff9e9; border-color:#304a53; }
+.gloomhaven-panel :focus-visible,.gh-dialog :focus-visible { outline:3px solid #bd8b50; outline-offset:2px; }
+.gh-heading,.gh-row { display:flex; align-items:center; justify-content:space-between; gap:9px; flex-wrap:wrap; }
+.gh-eyebrow { font-size:9px; letter-spacing:.2em; color:#7e7767; }
+.gh-heading h2 { font-family:Georgia,serif; font-size:clamp(24px,3vw,35px); letter-spacing:.035em; margin-top:6px; line-height:1.2; }
+.gh-heading h2 span { display:inline-block; font-family:inherit; font-size:14px; font-weight:normal; letter-spacing:.16em; }
+.gh-heading p { margin:7px 0 14px; font-size:11px; color:#74796e; }
+.gh-badge { padding:8px 12px; background:#dcd6c2; border:1px solid #c6b99e; border-radius:5px; font-size:12px; }
+.gh-status { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; border-block:1px solid var(--gh-line); padding:10px 0; margin-bottom:12px; font-size:12px; overflow-wrap:anywhere; }
+.gh-status>span { color:var(--gh-muted); }
+.gh-section,.gh-review { background:#faf9f0; border:1px solid var(--gh-line); border-radius:10px; padding:14px; margin-bottom:12px; }
+.gloomhaven-panel h3 { font-size:13px; font-weight:650; line-height:1.4; }
+.gh-settings { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; margin:15px 0; }
+.gh-settings label { display:flex; gap:8px; align-items:center; font-size:12px; }
+.gh-settings select { width:100%; min-width:0; padding:7px; margin:0; color:#26353c; background:#fffdf7; border:1px solid #c9cabd; border-radius:6px; }
+.gh-tabs { display:flex; gap:5px; flex-wrap:wrap; }
+.gh-tabs button { min-height:29px; padding:5px 8px; font-size:10px; }
+.gh-classes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:14px 0; }
+.gloomhaven-panel .gh-class { display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:6px; border-left:4px solid var(--class-color); padding:12px; }
+.gh-class strong { font-size:16px; }
+.gh-class span { font-size:11px; }
+.gh-heroes { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin:12px 0; }
+.gh-hero { background:#f7f7ee; border:1px solid var(--gh-line); border-top:3px solid var(--class-color); border-radius:7px; padding:9px 10px; overflow-wrap:anywhere; }
+.gh-hero.is-current { border-color:#9b7143; box-shadow:0 0 0 1px #9b7143; background:#fff7df; }
+.gh-hero.is-exhausted { opacity:.62; }
+.gh-hero strong { font-size:12px; display:block; }
+.gh-owner { font-size:10px; color:var(--gh-muted); line-height:1.5; margin:3px 0; }
+.gh-stats { display:flex; gap:5px 9px; flex-wrap:wrap; font-size:11px; }
+.gh-health { margin:7px 0; height:3px; background:#dedbd2; border-radius:2px; overflow:hidden; }
+.gh-health>i { display:block; height:100%; background:#a9604b; }
+.gh-layout { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:14px; align-items:start; }
+.gh-map-section { background:#24363b; color:#edeede; padding:14px; border:1px solid #30474c; border-radius:11px; }
+.gh-map-section .gh-tabs button { background:#354b50; border-color:#51666a; color:#ecebd8; }
+.gh-map-section .gh-tabs button[aria-pressed="true"] { background:#cead76; border-color:#cead76; color:#253b3e; }
+.gh-map { width:100%; margin:12px 0; min-height:160px; background:radial-gradient(ellipse at center,#3c5052,#203337); border-radius:7px; }
+.gh-map svg { width:100%; height:auto; display:block; max-height:370px; }
+.gh-hex { cursor:default; }
+.gh-hex polygon { fill:#4b5d5b; stroke:#263d41; stroke-width:1.7; }
+.gh-hex.is-reachable { cursor:pointer; }
+.gh-hex.is-reachable polygon { fill:#586f67; stroke:#a6c4a7; stroke-width:2; }
+.gh-hex.is-selected polygon { fill:#8c784f; stroke:#f5d593; stroke-width:3; }
+.gh-hex .gh-token { fill:#4b8d9b; stroke:#dbe7d7; stroke-width:1.6; }
+.gh-hex .gh-token.monster { fill:#9c5d50; stroke:#e8ab80; }
+.gh-hex .gh-token.active { stroke:#ffe0a1; stroke-width:3; }
+.gh-hex text { text-anchor:middle; dominant-baseline:central; fill:#f8f5e5; pointer-events:none; font-family:Arial,sans-serif; }
+.gh-hex .gh-token-icon { font-size:18px; }
+.gh-hex .gh-hex-detail { font-size:8px; font-weight:bold; }
+.gh-hex .gh-terrain { font-size:19px; }
+.gh-legend { display:flex; flex-wrap:wrap; gap:6px 12px; color:#c6d0c4; font-size:9px; line-height:1.5; }
+.gh-elements { display:flex; flex-wrap:wrap; gap:5px; padding:10px 0; margin-top:6px; border-block:1px solid #49605e; }
+.gh-element { padding:5px 7px; border-radius:4px; background:#ffffff0a; color:#e4e5d4; font-size:10px; }
+.gh-element.is-empty { color:#bdc4b7; opacity:.62; }
+.gh-element.is-strong { background:#8a754f; }
+.gh-queue { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.gh-initiative { background:#344a4c; border:1px solid #5a6c65; border-radius:5px; padding:5px 7px; font-size:10px; }
+.gh-initiative.is-current { background:#d4b584; color:#283e40; border-color:#d4b584; }
+.gh-initiative.is-done { opacity:.55; }
+.gh-monster-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-top:9px; }
+.gh-monster-card { padding:8px; background:#ffffff0a; border:1px solid #566762; border-radius:6px; font-size:10px; line-height:1.7; }
+.gh-last-attack { margin-top:10px; padding:9px; background:#ffffff0d; border-left:2px solid #ba8b58; font-size:11px; overflow-wrap:anywhere; }
+.gh-command-section { padding:13px; background:#fbfaf3; border:1px solid var(--gh-line); border-radius:11px; }
+.gh-command { padding:11px 0; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+.gh-command strong { color:#875535; }
+.gh-actions { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 12px; }
+.gh-actions button { flex:1 1 95px; }
+.gh-primary { background:#314f55!important; border-color:#314f55!important; color:#fff8e9!important; }
+.gh-danger { background:#9d5745!important; border-color:#9d5745!important; color:#fff8e9!important; }
+.gh-selected-action { display:flex; flex-wrap:wrap; gap:7px; align-items:center; padding:9px; border:1px solid #b4976a; border-radius:7px; margin-bottom:10px; background:#f5ebd2; }
+.gh-selected-action span { font-size:11px; flex:1 1 90px; overflow-wrap:anywhere; }
+.gh-hand { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:480px; overflow-y:auto; overscroll-behavior:contain; padding:2px; scrollbar-width:thin; align-content:start; }
+.gloomhaven-panel .gh-card { position:relative; display:flex; flex-direction:column; align-items:stretch; padding:0; text-align:left; border:1px solid #c6cabd; border-top:3px solid var(--class-color,#947956); border-radius:7px; background:#f5f3e7; color:#283c42; overflow-wrap:anywhere; min-height:136px; }
+.gh-card.is-selected { outline:2px solid #987044; outline-offset:-2px; background:#ede0be!important; color:#283c42!important; }
+.gh-card-title { display:flex; justify-content:space-between; gap:5px; padding:8px 9px; font-size:12px; align-items:center; border-bottom:1px solid #d4d5c6; }
+.gh-card-title strong { font-size:20px; font-family:Georgia,serif; color:#925e3d; }
+.gh-card-half { padding:8px 9px; font-size:11px; line-height:1.55; flex:1; border-bottom:1px solid #d8d7c8; }
+.gh-card-half:last-child { border:0; }
+.gh-card-half b { display:block; font-size:9px; color:#768273; font-weight:normal; margin-bottom:3px; }
+.gh-half-buttons { display:flex; gap:4px; margin-top:5px; }
+.gh-half-buttons button { flex:1; padding:4px 5px; min-height:28px; font-size:10px; }
+.gh-card-selection { background:#36535a; color:#fff5da; padding:4px 8px; text-align:center; font-size:10px; border-radius:0 0 5px 5px; }
+.gh-muted { font-size:11px; color:var(--gh-muted); overflow-wrap:anywhere; }
+.gh-details { margin-top:11px; border-top:1px solid #97a09255; padding-top:9px; font-size:11px; }
+.gh-details summary { cursor:pointer; padding:3px 0; }
+.gh-log { max-height:155px; overflow-y:auto; padding-left:20px; line-height:1.8; margin:8px 0 0; color:#cbd3c8; overflow-wrap:anywhere; }
+.gh-pile-cards { display:flex; flex-wrap:wrap; gap:5px; max-height:170px; overflow-y:auto; margin-top:8px; }
+.gh-pile-cards span { padding:5px 7px; border-radius:4px; background:#e5e5da; font-size:10px; }
+.gh-review { border-left:4px solid #a8844d; }
+.gh-review h3 { font-size:15px; }
+.gh-review>button { margin-top:10px; }
+.gh-rest-options { display:flex; gap:8px; flex-wrap:wrap; }
+.gh-rest { margin-top:9px; padding:9px; border:1px solid var(--gh-line); border-radius:7px; font-size:11px; display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+.gh-score { font-size:12px; margin-top:8px; overflow-wrap:anywhere; }
+.gh-tooltip { position:fixed; z-index:12000; width:max-content; max-width:min(300px,calc(100vw - 24px)); padding:9px 12px; border:1px solid #526660; border-radius:7px; background:#203a3e; color:#fff9e9; font-size:12px; line-height:1.6; box-shadow:0 5px 20px #0004; pointer-events:none; overflow-wrap:anywhere; }
+.gh-dialog { width:min(660px,calc(100vw - 24px)); max-width:calc(100vw - 24px); max-height:calc(100dvh - 32px); border:1px solid #aca386; border-radius:12px; padding:20px; background:#faf8ed; color:#273c40; box-shadow:0 15px 80px #0005; }
+.gh-dialog::backdrop { background:#132529b3; }
+.gh-dialog h2 { font-size:19px; }
+.gh-dialog h3 { margin-top:20px; font-size:15px; }
+.gh-dialog p,.gh-dialog li { font-size:13px; line-height:1.9; overflow-wrap:anywhere; }
+.gh-dialog .gh-row { position:sticky; top:-20px; padding-block:10px; background:#faf8ed; z-index:1; }
+.gh-explaining [data-gh-explain] { outline:2px dashed #ce9b58!important; outline-offset:1px; cursor:help!important; }
+.gh-explaining .gh-hex[data-gh-explain] { outline:0!important; }
+.gh-explaining .gh-hex polygon { stroke:#e1b16c; stroke-dasharray:4 3; }
+@media (max-width:1000px) { .gh-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .gh-heroes { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:720px) { .gh-layout { grid-template-columns:minmax(0,1fr); gap:10px; } .gh-map-section,.gh-command-section { padding:11px; } .gh-map svg { max-height:300px; } .gh-hand { max-height:390px; } .gh-classes { grid-template-columns:repeat(2,minmax(0,1fr)); } .gh-settings { gap:8px; } .gh-settings label { flex-wrap:wrap; gap:4px; } .gh-heading h2 span { display:block; margin-top:5px; } .gh-badge { padding:7px; font-size:10px; } .gh-heading { align-items:flex-start; } }
+@media (max-width:360px) { .gloomhaven-panel { padding:10px; } .gh-hero { padding:8px; } .gh-stats { gap:4px 7px; font-size:10px; } .gh-card-title { padding:6px; font-size:11px; } .gh-card-half { padding:7px; font-size:10px; } .gh-classes { gap:7px; } .gloomhaven-panel .gh-class { padding:9px; } }
+
+#roomControlsPanel.gh-your-turn.collapsed { border-color:#c84c3b; box-shadow:inset 0 0 0 2px #c84c3b; }
+.gh-round-report { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; max-height:210px; overflow-y:auto; margin-top:10px; }
+.gh-report-group { font-size:11px; line-height:1.7; padding:8px; background:#eeeee3; border:1px solid #d6d6c5; border-radius:6px; overflow-wrap:anywhere; }
+.gh-report-group.is-yours { background:#f4e6c5; border-color:#bda06c; }
+.gh-report-group strong { display:block; margin-bottom:4px; }
+@media (max-width:480px) { .gh-round-report { grid-template-columns:minmax(0,1fr); } }

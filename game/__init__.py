@@ -1,6 +1,9 @@
+from game.exploding_kittens import ExplodingKittensGame
+from game.gloomhaven import GloomhavenGame
 from game.the_crew import TheCrewGame
 from game.maskmen import MaskmenGame
 from game.startups import StartupsGame
+from game.natsumemo import NatsumemoGame
 from game.skull_king import SkullKingGame
 from game.deception import DeceptionGame
 from game.mind_the_lines import MindTheLinesGame
@@ -94,9 +97,12 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "ExplodingKittensGame",
+    "GloomhavenGame",
     "TheCrewGame",
     "MaskmenGame",
     "StartupsGame",
+    "NatsumemoGame",
     "SkullKingGame",
     "DeceptionGame",
     "MindTheLinesGame",

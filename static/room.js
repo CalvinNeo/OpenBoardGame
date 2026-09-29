@@ -756,7 +756,9 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  mall_of_horror: 1.94,
   startups: 1.58,
+  natsumemo: 1.33,
   orloj: 3.61,
   challengers: 1.79,
   las_vegas: 1.17,
@@ -815,6 +817,7 @@ const GAME_WEIGHT = {
   splendor_pokemon: 1.851063829787234,
   texas_holdem: 2.430830039525692,
   the_gang: 1.58,
+  the_crew: 1.97,
   trekking_history: 1.76,
   turing_machine: 2.41,
   kronologic: 2.05,
@@ -1023,6 +1026,7 @@ function createRoomForGame(gameId, config = null) {
 }
 
 function showCreateRoomGameStep() {
+  if (typeof hideGuandanSetup === "function") hideGuandanSetup();
   const theCrewSetup = document.getElementById("theCrewSetupStep");
   if (theCrewSetup) { theCrewSetup.classList.add("hidden"); theCrewSetup.setAttribute("aria-hidden", "true"); }
   if (pendingGameSetupSelection) {
@@ -1134,6 +1138,24 @@ function showCatanStarfarersSetupStep() {
 async function selectGameFromModal(gameId) {
   pendingGameSetupSelection = null;
   setRoomFeedback();
+  if (gameId === "guandan") {
+    const selection = {};
+    pendingGameSetupSelection = selection;
+    setRoomFeedback("Loading game setup...");
+    try {
+      await ensureGameAssets("guandan");
+    } catch {
+      if (pendingGameSetupSelection !== selection || createRoomModal.classList.contains("hidden")) return;
+      pendingGameSetupSelection = null;
+      setRoomFeedback("Could not load game setup. Select Guandan to retry.", true);
+      return;
+    }
+    if (pendingGameSetupSelection !== selection || createRoomModal.classList.contains("hidden")) return;
+    pendingGameSetupSelection = null;
+    setRoomFeedback();
+    showGuandanSetup();
+    return;
+  }
   if (gameId === "the_crew") {
     const selection = {};
     pendingGameSetupSelection = selection;
@@ -1556,6 +1578,9 @@ function getRoomStartReason() {
   if (!socket.connected) return "Connection lost. Reconnecting...";
   if (!roomSessionReady) return "Reconnect to the room before playing.";
   if (currentRoomState.status !== "lobby") return "Game already started.";
+  if (currentRoomState.game_type === "the_crew" && currentRoomState.host_player_id !== playerId) {
+    return "Waiting for the host to choose a mission.";
+  }
   if (typeof isGameAssetsLoaded === "function" && !isGameAssetsLoaded(currentGameType)) {
     return "Loading game files...";
   }
@@ -1595,18 +1620,20 @@ function updateRoomActionButtons() {
   addBotBtn.textContent = pendingRoomRequest?.event === "room:add_bot" ? "Adding..." : "Add Bot";
   removeBotBtn.disabled = !available || !inLobby || !players.some((player) => player.is_bot);
   leaveBtn.disabled = !roomId || busy;
-  reopenBtn.disabled = !available || !["in_game", "game_over"].includes(currentRoomState?.status);
+  reopenBtn.disabled = !available || !["in_game", "game_over"].includes(currentRoomState?.status)
+    || (currentRoomState?.game_type === "the_crew" && currentRoomState.host_player_id !== playerId);
   autoSaveToggle.disabled = !available || Boolean(currentRoomState?.auto_save);
   downloadMemoriesBtn.disabled = !available || !currentRoomState?.supports_memories || inLobby;
   createBtn.disabled = busy;
   updateRoomCreateButtonLabel();
-  document.querySelectorAll("#createRoomModal .game-item, #forestShuffleEnglishBtn, #forestShuffleChineseBtn, [data-catan-starfarers-setup]")
+  document.querySelectorAll("#createRoomModal .game-item, #forestShuffleEnglishBtn, #forestShuffleChineseBtn, [data-catan-starfarers-setup], #theCrewSetupCreate, #guandanSetupCreateBtn")
     .forEach((button) => { button.disabled = busy; });
   roomActionStatus.textContent = roomFeedbackMessage || (inLobby ? reason || "Ready to start." : "");
   roomActionStatus.classList.toggle("room-feedback-error", roomFeedbackIsError);
   createRoomStatus.textContent = roomFeedbackMessage;
   createRoomStatus.classList.toggle("room-feedback-error", roomFeedbackIsError);
   updateGameReconnectButton();
+  if (typeof syncTheCrewRoomControls === "function") syncTheCrewRoomControls();
 }
 
 function ensureRoomConnection(requiresRoom = true) {
@@ -1698,7 +1725,9 @@ function updateReopenButton() {
     currentRoomState && (currentRoomState.status === "in_game" || currentRoomState.status === "game_over");
   reopenBtn.classList.toggle("hidden", !showButton);
   reopenBtn.setAttribute("aria-hidden", (!showButton).toString());
-  reopenBtn.disabled = !showButton;
+  const theCrew = currentRoomState?.game_type === "the_crew";
+  reopenBtn.textContent = theCrew ? "Restart" : "Reopen";
+  reopenBtn.disabled = !showButton || (theCrew && currentRoomState.host_player_id !== playerId);
 }
 
 function closeReopenConfirmModal(restoreFocus = true) {
@@ -1732,6 +1761,10 @@ function requestRoomReopen(event) {
   const activeRoomId = roomId || (currentRoomState && currentRoomState.room_id);
   if (!activeRoomId || !currentRoomState) {
     log("Not in a room");
+    return;
+  }
+  if (currentRoomState.game_type === "the_crew") {
+    if (typeof openTheCrewMissionPicker === "function") openTheCrewMissionPicker("restart");
     return;
   }
   if (currentRoomState.status === "game_over") {

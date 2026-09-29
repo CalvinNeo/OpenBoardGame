@@ -86,6 +86,7 @@ DEFAULT_CONFIG = {
     "bot_search_finalize_reserve_ms": 35,
     "bot_endgame_search_reserve_ratio": 0.5,
     "bot_mcts_time_ms": 220,
+    "bot_mcts_max_time_ms": None,
     "bot_mcts_cost_guard": True,
     "bot_mcts_cost_probe_fraction": 0.15,
     "bot_mcts_short_budget_threshold_ms": 350,
@@ -93,6 +94,7 @@ DEFAULT_CONFIG = {
     "bot_mcts_short_budget_tree_ply": 0,
     "bot_mcts_short_budget_reply_width": 1,
     "bot_minimax_time_ms": 180,
+    "bot_minimax_max_time_ms": None,
 }
 
 _NN_CHECKPOINT_ROOT = Path(__file__).resolve().parent.parent
@@ -227,6 +229,7 @@ def _base_rank_order(level_rank: int) -> List[int]:
     return order
 
 
+@functools.lru_cache(maxsize=512)
 def _point_order_value(rank: int, level_rank: int, joker: Optional[str] = None) -> int:
     if joker == "big":
         return 100
@@ -234,8 +237,10 @@ def _point_order_value(rank: int, level_rank: int, joker: Optional[str] = None) 
         return 90
     if rank == level_rank:
         return 80
-    base = _base_rank_order(level_rank)
-    return 60 - base.index(rank)
+    if rank in RANKS:
+        # Removing the level rank shifts only the lower ordinary ranks up one.
+        return 46 + rank + (2 <= level_rank <= 14 and rank < level_rank)
+    return 60 - _base_rank_order(level_rank).index(rank)
 
 
 def _single_order_value(card: Dict, level_rank: int) -> int:
@@ -246,8 +251,10 @@ def _single_order_value(card: Dict, level_rank: int) -> int:
         return 90
     if card.get("rank") == level_rank:
         return 70
-    base = _base_rank_order(level_rank)
-    return 60 - base.index(card.get("rank"))
+    rank = card.get("rank")
+    if rank in RANKS:
+        return 46 + rank + (2 <= level_rank <= 14 and rank < level_rank)
+    return 60 - _base_rank_order(level_rank).index(rank)
 
 
 def _card_sort_key(card: Dict, level_rank: int) -> Tuple[int, int, int]:
@@ -1248,13 +1255,17 @@ def _list_single_options(hand: List[Dict], level_rank: int, threshold: int) -> L
 
 
 def _list_rank_group_options(
-    hand: List[Dict], level_rank: int, threshold: int, size: int, materialization_limit: int = 1
+    hand: List[Dict], level_rank: int, threshold: int, size: int, materialization_limit: int = 1,
+    *, info: Optional[Dict] = None,
 ) -> List[List[int]]:
-    info = _hand_info(hand, level_rank)
+    if info is None:
+        info = _hand_info(hand, level_rank)
     strength = _rank_strength(level_rank)
+    wild_count = len(info["wild_cards"])
     options: List[List[int]] = []
     for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
-        if strength[rank] <= threshold:
+        if (strength[rank] <= threshold
+                or len(info["normals_by_rank"].get(rank, ())) + wild_count < size):
             continue
         options.extend(
             _materialize_rank_requirements(
@@ -1274,10 +1285,11 @@ def _list_rank_group_options(
 
 
 def _list_full_house_options(
-    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1,
+    *, info: Optional[Dict] = None,
 ) -> List[List[int]]:
     strength = _rank_strength(level_rank)
-    base_info = _hand_info(hand, level_rank)
+    base_info = _hand_info(hand, level_rank) if info is None else info
     ranks = _ranks_sorted_by_strength(level_rank, ascending=True)
     counts = {rank: len(cards) for rank, cards in base_info["normals_by_rank"].items()}
     wild_count = len(base_info["wild_cards"])
@@ -1328,13 +1340,17 @@ def _list_full_house_options(
 
 
 def _list_straight_options(
-    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1,
+    *, info: Optional[Dict] = None,
 ) -> List[List[int]]:
     options: List[List[int]] = []
     hand_map = _map_hand_by_id(hand)
-    info = _hand_info(hand, level_rank)
+    if info is None:
+        info = _hand_info(hand, level_rank)
+    ranks = info["normals_by_rank"]
+    wild_count = len(info["wild_cards"])
     for seq, high_value in STRAIGHT_SEQUENCES:
-        if high_value <= threshold:
+        if high_value <= threshold or sum(rank not in ranks for rank in seq) > wild_count:
             continue
         generation_limit = (
             1
@@ -1381,15 +1397,21 @@ def _list_straight_options(
 
 
 def _list_three_pairs_options(
-    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1,
+    *, info: Optional[Dict] = None,
 ) -> List[List[int]]:
     options: List[List[int]] = []
-    info = _hand_info(hand, level_rank)
+    if info is None:
+        info = _hand_info(hand, level_rank)
+    missing = {rank: max(0, 2 - len(info["normals_by_rank"].get(rank, ()))) for rank in RANKS}
+    wild_count = len(info["wild_cards"])
     for start in range(2, 14):
         high_value = start + 2
         if high_value <= threshold or start + 2 > 14:
             continue
         seq = [start, start + 1, start + 2]
+        if sum(missing[rank] for rank in seq) > wild_count:
+            continue
         options.extend(
             _materialize_rank_requirements(
                 hand,
@@ -1403,15 +1425,21 @@ def _list_three_pairs_options(
 
 
 def _list_steel_plate_options(
-    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1,
+    *, info: Optional[Dict] = None,
 ) -> List[List[int]]:
     options: List[List[int]] = []
-    info = _hand_info(hand, level_rank)
+    if info is None:
+        info = _hand_info(hand, level_rank)
+    missing = {rank: max(0, 3 - len(info["normals_by_rank"].get(rank, ()))) for rank in RANKS}
+    wild_count = len(info["wild_cards"])
     for start in range(2, 14):
         high_value = start + 1
         if high_value <= threshold or start + 1 > 14:
             continue
         seq = [start, start + 1]
+        if missing[start] + missing[start + 1] > wild_count:
+            continue
         options.extend(
             _materialize_rank_requirements(
                 hand,
@@ -2520,7 +2548,7 @@ class GuandanGame:
                 }
             )
 
-        def _adaptive_search_budget_ms(configured_ms: int) -> int:
+        def _adaptive_search_budget_ms(configured_ms: int, maximum_ms: Optional[int] = None) -> int:
             now = time.perf_counter()
             reserve_ms = max(
                 0,
@@ -2545,6 +2573,8 @@ class GuandanGame:
                     (decision_deadline - now) * 1000.0 - reserve_ms,
                 )
                 target_ms = max(target_ms, soft_remaining_ms)
+            if maximum_ms is not None:
+                target_ms = min(target_ms, max(0, int(maximum_ms)))
             return max(0, int(min(target_ms, hard_remaining_ms)))
 
         try:
@@ -2655,7 +2685,9 @@ class GuandanGame:
                         25,
                         int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)),
                     )
-                    minimax_budget_ms = _adaptive_search_budget_ms(configured_minimax_budget_ms)
+                    minimax_budget_ms = _adaptive_search_budget_ms(
+                        configured_minimax_budget_ms, config.get("bot_minimax_max_time_ms")
+                    )
                     deadline = min(search_deadline, time.perf_counter() + minimax_budget_ms / 1000.0)
                     minimax_started_at = time.perf_counter()
                     public_closeout = None
@@ -2744,7 +2776,9 @@ class GuandanGame:
                         25,
                         int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)),
                     )
-                    mcts_budget_ms = _adaptive_search_budget_ms(configured_mcts_budget_ms)
+                    mcts_budget_ms = _adaptive_search_budget_ms(
+                        configured_mcts_budget_ms, config.get("bot_mcts_max_time_ms")
+                    )
                     deadline = min(search_deadline, time.perf_counter() + mcts_budget_ms / 1000.0)
                     _progress("mcts", 0.22, "Preparing MCTS search")
                     mcts_started_at = time.perf_counter()
