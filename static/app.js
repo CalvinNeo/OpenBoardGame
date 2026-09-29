@@ -199,6 +199,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "the_crew") {
+    if (typeof renderTheCrewGameState === "function") renderTheCrewGameState(data);
+    return;
+  }
   if (gameType === "maskmen") {
     if (typeof renderMaskmenGameState === "function") renderMaskmenGameState(data);
     return;

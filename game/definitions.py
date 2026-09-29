@@ -1,3 +1,4 @@
+from game.the_crew import TheCrewGame, ACTION_SCHEMA as THE_CREW_ACTION_SCHEMA, CONFIG_SCHEMA as THE_CREW_CONFIG_SCHEMA
 from game.maskmen import MaskmenGame, ACTION_SCHEMA as MASKMEN_ACTION_SCHEMA, CONFIG_SCHEMA as MASKMEN_CONFIG_SCHEMA
 from game.startups import StartupsGame, ACTION_SCHEMA as STARTUPS_ACTION_SCHEMA, CONFIG_SCHEMA as STARTUPS_CONFIG_SCHEMA
 from game.skull_king import SkullKingGame, ACTION_SCHEMA as SKULL_KING_ACTION_SCHEMA, CONFIG_SCHEMA as SKULL_KING_CONFIG_SCHEMA
@@ -122,6 +123,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=TheCrewGame.game_id, name="The Crew (1 / 2)", name_zh="宇航员",
+        min_players=2, max_players=5, turn_mode="turn",
+        action_schema=THE_CREW_ACTION_SCHEMA, config_schema=THE_CREW_CONFIG_SCHEMA,
+        module=TheCrewGame, serialize=TheCrewGame.serialize, deserialize=TheCrewGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

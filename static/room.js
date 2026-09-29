@@ -1023,6 +1023,8 @@ function createRoomForGame(gameId, config = null) {
 }
 
 function showCreateRoomGameStep() {
+  const theCrewSetup = document.getElementById("theCrewSetupStep");
+  if (theCrewSetup) { theCrewSetup.classList.add("hidden"); theCrewSetup.setAttribute("aria-hidden", "true"); }
   if (pendingGameSetupSelection) {
     pendingGameSetupSelection = null;
     setRoomFeedback();
@@ -1132,6 +1134,24 @@ function showCatanStarfarersSetupStep() {
 async function selectGameFromModal(gameId) {
   pendingGameSetupSelection = null;
   setRoomFeedback();
+  if (gameId === "the_crew") {
+    const selection = {};
+    pendingGameSetupSelection = selection;
+    setRoomFeedback("Loading game setup...");
+    try {
+      await ensureGameAssets("the_crew");
+    } catch {
+      if (pendingGameSetupSelection !== selection || createRoomModal.classList.contains("hidden")) return;
+      pendingGameSetupSelection = null;
+      setRoomFeedback("Could not load game setup. Select The Crew to retry.", true);
+      return;
+    }
+    if (pendingGameSetupSelection !== selection || createRoomModal.classList.contains("hidden")) return;
+    pendingGameSetupSelection = null;
+    setRoomFeedback();
+    showTheCrewSetup();
+    return;
+  }
   if (gameId === "forest_shuffle" && forestShuffleLanguageStep) {
     showForestShuffleLanguageStep();
     return;

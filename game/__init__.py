@@ -1,3 +1,4 @@
+from game.the_crew import TheCrewGame
 from game.maskmen import MaskmenGame
 from game.startups import StartupsGame
 from game.skull_king import SkullKingGame
@@ -93,6 +94,7 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "TheCrewGame",
     "MaskmenGame",
     "StartupsGame",
     "SkullKingGame",

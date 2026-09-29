@@ -1,183 +1,192 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-point_salad-1 {
+    #pointSaladPanel {
+        --ps-ink: #244331;
+        --ps-muted: #647565;
+        --ps-green: #397448;
+        --ps-line: #dce5d8;
+        container: point-salad / inline-size;
+        color: var(--ps-ink);
+        font-family: "Work Sans", Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    #pointSaladPanel * { min-width: 0; }
+    #pointSaladPanel :is(h3, h4, p) { margin: 0; }
+    #pointSaladPanel :is(button, summary, [tabindex]) { -webkit-tap-highlight-color: transparent; }
+    #pointSaladPanel button { font: inherit; color: inherit; touch-action: manipulation; }
+    #pointSaladPanel :is(button, summary, [tabindex]):focus-visible { outline: 3px solid #397448; outline-offset: 3px; }
 
-.point-salad-piles,
-.point-salad-market {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
+    .point-salad-status, .point-salad-turn, .point-salad-section-heading, .point-salad-shelf-heading,
+    .point-salad-player-header, .point-salad-card-top, .point-salad-card-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+    .point-salad-status { padding: 12px 16px; border: 1px solid var(--ps-line); border-radius: 14px; background: #f3f7ef; margin-bottom: 14px; }
+    .point-salad-status.your-turn { border-color: #9cbb82; background: #edf5e5; }
+    .point-salad-turn { justify-content: flex-start; gap: 12px; flex: 1; }
+    .point-salad-status-icon { font-size: 32px; flex-shrink: 0; }
+    .point-salad-turn strong { display: block; font-size: 17px; overflow-wrap: anywhere; }
+    .point-salad-eyebrow { font-size: 11px; color: var(--ps-muted); letter-spacing: .04em; }
+    .point-salad-counter { flex-shrink: 0; padding: 5px 9px; border-radius: 8px; background: #fff; font-size: 12px; }
+    .point-salad-winner { padding: 12px; margin-bottom: 12px; background: #fff4ce; border: 1px solid #e8d18a; border-radius: 12px; overflow-wrap: anywhere; }
 
-.point-salad-card {
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 8px;
-  background: #fff;
-  text-align: left;
-  cursor: pointer;
-}
+    .point-salad-workspace { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    .point-salad-workspace.spectating { grid-template-columns: minmax(0, 1fr); }
+    #pointSaladPanel.game-over .point-salad-workspace { grid-template-columns: minmax(0, 1fr); }
+    #pointSaladPanel.game-over .point-salad-market-panel { display: none; }
+    .point-salad-market-panel, .point-salad-own-panel { padding: 14px; border: 1px solid var(--ps-line); border-radius: 14px; }
+    .point-salad-market-panel { background: #fffdf7; }
+    .point-salad-own-panel { background: #f7faf4; }
+    .point-salad-section-heading { margin-bottom: 12px; flex-wrap: wrap; }
+    #pointSaladPanel h3 { font-size: 17px; font-weight: 600; }
+    #pointSaladPanel h4 { font-size: 12px; font-weight: 600; }
+    .point-salad-shelf-heading { margin: 12px 0 7px; color: var(--ps-muted); font-size: 11px; flex-wrap: wrap; }
+    .point-salad-piles, .point-salad-market { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .point-salad-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #dedfca;
+        border-radius: 10px;
+        background: #fff;
+        text-align: left;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+        box-shadow: 0 2px 0 #e8e7db;
+    }
+    #pointSaladPanel .point-salad-card:disabled { opacity: 1; cursor: default; }
+    .point-salad-pile { min-height: 150px; }
+    .point-salad-card-top { font-size: 11px; color: var(--ps-muted); flex-wrap: wrap; }
+    .point-salad-card-top strong { color: var(--ps-ink); font-size: 12px; }
+    .point-salad-rule { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+    .point-salad-rule-type { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--ps-muted); }
+    .point-salad-rule-symbols { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px; font-size: 18px; font-weight: 600; line-height: 1.45; }
+    .point-salad-rule-term { max-width: 100%; }
+    .point-salad-rule-note { font-size: 11px; color: #596658; }
+    .point-salad-card-bottom { font-size: 11px; color: var(--ps-muted); margin-top: auto; flex-wrap: wrap; }
+    .point-salad-pick-indicator { display: block; color: var(--ps-muted); font-size: 10px; min-height: 14px; }
+    .point-salad-card.selected .point-salad-pick-indicator { color: #246136; font-weight: 600; }
+    #pointSaladPanel .point-salad-card.selected { border-color: #397448; box-shadow: inset 0 0 0 1px #397448, 0 2px 0 #d5dfca; background: #edf6e6; }
+    .point-salad-veggie-card { align-items: center; gap: 2px; padding: 8px 6px; background: var(--ps-veggie-bg, #fff); border-color: var(--ps-veggie-border, #ddd); }
+    .point-salad-veggie-icon { font-size: 31px; line-height: 1.2; }
+    .point-salad-veggie-name { font-size: 12px; font-weight: 600; }
+    .point-salad-card.empty { border-style: dashed; box-shadow: none; background: #f4f3ec; color: #7b8375; justify-content: center; align-items: center; }
+    .point-salad-card.empty .point-salad-veggie-icon { opacity: .45; }
 
-.point-salad-card.selected {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-}
+    [data-point-salad-veggie="Lettuce"] { --ps-veggie-bg: #edf5dc; --ps-veggie-border: #cadba8; }
+    [data-point-salad-veggie="Pepper"] { --ps-veggie-bg: #fff4ce; --ps-veggie-border: #e9d790; }
+    [data-point-salad-veggie="Tomato"] { --ps-veggie-bg: #ffebe4; --ps-veggie-border: #ebc7b9; }
+    [data-point-salad-veggie="Carrot"] { --ps-veggie-bg: #fff0dc; --ps-veggie-border: #efd2a8; }
+    [data-point-salad-veggie="Onion"] { --ps-veggie-bg: #f5e9ed; --ps-veggie-border: #dfc7d0; }
+    [data-point-salad-veggie="Cabbage"] { --ps-veggie-bg: #efebfa; --ps-veggie-border: #d5caea; }
 
-.point-salad-card.disabled {
-  cursor: default;
-  opacity: 0.6;
-}
+    .point-salad-action-tray { border-top: 1px solid #e6e4d7; padding-top: 11px; margin-top: 12px; }
+    .point-salad-selection { min-height: 37px; font-size: 12px; overflow-wrap: anywhere; }
+    .point-salad-selection strong { font-weight: 600; display: block; }
+    #pointSaladSelectedFlips { display: block; color: #885929; margin-top: 3px; }
+    .point-salad-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+    #pointSaladPanel .point-salad-actions button { min-height: 40px; padding: 8px; border: 1px solid #397448; background: #397448; color: #fff; font-size: 12px; font-weight: 600; border-radius: 8px; }
+    #pointSaladPanel .point-salad-actions button:disabled { opacity: 1; color: #899184; background: #eeeee5; border-color: #e0e1d6; cursor: default; }
+    .point-salad-score { padding: 5px 9px; border-radius: 8px; background: #e6efd9; font-size: 17px; font-weight: 600; white-space: nowrap; }
+    .point-salad-veggie-counts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+    .point-salad-veggie-count { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid var(--ps-veggie-border); border-radius: 8px; padding: 6px 2px; background: var(--ps-veggie-bg); }
+    .point-salad-veggie-count span { font-size: 22px; line-height: 1.25; }
+    .point-salad-veggie-count strong { font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .point-salad-card-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 332px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; margin: -4px; scrollbar-width: thin; }
+    .point-salad-owned-card { min-height: 120px; box-shadow: none; }
+    .point-salad-owned-card.readonly { cursor: default; }
+    .point-salad-owned-card .point-salad-rule-symbols { font-size: 16px; }
+    .point-salad-owned-card.selected .point-salad-card-bottom { color: #246136; font-weight: 600; }
+    .point-salad-empty-state { grid-column: 1 / -1; padding: 25px 12px; border: 1px dashed #cfdcc5; border-radius: 10px; color: var(--ps-muted); text-align: center; font-size: 12px; }
+    .point-salad-empty-state span { display: block; font-size: 30px; margin-bottom: 6px; }
 
-.point-salad-card-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
+    .point-salad-table { margin-top: 16px; }
+    .point-salad-table .point-salad-section-heading { margin-bottom: 8px; }
+    .point-salad-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 10px; align-items: start; }
+    .point-salad-player { padding: 10px; border: 1px solid var(--ps-line); background: #fff; border-radius: 12px; }
+    .point-salad-player.current { border-color: #89a774; background: #f8fbf3; }
+    .point-salad-player.winner { border-color: #cba856; background: #fffbed; }
+    .point-salad-player-header { margin-bottom: 8px; align-items: flex-start; }
+    .point-salad-player-name { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+    .point-salad-player-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .point-salad-player-badge { border-radius: 4px; background: #eaf0e1; padding: 1px 5px; color: #547049; font-size: 10px; }
+    .point-salad-player .point-salad-score { font-size: 14px; flex-shrink: 0; }
+    .point-salad-player .point-salad-veggie-count { flex-direction: row; flex-wrap: wrap; padding: 4px 1px; gap: 2px; }
+    .point-salad-player .point-salad-veggie-count span { font-size: 17px; }
+    .point-salad-player .point-salad-veggie-count strong { font-size: 12px; }
+    .point-salad-player summary { padding: 8px 0 0; font-size: 11px; color: var(--ps-muted); cursor: pointer; }
+    .point-salad-player details[open] summary { margin-bottom: 10px; }
+    .point-salad-player .point-salad-card-list { max-height: 230px; }
 
-.point-salad-card-meta {
-  font-size: 12px;
-  color: #555;
-}
-
-.point-salad-player {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 8px;
-  background: #fafafa;
-}
-
-.point-salad-player.current {
-  border-color: #2563eb;
-  background: #eff6ff;
-}
-
-.point-salad-card-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.point-salad-card-chip {
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 4px 6px;
-  background: #fff;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.point-salad-card-chip.selected {
-  border-color: #2563eb;
-  background: #dbeafe;
-}
-
-.point-salad-card-chip.readonly {
-  cursor: default;
-  background: #f3f4f6;
-}
+    @media (hover: hover) {
+        #pointSaladPanel .point-salad-card:not(:disabled):hover { border-color: #699354; box-shadow: inset 0 0 0 1px #699354; }
+        #pointSaladPanel .point-salad-actions button:not(:disabled):hover { background: #2b5b37; }
+    }
+    @container point-salad (max-width: 720px) {
+        .point-salad-workspace { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+        .point-salad-card-list { max-height: 265px; }
+    }
+    @container point-salad (max-width: 390px) {
+        #pointSaladPanel .point-salad-status { padding: 9px 10px; gap: 6px; margin-bottom: 10px; }
+        .point-salad-status-icon { font-size: 25px; }
+        .point-salad-turn { gap: 8px; }
+        .point-salad-turn strong { font-size: 14px; }
+        .point-salad-turn .point-salad-eyebrow { display: none; }
+        .point-salad-eyebrow { font-size: 10px; letter-spacing: 0; }
+        .point-salad-counter { font-size: 10px; padding: 4px 6px; }
+        .point-salad-market-panel, .point-salad-own-panel { padding: 10px; border-radius: 11px; }
+        #pointSaladPanel h3 { font-size: 15px; }
+        .point-salad-section-heading { margin-bottom: 8px; }
+        .point-salad-piles, .point-salad-market { gap: 6px; }
+        .point-salad-card { padding: 8px 6px; gap: 5px; }
+        .point-salad-pile { min-height: 122px; }
+        .point-salad-card-top { gap: 3px; font-size: 10px; }
+        .point-salad-rule-symbols { font-size: 16px; gap: 2px 5px; }
+        .point-salad-rule-type { font-size: 9px; }
+        .point-salad-rule-note { font-size: 10px; }
+        .point-salad-veggie-card { padding: 6px 3px; gap: 1px; }
+        .point-salad-veggie-icon { font-size: 26px; }
+        .point-salad-veggie-name { font-size: 11px; }
+        .point-salad-veggie-card .point-salad-pick-indicator { display: none; }
+        .point-salad-veggie-card.selected .point-salad-veggie-name::before { content: "✓ "; }
+        .point-salad-veggie-counts { gap: 4px; }
+        .point-salad-veggie-count span { font-size: 20px; }
+        .point-salad-score { font-size: 15px; }
+        .point-salad-players { max-height: 390px; overflow-y: auto; padding: 3px; scrollbar-width: thin; }
+    }
 }
 
 @media all, obg-game-point_salad-2 {
-
-/* Point Salad Help/Explain */
-.point-salad-header-btn {
-  padding: 4px 10px;
-  font-size: 13px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #f9fafb;
-  cursor: pointer;
-}
-
-.point-salad-header-btn:hover {
-  background: #f3f4f6;
-}
-
-.point-salad-header-btn.active {
-  background: #dbeafe;
-  border-color: #3b82f6;
-  color: #1d4ed8;
-}
-
-body.point-salad-explain-mode button.has-explanation {
-  outline: 2px dashed #3b82f6;
-  outline-offset: 2px;
-  cursor: help;
-}
-
-body.point-salad-explain-mode button.has-explanation:hover {
-  outline-color: #1d4ed8;
-  outline-style: solid;
-}
-
-.point-salad-help-modal {
-  max-width: 720px;
-}
-
-.point-salad-help-content {
-  max-height: 70vh;
-  overflow-y: auto;
-  line-height: 1.6;
-}
-
-.point-salad-help-content h3 {
-  margin: 16px 0 8px;
-  font-size: 16px;
-  color: #111827;
-}
-
-.point-salad-help-content h3:first-child {
-  margin-top: 0;
-}
-
-.point-salad-help-content h4 {
-  margin: 12px 0 6px;
-  font-size: 14px;
-  color: #374151;
-}
-
-.point-salad-help-content ul {
-  margin: 8px 0;
-  padding-left: 20px;
-}
-
-.point-salad-help-content ol {
-  margin: 8px 0;
-  padding-left: 20px;
-}
-
-.point-salad-help-content li {
-  margin-bottom: 4px;
-}
-
-.point-salad-help-content p {
-  margin: 8px 0;
-}
-
-.point-salad-explain-modal {
-  max-width: 520px;
-}
+    .point-salad-header-btn { border: 1px solid #d2ddc9; border-radius: 8px; background: #f4f7ef; color: #396244; cursor: pointer; }
+    .point-salad-header-btn.active { background: #dcebcf; border-color: #699354; }
+    body.point-salad-explain-mode .point-salad-has-explanation { outline: 2px dashed #397448 !important; outline-offset: 2px; cursor: help !important; }
+    body.point-salad-explain-mode .point-salad-has-explanation:hover { outline-style: solid !important; }
+    .point-salad-explain-hint { padding: 9px 12px; background: #e9f1e0; border-radius: 8px; margin-bottom: 12px; font-size: 12px; }
+    .point-salad-help-modal { max-width: 680px; }
+    .point-salad-explain-modal { max-width: 500px; }
+    :is(.point-salad-help-modal, .point-salad-explain-modal) { color: #244331; border-radius: 14px; overflow-wrap: anywhere; }
+    :is(.point-salad-help-modal, .point-salad-explain-modal) .modal-header { background: #f3f7ed; border-radius: 14px 14px 0 0; gap: 12px; }
+    :is(.point-salad-help-modal, .point-salad-explain-modal) .modal-header h2 { font-size: 18px; min-width: 0; }
+    :is(.point-salad-help-modal, .point-salad-explain-modal) .modal-header button { border: 1px solid #cad7c2; background: #fff; padding: 7px 12px; border-radius: 7px; color: #396244; flex-shrink: 0; cursor: pointer; }
+    .point-salad-help-content { line-height: 1.6; font-size: 14px; }
+    .point-salad-help-content h3 { margin: 16px 0 6px; font-size: 15px; }
+    .point-salad-help-content h3:first-child { margin-top: 0; }
+    .point-salad-help-content p { margin: 6px 0; }
+    .point-salad-help-content ul { margin: 6px 0; padding-left: 20px; }
+    .point-salad-help-content li { margin-bottom: 5px; }
+    .point-salad-help-veggies { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+    .point-salad-help-veggies span { padding: 4px 8px; border: 1px solid var(--ps-veggie-border); background: var(--ps-veggie-bg); border-radius: 7px; font-size: 12px; }
 }
 
 @media all, obg-game-point_salad-3 {
-
-#pointSaladExplainContent {
-  line-height: 1.6;
-}
-
-#pointSaladExplainContent h4 {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: #111827;
-}
-
-#pointSaladExplainContent p {
-  margin: 6px 0;
-  color: #374151;
-}
-
-#pointSaladExplainContent .hint {
-  color: #6b7280;
-  font-size: 12px;
-}
+    #pointSaladExplainContent { line-height: 1.6; font-size: 14px; }
+    #pointSaladExplainContent h4 { margin: 0 0 8px; font-size: 17px; }
+    #pointSaladExplainContent p { margin: 8px 0; }
+    .point-salad-tooltip { position: fixed; z-index: 1100; max-width: min(280px, calc(100vw - 24px)); width: max-content; padding: 9px 12px; border-radius: 9px; background: #244331; color: #fff; font: 12px/1.5 Arial, sans-serif; box-shadow: 0 4px 16px #16301e25; overflow-wrap: anywhere; pointer-events: none; }
 }

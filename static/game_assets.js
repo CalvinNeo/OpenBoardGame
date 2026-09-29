@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "the_crew": {
+    "scripts": ["/static/games/the_crew.js?v=1"],
+    "styles": ["/static/games/the_crew.css?v=1"],
+    "markup": "/static/games/the_crew.html?v=1",
+    "panel": "theCrewPanel",
+    "header": "showTheCrewHeaderActions"
+  },
   "maskmen": {
     "scripts": ["/static/games/maskmen.js?v=3"],
     "styles": ["/static/games/maskmen.css?v=2"],
@@ -353,13 +360,13 @@ const GAME_ASSETS = {
   },
   "point_salad": {
     "scripts": [
-      "/static/games/point_salad.js?v=app_v4"
+      "/static/games/point_salad.js?v=app_v5"
     ],
     "styles": [],
     "panel": "pointSaladPanel",
     "header": "showPointSaladHeaderActions",
-    "markup": "/static/games/point_salad.html?v=1",
-    "styleFragments": "/static/games/point_salad.css?v=1"
+    "markup": "/static/games/point_salad.html?v=2",
+    "styleFragments": "/static/games/point_salad.css?v=2"
   },
   "forest_shuffle": {
     "scripts": [

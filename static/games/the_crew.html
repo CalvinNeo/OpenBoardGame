@@ -1,0 +1,55 @@
+<template data-game-target="theCrewSetupStep" data-game-mode="contents">
+  <div class="the-crew-setup">
+    <button id="theCrewSetupBack" type="button" class="create-room-back-btn">← Back to games</button>
+    <div class="the-crew-setup-heading"><span aria-hidden="true">🧑‍🚀</span><div><h3>One crew. Two adventures.</h3><p>Choose an edition · 2–5 players</p></div></div>
+    <div class="the-crew-editions" role="group" aria-label="Edition">
+      <button type="button" data-the-crew-edition="1" aria-pressed="true"><span aria-hidden="true">🚀</span><strong>1 · 第九行星任务</strong><small>The Quest for Planet Nine · 50 missions</small></button>
+      <button type="button" data-the-crew-edition="2" aria-pressed="false"><span aria-hidden="true">🌊</span><strong>2 · 深海任务</strong><small>Mission Deep Sea · 32 missions</small></button>
+    </div>
+    <div class="the-crew-setup-fields">
+      <label>Mode <select id="theCrewSetupMode"><option value="campaign">Campaign</option><option value="custom">Custom mission</option></select></label>
+      <label id="theCrewMissionField">Start at <select id="theCrewSetupMission" aria-label="Starting mission"></select></label>
+      <label id="theCrewCountField" class="hidden">Tasks <select id="theCrewSetupCount"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
+      <label id="theCrewDifficultyField" class="hidden">Difficulty <select id="theCrewSetupDifficulty" aria-label="Total task difficulty"></select></label>
+      <label id="theCrewOrderField" class="hidden">Task order <select id="theCrewSetupOrder"><option value="none">Any order</option><option value="numbered">Numbered</option><option value="relative">Relative &gt;</option></select></label>
+      <label id="theCrewCommField" class="hidden">Communication <select id="theCrewSetupComm"><option value="normal">Normal</option><option value="hidden">Hidden marker</option><option value="none">None</option></select></label>
+    </div>
+    <p class="the-crew-setup-note" id="theCrewSetupNote">两人游戏自动加入公开助手，由指挥官操控。</p>
+    <button type="button" id="theCrewSetupCreate" class="the-crew-primary">Create Room</button>
+  </div>
+</template>
+<template data-game-target="theCrewHeaderActions" data-game-mode="contents">
+  <button id="theCrewHelpBtn" type="button" title="Help">Help</button><button id="theCrewExplainBtn" type="button" title="Explain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="theCrewPanel" data-game-mode="contents">
+  <header class="the-crew-heading"><div><div class="the-crew-eyebrow" id="theCrewEdition">THE QUEST FOR PLANET NINE</div><h2>THE CREW <span>宇航员</span></h2></div><div class="the-crew-mission-mark" id="theCrewMission" tabindex="0" data-tc-explain="mission" data-tc-tip="Mission（任务关卡）／Attempt（尝试次数）。全队共同成功或失败。">MISSION 01</div></header>
+  <div class="the-crew-status"><strong id="theCrewStatus" role="status" aria-live="polite">Waiting to start</strong><span id="theCrewTrickNumber" tabindex="0" data-tc-explain="trick" data-tc-tip="Trick（墩）：每人出一张，最大者收走整墩并领出下一墩。"></span></div>
+  <div id="theCrewPlayers" class="the-crew-players" aria-label="Crew members"></div>
+  <div class="the-crew-layout">
+    <div class="the-crew-flightdeck">
+      <section class="the-crew-table" aria-label="Current trick">
+        <div class="the-crew-section-heading"><h3 id="theCrewTableTitle">Flight deck</h3><span id="theCrewLead" tabindex="0" data-tc-explain="trick" data-tc-tip="必须跟随领出的花色；没有该花色才能出其他牌。"></span></div>
+        <div id="theCrewTrick" class="the-crew-trick"></div>
+        <div class="the-crew-review hidden" id="theCrewReview"><strong id="theCrewResult"></strong><span id="theCrewReason"></span></div>
+      </section>
+      <section class="the-crew-hand-area" aria-label="Your cards">
+        <div class="the-crew-section-heading"><h3 id="theCrewHandTitle">Your hand</h3><span id="theCrewHandHint"></span></div>
+        <div id="theCrewHand" class="the-crew-hand"></div>
+        <div id="theCrewHelperArea" class="the-crew-helper-area hidden"><div class="the-crew-section-heading"><h3 id="theCrewHelperTitle">JARVIS</h3><span tabindex="0" data-tc-explain="helper" data-tc-tip="Helper（助手）：指挥官代打；只可使用明牌，下方暗牌在整墩结束后翻开。">🂠 7 columns</span></div><div id="theCrewHelper" class="the-crew-hand"></div></div>
+        <div id="theCrewSelection" class="the-crew-selection hidden"><strong id="theCrewSelectedLabel"></strong><div id="theCrewSelectedActions" class="the-crew-buttons"></div></div>
+      </section>
+      <section id="theCrewControls" class="the-crew-controls" aria-label="Available actions"></section>
+    </div>
+    <aside class="the-crew-objectives">
+      <div class="the-crew-section-heading"><h3>Mission tasks</h3><span id="theCrewTaskCount" tabindex="0" data-tc-explain="tasks" data-tc-tip="Tasks（任务）：每张有指定成员，所有任务均完成才能共同成功。"></span></div>
+      <div class="the-crew-mission-rule" id="theCrewMissionRule" tabindex="0" data-tc-explain="mission"></div>
+      <div id="theCrewTasks" class="the-crew-tasks"></div>
+      <section class="the-crew-signals"><div class="the-crew-section-heading"><h3>📡 Communications</h3><span id="theCrewCommCount" tabindex="0" data-tc-explain="communication"></span></div><div id="theCrewSignals"></div></section>
+      <details class="the-crew-journal"><summary>Mission log</summary><ol id="theCrewLog"></ol></details>
+    </aside>
+  </div>
+  <div id="theCrewTooltip" class="the-crew-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="theCrewDialog" data-game-mode="replace">
+  <dialog id="theCrewDialog" class="the-crew-dialog" aria-labelledby="theCrewDialogTitle"><div class="the-crew-dialog-heading"><h2 id="theCrewDialogTitle">The Crew</h2><button id="theCrewDialogClose" type="button">Close</button></div><div id="theCrewDialogBody"></div></dialog>
+</template>
