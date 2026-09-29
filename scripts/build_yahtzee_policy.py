@@ -1,7 +1,7 @@
 """Build the bundled Yahtzee table using a C++17 compiler, then gzip it.
 
 Run from any directory: python3 scripts/build_yahtzee_policy.py
-Only Python's standard library and a compiler are needed for this offline step.
+Uses the game's Python environment and a compiler for this offline step.
 The server needs neither a compiler nor extra Python dependencies.
 """
 

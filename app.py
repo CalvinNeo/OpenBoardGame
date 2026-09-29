@@ -158,6 +158,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_skull_king_save(source_room_id):
+        raise HTTPException(status_code=403, detail="This Skull King game is still active. Reconnect to the existing room.")
     if _has_unfinished_deception_save(source_room_id):
         raise HTTPException(status_code=403, detail="This Deception case is still active. Reconnect to the existing room.")
     if _has_live_private_save(source_room_id, "power_grid"):
@@ -294,6 +296,55 @@ def _has_live_private_save(source_room_id: str, game_type: str) -> bool:
     )
 
 
+def _has_unfinished_skull_king_save(source_room_id: str) -> bool:
+    if _has_live_private_save(source_room_id, "skull_king"):
+        return True
+    payload = _load_latest_save(source_room_id)
+    return bool(payload and payload.get("game_type") == "skull_king"
+                and isinstance(payload.get("game_state"), dict)
+                and not payload["game_state"].get("game_over"))
+
+
+def _restore_skull_king_for_reconnect(room_id: str, player_id: str, token: str) -> Optional[Room]:
+    """Recover private hands from disk only for an authenticated original seat."""
+    if not all(isinstance(value, str) for value in (room_id, player_id, token)) or not _is_safe_room_id(room_id):
+        return None
+    payload = _load_latest_save(room_id)
+    if not payload or payload.get("game_type") != "skull_king":
+        return None
+    saved_players, saved_state = payload.get("players"), payload.get("game_state")
+    if not isinstance(saved_players, list) or not isinstance(saved_state, dict):
+        return None
+    if not any(isinstance(raw, dict) and raw.get("player_id") == player_id
+               and not raw.get("is_bot") and raw.get("reconnect_token") == token and token
+               for raw in saved_players):
+        return None
+    try:
+        definition = _get_game_definition("skull_king")
+        state = definition.deserialize(saved_state)
+        players = [Player(
+            player_id=raw["player_id"], name=raw["name"], seat=raw["seat"], socket_id=None,
+            ready=bool(raw.get("ready")), connected=bool(raw.get("is_bot")),
+            seat_claimed=True, is_bot=bool(raw.get("is_bot")),
+            reconnect_token=raw["reconnect_token"], last_seen=time.time(),
+        ) for raw in saved_players]
+        if (len({player.player_id for player in players}) != len(players)
+                or {player.player_id for player in players} != set(state["players"])):
+            return None
+        definition.module.get_public_view(state, player_id)
+        room = Room(
+            room_id=room_id, game_type="skull_king", game_config=dict(state["config"]),
+            status="game_over" if state["game_over"] else "in_game", players=players,
+            state_version=int(payload.get("state_version", 0)), game_state=state, auto_save=True,
+            source_room_ids=[value for value in payload.get("source_room_ids", [])
+                             if isinstance(value, str) and _is_safe_room_id(value)],
+        )
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return None
+    ROOMS[room_id] = room
+    return room
+
+
 def _has_unfinished_deception_save(source_room_id: str) -> bool:
     if _has_live_private_save(source_room_id, "deception"):
         return True
@@ -301,6 +352,47 @@ def _has_unfinished_deception_save(source_room_id: str) -> bool:
     return bool(payload and payload.get("game_type") == "deception"
                 and isinstance(payload.get("game_state"), dict)
                 and not payload["game_state"].get("game_over"))
+
+
+def _restore_deception_for_reconnect(room_id: str, player_id: str, token: str) -> Optional[Room]:
+    """Restore an autosaved private case only for a holder of an original seat token."""
+    if not all(isinstance(value, str) for value in (room_id, player_id, token)) or not _is_safe_room_id(room_id):
+        return None
+    payload = _load_latest_save(room_id)
+    if not payload or payload.get("game_type") != "deception":
+        return None
+    saved_players, saved_state = payload.get("players"), payload.get("game_state")
+    if not isinstance(saved_players, list) or not isinstance(saved_state, dict):
+        return None
+    if not any(isinstance(raw, dict) and raw.get("player_id") == player_id
+               and not raw.get("is_bot") and raw.get("reconnect_token") == token and token
+               for raw in saved_players):
+        return None
+    try:
+        state = _get_game_definition("deception").deserialize(saved_state)
+        players = [Player(
+            player_id=raw["player_id"], name=raw["name"], seat=raw["seat"], socket_id=None,
+            ready=bool(raw.get("ready")), connected=bool(raw.get("is_bot")),
+            seat_claimed=True, is_bot=bool(raw.get("is_bot")),
+            reconnect_token=raw["reconnect_token"], last_seen=time.time(),
+        ) for raw in saved_players]
+        if len({player.player_id for player in players}) != len(players):
+            return None
+        if {player.player_id for player in players} != set(state["roles"]):
+            return None
+        # Check the serialized shape before making the restored room visible.
+        _get_game_definition("deception").module.get_public_view(state, player_id)
+        room = Room(
+            room_id=room_id, game_type="deception", game_config=dict(state["config"]),
+            status="game_over" if state["game_over"] else "in_game", players=players,
+            state_version=int(payload.get("state_version", 0)), game_state=state, auto_save=True,
+            source_room_ids=[value for value in payload.get("source_room_ids", [])
+                             if isinstance(value, str) and _is_safe_room_id(value)],
+        )
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return None
+    ROOMS[room_id] = room
+    return room
 
 
 def _find_player(room: Room, player_id: str) -> Optional[Player]:
@@ -456,7 +548,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -575,6 +667,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "skull_king":
+        return {"type": action.get("type")}
     if game_type == "deception":
         return {"type": action.get("type")}
     if game_type == "mind_the_lines":
@@ -1484,6 +1578,10 @@ async def on_room_reconnect(sid, data):
         return
     room = _get_room(room_id)
     if not room:
+        room = _restore_deception_for_reconnect(room_id, player_id, reconnect_token)
+    if not room:
+        room = _restore_skull_king_for_reconnect(room_id, player_id, reconnect_token)
+    if not room:
         await _send_error(sid, "room not found")
         return
     player = _find_player(room, player_id)
@@ -1523,6 +1621,8 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
+    if room.game_type in ("deception", "skull_king"):
+        await _maybe_run_bots(room)
 
 
 @sio.on("room:leave")
@@ -1879,6 +1979,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_skull_king_save(source_room_id)
         or _has_unfinished_deception_save(source_room_id)
         or _has_live_private_save(source_room_id, "challengers")
         or _has_live_private_save(source_room_id, "love_letter")

@@ -216,6 +216,15 @@ class YahtzeePolicyTableTests(unittest.TestCase):
             sheet = make_state(remaining=[cat])["players"]["bot"]["score_sheet"]
             self.assertAlmostEqual(expected_remaining_score(sheet), face * 5 * (1 - (5 / 6) ** 3), places=5)
 
+    def test_upper_bonus_is_counted_only_when_newly_earned(self):
+        sheet = make_state(remaining=["ones"])["players"]["bot"]["score_sheet"]
+        sheet.update(twos=10, threes=12, fours=20, fives=20, sixes=0)
+        ones_mean = 5 * (1 - (5 / 6) ** 3)
+        # At 62, at least one 1 among the fifteen opportunities earns the bonus.
+        self.assertAlmostEqual(expected_remaining_score(sheet), ones_mean + 35 * (1 - (5 / 6) ** 15), places=5)
+        sheet["fives"] = 25  # Bonus already earned: never collect it a second time.
+        self.assertAlmostEqual(expected_remaining_score(sheet), ones_mean, places=5)
+
     def test_exported_values_satisfy_bellman_equation(self):
         samples = [(ALL_CATEGORIES, 0, False), (0, 63, True)]
         rng = random.Random(612)

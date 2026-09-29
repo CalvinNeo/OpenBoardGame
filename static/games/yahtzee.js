@@ -24,8 +24,8 @@ function getYahtzeeConfig() {
 
 function updateYahtzeeConfigHint() {
   yahtzeeBotStrategyHint.textContent = getYahtzeeConfig().bot_strategy === "dynamic_programming"
-    ? "Dynamic programming: plans keeps, rerolls and scoring for the highest expected final score, including bonuses. Applies to all bots."
-    : "Original AI: random rerolls, then the highest immediate score. Applies to all bots.";
+    ? "DP = dynamic programming. Plans for the highest expected final score. All bots."
+    : "Original AI: random rerolls and immediate scores. All bots.";
 }
 
 function updateYahtzeeConfigRow() {
@@ -94,6 +94,8 @@ function renderYahtzeeDice(view) {
     const die = document.createElement("button");
     die.type = "button";
     die.className = "yahtzee-die";
+    die.dataset.yahtzeeExplain = "die";
+    die.dataset.yahtzeeDie = String(idx);
     if (locked[idx]) {
       die.classList.add("locked");
     }
@@ -154,15 +156,34 @@ function renderYahtzeeScorecards(view) {
     const nameLabel = player.name || player.player_id || "-";
     nameEl.textContent = player.player_id === view.you ? `${nameLabel} (You)` : nameLabel;
     const totalEl = document.createElement("div");
+    totalEl.className = "yahtzee-score-summary";
     const totalValue = Number.isInteger(player.total) ? player.total : 0;
     const upperTotal = Number.isInteger(player.upper_total) ? player.upper_total : 0;
     const lowerTotal = Number.isInteger(player.lower_total) ? player.lower_total : 0;
     const upperBonus = Number.isInteger(player.upper_bonus) ? player.upper_bonus : 0;
     const yahtzeeBonus = Number.isInteger(player.yahtzee_bonus) ? player.yahtzee_bonus : 0;
-    totalEl.textContent = `Total: ${totalValue}`;
+    const totalLabel = document.createElement("span");
+    totalLabel.textContent = `Total: ${totalValue}`;
+    totalLabel.tabIndex = 0;
+    totalLabel.dataset.yahtzeeExplain = "total";
+    totalEl.appendChild(totalLabel);
     const note = document.createElement("span");
     note.className = "yahtzee-score-note";
-    note.textContent = `U ${upperTotal} + B ${upperBonus} + L ${lowerTotal} + Y ${yahtzeeBonus}`;
+    [
+      ["U", upperTotal, "upper", "Upper subtotal: Ones through Sixes."],
+      ["B", upperBonus, "bonus", "Upper bonus: +35 when U reaches 63."],
+      ["L", lowerTotal, "lower", "Lower subtotal: Three of a Kind through Chance."],
+      ["Y", yahtzeeBonus, "yahtzee_bonus", "Extra Yahtzee bonuses: +100 each after a scored 50."],
+    ].forEach(([label, value, key, tip], idx) => {
+      if (idx) note.appendChild(document.createTextNode(" + "));
+      const part = document.createElement("span");
+      part.className = "yahtzee-score-part";
+      part.textContent = `${label} ${value}`;
+      part.tabIndex = 0;
+      part.dataset.yahtzeeExplain = key;
+      part.dataset.yahtzeeTip = `${label} — ${tip}`;
+      note.appendChild(part);
+    });
     totalEl.appendChild(note);
     header.appendChild(nameEl);
     header.appendChild(totalEl);
@@ -173,6 +194,10 @@ function renderYahtzeeScorecards(view) {
     categories.forEach((category, idx) => {
       const row = document.createElement("div");
       row.className = "yahtzee-score-row";
+      row.dataset.yahtzeeExplain = "category";
+      row.dataset.yahtzeeCategory = category;
+      row.dataset.yahtzeePlayer = player.player_id;
+      row.tabIndex = 0;
       if (idx < 6) {
         row.classList.add("upper");
       } else {
@@ -199,8 +224,15 @@ function renderYahtzeeScorecards(view) {
         const canSelect = isActivePlayer && isViewerTurn && canScore && allowed.has(category);
         if (canSelect) {
           row.classList.add("possible");
+          row.setAttribute("role", "button");
           row.addEventListener("click", () => {
             sendAction({ type: "score", category });
+          });
+          row.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              row.click();
+            }
           });
         }
       }
@@ -216,6 +248,7 @@ function renderYahtzeeScorecards(view) {
 }
 
 function clearYahtzeeState() {
+  yahtzeeGuide.reset();
   currentYahtzeeView = null;
   if (yahtzeePhaseLabel) {
     yahtzeePhaseLabel.textContent = "-";
@@ -248,6 +281,7 @@ function clearYahtzeeState() {
 }
 
 function renderYahtzeeGameState(data) {
+  yahtzeeGuide.hideTip();
   const view = data.view;
   currentYahtzeeView = view;
   if (currentGameType !== "yahtzee") {

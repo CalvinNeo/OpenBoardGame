@@ -1,38 +1,51 @@
-<template data-game-target="yahtzeeConfigMount" data-game-mode="contents">
-  <div class="game-config-card hidden" id="yahtzeeConfigBox" aria-hidden="true">
+<template data-game-target="yahtzeeConfigBox" data-game-mode="contents">
     <div class="game-config-title">Yahtzee</div>
     <div class="row">
       <label for="yahtzeeBotStrategySelect">🤖 Bot AI</label>
-      <select id="yahtzeeBotStrategySelect" aria-describedby="yahtzeeBotStrategyHint">
+      <select id="yahtzeeBotStrategySelect" aria-describedby="yahtzeeBotStrategyHint" data-yahtzee-explain="ai">
         <option value="classic">Classic (original)</option>
         <option value="dynamic_programming">Strategic (DP)</option>
       </select>
     </div>
     <div class="hint" id="yahtzeeBotStrategyHint"></div>
-  </div>
+</template>
+<template data-game-target="yahtzeeHeaderActions" data-game-mode="contents">
+  <button id="yahtzeeHelpBtn" type="button" title="Help" aria-label="Help">📖<span class="yahtzee-header-label"> Help</span></button>
+  <button id="yahtzeeExplainBtn" type="button" title="Explain" aria-label="Explain" aria-pressed="false">🔎<span class="yahtzee-header-label"> Explain</span></button>
 </template>
 <template data-game-target="yahtzeePanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="yahtzeePhase">-</span></div>
-                <div>Round: <span id="yahtzeeRound">-</span></div>
-                <div>Current Turn: <span id="yahtzeeTurn">-</span></div>
-              </div>
-              <div class="row">
-                <div>Rolls: <span id="yahtzeeRolls">-</span></div>
-                <div>Winner: <span id="yahtzeeWinner">-</span></div>
-              </div>
+  <p id="yahtzeeExplainNotice" class="yahtzee-explain-notice" role="status" hidden>Select a highlighted item to explain. Esc to exit.</p>
+  <div class="row yahtzee-status">
+    <div tabindex="0" data-yahtzee-explain="phase">Phase: <span id="yahtzeePhase">-</span></div>
+    <div tabindex="0" data-yahtzee-explain="round">Round: <span id="yahtzeeRound">-</span></div>
+    <div tabindex="0" data-yahtzee-explain="turn">Current Turn: <span id="yahtzeeTurn">-</span></div>
+    <div tabindex="0" data-yahtzee-explain="rolls">Rolls: <span id="yahtzeeRolls">-</span></div>
+    <div tabindex="0" data-yahtzee-explain="winner">Winner: <span id="yahtzeeWinner">-</span></div>
+  </div>
 
-              <div id="yahtzeeJokerNotice" class="round-notice hidden">
-                <div class="round-notice-title">Joker</div>
-                <div id="yahtzeeJokerBody" class="round-notice-body">-</div>
-              </div>
+  <div id="yahtzeeJokerNotice" class="round-notice hidden" tabindex="0" data-yahtzee-explain="joker">
+    <div class="round-notice-title">Joker</div>
+    <div id="yahtzeeJokerBody" class="round-notice-body">-</div>
+  </div>
 
-              <h3>Dice</h3>
-              <div class="yahtzee-dice-container">
-                <div id="yahtzeeDice" class="yahtzee-dice"></div>
-                <button id="yahtzeeRollBtn">Roll</button>
-              </div>
+  <h3>Dice</h3>
+  <div class="yahtzee-dice-container">
+    <div id="yahtzeeDice" class="yahtzee-dice"></div>
+    <button id="yahtzeeRollBtn" type="button" data-yahtzee-explain="roll">Roll</button>
+  </div>
 
-              <h3>Scorecards</h3>
-              <div id="yahtzeeScorecards"></div>
-            </template>
+  <h3>Scorecards</h3>
+  <div id="yahtzeeScorecards"></div>
+</template>
+<template data-game-target="yahtzeeGuideOverlay" data-game-mode="replace">
+  <div id="yahtzeeGuideOverlay">
+    <dialog id="yahtzeeDialog" aria-labelledby="yahtzeeDialogTitle">
+      <div class="yahtzee-dialog-header">
+        <h2 id="yahtzeeDialogTitle">Help · Yahtzee</h2>
+        <button id="yahtzeeDialogCloseBtn" type="button" autofocus>Close</button>
+      </div>
+      <div id="yahtzeeDialogBody" class="yahtzee-dialog-body"></div>
+    </dialog>
+    <div id="yahtzeeTooltip" class="yahtzee-tooltip" role="tooltip" hidden></div>
+  </div>
+</template>
