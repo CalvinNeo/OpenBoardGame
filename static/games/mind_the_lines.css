@@ -23,8 +23,12 @@
 .mind-board { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
 .mind-board.is-locked { cursor: default; }
 .mind-board.is-erasing { cursor: cell; }
-.mind-base-line { stroke: #c3bdb6; stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 4 7; }
-.mind-base-line.is-ink { stroke: #302a40; stroke-width: 10; stroke-dasharray: none; }
+.mind-board.is-panning { cursor: grab; }
+.mind-base-line { stroke: #c3bdb6; stroke-width: calc(2.6px * var(--mind-stroke, 1)); stroke-linecap: round; stroke-dasharray: 4 7; }
+.mind-base-line.is-ink { stroke: #302a40; stroke-width: calc(10px * var(--mind-stroke, 1)); stroke-dasharray: none; }
+.mind-zoom-bar { position: absolute; right: 7px; bottom: 7px; display: flex; gap: 6px; z-index: 2; }
+.mind-zoom-bar button { width: 42px; height: 42px; padding: 0; border-radius: 50%; border: 1px solid #d8cfc0; background: #fffcf5e8; color: #584b61; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px #34204426; line-height: 1; }
+.mind-zoom-bar button[aria-pressed="true"] { color: #fff; background: var(--mind-purple); border-color: var(--mind-purple); }
 .mind-board-cover { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: #fffdf6bd; padding: 20px; text-align: center; font-size: 14px; font-weight: 650; pointer-events: none; }
 .mind-board-cover strong { font-size: 26px; color: var(--mind-purple); }
 .mind-toolbar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }

@@ -18,6 +18,12 @@
         <div id="mindTheLinesBoardWrap" class="mind-board-wrap" data-mind-explain="board">
           <svg id="mindTheLinesBoard" class="mind-board" viewBox="0 0 1000 1000" role="img" aria-label="Drawing board: trace the existing pale lines"></svg>
           <div id="mindTheLinesBoardCover" class="mind-board-cover"></div>
+          <div id="mindTheLinesZoomBar" class="mind-zoom-bar" hidden>
+            <button id="mindTheLinesZoomIn" type="button" data-mind-zoom="in" data-mind-explain="zoom" title="Zoom in" aria-label="Zoom in">🔍+</button>
+            <button id="mindTheLinesZoomOut" type="button" data-mind-zoom="out" data-mind-explain="zoom" title="Zoom out" aria-label="Zoom out">🔍−</button>
+            <button id="mindTheLinesZoomPan" type="button" data-mind-zoom="pan" data-mind-explain="zoom" title="Pan mode: drag to move the zoomed view" aria-label="Pan mode" aria-pressed="false" hidden>✋</button>
+            <button id="mindTheLinesZoomReset" type="button" data-mind-zoom="reset" data-mind-explain="zoom" title="Reset zoom" aria-label="Reset zoom" hidden>1×</button>
+          </div>
         </div>
         <div class="mind-toolbar" role="toolbar" aria-label="Drawing tools">
           <button id="mindTheLinesPen" type="button" data-mind-action="pen" data-mind-explain="pen" aria-pressed="true">✏️ Pen</button>

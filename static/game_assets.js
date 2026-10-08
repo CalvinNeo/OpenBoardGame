@@ -64,9 +64,9 @@ const GAME_ASSETS = {
     "header": "showDeceptionHeaderActions"
   },
   "mind_the_lines": {
-    "scripts": ["/static/games/mind_the_lines.js?v=1"],
-    "styles": ["/static/games/mind_the_lines.css?v=1"],
-    "markup": "/static/games/mind_the_lines.html?v=1",
+    "scripts": ["/static/games/mind_the_lines.js?v=2"],
+    "styles": ["/static/games/mind_the_lines.css?v=2"],
+    "markup": "/static/games/mind_the_lines.html?v=2",
     "panel": "mindTheLinesPanel",
     "header": "showMindTheLinesHeaderActions"
   },

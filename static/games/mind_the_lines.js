@@ -10,6 +10,7 @@
     const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[char]));
     const explanations = {
         board: "画板(✏️)：只可沿淡色预设短线段描画，不能添加自由笔迹、文字、数字或字母。鼠标拖动或单指滑动会吸附近处的线段。绘画计时结束或 Submit 后画板锁定。",
+        zoom: "Zoom(🔍)：放大画板局部，方便在手机上精准描画。🔍+／🔍− 按画面中心缩放，双指捏合可同时缩放和平移；✋ 开启后单指拖动平移画面，1× 恢复整体视图。缩放只改变自己的显示，不影响画稿。",
         pen: "Pen(✏️) 使用固定笔宽描出已有线段。按住并沿线移动可连续描画；轻点也可选中一条线。词语(🔒)只给本人看，不要用聊天或手势泄露线索。",
         eraser: "Eraser 擦除经过的已选线段。只改变你自己的画稿，计时结束或提交之后无法修改。",
         undo: "Undo(↶) 撤销最近一次笔画、擦除、翻面或旋转。撤销记录保存在当前浏览器中；刷新会恢复已保存画稿，但不会恢复撤销记录。",
@@ -36,6 +37,9 @@
     let chosenCard = null, pending = null, pendingTimer = null, configSignature = null;
     let explaining = false, suppressClickUntil = 0, pointerType = "mouse", tipTimer = null, returnFocus = null;
     let localClockExpired = false, awaitingResync = false;
+    let zoom = 1, panX = 0, panY = 0, pinchIds = null, pinchPrev = null, panPointer = null, panPrev = null, panMode = false;
+    const activePointers = new Map();
+    const MAX_ZOOM = 4;
 
     const own = () => view?.players?.find(player => player.player_id === view.you);
     const name = id => view?.players?.find(player => player.player_id === id)?.name || "—";
@@ -98,7 +102,7 @@
             <li><strong>猜测与排除：</strong>公开所有画作，以及真实词和等量干扰词。按顺序每人排除一个认为无人画出的词；2–3 人轮流两圈。不要交流额外线索。自己知道的词也会出现在候选中，谨慎判断。每次排除的正误暂时保密。</li>
             <li><strong>认领与回顾：</strong>所有排除结束后统一揭晓归属，每误排一个真实词计一个错误(❌)。所有人点击 Next Round 才继续；画板顺时针传给下一人，首位玩家顺移。</li></ol>
             <h3>合作胜负</h3><p>一局最多四轮。累计错误(❌)超过玩家人数时立即失败；四轮结束时错误不超过人数即全员获胜，<strong>错误刚好等于人数仍获胜</strong>。未排除的干扰词不另罚。最终结果保留供查看。</p>
-            <h3>画笔与保存</h3><p>鼠标按住或单指滑动连续描线；触摸只在画板区域接管拖动。Eraser 擦除线段，Undo(↶)撤销最近一次操作。Flip(↔)换面会清除当前面笔迹，可立即 Undo 恢复；Rotate(↻)连同笔迹旋转 90°。固定笔宽，无自由绘画或填充。</p><p>画稿自动保存，刷新恢复服务器收到的最新画稿，撤销历史不会保留。Submit 锁定画稿；全员提前提交可提前结束，超时自动使用最后保存的画稿。断线不停止绘画计时，轮末确认则必须由本人重连完成。</p>
+            <h3>画笔与保存</h3><p>鼠标按住或单指滑动连续描线；触摸只在画板区域接管拖动。Eraser 擦除线段，Undo(↶)撤销最近一次操作。Flip(↔)换面会清除当前面笔迹，可立即 Undo 恢复；Rotate(↻)连同笔迹旋转 90°。固定笔宽，无自由绘画或填充。</p><p>Zoom(🔍)：手机上可用画板角落的 🔍+／🔍− 放大局部精准描画，或双指捏合缩放并移动画面；✋ 开启后单指拖动平移，1× 恢复整体视图。缩放只影响自己的显示，不会改变画稿。</p><p>画稿自动保存，刷新恢复服务器收到的最新画稿，撤销历史不会保留。Submit 锁定画稿；全员提前提交可提前结束，超时自动使用最后保存的画稿。断线不停止绘画计时，轮末确认则必须由本人重连完成。</p>
             <h3>线上配置与原创内容</h3><p>2 minutes 为标准计时。3 minutes 与 Untimed 是线上练习便利选项。Easy／Hard 使用不同难度的原创中英词库；画板由程序生成，未复制商业画板、美术或完整词卡。练习机器人只按自身词语与公开画作行动，能力有限。</p>
             <h3>查看与操作</h3><p>点画作放大；点词卡后选择 Eliminate 或 Cancel。点击空白或按 Esc 取消未确认选择。轮末 Next Round 不再二次确认，每个席位分别确认，机器人只确认自己。旁观者可看公开进度和画廊，无法查看秘密词或未提交画稿。</p><p>Help 显示规则。Explain 之后点选画板、词卡、指标或按钮看解释，包括禁用按钮；此模式不会执行游戏操作，解释后自动退出，也可按 Esc。指标上的图标均配文字：词语(🔒)、时间(⏳)、画板(✏️)、错误(❌)。电脑悬停或键盘聚焦可查看说明；手机点按显示三秒提示。</p>`);
     }
@@ -146,6 +150,9 @@
         byId("Ready").textContent = own()?.ready ? "Ready ✓" : pending?.action === "ready" ? "Sending…" : "Ready";
         board.classList.toggle("is-locked", !drawing);
         board.classList.toggle("is-erasing", drawing && tool === "eraser");
+        byId("ZoomBar").hidden = !drawing;
+        if (!drawing && zoom !== 1) resetZoom();
+        else applyZoom();
         const cover = byId("BoardCover");
         cover.hidden = drawing || (view?.phase === "drawing" && own()?.submitted);
         if (!connected()) cover.innerHTML = "<strong>Reconnecting…</strong><span>Your draft is preserved.</span>";
@@ -319,10 +326,106 @@
 
     function pointFor(event) {
         const rect = board.getBoundingClientRect();
-        let x = (event.clientX - rect.left) * 1000 / rect.width - 500;
-        let y = (event.clientY - rect.top) * 1000 / rect.height - 500;
+        const size = 1000 / zoom;
+        let x = panX + (event.clientX - rect.left) * size / rect.width - 500;
+        let y = panY + (event.clientY - rect.top) * size / rect.height - 500;
         for (let i = 0; i < rotation; i += 1) [x, y] = [y, -x];
         return {x: x + 500, y: y + 500};
+    }
+
+    function applyZoom() {
+        if (zoom <= 1) panMode = false;
+        const size = 1000 / zoom;
+        panX = Math.max(0, Math.min(1000 - size, panX));
+        panY = Math.max(0, Math.min(1000 - size, panY));
+        board.setAttribute("viewBox", `${panX.toFixed(2)} ${panY.toFixed(2)} ${size.toFixed(2)} ${size.toFixed(2)}`);
+        board.style.setProperty("--mind-stroke", String(1 / Math.sqrt(zoom)));
+        board.classList.toggle("is-panning", panMode && zoom > 1);
+        if (!byId("ZoomBar")) return;
+        byId("ZoomIn").disabled = zoom >= MAX_ZOOM;
+        byId("ZoomOut").disabled = zoom <= 1;
+        byId("ZoomPan").hidden = zoom <= 1;
+        byId("ZoomReset").hidden = zoom <= 1;
+        byId("ZoomPan").setAttribute("aria-pressed", String(panMode && zoom > 1));
+    }
+
+    function zoomAt(nextZoom, fractionX, fractionY) {
+        const clamped = Math.max(1, Math.min(MAX_ZOOM, nextZoom));
+        const oldSize = 1000 / zoom, size = 1000 / clamped;
+        panX += fractionX * (oldSize - size);
+        panY += fractionY * (oldSize - size);
+        zoom = clamped;
+        applyZoom();
+    }
+
+    function endPan() {
+        const id = panPointer;
+        panPointer = null;
+        panPrev = null;
+        if (id !== null && board.hasPointerCapture?.(id)) board.releasePointerCapture(id);
+    }
+
+    function resetZoom() {
+        endPan();
+        endPinch();
+        zoom = 1;
+        panX = panY = 0;
+        panMode = false;
+        applyZoom();
+    }
+
+    function runZoom(kind) {
+        if (kind === "in") zoomAt(zoom * 1.5, 0.5, 0.5);
+        else if (kind === "out") zoomAt(zoom / 1.5, 0.5, 0.5);
+        else if (kind === "pan") { panMode = !panMode; applyZoom(); }
+        else resetZoom();
+    }
+
+    function pinchInfo() {
+        const [first, second] = pinchIds.map(id => activePointers.get(id));
+        const rect = board.getBoundingClientRect();
+        return {
+            dist: Math.hypot(first.x - second.x, first.y - second.y) || 1,
+            fractionX: ((first.x + second.x) / 2 - rect.left) / rect.width,
+            fractionY: ((first.y + second.y) / 2 - rect.top) / rect.height,
+        };
+    }
+
+    function startPinch() {
+        endPan();
+        pinchIds = Array.from(activePointers.keys()).slice(-2);
+        for (const id of pinchIds) { try { board.setPointerCapture(id); } catch { /* pointer may be gone */ } }
+        pinchPrev = pinchInfo();
+    }
+
+    function movePinch() {
+        const next = pinchInfo();
+        const oldSize = 1000 / zoom;
+        const focusX = panX + pinchPrev.fractionX * oldSize;
+        const focusY = panY + pinchPrev.fractionY * oldSize;
+        zoom = Math.max(1, Math.min(MAX_ZOOM, zoom * next.dist / pinchPrev.dist));
+        const size = 1000 / zoom;
+        panX = focusX - next.fractionX * size;
+        panY = focusY - next.fractionY * size;
+        pinchPrev = next;
+        applyZoom();
+    }
+
+    function endPinch() {
+        if (!pinchIds) return;
+        const ids = pinchIds;
+        pinchIds = null;
+        pinchPrev = null;
+        for (const id of ids) { if (board.hasPointerCapture?.(id)) board.releasePointerCapture(id); }
+    }
+
+    function movePan(event) {
+        const rect = board.getBoundingClientRect();
+        const size = 1000 / zoom;
+        panX -= (event.clientX - panPrev.x) * size / rect.width;
+        panY -= (event.clientY - panPrev.y) * size / rect.height;
+        panPrev = {x: event.clientX, y: event.clientY};
+        applyZoom();
     }
 
     function distanceToLine(point, line) {
@@ -333,7 +436,7 @@
 
     function markNearest(point) {
         const lines = view.your_board.sides[side];
-        let nearest = -1, distance = 17;
+        let nearest = -1, distance = Math.max(6, 17 / zoom);
         lines.forEach((line, index) => {
             if (tool === "eraser" && !selected.has(index)) return;
             const nextDistance = distanceToLine(point, line);
@@ -368,8 +471,30 @@
     }
 
     board.addEventListener("pointerdown", event => {
-        if (explaining || event.button !== 0 || !canDraw() || pointerId !== null) return;
+        if (explaining || event.button !== 0 || !canDraw()) return;
         event.preventDefault();
+        if (event.pointerType === "touch") {
+            activePointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
+            if (activePointers.size >= 2 && !pinchIds) {
+                if (pointerId !== null && strokeChanged) {
+                    const previous = history.pop();
+                    if (previous) { selected = new Set(previous.segments); side = previous.side; rotation = previous.rotation; }
+                    strokeChanged = false;
+                    changed();
+                }
+                finishPointer(false);
+                startPinch();
+                return;
+            }
+            if (pinchIds) return;
+        }
+        if (panMode && zoom > 1 && panPointer === null && pointerId === null) {
+            panPointer = event.pointerId;
+            panPrev = {x: event.clientX, y: event.clientY};
+            board.setPointerCapture(panPointer);
+            return;
+        }
+        if (!canDraw() || pointerId !== null) return;
         pointerId = event.pointerId;
         strokeSnapshot = snapshot();
         strokeChanged = false;
@@ -378,22 +503,50 @@
         drawTo(pointFor(event));
     });
     board.addEventListener("pointermove", event => {
+        if (activePointers.has(event.pointerId)) activePointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
+        if (pinchIds?.includes(event.pointerId)) {
+            event.preventDefault();
+            movePinch();
+            return;
+        }
+        if (event.pointerId === panPointer) {
+            event.preventDefault();
+            movePan(event);
+            return;
+        }
         if (event.pointerId !== pointerId) return;
         event.preventDefault();
         const samples = event.getCoalescedEvents?.() || [];
         for (const sample of samples.length ? samples : [event]) drawTo(pointFor(sample));
     });
-    board.addEventListener("pointerup", event => {
+    function releaseBoardPointer(event, draw) {
+        activePointers.delete(event.pointerId);
+        if (pinchIds?.includes(event.pointerId)) { endPinch(); return; }
+        if (event.pointerId === panPointer) { endPan(); return; }
         if (event.pointerId !== pointerId) return;
-        event.preventDefault();
-        drawTo(pointFor(event));
+        if (draw) {
+            event.preventDefault();
+            drawTo(pointFor(event));
+        }
         finishPointer(true);
+    }
+    board.addEventListener("pointerup", event => releaseBoardPointer(event, true));
+    board.addEventListener("pointercancel", event => releaseBoardPointer(event, false));
+    window.addEventListener("pointerup", event => activePointers.delete(event.pointerId), true);
+    window.addEventListener("pointercancel", event => activePointers.delete(event.pointerId), true);
+    board.addEventListener("lostpointercapture", event => {
+        if (pinchIds?.includes(event.pointerId)) { activePointers.delete(event.pointerId); endPinch(); return; }
+        if (event.pointerId === panPointer) { activePointers.delete(event.pointerId); endPan(); return; }
+        if (event.pointerId === pointerId) { activePointers.delete(event.pointerId); finishPointer(true); }
     });
-    board.addEventListener("pointercancel", event => { if (event.pointerId === pointerId) finishPointer(true); });
-    board.addEventListener("lostpointercapture", event => { if (event.pointerId === pointerId) finishPointer(true); });
 
     panel.addEventListener("click", event => {
         if (explaining) return;
+        const zoomButton = event.target.closest("[data-mind-zoom]");
+        if (zoomButton) {
+            if (!zoomButton.disabled) runZoom(zoomButton.dataset.mindZoom);
+            return;
+        }
         const action = event.target.closest("[data-mind-action]");
         if (action && !action.disabled) {
             const type = action.dataset.mindAction;
@@ -510,6 +663,8 @@
         window.clearInterval(timerId);
         timerId = null;
         finishPointer(false);
+        activePointers.clear();
+        resetZoom();
         view = null;
         context = drawingIdentity = baseIdentity = gallerySignature = null;
         selected = new Set();
@@ -556,6 +711,7 @@
             dirty = false;
             window.clearTimeout(saveTimer);
             tool = "pen";
+            resetZoom();
         } else if (serverDrawing && (serverDrawing.seq ?? -1) > sequence && pointerId === null && !dirty) {
             selected = new Set(serverDrawing.segments || []);
             side = serverDrawing.side || 0;

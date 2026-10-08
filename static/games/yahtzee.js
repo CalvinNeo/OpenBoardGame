@@ -140,7 +140,7 @@ function renderYahtzeeScorecards(view) {
   const canScore = isYahtzeeActionAvailable("score");
   const isViewerTurn = view.you && view.you === view.current_player;
 
-  (view.players || []).forEach((player) => {
+  [...(view.players || [])].sort((a, b) => Number(b.player_id === view.you) - Number(a.player_id === view.you)).forEach((player) => {
     const card = document.createElement("div");
     card.className = "yahtzee-scorecard player-card";
     if (player.player_id === view.current_player) {
