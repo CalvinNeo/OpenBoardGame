@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import itertools
 import math
 import random
@@ -2058,6 +2059,197 @@ def _current_hand_routes(state: Dict, player_id: str) -> Dict:
     return cache["hand_routes"]
 
 
+def _route_overbomb_willingness(hand_count: int) -> float:
+    """Willingness to answer a bomb with a bigger bomb, by enemy hand length.
+
+    Matches the 0.35 willingness the ordinary-lead bomb model applies for
+    middle-game hands, falls further while the enemy still holds most of
+    the deal, and rises to certainty once they are down to a few cards.
+    """
+    if hand_count <= 16:
+        return 0.35 + 0.65 * min(1.0, (16 - hand_count) / 10.0)
+    return 0.35 - 0.2 * min(1.0, (hand_count - 16) / 11.0)
+
+
+def _route_bomb_willingness(hand_count: int) -> float:
+    """Scale the ordinary-lead bomb reply for an enemy still holding a long hand.
+
+    The analytic model's flat willingness suits the middle game. An enemy
+    holding most of the deal rarely spends a bomb on a cheap lead that wins
+    one trick. Priced at the flat rate, every opening probe looked half lost
+    and every recovery worth half, which favoured covers with the fewest
+    groups regardless of the controls they dissolved to get there.
+    """
+    return 1.0 - 0.85 * min(1.0, max(0.0, (hand_count - 16) / 11.0))
+
+
+_WILD_BOMB_KINDS = ("bomb", "straight_flush")
+
+
+def _route_wild_misuse_penalty(
+    hand: List[Dict], cards: List[int], combo: Dict, level_rank: int,
+    play_cards: List[Dict], before: Optional[List[Dict]] = None,
+) -> float:
+    """Price a non-bomb group against the bomb its cards could still build.
+
+    A wildcard that completes a natural triple (or a straight flush) is a
+    universal control. Spending it on the cheapest compound that happens to
+    fit, or splitting the natural set it would upgrade, forfeits that
+    control. The group that forfeits it pays for the bomb it destroys, net of
+    whatever structure it builds with the wildcard itself. ``before`` is the
+    wild structure scan of ``hand``; callers pricing many groups of one hand
+    pass it in once.
+    """
+    uses_wild = bool(combo.get("uses_wild"))
+    is_wild = _CORE._is_wild
+    is_joker = _CORE._is_joker
+    combo_type = combo.get("type")
+    if combo_type in BOMB_TYPES and not uses_wild:
+        return 0.0
+    if uses_wild and combo_type in ("pair", "three") and all(
+        card.get("rank") == level_rank for card in play_cards
+    ):
+        # The heart of the level rank played as itself beside the other level
+        # cards is the top ordinary set, a control in its own right rather than
+        # a wildcard spent on filler.
+        return 0.0
+    if before is None:
+        before = _wild_structure_ranked_candidates(hand, level_rank)
+    best_before = next((cand for cand in before if cand["kind"] in _WILD_BOMB_KINDS), None)
+    if best_before is None:
+        return 0.0
+    if combo_type in BOMB_TYPES:
+        # A wild bomb pays for the better bomb it forfeits: upgrading a natural
+        # quad by one card costs the new bomb a natural triple would have made.
+        if combo_type == "straight_flush":
+            own = max((cand["score"] for cand in before if cand["kind"] == "straight_flush"), default=0.0)
+        else:
+            ranks = {card.get("rank") for card in play_cards
+                     if not is_joker(card) and not is_wild(card, level_rank)}
+            own = max((cand["score"] for cand in before
+                       if cand["kind"] == "bomb" and int(cand["rank"]) in ranks), default=0.0)
+        return max(0.0, best_before["score"] - own)
+    if not uses_wild:
+        # Without the wildcard, only groups that consume the natural material
+        # of the best bomb candidate can hurt it.
+        signature = best_before["signature"]
+        if signature[0] == "bomb":
+            rank = int(best_before["rank"])
+            touches = any(
+                card.get("rank") == rank and not is_joker(card) and not is_wild(card, level_rank)
+                for card in play_cards
+            )
+        else:
+            _, suit, seq = signature
+            touches = any(
+                card.get("suit") == suit and card.get("rank") in seq
+                and not is_joker(card) and not is_wild(card, level_rank)
+                for card in play_cards
+            )
+        if not touches:
+            return 0.0
+    remaining = _remove_cards(hand, cards)
+    after = _wild_structure_ranked_candidates(remaining, level_rank)
+    best_after = next((cand["score"] for cand in after if cand["kind"] in _WILD_BOMB_KINDS), 0.0)
+    loss = max(0.0, best_before["score"] - best_after)
+    if loss <= 0.0:
+        return 0.0
+    if uses_wild:
+        own_kind = combo.get("type")
+        own = max((cand["score"] for cand in before if cand["kind"] == own_kind), default=0.0)
+        loss = max(0.0, loss - own)
+    return loss
+
+
+def _rank_control_strength(rank: int, level_rank: int) -> float:
+    """Control a natural rank carries on its own: level rank, then A..J."""
+    if rank == level_rank:
+        return 10.0
+    return max(0.0, float(_point_order_value(rank, level_rank) - 56))
+
+
+def _route_control_absorption_penalty(
+    play_cards: List[Dict], combo: Dict, level_rank: int,
+) -> float:
+    """Charge compounds that bury a controlling set as cargo.
+
+    The level pair is the strongest ordinary pair, yet as the low end of a
+    three-pairs run or the pair of a low full house it is worth no more than
+    a 3. The compound only inherits the control of its top rank, so each
+    absorbed set pays the control it gives up beyond that.
+    """
+    combo_type = combo.get("type")
+    if combo_type == "full_house":
+        group_rank = next(
+            (rank for rank, count in _rank_count_map(play_cards, level_rank).items() if count >= 3),
+            None,
+        )
+        group_control = _rank_control_strength(group_rank, level_rank) if group_rank is not None else 10.0
+    elif combo_type in ("three_pairs", "steel_plate", "straight"):
+        high_rank = int(combo.get("high_value") or 0)
+        # A run is ranked by its natural top card; the level rank inside a run
+        # is just another step, not a control.
+        group_control = max(0.0, float(high_rank - 10))
+    else:
+        return 0.0
+    waste = 0.0
+    for rank, count in _rank_count_map(play_cards, level_rank).items():
+        if combo_type == "full_house" and count >= 3:
+            continue
+        excess = _rank_control_strength(rank, level_rank) - group_control
+        if excess <= 0.0:
+            continue
+        waste += excess * min(1.0, count / 2.0)
+    return waste * 0.42
+
+
+def _route_bomb_break_penalty(
+    before_counts: Dict[int, int], play_cards: List[Dict], combo: Dict, level_rank: int,
+) -> float:
+    """Charge a non-bomb group for dissolving or downgrading a natural bomb."""
+    if combo.get("type") in BOMB_TYPES:
+        return 0.0
+
+    def tier(count: int) -> int:
+        if count < 4:
+            return 0
+        return count - 3 if count <= 5 else count - 2
+
+    penalty = 0.0
+    for rank, removed in _rank_count_map(play_cards, level_rank).items():
+        before = before_counts.get(rank, 0)
+        if before < 4:
+            continue
+        after = before - removed
+        if after < 4:
+            penalty += 1.0 + 0.3 * (before - 4)
+        else:
+            penalty += 0.35 * (tier(before) - tier(after))
+    return penalty
+
+
+def _route_set_fragment_penalty(
+    before_counts: Dict[int, int], play_cards: List[Dict], combo: Dict, level_rank: int,
+) -> float:
+    """Charge a group that carves a single or pair out of a natural set.
+
+    A natural pair or triple led whole is one group; splitting it leaves a
+    bare single or pair, the weakest lead there is, while the rest becomes
+    cargo for some compound. The cover count does not change, and the reply
+    model prices a bare 3 like any other low single although it can never be
+    dumped on another player's lead, so the plan pays for the lead it
+    weakened. Bombs are priced separately.
+    """
+    if combo.get("type") in BOMB_TYPES:
+        return 0.0
+    penalty = 0.0
+    for rank, used in _rank_count_map(play_cards, level_rank).items():
+        natural = before_counts.get(rank, 0)
+        if 2 <= natural <= 3 and used < natural:
+            penalty += 0.5
+    return penalty
+
+
 def _hand_route_reply_model(
     state: Dict, player_id: str,
 ) -> Tuple[Callable[[Dict], Tuple[float, ...]], float]:
@@ -2085,12 +2277,20 @@ def _hand_route_reply_model(
                 state, pid, combo, total, rank_counts, wild_count,
                 unknown, use_history=False,
             )
-            bomb = (_opponent_overbomb_reply_probability(
-                state, pid, combo, total, rank_counts, joker_counts,
-            ) if is_bomb else _analytic_bomb_reply_probability(
-                state, pid, combo, total, rank_counts, joker_counts,
-                unknown, use_history=False,
-            ))
+            if is_bomb:
+                # The ordinary-lead model discounts bomb replies for
+                # willingness. Price a bigger bomb over our bomb on the same
+                # scale: an enemy with a long hand is at least as reluctant
+                # to spend it on a trick they did not need, while a short
+                # hand fights for every trick.
+                bomb = _opponent_overbomb_reply_probability(
+                    state, pid, combo, total, rank_counts, joker_counts,
+                ) * _route_overbomb_willingness(len(state["players"][pid]["hand"]))
+            else:
+                bomb = _analytic_bomb_reply_probability(
+                    state, pid, combo, total, rank_counts, joker_counts,
+                    unknown, use_history=False,
+                ) * _route_bomb_willingness(len(state["players"][pid]["hand"]))
             same_probs.append(same)
             bomb_probs.append(bomb)
             if len(state["players"][pid]["hand"]) == combo["size"]:
@@ -2126,9 +2326,22 @@ def _hand_route_plan_costs(
     ).items()}
 
 
+# Covers with at most this many groups can be routed exactly. The route search
+# is exponential in the group count, so longer covers only receive a coarse
+# allocation cost and stay out of the final action-order reconciliation.
+# Covers up to _HAND_ROUTE_EXACT_ALWAYS_GROUPS are always routed exactly; of
+# the longer ones only the _HAND_ROUTE_EXACT_LONG_PLANS most promising by
+# coarse cost are, which keeps a 27-card opening panel inside its budget.
+_HAND_ROUTE_EXACT_GROUPS = 10
+_HAND_ROUTE_EXACT_ALWAYS_GROUPS = 8
+_HAND_ROUTE_EXACT_LONG_PLANS = 16
+
+
 def _hand_route_plan_values(
     combos: List[Dict], profile: Callable[[Dict], Tuple[float, ...]],
     loss_weight: float, level: int, config: Dict, tempo_weight: float = 1.0,
+    memo: Optional[Dict] = None, exact: bool = True,
+    keys: Optional[List[Tuple]] = None,
 ) -> Dict[Tuple, Dict[str, float]]:
     """Price leads and lost entries, consuming each recovery group once.
 
@@ -2137,52 +2350,113 @@ def _hand_route_plan_values(
     cashing an unbeatable group look as useful as retaining it to carry a low
     group. Keep expected leads and entry risk separate, but optimize their
     combined cost so both numbers describe the same executable order.
+
+    ``memo`` may be shared by every cover of one panel: a tail's route depends
+    only on the multiset of groups it contains, and covers that differ in a
+    few groups still share most of their tails. ``exact=False`` requests the
+    coarse allocation cost, an upper bound that credits no recovery. ``keys``
+    are the ``_hand_route_key`` values of ``combos`` when the caller already
+    has them.
     """
-    risks = [profile(combo) for combo in combos]
+    shared = memo if memo is not None else {}
+    if keys is None:
+        keys = [_hand_route_key(combo) for combo in combos]
+    exact = exact and len(combos) <= _HAND_ROUTE_EXACT_GROUPS
+    # Reply profiles depend only on the group, so every cover of the panel
+    # shares them.
+    risks = []
+    for combo, key in zip(combos, keys):
+        risk = shared.get(("risk", key))
+        if risk is None:
+            risk = shared[("risk", key)] = profile(combo)
+        risks.append(risk)
 
     def value(leads, risk):
         return {"lead_turns": max(0.0, leads), "entry_risk": max(0.0, risk),
-                "cost": tempo_weight * max(0.0, leads) + 1.6 * max(0.0, risk)}
+                "cost": tempo_weight * max(0.0, leads) + 1.6 * max(0.0, risk),
+                "exact": exact}
 
-    if len(combos) > 7:
-        # Long scattered tails get a coarse allocation cost; only compact
-        # covers participate in the final action-order reconciliation.
+    if not exact:
+        # Long scattered tails get a coarse allocation cost; only exactly
+        # routed covers participate in the final action-order reconciliation.
         losses = [(1.0 - (1.0 - r[0]) * (1.0 - r[1])) * loss_weight
                   + r[2] * 3.0 for r in risks]
+        total = sum(losses)
+        top = max(range(len(losses)), key=losses.__getitem__)
+        second = max((losses[j] for j in range(len(losses)) if j != top), default=0.0)
         return {
-            _hand_route_key(combo): value(len(combos), sum(losses)
-                - max(losses[j] for j in range(len(combos)) if j != index))
-            for index, combo in enumerate(combos)
+            key: value(len(combos), total - (second if index == top else losses[top]))
+            for index, key in enumerate(keys)
         }
-    memo = {0: value(0.0, 0.0)}
-    costs = {}
-
-    def route_cost(remaining, lead):
-        key = (remaining, lead)
-        if key in costs:
-            return costs[key]
-        tail = remaining ^ (1 << lead)
-        if not tail:
-            return value(1.0, 0.0)
-        same, bomb, finish, mate_finish, continuing = risks[lead]
-        any_reply = 1.0 - (1.0 - same) * (1.0 - bomb)
-        future = best_tail(tail)
-        risk = future["entry_risk"] + any_reply * loss_weight + finish * 3.0
-        leads = 1.0 + future["lead_turns"]
-        # Match each possible response band to the cheapest higher
-        # same-type group. Equal-valued replies cannot be overcalled.
-        followups = sorted((i for i, combo in enumerate(combos)
-                            if tail & (1 << i)
-                            and combo["type"] == combos[lead]["type"]
-                            and _compare_combos(combos[lead], combo, level, config)),
-                           key=lambda i: _combo_numeric_value(combos[i]))
-        previous = continuing
-        covered_same = 0.0
-        for follow in followups:
-            threshold = dict(combos[follow])
+    count = len(combos)
+    # Candidate followups and bomb covers depend only on the groups, not on
+    # the tail; filter them per state instead of rebuilding them.
+    values_by_index = [_combo_numeric_value(combo) for combo in combos]
+    followup_candidates = [
+        sorted((i for i, combo in enumerate(combos)
+                if i != lead and combo["type"] == combos[lead]["type"]
+                and _compare_combos(combos[lead], combo, level, config)),
+               key=lambda i: values_by_index[i])
+        for lead in range(count)
+    ]
+    bomb_indices = sorted((i for i, combo in enumerate(combos) if combo["type"] in BOMB_TYPES),
+                          key=lambda i: (_bomb_tier(combos[i]), values_by_index[i]))
+    # The probability that an enemy can continue just below a followup, i.e.
+    # the top of the response band that followup recovers.
+    below_followup = []
+    for combo, key in zip(combos, keys):
+        below = shared.get(("below", key))
+        if below is None:
+            threshold = dict(combo)
             value_key = "high_value" if "high_value" in threshold else "rank_value"
             threshold[value_key] = threshold[value_key] - 0.5
-            upper = min(previous, profile(threshold)[4])
+            below = shared[("below", key)] = profile(threshold)[4]
+        below_followup.append(below)
+    # A tail is the multiset of groups it contains. Sum one fixed random word
+    # per group key: identical for any order and any cover, and incremental
+    # over the bitmask instead of sorting the keys for every state.
+    words = []
+    for key in keys:
+        word = shared.get(("word", key))
+        if word is None:
+            digest = hashlib.blake2b(repr(key).encode("utf-8"), digest_size=8).digest()
+            word = shared[("word", key)] = int.from_bytes(digest, "big")
+        words.append(word)
+    tail_words = {0: 0}
+
+    def tail_key(mask):
+        word = tail_words.get(mask)
+        if word is None:
+            low = mask & -mask
+            word = tail_key(mask ^ low) + words[low.bit_length() - 1]
+            tail_words[mask] = word
+        return word
+
+    # Internal states are (cost, leads, risk) tuples; dicts only at the end.
+    done = (tempo_weight, 1.0, 0.0)
+    empty = (0.0, 0.0, 0.0)
+
+    def route_cost(remaining, lead):
+        key = (tail_key(remaining), words[lead])
+        cached = shared.get(key)
+        if cached is not None:
+            return cached
+        tail = remaining ^ (1 << lead)
+        if not tail:
+            return done
+        same, bomb, finish, mate_finish, continuing = risks[lead]
+        any_reply = 1.0 - (1.0 - same) * (1.0 - bomb)
+        _future_cost, future_leads, future_risk = best_tail(tail)
+        risk = future_risk + any_reply * loss_weight + finish * 3.0
+        leads = 1.0 + future_leads
+        # Match each possible response band to the cheapest higher
+        # same-type group. Equal-valued replies cannot be overcalled.
+        previous = continuing
+        covered_same = 0.0
+        for follow in followup_candidates[lead]:
+            if not tail & (1 << follow):
+                continue
+            upper = min(previous, below_followup[follow])
             highest_band = max(0.0, previous - upper)
             # A cheap initial reply is not a secured recovery: another enemy
             # can still overcall our control. Use the probability of the
@@ -2195,40 +2469,52 @@ def _hand_route_plan_values(
             # A player going out cannot be caught by our next group.
             band *= 1.0 - finish
             if band > 0.00001:
-                recovered = best_tail(tail ^ (1 << follow))
-                risk -= band * (loss_weight + future["entry_risk"] - recovered["entry_risk"])
-                leads -= band * (future["lead_turns"] - recovered["lead_turns"])
+                _cost, recovered_leads, recovered_risk = best_tail(tail ^ (1 << follow))
+                risk -= band * (loss_weight + future_risk - recovered_risk)
+                leads -= band * (future_leads - recovered_leads)
             previous = upper
         # A distinct bomb can cover an ordinary reply, spending
         # that control instead of counting it again for the tail.
         if combos[lead]["type"] not in BOMB_TYPES:
-            bombs = [i for i, combo in enumerate(combos)
-                     if tail & (1 << i) and combo["type"] in BOMB_TYPES]
-            if bombs:
-                cover = min(bombs, key=lambda i: (_bomb_tier(combos[i]), _combo_numeric_value(combos[i])))
+            cover = next((i for i in bomb_indices if tail & (1 << i)), None)
+            if cover is not None:
                 uncovered = max(0.0, continuing - covered_same) * (1.0 - bomb) * (1.0 - finish)
                 cover_hold = 1.0 - risks[cover][1]
                 if uncovered * cover_hold > 0.00001:
-                    recovered = best_tail(tail ^ (1 << cover))
+                    _cost, recovered_leads, recovered_risk = best_tail(tail ^ (1 << cover))
                     band = uncovered * cover_hold
-                    risk -= band * (loss_weight + future["entry_risk"] - recovered["entry_risk"])
-                    leads -= band * (future["lead_turns"] - recovered["lead_turns"])
+                    risk -= band * (loss_weight + future_risk - recovered_risk)
+                    leads -= band * (future_leads - recovered_leads)
         risk -= mate_finish * min(1.2, loss_weight)
-        costs[key] = value(leads, risk)
-        return costs[key]
-
-    def best_tail(remaining):
-        if remaining in memo:
-            return memo[remaining]
-        choices = [i for i in range(len(combos)) if remaining & (1 << i)]
-        result = min((route_cost(remaining, i) for i in choices),
-                     key=lambda item: (item["cost"], item["entry_risk"]))
-        memo[remaining] = result
+        leads = max(0.0, leads)
+        risk = max(0.0, risk)
+        result = shared[key] = (tempo_weight * leads + 1.6 * risk, leads, risk)
         return result
 
-    whole = (1 << len(combos)) - 1
-    return {_hand_route_key(combo): route_cost(whole, index)
-            for index, combo in enumerate(combos)}
+    def best_tail(remaining):
+        if not remaining:
+            return empty
+        key = tail_key(remaining)
+        cached = shared.get(key)
+        if cached is not None:
+            return cached
+        best = None
+        bits = remaining
+        while bits:
+            low = bits & -bits
+            bits ^= low
+            candidate = route_cost(remaining, low.bit_length() - 1)
+            if best is None or (candidate[0], candidate[2]) < (best[0], best[2]):
+                best = candidate
+        shared[key] = best
+        return best
+
+    whole = (1 << count) - 1
+    result = {}
+    for index, key in enumerate(keys):
+        _cost, leads, risk = route_cost(whole, index)
+        result[key] = value(leads, risk)
+    return result
 
 
 def _prepare_hand_route_scores(
@@ -2264,7 +2550,7 @@ def _prepare_hand_route_scores(
     if available is not None and available <= 0.02:
         cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
         return
-    route_deadline = started + min(0.24, available * 0.12) if available is not None else None
+    route_deadline = started + min(0.4, available * 0.12) if available is not None else None
     level = state["level_rank"]
     config = state.get("config", {})
     hand_map = _map_hand_by_id(hand)
@@ -2299,6 +2585,80 @@ def _prepare_hand_route_scores(
         not entries[mask][1].get("uses_wild"),
         len(entries[mask][0]), -_combo_numeric_value(entries[mask][1]), -mask,
     ), reverse=True))
+
+    # Frozen reply estimates price the route of a cover, not the controls it
+    # dissolves to get there. Burying the level pair as the low end of a run,
+    # or spending the wildcard on the cheapest compound while a natural triple
+    # waits for it, trades a universal control for one fewer group. Charge
+    # each group for that lost option so covers compete on equal material.
+    material = {}
+    hand_counts = _rank_count_map(hand, level)
+    wild_before = _wild_structure_ranked_candidates(hand, level)
+    for mask, (cards, combo) in entries.items():
+        play_cards = [hand_map[cid] for cid in cards]
+        material[mask] = (
+            _route_wild_misuse_penalty(hand, cards, combo, level, play_cards, wild_before) * 0.45
+            + _route_control_absorption_penalty(play_cards, combo, level) * 0.4
+            + _route_bomb_break_penalty(hand_counts, play_cards, combo, level)
+            + _route_set_fragment_penalty(hand_counts, play_cards, combo, level)
+        )
+    # Greedy covers that pay for material up front: compounds that break a
+    # natural bomb or spend the wildcard cheaply are taken last, and the
+    # smallest natural bomb of a rank is taken first so a fifth card can still
+    # serve a run. These are extra witnesses, not replacements.
+    orders.append(sorted(grouped, key=lambda mask: (
+        len(entries[mask][0]) - 1
+        + (1.4 * _bomb_tier(entries[mask][1]) if entries[mask][1]["type"] in BOMB_TYPES else 0.0)
+        - 0.2 * bool(entries[mask][1].get("uses_wild")) - material[mask],
+        -_combo_numeric_value(entries[mask][1]), -mask,
+    ), reverse=True))
+    orders.append(sorted(grouped, key=lambda mask: (
+        entries[mask][1]["type"] in BOMB_TYPES,
+        -len(entries[mask][0]) if entries[mask][1]["type"] in BOMB_TYPES else 0,
+        not entries[mask][1].get("uses_wild"),
+        len(entries[mask][0]) - 1 - material[mask],
+        -_combo_numeric_value(entries[mask][1]), -mask,
+    ), reverse=True))
+    # The plain plan: natural bombs, the wildcard on its best bomb, then every
+    # natural set whole, and compounds only from what is left. Length-first
+    # covers never list it because a full house or run always outranks the
+    # two sets it is carved from.
+    compounds = ("straight", "three_pairs", "steel_plate", "full_house")
+
+    def whole_set_key(mask):
+        cards, combo = entries[mask]
+        if combo["type"] in BOMB_TYPES:
+            family = 2
+        elif combo["type"] in compounds:
+            family = 0
+        else:
+            family = 1
+        return (family, not combo.get("uses_wild"), len(cards) - 1 - material[mask],
+                -_combo_numeric_value(combo), -mask)
+
+    orders.append(sorted(grouped, key=whole_set_key, reverse=True))
+    # The same plan allowing compounds built from whole sets only: a full
+    # house of two complete sets saves a lead, one that leaves a bare single
+    # behind does not.
+    fragments = {}
+    for mask, (cards, combo) in entries.items():
+        play_cards = [hand_map[cid] for cid in cards]
+        fragments[mask] = _route_set_fragment_penalty(hand_counts, play_cards, combo, level) > 0.0
+
+    def whole_compound_key(mask):
+        cards, combo = entries[mask]
+        if fragments[mask]:
+            family = 0
+        elif combo["type"] in BOMB_TYPES:
+            family = 3
+        elif combo["type"] in compounds:
+            family = 2
+        else:
+            family = 1
+        return (family, not combo.get("uses_wild"), len(cards) - 1 - material[mask],
+                -_combo_numeric_value(combo), -mask)
+
+    orders.append(sorted(grouped, key=whole_compound_key, reverse=True))
     candidate_plans = {}
     for cards in options:
         if route_deadline is not None and time.perf_counter() >= route_deadline:
@@ -2326,32 +2686,78 @@ def _prepare_hand_route_scores(
 
     profile, loss_weight = _hand_route_reply_model(state, player_id)
 
-    panel = {}
+    def plan_commitment(ordered) -> float:
+        # Short closeouts spend material freely; the option value of a
+        # retained control only matters while several leads remain.
+        scale = min(1.0, max(0, len(ordered) - 3) / 3.0)
+        return scale * sum(material[mask] for mask in ordered) if scale > 0.0 else 0.0
+
+    # Price every distinct cover once. Exact routing is exponential in the
+    # group count: short covers are always routed exactly, longer ones only
+    # when their coarse cost ranks among the most promising, so the panel is
+    # deterministic and bounded.
+    route_keys = {mask: _hand_route_key(combo) for mask, (_cards, combo) in entries.items()}
+    plan_index = {}
+    for plans in candidate_plans.values():
+        for plan in plans:
+            if plan not in plan_index:
+                ordered = tuple(sorted(plan, key=route_keys.__getitem__))
+                plan_index[plan] = (ordered, tuple(route_keys[mask] for mask in ordered),
+                                    plan_commitment(ordered))
     plan_cache = {}
-    for first, plans in candidate_plans.items():
-        best = None
-        for plan in sorted(plans, key=lambda item: (len(item), item)):
+    coarse = {}
+    pending = []
+    route_memo = {}
+    for ordered, plan_key, commitment in plan_index.values():
+        if plan_key in plan_cache or plan_key in coarse:
+            continue
+        combos = [entries[mask][1] for mask in ordered]
+        if len(combos) <= _HAND_ROUTE_EXACT_ALWAYS_GROUPS:
             if route_deadline is not None and time.perf_counter() >= route_deadline:
                 cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
                 return
-            ordered = tuple(sorted(plan, key=lambda mask: _hand_route_key(entries[mask][1])))
-            plan_key = tuple(_hand_route_key(entries[mask][1]) for mask in ordered)
-            if plan_key not in plan_cache:
-                plan_cache[plan_key] = _hand_route_plan_values(
-                    [entries[mask][1] for mask in ordered], profile, loss_weight, level, config,
-                )
-            route = plan_cache[plan_key][_hand_route_key(entries[first][1])]
-            cost = route["cost"]
+            plan_cache[plan_key] = _hand_route_plan_values(
+                combos, profile, loss_weight, level, config, memo=route_memo,
+                keys=list(plan_key),
+            )
+            continue
+        values = _hand_route_plan_values(
+            combos, profile, loss_weight, level, config, exact=False, keys=list(plan_key),
+        )
+        coarse[plan_key] = values
+        if len(combos) <= _HAND_ROUTE_EXACT_GROUPS:
+            pending.append((min(value["cost"] for value in values.values())
+                            + commitment, plan_key, ordered))
+    pending.sort()
+    for _cost, plan_key, ordered in pending[:_HAND_ROUTE_EXACT_LONG_PLANS]:
+        if route_deadline is not None and time.perf_counter() >= route_deadline:
+            cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
+            return
+        plan_cache[plan_key] = _hand_route_plan_values(
+            [entries[mask][1] for mask in ordered], profile, loss_weight, level, config,
+            memo=route_memo, keys=list(plan_key),
+        )
+    for plan_key, values in coarse.items():
+        plan_cache.setdefault(plan_key, values)
+
+    panel = {}
+    for first, plans in candidate_plans.items():
+        best = None
+        for plan in sorted(plans, key=lambda item: (len(item), item)):
+            _ordered, plan_key, commitment = plan_index[plan]
+            route = plan_cache[plan_key][route_keys[first]]
+            cost = route["cost"] + commitment
             if best is None or cost < best[0]:
-                best = (cost, plan, route)
+                best = (cost, plan, route, commitment)
         panel[_cards_key(entries[first][0])] = {
             "cards": entries[first][0],
             "family": entries[first][1]["type"],
-            "cost": best[0], "turns": len(best[1]),
+            "cost": best[0], "turns": len(best[1]), "exact": best[2]["exact"],
             "entry_risk": best[2]["entry_risk"], "lead_turns": best[2]["lead_turns"],
+            "material_commitment": best[3],
             "groups": [entries[mask][0] for mask in best[1]],
         }
-    compact = min(value["turns"] for value in panel.values()) <= 7
+    compact = any(value["exact"] for value in panel.values())
     for value in panel.values():
         # Frozen public reply estimates cannot price every later change of
         # lane. Among similarly executable routes, retain flexible controls
@@ -2431,13 +2837,21 @@ def _hand_route_control_challenger(
     if not current or not current["compact_comparison"] or current["control_commitment"] <= 0.0:
         return None
     current_score = _hand_route_lead_score(state, player_id, incumbent)
+
+    def executable(route: Dict) -> float:
+        # Leads, entry risk and the controls the cover dissolves on the way,
+        # without the option value of the controls still in hand.
+        return route["cost"] - route["control_commitment"]
+
+    # Leading one group of a cover before another moves its cost by less than
+    # the reply model can resolve; that is not an improved route.
+    tolerance = 0.05
     candidates = []
     for cards in options:
         route = panel.get(_cards_key(cards or []))
-        if (not route or route["turns"] > 7
+        if (not route or not route["exact"]
                 or route["control_commitment"] >= current["control_commitment"] - 1e-9
-                or route["lead_turns"] > current["lead_turns"] + 1e-9
-                or route["entry_risk"] > current["entry_risk"] + 1e-9):
+                or executable(route) > executable(current) + tolerance):
             continue
         score = _hand_route_lead_score(state, player_id, cards)
         if score is not None and score >= current_score - 1e-9:
@@ -2462,7 +2876,7 @@ def _apply_hand_route_order(
     groups = {}
     for index, (cards, _score, components) in enumerate(scored):
         route = panel.get(_cards_key(cards or []))
-        if (not route or route["turns"] > 7 or "anytime_quick_score" in components
+        if (not route or not route["exact"] or "anytime_quick_score" in components
                 or components.get("anytime_partial")):
             continue
         groups.setdefault(route["order_group"], []).append((index, route))
@@ -6740,6 +7154,27 @@ def _additional_bomb_witness_probability(unknown_cards: List[Dict], hand_count: 
     return probability
 
 
+def _straight_flush_witness_probability(unknown_cards: List[Dict], hand_count: int, level_rank: int) -> float:
+    """Lower bound from one physical straight-flush witness in the pool."""
+    if hand_count < 5:
+        return 0.0
+    suits: Dict[str, set] = {}
+    wild_count = 0
+    for card in unknown_cards:
+        if _is_joker(card):
+            continue
+        if _is_wild(card, level_rank):
+            wild_count += 1
+        else:
+            suits.setdefault(card["suit"], set()).add(card["rank"])
+    if any(
+        sum(rank not in ranks for rank in sequence) <= wild_count
+        for ranks in suits.values() for sequence, _high in _CORE.STRAIGHT_SEQUENCES
+    ):
+        return _hypergeom_at_least(len(unknown_cards), 5, hand_count, 5)
+    return 0.0
+
+
 def _analytic_bomb_reply_probability(
     state: Dict,
     opponent_id: str,
@@ -6851,20 +7286,36 @@ def _opponent_overbomb_reply_probability(
 
     level_rank = state["level_rank"]
     revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
-    if combo_type == "bomb":
+    tier = _bomb_tier(combo)
+    size = int(combo.get("size") or 0)
+
+    def kind_probs(needed_for_rank) -> List[float]:
+        probs: List[float] = []
+        for rank in range(2, 15):
+            needed = needed_for_rank(rank)
+            if needed is None or needed > hand_count:
+                continue
+            available = min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8)))
+            if available >= needed:
+                probs.append(_hypergeom_at_least(unknown_total, available, hand_count, needed))
+        return probs
+
+    if combo_type == "bomb" and size >= 4:
         threshold = combo.get("rank_value", 0)
-        probs = [
-            _hypergeom_at_least(
-                unknown_total,
-                min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))),
-                hand_count,
-                4,
-            )
-            for rank in range(2, 15)
-            if min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))) >= 4
-            and _point_order_value(rank, level_rank) > threshold
-        ]
+        # Bombs rank by size first: the same size needs a higher rank, while
+        # one more card of any rank beats this bomb outright.
+        probs = kind_probs(
+            lambda rank: size if _point_order_value(rank, level_rank) > threshold else size + 1
+        )
+        if tier < 3 and unknown_cards is not None:
+            # A straight flush beats four- and five-card bombs. Use the same
+            # single physical witness bound as the bomb-reply model.
+            probs.append(_straight_flush_witness_probability(unknown_cards, hand_count, level_rank))
         overbomb_prob = _aggregate_event_probability(probs)
+    elif combo_type == "straight_flush":
+        # Six or more of a kind outranks every straight flush. A higher straight
+        # flush is possible but rare enough that the public model ignores it.
+        overbomb_prob = _aggregate_event_probability(kind_probs(lambda rank: 6))
     else:
         overbomb_prob = 0.0
 

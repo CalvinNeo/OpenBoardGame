@@ -29,8 +29,11 @@ class GuandanControlRouteTests(unittest.TestCase):
         return guandan_ai.call(guandan, name, *args)
 
     def test_saved_leads_keep_the_level_cards_in_both_modes(self):
+        # At 57 the level triple stays the top of a full house instead of
+        # burying the level pair in 223344; at 67 the wild heart completes
+        # 2222 into a bomb and the lowest junk single leads.
         for mode in ("heuristic", "auto"):
-            for boundary, expected in ((57, ["♥️3", "♣️3"]), (67, ["♣️6"])):
+            for boundary, expected in ((57, ["♥️3", "♣️3"]), (67, ["♥️4"])):
                 with self.subTest(mode=mode, before_action=boundary):
                     state = replay_fixture("546", boundary, {"bot_mode": mode})
                     pid = state["current_turn"]
@@ -120,7 +123,10 @@ class GuandanControlRouteTests(unittest.TestCase):
                                      incumbent, options) or incumbent)
         self.assertEqual(panels[0], panels[1])
         self.assertEqual(choices[0], choices[1])
-        self.assertEqual(len(choices[0]), 1)
+        # The quick choice sheds a junk group and keeps the level triple.
+        self.assertEqual(panels[0][guandan._cards_key(choices[0])]["control_commitment"], 0.0)
+        hand = guandan._map_hand_by_id(original["players"][pid]["hand"])
+        self.assertEqual(sorted(hand[cid]["rank"] for cid in choices[0]), [3, 3])
 
     def test_completed_route_remains_the_fallback_when_final_scoring_expires(self):
         state = replay_fixture("546", 67)
@@ -131,7 +137,7 @@ class GuandanControlRouteTests(unittest.TestCase):
         with mock.patch.object(guandan_ai.time, "perf_counter", return_value=2.0):
             cards = self.call("_bot_select_play", state, pid, 4, 1.0)
         hand = guandan._map_hand_by_id(state["players"][pid]["hand"])
-        self.assertEqual([guandan._card_label(hand[c]) for c in cards], ["♣️6"])
+        self.assertEqual([guandan._card_label(hand[c]) for c in cards], ["♥️4"])
         self.assertEqual(state["_ai_eval_cache"]["heuristic_anytime"]["evaluated"], 0)
 
     def test_local_hold_reward_cannot_reverse_a_better_control_allocation(self):
