@@ -654,8 +654,8 @@ def _short_enemy_bomb_takeover_bonus(
     if not current_trick or combo.get("type") not in BOMB_TYPES:
         return 0.0
 
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+    leader = _active_enemy_leader(state, player_id)
+    if leader is None:
         return 0.0
 
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
@@ -1530,7 +1530,9 @@ def _structured_enemy_runout_pressure(state: Dict, leader_id: str, combo: Dict) 
         return 0.0
 
     leader_left = len(state["players"].get(leader_id, {}).get("hand", []))
-    if leader_left > 12:
+    if (not leader_left or leader_left > 12
+            or state["players"].get(leader_id, {}).get("finished")
+            or leader_id in state.get("finish_order", [])):
         return 0.0
 
     actions: List[Dict] = []
@@ -2958,6 +2960,7 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
     score += remaining_strength * 0.16
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
     score -= _lead_short_escape_window_penalty(state, player_id, cards, combo)
+    score -= _lead_closeout_reply_penalty(state, player_id, cards, combo)
     score -= _lead_same_type_value_conservation_penalty(state, player_id, cards, combo)
     score -= _lead_special_material_penalty(state, player_id, cards, combo)
     score -= _lead_probe_deferral_penalty(state, player_id, cards, combo)
@@ -4321,6 +4324,20 @@ def _next_opponent_closeout_pressure(state: Dict, player_id: str) -> float:
     return min(45.0, pressure)
 
 
+def _active_enemy_leader(state: Dict, player_id: str) -> Optional[str]:
+    leader = (state.get("current_trick") or {}).get("player_id")
+    player = state["players"].get(leader, {})
+    if (
+        leader is None
+        or _team_of(state, leader) == _team_of(state, player_id)
+        or player.get("finished")
+        or leader in state.get("finish_order", [])
+        or not player.get("hand")
+    ):
+        return None
+    return leader
+
+
 def _is_last_defender_against_enemy(state: Dict, player_id: str) -> bool:
     """Return whether this is the final response before an enemy keeps the lead."""
     current_trick = state.get("current_trick")
@@ -4928,8 +4945,8 @@ def _opponent_one_card_closeout_bonus(
     if not current_trick:
         return 0.0
 
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+    leader = _active_enemy_leader(state, player_id)
+    if leader is None:
         return 0.0
 
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
@@ -5255,8 +5272,8 @@ def _critical_pair_three_bomb_bonus(
     current_trick = state.get("current_trick")
     if not current_trick or not cards:
         return 0.0
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+    leader = _active_enemy_leader(state, player_id)
+    if leader is None:
         return 0.0
     current_combo = current_trick.get("combo") or {}
     combo_type = current_combo.get("type")
@@ -7518,6 +7535,52 @@ def _lead_retake_control_bonus(
         bonus *= 0.55
 
     return max(0.0, min(9.5, bonus))
+
+
+def _lead_closeout_reply_penalty(
+    state: Dict, player_id: str, cards: List[int], combo: Dict,
+) -> float:
+    """Price ordinary replies that leave an enemy one play from a one-two finish."""
+    combo_type = combo.get("type")
+    if (not _critical_enemy_closeout_lead(state, player_id) or not cards
+            or combo_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate")):
+        return 0.0
+    opponents = [
+        opponent_id for opponent_id in state.get("turn_order", [])
+        if _team_of(state, opponent_id) != _team_of(state, player_id)
+        and not state["players"][opponent_id].get("finished")
+        and opponent_id not in state.get("finish_order", [])
+        and 1 <= len(state["players"][opponent_id].get("hand", [])) - len(cards) <= 2
+    ]
+    if not opponents:
+        return 0.0
+    remaining = _remove_cards(state["players"][player_id]["hand"], cards)
+    if not remaining:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    unknown_cards = _lead_unknown_pool_cards(state, player_id)
+    unknown_total, rank_counts, wild_count, _jokers = _lead_unknown_pool_profile(state, player_id)
+    followup_value = _max_combo_value_for_hand(remaining, level_rank, combo_type, config)
+    has_bomb = bool(_find_bomb_candidates(remaining, level_rank))
+    penalties = []
+    for opponent_id in opponents:
+        hand_count = len(state["players"][opponent_id]["hand"])
+        tail_count = hand_count - len(cards)
+        if has_bomb:
+            continue
+        reply_threshold = dict(combo)
+        if followup_value is not None:
+            value_key = "high_value" if combo_type in ("straight", "three_pairs", "steel_plate") else "rank_value"
+            reply_threshold[value_key] = max(combo.get(value_key, 0), followup_value - 1)
+        reply_probability = _opponent_same_type_reply_probability(
+            state, opponent_id, reply_threshold, unknown_total, rank_counts, wild_count,
+            unknown_cards=unknown_cards,
+        )
+        severity = 72.0 + (2 - tail_count) * 8.0
+        penalties.append(reply_probability * severity)
+    return min(80.0, sum(penalties))
 
 
 def _lead_initiative_retention_bonus(
@@ -11003,6 +11066,21 @@ def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
     return actions
 
 
+def _critical_enemy_closeout_lead(state: Dict, player_id: str) -> bool:
+    if state.get("current_trick"):
+        return False
+    finish_order = state.get("finish_order") or []
+    if not finish_order or _team_of(state, finish_order[0]) == _team_of(state, player_id):
+        return False
+    return any(
+        _team_of(state, opponent_id) != _team_of(state, player_id)
+        and not state["players"][opponent_id].get("finished")
+        and opponent_id not in finish_order
+        and 0 < len(state["players"][opponent_id].get("hand", [])) <= 8
+        for opponent_id in state.get("turn_order", [])
+    )
+
+
 def _mcts_root_candidate_subset(
     state: Dict,
     player_id: str,
@@ -11011,6 +11089,8 @@ def _mcts_root_candidate_subset(
 ) -> List[Dict]:
     """Keep action-family coverage before filling the bounded root width."""
     play_limit = max(1, play_limit)
+    if _critical_enemy_closeout_lead(state, player_id):
+        play_limit = min(play_limit, max(2, int(state.get("config", {}).get("bot_mcts_large_hand_max_actions", 3))))
     play_actions = [action for action in actions if action.get("type") == "play"]
     other_actions = [action for action in actions if action.get("type") != "play"]
     if len(play_actions) <= play_limit:
@@ -11064,7 +11144,8 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     if "play" not in legal:
         return False
     current_trick = state.get("current_trick")
-    if not current_trick:
+    critical_lead = _critical_enemy_closeout_lead(state, bot_id)
+    if not current_trick and not critical_lead:
         return False
     if _teammate_lead_context(state, bot_id):
         return False
@@ -11105,6 +11186,12 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     has_pass = any(action.get("type") == "pass" for action in actions)
     if not play_actions:
         return False
+
+    if critical_lead:
+        state.setdefault("_ai_eval_cache", {})["mcts_gate"] = {
+            "reason": "enemy_closeout_lead", "candidates": len(actions),
+        }
+        return len(play_actions) > 1
 
     current_combo = current_trick.get("combo") or {}
     combo_type = current_combo.get("type")
@@ -11788,6 +11875,7 @@ def _should_accept_mcts_override(
     mcts_action: Optional[Dict],
     depth: int,
     deadline: Optional[float] = None,
+    search_scores: Optional[List[Tuple[Dict, float, int, Dict[str, float]]]] = None,
 ) -> bool:
     if not mcts_action:
         return False
@@ -11803,6 +11891,27 @@ def _should_accept_mcts_override(
         return False
     if _retained_bomb_override_is_unsafe(state, bot_id, heuristic_action, mcts_action):
         return False
+    closeout_risk = _lead_closeout_plan_risk(state, bot_id, heuristic_action, mcts_action)
+    if closeout_risk > 0.001:
+        records = {_mcts_action_key(action): stats for action, _score, _count, stats in search_scores or []}
+        baseline = records.get(_mcts_action_key(heuristic_action), {})
+        challenger = records.get(_mcts_action_key(mcts_action), {})
+        required_samples = max(2, int(state.get("config", {}).get("bot_mcts_confidence_min_pairs", 3)))
+        required_gain = 5.5 + closeout_risk
+        lower_gain = challenger.get("paired_lcb")
+        accepted = bool(
+            baseline.get("paired_reference")
+            and challenger.get("paired_count", 0) >= required_samples
+            and lower_gain is not None and lower_gain >= required_gain
+        )
+        state.setdefault("_ai_eval_cache", {})["mcts_closeout_guard"] = {
+            "accepted": accepted, "risk_increase": closeout_risk,
+            "reason": "supported_plan_change" if accepted else "preserve_closeout_reentry",
+            "paired_gain_lower": lower_gain, "required_gain": required_gain,
+            "samples": challenger.get("paired_count", 0),
+        }
+        if not accepted:
+            return False
     if (
         heuristic_action.get("type") == "play"
         and mcts_action.get("type") == "pass"
@@ -11939,6 +12048,20 @@ def _should_accept_mcts_override(
     return True
 
 
+def _lead_closeout_plan_risk(
+    state: Dict, bot_id: str, reference: Dict, proposal: Dict,
+) -> float:
+    if state.get("current_trick") or proposal.get("type") != "play" or reference.get("type") != "play":
+        return 0.0
+    reference_risk = _lead_closeout_reply_penalty(
+        state, bot_id, reference.get("card_ids") or [], _action_combo(state, bot_id, reference) or {},
+    )
+    proposal_risk = _lead_closeout_reply_penalty(
+        state, bot_id, proposal.get("card_ids") or [], _action_combo(state, bot_id, proposal) or {},
+    )
+    return max(0.0, proposal_risk - reference_risk)
+
+
 def _minimax_plan_risks(
     state: Dict,
     bot_id: str,
@@ -11957,6 +12080,9 @@ def _minimax_plan_risks(
     reference_combo = _action_combo(state, bot_id, reference) or {}
     proposal_combo = _action_combo(state, bot_id, proposal) or {}
     risks: Dict[str, float] = {}
+    closeout_risk = _lead_closeout_plan_risk(state, bot_id, reference, proposal)
+    if closeout_risk > 0.001:
+        risks["closeout_reentry"] = closeout_risk
     if proposal.get("type") == "pass" and reference_combo.get("type") in BOMB_TYPES:
         leader = current_trick.get("player_id")
         if (leader and _team_of(state, leader) != _team_of(state, bot_id)
@@ -12262,6 +12388,7 @@ def _mcts_budget(
         or (leader_is_enemy and leader_left <= 2)
         or (actor_id in state.get("players", {}) and _next_opponent_closeout_pressure(state, actor_id) > 0.0)
         or (has_pass and has_bomb_response)
+        or (actor_id in state.get("players", {}) and _critical_enemy_closeout_lead(state, actor_id))
     )
 
     scale = 1.0
@@ -12556,7 +12683,7 @@ def _enemy_double_down_closeout_pressure(state: Dict, player_id: str) -> float:
         for pid in state.get("turn_order", [])
     )
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
-    if not has_finished_teammate or leader_left > 10:
+    if not has_finished_teammate or not _active_enemy_leader(state, player_id) or leader_left > 10:
         return 0.0
 
     pressure = 24.0 + max(0, 10 - leader_left) * 1.2
@@ -12915,7 +13042,10 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
         cache[cache_key] = dict(components)
         return components
 
-    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    leader_left = (
+        len(state["players"].get(leader, {}).get("hand", []))
+        if _active_enemy_leader(state, player_id) else 99
+    )
     if leader_left <= 2:
         components["pass_short_enemy_prior"] = -12.0
     elif leader_left <= 5:
@@ -14809,7 +14939,7 @@ def _bomb_response_frontier(
     player_id: str,
     limit: int = 3,
 ) -> List[List[int]]:
-    """Keep the cheapest overbomb plus structurally better closeout variants."""
+    """Keep cheap, resource-preserving and stronger control alternatives."""
     current_trick = state.get("current_trick") or {}
     current_combo = current_trick.get("combo") or {}
     if current_combo.get("type") not in BOMB_TYPES:
@@ -14823,20 +14953,20 @@ def _bomb_response_frontier(
     minimal = _minimal_bomb_response(hand, level_rank, current_combo, config)
     if minimal is None:
         return []
+    limit = max(1, limit)
+    if limit == 1:
+        return [minimal]
 
-    # Large hands should retain the existing conservative behavior. Structural
-    # overbombs matter most when either side is already close to going out.
     leader = current_trick.get("player_id")
     leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
-    if len(hand) > 16 and leader_left > 4:
-        return [minimal]
+    conservative_large_hand = len(hand) > 16 and leader_left > 4
 
     legal_options = _list_bomb_options(hand, level_rank, current_combo, config)
     if not legal_options:
         return [minimal]
 
     minimal_key = _cards_key(minimal)
-    records: List[Tuple[List[int], Dict, List[Dict], float, bool]] = []
+    records: List[Tuple[List[int], Dict, List[Dict], float, bool, bool]] = []
     hand_map = _map_hand_by_id(hand)
     seen = set()
     for cards in legal_options:
@@ -14850,17 +14980,20 @@ def _bomb_response_frontier(
             continue
         remaining = _remove_cards(hand, cards)
         finishes_next = bool(remaining) and _can_play_all(remaining, level_rank, config, None)
-        remaining_turns = (
-            0.0
-            if not remaining
-            else 1.0
-            if finishes_next
-            else _hand_decomposition_summary(remaining, level_rank).get(
-                "turns",
-                float(len(remaining)),
+        remaining_turns = float("inf")
+        if not conservative_large_hand:
+            remaining_turns = (
+                0.0
+                if not remaining
+                else 1.0
+                if finishes_next
+                else _hand_decomposition_summary(remaining, level_rank).get(
+                    "turns",
+                    float(len(remaining)),
+                )
             )
-        )
-        records.append((cards, combo, remaining, remaining_turns, finishes_next))
+        natural = not _cards_use_special_material(play_cards, level_rank)
+        records.append((cards, combo, remaining, remaining_turns, finishes_next, natural))
 
     if not records:
         return [minimal]
@@ -14871,13 +15004,57 @@ def _bomb_response_frontier(
     if minimal_record is None:
         return [minimal]
 
+    minimal_combo = minimal_record[1]
+    minimal_natural = minimal_record[5]
+    resource_alternatives = [
+        record
+        for record in records
+        if (
+            not minimal_natural
+            and record[5]
+            and record[1].get("type") == minimal_combo.get("type")
+            and _bomb_tier(record[1]) == _bomb_tier(minimal_combo)
+            and len(record[0]) == len(minimal)
+        )
+    ]
+    resource_alternatives.sort(
+        key=lambda record: (
+            record[3],
+            _combo_numeric_value(record[1]),
+            _cards_key(record[0]),
+        )
+    )
+
+    control_alternatives = [
+        record for record in records
+        if _bomb_tier(record[1]) > _bomb_tier(minimal_combo)
+    ]
+    control_alternatives.sort(
+        key=lambda record: (
+            -_bomb_tier(record[1]),
+            record[3],
+            not record[5],
+            _combo_numeric_value(record[1]),
+            _cards_key(record[0]),
+        )
+    )
+    control_representatives = []
+    control_families = set()
+    for record in control_alternatives:
+        family = (record[1].get("type"), _bomb_tier(record[1]), len(record[0]))
+        if family not in control_families:
+            control_families.add(family)
+            control_representatives.append(record)
+
     selected = [minimal]
     selected_keys = {minimal_key}
     minimal_turns = minimal_record[3]
     minimal_finishes_next = minimal_record[4]
     upgrades = []
     for record in records:
-        cards, combo, remaining, remaining_turns, finishes_next = record
+        if conservative_large_hand:
+            break
+        cards, combo, remaining, remaining_turns, finishes_next, _natural = record
         key = _cards_key(cards)
         if key in selected_keys:
             continue
@@ -14908,13 +15085,16 @@ def _bomb_response_frontier(
             _cards_key(item[0]),
         )
     )
-    for cards, _combo, _remaining, _turns, _finishes_next, _immediate in upgrades:
+    upgrade_candidates = (
+        resource_alternatives[:1] + control_representatives + upgrades + resource_alternatives[1:]
+    )
+    for cards, _combo, _remaining, _turns, _finishes_next, _immediate in upgrade_candidates:
         key = _cards_key(cards)
         if key in selected_keys:
             continue
         selected.append(cards)
         selected_keys.add(key)
-        if len(selected) >= max(2, limit):
+        if len(selected) >= limit:
             break
     return selected
 
@@ -14982,7 +15162,10 @@ def _compute_bot_score_components(
                 components["total"] = sum(components.values())
                 return components
             combo_type = (current_trick.get("combo") or {}).get("type")
-            leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+            leader_left = (
+                len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+                if _active_enemy_leader(state, bot_id) else 99
+            )
             if response_score is not None and response_score > 0:
                 pass_cap = 8.5
                 if leader_left <= 14:
@@ -15320,7 +15503,10 @@ def _compute_bot_score_components(
         teammate_lane_bonus = _response_teammate_lane_bonus(state, bot_id, cards, combo)
         if teammate_lane_bonus > 0.001:
             components["protect_teammate_lane"] = teammate_lane_bonus
-        leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+        leader_left = (
+            len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+            if _active_enemy_leader(state, bot_id) else 99
+        )
         if combo.get("type") == (current_trick.get("combo") or {}).get("type") and combo.get("type") not in BOMB_TYPES:
             natural_takeover = 0.0
             if leader_left <= 14:
@@ -15387,6 +15573,9 @@ def _compute_bot_score_components(
         speculative_penalty = _lead_speculative_followup_penalty(state, bot_id, cards, combo)
         if speculative_penalty > 0.001:
             components["lead_followup_risk"] = -speculative_penalty
+        closeout_reply = _lead_closeout_reply_penalty(state, bot_id, cards, combo)
+        if closeout_reply > 0.001:
+            components["lead_closeout_reply"] = -closeout_reply
         opening_commitment = _lead_opening_commitment_penalty(state, bot_id, cards, combo)
         if opening_commitment > 0.001:
             components["lead_opening_commitment"] = -opening_commitment
@@ -15733,8 +15922,8 @@ def _short_enemy_pressure_bomb_options(state: Dict, player_id: str) -> List[List
     if current_combo.get("type") in BOMB_TYPES:
         return []
 
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+    leader = _active_enemy_leader(state, player_id)
+    if leader is None:
         return []
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
     if current_combo.get("type") not in ("full_house", "straight", "three_pairs", "steel_plate"):

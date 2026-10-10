@@ -3042,7 +3042,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
                 with mock.patch("game.guandan_ai._rank_response_options", side_effect=lambda _s, _p, items: items):
                     with mock.patch("game.guandan_ai._filter_overbomb_options", side_effect=lambda _s, _p, items: items):
-                        with mock.patch("game.guandan_ai._bot_score_components", side_effect=score_components) as score:
+                        with (
+                            mock.patch("game.guandan_ai._bot_score_components", side_effect=score_components) as score,
+                            mock.patch("game.guandan_ai._quick_candidate_score",
+                                       side_effect=lambda _state, _actor, cards: 0.0 if cards is None else float(cards[0])),
+                        ):
                             chosen = guandan._bot_select_play(state, "bot", depth=3, deadline=0.0)
 
         self.assertIn(chosen, options)
@@ -8165,7 +8169,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                 state.get("config", {}),
             ).get("type") == "bomb"
         }
-        self.assertEqual(bomb_sizes, {5, 7})
+        self.assertEqual(bomb_sizes, {5, 7, 8})
 
         chosen = guandan._bot_select_play(state, "bot3", depth=4)
         self.assertIsNotNone(chosen)

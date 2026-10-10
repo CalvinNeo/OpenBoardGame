@@ -2848,6 +2848,7 @@ class GuandanGame:
                             mcts_action,
                             depth,
                             deadline=search_deadline,
+                            search_scores=mcts_scores,
                         )
                         _record_stage("mcts_guard", mcts_guard_started_at)
                     if mcts_action is not None and mcts_accepted:
@@ -2989,6 +2990,7 @@ class GuandanGame:
                             "mcts_budget_ms": mcts_budget_ms,
                             "mcts_stop_reason": mcts_status.get("stop_reason"),
                             "mcts_cost_estimate": mcts_status.get("cost_estimate", {}),
+                            "mcts_closeout_guard": state.get("_ai_eval_cache", {}).get("mcts_closeout_guard", {}),
                         }
                     )
                 mcts_gate = state.get("_ai_eval_cache", {}).get("mcts_gate")

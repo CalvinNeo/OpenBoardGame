@@ -24,6 +24,29 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
         state = replay_fixture("964", len(FIXTURES["964"]["actions"]) + 1)
         self.assertEqual(state["finish_order"], ["z", "bot4", "bot2", "calvin"])
 
+    def test_saved_overbomb_frontier_keeps_natural_same_tier_bomb(self):
+        for step in (11, 23):
+            with self.subTest(step=step):
+                state = replay_fixture("964", step)
+                hand = state["players"]["bot4"]["hand"]
+                hand_map = guandan._map_hand_by_id(hand)
+
+                frontier = self.call("_bomb_response_frontier", state, "bot4", 3)
+                frontier_labels = {
+                    tuple(sorted(guandan._card_label(hand_map[card_id]) for card_id in cards))
+                    for cards in frontier
+                }
+                self.assertIn(tuple(sorted(["♦️7", "♠️7", "♦️7", "♥️2"])), frontier_labels)
+                self.assertIn(tuple(sorted(["♠️9", "♥️9", "♣️9", "♦️9"])), frontier_labels)
+
+                actions = guandan._candidate_actions(state, "bot4", 8)
+                action_labels = {
+                    tuple(sorted(guandan._card_label(hand_map[card_id]) for card_id in action["card_ids"]))
+                    for action in actions
+                    if action.get("type") == "play"
+                }
+                self.assertIn(tuple(sorted(["♠️9", "♥️9", "♣️9", "♦️9"])), action_labels)
+
     def test_forced_actions_skip_scoring_determinization_and_search(self):
         for step in (63, 67, 71, 73, 75, 77, 79, 83, 85, 87, 89, 95):
             with self.subTest(step=step):
