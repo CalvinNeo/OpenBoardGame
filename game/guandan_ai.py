@@ -2166,6 +2166,8 @@ def _route_wild_misuse_penalty(
     is_wild = _CORE._is_wild
     is_joker = _CORE._is_joker
     combo_type = combo.get("type")
+    if len(cards) == len(hand):
+        return 0.0
     if combo_type in BOMB_TYPES and not uses_wild:
         return 0.0
     if uses_wild and combo_type in ("pair", "three") and all(
@@ -2189,7 +2191,8 @@ def _route_wild_misuse_penalty(
             ranks = {card.get("rank") for card in play_cards
                      if not is_joker(card) and not is_wild(card, level_rank)}
             own = max((cand["score"] for cand in before
-                       if cand["kind"] == "bomb" and int(cand["rank"]) in ranks), default=0.0)
+                       if cand["kind"] == "bomb" and int(cand["rank"]) in ranks
+                       and cand["target_size"] == len(cards)), default=0.0)
         return max(0.0, best_before["score"] - own)
     if not uses_wild:
         # Without the wildcard, only groups that consume the natural material
@@ -2218,7 +2221,8 @@ def _route_wild_misuse_penalty(
         return 0.0
     if uses_wild:
         own_kind = combo.get("type")
-        own = max((cand["score"] for cand in before if cand["kind"] == own_kind), default=0.0)
+        own = max((cand["score"] for cand in before if cand["kind"] == own_kind
+                   and cand.get("high_value") == combo.get("high_value")), default=0.0)
         loss = max(0.0, loss - own)
     return loss
 
@@ -9027,7 +9031,12 @@ def _wild_structure_candidate_priority(kind: str) -> int:
     }.get(kind, 0)
 
 
-def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List[Dict[str, float]]:
+def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List[Dict]:
+    """Marginal structure values with explicit wildcard and support budgets.
+
+    These are heuristic option values, not probabilities. A fresh bomb is
+    worth more than enlarging one; ordinary runs chiefly save a future lead.
+    """
     info = _hand_info(hand, level_rank)
     wild_count = len(info["wild_cards"])
     if wild_count <= 0:
@@ -9035,8 +9044,7 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
 
     rank_counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
     strength = _rank_strength(level_rank)
-    control = _control_card_score(hand, level_rank)
-    candidates: List[Dict[str, float]] = []
+    candidates: List[Dict] = []
 
     def add_candidate(
         kind: str,
@@ -9047,7 +9055,7 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
     ) -> None:
         if needed_wilds <= 0 or needed_wilds > wild_count or score <= 0.0:
             return
-        entry: Dict[str, float] = {
+        entry: Dict = {
             "kind": kind,
             "needed_wilds": float(needed_wilds),
             "score": score,
@@ -9055,26 +9063,41 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
             "signature": signature,
         }
         entry.update(extra)
+        if kind in ("bomb", "set_upgrade"):
+            rank = int(extra["rank"])
+            support = int(extra["target_size"]) - needed_wilds if kind == "bomb" else 2
+            entry["requirements"] = ((None, rank, support),)
+        elif kind == "straight_flush":
+            _, suit, seq = signature
+            entry["requirements"] = tuple((suit, rank, 1) for rank in seq
+                                          if info["normals_by_suit"].get(suit, {}).get(rank))
+        else:
+            if kind == "straight":
+                ranks, copies = signature[1], 1
+            else:
+                width, copies = (3, 2) if kind == "three_pairs" else (2, 3)
+                ranks = range(signature[1], signature[1] + width)
+            entry["requirements"] = tuple((None, rank, min(copies, rank_counts.get(rank, 0)))
+                                          for rank in ranks)
         candidates.append(entry)
 
     for rank, count in rank_counts.items():
-        if count >= 3:
-            needed = max(0, 4 - count)
-            if needed <= 0:
-                needed = 1
-            max_size = min(8, count + wild_count)
-            size_bonus = max(0, max_size - 4) * (1.1 if count == 3 else 0.8)
+        for needed in range(1, wild_count + 1):
+            size = count + needed
+            if not 4 <= size <= 8:
+                continue
+            size_bonus = max(0, size - 4) * (1.1 if count < 4 else 0.8)
             rank_bonus = max(0.0, strength[rank] - 50) * 0.06
-            base = 13.5 if count == 3 else 9.4
+            base = 13.5 if count < 4 else 9.4
             add_candidate(
                 "bomb",
                 needed,
                 base + size_bonus + rank_bonus,
-                ("bomb", rank, count),
+                ("bomb", rank, count, size),
                 rank=float(rank),
-                target_size=float(max_size),
+                target_size=float(size),
             )
-        elif count == 2:
+        if count == 2:
             rank_bonus = max(0.0, strength[rank] - 50) * 0.025
             add_candidate("set_upgrade", 1, 1.2 + rank_bonus, ("set", rank), rank=float(rank))
 
@@ -9122,9 +9145,10 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
                 present += 1
             else:
                 need += 1
-        if 0 < need <= wild_count and present >= 4:
-            control_gap = max(0.0, 2.2 - control)
-            score = 6.8 + (present - 4) * 0.45 + max(0.0, high_value - 10) * 0.22 + control_gap * 0.85
+        if 0 < need <= wild_count and present >= 3:
+            # The smallest run mainly saves a future lead. Lack of controls
+            # must not INCREASE that value; larger runs have more reply value.
+            score = 2.5 + (high_value - 5) * 0.32 - (need - 1) * 0.8
             add_candidate(
                 "straight",
                 need,
@@ -9144,7 +9168,7 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
                     present += 1
                 else:
                     need += 1
-            if 0 < need <= wild_count and present >= 4:
+            if 0 < need <= wild_count and present >= 3:
                 score = 9.4 + (present - 4) * 0.55 + max(0.0, high_value - 10) * 0.28
                 add_candidate(
                     "straight_flush",
@@ -9154,7 +9178,7 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
                     high_value=float(high_value),
                 )
 
-    unique: Dict[Tuple, Dict[str, float]] = {}
+    unique: Dict[Tuple, Dict] = {}
     for cand in candidates:
         signature = cand["signature"]
         current = unique.get(signature)
@@ -9183,20 +9207,29 @@ def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
     if not ranked:
         return 0.0
 
-    remaining_wilds = wild_count
-    multipliers = (1.0, 0.72, 0.52)
-    total = 0.0
-    chosen = 0
-    for cand in ranked:
-        needed = int(cand["needed_wilds"])
-        if needed > remaining_wilds:
+    best = max(candidate["score"] for candidate in ranked)
+    # At most two hearts of the level rank exist. Alternatives may share
+    # natural cards as well as wildcards; only disjoint uses can be added.
+    for index, first in enumerate(ranked):
+        if first["needed_wilds"] >= wild_count:
             continue
-        total += cand["score"] * multipliers[min(chosen, len(multipliers) - 1)]
-        remaining_wilds -= needed
-        chosen += 1
-        if chosen >= 3 or remaining_wilds <= 0:
-            break
-    return total
+        for second in ranked[index + 1:]:
+            if first["needed_wilds"] + second["needed_wilds"] > wild_count:
+                continue
+            ranks, suits = {}, {}
+            for candidate in (first, second):
+                for suit, rank, count in candidate["requirements"]:
+                    ranks[rank] = ranks.get(rank, 0) + count
+                    if suit is not None:
+                        suits[(suit, rank)] = suits.get((suit, rank), 0) + count
+            if any(count > len(info["normals_by_rank"].get(rank, [])) for rank, count in ranks.items()):
+                continue
+            if any(count > len(info["normals_by_suit"].get(suit, {}).get(rank, []))
+                   for (suit, rank), count in suits.items()):
+                continue
+            high, low = sorted((first["score"], second["score"]), reverse=True)
+            best = max(best, high + low * 0.72)
+    return best
 
 
 def _wild_structure_opportunity_loss(hand: List[Dict], cards: List[int], level_rank: int) -> float:
@@ -9206,6 +9239,46 @@ def _wild_structure_opportunity_loss(hand: List[Dict], cards: List[int], level_r
     remaining = _remove_cards(hand, cards)
     after = _wild_structure_potential(remaining, level_rank)
     return max(0.0, before - after)
+
+
+def _stranded_wild_run_pass_penalty(state: Dict, player_id: str) -> float:
+    """Discount waiting for a small wildcard run without an independent entry."""
+    hand = state["players"][player_id]["hand"]
+    leader = _active_enemy_leader(state, player_id)
+    if not leader or not 6 <= len(hand) <= 12:
+        return 0.0
+    level = state["level_rank"]
+    if not any(_is_wild(card, level) for card in hand):
+        return 0.0
+    # A run is relevant only when the actual compact plan uses it. A possible
+    # but inferior run must not penalize an unrelated, workable bomb plan.
+    if "straight" not in _hand_decomposition_summary(hand, level).get("plan_types", ()):
+        return 0.0
+    hand_map = _map_hand_by_id(hand)
+    best = None
+    opponents = [pid for pid in state["turn_order"]
+                 if _team_of(state, pid) != _team_of(state, player_id)
+                 and not state["players"][pid].get("finished")]
+    for cards in _list_straight_options(hand, level, 0):
+        combo = _evaluate_combo([hand_map[cid] for cid in cards], level, state.get("config", {}))
+        if not combo or combo["type"] != "straight" or not combo.get("uses_wild"):
+            continue
+        if combo["high_value"] > 8:
+            return 0.0
+        remaining = _remove_cards(hand, cards)
+        controls = [_evaluate_combo([hand_map[cid] for cid in bomb["cards"]], level,
+                                    state.get("config", {}))
+                    for bomb in _find_bomb_candidates(remaining, level)]
+        controls.extend(_evaluate_combo([card], level, {}) for card in remaining
+                        if _single_order_value(card, level) >= CONTROL_SINGLE_VALUE_MIN)
+        recovery = 0.0
+        for control in controls:
+            hold = math.prod(1.0 - _public_reply_belief(state, player_id, opp, control)["any"]
+                             for opp in opponents)
+            recovery = max(recovery, hold)
+        penalty = (9.0 - (combo["high_value"] - 5) * 0.75) * (1.0 - recovery)
+        best = penalty if best is None else min(best, penalty)
+    return best or 0.0
 
 
 def _level_response_flexibility_bonus(
@@ -9535,6 +9608,23 @@ def _teammate_can_retake_current_lane(
     teammate_hand = state["players"].get(teammate, {}).get("hand", [])
     if not teammate_hand:
         return False
+    if not state.get("_ai_sampled_world"):
+        if not _teammate_response_window_open(state, player_id):
+            return False
+        available, locked = _teammate_public_response_pool(state, player_id, teammate)
+        if _hand_has_same_type_beat(locked, state["level_rank"], current_combo, state.get("config", {})):
+            return True
+        if current_combo.get("type") == "single":
+            probability = _teammate_single_response_probability(
+                state, player_id, current_combo.get("rank_value", 0),
+            )
+        elif current_combo.get("type") in ("pair", "three"):
+            probability = _history_lane_reply_probability(
+                state, teammate, current_combo, available + locked, locked,
+            )
+        else:
+            probability = _public_reply_belief(state, player_id, teammate, current_combo)["same_type"]
+        return probability >= 0.8
     return _hand_has_same_type_beat(
         teammate_hand,
         state["level_rank"],
@@ -9738,6 +9828,7 @@ def _heuristic_score_cache_key(state: Dict, bot_id: str, depth: int) -> Tuple:
     return (
         bot_id,
         depth,
+        bool(state.get("_ai_sampled_world")),
         state.get("round_number"),
         state.get("phase"),
         state.get("current_turn"),
@@ -10786,17 +10877,53 @@ def _team_finish_score(
     bot_remaining: int,
     bot_hand: Optional[List[Dict]] = None,
 ) -> float:
-    counts = {pid: len(state["players"][pid]["hand"]) for pid in state["turn_order"]}
-    counts[bot_id] = bot_remaining
     level_rank = state.get("level_rank", 2)
-    turns = {}
-    for pid in state["turn_order"]:
-        if pid == bot_id and bot_hand is not None:
-            turns[pid] = _estimated_turns_to_finish(bot_hand, level_rank)
-        else:
-            turns[pid] = _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
-    predicted = _predict_finish_order(state, counts, turns)
-    return _predicted_team_upgrade_value(state, bot_id, predicted)
+    hand = bot_hand if bot_hand is not None else state["players"][bot_id]["hand"]
+    return _team_finish_score_with_turn_override(
+        state, bot_id, bot_remaining, _estimated_turns_to_finish(hand, level_rank),
+    )
+
+
+def _public_finish_turn_panels(state: Dict, observer_id: str) -> List[Dict[str, float]]:
+    """Use a fixed public-pool prior, never the server's actual hidden hands.
+
+    Reuse the same small panel for every candidate of a decision. Publicly
+    known owners are locked; voluntary passes do not rule out a hand. These
+    inexpensive shape estimates are an ordering prior, not a rollout result.
+    """
+    key = (_heuristic_score_cache_key(state, observer_id, 0), _bounded_finalist_scoring())
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("public_finish_turns", {})
+    if key in cache:
+        return cache[key]
+    targets = [pid for pid in state["turn_order"] if pid != observer_id]
+    pool = _lead_unknown_pool_cards(state, observer_id)
+    owners = {}
+    for cid, pid in (state.get("known_card_owners") or {}).items():
+        try:
+            owners[int(cid)] = pid
+        except (TypeError, ValueError):
+            continue
+    locked = {pid: [card for card in pool if owners.get(card["id"]) == pid] for pid in targets}
+    available = [card for card in pool if owners.get(card["id"]) not in targets]
+    seed = hashlib.blake2b(repr(key[0]).encode("utf-8"), digest_size=8).digest()
+    rng = random.Random(int.from_bytes(seed, "big"))
+    panels = []
+    for _ in range(8):
+        shuffled = list(available)
+        rng.shuffle(shuffled)
+        offset = 0
+        turns = {}
+        for pid in targets:
+            count = len(state["players"][pid]["hand"])
+            known = locked[pid][:count]
+            needed = max(0, count - len(known))
+            sampled = known + shuffled[offset:offset + needed]
+            offset += needed
+            turns[pid] = _estimated_turns_to_finish(sampled, state["level_rank"])
+        panels.append(turns)
+    if not _deadline_expired():
+        cache[key] = panels
+    return panels
 
 
 def _team_finish_score_with_turn_override(
@@ -10808,14 +10935,24 @@ def _team_finish_score_with_turn_override(
     counts = {pid: len(state["players"][pid]["hand"]) for pid in state["turn_order"]}
     counts[bot_id] = bot_remaining
     level_rank = state.get("level_rank", 2)
-    turns = {}
-    for pid in state["turn_order"]:
-        if pid == bot_id:
-            turns[pid] = bot_turns
-        else:
-            turns[pid] = _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
-    predicted = _predict_finish_order(state, counts, turns)
-    return _predicted_team_upgrade_value(state, bot_id, predicted)
+    if state.get("_ai_sampled_world"):
+        panels = [{pid: _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
+                   for pid in state["turn_order"] if pid != bot_id}]
+    else:
+        panels = _public_finish_turn_panels(state, bot_id)
+    values = []
+    for panel in panels:
+        turns = {**panel, bot_id: bot_turns}
+        predicted = _predict_finish_order(state, counts, turns)
+        values.append(_predicted_team_upgrade_value(state, bot_id, predicted))
+    mean = sum(values) / len(values)
+    if len(values) > 1 and min(values) < 0 < max(values):
+        # A small public panel disagreeing on the winning team is weak
+        # evidence. Shrink one standard error toward neutral so a noisy
+        # predicted placing cannot outweigh a clean, concrete takeover.
+        variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
+        mean = math.copysign(max(0.0, abs(mean) - math.sqrt(variance / len(values))), mean)
+    return mean
 
 
 def _team_finish_visibility_weight(state: Dict, bot_id: str) -> float:
@@ -11824,6 +11961,7 @@ def _determinize_state(
 
     for pid, cards in chosen_assignment.items():
         det["players"][pid]["hand"] = cards
+    det["_ai_sampled_world"] = True
     return det
 
 
@@ -12826,8 +12964,7 @@ def _natural_structure_takeover_profile(
     combo_type = combo.get("type") or ""
     if (
         combo_type != current_combo.get("type")
-        or combo_type not in ("full_house", "straight", "three_pairs", "steel_plate")
-        or len(cards) < 5
+        or combo_type not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate")
     ):
         return {"qualified": 0.0}
 
@@ -12836,6 +12973,11 @@ def _natural_structure_takeover_profile(
         return {"qualified": 0.0}
 
     hand = features.get("hand") or state["players"][player_id].get("hand", [])
+    if combo_type in ("pair", "three"):
+        rank = play_cards[0].get("rank")
+        if (rank == state["level_rank"]
+                or features.get("before_counts", {}).get(rank) != len(cards)):
+            return {"qualified": 0.0}
     if combo_type == "straight":
         hand_map = _map_hand_by_id(hand)
         for candidate in _find_bomb_candidates(hand, state["level_rank"]):
@@ -13136,6 +13278,9 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
     strategic_pass = _strategic_enemy_pass_bonus(state, player_id)
     if strategic_pass > 0.001:
         components["strategic_enemy_pass"] = strategic_pass
+    stranded_run = _stranded_wild_run_pass_penalty(state, player_id)
+    if stranded_run > 0.001:
+        components["pass_stranded_wild_run"] = -stranded_run
     teammate_control = _safe_teammate_control_wait_probability(state, player_id)
     if teammate_control > 0.001:
         components["defer_to_teammate_control"] = teammate_control * 7.0
@@ -15593,12 +15738,21 @@ def _compute_bot_score_components(
             current_combo = current_trick.get("combo") or {}
             minimal = _minimal_bomb_response(hand, level_rank, current_combo, config)
             stall_escape = _defer_bomb_upgrade_risk_penalty(state, bot_id)
+            bomb_choice_count = len(
+                _list_bomb_options(hand, level_rank, current_combo, config)
+            )
             if (
                 stall_escape > 0.001
                 and minimal is not None
                 and tuple(sorted(minimal)) == tuple(sorted(cards))
             ):
-                components["bomb_stall_escape"] = stall_escape * 1.45
+                if bomb_choice_count > 1:
+                    components["bomb_stall_escape"] = stall_escape * 1.45
+                else:
+                    # With one legal bomb this is a forced takeover, not a
+                    # minimal-bomb choice. Keep the contest incentive without
+                    # pretending that an upgrade was deferred.
+                    components["bomb_forced_takeover"] = stall_escape * 1.45
             upgrade = _bomb_followup_upgrade_metrics(state, bot_id, cards, combo, remaining)
             if upgrade["score"] > 0.001:
                 components["bomb_shape_upgrade"] = upgrade["score"]

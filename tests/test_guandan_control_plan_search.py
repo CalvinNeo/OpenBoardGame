@@ -145,7 +145,9 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
                               ["♠️K", "♣️K", "♦️K"])
         explain = state["bot_explain"]["bot2"]
         search = explain["search"]
-        self.assertEqual(search["decision"]["reason"], "preserve_control_plan")
+        # The search may now agree with the public-information baseline;
+        # either path must preserve the strong grouped lead asserted above.
+        self.assertIn(search["decision"]["reason"], ("agreement", "preserve_control_plan"))
         self.assertGreater(search["completed_depth"], state["config"]["bot_minimax_depth"])
         self.assertEqual(sum(record["selected"] for record in search["candidates"]), 1)
         for record in search["candidates"]:

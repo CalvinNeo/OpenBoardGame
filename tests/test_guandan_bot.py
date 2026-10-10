@@ -525,6 +525,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["config"]["bot_endgame_threshold"] = 0
         state["trick_plays"] = {}
 
+        # Replacing the deal must also replace its randomly exposed card.
+        state.update(known_card_owners={}, round_memories=[], visible_card_id=None)
         deck = guandan._full_deck()
         trick_cards = self._pick_labels(deck, trick_labels)
         bot_hand = self._pick_labels(deck, bot_labels)
@@ -747,6 +749,12 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
     def test_save_62f633_midgame_sheds_orphan_before_intact_full_houses(self):
         state = self._make_midgame_orphan_cleanup_state()
+        # This tactical regression assumes the recorded control distribution.
+        # Make that information explicit instead of reading server-only hands.
+        state["known_card_owners"] = {
+            card["id"]: pid for pid, player in state["players"].items()
+            if pid != "bot3" for card in player["hand"]
+        }
         hand = state["players"]["bot3"]["hand"]
         single_eight = [
             card["id"] for card in hand if guandan._card_label(card) == "♠️8"
@@ -5854,7 +5862,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         hand_map = guandan._map_hand_by_id(bot_hand)
         chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
-        self.assertEqual(chosen_labels, ["♠️8"])
+        # Both loose medium singles avoid spending the level card or wild.
+        self.assertIn(chosen_labels, (["♠️8"], ["♠️10"]))
 
         explain = state.get("bot_explain", {}).get("bot3", {})
         top_cards = [entry.get("cards") for entry in explain.get("top", [])]
@@ -6232,6 +6241,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state = guandan.GuandanGame.init_game({}, players)
         state["phase"] = "playing"
         state["current_turn"] = "bot"
+        # Replacing the deal must also replace its randomly exposed card.
+        state.update(known_card_owners={}, round_memories=[], visible_card_id=None)
         deck = guandan._full_deck()
 
         four = next(card for card in deck if card.get("rank") == 4 and card.get("suit") == "spades")
@@ -6841,7 +6852,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         }
         state["seen_cards"] = [card["id"] for card in teammate_three + enemy_three]
         state["visible_card_id"] = None
-        state["known_card_owners"] = {}
+        # Certainty about a partner's next reply requires public ownership.
+        state["known_card_owners"] = {
+            card["id"]: "bot3" for card in state["players"]["bot3"]["hand"]
+        }
         self._assert_consistent_card_zones(state)
 
         bomb_ids = [card["id"] for card in bot_hand if guandan._card_label(card) in ("♣️J", "♥️J", "♦️J", "♠️J")]
@@ -6928,7 +6942,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         }
         state["seen_cards"] = [card["id"] for card in teammate_full_house + enemy_full_house]
         state["visible_card_id"] = None
-        state["known_card_owners"] = {}
+        # Certainty about a partner's next reply requires public ownership.
+        state["known_card_owners"] = {
+            card["id"]: "bot3" for card in state["players"]["bot3"]["hand"]
+        }
         self._assert_consistent_card_zones(state)
 
         high_full_house_ids = [
@@ -7599,6 +7616,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             "combo": guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {})),
         }
 
+        # Preserve this exact-world conservation case as public information.
+        state["known_card_owners"] = {
+            card["id"]: pid for pid, player in state["players"].items()
+            if pid != "bot2" for card in player["hand"]
+        }
         real_random = random.Random
         with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
             action = guandan.GuandanGame.bot_move(state, "bot2")
