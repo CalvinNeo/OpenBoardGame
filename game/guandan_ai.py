@@ -11939,6 +11939,97 @@ def _should_accept_mcts_override(
     return True
 
 
+def _minimax_plan_risks(
+    state: Dict,
+    bot_id: str,
+    reference: Optional[Dict],
+    proposal: Optional[Dict],
+) -> Dict[str, float]:
+    if not reference or not proposal or _action_identity(reference) == _action_identity(proposal):
+        return {}
+    hand = state["players"][bot_id]["hand"]
+    level_rank = state["level_rank"]
+    cards = proposal.get("card_ids") or []
+    if cards and len(cards) == len(hand):
+        return {}
+    current_trick = state.get("current_trick") or {}
+    reference_cards = reference.get("card_ids") or []
+    reference_combo = _action_combo(state, bot_id, reference) or {}
+    proposal_combo = _action_combo(state, bot_id, proposal) or {}
+    risks: Dict[str, float] = {}
+    if proposal.get("type") == "pass" and reference_combo.get("type") in BOMB_TYPES:
+        leader = current_trick.get("player_id")
+        if (leader and _team_of(state, leader) != _team_of(state, bot_id)
+                and len(state["players"][leader]["hand"]) <= 5
+                and not _retained_bomb_override_is_unsafe(state, bot_id, proposal, reference)):
+            risks["keep_takeover"] = 10.0
+    if cards and proposal_combo.get("type") not in BOMB_TYPES:
+        remaining = _remove_cards(hand, cards)
+        wild_ids = {card["id"] for card in hand if _is_wild(card, level_rank)}
+        if (wild_ids.intersection(cards) and not wild_ids.intersection(reference_cards)
+                and not _can_play_all(remaining, level_rank, state.get("config", {}), None)):
+            loss = _wild_structure_opportunity_loss(hand, cards, level_rank)
+            if loss > 0.0:
+                risks["wild_control_reserve"] = min(24.0, loss)
+    if (not current_trick and proposal_combo.get("type") == "single"
+            and _minimax_clean_grouped_lead(state, bot_id, reference)):
+        opponents = [pid for pid in state["turn_order"]
+                     if _team_of(state, pid) != _team_of(state, bot_id)
+                     and not state["players"][pid].get("finished")]
+        largest_hand = max((len(state["players"][pid]["hand"]) for pid in opponents), default=0)
+        unknown = _lead_unknown_pool_cards(state, bot_id)
+        if (not _public_pool_supports_same_type_reply(unknown, largest_hand, level_rank, reference_combo)
+                and _public_pool_supports_same_type_reply(unknown, largest_hand, level_rank, proposal_combo)):
+            risks["cash_unbeaten_group"] = 10.0 + min(8.0, len(reference_cards) * 2.0)
+    return risks
+
+
+def _should_accept_minimax_override(
+    state: Dict,
+    bot_id: str,
+    reference: Optional[Dict],
+    proposal: Optional[Dict],
+    status: Dict,
+) -> bool:
+    decision = {"reference": reference, "proposal": proposal, "accepted": False,
+                "reason": "no_proposal", "plan_risks": {}}
+    state.setdefault("_ai_eval_cache", {})["minimax_override"] = decision
+    if not proposal:
+        return False
+    if not reference or _action_identity(reference) == _action_identity(proposal):
+        decision.update(accepted=True, reason="agreement")
+        return True
+    if _retained_bomb_override_is_unsafe(state, bot_id, reference, proposal):
+        decision["reason"] = "uncovered_retained_bomb"
+        return False
+    risks = _minimax_plan_risks(state, bot_id, reference, proposal)
+    decision["plan_risks"] = risks
+    if not risks:
+        decision.update(accepted=True, reason="search_preference")
+        return True
+    records = {_action_identity(record["action"]): record for record in status.get("root_values", [])}
+    baseline = records.get(_action_identity(reference))
+    challenger = records.get(_action_identity(proposal))
+    if not baseline or not challenger or not status.get("completed_depth"):
+        decision["reason"] = "incomplete_plan_comparison"
+        return False
+    before_values = baseline.get("world_values") or []
+    after_values = challenger.get("world_values") or []
+    if len(before_values) < 2 or len(before_values) != len(after_values):
+        decision["reason"] = "incomplete_plan_comparison"
+        return False
+    penalty_delta = challenger.get("lead_penalty", 0.0) - baseline.get("lead_penalty", 0.0)
+    deltas = [after - before - penalty_delta for before, after in zip(before_values, after_values)]
+    gain = sum(deltas) / len(deltas)
+    variance = sum((delta - gain) ** 2 for delta in deltas) / (len(deltas) - 1)
+    lower_gain = gain - 1.64 * math.sqrt(variance / len(deltas))
+    margin = 5.5 + max(risks.values())
+    accepted = lower_gain >= margin
+    decision.update(accepted=accepted, reason="supported_plan_change" if accepted else "preserve_control_plan",
+                    paired_gain=gain, paired_gain_lower=lower_gain, required_gain=margin)
+    return accepted
+
+
 def _next_actor(state: Dict) -> Optional[str]:
     for pid in state["turn_order"]:
         if GuandanGame.get_legal_actions(state, pid):
@@ -14293,6 +14384,11 @@ def _minimax_pick_action(
     target_depth = max(1, int(depth))
     particle_count_used = 1
     aggregation = "single_world"
+    root_values: List[Dict] = []
+    extension_limit = target_depth
+    if (public_state is not None and deadline is not None
+            and public_state.get("config", {}).get("bot_search_use_remaining_budget", True)):
+        extension_limit += 3
 
     def store_status(
         stop_reason: str,
@@ -14315,6 +14411,8 @@ def _minimax_pick_action(
             "attempted": attempted,
             "particles": particle_count_used,
             "aggregation": aggregation,
+            "root_values": list(root_values),
+            "extension_limit": extension_limit,
         }
         closeout_meta = state.get("_ai_eval_cache", {}).get("public_closeout")
         if isinstance(closeout_meta, dict):
@@ -14335,6 +14433,11 @@ def _minimax_pick_action(
         return None
     actions = _CORE._candidate_actions(state, bot_id, width)
     actions = _CORE._filter_overbomb_actions(state, bot_id, actions)
+    if incumbent_action:
+        trial = _clone_search_state(state)
+        _, error = GuandanGame.apply_action(trial, bot_id, dict(incumbent_action))
+        if error is None:
+            actions = _merge_action_candidates(actions, [dict(incumbent_action)])
     if not actions:
         store_status("no_candidates")
         return None
@@ -14486,7 +14589,7 @@ def _minimax_pick_action(
         if particle_count_used > 1
         else 0.0
     )
-    for search_depth in range(1, target_depth + 1):
+    for search_depth in range(1, extension_limit + 1):
         layer_values: List[List[float]] = [[] for _action in actions]
         layer_interrupted = False
         for particle_index, particle in enumerate(search_states, start=1):
@@ -14546,6 +14649,7 @@ def _minimax_pick_action(
 
         reference_values = layer_values[0]
         layer_scored: List[Tuple[Dict, float]] = []
+        layer_records: List[Dict] = []
         for action, values in zip(actions, layer_values):
             mean_value = sum(values) / particle_count_used
             paired_deltas = [
@@ -14557,17 +14661,29 @@ def _minimax_pick_action(
                 (delta - mean_delta) ** 2 for delta in paired_deltas
             ) / particle_count_used
             aggregate_value = mean_value - risk_lambda * math.sqrt(max(0.0, variance))
-            aggregate_value -= _minimax_root_lead_single_penalty(
+            lead_penalty = _minimax_root_lead_single_penalty(
                 public_state or state,
                 bot_id,
                 action,
             )
+            aggregate_value -= lead_penalty
             layer_scored.append((action, aggregate_value))
+            layer_records.append({
+                "action": dict(action), "mean": mean_value,
+                "std": math.sqrt(sum((value - mean_value) ** 2 for value in values) / particle_count_used),
+                "paired_std": math.sqrt(max(0.0, variance)), "value": aggregate_value,
+                "lead_penalty": lead_penalty, "world_values": list(values),
+            })
         if not layer_scored:
             break
         root_scored = layer_scored
+        root_values = layer_records
         best_action, best_value = max(layer_scored, key=lambda item: item[1])
         completed_depth = search_depth
+        if search_depth >= target_depth and not _minimax_plan_risks(
+            public_state or state, bot_id, incumbent_action, best_action,
+        ):
+            break
     # Defensive shortcuts are an emergency fallback. Once a complete root
     # comparison exists, its values already include the cost of a single lead;
     # a rank-only rewrite must not replace a searched win with a searched loss.
@@ -16689,6 +16805,16 @@ def _build_bot_explain(
         )
         return [_card_label(card) for card in sorted_hand]
 
+    if (method_meta or {}).get("forced_action"):
+        return {
+            "method": method, "score_model": "none", "method_details": method_meta,
+            "timing": timing_meta or {},
+            "chosen": {"cards": label_action(chosen_action_type, chosen_cards),
+                       "score": None, "components": {}},
+            "decision": decision, "hand_before": hand_before_labels,
+            "hand": hand_labels_for(chosen_action_type), "top": [],
+        }
+
     route_cache = state.get("_ai_eval_cache", {})
     if route_cache.get("hand_route_status"):
         method_meta = dict(method_meta or {})
@@ -16868,6 +16994,11 @@ def _build_bot_explain(
         pass_entry = next((entry for entry in scored if entry[0] is None), None)
         if pass_entry is not None:
             comparisons.append(pass_entry)
+    selected_key = _cards_key(chosen_cards) if chosen_action_type == "play" else ()
+    if not any(_cards_key(cards or []) == selected_key for cards, _, _ in comparisons):
+        selected = next((entry for entry in scored if _cards_key(entry[0] or []) == selected_key), None)
+        if selected is not None:
+            comparisons.append(selected)
     for cards, score, comps in comparisons:
         comps_clean = {k: v for k, v in comps.items() if k != "total" and abs(v) > 0.001}
         top.append(
@@ -16890,10 +17021,34 @@ def _build_bot_explain(
     if chosen_comps is None:
         chosen_comps = _bot_score_components(state, bot_id, chosen_cards, depth)
     chosen_clean = {k: v for k, v in chosen_comps.items() if k != "total" and abs(v) > 0.001}
+    method_meta = dict(method_meta or {})
+    root_values = method_meta.pop("minimax_root_values", [])
+    override = dict(method_meta.pop("minimax_override", {}) or {})
+    search_explain = None
+    if root_values or override:
+        heuristic_values = {_cards_key(cards or []): score for cards, score, _ in scored}
+        records = []
+        for record in root_values:
+            action = record["action"]
+            key = _cards_key(action.get("card_ids") or [])
+            records.append({
+                "cards": label_action(action.get("type", "play"), action.get("card_ids") or []),
+                "value": record["value"], "mean": record["mean"], "std": record["std"],
+                "paired_std": record["paired_std"], "lead_penalty": record["lead_penalty"],
+                "samples": len(record["world_values"]), "world_values": list(record["world_values"]),
+                "heuristic_score": heuristic_values.get(key), "selected": key == selected_key,
+            })
+        for key in ("reference", "proposal"):
+            action = override.get(key)
+            if action:
+                override[key] = label_action(action.get("type", "play"), action.get("card_ids") or [])
+        search_explain = {"method": "minimax", "candidates": sorted(records, key=lambda item: item["value"], reverse=True),
+                          "decision": override, "completed_depth": method_meta.get("minimax_completed_depth")}
     return {
         "method": method,
         "score_model": "heuristic",
         "method_details": method_meta or {},
+        "search": search_explain,
         "timing": timing_meta or {},
         "chosen": {
             "cards": label_action(chosen_action_type, chosen_cards),

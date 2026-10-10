@@ -1502,6 +1502,58 @@ function buildGuandanRoundHistoryClipboardText(view) {
   return sections.join("\n");
 }
 
+function formatGuandanSearchValue(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(2) : "-";
+}
+
+function buildGuandanBotSearchText(explain) {
+  if (explain.method_details && explain.method_details.forced_action) {
+    return "Only one legal action. Scoring and search were skipped.";
+  }
+  const search = explain.search;
+  if (!search) return "";
+  const decision = search.decision || {};
+  const reasons = {
+    agreement: "Search agrees with the heuristic plan.",
+    search_preference: "Search selected an alternative without breaking a protected control plan.",
+    supported_plan_change: "Consistent search gains justify changing the control plan.",
+    preserve_control_plan: "Kept the control plan: sampled gains do not justify changing it.",
+    incomplete_plan_comparison: "Kept the control plan: the comparison did not finish.",
+    uncovered_retained_bomb: "Kept the control plan: the opponent's retained bomb is not covered.",
+    no_proposal: "Search did not return an alternative.",
+  };
+  const lines = [reasons[decision.reason] || "Minimax comparison."];
+  if (decision.reference) lines.push(`Heuristic plan: ${decision.reference.join(" ")}`);
+  if (decision.proposal) lines.push(`Search proposal: ${decision.proposal.join(" ")}`);
+  const risks = {
+    wild_control_reserve: "wildcard control combinations",
+    cash_unbeaten_group: "a complete group with no higher ordinary reply",
+    keep_takeover: "taking the lead before a short opponent",
+  };
+  const protections = Object.keys(decision.plan_risks || {}).map((key) => risks[key] || key);
+  if (protections.length) lines.push(`Protected: ${protections.join("; ")}`);
+  if (typeof decision.paired_gain_lower === "number") {
+    lines.push(`Paired gain: ${formatGuandanSearchValue(decision.paired_gain)}; conservative gain: ${formatGuandanSearchValue(decision.paired_gain_lower)}; required: ${formatGuandanSearchValue(decision.required_gain)}`);
+  }
+  lines.push(`Completed search depth: ${search.completed_depth ?? "-"}. Search values and heuristic scores are separate.`);
+  for (const candidate of search.candidates || []) {
+    lines.push(`${candidate.selected ? "Chosen: " : "Alternative: "}${candidate.cards.join(" ")} | search=${formatGuandanSearchValue(candidate.value)} mean=${formatGuandanSearchValue(candidate.mean)} std=${formatGuandanSearchValue(candidate.std)} samples=${candidate.samples} heuristic=${formatGuandanSearchValue(candidate.heuristic_score)}`);
+  }
+  return lines.join("\n");
+}
+
+function buildGuandanBotSearchHtml(explain) {
+  const text = buildGuandanBotSearchText(explain);
+  if (!text) return "";
+  const escaped = text.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[character]));
+  const lines = escaped.split("\n");
+  return `<div><strong>Search decision:</strong> ${lines[0]}</div>${lines.length > 1
+    ? `<details><summary>Search comparison and control plan</summary>${lines.slice(1).map((line) => `<div class="hint">${line}</div>`).join("")}</details>`
+    : ""}`;
+}
+
 function buildGuandanBotExplainClipboardText(playerId, explain) {
   const view = currentGuandanView;
   if (!view || !explain) return "";
@@ -1593,6 +1645,8 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
     `hand_before=${handBeforeAction.join(" ") || "-"}`,
     `hand_after=${remainingHand.join(" ") || "-"}`,
     `chosen=${chosenCards.join(" ") || "-"} score=${typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-"} comps=${formatGuandanBotComponentsText(chosen.components)}`,
+    `score_model=${explain.score_model || "heuristic"}`,
+    buildGuandanBotSearchText(explain),
     "top=",
     topLines,
   ].join("\n");
@@ -1661,6 +1715,9 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
   const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";
   const chosenComponents = formatGuandanBotComponents(chosen.components);
   const timingHtml = buildGuandanBotTimingHtml(explain.timing || null);
+  const searchHtml = buildGuandanBotSearchHtml(explain);
+  const scoreLabel = explain.score_model === "heuristic" ? "Heuristic score" : "Score";
+  const chosenScoreText = explain.score_model === "none" ? "only legal action" : `${scoreLabel.toLowerCase()} ${chosenScore}`;
   const targetSummary = getGuandanBotExplainTargetText(context);
   const hand = Array.isArray(explain.hand) ? explain.hand : [];
   const handItems = hand.map((card) => `<span class="guandan-bot-hand-card">${card}</span>`).join("");
@@ -1746,16 +1803,17 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
     ${detailLine}
     ${timingHtml}
     ${mctsLine}
+    ${searchHtml}
     ${handBlock}
     <div><strong>Target:</strong> ${targetSummary}</div>
-    <div><strong>Chosen:</strong> ${chosenCards} <span class="hint">(score ${chosenScore})</span></div>
-    <div><strong>Score Breakdown:</strong> ${chosenComponents}</div>
+    <div><strong>Chosen:</strong> ${chosenCards} <span class="hint">(${chosenScoreText})</span></div>
+    <div><strong>${scoreLabel} breakdown:</strong> ${chosenComponents}</div>
     <table class="guandan-bot-explain-table">
       <thead>
         <tr>
           <th>Rank</th>
           <th>Cards</th>
-          <th>Score</th>
+          <th>${scoreLabel}</th>
           <th>Components</th>
         </tr>
       </thead>

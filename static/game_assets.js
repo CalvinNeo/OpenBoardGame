@@ -457,7 +457,7 @@ const GAME_ASSETS = {
   },
   "guandan": {
     "scripts": [
-      "/static/games/guandan.js?v=app_v15"
+      "/static/games/guandan.js?v=app_v16"
     ],
     "styles": [],
     "panel": "guandanPanel",

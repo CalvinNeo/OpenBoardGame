@@ -1569,6 +1569,7 @@ _AI_EXPORTED_FUNCS = (
     "_determinize_state",
     "_retained_bomb_override_is_unsafe",
     "_should_accept_mcts_override",
+    "_should_accept_minimax_override",
     "_next_actor",
     "_rollout_policy_action",
     "_rollout_value",
@@ -2583,6 +2584,35 @@ class GuandanGame:
                     return
                 progress_callback(stage, max(0.0, min(0.99, float(progress))), detail)
 
+            hand = state["players"][bot_id]["hand"]
+            forced_action = None
+            if state.get("current_trick") and "pass" in legal and not _list_hint_options(state, bot_id):
+                forced_action = {"type": "pass"}
+            elif not state.get("current_trick") and len(hand) == 1:
+                forced_action = {"type": "play", "card_ids": [hand[0]["id"]]}
+            if forced_action is not None:
+                explain = _build_bot_explain(
+                    state, bot_id, forced_action.get("card_ids", []), "heuristic",
+                    config.get("bot_search_depth", 2),
+                    method_meta={"forced_action": True, "search_stop_reason": "only_legal_action"},
+                    chosen_action_type=forced_action["type"],
+                )
+                elapsed_ms = (time.perf_counter() - decision_started_at) * 1000.0
+                explain["timing"] = {
+                    "budget_ms": float(think_budget_ms), "hard_budget_ms": hard_budget_ms,
+                    "total_ms": round(elapsed_ms, 3), "stages_ms": {"forced": round(elapsed_ms, 3)},
+                    "over_budget_ms": round(max(0.0, elapsed_ms - think_budget_ms), 3),
+                    "deadline_limited": False, "fallback_used": False, "fallback_events": [],
+                    "deadline_reached": time.perf_counter() >= decision_deadline,
+                    "hard_deadline_reached": time.perf_counter() >= hard_decision_deadline,
+                }
+                state.setdefault("bot_explain", {})[bot_id] = explain
+                _append_bot_explain_history(
+                    state, bot_id, explain, forced_action["type"], forced_action.get("card_ids", []),
+                )
+                _progress("finalizing", 0.99, "Only legal action ready")
+                return forced_action
+
             depth = config.get("bot_search_depth", 2)
             search_width = config.get("bot_minimax_width", 6)
             mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
@@ -2747,8 +2777,8 @@ class GuandanGame:
                             det.get("_ai_eval_cache", {}).get("minimax_anytime") or {}
                         )
                     _record_stage("minimax", minimax_started_at)
-                    if minimax_action is not None and not _retained_bomb_override_is_unsafe(
-                        state, bot_id, heuristic_action, minimax_action
+                    if minimax_action is not None and _should_accept_minimax_override(
+                        state, bot_id, heuristic_action, minimax_action, minimax_status
                     ):
                         decided = True
                         method = "minimax"
@@ -2941,6 +2971,9 @@ class GuandanGame:
                             ),
                             "minimax_budget_ms": minimax_budget_ms,
                             "minimax_stop_reason": minimax_status.get("stop_reason"),
+                            "minimax_extension_limit": minimax_status.get("extension_limit"),
+                            "minimax_root_values": minimax_status.get("root_values", []),
+                            "minimax_override": state.get("_ai_eval_cache", {}).get("minimax_override", {}),
                         }
                     )
                 if mcts_status:
