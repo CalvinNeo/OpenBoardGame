@@ -457,13 +457,13 @@ const GAME_ASSETS = {
   },
   "guandan": {
     "scripts": [
-      "/static/games/guandan.js?v=app_v16"
+      "/static/games/guandan.js?v=app_v17"
     ],
     "styles": [],
     "panel": "guandanPanel",
     "header": "showGuandanHeaderActions",
-    "markup": "/static/games/guandan.html?v=2",
-    "styleFragments": "/static/games/guandan.css?v=3"
+    "markup": "/static/games/guandan.html?v=3",
+    "styleFragments": "/static/games/guandan.css?v=4"
   },
   "cabo": {
     "scripts": [

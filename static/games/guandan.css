@@ -75,8 +75,9 @@
 }
 
 #guandanPanel .guandan-status-bar {
+  position: relative;
   display: grid;
-  grid-template-columns: 0.9fr 0.72fr 1.3fr 1fr 0.72fr;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.72fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.72fr) minmax(0, 1fr);
   gap: 5px;
   margin-bottom: 7px;
 }
@@ -503,33 +504,59 @@ body.guandan-explain-mode button.has-explanation:hover {
   color: #3730a3;
 }
 
-#guandanPanel .guandan-tribute-strip {
+#guandanPanel .guandan-status-item--tribute {
+  display: block;
+  border-color: #e4ddc7;
+  background: rgba(255, 251, 235, 0.74);
+}
+
+#guandanPanel .guandan-status-item--tribute summary {
   display: flex;
-  min-width: 0;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 6px;
-  padding: 5px 8px;
+  gap: inherit;
+  cursor: pointer;
+  list-style: none;
+}
+
+#guandanPanel .guandan-status-item--tribute summary::-webkit-details-marker {
+  display: none;
+}
+
+#guandanPanel .guandan-status-item--tribute summary::after {
+  content: "▾";
+  margin-left: auto;
+  color: #8a6a22;
+  font-size: 0.65rem;
+}
+
+#guandanPanel .guandan-status-item--tribute[open] summary::after {
+  content: "▴";
+}
+
+#guandanPanel .guandan-status-item--tribute summary:focus-visible {
+  outline: 2px solid var(--guandan-you);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+#guandanPanel .guandan-tribute-details {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  width: min(320px, 100%);
+  max-height: min(12rem, 50vh);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  padding: 9px 11px;
   border: 1px solid #e4ddc7;
   border-radius: 8px;
-  background: rgba(255, 251, 235, 0.74);
+  background: #fffdf5;
   color: #5d5542;
-  font-size: 0.67rem;
-  line-height: 1.25;
-}
-
-#guandanPanel .guandan-tribute-label {
-  flex: 0 0 auto;
-  color: #8a6a22;
-  font-size: 0.57rem;
-  font-weight: 900;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-#guandanPanel #guandanTribute {
-  min-width: 0;
-  overflow-wrap: anywhere;
+  box-shadow: 0 5px 18px rgba(31, 50, 40, 0.15);
+  font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 #guandanPanel .guandan-section {

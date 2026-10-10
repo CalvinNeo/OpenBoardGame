@@ -47,6 +47,8 @@ const guandanBeatCardsEl = document.getElementById("guandanBeatCards");
 const guandanBeatHintEl = document.getElementById("guandanBeatHint");
 const guandanTrickPlaysLabel = document.getElementById("guandanTrickPlays");
 const guandanTributeLabel = document.getElementById("guandanTribute");
+const guandanTributeStatus = document.getElementById("guandanTributeStatus");
+const guandanTributeDetails = document.getElementById("guandanTributeDetails");
 const guandanHandEl = document.getElementById("guandanHand");
 const guandanPileEl = document.getElementById("guandanPile");
 const guandanPlayersEl = document.getElementById("guandanPlayers");
@@ -1055,6 +1057,8 @@ function renderGuandanTribute(view) {
   if (!guandanTributeLabel) return;
   if (!view.tribute) {
     guandanTributeLabel.textContent = "-";
+    if (guandanTributeDetails) guandanTributeDetails.textContent = "No tribute this round.";
+    if (guandanTributeStatus) guandanTributeStatus.open = false;
     return;
   }
   const tribute = view.tribute;
@@ -1080,7 +1084,8 @@ function renderGuandanTribute(view) {
       parts.push(`return cards: ${labels.join(", ")}`);
     }
   }
-  guandanTributeLabel.textContent = parts.join(" | ");
+  guandanTributeLabel.textContent = parts[0];
+  if (guandanTributeDetails) guandanTributeDetails.textContent = parts.join(" | ");
 }
 
 function renderGuandanGameState(data) {
@@ -2072,6 +2077,9 @@ if (guandanBotExplainModalCloseBtn) {
 }
 
 document.addEventListener("pointerdown", (e) => {
+  if (guandanTributeStatus?.open && !guandanTributeStatus.contains(e.target)) {
+    guandanTributeStatus.open = false;
+  }
   if (!guandanExplainMode) return;
 
   const buttonId = findGuandanButtonAtPoint(e.clientX, e.clientY);
@@ -2114,6 +2122,10 @@ window.addEventListener("keydown", (e) => {
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (guandanTributeStatus?.open) {
+    guandanTributeStatus.open = false;
+    guandanTributeStatus.querySelector("summary")?.focus();
+  }
   if (guandanExplainMode) exitGuandanExplainMode();
   if (guandanHelpModal && !guandanHelpModal.classList.contains("hidden")) {
     closeGuandanHelpModal();
