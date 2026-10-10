@@ -1035,6 +1035,66 @@ def _defer_bomb_upgrade_risk_penalty(state: Dict, player_id: str) -> float:
     if not minimal_combo or minimal_combo.get("type") not in BOMB_TYPES:
         return 0.0
 
+    # This value is also used as a bonus on the minimal bomb itself.  That
+    # bonus is only sound when a stronger bomb is worth preserving.  If a
+    # stronger legal bomb leaves a materially better residual hand, rewarding
+    # the minimal response can make the bot choose an inferior takeover (for
+    # example, QQQQ over a straight flush that cannot be counterbombed).
+    legal_bombs = _list_bomb_options(hand, level_rank, combo, state.get("config", {}))
+    minimal_key = tuple(sorted(minimal_bomb))
+    stronger_bombs = []
+    for option in legal_bombs:
+        if tuple(sorted(option)) == minimal_key:
+            continue
+        option_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        option_combo = _evaluate_combo(option_cards, level_rank, state.get("config", {}))
+        if not option_combo or _bomb_tier(option_combo) <= _bomb_tier(minimal_combo):
+            continue
+        stronger_bombs.append((option, option_combo))
+
+    if stronger_bombs:
+        minimal_remaining = _remove_cards(hand, minimal_bomb)
+        minimal_finishes_next = bool(
+            minimal_remaining
+            and _can_play_all(minimal_remaining, level_rank, state.get("config", {}), None)
+        )
+        minimal_turns = (
+            0.0
+            if not minimal_remaining
+            else 1.0
+            if minimal_finishes_next
+            else _hand_decomposition_summary(minimal_remaining, level_rank).get(
+                "turns", float(len(minimal_remaining))
+            )
+        )
+        minimal_upgrade = _bomb_followup_upgrade_metrics(
+            state, player_id, minimal_bomb, minimal_combo, minimal_remaining
+        )
+        for option, option_combo in stronger_bombs:
+            remaining = _remove_cards(hand, option)
+            finishes_next = bool(
+                remaining
+                and _can_play_all(remaining, level_rank, state.get("config", {}), None)
+            )
+            turns = (
+                0.0
+                if not remaining
+                else 1.0
+                if finishes_next
+                else _hand_decomposition_summary(remaining, level_rank).get(
+                    "turns", float(len(remaining))
+                )
+            )
+            upgrade = _bomb_followup_upgrade_metrics(
+                state, player_id, option, option_combo, remaining
+            )
+            if (
+                (finishes_next and not minimal_finishes_next)
+                or turns <= minimal_turns - 0.75
+                or upgrade.get("score", 0.0) >= minimal_upgrade.get("score", 0.0) + 2.0
+            ):
+                return 0.0
+
     response_options = _rank_response_options(state, player_id, _list_hint_options(state, player_id))
     non_bomb_responses = []
     for option in response_options:
