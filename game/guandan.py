@@ -1657,6 +1657,17 @@ def _finish_player(state: Dict, player_id: str) -> None:
     pdata["finish_rank"] = len(state["finish_order"])
 
 
+def _is_double_finish_settled(state: Dict) -> bool:
+    """Return whether the first two finishers are teammates.
+
+    Once both teammates have finished first and second, the round result is
+    already a double finish.  The other team must occupy third and fourth,
+    so there is no reason to keep dealing turns to those players.
+    """
+    order = state.get("finish_order") or []
+    return len(order) >= 2 and _team_of(state, order[0]) == _team_of(state, order[1])
+
+
 def _complete_finish_order(state: Dict) -> None:
     if len(state["finish_order"]) >= 4:
         return
@@ -2199,6 +2210,15 @@ class GuandanGame:
         if state["phase"] != "playing":
             return events, "invalid phase"
 
+        # A teammate's second-place finish settles a double finish.  This
+        # guard also closes out rooms restored from an older state that had
+        # already reached that point but had not advanced the round yet.
+        if _is_double_finish_settled(state):
+            current_trick = state.get("current_trick") or {}
+            _close_open_trick_memory(state, current_trick.get("player_id"), status="round_end")
+            _advance_to_round_end(state)
+            return events, None
+
         if player_id not in state["players"]:
             return events, "unknown player"
         if state["players"][player_id]["finished"]:
@@ -2281,7 +2301,7 @@ class GuandanGame:
         if not state["players"][player_id]["hand"]:
             _finish_player(state, player_id)
             trick_entry["actions"][-1]["finished_rank"] = state["players"][player_id].get("finish_rank")
-        if len(state["finish_order"]) >= 3:
+        if _is_double_finish_settled(state) or len(state["finish_order"]) >= 3:
             _close_open_trick_memory(state, player_id, status="round_end")
             _advance_to_round_end(state)
             return events, None
