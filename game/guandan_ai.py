@@ -7244,27 +7244,6 @@ def _additional_bomb_witness_probability(unknown_cards: List[Dict], hand_count: 
     return probability
 
 
-def _straight_flush_witness_probability(unknown_cards: List[Dict], hand_count: int, level_rank: int) -> float:
-    """Lower bound from one physical straight-flush witness in the pool."""
-    if hand_count < 5:
-        return 0.0
-    suits: Dict[str, set] = {}
-    wild_count = 0
-    for card in unknown_cards:
-        if _is_joker(card):
-            continue
-        if _is_wild(card, level_rank):
-            wild_count += 1
-        else:
-            suits.setdefault(card["suit"], set()).add(card["rank"])
-    if any(
-        sum(rank not in ranks for rank in sequence) <= wild_count
-        for ranks in suits.values() for sequence, _high in _CORE.STRAIGHT_SEQUENCES
-    ):
-        return _hypergeom_at_least(len(unknown_cards), 5, hand_count, 5)
-    return 0.0
-
-
 def _analytic_bomb_reply_probability(
     state: Dict,
     opponent_id: str,
@@ -7487,7 +7466,7 @@ def _opponent_overbomb_reply_probability(
     unknown_cards: Optional[List[Dict]] = None,
 ) -> float:
     combo_type = combo.get("type")
-    if combo_type == "heavenly":
+    if combo_type not in BOMB_TYPES or combo_type == "heavenly":
         return 0.0
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
     if hand_count <= 0:
@@ -7495,13 +7474,15 @@ def _opponent_overbomb_reply_probability(
     if hand_count == 4 and unknown_cards is not None:
         profile = _four_card_bomb_finish_profile_from_pool(state, opponent_id, unknown_cards)
         return _four_card_bomb_reply_probability(profile, combo, state["level_rank"], state.get("config", {}))
-    # Overbomb risk only applies after an existing bomb/straight-flush lead.
-    # Keep the ordinary analytic path for non-bomb combos; callers that need
-    # the first bomb against a pair/single use _opponent_bomb_reply_probability.
-    if unknown_cards is not None and combo_type in BOMB_TYPES:
+    if unknown_cards is not None:
         physical = _public_overbomb_profile_from_pool(state, opponent_id, combo, unknown_cards)
         if not physical["possible"]:
             return 0.0
+        known_ids = {str(cid) for cid in (state.get("known_card_owners") or {})}
+        if physical["probability"] >= 1.0 or any(str(card["id"]) in known_ids for card in unknown_cards):
+            # The legacy six-card shape sampler does not condition on owner
+            # locks. Keep the conditioned physical estimate in those cases.
+            return physical["probability"]
         short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
         if short_reply is not None:
             # A small history-conditioned panel can miss a rare legal bomb.
@@ -7511,7 +7492,6 @@ def _opponent_overbomb_reply_probability(
 
     level_rank = state["level_rank"]
     revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
-    tier = _bomb_tier(combo)
     size = int(combo.get("size") or 0)
 
     def kind_probs(needed_for_rank) -> List[float]:
@@ -7532,14 +7512,10 @@ def _opponent_overbomb_reply_probability(
         probs = kind_probs(
             lambda rank: size if _point_order_value(rank, level_rank) > threshold else size + 1
         )
-        if tier < 3 and unknown_cards is not None:
-            # A straight flush beats four- and five-card bombs. Use the same
-            # single physical witness bound as the bomb-reply model.
-            probs.append(_straight_flush_witness_probability(unknown_cards, hand_count, level_rank))
         overbomb_prob = _aggregate_event_probability(probs)
     elif combo_type == "straight_flush":
-        # Six or more of a kind outranks every straight flush. A higher straight
-        # flush is possible but rare enough that the public model ignores it.
+        # Legacy rank-only callers cannot describe suits or wild substitutions;
+        # the full public-card path above includes those beating families.
         overbomb_prob = _aggregate_event_probability(kind_probs(lambda rank: 6))
     else:
         overbomb_prob = 0.0
@@ -7569,6 +7545,7 @@ def _bomb_closeout_stress_risk(
         return False
     pool = _lead_unknown_pool_cards(state, player_id)
     pool_map = _map_hand_by_id(pool)
+    owners = {str(cid): owner for cid, owner in (state.get("known_card_owners") or {}).items()}
     opponents = [pid for pid in state["turn_order"]
                  if _team_of(state, pid) != _team_of(state, player_id)
                  and not state["players"][pid].get("finished")]
@@ -7585,11 +7562,12 @@ def _bomb_closeout_stress_risk(
                 continue
             if count == len(witness):
                 return True
-            rest_pool = [card for card in pool if card["id"] not in witness]
-            largest = max((len(state["players"][pid]["hand"])
-                           - (len(witness) if pid == opponent else 0) for pid in opponents), default=0)
-            if _public_pool_supports_same_type_reply(rest_pool, largest, level_rank, followup):
-                return True
+            for pid in opponents:
+                rest_pool = [card for card in pool if card["id"] not in witness
+                             and owners.get(str(card["id"]), pid) == pid]
+                rest_count = len(state["players"][pid]["hand"]) - (len(witness) if pid == opponent else 0)
+                if _public_pool_supports_same_type_reply(rest_pool, rest_count, level_rank, followup):
+                    return True
     return False
 
 

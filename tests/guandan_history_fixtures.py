@@ -3,7 +3,8 @@
 Original account IDs, room data, bot explanations, timestamps, and source paths
 are deliberately absent. Card IDs are allocated from one canonical deck, and
 states are rebuilt through the real rules handler using only the requested
-prefix of actions. Empty card tuples represent passes.
+prefix of actions. Empty card tuples represent passes. Legacy actions after
+the first two teammates finish are omitted: the current engine settles then.
 """
 
 from typing import Dict, List, Optional, Sequence
@@ -1127,25 +1128,7 @@ FIXTURES = {
                          ('bot2', ()),
                          ('bot4', ()),
                          ('calvin', ('♦️8', '♥️8')),
-                         ('bot2', ('♦️Q', '♥️Q')),
-                         ('bot4', ('♣️A', '♣️A')),
-                         ('bot2', ()),
-                         ('bot4', ('♣️5', '♦️5')),
-                         ('bot2', ()),
-                         ('bot4', ('♥️6', '♠️6')),
-                         ('bot2', ()),
-                         ('bot4', ('♠️8', '♣️8')),
-                         ('bot2', ()),
-                         ('bot4', ('♥️9', '♥️9')),
-                         ('bot2', ()),
-                         ('bot4', ('♠️4',)),
-                         ('bot2', ('♦️9',)),
-                         ('bot4', ()),
-                         ('bot2', ('♣️Q',)),
-                         ('bot4', ()),
-                         ('bot2', ('🃏S',)),
-                         ('bot4', ()),
-                         ('bot2', ('🃏B',)))},
+                         )},
     'c94': {'start_player': 'z',
      'dealer_team': 'A',
      'level_rank': 2,
@@ -1328,7 +1311,7 @@ FIXTURES = {
                  ('bot4', ()),
                  ('bot2', ()),
                  ('z', ('♥️3', '♣️3', '♣️3', '♦️3', '♥️3', '♠️3')),
-                 ('bot4', ()))},
+                 )},
     "426": {'start_player': 'z',
  'dealer_team': 'A',
  'level_rank': 2,

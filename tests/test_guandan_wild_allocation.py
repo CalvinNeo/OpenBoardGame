@@ -104,14 +104,14 @@ class GuandanWildAllocationTests(unittest.TestCase):
         self.assertEqual(set(action['card_ids']), set(ids))
 
     def test_saved_round_and_wheel_break_are_reproducible(self):
-        self.assertEqual(len(FIXTURES['c94']['actions']), 71)
+        self.assertEqual(len(FIXTURES['c94']['actions']), 70)
         state = replay_fixture('c94', 52)
         ids = pick_card_ids(state['players']['bot2']['hand'], ('♦️A', '♥️2', '♦️3', '♠️4', '♠️5'))
         combo = self.call('_action_combo', state, 'bot2', {'type': 'play', 'card_ids': ids})
         self.assertEqual((combo['type'], combo['high_value']), ('straight', 5))
         later = replay_fixture('c94', 56)
         self.assertFalse(any(c.get('rank') == 14 for c in later['players']['bot2']['hand']))
-        final = replay_fixture('c94', 72)
+        final = replay_fixture('c94', 71)
         self.assertEqual(final['finish_order'], ['calvin', 'z', 'bot2', 'bot4'])
 
     def test_saved_single_response_can_abandon_small_run_and_keep_wild_bomb(self):

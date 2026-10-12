@@ -173,12 +173,27 @@ class GuandanCloseoutRecoveryTests(unittest.TestCase):
             self.assertEqual(self.call("_short_enemy_bomb_takeover_bonus", state, cards,
                                        self.combo(state, cards), remaining), 0.0)
 
+    def legacy_finished_leader_state(self):
+        """Old saves could await replies after the second teammate finished."""
+        state = replay_fixture("fd4", 57)
+        leader = "calvin"
+        cards = list(state["players"][leader]["hand"])
+        state["current_trick"] = {
+            "player_id": leader, "cards": [card["id"] for card in cards],
+            "combo": guandan._evaluate_combo(cards, state["level_rank"], state["config"]),
+        }
+        state["seen_cards"].extend(card["id"] for card in cards)
+        state["players"][leader]["hand"] = []
+        guandan._finish_player(state, leader)
+        state.update(current_turn="bot2", trick_plays={leader: cards}, round_memories=[])
+        return state
+
     def test_finished_leader_has_no_closeout_rewards_or_pass_penalties(self):
         forbidden = {"deny_enemy_double_down", "deny_short_lead", "block_closeout",
                      "pass_enemy_double_down_threat", "pass_closeout_threat", "pass_short_enemy_prior"}
         for marker in ("all", "empty_hand", "finish_order", "finished"):
             with self.subTest(marker=marker):
-                state = replay_fixture("fd4", 58)
+                state = self.legacy_finished_leader_state()
                 if marker == "empty_hand":
                     state["players"]["calvin"].update(finished=False, finish_rank=None)
                     state["finish_order"] = ["z"]
@@ -195,7 +210,7 @@ class GuandanCloseoutRecoveryTests(unittest.TestCase):
                     self.assertFalse(forbidden.intersection(components))
 
     def test_live_enemy_closeout_pressure_remains(self):
-        state = replay_fixture("fd4", 58)
+        state = self.legacy_finished_leader_state()
         state["players"]["calvin"].update(
             hand=[{"id": -1, "suit": "spades", "rank": 3}], finished=False, finish_rank=None)
         state["finish_order"] = ["z"]
