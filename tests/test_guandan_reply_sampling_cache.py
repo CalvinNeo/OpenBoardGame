@@ -149,6 +149,12 @@ class GuandanReplySamplingCacheTests(unittest.TestCase):
                 args = (self.state, "p1", combo, len(self.pool), rank_counts, counts)
                 with self.subTest(caller=name, combo=combo["type"]):
                     expected = guandan_ai.call(guandan, name, *args)
+                    if name == "_opponent_overbomb_reply_probability" and combo["type"] in guandan.BOMB_TYPES:
+                        # Full card data now includes wilds and higher flushes;
+                        # the old rank-only fallback is no longer equivalent.
+                        expected = guandan_ai.call(
+                            guandan, "_public_overbomb_profile_from_pool", self.state, "p1", combo, self.pool,
+                        )["probability"]
                     with mock.patch.object(guandan_ai, "_deadline_expired", return_value=True), \
                          mock.patch.object(guandan_ai.random, "Random", side_effect=AssertionError("late sampling")):
                         actual = guandan_ai.call(guandan, name, *args, unknown_cards=self.pool)

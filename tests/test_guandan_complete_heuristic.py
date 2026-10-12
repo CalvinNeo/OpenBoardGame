@@ -91,7 +91,11 @@ class GuandanCompleteHeuristicTests(unittest.TestCase):
                 self.assertEqual(len(scored), 277)
                 self.assertEqual(details["heuristic_stop_reason"], "candidates_exhausted")
                 self.assertTrue(details["hand_route_status"]["complete"])
-                self.assertEqual(state["bot_explain"]["bot"]["chosen"]["cards"], ["♦️4"])
+                # Removing hidden-hand support can change the preferred lead.
+                # The invariant here is identical complete scoring and choice
+                # on fast and slow clocks (compared below).
+                self.assertEqual(action["type"], "play")
+                self.assertTrue(action["card_ids"])
                 if slow:
                     self.assertGreater(clock[0], 6.0)
             results.append((action, scored))

@@ -148,7 +148,12 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
         # The search may now agree with the public-information baseline;
         # either path must preserve the strong grouped lead asserted above.
         self.assertIn(search["decision"]["reason"], ("agreement", "preserve_control_plan"))
-        self.assertGreater(search["completed_depth"], state["config"]["bot_minimax_depth"])
+        # Depth now counts decisions, with compulsory passes compressed and
+        # short-hand control transfers extended separately. Raw old ply counts
+        # are no longer comparable, especially under a wall-clock deadline.
+        self.assertGreaterEqual(search["completed_depth"], 1)
+        self.assertTrue(explain["method_details"]["minimax_forced_passes_free"])
+        self.assertEqual(explain["method_details"]["minimax_control_extension_plies"], 2)
         self.assertEqual(sum(record["selected"] for record in search["candidates"]), 1)
         for record in search["candidates"]:
             self.assertEqual(record["samples"], 3)
@@ -162,7 +167,7 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
         self.assertEqual(action, {"type": "pass"})
         explain = state["bot_explain"]["bot2"]
         self.assertEqual(explain["chosen"]["cards"], ["Pass"])
-        self.assertEqual(explain["search"]["decision"]["reason"], "agreement")
+        self.assertIn(explain["search"]["decision"]["reason"], ("agreement", "preserve_control_plan"))
 
 
 if __name__ == "__main__":

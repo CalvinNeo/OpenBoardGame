@@ -6231,26 +6231,36 @@ def _lead_teammate_support_bonus(
 
     team = _team_of(state, player_id)
     level_rank = state["level_rank"]
-    teammate_hand = state["players"][teammate]["hand"]
-    if not teammate_hand:
+    if not state["players"][teammate]["hand"]:
         return 0.0
     history = _teammate_public_history_profile(state, player_id)
 
-    opponent_turns = [
-        _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
+    opponents = [
+        pid
         for pid in state["turn_order"]
         if _team_of(state, pid) != team and not state["players"][pid]["finished"]
     ]
-    if not opponent_turns:
+    if not opponents:
         return 0.0
 
     hand = state["players"][player_id]["hand"]
     remaining = _remove_cards(hand, cards)
-    teammate_turns = _estimated_turns_to_finish(teammate_hand, level_rank)
     bot_after_turns = 0.0 if not remaining else _estimated_turns_to_finish(remaining, level_rank) + 1.0
-    support_edge = bot_after_turns - teammate_turns
-    race_window = min(opponent_turns) - teammate_turns
-    if support_edge < 1.0 or race_window < 0.8:
+    if state.get("_ai_sampled_world"):
+        panels = [{pid: _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
+                   for pid in opponents + [teammate]}]
+    else:
+        panels = _public_finish_turn_panels(state, player_id)
+    factors = []
+    for panel in panels:
+        support_edge = bot_after_turns - panel[teammate]
+        race_window = min(panel[pid] for pid in opponents) - panel[teammate]
+        factors.append(
+            min(1.0, 0.2 + support_edge * 0.16 + max(0.0, race_window) * 0.12)
+            if support_edge >= 1.0 and race_window >= 0.8 else 0.0
+        )
+    factor = sum(factors) / max(1, len(factors))
+    if factor <= 0.0:
         return 0.0
 
     hand_map = _map_hand_by_id(hand)
@@ -6266,7 +6276,6 @@ def _lead_teammate_support_bonus(
     uses_special = _cards_use_special_material(play_cards, level_rank)
     fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
     control_break = _control_group_break_penalty(hand, cards, level_rank)
-    factor = min(1.0, 0.2 + support_edge * 0.16 + max(0.0, race_window) * 0.12)
 
     bonus = 0.0
     if combo_type == "single":
@@ -7342,6 +7351,132 @@ def _public_reply_belief(state: Dict, observer_id: str, opponent_id: str, combo:
             "same_type_possible": same_type_possible, "bomb_possible": bomb_possible}
 
 
+def _overbomb_events(pool: List[Dict], combo: Dict, level_rank: int, config: Dict) -> List[Tuple]:
+    """All beating bomb families, represented by disjoint card groups.
+
+    Each group contributes up to its cap toward an event's required count.
+    This counts physical copies and wild substitutions without enumerating
+    every equivalent play. Different events may overlap.
+    """
+    if combo.get("type") == "heavenly":
+        return []
+    info = _hand_info(pool, level_rank)
+    wilds = frozenset(info["wild_cards"])
+    events = []
+    for rank, ids in info["normals_by_rank"].items():
+        for uses_wild in (False, True):
+            for size in range(4, min(10, len(ids) + (len(wilds) if uses_wild else 0)) + 1):
+                challenger = {"type": "bomb", "size": size, "tier": _bomb_tier_for_size(size),
+                              "rank_value": _point_order_value(rank, level_rank), "uses_wild": uses_wild}
+                if _compare_combos(combo, challenger, level_rank, config):
+                    groups = [(frozenset(ids), size)]
+                    if uses_wild:
+                        groups.append((wilds, 2))
+                    events.append((tuple(groups), size))
+                    break
+    for suit_map in info["normals_by_suit"].values():
+        for sequence, high in _CORE.STRAIGHT_SEQUENCES:
+            challenger = {"type": "straight_flush", "size": 5, "tier": 3, "high_value": high}
+            if not _compare_combos(combo, challenger, level_rank, config):
+                continue
+            groups = [(frozenset(suit_map.get(rank, [])), 1) for rank in sequence]
+            groups.append((wilds, 2))
+            if sum(min(len(ids), cap) for ids, cap in groups) >= 5:
+                events.append((tuple(groups), 5))
+    if len(info["jokers_small"]) >= 2 and len(info["jokers_big"]) >= 2:
+        events.append((((frozenset(info["jokers_small"]), 2),
+                        (frozenset(info["jokers_big"]), 2)), 4))
+    # A natural bomb event is contained in its same-size wild-capable event.
+    return [event for event in dict.fromkeys(events)
+            if not any(event != other and event[1] == other[1]
+                       and set(event[0]) < set(other[0]) for other in events)]
+
+
+def _bomb_event_draw_probability(event: Tuple, free: frozenset, locked: frozenset, draws: int) -> float:
+    """Exact marginal of one bomb family under uniform draws and owner locks."""
+    groups, need = event
+    if sum(min(len(ids & (free | locked)), cap) for ids, cap in groups) < need:
+        return 0.0
+    ways = {(0, 0): 1}
+    grouped_free = 0
+    for ids, cap in groups:
+        count = len(ids & free)
+        fixed = len(ids & locked)
+        grouped_free += count
+        updated = {}
+        for (used, hits), weight in ways.items():
+            for take in range(min(count, draws - used) + 1):
+                key = (used + take, min(need, hits + min(cap, fixed + take)))
+                updated[key] = updated.get(key, 0) + weight * math.comb(count, take)
+        ways = updated
+    others = len(free) - grouped_free
+    successes = sum(weight * math.comb(others, draws - used)
+                    for (used, hits), weight in ways.items()
+                    if hits == need and 0 <= draws - used <= others)
+    return successes / math.comb(len(free), draws)
+
+
+def _public_overbomb_profile_from_pool(state: Dict, target_id: str, combo: Dict, pool: List[Dict]) -> Dict:
+    """Physical overbomb risk and witnesses; no server-side hidden faces.
+
+    Small pools use the exact event union. Larger pools combine exact event
+    marginals with an independence approximation. Witnesses are stress cases,
+    never additional posterior samples or evidence of their frequency.
+    """
+    count = len(state["players"].get(target_id, {}).get("hand", []))
+    owners = {str(cid): owner for cid, owner in (state.get("known_card_owners") or {}).items()}
+    pool = [card for card in pool if owners.get(str(card["id"]), target_id) == target_id]
+    locked = frozenset(card["id"] for card in pool if owners.get(str(card["id"])) == target_id)
+    free = frozenset(card["id"] for card in pool) - locked
+    draws = count - len(locked)
+    empty = {"probability": 0.0, "possible": False, "witnesses": (), "method": "exact"}
+    if (count < 4 or not 0 <= draws <= len(free)
+            or state["players"].get(target_id, {}).get("finished")):
+        return empty
+    key = (target_id, count, state["level_rank"], tuple(sorted(combo.items())),
+           bool(state.get("config", {}).get("hard_bomb_beats_soft")),
+           tuple(sorted((card["id"], card.get("rank"), card.get("suit"), card.get("joker")) for card in pool)),
+           tuple(sorted(locked)))
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("public_overbomb", {})
+    if key in cache:
+        return cache[key]
+    events = _overbomb_events(pool, combo, state["level_rank"], state.get("config", {}))
+    probabilities = []
+    witnesses = []
+    possible_events = []
+    for event in events:
+        probability = _bomb_event_draw_probability(event, free, locked, draws)
+        if probability <= 0.0:
+            continue
+        probabilities.append(probability)
+        possible_events.append(event)
+        groups, need = event
+        # Prefer locked cards so every witness fits a complete target hand.
+        contributions = [cid for ids, cap in groups
+                         for cid in sorted(ids, key=lambda cid: (cid not in locked, cid))[:cap]]
+        witness = tuple(sorted(sorted(contributions, key=lambda cid: (cid not in locked, cid))[:need]))
+        witnesses.append(witness)
+    if not probabilities:
+        cache[key] = empty
+        return empty
+    total = math.comb(len(free), draws)
+    if total <= 2048 and len(possible_events) > 1:
+        hits = 0
+        for drawn in itertools.combinations(sorted(free), draws):
+            hand_ids = locked | frozenset(drawn)
+            hits += any(sum(min(cap, len(ids & hand_ids)) for ids, cap in groups) >= need
+                        for groups, need in possible_events)
+        probability = hits / total
+        method = "exact"
+    else:
+        probability = _aggregate_event_probability(probabilities)
+        method = "exact" if len(probabilities) == 1 else "event_marginals"
+    result = {"probability": probability, "possible": True,
+              "witnesses": tuple(dict.fromkeys(witnesses)), "method": method}
+    cache[key] = result
+    return result
+
+
 def _opponent_overbomb_reply_probability(
     state: Dict,
     opponent_id: str,
@@ -7360,10 +7495,19 @@ def _opponent_overbomb_reply_probability(
     if hand_count == 4 and unknown_cards is not None:
         profile = _four_card_bomb_finish_profile_from_pool(state, opponent_id, unknown_cards)
         return _four_card_bomb_reply_probability(profile, combo, state["level_rank"], state.get("config", {}))
-    if unknown_cards is not None:
+    # Overbomb risk only applies after an existing bomb/straight-flush lead.
+    # Keep the ordinary analytic path for non-bomb combos; callers that need
+    # the first bomb against a pair/single use _opponent_bomb_reply_probability.
+    if unknown_cards is not None and combo_type in BOMB_TYPES:
+        physical = _public_overbomb_profile_from_pool(state, opponent_id, combo, unknown_cards)
+        if not physical["possible"]:
+            return 0.0
         short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
         if short_reply is not None:
-            return short_reply["overbomb"]
+            # A small history-conditioned panel can miss a rare legal bomb.
+            # Keep physical support in the prior, just as ordinary replies do.
+            return 0.75 * short_reply["overbomb"] + 0.25 * physical["probability"]
+        return physical["probability"]
 
     level_rank = state["level_rank"]
     revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
@@ -7401,12 +7545,52 @@ def _opponent_overbomb_reply_probability(
         overbomb_prob = 0.0
 
     heavenly_prob = 0.0
-    if joker_counts.get("small", 0) > 0 and joker_counts.get("big", 0) > 0:
-        small = _hypergeom_hit_probability(unknown_total, joker_counts["small"], hand_count)
-        big = _hypergeom_hit_probability(unknown_total, joker_counts["big"], hand_count)
-        heavenly_prob = small * big
+    if joker_counts.get("small", 0) >= 2 and joker_counts.get("big", 0) >= 2:
+        heavenly_prob = _hypergeom_at_least(unknown_total, 4, hand_count, 4)
 
     return min(1.0, overbomb_prob + heavenly_prob * 0.85)
+
+
+def _bomb_closeout_stress_risk(
+    state: Dict, player_id: str, combo: Dict, remaining: List[Dict],
+) -> bool:
+    """Check rare physical counterexamples to a fragile bomb-then-finish plan.
+
+    This is a bounded robustness check, not another probability sample. It
+    discounts stacked tempo rewards only; it does not veto a necessary bomb.
+    """
+    if (not state.get("current_trick") or combo.get("type") not in BOMB_TYPES
+            or not remaining or len(remaining) > 6):
+        return False
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    followup = _evaluate_combo(remaining, level_rank, config)
+    if not followup or followup.get("type") in BOMB_TYPES:
+        return False
+    pool = _lead_unknown_pool_cards(state, player_id)
+    pool_map = _map_hand_by_id(pool)
+    opponents = [pid for pid in state["turn_order"]
+                 if _team_of(state, pid) != _team_of(state, player_id)
+                 and not state["players"][pid].get("finished")]
+    for opponent in opponents:
+        count = len(state["players"][opponent]["hand"])
+        if count > 8:
+            continue
+        profile = _public_overbomb_profile_from_pool(state, opponent, combo, pool)
+        for witness in profile["witnesses"]:
+            # The family witness is a legal physical bomb in at least one
+            # allocation respecting public ownership and remaining counts.
+            reply = _evaluate_combo([pool_map[cid] for cid in witness], level_rank, config)
+            if not reply or not _compare_combos(combo, reply, level_rank, config):
+                continue
+            if count == len(witness):
+                return True
+            rest_pool = [card for card in pool if card["id"] not in witness]
+            largest = max((len(state["players"][pid]["hand"])
+                           - (len(witness) if pid == opponent else 0) for pid in opponents), default=0)
+            if _public_pool_supports_same_type_reply(rest_pool, largest, level_rank, followup):
+                return True
+    return False
 
 
 def _opponent_followup_reply_bias(state: Dict, opponent_id: str, combo: Dict) -> float:
@@ -9544,11 +9728,34 @@ def _response_teammate_lane_bonus(
     if leader is None or _team_of(state, leader) == _team_of(state, player_id):
         return 0.0
 
+    # This bonus is for a response that hands the lane to our teammate after
+    # the remaining seats get a chance to answer.  When passing now would
+    # close the trick, the teammate does not get another turn on this play.
+    # Seat order alone is insufficient here: at the last-defender position
+    # ``_opponents_before_teammate_this_trick`` still sees an opponent seat
+    # before the teammate even though ``pass_count`` will settle the trick.
+    if not _teammate_response_window_open(state, player_id):
+        return 0.0
+
     current_combo = current_trick.get("combo") or {}
     combo_type = combo.get("type") or ""
     if combo_type not in ("pair", "three"):
         return 0.0
     if combo_type != current_combo.get("type"):
+        return 0.0
+
+    # A teammate's pass is soft evidence, but a recorded pass ceiling is still
+    # useful when deciding whether this response really creates a lane.  If the
+    # candidate is already above that ceiling and the public pool has no higher
+    # teammate reply, do not award a lane bonus for handing over an unusable
+    # top play.  Keep the ordinary uncertain cases unchanged.
+    teammate_cover = _teammate_backstop_confidence(state, player_id, combo)
+    teammate = _teammate_of(state, player_id)
+    limit = (
+        state.get("pass_limits", {}).get(teammate, {}).get(combo_type)
+        if teammate else None
+    )
+    if teammate_cover <= 0.001 and limit is not None and _combo_numeric_value(combo) > limit:
         return 0.0
 
     opponents_before_teammate = _opponents_before_teammate_this_trick(state, player_id)
@@ -12090,12 +12297,14 @@ def _should_accept_mcts_override(
     if _retained_bomb_override_is_unsafe(state, bot_id, heuristic_action, mcts_action):
         return False
     closeout_risk = _lead_closeout_plan_risk(state, bot_id, heuristic_action, mcts_action)
-    if closeout_risk > 0.001:
+    control_risk = _same_type_control_plan_risk(state, bot_id, heuristic_action, mcts_action)
+    plan_risk = max(closeout_risk, control_risk)
+    if plan_risk > 0.001:
         records = {_mcts_action_key(action): stats for action, _score, _count, stats in search_scores or []}
         baseline = records.get(_mcts_action_key(heuristic_action), {})
         challenger = records.get(_mcts_action_key(mcts_action), {})
         required_samples = max(2, int(state.get("config", {}).get("bot_mcts_confidence_min_pairs", 3)))
-        required_gain = 5.5 + closeout_risk
+        required_gain = 5.5 + plan_risk
         lower_gain = challenger.get("paired_lcb")
         accepted = bool(
             baseline.get("paired_reference")
@@ -12103,8 +12312,10 @@ def _should_accept_mcts_override(
             and lower_gain is not None and lower_gain >= required_gain
         )
         state.setdefault("_ai_eval_cache", {})["mcts_closeout_guard"] = {
-            "accepted": accepted, "risk_increase": closeout_risk,
-            "reason": "supported_plan_change" if accepted else "preserve_closeout_reentry",
+            "accepted": accepted, "risk_increase": plan_risk,
+            "same_type_control": control_risk,
+            "reason": ("supported_plan_change" if accepted else
+                       "preserve_control_plan" if control_risk > 0.0 else "preserve_closeout_reentry"),
             "paired_gain_lower": lower_gain, "required_gain": required_gain,
             "samples": challenger.get("paired_count", 0),
         }
@@ -12260,6 +12471,30 @@ def _lead_closeout_plan_risk(
     return max(0.0, proposal_risk - reference_risk)
 
 
+def _same_type_control_plan_risk(state: Dict, bot_id: str, reference: Dict, proposal: Dict) -> float:
+    if state.get("current_trick") or reference.get("type") != "play" or proposal.get("type") != "play":
+        return 0.0
+    hand = state["players"][bot_id]["hand"]
+    reference_cards = reference.get("card_ids") or []
+    cards = proposal.get("card_ids") or []
+    if len(cards) == len(hand) or len(cards) != len(reference_cards):
+        return 0.0
+    reference_combo = _action_combo(state, bot_id, reference) or {}
+    proposal_combo = _action_combo(state, bot_id, proposal) or {}
+    if (proposal_combo.get("type") not in ("single", "pair", "three")
+            or reference_combo.get("type") != proposal_combo.get("type")):
+        return 0.0
+    level_rank = state["level_rank"]
+    strength_spent = _combo_numeric_value(proposal_combo) - _combo_numeric_value(reference_combo)
+    if (strength_spent >= 3.0
+            and _control_group_break_penalty(hand, reference_cards, level_rank) < 0.4
+            and _group_fragment_penalty(hand, reference_cards, level_rank, reference_combo) < 0.4):
+        # Equal-size clean leads shed the same number of cards. A tiny
+        # sampled gain does not justify spending the stronger group first.
+        return min(10.0, strength_spent * 0.6)
+    return 0.0
+
+
 def _minimax_plan_risks(
     state: Dict,
     bot_id: str,
@@ -12278,6 +12513,9 @@ def _minimax_plan_risks(
     reference_combo = _action_combo(state, bot_id, reference) or {}
     proposal_combo = _action_combo(state, bot_id, proposal) or {}
     risks: Dict[str, float] = {}
+    control_risk = _same_type_control_plan_risk(state, bot_id, reference, proposal)
+    if control_risk > 0.0:
+        risks["same_type_control"] = control_risk
     closeout_risk = _lead_closeout_plan_risk(state, bot_id, reference, proposal)
     if closeout_risk > 0.001:
         risks["closeout_reentry"] = closeout_risk
@@ -14334,12 +14572,12 @@ def _minimax_value(
     beta: float,
     width: int,
     deadline: Optional[float] = None,
+    extension_plies: int = 2,
 ) -> float:
     if deadline is not None and time.perf_counter() >= deadline:
         return _evaluate_state_for_bot(state, bot_id)
     if (
-        depth <= 0
-        or state.get("game_over")
+        state.get("game_over")
         or state.get("phase") != "playing"
         or _settled_round_value(state, bot_id) is not None
     ):
@@ -14347,6 +14585,26 @@ def _minimax_value(
     actor = _next_actor(state)
     if actor is None:
         return _evaluate_state_for_bot(state, bot_id)
+    if state.get("current_trick") and not _list_hint_options(state, actor):
+        if deadline is not None and time.perf_counter() >= deadline:
+            return _evaluate_state_for_bot(state, bot_id)
+        # Only truly forced passes are free. A voluntary pass still spends a
+        # ply. Advancing the real rules handler also handles finished leaders
+        # and teammate inheritance without inventing a control transition.
+        nxt = _clone_search_state(state)
+        _, err = GuandanGame.apply_action(nxt, actor, {"type": "pass"})
+        if err is None:
+            return _minimax_value(nxt, bot_id, depth, alpha, beta, width,
+                                  deadline=deadline, extension_plies=extension_plies)
+    if depth <= 0:
+        if (extension_plies > 0 and not state.get("current_trick")
+                and len(state["players"][actor]["hand"]) <= 6):
+            # See the short hand's next lead before assigning a static value
+            # to newly won control. Bound this independently of ordinary depth.
+            depth = 1
+            extension_plies -= 1
+        else:
+            return _evaluate_state_for_bot(state, bot_id)
     actions = _CORE._candidate_actions(state, actor, width)
     if deadline is not None and time.perf_counter() >= deadline:
         return _evaluate_state_for_bot(state, bot_id)
@@ -14364,7 +14622,8 @@ def _minimax_value(
             if err:
                 continue
             evaluated_child = True
-            value = max(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width, deadline=deadline))
+            value = max(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width,
+                                             deadline=deadline, extension_plies=extension_plies))
             alpha = max(alpha, value)
             if beta <= alpha:
                 break
@@ -14379,7 +14638,8 @@ def _minimax_value(
         if err:
             continue
         evaluated_child = True
-        value = min(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width, deadline=deadline))
+        value = min(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width,
+                                         deadline=deadline, extension_plies=extension_plies))
         beta = min(beta, value)
         if beta <= alpha:
             break
@@ -14748,6 +15008,8 @@ def _minimax_pick_action(
             "aggregation": aggregation,
             "root_values": list(root_values),
             "extension_limit": extension_limit,
+            "forced_passes_free": True,
+            "control_extension_plies": 2,
         }
         closeout_meta = state.get("_ai_eval_cache", {}).get("public_closeout")
         if isinstance(closeout_meta, dict):
@@ -15670,6 +15932,7 @@ def _compute_bot_score_components(
         components["opp_risk"] = -len(opp_ids) * 3.0
     else:
         expected_beats = 0.0
+        expected_bomb_risk = 0.0
         unknown_cards = _lead_unknown_pool_cards(state, bot_id)
         for opp in opp_ids:
             # Remove ordinary-reply risk only when the public pool proves it
@@ -15681,9 +15944,12 @@ def _compute_bot_score_components(
             )
             # Avoid sampling a six-card hand when this component would throw
             # away the sampled probability and use the default risk anyway.
-            reply_probability = 1.0 if same_type_possible else _public_reply_belief(
-                state, bot_id, opp, combo
-            )["bomb"]
+            if same_type_possible:
+                reply_probability = 1.0
+            else:
+                belief = _public_reply_belief(state, bot_id, opp, combo)
+                reply_probability = belief["bomb"]
+                expected_bomb_risk += belief["bomb"]
             expected_beats += reply_probability
         if expected_beats > 0.001:
             components["opp_risk"] = -expected_beats * 3.0
@@ -15762,6 +16028,35 @@ def _compute_bot_score_components(
             teammate_handoff = _teammate_handoff_bonus_after_bomb(state, bot_id, combo, remaining)
             if teammate_handoff > 0.001:
                 components["bomb_teammate_handoff"] = teammate_handoff
+        elif (
+            expected_bomb_risk > 0.001
+            and combo.get("type") in ("pair", "three")
+            and _combo_numeric_value(combo) >= PREMIUM_SINGLE_VALUE_MIN
+            and len(state["players"].get(current_trick.get("player_id"), {}).get("hand", [])) <= 6
+        ):
+            # A premium ordinary group is often a one-way takeover: if an
+            # opponent bombs it, the group is spent and the teammate cannot
+            # continue the lane.  The ordinary ``opp_risk`` term is deliberately
+            # small and treats a possible same-type reply as a full risk, so it
+            # does not price this distinct overbomb failure.  Charge an
+            # expected material/tempo loss here, with a modest risk multiplier
+            # for the intentionally conservative public-card estimate.
+            teammate_cover = _teammate_backstop_confidence(state, bot_id, combo)
+            if teammate_cover <= 0.001:
+                leader_left = len(
+                    state["players"].get(current_trick.get("player_id"), {}).get("hand", [])
+                )
+                response_cost = _response_material_cost(state, bot_id, cards, combo)
+                takeover_value = components.get("seize_tempo", 0.0)
+                loss_if_bombed = 12.0
+                loss_if_bombed += min(18.0, response_cost * 0.9)
+                loss_if_bombed += min(16.0, takeover_value * 0.7)
+                if leader_left <= 6:
+                    loss_if_bombed += 8.0
+                effective_risk = min(1.0, expected_bomb_risk * 2.0)
+                overbomb_penalty = min(20.0, effective_risk * loss_if_bombed)
+                if overbomb_penalty > 0.001:
+                    components["premium_control_overbomb_risk"] = -overbomb_penalty
         closeout_block = _opponent_one_card_closeout_bonus(state, bot_id, cards, combo)
         if closeout_block > 0.001:
             components["block_closeout"] = closeout_block
@@ -15891,6 +16186,14 @@ def _compute_bot_score_components(
             if not current_trick:
                 components["retained_bomb_finish_risk"] = -tail["penalty"]
 
+    if _bomb_closeout_stress_risk(state, bot_id, combo, remaining):
+        # Reserve at most six heuristic points for an uncovered counterexample.
+        # This robustness haircut is deliberately separate from expected bomb
+        # frequency, MCTS sample counts and win-rate statistics.
+        credit = sum(max(0.0, components.get(name, 0.0)) for name in (
+            "bomb_closeout_ev", "lead_finish_bonus", "seize_tempo", "opp_block",
+        ))
+        components["overbomb_closeout_stress"] = -min(6.0, credit * 0.25)
     components["total"] = sum(components.values())
     return components
 
@@ -16239,6 +16542,73 @@ def _best_short_enemy_pressure_bomb_score(state: Dict, player_id: str, depth: in
     return score if complete else None
 
 
+def _premium_control_overbomb_pressure(
+    state: Dict,
+    player_id: str,
+    ordinary_options: List[List[int]],
+) -> float:
+    """Estimate when a premium ordinary reply is itself a fragile takeover.
+
+    The overbomb filter normally gives a clean non-bomb reply priority over a
+    low bomb.  That prior is too strong when the ordinary reply is a level
+    pair/triple, the teammate has no public backstop for the resulting top
+    play, and an opponent still has a live bomb chance.  Return the same
+    conservative expected loss used by detailed scoring so the low bomb keeps
+    enough priority to be compared on its merits.
+    """
+    current_trick = state.get("current_trick")
+    if not current_trick or not ordinary_options:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    hand_map = _map_hand_by_id(hand)
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    opp_ids = [
+        pid for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id)
+        and not state["players"].get(pid, {}).get("finished")
+    ]
+    if not opp_ids:
+        return 0.0
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left > 6:
+        return 0.0
+    best = 0.0
+    for cards in ordinary_options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if not combo or combo.get("type") not in ("pair", "three"):
+            continue
+        if _combo_numeric_value(combo) < PREMIUM_SINGLE_VALUE_MIN:
+            continue
+        if _teammate_backstop_confidence(state, player_id, combo) > 0.001:
+            continue
+
+        bomb_risk = 0.0
+        for opp in opp_ids:
+            belief = _public_reply_belief(state, player_id, opp, combo)
+            if not belief.get("same_type_possible"):
+                bomb_risk += belief.get("bomb", 0.0)
+        if bomb_risk <= 0.001:
+            continue
+
+        response_cost = _response_material_cost(state, player_id, cards, combo)
+        takeover_value = _takeover_opportunity_score(state, player_id, cards)
+        loss_if_bombed = 12.0
+        loss_if_bombed += min(18.0, response_cost * 0.9)
+        loss_if_bombed += min(16.0, takeover_value * 0.7)
+        if leader_left <= 6:
+            loss_if_bombed += 8.0
+        effective_risk = min(1.0, bomb_risk * 2.0)
+        best = max(best, min(20.0, effective_risk * loss_if_bombed))
+    return best
+
+
 def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
     current_trick = state.get("current_trick")
     if not current_trick:
@@ -16344,9 +16714,11 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
 
     if ordinary and has_structurally_clean_non_bomb:
         penalties = state.setdefault("_ai_eval_cache", {}).setdefault("overbomb_soft_penalties", {})
+        premium_pressure = _premium_control_overbomb_pressure(state, player_id, ordinary)
+        soft_penalty = max(4.0, 18.0 - premium_pressure * 1.2)
         for cards, _combo, priority, _natural in ranked_bombs:
             if priority >= 3:
-                penalties[(player_id, _cards_key(cards))] = 18.0
+                penalties[(player_id, _cards_key(cards))] = soft_penalty
 
     if not ordinary:
         return representatives + deferred

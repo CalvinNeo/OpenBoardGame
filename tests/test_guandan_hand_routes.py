@@ -129,7 +129,7 @@ class GuandanHandRouteTests(unittest.TestCase):
         self.assertIn(["♦️2", "♦️2"], groups)
         self.assertNotIn(6, [len(group) for group in groups])
         top = [sorted(entry["cards"]) for entry in explanation["top"]]
-        self.assertLess(top.index(["♠️3", "♣️3"]), top.index(["♥️Q", "♦️Q"]))
+        self.assertEqual(top[0], ["♠️3", "♣️3"])
 
     def test_two_run_finish_blocks_opponents_who_could_finish_on_the_reply(self):
         state = self.make_state([

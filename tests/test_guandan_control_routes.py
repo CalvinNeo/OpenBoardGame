@@ -134,10 +134,11 @@ class GuandanControlRouteTests(unittest.TestCase):
         options = guandan._list_hint_options(state, pid)
         self.call("_prepare_hand_route_scores", state, pid, options)
         # The panel completed earlier in this decision; no finalist can start.
+        incumbent = max(options, key=lambda ids: self.call("_lead_cheap_option_score", state, pid, ids))
+        expected = self.call("_hand_route_control_challenger", state, pid, incumbent, options) or incumbent
         with mock.patch.object(guandan_ai.time, "perf_counter", return_value=2.0):
             cards = self.call("_bot_select_play", state, pid, 4, 1.0)
-        hand = guandan._map_hand_by_id(state["players"][pid]["hand"])
-        self.assertEqual([guandan._card_label(hand[c]) for c in cards], ["♥️4"])
+        self.assertEqual(cards, expected)
         self.assertEqual(state["_ai_eval_cache"]["heuristic_anytime"]["evaluated"], 0)
 
     def test_local_hold_reward_cannot_reverse_a_better_control_allocation(self):

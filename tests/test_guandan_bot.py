@@ -1342,7 +1342,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             "combo": guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {})),
         }
 
-        action = guandan.GuandanGame.bot_move(state, "bot2")
+        # Isolate the structural upgrade when this flush can retain control.
+        # The public risk model also covers higher flushes now, so an unseen
+        # larger flush is no longer implicitly treated as impossible.
+        with mock.patch.object(guandan._guandan_ai, "_opponent_overbomb_reply_probability", return_value=0.0):
+            action = guandan.GuandanGame.bot_move(state, "bot2")
         self.assertEqual(action.get("type"), "play")
         hand_map = guandan._map_hand_by_id(bot_hand)
         chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
@@ -4120,6 +4124,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["players"]["mate"]["hand"] = mate_hand
         state["players"]["opp"]["hand"] = opp_hand
         state["players"]["opp2"]["hand"] = opp2_hand
+        # This tactical comparison assumes the shown teammate steel plate and
+        # opponent shapes. Such concrete hidden hands belong to a sampled
+        # search world; root scoring must infer them from public information.
+        state["_ai_sampled_world"] = True
 
         low_single = [next(card["id"] for card in bot_hand if guandan._card_label(card) == "♠️4")]
         high_single = [next(card["id"] for card in bot_hand if guandan._card_label(card) == "♠️A")]
@@ -9094,9 +9102,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["pass_count"] = 0
         state["seen_cards"] = [
             card["id"] for card in prior_three + teammate_three
-        ]
+        ] + [card["id"] for card in deck]
         state["visible_card_id"] = None
-        state["known_card_owners"] = {}
+        # Make the unsafe single lane a public fact rather than relying on a
+        # particular lucky determinization of the opponent's final card.
+        state["known_card_owners"] = {state["players"]["calvin"]["hand"][0]["id"]: "calvin"}
         state["round_memories"] = []
         self._assert_consistent_card_zones(state)
 
