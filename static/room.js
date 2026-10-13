@@ -118,11 +118,9 @@ const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
+const roomControlsCollapseBtn = document.getElementById("roomControlsCollapseBtn");
 const roomControlsBackdrop = document.getElementById("roomControlsBackdrop");
 const roomControlsMain = document.querySelector(".layout > .main");
-const mobileCreateSlot = document.getElementById("mobileCreateSlot");
-const roomCreateButtonAnchor = document.createComment("Create Room button home");
-createBtn.before(roomCreateButtonAnchor);
 const mobileExplainSlot = document.getElementById("mobileExplainSlot");
 const gameReconnectBtn = document.getElementById("gameReconnectBtn");
 
@@ -1600,8 +1598,7 @@ function getRoomStartReason() {
 }
 
 function updateRoomCreateButtonLabel() {
-  const label = createBtn.parentNode === mobileCreateSlot ? "Create" : "Create Room";
-  createBtn.textContent = pendingRoomRequest?.event === "room:create" ? "Creating..." : label;
+  createBtn.textContent = pendingRoomRequest?.event === "room:create" ? "Creating..." : "Create Room";
 }
 
 function updateRoomActionButtons() {
@@ -1781,12 +1778,6 @@ function updateRoomControlsDock() {
     return;
   }
   const isCollapsed = roomControlsPanel.classList.contains("collapsed");
-  if (roomControlsDockQuery.matches && isCollapsed) {
-    if (createBtn.parentNode !== mobileCreateSlot) mobileCreateSlot.appendChild(createBtn);
-  } else if (createBtn.parentNode === mobileCreateSlot) {
-    roomCreateButtonAnchor.after(createBtn);
-  }
-  updateRoomCreateButtonLabel();
   const shouldDock = roomControlsDockQuery.matches;
   const drawerOpen = shouldDock && !isCollapsed;
   const shouldCloseDesktopDrawer = !roomControlsDockQuery.matches && isCollapsed;
@@ -1800,12 +1791,15 @@ function updateRoomControlsDock() {
   if (drawerOpen) {
     roomControlsPanel.setAttribute("role", "dialog");
     roomControlsPanel.setAttribute("aria-modal", "true");
-    if (roomControlsMain.contains(document.activeElement)) {
-      roomControlsToggleBtn.focus({ preventScroll: true });
+    if (roomControlsMain.contains(document.activeElement) || document.activeElement === roomControlsToggleBtn) {
+      roomControlsCollapseBtn.focus({ preventScroll: true });
     }
   } else {
     roomControlsPanel.removeAttribute("role");
     roomControlsPanel.removeAttribute("aria-modal");
+    if (document.activeElement === roomControlsCollapseBtn) {
+      roomControlsToggleBtn.focus({ preventScroll: true });
+    }
   }
   if (shouldDock) {
     // Reserve only the top bar, so opening the drawer never shifts the game.
@@ -1881,9 +1875,7 @@ function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
   if (!roomControlsPanel) {
     return;
   }
-  if (collapsed && roomControlsPanel.contains(document.activeElement)) {
-    roomControlsToggleBtn.focus({ preventScroll: true });
-  }
+  const restoreFocus = collapsed && roomControlsPanel.contains(document.activeElement);
   roomControlsPanel.classList.toggle("collapsed", collapsed);
   if (roomControlsToggleBtn) {
     roomControlsToggleBtn.textContent = collapsed ? "Show" : "Hide";
@@ -1891,6 +1883,7 @@ function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
   }
   roomControlsAutoCollapsed = auto && collapsed;
   updateRoomControlsDock();
+  if (restoreFocus) roomControlsToggleBtn.focus({ preventScroll: true });
 }
 
 function updateRoomControlsForStatus(status) {
@@ -2998,6 +2991,10 @@ document.addEventListener("click", (event) => {
 });
 
 roomControlsBackdrop.addEventListener("click", () => {
+  setRoomControlsCollapsed(true);
+});
+
+roomControlsCollapseBtn.addEventListener("click", () => {
   setRoomControlsCollapsed(true);
 });
 
