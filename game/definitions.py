@@ -1,3 +1,4 @@
+from game.night_of_the_ninja import NightOfTheNinjaGame, ACTION_SCHEMA as NIGHT_NINJA_ACTION_SCHEMA, CONFIG_SCHEMA as NIGHT_NINJA_CONFIG_SCHEMA
 from game.gloomhaven import GloomhavenGame, ACTION_SCHEMA as GLOOMHAVEN_ACTION_SCHEMA, CONFIG_SCHEMA as GLOOMHAVEN_CONFIG_SCHEMA
 from game.mall_of_horror import MallOfHorrorGame, ACTION_SCHEMA as MALL_OF_HORROR_ACTION_SCHEMA, CONFIG_SCHEMA as MALL_OF_HORROR_CONFIG_SCHEMA
 from game.exploding_kittens import ExplodingKittensGame, ACTION_SCHEMA as EXPLODING_KITTENS_ACTION_SCHEMA, CONFIG_SCHEMA as EXPLODING_KITTENS_CONFIG_SCHEMA
@@ -127,6 +128,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=NightOfTheNinjaGame.game_id, name="Night of the Ninja", name_zh="忍者杀",
+        min_players=4, max_players=11, turn_mode="simultaneous",
+        action_schema=NIGHT_NINJA_ACTION_SCHEMA, config_schema=NIGHT_NINJA_CONFIG_SCHEMA,
+        module=NightOfTheNinjaGame, serialize=NightOfTheNinjaGame.serialize, deserialize=NightOfTheNinjaGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

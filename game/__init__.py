@@ -1,3 +1,4 @@
+from game.night_of_the_ninja import NightOfTheNinjaGame
 from game.exploding_kittens import ExplodingKittensGame
 from game.gloomhaven import GloomhavenGame
 from game.the_crew import TheCrewGame
@@ -97,6 +98,7 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "NightOfTheNinjaGame",
     "ExplodingKittensGame",
     "GloomhavenGame",
     "TheCrewGame",

@@ -1,0 +1,14 @@
+<template data-game-target="nightNinjaHeaderActions" data-game-mode="contents">
+  <button id="nightNinjaHelpBtn" type="button">Help</button>
+  <button id="nightNinjaExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="nightNinjaPanel" data-game-mode="contents">
+  <div id="nnSurface" class="nn-surface"><div class="nn-waiting">Waiting to start</div></div>
+  <div id="nnTooltip" class="nn-tooltip" role="tooltip" hidden></div>
+</template>
+<template data-game-target="nightNinjaDialog" data-game-mode="replace">
+  <dialog id="nightNinjaDialog" class="nn-dialog" aria-labelledby="nnDialogTitle">
+    <div class="nn-dialog-head"><h2 id="nnDialogTitle">Help</h2><button id="nnDialogClose" type="button">Close</button></div>
+    <div id="nnDialogBody"></div>
+  </dialog>
+</template>

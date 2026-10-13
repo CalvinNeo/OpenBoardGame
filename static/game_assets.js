@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "night_of_the_ninja": {
+    "scripts": ["/static/games/night_of_the_ninja.js?v=2"],
+    "styles": ["/static/games/night_of_the_ninja.css?v=3"],
+    "markup": "/static/games/night_of_the_ninja.html?v=1",
+    "panel": "nightNinjaPanel",
+    "header": "showNightNinjaHeaderActions"
+  },
   "gloomhaven": {
     "scripts": ["/static/games/gloomhaven.js?v=3"],
     "styles": ["/static/games/gloomhaven.css?v=2"],

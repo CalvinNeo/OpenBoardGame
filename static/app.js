@@ -199,6 +199,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "night_of_the_ninja") {
+    if (typeof renderNightNinjaGameState === "function") renderNightNinjaGameState(data);
+    return;
+  }
   if (gameType === "mall_of_horror") {
     if (typeof renderMallOfHorrorGameState === "function") renderMallOfHorrorGameState(data);
     return;
