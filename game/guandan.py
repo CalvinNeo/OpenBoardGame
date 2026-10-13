@@ -1628,6 +1628,7 @@ _AI_EXPORTED_FUNCS = (
     "_filter_overbomb_options",
     "_filter_overbomb_actions",
     "_bot_select_play",
+    "_prefer_bomb_closeout_upgrade",
     "_build_bot_explain",
     "_suggest_hint_cards",
 )
@@ -2606,15 +2607,21 @@ class GuandanGame:
 
             hand = state["players"][bot_id]["hand"]
             forced_action = None
+            forced_reason = "only_legal_action"
             if state.get("current_trick") and "pass" in legal and not _list_hint_options(state, bot_id):
                 forced_action = {"type": "pass"}
-            elif not state.get("current_trick") and len(hand) == 1:
-                forced_action = {"type": "play", "card_ids": [hand[0]["id"]]}
+            elif "play" in legal and hand and _can_play_all(
+                hand, state["level_rank"], config, current_combo or None
+            ):
+                # Finishing is immediate, even if someone can beat this play.
+                # Search for a next-turn closeout must never split this hand.
+                forced_action = {"type": "play", "card_ids": [card["id"] for card in hand]}
+                forced_reason = "immediate_finish"
             if forced_action is not None:
                 explain = _build_bot_explain(
                     state, bot_id, forced_action.get("card_ids", []), "heuristic",
                     config.get("bot_search_depth", 2),
-                    method_meta={"forced_action": True, "search_stop_reason": "only_legal_action"},
+                    method_meta={"forced_action": True, "search_stop_reason": forced_reason},
                     chosen_action_type=forced_action["type"],
                 )
                 elapsed_ms = (time.perf_counter() - decision_started_at) * 1000.0
@@ -2630,7 +2637,10 @@ class GuandanGame:
                 _append_bot_explain_history(
                     state, bot_id, explain, forced_action["type"], forced_action.get("card_ids", []),
                 )
-                _progress("finalizing", 0.99, "Only legal action ready")
+                _progress("finalizing", 0.99, (
+                    "Immediate finish ready" if forced_reason == "immediate_finish"
+                    else "Only legal action ready"
+                ))
                 return forced_action
 
             depth = config.get("bot_search_depth", 2)
@@ -2941,6 +2951,19 @@ class GuandanGame:
             if decided:
                 finalize_started_at = time.perf_counter()
                 _progress("finalizing", 0.94, "Legalizing chosen action")
+                if chosen_action_type == "play" and chosen:
+                    upgraded = _prefer_bomb_closeout_upgrade(state, bot_id, chosen)
+                    if upgraded != chosen:
+                        method_meta = dict(method_meta or {})
+                        method_meta["bomb_closeout_upgrade"] = {
+                            "reason": "stronger_bomb_same_two_play_closeout",
+                            "source_method": method,
+                            "from_cards": list(chosen),
+                            "to_cards": list(upgraded),
+                        }
+                        chosen = upgraded
+                        method = "heuristic"
+                        method_scores = None
                 selected_action = {"type": "pass"} if chosen_action_type == "pass" else {"type": "play", "card_ids": chosen or []}
                 legal_action, illegal_err = _legalize_action(selected_action)
                 if legal_action is None:

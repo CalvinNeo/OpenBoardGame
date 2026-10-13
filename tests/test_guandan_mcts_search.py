@@ -265,6 +265,7 @@ class GuandanMinimaxAnytimeTests(unittest.TestCase):
     def test_timeout_keeps_last_complete_depth_and_uses_compact_clone(self):
         state = {
             "phase": "playing",
+            "players": {"bot": {"hand": []}},
             "current_trick": {"player_id": "opp"},
             "_ai_eval_cache": {},
         }

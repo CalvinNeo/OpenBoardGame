@@ -6094,6 +6094,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             state["players"][player_id]["hand"] = deck[:count]
             del deck[:count]
         state["seen_cards"] = [card["id"] for card in deck]
+        # Replace public metadata from the unrelated random opening deal.
+        state.update(known_card_owners={}, visible_card_id=None, round_memories=[])
         self._assert_consistent_card_zones(state)
 
         hand_by_label = {guandan._card_label(card): card for card in bot_hand}
@@ -7543,6 +7545,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             "combo": guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {})),
         }
         state["trick_plays"] = {"calvin": [lead]}
+
+        # The hands above replace the random opening deal. Its face-up card
+        # owner and memories are no longer valid public evidence for this test.
+        held_ids = {card["id"] for player in state["players"].values() for card in player["hand"]}
+        state.update(
+            known_card_owners={}, visible_card_id=None, round_memories=[],
+            seen_cards=[card["id"] for card in guandan._full_deck() if card["id"] not in held_ids],
+        )
 
         pass_components = guandan._bot_score_components(state, "bot3", None, depth=3)
         self.assertIn("pass_lane_concession", pass_components)
@@ -8997,7 +9007,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         self.assertNotIn(chosen_labels, [["♥️J"], ["♦️10"], ["♦️7"], ["♠️5"], ["♥️4"]])
 
-    def test_save_c276d4_minimax_timeout_passes_teammate_bomb(self):
+    def test_save_c276d4_minimax_timeout_finishes_or_preserves_teammate_bomb(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
@@ -9042,8 +9052,15 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         actions = guandan._candidate_actions(state, "bot3", 8)
         self.assertEqual({action["type"] for action in actions}, {"play", "pass"})
 
-        # c276d4 reached this root with almost no budget left. A timed-out
-        # search must retain the cheap incumbent (pass), not the first play.
+        # Even with no search budget, the whole five-card bomb finishes now.
+        action = guandan._minimax_pick_action(state, "bot3", depth=5, width=8, deadline=0.0)
+        self.assertEqual(set(action["card_ids"]), {card["id"] for card in bot3_hand})
+        finished = copy.deepcopy(state)
+        self.assertIsNone(guandan.GuandanGame.apply_action(finished, "bot3", action)[1])
+        self.assertEqual(finished["players"]["bot3"]["finish_rank"], 2)
+
+        # If bombing leaves a loose card, retain the existing safe timeout pass.
+        state["players"]["bot3"]["hand"].extend(self._pick_labels(deck, ["♠️3"]))
         action = guandan._minimax_pick_action(state, "bot3", depth=5, width=8, deadline=0.0)
         self.assertEqual(action, {"type": "pass"})
 

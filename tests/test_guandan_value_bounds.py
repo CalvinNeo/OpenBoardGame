@@ -103,7 +103,7 @@ class GuandanValueBoundsTests(unittest.TestCase):
                  mock.patch.object(guandan_ai, "_control_card_score", return_value=0.0):
                 self.assertEqual(guandan._evaluate_state_for_bot(self.state, "p0"), raw)
 
-    def test_shallow_search_secures_one_point_loss_instead_of_delaying_two_point_loss(self):
+    def test_immediate_finish_secures_one_point_loss_instead_of_delaying_two_point_loss(self):
         state = self.state
         self._set_prefix(state, ("p0", "p3"))
         deck = guandan._full_deck()
@@ -139,7 +139,7 @@ class GuandanValueBoundsTests(unittest.TestCase):
 
         chosen = guandan._minimax_pick_action(state, "p1", depth=1, width=8)
         self.assertEqual(chosen, pair_action)
-        self.assertEqual(state["_ai_eval_cache"]["minimax_anytime"]["completed_depth"], 1)
+        self.assertEqual(state["_ai_eval_cache"]["minimax_anytime"]["stop_reason"], "immediate_finish")
 
 
 if __name__ == "__main__":
