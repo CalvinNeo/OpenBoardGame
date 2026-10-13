@@ -2318,6 +2318,7 @@ button.splendor-card {
   #roomControlsPanel #roomControlsToggleBtn {
     display: block;
     position: absolute;
+    z-index: 1;
     inset: 0 0 auto;
     width: 100%;
     height: var(--room-controls-bar-height, 34px);
@@ -2382,7 +2383,7 @@ button.splendor-card {
   #mobileExplainSlot:not(:empty) {
     display: flex;
     position: relative;
-    z-index: 1;
+    z-index: 2;
   }
 
   #roomControlsPanel #mobileExplainSlot > button {

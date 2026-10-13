@@ -8,7 +8,7 @@ const GAME_ASSETS = {
     "header": "showNightNinjaHeaderActions"
   },
   "gloomhaven": {
-    "scripts": ["/static/games/gloomhaven.js?v=3"],
+    "scripts": ["/static/games/gloomhaven.js?v=4"],
     "styles": ["/static/games/gloomhaven.css?v=2"],
     "markup": "/static/games/gloomhaven.html?v=1",
     "panel": "gloomhavenPanel",
