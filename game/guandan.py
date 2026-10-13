@@ -526,7 +526,12 @@ def _pair_possible(
     return False
 
 
-def _compute_evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) -> Optional[Dict]:
+def _compute_evaluate_combo(
+    cards: List[Dict],
+    level_rank: int,
+    config: Dict,
+    preferred_type: Optional[str] = None,
+) -> Optional[Dict]:
     if not cards:
         return None
     size = len(cards)
@@ -543,7 +548,7 @@ def _compute_evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) ->
         return {
             "type": "heavenly",
             "size": 4,
-            "tier": 7,
+            "tier": 9,
             "rank_value": 0,
             "uses_wild": False,
         }
@@ -688,22 +693,25 @@ def _compute_evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) ->
     if size == 6:
         if jokers:
             return None
-        high_value = _evaluate_three_pairs(normal_ranks, wild_count)
-        if high_value is not None:
-            return {
-                "type": "three_pairs",
-                "size": 6,
-                "high_value": high_value,
-                "uses_wild": wild_count > 0,
-            }
-        high_value = _evaluate_steel_plate(normal_ranks, wild_count)
-        if high_value is not None:
-            return {
-                "type": "steel_plate",
-                "size": 6,
-                "high_value": high_value,
-                "uses_wild": wild_count > 0,
-            }
+        # The same physical cards can have two meanings when wild cards are
+        # present (for example 55, 66, W, W can be three pairs or a steel
+        # plate).  Callers replying to an existing trick must preserve that
+        # meaning; the old fixed three-pairs-first order made legal steel
+        # plates impossible to play.
+        evaluators = (
+            (("steel_plate", _evaluate_steel_plate), ("three_pairs", _evaluate_three_pairs))
+            if preferred_type == "steel_plate"
+            else (("three_pairs", _evaluate_three_pairs), ("steel_plate", _evaluate_steel_plate))
+        )
+        for combo_type, evaluator in evaluators:
+            high_value = evaluator(normal_ranks, wild_count)
+            if high_value is not None:
+                return {
+                    "type": combo_type,
+                    "size": 6,
+                    "high_value": high_value,
+                    "uses_wild": wild_count > 0,
+                }
         return None
 
     return None
@@ -727,6 +735,7 @@ def _combo_cards_signature(cards: List[Dict]) -> Tuple[Tuple[int, str, str], ...
 def _evaluate_combo_cached(
     signature: Tuple[Tuple[int, str, str], ...],
     level_rank: int,
+    preferred_type: Optional[str] = None,
 ) -> Optional[Dict]:
     cards = [
         {
@@ -736,7 +745,7 @@ def _evaluate_combo_cached(
         }
         for rank, suit, joker in signature
     ]
-    return _compute_evaluate_combo(cards, level_rank, {})
+    return _compute_evaluate_combo(cards, level_rank, {}, preferred_type)
 
 
 def _evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) -> Optional[Dict]:
@@ -748,9 +757,46 @@ def _evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) -> Optiona
     return dict(cached) if cached is not None else None
 
 
+def _evaluate_combo_for_type(
+    cards: List[Dict], level_rank: int, config: Dict, preferred_type: Optional[str]
+) -> Optional[Dict]:
+    """Evaluate an ambiguous play using the type required by the trick."""
+    if len(cards) != 6 or preferred_type != "steel_plate":
+        return _evaluate_combo(cards, level_rank, config)
+    cached = _evaluate_combo_cached(
+        _combo_cards_signature(cards), level_rank, preferred_type
+    )
+    return dict(cached) if cached is not None else None
+
+
+def _evaluate_combo_options(cards: List[Dict], level_rank: int, config: Dict) -> List[Dict]:
+    """Keep both six-card run types; otherwise use the canonical combo.
+
+    Most card sets have one interpretation.  Six-card wild-card structures are
+    the important exception and need both interpretations available to legality
+    checks and search callers.
+    """
+    if len(cards) != 6 or any(_is_joker(card) for card in cards):
+        combo = _evaluate_combo(cards, level_rank, config)
+        return [combo] if combo else []
+    signature = _combo_cards_signature(cards)
+    options = []
+    for combo_type in ("three_pairs", "steel_plate"):
+        combo = _evaluate_combo_cached(signature, level_rank, combo_type)
+        if combo and all(existing.get("type") != combo.get("type") for existing in options):
+            options.append(dict(combo))
+    return options
+
+
+def _evaluate_play_combo(state: Dict, cards: List[Dict]) -> Optional[Dict]:
+    """Resolve an actual move consistently for rules, scoring and search."""
+    preferred_type = ((state.get("current_trick") or {}).get("combo") or {}).get("type")
+    return _evaluate_combo_for_type(cards, state["level_rank"], state.get("config", {}), preferred_type)
+
+
 def _bomb_tier(combo: Dict) -> int:
     if combo["type"] == "heavenly":
-        return 7
+        return 9  # Ten-card ordinary bombs are tier 8.
     if combo["type"] == "straight_flush":
         return 3
     return combo.get("tier", 0)
@@ -765,6 +811,11 @@ def _compare_combos(current: Dict, challenger: Dict, level_rank: int, config: Di
     if current_bomb and not challenger_bomb:
         return False
     if current_bomb and challenger_bomb:
+        # Keep the category ordering even for saved games carrying an old tier.
+        if current["type"] == "heavenly":
+            return False
+        if challenger["type"] == "heavenly":
+            return True
         current_tier = _bomb_tier(current)
         challenger_tier = _bomb_tier(challenger)
         if challenger_tier != current_tier:
@@ -1025,12 +1076,12 @@ def _find_steel_plate_to_beat(hand: List[Dict], level_rank: int, threshold: int)
 
 
 def _can_play_all(hand: List[Dict], level_rank: int, config: Dict, current_combo: Optional[Dict]) -> bool:
-    combo = _evaluate_combo(hand, level_rank, config)
-    if not combo:
+    combos = _evaluate_combo_options(hand, level_rank, config)
+    if not combos:
         return False
     if not current_combo:
         return True
-    return _compare_combos(current_combo, combo, level_rank, config)
+    return any(_compare_combos(current_combo, combo, level_rank, config) for combo in combos)
 
 
 def _cards_key(cards: List[int]) -> str:
@@ -1159,6 +1210,21 @@ def _select_materialization_variants(
         best_by_remainder.values(),
         key=lambda item: (-item[0], item[1]),
     )
+    # Spending a wildcard and retaining it are different resource decisions.
+    # Preserve one representative of each budget before filling suit variants;
+    # otherwise the cheap wildcard-retention score can discard every deliberate
+    # substitution before the complete policy ever compares those actions.
+    wild_ids = {card["id"] for card in hand if _is_wild(card, level_rank)}
+    if wild_ids and limit > 1:
+        representatives, alternatives, seen = [], [], set()
+        for entry in ordered_entries:
+            used_wilds = len(wild_ids.intersection(entry[1]))
+            if used_wilds in seen:
+                alternatives.append(entry)
+            else:
+                seen.add(used_wilds)
+                representatives.append(entry)
+        ordered_entries = representatives + alternatives
     return [list(entry[2]) for entry in ordered_entries[:limit]]
 
 
@@ -1190,17 +1256,27 @@ def _materialize_rank_requirements(
     hand_map = _map_hand_by_id(hand)
     for rank, count in requirements:
         normals = list(info["normals_by_rank"].get(rank, []))
-        take_normal = min(len(normals), count)
-        missing = count - take_normal
-        if missing > len(wilds):
-            return []
-        all_normal_choices = list(itertools.combinations(normals, take_normal)) if take_normal else [()]
+        # Usually the natural card is preferable, but it is not the only legal
+        # realization.  When a wildcard can replace an available natural card,
+        # retaining that natural card may preserve a bomb or another complete
+        # group in the residual hand.  Enumerate both shapes and let the bounded
+        # residual chooser decide; this is especially important for a wild
+        # straight such as 3,4,W,6,7 beside four natural fives.
+        min_normal = max(0, count - len(wilds))
+        max_normal = min(len(normals), count)
+        normal_counts = range(max_normal, min_normal - 1, -1)
+        all_normal_choices = []
+        for normal_count in normal_counts:
+            if normal_count:
+                all_normal_choices.extend(itertools.combinations(normals, normal_count))
+            else:
+                all_normal_choices.append(())
         normal_choices_by_shape: Dict[Tuple[str, ...], Tuple[int, ...]] = {}
         for choice in all_normal_choices:
             suit_shape = tuple(sorted(str(hand_map[card_id].get("suit") or "") for card_id in choice))
             normal_choices_by_shape.setdefault(suit_shape, choice)
         normal_choices = list(normal_choices_by_shape.values())
-        legacy_normal = tuple(normals[:take_normal])
+        legacy_normal = tuple(normals[:max_normal])
         normal_choices.sort(
             key=lambda choice: (
                 sum(
@@ -1219,13 +1295,17 @@ def _materialize_rank_requirements(
         expanded: List[List[int]] = []
         for partial in beams:
             used = set(partial)
-            available_wilds = [card_id for card_id in wilds if card_id not in used]
-            if missing > len(available_wilds):
-                continue
-            wild_choices = list(itertools.combinations(available_wilds, missing)) if missing else [()]
             for normal_choice in normal_choices:
                 if any(card_id in used for card_id in normal_choice):
                     continue
+                missing = count - len(normal_choice)
+                available_wilds = [card_id for card_id in wilds if card_id not in used]
+                if missing > len(available_wilds):
+                    continue
+                wild_choices = (
+                    list(itertools.combinations(available_wilds, missing))
+                    if missing else [()]
+                )
                 for wild_choice in wild_choices:
                     expanded.append(partial + list(normal_choice) + list(wild_choice))
         if not expanded:
@@ -2272,10 +2352,10 @@ class GuandanGame:
         if any(cid not in hand_map for cid in card_ids):
             return events, "card not in hand"
         cards = [hand_map[cid] for cid in card_ids]
-        combo = _evaluate_combo(cards, state["level_rank"], state["config"])
+        current_trick = state.get("current_trick")
+        combo = _evaluate_play_combo(state, cards)
         if not combo:
             return events, "invalid combo"
-        current_trick = state.get("current_trick")
         if current_trick:
             if not _compare_combos(current_trick["combo"], combo, state["level_rank"], state["config"]):
                 return events, "combo not strong enough"

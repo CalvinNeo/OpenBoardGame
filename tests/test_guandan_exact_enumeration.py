@@ -58,6 +58,95 @@ def unpruned_runs(hand, level, threshold, limit, size, length):
 
 
 class GuandanExactEnumerationTests(unittest.TestCase):
+    def _cards(self, labels):
+        deck = guandan._full_deck()
+        cards = []
+        for label in labels:
+            card = next(card for card in deck if guandan._card_label(card) == label)
+            deck.remove(card)
+            cards.append(card)
+        return cards
+
+    def test_wild_six_keeps_both_meanings_and_uses_table_type_on_reply(self):
+        cards = self._cards(["♠️5", "♥️5", "♣️6", "♦️6", "♥️2", "♥️2"])
+        options = guandan._evaluate_combo_options(cards, 2, {})
+        self.assertEqual({combo["type"] for combo in options}, {"three_pairs", "steel_plate"})
+        self.assertEqual(guandan._evaluate_combo_for_type(cards, 2, {}, "steel_plate")["type"],
+                         "steel_plate")
+
+        players = [
+            {"player_id": pid, "name": pid, "seat": seat, "is_bot": True}
+            for seat, pid in enumerate(("bot", "opp", "mate", "opp2"))
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        deck = guandan._full_deck()
+        used = {card["id"] for card in cards}
+        deck = [card for card in deck if card["id"] not in used]
+        lead = []
+        for rank in (3, 3, 3, 4, 4, 4):
+            card = next(card for card in deck if card.get("rank") == rank)
+            deck.remove(card)
+            lead.append(card)
+        state["players"]["bot"]["hand"] = cards
+        for pid in ("opp", "mate", "opp2"):
+            state["players"][pid]["hand"], deck = deck[:20], deck[20:]
+        state.update(
+            phase="playing", current_turn="bot", level_rank=2,
+            current_trick={"player_id": "opp", "cards": [card["id"] for card in lead],
+                           "combo": guandan._evaluate_combo(lead, 2, {})},
+            round_memories=[], known_card_owners={}, visible_card_id=None,
+            pass_limits={}, seen_cards=[card["id"] for card in deck + lead],
+            trick_plays={"opp": lead}, pass_count=0, finish_order=[], _ai_eval_cache={},
+        )
+        ids = [card["id"] for card in cards]
+        self.assertTrue(guandan._can_play_all(cards, 2, {}, state["current_trick"]["combo"]))
+        self.assertIn(set(ids), [set(option) for option in guandan._list_hint_options(state, "bot")])
+        for name in ("_hand_has_same_type_beat", "_hand_can_beat_combo"):
+            self.assertTrue(guandan_ai.call(guandan, name, cards, 2, state["current_trick"]["combo"], {}))
+        self.assertEqual(guandan_ai.call(guandan, "_action_combo", state, "bot",
+                                       {"type": "play", "card_ids": ids})["type"], "steel_plate")
+        # Context is part of the feature cache identity; a lead has the canonical
+        # three-pairs meaning, while a response retains the steel-plate meaning.
+        trick = state["current_trick"]
+        state["current_trick"] = None
+        self.assertEqual(guandan_ai.call(guandan, "_action_combo", state, "bot",
+                                       {"type": "play", "card_ids": ids})["type"], "three_pairs")
+        state["current_trick"] = trick
+        for mode in ("heuristic", "auto"):
+            trial = copy.deepcopy(state)
+            trial["config"]["bot_mode"] = mode
+            self.assertEqual(set(guandan.GuandanGame.bot_move(trial, "bot")["card_ids"]), set(ids))
+        _, error = guandan.GuandanGame.apply_action(
+            state, "bot", {"type": "play", "card_ids": [card["id"] for card in cards]}
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["current_trick"]["combo"]["type"], "steel_plate")
+
+    def test_straight_materializer_can_keep_a_natural_bomb_card(self):
+        hand = self._cards(["♠️3", "♥️4", "♠️5", "♥️5", "♣️5", "♦️5", "♦️6", "♠️7", "♥️2"])
+        # Use the default policy's three materializations, not an enlarged
+        # panel that could hide pruning of the strategic alternative.
+        options = guandan._list_straight_options(hand, 2, 0, 3)
+        target = {card["id"] for card in hand if guandan._card_label(card) in
+                  {"♠️3", "♥️4", "♦️6", "♠️7", "♥️2"}}
+        self.assertIn(target, [set(option) for option in options])
+
+    def test_bomb_candidates_cover_nine_and_ten_cards_and_heavenly_stays_top(self):
+        deck = guandan._full_deck()
+        rank_cards = [card for card in deck if card.get("rank") == 3]
+        wilds = [card for card in deck if guandan._is_wild(card, 2)]
+        for size in (9, 10):
+            hand = rank_cards + wilds[: size - len(rank_cards)]
+            candidates = guandan_ai.call(guandan, "_find_bomb_candidates", hand, 2, 3)
+            self.assertIn(size, {len(candidate["cards"]) for candidate in candidates})
+        heavenly = guandan._evaluate_combo([card for card in deck if card.get("joker")], 2, {})
+        for size in (9, 10):
+            bomb = guandan._evaluate_combo(rank_cards + wilds[:size - 8], 2, {})
+            for tier in (7, heavenly["tier"]):
+                saved_heavenly = dict(heavenly, tier=tier)
+                self.assertFalse(guandan._compare_combos(saved_heavenly, bomb, 2, {}))
+                self.assertTrue(guandan._compare_combos(bomb, saved_heavenly, 2, {}))
+
     def test_card_strength_matches_rank_order_for_every_level_and_card(self):
         for level in range(2, 15):
             ordinary = [rank for rank in range(14, 1, -1) if rank != level]

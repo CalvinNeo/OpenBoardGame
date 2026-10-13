@@ -172,6 +172,7 @@ _point_order_value = _proxy("_point_order_value")
 _is_joker = _proxy("_is_joker")
 _is_wild = _proxy("_is_wild")
 _evaluate_combo = _proxy("_evaluate_combo")
+_evaluate_play_combo = _proxy("_evaluate_play_combo")
 _team_of = _proxy("_team_of")
 _teammate_of = _proxy("_teammate_of")
 _best_response_play_score = _proxy("_best_response_play_score")
@@ -1720,7 +1721,7 @@ def _has_natural_same_type_response(
         if tuple(sorted(option)) == exclude_key:
             continue
         play_cards = [hand_map[cid] for cid in option if cid in hand_map]
-        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        combo = _evaluate_play_combo(state, play_cards)
         if not combo or combo.get("type") != combo_type:
             continue
         if not _cards_use_special_material(play_cards, state["level_rank"]):
@@ -1816,7 +1817,7 @@ def _find_bomb_candidates(
         candidates.append(
             {
                 "type": "heavenly",
-                "tier": 7,
+                "tier": 9,
                 "rank_value": 0,
                 "high_value": 0,
                 "cards": info["jokers_big"][:2] + info["jokers_small"][:2],
@@ -1839,7 +1840,10 @@ def _find_bomb_candidates(
 
     for rank, card_ids in info["normals_by_rank"].items():
         total = len(card_ids) + len(wilds)
-        sizes = list(range(4, min(8, total) + 1))
+        # Two wild cards can extend the eight natural copies of a rank to a
+        # nine- or ten-card bomb.  The rule evaluator accepts these sizes, so
+        # candidate generation must not silently stop at eight.
+        sizes = list(range(4, min(10, total) + 1))
         for size in sizes:
             tier = _bomb_tier_for_size(size)
             variants = _CORE._materialize_rank_requirements(
@@ -1926,7 +1930,9 @@ def _candidate_features(
     """Build once-per-decision features shared by ranking and full scoring."""
     hand = state["players"][player_id]["hand"]
     hand_key = tuple(sorted(card["id"] for card in hand))
-    cache_key = (player_id, state["level_rank"], hand_key, _cards_key(cards))
+    trick_type = ((state.get("current_trick") or {}).get("combo") or {}).get("type")
+    cache_key = (player_id, state["level_rank"], hand_key, _cards_key(cards), trick_type,
+                 tuple(sorted((combo or {}).items())))
     eval_cache = state.setdefault("_ai_eval_cache", {})
     feature_cache = eval_cache.setdefault("candidate_features", {})
     cached = feature_cache.get(cache_key)
@@ -1937,7 +1943,7 @@ def _candidate_features(
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
     resolved_combo = combo
     if resolved_combo is None:
-        resolved_combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        resolved_combo = _evaluate_play_combo(state, play_cards)
     remaining = _remove_cards(hand, cards)
     before_counts = _rank_count_map(hand, state["level_rank"])
     after_counts = _rank_count_map(remaining, state["level_rank"])
@@ -2179,50 +2185,33 @@ def _route_wild_misuse_penalty(
         return 0.0
     if before is None:
         before = _wild_structure_ranked_candidates(hand, level_rank)
-    best_before = next((cand for cand in before if cand["kind"] in _WILD_BOMB_KINDS), None)
-    if best_before is None:
+    bomb_before = [candidate for candidate in before if candidate["kind"] in _WILD_BOMB_KINDS]
+    if not uses_wild and not any(
+        card.get("rank") == rank and (suit is None or card.get("suit") == suit)
+        for candidate in bomb_before for suit, rank, count in candidate["requirements"] if count
+        for card in play_cards
+    ):
         return 0.0
-    if combo_type in BOMB_TYPES:
-        # A wild bomb pays for the better bomb it forfeits: upgrading a natural
-        # quad by one card costs the new bomb a natural triple would have made.
-        if combo_type == "straight_flush":
-            own = max((cand["score"] for cand in before if cand["kind"] == "straight_flush"), default=0.0)
-        else:
-            ranks = {card.get("rank") for card in play_cards
-                     if not is_joker(card) and not is_wild(card, level_rank)}
-            own = max((cand["score"] for cand in before
-                       if cand["kind"] == "bomb" and int(cand["rank"]) in ranks
-                       and cand["target_size"] == len(cards)), default=0.0)
-        return max(0.0, best_before["score"] - own)
-    if not uses_wild:
-        # Without the wildcard, only groups that consume the natural material
-        # of the best bomb candidate can hurt it.
-        signature = best_before["signature"]
-        if signature[0] == "bomb":
-            rank = int(best_before["rank"])
-            touches = any(
-                card.get("rank") == rank and not is_joker(card) and not is_wild(card, level_rank)
-                for card in play_cards
-            )
-        else:
-            _, suit, seq = signature
-            touches = any(
-                card.get("suit") == suit and card.get("rank") in seq
-                and not is_joker(card) and not is_wild(card, level_rank)
-                for card in play_cards
-            )
-        if not touches:
-            return 0.0
+    before_value, _ = _wild_resource_plan(hand, level_rank, bomb_before)
+    if before_value <= 0.0:
+        return 0.0
     remaining = _remove_cards(hand, cards)
     after = _wild_structure_ranked_candidates(remaining, level_rank)
-    best_after = next((cand["score"] for cand in after if cand["kind"] in _WILD_BOMB_KINDS), 0.0)
-    loss = max(0.0, best_before["score"] - best_after)
-    if loss <= 0.0:
-        return 0.0
+    bomb_after = [candidate for candidate in after if candidate["kind"] in _WILD_BOMB_KINDS]
+    after_value, _ = _wild_resource_plan(remaining, level_rank, bomb_after)
+    loss = max(0.0, before_value - after_value)
     if uses_wild:
-        own_kind = combo.get("type")
-        own = max((cand["score"] for cand in before if cand["kind"] == own_kind
-                   and cand.get("high_value") == combo.get("high_value")), default=0.0)
+        # Credit the realized use once. Both sides use the same mutually
+        # exclusive resource plans, including the second wildcard's support.
+        ranks = {card.get("rank") for card in play_cards
+                 if not is_joker(card) and not is_wild(card, level_rank)}
+        own = max((candidate["score"] for candidate in before
+                   if candidate["kind"] == combo_type
+                   and ((combo_type == "bomb"
+                         and int(candidate["rank"]) in ranks
+                         and candidate["target_size"] == len(cards))
+                        or (combo_type != "bomb"
+                            and candidate.get("high_value") == combo.get("high_value")))), default=0.0)
         loss = max(0.0, loss - own)
     return loss
 
@@ -3976,7 +3965,7 @@ def _response_material_cost(
     level_rank = state["level_rank"]
     config = state.get("config", {})
     if combo is None:
-        combo = _evaluate_combo(play_cards, level_rank, config)
+        combo = _evaluate_play_combo(state, play_cards)
     if not combo:
         return 999.0
 
@@ -4100,7 +4089,7 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
     )
     for cards in _dedupe_card_sets(options):
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-        combo = _evaluate_combo(play_cards, level_rank, config)
+        combo = _evaluate_play_combo(state, play_cards)
         if not combo:
             continue
         uses_special = _cards_use_special_material(play_cards, level_rank)
@@ -4270,7 +4259,7 @@ def _best_response_play_score_result(
     eligible: List[List[int]] = []
     for cards in options:
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        combo = _evaluate_play_combo(state, play_cards)
         if not combo or (non_bomb_only and combo["type"] in BOMB_TYPES):
             continue
         eligible.append(cards)
@@ -4472,7 +4461,7 @@ def _retained_bomb_takeover_profile(
     config = state.get("config", {})
     if combo is None:
         hand_map = _map_hand_by_id(hand)
-        combo = _evaluate_combo([hand_map[cid] for cid in cards], level_rank, config)
+        combo = _evaluate_play_combo(state, [hand_map[cid] for cid in cards])
     if not combo or (combo.get("type") not in BOMB_TYPES and state.get("current_trick")):
         return empty
     profiles = [
@@ -6581,7 +6570,7 @@ def _hand_has_same_type_beat(hand: List[Dict], level_rank: int, combo: Dict, con
 
     for cards in options:
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-        challenger = _evaluate_combo(play_cards, level_rank, config)
+        challenger = _CORE._evaluate_combo_for_type(play_cards, level_rank, config, combo_type)
         if challenger and _compare_combos(combo, challenger, level_rank, config):
             return True
     return False
@@ -9328,7 +9317,7 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
     for rank, count in rank_counts.items():
         for needed in range(1, wild_count + 1):
             size = count + needed
-            if not 4 <= size <= 8:
+            if not 4 <= size <= 10:
                 continue
             size_bonus = max(0, size - 4) * (1.1 if count < 4 else 0.8)
             rank_bonus = max(0.0, strength[rank] - 50) * 0.06
@@ -9353,8 +9342,8 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
             support += min(count, 2)
             need += max(0, 2 - count)
         if 0 < need <= wild_count and support >= 4:
-            high_value = _point_order_value(start + 2, level_rank)
-            score = 5.4 + max(0.0, support - 4) * 0.45 + max(0.0, high_value - 52) * 0.045
+            high_value = start + 2
+            score = 5.4 + max(0.0, support - 4) * 0.45 + max(0, high_value - 6) * 0.045
             add_candidate(
                 "three_pairs",
                 need,
@@ -9371,8 +9360,8 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
             support += min(count, 3)
             need += max(0, 3 - count)
         if 0 < need <= wild_count and support >= 4:
-            high_value = _point_order_value(start + 1, level_rank)
-            score = 6.1 + max(0.0, support - 4) * 0.55 + max(0.0, high_value - 52) * 0.05
+            high_value = start + 1
+            score = 6.1 + max(0.0, support - 4) * 0.55 + max(0, high_value - 6) * 0.05
             add_candidate(
                 "steel_plate",
                 need,
@@ -9441,17 +9430,22 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
     return ranked
 
 
-def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
+def _wild_resource_plan(
+    hand: List[Dict], level_rank: int, ranked: List[Dict],
+) -> Tuple[float, Tuple[Dict, ...]]:
+    """Allocate at most two wildcards and their natural support together.
+
+    Each selected option owns its natural rank/suit requirements. Alternatives
+    remain available for replanning, but cannot all count as executable stock.
+    The existing discount on a second use is preserved as an explicit policy.
+    """
     info = _hand_info(hand, level_rank)
     wild_count = len(info["wild_cards"])
-    if wild_count <= 0:
-        return 0.0
+    if wild_count <= 0 or not ranked:
+        return 0.0, ()
 
-    ranked = _wild_structure_ranked_candidates(hand, level_rank)
-    if not ranked:
-        return 0.0
-
-    best = max(candidate["score"] for candidate in ranked)
+    strongest = max(ranked, key=lambda candidate: candidate["score"])
+    best, selected = strongest["score"], (strongest,)
     # At most two hearts of the level rank exist. Alternatives may share
     # natural cards as well as wildcards; only disjoint uses can be added.
     for index, first in enumerate(ranked):
@@ -9472,8 +9466,16 @@ def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
                    for (suit, rank), count in suits.items()):
                 continue
             high, low = sorted((first["score"], second["score"]), reverse=True)
-            best = max(best, high + low * 0.72)
-    return best
+            value = high + low * 0.72
+            if value > best:
+                best, selected = value, (first, second)
+    return best, selected
+
+
+def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
+    candidates = _wild_structure_ranked_candidates(hand, level_rank)
+    value, _ = _wild_resource_plan(hand, level_rank, candidates)
+    return value
 
 
 def _wild_structure_opportunity_loss(hand: List[Dict], cards: List[int], level_rank: int) -> float:
@@ -9668,7 +9670,7 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
     hand = state["players"][player_id]["hand"]
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    combo = _evaluate_play_combo(state, play_cards)
     if not combo:
         return 0.0
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
@@ -10865,6 +10867,52 @@ def _control_card_score(hand: List[Dict], level_rank: int) -> float:
     return score
 
 
+def _independent_bomb_reserve(
+    hand: List[Dict], level_rank: int, bombs: List[Dict], reserve_factor: float,
+) -> float:
+    """Estimate executable bomb inventory without sharing physical cards.
+
+    Regenerate on residual hands: candidates use a canonical physical wildcard
+    or rank copy, which must be reassigned after the first bomb spends it.
+    Thus two triples and two wildcards can supply two independent bombs, and
+    eight natural copies can supply two fours. A static candidate conflict
+    graph would incorrectly treat these canonical copies as shared resources.
+
+    This is a bounded beam, not an exhaustive partition solver. Each retained
+    value belongs to a feasible plan; pruning can underestimate the reserve but
+    cannot invent mutually exclusive bombs. Bound the work because this metric
+    is also evaluated on many sampled hands inside each root decision.
+    """
+    if not bombs:
+        return 0.0
+    bits = {card["id"]: 1 << index for index, card in enumerate(hand)}
+    full_mask = (1 << len(hand)) - 1
+    low_anchor = _point_order_value(3, level_rank)
+    beam_width = 32
+    frontier = {full_mask: 0.0}
+    best_value = 0.0
+    while frontier:
+        expanded: Dict[int, float] = {}
+        for mask, value in frontier.items():
+            remaining = [card for card in hand if mask & bits[card["id"]]]
+            options = bombs if mask == full_mask else _find_bomb_candidates(remaining, level_rank)
+            for bomb in options:
+                spent = sum(bits[card_id] for card_id in bomb["cards"])
+                base = 1.2 + 0.8 * bomb.get("tier", 0)
+                if bomb["type"] == "bomb":
+                    base += max(0.0, bomb.get("rank_value", low_anchor) - low_anchor) * 0.45
+                elif bomb["type"] == "straight_flush":
+                    base += 1.0
+                elif bomb["type"] == "heavenly":
+                    base += 2.0
+                total = value + base * reserve_factor
+                residual = mask ^ spent
+                expanded[residual] = max(expanded.get(residual, 0.0), total)
+                best_value = max(best_value, total)
+        frontier = dict(sorted(expanded.items(), key=lambda item: (-item[1], item[0]))[:beam_width])
+    return best_value
+
+
 def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, float]:
     if not hand:
         return {
@@ -10960,22 +11008,9 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
     if max_run >= 5:
         shape_synergy += 1.5 + min(1.0, (max_run - 5) * 0.3)
 
-    bomb_reserve = 0.0
     bombs = _find_bomb_candidates(hand, level_rank)
-    if bombs:
-        reserve_factor = 1.0 + min(0.7, max(0.0, (len(hand) - 6) * 0.07))
-        low_bomb_anchor = _point_order_value(3, level_rank)
-        for bomb in bombs:
-            tier = bomb.get("tier", 0)
-            base = 1.2 + 0.8 * tier
-            if bomb.get("type") == "bomb":
-                rank_pressure = max(0.0, bomb.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
-                base += rank_pressure * 0.45
-            elif bomb.get("type") == "straight_flush":
-                base += 1.0
-            elif bomb.get("type") == "heavenly":
-                base += 2.0
-            bomb_reserve += base * reserve_factor
+    reserve_factor = 1.0 + min(0.7, max(0.0, (len(hand) - 6) * 0.07))
+    bomb_reserve = _independent_bomb_reserve(hand, level_rank, bombs, reserve_factor)
 
     decomp = _hand_decomposition_summary(hand, level_rank)
 
@@ -11743,7 +11778,7 @@ def _max_combo_value_for_hand(hand: List[Dict], level_rank: int, combo_type: str
     best = None
     for cards in options:
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-        combo = _evaluate_combo(play_cards, level_rank, config)
+        combo = _CORE._evaluate_combo_for_type(play_cards, level_rank, config, combo_type)
         if not combo or combo.get("type") != combo_type:
             continue
         value = combo.get("high_value") if combo_type in ("straight", "three_pairs", "steel_plate") else combo.get("rank_value")
@@ -12256,7 +12291,7 @@ def _hand_can_beat_combo(hand: List[Dict], level_rank: int, combo: Dict, config:
 
     for cards in options:
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-        challenger = _evaluate_combo(play_cards, level_rank, config)
+        challenger = _CORE._evaluate_combo_for_type(play_cards, level_rank, config, combo_type)
         if challenger and _compare_combos(combo, challenger, level_rank, config):
             return True
 
@@ -16775,7 +16810,7 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
     pressure_keys = {tuple(sorted(cards)) for cards in pressure_bombs}
     for cards in options:
         combo_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-        combo = _evaluate_combo(combo_cards, level_rank, config)
+        combo = _evaluate_play_combo(state, combo_cards)
         if combo and combo["type"] in BOMB_TYPES:
             finish_push = len(cards) == len(hand)
             priority = 0 if finish_push or tuple(sorted(cards)) in pressure_keys else 3
