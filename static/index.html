@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v117" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v118" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -452,12 +452,14 @@
     </div>
   </section>
 
+  <div id="roomControlsBackdrop" class="room-controls-backdrop" aria-hidden="true"></div>
+
   <div class="container">
     <h1 class="app-title">OpenBoardGame</h1>
 
     <div class="layout">
       <aside class="sidebar">
-        <section class="panel collapsible room-controls" id="roomControlsPanel">
+        <section class="panel collapsible room-controls" id="roomControlsPanel" aria-label="Room Controls">
           <div class="panel-header">
             <h2 class="room-controls-heading">
               <span class="room-controls-title-full">Room Controls</span>
@@ -466,10 +468,10 @@
             <div class="panel-header-actions">
               <div id="mobileCreateSlot" class="mobile-create-slot"></div>
               <div id="mobileExplainSlot" class="mobile-explain-slot"></div>
-              <button class="collapse-btn" id="roomControlsToggleBtn" type="button" aria-expanded="true">Hide</button>
+              <button class="collapse-btn" id="roomControlsToggleBtn" type="button" aria-expanded="true" aria-controls="roomControlsBody" aria-label="Hide Room Controls">Hide</button>
             </div>
           </div>
-          <div class="panel-body room-controls-body">
+          <div class="panel-body room-controls-body" id="roomControlsBody">
             <section class="room-controls-section" id="connectionPanel">
               <div class="panel-header">
                 <h3>Connection</h3>
@@ -1656,6 +1658,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v50" defer></script>
-  <script src="/static/room.js?v=app_v71" defer></script>
+  <script src="/static/room.js?v=app_v72" defer></script>
 </body>
 </html>

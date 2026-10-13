@@ -100,6 +100,7 @@ h1 {
 }
 
 .room-controls-title-short,
+.room-controls-backdrop,
 .mobile-create-slot,
 .mobile-explain-slot {
   display: none;
@@ -178,6 +179,11 @@ h1 {
 .room-controls-section + .room-controls-section {
   border-top: 1px solid #eee;
   padding-top: 12px;
+}
+
+@keyframes room-controls-unfold {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 #roomControlsPanel > .panel-header {
@@ -2165,7 +2171,7 @@ button.splendor-card {
 
 @media (max-width: 900px) {
   .container {
-    padding: 12px;
+    padding: 4px max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
   }
 
   .container > h1 {
@@ -2189,21 +2195,34 @@ button.splendor-card {
   }
 
   .panel {
-    padding: 12px;
+    padding: 6px;
   }
 
   body.room-controls-docked #roomControlsPanel {
     position: fixed;
     top: 0;
-    left: 12px;
-    right: 12px;
+    left: max(4px, env(safe-area-inset-left));
+    right: max(4px, env(safe-area-inset-right));
     z-index: 200;
     margin: 0;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 12px 12px;
   }
 
   body.room-controls-docked .container {
-    padding-top: calc(12px + var(--room-controls-bar-height, 0px));
+    padding-top: calc(4px + var(--room-controls-bar-height, 34px));
+  }
+
+  body.room-controls-drawer-open {
+    overflow: hidden;
+  }
+
+  body.room-controls-drawer-open .room-controls-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(30, 47, 68, 0.12);
+    touch-action: none;
   }
 
   .room-controls-title-full {
@@ -2215,38 +2234,64 @@ button.splendor-card {
   }
 
   #roomControlsPanel {
-    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 8px);
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-bottom)));
+    padding: max(4px, env(safe-area-inset-top)) 6px 4px;
+    overflow: hidden;
+    background: #f3f8fe;
+    border-color: rgba(180, 200, 224, 0.65);
+    box-shadow: 0 8px 28px rgba(36, 63, 96, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    #roomControlsPanel {
+      background: linear-gradient(125deg, rgba(255, 255, 255, 0.88), rgba(233, 244, 255, 0.72) 55%, rgba(255, 255, 255, 0.82));
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      backdrop-filter: blur(22px) saturate(160%);
+    }
   }
 
   #roomControlsPanel .room-controls-heading {
-    font-size: 20px;
-    line-height: 1.2;
-  }
-
-  #roomControlsPanel.collapsed {
-    padding: 4px 10px;
-  }
-
-  #roomControlsPanel.collapsed > .panel-header {
-    min-height: 24px;
-    margin-bottom: 0;
-  }
-
-  #roomControlsPanel.collapsed .room-controls-heading {
     font-size: 16px;
     line-height: 1.25;
   }
 
   #roomControlsPanel .room-controls-body {
-    gap: 10px;
+    min-height: 0;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 6px 0 2px;
+    border-top: 1px solid rgba(180, 200, 224, 0.4);
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    #roomControlsPanel:not(.collapsed) .room-controls-body {
+      animation: room-controls-unfold 180ms ease-out;
+    }
   }
 
   #roomControlsPanel .room-controls-section + .room-controls-section {
-    padding-top: 8px;
+    padding-top: 6px;
+    border-color: rgba(180, 200, 224, 0.4);
+  }
+
+  #roomControlsPanel .game-config-card {
+    padding: 6px;
   }
 
   #roomControlsPanel .panel-header {
     margin-bottom: 6px;
+  }
+
+  #roomControlsPanel > .panel-header {
+    flex-shrink: 0;
+    min-height: 24px;
+    margin-bottom: 0;
   }
 
   #roomControlsPanel .room-controls-section > .panel-header {
@@ -2267,6 +2312,18 @@ button.splendor-card {
     font-size: 12px;
     line-height: normal;
     white-space: nowrap;
+  }
+
+  #roomControlsPanel #roomControlsToggleBtn {
+    min-height: 24px;
+    border-color: rgba(160, 181, 208, 0.6);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  #roomControlsToggleBtn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
   }
 
   #roomControlsPanel #logoutBtn {
@@ -2339,13 +2396,13 @@ button.splendor-card {
   }
 
   .game-panel {
-    padding: 8px 12px;
+    padding: 6px;
     width: 100%;
   }
 
   .game-panel > .panel-header {
-    gap: 4px 8px;
-    margin-bottom: 6px;
+    gap: 4px 6px;
+    margin-bottom: 4px;
   }
 
   .game-panel-title {

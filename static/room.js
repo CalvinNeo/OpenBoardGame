@@ -118,6 +118,8 @@ const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
+const roomControlsBackdrop = document.getElementById("roomControlsBackdrop");
+const roomControlsMain = document.querySelector(".layout > .main");
 const mobileCreateSlot = document.getElementById("mobileCreateSlot");
 const roomCreateButtonAnchor = document.createComment("Create Room button home");
 createBtn.before(roomCreateButtonAnchor);
@@ -1785,15 +1787,33 @@ function updateRoomControlsDock() {
     roomCreateButtonAnchor.after(createBtn);
   }
   updateRoomCreateButtonLabel();
-  const shouldDock =
-    roomControlsDockQuery.matches &&
-    roomControlsPanel.classList.contains("compact") &&
-    isCollapsed;
+  const shouldDock = roomControlsDockQuery.matches;
+  const drawerOpen = shouldDock && !isCollapsed;
   const shouldCloseDesktopDrawer = !roomControlsDockQuery.matches && isCollapsed;
   document.body.classList.toggle("room-controls-docked", shouldDock);
+  document.body.classList.toggle("room-controls-drawer-open", drawerOpen);
   document.body.classList.toggle("room-controls-drawer-closed", shouldCloseDesktopDrawer);
+  roomControlsToggleBtn.setAttribute("aria-expanded", (!isCollapsed).toString());
+  roomControlsToggleBtn.setAttribute("aria-label", isCollapsed ? "Open Room Controls" : "Hide Room Controls");
+  roomControlsToggleBtn.title = isCollapsed ? "Open Room Controls" : "Hide Room Controls";
+  roomControlsMain.inert = drawerOpen;
+  if (drawerOpen) {
+    roomControlsPanel.setAttribute("role", "dialog");
+    roomControlsPanel.setAttribute("aria-modal", "true");
+    if (roomControlsMain.contains(document.activeElement)) {
+      roomControlsToggleBtn.focus({ preventScroll: true });
+    }
+  } else {
+    roomControlsPanel.removeAttribute("role");
+    roomControlsPanel.removeAttribute("aria-modal");
+  }
   if (shouldDock) {
-    const height = roomControlsPanel.getBoundingClientRect().height;
+    // Reserve only the top bar, so opening the drawer never shifts the game.
+    const header = roomControlsPanel.querySelector(":scope > .panel-header");
+    const style = getComputedStyle(roomControlsPanel);
+    const height = header.getBoundingClientRect().height +
+      parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) +
+      parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
     document.documentElement.style.setProperty("--room-controls-bar-height", `${height}px`);
   } else {
     document.documentElement.style.removeProperty("--room-controls-bar-height");
@@ -1861,14 +1881,15 @@ function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
   if (!roomControlsPanel) {
     return;
   }
+  if (collapsed && roomControlsPanel.contains(document.activeElement)) {
+    roomControlsToggleBtn.focus({ preventScroll: true });
+  }
   roomControlsPanel.classList.toggle("collapsed", collapsed);
   if (roomControlsToggleBtn) {
     roomControlsToggleBtn.textContent = collapsed ? "Show" : "Hide";
     roomControlsToggleBtn.setAttribute("aria-expanded", (!collapsed).toString());
   }
-  if (auto) {
-    roomControlsAutoCollapsed = collapsed;
-  }
+  roomControlsAutoCollapsed = auto && collapsed;
   updateRoomControlsDock();
 }
 
@@ -2612,6 +2633,7 @@ socket.on("game:bot_progress", (data) => {
 playerName = loadStoredName().trim();
 updateRoomControlsName();
 updateGameReconnectButton();
+updateRoomControlsDock();
 
 playerNameForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2966,14 +2988,44 @@ document.addEventListener("click", (event) => {
   const btn = event.target.closest?.(".collapse-btn");
   const panel = btn?.closest(".panel");
   if (!panel) return;
+  if (panel === roomControlsPanel) {
+    setRoomControlsCollapsed(!panel.classList.contains("collapsed"));
+    return;
+  }
   const collapsed = panel.classList.toggle("collapsed");
   btn.textContent = collapsed ? "Show" : "Hide";
   btn.setAttribute("aria-expanded", (!collapsed).toString());
-  if (panel.id === "roomControlsPanel") {
-    btn.setAttribute("aria-label", collapsed ? "Open Room Controls" : "Hide Room Controls");
-    btn.title = collapsed ? "Open Room Controls" : "Hide Room Controls";
-    roomControlsAutoCollapsed = false;
-    updateRoomControlsDock();
+});
+
+roomControlsBackdrop.addEventListener("click", () => {
+  setRoomControlsCollapsed(true);
+});
+
+// Explain needs access to the game immediately, even when used from the drawer.
+mobileExplainSlot.addEventListener("click", (event) => {
+  if (event.target.closest("button")) setRoomControlsCollapsed(true);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!document.body.classList.contains("room-controls-drawer-open") || event.defaultPrevented) return;
+  const overlayOpen = Array.from(document.querySelectorAll('.modal, dialog[open], [role="dialog"], .log-panel'))
+    .some((element) => element !== roomControlsPanel && element.getClientRects().length > 0);
+  if (overlayOpen) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    setRoomControlsCollapsed(true);
+  } else if (event.key === "Tab") {
+    const controls = Array.from(roomControlsPanel.querySelectorAll('button, input, select, textarea, a[href], [tabindex]'))
+      .filter((element) => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length > 0);
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!roomControlsPanel.contains(document.activeElement) || (!event.shiftKey && document.activeElement === last)) {
+      event.preventDefault();
+      first?.focus();
+    }
   }
 });
 
@@ -2983,6 +3035,7 @@ updateRoomActionButtons();
 fetchGameList().catch(() => {});
 
 window.addEventListener("resize", syncRoomControlsExplainButton);
+new ResizeObserver(updateRoomControlsDock).observe(roomControlsPanel.querySelector(":scope > .panel-header"));
 
 if (logCloseBtn) {
   logCloseBtn.addEventListener("click", () => {
