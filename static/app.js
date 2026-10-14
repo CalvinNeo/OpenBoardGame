@@ -48,6 +48,7 @@ const manilaPanel = document.getElementById("manilaPanel");
 const skullPanel = document.getElementById("skullPanel");
 const rebelPrincessPanel = document.getElementById("rebelPrincessPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
+const compressPanel = document.getElementById("compressPanel");
 const coyotePanel = document.getElementById("coyotePanel");
 const inAGrovePanel = document.getElementById("inAGrovePanel");
 const citadelsPanel = document.getElementById("citadelsPanel");
@@ -197,6 +198,10 @@ function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
   if (!isGameAssetsLoaded(gameType)) {
     // room:state starts the load and replays the latest game:state once ready.
+    return;
+  }
+  if (gameType === "the_mind") {
+    if (typeof renderTheMindGameState === "function") renderTheMindGameState(data);
     return;
   }
   if (gameType === "night_of_the_ninja") {
@@ -481,6 +486,10 @@ function renderGameState(data) {
   }
   if (gameType === "perfect_mismatch") {
     renderMismatchGameState(data);
+    return;
+  }
+  if (gameType === "compress") {
+    renderCompressGameState(data);
     return;
   }
   if (gameType === "coyote") {

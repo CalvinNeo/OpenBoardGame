@@ -1,0 +1,78 @@
+<template data-game-target="compressHeaderActions" data-game-mode="contents">
+  <button id="compressHelpBtn" type="button" title="Read the rules">Help</button>
+  <button id="compressExplainBtn" type="button" aria-pressed="false" title="Explain an item">Explain</button>
+</template>
+<template data-game-target="compressPanel" data-game-mode="contents">
+  <div class="compress-game" data-compress-explain-root>
+    <div class="compress-heading">
+      <div>
+        <span class="compress-eyebrow">COMPRESS · 脑力压缩</span>
+        <h2>Record the bits</h2>
+      </div>
+      <div id="compressStats" class="compress-stats" aria-live="polite"></div>
+    </div>
+    <div id="compressStatus" class="compress-status" role="status" aria-live="polite"></div>
+    <div class="compress-layout">
+      <section class="compress-main" aria-label="Binary sequence and actions">
+        <div class="compress-section-heading">
+          <h3 data-compress-explain="sequence">🧠 Sequence</h3>
+          <span id="compressSequenceMeta" class="compress-caption"></span>
+        </div>
+        <div id="compressSequence" class="compress-sequence" data-compress-explain="sequence" aria-live="polite"></div>
+        <div id="compressSequenceHint" class="compress-hint"></div>
+
+        <div id="compressNotesSection" class="compress-notes-section">
+          <div class="compress-section-heading">
+            <h3 data-compress-explain="notes">🗂️ Your 8 note cards</h3>
+            <span class="compress-caption">Choose a slot, then write 0 or 1</span>
+          </div>
+          <div id="compressNotes" class="compress-notes" data-compress-explain="notes"></div>
+          <div class="compress-note-actions" role="toolbar" aria-label="Write note">
+            <button type="button" class="compress-bit-btn compress-zero" data-compress-note-bit="0" title="Write zero">0️⃣ Write 0</button>
+            <button type="button" class="compress-bit-btn compress-one" data-compress-note-bit="1" title="Write one">1️⃣ Write 1</button>
+            <button id="compressHideBtn" type="button" class="compress-primary" data-compress-action="hide_sequence">Hide sequence</button>
+          </div>
+        </div>
+
+        <div id="compressAnswerSection" class="compress-answer-section hidden">
+          <div class="compress-section-heading">
+            <h3 data-compress-explain="answer">⌨️ Rebuild the sequence</h3>
+            <span class="compress-caption">Tap each cell to cycle ? → 0 → 1</span>
+          </div>
+          <div id="compressAnswer" class="compress-answer" data-compress-explain="answer"></div>
+          <button id="compressSubmitBtn" type="button" class="compress-primary" data-compress-action="answer">Submit answer</button>
+        </div>
+
+        <div id="compressResult" class="compress-result hidden" data-compress-explain="result">
+          <h3 id="compressResultTitle">Round result</h3>
+          <p id="compressResultBody"></p>
+          <div id="compressReadyHint" class="compress-caption"></div>
+          <button id="compressNextBtn" type="button" class="compress-primary" data-compress-action="next_round">Next Round</button>
+          <button id="compressPlayAgainBtn" type="button" class="compress-primary hidden" data-compress-action="play_again">Play Again</button>
+        </div>
+      </section>
+      <aside class="compress-sidebar">
+        <div class="compress-player-panel">
+          <div class="compress-section-heading"><h3 data-compress-explain="players">👥 Players</h3><span class="compress-caption">Errors cost lives</span></div>
+          <div id="compressPlayers" class="compress-players"></div>
+        </div>
+        <div class="compress-rule-card">
+          <strong>💡 Compress your memory</strong>
+          <p>Only the latest bits stay visible after you hide the sequence. Use eight slots to make your own shorthand.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</template>
+<template data-game-target="compressDialog" data-game-mode="contents">
+  <dialog id="compressHelpModal" class="compress-dialog" aria-labelledby="compressHelpTitle">
+    <div class="compress-dialog-heading"><h2 id="compressHelpTitle">Compress · Help</h2><button id="compressHelpClose" type="button">Close</button></div>
+    <div class="compress-dialog-body">
+      <h3>Goal</h3><p>Remember the growing string of 0s and 1s. You have only eight note cards, so invent a compact way to keep track of it.</p>
+      <h3>Turn</h3><ol><li>Study the sequence and write useful bits into your eight note slots.</li><li>Hide the sequence, rebuild the complete string, and submit it.</li><li>A correct answer scores the sequence length. A wrong answer gives one ❌; two errors eliminate you.</li></ol>
+      <h3>End</h3><p>The sequence grows by one each round. Reach the target length or be the last player standing to win. Everyone presses <strong>Next Round</strong> after a result.</p>
+      <p>Cards: printed bit (0️⃣/1️⃣) and background (⬜/⬛). A recorded bit is your private shorthand.</p>
+    </div>
+  </dialog>
+  <div id="compressTip" class="compress-tip" role="status" hidden></div>
+</template>

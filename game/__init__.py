@@ -1,3 +1,5 @@
+from game.the_mind import TheMindGame
+from game.moshimo_yusha import MoshimoYushaGame
 from game.night_of_the_ninja import NightOfTheNinjaGame
 from game.exploding_kittens import ExplodingKittensGame
 from game.gloomhaven import GloomhavenGame
@@ -65,6 +67,7 @@ from game.nine_upper import NineUpperGame
 from game.no_thanks import NoThanksGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
+from game.compress import CompressGame
 from game.point_salad import PointSaladGame
 from game.poison import PoisonGame
 from game.ponzi_scheme import PonziSchemeGame
@@ -98,6 +101,8 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "TheMindGame",
+    "MoshimoYushaGame",
     "NightOfTheNinjaGame",
     "ExplodingKittensGame",
     "GloomhavenGame",
@@ -166,6 +171,7 @@ __all__ = [
     "NoThanksGame",
     "PatchworkGame",
     "PerfectMismatchGame",
+    "CompressGame",
     "PointSaladGame",
     "PoisonGame",
     "PonziSchemeGame",

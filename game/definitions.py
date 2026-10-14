@@ -1,3 +1,5 @@
+from game.the_mind import TheMindGame, ACTION_SCHEMA as THE_MIND_ACTION_SCHEMA, CONFIG_SCHEMA as THE_MIND_CONFIG_SCHEMA
+from game.moshimo_yusha import MoshimoYushaGame, ACTION_SCHEMA as MOSHIMO_YUSHA_ACTION_SCHEMA, CONFIG_SCHEMA as MOSHIMO_YUSHA_CONFIG_SCHEMA
 from game.night_of_the_ninja import NightOfTheNinjaGame, ACTION_SCHEMA as NIGHT_NINJA_ACTION_SCHEMA, CONFIG_SCHEMA as NIGHT_NINJA_CONFIG_SCHEMA
 from game.gloomhaven import GloomhavenGame, ACTION_SCHEMA as GLOOMHAVEN_ACTION_SCHEMA, CONFIG_SCHEMA as GLOOMHAVEN_CONFIG_SCHEMA
 from game.mall_of_horror import MallOfHorrorGame, ACTION_SCHEMA as MALL_OF_HORROR_ACTION_SCHEMA, CONFIG_SCHEMA as MALL_OF_HORROR_CONFIG_SCHEMA
@@ -86,6 +88,7 @@ from game.nine_upper import NineUpperGame
 from game.no_thanks import NoThanksGame, ACTION_SCHEMA as NO_THANKS_ACTION_SCHEMA, CONFIG_SCHEMA as NO_THANKS_CONFIG_SCHEMA
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
+from game.compress import CompressGame, ACTION_SCHEMA as COMPRESS_ACTION_SCHEMA, CONFIG_SCHEMA as COMPRESS_CONFIG_SCHEMA
 from game.point_salad import PointSaladGame
 from game.poison import PoisonGame
 from game.ponzi_scheme import PonziSchemeGame
@@ -128,6 +131,31 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=TheMindGame.game_id, name="The Mind", name_zh="心意相通",
+        min_players=2, max_players=4, turn_mode="simultaneous",
+        action_schema=THE_MIND_ACTION_SCHEMA, config_schema=THE_MIND_CONFIG_SCHEMA,
+        module=TheMindGame, serialize=TheMindGame.serialize, deserialize=TheMindGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=MoshimoYushaGame.game_id,
+        name="If You Have a Brave",
+        name_zh="如果勇者在的话就好了",
+        min_players=MoshimoYushaGame.min_players,
+        max_players=MoshimoYushaGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=MOSHIMO_YUSHA_ACTION_SCHEMA,
+        config_schema=MOSHIMO_YUSHA_CONFIG_SCHEMA,
+        module=MoshimoYushaGame,
+        serialize=MoshimoYushaGame.serialize,
+        deserialize=MoshimoYushaGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(
@@ -5569,6 +5597,22 @@ register_game(
         module=PerfectMismatchGame,
         serialize=PerfectMismatchGame.serialize,
         deserialize=PerfectMismatchGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CompressGame.game_id,
+        name="Compress",
+        name_zh="脑力压缩",
+        min_players=CompressGame.min_players,
+        max_players=CompressGame.max_players,
+        turn_mode="turn",
+        action_schema=COMPRESS_ACTION_SCHEMA,
+        config_schema=COMPRESS_CONFIG_SCHEMA,
+        module=CompressGame,
+        serialize=CompressGame.serialize,
+        deserialize=CompressGame.deserialize,
     )
 )
 

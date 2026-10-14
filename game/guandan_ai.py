@@ -2597,6 +2597,8 @@ def _prepare_hand_route_scores(
     cache.pop("hand_route_key", None)
     cache.pop("hand_route_context", None)
     cache.pop("heuristic_scored_candidates", None)
+    cache.pop("lead_option_scores", None)
+    cache.pop("bot_score_components", None)
     if len(options) > 512:
         cache["hand_route_status"] = {"complete": False, "reason": "option_limit"}
         return
@@ -3023,7 +3025,7 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
     score -= _lead_low_pair_full_house_carry_penalty(state, player_id, cards, combo)
     score -= _lead_low_single_probe_penalty(state, player_id, cards, combo)
     score += _lead_control_probe_bonus(state, player_id, cards, combo)
-    score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
+    score += _lead_structure_efficiency_bonus(state, player_id, cards, combo)
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
     score += _lead_teammate_support_bonus(state, player_id, cards, combo)
     score += _lead_short_enemy_lock_bonus(state, player_id, cards, combo)
@@ -6143,12 +6145,20 @@ def _compute_lead_same_type_reentry_bonus(
     return best
 
 
-def _lead_turn_efficiency_bonus(
+def _lead_structure_efficiency_bonus(
     state: Dict,
     player_id: str,
     cards: List[int],
     combo: Dict,
 ) -> float:
+    """Price local shape, never a single play's claimed gain in future tricks.
+
+    Re-running greedy decomposition on a residual hand can find a different
+    cover and invent a positive turn gain (61559c: KK gained two turns).
+    Keep its fragmentation and alignment estimates as local shape priors,
+    but never reward that apparent improvement. Expected leads and recovery
+    belong to the complete route, including its material and entry costs.
+    """
     if state.get("current_trick"):
         return 0.0
 
@@ -6161,16 +6171,12 @@ def _lead_turn_efficiency_bonus(
     before_turns = before.get("turns", float(len(hand)))
     after_turns = after.get("turns", 0.0)
     projected_turns = 0.0 if not remaining else after_turns + 1.0
-    turn_gain = before_turns - projected_turns
+    extra_groups = max(0.0, projected_turns - before_turns)
 
     combo_type = combo.get("type") or ""
     structured_types = {"straight", "three_pairs", "steel_plate", "full_house", "three"}
     primary_type = (before.get("plan_types") or (None,))[0]
-    score = 0.0
-    if turn_gain >= 0.0:
-        score += min(11.0, turn_gain * 5.8)
-    else:
-        score += max(-12.0, turn_gain * 7.0)
+    score = -min(12.0, extra_groups * 7.0)
 
     plan_score = _plan_alignment_score(hand, cards, combo, level_rank)
     if abs(plan_score) > 0.001:
@@ -6179,13 +6185,11 @@ def _lead_turn_efficiency_bonus(
     if primary_type in structured_types:
         if combo_type == primary_type:
             score += 2.2
-        elif combo_type in structured_types and turn_gain >= 0.35:
-            score += 0.9
-        elif combo_type == "single" and turn_gain < 0.6:
+        elif combo_type == "single":
             score -= 3.0
-        elif combo_type == "pair" and turn_gain < 0.6:
+        elif combo_type == "pair":
             score -= 1.8
-        elif combo_type == "three" and primary_type in ("full_house", "three_pairs", "steel_plate") and turn_gain < 0.8:
+        elif combo_type == "three" and primary_type in ("full_house", "three_pairs", "steel_plate"):
             score -= 0.9
 
     low_single_delta = before.get("low_singles", 0.0) - after.get("low_singles", 0.0)
@@ -6202,11 +6206,11 @@ def _lead_turn_efficiency_bonus(
     if before.get("bomb_turns", 0.0) > after.get("bomb_turns", 0.0) and combo_type not in BOMB_TYPES and len(hand) >= 10:
         score -= 4.4 + (before.get("bomb_turns", 0.0) - after.get("bomb_turns", 0.0)) * 1.1
 
-    if combo_type in ("straight", "three_pairs", "steel_plate") and turn_gain < 0.35:
+    if combo_type in ("straight", "three_pairs", "steel_plate"):
         score -= 3.4
-    elif combo_type == "full_house" and turn_gain < 0.25:
+    elif combo_type == "full_house":
         score -= 1.4
-    elif combo_type == "single" and before.get("group_turns", 0.0) >= 2.0 and turn_gain <= 0.0:
+    elif combo_type == "single" and before.get("group_turns", 0.0) >= 2.0:
         score -= 1.8
 
     before_quality = before.get("score", 0.0) / max(1.0, before_turns)
@@ -8374,9 +8378,9 @@ def _lead_opening_commitment_penalty(
     ):
         before = _hand_decomposition_summary(hand, level_rank)
         after = _hand_decomposition_summary(_remove_cards(hand, cards), level_rank)
-        turn_bonus = max(0.0, _lead_turn_efficiency_bonus(state, player_id, cards, combo))
+        shape_bonus = max(0.0, _lead_structure_efficiency_bonus(state, player_id, cards, combo))
         retention_bonus = _lead_initiative_retention_bonus(state, player_id, cards, combo)
-        relief = min(6.2, turn_bonus * 1.65)
+        relief = min(6.2, shape_bonus * 1.65)
         if after.get("group_turns", 0.0) >= max(2.0, before.get("group_turns", 0.0) - 1.0):
             relief += 2.8
         if after.get("low_singles", 0.0) <= before.get("low_singles", 0.0):
@@ -16231,14 +16235,17 @@ def _compute_bot_score_components(
         # Lead ranking has already populated the per-decision cache, so the
         # detailed score is reused here instead of computed a second time.
         lead_score = _lead_option_score(state, bot_id, cards)
+        shape_bonus = _lead_structure_efficiency_bonus(state, bot_id, cards, combo)
+        # Ranking needs this prior too, but expose its complete contribution
+        # once instead of burying another copy inside lead_plan.
+        lead_score -= shape_bonus
         if abs(lead_score) > 0.001:
             components["lead_plan"] = lead_score * 0.18
         lane_exposure = _lead_enemy_lane_exposure(state, bot_id, combo)
         if lane_exposure > 0.001:
             components["lead_enemy_lane_feed"] = -lane_exposure
-        turn_bonus = _lead_turn_efficiency_bonus(state, bot_id, cards, combo)
-        if abs(turn_bonus) > 0.001:
-            components["lead_turns"] = turn_bonus
+        if abs(shape_bonus) > 0.001:
+            components["lead_shape"] = shape_bonus * 1.18
         teammate_bonus = _lead_teammate_support_bonus(state, bot_id, cards, combo)
         if abs(teammate_bonus) > 0.001:
             components["lead_teammate"] = teammate_bonus
@@ -17756,6 +17763,23 @@ def _build_bot_explain(
             labels.append(_card_label(card) if card else str(cid))
         return labels
 
+    routes = _current_hand_routes(state, bot_id)
+
+    def explain_route(card_ids: List[int]) -> Optional[Dict]:
+        route = routes.get(_cards_key(card_ids))
+        if not route:
+            return None
+        return {
+            "groups": [label_cards(group) for group in route["groups"]],
+            "turns": route["turns"],
+            "lead_turns": round(route["lead_turns"], 4),
+            "entry_risk": round(route["entry_risk"], 4),
+            "material_commitment": round(route["material_commitment"], 4),
+            "control_commitment": round(route["control_commitment"], 4),
+            "cost": round(route["cost"], 4),
+            "exact": route["exact"],
+        }
+
     def label_action(action_type: str, card_ids: List[int]) -> List[str]:
         if action_type == "pass":
             return ["Pass"]
@@ -17784,16 +17808,9 @@ def _build_bot_explain(
     if route_cache.get("hand_route_status"):
         method_meta = dict(method_meta or {})
         method_meta["hand_route_status"] = dict(route_cache["hand_route_status"])
-        route = _current_hand_routes(state, bot_id).get(_cards_key(chosen_cards))
+        route = explain_route(chosen_cards)
         if route:
-            method_meta["hand_route"] = {
-                "groups": [label_cards(group) for group in route["groups"]],
-                "turns": route["turns"],
-                "lead_turns": round(route["lead_turns"], 4),
-                "entry_risk": round(route["entry_risk"], 4),
-                "control_commitment": round(route["control_commitment"], 4),
-                "cost": round(route["cost"], 4),
-            }
+            method_meta["hand_route"] = route
 
     if method == "nn" and method_scores:
         all_scores = method_scores[:]
@@ -17976,6 +17993,9 @@ def _build_bot_explain(
                 "components": comps_clean,
             }
         )
+        route = explain_route(cards or [])
+        if route:
+            top[-1]["hand_route"] = route
     chosen_comps = None
     chosen_key = () if chosen_action_type == "pass" else tuple(chosen_cards)
     for cards, _score, comps in scored:

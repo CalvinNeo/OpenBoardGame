@@ -1,0 +1,92 @@
+@media all, obg-game-compress-1 {
+  .compress-game { --compress-ink: #122033; --compress-blue: #2563eb; --compress-cyan: #0e7490; --compress-paper: #f7fbff; --compress-line: #d5e2ed; color: var(--compress-ink); max-width: 1120px; margin: 0 auto; min-width: 0; }
+  .compress-game *, .compress-dialog * { box-sizing: border-box; }
+  .compress-game [hidden], .compress-game .hidden, .compress-tip[hidden] { display: none !important; }
+  .compress-game h2, .compress-game h3, .compress-game p { margin: 0; }
+  .compress-game h2 { font-size: 26px; letter-spacing: .08em; line-height: 1.25; }
+  .compress-game h3 { font-size: 16px; }
+  .compress-game button, .compress-dialog button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+  .compress-heading, .compress-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .compress-heading { padding-bottom: 12px; }
+  .compress-eyebrow { display: block; color: #55728b; font-size: 10px; letter-spacing: .17em; font-weight: 800; line-height: 1.5; }
+  .compress-stats { display: flex; gap: 6px; flex-wrap: wrap; }
+  .compress-stat { padding: 7px 9px; background: #eaf4ff; border-radius: 8px; font-size: 12px; font-weight: 700; }
+  .compress-stat.is-alert { color: #a32626; background: #ffeded; }
+  .compress-status { border-left: 3px solid var(--compress-blue); background: #f0f7ff; padding: 10px 13px; margin-bottom: 14px; min-height: 42px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+  .compress-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(220px, .8fr); gap: 18px; align-items: start; }
+  .compress-main, .compress-player-panel { min-width: 0; background: var(--compress-paper); border: 1px solid var(--compress-line); border-radius: 14px; padding: 14px; }
+  .compress-section-heading { margin-bottom: 9px; }
+  .compress-caption, .compress-hint { color: #5d7488; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+  .compress-sequence { min-height: 74px; padding: 12px; border: 1px solid #bed0df; border-radius: 10px; background: #fff; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; overflow-wrap: anywhere; }
+  .compress-sequence-bit { width: 34px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; font-size: 22px; font-weight: 800; border: 1px solid #c4d6e4; }
+  .compress-sequence-bit.zero { background: #eef2f6; color: #334155; }
+  .compress-sequence-bit.one { background: #dbeafe; color: #1d4ed8; }
+  .compress-sequence-bit.muted { background: #f2f5f7; color: #91a1af; }
+  .compress-hint { min-height: 26px; padding: 7px 2px 0; }
+  .compress-notes-section { margin-top: 15px; }
+  .compress-notes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+  .compress-note { position: relative; min-width: 0; min-height: 74px; border: 2px solid #cbd8e2; border-radius: 9px; background: #fff; padding: 7px; cursor: pointer; text-align: left; color: var(--compress-ink); }
+  .compress-note.is-selected { border-color: var(--compress-blue); box-shadow: 0 0 0 2px #bfdbfe; }
+  .compress-note.is-black { background: #17212b; color: #f8fafc; border-color: #17212b; }
+  .compress-note-id { font-size: 10px; color: #668096; }
+  .compress-note.is-black .compress-note-id { color: #b7c9d7; }
+  .compress-note-card-bit { font-size: 23px; font-weight: 800; margin-top: 3px; }
+  .compress-note-record { position: absolute; right: 6px; bottom: 4px; border-radius: 4px; padding: 2px 4px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 800; }
+  .compress-note-record.empty { background: #eff6ff; color: #64748b; }
+  .compress-note-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+  .compress-bit-btn, .compress-primary { border: 1px solid #b8cfe0; border-radius: 8px; padding: 9px 12px; background: #fff; color: #17324a; cursor: pointer; font-weight: 700; }
+  .compress-bit-btn:hover:not(:disabled), .compress-primary:hover:not(:disabled) { filter: brightness(.97); }
+  .compress-zero { background: #edf2f7; }
+  .compress-one { background: #e0edff; }
+  .compress-primary { background: var(--compress-blue); color: #fff; border-color: var(--compress-blue); }
+  .compress-game button:disabled { opacity: .45; cursor: not-allowed; }
+  .compress-answer-section { margin-top: 16px; }
+  .compress-answer { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin-bottom: 10px; }
+  .compress-answer-cell { min-width: 0; min-height: 40px; border: 1px solid #b9cad8; border-radius: 7px; background: #fff; color: #1e3a5f; cursor: pointer; font-size: 18px; font-weight: 800; }
+  .compress-answer-cell.is-unknown { color: #96a7b5; background: #f5f8fa; }
+  .compress-result { margin-top: 16px; padding: 13px; border: 1px solid #c6d9e8; border-radius: 10px; background: #fff; }
+  .compress-result h3 { margin-bottom: 6px; }
+  .compress-result p { font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; margin-bottom: 9px; }
+  .compress-result .compress-primary + .compress-primary { margin-left: 6px; }
+  .compress-sidebar { display: grid; gap: 14px; min-width: 0; }
+  .compress-players { display: grid; gap: 7px; }
+  .compress-player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 9px 10px; border-radius: 9px; background: #fff; font-size: 13px; min-width: 0; }
+  .compress-player.is-you { box-shadow: inset 3px 0 0 var(--compress-blue); }
+  .compress-player.is-turn { background: #eaf4ff; }
+  .compress-player.is-out { opacity: .52; }
+  .compress-player-name { min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
+  .compress-player-meta { min-width: 0; color: #55728b; font-size: 11px; text-align: right; overflow-wrap: anywhere; }
+  .compress-rule-card { padding: 14px; border: 1px solid #d8e3ea; border-radius: 12px; background: #f8fbfd; }
+  .compress-rule-card strong { display: block; margin-bottom: 7px; font-size: 15px; }
+  .compress-rule-card p { color: #5d7488; font-size: 12px; line-height: 1.6; }
+  .compress-dialog { width: min(680px, calc(100vw - 28px)); max-height: min(90dvh, 900px); padding: 0; border: 1px solid #c8dbe9; border-radius: 14px; background: #fff; color: var(--compress-ink); box-shadow: 0 20px 90px #12304a55; }
+  .compress-dialog::backdrop { background: #0f243888; }
+  .compress-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid #dbe6ed; }
+  .compress-dialog-heading h2 { margin: 0; font-size: 19px; }
+  .compress-dialog-body { padding: 15px 18px 19px; overflow-y: auto; max-height: calc(85dvh - 70px); font-size: 14px; line-height: 1.65; }
+  .compress-dialog-body h3 { color: #1d4ed8; margin: 14px 0 5px; }
+  .compress-dialog-body p { margin: 7px 0; }
+  .compress-dialog-body ol { padding-left: 23px; }
+  .compress-tip { position: fixed; z-index: 10050; max-width: min(300px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 9px; background: #17324a; color: #fff; font-size: 12px; line-height: 1.5; pointer-events: none; box-shadow: 0 4px 18px #12304a44; overflow-wrap: anywhere; }
+}
+
+@media all, obg-game-compress-2 {
+  @media (max-width: 700px) {
+    .compress-game h2 { font-size: 22px; }
+    .compress-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .compress-main, .compress-player-panel { padding: 11px; }
+    .compress-notes { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+    .compress-note { min-height: 66px; padding: 6px; }
+    .compress-note-card-bit { font-size: 20px; }
+    .compress-answer { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+    .compress-answer-cell { min-height: 36px; font-size: 16px; }
+    .compress-note-actions { gap: 5px; }
+    .compress-bit-btn, .compress-primary { padding: 8px 9px; font-size: 12px; }
+    .compress-sequence-bit { width: 30px; height: 38px; font-size: 19px; }
+  }
+  @media (max-width: 360px) {
+    .compress-notes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .compress-answer { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .compress-note-actions .compress-primary { width: 100%; }
+  }
+}

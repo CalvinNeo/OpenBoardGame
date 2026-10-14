@@ -34,6 +34,8 @@ GAME_TAG_ORDER: Dict[str, int] = {tag.tag_id: index for index, tag in enumerate(
 # classification. The tuple order does not affect filtering; GAME_TAGS controls
 # display order.
 GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
+    "the_mind": ("filler", "cooperative"),
+    "moshimo_yusha": ("filler", "bluffing"),
     "night_of_the_ninja": ("filler", "bluffing"),
     "exploding_kittens": ("filler", "push_your_luck", "bluffing"),
     "mall_of_horror": ("ameritrash", "bluffing"),
@@ -80,6 +82,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "century_spice_road": ("euro",),
     "citadels": ("euro", "bluffing"),
     "coyote": ("filler", "push_your_luck", "bluffing"),
+    "compress": ("filler", "puzzle"),
     "criminal_dance": ("filler", "bluffing"),
     "cyber_pictures": ("filler", "creative"),
     "davinci_code": ("filler", "puzzle"),

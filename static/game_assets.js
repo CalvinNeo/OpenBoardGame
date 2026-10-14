@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "the_mind": {
+    "scripts": ["/static/games/the_mind.js?v=1"],
+    "styles": ["/static/games/the_mind.css?v=1"],
+    "markup": "/static/games/the_mind.html?v=1",
+    "panel": "theMindPanel",
+    "header": "showTheMindHeaderActions"
+  },
   "night_of_the_ninja": {
     "scripts": ["/static/games/night_of_the_ninja.js?v=2"],
     "styles": ["/static/games/night_of_the_ninja.css?v=3"],
@@ -538,6 +545,16 @@ const GAME_ASSETS = {
     "panel": "mismatchPanel",
     "markup": "/static/games/perfect_mismatch.html?v=1",
     "styleFragments": "/static/games/perfect_mismatch.css?v=1"
+  },
+  "compress": {
+    "scripts": [
+      "/static/games/compress.js?v=1"
+    ],
+    "styles": [],
+    "panel": "compressPanel",
+    "header": "showCompressHeaderActions",
+    "markup": "/static/games/compress.html?v=1",
+    "styleFragments": "/static/games/compress.css?v=1"
   },
   "coyote": {
     "scripts": [

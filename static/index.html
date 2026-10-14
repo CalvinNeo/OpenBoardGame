@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v120" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v121" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -550,6 +550,7 @@
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
+                    <option value="compress">Compress · 脑力压缩</option>
                     <option value="things_in_rings">Things in Rings</option>
                     <option value="davinci_code">Da Vinci Code</option>
                     <option value="turing_machine">Turing Machine</option>
@@ -1317,7 +1318,9 @@
             <div class="panel-header-actions" id="skullKingHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="deceptionHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="mindTheLinesHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="compressHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="powerGridHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="theMindHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="nightNinjaHeaderActions" style="display: none;"></div>
               <div class="panel-header-actions" id="explodingKittensHeaderActions" style="display: none;"></div>
               <div class="panel-header-actions" id="noThanksHeaderActions" style="display: none;"></div>
@@ -1372,6 +1375,7 @@
               <button id="hotStreakHelpBtn" class="hot-streak-header-btn" type="button">Help</button>
               <button id="hotStreakExplainBtn" class="hot-streak-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="moshimoYushaHeaderActions" style="display: none;"></div>
           </div>
           <div class="panel-body">
             <div id="gameAssetsStatus" class="room-feedback hidden" role="status" aria-live="polite">
@@ -1452,11 +1456,15 @@
             <div id="skullKingPanel" class="hidden skull-king-panel"></div>
             <div id="deceptionPanel" class="hidden deception-panel"></div>
             <div id="mindTheLinesPanel" class="hidden mind-the-lines-panel"></div>
+            <div id="compressPanel" class="hidden"></div>
             <div id="powerGridPanel" class="hidden power-grid-panel"></div>
+            <div id="theMindPanel" class="hidden tm-panel"></div>
             <div id="nightNinjaPanel" class="hidden nn-panel"></div>
             <div id="explodingKittensPanel" class="hidden ek-panel"></div>
             <div id="noThanksPanel" class="hidden no-thanks-panel"></div>
             <div id="hivePanel" class="hidden hive-panel"></div>
+
+            <div id="moshimoYushaPanel" class="hidden moshimo-yusha-panel"></div>
 
             <div id="tucanoPanel" class="hidden tucano-panel"></div>
 
@@ -1631,7 +1639,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=88" defer></script>
+  <script src="/static/game_assets.js?v=90" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1644,7 +1652,9 @@
   <template id="skullKingDialog"></template>
   <template id="deceptionDialog"></template>
   <div id="mindTheLinesDialog"></div>
+  <div id="compressDialog"></div>
   <template id="powerGridDialog"></template>
+  <template id="theMindDialog"></template>
   <template id="nightNinjaDialog"></template>
   <template id="explodingKittensDialog"></template>
   <template id="noThanksDialog"></template>
@@ -1659,7 +1669,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v50" defer></script>
-  <script src="/static/room.js?v=app_v73" defer></script>
+  <script src="/static/app.js?v=app_v52" defer></script>
+  <script src="/static/room.js?v=app_v74" defer></script>
 </body>
 </html>

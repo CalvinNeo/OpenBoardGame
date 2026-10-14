@@ -809,6 +809,7 @@ const GAME_WEIGHT = {
   kobayakawa: 1.2,
   tucano: 1.09,
   perfect_mismatch: 1.0,
+  compress: 1.10,
   point_salad: 1.15,
   project_l: 1.53,
   six_nimmt: 1.19,
@@ -2219,6 +2220,7 @@ function resetRoomState() {
   if (typeof clearCatInBoxState === "function") clearCatInBoxState();
   if (typeof clearGangState === "function") clearGangState();
   if (typeof clearMismatchState === "function") clearMismatchState();
+  if (typeof clearCompressState === "function") clearCompressState();
   if (typeof clearCoyoteState === "function") clearCoyoteState();
   if (typeof clearInAGroveState === "function") {
     clearInAGroveState();

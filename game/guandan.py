@@ -1692,7 +1692,7 @@ _AI_EXPORTED_FUNCS = (
     "_lead_structure_overreach_penalty",
     "_lead_special_material_penalty",
     "_lead_same_type_reentry_bonus",
-    "_lead_turn_efficiency_bonus",
+    "_lead_structure_efficiency_bonus",
     "_lead_teammate_support_bonus",
     "_lead_initiative_retention_bonus",
     "_lead_short_opponent_breakup_penalty",
