@@ -1,3 +1,4 @@
+from game.dnd_starter_set import DndStarterSetGame, ACTION_SCHEMA as DND_STARTER_ACTION_SCHEMA, CONFIG_SCHEMA as DND_STARTER_CONFIG_SCHEMA
 from game.the_mind import TheMindGame, ACTION_SCHEMA as THE_MIND_ACTION_SCHEMA, CONFIG_SCHEMA as THE_MIND_CONFIG_SCHEMA
 from game.moshimo_yusha import MoshimoYushaGame, ACTION_SCHEMA as MOSHIMO_YUSHA_ACTION_SCHEMA, CONFIG_SCHEMA as MOSHIMO_YUSHA_CONFIG_SCHEMA
 from game.night_of_the_ninja import NightOfTheNinjaGame, ACTION_SCHEMA as NIGHT_NINJA_ACTION_SCHEMA, CONFIG_SCHEMA as NIGHT_NINJA_CONFIG_SCHEMA
@@ -6133,5 +6134,21 @@ register_game(
         min_players=4, max_players=12, turn_mode="simultaneous",
         action_schema=DECEPTION_ACTION_SCHEMA, config_schema=DECEPTION_CONFIG_SCHEMA,
         module=DeceptionGame, serialize=DeceptionGame.serialize, deserialize=DeceptionGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DndStarterSetGame.game_id,
+        name="D&D Starter Set: Heroes of the Borderlands",
+        name_zh="龙与地下城：边陲英雄",
+        min_players=DndStarterSetGame.min_players,
+        max_players=DndStarterSetGame.max_players,
+        turn_mode="turn",
+        action_schema=DND_STARTER_ACTION_SCHEMA,
+        config_schema=DND_STARTER_CONFIG_SCHEMA,
+        module=DndStarterSetGame,
+        serialize=DndStarterSetGame.serialize,
+        deserialize=DndStarterSetGame.deserialize,
     )
 )

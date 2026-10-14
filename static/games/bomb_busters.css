@@ -210,7 +210,7 @@
 
 .bomb-busters-marker-row {
   display: grid;
-  grid-template-columns: minmax(76px, auto) minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr);
   gap: 8px;
   align-items: baseline;
   color: var(--bomb-muted);
@@ -318,6 +318,7 @@
 .bomb-busters-wire-slot {
   display: grid;
   min-width: 0;
+  align-content: start;
   gap: 3px;
 }
 
@@ -326,11 +327,10 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  min-height: 92px;
+  min-height: 76px;
   align-content: center;
   justify-items: center;
-  gap: 2px;
-  padding: 17px 5px 8px;
+  padding: 18px 5px 6px;
   overflow: hidden;
   color: #e5eef9;
   border: 1px solid rgba(148, 180, 216, 0.3);
@@ -364,28 +364,39 @@
 }
 
 .bomb-busters-wire-icon {
-  font-size: 20px;
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 12px;
   line-height: 1;
 }
 
 .bomb-busters-wire-label {
   overflow: hidden;
   max-width: 100%;
-  font-size: 11px;
-  line-height: 1.15;
+  font-size: 32px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   text-align: center;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.bomb-busters-wire-detail {
-  overflow: hidden;
-  max-width: 100%;
-  color: #a9bad0;
-  font-size: 9px;
-  line-height: 1.15;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.bomb-busters-wire-button.is-blue .bomb-busters-wire-label {
+  color: #bfdbfe;
+}
+
+.bomb-busters-wire-button.is-yellow .bomb-busters-wire-label,
+.bomb-busters-wire-button.is-red .bomb-busters-wire-label {
+  font-size: 24px;
+}
+
+.bomb-busters-wire-button.is-yellow .bomb-busters-wire-label {
+  color: #fde047;
+}
+
+.bomb-busters-wire-button.is-red .bomb-busters-wire-label {
+  color: #fda4af;
 }
 
 .bomb-busters-wire-button.is-hidden-wire {
@@ -447,7 +458,7 @@
   border-radius: 7px;
   background: rgba(120, 53, 15, 0.35);
   color: #fef3c7;
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 850;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -802,6 +813,11 @@ body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
     flex-wrap: wrap;
   }
 
+  .bomb-busters-racks-section,
+  .bomb-busters-player-card {
+    padding: 8px;
+  }
+
   .bomb-busters-player-heading > strong {
     flex-basis: calc(100% - 88px);
   }
@@ -818,16 +834,17 @@ body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
   }
 
   .bomb-busters-wire-button {
-    min-height: 84px;
+    min-height: 60px;
     padding-inline: 3px;
   }
 
   .bomb-busters-wire-label {
-    font-size: 10px;
+    font-size: 28px;
   }
 
-  .bomb-busters-wire-detail {
-    font-size: 8px;
+  .bomb-busters-wire-button.is-yellow .bomb-busters-wire-label,
+  .bomb-busters-wire-button.is-red .bomb-busters-wire-label {
+    font-size: 22px;
   }
 
   .bomb-busters-side {
@@ -863,10 +880,6 @@ body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
 @media (max-width: 350px) {
   .bomb-busters-rack-slots {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .bomb-busters-wire-button {
-    min-height: 78px;
   }
 
   .bomb-busters-actions,

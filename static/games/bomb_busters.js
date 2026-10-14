@@ -59,7 +59,7 @@
   const BOMB_BUSTERS_EXPLANATIONS = {
     own_wire: {
       title: "Your Wire",
-      body: "You can see this wire's face. Select an uncut BLUE or YELLOW wire to make a Duo Cut declaration. A RED wire can never be declared.",
+      body: "You can see this wire's face. Select an uncut blue (🔵) or yellow (🟡) wire to make a Duo Cut declaration. Blue numbers are cut values; yellow and red decimals are private sorting positions only. A red (🔴, ⚠️) wire can never be declared.",
     },
     hidden_wire: {
       title: "Teammate Wire",
@@ -67,7 +67,7 @@
     },
     revealed_wire: {
       title: "Processed Wire",
-      body: "A cut or safely secured wire stays in its original slot with its face visible, preserving the rack's sorting clues.",
+      body: "A cut (✂️), safely secured (🛡️), or exploded (💥) wire stays in its original slot with its face visible, preserving the rack's sorting clues.",
     },
     info: {
       title: "Info Token",
@@ -119,7 +119,7 @@
     <div class="bomb-busters-rules">
       <p class="bomb-busters-practice-note"><strong>Core Practice · Original practice setup · Shared equipment disabled.</strong> This implementation uses original practice setups, not the commercial game's numbered missions.</p>
       <h3>Goal and wires</h3>
-      <p>Work together to process every wire before the detonator runs out. BLUE wires are numbered 1–12 with four copies of each number. YELLOW wires all match one another. RED wires are dangerous and never match a cut declaration.</p>
+      <p>Work together to process every wire before the detonator runs out. Blue (🔵) wires are numbered 1–12 with four copies of each number. Yellow (🟡) wires all match one another. Red (🔴, ⚠️) wires are dangerous and never match a cut declaration. A question mark (?) hides a teammate's wire; corner icons mark cut (✂️), secured (🛡️), or exploded (💥) wires.</p>
       <p>The decimal shown on your own YELLOW or RED wire is only its private sorting position. For example, 4.1 sorts after BLUE 4, and 4.5 sorts after that. It is not a cut value.</p>
       <h3>Racks and setup clues</h3>
       <p>Each rack is sorted independently and slots never move. With two players, everyone has two racks. With three, the Captain has two racks and the others have one. With four or five, everyone has one rack. Two racks still count as one hand.</p>
@@ -192,7 +192,7 @@
 
   function bombBustersDeclarationLabel(wire) {
     if (!wire || wire.hidden) return "wire";
-    return wire.kind === "blue" ? `BLUE ${wire.blue_value}` : wire.kind === "yellow" ? "YELLOW" : "RED";
+    return wire.kind === "blue" ? `🔵 ${wire.blue_value}` : wire.kind === "yellow" ? "🟡" : "🔴";
   }
 
   function bombBustersRackLabel(rack) {
@@ -525,33 +525,28 @@
     slotNumber.textContent = `#${Number(wire.slot_index) + 1}`;
     const icon = document.createElement("span");
     icon.className = "bomb-busters-wire-icon";
+    icon.setAttribute("aria-hidden", "true");
     const label = document.createElement("strong");
     label.className = "bomb-busters-wire-label";
-    const detail = document.createElement("span");
-    detail.className = "bomb-busters-wire-detail";
 
     if (wire.hidden) {
-      icon.textContent = "❔";
-      label.textContent = "Hidden";
-      detail.textContent = "wire";
+      label.textContent = "?";
     } else if (wire.kind === "blue") {
-      icon.textContent = wire.status === "cut" ? "✂️" : "🔵";
-      label.textContent = `BLUE ${wire.blue_value}`;
-      detail.textContent = wire.status === "cut" ? "cut" : "number wire";
+      icon.textContent = wire.status === "cut" ? "✂️" : "";
+      label.textContent = wire.blue_value;
     } else if (wire.kind === "yellow") {
-      icon.textContent = wire.status === "cut" ? "✂️" : "🟡";
-      label.textContent = "YELLOW";
-      detail.textContent = `${wire.sort_label} · ${wire.status === "cut" ? "cut" : "private sort"}`;
+      icon.textContent = wire.status === "cut" ? "✂️" : "";
+      label.textContent = wire.sort_label;
     } else {
-      icon.textContent = wire.status === "secured" ? "🛡️" : wire.status === "cut" ? "💥" : "🔴";
-      label.textContent = wire.status === "secured" ? "RED secured" : "RED DANGER";
-      detail.textContent = `${wire.sort_label} · ${wire.status === "uncut" ? "private sort" : wire.status}`;
+      icon.textContent = wire.status === "secured" ? "🛡️" : wire.status === "cut" ? "💥" : "⚠️";
+      label.textContent = wire.sort_label;
     }
-    button.append(slotNumber, icon, label, detail);
+    button.append(slotNumber, label);
+    if (icon.textContent) button.appendChild(icon);
     button.disabled = !bombBustersWireIsSelectable(view, rack, wire);
     button.setAttribute(
       "aria-label",
-      `${bombBustersRackLabel(rack)} slot ${Number(wire.slot_index) + 1}: ${bombBustersWireFaceLabel(wire)}${wire.public_info ? `, Info ${wire.public_info}` : ""}`
+      `${bombBustersRackLabel(rack)} slot ${Number(wire.slot_index) + 1}: ${bombBustersWireFaceLabel(wire)}, ${wire.status}${wire.public_info ? `, Info ${wire.public_info}` : ""}`
     );
     button.addEventListener("click", () => bombBustersHandleWireClick(rack, wire));
     slot.appendChild(button);
@@ -561,7 +556,7 @@
       info.type = "button";
       info.className = "bomb-busters-info-token";
       info.dataset.bombBustersExplain = "info";
-      info.textContent = `ℹ️ ${wire.public_info === "yellow" ? "YELLOW" : wire.public_info}`;
+      info.textContent = `ℹ️ ${wire.public_info === "yellow" ? "🟡" : wire.public_info}`;
       info.setAttribute("aria-label", `Info token: ${wire.public_info}`);
       info.addEventListener("click", () => bombBustersHandleWireClick(rack, wire));
       slot.appendChild(info);
@@ -657,7 +652,8 @@
       const row = document.createElement("div");
       row.className = "bomb-busters-marker-row";
       const label = document.createElement("strong");
-      label.textContent = `${emoji} ${kind.toUpperCase()}`;
+      label.textContent = emoji;
+      label.setAttribute("aria-label", `${kind} markers`);
       const values = document.createElement("span");
       const markers = view.public_color_markers && view.public_color_markers[kind] || [];
       values.textContent = markers.length ? markers.map((marker) => marker.sort_label).join(" · ") : "None in play";
@@ -759,7 +755,7 @@
       bombBustersActionSummaryEl.textContent = ownWire
         ? `Share ${bombBustersDeclarationLabel(ownWire)} as your initial clue.`
         : view.initial_info_player_id === view.you
-          ? "Choose one of your BLUE wires, then confirm Share Clue."
+          ? "Choose one of your 🔵 wires, then confirm Share Clue."
           : `Waiting for ${bombBustersPlayerName(view, view.initial_info_player_id)} to choose an initial clue…`;
       return;
     }
@@ -781,7 +777,7 @@
     if (bombBustersActionMode === "detector") {
       if (bombBustersActionModeEl) bombBustersActionModeEl.textContent = "Double Detector";
       if (!ownWire) {
-        bombBustersActionSummaryEl.textContent = "Choose one of your BLUE wires as the detector declaration.";
+        bombBustersActionSummaryEl.textContent = "Choose one of your 🔵 wires as the detector declaration.";
       } else if (targetWires.length < 2) {
         bombBustersActionSummaryEl.textContent = `Declare ${bombBustersDeclarationLabel(ownWire)} · choose ${2 - targetWires.length} more wire${targetWires.length === 1 ? "" : "s"} on one teammate rack.`;
       } else {
@@ -797,7 +793,7 @@
     } else {
       if (bombBustersActionModeEl) bombBustersActionModeEl.textContent = "Duo Cut";
       if (!ownWire) {
-        bombBustersActionSummaryEl.textContent = "Choose one of your BLUE or YELLOW wires.";
+        bombBustersActionSummaryEl.textContent = "Choose one of your 🔵 or 🟡 wires.";
       } else if (!targetWires.length) {
         bombBustersActionSummaryEl.textContent = `Declare ${bombBustersDeclarationLabel(ownWire)} · choose one teammate wire.`;
       } else {
@@ -819,12 +815,12 @@
     if (bombBustersResultTitleEl) bombBustersResultTitleEl.textContent = success ? "Mission Defused" : "Bomb Exploded";
     const reasonLabels = {
       all_wires_cleared: "Every wire was processed safely.",
-      red_wire: "A RED wire triggered the bomb.",
+      red_wire: "A 🔴 wire triggered the bomb.",
       detonator: "The detonator ran out of safe steps.",
     };
     if (bombBustersResultDetailEl) {
       const completed = (result.completed_blue_values || []).length
-        ? ` Validated BLUE: ${(result.completed_blue_values || []).join(", ")}.`
+        ? ` Validated 🔵: ${(result.completed_blue_values || []).join(", ")}.`
         : "";
       bombBustersResultDetailEl.textContent = `${reasonLabels[result.reason] || "Mission complete."} Mistakes used: ${result.mistakes_used}.${completed}`;
     }
@@ -859,7 +855,7 @@
     if (!bombBustersStatusEl) return;
     if (view.phase === "initial_info") {
       bombBustersStatusEl.textContent = view.initial_info_player_id === view.you
-        ? "Choose an initial BLUE clue."
+        ? "Choose an initial 🔵 clue."
         : `${bombBustersPlayerName(view, view.initial_info_player_id)} is choosing an initial clue…`;
     } else if (view.phase === "awaiting_detector_choice") {
       bombBustersStatusEl.textContent = view.current_responder_id === view.you

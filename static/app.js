@@ -200,6 +200,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "dnd_starter_set") {
+    if (typeof renderDndStarterSetGameState === "function") renderDndStarterSetGameState(data);
+    return;
+  }
   if (gameType === "moshimo_yusha") {
     if (typeof renderMoshimoYushaGameState === "function") renderMoshimoYushaGameState(data);
     return;

@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "dnd_starter_set": {
+    "scripts": ["/static/games/dnd_starter_set.js?v=1"],
+    "styles": ["/static/games/dnd_starter_set.css?v=1"],
+    "markup": "/static/games/dnd_starter_set.html?v=1",
+    "panel": "dndStarterSetPanel",
+    "header": "showDndStarterSetHeaderActions"
+  },
   "moshimo_yusha": {
     "scripts": ["/static/games/moshimo_yusha.js?v=2"],
     "styles": ["/static/games/moshimo_yusha.css?v=2"],
@@ -796,7 +803,7 @@ const GAME_ASSETS = {
   },
   "emerald_skulls": {
     "scripts": [
-      "/static/games/emerald_skulls.js?v=app_v4"
+      "/static/games/emerald_skulls.js?v=app_v5"
     ],
     "styles": [],
     "panel": "emeraldSkullsPanel",
@@ -921,13 +928,13 @@ const GAME_ASSETS = {
   },
   "bomb_busters": {
     "scripts": [
-      "/static/games/bomb_busters.js?v=app_v2"
+      "/static/games/bomb_busters.js?v=app_v3"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=1",
-    "styleFragments": "/static/games/bomb_busters.css?v=1"
+    "markup": "/static/games/bomb_busters.html?v=2",
+    "styleFragments": "/static/games/bomb_busters.css?v=2"
   },
   "felix": {
     "scripts": [
