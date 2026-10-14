@@ -200,6 +200,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "moshimo_yusha") {
+    if (typeof renderMoshimoYushaGameState === "function") renderMoshimoYushaGameState(data);
+    return;
+  }
   if (gameType === "the_mind") {
     if (typeof renderTheMindGameState === "function") renderTheMindGameState(data);
     return;

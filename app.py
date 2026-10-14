@@ -158,6 +158,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "moshimo_yusha"):
+        raise HTTPException(status_code=403, detail="This game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "the_mind"):
         raise HTTPException(status_code=403, detail="This The Mind game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "night_of_the_ninja"):
@@ -586,7 +588,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -707,7 +709,7 @@ def _bot_status_payload(room: Room) -> Dict:
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
     if game_type == "compress":
         return {"type": action.get("type")}
-    if game_type == "the_mind":
+    if game_type in ("moshimo_yusha", "the_mind"):
         return {"type": action.get("type")}
     if game_type == "night_of_the_ninja":
         return {"type": action.get("type")}
@@ -1645,6 +1647,8 @@ async def on_room_reconnect(sid, data):
         return
     room = _get_room(room_id)
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "moshimo_yusha")
+    if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "the_mind")
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "night_of_the_ninja")
@@ -1706,7 +1710,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("mall_of_horror", "deception", "skull_king", "startups", "natsumemo", "maskmen", "the_crew", "gloomhaven"):
+    if room.game_type in ("moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "natsumemo", "maskmen", "the_crew", "gloomhaven"):
         await _maybe_run_bots(room)
 
 
@@ -2126,6 +2130,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_private_save(source_room_id, "moshimo_yusha")
         or _has_unfinished_private_save(source_room_id, "the_mind")
         or _has_unfinished_private_save(source_room_id, "night_of_the_ninja")
         or _has_unfinished_private_save(source_room_id, "mall_of_horror")

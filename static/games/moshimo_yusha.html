@@ -1,0 +1,89 @@
+<template data-game-target="moshimoYushaHeaderActions" data-game-mode="contents">
+    <button id="moshimoYushaHelpBtn" type="button">Help</button>
+    <button id="moshimoYushaExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="moshimoYushaPanel" data-game-mode="contents">
+    <header class="my-brand">
+        <div>
+            <span class="my-eyebrow">A KINGDOM WITHOUT A HERO</span>
+            <h2>如果勇者在的话就好了</h2>
+            <p>If You Have a Brave</p>
+        </div>
+        <span class="my-crest" aria-hidden="true">🗡️</span>
+    </header>
+    <div class="my-statusbar">
+        <strong id="myStatus" role="status" aria-live="polite">Waiting to start</strong
+        ><span id="myRound"></span>
+    </div>
+    <div class="my-layout">
+        <main class="my-main">
+            <section class="my-decision">
+                <div class="my-section-title">
+                    <h3 id="myHandTitle">Your hand</h3>
+                    <span id="myProgress"></span>
+                </div>
+                <p id="myInstruction" class="my-caption">Waiting to start</p>
+                <details id="myHandDetails" class="my-hand-details" open>
+                    <summary id="myHandSummary" class="hidden">Remaining hand · private</summary>
+                    <div id="myHand" class="my-hand"></div>
+                </details>
+                <div class="my-actionbar">
+                    <span id="mySelected"></span
+                    ><button id="myConfirm" type="button" data-my-explain="confirm" disabled>
+                        Confirm</button
+                    ><button id="myNext" type="button" data-my-explain="next" class="hidden">
+                        Next Round
+                    </button>
+                </div>
+                <div id="myExchange" class="my-private hidden"></div>
+            </section>
+            <section id="myReview" class="my-review hidden">
+                <div class="my-section-title">
+                    <h3 id="myReviewTitle">Round review</h3>
+                    <span id="myReviewStatus"></span>
+                </div>
+                <div id="myReviewRows" class="my-review-rows"></div>
+                <ol id="myEffects" class="my-effects"></ol>
+            </section>
+            <section id="myFinal" class="my-review hidden">
+                <h3 id="myFinalTitle">Final cards</h3>
+                <div id="myFinalRows" class="my-review-rows"></div>
+            </section>
+        </main>
+        <aside class="my-aside">
+            <section>
+                <div class="my-section-title">
+                    <h3>At the table</h3>
+                    <span id="myTableCount"></span>
+                </div>
+                <div id="myPlayers" class="my-players"></div>
+            </section>
+            <section class="my-discard">
+                <div class="my-section-title">
+                    <h3>Public cards</h3>
+                    <span
+                        tabindex="0"
+                        data-my-explain="discard"
+                        data-my-tip="初始弃牌（🂠）匿名汇总；已出牌（🃏）保留公开记录。"
+                        >🂠 / 🃏</span
+                    >
+                </div>
+                <div id="myDiscard"></div>
+            </section>
+            <details class="my-history">
+                <summary>Recent events</summary>
+                <ol id="myLog"></ol>
+            </details>
+        </aside>
+    </div>
+    <div id="myTooltip" class="my-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="moshimoYushaDialog" data-game-mode="replace">
+    <dialog id="moshimoYushaDialog" class="my-dialog" aria-labelledby="myDialogTitle">
+        <div class="my-section-title">
+            <h2 id="myDialogTitle">Help</h2>
+            <button id="myDialogClose" type="button">Close</button>
+        </div>
+        <div id="myDialogBody"></div>
+    </dialog>
+</template>

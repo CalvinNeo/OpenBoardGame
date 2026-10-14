@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "moshimo_yusha": {
+    "scripts": ["/static/games/moshimo_yusha.js?v=2"],
+    "styles": ["/static/games/moshimo_yusha.css?v=2"],
+    "markup": "/static/games/moshimo_yusha.html?v=2",
+    "panel": "moshimoYushaPanel",
+    "header": "showMoshimoYushaHeaderActions"
+  },
   "the_mind": {
     "scripts": ["/static/games/the_mind.js?v=1"],
     "styles": ["/static/games/the_mind.css?v=1"],
@@ -871,10 +878,10 @@ const GAME_ASSETS = {
   },
   "cryptid": {
     "scripts": [
-      "/static/games/cryptid.js?v=4"
+      "/static/games/cryptid.js?v=5"
     ],
     "styles": [
-      "/static/cryptid.css?v=3"
+      "/static/cryptid.css?v=4"
     ],
     "panel": "cryptidPanel",
     "header": "showCryptidHeaderActions",

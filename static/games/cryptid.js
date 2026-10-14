@@ -13,7 +13,7 @@
     const W = 744, H = 674;
     const phaseNames = {initial_clues: "开局分享", turn: "探索", search_extra_disc: "补放圆片", compensate_cube: "补放方块", round_end: "本轮回顾", game_over: "探索结束"};
     const explanations = {
-        map: "点选六边形后，地图蒙版内显示坐标、地形、动物与标记，并提供 Confirm／Cancel。拖动或缩放不会提交动作。熊(🐻)用虚线，美洲狮(🐾)用实线边界。结构物有独立的类型与颜色。",
+        map: "点选六边形后，在该格附近的地图蒙版内选择行动，并用 Confirm／Cancel 确认或取消。亮圈保留所选位置，确认区始终位于地图内。拖动或缩放不会提交动作。熊(🐻)用虚线，美洲狮(🐾)用实线边界。结构物有独立的类型与颜色。",
         question: "询问(❓)：选择无排除(■)的格子和尚未回答该格的另一名玩家。可以询问不符合自己线索的位置。系统诚实给出可能(●)或排除(■)；得到排除后，你须另放一个方块。",
         search: "搜索(🔍)：只能搜索符合自己线索、无排除(■)的格子。先放可能(●)；若已有自己的圆片，先在别处补圆片。依席位核对，首个否定后停止并补方块；全部通过才获胜。",
         place: "排除(■)必须不符合你的线索，可能(●)必须符合。标记不能重复；有任何方块的格子都不能再互动。当前阶段只允许所需标记的合法新位置。",
@@ -21,7 +21,8 @@
         cancel_selection: "Cancel 关闭选格蒙版，取消尚未提交的选择；点击蒙版周围空白或按 Esc 也可以。不会撤销已经提交的动作，补放圆片(●)／方块(■)的义务仍需完成。",
         next: "每圈结束暂停回顾。每人分别点击 Next Round，全员确认才继续。机器人只确认自己，断线真人不会自动跳过。",
         notes: "笔记(📝)仅你可见：手动标记候选／排除格，或勾掉你认为不成立的对手线索。Save 保存到个人笔记，Close／Esc 放弃未保存编辑。不会替你自动推理。",
-        clue: "Your clue(🔒) 从右侧打开你的秘密线索，Close／Esc 收起。Highlight on map 只高亮符合你自己线索的格子，不代表符合别人线索，也不排除已出现方块的位置。距离包括目标本身，within 2 表示 0、1、2 格。",
+        clue: "Your clue(🔒) 从右侧打开你的秘密线索，Close／Esc 收起。开启 Highlight on map 后收起侧栏，回到地图查看高亮。距离包括目标本身，within 2 表示 0、1、2 格。",
+        highlight: "Highlight 用金色描边与勾号(✓)标出符合你自己线索的格子，其余格子的地形淡化；公开标记仍然保留。高亮不代表符合别人线索，也不排除已出现方块的位置。地图工具栏可随时开启或关闭。",
         hint: "提示(💡)需要投票：三人全部同意；四或五人至少人数减一同意。每局最多公开一次未使用的线索类别；没有可用类别时，在投票通过后说明。开局未完成或已揭示时不可投票。",
         zoom: "使用 +／− 缩放，Fit 查看整张地图。地图区域内拖动平移，手机支持双指缩放；区域外正常滚动页面。",
         legend: "可能(●)只符合放置者的线索，排除(■)则让整格停止互动。玩家用颜色和座位编号区分；结构物的颜色与玩家归属无关。",
@@ -75,7 +76,7 @@
     }
 
     function mapHTML() {
-        return `<svg class="cryptid-map" viewBox="0 0 ${W} ${H}" aria-label="Cryptid hex map" role="group" ${selected ? "inert" : ""}>
+        return `<svg class="cryptid-map ${showClue ? "is-highlighting" : ""}" viewBox="0 0 ${W} ${H}" aria-label="Cryptid hex map" role="group" ${selected ? "inert" : ""}>
             ${Array.from({length: 12}, (_, col) => `<text class="cryptid-cell-coord" x="${48 + col * 57}" y="8">${String.fromCharCode(65 + col)}</text>`).join("")}
             ${Array.from({length: 9}, (_, row) => `<text class="cryptid-cell-coord" x="6" y="${46 + row * Math.sqrt(3) * 38}">${row + 1}</text>`).join("")}
             ${view.board.map(cell => {
@@ -96,10 +97,13 @@
                 }).join("");
                 const note = view.notes?.cells[cell.id];
                 return `<g class="cryptid-cell ${selected === cell.id ? "is-selected" : ""} ${marker.cube ? "is-blocked" : ""} ${showClue && view.my_matches.includes(cell.id) ? "is-possible" : ""}" transform="translate(${x},${y})" data-cell="${cell.id}" data-cryptid-explain="map" data-cryptid-tip="${esc(cellDescription(cell))}" role="button" tabindex="0" aria-label="${esc(cellDescription(cell))}" aria-pressed="${selected === cell.id}">
-                    <polygon class="cryptid-cell-shape" points="${hexPoints(38)}" fill="${terrain.color}"/>
+                    <g class="cryptid-cell-landscape"><polygon class="cryptid-cell-shape" points="${hexPoints(38)}" fill="${terrain.color}"/>
                     ${cell.animal ? `<polygon class="cryptid-territory is-${cell.animal}" points="${hexPoints(34)}"/>` : ""}
-                    <text class="cryptid-cell-icon" y="-12">${terrain.icon}</text>${extra.join("")}${markers}
+                    <text class="cryptid-cell-icon" y="-12">${terrain.icon}</text>${extra.join("")}</g>
+                    ${showClue && view.my_matches.includes(cell.id) ? `<polygon class="cryptid-clue-outline" points="${hexPoints(36)}"/><polygon class="cryptid-clue-ring" points="${hexPoints(36)}"/><g class="cryptid-clue-check" aria-hidden="true" transform="translate(22,-15)"><circle r="8"/><path d="M-4 0 -1 3 4-3"/></g>` : ""}
+                    ${markers}
                     ${note ? `<circle cx="27" cy="0" r="5" fill="${note === "candidate" ? "#fff28a" : "#fbf9f0"}" stroke="#26372f" stroke-width="1.5"/>` : ""}
+                    ${selected === cell.id ? `<polygon class="cryptid-selected-ring" points="${hexPoints(38)}"/>` : ""}
                 </g>`;
             }).join("")}</svg>`;
     }
@@ -136,7 +140,7 @@
         const question = available("question");
         const options = view.players.filter(p => p.player_id !== view.you);
         const canConfirm = !view.game_over && view.phase !== "round_end";
-        let hint = stepText();
+        let hint = view.current_turn === view.you && view.phase === "turn" ? "" : stepText();
         if (canConfirm && !pending && view.current_turn === view.you) {
             if (view.markers[selected].cube) hint = "此格已有排除(■)，不能再进行操作。";
             else if (view.phase === "turn" && mode === "search" && !view.search_cells.includes(selected)) hint = "此格不符合你的线索，不能搜索。";
@@ -147,7 +151,7 @@
             <div class="cryptid-selection-body"><div class="cryptid-detail-list">${details.map(part => `<span>${esc(part)}</span>`).join("") || "尚无公开标记"}</div>
                 ${view.phase === "turn" ? `<div class="cryptid-mode-buttons">${btn("❓ 询问", "question", "question", !question, `class="${mode === "question" ? "is-active" : ""}" aria-pressed="${mode === "question"}"`)}${btn("🔍 搜索", "search", "search", !available("search"), `class="${mode === "search" ? "is-active" : ""}" aria-pressed="${mode === "search"}"`)}</div>` : ""}
                 ${view.phase === "turn" && mode === "question" ? `<label class="cryptid-target-label" data-cryptid-explain="question"><span>Ask</span><select id="cryptidTarget" ${!question ? "disabled" : ""}><option value="">Select player</option>${options.map(p => `<option value="${esc(p.player_id)}" ${target === p.player_id ? "selected" : ""} ${view.markers[selected].cube || view.markers[selected].discs.includes(p.player_id) ? "disabled" : ""}>${p.seat + 1} · ${esc(p.name)}</option>`).join("")}</select></label>` : ""}
-                <p class="cryptid-muted" aria-live="polite">${esc(hint)}</p>
+                ${hint ? `<p class="cryptid-muted" aria-live="polite">${esc(hint)}</p>` : ""}
             </div><div class="cryptid-actions">${canConfirm ? btn("Confirm", "confirm", "confirm", !actionCandidate(), 'class="cryptid-primary"') : ""}${btn("Cancel", "cancel_selection")}</div>
         </section></div>`;
     }
@@ -158,6 +162,11 @@
         return `<section class="cryptid-map-status"><h3 data-cryptid-explain="${phaseExplanation}">${phaseNames[view.phase]}</h3><p class="cryptid-muted" aria-live="polite">${esc(stepText())}</p>
             ${view.phase === "round_end" ? `<div class="cryptid-actions">${btn(view.next_ready.includes(view.you) ? "Ready ✓" : "Next Round", "next", "next", !available("next_round"), 'class="cryptid-primary"')}</div><p class="cryptid-muted">Waiting: ${esc(view.players.filter(p => !view.next_ready.includes(p.player_id)).map(p => p.name).join(", ")) || "—"}</p>` : ""}
         </section>`;
+    }
+
+    function highlightHTML() {
+        if (!showClue) return "";
+        return `<div class="cryptid-highlight-status" role="status" data-cryptid-explain="highlight" data-cryptid-tip="${esc(explanations.highlight)}"><span class="cryptid-highlight-key" aria-hidden="true">✓</span><span>符合你的线索 <strong>${view.my_matches.length} / ${view.board.length}</strong></span><span class="cryptid-highlight-muted">其余地形淡化</span></div>`;
     }
 
     function resultsHTML() {
@@ -173,7 +182,7 @@
         resetGesture(); hideTip();
         panel.innerHTML = `<div class="cryptid-shell"><div class="cryptid-top"><div><div class="cryptid-eyebrow">A field guide to the unknown</div><h2>诡影寻踪 <span lang="en">Cryptid</span></h2></div><span class="cryptid-badge">${view.advanced ? "Advanced" : "Normal"} · ${view.round ? `Round ${view.round}` : "Setup"}</span></div>
             <div class="cryptid-players">${view.players.map(p => `<div class="cryptid-player ${p.player_id === view.current_turn ? "is-current" : ""}"><strong><span class="cryptid-dot" style="background:${color(p.player_id)}"></span>${p.seat + 1} · ${esc(p.name)}</strong><small>${p.player_id === view.you ? "You" : p.is_bot ? "Bot" : "Player"}${p.player_id === view.current_turn ? " · Acting" : view.next_ready.includes(p.player_id) ? " · Ready ✓" : ""}</small></div>`).join("")}</div>
-            <div class="cryptid-layout"><div class="cryptid-map-area"><div class="cryptid-map-frame"><div class="cryptid-map-tools"><div>${btn("−", "out", "zoom")}${btn("+", "in", "zoom")}${btn("Fit", "fit", "zoom")}<span class="cryptid-zoom">${Math.round(zoom * 100)}%</span></div><div class="cryptid-dock-tools">${btn("🔒 Your clue", "clue", "clue", !view.my_clue, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}${btn("📝 Notes", "notes", "notes", !view.notes, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}</div></div>${actionHTML()}<div class="cryptid-map-viewport">${mapHTML()}${selectionHTML()}</div></div>
+            <div class="cryptid-layout"><div class="cryptid-map-area"><div class="cryptid-map-frame"><div class="cryptid-map-tools"><div class="cryptid-zoom-tools">${btn("−", "out", "zoom")}${btn("+", "in", "zoom")}${btn("Fit", "fit", "zoom")}<span class="cryptid-zoom">${Math.round(zoom * 100)}%</span>${btn(`${showClue ? "✓ " : ""}Highlight`, "highlight", "highlight", !view.my_clue, `class="cryptid-highlight-toggle" aria-pressed="${showClue}"`)}</div><div class="cryptid-dock-tools">${btn("🔒 Your clue", "clue", "clue", !view.my_clue, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}${btn("📝 Notes", "notes", "notes", !view.notes, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}</div></div>${actionHTML()}${highlightHTML()}<div class="cryptid-map-viewport">${mapHTML()}${selectionHTML()}</div></div>
                 <div class="cryptid-legend">${Object.values(view.terrain_defs).map(t => `<button type="button" data-cryptid-explain data-cryptid-tip="${esc(`${t.name}(${t.icon})：五种地形之一。`)}">${t.icon} ${t.name}</button>`).join("")}<button type="button" data-cryptid-explain="legend" data-cryptid-tip="${esc(explanations.legend)}">● / ■</button><button type="button" data-cryptid-explain data-cryptid-tip="熊(🐻)用虚线边界，美洲狮(🐾)用实线边界；领地叠加在地形上。">🐻 / 🐾</button><button type="button" data-cryptid-explain data-cryptid-tip="立石(🗿)与废弃小屋(🏚️)；色框表示结构物的白、绿、蓝、黑颜色，与玩家颜色无关。">🗿 / 🏚️</button></div>
                 ${view.phase === "round_end" ? `<section class="cryptid-box cryptid-review"><h3>Round review</h3><ul class="cryptid-history">${view.last_round.map(line => `<li>${esc(line)}</li>`).join("")}</ul></section>` : ""}
                 ${view.game_over ? `<section class="cryptid-box cryptid-review"><h3>🏆 ${esc(name(view.winner[0]))} · ${view.solution}</h3><div class="cryptid-results">${view.players.map(p => `<div class="cryptid-result"><strong>${esc(p.name)}</strong>：${esc(view.revealed_clues[p.player_id].description)}</div>`).join("")}</div></section>` : ""}
@@ -185,7 +194,7 @@
         updateMap(); updateDockButtons();
         const selectionBody = panel.querySelector(".cryptid-selection-body");
         if (selectionBody) selectionBody.scrollTop = scrollTop;
-        if (focused) {
+        if (focused && !dialog.open) {
             const control = focused.id ? document.getElementById(focused.id) : panel.querySelector(`.cryptid-selection-card [data-cryptid-action="${focused.action}"]`);
             control?.focus({preventScroll: true});
         }
@@ -213,6 +222,37 @@
         svg.classList.toggle("is-compact", svg.clientWidth / W * zoom < 0.95);
         const label = panel.querySelector(".cryptid-zoom");
         if (label) label.textContent = `${Math.round(zoom * 100)}%`;
+        positionSelection();
+    }
+
+    function positionSelection() {
+        if (!selected) return;
+        const viewport = panel.querySelector(".cryptid-map-viewport");
+        const overlay = panel.querySelector(".cryptid-selection-overlay");
+        const card = panel.querySelector(".cryptid-selection-card");
+        const cell = panel.querySelector(`[data-cell="${selected}"]`);
+        if (!viewport || !overlay || !card || !cell) return;
+        const bounds = viewport.getBoundingClientRect(), tile = cell.getBoundingClientRect();
+        const margin = 8, gap = 12;
+        const screenTop = window.visualViewport?.offsetTop || 0;
+        const screenBottom = screenTop + (window.visualViewport?.height || window.innerHeight);
+        const top = Math.max(margin, screenTop - bounds.top + margin);
+        const bottom = Math.min(bounds.height - margin, screenBottom - bounds.top - margin);
+        // Keep the actions in the visible part of the board, including after a page scroll.
+        const minTop = Math.min(top, bounds.height - 140);
+        const maxBottom = Math.max(bottom, minTop + 132);
+        card.style.maxHeight = `${maxBottom - minTop}px`;
+        const size = card.getBoundingClientRect();
+        const x = (tile.left + tile.right) / 2 - bounds.left;
+        const y = (tile.top + tile.bottom) / 2 - bounds.top;
+        const below = tile.bottom - bounds.top + gap;
+        const above = tile.top - bounds.top - gap - size.height;
+        const preferred = below + size.height <= maxBottom ? below : above >= minTop ? above : y < (minTop + maxBottom) / 2 ? maxBottom - size.height : minTop;
+        card.style.left = `${Math.max(margin, Math.min(bounds.width - size.width - margin, x - size.width / 2))}px`;
+        card.style.top = `${Math.max(minTop, Math.min(maxBottom - size.height, preferred))}px`;
+        overlay.style.setProperty("--cryptid-selection-x", `${x}px`);
+        overlay.style.setProperty("--cryptid-selection-y", `${y}px`);
+        overlay.style.setProperty("--cryptid-selection-radius", `${Math.max(20, tile.height / 2 + 5)}px`);
     }
 
     function setZoom(value) { zoom = Math.max(1, Math.min(3.4, value)); updateMap(); hideTip(); }
@@ -261,7 +301,7 @@
             <details><summary>All clue types</summary><ul>${(view?.catalog || []).map(clue => `<li>${esc(clue.description)}</li>`).join("")}</ul></details>
             <h3>提示、笔记与回顾</h3><p>${explanations.hint}</p><p>${explanations.notes}</p><p>${explanations.next}</p>
             <h3>线上适配</h3><p>强制回答由服务器诚实计算。仅当所有合法新落点已耗尽时，免除对应的额外圆片／补偿方块，并公开记录。这是避免卡局的线上约定。地图地形依据官方辅助站转录，题目独立生成并验证唯一解；界面使用原创图形。普通模式六个结构物，进阶八个。没有双人规则或 Urban Legends 模式。</p>
-            <h3>地图操作</h3><p>${explanations.zoom}</p><p>点选格子后，地图出现半透明蒙版，在蒙版内选择行动与询问对象，再用 Confirm 提交。Cancel、蒙版周围空白或 Esc 取消未提交选择。${explanations.clue} Notes(📝) 也从右侧打开；Save 保存私人笔记。图标可悬停查看说明，手机轻点显示三秒提示。</p>`);
+            <h3>地图操作</h3><p>${explanations.zoom}</p><p>${explanations.map} Cancel、蒙版周围空白或 Esc 取消未提交选择。</p><p>${explanations.clue} ${explanations.highlight} Notes(📝) 也从右侧打开；Save 保存私人笔记。图标可悬停查看说明，手机轻点显示三秒提示。</p>`);
     }
 
     function notebookHTML() {
@@ -306,6 +346,7 @@
         else if (action === "fit") { center = {x: W / 2, y: H / 2}; setZoom(1); }
         else if (action === "notes") openNotebook();
         else if (action === "clue") openClue();
+        else if (action === "highlight") { showClue = !showClue; render(); panel.querySelector('[data-cryptid-action="highlight"]')?.focus({preventScroll: true}); }
         else if (action === "close") dialog.close();
         else if (action === "save_notes") { const notes = notesDraft; dialog.close(); submit({type: "update_notes", notes}); }
     }
@@ -318,7 +359,10 @@
         if (event.target.id === "cryptidNoteText") notesDraft.text = event.target.value;
     });
     dialogBody.addEventListener("change", event => {
-        if (event.target.id === "cryptidShowClue") { showClue = event.target.checked; render(); }
+        if (event.target.id === "cryptidShowClue") {
+            showClue = event.target.checked; render();
+            if (showClue) { returnFocus = null; returnFocusAction = "highlight"; dialog.close(); }
+        }
         if (!notesDraft) return;
         if (event.target.id === "cryptidNotePlayer") { notebookPlayer = event.target.value; dialogBody.innerHTML = notebookHTML(); }
         if (event.target.id === "cryptidNoteCell" && notebookCell) { if (event.target.value) notesDraft.cells[notebookCell] = event.target.value; else delete notesDraft.cells[notebookCell]; }
@@ -439,6 +483,9 @@
         narrowLayout = narrow; updateMap();
     });
     window.addEventListener("blur", resetGesture);
+    window.addEventListener("scroll", positionSelection, {passive: true, capture: true});
+    window.visualViewport?.addEventListener("resize", positionSelection);
+    window.visualViewport?.addEventListener("scroll", positionSelection);
 
     function clearState() {
         view = null; signature = null; selected = null; target = ""; pending = false;

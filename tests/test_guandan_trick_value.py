@@ -167,6 +167,34 @@ class GuandanTrickValueTests(unittest.TestCase):
                 scores.append(guandan._lead_structure_efficiency_bonus(state, "bot", cards, combo))
         self.assertEqual(scores, [0.0, 0.0])
 
+    def test_plan_alignment_cannot_reintroduce_the_greedy_turn_credit(self):
+        state = make_opening_61559c()
+        hand = state["players"]["bot"]["hand"]
+        cards = pick_card_ids(hand, ["♦️K", "♠️K"])
+        combo = guandan._evaluate_combo([c for c in hand if c["id"] in cards], 2, {})
+        scores = []
+        for before_turns in (9, 11):
+            with mock.patch.object(guandan_ai, "_hand_decomposition_summary", side_effect=[
+                {"turns": before_turns}, {"turns": 8},
+            ]):
+                scores.append(self.call("_plan_alignment_score", hand, cards, combo, 2))
+        self.assertEqual(scores, [0.0, 0.0])
+
+    def test_direct_finish_does_not_rebase_a_shape_term_absent_from_ranking(self):
+        state = make_opening_61559c()
+        hand = state["players"]["bot"]["hand"]
+        cards = pick_card_ids(hand, ["♣️4", "♥️4"])
+        state["players"]["bot"]["hand"] = [c for c in hand if c["id"] in cards]
+        state["seen_cards"] = [c["id"] for c in hand if c["id"] not in cards]
+        state.update(known_card_owners={}, visible_card_id=None, round_memories=[])
+        combo = guandan._evaluate_combo(state["players"]["bot"]["hand"], 2, {})
+        score = guandan._bot_score_components(state, "bot", cards, 4)
+        shape = guandan._lead_structure_efficiency_bonus(state, "bot", cards, combo)
+        self.assertEqual(score["finish_bonus"], 100.0)
+        self.assertEqual(score["lead_plan"], 180.0)
+        self.assertEqual(score["lead_shape"], shape)
+        self.assertAlmostEqual(score["total"], sum(v for k, v in score.items() if k != "total"))
+
 
 if __name__ == "__main__":
     unittest.main()

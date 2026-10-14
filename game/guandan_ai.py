@@ -6156,8 +6156,9 @@ def _lead_structure_efficiency_bonus(
     Re-running greedy decomposition on a residual hand can find a different
     cover and invent a positive turn gain (61559c: KK gained two turns).
     Keep its fragmentation and alignment estimates as local shape priors,
-    but never reward that apparent improvement. Expected leads and recovery
-    belong to the complete route, including its material and entry costs.
+    but do not reward their positive group-count discrepancy. Expected leads
+    and recovery belong to the complete route, including material and entry
+    costs. These remaining shape estimates are still heuristic.
     """
     if state.get("current_trick"):
         return 0.0
@@ -8539,9 +8540,10 @@ def _plan_alignment_score(hand: List[Dict], cards: List[int], combo: Dict, level
     after_turns = after.get("turns", 0.0)
     projected_turns = after_turns + (0.0 if not remaining else 1.0)
     turn_gain = before_turns - projected_turns
-    if turn_gain > 0.01:
-        score += min(2.4, turn_gain * 1.2)
-    elif turn_gain < -0.01:
+    # The played group plus any residual cover was also a cover of the
+    # original hand. A positive difference only means greedy partitioning
+    # missed that cover; it is not progress attributable to this play.
+    if turn_gain < -0.01:
         score += max(-1.6, turn_gain * 0.8)
 
     low_single_delta = before.get("low_singles", 0.0) - after.get("low_singles", 0.0)
@@ -16237,15 +16239,17 @@ def _compute_bot_score_components(
         lead_score = _lead_option_score(state, bot_id, cards)
         shape_bonus = _lead_structure_efficiency_bonus(state, bot_id, cards, combo)
         # Ranking needs this prior too, but expose its complete contribution
-        # once instead of burying another copy inside lead_plan.
-        lead_score -= shape_bonus
+        # once instead of burying another copy inside lead_plan. Playing the
+        # entire hand takes the ranking shortcut and has no embedded prior.
+        ranked_shape = shape_bonus if remaining else 0.0
+        lead_score -= ranked_shape
         if abs(lead_score) > 0.001:
             components["lead_plan"] = lead_score * 0.18
         lane_exposure = _lead_enemy_lane_exposure(state, bot_id, combo)
         if lane_exposure > 0.001:
             components["lead_enemy_lane_feed"] = -lane_exposure
         if abs(shape_bonus) > 0.001:
-            components["lead_shape"] = shape_bonus * 1.18
+            components["lead_shape"] = shape_bonus + ranked_shape * 0.18
         teammate_bonus = _lead_teammate_support_bonus(state, bot_id, cards, combo)
         if abs(teammate_bonus) > 0.001:
             components["lead_teammate"] = teammate_bonus

@@ -29,6 +29,10 @@
 .cryptid-map-tools > div { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .cryptid-map-tools button { padding: 6px 11px; min-height: 35px; font-size: 12px; }
 .cryptid-map-tools button[aria-expanded="true"] { background: #dce8d4; border-color: #35634e; }
+.cryptid-map-tools .cryptid-highlight-toggle[aria-pressed="true"] { color: #302906; background: #ffe579; border-color: #786317; box-shadow: inset 0 0 0 1px #786317; }
+.cryptid-highlight-status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; padding: 7px 10px; background: #fff1b8; border-bottom: 1px solid #cfb95f; color: #4a3a08; font-size: 12px; }
+.cryptid-highlight-key { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #ffe579; border: 2px solid #4a3a08; font-weight: 800; }
+.cryptid-highlight-muted { color: #675d3c; margin-left: auto; font-size: 11px; }
 .cryptid-map-status { padding: 10px 12px; border-bottom: 1px solid #d8ddcf; background: #f8f7ee; overflow-wrap: anywhere; }
 .cryptid-map-status h3 { margin: 0; font-size: 13px; }
 .cryptid-map-status p { margin: 4px 0 0; }
@@ -39,7 +43,15 @@
 .cryptid-map.is-dragging { cursor: grabbing; }
 .cryptid-cell { cursor: pointer; outline: none; }
 .cryptid-cell-shape { stroke: #faf8ee; stroke-width: 1.6; }
-.cryptid-cell.is-possible .cryptid-cell-shape { stroke: #fff8a6; stroke-width: 3; }
+.cryptid-map.is-highlighting .cryptid-cell:not(.is-possible) .cryptid-cell-landscape { opacity: .3; filter: saturate(.15); }
+.cryptid-map.is-highlighting .cryptid-cell.is-selected .cryptid-cell-landscape { opacity: 1; filter: none; }
+.cryptid-clue-outline, .cryptid-clue-ring, .cryptid-selected-ring { fill: none; pointer-events: none; stroke-linejoin: round; }
+.cryptid-clue-outline { stroke: #483707; stroke-width: 6; }
+.cryptid-clue-ring { stroke: #ffe579; stroke-width: 3; }
+.cryptid-clue-check { pointer-events: none; }
+.cryptid-clue-check circle { fill: #ffe579; stroke: #483707; stroke-width: 1.5; }
+.cryptid-clue-check path { fill: none; stroke: #302906; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cryptid-selected-ring { stroke: #fff; stroke-width: 3; filter: drop-shadow(0 0 2px #123e31); }
 .cryptid-cell:focus .cryptid-cell-shape, .cryptid-cell.is-selected .cryptid-cell-shape { stroke: #253e34; stroke-width: 4; }
 .cryptid-cell.is-blocked .cryptid-cell-shape { filter: saturate(.4); }
 .cryptid-cell-coord { font: 10px system-ui; fill: #21332e; text-anchor: middle; }
@@ -60,12 +72,12 @@
 .cryptid-inline-label { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .cryptid-inline-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; }
 .cryptid-muted { color: #63756c; font-size: 12px; line-height: 1.65; margin: 6px 0; }
-.cryptid-selection-overlay { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 12px; background: #163c305c; }
-.cryptid-selection-card { display: flex; flex-direction: column; width: min(420px, 100%); min-width: 0; max-height: 100%; padding: 15px; border: 1px solid #c0cfb7; border-radius: 13px; background: #fffdf5f5; box-shadow: 0 8px 26px #19352d33; overflow-wrap: anywhere; outline: none; }
+.cryptid-selection-overlay { position: absolute; inset: 0; z-index: 1; background: radial-gradient(circle at var(--cryptid-selection-x, 50%) var(--cryptid-selection-y, 50%), transparent var(--cryptid-selection-radius, 30px), #163c306b calc(var(--cryptid-selection-radius, 30px) + 3px)); }
+.cryptid-selection-card { position: absolute; display: flex; flex-direction: column; width: min(340px, calc(100% - 16px)); min-width: 0; max-height: calc(100% - 16px); padding: 12px; border: 1px solid #738f7d; border-radius: 13px; background: #fffdf5f5; box-shadow: 0 8px 26px #19352d33; overflow-wrap: anywhere; outline: none; }
 .cryptid-selection-card h3 { flex: 0 0 auto; margin: 0 0 8px; font-size: 18px; }
 .cryptid-selection-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 3px; }
 .cryptid-selection-card > .cryptid-actions { flex: 0 0 auto; }
-.cryptid-selection-card .cryptid-mode-buttons { margin-top: 10px; }
+.cryptid-selection-card .cryptid-mode-buttons { margin-top: 7px; }
 .cryptid-selection-card .cryptid-mode-buttons button { min-height: 38px; }
 .cryptid-detail-list { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 12px; line-height: 1.7; }
 .cryptid-detail-list > span { min-width: 0; max-width: 100%; }
@@ -112,10 +124,13 @@
     .cryptid-map { height: auto; aspect-ratio: 4 / 5; min-height: 280px; max-height: 390px; }
     .cryptid-sidebar { grid-template-columns: minmax(0, 1fr); }
     .cryptid-map-tools { padding: 6px; }
-    .cryptid-map-tools button { padding: 6px 9px; }
+    .cryptid-map-tools button { padding: 6px 8px; min-height: 40px; }
+    .cryptid-map-tools .cryptid-zoom-tools { width: 100%; gap: 4px; }
+    .cryptid-zoom-tools .cryptid-highlight-toggle { margin-left: auto; }
     .cryptid-map-tools .cryptid-dock-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
-    .cryptid-selection-overlay { padding: 10px; }
-    .cryptid-selection-card { padding: 11px; }
+    .cryptid-selection-card { padding: 10px; }
+    .cryptid-selection-card h3 { font-size: 16px; margin-bottom: 4px; }
+    .cryptid-target-label select, .cryptid-dialog textarea { font-size: 16px; }
     .cryptid-box { padding: 11px; }
     .cryptid-dialog { padding: 16px; }
 }
