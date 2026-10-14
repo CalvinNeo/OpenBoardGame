@@ -1,0 +1,14 @@
+<template data-game-target="dndStarterSetHeaderActions" data-game-mode="contents">
+  <button id="dndStarterSetHelpBtn" type="button">Help</button>
+  <button id="dndStarterSetExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="dndStarterSetPanel" data-game-mode="contents">
+  <div id="dndSurface" class="dnd-surface"><div class="dnd-wait">Waiting to start · 第一席担任地下城主</div></div>
+  <div id="dndTooltip" class="dnd-tooltip" role="tooltip" hidden></div>
+</template>
+<template data-game-target="dndStarterSetDialog" data-game-mode="replace">
+  <dialog id="dndStarterSetDialog" class="dnd-dialog" aria-labelledby="dndDialogTitle">
+    <div class="dnd-row"><h2 id="dndDialogTitle">Help</h2><button id="dndDialogClose" type="button">Close</button></div>
+    <div id="dndDialogBody"></div>
+  </dialog>
+</template>

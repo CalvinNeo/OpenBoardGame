@@ -17146,10 +17146,10 @@ def _shared_response_tactical_components(
         retake_key = (
             player_id,
             tuple(current_trick.get("cards") or []),
-            tuple(
+            (tuple(
                 card["id"]
                 for card in state["players"].get(teammate, {}).get("hand", [])
-            ),
+            ) if state.get("_ai_sampled_world") else _heuristic_score_cache_key(state, player_id, 0)),
         )
         if retake_key not in retake_cache:
             retake_cache[retake_key] = _teammate_can_retake_current_lane(state, player_id)

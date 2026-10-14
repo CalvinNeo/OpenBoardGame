@@ -1,0 +1,119 @@
+.dnd-panel { --dnd-gold:#e7bd73; --dnd-ink:#202b30; --dnd-muted:#68726c; min-width:0; }
+.dnd-panel *, .dnd-dialog * { box-sizing:border-box; min-width:0; }
+.dnd-surface { color:var(--dnd-ink); background:#f0eee4; border:1px solid #c9c8bb; border-radius:16px; overflow:hidden; overflow-wrap:anywhere; }
+.dnd-surface h2,.dnd-surface h3,.dnd-surface p { margin:0; }
+.dnd-panel button,.dnd-dialog button { white-space:normal; overflow-wrap:anywhere; min-height:35px; margin:0; padding:8px 10px; border:1px solid #c8c7b9; border-radius:7px; color:#243338; background:#fbfaf4; box-shadow:none; font-size:12px; line-height:1.4; }
+.dnd-panel button:hover:not(:disabled) { background:#e6ddc7; }
+.dnd-panel button:disabled { opacity:.43; cursor:default; }
+.dnd-panel :focus-visible,.dnd-dialog :focus-visible { outline:3px solid #bb8541; outline-offset:2px; }
+.dnd-banner { padding:20px 22px; display:flex; align-items:center; justify-content:space-between; gap:15px; background:radial-gradient(ellipse at 90% 0%,#3e5150,#1b2c33 70%); color:#f2ebdc; }
+.dnd-banner h2 { font-family:Georgia,"Songti SC",serif; font-size:clamp(25px,3vw,36px); letter-spacing:.08em; line-height:1.25; }
+.dnd-eyebrow { font-size:9px; letter-spacing:.15em; color:#abb9b8; margin-bottom:6px; }
+.dnd-banner p { font-size:11px; color:#d8c59f; margin-top:7px; }
+.dnd-emblem { display:grid; place-items:center; width:63px; aspect-ratio:1; flex:0 0 63px; border:1px solid #8f7c57; border-radius:50%; font-size:33px; background:#ffffff06; }
+.dnd-row { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; align-items:center; }
+.dnd-status { padding:11px 17px; background:#e5e1d3; font-size:12px; border-bottom:1px solid #cdc7b6; }
+.dnd-status.is-yours { box-shadow:inset 4px 0 #ac4d37; background:#f3e4ce; }
+.dnd-status strong { flex:1 1 120px; }
+.dnd-badge { display:inline-block; border:1px solid #b9ad94; padding:4px 7px; border-radius:5px; font-size:10px; }
+.dnd-content { padding:14px; }
+.dnd-columns { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:13px; align-items:start; }
+.dnd-box { background:#fcfaf2; border:1px solid #d1cebf; border-radius:10px; padding:13px; margin-bottom:12px; }
+.dnd-box h3 { font-size:13px; margin-bottom:10px; line-height:1.45; }
+.dnd-subtitle { font-size:10px; color:#6a7167; letter-spacing:.08em; margin-bottom:7px; }
+.dnd-muted { font-size:11px; color:var(--dnd-muted); line-height:1.7; }
+.dnd-scene-copy { font-size:13px; line-height:1.85; margin-bottom:12px!important; }
+.dnd-actions { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 0; }
+.dnd-actions>button { flex:1 1 95px; }
+.dnd-panel .dnd-primary { color:#fff8e8; background:#2e4a4b; border-color:#2e4a4b; }
+.dnd-panel .dnd-danger { color:#fff8e8; background:#9c493b; border-color:#9c493b; }
+.dnd-panel button[aria-pressed="true"] { background:#e8d1a2; color:#293536; border-color:#ab8243; box-shadow:inset 0 0 0 1px #ab8243; }
+.dnd-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.dnd-panel .dnd-class { display:flex; flex-direction:column; text-align:left; align-items:flex-start; padding:14px; gap:7px; border-top:3px solid #9b7647; }
+.dnd-class .dnd-icon { font-size:32px; }
+.dnd-class strong { font-size:17px; }
+.dnd-class small { font-size:11px; line-height:1.5; color:#69756b; }
+.dnd-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:12px 0; }
+.dnd-field { display:flex; align-items:center; gap:7px; font-size:11px; margin:8px 0; }
+.dnd-field label { flex:0 0 48px; }
+.dnd-panel select,.dnd-panel input,.dnd-panel textarea { max-width:100%; min-width:0; width:100%; border:1px solid #c9c7b8; background:#fffdf6; color:#243338; padding:7px; border-radius:6px; font-size:12px; margin:0; }
+.dnd-field select,.dnd-field input { flex:1 1 50px; width:0; }
+.dnd-panel textarea { resize:vertical; min-height:65px; line-height:1.55; }
+.dnd-heroes { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.dnd-hero { padding:10px; border:1px solid #cfccbd; background:#fbf9ef; border-top:3px solid #8c9e94; border-radius:8px; }
+.dnd-hero.is-you { border-color:#9d814e; }
+.dnd-hero.is-active { box-shadow:0 0 0 2px #ab4e3c; }
+.dnd-hero.is-fallen { background:#e7e5df; }
+.dnd-hero strong { display:block; font-size:12px; }
+.dnd-stats { display:flex; flex-wrap:wrap; gap:5px 9px; margin-top:8px; font-size:11px; }
+.dnd-health { height:4px; background:#d9d5c9; margin-top:8px; border-radius:4px; overflow:hidden; }
+.dnd-health>span { display:block; height:100%; background:#a35d4a; }
+.dnd-abilities { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin-top:9px; }
+.dnd-ability { padding:6px 2px; text-align:center; background:#e9e6d9; border:1px solid #d8d2c0; border-radius:5px; font-size:10px; }
+.dnd-ability b { display:block; font-size:16px; margin-top:3px; }
+.dnd-regions { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px; }
+.dnd-region { flex:1 1 85px; font-size:11px; padding:8px; background:#e1e5dd; border:1px solid #c9d0c3; border-radius:7px; text-align:center; }
+.dnd-region.is-here { background:#2e4949; color:#f6e8c7; border-color:#2e4949; }
+.dnd-routes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.dnd-route { text-align:left; display:flex; gap:7px; align-items:center; }
+.dnd-route b { font-size:20px; }
+.dnd-route small { display:block; color:#69766d; font-size:10px; }
+.dnd-map-box { background:#233a3e; border:1px solid #324d4f; border-radius:10px; padding:12px; color:#f0ead6; margin-bottom:12px; }
+.dnd-map-title { font-size:12px; margin-bottom:10px; }
+.dnd-grid { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:2px; width:100%; max-width:480px; margin-inline:auto; border:2px solid #182d31; border-radius:5px; background:#182d31; padding:2px; }
+.dnd-panel .dnd-cell { padding:0; min-height:0; aspect-ratio:1; border:1px solid #4c6262; border-radius:2px; background:#405553; color:#f0e6ce; display:grid; place-items:center; font-size:clamp(14px,2vw,24px); position:relative; line-height:1; overflow:hidden; }
+.dnd-panel .dnd-cell:disabled { opacity:1; }
+.dnd-cell.is-wall { background:#243331!important; border-color:#22302e!important; }
+.dnd-cell.is-rough { background:#5a5f45!important; }
+.dnd-cell.is-reachable { border-color:#a4bf99!important; background:#48695a!important; }
+.dnd-cell.is-selected { outline:2px solid #f6cc7d; outline-offset:-2px; background:#8c784f!important; }
+.dnd-cell.is-current { outline:2px solid #efb26f; outline-offset:-2px; }
+.dnd-cell.is-monster { background:#784b40!important; }
+.dnd-cell.is-hero { background:#3c6572!important; }
+.dnd-cell.is-defeated { filter:grayscale(1); opacity:.6!important; }
+.dnd-cell small { position:absolute; right:1px; bottom:1px; font-size:8px; line-height:1; }
+.dnd-legend { display:flex; flex-wrap:wrap; gap:7px 12px; font-size:9px; color:#bfcbbf; margin-top:9px; }
+.dnd-initiative { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.dnd-initiative span { font-size:10px; border:1px solid #58716f; padding:4px 6px; border-radius:5px; }
+.dnd-initiative span.is-current { background:#cfaa6d; color:#283b3d; }
+.dnd-selection { border:1px solid #b4965b; border-radius:8px; padding:10px; margin:10px 0; background:#f4e6c6; font-size:12px; }
+.dnd-targets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:8px; }
+.dnd-targets button { text-align:left; }
+.dnd-scroll { max-height:240px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+.dnd-log-row { border-bottom:1px solid #e0dbca; padding:7px 5px; font-size:11px; line-height:1.65; }
+.dnd-log-row.is-you { border-left:3px solid #ae7440; background:#f4e8d1; padding-left:9px; }
+.dnd-log-row.is-roll { color:#455f73; }
+.dnd-review { background:#f7edda; border-color:#d7b978; }
+.dnd-review h3 { color:#77532b; font-size:18px; }
+.dnd-review .dnd-scroll { max-height:290px; }
+.dnd-people { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.dnd-people span { padding:5px 7px; border-radius:5px; border:1px solid #d4c9af; background:#f9f5e9; font-size:11px; }
+.dnd-dm { background:#e8e9e1; }
+.dnd-panel details summary { cursor:pointer; font-size:12px; color:#5c6c60; line-height:1.5; }
+.dnd-panel details[open] summary { margin-bottom:9px; }
+.dnd-panel details + details { margin-top:10px; }
+.dnd-spell-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:9px; max-height:250px; overflow:auto; padding:2px; }
+.dnd-spell-list button { display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:3px; }
+.dnd-spell-list small { font-size:10px; color:#6f796c; }
+.dnd-wait { padding:25px; color:#6b786f; font-size:13px; }
+.dnd-dialog { box-sizing:border-box; width:min(680px,calc(100vw - 24px)); max-height:85dvh; overflow:auto; overflow-wrap:anywhere; padding:20px; border:1px solid #baa477; border-radius:13px; color:#263a3d; background:#fcf9ef; }
+.dnd-dialog::backdrop { background:#122c39b5; }
+.dnd-dialog h2 { margin:0; font-size:20px; flex:1; }
+.dnd-dialog h3 { font-size:15px; margin:20px 0 8px; }
+.dnd-dialog p,.dnd-dialog li { font-size:13px; line-height:1.8; }
+.dnd-dialog ul { padding-left:22px; }
+.dnd-tooltip { position:fixed; z-index:16000; width:max-content; max-width:min(300px,calc(100vw - 24px)); padding:9px 12px; background:#1d3338; color:#fff6dc; border:1px solid #9c885b; border-radius:7px; box-shadow:0 4px 16px #0003; font-size:12px; line-height:1.6; overflow-wrap:anywhere; pointer-events:none; }
+.dnd-tooltip[hidden] { display:none!important; }
+.dnd-explaining [data-dnd-explain] { outline:2px dashed #b08037; outline-offset:1px; cursor:help!important; }
+body.dnd-needs-action #roomControlsPanel.collapsed,body.dnd-needs-action #roomControlsToggleBtn,body.dnd-needs-action .room-controls-toggle { border-color:#b63b34!important; box-shadow:0 0 0 2px #b63b3470; }
+@media(max-width:850px) { .dnd-heroes { grid-template-columns:repeat(2,minmax(0,1fr)); } .dnd-columns { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); } }
+@media(max-width:640px) {
+  .dnd-banner { padding:16px 13px; gap:10px; }.dnd-banner h2 { font-size:26px; }.dnd-emblem { width:48px; flex-basis:48px; font-size:27px; }
+  .dnd-content { padding:9px; }.dnd-columns { grid-template-columns:minmax(0,1fr); gap:0; }.dnd-box { padding:11px; }.dnd-status { padding:10px 12px; }
+  .dnd-panel .dnd-cell { font-size:clamp(14px,5vw,23px); }.dnd-grid { gap:1px; padding:1px; }.dnd-map-box { padding:8px; }
+  .dnd-fields { gap:6px; }.dnd-hero { padding:8px; }.dnd-class { padding:10px!important; }.dnd-class .dnd-icon { font-size:27px; }
+  .dnd-dialog { padding:14px; }.dnd-eyebrow { font-size:8px; letter-spacing:.1em; }.dnd-actions>button { flex-basis:85px; }
+}
+@media(prefers-reduced-motion:reduce) { .dnd-panel * { transition:none!important; } }
+
+.dnd-map-box .dnd-selection { color:var(--dnd-ink); }

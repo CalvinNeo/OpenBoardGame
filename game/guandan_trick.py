@@ -19,6 +19,10 @@ from game import guandan as rules
 from game import guandan_ai as ai
 
 
+_VALUE_EPSILON = 1e-8
+_ROUND_ROLLOUT_CARDS = 32
+
+
 class IncompleteTrick(Exception):
     """A complete paired comparison cannot be published."""
 
@@ -37,7 +41,8 @@ def _call(name: str, *args, **kwargs):
     return ai.call(rules, name, *args, **kwargs)
 
 
-def public_worlds(state: Dict, observer: str, count: int, budget: TrickBudget) -> List[Dict]:
+def public_worlds(state: Dict, observer: str, count: int, budget: TrickBudget,
+                  phase: str = "selection") -> List[Dict]:
     """Sample only public evidence; even sampler fallbacks contain no real hands."""
     budget.check()
     fields = ("config", "turn_order", "player_meta", "player_teams", "teams", "dealer_team",
@@ -78,6 +83,8 @@ def public_worlds(state: Dict, observer: str, count: int, budget: TrickBudget) -
     if any(sum(owner == pid for owner in owners.values()) > size for pid, size in counts.items()):
         raise IncompleteTrick("too_many_known_cards")
     seed_key = _call("_heuristic_score_cache_key", source, observer, 0)
+    if phase != "selection":
+        seed_key += ("trick_panel", phase)
     seed = hashlib.blake2b(repr(seed_key).encode(), digest_size=8).digest()
     rng = random.Random(int.from_bytes(seed, "big"))
     worlds = []
@@ -230,9 +237,9 @@ def team_value(state: Dict, observer: str, budget: TrickBudget, plans: Dict) -> 
 
     Plackett-Luce weights over all possible remaining finish orders smooth a
     resource-cover estimate. Its pace/seat assumptions are a continuation prior,
-    not a calibrated win probability. Legal immediate finishes advance through
-    the rules before predicting any remaining places. Same-team observers have
-    identical values; opponents have opposites.
+    not a calibrated win probability. Legal immediate finishes and forced
+    passes advance through the rules before predicting any remaining places.
+    Same-team observers have identical values; opponents have opposites.
     """
     budget.check()
     if state.get("game_over"):
@@ -245,15 +252,19 @@ def team_value(state: Dict, observer: str, budget: TrickBudget, plans: Dict) -> 
     if state.get("phase") == "playing" and player and not player.get("finished"):
         hand = player["hand"]
         current_combo = (state.get("current_trick") or {}).get("combo")
+        continuation = None
         if hand and rules._can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
+            continuation = {"type": "play", "card_ids": [card["id"] for card in hand]}
+        elif hand and current_combo and not rules._list_hint_options({**state, "_ai_eval_cache": {}}, actor):
+            continuation = {"type": "pass"}
+        if continuation is not None:
             budget.check()
             successor = _call("_clone_search_state", state)
-            _, error = rules.GuandanGame.apply_action(
-                successor, actor, {"type": "play", "card_ids": [card["id"] for card in hand]},
-            )
+            _, error = rules.GuandanGame.apply_action(successor, actor, continuation)
             budget.check()
             if error:
-                raise IncompleteTrick("illegal_immediate_finish: " + error)
+                reason = "illegal_forced_pass" if continuation["type"] == "pass" else "illegal_immediate_finish"
+                raise IncompleteTrick(reason + ": " + error)
             return team_value(successor, observer, budget, plans)
     prefix = list(state.get("finish_order") or [])
     active = [pid for pid in state["turn_order"] if pid not in prefix]
@@ -427,6 +438,30 @@ def response_action(state: Dict, actor: str, rng: random.Random) -> Dict:
     return {"type": "play", "card_ids": ids}
 
 
+def continuation_action(state: Dict, actor: str) -> Dict:
+    """Choose from one actor's cards and public evidence, never sampled faces."""
+    fields = ("config", "turn_order", "player_meta", "player_teams", "teams", "dealer_team",
+              "level_rank", "round_number", "phase", "current_turn", "current_trick", "pass_count",
+              "trick_plays", "finish_order", "visible_card_id", "seen_cards", "pass_limits",
+              "known_card_owners", "game_over", "winner_team")
+    view = {key: state[key] for key in fields if key in state}
+    view.update(_ai_sampled_world=False, _ai_eval_cache={}, game_start_time=0.0, tribute=None)
+    view["players"] = {
+        player: {"hand": list(data["hand"]) if player == actor else [None] * len(data["hand"]),
+                 "finished": data.get("finished", False), "finish_rank": data.get("finish_rank"),
+                 "round_ready": False}
+        for player, data in state["players"].items()
+    }
+    view["round_memories"] = [
+        {key: entry[key] for key in ("round_number", "level_rank", "tricks") if key in entry}
+        for entry in state.get("round_memories", [])
+    ]
+    action = _call("_rollout_policy_action", view, actor)
+    if not action:
+        raise IncompleteTrick("no_continuation_action")
+    return action
+
+
 @dataclass
 class TrickPlan:
     action: Dict
@@ -455,7 +490,7 @@ class TrickPlan:
 
 
 def trace_plan(world: Dict, observer: str, action: Dict, rng: random.Random,
-               budget: TrickBudget, max_actions: int, plans: Dict) -> TrickPlan:
+               budget: TrickBudget, max_actions: int, plans: Dict, finish_round: bool = False) -> TrickPlan:
     """Finish the response window, including responses after a player goes out.
 
     A finished player's place cannot be recovered, but other players may still
@@ -474,7 +509,9 @@ def trace_plan(world: Dict, observer: str, action: Dict, rng: random.Random,
     next_leader = None
     for step in range(max_actions):
         budget.check()
-        selected = action if step == 0 else response_action(state, actor, rng)
+        selected = action if step == 0 else (
+            continuation_action(state, actor) if finish_round else response_action(state, actor, rng)
+        )
         previous_top = (state.get("current_trick") or {}).get("player_id")
         _events, error = rules.GuandanGame.apply_action(state, actor, copy.deepcopy(selected))
         if error:
@@ -484,7 +521,7 @@ def trace_plan(world: Dict, observer: str, action: Dict, rng: random.Random,
         budget.check()
         if state.get("game_over") or _call("_settled_round_value", state, observer) is not None:
             boundary = "round_settled"
-        elif state.get("current_trick") is None:
+        elif state.get("current_trick") is None and not finish_round:
             boundary = "trick_closed"
             winner, next_leader = previous_top, state.get("current_turn")
         else:
@@ -504,12 +541,23 @@ def trace_plan(world: Dict, observer: str, action: Dict, rng: random.Random,
     raise IncompleteTrick("action_limit")
 
 
+def _paired_gain(reference: List[float], challenger: List[float]) -> Tuple[float, float]:
+    deltas = [selected - original for selected, original in zip(challenger, reference)]
+    mean = sum(deltas) / len(deltas)
+    variance = sum((delta - mean) ** 2 for delta in deltas) / (len(deltas) - 1)
+    return mean, mean - 1.64 * math.sqrt(variance / len(deltas))
+
+
 def compare_leads(state: Dict, observer: str, scored: List[Tuple], deadline: Optional[float] = None) -> Dict:
     """Publish only complete paired panels; shadow mode never changes selection."""
     config = state.get("config", {})
     mode = config.get("bot_trick_boundary_mode", "shadow")
     result = {"mode": mode, "status": "disabled", "applied": False, "candidates": []}
     if mode not in ("shadow", "replace") or state.get("current_trick") or len(scored) < 2:
+        return result
+    total_cards = sum(len(data["hand"]) for data in state["players"].values())
+    if total_cards > _ROUND_ROLLOUT_CARDS:
+        result.update(status="skipped", reason="outside_round_rollout_scope", hand_cards=total_cards)
         return result
     count = max(2, min(16, int(config.get("bot_trick_boundary_worlds", 4))))
     width = max(2, min(8, int(config.get("bot_trick_boundary_candidates", 4))))
@@ -522,39 +570,61 @@ def compare_leads(state: Dict, observer: str, scored: List[Tuple], deadline: Opt
     alternatives.sort(key=lambda row: (-row[1], tuple(sorted(row[0] or []))))
     candidates = [reference_entry] + alternatives[:width - 1]
     result.update(status="incomplete", candidate_count=len(candidates), requested_worlds=count,
-                  scope="heuristic_finalists", policy="actor_local_response_v2", value_model="residual_race_v3")
+                  scope="heuristic_endgame_finalists", policy="actor_local_quick_v1", value_model="terminal_round_v1",
+                  comparison="independent_confirmation_v1", sampling="public_position_paired_v2")
+    public_key = _call("_heuristic_score_cache_key", state, observer, 0)
+    plans = {}
+
+    def evaluate(action: Dict, worlds: List[Dict], phase: str) -> Dict:
+        traces = []
+        for index, world in enumerate(worlds):
+            seed_key = (public_key, "trick_response", phase, index)
+            seed = int.from_bytes(hashlib.blake2b(repr(seed_key).encode(), digest_size=8).digest(), "big")
+            traces.append(trace_plan(world, observer, action, random.Random(seed), budget,
+                                     max_actions * 4, plans, finish_round=True))
+        values = [trace.value for trace in traces]
+        return {"action": action, "value": sum(values) / len(values), "world_values": values,
+                "plans": [trace.explain(observer) for trace in traces]}
+
     try:
         worlds = public_worlds(state, observer, count, budget)
-        plans = {}
         for cards, old_score, _components in candidates:
             if not cards:
                 raise IncompleteTrick("non_lead_candidate")
             action = {"type": "play", "card_ids": list(cards)}
-            traces = [trace_plan(world, observer, action, random.Random(index), budget, max_actions, plans)
-                      for index, world in enumerate(worlds)]
-            values = [trace.value for trace in traces]
-            result["candidates"].append({
-                "action": action, "heuristic_score": old_score,
-                "value": sum(values) / len(values), "world_values": values,
-                "plans": [trace.explain(observer) for trace in traces],
-            })
+            result["candidates"].append({**evaluate(action, worlds, "selection"), "heuristic_score": old_score})
+        records = result["candidates"]
+        reference = records[0]
+        best = max(records, key=lambda row: row["value"])
+        if best["value"] <= reference["value"] + _VALUE_EPSILON:
+            best = reference
+        mean, lower = _paired_gain(reference["world_values"], best["world_values"])
+        result["verification"] = {"status": "not_needed"}
+        verified = best is reference
+        if best is not reference and count >= 4 and lower > _VALUE_EPSILON:
+            result["verification"] = {"status": "incomplete", "requested_worlds": count}
+            verification_worlds = public_worlds(state, observer, count, budget, phase="verification")
+            verification_reference = evaluate(reference["action"], verification_worlds, "verification")
+            verification_best = evaluate(best["action"], verification_worlds, "verification")
+            verification_mean, verification_lower = _paired_gain(
+                verification_reference["world_values"], verification_best["world_values"],
+            )
+            verified = verification_lower > _VALUE_EPSILON
+            result["verification"] = {
+                "status": "complete", "requested_worlds": count, "passed": verified,
+                "paired_gain": verification_mean, "paired_gain_lower": verification_lower,
+                "candidates": [verification_reference, verification_best],
+            }
         budget.check()
     except IncompleteTrick as exc:
         # Completed prefixes are diagnostic only and may never change ranking.
         result.update(reason=str(exc), elapsed_ms=(time.perf_counter() - started) * 1000)
         return result
-    records = result["candidates"]
-    reference = records[0]
-    best = max(records, key=lambda row: row["value"])
-    deltas = [a - b for a, b in zip(best["world_values"], reference["world_values"])]
-    mean = sum(deltas) / len(deltas)
-    variance = sum((delta - mean) ** 2 for delta in deltas) / (len(deltas) - 1)
-    lower = mean - 1.64 * math.sqrt(variance / len(deltas))
     # No old score is added to Q. Weak evidence simply keeps the reference.
     # Auto's later MCTS/minimax guards still use legacy score units. Keep this
     # experiment isolated until those consumers migrate to the same objective.
     applied = (mode == "replace" and config.get("bot_mode") == "heuristic"
-               and count >= 4 and (best is reference or lower > 0.0))
+               and count >= 4 and verified)
     selected = best if applied else reference
     result.update(status="complete", applied=applied, paired_gain=mean, paired_gain_lower=lower,
                   reference=reference["action"], proposed=best["action"], selected=selected["action"],
