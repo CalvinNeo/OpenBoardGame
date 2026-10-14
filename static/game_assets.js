@@ -796,7 +796,7 @@ const GAME_ASSETS = {
   },
   "emerald_skulls": {
     "scripts": [
-      "/static/games/emerald_skulls.js?v=app_v3"
+      "/static/games/emerald_skulls.js?v=app_v4"
     ],
     "styles": [],
     "panel": "emeraldSkullsPanel",

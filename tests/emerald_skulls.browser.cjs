@@ -23,6 +23,7 @@ def save(key, viewer='p1'):
     views[key] = Game.get_public_view(s, viewer)
 save('buy')
 Game.apply_action(s, 'p1', {'type':'buy_dice', 'count':7})
+save('await_roll')
 save('bets', 'p2')
 Game.apply_action(s, 'p1', {'type':'roll'})
 for die, face in zip(s['dice'], [1,1,'skull',3,4,4,5]):
@@ -48,6 +49,7 @@ async function render(page, key) {
     currentGameType = 'emerald_skulls';
     setGamePanelVisibility('emerald_skulls');
     renderEmeraldSkullsGameState({ view });
+    setRoomControlsCollapsed(true);
   }, views[key]);
 }
 
@@ -86,6 +88,7 @@ async function pointClick(page, locator) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base);
+    await page.evaluate(() => ensureGameAssets('emerald_skulls'));
     await page.waitForFunction(() => typeof renderEmeraldSkullsGameState === 'function');
     await page.evaluate(() => {
       window.emeraldSkullsQAActions = [];
@@ -152,6 +155,7 @@ async function pointClick(page, locator) {
     const mobile = await mobileContext.newPage();
     mobile.on('pageerror', error => errors.push(error.message));
     await mobile.goto(base);
+    await mobile.evaluate(() => ensureGameAssets('emerald_skulls'));
     await mobile.waitForFunction(() => typeof renderEmeraldSkullsGameState === 'function');
     await mobile.evaluate(() => { window.emeraldSkullsQAActions = []; sendAction = action => emeraldSkullsQAActions.push(action); });
     await render(mobile, 'roll');
@@ -162,6 +166,44 @@ async function pointClick(page, locator) {
     await resources.nth(1).tap();
     assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), /Reroll cubes/);
     await mobile.locator('#emeraldSkullsTip').waitFor({ state: 'hidden', timeout: 4000 });
+    await resources.nth(0).tap();
+    const mobileDice = mobile.locator('#emeraldSkullsDiceTray button');
+    await mobileDice.nth(0).tap();
+    assert.equal(await mobile.locator('.emerald-skulls-die.is-selected').count(), 1);
+    assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Selecting a die must dismiss tips without opening another');
+    await mobileDice.nth(2).tap();
+    assert.equal(await mobile.locator('.emerald-skulls-die.is-selected').count(), 2);
+    assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Selecting a wild die must not show a tip');
+    await mobile.locator('#emeraldSkullsBoard [data-level="1"] .emerald-skulls-empty-slot').tap();
+    assert.deepEqual(await mobile.evaluate(() => emeraldSkullsQAActions.pop()), { type: 'place_dice', level: 1, die_ids: ['die-1', 'die-3'] });
+    assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Placing dice must not show a tip');
+    await render(mobile, 'buy');
+    await mobile.locator('#emeraldSkullsBuyOptions button strong').first().tap();
+    assert.deepEqual(await mobile.evaluate(() => emeraldSkullsQAActions.pop()), { type: 'buy_dice', count: 3 });
+    assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Buying dice must not show a tip');
+    await render(mobile, 'await_roll');
+    await mobile.locator('#emeraldSkullsRollBtn').tap();
+    assert.deepEqual(await mobile.evaluate(() => emeraldSkullsQAActions.pop()), { type: 'roll' });
+    assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Rolling dice must not show a tip');
+    await render(mobile, 'bets');
+    await mobile.locator('[data-emerald-skulls-tab="bets"]').tap();
+    const bet = mobile.locator('.emerald-skulls-bet:not(:disabled)').first();
+    await bet.locator('.emerald-skulls-bet-vacancy').first().tap();
+    assert.equal(await mobile.evaluate(() => emeraldSkullsQAActions.pop().type), 'place_bet');
+    assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Bet markers inside an actionable button must not show tips');
+    await render(mobile, 'press');
+    await mobile.locator('[data-emerald-skulls-tab="skull"]').tap();
+    await mobile.locator('#emeraldSkullsChickenBtn').tap();
+    assert.deepEqual(await mobile.evaluate(() => emeraldSkullsQAActions.pop()), { type: 'chicken_out' });
+    assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Action-button focus must not show a tip');
+    await render(mobile, 'await_roll');
+    await mobile.locator('#emeraldSkullsExplainBtn').tap();
+    await mobile.locator('#emeraldSkullsRollBtn').tap();
+    assert.equal(await mobile.locator('#emeraldSkullsExplainModal').isVisible(), true);
+    assert.equal(await mobile.evaluate(() => emeraldSkullsQAActions.length), 0, 'Explain must describe a button without performing its action');
+    await mobile.keyboard.press('Escape');
+    await render(mobile, 'roll');
+    console.log('PASS mobile actions stay tip-free, including nested symbols and touch focus; Explain remains opt-in');
     await mobile.locator('#emeraldSkullsPanel').screenshot({ path: `${output}/mobile-skull.png` });
     await mobile.locator('[data-emerald-skulls-tab="bets"]').tap();
     assert.equal(await mobile.locator('#emeraldSkullsTable').isVisible(), false);

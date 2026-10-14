@@ -6115,7 +6115,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         )
 
         self.assertLess(single_score.get("lead_control_probe", 0.0), 2.0)
-        self.assertLess(single_score.get("lead_retake_stock", 0.0), 1.0)
+        # This field now includes the 0.18 ranking contribution that was
+        # previously hidden inside lead_plan; keep the same effective bound.
+        self.assertLess(single_score.get("lead_retake_stock", 0.0), 1.18)
         self.assertGreater(pair_score["total"], single_score["total"])
 
         action = guandan.GuandanGame.bot_move(state, "bot3")

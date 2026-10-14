@@ -162,7 +162,7 @@
       <h3>Goal</h3>
       <p>Collect the most <strong>⚙️ gears</strong>. Players rotate as the <strong>tumbler</strong>; everyone else races to bet on the result. The game ends immediately when a payout empties the central gear pot.</p>
       <h3>At a glance</h3>
-      <p><strong>Gears (⚙️)</strong> are your score and dice budget. <strong>Reroll cubes (🟩)</strong> rescue rolls. <strong>Bet markers (🎟️)</strong> lock wagers. Dice show <strong>⚀ 1 · ⚁ 2 · ⚂ 3 · ⚃ 4 · ⚄ 5</strong>; <strong>skull (💀)</strong> is wild. Hover over a symbol or tap it for a short tip. Tap empty space to deselect dice; press Esc to close a dialog or leave Explain.</p>
+      <p><strong>Gears (⚙️)</strong> are your score and dice budget. <strong>Reroll cubes (🟩)</strong> rescue rolls. <strong>Bet markers (🎟️)</strong> lock wagers. Dice show <strong>⚀ 1 · ⚁ 2 · ⚂ 3 · ⚃ 4 · ⚄ 5</strong>; <strong>skull (💀)</strong> is wild. Hover over or tap a display-only symbol for a short tip. Use Explain to learn about buttons. Tap empty space to deselect dice; press Esc to close a dialog or leave Explain.</p>
       <h3>Your turn as tumbler</h3>
       <ol>
         <li><strong>Buy Dice:</strong> take 3 for free, or pay 1 / 3 / 6 / 10 ⚙️ for 4 / 5 / 6 / 7 dice.</li>
@@ -253,8 +253,9 @@
   }
 
   function emeraldSkullsShowTip(target, autoHide = false) {
-    if (emeraldSkullsExplainMode || !target || !target.dataset.emeraldSkullsTip) return;
     emeraldSkullsHideTip();
+    if (emeraldSkullsExplainMode || !target || !target.dataset.emeraldSkullsTip) return;
+    if (target.closest("button, a[href], input, select, textarea, summary, [role='button']")) return;
     let tip = document.getElementById("emeraldSkullsTip");
     if (!tip) {
       tip = document.createElement("div");

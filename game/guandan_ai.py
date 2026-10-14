@@ -2598,6 +2598,7 @@ def _prepare_hand_route_scores(
     cache.pop("hand_route_context", None)
     cache.pop("heuristic_scored_candidates", None)
     cache.pop("lead_option_scores", None)
+    cache.pop("lead_refinements", None)
     cache.pop("bot_score_components", None)
     if len(options) > 512:
         cache["hand_route_status"] = {"complete": False, "reason": "option_limit"}
@@ -2845,6 +2846,7 @@ def _prepare_hand_route_scores(
     cache["hand_routes"] = panel
     cache.pop("lead_cheap_scores", None)
     cache.pop("lead_option_scores", None)
+    cache.pop("lead_refinements", None)
     cache["hand_route_status"] = {
         "complete": True, "plans": len(plan_cache), "candidates": len(panel),
         "elapsed_ms": (time.perf_counter() - started) * 1000.0,
@@ -2994,6 +2996,102 @@ def _apply_hand_route_order(
             scored[index] = (cards, adjusted, components)
 
 
+# Each refinement has one producer shared by lead ordering and final scoring.
+# Values are (producer, sign, signed direct contribution). These are legacy
+# priors, not independent future events: a route model must replace the
+# corresponding priors rather than add another reward for the same control.
+_LEAD_REFINEMENTS = {
+    "deny_one_card_window": ("_lead_short_next_opponent_penalty", -1, False),
+    "deny_short_runout_window": ("_lead_short_escape_window_penalty", -1, False),
+    "lead_closeout_reply": ("_lead_closeout_reply_penalty", -1, False),
+    "preserve_high_same_type": ("_lead_same_type_value_conservation_penalty", -1, False),
+    "lead_special_material": ("_lead_special_material_penalty", -1, False),
+    "lead_probe_deferral": ("_lead_probe_deferral_penalty", -1, False),
+    "lead_support_tension": ("_lead_composite_support_tension_penalty", -1, False),
+    "preserve_lighter_shape": ("_lead_lighter_shape_preservation_penalty", -1, False),
+    "lead_low_pair_probe": ("_lead_low_pair_probe_penalty", -1, False),
+    "lead_low_pair_carry": ("_lead_low_pair_full_house_carry_penalty", -1, False),
+    "lead_control_probe": ("_lead_control_probe_bonus", 1, False),
+    "lead_shape": ("_lead_structure_efficiency_bonus", 1, True),
+    "lead_reentry": ("_lead_same_type_reentry_bonus", 1, False),
+    "lead_teammate": ("_lead_teammate_support_bonus", 1, True),
+    "lead_short_enemy_lock": ("_lead_short_enemy_lock_bonus", 1, False),
+    "lead_hold": ("_lead_initiative_retention_bonus", 1, True),
+    "lead_retake_stock": ("_lead_retake_control_bonus", 1, False),
+    "lead_followup_risk": ("_lead_speculative_followup_penalty", -1, False),
+    "lead_opening_commitment": ("_lead_opening_commitment_penalty", -1, True),
+}
+
+
+def _lead_option_cache_key(state: Dict, player_id: str, cards: List[int]) -> Tuple:
+    return (
+        player_id, _bounded_finalist_scoring(), state["level_rank"],
+        state.get("round_number"), state.get("current_turn"),
+        len(state.get("action_history", [])), _public_history_signature(state),
+        tuple((pid, len(state["players"][pid].get("hand", [])),
+               bool(state["players"][pid].get("finished")))
+              for pid in state.get("turn_order", [])),
+        tuple(sorted(card["id"] for card in state["players"][player_id]["hand"])),
+        _cards_key(cards),
+    )
+
+
+def _lead_refinement_components(
+    state: Dict, player_id: str, cards: List[int], combo: Dict,
+) -> Tuple[Dict[str, float], Dict[str, float]]:
+    """Return raw ranking terms and the legacy thresholded direct terms.
+
+    Cache both views together so the final scorer removes exactly the terms
+    embedded in the ranking score, even when expensive helpers use sampling.
+    The scalar ranking cache and this breakdown share their key and lifetime.
+    """
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("lead_refinements", {})
+    key = _lead_option_cache_key(state, player_id, cards)
+    if key in cache:
+        ranked, direct = cache[key]
+        return dict(ranked), dict(direct)
+    ranked, direct = {}, {}
+    for name, (source, sign, signed) in _LEAD_REFINEMENTS.items():
+        if name == "deny_one_card_window":
+            raw = globals()[source](state, player_id, cards)
+        else:
+            raw = globals()[source](state, player_id, cards, combo)
+        label = ("lead_opening_patience"
+                 if name == "lead_opening_commitment" and raw < 0.0 else name)
+        ranked[label] = sign * raw
+        if (abs(raw) if signed else raw) > 0.001:
+            direct[label] = sign * raw
+    if not _deadline_expired():
+        cache[key] = (dict(ranked), dict(direct))
+    return ranked, direct
+
+
+def _merge_lead_score_components(
+    score: float, ranked: Dict[str, float], direct: Dict[str, float],
+) -> Dict[str, float]:
+    """Expose shared terms once with their net weight; preserve legacy totals.
+
+    ``score`` already includes ``ranked``. Only its remainder belongs to
+    lead_plan. Keep the old shape/lead_plan cutoffs during this migration,
+    including rank-only tiny terms and the direct-finish shortcut.
+    """
+    allowed = set(_LEAD_REFINEMENTS) | {"lead_opening_patience"}
+    unknown = (ranked.keys() | direct.keys()) - allowed
+    if unknown:
+        raise ValueError(f"Unregistered lead refinements: {sorted(unknown)}")
+    result = dict(direct)
+    shape = ranked.get("lead_shape", 0.0)
+    legacy_plan = score - shape
+    if abs(legacy_plan) > 0.001:
+        result["lead_plan"] = (score - sum(ranked.values())) * 0.18
+        for name, value in ranked.items():
+            if name != "lead_shape" and value != 0.0:
+                result[name] = result.get(name, 0.0) + value * 0.18
+    if "lead_shape" in direct:
+        result["lead_shape"] += shape * 0.18
+    return result
+
+
 def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     features = _candidate_features(state, player_id, cards)
     hand = features["hand"]
@@ -3013,27 +3111,10 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
 
     score -= structure_delta * 1.35
     score += remaining_strength * 0.16
-    score -= _lead_short_next_opponent_penalty(state, player_id, cards)
-    score -= _lead_short_escape_window_penalty(state, player_id, cards, combo)
-    score -= _lead_closeout_reply_penalty(state, player_id, cards, combo)
-    score -= _lead_same_type_value_conservation_penalty(state, player_id, cards, combo)
-    score -= _lead_special_material_penalty(state, player_id, cards, combo)
-    score -= _lead_probe_deferral_penalty(state, player_id, cards, combo)
-    score -= _lead_composite_support_tension_penalty(state, player_id, cards, combo)
-    score -= _lead_lighter_shape_preservation_penalty(state, player_id, cards, combo)
-    score -= _lead_low_pair_probe_penalty(state, player_id, cards, combo)
-    score -= _lead_low_pair_full_house_carry_penalty(state, player_id, cards, combo)
+    ranked, _direct = _lead_refinement_components(state, player_id, cards, combo)
+    score += sum(ranked.values())
     score -= _lead_low_single_probe_penalty(state, player_id, cards, combo)
-    score += _lead_control_probe_bonus(state, player_id, cards, combo)
-    score += _lead_structure_efficiency_bonus(state, player_id, cards, combo)
-    score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
-    score += _lead_teammate_support_bonus(state, player_id, cards, combo)
-    score += _lead_short_enemy_lock_bonus(state, player_id, cards, combo)
-    score += _lead_initiative_retention_bonus(state, player_id, cards, combo)
-    score += _lead_retake_control_bonus(state, player_id, cards, combo)
     score -= _lead_short_opponent_breakup_penalty(state, player_id, cards, combo)
-    score -= _lead_speculative_followup_penalty(state, player_id, cards, combo)
-    score -= _lead_opening_commitment_penalty(state, player_id, cards, combo)
 
     if combo["type"] == "single":
         escape_bonus = _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
@@ -3056,27 +3137,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     eval_cache = state.get("_ai_eval_cache")
     cache_key = None
     if isinstance(eval_cache, dict):
-        hand_key = tuple(sorted(card["id"] for card in state["players"][player_id]["hand"]))
-        table_key = tuple(
-            (
-                pid,
-                len(state["players"][pid].get("hand", [])),
-                bool(state["players"][pid].get("finished")),
-            )
-            for pid in state.get("turn_order", [])
-        )
-        cache_key = (
-            player_id,
-            _bounded_finalist_scoring(),
-            state["level_rank"],
-            state.get("round_number"),
-            state.get("current_turn"),
-            len(state.get("action_history", [])),
-            _public_history_signature(state),
-            table_key,
-            hand_key,
-            _cards_key(cards),
-        )
+        cache_key = _lead_option_cache_key(state, player_id, cards)
         lead_cache = eval_cache.setdefault("lead_option_scores", {})
         cached = lead_cache.get(cache_key)
         if cached is not None:
@@ -16234,48 +16295,21 @@ def _compute_bot_score_components(
         control_pair = _full_house_control_pair_penalty(state, bot_id, cards, combo)
         if control_pair > 0.001:
             components["full_house_control_pair"] = -control_pair
-        # Lead ranking has already populated the per-decision cache, so the
-        # detailed score is reused here instead of computed a second time.
         lead_score = _lead_option_score(state, bot_id, cards)
-        shape_bonus = _lead_structure_efficiency_bonus(state, bot_id, cards, combo)
-        # Ranking needs this prior too, but expose its complete contribution
-        # once instead of burying another copy inside lead_plan. Playing the
-        # entire hand takes the ranking shortcut and has no embedded prior.
-        ranked_shape = shape_bonus if remaining else 0.0
-        lead_score -= ranked_shape
-        if abs(lead_score) > 0.001:
-            components["lead_plan"] = lead_score * 0.18
+        ranked_terms, direct_terms = _lead_refinement_components(state, bot_id, cards, combo)
+        # Finishing now uses ranking's 1000-point shortcut, with no refinements.
+        components.update(_merge_lead_score_components(
+            lead_score, ranked_terms if remaining else {}, direct_terms,
+        ))
         lane_exposure = _lead_enemy_lane_exposure(state, bot_id, combo)
         if lane_exposure > 0.001:
             components["lead_enemy_lane_feed"] = -lane_exposure
-        if abs(shape_bonus) > 0.001:
-            components["lead_shape"] = shape_bonus + ranked_shape * 0.18
-        teammate_bonus = _lead_teammate_support_bonus(state, bot_id, cards, combo)
-        if abs(teammate_bonus) > 0.001:
-            components["lead_teammate"] = teammate_bonus
-        speculative_penalty = _lead_speculative_followup_penalty(state, bot_id, cards, combo)
-        if speculative_penalty > 0.001:
-            components["lead_followup_risk"] = -speculative_penalty
-        closeout_reply = _lead_closeout_reply_penalty(state, bot_id, cards, combo)
-        if closeout_reply > 0.001:
-            components["lead_closeout_reply"] = -closeout_reply
-        opening_commitment = _lead_opening_commitment_penalty(state, bot_id, cards, combo)
-        if opening_commitment > 0.001:
-            components["lead_opening_commitment"] = -opening_commitment
-        elif opening_commitment < -0.001:
-            components["lead_opening_patience"] = -opening_commitment
         overreach_penalty = _lead_structure_overreach_penalty(hand, cards, combo, level_rank)
         if overreach_penalty > 0.001:
             components["lead_overreach"] = -overreach_penalty
-        same_type_conservation = _lead_same_type_value_conservation_penalty(state, bot_id, cards, combo)
-        if same_type_conservation > 0.001:
-            components["preserve_high_same_type"] = -same_type_conservation
         full_house_conservation = _lead_full_house_value_conservation_penalty(state, bot_id, cards, combo)
         if full_house_conservation > 0.001:
             components["preserve_high_full_house"] = -full_house_conservation
-        lighter_shape_conservation = _lead_lighter_shape_preservation_penalty(state, bot_id, cards, combo)
-        if lighter_shape_conservation > 0.001:
-            components["preserve_lighter_shape"] = -lighter_shape_conservation
         trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
         if trap_penalty > 0.001:
             components["low_single_trap"] = -trap_penalty
@@ -16286,45 +16320,9 @@ def _compute_bot_score_components(
         initiative_penalty = _lead_single_initiative_penalty(state, bot_id, cards, combo)
         if initiative_penalty > 0.001:
             components["keep_initiative_shape"] = -initiative_penalty
-        retake_bonus = _lead_retake_control_bonus(state, bot_id, cards, combo)
-        if retake_bonus > 0.001:
-            components["lead_retake_stock"] = retake_bonus
-        short_next_penalty = _lead_short_next_opponent_penalty(state, bot_id, cards)
-        if short_next_penalty > 0.001:
-            components["deny_one_card_window"] = -short_next_penalty
-        short_escape_penalty = _lead_short_escape_window_penalty(state, bot_id, cards, combo)
-        if short_escape_penalty > 0.001:
-            components["deny_short_runout_window"] = -short_escape_penalty
-        short_enemy_lock = _lead_short_enemy_lock_bonus(state, bot_id, cards, combo)
-        if short_enemy_lock > 0.001:
-            components["lead_short_enemy_lock"] = short_enemy_lock
         overlap_low_single_bonus = _lead_overlap_run_low_single_bonus(state, bot_id, hand, cards, level_rank)
         if abs(overlap_low_single_bonus) > 0.001:
             components["overlap_run_low_single"] = overlap_low_single_bonus
-        special_penalty = _lead_special_material_penalty(state, bot_id, cards, combo)
-        if special_penalty > 0.001:
-            components["lead_special_material"] = -special_penalty
-        probe_deferral_penalty = _lead_probe_deferral_penalty(state, bot_id, cards, combo)
-        if probe_deferral_penalty > 0.001:
-            components["lead_probe_deferral"] = -probe_deferral_penalty
-        support_tension_penalty = _lead_composite_support_tension_penalty(state, bot_id, cards, combo)
-        if support_tension_penalty > 0.001:
-            components["lead_support_tension"] = -support_tension_penalty
-        low_pair_probe_penalty = _lead_low_pair_probe_penalty(state, bot_id, cards, combo)
-        if low_pair_probe_penalty > 0.001:
-            components["lead_low_pair_probe"] = -low_pair_probe_penalty
-        low_pair_carry_penalty = _lead_low_pair_full_house_carry_penalty(state, bot_id, cards, combo)
-        if low_pair_carry_penalty > 0.001:
-            components["lead_low_pair_carry"] = -low_pair_carry_penalty
-        control_probe_bonus = _lead_control_probe_bonus(state, bot_id, cards, combo)
-        if control_probe_bonus > 0.001:
-            components["lead_control_probe"] = control_probe_bonus
-        reentry_bonus = _lead_same_type_reentry_bonus(state, bot_id, cards, combo)
-        if reentry_bonus > 0.001:
-            components["lead_reentry"] = reentry_bonus
-        retention_bonus = _lead_initiative_retention_bonus(state, bot_id, cards, combo)
-        if abs(retention_bonus) > 0.001:
-            components["lead_hold"] = retention_bonus
 
     if depth >= 2 and remaining:
         # The old implementation ranked every possible lead only to learn whether
@@ -16350,7 +16348,11 @@ def _compute_bot_score_components(
             # These rewards assume that taking this trick buys useful future
             # turns. A retained finishing bomb defeats that assumption even
             # when it is smaller than our current bomb or our reserve bomb.
-            tempo_credit = sum(max(0.0, components.get(name, 0.0)) for name in (
+            tempo_terms = dict(components)
+            if not current_trick:
+                for name in ("lead_retake_stock", "lead_reentry"):
+                    tempo_terms[name] = direct_terms.get(name, 0.0)
+            tempo_credit = sum(max(0.0, tempo_terms.get(name, 0.0)) for name in (
                 "seize_tempo", "bomb_short_enemy_block", "bomb_stall_escape",
                 "bomb_shape_upgrade", "bomb_teammate_handoff", "opp_block",
                 "structured_runout_bomb_takeover", "lead_finish_bonus",
