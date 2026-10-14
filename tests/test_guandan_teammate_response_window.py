@@ -82,6 +82,18 @@ class GuandanTeammateResponseWindowTests(unittest.TestCase):
         state["pass_count"] = 1
         self.assertFalse(self.call("_teammate_response_window_open", state))
 
+    def test_finished_leader_still_allows_teammate_in_final_response_seat(self):
+        state, _pool = self.make_state()
+        state["players"]["leader"].update(hand=[], finished=True)
+        self.assertTrue(self.call("_teammate_response_window_open", state))
+
+    def test_final_response_to_finished_leader_cannot_wait_for_teammate_again(self):
+        state, _pool = self.make_state()
+        state["players"]["leader"].update(hand=[], finished=True)
+        state["turn_order"] = ["leader", "mate", "other", "bot"]
+        state["pass_count"] = 2
+        self.assertFalse(self.call("_teammate_response_window_open", state))
+
     def test_no_future_response_when_teammate_finished_or_turn_has_moved(self):
         state, _pool = self.make_state()
         for change in ("finished", "other_turn", "teammate_leads", "no_trick"):

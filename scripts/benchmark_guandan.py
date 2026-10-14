@@ -31,6 +31,7 @@ from typing import Dict, List, Optional, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_FILES = ("game/guandan.py", "game/guandan_ai.py", "game/memories.py")
 POLICIES = ("auto", "heuristic", "greedy", "random")
+OPTIONAL_RUNTIME_FILES = ("game/guandan_trick.py",)
 SCHEMA_VERSION = 2
 
 
@@ -60,8 +61,14 @@ def _runtime_sources(root: Path, revision: Optional[str] = None) -> Dict[str, by
     if revision is not None and (len(revision) not in (40, 64) or
                                  any(char not in "0123456789abcdef" for char in revision)):
         raise ValueError("runtime revision must be a resolved full commit ID")
+    names = list(RUNTIME_FILES)
+    for name in OPTIONAL_RUNTIME_FILES:
+        present = (bool(_git(root, "ls-tree", "--name-only", revision, "--", name).strip())
+                   if revision else (root / name).is_file())
+        if present:
+            names.append(name)
     return {name: (_git(root, "cat-file", "blob", f"{revision}:{name}") if revision else
-                   (root / name).read_bytes()) for name in RUNTIME_FILES}
+                   (root / name).read_bytes()) for name in names}
 
 
 def _source_identity(root: Path, sources: Dict[str, bytes], revision: Optional[str]) -> Dict:
@@ -70,7 +77,7 @@ def _source_identity(root: Path, sources: Dict[str, bytes], revision: Optional[s
     if revision is None:
         try:
             revision = resolve_revision(root, "HEAD")
-            dirty = bool(_git(root, "status", "--porcelain", "--", *RUNTIME_FILES).strip())
+            dirty = bool(_git(root, "status", "--porcelain", "--", *sources).strip())
         except ValueError:
             revision, dirty = None, None
         kind = "worktree"
@@ -262,6 +269,8 @@ def simple_action(core, state: Dict, player_id: str, mode: str, rng: random.Rand
 def _worker_main(root: Path, revision: Optional[str] = None) -> int:
     core = _install_runtime(root, revision)
     ai = core._guandan_ai
+    trick = (importlib.import_module("game.guandan_trick")
+             if "game/guandan_trick.py" in core.__benchmark_identity__["files"] else None)
     print(json.dumps({"defaults": core.DEFAULT_CONFIG, "source": core.__benchmark_identity__}), flush=True)
     for line in sys.stdin:
         try:
@@ -274,6 +283,9 @@ def _worker_main(root: Path, revision: Optional[str] = None) -> int:
             seeded = _SeededRandom(request["seed"])
             core.random = ai.random = seeded
             core.time = ai.time = _FixedClock() if request["clock"] == "fixed" else time
+            if trick is not None:
+                trick.random = seeded
+                trick.time = core.time
             started = time.perf_counter()
             # stdout is reserved for the protocol, including if a policy prints.
             with contextlib.redirect_stdout(sys.stderr):

@@ -297,6 +297,30 @@ class GuandanGame:
         with self.assertRaisesRegex(RuntimeError, "source changed before loading"):
             bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, expected_identity=expected)
 
+    def test_optional_trick_runtime_is_pinned_fingerprinted_and_uses_worker_clock(self):
+        module = self.root / "game/guandan_trick.py"
+        module.write_text('import time\nVALUE = "committed-trick"\n')
+        core = self.root / "game/guandan.py"
+        core.write_text(core.read_text().replace(
+            'return {"type": "pass", "fixture_version": _guandan_ai.VALUE + memories.VALUE}',
+            'from game import guandan_trick\n'
+            '        return {"type": "pass", "trick": guandan_trick.VALUE, '
+            '"clock": guandan_trick.time.perf_counter()}',
+        ))
+        self.commit()
+        revision = bench.resolve_revision(self.root, "HEAD")
+        expected = bench.source_identity(self.root)
+        module.write_text('import time\nVALUE = "edited-trick"\n')
+        self.assertNotIn("game/guandan_trick.py", bench.source_identity(self.root, self.revision)["files"])
+        with bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, revision) as frozen, \
+                bench.PolicyWorker(self.root, "auto", {}, "fixed", 10) as live:
+            self.assertEqual(frozen.choose(self.state, "p0", 1)["action"],
+                             {"type": "pass", "trick": "committed-trick", "clock": 0.0})
+            self.assertEqual(live.choose(self.state, "p0", 1)["action"]["trick"], "edited-trick")
+            self.assertIn("game/guandan_trick.py", frozen.identity["files"])
+        with self.assertRaisesRegex(RuntimeError, "source changed before loading"):
+            bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, expected_identity=expected)
+
     def test_worktree_worker_accepts_same_bytes_after_commit_changes_head(self):
         expected = bench.source_identity(self.root)
         self.commit()

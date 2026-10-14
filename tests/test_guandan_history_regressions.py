@@ -2,7 +2,9 @@ import copy
 import unittest
 
 from game import guandan
-from tests.guandan_history_fixtures import FIXTURES, replay_fixture
+from tests.guandan_history_fixtures import (
+    FIXTURES, _restore_legacy_finished_leader_closure, replay_fixture,
+)
 
 
 class GuandanHistoryFixtureTests(unittest.TestCase):
@@ -53,6 +55,34 @@ class GuandanHistoryFixtureTests(unittest.TestCase):
             with self.subTest(boundary=boundary):
                 with self.assertRaises(ValueError):
                     replay_fixture("72c", boundary)
+
+    def test_old_closure_keeps_original_actions_without_inventing_pass_evidence(self):
+        # In fd4 the old engine skipped the last response after action 35.
+        state = replay_fixture("fd4", 35)
+        player_id, labels = FIXTURES["fd4"]["actions"][34]
+        self.assertFalse(labels)
+        _, error = guandan.GuandanGame.apply_action(state, player_id, {"type": "pass"})
+        self.assertIsNone(error)
+        self.assertIsNotNone(state["current_trick"])
+        self.assertEqual(state["pass_count"], 2)
+        self.assertEqual(guandan._trick_passes_needed(state), 3)
+        omitted = state["current_turn"]
+        before_actions = copy.deepcopy(state["round_memories"][-1]["tricks"][-1]["actions"])
+        before_limits = copy.deepcopy(state["pass_limits"])
+        before_seen = list(state["seen_cards"])
+
+        _restore_legacy_finished_leader_closure(state, 35)
+
+        self.assertIsNone(state["current_trick"])
+        self.assertEqual(state["current_turn"], FIXTURES["fd4"]["actions"][35][0])
+        self.assertEqual(state["pass_limits"], before_limits)
+        self.assertEqual(state["seen_cards"], before_seen)
+        memory = state["round_memories"][-1]["tricks"][-1]
+        self.assertEqual(memory["actions"], before_actions)
+        marker = memory["legacy_finished_leader_closure"]
+        self.assertEqual(marker["omitted_responder"], omitted)
+        self.assertEqual(marker["after_action"], 35)
+        self.assertEqual(state["_fixture_legacy_closures"][-1], marker)
 
 
 class GuandanPublicHistoryDecisionTests(unittest.TestCase):

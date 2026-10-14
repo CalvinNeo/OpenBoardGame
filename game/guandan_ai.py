@@ -242,7 +242,7 @@ def _teammate_response_window_open(state: Dict, player_id: str) -> bool:
     if player_id not in active or teammate not in active:
         return False
 
-    passes_needed = max(1, len(active) - 1)
+    passes_needed = _CORE._trick_passes_needed(state)
     passes = max(0, int(state.get("pass_count") or 0)) + 1
     start = order.index(player_id)
     for offset in range(1, len(order)):
@@ -17686,9 +17686,46 @@ def _bot_select_play(
         "candidate_ms": [round(duration * 1000.0, 3) for duration in candidate_durations],
     }
     _apply_hand_route_order(state, bot_id, scored)
+    boundary_choice = None
+    if (is_lead and not state.get("_ai_sampled_world")
+            and config.get("bot_mode") == "heuristic"
+            and config.get("bot_trick_boundary_mode") == "replace"):
+        from game import guandan_trick
+
+        panel = guandan_trick.compare_leads(state, bot_id, scored, deadline=deadline)
+        eval_cache["trick_boundary"] = panel
+        if panel.get("applied"):
+            # Atomic model replacement: every finalist uses the same world
+            # panel and one boundary utility, with no old scoring terms added.
+            scored = [
+                (record["action"]["card_ids"], record["value"],
+                 {"trick_boundary_team_value": record["value"], "total": record["value"]})
+                for record in panel["candidates"]
+            ]
+            boundary_choice = panel["selected"]["card_ids"]
     _store_heuristic_scored_candidates(state, bot_id, depth, scored)
     scored.sort(key=lambda item: item[1], reverse=True)
-    return scored[0][0]
+    return boundary_choice if boundary_choice is not None else scored[0][0]
+
+
+def _record_trick_boundary_shadow(
+    state: Dict, bot_id: str, depth: int, chosen_action: Dict,
+    deadline: Optional[float] = None,
+) -> None:
+    """Use spare time after selection so shadow work cannot starve auto search."""
+    cache = state.setdefault("_ai_eval_cache", {})
+    mode = state.get("config", {}).get("bot_trick_boundary_mode", "shadow")
+    if state.get("current_trick") or mode not in ("shadow", "replace") or "trick_boundary" in cache:
+        return
+    scored = _get_cached_heuristic_scored_candidates(state, bot_id, depth)
+    if not scored:
+        return
+    from game import guandan_trick
+
+    shadow = {**state, "config": {**state.get("config", {}), "bot_trick_boundary_mode": "shadow"}}
+    panel = guandan_trick.compare_leads(shadow, bot_id, scored, deadline=deadline)
+    panel.update(requested_mode=mode, actual_action=dict(chosen_action))
+    cache["trick_boundary"] = panel
 
 
 def _bot_explain_snapshot(state: Dict) -> Dict:
@@ -17811,6 +17848,9 @@ def _build_bot_explain(
         }
 
     route_cache = state.get("_ai_eval_cache", {})
+    if route_cache.get("trick_boundary"):
+        method_meta = dict(method_meta or {})
+        method_meta["trick_boundary"] = copy.deepcopy(route_cache["trick_boundary"])
     if route_cache.get("hand_route_status"):
         method_meta = dict(method_meta or {})
         method_meta["hand_route_status"] = dict(route_cache["hand_route_status"])
@@ -18037,7 +18077,8 @@ def _build_bot_explain(
                           "decision": override, "completed_depth": method_meta.get("minimax_completed_depth")}
     return {
         "method": method,
-        "score_model": "heuristic",
+        "score_model": ("trick_boundary" if route_cache.get("trick_boundary", {}).get("applied")
+                        else "heuristic"),
         "method_details": method_meta or {},
         "search": search_explain,
         "timing": timing_meta or {},

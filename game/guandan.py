@@ -78,6 +78,13 @@ DEFAULT_CONFIG = {
     "bot_heuristic_min_lead_deep_candidates": 3,
     "bot_heuristic_min_lead_rank_candidates": 16,
     "bot_heuristic_time_check_batch": 2,
+    # Shadow evaluates paired whole-trick plans without changing the decision.
+    # Replace is experimental and selects only from a complete paired panel.
+    "bot_trick_boundary_mode": "shadow",
+    "bot_trick_boundary_candidates": 4,
+    "bot_trick_boundary_worlds": 4,
+    "bot_trick_boundary_max_actions": 40,
+    "bot_trick_boundary_time_ms": 250,
     # Performance target for complete heuristic scoring; remaining time bounds
     # optional tree search. Never truncate the actual heuristic decision to fit.
     "bot_think_time_ms": 6000,
@@ -404,6 +411,15 @@ def _sorted_rank_candidates(level_rank: int) -> List[int]:
 
 def _active_players(state: Dict) -> List[str]:
     return [pid for pid in state["turn_order"] if not state["players"][pid]["finished"]]
+
+
+def _trick_passes_needed(state: Dict) -> int:
+    """Wait for every active player other than the current top-play owner."""
+    active = _active_players(state)
+    leader = (state.get("current_trick") or {}).get("player_id")
+    # A player who just finished no longer belongs to ``active``. Their last
+    # play remains contestable by every player still holding cards.
+    return max(1, len(active) - int(leader in active))
 
 
 def _next_active_player(state: Dict, current_pid: str) -> Optional[str]:
@@ -1708,6 +1724,7 @@ _AI_EXPORTED_FUNCS = (
     "_filter_overbomb_options",
     "_filter_overbomb_actions",
     "_bot_select_play",
+    "_record_trick_boundary_shadow",
     "_prefer_bomb_closeout_upgrade",
     "_build_bot_explain",
     "_suggest_hint_cards",
@@ -2315,8 +2332,7 @@ class GuandanGame:
             state["pass_count"] += 1
             state.setdefault("trick_plays", {})[player_id] = "pass"
             _record_pass_limit(state, player_id, state["current_trick"]["combo"])
-            active_count = len(_active_players(state))
-            needed = max(1, active_count - 1)
+            needed = _trick_passes_needed(state)
             if state["pass_count"] >= needed:
                 winner = state["current_trick"]["player_id"]
                 _close_open_trick_memory(state, winner)
@@ -3031,7 +3047,8 @@ class GuandanGame:
             if decided:
                 finalize_started_at = time.perf_counter()
                 _progress("finalizing", 0.94, "Legalizing chosen action")
-                if chosen_action_type == "play" and chosen:
+                if (chosen_action_type == "play" and chosen
+                        and not state.get("_ai_eval_cache", {}).get("trick_boundary", {}).get("applied")):
                     upgraded = _prefer_bomb_closeout_upgrade(state, bot_id, chosen)
                     if upgraded != chosen:
                         method_meta = dict(method_meta or {})
@@ -3130,6 +3147,10 @@ class GuandanGame:
                     "fallback_events": deadline_events,
                 }
                 _progress("finalizing", 0.97, "Building bot explanation")
+                if bot_mode != "nn":
+                    _record_trick_boundary_shadow(
+                        state, bot_id, depth, legal_action, deadline=hard_decision_deadline,
+                    )
                 explain = _build_bot_explain(
                     state,
                     bot_id,

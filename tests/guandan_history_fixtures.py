@@ -5,6 +5,11 @@ are deliberately absent. Card IDs are allocated from one canonical deck, and
 states are rebuilt through the real rules handler using only the requested
 prefix of actions. Empty card tuples represent passes. Legacy actions after
 the first two teammates finish are omitted: the current engine settles then.
+
+These saves also predate the finished-leader response-window fix. Their
+recorded premature closures are restored explicitly when rebuilding a test
+position. Missing responses are never fabricated as public pass evidence;
+new play from the returned position always uses the current production rules.
 """
 
 from typing import Dict, List, Optional, Sequence
@@ -1870,6 +1875,44 @@ def pick_card_ids(hand: List[Dict], labels: Sequence[str]) -> List[int]:
     return card_ids
 
 
+LEGACY_FINISHED_LEADER_FIXTURES = frozenset({
+    "72c", "7a5", "546", "38c", "8b1", "c82", "964", "fd4", "c94", "426",
+    "b0a262", "df8914", "877cca",
+})
+
+
+def _restore_legacy_finished_leader_closure(state: Dict, after_action: int) -> None:
+    """Rebuild a recorded old closure without asserting an unrecorded pass.
+
+    The old engine subtracted the finished top player from the active count
+    twice and skipped the final responder. This is historical compatibility,
+    not a legal continuation under today's rules or evidence that player
+    chose to pass. It is deliberately confined to fixture reconstruction.
+    """
+    trick = state.get("current_trick")
+    if state.get("phase") != "playing" or not trick:
+        return
+    winner = trick["player_id"]
+    if not state["players"][winner]["finished"]:
+        return
+    active = guandan._active_players(state)
+    if state["pass_count"] < max(1, len(active) - 1):
+        return
+    teammate = guandan._teammate_of(state, winner)
+    if teammate not in active:
+        raise AssertionError("Legacy closure unexpectedly reached a settled round")
+    marker = {
+        "after_action": after_action,
+        "winner": winner,
+        "omitted_responder": state["current_turn"],
+    }
+    state.setdefault("_fixture_legacy_closures", []).append(marker)
+    memory = guandan._current_round_memory(state)["tricks"][-1]
+    memory["legacy_finished_leader_closure"] = dict(marker)
+    guandan._close_open_trick_memory(state, winner)
+    state.update(current_trick=None, pass_count=0, trick_plays={}, current_turn=teammate)
+
+
 def replay_fixture(
     case: str,
     before_action: int,
@@ -1880,6 +1923,8 @@ def replay_fixture(
     ``len(FIXTURES[case]["actions"]) + 1`` replays the entire recorded prefix.
     The returned object is a server state; public views must still be obtained
     through ``GuandanGame.get_public_view`` as in normal gameplay.
+    Legacy response-window closures are marked in ``_fixture_legacy_closures``
+    and the corresponding trick memory; no omitted response becomes an action.
     """
     fixture = FIXTURES[case]
     actions = fixture["actions"]
@@ -1934,4 +1979,6 @@ def replay_fixture(
         _, error = guandan.GuandanGame.apply_action(state, player_id, action)
         if error:
             raise AssertionError(f"Fixture {case} action {index}: {error}")
+        if case in LEGACY_FINISHED_LEADER_FIXTURES:
+            _restore_legacy_finished_leader_closure(state, index)
     return state
