@@ -110,6 +110,20 @@ python3 scripts/benchmark_guandan.py run \
 
 工作区源码字节未变、只新增 commit 导致 HEAD 改变时不应失败；工作区握手以来源类型和文件 hash 为准。使用 Git commit 模式时仍额外核对不可变 commit ID。
 
+### 性能与整墩诊断
+
+`diagnostics.candidate`／`diagnostics.baseline` 保留旧字段，并增加以下诊断（schema 2 的兼容性扩展）：
+
+- `latency_ms`：worker 外层实测决策耗时，含 mean、p50、p95、p99、max；分位数用 nearest-rank。
+- `budgeted_decisions`／`over_budget`／`over_budget_rate`：仅以解释中有 `timing.budget_ms` 的决策为分母，比较实测耗时与该目标预算。它不等于 `hard_deadline_reached`；允许 overrun 的配置也可能超过目标预算。旧解释缺少预算时不虚构分母，无样本为 null。
+- `trick_boundary.statuses`／`reasons`：完整、不完整、关闭等面板状态，以及 deadline 等未完成原因。`attempted` 只计 complete 和 incomplete，`completion_rate` 为 complete / attempted；它不是所有领牌或所有决策的覆盖率，没有尝试时为 null。
+- `trick_boundary.latency_ms`：报告了耗时的面板的 mean／p50／p95／p99／max，包括未完成面板。面板上限和整次决策预算不同；步骤间截止检查不是单个 Python 调用的强制抢占。
+- `proposed_changes`：完整面板的新首选不同于旧参考动作的次数，shadow 也计入。`applied`：完整面板采用新评分的次数，可能仍选原动作。`actual_changes`：已采用新评分且最终动作不同于旧参考动作的次数；比较忽略同一组实体牌 ID 的顺序。不完整面板永不计作采用或改选。
+
+这些计数帮助定位“没有时间完成”“完成但无分歧”“提出分歧但未采用”，不等同于策略收益。`--clock fixed` 会冻结内部时钟，因此面板耗时、完成率和截止标记不能作为真实预算验收；worker 外层耗时虽真实，也只能说明固定计算量成本。预算验收须单独用 `--clock wall`、一致预算和不受并行测试干扰的运行。
+
+### 强度统计
+
 置信区间以**一对交换对局**为重采样单位，满 30 对且有样本方差时使用 5,000 次 paired percentile bootstrap 的近似 95% 区间。统计采样也固定独立种子，不影响牌局随机流；保留同一对里的相关性，并利用实际方差衡量小幅改进。
 
 少于 30 对或样本全部相同时退回双侧 95% Hoeffding 界，防止几个全胜或完全一致的样本得到虚假的零宽区间。无论哪种情况，都会额外输出保守的 `conservative_ci95`：
@@ -129,7 +143,9 @@ Hoeffding 界较保守，但不依赖分布近似。例如，保守胜率区间�
 ## 验证
 
 ```bash
-python3 -m unittest tests.test_guandan_benchmark
+python3 -m unittest tests.test_guandan_benchmark tests.test_guandan_benchmark_diagnostics
 ```
 
 测试覆盖所有 24 种名次排列的零和计分、成对统计、异常不计分、随机流隔离、Git blob 独立加载/分支移动/禁止混入工作区依赖/源码变化检测、公开信息不随真实暗牌置换改变、已知牌归属，以及相同策略交换队伍时的轨迹对称性。Git 测试使用极小的合成仓库，不复制真实基线源码。原有 `test_guandan_bot` / `test_guandan_reviewed_round` 等作为战术回归集继续保留，不能代替对战 benchmark。
+
+诊断专项另覆盖空样本／旧解释兼容、p50／p95／p99、实测超预算，以及 shadow 建议、完整采用和实际改选的分离计数。

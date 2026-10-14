@@ -58,6 +58,15 @@ const output = 'build/room-controls-drawer';
         await page.waitForFunction(() => currentRoomState?.status === 'in_game' && lastGameStatePayload?.game_type === 'citadels');
         assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'Starting a game closes the drawer');
 
+        await page.evaluate(() => sendAction({ type: 'invalid_feedback_regression_action' }));
+        const feedback = page.locator('#roomFeedbackTooltip');
+        await feedback.waitFor({ state: 'visible' });
+        assert.match(await feedback.textContent(), /Error:/);
+        assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'A server action error must not open the drawer');
+        assert.equal(await page.locator('#roomActionStatus').textContent(), '');
+        await page.screenshot({ path: `${output}/mobile-error-tooltip.png` });
+        await feedback.waitFor({ state: 'hidden' });
+
         for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }, { width: 900, height: 700 }]) {
             await page.setViewportSize(viewport);
             await setOpen(false);

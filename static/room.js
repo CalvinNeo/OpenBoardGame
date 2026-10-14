@@ -23,6 +23,7 @@ let roomSessionReady = false;
 let pendingRoomRequest = null;
 let roomFeedbackMessage = "";
 let roomFeedbackIsError = false;
+let roomFeedbackTooltipTimer = null;
 const ROOM_REQUEST_TIMEOUT = 15000;
 const roomStorageCache = new Map();
 const roomConnectionLog = [];
@@ -49,6 +50,7 @@ const roomIdInput = document.getElementById("roomIdInput");
 const joinRoomError = document.getElementById("joinRoomError");
 const connectionInfo = document.getElementById("connectionInfo");
 const roomActionStatus = document.getElementById("roomActionStatus");
+const roomFeedbackTooltip = document.getElementById("roomFeedbackTooltip");
 const createRoomStatus = document.getElementById("createRoomStatus");
 const gameListRetryBtn = document.getElementById("gameListRetryBtn");
 const roomListEl = document.getElementById("roomList");
@@ -1563,14 +1565,42 @@ function setConnectionInfo(message) {
   connectionInfo.textContent = message;
 }
 
-function setRoomFeedback(message = "", isError = false, { revealControls = true } = {}) {
-  roomFeedbackMessage = message;
-  roomFeedbackIsError = isError;
-  setConnectionInfo(message || (roomSessionReady && roomId ? `Connected to room ${roomId}.` : ""));
+function hasRoomGameStarted() {
+  return ["in_game", "game_over"].includes(currentRoomState?.status);
+}
+
+function hideRoomFeedbackTooltip() {
+  window.clearTimeout(roomFeedbackTooltipTimer);
+  roomFeedbackTooltipTimer = null;
+  roomFeedbackTooltip.hidePopover?.();
+  roomFeedbackTooltip.hidden = true;
+  roomFeedbackTooltip.textContent = "";
+}
+
+function showRoomFeedbackTooltip(message, isError) {
+  hideRoomFeedbackTooltip();
+  roomFeedbackTooltip.textContent = message;
+  roomFeedbackTooltip.classList.toggle("room-feedback-tooltip-error", isError);
+  roomFeedbackTooltip.hidden = false;
+  roomFeedbackTooltip.showPopover?.();
+  roomFeedbackTooltipTimer = window.setTimeout(hideRoomFeedbackTooltip, 1000);
+}
+
+function setRoomFeedback(message = "", isError = false) {
+  const useTooltip = hasRoomGameStarted();
+  // Gameplay feedback must not persist in, or open, Room Controls.
+  roomFeedbackMessage = useTooltip ? "" : message;
+  roomFeedbackIsError = !useTooltip && isError;
+  setConnectionInfo(roomFeedbackMessage || (roomSessionReady && roomId ? `Connected to room ${roomId}.` : ""));
   updateRoomActionButtons();
+  if (useTooltip && message) {
+    showRoomFeedbackTooltip(message, isError);
+  } else {
+    hideRoomFeedbackTooltip();
+  }
   if (isError) {
     log(message);
-    if (revealControls) setRoomControlsCollapsed(false);
+    if (!useTooltip) setRoomControlsCollapsed(false);
   }
 }
 
@@ -1628,8 +1658,8 @@ function updateRoomActionButtons() {
   updateRoomCreateButtonLabel();
   document.querySelectorAll("#createRoomModal .game-item, #forestShuffleEnglishBtn, #forestShuffleChineseBtn, [data-catan-starfarers-setup], #theCrewSetupCreate, #guandanSetupCreateBtn")
     .forEach((button) => { button.disabled = busy; });
-  roomActionStatus.textContent = roomFeedbackMessage || (inLobby ? reason || "Ready to start." : "");
-  roomActionStatus.classList.toggle("room-feedback-error", roomFeedbackIsError);
+  roomActionStatus.textContent = hasRoomGameStarted() ? "" : roomFeedbackMessage || (inLobby ? reason || "Ready to start." : "");
+  roomActionStatus.classList.toggle("room-feedback-error", !hasRoomGameStarted() && roomFeedbackIsError);
   createRoomStatus.textContent = roomFeedbackMessage;
   createRoomStatus.classList.toggle("room-feedback-error", roomFeedbackIsError);
   updateGameReconnectButton();
@@ -1888,12 +1918,14 @@ function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
 }
 
 function updateRoomControlsForStatus(status) {
+  if (!["in_game", "game_over"].includes(status)) hideRoomFeedbackTooltip();
   if (!roomControlsPanel) {
     return;
   }
   const isInGame = status === "in_game";
   roomControlsPanel.classList.toggle("compact", isInGame);
   if (isInGame && !roomControlsGameActive) {
+    setRoomFeedback();
     const wasCollapsed = roomControlsPanel.classList.contains("collapsed");
     if (!wasCollapsed) {
       setRoomControlsCollapsed(true, { auto: true });
@@ -2130,6 +2162,7 @@ function renderRoomList(rooms) {
 }
 
 function resetRoomState() {
+  hideRoomFeedbackTooltip();
   roomSessionReady = false;
   closeReopenConfirmModal(false);
   roomId = null;
@@ -2493,13 +2526,7 @@ socket.on("system:error", (data) => {
       );
     }
   }
-  const showGameError = !failedRequest && roomSessionReady &&
-    currentRoomState?.status === "in_game" && currentGameType === "ark_nova" &&
-    typeof window.showArkNovaError === "function";
-  setRoomFeedback(`Error: ${data.message}`, true, { revealControls: !showGameError });
-  if (showGameError) {
-    window.showArkNovaError(data.message);
-  }
+  setRoomFeedback(`Error: ${data.message}`, true);
 });
 
 socket.on("room:session_replaced", () => {

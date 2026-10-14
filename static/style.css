@@ -253,6 +253,38 @@ h1 {
   color: #b42318;
 }
 
+.room-feedback-tooltip {
+  position: fixed;
+  z-index: 30000;
+  inset: auto;
+  top: calc(var(--room-controls-bar-height, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - var(--room-controls-bar-height, 0px) - 24px);
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  background: #1e293b;
+  color: #fff;
+  box-shadow: 0 4px 18px #0f172a33;
+  font: 13px/1.45 Arial, sans-serif;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.room-feedback-tooltip[hidden] {
+  display: none;
+}
+
+.room-feedback-tooltip-error {
+  border-color: #b42318;
+  background: #7a271a;
+}
+
 #roomControlsPanel .room-icon-btn {
   display: inline-flex;
   align-items: center;

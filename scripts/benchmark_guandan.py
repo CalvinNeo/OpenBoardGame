@@ -449,6 +449,14 @@ def summarize(records: List[Dict]) -> Dict:
             "rank_counts": dict(Counter("/".join(map(str, row["candidate_ranks"])) for row in records))}
 
 
+def latency_summary(samples: Sequence[float]) -> Dict:
+    ordered = sorted(samples)
+    return {"mean": statistics.mean(ordered) if ordered else None,
+            **{name: ordered[math.ceil(len(ordered) * fraction) - 1] if ordered else None
+               for name, fraction in (("p50", 0.5), ("p95", 0.95), ("p99", 0.99))},
+            "max": max(ordered) if ordered else None}
+
+
 class Diagnostics:
     def __init__(self):
         self.latencies = []
@@ -458,6 +466,20 @@ class Diagnostics:
         self.deadline_limited = 0
         self.hard_deadline_reached = 0
         self.mcts_attempted = 0
+        self.budgeted_decisions = 0
+        self.over_budget = 0
+        self.trick_statuses = Counter()
+        self.trick_reasons = Counter()
+        self.trick_latencies = []
+        self.trick_applied = 0
+        self.trick_proposed_changes = 0
+        self.trick_actual_changes = 0
+
+    @staticmethod
+    def _action_key(action: Optional[Dict]) -> tuple:
+        if not action:
+            return ()
+        return action.get("type"), tuple(sorted(action.get("card_ids") or []))
 
     def add(self, result: Dict) -> None:
         self.latencies.append(result["elapsed_ms"])
@@ -470,15 +492,40 @@ class Diagnostics:
         self.deadline_limited += bool(timing.get("deadline_limited"))
         self.hard_deadline_reached += bool(timing.get("hard_deadline_reached"))
         self.mcts_attempted += "mcts_candidates" in (explain.get("method_details") or {})
+        budget = timing.get("budget_ms")
+        if budget is not None:
+            self.budgeted_decisions += 1
+            self.over_budget += result["elapsed_ms"] > budget
+        panel = (explain.get("method_details") or {}).get("trick_boundary")
+        if not panel:
+            return
+        status = panel.get("status", "unknown")
+        self.trick_statuses[status] += 1
+        if panel.get("reason"):
+            self.trick_reasons[panel["reason"]] += 1
+        if panel.get("elapsed_ms") is not None:
+            self.trick_latencies.append(panel["elapsed_ms"])
+        if status == "complete" and panel.get("reference"):
+            reference = self._action_key(panel["reference"])
+            self.trick_proposed_changes += bool(panel.get("proposed")) and self._action_key(panel["proposed"]) != reference
+            if panel.get("applied"):
+                self.trick_applied += 1
+                self.trick_actual_changes += self._action_key(result.get("action")) != reference
 
     def report(self) -> Dict:
-        ordered = sorted(self.latencies)
-        return {"decisions": len(ordered), "methods": dict(self.methods), "actions": dict(self.actions),
-                "latency_ms": {"mean": statistics.mean(ordered) if ordered else None,
-                               "p95": ordered[math.ceil(len(ordered) * 0.95) - 1] if ordered else None,
-                               "max": max(ordered) if ordered else None},
+        attempted = self.trick_statuses["complete"] + self.trick_statuses["incomplete"]
+        return {"decisions": len(self.latencies), "methods": dict(self.methods), "actions": dict(self.actions),
+                "latency_ms": latency_summary(self.latencies),
                 "deadline_limited": self.deadline_limited, "hard_deadline_reached": self.hard_deadline_reached,
-                "mcts_attempted": self.mcts_attempted, "chosen_component_firings": dict(self.components)}
+                "mcts_attempted": self.mcts_attempted, "chosen_component_firings": dict(self.components),
+                "budgeted_decisions": self.budgeted_decisions, "over_budget": self.over_budget,
+                "over_budget_rate": self.over_budget / self.budgeted_decisions if self.budgeted_decisions else None,
+                "trick_boundary": {"statuses": dict(self.trick_statuses), "reasons": dict(self.trick_reasons),
+                                   "attempted": attempted,
+                                   "completion_rate": self.trick_statuses["complete"] / attempted if attempted else None,
+                                   "applied": self.trick_applied, "proposed_changes": self.trick_proposed_changes,
+                                   "actual_changes": self.trick_actual_changes,
+                                   "latency_ms": latency_summary(self.trick_latencies)}}
 
 
 def play_round(core, initial: Dict, workers: Dict, candidate_team: str, seed: int,

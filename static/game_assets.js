@@ -665,7 +665,7 @@ const GAME_ASSETS = {
   },
   "texas_holdem": {
     "scripts": [
-      "/static/games/texas_holdem.js?v=app_v5"
+      "/static/games/texas_holdem.js?v=app_v6"
     ],
     "styles": [],
     "panel": "texasHoldemPanel",
@@ -747,7 +747,7 @@ const GAME_ASSETS = {
   },
   "manila": {
     "scripts": [
-      "/static/games/manila.js?v=app_v4"
+      "/static/games/manila.js?v=app_v5"
     ],
     "styles": [],
     "panel": "manilaPanel",
@@ -1002,7 +1002,7 @@ const GAME_ASSETS = {
   },
   "ark_nova": {
     "scripts": [
-      "/static/games/ark_nova.js?v=app_v25"
+      "/static/games/ark_nova.js?v=app_v26"
     ],
     "styles": [
       "/static/ark_nova.css?v=app_v22"

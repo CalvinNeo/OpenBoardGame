@@ -6,6 +6,7 @@ Neither partial trajectories nor a mixture of old/new scores form a ranking.
 """
 
 import copy
+import functools
 import hashlib
 import itertools
 import math
@@ -116,71 +117,122 @@ def world_id(state: Dict) -> str:
     return hashlib.blake2b(repr(assignment).encode(), digest_size=8).hexdigest()
 
 
-def resource_plan(hand: List[Dict], level: int, budget: TrickBudget) -> Dict:
-    """One feasible physical cover, not a sum of incompatible potential uses.
+def _resource_group_pace(combo: Dict) -> float:
+    if combo["type"] in rules.BOMB_TYPES:
+        return 0.7
+    value = rules._combo_value(combo)
+    low, high = (5, 14) if combo["type"] in ("straight", "three_pairs", "steel_plate") else (49, 100)
+    strength = max(0.0, min(1.0, (value - low) / (high - low)))
+    return 1.0 - 0.3 * strength
 
-    Greedy candidate generation is a bounded approximation, not optimal hand
-    solving. A wildcard committed to a straight is unavailable to every later
-    group. Strength adjusts each group's pace once, rather than earning an
-    extra independent inventory bonus.
+
+def _exact_resource_plan(hand: List[Dict], level: int, budget: TrickBudget) -> Dict:
+    by_first = [[] for _card in hand]
+    for size in range(1, len(hand) + 1):
+        for indexes in itertools.combinations(range(len(hand)), size):
+            budget.check()
+            cards = [hand[index] for index in indexes]
+            combo = rules._evaluate_combo(cards, level, {})
+            if combo:
+                mask = sum(1 << index for index in indexes)
+                by_first[indexes[0]].append((mask, _resource_group_pace(combo), combo["type"]))
+
+    @functools.lru_cache(None)
+    def solve(remaining: int) -> Tuple[float, Tuple]:
+        budget.check()
+        if not remaining:
+            return 0.0, ()
+        first = (remaining & -remaining).bit_length() - 1
+        alternatives = []
+        for mask, cost, kind in by_first[first]:
+            if mask & remaining != mask:
+                continue
+            tail_cost, tail = solve(remaining ^ mask)
+            alternatives.append((cost + tail_cost, ((mask, kind),) + tail))
+        return min(alternatives)
+
+    pace, cover = solve((1 << len(hand)) - 1)
+    groups = [{"cards": [card["id"] for index, card in enumerate(hand) if mask & (1 << index)],
+               "type": kind} for mask, kind in cover]
+    budget.check()
+    return {"groups": groups, "pace": pace, "exact": True}
+
+
+def resource_plan(hand: List[Dict], level: int, budget: TrickBudget) -> Dict:
+    """Minimize one physical cover's pace, not incompatible resource credits.
+
+    Up to eight cards use all legal physical subsets. Longer hands compare
+    bounded complete covers with distinct allocation priorities, regenerating
+    candidates after consumption. Their minimum is approximate, not a proof
+    of globally optimal decomposition or of a calibrated continuation value.
     """
-    remaining = list(hand)
-    groups = []
-    pace = 0.0
-    while remaining:
+    budget.check()
+    hand = sorted(hand, key=lambda card: card["id"])
+    if len(hand) <= 8:
+        return _exact_resource_plan(hand, level, budget)
+    candidates_by_hand = {}
+
+    def candidates(remaining: List[Dict]) -> List[Tuple]:
+        signature = tuple(card["id"] for card in remaining)
+        if signature in candidates_by_hand:
+            return candidates_by_hand[signature]
         budget.check()
         info = rules._hand_info(remaining, level)
-        # Generate physical groups without invoking the legacy feature sum.
-        # Prefer long groups; only generate shorter shapes when needed.
         options = [entry["cards"] for entry in rules._find_bomb_candidates(remaining, level, info=info)]
-        options += rules._list_steel_plate_options(remaining, level, 0, info=info)
-        options += rules._list_three_pairs_options(remaining, level, 0, info=info)
-        if max(map(len, options), default=0) < 6:
-            options += rules._list_straight_options(remaining, level, 0, info=info)
-            options += rules._list_full_house_options(remaining, level, 0, info=info)
-        if not options:
-            options = rules._list_rank_group_options(remaining, level, 0, 3, info=info)
-        if not options:
-            options = rules._list_rank_group_options(remaining, level, 0, 2, info=info)
-        if not options:
-            options = [[c["id"]] for c in remaining]
+        for generator in (rules._list_steel_plate_options, rules._list_three_pairs_options,
+                          rules._list_straight_options, rules._list_full_house_options):
+            budget.check()
+            options.extend(generator(remaining, level, 0, info=info))
+        for size in (3, 2):
+            budget.check()
+            options.extend(rules._list_rank_group_options(remaining, level, 0, size, info=info))
+        options.extend([card["id"]] for card in remaining)
         by_id = rules._map_hand_by_id(remaining)
-        candidates = []
-        for cards in options:
-            combo = rules._evaluate_combo([by_id[cid] for cid in cards], level, {})
+        entries = []
+        for cards in sorted({tuple(sorted(option)) for option in options}):
+            budget.check()
+            combo = rules._evaluate_combo([by_id[card_id] for card_id in cards], level, {})
             if combo:
-                candidates.append((cards, combo))
-        if not candidates:
+                wilds = sum(rules._is_wild(by_id[card_id], level) for card_id in cards)
+                entries.append((cards, combo, wilds))
+        candidates_by_hand[signature] = entries
+        return entries
+
+    covers = []
+    for preferred in ((), rules.BOMB_TYPES, ("three_pairs",), ("full_house",), ("straight", "straight_flush")):
+        remaining = list(hand)
+        groups = []
+        pace = 0.0
+        while remaining:
+            budget.check()
+            options = candidates(remaining)
+            if not options:
+                raise IncompleteTrick("no_resource_cover")
+            cards, combo, _wilds = max(options, key=lambda row: (
+                row[1]["type"] in preferred, len(row[0]), row[1]["type"] in rules.BOMB_TYPES,
+                -row[2], rules._combo_value(row[1]), row[0],
+            ))
+            selected = set(cards)
+            if len(selected) != len(cards) or not selected <= {card["id"] for card in remaining}:
+                raise IncompleteTrick("invalid_resource_cover")
+            groups.append({"cards": list(cards), "type": combo["type"]})
+            pace += _resource_group_pace(combo)
+            remaining = [card for card in remaining if card["id"] not in selected]
+        if not groups:
             raise IncompleteTrick("no_resource_cover")
-        cards, combo = max(candidates, key=lambda row: (
-            len(row[0]), row[1]["type"] in rules.BOMB_TYPES,
-            -sum(rules._is_wild(by_id[cid], level) for cid in row[0]),
-            rules._combo_value(row[1]), tuple(sorted(row[0])),
-        ))
-        selected = set(cards)
-        if not selected or len(selected) != len(cards) or not selected <= {c["id"] for c in remaining}:
-            raise IncompleteTrick("invalid_resource_cover")
-        groups.append({"cards": list(cards), "type": combo["type"]})
-        if combo["type"] in rules.BOMB_TYPES:
-            group_pace = 0.7
-        else:
-            value = rules._combo_value(combo)
-            low, high = (5, 14) if combo["type"] in ("straight", "three_pairs", "steel_plate") else (49, 100)
-            strength = max(0.0, min(1.0, (value - low) / (high - low)))
-            group_pace = 1.0 - 0.3 * strength
-        pace += group_pace
-        remaining = [c for c in remaining if c["id"] not in selected]
+        covers.append({"groups": groups, "pace": pace, "exact": False})
     budget.check()
-    return {"groups": groups, "pace": pace}
+    return min(covers, key=lambda plan: (plan["pace"], tuple(tuple(group["cards"]) for group in plan["groups"])))
 
 
 def team_value(state: Dict, observer: str, budget: TrickBudget, plans: Dict) -> float:
     """Expected *one* team settlement value from a residual-hand race model.
 
     Plackett-Luce weights over all possible remaining finish orders smooth a
-    noisy greedy cover. Its pace/seat assumptions are a continuation prior,
-    not a calibrated win probability. Completed places are never predicted
-    again. Same-team observers have identical values; opponents have opposites.
+    resource-cover estimate. Its pace/seat assumptions are a continuation prior,
+    not a calibrated win probability. Legal immediate finishes advance through
+    the rules before predicting any remaining places. Same-team observers have
+    identical values; opponents have opposites.
     """
     budget.check()
     if state.get("game_over"):
@@ -188,6 +240,21 @@ def team_value(state: Dict, observer: str, budget: TrickBudget, plans: Dict) -> 
     settled = _call("_settled_round_value", state, observer)
     if settled is not None:
         return settled
+    actor = state.get("current_turn")
+    player = state["players"].get(actor)
+    if state.get("phase") == "playing" and player and not player.get("finished"):
+        hand = player["hand"]
+        current_combo = (state.get("current_trick") or {}).get("combo")
+        if hand and rules._can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
+            budget.check()
+            successor = _call("_clone_search_state", state)
+            _, error = rules.GuandanGame.apply_action(
+                successor, actor, {"type": "play", "card_ids": [card["id"] for card in hand]},
+            )
+            budget.check()
+            if error:
+                raise IncompleteTrick("illegal_immediate_finish: " + error)
+            return team_value(successor, observer, budget, plans)
     prefix = list(state.get("finish_order") or [])
     active = [pid for pid in state["turn_order"] if pid not in prefix]
     weights = {}
@@ -217,8 +284,65 @@ def team_value(state: Dict, observer: str, budget: TrickBudget, plans: Dict) -> 
     return total
 
 
+def _response_window(state: Dict, actor: str) -> List[str]:
+    responders = []
+    passes = int(state.get("pass_count") or 0) + 1
+    needed = rules._trick_passes_needed(state)
+    current = actor
+    while passes < needed and len(responders) < len(state["turn_order"]):
+        current = rules._next_active_player(state, current)
+        if current is None or current == actor or current == state["current_trick"]["player_id"]:
+            break
+        responders.append(current)
+        passes += 1
+    return responders
+
+
+def _short_finish_profile(state: Dict, actor: str, target: str) -> Dict:
+    """Count one/two-card finishing hands from public ownership, not samples."""
+    count = len(state["players"][target]["hand"])
+    if count not in (1, 2):
+        return {}
+    available, locked = _call("_teammate_public_response_pool", state, actor, target)
+    draws = count - len(locked)
+    if not 0 <= draws <= len(available):
+        return {}
+    level = state["level_rank"]
+    values = {}
+    if draws <= 1:
+        hands = [locked] if draws == 0 else [locked + [card] for card in available]
+        for hand in hands:
+            combo = rules._evaluate_combo(hand, level, {})
+            if combo:
+                value = rules._combo_value(combo)
+                values[value] = values.get(value, 0) + 1
+    else:
+        info = rules._hand_info(available, level)
+        wilds = len(info["wild_cards"])
+        for rank, cards in info["normals_by_rank"].items():
+            ways = math.comb(len(cards), 2) + len(cards) * wilds
+            value = rules._point_order_value(rank, level)
+            values[value] = values.get(value, 0) + ways
+        if wilds >= 2:
+            value = rules._point_order_value(level, level)
+            values[value] = values.get(value, 0) + math.comb(wilds, 2)
+        for kind, value in (("jokers_small", 90), ("jokers_big", 100)):
+            values[value] = values.get(value, 0) + math.comb(len(info[kind]), 2)
+    return {"count": count, "total": math.comb(len(available), draws), "values": values}
+
+
+def _short_finish_risk(profile: Dict, combo: Dict) -> float:
+    if not profile or not profile["total"]:
+        return 0.0
+    expected = "single" if profile["count"] == 1 else "pair"
+    if combo["type"] != expected:
+        return 0.0
+    threshold = rules._combo_value(combo)
+    return sum(weight for value, weight in profile["values"].items() if value > threshold) / profile["total"]
+
+
 def response_action(state: Dict, actor: str, rng: random.Random) -> Dict:
-    """A bounded actor-local policy: finish, protect partner, or contest cheaply.
+    """An actor-local policy with public short-hand defence and cheap relays.
 
     This intentionally uses only the actor's physical cards and public facts.
     It never maximizes a sampled all-hands leaf value (strategy fusion), nor
@@ -232,9 +356,21 @@ def response_action(state: Dict, actor: str, rng: random.Random) -> Dict:
     level, config = state["level_rank"], state.get("config", {})
     if rules._can_play_all(hand, level, config, trick["combo"]):
         return {"type": "play", "card_ids": [c["id"] for c in hand]}
-    if rules._team_of(state, actor) == rules._team_of(state, trick["player_id"]):
-        return {"type": "pass"}
-    options = rules._list_hint_options(state, actor)
+    own_team = rules._team_of(state, actor)
+    leader = trick["player_id"]
+    teammate_top = rules._team_of(state, leader) == own_team
+    window = _response_window(state, actor)
+    targets = [player for player in window if rules._team_of(state, player) != own_team
+               and len(state["players"][player]["hand"]) in (1, 2)]
+    leader_count = len(state["players"][leader]["hand"])
+    last_defender = (not teammate_top and leader_count in (1, 2)
+                     and not state["players"][leader].get("finished")
+                     and not any(rules._team_of(state, player) == own_team for player in window))
+    if last_defender:
+        targets.append(leader)
+    profiles = [_short_finish_profile(state, actor, player) for player in targets]
+    initial_risk = max((_short_finish_risk(profile, trick["combo"]) for profile in profiles), default=0.0)
+    options = rules._list_hint_options({**state, "_ai_eval_cache": {}}, actor)
     by_id = rules._map_hand_by_id(hand)
     counts = {}
     for card in hand:
@@ -252,12 +388,37 @@ def response_action(state: Dict, actor: str, rng: random.Random) -> Dict:
         breaks_bomb = any(0 < sum(by_id[cid].get("rank") == rank for cid in ids) < count
                           for rank, count in counts.items() if count >= 4)
         key = (is_bomb, breaks_bomb, wilds, len(ids) if is_bomb else 0, rules._combo_value(combo), tuple(ids))
-        ranked.append((key, list(ids)))
+        ranked.append((key, list(ids), combo))
     if not ranked:
         return {"type": "pass"}
     ranked.sort(key=lambda row: row[0])
-    cost, ids = ranked[0]
-    threat = 1 <= len(state["players"][trick["player_id"]]["hand"]) <= 2
+    if initial_risk > 0.0 or last_defender:
+        defenses = [(max((_short_finish_risk(profile, combo) for profile in profiles), default=0.0),
+                     cost, ids) for cost, ids, combo in ranked]
+        remaining_risk, _cost, ids = min(defenses)
+        if last_defender or remaining_risk < initial_risk - 1e-9:
+            return {"type": "play", "card_ids": ids}
+    if teammate_top:
+        if (trick["combo"]["type"] != "single" or state["players"][leader].get("finished")
+                or leader_count < 3 or any(not player.get("finished") and len(player["hand"]) <= 2
+                                          for player_id, player in state["players"].items()
+                                          if rules._team_of(state, player_id) != own_team)):
+            return {"type": "pass"}
+        _available, locked = _call("_teammate_public_response_pool", state, actor, leader)
+        return_control = max((rules._single_order_value(card, level) for card in locked), default=0)
+        natural_ranks = set(counts)
+        straight_ranks = set().union(*(set(sequence) for sequence, _high in rules.STRAIGHT_SEQUENCES
+                                       if set(sequence) <= natural_ranks))
+        for cost, ids, combo in ranked:
+            if (combo["type"] == "single" and not cost[2]
+                    and counts.get(by_id[ids[0]].get("rank"), 0) == 1
+                    and by_id[ids[0]].get("rank") not in straight_ranks
+                    and rules._combo_value(combo) <= ai.LOW_SINGLE_VALUE_MAX
+                    and return_control > rules._combo_value(combo)):
+                return {"type": "play", "card_ids": ids} if rng.random() < 0.8 else {"type": "pass"}
+        return {"type": "pass"}
+    cost, ids, _combo = ranked[0]
+    threat = 1 <= leader_count <= 2
     play_chance = 0.95 if threat else (0.15 if cost[0] else 0.8)
     if (cost[1] or cost[2]) and not threat:
         play_chance *= 0.5
@@ -361,7 +522,7 @@ def compare_leads(state: Dict, observer: str, scored: List[Tuple], deadline: Opt
     alternatives.sort(key=lambda row: (-row[1], tuple(sorted(row[0] or []))))
     candidates = [reference_entry] + alternatives[:width - 1]
     result.update(status="incomplete", candidate_count=len(candidates), requested_worlds=count,
-                  scope="heuristic_finalists", policy="actor_local_response_v1", value_model="residual_race_v1")
+                  scope="heuristic_finalists", policy="actor_local_response_v2", value_model="residual_race_v3")
     try:
         worlds = public_worlds(state, observer, count, budget)
         plans = {}

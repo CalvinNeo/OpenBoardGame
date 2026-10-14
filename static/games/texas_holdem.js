@@ -306,7 +306,7 @@
         if (explaining || !legal(action.type)) return;
         if (["bet", "raise"].includes(action.type) && !validAmount()) return;
         if (typeof ensureRoomConnection === "function" && !ensureRoomConnection()) {
-            feedback("Reconnect to the room before acting.");
+            feedback("");
             return;
         }
         pending = true;
@@ -492,11 +492,11 @@
         }
     };
     if (typeof socket !== "undefined") {
-        socket.on("system:error", (data) => {
+        socket.on("system:error", () => {
             if (!pending || currentGameType !== "texas_holdem") return;
             pending = false;
             window.clearTimeout(pendingTimer);
-            feedback(data?.message || "Action failed. Please try again.");
+            feedback("");
             updateActions();
         });
         socket.on("room:state", (room) => {

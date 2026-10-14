@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v121" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v122" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
+  <div id="roomFeedbackTooltip" class="room-feedback-tooltip" role="status" aria-live="polite" aria-atomic="true" popover="manual" hidden></div>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
     <div class="panel-header">
       <h2>Log</h2>
@@ -1639,7 +1640,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=94" defer></script>
+  <script src="/static/game_assets.js?v=95" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1671,6 +1672,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v53" defer></script>
-  <script src="/static/room.js?v=app_v74" defer></script>
+  <script src="/static/room.js?v=app_v75" defer></script>
 </body>
 </html>

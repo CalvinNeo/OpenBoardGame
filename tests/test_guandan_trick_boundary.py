@@ -119,6 +119,161 @@ class TrickBoundaryTests(unittest.TestCase):
         self.assertEqual(plan.winner, "bot")
         self.assertEqual(len(plan.actions), 4)
 
+    def test_closed_trick_values_certain_next_lead_finish(self):
+        state = make_state({"bot": [4, 4, 3], "opp": [14],
+                            "mate": [4, 6, 8, 10, 12], "opp2": [13]})
+        before = copy.deepcopy(state)
+        cards = pair(state, "bot", 4)
+        plan = trick.trace_plan(state, "bot", play(cards), random.Random(0), trick.TrickBudget(), 40, {})
+        self.assertEqual(plan.boundary, "trick_closed")
+        self.assertEqual(plan.next_leader, "bot")
+        self.assertEqual(plan.finish_order, [])
+        self.assertEqual(plan.consumed["bot"], cards)
+        self.assertEqual(len(plan.remaining["bot"]), 1)
+        self.assertGreaterEqual(plan.value, 100.0)
+        self.assertLessEqual(plan.value, 300.0)
+        self.assertEqual(state, before)
+
+    def test_immediate_finish_value_matches_rule_successor_for_every_actor(self):
+        for actor in self.state["turn_order"]:
+            for finish_hand in ([3], [3, 3], [3, 3, 3, 8, 8], [3, 3, 3, 3]):
+                with self.subTest(actor=actor, hand=finish_hand):
+                    ranks = {pid: [5, 7, 9, 11, 13] for pid in self.state["turn_order"]}
+                    ranks[actor] = finish_hand
+                    state = make_state(ranks)
+                    state["current_turn"] = actor
+                    before = copy.deepcopy(state)
+                    successor = copy.deepcopy(state)
+                    cards = [card["id"] for card in successor["players"][actor]["hand"]]
+                    _, error = guandan.GuandanGame.apply_action(successor, actor, play(cards))
+                    self.assertIsNone(error)
+                    self.assertEqual(successor["finish_order"], [actor])
+                    plans = {}
+                    values = {}
+                    for observer in state["turn_order"]:
+                        value = trick.team_value(state, observer, trick.TrickBudget(), plans)
+                        expected = trick.team_value(successor, observer, trick.TrickBudget(), plans)
+                        self.assertAlmostEqual(value, expected)
+                        if guandan._team_of(state, observer) == guandan._team_of(state, actor):
+                            self.assertGreaterEqual(value, 100.0)
+                            self.assertLessEqual(value, 300.0)
+                        else:
+                            self.assertGreaterEqual(value, -300.0)
+                            self.assertLessEqual(value, -100.0)
+                        values[observer] = value
+                    self.assertAlmostEqual(values["bot"], values["mate"])
+                    self.assertAlmostEqual(values["bot"], -values["opp"])
+                    self.assertEqual(state, before)
+
+    def test_immediate_finish_preserves_existing_places_and_terminal_rules(self):
+        cases = ((["mate"], "bot"), (["opp"], "opp2"),
+                 (["opp", "mate"], "bot"), (["mate", "opp"], "bot"))
+        for prefix, actor in cases:
+            for level in (2, 13):
+                for require_partner in (False, True):
+                    with self.subTest(prefix=prefix, actor=actor, level=level,
+                                      require_partner=require_partner):
+                        state = make_state({"bot": [4, 4], "opp": [6], "mate": [3], "opp2": [9]})
+                        state["config"]["require_partner_not_last_for_a"] = require_partner
+                        state["level_rank"] = level
+                        for team in state["teams"].values():
+                            team["level"] = level
+                        state.update(finish_order=list(prefix), current_turn=actor)
+                        for rank, player in enumerate(prefix, 1):
+                            state["seen_cards"].extend(card["id"] for card in state["players"][player]["hand"])
+                            state["players"][player].update(hand=[], finished=True, finish_rank=rank)
+                        before = copy.deepcopy(state)
+                        successor = copy.deepcopy(state)
+                        cards = [card["id"] for card in successor["players"][actor]["hand"]]
+                        _, error = guandan.GuandanGame.apply_action(successor, actor, play(cards))
+                        self.assertIsNone(error)
+                        self.assertIn(successor["phase"], ("round_end", "game_over"))
+                        with mock.patch.object(trick, "resource_plan",
+                                               side_effect=AssertionError("settled result was estimated")):
+                            value = trick.team_value(state, "bot", trick.TrickBudget(), {})
+                        self.assertEqual(value, guandan._evaluate_state_for_bot(successor, "bot"))
+                        self.assertEqual(state, before)
+
+    def test_immediate_finish_projection_requires_legal_reply(self):
+        for rank, can_finish in ((3, False), (2, True)):
+            with self.subTest(rank=rank):
+                state = make_state({"bot": [rank], "opp": [14, 5],
+                                    "mate": [4, 6, 8, 10, 12], "opp2": [13]})
+                state["current_turn"] = "opp"
+                ace = next(card["id"] for card in state["players"]["opp"]["hand"] if card["rank"] == 14)
+                for actor, action in (("opp", play([ace])), ("mate", {"type": "pass"}),
+                                      ("opp2", {"type": "pass"})):
+                    _, error = guandan.GuandanGame.apply_action(state, actor, action)
+                    self.assertIsNone(error)
+                before = copy.deepcopy(state)
+                apply_action = guandan.GuandanGame.apply_action
+                with mock.patch.object(guandan.GuandanGame, "apply_action", wraps=apply_action) as apply:
+                    value = trick.team_value(state, "bot", trick.TrickBudget(), {})
+                if can_finish:
+                    self.assertGreaterEqual(value, 100.0)
+                    self.assertLessEqual(value, 300.0)
+                    self.assertEqual(apply.call_count, 1)
+                    successor = apply.call_args.args[0]
+                    self.assertEqual(successor["finish_order"], ["bot"])
+                    self.assertIsNotNone(successor["current_trick"])
+                    self.assertEqual(successor["current_turn"], "opp")
+                else:
+                    apply.assert_not_called()
+                    self.assertLess(value, 100.0)
+                self.assertEqual(state, before)
+
+    def test_non_acting_players_cannot_claim_immediate_finish(self):
+        state = make_state({"bot": [3], "opp": [7, 9],
+                            "mate": [4, 6, 8, 10, 12], "opp2": [13]})
+        state["current_turn"] = "opp"
+        before = copy.deepcopy(state)
+        with mock.patch.object(guandan.GuandanGame, "apply_action",
+                               side_effect=AssertionError("projected a non-acting player's finish")):
+            trick.team_value(state, "bot", trick.TrickBudget(), {})
+        self.assertEqual(state, before)
+
+    def test_consecutive_legal_finishes_use_exact_terminal_result(self):
+        state = make_state({"bot": [3], "opp": [5], "mate": [7], "opp2": [9]})
+        before = copy.deepcopy(state)
+        successor = copy.deepcopy(state)
+        for actor in ("bot", "opp", "mate"):
+            cards = [card["id"] for card in successor["players"][actor]["hand"]]
+            _, error = guandan.GuandanGame.apply_action(successor, actor, play(cards))
+            self.assertIsNone(error)
+        self.assertEqual(successor["phase"], "round_end")
+        with mock.patch.object(trick, "resource_plan", side_effect=AssertionError("settled race")):
+            value = trick.team_value(state, "bot", trick.TrickBudget(), {})
+        self.assertEqual(value, guandan._evaluate_state_for_bot(successor, "bot"))
+        self.assertEqual(value, 200.0)
+        self.assertEqual(state, before)
+
+    def test_immediate_finish_projection_respects_deadline(self):
+        state = make_state({"bot": [3], "opp": [14],
+                            "mate": [4, 6, 8, 10, 12], "opp2": [13]})
+        before = copy.deepcopy(state)
+        clock = [0.0]
+        apply_action = guandan.GuandanGame.apply_action
+
+        def finish(*args, **kwargs):
+            result = apply_action(*args, **kwargs)
+            clock[0] = 1.0
+            return result
+
+        with mock.patch.object(trick.time, "perf_counter", side_effect=lambda: clock[0]), \
+                mock.patch.object(guandan.GuandanGame, "apply_action", side_effect=finish):
+            with self.assertRaisesRegex(trick.IncompleteTrick, "deadline"):
+                trick.team_value(state, "bot", trick.TrickBudget(1.0), {})
+        self.assertEqual(state, before)
+
+    def test_rejected_immediate_finish_does_not_publish_value(self):
+        state = make_state({"bot": [3], "opp": [14],
+                            "mate": [4, 6, 8, 10, 12], "opp2": [13]})
+        before = copy.deepcopy(state)
+        with mock.patch.object(guandan.GuandanGame, "apply_action", return_value=([], "rejected")):
+            with self.assertRaisesRegex(trick.IncompleteTrick, "illegal_immediate_finish: rejected"):
+                trick.team_value(state, "bot", trick.TrickBudget(), {})
+        self.assertEqual(state, before)
+
     def test_action_limit_never_produces_a_boundary_value(self):
         with mock.patch.object(trick, "team_value", side_effect=AssertionError("cutoff was scored")):
             with self.assertRaisesRegex(trick.IncompleteTrick, "action_limit"):
@@ -211,6 +366,8 @@ class TrickBoundaryTests(unittest.TestCase):
         before = copy.deepcopy(scored)
         panel = trick.compare_leads(self.state, "bot", scored)
         self.assertEqual(panel["status"], "complete")
+        self.assertEqual(panel["policy"], "actor_local_response_v2")
+        self.assertEqual(panel["value_model"], "residual_race_v3")
         self.assertFalse(panel["applied"])
         ids = [[p["world"] for p in row["plans"]] for row in panel["candidates"]]
         self.assertEqual(ids[0], ids[1])

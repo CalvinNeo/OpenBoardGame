@@ -4,7 +4,6 @@ let manilaCycleOpen = false;
 let manilaCycleUserOverride = null;
 let manilaLastPhase = null;
 let manilaTooltipTimer = null;
-let manilaErrorListenerBound = false;
 let manilaPilotDraft = null;
 
 const manilaPhaseLabel = document.getElementById("manilaPhase");
@@ -1926,22 +1925,6 @@ document.addEventListener("keydown", (event) => {
     exitManilaExplainMode();
   }
 });
-
-if (!manilaErrorListenerBound && typeof socket !== "undefined" && socket) {
-  manilaErrorListenerBound = true;
-  socket.on("system:error", (data) => {
-    if (currentGameType !== "manila") {
-      return;
-    }
-    const message = data && data.message ? String(data.message) : "";
-    if (!message) {
-      return;
-    }
-    if (message.includes("insufficient cash") && currentManilaView && currentManilaView.phase === "placement") {
-      showManilaTooltip("Not enough cash to place here.");
-    }
-  });
-}
 
 window.renderManilaGameState = renderManilaGameState;
 window.clearManilaState = clearManilaState;

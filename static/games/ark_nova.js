@@ -728,10 +728,6 @@
     arkNovaToast.timeout = window.setTimeout(() => toast.classList.remove("is-visible"), 3000);
   }
 
-  function showArkNovaError(message) {
-    arkNovaToast(String(message || "That action could not be completed."));
-  }
-
   function arkNovaPlayerColor(index) {
     return ARK_NOVA_PLAYER_COLORS[index % ARK_NOVA_PLAYER_COLORS.length];
   }
@@ -3732,7 +3728,6 @@
 
   window.clearArkNovaState = clearArkNovaState;
   window.showArkNovaHeaderActions = showArkNovaHeaderActions;
-  window.showArkNovaError = showArkNovaError;
   window.renderArkNovaGameState = renderArkNovaGameState;
   window.ensureArkNovaPanel = arkNovaEnsureShell;
   window.getArkNovaConfig = () => ({
