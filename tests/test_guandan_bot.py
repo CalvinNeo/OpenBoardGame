@@ -4,7 +4,7 @@ import time
 import unittest
 from unittest import mock
 
-from game import guandan
+from game import guandan, guandan_ai
 
 
 class GuandanBotBombAvoidanceTests(unittest.TestCase):
@@ -3383,8 +3383,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action, {"type": "play", "card_ids": [big_joker["id"]]})
         explain = state["bot_explain"]["bot"]
         self.assertEqual(explain["method"], "heuristic")
-        self.assertEqual(explain["method_details"]["mcts_gate"]["reason"],
-                         "large_hands_many_actions")
+        self.assertEqual(explain["method_details"]["heuristic_search_gate"]["reason"],
+                         "clear_heuristic_margin")
 
     def test_enemy_double_down_threat_uses_available_bomb(self):
         players = [
@@ -5254,6 +5254,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             {"type": "pass"},
         ]
 
+        state.setdefault("_ai_eval_cache", {})["heuristic_anytime"] = {
+            "cache_key": guandan_ai.call(guandan, "_heuristic_score_cache_key", state, "bot",
+                                         state["config"]["bot_search_depth"]),
+            "evaluated": 2, "total": 2, "stop_reason": "candidates_exhausted",
+        }
         with mock.patch("game.guandan_ai._candidate_actions", return_value=actions):
             with mock.patch("game.guandan_ai._filter_overbomb_actions", side_effect=lambda _s, _p, acts: acts):
                 with mock.patch("game.guandan_ai._action_combo", return_value={"type": "pair"}):
@@ -5454,7 +5459,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             action = guandan.GuandanGame.bot_move(state, "bot")
         self.assertEqual(action.get("type"), "play")
         explain = state.get("bot_explain", {}).get("bot", {})
-        self.assertEqual(explain.get("method"), "mcts")
+        self.assertEqual(explain.get("method"), "heuristic")
+        self.assertTrue(explain["method_details"]["heuristic_search_gate"]["confident"])
         top_cards = [entry.get("cards") for entry in explain.get("top", [])]
         self.assertEqual(explain.get("chosen", {}).get("cards"), ["♠️3", "♥️3", "♣️3", "♦️3"])
         self.assertIn(["Pass"], top_cards)
@@ -9139,10 +9145,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertEqual(action, {"type": "pass"})
         explain = state["bot_explain"]["bot4"]
-        self.assertEqual(explain.get("method"), "minimax")
+        self.assertEqual(explain.get("method"), "heuristic")
         self.assertEqual(
-            explain.get("method_details", {}).get("minimax_stop_reason"),
-            "teammate_control_defer",
+            explain["method_details"]["heuristic_search_gate"]["reason"],
+            "clear_heuristic_margin",
         )
 
         _, error = guandan.GuandanGame.apply_action(state, "bot4", action)
@@ -9242,12 +9248,26 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["config"]["bot_mode"] = "auto"
         state["config"]["bot_endgame_threshold"] = 999
 
+        def supported_pass(current, _bot_id, _depth, _width, **kwargs):
+            reference = kwargs["incumbent_action"]
+            proposal = {"type": "pass"}
+            current.setdefault("_ai_eval_cache", {})["minimax_anytime"] = {
+                "completed_depth": 3,
+                "root_values": [
+                    {"action": candidate, "world_values": [value] * 3,
+                     "value": value, "mean": value, "std": 0.0,
+                     "paired_std": 0.0, "lead_penalty": 0.0}
+                    for candidate, value in ((reference, -100.0), (proposal, 100.0))
+                ],
+            }
+            return proposal
+
         with mock.patch.object(
             guandan,
             "_determinize_state",
             side_effect=lambda current, *_args, **_kwargs: current,
         ):
-            with mock.patch.object(guandan, "_minimax_pick_action", return_value={"type": "pass"}):
+            with mock.patch.object(guandan, "_minimax_pick_action", side_effect=supported_pass):
                 action = guandan.GuandanGame.bot_move(state, "bot")
 
         self.assertEqual(action, {"type": "pass"})
@@ -10874,7 +10894,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertEqual(action, {"type": "play", "card_ids": [small_joker["id"]]})
         explain = state["bot_explain"]["bot2"]
-        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+        self.assertEqual(explain["method_details"]["heuristic_search_gate"]["reason"],
+                         "clear_heuristic_margin")
         self.assertFalse(explain["timing"].get("hard_deadline_reached"))
 
     def test_save_f620e9_bombs_third_straight_before_enemy_reaches_six_cards(self):

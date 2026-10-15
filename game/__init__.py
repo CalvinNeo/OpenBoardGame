@@ -1,3 +1,4 @@
+from game.colt_express import ColtExpressGame
 from game.dnd_starter_set import DndStarterSetGame
 from game.the_mind import TheMindGame
 from game.moshimo_yusha import MoshimoYushaGame
@@ -102,6 +103,7 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "ColtExpressGame",
     "DndStarterSetGame",
     "TheMindGame",
     "MoshimoYushaGame",

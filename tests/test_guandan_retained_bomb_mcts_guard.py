@@ -153,10 +153,24 @@ class GuandanRetainedBombMinimaxGuardTests(unittest.TestCase):
 
     def test_minimax_pass_remains_a_valid_search_override(self):
         state, bomb = self._endgame_state()
+
+        def supported_pass(current, *args, **kwargs):
+            proposal = {"type": "pass"}
+            current.setdefault("_ai_eval_cache", {})["minimax_anytime"] = {
+                "completed_depth": 3,
+                "root_values": [
+                    {"action": candidate, "world_values": [value] * 3,
+                     "value": value, "mean": value, "std": 0.0,
+                     "paired_std": 0.0, "lead_penalty": 0.0}
+                    for candidate, value in ((bomb, -100.0), (proposal, 100.0))
+                ],
+            }
+            return proposal
+
         with (
             mock.patch.object(guandan, "_heuristic_best_action", return_value=bomb),
             mock.patch.object(
-                guandan, "_minimax_pick_action", return_value={"type": "pass"}
+                guandan, "_minimax_pick_action", side_effect=supported_pass
             ) as search,
         ):
             action = guandan.GuandanGame.bot_move(state, "bot2")

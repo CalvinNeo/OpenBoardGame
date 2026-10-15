@@ -1,5 +1,12 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "colt_express": {
+    "scripts": ["/static/games/colt_express.js?v=1"],
+    "styles": ["/static/games/colt_express.css?v=1"],
+    "markup": "/static/games/colt_express.html?v=1",
+    "panel": "coltExpressPanel",
+    "header": "showColtExpressHeaderActions"
+  },
   "dnd_starter_set": {
     "scripts": ["/static/games/dnd_starter_set.js?v=1"],
     "styles": ["/static/games/dnd_starter_set.css?v=1"],

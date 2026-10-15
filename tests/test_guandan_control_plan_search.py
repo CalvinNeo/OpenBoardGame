@@ -167,7 +167,9 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
         self.assertEqual(action, {"type": "pass"})
         explain = state["bot_explain"]["bot2"]
         self.assertEqual(explain["chosen"]["cards"], ["Pass"])
-        self.assertIn(explain["search"]["decision"]["reason"], ("agreement", "preserve_control_plan"))
+        self.assertIsNone(explain["search"])
+        self.assertEqual(explain["method_details"]["heuristic_search_gate"]["reason"],
+                         "clear_heuristic_margin")
 
 
 if __name__ == "__main__":

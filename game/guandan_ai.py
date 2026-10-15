@@ -407,9 +407,43 @@ def _opponents_before_teammate_this_trick(state: Dict, player_id: str) -> int:
     return 0
 
 
+def _short_runner_has_natural_teammate_overtake(state: Dict, player_id: str) -> bool:
+    """Recognize a short runner's ordinary response that leaves one final play."""
+    teammate = _teammate_lead_context(state, player_id)
+    finish_order = state.get("finish_order") or []
+    if (not teammate or not finish_order
+            or _team_of(state, finish_order[0]) == _team_of(state, player_id)):
+        return False
+    hand = state["players"][player_id]["hand"]
+    if not 2 <= len(hand) <= 8 or len(state["players"][teammate]["hand"]) <= len(hand):
+        return False
+    current_combo = (state.get("current_trick") or {}).get("combo") or {}
+    if current_combo.get("type") not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return False
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    hand_map = _map_hand_by_id(hand)
+    for cards in _list_hint_options(state, player_id):
+        play_cards = [hand_map[card_id] for card_id in cards]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if (not combo or combo.get("type") != current_combo.get("type")
+                or _cards_use_special_material(play_cards, level_rank)
+                or _breaks_bomb_shape(hand, cards, level_rank)):
+            continue
+        remaining = _remove_cards(hand, cards)
+        if remaining and _can_play_all(remaining, level_rank, config, None):
+            return True
+    return False
+
+
 def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
     teammate = _teammate_lead_context(state, player_id)
     if not teammate:
+        return 0.0
+    if _short_runner_has_natural_teammate_overtake(state, player_id):
+        # After the opponents take first place, our short runner needs second
+        # place. Do not reward waiting behind a longer partner when a natural
+        # same-type response can prepare that finish without spending control.
         return 0.0
     active_counts = [
         len(state["players"][pid]["hand"])
@@ -522,7 +556,7 @@ def _short_enemy_defer_bomb_risk_penalty(state: Dict, player_id: str) -> float:
 
     combo = current_trick.get("combo") or {}
     combo_type = combo.get("type") or ""
-    if len(state["players"].get(leader, {}).get("hand", [])) == 4:
+    if 4 <= len(state["players"].get(leader, {}).get("hand", [])) <= 6:
         minimal = _minimal_bomb_response(
             state["players"][player_id]["hand"], state["level_rank"],
             combo, state.get("config", {}),
@@ -3003,6 +3037,7 @@ def _apply_hand_route_order(
 _LEAD_REFINEMENTS = {
     "deny_one_card_window": ("_lead_short_next_opponent_penalty", -1, False),
     "deny_short_runout_window": ("_lead_short_escape_window_penalty", -1, False),
+    "lead_teammate_finish": ("_lead_teammate_finish_bonus", 1, False),
     "lead_closeout_reply": ("_lead_closeout_reply_penalty", -1, False),
     "preserve_high_same_type": ("_lead_same_type_value_conservation_penalty", -1, False),
     "lead_special_material": ("_lead_special_material_penalty", -1, False),
@@ -4485,7 +4520,7 @@ def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> b
     leader = current_trick.get("player_id")
 
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
-    if leader_left == 4 and _four_card_bomb_finish_profile(
+    if 4 <= leader_left <= 6 and _retained_bomb_finish_profile(
         state, player_id, leader
     )["bomb_probability"] >= 0.5:
         # A retained bomb can finish on our next ordinary lead. Keep Pass in
@@ -4509,7 +4544,7 @@ def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> b
 def _retained_bomb_takeover_profile(
     state: Dict, player_id: str, cards: List[int], combo: Optional[Dict] = None
 ) -> Dict[str, float]:
-    """Check a takeover or lead's control route against public four-card tails.
+    """Check a takeover or lead's control route against public finishing bombs.
 
     A smaller enemy bomb need not beat this play: it can wait for the first
     ordinary lead and finish before our reserve bomb gets another turn. Only
@@ -4528,11 +4563,11 @@ def _retained_bomb_takeover_profile(
     if not combo or (combo.get("type") not in BOMB_TYPES and state.get("current_trick")):
         return empty
     profiles = [
-        _four_card_bomb_finish_profile(state, player_id, pid)
+        _retained_bomb_finish_profile(state, player_id, pid)
         for pid in state.get("turn_order", [])
         if _team_of(state, pid) != _team_of(state, player_id)
         and not state["players"].get(pid, {}).get("finished")
-        and len(state["players"].get(pid, {}).get("hand", [])) == 4
+        and 4 <= len(state["players"].get(pid, {}).get("hand", [])) <= 6
     ]
     profiles = [profile for profile in profiles if profile["bomb_probability"] > 0.0]
     if not profiles:
@@ -4690,7 +4725,7 @@ def _must_contest_structured_enemy_runout(state: Dict, player_id: str) -> bool:
     if combo.get("type") not in STRUCTURED_RUNOUT_TYPES:
         return False
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
-    if leader_left == 4 and _four_card_bomb_finish_profile(
+    if 4 <= leader_left <= 6 and _retained_bomb_finish_profile(
         state, player_id, leader
     )["bomb_probability"] >= 0.5:
         return False
@@ -4702,6 +4737,21 @@ def _must_contest_structured_enemy_runout(state: Dict, player_id: str) -> bool:
     if _has_natural_same_type_response(state, player_id, combo.get("type") or "", []):
         return False
     return _has_layered_bomb_response(state, player_id)
+
+
+def _target_single_value_distribution(state: Dict, observer: str, target: str) -> List[Tuple[int, float]]:
+    hand = state["players"].get(target, {}).get("hand", [])
+    if len(hand) != 1 or state["players"][target].get("finished"):
+        return []
+    if target == observer or state.get("_ai_sampled_world"):
+        return [(_single_order_value(hand[0], state["level_rank"]), 1.0)]
+    available, locked = _teammate_public_response_pool(state, observer, target)
+    possible = locked or available
+    counts = {}
+    for card in possible:
+        value = _single_order_value(card, state["level_rank"])
+        counts[value] = counts.get(value, 0) + 1
+    return [(value, count / len(possible)) for value, count in sorted(counts.items())]
 
 
 def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
@@ -4729,24 +4779,6 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
     if rank_value >= TOP_SINGLE_VALUE_MIN:
         return 0.0
 
-    config = state.get("config", {})
-    exact_max = _max_combo_value_for_hand(
-        state["players"].get(next_pid, {}).get("hand", []),
-        state["level_rank"],
-        "single",
-        config,
-    )
-    if next_left <= 1 and exact_max is not None and exact_max > rank_value:
-        remaining = max(0, len(hand) - len(cards))
-        penalty = 24.0
-        if remaining >= 5:
-            penalty += 4.0
-        if rank_value < CONTROL_SINGLE_VALUE_MIN:
-            penalty += 2.5
-        elif rank_value < PREMIUM_SINGLE_VALUE_MIN:
-            penalty += 1.0
-        return penalty
-
     pressure = max(0.0, float(CONTROL_SINGLE_VALUE_MIN) - float(rank_value))
     penalty = pressure * (1.45 if next_left <= 1 else 0.75)
     penalty += 6.0 if next_left <= 1 else 2.5
@@ -4763,6 +4795,14 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
         penalty *= 0.65
     if remaining <= 2:
         penalty *= 0.7
+    if next_left == 1:
+        reply_probability = sum(probability for value, probability in
+                                _target_single_value_distribution(state, player_id, next_pid)
+                                if value > rank_value)
+        losing_penalty = 24.0 + (4.0 if remaining >= 5 else 0.0)
+        losing_penalty += 2.5 if rank_value < CONTROL_SINGLE_VALUE_MIN else (
+            1.0 if rank_value < PREMIUM_SINGLE_VALUE_MIN else 0.0)
+        penalty += reply_probability * (losing_penalty - penalty)
     return max(0.0, penalty)
 
 
@@ -4804,11 +4844,16 @@ def _lead_short_escape_window_penalty(
         elif target_size >= 5:
             base = 18.0
 
-        exact_closeout = _can_play_all(hand, level_rank, config, combo)
-        if exact_closeout:
-            certainty = 1.0
+        if state.get("_ai_sampled_world"):
+            reply_probability = float(_can_play_all(hand, level_rank, config, combo))
+        elif target_size == 1:
+            reply_probability = sum(probability for value, probability in
+                                    _target_single_value_distribution(state, player_id, pid)
+                                    if value > combo.get("rank_value", 0))
         else:
-            certainty = 0.82 if target_size == 1 else 0.28
+            reply_probability = _public_reply_belief(state, player_id, pid, combo)["same_type"]
+        fallback = 0.82 if target_size == 1 else 0.28
+        certainty = fallback + (1.0 - fallback) * reply_probability
 
         if combo_type == "single":
             rank_value = combo.get("rank_value", 0)
@@ -4872,15 +4917,15 @@ def _lead_short_enemy_lock_bonus(
                     None,
                 ):
                     bonus += 2.0
-                teammate_hand = state["players"].get(teammate, {}).get("hand", [])
-                teammate_max = _max_combo_value_for_hand(
-                    teammate_hand,
-                    state["level_rank"],
-                    combo.get("type") or "",
-                    state.get("config", {}),
-                )
-                if teammate_max is not None and teammate_max > _combo_numeric_value(combo):
-                    bonus += 2.0
+                if state.get("_ai_sampled_world"):
+                    teammate_max = _max_combo_value_for_hand(
+                        state["players"].get(teammate, {}).get("hand", []),
+                        state["level_rank"], combo.get("type") or "", state.get("config", {}),
+                    )
+                    reply_probability = float(teammate_max is not None and teammate_max > _combo_numeric_value(combo))
+                else:
+                    reply_probability = _public_reply_belief(state, player_id, teammate, combo)["same_type"]
+                bonus += 2.0 * reply_probability
                 return min(13.5, bonus)
 
     if combo.get("type") != "pair":
@@ -4933,14 +4978,9 @@ def _single_lead_finish_window_penalty(state: Dict, bot_id: str) -> float:
     if next_left > 1:
         return 0.0
 
-    exact_max = _max_combo_value_for_hand(
-        next_hand,
-        state["level_rank"],
-        "single",
-        state.get("config", {}),
-    )
-    if exact_max is None or exact_max <= combo.get("rank_value", 0):
-        return 0.0
+    reply_probability = sum(probability for value, probability in
+                            _target_single_value_distribution(state, bot_id, next_pid)
+                            if value > combo.get("rank_value", 0))
 
     bot_remaining = len(state["players"].get(bot_id, {}).get("hand", []))
     penalty = 20.0
@@ -4948,7 +4988,7 @@ def _single_lead_finish_window_penalty(state: Dict, bot_id: str) -> float:
         penalty += 6.0
     if bot_remaining >= 5:
         penalty += 3.0
-    return penalty
+    return penalty * reply_probability
 
 
 def _active_lead_escape_window_penalty(state: Dict, bot_id: str) -> float:
@@ -4983,24 +5023,22 @@ def _active_lead_escape_window_penalty(state: Dict, bot_id: str) -> float:
             baseline = 5.5
         elif rank_value >= PREMIUM_SINGLE_VALUE_MIN:
             baseline = 7.0
-        next_max = _max_combo_value_for_hand(next_hand, level_rank, "single", config)
-        if next_max is not None:
+        for next_max, probability in _target_single_value_distribution(state, bot_id, next_pid):
             if next_max > rank_value:
-                baseline += min(10.0, 2.4 + (next_max - rank_value) * 0.22)
+                baseline += probability * min(10.0, 2.4 + (next_max - rank_value) * 0.22)
             else:
-                baseline -= min(2.0, max(0.0, rank_value - next_max) * 0.08)
+                baseline -= probability * min(2.0, max(0.0, rank_value - next_max) * 0.08)
         if leader == bot_id:
             baseline += 2.0
         return max(0.0, baseline)
 
-    exact_closeout = False
+    closeout_probability = 0.0
     if next_left == len(current_trick.get("cards") or []):
-        exact_closeout = _can_play_all(next_hand, level_rank, config, combo)
-    elif combo_type == "single" and next_left == 1:
-        exact_max = _max_combo_value_for_hand(next_hand, level_rank, "single", config)
-        exact_closeout = exact_max is not None and exact_max > combo.get("rank_value", 0)
+        closeout_probability = (float(_can_play_all(next_hand, level_rank, config, combo))
+                                if state.get("_ai_sampled_world")
+                                else _public_reply_belief(state, bot_id, next_pid, combo)["same_type"])
 
-    if not exact_closeout:
+    if closeout_probability <= 0.0:
         return 0.0
 
     penalty = {
@@ -5026,7 +5064,7 @@ def _active_lead_escape_window_penalty(state: Dict, bot_id: str) -> float:
             penalty += 3.0
         elif rank_value < PREMIUM_SINGLE_VALUE_MIN:
             penalty += 1.5
-    return penalty
+    return penalty * closeout_probability
 
 
 def _opponent_finish_pressure_penalty(state: Dict, bot_id: str) -> float:
@@ -7083,6 +7121,11 @@ def _opponent_bomb_reply_probability(
         return _four_card_bomb_finish_profile_from_pool(
             state, opponent_id, unknown_cards
         )["bomb_probability"]
+    tail_probability = 0.0
+    if 5 <= hand_count <= 6 and unknown_cards is not None:
+        tail_probability = _retained_bomb_finish_profile_from_pool(
+            state, opponent_id, unknown_cards
+        )["bomb_probability"]
     short_reply = None
     if unknown_cards is not None:
         short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
@@ -7090,29 +7133,43 @@ def _opponent_bomb_reply_probability(
         state, opponent_id, combo, unknown_total, rank_counts, joker_counts, unknown_cards
     )
     if not _reply_has_soft_history(state, opponent_id):
-        return observed
+        return max(tail_probability, observed)
     prior = _analytic_bomb_reply_probability(
         state, opponent_id, combo, unknown_total, rank_counts, joker_counts, unknown_cards, use_history=False
     )
-    return max(0.0, min(1.0, 0.75 * observed + 0.25 * prior))
+    return max(tail_probability, max(0.0, min(1.0, 0.75 * observed + 0.25 * prior)))
 
 
 def _four_card_bomb_finish_profile(
     state: Dict, observer_id: str, target_id: str
 ) -> Dict:
-    """Public evidence for a four-card hand reserved as a finishing bomb.
+    """Compatibility entry point for the original four-card tail model."""
+    return _retained_bomb_finish_profile(state, observer_id, target_id)
+
+
+def _retained_bomb_finish_profile(
+    state: Dict, observer_id: str, target_id: str
+) -> Dict:
+    """Public evidence for a short hand reserved as a finishing bomb.
 
     ``bomb_probability`` is a conservative heuristic, not a calibrated
     posterior. ``physical_probability`` retains the uniform-card baseline;
     ``bomb_combos`` describes the legal bomb strengths conditional on a bomb.
     No target card face is read, including when public evidence is incomplete.
     """
-    return _four_card_bomb_finish_profile_from_pool(
+    return _retained_bomb_finish_profile_from_pool(
         state, target_id, _lead_unknown_pool_cards(state, observer_id)
     )
 
 
 def _four_card_bomb_finish_profile_from_pool(
+    state: Dict, target_id: str, unknown_cards: List[Dict]
+) -> Dict:
+    """Compatibility entry point for callers supplying their public pool."""
+    return _retained_bomb_finish_profile_from_pool(state, target_id, unknown_cards)
+
+
+def _retained_bomb_finish_profile_from_pool(
     state: Dict, target_id: str, unknown_cards: List[Dict]
 ) -> Dict:
     empty = {
@@ -7123,30 +7180,33 @@ def _four_card_bomb_finish_profile_from_pool(
         "bomb_combos": (),
     }
     target = state["players"].get(target_id, {})
-    if target.get("finished") or len(target.get("hand", [])) != 4:
+    hand_count = len(target.get("hand", []))
+    if target.get("finished") or not 4 <= hand_count <= 6:
         return empty
 
-    actions = [
-        action
-        for trick in ((state.get("round_memories") or [{}])[-1].get("tricks") or [])
-        for action in (trick.get("actions") or [])
-        if action.get("player_id") == target_id and action.get("type") == "play"
-    ]
+    actions = []
+    for trick in ((state.get("round_memories") or [{}])[-1].get("tricks") or []):
+        plays = [action for action in (trick.get("actions") or [])
+                 if action.get("type") == "play"]
+        actions.extend({**action, "tail_bomb_lead": index == 0}
+                       for index, action in enumerate(plays)
+                       if action.get("player_id") == target_id)
     latest = actions[-1] if actions else None
     current = state.get("current_trick") or {}
     if current.get("player_id") == target_id and (
-        latest is None or latest.get("hand_count_after") != 4
+        latest is None or latest.get("hand_count_after") != hand_count
     ):
         # The current public trick also proves a play just reduced this hand
-        # to four, even in older saves without a complete round memory.
+        # to this count, even in older saves without a complete round memory.
         latest = {
             "combo_type": (current.get("combo") or {}).get("type"),
-            "hand_count_after": 4,
+            "hand_count_after": hand_count,
         }
         actions = actions + [latest]
-    history_supported = bool(latest and latest.get("hand_count_after") == 4)
+    history_supported = bool(latest and latest.get("hand_count_after") == hand_count)
     history_signature = tuple(
-        (action.get("combo_type"), action.get("hand_count_after"))
+        (action.get("combo_type"), action.get("hand_count_after"),
+         action.get("tail_bomb_lead"), len(action.get("cards") or []))
         for action in actions
     )
     owners = {}
@@ -7157,19 +7217,19 @@ def _four_card_bomb_finish_profile_from_pool(
             continue
     pool = [card for card in unknown_cards if owners.get(card["id"], target_id) == target_id]
     locked_ids = {card["id"] for card in pool if owners.get(card["id"]) == target_id}
-    if len(pool) < 4 or len(locked_ids) > 4:
+    if len(pool) < hand_count or len(locked_ids) > hand_count:
         return empty
     level_rank = state["level_rank"]
     config = state.get("config", {})
     caps = _public_revealed_rank_caps_for_target(state, target_id)
     cache_key = (
-        target_id, level_rank, history_signature,
+        target_id, hand_count, level_rank, history_signature,
         tuple((card["id"], card.get("rank"), card.get("suit"), card.get("joker")) for card in pool),
         tuple(sorted(locked_ids)),
         tuple(sorted(caps.items())),
         bool(config.get("hard_bomb_beats_soft")),
     )
-    cache = state.setdefault("_ai_eval_cache", {}).setdefault("four_card_bomb_finish_profiles", {})
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("retained_bomb_finish_profiles", {})
 
     def copy_profile(profile: Dict) -> Dict:
         return {
@@ -7190,8 +7250,16 @@ def _four_card_bomb_finish_profile_from_pool(
         for rank in range(2, 15)
     }
     entries = []
+    seen_classes = set()
 
     def add_class(groups: List[Tuple[List[Dict], int]]) -> None:
+        # Different straight-flush windows can describe the same physical
+        # hand when wilds fill its ends. Count that hand class only once.
+        class_key = tuple(sorted((tuple(sorted(card["id"] for card in group)), needed)
+                                 for group, needed in groups if needed))
+        if class_key in seen_classes:
+            return
+        seen_classes.add(class_key)
         eligible_ids = {card["id"] for group, _needed in groups for card in group}
         if not locked_ids.issubset(eligible_ids):
             return
@@ -7221,22 +7289,33 @@ def _four_card_bomb_finish_profile_from_pool(
             ) else 1.0
             entries.append({"combo": combo, "ways": ways, "weight": ways * history_weight})
 
-    # Four-card rank bombs and four jokers are disjoint physical hand classes.
+    # Whole-hand rank bombs, straight flushes and four jokers are disjoint.
     # Count classes analytically instead of hoping random deals contain one.
     for rank, cards in naturals.items():
         for wild_count in range(min(2, len(wilds)) + 1):
-            add_class([(cards, 4 - wild_count), (wilds, wild_count)])
+            add_class([(cards, hand_count - wild_count), (wilds, wild_count)])
     small = [card for card in pool if card.get("joker") == "small"]
     big = [card for card in pool if card.get("joker") == "big"]
-    add_class([(small, 2), (big, 2)])
+    if hand_count == 4:
+        add_class([(small, 2), (big, 2)])
+    elif hand_count == 5:
+        for suit in ("spades", "hearts", "clubs", "diamonds"):
+            by_rank = {rank: [card for card in cards if card.get("suit") == suit]
+                       for rank, cards in naturals.items()}
+            for sequence, _high in _CORE.STRAIGHT_SEQUENCES:
+                for wild_count in range(min(2, len(wilds)) + 1):
+                    for natural_ranks in itertools.combinations(sequence, 5 - wild_count):
+                        if all(by_rank[rank] for rank in natural_ranks):
+                            add_class([(by_rank[rank], 1) for rank in natural_ranks]
+                                      + [(wilds, wild_count)])
 
-    total_ways = math.comb(len(pool) - len(locked_ids), 4 - len(locked_ids))
+    total_ways = math.comb(len(pool) - len(locked_ids), hand_count - len(locked_ids))
     bomb_ways = sum(entry["ways"] for entry in entries)
     weighted_bomb_ways = sum(entry["weight"] for entry in entries)
     physical_probability = bomb_ways / total_ways if total_ways else 0.0
     weighted_total = total_ways - bomb_ways + weighted_bomb_ways
     probability = weighted_bomb_ways / weighted_total if weighted_total else 0.0
-    if bomb_ways and history_supported:
+    if bomb_ways and history_supported and hand_count == 4:
         # A hand reduced by deliberate plays is not four cards freshly dealt
         # from the remaining deck. Retained bombs are a serious finish threat.
         retained_prior = 0.65
@@ -7264,6 +7343,20 @@ def _four_card_bomb_finish_profile_from_pool(
             probability = 4.0 * probability / (1.0 + 3.0 * probability)
         else:
             probability = max(probability, retained_prior)
+    elif bomb_ways and history_supported:
+        # Five/six cards also fit ordinary whole-hand structures. Raise their
+        # bomb prior only after a public bomb run: deliberately leading a bomb
+        # from <= 12 cards, or spending consecutive bombs to reach this tail.
+        # Neither the hidden hand nor the initial deal is used as evidence.
+        consecutive_bombs = len(actions) >= 2 and all(
+            action.get("combo_type") in BOMB_TYPES for action in actions[-2:]
+        )
+        short_bomb_lead = bool(
+            latest.get("tail_bomb_lead") and latest.get("combo_type") in BOMB_TYPES
+            and hand_count + len(latest.get("cards") or []) <= 12
+        )
+        if consecutive_bombs or short_bomb_lead:
+            probability = max(probability, 0.9 if consecutive_bombs else 0.85)
 
     result = {
         "bomb_possible": bool(bomb_ways),
@@ -7552,6 +7645,12 @@ def _opponent_overbomb_reply_probability(
         profile = _four_card_bomb_finish_profile_from_pool(state, opponent_id, unknown_cards)
         return _four_card_bomb_reply_probability(profile, combo, state["level_rank"], state.get("config", {}))
     if unknown_cards is not None:
+        tail_probability = 0.0
+        if 5 <= hand_count <= 6:
+            tail = _retained_bomb_finish_profile_from_pool(state, opponent_id, unknown_cards)
+            tail_probability = _four_card_bomb_reply_probability(
+                tail, combo, state["level_rank"], state.get("config", {})
+            )
         physical = _public_overbomb_profile_from_pool(state, opponent_id, combo, unknown_cards)
         if not physical["possible"]:
             return 0.0
@@ -7559,13 +7658,13 @@ def _opponent_overbomb_reply_probability(
         if physical["probability"] >= 1.0 or any(str(card["id"]) in known_ids for card in unknown_cards):
             # The legacy six-card shape sampler does not condition on owner
             # locks. Keep the conditioned physical estimate in those cases.
-            return physical["probability"]
+            return max(tail_probability, physical["probability"])
         short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
         if short_reply is not None:
             # A small history-conditioned panel can miss a rare legal bomb.
             # Keep physical support in the prior, just as ordinary replies do.
-            return 0.75 * short_reply["overbomb"] + 0.25 * physical["probability"]
-        return physical["probability"]
+            return max(tail_probability, 0.75 * short_reply["overbomb"] + 0.25 * physical["probability"])
+        return max(tail_probability, physical["probability"])
 
     level_rank = state["level_rank"]
     revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
@@ -7673,13 +7772,7 @@ def _opponent_followup_reply_bias(state: Dict, opponent_id: str, combo: Dict) ->
 
 
 def _bomb_closeout_bases(state: Dict, player_id: str, cards: List[int]) -> List[List[int]]:
-    """Find weaker allocations of this bomb with the same one-play tail.
-
-    Moving wildcards from a final ordinary combo into the current bomb cannot
-    add a turn. Prefer the stronger bomb; material conservation and the shape
-    of the final lead must not reverse that allocation order. A second bomb
-    is still a recovery resource, so it is deliberately excluded.
-    """
+    """Find comparable bomb allocations without discarding a team handoff."""
     trick = state.get("current_trick") or {}
     current = trick.get("combo") or {}
     if (current.get("type") not in BOMB_TYPES
@@ -7712,6 +7805,14 @@ def _bomb_closeout_bases(state: Dict, player_id: str, cards: List[int]) -> List[
                 continue
             base_tail = _evaluate_combo(_remove_cards(hand, base), level_rank, config)
             if base_tail and base_tail.get("type") not in BOMB_TYPES:
+                if not state.get("finish_order") and base_tail.get("type") != tail.get("type"):
+                    pool = _lead_unknown_pool_cards(state, player_id)
+                    opponents = [actor for actor in state["turn_order"]
+                                 if _team_of(state, actor) != _team_of(state, player_id)
+                                 and not state["players"][actor].get("finished")]
+                    if not any(_public_overbomb_profile_from_pool(state, actor, base_combo, pool)["possible"]
+                               for actor in opponents):
+                        continue
                 bases.append(base)
     return bases
 
@@ -7900,6 +8001,22 @@ def _lead_retake_control_bonus(
     return max(0.0, min(9.5, bonus))
 
 
+def _lead_teammate_finish_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    """A public guaranteed finish before the opponent acts secures second place."""
+    if state.get("current_trick") or not cards or combo.get("type") != "single":
+        return 0.0
+    finish_order = state.get("finish_order") or []
+    if len(finish_order) != 1 or _team_of(state, finish_order[0]) == _team_of(state, player_id):
+        return 0.0
+    teammate = _teammate_of(state, player_id)
+    if not teammate or _next_active_after(state, player_id) != teammate:
+        return 0.0
+    distribution = _target_single_value_distribution(state, player_id, teammate)
+    if distribution and all(value > combo.get("rank_value", 0) for value, _probability in distribution):
+        return 100.0
+    return 0.0
+
+
 def _lead_closeout_reply_penalty(
     state: Dict, player_id: str, cards: List[int], combo: Dict,
 ) -> float:
@@ -7907,6 +8024,10 @@ def _lead_closeout_reply_penalty(
     combo_type = combo.get("type")
     if (not _critical_enemy_closeout_lead(state, player_id) or not cards
             or combo_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate")):
+        return 0.0
+    if _lead_teammate_finish_bonus(state, player_id, cards, combo):
+        # The teammate finishes first in this response window; the enemy can
+        # no longer take second place, even if its cards beat this lead later.
         return 0.0
     opponents = [
         opponent_id for opponent_id in state.get("turn_order", [])
@@ -11662,6 +11783,19 @@ def _mcts_root_candidate_subset(
     if len(play_actions) <= play_limit:
         return play_actions + other_actions
 
+    teammate = _teammate_of(state, player_id)
+    teammate_count = len(state["players"].get(teammate, {}).get("hand", []))
+    if (_critical_enemy_closeout_lead(state, player_id) and play_limit >= 2
+            and 0 < teammate_count <= 6
+            and teammate_count < len(state["players"][player_id]["hand"])):
+        # A short partner may need to shed a singleton before its final
+        # group. Keep that relay route beside the heuristic favorite instead
+        # of filling every root slot with ordinary multi-card families.
+        single = next((action for action in play_actions
+                       if (_action_combo(state, player_id, action) or {}).get("type") == "single"), None)
+        if single is not None:
+            play_actions = _merge_action_candidates([play_actions[0], single], play_actions)
+
     selected: List[Dict] = []
     selected_keys = set()
     seen_families = set()
@@ -11705,7 +11839,74 @@ def _merge_action_candidates(*groups: List[Dict]) -> List[Dict]:
     return merged
 
 
-def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
+def _heuristic_search_confidence(
+    state: Dict, bot_id: str, depth: int, action: Optional[Dict] = None
+) -> Dict:
+    """Skip speculative search only after a complete, decisive comparison.
+
+    A score margin is a routing heuristic, not a probability of winning.
+    In particular, a pruned pass or an unfinished finalist is not evidence
+    that the incumbent is better than every alternative.
+    """
+    required_gap = max(0.0, float(state.get("config", {}).get("bot_mcts_gate_score_gap", 10.0)))
+    result = {"confident": False, "reason": "incomplete_heuristic", "required_gap": required_gap}
+    status = state.get("_ai_eval_cache", {}).get("heuristic_anytime") or {}
+    if (not status or status.get("bounded_scoring") or status.get("interrupted")
+            or status.get("deadline_limited")
+            or status.get("stop_reason") != "candidates_exhausted"
+            or status.get("evaluated", 0) != status.get("total")
+            or status.get("cache_key") != _heuristic_score_cache_key(state, bot_id, depth)):
+        return result
+    cached = _get_cached_heuristic_scored_candidates(state, bot_id, depth)
+    if not cached or len(cached) != status.get("evaluated"):
+        return result
+    values = {}
+    for cards, score, components in cached:
+        if (not math.isfinite(score) or "anytime_quick_score" in components
+                or components.get("anytime_partial")):
+            return result
+        key = ("pass",) if cards is None else ("play", tuple(sorted(cards)))
+        if key in values and not math.isclose(values[key], score, abs_tol=1e-9):
+            return result
+        values[key] = score
+    if "pass" in GuandanGame.get_legal_actions(state, bot_id) and ("pass",) not in values:
+        result["reason"] = "pass_not_compared"
+        return result
+    if len(values) < 2:
+        result["reason"] = "insufficient_alternatives"
+        return result
+    ordered = sorted(values.items(), key=lambda item: item[1], reverse=True)
+    if action is not None and _action_identity(action) != ordered[0][0]:
+        result["reason"] = "incumbent_changed"
+        return result
+    gap = ordered[0][1] - ordered[1][1]
+    confident = gap >= required_gap and gap > 1e-9
+    result.update(confident=confident, reason="clear_heuristic_margin" if confident else "ambiguous_heuristic",
+                  score_gap=gap, candidates=len(values))
+    current = state.get("current_trick")
+    if (confident and ordered[0][0] == ("pass",) and current
+            and int(state.get("pass_count", 0)) + 1 < _CORE._trick_passes_needed(state)):
+        next_pid = _next_active_after(state, bot_id)
+        combo = current.get("combo") or {}
+        size = int(combo.get("size") or len(current.get("cards") or []))
+        if (next_pid and _team_of(state, next_pid) != _team_of(state, bot_id)
+                and size == len(state["players"][next_pid].get("hand", []))):
+            if combo.get("type") == "single":
+                finish_risk = sum(probability for value, probability in
+                                  _target_single_value_distribution(state, bot_id, next_pid)
+                                  if value > combo.get("rank_value", 0))
+            else:
+                finish_risk = _public_reply_belief(state, bot_id, next_pid, combo)["any"]
+            if finish_risk >= 0.5:
+                # A large shape/tempo margin cannot settle a contradictory
+                # public finish threat, including on our teammate's lead.
+                result.update(confident=False, reason="unresolved_enemy_finish", finish_risk=finish_risk)
+    return result
+
+
+def _should_use_mcts(
+    state: Dict, bot_id: str, width: int, heuristic_action: Optional[Dict] = None
+) -> bool:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return False
@@ -11714,6 +11915,14 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     if not current_trick and not critical_lead:
         return False
     if _teammate_lead_context(state, bot_id):
+        return False
+
+    confidence = _heuristic_search_confidence(
+        state, bot_id, max(1, int(state.get("config", {}).get("bot_search_depth", 4))),
+        heuristic_action,
+    )
+    if confidence["confident"]:
+        state.setdefault("_ai_eval_cache", {})["mcts_gate"] = confidence
         return False
 
     cached = _get_cached_heuristic_scored_candidates(
@@ -11784,15 +11993,6 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     if cached and len(cached) >= 2:
         ordered_scores = sorted((entry[1] for entry in cached), reverse=True)
         heuristic_gap = ordered_scores[0] - ordered_scores[1]
-        confidence_gap = float(state.get("config", {}).get("bot_mcts_gate_score_gap", 10.0))
-        critical_high_single = combo_type == "single" and current_combo.get("rank_value", 0) >= 70
-        if (
-            heuristic_gap >= confidence_gap
-            and not root_has_bomb_response
-            and not critical_high_single
-            and not immediate_closeout
-        ):
-            return False
 
     if immediate_closeout:
         return True
@@ -12252,6 +12452,21 @@ def _determinize_state(
 
     config = det.get("config", {})
     sample_count = max(1, int(config.get("bot_determinize_samples", 5)))
+    retained_group_odds = max(1.0, min(32.0, float(config.get("bot_determinize_retained_group_odds", 1.0))))
+    retained_targets = set()
+    if retained_group_odds > 1.0:
+        latest_counts = {}
+        for trick in ((det.get("round_memories") or [{}])[-1].get("tricks") or []):
+            for action in trick.get("actions") or []:
+                if action.get("type") == "play":
+                    latest_counts[action.get("player_id")] = action.get("hand_count_after")
+        retained_targets = {
+            player for player, size in targets
+            if 2 <= size <= 6 and latest_counts.get(player) == size
+        }
+    retained_bonus = math.log(retained_group_odds) * max(
+        0.05, float(config.get("bot_determinize_temperature", 1.25))
+    )
     remaining_budget = getattr(_CORE_LOCAL, "determinize_sampling_budget", None)
     if remaining_budget is None:
         remaining_budget = _deadline_remaining(deadline)
@@ -12295,6 +12510,8 @@ def _determinize_state(
             penalty += _pass_limit_penalty_for_hand(det, pid, cards)
             penalty += _revealed_rank_cap_penalty_for_hand(det, pid, cards)
             penalty += _public_action_line_penalty_for_hand(det, pid, cards)
+            if pid in retained_targets and _evaluate_combo(cards, det["level_rank"], config):
+                penalty -= retained_bonus
             if not short_budget:
                 # Sequence consistency performs a full decomposition for each
                 # player/proposal. Keep it for longer searches, while the short
@@ -12681,6 +12898,13 @@ def _minimax_plan_risks(
     closeout_risk = _lead_closeout_plan_risk(state, bot_id, reference, proposal)
     if closeout_risk > 0.001:
         risks["closeout_reentry"] = closeout_risk
+    if reference.get("type") == "pass" and cards and _teammate_lead_context(state, bot_id):
+        remaining = _remove_cards(hand, cards)
+        if not _can_play_all(remaining, level_rank, state.get("config", {}), None):
+            overtake_cost = _teammate_overtrick_penalty(
+                state, bot_id, cards, proposal_combo, len(remaining),
+            )
+            risks["teammate_control"] = max(5.0, min(18.0, overtake_cost))
     if proposal.get("type") == "pass" and reference_combo.get("type") in BOMB_TYPES:
         leader = current_trick.get("player_id")
         if (leader and _team_of(state, leader) != _team_of(state, bot_id)
@@ -12729,27 +12953,52 @@ def _should_accept_minimax_override(
     risks = _minimax_plan_risks(state, bot_id, reference, proposal)
     decision["plan_risks"] = risks
     if not risks:
-        decision.update(accepted=True, reason="search_preference")
-        return True
+        hand = state["players"][bot_id]["hand"]
+        cards = proposal.get("card_ids") or []
+        if (proposal.get("type") == "play" and hand and len(cards) == len(hand)
+                and set(cards) == {card["id"] for card in hand}
+                and _can_play_all(hand, state["level_rank"], state.get("config", {}),
+                                  (state.get("current_trick") or {}).get("combo"))):
+            decision.update(accepted=True, reason="immediate_finish")
+            return True
+        shortcuts = {"forced_relay": _forced_endgame_control_relay_action,
+                     "teammate_control_defer": _deferred_teammate_bomb_pass}
+        shortcut = shortcuts.get(status.get("stop_reason"))
+        if shortcut is not None:
+            checked = shortcut(state, bot_id, [reference, proposal])
+            if checked is not None and _action_identity(checked) == _action_identity(proposal):
+                decision.update(accepted=True, reason=status["stop_reason"])
+                return True
+    if set(risks) <= {"same_type_control"} and status.get("stop_reason") == "public_closeout":
+        closeout = _public_endgame_closeout_action(state, bot_id, [reference, proposal])
+        if closeout is not None and _action_identity(closeout[0]) == _action_identity(proposal):
+            decision.update(accepted=True, reason="public_closeout_control",
+                            hold_probability=closeout[1], reference_hold_probability=closeout[2])
+            return True
     records = {_action_identity(record["action"]): record for record in status.get("root_values", [])}
     baseline = records.get(_action_identity(reference))
     challenger = records.get(_action_identity(proposal))
     if not baseline or not challenger or not status.get("completed_depth"):
-        decision["reason"] = "incomplete_plan_comparison"
+        decision["reason"] = "incomplete_plan_comparison" if risks else "incomplete_search_comparison"
         return False
     before_values = baseline.get("world_values") or []
     after_values = challenger.get("world_values") or []
     if len(before_values) < 2 or len(before_values) != len(after_values):
-        decision["reason"] = "incomplete_plan_comparison"
+        decision["reason"] = "incomplete_plan_comparison" if risks else "incomplete_search_comparison"
         return False
     penalty_delta = challenger.get("lead_penalty", 0.0) - baseline.get("lead_penalty", 0.0)
     deltas = [after - before - penalty_delta for before, after in zip(before_values, after_values)]
+    if not all(math.isfinite(value) for value in deltas):
+        decision["reason"] = "invalid_search_values"
+        return False
     gain = sum(deltas) / len(deltas)
     variance = sum((delta - gain) ** 2 for delta in deltas) / (len(deltas) - 1)
     lower_gain = gain - 1.64 * math.sqrt(variance / len(deltas))
-    margin = 5.5 + max(risks.values())
+    margin = 5.5 + max(risks.values(), default=0.0)
     accepted = lower_gain >= margin
-    decision.update(accepted=accepted, reason="supported_plan_change" if accepted else "preserve_control_plan",
+    reason = ("supported_plan_change" if accepted else "preserve_control_plan") if risks else (
+        "search_preference" if accepted else "no_search_gain" if gain <= 1e-9 else "preserve_heuristic")
+    decision.update(accepted=accepted, reason=reason,
                     paired_gain=gain, paired_gain_lower=lower_gain, required_gain=margin)
     return accepted
 
@@ -13170,7 +13419,7 @@ def _short_enemy_single_pressure(state: Dict, player_id: str) -> float:
     left = len(state["players"][leader]["hand"])
     if left > 7:
         return 0.0
-    if left == 4 and _four_card_bomb_finish_profile(
+    if 4 <= left <= 6 and _retained_bomb_finish_profile(
         state, player_id, leader
     )["bomb_probability"] >= 0.5:
         # Preserve the existing exception for a genuinely supported bomb tail:
@@ -14884,16 +15133,17 @@ def _minimax_root_lead_single_penalty(state: Dict, bot_id: str, action: Dict) ->
         return 0.0
 
     chosen_value = combo.get("rank_value", 0)
-    next_max = _max_combo_value_for_hand(next_hand, state["level_rank"], "single", state.get("config", {}))
-    if next_max is None:
+    distribution = _target_single_value_distribution(state, bot_id, next_pid)
+    if not distribution:
         return 0.0
 
     best_single = max((_single_order_value(card, state["level_rank"]) for card in hand), default=chosen_value)
     penalty = 4.0
-    if next_max > chosen_value:
-        penalty += min(14.0, 3.2 + (next_max - chosen_value) * 0.6)
-    elif chosen_value >= next_max:
-        penalty -= min(1.2, max(0.0, chosen_value - next_max) * 0.06)
+    for next_value, probability in distribution:
+        if next_value > chosen_value:
+            penalty += probability * min(14.0, 3.2 + (next_value - chosen_value) * 0.6)
+        else:
+            penalty -= probability * min(1.2, max(0.0, chosen_value - next_value) * 0.06)
     if chosen_value < PREMIUM_SINGLE_VALUE_MIN:
         penalty += min(6.0, (PREMIUM_SINGLE_VALUE_MIN - chosen_value) * 0.16)
     if best_single > chosen_value:
@@ -15472,7 +15722,12 @@ def _minimax_pick_action(
         if any(len(values) != particle_count_used for values in layer_values):
             break
 
-        reference_values = layer_values[0]
+        reference_index = next(
+            (index for index, action in enumerate(actions)
+             if _action_identity(action) == _action_identity(incumbent_action)),
+            0,
+        )
+        reference_values = layer_values[reference_index]
         layer_scored: List[Tuple[Dict, float]] = []
         layer_records: List[Dict] = []
         for action, values in zip(actions, layer_values):
@@ -15503,7 +15758,13 @@ def _minimax_pick_action(
             break
         root_scored = layer_scored
         root_values = layer_records
-        best_action, best_value = max(layer_scored, key=lambda item: item[1])
+        # Terminal ties (for example, every world loses three levels) contain
+        # no evidence against the completed heuristic. Do not let root move
+        # ordering replace its choice with an arbitrary equally valued move.
+        best_action, best_value = max(
+            layer_scored,
+            key=lambda item: (item[1], _action_identity(item[0]) == _action_identity(incumbent_action)),
+        )
         completed_depth = search_depth
         if search_depth >= target_depth and not _minimax_plan_risks(
             public_state or state, bot_id, incumbent_action, best_action,
@@ -15803,7 +16064,9 @@ def _bot_component_cache_key(
     table_key = tuple(
         (
             pid,
-            tuple(sorted(card["id"] for card in state["players"][pid].get("hand", []))),
+            (tuple(sorted(card["id"] for card in state["players"][pid].get("hand", [])))
+             if pid == bot_id or state.get("_ai_sampled_world")
+             else len(state["players"][pid].get("hand", []))),
             bool(state["players"][pid].get("finished")),
             state["players"][pid].get("finish_rank"),
         )
@@ -17669,6 +17932,7 @@ def _bot_select_play(
             scored[scored_index] = (cand, score + 3.0, components)
             break
     eval_cache["heuristic_anytime"] = {
+        "cache_key": _heuristic_score_cache_key(state, bot_id, depth),
         "bounded_scoring": bounded_response,
         "evaluated": detailed_evaluated,
         "total": len(ordered_candidates),
@@ -17686,8 +17950,8 @@ def _bot_select_play(
         "candidate_ms": [round(duration * 1000.0, 3) for duration in candidate_durations],
     }
     _apply_hand_route_order(state, bot_id, scored)
-    boundary_choice = None
-    if (is_lead and not state.get("_ai_sampled_world")
+    boundary_action = None
+    if (not state.get("_ai_sampled_world")
             and config.get("bot_mode") == "heuristic"
             and config.get("bot_trick_boundary_mode") == "replace"):
         from game import guandan_trick
@@ -17698,14 +17962,14 @@ def _bot_select_play(
             # Atomic model replacement: every finalist uses the same world
             # panel and one boundary utility, with no old scoring terms added.
             scored = [
-                (record["action"]["card_ids"], record["value"],
+                (record["action"].get("card_ids"), record["value"],
                  {"trick_boundary_team_value": record["value"], "total": record["value"]})
                 for record in panel["candidates"]
             ]
-            boundary_choice = panel["selected"]["card_ids"]
+            boundary_action = panel["selected"]
     _store_heuristic_scored_candidates(state, bot_id, depth, scored)
     scored.sort(key=lambda item: item[1], reverse=True)
-    return boundary_choice if boundary_choice is not None else scored[0][0]
+    return boundary_action.get("card_ids") if boundary_action is not None else scored[0][0]
 
 
 def _record_trick_boundary_shadow(
@@ -17715,7 +17979,7 @@ def _record_trick_boundary_shadow(
     """Use spare time after selection so shadow work cannot starve auto search."""
     cache = state.setdefault("_ai_eval_cache", {})
     mode = state.get("config", {}).get("bot_trick_boundary_mode", "shadow")
-    if state.get("current_trick") or mode not in ("shadow", "replace") or "trick_boundary" in cache:
+    if mode not in ("shadow", "replace") or "trick_boundary" in cache:
         return
     scored = _get_cached_heuristic_scored_candidates(state, bot_id, depth)
     if not scored:
@@ -17848,6 +18112,26 @@ def _build_bot_explain(
         }
 
     route_cache = state.get("_ai_eval_cache", {})
+    if route_cache.get("exact_endgame"):
+        method_meta = dict(method_meta or {})
+        method_meta["exact_endgame"] = copy.deepcopy(route_cache["exact_endgame"])
+    if method == "exact_endgame":
+        panel = route_cache["exact_endgame"]
+        records = panel["candidates"]
+        proven = panel.get("scope") == "public_determined_endgame"
+        component = "proven_terminal_team_value" if proven else "sampled_terminal_team_value"
+        chosen_key = _action_identity({"type": chosen_action_type, "card_ids": chosen_cards})
+        selected = next(row for row in records if _action_identity(row["action"]) == chosen_key)
+
+        def exact_row(row: Dict) -> Dict:
+            action = row["action"]
+            return {"cards": label_action(action["type"], action.get("card_ids") or []),
+                    "score": row["value"], "components": {component: row["value"]}}
+
+        return {"method": method, "score_model": "proven_terminal" if proven else "sampled_terminal", "method_details": method_meta,
+                "timing": timing_meta or {}, "chosen": exact_row(selected), "decision": decision,
+                "hand_before": hand_before_labels, "hand": hand_labels_for(chosen_action_type),
+                "top": [exact_row(row) for row in sorted(records, key=lambda row: row["value"], reverse=True)[:3]]}
     if route_cache.get("trick_boundary"):
         method_meta = dict(method_meta or {})
         method_meta["trick_boundary"] = copy.deepcopy(route_cache["trick_boundary"])

@@ -332,6 +332,30 @@ class GuandanGame:
             self.assertEqual(worker.choose(self.state, "p0", 1)["action"]["fixture_version"],
                              "new-ai/new-memory")
 
+    def test_optional_exact_runtime_is_pinned_fingerprinted_and_uses_worker_clock(self):
+        module = self.root / "game/guandan_endgame.py"
+        module.write_text('import time\nVALUE = "committed-exact"\n')
+        core = self.root / "game/guandan.py"
+        core.write_text(core.read_text().replace(
+            'return {"type": "pass", "fixture_version": _guandan_ai.VALUE + memories.VALUE}',
+            'from game import guandan_endgame\n'
+            '        return {"type": "pass", "exact": guandan_endgame.VALUE, '
+            '"clock": guandan_endgame.time.perf_counter()}',
+        ))
+        self.commit()
+        revision = bench.resolve_revision(self.root, "HEAD")
+        expected = bench.source_identity(self.root)
+        module.write_text('import time\nVALUE = "edited-exact"\n')
+        self.assertNotIn("game/guandan_endgame.py", bench.source_identity(self.root, self.revision)["files"])
+        with bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, revision) as frozen, \
+                bench.PolicyWorker(self.root, "auto", {}, "fixed", 10) as live:
+            self.assertEqual(frozen.choose(self.state, "p0", 1)["action"],
+                             {"type": "pass", "exact": "committed-exact", "clock": 0.0})
+            self.assertEqual(live.choose(self.state, "p0", 1)["action"]["exact"], "edited-exact")
+            self.assertIn("game/guandan_endgame.py", frozen.identity["files"])
+        with self.assertRaisesRegex(RuntimeError, "source changed before loading"):
+            bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, expected_identity=expected)
+
     def test_git_worker_still_requires_expected_commit_revision(self):
         expected = {**self.identity, "revision": "0" * 40}
         with self.assertRaisesRegex(RuntimeError, "source changed before loading"):

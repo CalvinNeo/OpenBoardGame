@@ -62,6 +62,14 @@ DEFAULT_CONFIG = {
     "bot_minimax_particles": 3,
     "bot_minimax_risk_lambda": 0.12,
     "bot_minimax_short_budget_particles": 1,
+    "bot_exact_endgame_enabled": False,
+    "bot_exact_endgame_max_cards": 20,
+    "bot_exact_endgame_time_ms": 2500,
+    "bot_exact_endgame_worlds": 8,
+    "bot_exact_endgame_node_limit": 500000,
+    "bot_exact_endgame_proposals": 64,
+    "bot_exact_endgame_retained_group_odds": 16.0,
+    "bot_exact_endgame_public_only": False,
     "bot_endgame_closeout_min_hold": 0.55,
     "bot_endgame_closeout_min_gain": 0.04,
     "bot_lead_prescore_enabled": True,
@@ -80,7 +88,7 @@ DEFAULT_CONFIG = {
     "bot_heuristic_time_check_batch": 2,
     # Shadow evaluates paired whole-trick plans without changing the decision.
     # Replace is experimental and selects only from a complete paired panel.
-    "bot_trick_boundary_mode": "shadow",
+    "bot_trick_boundary_mode": "off",
     "bot_trick_boundary_candidates": 4,
     "bot_trick_boundary_worlds": 4,
     "bot_trick_boundary_max_actions": 40,
@@ -1659,6 +1667,7 @@ _AI_EXPORTED_FUNCS = (
     "_evaluate_state_for_bot",
     "_action_combo",
     "_heuristic_best_action",
+    "_heuristic_search_confidence",
     "_candidate_actions",
     "_should_use_mcts",
     "_clone_search_state",
@@ -2695,6 +2704,20 @@ class GuandanGame:
                 target_ms = min(target_ms, max(0, int(maximum_ms)))
             return max(0, int(min(target_ms, hard_remaining_ms)))
 
+        def _compare_exact_action(reference: Optional[Dict]) -> Optional[Dict]:
+            if bot_mode != "auto" or not config.get("bot_exact_endgame_enabled", False) or not reference:
+                return None
+            from game import guandan_endgame
+
+            exact_started_at = time.perf_counter()
+            exact_status = guandan_endgame.compare_actions(
+                sys.modules[__name__], state, bot_id, reference,
+                deadline=search_deadline - max(0, int(config.get("bot_search_finalize_reserve_ms", 35))) / 1000.0,
+            )
+            state["_ai_eval_cache"]["exact_endgame"] = exact_status
+            _record_stage("exact_endgame", exact_started_at)
+            return exact_status
+
         try:
             def _progress(stage: str, progress: float, detail: Optional[str] = None) -> None:
                 if not callable(progress_callback):
@@ -2709,23 +2732,42 @@ class GuandanGame:
             elif "play" in legal and hand and _can_play_all(
                 hand, state["level_rank"], config, current_combo or None
             ):
-                # Finishing is immediate, even if someone can beat this play.
-                # Search for a next-turn closeout must never split this hand.
                 forced_action = {"type": "play", "card_ids": [card["id"] for card in hand]}
                 forced_reason = "immediate_finish"
             if forced_action is not None:
+                forced_method = "heuristic"
+                forced_meta = {"forced_action": True, "search_stop_reason": forced_reason}
+                exact_status = None
+                if forced_reason == "immediate_finish":
+                    exact_status = _compare_exact_action(forced_action)
+                    if exact_status is not None:
+                        forced_meta["exact_endgame"] = exact_status
+                        if exact_status.get("applied"):
+                            forced_action = exact_status["selected"]
+                            forced_method = "exact_endgame"
+                            forced_meta.update(forced_action=False, search_stop_reason="exact_finish_comparison")
+                incomplete_exact = bool(exact_status and exact_status.get("status") == "incomplete")
+                exact_deadline = incomplete_exact and exact_status.get("reason") == "deadline"
+                if incomplete_exact:
+                    _record_deadline_event(
+                        "exact_endgame", "team finish comparison", "immediate finish",
+                        "The exact comparison was incomplete; the guaranteed finish was retained.",
+                    )
                 explain = _build_bot_explain(
-                    state, bot_id, forced_action.get("card_ids", []), "heuristic",
+                    state, bot_id, forced_action.get("card_ids", []), forced_method,
                     config.get("bot_search_depth", 2),
-                    method_meta={"forced_action": True, "search_stop_reason": forced_reason},
+                    method_meta=forced_meta,
                     chosen_action_type=forced_action["type"],
                 )
                 elapsed_ms = (time.perf_counter() - decision_started_at) * 1000.0
                 explain["timing"] = {
                     "budget_ms": float(think_budget_ms), "hard_budget_ms": hard_budget_ms,
-                    "total_ms": round(elapsed_ms, 3), "stages_ms": {"forced": round(elapsed_ms, 3)},
+                    "total_ms": round(elapsed_ms, 3),
+                    "stages_ms": {"forced": round(max(0.0, elapsed_ms - sum(stage_timings_ms.values())), 3),
+                                  **stage_timings_ms},
                     "over_budget_ms": round(max(0.0, elapsed_ms - think_budget_ms), 3),
-                    "deadline_limited": False, "fallback_used": False, "fallback_events": [],
+                    "deadline_limited": exact_deadline, "fallback_used": incomplete_exact,
+                    "fallback_events": copy.deepcopy(deadline_events),
                     "deadline_reached": time.perf_counter() >= decision_deadline,
                     "hard_deadline_reached": time.perf_counter() >= hard_decision_deadline,
                 }
@@ -2734,7 +2776,8 @@ class GuandanGame:
                     state, bot_id, explain, forced_action["type"], forced_action.get("card_ids", []),
                 )
                 _progress("finalizing", 0.99, (
-                    "Immediate finish ready" if forced_reason == "immediate_finish"
+                    "Team finish comparison ready" if forced_method == "exact_endgame"
+                    else "Immediate finish ready" if forced_reason == "immediate_finish"
                     else "Only legal action ready"
                 ))
                 return forced_action
@@ -2820,6 +2863,7 @@ class GuandanGame:
             minimax_budget_ms: Optional[int] = None
             mcts_budget_ms: Optional[int] = None
             mcts_attempted = False
+            heuristic_confidence = _heuristic_search_confidence(state, bot_id, depth, heuristic_action)
             if bot_mode == "nn":
                 nn_started_at = time.perf_counter()
                 nn_action, nn_scores, nn_meta = _nn_pick_action(state, bot_id, progress_callback=_progress)
@@ -2836,7 +2880,17 @@ class GuandanGame:
                         chosen = []
                         chosen_action_type = "pass"
             elif bot_mode == "auto":
-                if total_left <= endgame_threshold:
+                exact_status = _compare_exact_action(heuristic_action)
+                if exact_status is not None:
+                    if exact_status.get("applied"):
+                        exact_action = exact_status["selected"]
+                        decided = True
+                        method = "exact_endgame"
+                        chosen_action_type = exact_action["type"]
+                        chosen = list(exact_action.get("card_ids") or [])
+                public_closeout_candidate = not state.get("current_trick") and 2 <= len(hand) <= 6
+                if (not decided and total_left <= endgame_threshold
+                        and (not heuristic_confidence["confident"] or public_closeout_candidate)):
                     configured_minimax_budget_ms = max(
                         25,
                         int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)),
@@ -2846,6 +2900,7 @@ class GuandanGame:
                     )
                     deadline = min(search_deadline, time.perf_counter() + minimax_budget_ms / 1000.0)
                     minimax_started_at = time.perf_counter()
+                    minimax_action = None
                     public_closeout = None
                     closeout_actions: List[Dict] = []
                     bot_hand = state["players"].get(bot_id, {}).get("hand", [])
@@ -2879,7 +2934,7 @@ class GuandanGame:
                             "closeout_runner_probability": runner_probability,
                         }
                         _progress("minimax", 0.9, "Public closeout selected")
-                    else:
+                    elif not heuristic_confidence["confident"]:
                         _progress("minimax", 0.24, "Building hidden-card endgame worlds")
                         det = _determinize_state(
                             state,
@@ -2916,6 +2971,7 @@ class GuandanGame:
                             chosen_action_type = "pass"
                 if (
                     not decided
+                    and not heuristic_confidence["confident"]
                     and total_left > endgame_threshold
                     and (
                         time.perf_counter() < search_deadline
@@ -2925,7 +2981,7 @@ class GuandanGame:
                             and current_combo.get("rank_value", 0) >= 70
                         )
                     )
-                    and _should_use_mcts(state, bot_id, mcts_width)
+                    and _should_use_mcts(state, bot_id, mcts_width, heuristic_action=heuristic_action)
                 ):
                     mcts_attempted = True
                     configured_mcts_budget_ms = max(
@@ -3022,6 +3078,7 @@ class GuandanGame:
                     )
                 elif (
                     not decided
+                    and not heuristic_confidence["confident"]
                     and not mcts_attempted
                     and total_left > endgame_threshold
                     and state.get("current_trick")
@@ -3047,7 +3104,7 @@ class GuandanGame:
             if decided:
                 finalize_started_at = time.perf_counter()
                 _progress("finalizing", 0.94, "Legalizing chosen action")
-                if (chosen_action_type == "play" and chosen
+                if (chosen_action_type == "play" and chosen and method != "exact_endgame"
                         and not state.get("_ai_eval_cache", {}).get("trick_boundary", {}).get("applied")):
                     upgraded = _prefer_bomb_closeout_upgrade(state, bot_id, chosen)
                     if upgraded != chosen:
@@ -3074,6 +3131,8 @@ class GuandanGame:
                 chosen_action_type = legal_action.get("type", chosen_action_type or "play")
                 chosen = list(legal_action.get("card_ids") or [])
                 explain_method_meta = copy.deepcopy(method_meta or {})
+                if bot_mode == "auto":
+                    explain_method_meta["heuristic_search_gate"] = dict(heuristic_confidence)
                 if heuristic_status:
                     explain_method_meta.update(
                         {

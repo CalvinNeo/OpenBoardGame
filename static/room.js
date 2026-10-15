@@ -758,6 +758,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  colt_express: 1.83,
   mall_of_horror: 1.94,
   startups: 1.58,
   natsumemo: 1.33,

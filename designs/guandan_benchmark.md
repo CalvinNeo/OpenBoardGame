@@ -122,7 +122,17 @@ python3 scripts/benchmark_guandan.py run \
 
 这些计数帮助定位“没有时间完成”“完成但无分歧”“提出分歧但未采用”，不等同于策略收益。`--clock fixed` 会冻结内部时钟，因此面板耗时、完成率和截止标记不能作为真实预算验收；worker 外层耗时虽真实，也只能说明固定计算量成本。预算验收须单独用 `--clock wall`、一致预算和不受并行测试干扰的运行。
 
+`comparison=independent_confirmation_v1` 的面板在初筛提出可信改选后，还会在同一总预算内另取独立世界复核。逐步 trace 的 `trick_boundary.verification` 区分 `not_needed`、`complete`、`incomplete`；完整时包含 `passed`、复核的成对差值和两个动作的记录。`requested_worlds` 是初选样本数，复核自身另记 `requested_worlds`，不能把两阶段总轨迹数误写为原来的 4×4。顶层 `status=complete` 包括“复核完成但未通过”，而复核超时使整面板 incomplete、不得采用部分结果。顶层候选值／排名保留初选尺度，不混入复核分数，也不在复核样本中重新选优；这仍不是校准后的统计显著性声明。
+
 ### 强度统计
+
+2026-10-15 的实验性 `game/guandan_endgame.py` 也纳入可选运行时快照、源码指纹和固定时钟；冻结旧 commit 不存在此文件时不会从工作区补入。该实验默认关闭。启用时逐步解释的 `method_details.exact_endgame` 记录初选／独立确认、完成世界、节点与中断原因，`method=exact_endgame` 才表示最终采用。汇总的 `diagnostics.<side>.exact_endgame` 单独记录状态、原因、complete / (complete + incomplete)、采用与实际改牌次数、采样数、重复世界复用次数、节点和面板延迟。完成但保留原动作计入采用，不计入改牌；超范围／确定最高团队收益的跳过不进入完成率分母。中断世界已经访问的节点计入计算量，未完成收益不进入候选排名。初选和确认仍独立抽样，抽中相同实体分配时仅复用确定性的求解值，不删除样本或伪造额外样本。
+
+它不是 `trick_boundary` 面板，不能用后者的完成率代替精确搜索完成率。默认关闭高耗的正式续打 shadow 只减少无效计算，不等于棋力提升。正在运行的隔离旧快照不含新增诊断时，应从完整 trace 汇总，不能把缺字段当作零次调用。
+
+`bot_exact_endgame_public_only=true` 将实验接管限制在公开归属已确定的局面：自己的牌、公开已出牌和已知归属足以唯一确定剩余分配，且完整实体分区校验通过。此时只求解一个确定世界，`scope=public_determined_endgame`、`solver=exact_public_v1`，解释采用 `proven_terminal`。`reason=publicly_proven_change` 表示相对参考动作严格提高最坏情况团队终局值，`publicly_optimal_reference` 表示参考已经最优；平手保留参考。`verification` 为 `not_needed/public_hands_determined`，不是省略随机样本的独立确认。归属不确定直接 `skipped/unresolved_hidden_ownership`，仍走当前 auto；不能把服务端可见的暗牌当作公开确定。
+
+单个确定残局的最优值并不能证明完整对战平均更强：对手可能不按最坏情况应对，证明分支也可能很少出现。`public-proof-candidate-v2` 按预先固定的 seed `20261026` 完成 60 对／120 完整局，双方公开信息、相同 6 秒预算：净收益 +0.0333/局、95% 配对区间 [0.000, +0.075]、双侧符号翻转 p=0.25，仍为 `inconclusive`。候选还含炸弹接风分配修正，结果属于这组增量的联合比较，不能分别归因。58 个证明面板全部完成、两次证明改选，并不意味着整体显著；端到端仍有超六秒情况，且记录过无关系统 CPU 高负载。协议与冻结清单在 `tmp/guandan-strength-iteration-20261014/public-proof-full-protocol.md`；默认精确残局仍关闭。
 
 置信区间以**一对交换对局**为重采样单位，满 30 对且有样本方差时使用 5,000 次 paired percentile bootstrap 的近似 95% 区间。统计采样也固定独立种子，不影响牌局随机流；保留同一对里的相关性，并利用实际方差衡量小幅改进。
 
@@ -139,6 +149,8 @@ Hoeffding 界较保守，但不依赖分布近似。例如，保守胜率区间�
 `verdict` 以主指标净收益的区间为准：下界 > 0 为 `improved`，上界 < 0 为 `regressed`，否则 `inconclusive`。胜率 delta 是相对 50% 的直接对战优势，不是相对于共同对手的胜率差；1/2 与 1/4 都算赢，所以胜率与净收益应一起阅读。
 
 这些区间针对预先定好的单次比较，不提供“不断看结果、一显著就停”或多轮调参的整体 95% 保证。使用开发 seed 调参、另一批固定且未参与调参的 seed 验收；多配置探索后，再用保留集确认。重要发布同时检查 `conservative_ci95` 或另作预注册验证。初次接入只验证机制，不宣称已经提升。
+
+本轮另用 `tmp/guandan-strength-iteration-20261014/paired_sign_flip.py REPORT` 计算双侧精确配对符号翻转检验：以每对两局净分之和为单位，在对内策略标签可交换的零假设下计算绝对总差值至少等于观测值的概率。脚本要求预定批次完整、每对同一初始牌局且包含 A／B 两个席位；通过整数分布动态规划避免指数枚举。它是配对均值和 bootstrap 区间的补充，不把几次全正的局部改选当作总体显著，也不修复反复调参／多轮验收产生的选择偏差。
 
 ## 验证
 

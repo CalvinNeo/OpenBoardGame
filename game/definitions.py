@@ -1,3 +1,4 @@
+from game.colt_express import ColtExpressGame, ACTION_SCHEMA as COLT_EXPRESS_ACTION_SCHEMA, CONFIG_SCHEMA as COLT_EXPRESS_CONFIG_SCHEMA
 from game.dnd_starter_set import DndStarterSetGame, ACTION_SCHEMA as DND_STARTER_ACTION_SCHEMA, CONFIG_SCHEMA as DND_STARTER_CONFIG_SCHEMA
 from game.the_mind import TheMindGame, ACTION_SCHEMA as THE_MIND_ACTION_SCHEMA, CONFIG_SCHEMA as THE_MIND_CONFIG_SCHEMA
 from game.moshimo_yusha import MoshimoYushaGame, ACTION_SCHEMA as MOSHIMO_YUSHA_ACTION_SCHEMA, CONFIG_SCHEMA as MOSHIMO_YUSHA_CONFIG_SCHEMA
@@ -6150,5 +6151,22 @@ register_game(
         module=DndStarterSetGame,
         serialize=DndStarterSetGame.serialize,
         deserialize=DndStarterSetGame.deserialize,
+    )
+)
+
+
+register_game(
+    GameDefinition(
+        game_id=ColtExpressGame.game_id,
+        name="Colt Express",
+        name_zh="柯尔特快车",
+        min_players=ColtExpressGame.min_players,
+        max_players=ColtExpressGame.max_players,
+        turn_mode="turn_based",
+        action_schema=COLT_EXPRESS_ACTION_SCHEMA,
+        config_schema=COLT_EXPRESS_CONFIG_SCHEMA,
+        module=ColtExpressGame,
+        serialize=ColtExpressGame.serialize,
+        deserialize=ColtExpressGame.deserialize,
     )
 )

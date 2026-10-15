@@ -31,7 +31,7 @@ from typing import Dict, List, Optional, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_FILES = ("game/guandan.py", "game/guandan_ai.py", "game/memories.py")
 POLICIES = ("auto", "heuristic", "greedy", "random")
-OPTIONAL_RUNTIME_FILES = ("game/guandan_trick.py",)
+OPTIONAL_RUNTIME_FILES = ("game/guandan_trick.py", "game/guandan_endgame.py")
 SCHEMA_VERSION = 2
 
 
@@ -271,6 +271,8 @@ def _worker_main(root: Path, revision: Optional[str] = None) -> int:
     ai = core._guandan_ai
     trick = (importlib.import_module("game.guandan_trick")
              if "game/guandan_trick.py" in core.__benchmark_identity__["files"] else None)
+    endgame = (importlib.import_module("game.guandan_endgame")
+               if "game/guandan_endgame.py" in core.__benchmark_identity__["files"] else None)
     print(json.dumps({"defaults": core.DEFAULT_CONFIG, "source": core.__benchmark_identity__}), flush=True)
     for line in sys.stdin:
         try:
@@ -286,6 +288,8 @@ def _worker_main(root: Path, revision: Optional[str] = None) -> int:
             if trick is not None:
                 trick.random = seeded
                 trick.time = core.time
+            if endgame is not None:
+                endgame.time = core.time
             started = time.perf_counter()
             # stdout is reserved for the protocol, including if a policy prints.
             with contextlib.redirect_stdout(sys.stderr):
@@ -474,6 +478,14 @@ class Diagnostics:
         self.trick_applied = 0
         self.trick_proposed_changes = 0
         self.trick_actual_changes = 0
+        self.exact_statuses = Counter()
+        self.exact_reasons = Counter()
+        self.exact_latencies = []
+        self.exact_applied = 0
+        self.exact_actual_changes = 0
+        self.exact_completed_worlds = 0
+        self.exact_reused_worlds = 0
+        self.exact_nodes = 0
 
     @staticmethod
     def _action_key(action: Optional[Dict]) -> tuple:
@@ -496,6 +508,20 @@ class Diagnostics:
         if budget is not None:
             self.budgeted_decisions += 1
             self.over_budget += result["elapsed_ms"] > budget
+        exact = (explain.get("method_details") or {}).get("exact_endgame")
+        if exact:
+            self.exact_statuses[exact.get("status", "unknown")] += 1
+            if exact.get("reason"):
+                self.exact_reasons[exact["reason"]] += 1
+            if exact.get("elapsed_ms") is not None:
+                self.exact_latencies.append(exact["elapsed_ms"])
+            self.exact_completed_worlds += int(exact.get("completed_worlds", 0))
+            self.exact_reused_worlds += int(exact.get("reused_worlds", 0))
+            self.exact_nodes += int(exact.get("nodes", 0))
+            if exact.get("status") == "complete" and exact.get("applied"):
+                self.exact_applied += 1
+                if exact.get("reference"):
+                    self.exact_actual_changes += self._action_key(result.get("action")) != self._action_key(exact["reference"])
         panel = (explain.get("method_details") or {}).get("trick_boundary")
         if not panel:
             return
@@ -514,12 +540,20 @@ class Diagnostics:
 
     def report(self) -> Dict:
         attempted = self.trick_statuses["complete"] + self.trick_statuses["incomplete"]
+        exact_attempted = self.exact_statuses["complete"] + self.exact_statuses["incomplete"]
         return {"decisions": len(self.latencies), "methods": dict(self.methods), "actions": dict(self.actions),
                 "latency_ms": latency_summary(self.latencies),
                 "deadline_limited": self.deadline_limited, "hard_deadline_reached": self.hard_deadline_reached,
                 "mcts_attempted": self.mcts_attempted, "chosen_component_firings": dict(self.components),
                 "budgeted_decisions": self.budgeted_decisions, "over_budget": self.over_budget,
                 "over_budget_rate": self.over_budget / self.budgeted_decisions if self.budgeted_decisions else None,
+                "exact_endgame": {"statuses": dict(self.exact_statuses), "reasons": dict(self.exact_reasons),
+                                  "attempted": exact_attempted,
+                                  "completion_rate": self.exact_statuses["complete"] / exact_attempted if exact_attempted else None,
+                                  "applied": self.exact_applied, "actual_changes": self.exact_actual_changes,
+                                  "completed_worlds": self.exact_completed_worlds,
+                                  "reused_worlds": self.exact_reused_worlds, "nodes": self.exact_nodes,
+                                  "latency_ms": latency_summary(self.exact_latencies)},
                 "trick_boundary": {"statuses": dict(self.trick_statuses), "reasons": dict(self.trick_reasons),
                                    "attempted": attempted,
                                    "completion_rate": self.trick_statuses["complete"] / attempted if attempted else None,

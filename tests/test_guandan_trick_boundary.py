@@ -212,13 +212,13 @@ class TrickBoundaryTests(unittest.TestCase):
                 if can_finish:
                     self.assertGreaterEqual(value, 100.0)
                     self.assertLessEqual(value, 300.0)
-                    self.assertEqual(apply.call_count, 1)
-                    successor = apply.call_args.args[0]
+                    self.assertGreaterEqual(apply.call_count, 1)
+                    successor = apply.call_args_list[0].args[0]
                     self.assertEqual(successor["finish_order"], ["bot"])
                     self.assertIsNotNone(successor["current_trick"])
                     self.assertEqual(successor["current_turn"], "opp")
                 else:
-                    apply.assert_not_called()
+                    self.assertEqual(apply.call_args_list[0].args[2], {"type": "pass"})
                     self.assertLess(value, 100.0)
                 self.assertEqual(state, before)
 
@@ -366,8 +366,9 @@ class TrickBoundaryTests(unittest.TestCase):
         before = copy.deepcopy(scored)
         panel = trick.compare_leads(self.state, "bot", scored)
         self.assertEqual(panel["status"], "complete")
-        self.assertEqual(panel["policy"], "actor_local_response_v2")
-        self.assertEqual(panel["value_model"], "residual_race_v3")
+        self.assertEqual(panel["policy"], "actor_local_heuristic_v1")
+        self.assertEqual(panel["value_model"], "terminal_round_v1")
+        self.assertEqual(panel["comparison"], "independent_confirmation_v1")
         self.assertFalse(panel["applied"])
         ids = [[p["world"] for p in row["plans"]] for row in panel["candidates"]]
         self.assertEqual(ids[0], ids[1])
@@ -464,7 +465,7 @@ class TrickBoundaryTests(unittest.TestCase):
         self.assertEqual(panel["requested_mode"], "replace")
 
     def test_tied_legacy_reference_stays_actual_choice_with_same_paired_values(self):
-        self.state["config"].update(bot_trick_boundary_time_ms=10000)
+        self.state["config"].update(bot_trick_boundary_mode="shadow", bot_trick_boundary_time_ms=10000)
         scored = self.panel_input()
         scored[1] = (scored[1][0], scored[0][1], scored[1][2])
         first = trick.compare_leads(self.state, "bot", scored)

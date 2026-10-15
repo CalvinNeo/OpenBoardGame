@@ -1,7 +1,7 @@
-"""Paired, public-information whole-trick evaluation for heuristic leads.
+"""Paired, public-information continuation evaluation for heuristic finalists.
 
 This is an experimental model, independent of the additive root scorer. Each
-sample follows an actor-local response policy to a rule-defined event boundary.
+sample follows an actor-local policy to a rule-defined event boundary.
 Neither partial trajectories nor a mixture of old/new scores form a ranking.
 """
 
@@ -438,7 +438,7 @@ def response_action(state: Dict, actor: str, rng: random.Random) -> Dict:
     return {"type": "play", "card_ids": ids}
 
 
-def continuation_action(state: Dict, actor: str) -> Dict:
+def continuation_action(state: Dict, actor: str, cache: Optional[Dict] = None) -> Dict:
     """Choose from one actor's cards and public evidence, never sampled faces."""
     fields = ("config", "turn_order", "player_meta", "player_teams", "teams", "dealer_team",
               "level_rank", "round_number", "phase", "current_turn", "current_trick", "pass_count",
@@ -446,6 +446,7 @@ def continuation_action(state: Dict, actor: str) -> Dict:
               "known_card_owners", "game_over", "winner_team")
     view = {key: state[key] for key in fields if key in state}
     view.update(_ai_sampled_world=False, _ai_eval_cache={}, game_start_time=0.0, tribute=None)
+    view["config"] = {**state.get("config", {}), "bot_mode": "heuristic", "bot_trick_boundary_mode": "off"}
     view["players"] = {
         player: {"hand": list(data["hand"]) if player == actor else [None] * len(data["hand"]),
                  "finished": data.get("finished", False), "finish_rank": data.get("finish_rank"),
@@ -456,9 +457,25 @@ def continuation_action(state: Dict, actor: str) -> Dict:
         {key: entry[key] for key in ("round_number", "level_rank", "tricks") if key in entry}
         for entry in state.get("round_memories", [])
     ]
-    action = _call("_rollout_policy_action", view, actor)
-    if not action:
-        raise IncompleteTrick("no_continuation_action")
+    key = _call("_heuristic_score_cache_key", view, actor, view["config"].get("bot_search_depth", 4))
+    if cache is not None and key in cache:
+        return copy.deepcopy(cache[key])
+    current_combo = (view.get("current_trick") or {}).get("combo")
+    hand = view["players"][actor]["hand"]
+    if hand and rules._can_play_all(hand, view["level_rank"], view["config"], current_combo):
+        action = {"type": "play", "card_ids": [card["id"] for card in hand]}
+    elif current_combo and not rules._list_hint_options(view, actor):
+        action = {"type": "pass"}
+    else:
+        with ai.complete_heuristic_scoring():
+            cards = _call("_bot_select_play", view, actor, view["config"].get("bot_search_depth", 4))
+            if cards:
+                cards = _call("_prefer_bomb_closeout_upgrade", view, actor, cards)
+        if not cards and not current_combo:
+            raise IncompleteTrick("no_continuation_action")
+        action = {"type": "play", "card_ids": list(cards)} if cards else {"type": "pass"}
+    if cache is not None:
+        cache[key] = copy.deepcopy(action)
     return action
 
 
@@ -510,7 +527,8 @@ def trace_plan(world: Dict, observer: str, action: Dict, rng: random.Random,
     for step in range(max_actions):
         budget.check()
         selected = action if step == 0 else (
-            continuation_action(state, actor) if finish_round else response_action(state, actor, rng)
+            continuation_action(state, actor, plans.setdefault("continuation_actions", {}))
+            if finish_round else response_action(state, actor, rng)
         )
         previous_top = (state.get("current_trick") or {}).get("player_id")
         _events, error = rules.GuandanGame.apply_action(state, actor, copy.deepcopy(selected))
@@ -548,12 +566,54 @@ def _paired_gain(reference: List[float], challenger: List[float]) -> Tuple[float
     return mean, mean - 1.64 * math.sqrt(variance / len(deltas))
 
 
+def _panel_candidates(state: Dict, observer: str, scored: List[Tuple], width: int,
+                      budget: TrickBudget) -> List[Tuple]:
+    reference = max(scored, key=lambda row: row[1])
+    ordered = [reference] + sorted((row for row in scored if row is not reference),
+                                  key=lambda row: (-row[1], tuple(sorted(row[0] or []))))
+    by_id = rules._map_hand_by_id(state["players"][observer]["hand"])
+    entries = []
+    for row in ordered:
+        budget.check()
+        cards = row[0]
+        if cards is None:
+            if not state.get("current_trick"):
+                raise IncompleteTrick("pass_without_trick")
+            entries.append((row, ("pass", 0), ("pass",), ("pass",)))
+            continue
+        if not cards or any(card_id not in by_id for card_id in cards):
+            raise IncompleteTrick("invalid_candidate_cards")
+        selected = [by_id[card_id] for card_id in cards]
+        combo = rules._evaluate_combo(selected, state["level_rank"], state.get("config", {}))
+        if not combo:
+            raise IncompleteTrick("invalid_candidate_combo")
+        family = (combo["type"], combo["size"])
+        lane = family + (combo.get("rank_value"), combo.get("high_value"),
+                         sum(rules._is_wild(card, state["level_rank"]) for card in selected))
+        faces = tuple(sorted((card.get("rank") or 0, card.get("suit") or "", card.get("joker") or "")
+                             for card in selected))
+        entries.append((row, family, lane, faces))
+    selected_entries = [entries[0]]
+    if entries[0][0][0] is not None:
+        pass_entry = next((entry for entry in entries[1:] if entry[0][0] is None), None)
+        if pass_entry is not None:
+            selected_entries.append(pass_entry)
+    for identity in (1, 2, 3):
+        for entry in entries[1:]:
+            if len(selected_entries) >= width:
+                break
+            if all(entry[identity] != previous[identity] for previous in selected_entries):
+                selected_entries.append(entry)
+    return [reference] + sorted((entry[0] for entry in selected_entries[1:]),
+                                key=lambda row: (-row[1], tuple(sorted(row[0] or []))))
+
+
 def compare_leads(state: Dict, observer: str, scored: List[Tuple], deadline: Optional[float] = None) -> Dict:
     """Publish only complete paired panels; shadow mode never changes selection."""
     config = state.get("config", {})
     mode = config.get("bot_trick_boundary_mode", "shadow")
     result = {"mode": mode, "status": "disabled", "applied": False, "candidates": []}
-    if mode not in ("shadow", "replace") or state.get("current_trick") or len(scored) < 2:
+    if mode not in ("shadow", "replace") or len(scored) < 2:
         return result
     total_cards = sum(len(data["hand"]) for data in state["players"].values())
     if total_cards > _ROUND_ROLLOUT_CARDS:
@@ -565,13 +625,10 @@ def compare_leads(state: Dict, observer: str, scored: List[Tuple], deadline: Opt
     started = time.perf_counter()
     stop = started + max(0.0, float(config.get("bot_trick_boundary_time_ms", 250))) / 1000.0
     budget = TrickBudget(min(stop, deadline) if deadline is not None else stop)
-    reference_entry = max(scored, key=lambda row: row[1])
-    alternatives = [row for row in scored if row is not reference_entry]
-    alternatives.sort(key=lambda row: (-row[1], tuple(sorted(row[0] or []))))
-    candidates = [reference_entry] + alternatives[:width - 1]
-    result.update(status="incomplete", candidate_count=len(candidates), requested_worlds=count,
-                  scope="heuristic_endgame_finalists", policy="actor_local_quick_v1", value_model="terminal_round_v1",
-                  comparison="independent_confirmation_v1", sampling="public_position_paired_v2")
+    result.update(status="incomplete", candidate_count=0, requested_worlds=count,
+                  scope="heuristic_endgame_finalists", policy="actor_local_heuristic_v1", value_model="terminal_round_v1",
+                  comparison="independent_confirmation_v1", sampling="public_position_paired_v2",
+                  root="follow" if state.get("current_trick") else "lead", candidates_model="diverse_routes_v1")
     public_key = _call("_heuristic_score_cache_key", state, observer, 0)
     plans = {}
 
@@ -587,11 +644,15 @@ def compare_leads(state: Dict, observer: str, scored: List[Tuple], deadline: Opt
                 "plans": [trace.explain(observer) for trace in traces]}
 
     try:
+        candidates = _panel_candidates(state, observer, scored, width, budget)
+        result["candidate_count"] = len(candidates)
+        if len(candidates) < 2:
+            result.update(status="skipped", reason="equivalent_candidates",
+                          elapsed_ms=(time.perf_counter() - started) * 1000)
+            return result
         worlds = public_worlds(state, observer, count, budget)
         for cards, old_score, _components in candidates:
-            if not cards:
-                raise IncompleteTrick("non_lead_candidate")
-            action = {"type": "play", "card_ids": list(cards)}
+            action = {"type": "pass"} if cards is None else {"type": "play", "card_ids": list(cards)}
             result["candidates"].append({**evaluate(action, worlds, "selection"), "heuristic_score": old_score})
         records = result["candidates"]
         reference = records[0]

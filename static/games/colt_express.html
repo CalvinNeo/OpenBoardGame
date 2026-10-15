@@ -1,0 +1,14 @@
+<template data-game-target="coltExpressHeaderActions" data-game-mode="contents">
+  <button id="coltExpressHelpBtn" type="button">Help</button>
+  <button id="coltExpressExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="coltExpressPanel" data-game-mode="contents">
+  <div id="coltExpressSurface" class="ce-surface"><div class="ce-wait">Waiting to start · 3–6 位匪徒，一趟西部快车</div></div>
+  <div id="coltExpressTooltip" class="ce-tooltip" role="tooltip" hidden></div>
+</template>
+<template data-game-target="coltExpressDialog" data-game-mode="replace">
+  <dialog id="coltExpressDialog" class="ce-dialog" aria-labelledby="coltExpressDialogTitle">
+    <header class="ce-row"><h2 id="coltExpressDialogTitle">Help</h2><button id="coltExpressDialogClose" type="button">Close</button></header>
+    <div id="coltExpressDialogBody"></div>
+  </dialog>
+</template>

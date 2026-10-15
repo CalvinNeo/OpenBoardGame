@@ -177,10 +177,13 @@ class GuandanPublicReplyBeliefTests(unittest.TestCase):
     def test_lead_does_not_reward_reply_control_twice(self):
         state, own = self._response_score_case()
         state["current_trick"] = None
-        with mock.patch.object(guandan_ai, "_public_reply_belief", side_effect=AssertionError("duplicate lead belief")):
+        with mock.patch.object(guandan_ai, "_public_reply_belief", wraps=guandan_ai._public_reply_belief) as belief:
             components = guandan._bot_score_components(state, "p0", [card["id"] for card in own[:2]], 1)
         self.assertEqual(components.get("opp_block", 0.0), 0.0)
         self.assertEqual(components["opp_risk"], -6.0)
+        for invocation in belief.call_args_list:
+            target = invocation.args[2]
+            self.assertEqual(len(state["players"][target]["hand"]), 2)
 
     def test_response_does_not_turn_voluntary_pass_into_proved_control(self):
         state, own = self._response_score_case()

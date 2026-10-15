@@ -35,7 +35,7 @@ class GuandanLargeSearchGateTests(unittest.TestCase):
                                      "large_hands_many_actions")
 
     def test_saved_expensive_position_keeps_heuristic_without_entering_mcts(self):
-        state = replay_fixture("38c", 5)
+        state = replay_fixture("38c", 5, {"bot_mcts_gate_score_gap": float("inf")})
         pid = state["current_turn"]
         stages = []
         with mock.patch.object(guandan, "_mcts_pick_action") as search:
@@ -48,8 +48,8 @@ class GuandanLargeSearchGateTests(unittest.TestCase):
                          "large_hands_many_actions")
         self.assertEqual(action["type"], "play")
 
-    def test_narrow_bomb_decision_still_enters_mcts_and_reports_stage(self):
-        state = replay_fixture("38c", 53)
+    def test_narrow_bomb_decision_without_a_decisive_margin_still_searches(self):
+        state = replay_fixture("38c", 53, {"bot_mcts_gate_score_gap": float("inf")})
         stages = []
         with mock.patch.object(guandan, "_mcts_pick_action", return_value=(None, [])) as search:
             guandan.GuandanGame.bot_move(

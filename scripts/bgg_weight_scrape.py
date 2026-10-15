@@ -14,6 +14,7 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "colt_express": "https://boardgamegeek.com/boardgame/158899/colt-express",
     "mall_of_horror": "https://boardgamegeek.com/boardgame/16772/mall-of-horror",
     "natsumemo": "https://boardgamegeek.com/boardgame/280811/natsumemo-natsumemo",
     "the_crew": "https://boardgamegeek.com/boardgame/284083/the-crew-the-quest-for-planet-nine",

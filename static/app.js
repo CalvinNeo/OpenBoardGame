@@ -200,6 +200,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "colt_express") {
+    if (typeof renderColtExpressGameState === "function") renderColtExpressGameState(data);
+    return;
+  }
   if (gameType === "dnd_starter_set") {
     if (typeof renderDndStarterSetGameState === "function") renderDndStarterSetGameState(data);
     return;
