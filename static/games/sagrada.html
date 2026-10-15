@@ -1,0 +1,41 @@
+<template data-game-target="sagradaHelpModal" data-game-mode="replace"><section id="sagradaHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sagradaHelpTitle">
+  <div class="modal-content sagrada-modal">
+    <div class="modal-header"><h2 id="sagradaHelpTitle">Sagrada · Help</h2><button id="sagradaHelpClose" type="button">Close</button></div>
+    <div class="modal-body" id="sagradaHelpContent"></div>
+  </div>
+</section></template>
+<template data-game-target="sagradaExplainModal" data-game-mode="replace"><section id="sagradaExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sagradaExplainTitle">
+  <div class="modal-content sagrada-modal">
+    <div class="modal-header"><h2 id="sagradaExplainTitle">Explain</h2><button id="sagradaExplainClose" type="button">Close</button></div>
+    <div class="modal-body" id="sagradaExplainContent"></div>
+  </div>
+</section></template>
+<template data-game-target="sagradaPanel" data-game-mode="contents"><div class="sagrada-panel" id="sagradaGamePanel">
+  <div class="sagrada-status" aria-live="polite">
+    <span>Round <strong id="sagradaRound">-</strong>/10</span>
+    <span>Turn <strong id="sagradaTurn">-</strong></span>
+    <span>Dice <strong id="sagradaDiceCount">-</strong></span>
+    <span>Phase <strong id="sagradaPhase">-</strong></span>
+    <span id="sagradaWinnerStatus" class="hidden">Winner: <strong id="sagradaWinner">-</strong></span>
+  </div>
+  <div class="sagrada-layout">
+    <section class="sagrada-main-card">
+      <div class="sagrada-pool-block">
+        <div class="sagrada-section-title"><h3>Dice pool 🎲</h3><span id="sagradaPoolHint" class="hint"></span></div>
+        <div id="sagradaPool" class="sagrada-pool" role="group" aria-label="Dice pool"></div>
+        <div id="sagradaRoundSummary" class="sagrada-round-summary hidden" aria-live="polite"></div>
+      </div>
+      <div class="sagrada-board-block">
+        <div class="sagrada-section-title"><h3>Your stained glass 🪟</h3><span id="sagradaSecretGoal" class="sagrada-goal"></span></div>
+        <div id="sagradaBoard" class="sagrada-board" role="grid" aria-label="Your stained glass window"></div>
+        <div class="sagrada-selection" id="sagradaSelection" aria-live="polite">Select a die, then an empty window cell.</div>
+        <div class="sagrada-actions"><button id="sagradaPlaceBtn" data-sagrada-tip="Place the selected die in the selected window cell." type="button" disabled>Place die</button><button id="sagradaSkipBtn" data-sagrada-tip="Take the selected die and leave it unused for this round." type="button" class="secondary" disabled>Skip die</button><button id="sagradaNextRoundBtn" data-sagrada-tip="Confirm that you have reviewed the round. Everyone must confirm before the next round starts." type="button" class="secondary" disabled>Next Round</button></div>
+      </div>
+    </section>
+    <aside class="sagrada-side">
+      <details open><summary>Objectives &amp; resources</summary><div id="sagradaObjectives"></div></details>
+      <details open><summary>Players</summary><div id="sagradaPlayers"></div></details>
+      <div class="sagrada-log" id="sagradaLog" aria-live="polite"></div>
+    </aside>
+  </div>
+</div></template>

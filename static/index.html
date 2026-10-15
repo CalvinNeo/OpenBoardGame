@@ -257,6 +257,10 @@
 
   <template id="azulExplainModal"></template>
 
+  <template id="sagradaHelpModal"></template>
+
+  <template id="sagradaExplainModal"></template>
+
   <template id="abracaHelpModal"></template>
 
   <template id="abracaExplainModal"></template>
@@ -565,6 +569,7 @@
                     <option value="project_l">Project L</option>
                     <option value="blokus">Blokus</option>
                     <option value="carcassonne">Carcassonne</option>
+                    <option value="sagrada">Sagrada · 圣家族大教堂</option>
 
                     <option value="fang_niao">Square Bird</option>
                   </select>
@@ -1142,6 +1147,10 @@
               <button id="azulHelpBtn" class="azul-header-btn" type="button">Help</button>
               <button id="azulExplainBtn" class="azul-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="sagradaHeaderActions" style="display: none;">
+              <button id="sagradaHelpBtn" type="button">Help</button>
+              <button id="sagradaExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="abracaHeaderActions" style="display: none;">
               <button id="abracaHelpBtn" class="abraca-header-btn" type="button">Help</button>
               <button id="abracaExplainBtn" class="abraca-header-btn" type="button">Explain</button>
@@ -1600,6 +1609,8 @@
 
             <div id="azulPanel" class="hidden"></div>
 
+            <div id="sagradaPanel" class="hidden"></div>
+
             <div id="fangNiaoPanel" class="hidden"></div>
 
             <template id="davinciCodeHelpModal"></template>
@@ -1644,7 +1655,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=99" defer></script>
+  <script src="/static/game_assets.js?v=100" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>

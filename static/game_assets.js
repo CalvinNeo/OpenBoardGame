@@ -216,6 +216,13 @@ const GAME_ASSETS = {
     "markup": "/static/games/azul.html?v=1",
     "styleFragments": "/static/games/azul.css?v=1"
   },
+  "sagrada": {
+    "scripts": ["/static/games/sagrada.js?v=1"],
+    "styles": ["/static/games/sagrada.css?v=1"],
+    "markup": "/static/games/sagrada.html?v=1",
+    "panel": "sagradaPanel",
+    "header": "showSagradaHeaderActions"
+  },
   "draw_guess": {
     "scripts": [
       "/static/games/draw_guess.js?v=app_v4"

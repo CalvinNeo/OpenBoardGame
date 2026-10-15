@@ -22,6 +22,7 @@ from game.abraca_what import AbracaWhatGame
 from game.age_of_war import AgeOfWarGame
 from game.ark_nova import ArkNovaGame
 from game.azul import AzulGame
+from game.sagrada import SagradaGame
 from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
@@ -128,6 +129,7 @@ __all__ = [
     "AgeOfWarGame",
     "ArkNovaGame",
     "AzulGame",
+    "SagradaGame",
     "AiDixitGame",
     "BlokusGame",
     "BlitzSketchGame",

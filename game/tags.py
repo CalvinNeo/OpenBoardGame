@@ -70,6 +70,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "aidixit": ("filler", "creative"),
     "ark_nova": ("euro",),
     "azul": ("euro", "abstract"),
+    "sagrada": ("euro", "abstract"),
     "blitz_sketch": ("filler", "creative"),
     "blokus": ("abstract",),
     "hive": ("abstract",),

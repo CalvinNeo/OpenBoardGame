@@ -33,6 +33,7 @@ from game.ark_nova import ArkNovaGame
 from game.gaia_project import GaiaProjectGame
 from game.gaia_project_data import ACTION_SCHEMA as GAIA_PROJECT_ACTION_SCHEMA, CONFIG_SCHEMA as GAIA_PROJECT_CONFIG_SCHEMA
 from game.azul import AzulGame
+from game.sagrada import SagradaGame, ACTION_SCHEMA as SAGRADA_ACTION_SCHEMA, CONFIG_SCHEMA as SAGRADA_CONFIG_SCHEMA
 from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
 from game.boomerang_australia import (
@@ -5694,6 +5695,22 @@ register_game(
         module=AzulGame,
         serialize=AzulGame.serialize,
         deserialize=AzulGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=SagradaGame.game_id,
+        name="Sagrada",
+        name_zh="圣家族大教堂",
+        min_players=SagradaGame.min_players,
+        max_players=SagradaGame.max_players,
+        turn_mode="turn",
+        action_schema=SAGRADA_ACTION_SCHEMA,
+        config_schema=SAGRADA_CONFIG_SCHEMA,
+        module=SagradaGame,
+        serialize=SagradaGame.serialize,
+        deserialize=SagradaGame.deserialize,
     )
 )
 

@@ -628,6 +628,10 @@ function renderGameState(data) {
     renderAzulGameState(data);
     return;
   }
+  if (gameType === "sagrada") {
+    if (typeof renderSagradaGameState === "function") renderSagradaGameState(data);
+    return;
+  }
   if (gameType === "fang_niao") {
     renderFangNiaoGameState(data);
     return;
