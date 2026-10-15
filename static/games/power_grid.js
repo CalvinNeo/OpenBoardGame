@@ -3,23 +3,23 @@
   const byId = suffix => document.getElementById(`powerGrid${suffix}`);
   const panel = byId("Panel"), dialog = byId("Dialog"), tooltip = byId("Tooltip");
   const fuels = ["coal", "oil", "garbage", "uranium"];
-  const icons = {coal:"🟤", oil:"⚫", garbage:"🟡", uranium:"🔴", hybrid:"🟤⚫", green:"🌿"};
   const names = {coal:"Coal", oil:"Oil", garbage:"Garbage", uranium:"Uranium", hybrid:"Hybrid", green:"Clean energy"};
+  const shapes = {coal:"brown cube / 棕色立方体", oil:"black cylinder / 黑色圆柱", garbage:"yellow prism / 黄色棱柱", uranium:"red circle / 红色圆形", hybrid:"coal cube + oil cylinder / 煤立方体 + 油圆柱", green:"🌿"};
   const shades = {coal:"#dfcdb8", oil:"#d6d7cd", garbage:"#f0dda2", uranium:"#efcbc0", hybrid:"#ddcfb8", green:"#d5e6bd"};
   const colors = ["#c76049", "#4c85b0", "#8c6bb2", "#bd9937", "#398574", "#b66c92"];
   const regionNames = {north:"North", west:"West", southwest:"Southwest", central:"Central", south:"South", east:"East"};
   let view = null, pending = false, pendingTimer, signature = "", phaseSignature = "", configSignature = "";
   let selectedPlant = null, selectedCity = null, chosenPlants = [], hybridCoal = 0, bidValue = 0;
   let cart = emptyFuel(), keep = emptyFuel(), explaining = false, suppressClick = false, suppressTimer;
-  let tipTimer, previousFocus, mapBounds, mapBox, mapKey = "", mapRenderSize = "", mapLayoutScale = null, mapAspect = 1, mapXScale = 1.6, drag = null;
+  let tipTimer, tipTarget, previousFocus, mapBounds, mapBox, mapKey = "", mapRenderSize = "", mapLayoutScale = null, mapAspect = 1, mapXScale = 1.6, drag = null;
 
   const explanations = {
     steps:["Round / Step", "每轮进行竞拍、买资源、建网、供电。Step 1／2／3 每城分别允许 1／2／3 家公司。达到门槛的整段建设结束后才进入 Step 2；抽到 Step 3 卡后在下一阶段生效。"],
     order:["Player order · 行动顺序", "每轮按 Cities（🏠，已连接城市数）排序，平手看最高电厂编号。顺序领先者先发起竞拍、后买资源和建城。拍卖内叫价按座位顺时针进行。首轮拍卖后重新排序。"],
     market:["Power plants（🏭）· 电厂市场", "Step 1／2 只有上排最低的 4 张可竞拍，下排为未来市场；Step 3 全部 6 张可买。电厂编号也是最低出价。每轮最多买 1 厂，首轮必须购买。售出立即补牌；过时电厂会淘汰。Deck（🂠）不含 Step 3 卡。"],
     auction:["Auction（🔨） / Bid（💰）", "点现货电厂，用 −／+ 调整 Bid（💰，叫价），每次 1 💰，再点击 Start Auction。默认显示最低合法叫价，不能减到最低价以下或加到余额以上。已开始竞拍时点击 Raise Bid 加价，必须高于当前价且付得起。只有最后赢家付款。竞拍中 Pass 只退出当前电厂；无人竞拍时 Pass 表示本轮不再购买。首轮不能跳过购买。"],
-    resources:["Fuel market · 资源市场", "Coal（🟤，煤）、Oil（⚫，油）、Garbage（🟡，垃圾）、Uranium（🔴，铀）从便宜到贵买入。价格随库存变化。用 +／− 选数量，Buy Fuel 一次购买；可以买多次，再点 Done。Step 和人数决定补货量，总组件有限。"],
-    storage:["Fuel storage · 燃料储存", "每座电厂可储存一次燃料需求的两倍，只能存兼容类型。Hybrid（🟤⚫，混合厂）的煤和油共享容量。公司资源池自动安排储位，等价于规则允许的自由调配。Clean energy（🌿，清洁电厂）不需要也不能储存燃料。"],
+    resources:["Fuel market · 资源市场", "Coal（棕色立方体，煤）、Oil（黑色圆柱，油）、Garbage（黄色棱柱，垃圾）、Uranium（红色圆形，铀）从便宜到贵买入。悬停或点击资源可查看全部价位的剩余组件，空位表示已售出；煤、油、垃圾每个价位 3 个位置，铀每个价位 1 个位置。价格随库存变化。用 +／− 选数量，Buy Fuel 一次购买；可以买多次，再点 Done。Step 和人数决定补货量，总组件有限。"],
+    storage:["Fuel storage · 燃料储存", "每座电厂可储存一次燃料需求的两倍，只能存兼容类型。Hybrid（煤立方体 + 油圆柱，混合厂）的煤和油共享容量。公司资源池自动安排储位，等价于规则允许的自由调配。Clean energy（🌿，清洁电厂）不需要也不能储存燃料。"],
     network:["Cities（🏠）· 城市网络", "点城市或展开 City list 选择目标，再点 Build。首城只付占位费，后续付从已有任一城市出发的最短线路费用，再加占位 10／15／20 💰。可以途经已满或尚未购买的城市，但不能途经未启用区域；一个城市不能重复建。"],
     connection:["Line cost（💰）· 线路费用", "线路上的浅橙色矩形数字是这段线路的费用（💰），圆形数字是 Cities（🏠，城市）编号。0 表示这段线路免费。标签错开时由短引线指向对应线路；悬停或点击可查看两端城市与费用。建设时系统累加最短路径上的线路费用，再加城市占位费。"],
     zoom:["Map controls", "拖动地图平移，+／− 缩放，Fit 显示全部可用区域。手机触摸由地图接管，松手或取消后停止；拖动不会误选城市。也可使用 City list 查看名称和精确建造费用。"],
@@ -37,7 +37,7 @@
     <table><thead><tr><th>Players</th><th>Regions</th><th>Removed</th><th>Plant limit</th><th>Step 2</th><th>Finish 🏁</th></tr></thead><tbody><tr><td>2</td><td>3</td><td>8</td><td>4</td><td>10</td><td>21</td></tr><tr><td>3</td><td>3</td><td>8</td><td>3</td><td>7</td><td>17</td></tr><tr><td>4</td><td>4</td><td>4</td><td>3</td><td>7</td><td>17</td></tr><tr><td>5</td><td>5</td><td>0</td><td>3</td><td>7</td><td>15</td></tr><tr><td>6</td><td>5</td><td>0</td><td>3</td><td>6</td><td>14</td></tr></tbody></table>
     <h3>1 · 顺序</h3><p>城市多的公司靠前，平手看最高电厂编号。首轮随机，首轮竞拍结束后重排。竞拍发起与供电使用正序；资源采购和建设使用逆序。</p>
     <h3>2 · 竞拍 🔨</h3><p>选现货电厂起拍，价格不能低于编号。用 −／+ 调整 Bid（💰，叫价），每次 1 💰，默认最低合法叫价，上限为自己的余额，再点击 Start Auction 或 Raise Bid 确认。按座位顺时针加价或 Pass，最后一位支付叫价。每人每轮最多买 1 座；首轮必须买。当前拍卖 Pass 只退出这张牌；轮到发起拍卖时 Pass 会退出本轮所有后续拍卖。若别人赢了你发起的拍卖，你可再发起。超过电厂上限时必须退役一座旧厂，选择可保留的资源，多余燃料返回供应堆。</p>
-    <h3>3 · 资源采购</h3><p>Coal（🟤，煤）、Oil（⚫，油）、Garbage（🟡，垃圾）、Uranium（🔴，铀）从便宜到贵购买。初始价格分别为 1／3／7／14 💰。每厂只存兼容燃料，最多为一次需求的两倍。Hybrid（🟤⚫，混合厂）混合储存煤油，共享容量。Clean energy（🌿，清洁电厂）无需燃料。公司燃料可在兼容电厂之间自由分配。</p>
+    <h3>3 · 资源采购</h3>${resourceLegend().outerHTML}<p>Coal（棕色立方体，煤）、Oil（黑色圆柱，油）、Garbage（黄色棱柱，垃圾）、Uranium（红色圆形，铀）从便宜到贵购买。悬停或点击资源可查看全部价位的剩余组件，空位表示已售出；煤、油、垃圾每价位 3 个位置，铀每价位 1 个位置。初始价格分别为 1／3／7／14 💰。每厂只存兼容燃料，最多为一次需求的两倍。Hybrid（煤立方体 + 油圆柱，混合厂）混合储存煤油，共享容量。Clean energy（🌿，清洁电厂）无需燃料。公司燃料可在兼容电厂之间自由分配。</p>
     <h3>4 · 建设网络</h3><p>地图圆形数字为 Cities（🏠，城市）编号，浅橙色矩形数字为 Line cost（💰，该段线路费用），0 表示免费；缩略视图也显示费用。错开的标签用短引线连接对应线路，悬停／点击可查看两端城市。首城只付占位费。后续城市需支付最短线路费用加占位费：同城第一／二／三家公司分别 10／15／20 💰。可以经过未建或已满城市，线路可跨越多城；不能经过未启用区域，也不能重复占同一城。每次延伸重新计算连接费，不永久占有已用线路。可建任意多城，也可跳过。选城后可见线路与费用，Build 确认。</p>
     <h3>5 · 供电与收入</h3><p>选择要运行的电厂，每厂本轮最多一次，必须支付其完整燃料。混合厂的煤油合计达到需求即可。可少发或不发；按供电量和已有城市数中较小者领钱。0 城收入 10 💰。结算补货受供应堆实物数量限制。轮末所有人点击 Next Round 才继续。</p>
     <p>供电城市 → 收入 💰：${[10,22,33,44,54,64,73,82,90,98,105,112,118,124,129,134,138,142,145,148,150].map((n,i)=>`${i===20?"20+":i}→${n}`).join(" · ")}</p>
@@ -59,7 +59,56 @@
   function playerName(pid) { return view?.players.find(p=>p.player_id===pid)?.name || pid || "—"; }
   function playerColor(pid) { return colors[Math.max(0,view.players.findIndex(p=>p.player_id===pid))%colors.length]; }
   function can(kind) { return !!view?.legal_actions.includes(kind) && !pending && socket.connected; }
-  function fuelText(values) { return fuels.filter(r=>values[r]).map(r=>`${icons[r]} ${values[r]}`).join("  ") || "🌿 No fuel"; }
+  function resourceToken(resource) {
+    const token=svg("svg",{class:"pg-resource-token","data-resource":resource,viewBox:"0 0 24 24",width:24,height:24,"aria-hidden":"true",focusable:"false"});
+    if(resource==="coal"){
+      token.append(svg("path",{d:"M12 2 22 7 12 12 2 7Z",fill:"#a97950"}),svg("path",{d:"M2 7 12 12 12 23 2 18Z",fill:"#815536"}),svg("path",{d:"M12 12 22 7 22 18 12 23Z",fill:"#5f3c28"}));
+    }else if(resource==="oil"){
+      token.append(svg("path",{d:"M3 6C3 1 21 1 21 6V18C21 23 3 23 3 18Z",fill:"#262927"}),svg("ellipse",{cx:12,cy:6,rx:9,ry:4,fill:"#535650"}),svg("path",{d:"M4 17C4 21 20 21 20 17",fill:"none",stroke:"#111512","stroke-width":1.5}));
+    }else if(resource==="garbage"){
+      token.append(svg("path",{d:"M2 19 8 5 15 19Z",fill:"#eed264"}),svg("path",{d:"M8 5 15 2 22 16 15 19Z",fill:"#d8b43e"}),svg("path",{d:"M2 19 15 19 22 16 9 16Z",fill:"#b18b25"}));
+    }else if(resource==="uranium"){
+      token.append(svg("circle",{cx:12,cy:12,r:9,fill:"#c76049"}),svg("circle",{cx:9,cy:9,r:3,fill:"#dd8b77"}));
+    }
+    return token;
+  }
+  function resourceIcons(resource) {
+    const icons=node("span","pg-resource-icons");
+    if(resource==="green")icons.textContent="🌿";
+    else (resource==="hybrid"?["coal","oil"]:[resource]).forEach(r=>icons.append(resourceToken(r)));
+    return icons;
+  }
+  function resourceName(resource) {
+    const label=node("span","pg-resource-name");label.append(resourceIcons(resource),node("span","",names[resource]));return label;
+  }
+  function resourceLegend() {
+    const legend=node("div","pg-resource-legend");legend.append(...[...fuels,"hybrid","green"].map(resourceName));return legend;
+  }
+  function fuelText(values) { return fuels.filter(r=>values[r]).map(r=>`${names[r]} ${values[r]}`).join(" · ") || "No fuel"; }
+  function fuelSummary(values) {
+    const summary=node("span","pg-fuel-summary");summary.setAttribute("aria-label",fuelText(values));
+    fuels.filter(r=>values[r]).forEach(r=>{
+      const amount=node("span","pg-fuel-amount");amount.append(resourceToken(r),node("span","",values[r]));summary.append(amount);
+    });
+    if(!summary.childElementCount)summary.textContent="🌿 No fuel";
+    return summary;
+  }
+  function resourceTiers(resource) { return resource==="uranium"?[1,2,3,4,5,6,7,8,10,12,14,16]:[1,2,3,4,5,6,7,8]; }
+  function renderResourceTip(resource) {
+    const stock=view.resources[resource], capacity=resource==="uranium"?1:3;
+    const heading=node("div","pg-resource-tip-heading");heading.append(resourceName(resource),node("strong","",`${stock.prices.length} left`));
+    const grid=node("div","pg-resource-tier-grid");
+    resourceTiers(resource).forEach(price=>{
+      const count=stock.prices.filter(value=>value===price).length;
+      const tier=node("div",`pg-resource-tier${count?"":" is-empty"}`), slots=node("div","pg-resource-tier-slots");
+      tier.setAttribute("aria-label",`${price} Elektro: ${count} of ${capacity} ${names[resource]} remaining`);
+      for(let i=0;i<capacity;i++){
+        const slot=node("span",`pg-resource-slot${i<count?"":" is-empty"}`);slot.append(resourceToken(resource));slots.append(slot);
+      }
+      tier.append(node("strong","pg-resource-tier-price",`${price} 💰`),slots,node("small","pg-resource-tier-count",`${count}/${capacity} left`));grid.append(tier);
+    });
+    tooltip.replaceChildren(heading,grid,node("div","pg-resource-tip-footer",`+${stock.refill} / round · Empty slots are sold out`));
+  }
   function storeable(plants, values) {
     const caps={...emptyFuel(),hybrid:0}; plants.forEach(p=>{if(p.intake)caps[p.resource]+=2*p.intake;});
     return values.garbage<=caps.garbage && values.uranium<=caps.uranium && Math.max(0,values.coal-caps.coal)+Math.max(0,values.oil-caps.oil)<=caps.hybrid;
@@ -75,12 +124,22 @@
     if(view){renderMarket();renderFleet();renderAction();renderReview();}
   }
   function clearLineHighlight(){byId("Map").querySelectorAll(".is-inspected").forEach(n=>n.classList.remove("is-inspected"));}
-  function hideTip(){clearTimeout(tipTimer);tooltip.classList.add("hidden");clearLineHighlight();}
+  function releaseTipTarget(){
+    if(!tipTarget)return;
+    const ids=(tipTarget.getAttribute("aria-describedby")||"").split(/\s+/).filter(id=>id&&id!==tooltip.id);
+    if(ids.length)tipTarget.setAttribute("aria-describedby",ids.join(" "));else tipTarget.removeAttribute("aria-describedby");
+    tipTarget=null;
+  }
+  function hideTip(){clearTimeout(tipTimer);tooltip.classList.add("hidden");releaseTipTarget();clearLineHighlight();}
   function showTip(target, auto=false){
     if(!target?.dataset.pgTip || explaining || dialog.open)return;
-    clearTimeout(tipTimer);clearLineHighlight();
+    clearTimeout(tipTimer);releaseTipTarget();clearLineHighlight();
+    tipTarget=target;target.setAttribute("aria-describedby",[target.getAttribute("aria-describedby"),tooltip.id].filter(Boolean).join(" "));
     if(target.dataset.edge!==undefined)byId("Map").querySelector(`.pg-edge[data-edge="${target.dataset.edge}"]`)?.classList.add("is-inspected");
-    tooltip.textContent=target.dataset.pgTip;tooltip.classList.remove("hidden");
+    const resource=target.dataset.pgResource;
+    tooltip.classList.toggle("pg-resource-tooltip",!!resource);
+    if(resource)renderResourceTip(resource);else tooltip.textContent=target.dataset.pgTip;
+    tooltip.classList.remove("hidden");
     const r=target.getBoundingClientRect(), t=tooltip.getBoundingClientRect();
     tooltip.style.left=`${Math.max(12,Math.min(r.left,innerWidth-t.width-12))}px`;
     tooltip.style.top=`${r.bottom+t.height+18<innerHeight?r.bottom+7:Math.max(12,r.top-t.height-7)}px`;
@@ -92,7 +151,10 @@
     if(html)byId("DialogBody").innerHTML=content;else byId("DialogBody").replaceChildren(node("p","",content));
     if(!dialog.open)dialog.showModal();byId("DialogClose").focus();
   }
-  function explain(target){const item=explanations[target?.dataset.pgExplain];if(!item)return;setExplain(false);showDialog(...item);}
+  function explain(target){
+    const key=target?.dataset.pgExplain,item=explanations[key];if(!item)return;setExplain(false);showDialog(...item);
+    if(["market","resources","storage","power","replace"].includes(key))byId("DialogBody").append(resourceLegend());
+  }
   function setTab(tab){panel.dataset.tab=tab;byId("MapTab").setAttribute("aria-pressed",String(tab==="network"));byId("MarketTab").setAttribute("aria-pressed",String(tab==="market"));applyMapBox();}
 
   function plantCard(plant, source){
@@ -114,13 +176,14 @@
     // Keep descriptive cards focusable. Their action still checks availability.
     card.setAttribute("aria-disabled",String(!available));card.setAttribute("aria-pressed",String(selected));
     card.dataset.plant=plant.id;card.dataset.source=source;
-    card.dataset.pgTip=`🏭 #${plant.id} · ${names[plant.resource]}（${icons[plant.resource]}）×${plant.intake} → Power（⚡）${plant.output} cities${plant.available===false?" · Future market":""}`;
+    card.dataset.pgTip=`🏭 #${plant.id} · Minimum price ${plant.id} 💰 · ${names[plant.resource]}（${shapes[plant.resource]}）×${plant.intake} → Power（⚡）${plant.output} cities${plant.available===false?" · Future market":""}`;
     card.setAttribute("aria-label",`Plant ${plant.id}, ${names[plant.resource]}, ${plant.intake} fuel, ${plant.output} cities${plant.available===false?", future market":""}`);
     card.addEventListener("click",e=>{if(!available){e.stopImmediatePropagation();showTip(card,true);}},true);
     card.style.setProperty("--fuel-color",shades[plant.resource]);
-    const top=node("div","pg-plant-top");top.append(node("strong","pg-plant-number",String(plant.id).padStart(2,"0")),node("span","pg-plant-icon",plant.resource==="green"?"🌿":"🏭"));
-    const bottom=node("div","pg-plant-bottom");bottom.append(node("span","",plant.intake?`${icons[plant.resource]} ${plant.intake}`:"🌿 0"),node("strong","",`⚡ ${plant.output}`));
-    card.append(top,node("div","pg-plant-type",names[plant.resource]),bottom);return card;
+    const top=node("div","pg-plant-top");top.append(node("span","pg-plant-icon",plant.resource==="green"?"🌿":"🏭"),node("strong","pg-plant-output",`⚡ ${plant.output}`));
+    const fuel=node("div","pg-plant-fuel");fuel.append(resourceIcons(plant.resource),node("span","",plant.intake?`× ${plant.intake}`:"No fuel"));
+    const bottom=node("div","pg-plant-bottom");bottom.append(node("strong","pg-plant-price",`💰 ${String(plant.id).padStart(2,"0")}`));
+    card.append(top,node("div","pg-plant-type",names[plant.resource]),fuel,bottom);return card;
   }
   function renderMarket(){
     const box=byId("Market");box.replaceChildren();
@@ -130,16 +193,17 @@
     });
     text("Deck",`🂠 ${view.deck_count}`);
     byId("ResourceMarket").replaceChildren(...fuels.map(r=>{
-      const resource=view.resources[r],tiers={};resource.prices.forEach(p=>{tiers[p]=(tiers[p]||0)+1;});
-      const description=`${names[r]}（${icons[r]}）：${Object.entries(tiers).map(([price,count])=>`${price} 💰 × ${count}`).join(" · ")||"Sold out"}。每轮补充 ${resource.refill}，受供应堆余量限制。`;
+      const resource=view.resources[r];
+      const description=`${names[r]}（${shapes[r]}）· ${resource.prices.length} left. View remaining tokens at every price.`;
       const tile=explainable(node("div","pg-resource-tile"),"resources",description);
-      tile.append(node("span","",`${icons[r]} ${names[r]}`),node("strong","",`${resource.prices[0]??"—"} 💰`),node("small","",`${resource.count} left · +${resource.refill}`));return tile;
+      tile.dataset.pgResource=r;
+      tile.append(resourceName(r),node("strong","",`${resource.prices[0]??"—"} 💰`),node("small","",`${resource.count} left · +${resource.refill}`));return tile;
     }));
   }
   function renderFleet(){
     const player=own();byId("Fleet").replaceChildren(...(player?.plants || []).map(p=>plantCard(p,"fleet")));
-    text("Fuel",player?fuelText(player.resources):"Spectator");
-    byId("Fuel").dataset.pgTip="Fuel：公司拥有的资源可在兼容电厂间自动调配；每座最多储存两倍需求。";
+    byId("Fuel").replaceChildren(player?fuelSummary(player.resources):document.createTextNode("Spectator"));
+    byId("Fuel").dataset.pgTip=`${player?fuelText(player.resources):"Spectator"}。Coal（棕色立方体）、Oil（黑色圆柱）、Garbage（黄色棱柱）、Uranium（红色圆形）。公司拥有的资源可在兼容电厂间自动调配；每座最多储存两倍需求。`;
   }
   function normalizeHybrid(){
     const options=view.dispatch_options.filter(o=>JSON.stringify(o.plants)===JSON.stringify(chosenPlants));
@@ -155,10 +219,11 @@
   function renderResources(box, replacing=false){
     const values=replacing?keep:cart, player=own();
     fuels.forEach(r=>{
-      const row=node("div","pg-resource-row"), label=node("label","",`${icons[r]} ${names[r]}`);
+      const row=node("div","pg-resource-row"), label=node("label");label.append(resourceName(r));
       const resource=view.resources[r];
       label.append(node("small","",replacing?`Owned ${player.resources[r]}`:`${resource.count} left · ${resource.prices[0]??"—"} 💰 each · +${resource.refill} / round`));
-      row.append(explainable(label,replacing?"storage":"resources"));
+      if(!replacing)label.dataset.pgResource=r;
+      row.append(explainable(label,replacing?"storage":"resources",replacing?`${names[r]}（${shapes[r]}）· Owned ${player.resources[r]}`:`${names[r]}（${shapes[r]}）· View remaining tokens at every price.`));
       stepper(row,values[r],replacing?player.resources[r]:view.buy_limits[r],value=>{values[r]=value;renderAction();},replacing?"storage":"resources",names[r]);box.append(row);
     });
     if(replacing)return;
@@ -219,9 +284,15 @@
     }else if(view.phase==="bureaucracy"){
       box.append(node("p","pg-action-message","Select the plants to run in Your Company below."));
       const hybrid=player.plants.filter(p=>chosenPlants.includes(p.id)&&p.resource==="hybrid").reduce((s,p)=>s+p.intake,0);
-      if(hybrid){const row=node("div","pg-resource-row");row.append(node("label","",`Hybrid · 🟤 ${hybridCoal} + ⚫ ${hybrid-hybridCoal}`));stepper(row,hybridCoal,hybrid,value=>{hybridCoal=value;renderAction();},"power","hybrid coal");box.append(row);}
+      if(hybrid){
+        const row=node("div","pg-resource-row"),label=node("label");label.append(node("span","","Hybrid · "),fuelSummary({coal:hybridCoal,oil:hybrid-hybridCoal}));
+        row.append(explainable(label,"power","Hybrid：煤立方体和油圆柱合计满足本次燃料需求。用 −／+ 调整煤数，其余消耗油。"));
+        stepper(row,hybridCoal,hybrid,value=>{hybridCoal=value;renderAction();},"power","hybrid coal");box.append(row);
+      }
       const option=view.dispatch_options.find(o=>JSON.stringify(o.plants)===JSON.stringify(chosenPlants)&&o.hybrid_coal===hybridCoal);
-      box.append(node("div",`pg-cost-preview${option?"":" pg-warning"}`,option?`${fuelText(option.fuel)} → ⚡ ${option.powered} cities · +${option.income} 💰`:"Not enough fuel for this selection."));
+      const preview=node("div",`pg-cost-preview${option?"":" pg-warning"}`);
+      if(option)preview.append(fuelSummary(option.fuel),document.createTextNode(` → ⚡ ${option.powered} cities · +${option.income} 💰`));else preview.textContent="Not enough fuel for this selection.";
+      box.append(preview);
       const row=node("div","pg-inline-actions");
       row.append(button(chosenPlants.length?"Run Plants":"Take 10 💰",()=>send("power",{plants:chosenPlants,hybrid_coal:hybridCoal}),"power",!can("power")||!option,true));
       row.append(button("Best Output",()=>{const best=[...view.dispatch_options].sort((a,b)=>b.powered-a.powered || Object.values(a.fuel).reduce((s,n)=>s+n,0)-Object.values(b.fuel).reduce((s,n)=>s+n,0))[0];chosenPlants=[...best.plants];hybridCoal=best.hybrid_coal;renderFleet();renderAction();},"power",!can("power")));box.append(row);
@@ -349,8 +420,8 @@
       const p=view.players.find(x=>x.player_id===pid),card=node("article",`pg-player${pid===view.current_turn?" is-current":""}`);
       card.style.setProperty("--player-color",playerColor(pid));card.append(node("strong","",`${i+1}. ${p.name}${pid===view.you?" · You":""}${p.is_bot?" · Bot":""}`));
       card.append(explainable(node("span","",`🏠 ${p.cities.length} · ⚡ ${p.capacity} · 💰 ${p.money??"🔒"}`),"capacity","🏠 城市数；⚡ 电厂额定容量；💰 本人资金，🔒 隐藏。"));
-      card.append(explainable(node("span","",`🏭 ${p.plants.map(n=>`#${n.id}`).join(" · ")||"—"}`),"market",p.plants.map(n=>`#${n.id} ${names[n.resource]}（${icons[n.resource]}）×${n.intake} → ⚡ ${n.output}`).join("；")||"No power plants yet."));
-      card.append(explainable(node("span","",fuelText(p.resources)),"storage","Coal（🟤）、Oil（⚫）、Garbage（🟡）、Uranium（🔴）为储存燃料。"));return card;
+      card.append(explainable(node("span","",`🏭 ${p.plants.map(n=>`#${n.id}`).join(" · ")||"—"}`),"market",p.plants.map(n=>`#${n.id} ${names[n.resource]}（${shapes[n.resource]}）×${n.intake} → ⚡ ${n.output}`).join("；")||"No power plants yet."));
+      card.append(explainable(fuelSummary(p.resources),"storage",`${fuelText(p.resources)}。Coal（棕色立方体）、Oil（黑色圆柱）、Garbage（黄色棱柱）、Uranium（红色圆形）为储存燃料。`));return card;
     }));
   }
   function renderReview(){
@@ -358,7 +429,7 @@
     text("ReviewTitle",view.game_over?"FINAL NETWORKS":"ROUND COMPLETE");text("Ready",view.game_over?"":`${view.next_ready.length} / ${view.players.length} ready`);
     const results=view.game_over?view.final_results:view.round_summary.players;
     byId("Results").replaceChildren(...results.map(r=>{const card=node("div","pg-result");card.append(node("strong","",`${view.winner_ids.includes(r.player_id)?"🏆 ":""}${playerName(r.player_id)}`));card.append(node("div","",view.game_over?`⚡ ${r.powered} · 🏠 ${r.cities} · 💰 ${r.money}`:`⚡ ${r.powered} · +${r.income} 💰`));return card;}));
-    text("Refill",view.game_over?"Scored before final income.":`Restocked: ${fuelText(view.round_summary.refill)}`);
+    if(view.game_over)text("Refill","Scored before final income.");else byId("Refill").replaceChildren(document.createTextNode("Restocked: "),fuelSummary(view.round_summary.refill));
     byId("Next").classList.toggle("hidden",view.game_over);byId("Next").disabled=!can("next_round");text("Next",view.next_ready.includes(view.you)?"Ready ✓":"Next Round");
   }
   function render(){
@@ -415,12 +486,22 @@
     const target=e.target.closest("[data-pg-tip]");if(target)showTip(target,true);else hideTip();
     if(!e.target.closest("button,input,label,summary,svg,[data-pg-tip],.pg-plant,.pg-resource-row,.pg-bid-control"))clearSelection();
   });
-  panel.addEventListener("pointerover",e=>{if(e.pointerType==="mouse")showTip(e.target.closest("[data-pg-tip]"));});
-  panel.addEventListener("pointerout",e=>{if(e.pointerType==="mouse")hideTip();});
+  panel.addEventListener("pointerover",e=>{
+    const target=e.target.closest("[data-pg-tip]");
+    if(e.pointerType==="mouse"&&target&&!target.contains(e.relatedTarget))showTip(target);
+  });
+  panel.addEventListener("pointerout",e=>{
+    const target=e.target.closest("[data-pg-tip]");
+    if(e.pointerType==="mouse"&&target&&!target.contains(e.relatedTarget))hideTip();
+  });
   panel.addEventListener("focusin",e=>showTip(e.target.closest("[data-pg-tip]")));panel.addEventListener("focusout",hideTip);
   document.addEventListener("keydown",e=>{
     if(panel.classList.contains("hidden"))return;
     if(e.key==="Escape"){setExplain(false);hideTip();if(!dialog.open)clearSelection();}
+    if(!explaining&&["Enter"," "].includes(e.key)){
+      const resource=e.target.closest("[data-pg-resource]");
+      if(resource){e.preventDefault();showTip(resource,true);return;}
+    }
     if(!explaining||exempt(e.target)||!["Enter"," "].includes(e.key))return;
     e.preventDefault();e.stopImmediatePropagation();explain(e.target.closest("[data-pg-explain]"));
   },true);

@@ -106,8 +106,8 @@ const GAME_ASSETS = {
     "header": "showMindTheLinesHeaderActions"
   },
   "power_grid": {
-    "scripts": ["/static/games/power_grid.js?v=4"],
-    "styles": ["/static/games/power_grid.css?v=4"],
+    "scripts": ["/static/games/power_grid.js?v=5"],
+    "styles": ["/static/games/power_grid.css?v=5"],
     "markup": "/static/games/power_grid.html?v=2",
     "panel": "powerGridPanel",
     "header": "showPowerGridHeaderActions"

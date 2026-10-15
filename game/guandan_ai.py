@@ -12978,7 +12978,8 @@ def _should_accept_minimax_override(
     records = {_action_identity(record["action"]): record for record in status.get("root_values", [])}
     baseline = records.get(_action_identity(reference))
     challenger = records.get(_action_identity(proposal))
-    if not baseline or not challenger or not status.get("completed_depth"):
+    terminal_complete = bool(status.get("terminal_complete"))
+    if not baseline or not challenger or not (status.get("completed_depth") or terminal_complete):
         decision["reason"] = "incomplete_plan_comparison" if risks else "incomplete_search_comparison"
         return False
     before_values = baseline.get("world_values") or []
@@ -12994,12 +12995,15 @@ def _should_accept_minimax_override(
     gain = sum(deltas) / len(deltas)
     variance = sum((delta - gain) ** 2 for delta in deltas) / (len(deltas) - 1)
     lower_gain = gain - 1.64 * math.sqrt(variance / len(deltas))
-    margin = 5.5 + max(risks.values(), default=0.0)
-    accepted = lower_gain >= margin
+    margin = 5.5 + max(risks.values()) if risks else 0.0
+    sampled_dominance = terminal_complete and min(deltas) >= -1e-9 and gain > margin
+    accepted = sampled_dominance or (lower_gain >= margin if risks else
+                                    lower_gain > 1e-9 if terminal_complete else gain > 1e-9)
     reason = ("supported_plan_change" if accepted else "preserve_control_plan") if risks else (
         "search_preference" if accepted else "no_search_gain" if gain <= 1e-9 else "preserve_heuristic")
     decision.update(accepted=accepted, reason=reason,
-                    paired_gain=gain, paired_gain_lower=lower_gain, required_gain=margin)
+                    paired_gain=gain, paired_gain_lower=lower_gain, required_gain=margin,
+                    terminal_complete=terminal_complete, sampled_dominance=sampled_dominance)
     return accepted
 
 
@@ -15436,6 +15440,52 @@ def _deferred_teammate_bomb_pass(
     return None
 
 
+def _minimax_terminal_root_values(
+    states: List[Dict],
+    bot_id: str,
+    actions: List[Dict],
+    deadline: Optional[float],
+) -> Tuple[Optional[List[List[float]]], Dict]:
+    from game.guandan_endgame import EndgameSolver, IncompleteEndgame
+
+    result = {"status": "disabled", "nodes": 0, "completed_worlds": 0}
+    configured_ms = max(0.0, float(states[0].get("config", {}).get("bot_minimax_exact_time_ms", 0)))
+    if configured_ms <= 0 or deadline is None or len(states) < 2:
+        return None, result
+    if any(not state.get("_ai_sampled_world") for state in states):
+        result.update(status="skipped", reason="unsampled_world")
+        return None, result
+    started = time.perf_counter()
+    remaining = deadline - started
+    if remaining < 0.05:
+        result.update(status="skipped", reason="insufficient_budget")
+        return None, result
+    stop = started + min(configured_ms / 1000.0, remaining * 0.45)
+    node_limit = max(1, int(states[0].get("config", {}).get("bot_exact_endgame_node_limit", 500000)))
+    values = [[] for action in actions]
+    result.update(status="incomplete", requested_worlds=len(states), candidates=len(actions),
+                  solver="exact_sampled_v1")
+    try:
+        for state in states:
+            solver = EndgameSolver(_CORE, state, bot_id, stop, node_limit - result["nodes"])
+            try:
+                row = solver.root_values(actions)
+            finally:
+                result["nodes"] += solver.nodes
+            for column, value in zip(values, row):
+                column.append(value)
+            result["completed_worlds"] += 1
+        if time.perf_counter() >= stop:
+            raise IncompleteEndgame("deadline")
+        result["status"] = "complete"
+        return values, result
+    except IncompleteEndgame as error:
+        result["reason"] = str(error)
+        return None, result
+    finally:
+        result["elapsed_ms"] = (time.perf_counter() - started) * 1000.0
+
+
 def _minimax_pick_action(
     state: Dict,
     bot_id: str,
@@ -15453,6 +15503,7 @@ def _minimax_pick_action(
     particle_count_used = 1
     aggregation = "single_world"
     root_values: List[Dict] = []
+    terminal_attempt: Dict = {}
     extension_limit = target_depth
     if (public_state is not None and deadline is not None
             and public_state.get("config", {}).get("bot_search_use_remaining_budget", True)):
@@ -15483,6 +15534,7 @@ def _minimax_pick_action(
             "extension_limit": extension_limit,
             "forced_passes_free": True,
             "control_extension_plies": 2,
+            "terminal_attempt": dict(terminal_attempt),
         }
         closeout_meta = state.get("_ai_eval_cache", {}).get("public_closeout")
         if isinstance(closeout_meta, dict):
@@ -15664,6 +15716,40 @@ def _minimax_pick_action(
         if particle_count_used > 1
         else 0.0
     )
+    if public_state is not None:
+        terminal_values, terminal_attempt = _minimax_terminal_root_values(
+            search_states, bot_id, actions, deadline,
+        )
+        if terminal_values is not None:
+            reference_index = next((index for index, action in enumerate(actions)
+                                    if _action_identity(action) == _action_identity(incumbent_action)), 0)
+            for action, values in zip(actions, terminal_values):
+                mean = sum(values) / particle_count_used
+                deltas = [value - reference for value, reference in
+                          zip(values, terminal_values[reference_index])]
+                gain = sum(deltas) / particle_count_used
+                paired_std = math.sqrt(sum((delta - gain) ** 2 for delta in deltas) / particle_count_used)
+                root_values.append({"action": dict(action), "mean": mean,
+                                    "std": math.sqrt(sum((value - mean) ** 2 for value in values) / particle_count_used),
+                                    "paired_std": paired_std, "value": mean - risk_lambda * paired_std,
+                                    "lead_penalty": 0.0, "world_values": values})
+            best = max(root_values, key=lambda record: (
+                record["value"], _action_identity(record["action"]) == _action_identity(incumbent_action)))
+            reference = root_values[reference_index]
+            tied_actions = [record["action"] for record in root_values
+                            if record["world_values"] == reference["world_values"]]
+            if best["value"] <= reference["value"] + 1e-9 and len(tied_actions) > 1:
+                actions = tied_actions
+                total_actions = len(actions)
+                terminal_attempt["tie_break_candidates"] = total_actions
+                root_values = []
+            else:
+                store_status("sampled_terminal", len(actions), len(actions),
+                             attempted=len(actions) * particle_count_used)
+                state["_ai_eval_cache"]["minimax_anytime"]["terminal_complete"] = True
+                _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end,
+                                        1.0, "Completed terminal comparison on sampled endgames")
+                return dict(best["action"])
     for search_depth in range(1, extension_limit + 1):
         layer_values: List[List[float]] = [[] for _action in actions]
         layer_interrupted = False
@@ -18358,7 +18444,9 @@ def _build_bot_explain(
             if action:
                 override[key] = label_action(action.get("type", "play"), action.get("card_ids") or [])
         search_explain = {"method": "minimax", "candidates": sorted(records, key=lambda item: item["value"], reverse=True),
-                          "decision": override, "completed_depth": method_meta.get("minimax_completed_depth")}
+                          "decision": override, "completed_depth": method_meta.get("minimax_completed_depth"),
+                          "terminal_complete": method_meta.get("minimax_terminal_complete", False),
+                          "terminal_attempt": method_meta.get("minimax_terminal_attempt", {})}
     return {
         "method": method,
         "score_model": ("trick_boundary" if route_cache.get("trick_boundary", {}).get("applied")

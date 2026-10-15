@@ -124,6 +124,10 @@ python3 scripts/benchmark_guandan.py run \
 
 `comparison=independent_confirmation_v1` 的面板在初筛提出可信改选后，还会在同一总预算内另取独立世界复核。逐步 trace 的 `trick_boundary.verification` 区分 `not_needed`、`complete`、`incomplete`；完整时包含 `passed`、复核的成对差值和两个动作的记录。`requested_worlds` 是初选样本数，复核自身另记 `requested_worlds`，不能把两阶段总轨迹数误写为原来的 4×4。顶层 `status=complete` 包括“复核完成但未通过”，而复核超时使整面板 incomplete、不得采用部分结果。顶层候选值／排名保留初选尺度，不混入复核分数，也不在复核样本中重新选优；这仍不是校准后的统计显著性声明。
 
+### 运行中用户调整样本量
+
+2026-10-15 v3 验收原计划 120 对／240 局，用户在完成 138 局时明确要求仅 180 局。监督进程在第 90 对完整结束后中断原 runner，保留原始中断报告；新报告 `tmp/guandan-strength-iteration-20261014/search-evidence-full-90.json` 只含完整索引 0–89，并重放核验全部动作、结算、初始牌与轨迹哈希，重算保留局的全部诊断。`sample_amendment` 明确记录原样本量、用户要求、原报告指纹与中断原因。不可把此改动写成开跑前固定 90 对，也不可把任意失败／残缺报告改成成功。该次 180 局净收益 −0.0111/局、配对区间跨零、符号翻转 p=0.89246，未推广。
+
 ### 强度统计
 
 2026-10-15 的实验性 `game/guandan_endgame.py` 也纳入可选运行时快照、源码指纹和固定时钟；冻结旧 commit 不存在此文件时不会从工作区补入。该实验默认关闭。启用时逐步解释的 `method_details.exact_endgame` 记录初选／独立确认、完成世界、节点与中断原因，`method=exact_endgame` 才表示最终采用。汇总的 `diagnostics.<side>.exact_endgame` 单独记录状态、原因、complete / (complete + incomplete)、采用与实际改牌次数、采样数、重复世界复用次数、节点和面板延迟。完成但保留原动作计入采用，不计入改牌；超范围／确定最高团队收益的跳过不进入完成率分母。中断世界已经访问的节点计入计算量，未完成收益不进入候选排名。初选和确认仍独立抽样，抽中相同实体分配时仅复用确定性的求解值，不删除样本或伪造额外样本。
