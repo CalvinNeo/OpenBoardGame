@@ -2,6 +2,16 @@
 
 入口：`python3 scripts/benchmark_guandan.py`，只用 Python 标准库。历次改进、关键复盘与评测结果统一见 [guandan_ai_review.md](guandan_ai_review.md)。
 
+## 最新固定对照：2026-10-15
+
+v5 按用户要求完成新 seed `20261028` 的 **90 对／180 局**，双方 `auto`、公开信息、6000ms、零额外预算；级牌 2／7／A 各 30 对。候选／基线是 `tmp/guandan-strength-iteration-20261014/` 下冻结的 `terminal-candidate-v5/` 与 `structured-current-baseline/`，不是下方示例中的旧 Git 基线。预定协议 `terminal-v5-full-protocol.md`，完整报告 `terminal-v5-full-90.json`。
+
+净升级收益 +0.1167/局，配对 bootstrap 95% [+0.0222, +0.2278]，双侧精确符号翻转 p=0.02722，达到该批预定推广条件；93 胜／87 负，胜率区间 [50.00%, 53.89%]，不另称胜率显著提高。90 对中 12 正、2 负、76 零；保守净收益参考界 [−0.7423, +0.9756]，前期多次开发尝试不共享单批置信度。
+
+`validate_full_batch.py` 已重放全部 17117 动作并核对公开观察、动作合法性、轨迹和结算、预定发牌与两侧源码。`summarize_terminal_trace.py` 将采样终局面板、等价路线浅搜和公开确定接管分开统计。两者只作验证和诊断，不是额外独立强度样本。生产默认采用本次候选完整 effective_config，运行代码除默认字典外与验证快照一致。
+
+启用后 815 项掼蛋及房间回归通过，205.992 秒；`terminal-v5-promotion-verification.json` 保存源码、默认配置等价核对及最终测试日志指纹。结算重放与单元回归不会扩充 180 局强度样本。
+
 ## 评测什么
 
 两名 candidate 组成一队，对战两名 baseline。同一副牌打两次：candidate 分别坐 A 队（0、2）和 B 队（1、3），牌、级牌、先手保持一致。每对牌局是一个统计样本。每对还交替实际运行 A/B 的顺序。

@@ -151,13 +151,18 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
         # Depth now counts decisions, with compulsory passes compressed and
         # short-hand control transfers extended separately. Raw old ply counts
         # are no longer comparable, especially under a wall-clock deadline.
-        self.assertGreaterEqual(search["completed_depth"], 1)
+        if search.get("terminal_complete"):
+            self.assertIsNone(search["completed_depth"])
+            self.assertEqual(search["terminal_attempt"]["status"], "complete")
+            self.assertEqual(search["terminal_attempt"]["completed_worlds"], 12)
+        else:
+            self.assertGreaterEqual(search["completed_depth"], 1)
         self.assertTrue(explain["method_details"]["minimax_forced_passes_free"])
         self.assertEqual(explain["method_details"]["minimax_control_extension_plies"], 2)
         self.assertEqual(sum(record["selected"] for record in search["candidates"]), 1)
         for record in search["candidates"]:
-            self.assertEqual(record["samples"], 3)
-            self.assertEqual(record["mean"], sum(record["world_values"]) / 3)
+            self.assertEqual(record["samples"], 12)
+            self.assertEqual(record["mean"], sum(record["world_values"]) / 12)
         self.assertAlmostEqual(explain["chosen"]["score"], sum(explain["chosen"]["components"].values()))
 
     def test_saved_level_two_response_keeps_the_wildcard_plan(self):
@@ -170,6 +175,120 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
         self.assertIsNone(explain["search"])
         self.assertEqual(explain["method_details"]["heuristic_search_gate"]["reason"],
                          "clear_heuristic_margin")
+
+
+class GuandanShortRunnerTests(unittest.TestCase):
+    def state(self):
+        return replay_fixture("bb7780", 61, {"bot_mode": "heuristic", "bot_trick_boundary_mode": "off"})
+
+    def qualified(self, state):
+        return guandan_ai.call(guandan, "_short_runner_has_natural_teammate_overtake", state, "bot2")
+
+    def relay_state(self):
+        state = self.state()
+        for actor, labels in (("bot2", ("♥️8", "♦️8", "♦️8", "♣️9", "♥️9")),
+                              ("z", ("♣️10", "♠️10", "♣️10", "♠️Q", "♣️Q")),
+                              ("bot4", ("♣️4", "♦️4", "♣️4", "♦️4", "♥️4")),
+                              ("bot2", ()), ("z", ())):
+            action = {"type": "play", "card_ids": pick_card_ids(state["players"][actor]["hand"], labels)} \
+                if labels else {"type": "pass"}
+            _, error = guandan.GuandanGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+        return state
+
+    def test_short_runner_sets_up_second_place_before_long_partner(self):
+        state = self.state()
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+        hand = state["players"]["bot2"]["hand"]
+        self.assertEqual(set(action["card_ids"]), set(pick_card_ids(hand, ("♥️8", "♦️8", "♦️8", "♣️9", "♥️9"))))
+        self.assertEqual(state["bot_explain"]["bot2"]["method"], "heuristic")
+        self.assertEqual(guandan_ai.call(guandan, "_teammate_protect_bonus", state, "bot2"), 0.0)
+
+    def test_runner_setup_uses_only_own_cards_and_public_counts(self):
+        state = self.state()
+        self.assertTrue(self.qualified(state))
+        for actor, data in state["players"].items():
+            if actor != "bot2":
+                data["hand"] = [None] * len(data["hand"])
+        state["_ai_eval_cache"] = {}
+        self.assertTrue(self.qualified(state))
+
+    def test_no_urgency_or_short_partner_keeps_protection(self):
+        for mutate in (lambda state: state.update(finish_order=[]),
+                       lambda state: state["players"]["bot4"].update(hand=[None] * 2)):
+            state = self.state()
+            mutate(state)
+            self.assertFalse(self.qualified(state))
+            self.assertGreater(guandan_ai.call(guandan, "_teammate_protect_bonus", state, "bot2"), 0.0)
+
+    def test_wild_spending_bomb_break_and_unstructured_tail_do_not_qualify(self):
+        groups = (("♥️8", "♦️8", "♥️2", "♣️9", "♥️9", "♦️J"),
+                  ("♥️8", "♦️8", "♦️8", "♣️8", "♣️9", "♥️9"),
+                  ("♥️8", "♦️8", "♦️8", "♣️9", "♥️9", "♦️J", "♦️Q"))
+        for labels in groups:
+            state = self.state()
+            deck = guandan._full_deck()
+            selected = set(pick_card_ids(deck, labels))
+            state["players"]["bot2"]["hand"] = [card for card in deck if card["id"] in selected]
+            state["_ai_eval_cache"] = {}
+            with self.subTest(labels=labels):
+                self.assertFalse(self.qualified(state))
+
+    def test_public_guaranteed_single_relay_secures_second_place(self):
+        state = self.relay_state()
+        action = guandan.GuandanGame.bot_move(state, "bot4")
+        expected = pick_card_ids(state["players"]["bot4"]["hand"], ("♣️5",))
+        self.assertEqual(action["card_ids"], expected)
+        components = state["bot_explain"]["bot4"]["chosen"]["components"]
+        self.assertGreaterEqual(components["lead_teammate_finish"], 100.0)
+        self.assertNotIn("lead_closeout_reply", components)
+        _, error = guandan.GuandanGame.apply_action(state, "bot4", action)
+        self.assertIsNone(error)
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+        _, error = guandan.GuandanGame.apply_action(state, "bot2", action)
+        self.assertIsNone(error)
+        self.assertEqual(state["finish_order"][:2], ["calvin", "bot2"])
+
+    def test_auto_continuation_sets_up_and_completes_second_place_relay(self):
+        state = replay_fixture("bb7780", 61, {
+            "bot_mode": "auto", "bot_think_time_ms": 6000,
+            "bot_trick_boundary_mode": "off", "bot_search_use_remaining_budget": False,
+        })
+        real_random = random.Random
+        expected = (
+            ("bot2", ("♥️8", "♦️8", "♦️8", "♣️9", "♥️9")),
+            ("z", ("♣️10", "♠️10", "♣️10", "♠️Q", "♣️Q")),
+            ("bot4", ("♣️4", "♦️4", "♣️4", "♦️4", "♥️4")),
+            ("bot2", ()), ("z", ()), ("bot4", ("♣️5",)), ("bot2", ("♦️J",)),
+        )
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            for actor, labels in expected:
+                with self.subTest(actor=actor, labels=labels):
+                    self.assertEqual(state["current_turn"], actor)
+                    hand = state["players"][actor]["hand"]
+                    wanted = {"type": "play", "card_ids": pick_card_ids(hand, labels)} \
+                        if labels else {"type": "pass"}
+                    action = wanted if actor == "z" else guandan.GuandanGame.bot_move(state, actor)
+                    self.assertEqual(action["type"], wanted["type"])
+                    self.assertEqual(set(action.get("card_ids", [])), set(wanted.get("card_ids", [])))
+                    _, error = guandan.GuandanGame.apply_action(state, actor, action)
+                    self.assertIsNone(error)
+        self.assertEqual(state["finish_order"][:2], ["calvin", "bot2"])
+
+    def test_single_relay_proof_uses_public_pool_and_response_order(self):
+        state = self.relay_state()
+        for actor, data in state["players"].items():
+            if actor != "bot4":
+                data["hand"] = [None] * len(data["hand"])
+        state["_ai_eval_cache"] = {}
+        for label, expected in (("♣️5", 100.0), ("♦️Q", 0.0)):
+            cards = pick_card_ids(state["players"]["bot4"]["hand"], (label,))
+            combo = guandan_ai.call(guandan, "_action_combo", state, "bot4", {"type": "play", "card_ids": cards})
+            self.assertEqual(guandan_ai.call(guandan, "_lead_teammate_finish_bonus",
+                                            state, "bot4", cards, combo), expected)
+            with mock.patch.object(guandan_ai, "_next_active_after", return_value="z"):
+                self.assertEqual(guandan_ai.call(guandan, "_lead_teammate_finish_bonus",
+                                                state, "bot4", cards, combo), 0.0)
 
 
 if __name__ == "__main__":

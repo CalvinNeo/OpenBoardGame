@@ -61,5 +61,51 @@ class GuandanBenchmarkDiagnosticsTests(unittest.TestCase):
         self.assertIsNone(report["over_budget_rate"])
 
 
+class GuandanExactDiagnosticsTests(unittest.TestCase):
+    def test_completed_reference_is_applied_but_not_a_changed_move(self):
+        diagnostic = bench.Diagnostics()
+        reference = {"type": "play", "card_ids": [1, 2]}
+        diagnostic.add({"elapsed_ms": 30.0, "action": {"type": "play", "card_ids": [2, 1]},
+                        "explain": {"method": "exact_endgame", "method_details": {"exact_endgame": {
+                            "status": "complete", "applied": True, "reference": reference,
+                            "reason": "no_supported_change", "elapsed_ms": 12.0,
+                            "completed_worlds": 8, "reused_worlds": 7, "nodes": 53}}}})
+        report = diagnostic.report()["exact_endgame"]
+        self.assertEqual(report["attempted"], 1)
+        self.assertEqual(report["applied"], 1)
+        self.assertEqual(report["actual_changes"], 0)
+        self.assertEqual(report["completion_rate"], 1.0)
+        self.assertEqual(report["completed_worlds"], 8)
+        self.assertEqual(report["reused_worlds"], 7)
+        self.assertEqual(report["nodes"], 53)
+        self.assertEqual(report["latency_ms"]["mean"], 12.0)
+
+    def test_incomplete_and_skipped_are_not_applied_or_scored_as_changes(self):
+        diagnostic = bench.Diagnostics()
+        for status, reason in (("complete", "confirmed_change"), ("incomplete", "deadline"),
+                               ("skipped", "outside_exact_scope")):
+            diagnostic.add({"elapsed_ms": 20.0, "action": {"type": "pass"},
+                            "explain": {"method_details": {"exact_endgame": {
+                                "status": status, "applied": status == "complete", "reason": reason,
+                                "reference": {"type": "play", "card_ids": [1]}, "changed": True}}}})
+        report = diagnostic.report()
+        exact = report["exact_endgame"]
+        self.assertEqual(exact["attempted"], 2)
+        self.assertEqual(exact["completion_rate"], 0.5)
+        self.assertEqual(exact["applied"], 1)
+        self.assertEqual(exact["actual_changes"], 1)
+        self.assertEqual(exact["statuses"], {"complete": 1, "incomplete": 1, "skipped": 1})
+        self.assertEqual(report["trick_boundary"]["attempted"], 0)
+        self.assertIsNone(report["trick_boundary"]["completion_rate"])
+
+    def test_absent_exact_panel_does_not_invent_a_completion_rate(self):
+        diagnostic = bench.Diagnostics()
+        diagnostic.add({"elapsed_ms": 2.0, "action": {"type": "pass"}, "explain": {}})
+        exact = diagnostic.report()["exact_endgame"]
+        self.assertEqual(exact["attempted"], 0)
+        self.assertIsNone(exact["completion_rate"])
+        self.assertIsNone(exact["latency_ms"]["mean"])
+
+
 if __name__ == "__main__":
     unittest.main()

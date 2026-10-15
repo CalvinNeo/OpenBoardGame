@@ -4,6 +4,8 @@ import unittest
 from unittest import mock
 
 from game import guandan, guandan_ai
+from tests.test_guandan_trick_boundary import make_state, pair, play
+from tests.test_guandan_trick_responses import CountOnlyHand
 
 
 class GuandanPublicReplyBeliefTests(unittest.TestCase):
@@ -248,6 +250,208 @@ class GuandanPublicReplyBeliefTests(unittest.TestCase):
             self.assertGreater(belief["same_type"], 0.0)
             self.assertTrue(belief["same_type_possible"])
             sample.assert_called_once()
+
+
+class PublicEndgameTests(unittest.TestCase):
+    def state(self, ranks=None):
+        state = make_state(ranks or {'bot': [8, 8, 6, 14], 'opp': [9],
+                                     'mate': [4, 7], 'opp2': [3, 11, 13]})
+        state.pop('_ai_sampled_world')
+        state['config']['bot_trick_boundary_mode'] = 'off'
+        return state
+
+    def call(self, name, state, *args):
+        return guandan_ai.call(guandan, name, state, 'bot', *args)
+
+    def protect(self, state):
+        protected = copy.deepcopy(state)
+        for actor, data in protected['players'].items():
+            if actor != 'bot':
+                data['hand'] = CountOnlyHand(data['hand'])
+        return protected
+
+    def test_single_distribution_uses_public_pool_and_owner_locks(self):
+        state = self.state()
+        expected = [(guandan._single_order_value({'rank': rank}, 2), 1 / 6)
+                    for rank in (3, 4, 7, 9, 11, 13)]
+        self.assertEqual(self.call('_target_single_value_distribution', self.protect(state), 'opp'), expected)
+        known = state['players']['opp']['hand'][0]
+        state['known_card_owners'] = {str(known['id']): 'opp'}
+        self.assertEqual(self.call('_target_single_value_distribution', self.protect(state), 'opp'),
+                         [(guandan._single_order_value(known, 2), 1.0)])
+
+    def test_other_owner_locks_are_excluded_from_single_distribution(self):
+        state = self.state()
+        known = state['players']['opp2']['hand'][-1]
+        state['known_card_owners'] = {known['id']: 'opp2'}
+        distribution = self.call('_target_single_value_distribution', self.protect(state), 'opp')
+        self.assertNotIn(guandan._single_order_value(known, 2), dict(distribution))
+        self.assertAlmostEqual(sum(probability for value, probability in distribution), 1.0)
+
+    def test_sampled_single_distribution_remains_exact(self):
+        state = self.state()
+        state['_ai_sampled_world'] = True
+        self.assertEqual(self.call('_target_single_value_distribution', state, 'opp'),
+                         [(guandan._single_order_value(state['players']['opp']['hand'][0], 2), 1.0)])
+        self.assertEqual(self.call('_target_single_value_distribution', state, 'mate'), [])
+
+    def test_short_enemy_lead_score_does_not_depend_on_hidden_assignment(self):
+        state = self.state()
+        swapped = copy.deepcopy(state)
+        swapped['players']['opp']['hand'][0], swapped['players']['opp2']['hand'][0] = (
+            swapped['players']['opp2']['hand'][0], swapped['players']['opp']['hand'][0])
+        cards = [next(card['id'] for card in state['players']['bot']['hand'] if card['rank'] == 6)]
+        before = copy.deepcopy(state)
+        score = self.call('_bot_score_components', state, cards, 4)
+        self.assertEqual(self.call('_bot_score_components', swapped, cards, 4), score)
+        self.assertEqual(self.call('_bot_score_components', self.protect(before), cards, 4), score)
+
+    def test_public_lead_penalty_is_expected_sampled_penalty_not_one_random_world(self):
+        state = self.state()
+        cards = [next(card['id'] for card in state['players']['bot']['hand'] if card['rank'] == 6)]
+        values = []
+        for target in ('opp', 'mate', 'opp2'):
+            for card in state['players'][target]['hand']:
+                world = copy.deepcopy(state)
+                world['_ai_sampled_world'] = True
+                world['players']['opp']['hand'] = [card]
+                values.append(self.call('_lead_short_next_opponent_penalty', world, cards))
+        self.assertGreater(max(values), min(values))
+        self.assertAlmostEqual(self.call('_lead_short_next_opponent_penalty', self.protect(state), cards),
+                               sum(values) / len(values))
+
+    def test_finish_window_values_do_not_read_enemy_single(self):
+        state = self.state()
+        card = next(card for card in state['players']['bot']['hand'] if card['rank'] == 6)
+        _, error = guandan.GuandanGame.apply_action(state, 'bot', play([card['id']]))
+        self.assertIsNone(error)
+        swapped = copy.deepcopy(state)
+        swapped['players']['opp']['hand'][0], swapped['players']['opp2']['hand'][0] = (
+            swapped['players']['opp2']['hand'][0], swapped['players']['opp']['hand'][0])
+        for name in ('_single_lead_finish_window_penalty', '_active_lead_escape_window_penalty'):
+            self.assertEqual(self.call(name, state), self.call(name, swapped))
+            self.assertEqual(self.call(name, state), self.call(name, self.protect(state)))
+        self.assertAlmostEqual(self.call('_single_lead_finish_window_penalty', state), 26.0 * 4 / 6)
+
+    def test_short_pair_escape_and_partner_lock_use_public_cards(self):
+        state = self.state({'bot': [8, 8, 6, 6, 6, 6, 14], 'opp': [9, 9],
+                            'mate': [4, 4, 7], 'opp2': [3, 11, 13]})
+        cards = pair(state, 'bot', 8)
+        combo = guandan._evaluate_combo([card for card in state['players']['bot']['hand']
+                                        if card['id'] in cards], state['level_rank'], state['config'])
+        for name in ('_lead_short_escape_window_penalty', '_lead_short_enemy_lock_bonus'):
+            self.assertEqual(self.call(name, state, cards, combo),
+                             self.call(name, self.protect(state), cards, combo))
+        _, error = guandan.GuandanGame.apply_action(state, 'bot', play(cards))
+        self.assertIsNone(error)
+        self.assertEqual(self.call('_active_lead_escape_window_penalty', state),
+                         self.call('_active_lead_escape_window_penalty', self.protect(state)))
+
+    def test_component_cache_ignores_public_hidden_faces_but_not_sampled_faces(self):
+        state = self.state()
+        swapped = copy.deepcopy(state)
+        swapped['players']['opp']['hand'][0], swapped['players']['opp2']['hand'][0] = (
+            swapped['players']['opp2']['hand'][0], swapped['players']['opp']['hand'][0])
+        cards = pair(state, 'bot', 8)
+        self.assertEqual(self.call('_bot_component_cache_key', state, cards, 4),
+                         self.call('_bot_component_cache_key', swapped, cards, 4))
+        self.assertEqual(self.call('_bot_component_cache_key', state, cards, 4),
+                         self.call('_bot_component_cache_key', self.protect(state), cards, 4))
+        state['_ai_sampled_world'] = swapped['_ai_sampled_world'] = True
+        self.assertNotEqual(self.call('_bot_component_cache_key', state, cards, 4),
+                            self.call('_bot_component_cache_key', swapped, cards, 4))
+
+    def test_minimax_single_penalty_does_not_read_hidden_faces(self):
+        state = self.state()
+        cards = [next(card['id'] for card in state['players']['bot']['hand'] if card['rank'] == 6)]
+        swapped = copy.deepcopy(state)
+        swapped['players']['opp']['hand'][0], swapped['players']['opp2']['hand'][0] = (
+            swapped['players']['opp2']['hand'][0], swapped['players']['opp']['hand'][0])
+        penalty = self.call('_minimax_root_lead_single_penalty', state, play(cards))
+        self.assertEqual(self.call('_minimax_root_lead_single_penalty', swapped, play(cards)), penalty)
+        self.assertEqual(self.call('_minimax_root_lead_single_penalty', self.protect(state), play(cards)),
+                         penalty)
+
+    def test_minimax_single_penalty_equals_public_expected_sampled_penalty(self):
+        state = self.state()
+        cards = [next(card['id'] for card in state['players']['bot']['hand'] if card['rank'] == 6)]
+        penalties = []
+        for target in ('opp', 'mate', 'opp2'):
+            for index in range(len(state['players'][target]['hand'])):
+                world = copy.deepcopy(state)
+                world['_ai_sampled_world'] = True
+                world['players']['opp']['hand'][0], world['players'][target]['hand'][index] = (
+                    world['players'][target]['hand'][index], world['players']['opp']['hand'][0])
+                penalties.append(self.call('_minimax_root_lead_single_penalty', world, play(cards)))
+        self.assertGreater(max(penalties), min(penalties))
+        self.assertAlmostEqual(
+            self.call('_minimax_root_lead_single_penalty', self.protect(state), play(cards)),
+            sum(penalties) / len(penalties))
+
+    def test_minimax_single_penalty_uses_public_known_owner(self):
+        state = self.state()
+        cards = [next(card['id'] for card in state['players']['bot']['hand'] if card['rank'] == 6)]
+        known = state['players']['opp']['hand'][0]
+        state['known_card_owners'] = {str(known['id']): 'opp'}
+        world = copy.deepcopy(state)
+        world['_ai_sampled_world'] = True
+        self.assertEqual(
+            self.call('_minimax_root_lead_single_penalty', self.protect(state), play(cards)),
+            self.call('_minimax_root_lead_single_penalty', world, play(cards)))
+
+    def test_minimax_single_penalty_skips_non_single_actions(self):
+        state = self.protect(self.state())
+        self.assertEqual(self.call('_minimax_root_lead_single_penalty', state, {'type': 'pass'}), 0.0)
+        self.assertEqual(self.call('_minimax_root_lead_single_penalty', state, play(pair(state, 'bot', 8))),
+                         0.0)
+
+    def test_better_public_closeout_can_spend_control_only_after_rechecking_both_routes(self):
+        state = self.state({'bot': [4, 4, 13, 13, 8], 'opp': [9],
+                            'mate': [5, 7], 'opp2': [3, 11]})
+        reference = play(pair(state, 'bot', 4))
+        proposal = play(pair(state, 'bot', 13))
+        status = {'stop_reason': 'public_closeout'}
+        with mock.patch.object(guandan_ai, '_minimax_plan_risks', return_value={'same_type_control': 5.0}), \
+                mock.patch.object(guandan_ai, '_retained_bomb_override_is_unsafe', return_value=False), \
+                mock.patch.object(guandan_ai, '_public_endgame_closeout_action',
+                                  return_value=(proposal, 0.9, 0.7)) as closeout:
+            self.assertTrue(self.call('_should_accept_minimax_override', state, reference, proposal, status))
+        self.assertEqual(closeout.call_args.args[2], [reference, proposal])
+        decision = state['_ai_eval_cache']['minimax_override']
+        self.assertEqual(decision['reason'], 'public_closeout_control')
+        self.assertEqual(decision['hold_probability'], 0.9)
+
+    def test_public_closeout_label_cannot_bypass_other_risks_or_a_failed_recheck(self):
+        state = self.state({'bot': [4, 4, 13, 13, 8], 'opp': [9],
+                            'mate': [5, 7], 'opp2': [3, 11]})
+        reference = play(pair(state, 'bot', 4))
+        proposal = play(pair(state, 'bot', 13))
+        cases = [({'same_type_control': 5.0}, None, 'public_closeout'),
+                 ({'same_type_control': 5.0}, (reference, 0.9, 0.7), 'public_closeout'),
+                 ({'same_type_control': 5.0}, (proposal, 0.9, 0.7), 'deadline'),
+                 ({'same_type_control': 5.0, 'closeout_reentry': 10.0},
+                  (proposal, 0.9, 0.7), 'public_closeout')]
+        for risks, checked, reason in cases:
+            with self.subTest(risks=risks, reason=reason, checked=checked), \
+                    mock.patch.object(guandan_ai, '_minimax_plan_risks', return_value=risks), \
+                    mock.patch.object(guandan_ai, '_retained_bomb_override_is_unsafe', return_value=False), \
+                    mock.patch.object(guandan_ai, '_public_endgame_closeout_action', return_value=checked):
+                self.assertFalse(self.call('_should_accept_minimax_override', state, reference,
+                                           proposal, {'stop_reason': reason}))
+
+    def test_public_closeout_without_a_plan_risk_still_requires_rechecking(self):
+        state = self.state({'bot': [4, 4, 13, 13, 8], 'opp': [9],
+                            'mate': [5, 7], 'opp2': [3, 11]})
+        reference = play(pair(state, 'bot', 4))
+        proposal = play(pair(state, 'bot', 13))
+        for checked, accepted in ((None, False), ((reference, 0.9, 0.7), False),
+                                  ((proposal, 0.9, 0.7), True)):
+            with self.subTest(checked=checked), \
+                    mock.patch.object(guandan_ai, '_minimax_plan_risks', return_value={}), \
+                    mock.patch.object(guandan_ai, '_retained_bomb_override_is_unsafe', return_value=False), \
+                    mock.patch.object(guandan_ai, '_public_endgame_closeout_action', return_value=checked):
+                self.assertEqual(self.call('_should_accept_minimax_override', state, reference,
+                                           proposal, {'stop_reason': 'public_closeout'}), accepted)
 
 
 if __name__ == "__main__":

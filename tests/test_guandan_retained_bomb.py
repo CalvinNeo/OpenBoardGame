@@ -1,4 +1,4 @@
-"""Public-history regressions from room 3a8f1e, round 1.
+"""Public-history regressions for retained bombs and five-card tails.
 
 Only card labels and actions are retained from the save. Player identifiers are
 local aliases; room credentials, explanations and future actions are omitted.
@@ -7,8 +7,8 @@ local aliases; room credentials, explanations and future actions are omitted.
 import copy
 import time
 import unittest
-from unittest import mock
 from typing import Dict, List, Sequence
+from unittest import mock
 
 from game import guandan, guandan_ai
 
@@ -310,6 +310,211 @@ class GuandanRetainedBombHistoryTests(unittest.TestCase):
         changed["round_memories"][0]["initial_hands"] = {}
         changed.pop("_ai_eval_cache", None)
         self.assertEqual(belief(changed), original)
+
+
+FIVE_CARD_TAIL_INITIAL_HANDS = {
+    "calvin": (
+        "🃏B", "🃏S", "♠️2", "♥️2", "♦️2", "♦️2", "♥️A", "♠️K", "♣️K",
+        "♣️Q", "♣️Q", "♦️Q", "♦️Q", "♣️J", "♦️J", "♥️10", "♥️9", "♥️9",
+        "♦️9", "♦️9", "♦️7", "♥️6", "♠️5", "♠️5", "♣️5", "♦️5", "♠️3",
+    ),
+    "bot2": (
+        "🃏S", "♠️2", "♣️2", "♣️A", "♦️A", "♥️K", "♥️Q", "♥️Q", "♥️J",
+        "♠️10", "♣️10", "♦️10", "♠️9", "♣️9", "♠️8", "♥️8", "♣️8", "♦️7",
+        "♣️6", "♦️6", "♦️6", "♥️5", "♣️5", "♦️4", "♦️4", "♥️3", "♣️3",
+    ),
+    "z": (
+        "♣️2", "♠️A", "♦️A", "♥️K", "♦️K", "♠️Q", "♠️Q", "♠️J", "♥️J",
+        "♥️10", "♦️10", "♥️8", "♣️8", "♦️8", "♦️8", "♠️7", "♥️7", "♥️7",
+        "♣️7", "♠️6", "♣️6", "♦️5", "♥️4", "♠️3", "♥️3", "♣️3", "♦️3",
+    ),
+    "bot4": (
+        "🃏B", "♥️2", "♠️A", "♥️A", "♣️A", "♠️K", "♣️K", "♦️K", "♠️J",
+        "♣️J", "♦️J", "♠️10", "♣️10", "♠️9", "♣️9", "♠️8", "♠️7", "♣️7",
+        "♠️6", "♥️6", "♥️5", "♠️4", "♠️4", "♥️4", "♣️4", "♣️4", "♦️3",
+    ),
+}
+
+FIVE_CARD_TAIL_PUBLIC_ACTIONS = (
+    ("calvin", ("♠️3",)),
+    ("bot2", ("♦️7",)),
+    ("z", ("♣️2",)),
+    ("bot4", ("🃏B",)),
+    ("calvin", ()),
+    ("bot2", ()),
+    ("z", ()),
+    ("bot4", ("♦️3",)),
+    ("calvin", ("♥️6",)),
+    ("bot2", ("♥️Q",)),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♥️A",)),
+    ("bot2", ("🃏S",)),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("🃏B",)),
+    ("bot2", ()),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♦️7",)),
+    ("bot2", ("♥️J",)),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("🃏S",)),
+    ("bot2", ()),
+    ("z", ()),
+    ("bot4", ("♣️4", "♣️4", "♠️4", "♥️4")),
+    ("calvin", ()),
+    ("bot2", ()),
+    ("z", ()),
+    ("bot4", ("♠️9", "♣️9")),
+    ("calvin", ("♠️K", "♣️K")),
+    ("bot2", ("♦️A", "♣️A")),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♦️2", "♠️2")),
+    ("bot2", ()),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♥️10",)),
+    ("bot2", ("♥️Q",)),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♦️2",)),
+    ("bot2", ()),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♦️J", "♣️J")),
+    ("bot2", ("♠️2", "♣️2")),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♦️5", "♣️5", "♠️5", "♠️5")),
+    ("bot2", ()),
+    ("z", ()),
+    ("bot4", ()),
+    ("calvin", ("♥️9", "♦️9", "♥️9", "♦️9")),
+    ("bot2", ()),
+    ("z", ()),
+)
+
+
+def make_five_card_tail_state():
+    """Rebuild Bot 4's turn after Calvin leads his second bomb, leaving five."""
+    players = [{"player_id": pid, "name": pid, "seat": seat,
+                "is_bot": pid.startswith("bot")}
+               for seat, pid in enumerate(FIVE_CARD_TAIL_INITIAL_HANDS)]
+    state = guandan.GuandanGame.init_game({"bot_mode": "heuristic"}, players)
+    deck = guandan._full_deck()
+    for pid, labels in FIVE_CARD_TAIL_INITIAL_HANDS.items():
+        state["players"][pid]["hand"] = take_labels(deck, labels)
+    assert not deck
+    visible = next(card for card in state["players"]["calvin"]["hand"]
+                   if guandan._card_label(card) == "♠️5")
+    state.update(dealer_team="A", level_rank=2, current_turn="calvin",
+                 current_trick=None, round_memories=[], pass_limits={},
+                 seen_cards=[], trick_plays={},
+                 known_card_owners={visible["id"]: "calvin"}, visible_card_id=visible["id"])
+    guandan._start_round_memory(state)
+    for pid, labels in FIVE_CARD_TAIL_PUBLIC_ACTIONS:
+        action = {"type": "pass"}
+        if labels:
+            cards = take_labels(list(state["players"][pid]["hand"]), labels)
+            action = {"type": "play", "card_ids": [card["id"] for card in cards]}
+        _events, error = guandan.GuandanGame.apply_action(state, pid, action)
+        assert error is None, (pid, labels, error)
+    assert state["current_turn"] == "bot4"
+    assert len(state["players"]["calvin"]["hand"]) == 5
+    return state
+
+
+class GuandanRetainedBombTailTests(unittest.TestCase):
+    @staticmethod
+    def _call(name, *args):
+        return guandan_ai.call(guandan, name, *args)
+
+    def test_consecutive_bombs_leave_pass_available_and_preserve_control(self):
+        state = make_five_card_tail_state()
+        self.assertFalse(self._call("_must_contest_short_enemy_as_last_defender", state, "bot4"))
+        self.assertEqual(guandan.GuandanGame.bot_move(state, "bot4"), {"type": "pass"})
+        scored = state["bot_explain"]["bot4"]["top"]
+        self.assertEqual(scored[0]["cards"], ["Pass"])
+
+    def test_larger_tail_is_publicly_supported_and_rejects_unsafe_takeover(self):
+        state = make_five_card_tail_state()
+        profile = self._call("_retained_bomb_finish_profile", state, "bot4", "calvin")
+        self.assertGreaterEqual(profile["bomb_probability"], 0.9)
+        self.assertLess(profile["physical_probability"], 0.1)
+        cards = take_labels(list(state["players"]["bot4"]["hand"]),
+                            ("♣️J", "♦️J", "♠️J", "♥️2"))
+        ids = [card["id"] for card in cards]
+        takeover = self._call("_retained_bomb_takeover_profile", state, "bot4", ids)
+        self.assertGreaterEqual(takeover["risk"], 0.9)
+        self.assertEqual(takeover["safe_closeout"], 0.0)
+        self.assertTrue(self._call("_retained_bomb_override_is_unsafe", state, "bot4",
+                                  {"type": "pass"}, {"type": "play", "card_ids": ids}))
+        combo = guandan._evaluate_combo(cards, 2, state["config"])
+        reply = self._call("_public_reply_belief", state, "bot4", "calvin", combo)
+        self.assertGreaterEqual(reply["bomb"], 0.9 - 1e-9)
+
+    def test_belief_does_not_read_hidden_hands_or_initial_deal(self):
+        state = make_five_card_tail_state()
+        expected = self._call("_retained_bomb_finish_profile", state, "bot4", "calvin")
+        for pid, player in state["players"].items():
+            if pid != "bot4":
+                player["hand"] = [object() for _ in player["hand"]]
+        state["round_memories"][0]["initial_hands"] = {}
+        state.pop("_ai_eval_cache", None)
+        self.assertEqual(self._call("_retained_bomb_finish_profile", state, "bot4", "calvin"), expected)
+
+    def test_five_cards_without_bomb_run_do_not_receive_a_strong_prior(self):
+        state = make_five_card_tail_state()
+        state["round_memories"] = []
+        state["current_trick"] = None
+        profile = self._call("_retained_bomb_finish_profile", state, "bot4", "calvin")
+        self.assertLess(profile["bomb_probability"], 0.5)
+
+    def test_six_card_tail_uses_the_same_public_bomb_run_evidence(self):
+        state = make_five_card_tail_state()
+        state["players"]["calvin"]["hand"].append(object())
+        state["round_memories"][-1]["tricks"][-1]["actions"][0]["hand_count_after"] = 6
+        profile = self._call("_retained_bomb_finish_profile", state, "bot4", "calvin")
+        self.assertGreaterEqual(profile["bomb_probability"], 0.9)
+        self.assertTrue(all(entry["combo"]["size"] == 6 for entry in profile["bomb_combos"]))
+
+    def test_known_straight_flush_tail_is_counted_once_with_wild_endpoints(self):
+        state = make_five_card_tail_state()
+        state.update(round_memories=[], current_trick=None, known_card_owners={})
+        pool = take_labels(guandan._full_deck(), ("♠️4", "♠️5", "♠️6", "♠️7", "♥️2"))
+        profile = self._call("_retained_bomb_finish_profile_from_pool", state, "calvin", pool)
+        self.assertEqual(profile["physical_probability"], 1.0)
+        self.assertEqual(len(profile["bomb_combos"]), 1)
+        self.assertEqual(profile["bomb_combos"][0]["combo"]["type"], "straight_flush")
+        self.assertEqual(profile["bomb_combos"][0]["combo"]["high_value"], 8)
+
+    def test_public_material_impossibility_overrides_bomb_run_signal(self):
+        state = make_five_card_tail_state()
+        state["known_card_owners"] = {}
+        pool = take_labels(guandan._full_deck(), ("♠️3", "♥️5", "♣️7", "♦️9", "♠️J"))
+        profile = self._call("_retained_bomb_finish_profile_from_pool", state, "calvin", pool)
+        self.assertFalse(profile["bomb_possible"])
+        self.assertEqual(profile["bomb_probability"], 0.0)
+
+    def test_public_owner_locks_can_rule_out_a_whole_hand_bomb(self):
+        state = make_five_card_tail_state()
+        pool = take_labels(guandan._full_deck(),
+                           ("♠️Q", "♠️Q", "♥️Q", "♣️Q", "♦️Q", "♣️3"))
+        state["known_card_owners"] = {pool[0]["id"]: "calvin", pool[-1]["id"]: "calvin"}
+        profile = self._call("_retained_bomb_finish_profile_from_pool", state, "calvin", pool)
+        self.assertEqual(profile["bomb_probability"], 0.0)
+
+    def test_immediate_finish_is_not_rejected_by_a_retained_bomb(self):
+        state = make_five_card_tail_state()
+        hand = take_labels(list(state["players"]["bot4"]["hand"]),
+                           ("♣️J", "♦️J", "♠️J", "♥️2"))
+        state["players"]["bot4"]["hand"] = hand
+        ids = [card["id"] for card in hand]
+        self.assertEqual(self._call("_retained_bomb_takeover_profile", state, "bot4", ids)["risk"], 0.0)
+        self.assertEqual(guandan.GuandanGame.bot_move(state, "bot4")["type"], "play")
 
 
 if __name__ == "__main__":

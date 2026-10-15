@@ -4,6 +4,7 @@ import copy
 import random
 import time
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 from game import guandan, guandan_ai, guandan_trick as trick
@@ -475,6 +476,181 @@ class TrickBoundaryTests(unittest.TestCase):
         def values(panel):
             return {tuple(row["action"]["card_ids"]): row["world_values"] for row in panel["candidates"]}
         self.assertEqual(values(first), values(second))
+
+
+class ForcedContinuationTests(unittest.TestCase):
+    def test_forced_passes_preserve_partner_inheritance_and_double_finish(self):
+        state = make_state({'bot': [3, 3], 'opp': [14], 'mate': [4], 'opp2': [13]})
+        before = copy.deepcopy(state)
+        with mock.patch.object(trick, 'resource_plan', side_effect=AssertionError('estimated forced settlement')):
+            self.assertEqual(trick.team_value(state, 'bot', trick.TrickBudget(), {}), 300.0)
+            self.assertEqual(trick.team_value(state, 'opp', trick.TrickBudget(), {}), -300.0)
+        self.assertEqual(state, before)
+
+    def test_forced_passes_also_resolve_opponents_double_finish(self):
+        state = make_state({'bot': [14], 'opp': [3, 3], 'mate': [13], 'opp2': [4]})
+        state['current_turn'] = 'opp'
+        self.assertEqual(trick.team_value(state, 'bot', trick.TrickBudget(), {}), -300.0)
+
+    def test_optional_pair_response_is_not_forced_to_pass(self):
+        state = make_state({'bot': [3, 3], 'opp': [5, 5, 6], 'mate': [4], 'opp2': [13]})
+        apply_action = guandan.GuandanGame.apply_action
+        with mock.patch.object(guandan.GuandanGame, 'apply_action', wraps=apply_action) as apply:
+            value = trick.team_value(state, 'bot', trick.TrickBudget(), {})
+        self.assertEqual(apply.call_count, 1)
+        self.assertEqual(apply.call_args.args[1], 'bot')
+        self.assertLess(value, 300.0)
+
+    def test_higher_bomb_response_is_not_forced_to_pass(self):
+        state = make_state({'bot': [3] * 4, 'opp': [5] * 4 + [6], 'mate': [4], 'opp2': [13]})
+        apply_action = guandan.GuandanGame.apply_action
+        with mock.patch.object(guandan.GuandanGame, 'apply_action', wraps=apply_action) as apply:
+            trick.team_value(state, 'bot', trick.TrickBudget(), {})
+        self.assertEqual(apply.call_count, 1)
+
+    def test_forced_pass_error_does_not_publish_value(self):
+        state = make_state({'bot': [3, 3], 'opp': [14], 'mate': [4], 'opp2': [13]})
+        guandan.GuandanGame.apply_action(state, 'bot', play(pair(state, 'bot', 3)))
+        before = copy.deepcopy(state)
+        with mock.patch.object(guandan.GuandanGame, 'apply_action', return_value=([], 'rejected')):
+            with self.assertRaisesRegex(trick.IncompleteTrick, 'illegal_forced_pass: rejected'):
+                trick.team_value(state, 'bot', trick.TrickBudget(), {})
+        self.assertEqual(state, before)
+
+    def test_forced_pass_deadline_does_not_publish_value(self):
+        state = make_state({'bot': [3, 3], 'opp': [14], 'mate': [4], 'opp2': [13]})
+        guandan.GuandanGame.apply_action(state, 'bot', play(pair(state, 'bot', 3)))
+        before = copy.deepcopy(state)
+        now = [0.0]
+        apply_action = guandan.GuandanGame.apply_action
+
+        def expire(*args, **kwargs):
+            result = apply_action(*args, **kwargs)
+            now[0] = 1.0
+            return result
+
+        with mock.patch.object(trick.time, 'perf_counter', side_effect=lambda: now[0]), \
+                mock.patch.object(guandan.GuandanGame, 'apply_action', side_effect=expire):
+            with self.assertRaisesRegex(trick.IncompleteTrick, 'deadline'):
+                trick.team_value(state, 'bot', trick.TrickBudget(1.0), {})
+        self.assertEqual(state, before)
+
+
+class IndependentComparisonTests(unittest.TestCase):
+    def setUp(self):
+        self.state = make_state({'bot': [4, 4, 13, 13, 9], 'opp': [10, 10, 3],
+                                 'mate': [6, 6, 8], 'opp2': [7, 7, 11]})
+        self.state['config'].update(bot_trick_boundary_mode='replace', bot_trick_boundary_time_ms=10000)
+        self.reference = play(pair(self.state, 'bot', 4))
+        self.challenger = play(pair(self.state, 'bot', 13))
+        self.scored = [(self.reference['card_ids'], 100.0, {}), (self.challenger['card_ids'], 99.0, {})]
+
+    def panel(self, selection_gain=30.0, verification_gain=10.0, fail_verification=False):
+        phases = []
+        visits = []
+
+        def worlds(state, observer, count, budget, phase='selection'):
+            phases.append(phase)
+            return [{'phase': phase, 'sample': index} for index in range(count)]
+
+        def trace(world, observer, action, rng, budget, max_actions, plans, finish_round=False):
+            self.assertTrue(finish_round)
+            visits.append((world['phase'], tuple(action['card_ids']), world['sample'], rng.random()))
+            if fail_verification and world['phase'] == 'verification':
+                raise trick.IncompleteTrick('verification_deadline')
+            gain = selection_gain if world['phase'] == 'selection' else verification_gain
+            value = 0.0 if action == self.reference else gain
+            return SimpleNamespace(value=value, explain=lambda observer: {'world': str(world['sample'])})
+
+        with mock.patch.object(trick, 'public_worlds', side_effect=worlds), \
+                mock.patch.object(trick, 'trace_plan', side_effect=trace):
+            panel = trick.compare_leads(self.state, 'bot', self.scored)
+        return panel, phases, visits
+
+    def test_discovery_winner_must_win_independent_confirmation(self):
+        panel, phases, _visits = self.panel(verification_gain=-5.0)
+        self.assertEqual(phases, ['selection', 'verification'])
+        self.assertEqual(panel['status'], 'complete')
+        self.assertEqual(panel['proposed'], self.challenger)
+        self.assertEqual(panel['selected'], self.reference)
+        self.assertFalse(panel['applied'])
+        self.assertEqual(panel['verification']['paired_gain'], -5.0)
+
+    def test_consistent_independent_improvement_can_replace(self):
+        panel, phases, visits = self.panel()
+        self.assertEqual(phases, ['selection', 'verification'])
+        self.assertEqual(panel['selected'], self.challenger)
+        self.assertTrue(panel['applied'])
+        self.assertEqual(panel['verification']['paired_gain'], 10.0)
+        self.assertEqual(len(visits), 16)
+        self.assertEqual([row['value'] for row in panel['candidates']], [0.0, 30.0])
+
+    def test_randomness_is_paired_but_changes_between_phases_and_positions(self):
+        _panel, _phases, visits = self.panel()
+        phase_draws = {}
+        for phase in ('selection', 'verification'):
+            reference = [draw for seen_phase, action, _index, draw in visits
+                         if seen_phase == phase and action == tuple(self.reference['card_ids'])]
+            challenger = [draw for seen_phase, action, _index, draw in visits
+                          if seen_phase == phase and action == tuple(self.challenger['card_ids'])]
+            self.assertEqual(reference, challenger)
+            phase_draws[phase] = reference
+        self.assertNotEqual(phase_draws['selection'], phase_draws['verification'])
+        self.assertNotEqual(phase_draws['selection'], [random.Random(index).random() for index in range(4)])
+        self.assertEqual(visits, self.panel()[2])
+        self.state['round_number'] += 1
+        self.assertNotEqual(visits, self.panel()[2])
+
+    def test_verification_timeout_retains_entire_legacy_panel(self):
+        before = copy.deepcopy(self.scored)
+        panel, _phases, _visits = self.panel(fail_verification=True)
+        self.assertEqual(panel['status'], 'incomplete')
+        self.assertFalse(panel['applied'])
+        self.assertEqual(panel['reason'], 'verification_deadline')
+        self.assertNotIn('ranking', panel)
+        self.assertEqual(self.scored, before)
+
+    def test_verification_never_switches_to_unvalidated_runner_up(self):
+        extra = [card['id'] for card in self.state['players']['bot']['hand'] if card['rank'] == 9]
+        self.scored.append((extra, 98.0, {}))
+        panel, _phases, visits = self.panel(verification_gain=-5.0)
+        confirmed = {action for phase, action, _index, _draw in visits if phase == 'verification'}
+        self.assertEqual(confirmed, {tuple(self.reference['card_ids']), tuple(self.challenger['card_ids'])})
+        self.assertEqual(panel['selected'], self.reference)
+
+    def test_no_challenger_skips_confirmation(self):
+        panel, phases, _visits = self.panel(selection_gain=-5.0)
+        self.assertEqual(phases, ['selection'])
+        self.assertEqual(panel['selected'], self.reference)
+        self.assertEqual(panel['verification']['status'], 'not_needed')
+
+    def test_roundoff_differences_do_not_trigger_a_phantom_challenger(self):
+        panel, phases, _visits = self.panel(selection_gain=1e-12, verification_gain=1e-12)
+        self.assertEqual(phases, ['selection'])
+        self.assertEqual(panel['proposed'], self.reference)
+        self.assertEqual(panel['selected'], self.reference)
+        self.assertEqual(panel['paired_gain'], 0.0)
+
+    def test_shadow_also_confirms_but_never_changes_actual_action(self):
+        self.state['config']['bot_trick_boundary_mode'] = 'shadow'
+        panel, phases, _visits = self.panel()
+        self.assertEqual(phases, ['selection', 'verification'])
+        self.assertEqual(panel['verification']['paired_gain'], 10.0)
+        self.assertFalse(panel['applied'])
+        self.assertEqual(panel['selected'], self.reference)
+
+    def test_verification_worlds_are_repeatable_independent_and_public(self):
+        budget = trick.TrickBudget()
+        selection = trick.public_worlds(self.state, 'bot', 4, budget)
+        verification = trick.public_worlds(self.state, 'bot', 4, budget, phase='verification')
+        other = copy.deepcopy(self.state)
+        other['players']['mate']['hand'], other['players']['opp2']['hand'] = (
+            other['players']['opp2']['hand'], other['players']['mate']['hand'])
+        repeated = trick.public_worlds(other, 'bot', 4, budget, phase='verification')
+        self.assertNotEqual([trick.world_id(world) for world in selection],
+                            [trick.world_id(world) for world in verification])
+        self.assertEqual([trick.world_id(world) for world in verification],
+                         [trick.world_id(world) for world in repeated])
 
 
 if __name__ == "__main__":

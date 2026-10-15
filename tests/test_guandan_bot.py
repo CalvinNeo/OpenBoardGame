@@ -7986,6 +7986,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["level_rank"] = 2
         state["current_turn"] = "bot3"
         state["config"]["bot_mode"] = "heuristic"
+        state["known_card_owners"] = {}
+        state["visible_card_id"] = None
 
         deck = guandan._full_deck()
 
@@ -9145,7 +9147,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertEqual(action, {"type": "pass"})
         explain = state["bot_explain"]["bot4"]
-        self.assertEqual(explain.get("method"), "heuristic")
+        self.assertEqual(explain.get("method"), "exact_endgame")
+        self.assertEqual(explain["method_details"]["exact_endgame"]["status"], "complete")
+        self.assertEqual(explain["score_model"], "proven_terminal")
         self.assertEqual(
             explain["method_details"]["heuristic_search_gate"]["reason"],
             "clear_heuristic_margin",

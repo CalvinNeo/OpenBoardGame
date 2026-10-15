@@ -161,5 +161,211 @@ class TrickResponsePolicyTests(unittest.TestCase):
             self.assertIsNone(error)
 
 
+class ContinuationPolicyTests(unittest.TestCase):
+    def test_continuation_never_accesses_other_hands(self):
+        state = make_state({'bot': [3, 3, 14, 5], 'opp': [4, 6, 9],
+                            'mate': [7, 8, 10], 'opp2': [12, 13, 11]})
+        for step in range(80):
+            if state['phase'] != 'playing':
+                break
+            actor = state['current_turn']
+            protected = copy.deepcopy(state)
+            before = copy.deepcopy(state)
+            for player, data in protected['players'].items():
+                if player != actor:
+                    data['hand'] = CountOnlyHand(data['hand'])
+            action = trick.continuation_action(protected, actor)
+            self.assertEqual(action, trick.continuation_action(state, actor))
+            self.assertEqual(state, before)
+            _, error = guandan.GuandanGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+        self.assertNotEqual(state['phase'], 'playing')
+
+    def test_continuation_after_teammate_was_overcalled_uses_public_cache_key(self):
+        state = make_state({'bot': [14, 5], 'opp': [9, 11], 'mate': [3, 7, 8], 'opp2': [4, 6, 10]})
+        state['current_turn'] = 'mate'
+        for actor in ('mate', 'opp2'):
+            action = play([state['players'][actor]['hand'][0]['id']])
+            _, error = guandan.GuandanGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+        for actor, data in state['players'].items():
+            if actor != 'bot':
+                data['hand'] = CountOnlyHand(data['hand'])
+        action = trick.continuation_action(state, 'bot')
+        self.assertIn(action['type'], ('play', 'pass'))
+
+    def test_actor_view_has_no_saved_private_or_sampled_fields(self):
+        state = make_state({'bot': [3, 8], 'opp': [4, 6], 'mate': [7, 9], 'opp2': [11, 12]})
+        state['private_field'] = 'hidden'
+        state['_ai_eval_cache'] = {'private': 'hidden'}
+        state['round_memories'][0]['initial_hands'] = {'opp': 'hidden'}
+
+        original = trick.ai.call
+
+        def policy(core, name, view, actor, *args):
+            if name != '_bot_select_play':
+                return original(core, name, view, actor, *args)
+            self.assertFalse(view['_ai_sampled_world'])
+            self.assertNotIn('private_field', view)
+            self.assertEqual(view['_ai_eval_cache'], {})
+            self.assertNotIn('initial_hands', view['round_memories'][0])
+            self.assertEqual(view['players']['opp']['hand'], [None, None])
+            self.assertEqual(view['config']['bot_trick_boundary_mode'], 'off')
+            return [view['players'][actor]['hand'][0]['id']]
+
+        with mock.patch.object(trick.ai, 'call', side_effect=policy):
+            trick.continuation_action(state, 'bot')
+
+    def test_continuation_matches_public_heuristic_and_reuses_exact_observations(self):
+        state = make_state({'bot': [3, 3, 14, 5], 'opp': [4, 6, 9],
+                            'mate': [7, 8, 10], 'opp2': [12, 13, 11]})
+        state.pop('_ai_sampled_world')
+        state['config']['bot_trick_boundary_mode'] = 'off'
+        expected = guandan.GuandanGame.bot_move(copy.deepcopy(state), 'bot')
+        cache = {}
+        self.assertEqual(trick.continuation_action(state, 'bot', cache), expected)
+        with mock.patch.object(guandan.GuandanGame, 'get_legal_actions',
+                               side_effect=AssertionError('cached continuation was recomputed')):
+            repeated = trick.continuation_action(state, 'bot', cache)
+        self.assertEqual(repeated, expected)
+        repeated['card_ids'].append(-1)
+        self.assertEqual(trick.continuation_action(state, 'bot', cache), expected)
+
+    def test_closed_trick_is_not_a_terminal_rollout_leaf(self):
+        state = make_state({'bot': [3, 3, 5], 'opp': [14], 'mate': [7, 9], 'opp2': [13]})
+        before = copy.deepcopy(state)
+        plan = trick.trace_plan(state, 'bot', play(pair(state, 'bot', 3)), random.Random(0),
+                                trick.TrickBudget(), 80, {}, finish_round=True)
+        self.assertEqual(plan.boundary, 'round_settled')
+        self.assertGreater(len(plan.actions), 4)
+        self.assertTrue(plan.finish_order)
+        self.assertIsNone(plan.next_leader)
+        self.assertIn(plan.value, (-300.0, -200.0, -100.0, 100.0, 200.0, 300.0))
+        self.assertEqual(state, before)
+
+    def test_terminal_rollout_does_not_use_residual_race(self):
+        state = make_state({'bot': [3, 3, 5], 'opp': [14], 'mate': [7, 9], 'opp2': [13]})
+        with mock.patch.object(trick, 'resource_plan', side_effect=AssertionError('nonterminal race')):
+            trick.trace_plan(state, 'bot', play(pair(state, 'bot', 3)), random.Random(0),
+                             trick.TrickBudget(), 80, {}, finish_round=True)
+
+    def test_rollout_limit_cannot_publish_a_partial_round(self):
+        state = make_state({'bot': [3, 3, 5], 'opp': [14], 'mate': [7, 9], 'opp2': [13]})
+        with self.assertRaisesRegex(trick.IncompleteTrick, 'action_limit'):
+            trick.trace_plan(state, 'bot', play(pair(state, 'bot', 3)), random.Random(0),
+                             trick.TrickBudget(), 2, {}, finish_round=True)
+
+    def test_full_hands_skip_unaffordable_terminal_search(self):
+        state = make_state({'bot': [3] * 4 + [5] * 4 + [8], 'opp': [4] * 4 + [6] * 4,
+                            'mate': [7] * 4 + [9] * 4, 'opp2': [10] * 4 + [11] * 4})
+        state['config']['bot_trick_boundary_mode'] = 'shadow'
+        scored = [(pair(state, 'bot', 3), 10.0, {}), (pair(state, 'bot', 5), 9.0, {})]
+        with mock.patch.object(trick, 'public_worlds', side_effect=AssertionError('oversized rollout')):
+            panel = trick.compare_leads(state, 'bot', scored)
+        self.assertEqual(panel['status'], 'skipped')
+        self.assertFalse(panel['applied'])
+
+
+class ContinuationRootTests(unittest.TestCase):
+    def follow_state(self):
+        state = make_state({'bot': [6, 6, 9, 13, 13], 'opp': [3, 3, 8],
+                            'mate': [7, 7, 12], 'opp2': [4, 4, 10]})
+        state['current_turn'] = 'opp2'
+        _, error = guandan.GuandanGame.apply_action(state, 'opp2', play(pair(state, 'opp2', 4)))
+        self.assertIsNone(error)
+        self.assertEqual(state['current_turn'], 'bot')
+        state['config'].update(bot_trick_boundary_mode='replace', bot_trick_boundary_time_ms=10000)
+        return state
+
+    def test_follow_panel_compares_pass_with_legal_replies(self):
+        state = self.follow_state()
+        before = copy.deepcopy(state)
+        scored = [(pair(state, 'bot', 6), 10.0, {}), (None, 9.0, {}),
+                  (pair(state, 'bot', 13), 8.0, {})]
+        panel = trick.compare_leads(state, 'bot', scored)
+        self.assertEqual(panel['status'], 'complete')
+        self.assertEqual(panel['root'], 'follow')
+        self.assertIn({'type': 'pass'}, [entry['action'] for entry in panel['candidates']])
+        for entry in panel['candidates']:
+            self.assertTrue(all(plan['boundary'] == 'round_settled' for plan in entry['plans']))
+        self.assertEqual(state, before)
+
+    def test_selected_pass_is_not_confused_with_absent_override(self):
+        state = self.follow_state()
+        state.pop('_ai_sampled_world')
+        cards = pair(state, 'bot', 6)
+        panel = {'mode': 'replace', 'status': 'complete', 'applied': True,
+                 'selected': {'type': 'pass'}, 'candidates': [
+                     {'action': play(cards), 'value': 100.0},
+                     {'action': {'type': 'pass'}, 'value': 100.0},
+                 ]}
+        with mock.patch.object(trick, 'compare_leads', return_value=panel) as compare:
+            action = guandan.GuandanGame.bot_move(state, 'bot')
+        self.assertEqual(compare.call_count, 1)
+        self.assertEqual(action, {'type': 'pass'})
+        explanation = state['bot_explain']['bot']
+        self.assertEqual(explanation['score_model'], 'trick_boundary')
+        self.assertEqual(explanation['chosen']['cards'], ['Pass'])
+        self.assertEqual(explanation['chosen']['components'], {'trick_boundary_team_value': 100.0})
+
+    def test_partial_follow_panel_keeps_original_action_and_units(self):
+        state = self.follow_state()
+        state.pop('_ai_sampled_world')
+        baseline = copy.deepcopy(state)
+        baseline['config']['bot_trick_boundary_mode'] = 'off'
+        expected = guandan.GuandanGame.bot_move(baseline, 'bot')
+        panel = {'status': 'incomplete', 'applied': False, 'candidates': [
+            {'action': {'type': 'pass'}, 'value': 10000.0},
+        ]}
+        with mock.patch.object(trick, 'compare_leads', return_value=panel):
+            action = guandan.GuandanGame.bot_move(state, 'bot')
+        self.assertEqual(action, expected)
+        self.assertEqual(state['bot_explain']['bot']['score_model'], 'heuristic')
+
+    def test_pass_survives_a_narrow_panel_even_with_a_low_prior(self):
+        state = self.follow_state()
+        scored = [(pair(state, 'bot', 6), 10.0, {}), (pair(state, 'bot', 13), 9.0, {}),
+                  (None, -100.0, {})]
+        finalists = trick._panel_candidates(state, 'bot', scored, 2, trick.TrickBudget())
+        self.assertEqual([entry[0] for entry in finalists], [scored[0][0], None])
+
+    def test_pass_is_not_introduced_when_defense_pruning_removed_it(self):
+        state = self.follow_state()
+        scored = [(pair(state, 'bot', 6), 10.0, {}), (pair(state, 'bot', 13), 9.0, {})]
+        finalists = trick._panel_candidates(state, 'bot', scored, 4, trick.TrickBudget())
+        self.assertTrue(all(entry[0] is not None for entry in finalists))
+
+    def test_distinct_routes_precede_extra_copies_of_the_same_pair(self):
+        state = make_state({'bot': [6, 6, 6, 6, 9], 'opp': [3, 8],
+                            'mate': [7, 12], 'opp2': [4, 10]})
+        sixes = [card['id'] for card in state['players']['bot']['hand'] if card['rank'] == 6]
+        single = [state['players']['bot']['hand'][-1]['id']]
+        scored = [(sixes[:2], 10.0, {}), (sixes[1:3], 9.0, {}),
+                  (sixes[2:], 8.0, {}), (single, 7.0, {}), (sixes, 6.0, {})]
+        finalists = trick._panel_candidates(state, 'bot', scored, 3, trick.TrickBudget())
+        self.assertEqual([entry[0] for entry in finalists], [sixes[:2], single, sixes])
+
+    def test_identical_faces_from_other_deck_do_not_fill_a_panel(self):
+        state = make_state({'bot': [6, 6, 6, 6, 9], 'opp': [3, 8],
+                            'mate': [7, 12], 'opp2': [4, 10]})
+        sixes = [card for card in guandan._full_deck() if card['rank'] == 6 and card['suit'] == 'spades']
+        state['players']['bot']['hand'] = sixes
+        scored = [([sixes[0]['id']], 10.0, {}), ([sixes[1]['id']], 9.0, {})]
+        finalists = trick._panel_candidates(state, 'bot', scored, 4, trick.TrickBudget())
+        self.assertEqual(finalists, scored[:1])
+
+    def test_candidates_distinguish_jokers_and_sort_mixed_faces(self):
+        state = make_state({'bot': [6, 6, 6, 6, 9], 'opp': [3, 8],
+                            'mate': [7, 12], 'opp2': [4, 10]})
+        jokers = [card for card in guandan._full_deck() if card.get('joker')]
+        sixes = pair(state, 'bot', 6)
+        state['players']['bot']['hand'].extend(jokers)
+        scored = [(sixes, 10.0, {})] + [([card['id']], 9.0, {}) for card in jokers]
+        scored.append(([card['id'] for card in jokers], 8.0, {}))
+        finalists = trick._panel_candidates(state, 'bot', scored, 8, trick.TrickBudget())
+        self.assertEqual(len(finalists), 4)
+        self.assertEqual(len([entry for entry in finalists if len(entry[0]) == 1]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
