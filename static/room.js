@@ -781,6 +781,7 @@ const GAME_WEIGHT = {
   aidixit: 1.1924453280318092,
   ark_nova: 3.80,
   azul: 1.78,
+  sagrada: 1.92,
   blokus: 1.73,
   blitz_sketch: 1.0,
   bohnanza_dice: 1.17,

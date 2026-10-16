@@ -1,41 +1,20 @@
 <template data-game-target="sagradaHelpModal" data-game-mode="replace"><section id="sagradaHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sagradaHelpTitle">
-  <div class="modal-content sagrada-modal">
-    <div class="modal-header"><h2 id="sagradaHelpTitle">Sagrada · Help</h2><button id="sagradaHelpClose" type="button">Close</button></div>
-    <div class="modal-body" id="sagradaHelpContent"></div>
-  </div>
+  <div class="modal-content sagrada-modal"><div class="modal-header"><h2 id="sagradaHelpTitle">Sagrada · Help</h2><button id="sagradaHelpClose" type="button">Close</button></div><div class="modal-body" id="sagradaHelpContent"></div></div>
 </section></template>
 <template data-game-target="sagradaExplainModal" data-game-mode="replace"><section id="sagradaExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="sagradaExplainTitle">
-  <div class="modal-content sagrada-modal">
-    <div class="modal-header"><h2 id="sagradaExplainTitle">Explain</h2><button id="sagradaExplainClose" type="button">Close</button></div>
-    <div class="modal-body" id="sagradaExplainContent"></div>
-  </div>
+  <div class="modal-content sagrada-modal"><div class="modal-header"><h2 id="sagradaExplainTitle">Explain</h2><button id="sagradaExplainClose" type="button">Close</button></div><div class="modal-body" id="sagradaExplainContent"></div></div>
 </section></template>
 <template data-game-target="sagradaPanel" data-game-mode="contents"><div class="sagrada-panel" id="sagradaGamePanel">
-  <div class="sagrada-status" aria-live="polite">
-    <span>Round <strong id="sagradaRound">-</strong>/10</span>
-    <span>Turn <strong id="sagradaTurn">-</strong></span>
-    <span>Dice <strong id="sagradaDiceCount">-</strong></span>
-    <span>Phase <strong id="sagradaPhase">-</strong></span>
-    <span id="sagradaWinnerStatus" class="hidden">Winner: <strong id="sagradaWinner">-</strong></span>
-  </div>
-  <div class="sagrada-layout">
-    <section class="sagrada-main-card">
-      <div class="sagrada-pool-block">
-        <div class="sagrada-section-title"><h3>Dice pool 🎲</h3><span id="sagradaPoolHint" class="hint"></span></div>
-        <div id="sagradaPool" class="sagrada-pool" role="group" aria-label="Dice pool"></div>
-        <div id="sagradaRoundSummary" class="sagrada-round-summary hidden" aria-live="polite"></div>
-      </div>
-      <div class="sagrada-board-block">
-        <div class="sagrada-section-title"><h3>Your stained glass 🪟</h3><span id="sagradaSecretGoal" class="sagrada-goal"></span></div>
-        <div id="sagradaBoard" class="sagrada-board" role="grid" aria-label="Your stained glass window"></div>
-        <div class="sagrada-selection" id="sagradaSelection" aria-live="polite">Select a die, then an empty window cell.</div>
-        <div class="sagrada-actions"><button id="sagradaPlaceBtn" data-sagrada-tip="Place the selected die in the selected window cell." type="button" disabled>Place die</button><button id="sagradaSkipBtn" data-sagrada-tip="Take the selected die and leave it unused for this round." type="button" class="secondary" disabled>Skip die</button><button id="sagradaNextRoundBtn" data-sagrada-tip="Confirm that you have reviewed the round. Everyone must confirm before the next round starts." type="button" class="secondary" disabled>Next Round</button></div>
-      </div>
-    </section>
-    <aside class="sagrada-side">
-      <details open><summary>Objectives &amp; resources</summary><div id="sagradaObjectives"></div></details>
-      <details open><summary>Players</summary><div id="sagradaPlayers"></div></details>
-      <div class="sagrada-log" id="sagradaLog" aria-live="polite"></div>
-    </aside>
+  <div class="sagrada-status" aria-live="polite"><span data-sagrada-tip="Ten rounds. Each player normally drafts and places up to two dice each round.">Round <strong id="sagradaRound">–</strong>/10</span><span>Turn <strong id="sagradaTurn">–</strong></span><span id="sagradaPhase">Waiting</span><span id="sagradaWinnerStatus" class="hidden">🏆 <strong id="sagradaWinner">–</strong></span></div>
+  <section id="sagradaSetup" class="sagrada-card hidden"><div class="sagrada-section-title"><h3>Choose your window 🪟</h3><span class="hint">Difficulty = starting Favor Tokens 🔹</span></div><div id="sagradaPatterns" class="sagrada-patterns"></div><p id="sagradaSetupStatus" class="hint" aria-live="polite"></p></section>
+  <div id="sagradaPlayArea" class="sagrada-layout">
+    <section class="sagrada-card sagrada-window-card"><div class="sagrada-section-title"><h3 id="sagradaWindowTitle">Your stained glass 🪟</h3><span id="sagradaSecretGoal" class="sagrada-goal" tabindex="0"></span></div><div id="sagradaBoard" class="sagrada-board" role="grid" aria-label="Your stained glass window"></div><div class="sagrada-selection" id="sagradaSelection" aria-live="polite">Select a die, then an empty window cell.</div><div class="sagrada-actions"><button id="sagradaPlaceBtn" data-sagrada-tip="Place the selected die in the highlighted window cell." type="button" disabled>Place die</button><button id="sagradaSkipBtn" data-sagrada-tip="End your turn. An unused draft is forfeited; no die is removed from the pool." type="button" class="secondary" disabled>End turn</button></div></section>
+    <aside class="sagrada-draft-column"><section class="sagrada-card"><div class="sagrada-section-title"><h3>Draft pool 🎲</h3><span id="sagradaDiceCount" class="hint"></span></div><div id="sagradaPool" class="sagrada-pool" role="group" aria-label="Dice pool"></div><div id="sagradaPoolHint" class="hint" aria-live="polite"></div></section><section class="sagrada-card"><div class="sagrada-section-title"><h3>Tools 🛠️</h3><span id="sagradaFavor" class="hint" data-sagrada-tip="Favor Tokens (🔹) pay for tool cards. A tool costs 1 token the first time it is used, then 2. Each unused token scores 1 point at the end."></span></div><div id="sagradaTools" class="sagrada-tools"></div><div id="sagradaToolControls" class="sagrada-tool-controls hidden" aria-live="polite"></div></section></aside>
+    <section class="sagrada-card sagrada-objectives-card"><h3>Objectives 🎯</h3><div id="sagradaObjectives" class="sagrada-objectives"></div></section>
+    <section id="sagradaReview" class="sagrada-card sagrada-review hidden"><div class="sagrada-section-title"><h3>Round review</h3><button id="sagradaNextRoundBtn" data-sagrada-tip="Confirm the round review. Play resumes after every player clicks Next Round." type="button" disabled>Next Round</button></div><div id="sagradaReady" class="hint"></div><div id="sagradaRoundSummary" class="sagrada-round-summary" aria-live="polite"></div></section>
+    <section class="sagrada-card sagrada-track-card"><div class="sagrada-section-title"><h3>Round track 🕰️</h3><span class="hint" data-sagrada-tip="Dice left in the pool are kept on the round track. Some tools exchange or refer to these dice.">Leftover dice</span></div><div id="sagradaRoundTrack" class="sagrada-round-track"></div></section>
+    <section class="sagrada-card sagrada-players-card"><h3>Table windows 🪟</h3><div id="sagradaPlayers" class="sagrada-players"></div></section>
+    <section id="sagradaResults" class="sagrada-card sagrada-results hidden"><h3>Final scores 🏆</h3><div id="sagradaScores"></div></section>
+    <details class="sagrada-card sagrada-activity"><summary>Recent activity</summary><div class="sagrada-log" id="sagradaLog" aria-live="polite"></div></details>
   </div>
 </div></template>

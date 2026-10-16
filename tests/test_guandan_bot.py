@@ -4234,6 +4234,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["players"]["mate"]["hand"] = [pick_label(label) for label in ["♠️A", "♥️A", "♣️A", "♠️K", "♥️K"]]
         state["players"]["opp"]["hand"] = [pick_label(label) for label in ["♣️3", "♦️4", "♠️6", "♥️9", "♣️10", "♦️J", "♣️Q", "♠️10"]]
         state["players"]["opp2"]["hand"] = [pick_label(label) for label in ["♥️3", "♣️6", "♦️7", "♣️8", "♥️10", "♠️J", "♥️Q", "♦️J"]]
+        # Replacing the deal also invalidates its random visible-card owner.
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
         state["round_memories"] = [
             {
                 "round_number": 1,

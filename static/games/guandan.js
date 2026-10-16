@@ -374,13 +374,19 @@ function getGuandanNextSfCursor(candidates, selectedKey, previousCursor) {
 
 function getGuandanHintOptions(view) {
   if (!view) return [];
+  let options = [];
   if (Array.isArray(view.hint_options) && view.hint_options.length) {
-    return view.hint_options;
+    options = view.hint_options;
+  } else if (Array.isArray(view.hint_cards) && view.hint_cards.length) {
+    options = [view.hint_cards];
   }
-  if (Array.isArray(view.hint_cards) && view.hint_cards.length) {
-    return [view.hint_cards];
-  }
-  return [];
+  return options.filter((cards) => {
+    const selectedIds = new Set(cards);
+    return guandanPiles.every((pile) => {
+      const selectedCount = pile.filter((cid) => selectedIds.has(cid)).length;
+      return selectedCount === 0 || selectedCount === pile.length;
+    });
+  });
 }
 
 function updateGuandanButtons() {
@@ -1146,6 +1152,9 @@ const GUANDAN_HELP_TEXT = `
   <li>Two 🃏B in hand cancels tribute.</li>
 </ul>
 
+<h3>Hand Organization</h3>
+<p><strong>Pile (≡)</strong> groups selected cards. <strong>Hint (💡)</strong> cycles through playable combos while keeping each pile intact: it selects all cards in a pile or none. Hint is disabled when no such combo is available. Return cards from a pile to your hand to allow hints that use them separately.</p>
+
 <h3>Bot Thinking</h3>
 <p>Choose bot thinking times when creating a room, or adjust them in the lobby before starting. Times are in seconds.</p>
 <ul>
@@ -1171,7 +1180,7 @@ const GUANDAN_BUTTON_EXPLANATIONS = {
   },
   guandanHintBtn: {
     name: "Hint",
-    description: "Auto-select the next playable combo based on the current trick.",
+    description: "Auto-select the next playable combo based on the current trick, selecting each pile in full or not at all. Disabled when no such combo is available.",
     cost: "Assist",
     costType: "free",
   },

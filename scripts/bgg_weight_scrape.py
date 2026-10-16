@@ -20,6 +20,7 @@ GAME_URLS = {
     "the_crew": "https://boardgamegeek.com/boardgame/284083/the-crew-the-quest-for-planet-nine",
     "maskmen": "https://boardgamegeek.com/boardgame/159581/maskmen",
     "startups": "https://boardgamegeek.com/boardgame/223770/startups",
+    "sagrada": "https://boardgamegeek.com/boardgame/199561/sagrada",
     "deception": "https://boardgamegeek.com/boardgame/156129/deception-murder-in-hong-kong",
     "orloj": "https://boardgamegeek.com/boardgame/429405/orloj-the-prague-astronomical-clock",
     "challengers": "https://boardgamegeek.com/boardgame/359970/challengers",

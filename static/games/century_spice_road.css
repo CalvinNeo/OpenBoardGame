@@ -8,32 +8,43 @@
   --century-paper: #fffdf7;
   --century-gold: #b67a18;
   position: relative;
-  padding: clamp(12px, 2vw, 22px);
+  padding: 8px;
   overflow: hidden;
   border: 1px solid #ded2bf;
-  border-radius: 18px;
+  border-radius: 12px;
   background:
     radial-gradient(circle at 92% 3%, rgba(210, 166, 83, 0.16), transparent 24%),
     radial-gradient(circle at 2% 42%, rgba(44, 122, 106, 0.09), transparent 20%),
     #f7f1e5;
   color: var(--century-ink);
+  container-type: inline-size;
+  font-size: 12px;
 }
 
-#centurySpiceRoadPanel > h3,
+#centurySpiceRoadPanel button {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.century-markets h3,
+.century-opponents > h3,
 #centuryYou > h4,
 .century-hand-heading > h4 {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 20px 0 9px;
+  gap: 6px;
+  margin: 0 0 6px;
   color: #4a3928;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 850;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-#centurySpiceRoadPanel > h3::after,
+.century-markets h3::after,
+.century-opponents > h3::after,
 #centuryYou > h4::after,
 .century-hand-heading > h4::after {
   flex: 1;
@@ -46,12 +57,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 11px 12px;
-  border: 1px solid rgba(89, 70, 47, 0.18);
-  border-radius: 14px;
-  background: rgba(255, 253, 247, 0.88);
-  box-shadow: 0 8px 24px rgba(78, 56, 32, 0.06);
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  margin-bottom: 8px;
 }
 
 .century-header > .row {
@@ -81,38 +93,44 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
 }
 
 .century-header-actions button {
-  min-height: 32px;
-  padding: 6px 11px;
+  min-height: 30px;
+  padding: 4px 8px;
   border-color: #cdbb9f;
   background: #fffaf0;
   color: #57422c;
   font-weight: 750;
+  font-size: 11px;
 }
 
 .century-prompt {
-  margin: 11px 0 2px;
-  padding: 10px 13px;
+  margin: 0;
+  padding: 6px 8px;
   border: 1px solid #add5ca;
-  border-left: 5px solid #237d6b;
+  border-left: 3px solid #237d6b;
   border-radius: 8px;
   background: linear-gradient(90deg, #e9f7f2, #f7fbf8);
   color: #174d43;
   font-weight: 700;
+  font-size: 12px;
+  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .century-card-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(166px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  gap: 6px;
   align-items: stretch;
 }
 
 #centuryPointMarket {
-  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .century-card,
@@ -122,10 +140,10 @@
   --century-card-soft: #edf2f6;
   position: relative;
   display: grid;
-  gap: 9px;
+  gap: 5px;
   min-width: 0;
   border: 1px solid #c5ccd1;
-  border-radius: 12px;
+  border-radius: 8px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(255, 253, 247, 0.88)),
     var(--century-card-soft);
@@ -134,10 +152,10 @@
 }
 
 .century-card {
-  min-height: 154px;
-  padding: 11px;
+  min-height: 96px;
+  padding: 6px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(74, 52, 27, 0.08);
+  box-shadow: 0 2px 5px rgba(74, 52, 27, 0.05);
   transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
 }
 
@@ -145,7 +163,7 @@
 .century-action-card::after {
   position: absolute;
   inset: 0 auto 0 0;
-  width: 4px;
+  width: 3px;
   background: var(--century-card-accent);
   content: "";
 }
@@ -207,12 +225,13 @@ button.century-card:disabled {
   display: inline-flex;
   min-width: 0;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   color: var(--century-card-deep);
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.075em;
+  letter-spacing: 0.025em;
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .century-kind-mark {
@@ -276,7 +295,7 @@ button.century-card:disabled {
 
 .century-card-effect {
   display: flex;
-  min-height: 72px;
+  min-height: 46px;
   align-items: center;
   justify-content: center;
 }
@@ -290,10 +309,11 @@ button.century-card:disabled {
 
 .century-produce-effect {
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   border: 1px solid #edd5a8;
-  border-radius: 10px;
+  border-radius: 6px;
   background: linear-gradient(145deg, #fff9e8, #fff3cf);
+  padding: 4px;
 }
 
 .century-spice-list {
@@ -302,18 +322,18 @@ button.century-card:disabled {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
 }
 
 .century-spice-token {
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  padding: 2px 5px 2px 2px;
+  padding: 1px 3px 1px 1px;
   border: 1px solid rgba(50, 42, 32, 0.15);
-  border-radius: 999px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 1px 2px rgba(42, 32, 21, 0.08);
+  box-shadow: none;
   color: #29231b;
   line-height: 1;
 }
@@ -325,21 +345,22 @@ button.century-card:disabled {
 .century-spice-gem {
   --century-spice-color: #777;
   display: inline-grid;
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 18px;
   flex: 0 0 auto;
   place-items: center;
-  clip-path: polygon(50% 0, 91% 24%, 100% 66%, 70% 100%, 30% 100%, 0 66%, 9% 24%);
-  border-radius: 6px;
+  clip-path: none;
+  border-radius: 2px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.48), transparent 38%),
     var(--century-spice-color);
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   color: #fff;
-  font-size: 9px;
-  font-weight: 950;
+  font-size: 13px;
+  font-weight: normal;
   line-height: 1;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  text-shadow: none;
+  background: none;
 }
 
 .century-spice-gem--yellow {
@@ -361,8 +382,8 @@ button.century-card:disabled {
 }
 
 .century-spice-count {
-  min-width: 13px;
-  font-size: 12px;
+  min-width: 10px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   font-weight: 900;
   text-align: center;
@@ -376,22 +397,22 @@ button.century-card:disabled {
 
 .century-convert-effect {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
-  gap: 5px;
+  grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr);
+  gap: 3px;
   align-items: stretch;
 }
 
 .century-recipe-side {
   display: flex;
   min-width: 0;
-  min-height: 76px;
+  min-height: 46px;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 7px;
-  padding: 6px 4px;
+  gap: 4px;
+  padding: 4px 2px;
   border: 1px solid;
-  border-radius: 9px;
+  border-radius: 6px;
 }
 
 .century-recipe-cost {
@@ -411,7 +432,7 @@ button.century-card:disabled {
 .century-track-arrow {
   position: relative;
   display: inline-block;
-  width: 16px;
+  width: 6px;
   height: 2px;
   align-self: center;
   background: currentColor;
@@ -436,17 +457,17 @@ button.century-card:disabled {
 
 .century-upgrade-effect {
   flex-direction: column;
-  gap: 7px;
-  padding: 8px 5px;
+  gap: 4px;
+  padding: 5px 2px;
   border: 1px solid #d9c7ee;
-  border-radius: 10px;
+  border-radius: 6px;
   background: linear-gradient(145deg, #fbf7ff, #f0e7fb);
   text-align: center;
 }
 
 .century-upgrade-effect > strong {
   color: #57347c;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .century-upgrade-effect > span {
@@ -458,13 +479,14 @@ button.century-card:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 2px;
+  flex-wrap: wrap;
 }
 
 .century-spice-gem--track {
-  width: 18px;
-  height: 18px;
-  font-size: 8px;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
 }
 
 .century-track-arrow {
@@ -480,18 +502,18 @@ button.century-card:disabled {
 
 .century-market-card-footer {
   display: grid;
-  gap: 5px;
-  margin: auto -11px -11px;
-  padding: 7px 10px 8px 14px;
+  gap: 3px;
+  margin: auto -6px -6px;
+  padding: 4px 6px 4px 9px;
   border-top: 1px solid #ded5c8;
   background: rgba(255, 253, 247, 0.9);
 }
 
 .century-acquire-cost {
   color: #5f5548;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .century-acquire-cost.is-free {
@@ -500,12 +522,13 @@ button.century-card:disabled {
 
 .century-waiting-spices {
   display: flex;
-  min-height: 24px;
+  min-height: 0;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   color: #9b9184;
   font-size: 9px;
   font-weight: 750;
+  flex-wrap: wrap;
 }
 
 .century-waiting-spices.has-spices {
@@ -513,9 +536,9 @@ button.century-card:disabled {
 }
 
 .century-waiting-spices .century-spice-gem {
-  width: 17px;
-  height: 17px;
-  font-size: 7px;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
 }
 
 .century-waiting-spices .century-spice-count {
@@ -526,11 +549,13 @@ button.century-card:disabled {
   --century-card-accent: #9d6920;
   --century-card-deep: #684112;
   --century-card-soft: #fff4d9;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr;
   border-color: #cfb277;
   background:
     radial-gradient(circle at 50% 36%, rgba(226, 180, 79, 0.18), transparent 42%),
     linear-gradient(145deg, #fffdf7, #fff6df);
+  min-height: 86px;
+  align-content: start;
 }
 
 .century-point-card .century-kind-mark::before {
@@ -542,41 +567,42 @@ button.century-card:disabled {
 .century-point-value {
   display: flex;
   align-items: baseline;
-  justify-content: center;
-  gap: 4px;
+  justify-content: flex-start;
+  gap: 3px;
   color: #6e450f;
+  flex-wrap: wrap;
 }
 
-.century-point-value strong {
+.century-point-value > strong {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 35px;
+  font-size: 24px;
   line-height: 1;
 }
 
 .century-point-value span {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
 }
 
 .century-point-cost {
   display: flex;
-  min-height: 38px;
+  min-height: 0;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 4px;
-  padding: 5px;
+  gap: 3px;
+  padding: 4px 1px;
   border: 1px solid #ead7af;
-  border-radius: 8px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.7);
 }
 
 .century-point-bonus {
   display: flex;
-  min-height: 25px;
+  min-height: 0;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 3px;
   color: #6c573a;
   font-size: 9px;
   font-weight: 750;
@@ -597,43 +623,43 @@ button.century-card:disabled {
 .century-coin-token {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px 2px 2px;
+  gap: 3px;
+  padding: 1px 4px 1px 2px;
   border: 1px solid #d5c6aa;
   border-radius: 999px;
   background: #fffdf8;
   color: #5e513f;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 750;
 }
 
 .century-coin-mark {
   display: inline-grid;
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
   place-items: center;
-  border: 2px double rgba(90, 63, 23, 0.36);
+  border: 0;
   border-radius: 50%;
-  font-size: 8px;
+  font-size: 13px;
   font-weight: 950;
 }
 
 .century-coin-token--gold .century-coin-mark {
-  background: linear-gradient(145deg, #ffe58f, #c58b16);
+  background: none;
   color: #553600;
 }
 
 .century-coin-token--silver .century-coin-mark {
   border-color: rgba(56, 65, 77, 0.3);
-  background: linear-gradient(145deg, #f8fafc, #a9b1bc);
+  background: none;
   color: #38414d;
 }
 
 .century-hand-heading {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 20px 0 9px;
+  gap: 6px;
+  margin: 2px 0 0;
 }
 
 .century-hand-heading > h4 {
@@ -648,9 +674,9 @@ button.century-card:disabled {
 }
 
 .century-rest-button {
-  min-width: 86px;
-  min-height: 34px;
-  padding: 6px 15px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 9px;
   border-color: #a9906f;
   background: linear-gradient(180deg, #fffdf8, #f1e8d9);
   color: #5a4630;
@@ -671,14 +697,15 @@ button.century-card:disabled {
 }
 
 .century-hand-card {
-  min-height: 136px;
+  min-height: 82px;
 }
 
 button.century-card.is-selected {
   border-color: var(--century-card-accent);
-  outline: 3px solid rgba(255, 253, 247, 0.95);
-  transform: translateY(-3px);
-  box-shadow: 0 0 0 5px var(--century-card-accent), 0 11px 22px rgba(65, 46, 24, 0.16);
+  outline: 2px solid var(--century-card-accent);
+  transform: none;
+  box-shadow: 0 2px 5px rgba(65, 46, 24, 0.12);
+  outline-offset: 1px;
 }
 
 .century-hand-action-slot {
@@ -689,7 +716,10 @@ button.century-card.is-selected {
   position: relative;
   display: block;
   width: 100%;
-  margin-top: 13px;
+  margin-top: 2px;
+  min-width: 0;
+  grid-column: 1 / -1;
+  scroll-margin-block: 8px;
 }
 
 .century-actions[hidden] {
@@ -737,7 +767,7 @@ button.century-card.is-selected {
 }
 
 .century-played-card {
-  min-height: 124px;
+  min-height: 82px;
   background: #f1eee8;
   filter: saturate(0.58);
   opacity: 0.76;
@@ -745,25 +775,27 @@ button.century-card.is-selected {
 
 .century-player-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 6px;
 }
 
 .century-player-card {
   display: grid;
-  gap: 10px;
+  gap: 5px;
   min-width: 0;
-  padding: 12px;
+  padding: 7px;
   border: 1px solid var(--century-line);
-  border-radius: 12px;
+  border-radius: 8px;
   background: rgba(255, 253, 248, 0.9);
-  box-shadow: 0 3px 10px rgba(70, 50, 28, 0.05);
+  box-shadow: none;
 }
 
 #centuryYou {
-  padding: 15px;
+  padding: 8px;
   border-color: #c9b58f;
   background: linear-gradient(145deg, rgba(255, 254, 250, 0.98), rgba(250, 243, 226, 0.94));
+  align-self: start;
+  gap: 6px;
 }
 
 .century-player-card.self {
@@ -779,7 +811,9 @@ button.century-card.is-selected {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .century-player-header > div:first-child {
@@ -798,8 +832,8 @@ button.century-card.is-selected {
 .century-score-chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
-  padding: 5px 8px;
+  gap: 3px;
+  padding: 3px 5px;
   border: 1px solid #d8cbb8;
   border-radius: 999px;
   background: #fffdf8;
@@ -821,10 +855,10 @@ button.century-card.is-selected {
 
 .century-caravan-spices,
 .century-player-spices {
-  padding: 9px;
-  border: 1px solid #e0d5c4;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.7);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .century-caravan-spices .century-spice-list,
@@ -839,7 +873,7 @@ button.century-card.is-selected {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 5px;
 }
 
 .century-claimed-line {
@@ -854,7 +888,7 @@ button.century-card.is-selected {
 }
 
 .century-player-facts > span {
-  padding: 4px 7px;
+  padding: 2px 4px;
   border-radius: 6px;
   background: #eee8dd;
   color: #706454;
@@ -876,14 +910,14 @@ button.century-card.is-selected {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 11px;
+  gap: 7px;
   width: 100%;
-  padding: 14px;
+  padding: 8px;
   border: 1px solid #cfbea5;
   border-top: 3px solid #8b7353;
-  border-radius: 12px;
+  border-radius: 8px;
   background: linear-gradient(145deg, #fffaf1, #fffdf8);
-  box-shadow: 0 8px 20px rgba(67, 48, 26, 0.1);
+  box-shadow: 0 3px 8px rgba(67, 48, 26, 0.08);
 }
 
 .century-action-form--produce {
@@ -911,11 +945,12 @@ button.century-card.is-selected {
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 9px 11px;
+  gap: 6px;
+  padding: 6px;
   border: 1px solid #e3c9c1;
   border-radius: 10px;
   background: #fff4f1;
+  flex-wrap: wrap;
 }
 
 .century-keep-status > p {
@@ -967,17 +1002,17 @@ button.century-card.is-selected {
 
 .century-keep-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .century-keep-group {
   --century-keep-accent: #817364;
   min-width: 0;
-  padding: 9px;
+  padding: 5px;
   border: 1px solid #ddd2c4;
   border-top: 3px solid var(--century-keep-accent);
-  border-radius: 10px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.74);
 }
 
@@ -1006,7 +1041,9 @@ button.century-card.is-selected {
 
 .century-keep-group-heading {
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+  gap: 3px;
 }
 
 .century-keep-group-heading strong {
@@ -1023,36 +1060,36 @@ button.century-card.is-selected {
 .century-keep-group-heading .century-spice-gem {
   width: 18px;
   height: 18px;
-  font-size: 7px;
+  font-size: 13px;
 }
 
 .century-keep-pieces {
   display: flex;
-  min-height: 48px;
+  min-height: 0;
   align-content: flex-start;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 .century-keep-spice {
   position: relative;
   display: inline-grid;
-  width: 43px;
-  min-width: 43px;
-  height: 48px;
-  padding: 4px;
+  width: 32px;
+  min-width: 32px;
+  height: 36px;
+  padding: 3px;
   place-items: center;
   border: 1px solid #d5c9ba;
-  border-radius: 9px;
+  border-radius: 5px;
   background: #fffdf9;
   color: #51463a;
   transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
 .century-spice-gem--keep {
-  width: 28px;
-  height: 28px;
-  font-size: 10px;
+  width: 22px;
+  height: 22px;
+  font-size: 17px;
 }
 
 .century-keep-spice:hover:not(:disabled),
@@ -1095,7 +1132,10 @@ button.century-card.is-selected {
 }
 
 .century-keep-controls .century-primary-action {
-  min-width: 170px;
+  min-width: 100px;
+  min-height: 34px;
+  padding: 5px 12px;
+  font-size: 12px;
 }
 
 .century-action-form--compact {
@@ -1125,20 +1165,21 @@ button.century-card.is-selected {
 .century-action-title > strong {
   grid-column: 1;
   color: #3e3023;
-  font-size: 14px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .century-drawer-close {
   grid-column: 2;
   grid-row: 1 / 3;
   align-self: center;
-  min-width: 64px;
-  min-height: 31px;
-  padding: 5px 10px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 8px;
   border-color: #d1c3af;
   background: #f5eee3;
   color: #6c5c48;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 750;
 }
 
@@ -1159,16 +1200,17 @@ button.century-card.is-selected {
 
 .century-upgrade-choice {
   display: grid;
-  min-width: 118px;
-  flex: 1 1 118px;
-  gap: 5px;
+  min-width: 0;
+  flex: 1 1 70px;
+  gap: 3px;
   place-items: center;
-  padding: 7px;
+  padding: 5px;
   border-color: #c8b2df;
   background: #faf6ff;
   color: #5a3b78;
   font-size: 9px;
   font-weight: 850;
+  min-height: 36px;
 }
 
 .century-upgrade-choice-path {
@@ -1183,17 +1225,20 @@ button.century-card.is-selected {
 }
 
 .century-secondary-action {
-  min-width: 90px;
+  min-width: 0;
   border-color: #d3c7b8;
   background: #f6f1e8;
   color: #665b4c;
+  padding: 5px 8px;
+  font-size: 11px;
+  min-height: 32px;
 }
 
 .century-selection-label {
   display: grid;
   grid-column: 1;
-  gap: 8px;
-  padding: 9px;
+  gap: 5px;
+  padding: 6px;
   border: 1px solid #d9cde5;
   border-radius: 9px;
   background: #fcfaff;
@@ -1204,9 +1249,10 @@ button.century-card.is-selected {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 5px;
   color: #74657f;
   font-size: 10px;
+  flex-wrap: wrap;
 }
 
 .century-planned-steps {
@@ -1274,24 +1320,24 @@ button.century-card.is-selected {
 
 .century-repeat-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 5px;
 }
 
 .century-repeat-option {
   display: inline-flex;
-  min-height: 46px;
+  min-height: 34px;
   align-items: baseline;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 10px;
+  gap: 3px;
+  padding: 5px;
   border-color: #aac6ca;
   background: #f4fbfb;
   color: #285c65;
 }
 
 .century-repeat-option > strong {
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
 }
 
@@ -1378,5 +1424,204 @@ body.century-explain-mode .has-explanation {
   cursor: help;
   outline: 2px dashed #0f766e;
   outline-offset: 2px;
+}
+
+
+.century-table-layout,
+.century-markets {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  align-items: start;
+}
+
+.century-table-layout > *,
+.century-markets > section {
+  min-width: 0;
+}
+
+#centuryMerchantMarket {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.century-caravan-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--century-line);
+}
+
+.century-caravan-summary > .century-player-header {
+  width: 100%;
+}
+
+.century-caravan-summary h3 {
+  flex: 1;
+  margin: 0;
+  color: #4a3928;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.century-caravan-resources {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+}
+
+.century-caravan-resources .century-caravan-spices {
+  flex: 1;
+}
+
+.century-hand-action-slot:empty,
+.century-hand-action-slot:has(> [hidden]) {
+  display: none;
+}
+
+.century-claim-cost {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.century-history-details,
+.century-table-details {
+  min-width: 0;
+  color: var(--century-muted);
+  font-size: 11px;
+}
+
+.century-history-details > summary,
+.century-table-details > summary {
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.century-history-details[open] > summary {
+  margin-bottom: 4px;
+}
+
+.century-table-details .row {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 11px;
+}
+
+.century-opponents {
+  margin-top: 10px;
+}
+
+.century-player-header > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.century-recipe-arrow {
+  width: 9px;
+}
+
+.century-point-card .century-coin-token {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+.century-point-card .century-spice-token {
+  padding: 1px;
+  gap: 0;
+}
+
+.century-point-card .century-spice-gem {
+  width: 16px;
+  font-size: 12px;
+}
+
+.century-pay-grid label {
+  min-width: 0;
+  flex: 1 1 120px;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.century-pay-grid select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 32px;
+  flex: 1;
+  padding: 4px;
+  font-size: 12px;
+}
+
+.century-tooltip {
+  position: fixed;
+  z-index: 1200;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 6px 9px;
+  border: 1px solid #d6c8b4;
+  border-radius: 7px;
+  background: #fffdf7;
+  color: #3e3023;
+  box-shadow: 0 3px 12px #29231b24;
+  font: 12px/1.4 Arial, sans-serif;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.century-tooltip[hidden] {
+  display: none;
+}
+
+@container (min-width: 900px) {
+  .century-table-layout {
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+  }
+
+  .century-hand {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 1160px) {
+  #centuryMerchantMarket {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 309px) {
+  #centuryMerchantMarket,
+  .century-hand {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .century-card-kind {
+    font-size: 9px;
+  }
+
+  .century-point-card {
+    padding: 4px;
+  }
+
+  .century-point-value > strong {
+    font-size: 21px;
+  }
+
+  .century-header {
+    flex-wrap: wrap;
+  }
+
+  .century-header-actions {
+    margin-left: auto;
+  }
 }
 }

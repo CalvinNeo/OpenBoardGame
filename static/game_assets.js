@@ -217,9 +217,9 @@ const GAME_ASSETS = {
     "styleFragments": "/static/games/azul.css?v=1"
   },
   "sagrada": {
-    "scripts": ["/static/games/sagrada.js?v=1"],
-    "styles": ["/static/games/sagrada.css?v=1"],
-    "markup": "/static/games/sagrada.html?v=1",
+    "scripts": ["/static/games/sagrada.js?v=3"],
+    "styles": ["/static/games/sagrada.css?v=3"],
+    "markup": "/static/games/sagrada.html?v=3",
     "panel": "sagradaPanel",
     "header": "showSagradaHeaderActions"
   },
@@ -293,13 +293,13 @@ const GAME_ASSETS = {
   },
   "century_spice_road": {
     "scripts": [
-      "/static/games/century_spice_road.js?v=app_v7"
+      "/static/games/century_spice_road.js?v=app_v8"
     ],
     "styles": [],
     "panel": "centurySpiceRoadPanel",
     "header": "showCenturyHeaderActions",
-    "markup": "/static/games/century_spice_road.html?v=1",
-    "styleFragments": "/static/games/century_spice_road.css?v=1"
+    "markup": "/static/games/century_spice_road.html?v=2",
+    "styleFragments": "/static/games/century_spice_road.css?v=2"
   },
   "splendor": {
     "scripts": [
@@ -499,7 +499,7 @@ const GAME_ASSETS = {
   },
   "guandan": {
     "scripts": [
-      "/static/games/guandan.js?v=app_v17"
+      "/static/games/guandan.js?v=app_v18"
     ],
     "styles": [],
     "panel": "guandanPanel",

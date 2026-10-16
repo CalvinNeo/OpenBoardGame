@@ -1,5 +1,7 @@
 let currentCenturyView = null;
 let centuryExplainMode = false;
+let centuryTooltipTimer = null;
+let centuryTooltip = null;
 
 const centuryPanel = document.getElementById("centurySpiceRoadPanel");
 const centuryPhase = document.getElementById("centuryPhase");
@@ -23,36 +25,40 @@ const centuryExplainModalCloseBtn = document.getElementById("centuryExplainModal
 const centuryExplainContent = document.getElementById("centuryExplainContent");
 
 const CENTURY_SPICE_META = {
-  yellow: { name: "Yellow", spice: "Turmeric", short: "Y" },
-  red: { name: "Red", spice: "Saffron", short: "R" },
-  green: { name: "Green", spice: "Cardamom", short: "G" },
-  brown: { name: "Brown", spice: "Cinnamon", short: "B" },
+  yellow: { name: "Yellow", spice: "Turmeric", emoji: "🟨" },
+  red: { name: "Red", spice: "Saffron", emoji: "🟥" },
+  green: { name: "Green", spice: "Cardamom", emoji: "🟩" },
+  brown: { name: "Brown", spice: "Cinnamon", emoji: "🟫" },
 };
 const CENTURY_SPICE_ORDER = Object.keys(CENTURY_SPICE_META);
 
 const CENTURY_CARD_META = {
-  spice: { label: "PRODUCE", className: "produce", hint: "Take spices" },
-  trade: { label: "CONVERT", className: "convert", hint: "Repeatable recipe" },
-  upgrade: { label: "WILD UPGRADE", className: "upgrade", hint: "Flexible steps" },
+  spice: { label: "PRODUCE", className: "produce" },
+  trade: { label: "CONVERT", className: "convert" },
+  upgrade: { label: "UPGRADE", className: "upgrade" },
 };
 
 const CENTURY_HELP_HTML = `
   <h3>Goal</h3>
   <p>Build a spice engine, claim point cards, and finish with the highest total.</p>
 
+  <h3>Spices and coins</h3>
+  <p>Value order: Turmeric / Yellow (🟨) → Saffron / Red (🟥) → Cardamom / Green (🟩) → Cinnamon / Brown (🟫). The number beside a spice is its quantity. Gold (🟡) is worth 3 points; Silver (⚪) is worth 1. VP means victory points.</p>
+
   <h3>Turn</h3>
   <ul>
     <li><strong>Play</strong>: play one merchant card. <strong>Produce</strong> takes spices, <strong>Convert</strong> runs a repeatable recipe, and <strong>Wild Upgrade</strong> moves any spice up the value track.</li>
     <li><strong>Acquire</strong>: take one merchant card. Cards to its left each receive one spice from you.</li>
     <li><strong>Rest</strong>: return all played merchant cards to your hand.</li>
-    <li><strong>Claim</strong>: pay spices for one point card. The first two slots may award a Gold or Silver coin.</li>
+    <li><strong>Claim</strong>: pay spices for one point card. The first two slots may award a Gold (🟡) or Silver (⚪) coin.</li>
   </ul>
 
   <h3>Important</h3>
   <ul>
     <li>Your caravan holds 10 spices. If you exceed 10, choose exactly 10 spices to keep before the next turn.</li>
     <li>In 2-3 player games, the end triggers at 6 point cards. In 4-5 player games, it triggers at 5.</li>
-    <li>Final score is point cards + Gold coins x3 + Silver coins x1 + every non-yellow spice.</li>
+    <li>Final score is point cards + Gold (🟡) coins x3 + Silver (⚪) coins x1 + every non-yellow spice.</li>
+    <li>Select a card to open its controls nearby. Confirm to use it; click outside or press Esc to cancel. Played and claimed cards are under your caravan's expandable history.</li>
   </ul>
 `;
 
@@ -83,7 +89,7 @@ function centurySpicePlainText(counts, includeZeros = false) {
   CENTURY_SPICE_ORDER.forEach((color) => {
     const amount = Number((counts || {})[color] || 0);
     if (amount || includeZeros) {
-      parts.push(`${CENTURY_SPICE_META[color].name} x${amount}`);
+      parts.push(`${CENTURY_SPICE_META[color].name} (${CENTURY_SPICE_META[color].emoji}) x${amount}`);
     }
   });
   return parts.length ? parts.join(" ") : "-";
@@ -92,7 +98,7 @@ function centurySpicePlainText(counts, includeZeros = false) {
 function centurySpiceGemMarkup(color, extraClass = "") {
   const meta = CENTURY_SPICE_META[color];
   if (!meta) return "";
-  return `<span class="century-spice-gem century-spice-gem--${color} ${extraClass}" aria-hidden="true">${meta.short}</span>`;
+  return `<span class="century-spice-gem century-spice-gem--${color} ${extraClass}" data-century-tooltip="${meta.spice} / ${meta.name} (${meta.emoji})" aria-hidden="true">${meta.emoji}</span>`;
 }
 
 function centurySpiceMarkup(counts, includeZeros = false, extraClass = "") {
@@ -103,7 +109,7 @@ function centurySpiceMarkup(counts, includeZeros = false, extraClass = "") {
     const meta = CENTURY_SPICE_META[color];
     tokens.push(`
       <span class="century-spice-token century-spice-token--${color} ${amount ? "" : "is-zero"}"
-            title="${meta.spice} (${meta.name})" aria-label="${meta.name} spice, ${amount}">
+            data-century-tooltip="${meta.spice} / ${meta.name} (${meta.emoji}): ${amount}" aria-label="${meta.name} spice, ${amount}">
         ${centurySpiceGemMarkup(color)}
         <span class="century-spice-count" aria-hidden="true">${amount}</span>
       </span>
@@ -121,13 +127,13 @@ function centuryScaleSpices(counts, multiplier) {
   return scaled;
 }
 
-function centuryCoinMarkup(kind, amount, showName = true) {
+function centuryCoinMarkup(kind, amount, showName = false) {
   const isGold = kind === "gold";
   const name = isGold ? "Gold" : "Silver";
   const count = Number(amount || 0);
   return `
-    <span class="century-coin-token century-coin-token--${isGold ? "gold" : "silver"}" aria-label="${name} coins, ${count}">
-      <span class="century-coin-mark" aria-hidden="true">${isGold ? "G" : "S"}</span>
+    <span class="century-coin-token century-coin-token--${isGold ? "gold" : "silver"}" data-century-tooltip="${name} (${isGold ? "🟡" : "⚪"}): ${count} coins, ${isGold ? "3" : "1"} points each" aria-label="${name} coins, ${count}">
+      <span class="century-coin-mark" aria-hidden="true">${isGold ? "🟡" : "⚪"}</span>
       ${showName ? `<span class="century-coin-name">${name}</span>` : ""}
       <strong aria-hidden="true">x${count}</strong>
     </span>
@@ -146,7 +152,7 @@ function centuryMerchantPlainText(card) {
   }
   if (card.type === "upgrade") {
     const steps = Number(card.upgrade_steps || 0);
-    return `Wild Upgrade: use up to ${steps} flexible ${steps === 1 ? "step" : "steps"}`;
+    return `Wild Upgrade: use up to ${steps} ${steps === 1 ? "step" : "steps"}. Yellow (🟨) → Red (🟥) → Green (🟩) → Brown (🟫)`;
   }
   if (card.type === "trade") {
     return `Convert ${centurySpicePlainText(card.cost)} into ${centurySpicePlainText(card.gain)}`;
@@ -180,8 +186,7 @@ function centuryMerchantCardMarkup(card) {
     effect = `
       <div class="century-card-effect century-upgrade-effect">
         ${centuryUpgradeTrackMarkup()}
-        <strong>${steps} flexible ${steps === 1 ? "step" : "steps"}</strong>
-        <span>Move any spice one level per step</span>
+        <strong>${steps} ${steps === 1 ? "step" : "steps"}</strong>
       </div>
     `;
   } else {
@@ -202,7 +207,6 @@ function centuryMerchantCardMarkup(card) {
   return `
     <div class="century-card-heading">
       <span class="century-card-kind"><span class="century-kind-mark" aria-hidden="true"></span>${meta.label}</span>
-      <span class="century-card-hint">${meta.hint}</span>
     </div>
     ${effect}
   `;
@@ -270,6 +274,7 @@ function showCenturyHeaderActions(show) {
 function clearCenturyState() {
   currentCenturyView = null;
   setCenturyExplainMode(false);
+  centuryHideTooltip();
   if (centuryPhase) centuryPhase.textContent = "-";
   if (centuryTurn) centuryTurn.textContent = "-";
   if (centuryDecks) centuryDecks.textContent = "-";
@@ -306,7 +311,8 @@ function centuryClearActionSelection() {
   });
 }
 
-function centuryCloseActionDrawer() {
+function centuryCloseActionDrawer(force = false) {
+  if (centuryActions && centuryActions.classList.contains("is-required") && force !== true) return;
   centuryClearActionSelection();
   if (!centuryActions) return;
   centuryActions.innerHTML = "";
@@ -318,7 +324,18 @@ function centuryCloseActionDrawer() {
 function centuryOpenActionDrawer(form, sourceButton = null, required = false) {
   if (!centuryActions || !form) return;
   centuryClearActionSelection();
+  centuryActions.hidden = true;
   centuryActions.replaceChildren(form);
+  if (sourceButton) {
+    const row = sourceButton.parentElement;
+    const cards = Array.from(row.children).filter((node) => node.classList.contains("century-card"));
+    const sourceTop = sourceButton.offsetTop;
+    const lastInRow = cards.filter((node) => Math.abs(node.offsetTop - sourceTop) < 2).pop();
+    if (lastInRow) lastInRow.after(centuryActions);
+  } else {
+    const actionSlot = centuryYou.querySelector(".century-hand-action-slot");
+    if (actionSlot) actionSlot.appendChild(centuryActions);
+  }
   centuryActions.hidden = false;
   centuryActions.classList.add("is-open");
   centuryActions.classList.toggle("is-required", required);
@@ -331,8 +348,6 @@ function centuryOpenActionDrawer(form, sourceButton = null, required = false) {
       const pointerX = sourceBounds.left + sourceBounds.width / 2 - drawerBounds.left;
       const clampedPointerX = Math.max(24, Math.min(drawerBounds.width - 24, pointerX));
       centuryActions.style.setProperty("--century-drawer-pointer-x", `${clampedPointerX}px`);
-      const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      centuryActions.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
     });
   }
 }
@@ -340,8 +355,8 @@ function centuryOpenActionDrawer(form, sourceButton = null, required = false) {
 function centuryAddActionDrawerClose(form) {
   const title = form && form.querySelector(".century-action-title");
   if (!title) return;
-  const closeButton = centuryButton("Close", centuryCloseActionDrawer, false, "century-drawer-close");
-  closeButton.setAttribute("aria-label", "Close selected action");
+  const closeButton = centuryButton("Cancel", () => centuryCloseActionDrawer(), false, "century-drawer-close");
+  closeButton.setAttribute("aria-label", "Cancel selected action");
   title.appendChild(closeButton);
 }
 
@@ -353,26 +368,21 @@ function renderCenturyPointMarket(view) {
     button.className = "century-card century-point-card";
     const bonus = centuryPointBonus(view, index);
     button.innerHTML = `
-      <div class="century-card-heading">
-        <span class="century-card-kind"><span class="century-kind-mark" aria-hidden="true"></span>POINT CARD</span>
-        <span class="century-slot-number">#${index + 1}</span>
-      </div>
-      <div class="century-point-value"><strong>${Number(card.points || 0)}</strong><span>VP</span></div>
+      <div class="century-point-value"><strong>${Number(card.points || 0)}</strong><span data-century-tooltip="Victory points">VP</span>${bonus ? `<span class="century-point-bonus">${centuryCoinMarkup(bonus, 1)}</span>` : ""}</div>
       <div class="century-point-cost">
         <span class="century-effect-label">PAY</span>
         ${centurySpiceMarkup(card.cost)}
       </div>
-      <div class="century-point-bonus ${bonus ? "" : "is-empty"}">
-        ${bonus ? `${centuryCoinMarkup(bonus, 1)}<span>Slot bonus</span>` : "No coin bonus"}
-      </div>
     `;
     button.setAttribute("aria-label", `Point card worth ${card.points} points. Cost: ${centurySpicePlainText(card.cost)}.`);
     button.disabled = !centuryCan(view, "claim");
-    button.addEventListener("click", () => sendAction({ type: "claim", index }));
+    button.setAttribute("aria-controls", "centuryActions");
+    button.setAttribute("aria-expanded", "false");
+    button.addEventListener("click", () => renderCenturyClaimForm(view, index, button));
     centuryExplain(button, "Point Card", "Claim this card by paying its spice cost.", [
       `Cost: ${centurySpicePlainText(card.cost)}`,
       `Printed value: ${card.points} VP`,
-      bonus ? `This slot awards one ${bonus === "gold" ? "Gold" : "Silver"} coin.` : "This slot has no coin bonus.",
+      bonus ? `This slot awards one ${bonus === "gold" ? "Gold (🟡)" : "Silver (⚪)"} coin.` : "This slot has no coin bonus.",
     ]);
     centuryPointMarket.appendChild(button);
   });
@@ -389,10 +399,8 @@ function renderCenturyMerchantMarket(view) {
     button.innerHTML = `
       ${centuryMerchantCardMarkup(card)}
       <div class="century-market-card-footer">
-        <span class="century-acquire-cost ${index === 0 ? "is-free" : ""}">${index === 0 ? "FREE PICK" : `PAY ${index} ANY`}</span>
-        <span class="century-waiting-spices ${waitingSpices ? "has-spices" : ""}">
-          ${waitingSpices ? `BONUS ${centurySpiceMarkup(slot.spices)}` : "No bonus spices"}
-        </span>
+        <span class="century-acquire-cost ${index === 0 ? "is-free" : ""}">${index === 0 ? "FREE" : `PAY ${index} ANY`}</span>
+        ${waitingSpices ? `<span class="century-waiting-spices has-spices">+ ${centurySpiceMarkup(slot.spices)}</span>` : ""}
       </div>
     `;
     const acquireCostLabel = index === 0 ? "Free to acquire" : `Costs ${index} ${index === 1 ? "spice" : "spices"} to acquire`;
@@ -417,34 +425,33 @@ function renderCenturyYou(view) {
     return;
   }
   const caravanCount = Object.values(you.spices || {}).reduce((total, amount) => total + Number(amount || 0), 0);
+  const historyOpen = centuryYou.querySelector(".century-history-details")?.open || false;
+  centuryCloseActionDrawer(true);
   centuryYou.innerHTML = `
-    <div class="century-player-header">
-      <div>
-        <span class="century-eyebrow">YOUR CARAVAN</span>
-        <strong>${centuryEscapeHtml(you.name || "You")}</strong>
+    <div class="century-caravan-summary">
+      <div class="century-player-header">
+        <h3>Your Caravan</h3>
+        <span class="century-capacity ${caravanCount > 10 ? "is-over" : ""}" data-century-tooltip="Caravan capacity: ${caravanCount} of 10 spices">${caravanCount}/10</span>
+        <span class="century-score-chip" data-century-tooltip="Current points: claimed cards + coins + non-yellow spices"><strong>${Number(you.score || 0)}</strong> pts</span>
       </div>
-      <span class="century-capacity ${caravanCount > 10 ? "is-over" : ""}">${caravanCount} / 10 spices</span>
+      <div class="century-caravan-resources">
+        <div class="century-caravan-spices">${centurySpiceMarkup(you.spices, true)}</div>
+        <span class="century-coin-list">${centuryCoinMarkup("gold", you.gold)}${centuryCoinMarkup("silver", you.silver)}</span>
+      </div>
     </div>
-    <div class="century-caravan-spices">${centurySpiceMarkup(you.spices, true)}</div>
-    <div class="century-player-summary-row">
-      <span class="century-coin-list">${centuryCoinMarkup("gold", you.gold)}${centuryCoinMarkup("silver", you.silver)}</span>
-      <span class="century-score-chip"><strong>${Number(you.score || 0)}</strong> current points</span>
-    </div>
-    <div class="century-claimed-line"><strong>Claimed cards</strong><span>${(you.claimed_points || []).map((card) => `${Number(card.points || 0)} VP`).join(" · ") || "None"}</span></div>
-    <div class="century-spice-key" aria-label="Spice value order">
-      <span>LOW</span>${centuryUpgradeTrackMarkup()}<span>HIGH</span>
-    </div>
+    <div class="century-hand-action-slot"></div>
     <div class="century-hand-heading">
-      <h4>Hand</h4>
+      <h4>Hand · ${(you.hand || []).length}</h4>
       <div class="century-hand-tools"></div>
     </div>
     <div class="century-card-row century-hand"></div>
-    <div class="century-hand-action-slot"></div>
-    <h4>Played</h4>
-    <div class="century-card-row century-played"></div>
+    <details class="century-history-details" ${historyOpen ? "open" : ""}>
+      <summary>Played ${(you.played_cards || []).length} · Claimed ${(you.claimed_points || []).length}</summary>
+      <div class="century-claimed-line"><strong>Claimed</strong><span data-century-tooltip="Victory points printed on your claimed cards">${(you.claimed_points || []).map((card) => `${Number(card.points || 0)} VP`).join(" · ") || "None"}</span></div>
+      <div class="century-card-row century-played"></div>
+    </details>
   `;
   const actionSlot = centuryYou.querySelector(".century-hand-action-slot");
-  centuryCloseActionDrawer();
   if (actionSlot && centuryActions) actionSlot.appendChild(centuryActions);
 
   const handTools = centuryYou.querySelector(".century-hand-tools");
@@ -481,7 +488,10 @@ function renderCenturyYou(view) {
 
 function renderCenturyPlayers(view) {
   centuryPlayers.innerHTML = "";
-  (view.players || []).forEach((player) => {
+  const opponents = (view.players || []).filter((player) => view.game_over || player.player_id !== view.you);
+  const heading = centuryPlayers.parentElement.querySelector("h3");
+  if (heading) heading.textContent = view.game_over ? "Final Scores" : "Other Caravans";
+  opponents.forEach((player) => {
     const div = document.createElement("div");
     div.className = "century-player-card";
     if (player.player_id === view.current_turn) div.classList.add("current");
@@ -489,7 +499,7 @@ function renderCenturyPlayers(view) {
     div.innerHTML = `
       <div class="century-player-header">
         <strong>${centuryEscapeHtml(player.name || player.player_id)}</strong>
-        <span class="century-score-chip"><strong>${Number(player.score || 0)}</strong> pts</span>
+        <span class="century-score-chip" data-century-tooltip="Current points: claimed cards + coins + non-yellow spices"><strong>${Number(player.score || 0)}</strong> pts</span>
       </div>
       <div class="century-player-spices">${centurySpiceMarkup(player.spices, true)}</div>
       <div class="century-player-facts">
@@ -501,7 +511,7 @@ function renderCenturyPlayers(view) {
     `;
     centuryExplain(div, "Player Summary", "Public player information.", [
       "Hands are hidden from other players except for card count.",
-      "Played cards, spices, coins, claimed cards, and current score are public here.",
+      "Played cards, spices, Gold (🟡) / Silver (⚪) coins, claimed cards, and current score are public here.",
     ]);
     centuryPlayers.appendChild(div);
   });
@@ -518,6 +528,24 @@ function maxCenturyTradeTimes(player, card) {
   return maxTimes === Infinity ? 0 : maxTimes;
 }
 
+function renderCenturyClaimForm(view, index, sourceButton = null) {
+  const card = (view.point_market || [])[index];
+  const you = centurySelf(view);
+  if (!card || !you) return;
+  const canPay = CENTURY_SPICE_ORDER.every((color) => Number((you.spices || {})[color] || 0) >= Number((card.cost || {})[color] || 0));
+  const form = document.createElement("div");
+  form.className = "century-action-form century-action-form--drawer century-action-form--claim";
+  form.innerHTML = `
+    <div class="century-action-title"><strong>Claim ${Number(card.points || 0)} VP</strong></div>
+    <div class="century-claim-cost"><span>Pay</span>${centurySpiceMarkup(card.cost)}</div>
+  `;
+  centuryAddActionDrawerClose(form);
+  form.appendChild(centuryButton(canPay ? "Claim" : "Not enough spices", () => {
+    sendAction({ type: "claim", index });
+  }, !canPay, "century-primary-action"));
+  centuryOpenActionDrawer(form, sourceButton);
+}
+
 function renderCenturyPlayForm(view, card, sourceButton = null) {
   const you = centurySelf(view);
   const form = document.createElement("div");
@@ -525,8 +553,7 @@ function renderCenturyPlayForm(view, card, sourceButton = null) {
   form.className = `century-action-form century-action-form--drawer century-action-form--${cardMeta.className}`;
   form.innerHTML = `
     <div class="century-action-title">
-      <span>PLAY ${cardMeta.label}</span>
-      <strong>${centuryMerchantPlainText(card)}</strong>
+      <strong>Play ${cardMeta.label.toLowerCase()}</strong>
     </div>
   `;
   centuryAddActionDrawerClose(form);
@@ -551,12 +578,13 @@ function renderCenturyPlayForm(view, card, sourceButton = null) {
       }).join("");
       sequenceLabel.innerHTML = `
         <div class="century-selection-heading">
-          <strong>Planned upgrades</strong>
+          <strong>Upgrades</strong>
           <span>${upgrades.length} / ${Number(card.upgrade_steps || 0)} steps</span>
         </div>
-        <div class="century-planned-steps">${steps || '<span class="century-empty-value">Choose a conversion above. You may use fewer than the maximum.</span>'}</div>
-        <div class="century-upgrade-preview"><span>Caravan after plan</span>${centurySpiceMarkup(preview, true)}</div>
+        <div class="century-planned-steps">${steps || '<span class="century-empty-value">Choose an upgrade</span>'}</div>
+        <div class="century-upgrade-preview"><span>After</span>${centurySpiceMarkup(preview, true)}</div>
       `;
+      undoButton.disabled = upgrades.length === 0;
       wrap.querySelectorAll("button[data-upgrade-color]").forEach((button) => {
         const color = button.dataset.upgradeColor;
         button.disabled = upgrades.length >= Number(card.upgrade_steps || 0) || Number(preview[color] || 0) <= 0;
@@ -573,15 +601,21 @@ function renderCenturyPlayForm(view, card, sourceButton = null) {
       });
       button.className = "century-upgrade-choice";
       button.innerHTML = `
-        <span>UPGRADE</span>
         <span class="century-upgrade-choice-path">${centurySpiceGemMarkup(color)}<span class="century-inline-arrow" aria-hidden="true"></span>${centurySpiceGemMarkup(nextColor)}</span>
       `;
       button.setAttribute("aria-label", `Upgrade ${CENTURY_SPICE_META[color].name} to ${CENTURY_SPICE_META[nextColor].name}`);
       button.dataset.upgradeColor = color;
       wrap.appendChild(button);
     });
-    const resetBtn = centuryButton("Start over", () => renderCenturyPlayForm(view, card, sourceButton), false, "century-secondary-action");
-    wrap.appendChild(resetBtn);
+    const undoButton = centuryButton("Undo", () => {
+      const color = upgrades.pop();
+      if (!color) return;
+      const nextColor = CENTURY_SPICE_ORDER[CENTURY_SPICE_ORDER.indexOf(color) + 1];
+      preview[color] = Number(preview[color] || 0) + 1;
+      preview[nextColor] = Number(preview[nextColor] || 0) - 1;
+      refreshUpgradeButtons();
+    }, true, "century-secondary-action");
+    wrap.appendChild(undoButton);
     form.appendChild(wrap);
     form.appendChild(sequenceLabel);
     refreshUpgradeButtons();
@@ -595,7 +629,7 @@ function renderCenturyPlayForm(view, card, sourceButton = null) {
     chooser.className = "century-repeat-control";
     chooser.innerHTML = `
       <div class="century-repeat-heading">
-        <strong>How many times?</strong>
+        <strong>Repeat</strong>
         <span>Maximum ${maxTimes}</span>
       </div>
     `;
@@ -653,12 +687,12 @@ function renderCenturyAcquireForm(view, index, sourceButton = null) {
   form.className = `century-action-form century-action-form--drawer century-action-form--acquire century-action-form--${cardMeta.className}`;
   form.innerHTML = `
     <div class="century-action-title">
-      <span>ACQUIRE SLOT ${index + 1}</span>
-      <strong>${slot && slot.card ? centuryMerchantPlainText(slot.card) : "Merchant card"}</strong>
+      <strong>Acquire · ${index === 0 ? "free" : `pay ${index} spices`}</strong>
     </div>
   `;
   centuryAddActionDrawerClose(form);
   const selects = [];
+  const available = { ...(you.spices || {}) };
   if (index > 0) {
     const wrap = document.createElement("div");
     wrap.className = "century-pay-grid";
@@ -669,19 +703,35 @@ function renderCenturyAcquireForm(view, index, sourceButton = null) {
       CENTURY_SPICE_ORDER.forEach((color) => {
         const option = document.createElement("option");
         option.value = color;
-        option.textContent = `${CENTURY_SPICE_META[color].name} spice`;
+        option.textContent = `${CENTURY_SPICE_META[color].emoji} ${CENTURY_SPICE_META[color].name}`;
         option.disabled = Number((you.spices || {})[color] || 0) <= 0;
         select.appendChild(option);
       });
+      const initialColor = CENTURY_SPICE_ORDER.find((color) => Number(available[color] || 0) > 0);
+      if (initialColor) {
+        select.value = initialColor;
+        available[initialColor] -= 1;
+      }
       selects.push(select);
       label.appendChild(select);
       wrap.appendChild(label);
     }
     form.appendChild(wrap);
   }
-  form.appendChild(centuryButton("Acquire", () => {
+  const acquireButton = centuryButton("Acquire", () => {
     sendAction({ type: "acquire", index, payments: selects.map((select) => select.value) });
-  }, false, "century-primary-action"));
+  }, false, "century-primary-action");
+  const refreshPayment = () => {
+    const used = {};
+    selects.forEach((select) => { used[select.value] = (used[select.value] || 0) + 1; });
+    const valid = selects.every((select) => CENTURY_SPICE_ORDER.includes(select.value))
+      && CENTURY_SPICE_ORDER.every((color) => Number(used[color] || 0) <= Number((you.spices || {})[color] || 0));
+    acquireButton.disabled = !valid;
+    acquireButton.textContent = valid ? "Acquire" : "Not enough spices";
+  };
+  selects.forEach((select) => select.addEventListener("change", refreshPayment));
+  refreshPayment();
+  form.appendChild(acquireButton);
   centuryOpenActionDrawer(form, sourceButton);
 }
 
@@ -695,8 +745,7 @@ function renderCenturyDiscardForm(view) {
   form.className = "century-action-form century-action-form--drawer century-action-form--compact century-action-form--limit century-action-form--keep";
   form.innerHTML = `
     <div class="century-action-title">
-      <span>CARAVAN LIMIT</span>
-      <strong>Choose ${keepTarget} spices to keep</strong>
+      <strong>Keep ${keepTarget} spices</strong>
     </div>
   `;
 
@@ -743,10 +792,6 @@ function renderCenturyDiscardForm(view) {
 
   const controls = document.createElement("div");
   controls.className = "century-keep-controls";
-  const clearButton = centuryButton("Clear selection", () => {
-    keptPieces.clear();
-    refreshKeepSelection();
-  }, true, "century-secondary-action");
   const confirmButton = centuryButton(`Keep these ${keepTarget}`, () => {
     const discard = {};
     CENTURY_SPICE_ORDER.forEach((color) => {
@@ -755,7 +800,6 @@ function renderCenturyDiscardForm(view) {
     });
     sendAction({ type: "discard", spices: discard });
   }, true, "century-primary-action");
-  controls.appendChild(clearButton);
   controls.appendChild(confirmButton);
   form.appendChild(controls);
 
@@ -768,7 +812,6 @@ function renderCenturyDiscardForm(view) {
       button.setAttribute("aria-pressed", String(isKept));
       button.disabled = !isKept && selectedCount >= keepTarget;
     });
-    clearButton.disabled = selectedCount === 0;
     confirmButton.disabled = !selectionComplete;
     confirmButton.textContent = selectionComplete ? `Keep these ${keepTarget}` : `Select ${keepTarget - selectedCount} more`;
 
@@ -785,7 +828,6 @@ function renderCenturyDiscardForm(view) {
     } else {
       status.innerHTML = `
         <div class="century-keep-progress"><strong>${selectedCount} / ${keepTarget}</strong><span>kept</span></div>
-        <p>Click the individual spices you want to keep in your caravan.</p>
       `;
     }
   }
@@ -799,7 +841,7 @@ function renderCenturyDefaultActions(view) {
     renderCenturyDiscardForm(view);
     return;
   }
-  centuryCloseActionDrawer();
+  centuryCloseActionDrawer(true);
 }
 
 function renderCenturyGameState(payload) {
@@ -821,9 +863,9 @@ function renderCenturyGameState(payload) {
       const keepTarget = Math.max(0, totalSpices - Number(view.discard_needed || 0));
       centuryPrompt.textContent = `${centuryPlayerName(view, view.discard_player)} must choose ${keepTarget} spices to keep.`;
     } else if (view.end_triggered) {
-      centuryPrompt.textContent = `Final round is active. Last player: ${centuryPlayerName(view, view.final_player)}.`;
+      centuryPrompt.textContent = `${view.current_turn === view.you ? "Your turn" : `${currentName}’s turn`} · Final round`;
     } else {
-      centuryPrompt.textContent = `${currentName} chooses one action.`;
+      centuryPrompt.textContent = view.current_turn === view.you ? "Your turn · Choose a card or rest" : `${currentName}’s turn`;
     }
   }
   renderCenturyPointMarket(view);
@@ -832,6 +874,37 @@ function renderCenturyGameState(payload) {
   renderCenturyPlayers(view);
   renderCenturyDefaultActions(view);
   updateCenturyExplainClasses();
+}
+
+function centuryHideTooltip() {
+  window.clearTimeout(centuryTooltipTimer);
+  if (centuryTooltip) centuryTooltip.hidden = true;
+}
+
+function centuryTooltipTarget(event) {
+  const target = event.target?.closest?.("[data-century-tooltip]");
+  if (!target || target.closest("button, input, select, summary, a")) return null;
+  return target.closest(".century-spice-token") || target;
+}
+
+function centuryShowTooltip(target) {
+  if (!target || centuryExplainMode) return;
+  centuryHideTooltip();
+  if (!centuryTooltip) {
+    centuryTooltip = document.createElement("div");
+    centuryTooltip.className = "century-tooltip";
+    centuryTooltip.setAttribute("role", "tooltip");
+    document.body.appendChild(centuryTooltip);
+  }
+  centuryTooltip.textContent = target.dataset.centuryTooltip;
+  centuryTooltip.hidden = false;
+  const bounds = target.getBoundingClientRect();
+  const tooltipBounds = centuryTooltip.getBoundingClientRect();
+  const left = Math.max(8, Math.min(window.innerWidth - tooltipBounds.width - 8, bounds.left + bounds.width / 2 - tooltipBounds.width / 2));
+  const top = bounds.top >= tooltipBounds.height + 12 ? bounds.top - tooltipBounds.height - 8 : bounds.bottom + 8;
+  centuryTooltip.style.left = `${left}px`;
+  centuryTooltip.style.top = `${Math.max(8, Math.min(window.innerHeight - tooltipBounds.height - 8, top))}px`;
+  centuryTooltipTimer = window.setTimeout(centuryHideTooltip, 3000);
 }
 
 if (centuryHelpBtn) {
@@ -852,8 +925,11 @@ if (centuryExplainModalCloseBtn) {
 if (centuryPanel) {
   centuryPanel.addEventListener("pointerdown", (event) => {
     if (!centuryExplainMode) return;
-    const target = event.target && event.target.closest ? event.target.closest("[data-century-explain]") : null;
-    if (!target || !target.matches("button:disabled, input:disabled, select:disabled, textarea:disabled")) return;
+    const target = Array.from(centuryPanel.querySelectorAll("[data-century-explain]:disabled")).find((node) => {
+      const bounds = node.getBoundingClientRect();
+      return event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+    });
+    if (!target) return;
     event.preventDefault();
     event.stopPropagation();
     showCenturyExplanationFromNode(target);
@@ -862,18 +938,37 @@ if (centuryPanel) {
   centuryPanel.addEventListener("click", (event) => {
     if (!centuryExplainMode) return;
     const target = event.target && event.target.closest ? event.target.closest("[data-century-explain]") : null;
-    const control = event.target && event.target.closest ? event.target.closest("button, input, select, textarea, a") : null;
+    const control = event.target && event.target.closest ? event.target.closest("button, input, select, textarea, a, summary") : null;
     if (control === centuryExplainBtn || control === centuryHelpBtn) return;
     if (!target && !control) return;
     event.preventDefault();
     event.stopPropagation();
     if (target) showCenturyExplanationFromNode(target);
   }, true);
+
+  centuryPanel.addEventListener("pointerover", (event) => {
+    if (event.pointerType === "mouse") centuryShowTooltip(centuryTooltipTarget(event));
+  });
+  centuryPanel.addEventListener("pointerout", (event) => {
+    if (centuryTooltipTarget(event)) centuryHideTooltip();
+  });
+  centuryPanel.addEventListener("click", (event) => centuryShowTooltip(centuryTooltipTarget(event)));
 }
+
+document.addEventListener("pointerdown", (event) => {
+  if (!centuryPanel || centuryPanel.classList.contains("hidden") || centuryExplainMode) return;
+  if (!event.target?.closest?.("[data-century-tooltip]")) centuryHideTooltip();
+  if (!centuryActions || centuryActions.hidden || centuryActions.contains(event.target)) return;
+  if (event.target?.closest?.('[aria-controls="centuryActions"], #centuryHelpBtn, #centuryExplainBtn, .modal')) return;
+  centuryCloseActionDrawer();
+}, true);
+
+window.addEventListener("scroll", centuryHideTooltip, true);
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !centuryPanel || centuryPanel.classList.contains("hidden")) return;
   let handled = false;
+  centuryHideTooltip();
   if (centuryExplainMode) {
     setCenturyExplainMode(false);
     handled = true;
@@ -884,5 +979,9 @@ document.addEventListener("keydown", (event) => {
       handled = true;
     }
   });
+  if (!handled && centuryActions && !centuryActions.hidden && !centuryActions.classList.contains("is-required")) {
+    centuryCloseActionDrawer();
+    handled = true;
+  }
   if (handled) event.preventDefault();
 });

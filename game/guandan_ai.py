@@ -440,6 +440,10 @@ def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
     teammate = _teammate_lead_context(state, player_id)
     if not teammate:
         return 0.0
+    if _next_opponent_closeout_pressure(state, player_id) > 0.0:
+        # Keeping a teammate's low single on top does not protect the team
+        # when the next opponent can use it to finish before we act again.
+        return 0.0
     if _short_runner_has_natural_teammate_overtake(state, player_id):
         # After the opponents take first place, our short runner needs second
         # place. Do not reward waiting behind a longer partner when a natural
@@ -4430,7 +4434,9 @@ def _next_opponent_closeout_pressure(state: Dict, player_id: str) -> float:
     if not current_trick:
         return 0.0
     leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+    if leader is None:
+        return 0.0
+    if int(state.get("pass_count", 0)) + 1 >= _CORE._trick_passes_needed(state):
         return 0.0
 
     next_pid = _next_active_after(state, player_id)
@@ -4445,6 +4451,21 @@ def _next_opponent_closeout_pressure(state: Dict, player_id: str) -> float:
     next_left = len(state["players"].get(next_pid, {}).get("hand", []))
     if next_left != combo_size:
         return 0.0
+
+    finish_probability = 1.0
+    if _team_of(state, leader) == _team_of(state, player_id):
+        if combo_type != "single":
+            return 0.0
+        # A teammate's finish still leaves the remaining seats a response.
+        # Use unseen cards/public ownership, never the next enemy's actual
+        # singleton, to decide whether we must cover that response window.
+        finish_probability = sum(
+            probability for value, probability in
+            _target_single_value_distribution(state, player_id, next_pid)
+            if value > current_combo.get("rank_value", 0)
+        )
+        if finish_probability <= 0.0:
+            return 0.0
 
     pressure = {
         "single": 30.0,
@@ -4472,7 +4493,7 @@ def _next_opponent_closeout_pressure(state: Dict, player_id: str) -> float:
         for pid in state.get("turn_order", [])
     ):
         pressure += 7.0
-    return min(45.0, pressure)
+    return min(45.0, pressure) * finish_probability
 
 
 def _active_enemy_leader(state: Dict, player_id: str) -> Optional[str]:
@@ -5398,6 +5419,93 @@ def _teammate_safe_overtake_profile(
     bonus *= max(0.45, 1.0 - reply_risk * 2.2)
     relief_scale = min(0.92, 0.55 + visibility * 0.28 + max(0.0, 0.12 - reply_risk) * 1.5)
     return {"qualified": 1.0, "bonus": bonus, "relief_scale": relief_scale}
+
+
+def _multi_bomb_takeover_profile(state: Dict, player_id: str) -> Dict:
+    """Spend the smallest of three natural bombs to release ordinary groups.
+
+    A high rank is not a scarce last control when two independent bombs can
+    remain. Verify a physical allocation of both reserves and the follow-up;
+    overlapping wildcards or subsets of one large bomb are not extra control.
+    """
+    current = state.get("current_trick") or {}
+    leader = current.get("player_id")
+    if not leader or _active_enemy_leader(state, player_id) is None:
+        return {}
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if len(hand) < 17:
+        return {}
+    if any(
+        not state["players"][pid].get("finished")
+        and _team_of(state, pid) != _team_of(state, player_id)
+        and len(state["players"][pid].get("hand", [])) <= 6
+        for pid in state.get("turn_order", [])
+    ):
+        # Short-hand defense has separate closeout and retained-bomb policies.
+        # Ordinary follow-up groups alone do not establish a safe route there.
+        return {}
+    current_combo = current.get("combo") or {}
+    current_type = current_combo.get("type")
+    level_rank = state["level_rank"]
+    if current_type == "single" and current_combo.get("rank_value", 0) < CONTROL_SINGLE_VALUE_MIN:
+        return {}
+    if current_type in ("pair", "three") and current_combo.get("rank_value", 0) < _point_order_value(13, level_rank):
+        return {}
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("multi_bomb_takeovers", {})
+    cache_key = _heuristic_score_cache_key(state, player_id, 0)
+    if cache_key in cache:
+        return dict(cache[cache_key])
+    cache[cache_key] = {}
+    if (_teammate_can_retake_current_lane(state, player_id)
+            or _safe_teammate_control_wait_probability(state, player_id) >= 0.25):
+        return {}
+    minimal = _minimal_bomb_response(hand, level_rank, current_combo, state.get("config", {}))
+    if not minimal:
+        return {}
+    hand_map = _map_hand_by_id(hand)
+    # A wildcard is shared with ordinary routes; creating another soft bomb
+    # does not make it redundant control that can fund this early takeover.
+    if any(_is_wild(hand_map[cid], level_rank) for cid in minimal):
+        return {}
+    remaining = _remove_cards(hand, minimal)
+    followup_size = 0
+    checked_tails = set()
+    for first in _find_bomb_candidates(remaining, level_rank):
+        if any(_is_wild(hand_map[cid], level_rank) for cid in first["cards"]):
+            continue
+        after_first = _remove_cards(remaining, first["cards"])
+        for second in _find_bomb_candidates(after_first, level_rank):
+            if any(_is_wild(hand_map[cid], level_rank) for cid in second["cards"]):
+                continue
+            tail = _remove_cards(after_first, second["cards"])
+            tail_key = tuple(sorted(card["id"] for card in tail))
+            if tail_key in checked_tails:
+                continue
+            checked_tails.add(tail_key)
+            for option, combo, _score in _decomposition_candidates(tail, level_rank):
+                if combo.get("type") in STRUCTURED_RUNOUT_TYPES:
+                    followup_size = max(followup_size, len(option))
+            if followup_size >= 5:
+                break
+        if followup_size >= 5:
+            break
+    if followup_size < 5:
+        return {}
+
+    # Natural, inexpensive coverage has priority over spending any bomb.
+    for option in _list_hint_options(state, player_id):
+        play_cards = [hand_map[cid] for cid in option]
+        combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+        if (combo and combo.get("type") not in BOMB_TYPES
+                and not _cards_use_special_material(play_cards, level_rank)
+                and _response_material_cost(state, player_id, option, combo) <= 3.2
+                and _group_fragment_penalty(hand, option, level_rank, combo) <= 1.2
+                and _control_group_break_penalty(hand, option, level_rank) <= 1.0):
+            return {}
+    result = {"cards": tuple(sorted(minimal)),
+              "tempo": 10.0 + min(4.0, followup_size * 0.6)}
+    cache[cache_key] = result
+    return dict(result)
 
 
 def _high_single_bomb_profile(state: Dict, player_id: str) -> Optional[Dict]:
@@ -13939,6 +14047,9 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
 
     leader = current_trick.get("player_id")
     components: Dict[str, float] = {}
+    next_closeout_pressure = _next_opponent_closeout_pressure(state, player_id)
+    if next_closeout_pressure > 0.001:
+        components["pass_next_enemy_closeout"] = -next_closeout_pressure
     if leader == teammate:
         protect = _teammate_protect_bonus(state, player_id)
         if protect > 0.001:
@@ -13976,10 +14087,6 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
         effective_pressure = double_down_pressure * max(0.18, 1.0 - immediate_backstop)
         components["pass_enemy_double_down_threat"] = -effective_pressure
 
-    next_closeout_pressure = _next_opponent_closeout_pressure(state, player_id)
-    if next_closeout_pressure > 0.001:
-        components["pass_next_enemy_closeout"] = -next_closeout_pressure
-
     overcall_penalty = _enemy_overcall_teammate_single_pass_penalty(state, player_id)
     if overcall_penalty > 0.001:
         components["pass_enemy_overcall"] = -overcall_penalty
@@ -13996,6 +14103,10 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
     lane_pressure = _enemy_lane_control_pressure(state, player_id)
     if lane_pressure > 0.001:
         components["pass_enemy_lane_control"] = -lane_pressure
+    multi_bomb = _multi_bomb_takeover_profile(state, player_id)
+    if multi_bomb:
+        components.pop("strategic_enemy_pass", None)
+        components["pass_multi_bomb_tempo"] = -multi_bomb["tempo"]
     cache[cache_key] = dict(components)
     return components
 
@@ -16303,7 +16414,8 @@ def _compute_bot_score_components(
                     rank_pressure = bomb_profile["rank_pressure"]
                     if rank_pressure <= 2.5:
                         components["cheap_bomb_pass_penalty"] = -(4.5 - rank_pressure * 1.2)
-                    elif rank_pressure >= 4.0 and leader_left > 6:
+                    elif (rank_pressure >= 4.0 and leader_left > 6
+                          and "pass_multi_bomb_tempo" not in components):
                         components["preserve_premium_bomb"] = (rank_pressure - 3.5) * 2.0
             tactical_pass_alarms = (
                 "pass_structure_concession",
@@ -16466,7 +16578,8 @@ def _compute_bot_score_components(
                     rank_pressure = 6.0 + _bomb_tier(combo) * 1.5
                 leader = _active_enemy_leader(state, bot_id)
                 leader_left = len(state["players"][leader]["hand"]) if leader else 99
-                if rank_pressure >= 4.0 and leader_left > 6:
+                if (rank_pressure >= 4.0 and leader_left > 6
+                        and "multi_bomb_tempo" not in shared_response):
                     components["premium_bomb_spend_penalty"] = -(rank_pressure - 3.5) * 2.0
     if combo.get("uses_wild"):
         components["wild_penalty"] = -2.0
@@ -17522,6 +17635,10 @@ def _shared_response_tactical_components(
     cheap_bomb = _shared_cheap_bomb_takeover_bonus(state, player_id, cards, combo)
     if cheap_bomb > 0.001:
         components["cheap_bomb_takeover"] = cheap_bomb
+    if combo.get("type") in BOMB_TYPES:
+        multi_bomb = _multi_bomb_takeover_profile(state, player_id)
+        if multi_bomb and tuple(sorted(cards)) == multi_bomb["cards"]:
+            components["multi_bomb_tempo"] = multi_bomb["tempo"]
     if combo.get("type") in BOMB_TYPES and len(features.get("remaining") or []) > 2:
         teammate_control = _safe_teammate_control_wait_probability(state, player_id)
         if teammate_control > 0.001:

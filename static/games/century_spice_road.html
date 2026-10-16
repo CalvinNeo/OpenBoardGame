@@ -1,32 +1,41 @@
 <template data-game-target="centurySpiceRoadPanel" data-game-mode="contents">
               <div class="century-header">
-                <div class="row">
-                  <div>Phase: <span id="centuryPhase">-</span></div>
-                  <div>Current Turn: <span id="centuryTurn">-</span></div>
-                  <div>Decks: <span id="centuryDecks">-</span></div>
-                  <div>Coins: <span id="centuryCoins">-</span></div>
-                </div>
+                <div id="centuryPrompt" class="century-prompt">Waiting for state…</div>
                 <div class="century-header-actions" id="centuryHeaderActions">
                   <button id="centuryHelpBtn" type="button">Help</button>
                   <button id="centuryExplainBtn" type="button">Explain</button>
                 </div>
               </div>
 
-              <div id="centuryPrompt" class="century-prompt">Waiting for state…</div>
-
-              <h3>Point Cards</h3>
-              <div id="centuryPointMarket" class="century-card-row"></div>
-
-              <h3>Merchant Cards</h3>
-              <div id="centuryMerchantMarket" class="century-card-row"></div>
-
-              <h3>Your Caravan</h3>
-              <div id="centuryYou" class="century-player-card"></div>
+              <div class="century-table-layout">
+                <div class="century-markets">
+                  <section>
+                    <h3>Point Cards</h3>
+                    <div id="centuryPointMarket" class="century-card-row"></div>
+                  </section>
+                  <section>
+                    <h3>Merchant Cards</h3>
+                    <div id="centuryMerchantMarket" class="century-card-row"></div>
+                  </section>
+                </div>
+                <div id="centuryYou" class="century-player-card"></div>
+              </div>
 
               <div id="centuryActions" class="century-actions" role="region" aria-label="Selected action" aria-live="polite" hidden></div>
 
-              <h3>Players</h3>
-              <div id="centuryPlayers" class="century-player-list"></div>
+              <section class="century-opponents">
+                <h3>Other Caravans</h3>
+                <div id="centuryPlayers" class="century-player-list"></div>
+              </section>
+              <details class="century-table-details">
+                <summary>Table info</summary>
+                <div class="row">
+                  <span>Phase: <strong id="centuryPhase">-</strong></span>
+                  <span>Turn: <strong id="centuryTurn">-</strong></span>
+                  <span>Decks: <strong id="centuryDecks">-</strong></span>
+                  <span>Coins: <span id="centuryCoins">-</span></span>
+                </div>
+              </details>
             </template>
 <template data-game-target="centuryHelpModal" data-game-mode="replace"><div id="centuryHelpModal" class="modal hidden" aria-hidden="true">
               <div class="modal-content century-modal">
