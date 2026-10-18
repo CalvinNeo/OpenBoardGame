@@ -341,13 +341,13 @@ const GAME_ASSETS = {
   },
   "wavelength": {
     "scripts": [
-      "/static/games/wavelength.js?v=app_v5"
+      "/static/games/wavelength.js?v=app_v6"
     ],
     "styles": [],
     "panel": "wavelengthPanel",
     "header": "showWavelengthHeaderActions",
-    "markup": "/static/games/wavelength.html?v=2",
-    "styleFragments": "/static/games/wavelength.css?v=2"
+    "markup": "/static/games/wavelength.html?v=3",
+    "styleFragments": "/static/games/wavelength.css?v=3"
   },
   "dumb_questions": {
     "scripts": [
@@ -877,7 +877,7 @@ const GAME_ASSETS = {
   },
   "ponzi_scheme": {
     "scripts": [
-      "/static/games/ponzi_scheme.js?v=2"
+      "/static/games/ponzi_scheme.js?v=3"
     ],
     "styles": [
       "/static/ponzi_scheme.css?v=2"

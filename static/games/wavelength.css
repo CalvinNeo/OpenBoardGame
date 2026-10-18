@@ -416,7 +416,7 @@
 
   .wavelength-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 11px;
     margin-top: 14px;
   }
@@ -531,6 +531,7 @@
   .wavelength-guess-pill {
     display: inline-flex;
     align-items: center;
+    flex: 1 1 auto;
     min-width: 0;
     max-width: 100%;
     padding: 5px 8px;
@@ -540,6 +541,7 @@
     font-size: 11px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
     overflow-wrap: anywhere;
   }
 

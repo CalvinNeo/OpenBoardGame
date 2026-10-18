@@ -15103,6 +15103,16 @@ def _mcts_score_actions(
     # Reuse this small panel at every depth. A deeper result only replaces the
     # checkpoint after ALL root actions have finished on the SAME worlds.
     panel_size = min(sims_per, confidence_min_pairs)
+    # With a timed search, reserve the configured visits for the target depth.
+    # Previously iterative-deepening checkpoints consumed that entire budget:
+    # 96 visits / (6 actions * 3 worlds) stopped at depth four even when several
+    # seconds remained and depth eight was requested. Pay for those complete
+    # checkpoints separately, retaining a finite visit cap as well as deadline.
+    checkpoint_visits = 0
+    if deadline is not None and cfg.get("bot_search_use_remaining_budget", True):
+        checkpoint_visits = effective_depth * panel_size * len(candidates)
+        total_visits_target += checkpoint_visits
+        report_stride = max(1, total_visits_target // 24)
     cost_guard = deadline is not None and bool(cfg.get("bot_mcts_cost_guard", True))
     minimum_depth = min(1, effective_depth)
     determinize_seconds = 0.0
@@ -15416,6 +15426,7 @@ def _mcts_score_actions(
         "completed_depth": completed_depth,
         "target_depth": effective_depth,
         "interrupted_depth": interrupted_depth,
+        "checkpoint_visits": checkpoint_visits,
     })
     _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
     return published_scored
@@ -18626,8 +18637,11 @@ def _build_bot_explain(
     if route_cache.get("exact_endgame"):
         method_meta = dict(method_meta or {})
         method_meta["exact_endgame"] = copy.deepcopy(route_cache["exact_endgame"])
-    if method == "exact_endgame":
-        panel = route_cache["exact_endgame"]
+    if route_cache.get("post_mcts_terminal"):
+        method_meta = dict(method_meta or {})
+        method_meta["post_mcts_terminal"] = copy.deepcopy(route_cache["post_mcts_terminal"])
+    if method in ("exact_endgame", "post_mcts_terminal"):
+        panel = route_cache["post_mcts_terminal" if method == "post_mcts_terminal" else "exact_endgame"]
         records = panel["candidates"]
         proven = panel.get("scope") in ("public_determined_endgame", "proven_public_runout")
         component = "proven_terminal_team_value" if proven else "sampled_terminal_team_value"

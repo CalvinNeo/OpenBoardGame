@@ -65,6 +65,11 @@ class EndgameSolver:
         self.teams = tuple(state["player_teams"][actor] for actor in self.order)
         if len(set(self.teams)) != 2 or any(self.teams.count(team) != 2 for team in self.teams):
             raise ValueError("two teams of two are required")
+        self.partners = tuple(
+            next(other for other in range(4)
+                 if other != actor and self.teams[other] == self.teams[actor])
+            for actor in range(4)
+        )
         self.observer_team = state["player_teams"][observer]
         self.levels = {team: data["level"] for team, data in state["teams"].items()}
         self.dealer_team = state["dealer_team"]
@@ -93,7 +98,19 @@ class EndgameSolver:
             value = self.terminal(order)
             for length in range(5):
                 possible_values.setdefault(order[:length], []).append(value)
+        # Finish prefixes determine both settlement and active turn order.
+        # Reuse these small tables at every node instead of scanning players
+        # again for each forced pass and terminal check.
+        self.terminal_values = {prefix: self.terminal(prefix) for prefix in possible_values}
         self.bounds = {prefix: (min(values), max(values)) for prefix, values in possible_values.items()}
+        self.next_actors = {
+            prefix: tuple(
+                next((actor + offset) % 4 for offset in range(1, 5)
+                     if (actor + offset) % 4 not in prefix)
+                for actor in range(4)
+            )
+            for prefix in possible_values if len(prefix) < 4
+        }
         current = state.get("current_trick")
         target = self.combo_id(current["combo"]) if current else -1
         for hand in self.cards:
@@ -206,20 +223,18 @@ class EndgameSolver:
             leader, target, passes = actor, combo, 0
         else:
             passes += 1
-            needed = sum(bool(hand) for hand in hands) - bool(hands[leader])
+            needed = 4 - len(finish) - bool(hands[leader])
             if passes >= needed:
-                next_actor = leader if hands[leader] else next(
-                    position for position, hand in enumerate(hands)
-                    if hand and self.teams[position] == self.teams[leader])
+                next_actor = leader if hands[leader] else self.partners[leader]
                 return hands, next_actor, -1, -1, 0, finish
-        next_actor = next((actor + offset) % 4 for offset in range(1, 5) if hands[(actor + offset) % 4])
+        next_actor = self.next_actors[finish][actor]
         return hands, next_actor, leader, target, passes, finish
 
     def value(self, node: Tuple, alpha: float, beta: float) -> float:
         self.nodes += 1
         if self.nodes % 64 == 0:
             self.check()
-        terminal = self.terminal(node[5])
+        terminal = self.terminal_values[node[5]]
         if terminal is not None:
             return terminal
         old_alpha, old_beta = alpha, beta
@@ -650,3 +665,129 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
     finally:
         result["elapsed_ms"] = (time.perf_counter() - started) * 1000.0
     return result
+
+
+def confirm_mcts_action(rules, state: Dict, observer: str, reference: Dict,
+                        proposal: Dict, deadline: Optional[float]) -> Dict:
+    """Experiment: compare a completed MCTS choice with the heuristic action.
+
+    The MCTS result is the incumbent. Never replace it using a partially
+    sampled/solved panel, a mixture of terminal and heuristic utilities, a tie,
+    or only one distinct sampled deal. This is not a public-information proof.
+    """
+    from game import guandan_trick as sampling
+
+    config = state.get("config", {})
+    result = {
+        "status": "disabled", "applied": False, "changed": False,
+        "reference": copy.deepcopy(reference), "proposal": copy.deepcopy(proposal),
+        "selected": copy.deepcopy(reference), "candidates": [],
+        "scope": "public_sampled_endgame", "solver": "exact_sampled_v1",
+        "value_model": "terminal_round_v1", "completed_worlds": 0,
+        "distinct_worlds": 0, "reused_worlds": 0, "nodes": 0,
+        "timing_ms": {"sampling": 0.0, "construction": 0.0, "search": 0.0},
+    }
+    if not config.get("bot_post_mcts_exact_enabled", False):
+        return result
+    if not reference or not proposal or _action_key(reference) == _action_key(proposal):
+        result.update(status="skipped", reason="same_or_missing_action")
+        return result
+    status = state.get("_ai_eval_cache", {}).get("mcts_anytime", {})
+    if (not status.get("completed_depth") or status.get("fallback_to_reference")
+            or status.get("completed_rounds", 0) < 3):
+        result.update(status="skipped", reason="no_completed_mcts_comparison")
+        return result
+    total = sum(len(player["hand"]) for player in state["players"].values())
+    maximum = min(28, int(config.get("bot_post_mcts_exact_max_cards", 28)))
+    if state.get("phase") != "playing" or not 24 < total <= maximum:
+        result.update(status="skipped", reason="outside_near_endgame_scope")
+        return result
+    count = int(config.get("bot_post_mcts_exact_worlds", 12))
+    if not 4 <= count <= 32:
+        result.update(status="skipped", reason="invalid_fixed_panel_size")
+        return result
+    started = time.perf_counter()
+    remaining = deadline - started if deadline is not None else 0.0
+    minimum = max(0.05, float(config.get("bot_post_mcts_exact_min_remaining_ms", 350)) / 1000.0)
+    configured = max(0.0, float(config.get("bot_post_mcts_exact_time_ms", 1200)) / 1000.0)
+    if remaining < minimum or configured <= 0.0:
+        result.update(status="skipped", reason="insufficient_remaining_budget")
+        return result
+    stop = started + min(configured, remaining * 0.45)
+    budget = sampling.TrickBudget(stop)
+    node_limit = max(1, int(config.get("bot_exact_endgame_node_limit", 500000)))
+    result.update(status="incomplete", requested_worlds=count,
+                  budget_ms=(stop - started) * 1000.0,
+                  sampling={"phase": "post_mcts_terminal_verification_v1",
+                            "history": "full", "proposals": config.get("bot_determinize_samples", 5)})
+    rows = []
+    solved = {}
+    stage = "sampling"
+    stage_started = started
+
+    def switch_stage(name):
+        nonlocal stage, stage_started
+        now = time.perf_counter()
+        result["timing_ms"][stage] += (now - stage_started) * 1000.0
+        stage, stage_started = name, now
+
+    try:
+        worlds = sampling.public_worlds(
+            state, observer, count, budget,
+            phase="post_mcts_terminal_verification_v1", full_history=True,
+        )
+        budget.check()
+        if len(worlds) != count:
+            raise sampling.IncompleteTrick("incomplete_fixed_world_panel")
+        actions = [copy.deepcopy(reference), copy.deepcopy(proposal)]
+        for world in worlds:
+            budget.check()
+            key = _world_key(world)
+            if key in solved:
+                row = solved[key]
+                result["reused_worlds"] += 1
+            else:
+                switch_stage("construction")
+                solver = EndgameSolver(rules, world, observer, stop,
+                                       node_limit - result["nodes"])
+                budget.check()
+                switch_stage("search")
+                try:
+                    row = solver.root_values(actions)
+                finally:
+                    result["nodes"] += solver.nodes
+                budget.check()
+                if len(row) != 2 or not all(math.isfinite(value) for value in row):
+                    raise ValueError("invalid_terminal_row")
+                solved[key] = row
+                result["distinct_worlds"] += 1
+            rows.append(row)
+            result["completed_worlds"] += 1
+        budget.check()
+        before = [row[0] for row in rows]
+        after = [row[1] for row in rows]
+        gain, lower_gain = _paired_gain(before, after)
+        accepted = result["distinct_worlds"] >= 2 and lower_gain > 1e-9
+        records = [
+            {"action": action, "world_values": values, "value": sum(values) / count}
+            for action, values in zip(actions, (before, after))
+        ]
+        budget.check()
+        result.update(
+            status="complete", candidates=records, paired_gain=gain,
+            paired_gain_lower=lower_gain, confidence_z=1.64,
+            evidence_model="approximate_paired_lower_bound_v1", applied=accepted,
+            changed=accepted, selected=copy.deepcopy(proposal if accepted else reference),
+            reason=("paired_terminal_gain" if accepted else
+                    "insufficient_distinct_worlds" if result["distinct_worlds"] < 2 else
+                    "equal_terminal_values" if before == after else "insufficient_paired_gain"),
+        )
+    except (IncompleteEndgame, sampling.IncompleteTrick, ValueError) as error:
+        # Nothing from an incomplete panel may participate in action ranking.
+        result.update(reason=str(error), candidates=[], applied=False, changed=False,
+                      selected=copy.deepcopy(reference))
+    finally:
+        switch_stage(stage)
+        result["elapsed_ms"] = (time.perf_counter() - started) * 1000.0
+    return result
+

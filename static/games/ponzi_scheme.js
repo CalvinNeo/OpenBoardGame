@@ -45,6 +45,7 @@
     let tipTimer = null;
     let tipHideTimer = null;
     let touchStart = null;
+    let selectionPointer = null;
     let inputKind = "mouse";
     const openDetails = new Set();
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[char]));
@@ -230,9 +231,10 @@
     }
 
     function decorateTips() {
-        // Separate information buttons stay enabled even beside disabled game actions.
+        // Explain mode uses the existing game controls as targets. Keep their
+        // details attached to the control without adding a separate info button
+        // to every card, industry, or action area.
         panel.querySelectorAll("button[data-ps-explain]").forEach(control => {
-            if (["pass", "target", "amount"].includes(control.dataset.psAction)) return;
             let text = explanations[control.dataset.psExplain];
             if (control.dataset.card) text = describeCard(view.market.find(card => card.id === control.dataset.card));
             if (control.dataset.industry) {
@@ -244,17 +246,7 @@
                 text = `${spec.name}：花费 ${spec.cost} 单位现金获得 ${spec.points} 分。${explanations.luxury}`;
             }
             if (control.dataset.psAction === "amount") text = "秘密报价调整：以现金为单位增减报价，不会发送信封。选择好双方共同行业后，点击 Send offer 才会提交。";
-            const wrapper = document.createElement("div");
-            wrapper.className = "ponzi-scheme-control" + (control.classList.contains("ponzi-scheme-primary") ? " is-primary-control" : "");
-            if (control.dataset.card) wrapper.classList.add("is-card-control");
-            control.replaceWith(wrapper);
-            wrapper.appendChild(control);
-            const info = document.createElement("button");
-            info.type = "button";
-            info.className = "ponzi-scheme-info";
-            info.textContent = "ⓘ";
-            addTip(info, text);
-            wrapper.appendChild(info);
+            if (text) control.dataset.psExplainText = text;
         });
         const mark = (selector, text) => panel.querySelectorAll(selector).forEach(target => addTip(target, text));
         mark(".ponzi-scheme-round", "轮数：当前进行的完整轮次。每轮募资、交易、调整市场并支付到期利息，直到出现破产。 ");
@@ -419,7 +411,7 @@
             <p><strong>⭐ 计分</strong>：每个行业 n 个 = n(n+1)/2 分：0／1／2／3／4／5／6 个对应 0／1／3／6／10／15／21 分。基础模式现金 0–29／30–55／56–77／78–95／96+ 对应 0／1／2／3／4 分。同分时最大本金资金牌较高者胜，再同则共享胜利。全员破产时无人获胜。</p>
             <p><strong>💎 进阶</strong>：发起交易的机会可改为购买一件奢侈品：💍30→1分、🚘56→2分、🛥️78→3分、🏙️96→4分。每件唯一，不能转卖；进阶现金不计分。</p>
             <p><strong>版本</strong>：四类行业各 15 个，72 张资金牌（9 起始、47 普通、16 熊）。默认采用作者补充的首轮跳过交易；房间可开启 First-round trading。牌表来自可追溯的 MIT 许可转录，并核对规则书示例与作者勘误。</p>
-            <p><strong>Controls</strong>：点选后 Confirm，点击空白或 Esc 取消；Close、Esc 或对话框外关闭弹窗。悬停或聚焦徽标／ⓘ 查看即时说明，触摸轻点后显示三秒，再点重新计时。说明入口不会执行游戏操作。Explain 模式只展示说明，灰色按钮也可点，按 Esc 退出。</p>
+            <p><strong>Controls</strong>：点选后 Confirm，点击空白或 Esc 取消；Close、Esc 或对话框外关闭弹窗。点击 Explain 后再点选板块、卡牌或区域查看说明；图标和缩写可悬停或聚焦查看即时提示，手机轻点后显示三秒，再点重新计时。Explain 模式只展示说明，灰色按钮也可点，按 Esc 退出。</p>
             <p><a href="https://cdn.1j1ju.com/medias/0c/7f/67-ponzi-scheme-rulebook.pdf" target="_blank" rel="noopener noreferrer">Rulebook</a> · <a href="https://www.flyingv.cc/projects/4303/comments" target="_blank" rel="noopener noreferrer">Designer’s corrections</a></p>`, true);
     });
     explainButton.addEventListener("click", () => setExplain(!explaining));
@@ -427,7 +419,7 @@
     dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
 
     function explainTarget(target) {
-        const text = target && (target.dataset.psTip || explanations[target.dataset.psExplain]);
+        const text = target && (target.dataset.psExplainText || target.dataset.psTip || explanations[target.dataset.psExplain]);
         if (text) { setExplain(false); openDialog("Explain", text); }
     }
     document.addEventListener("pointerdown", event => {
@@ -450,9 +442,20 @@
         event.preventDefault(); event.stopImmediatePropagation();
         if (panel.contains(event.target)) explainTarget(event.target.closest("[data-ps-explain]"));
     }, true);
+    const isInteractiveSelectionTarget = target => target?.closest?.("button, input, select, summary, a, dialog, label, [data-ps-tip]");
     panel.addEventListener("pointerdown", event => {
-        if (!view || explaining || pending || event.ponziTipDismissed || event.target.closest("button, input, select, summary, a, dialog, label, [data-ps-tip]")) return;
-        if (selectedCard || selectedIndustry || selectedTarget) { resetSelection(); render(); }
+        if (!view || explaining || pending || !(selectedCard || selectedIndustry || selectedTarget) || isInteractiveSelectionTarget(event.target)) return;
+        // Defer clearing until pointerup. A touch that moves is a scroll gesture,
+        // while a short, stationary tap is an intentional blank-area click.
+        selectionPointer = {
+            id: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            time: Date.now(),
+            pointerType: event.pointerType,
+            moved: false,
+            tipDismissed: Boolean(event.ponziTipDismissed),
+        };
     });
     document.addEventListener("keydown", event => {
         if (event.key === "Tab") inputKind = "keyboard";
@@ -492,16 +495,29 @@
         }
     }, true);
     document.addEventListener("pointermove", event => {
+        if (selectionPointer?.id === event.pointerId) {
+            const threshold = selectionPointer.pointerType === "mouse" ? 4 : 10;
+            if (Math.hypot(event.clientX - selectionPointer.x, event.clientY - selectionPointer.y) > threshold) selectionPointer.moved = true;
+        }
         if (touchStart?.id === event.pointerId && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 10) { touchStart.moved = true; hideImmediateTip(); }
     }, true);
     document.addEventListener("pointerup", event => {
+        if (selectionPointer?.id === event.pointerId) {
+            const start = selectionPointer;
+            selectionPointer = null;
+            const intentionalTap = !start.moved && !start.tipDismissed && Date.now() - start.time < 700;
+            if (intentionalTap && panel.contains(event.target) && !isInteractiveSelectionTarget(event.target) && view && !explaining && !pending) {
+                resetSelection();
+                render();
+            }
+        }
         if (!touchStart || touchStart.id !== event.pointerId) return;
         const start = touchStart; touchStart = null;
         if (!start.moved && Date.now() - start.time < 700 && start.target.isConnected && !explaining) {
             event.preventDefault(); event.stopImmediatePropagation(); showImmediateTip(start.target, true);
         }
     }, true);
-    document.addEventListener("pointercancel", () => { touchStart = null; }, true);
+    document.addEventListener("pointercancel", () => { touchStart = null; selectionPointer = null; }, true);
     document.addEventListener("click", event => {
         const target = event.target.closest("#ponziSchemePanel [data-ps-tip]");
         if (!target || explaining) return;
@@ -512,7 +528,7 @@
     document.addEventListener("scroll", () => { if (inputKind !== "touch") hideImmediateTip(); }, true);
 
     function clearState() {
-        hideImmediateTip(); touchStart = null;
+        hideImmediateTip(); touchStart = null; selectionPointer = null;
         view = null; signature = null; pending = false; suppressedPointer = null;
         resetSelection(); setExplain(false); openDetails.clear(); window.clearTimeout(pendingTimer);
         if (dialog.open) dialog.close();

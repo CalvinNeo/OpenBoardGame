@@ -6,7 +6,7 @@ let wavelengthPreviewTimer = null;
 let wavelengthTooltipTimer = null;
 
 const wavelengthById = (id) => document.getElementById(id);
-const wavelengthPanel = wavelengthById("wavelengthPanel");
+const wavelengthGamePanel = wavelengthById("wavelengthPanel");
 const wavelengthHeaderActions = wavelengthById("wavelengthHeaderActions");
 const wavelengthHelpBtn = wavelengthById("wavelengthHelpBtn");
 const wavelengthExplainBtn = wavelengthById("wavelengthExplainBtn");
@@ -147,11 +147,11 @@ function wavelengthRenderTicks() {
 function wavelengthRenderZones(center) {
   if (!wavelengthScoreZones) return;
   wavelengthScoreZones.replaceChildren();
-  if (!Number.isFinite(Number(center))) return;
+  if (typeof center !== "number" || !Number.isFinite(center)) return;
   const bands = [
-    { score: 2, width: 0.38, className: "wavelength-score-zone--2" },
-    { score: 3, width: 0.24, className: "wavelength-score-zone--3" },
-    { score: 4, width: 0.12, className: "wavelength-score-zone--4" },
+    { score: 2, width: 0.38, labelRadius: 205, className: "wavelength-score-zone--2" },
+    { score: 3, width: 0.24, labelRadius: 154, className: "wavelength-score-zone--3" },
+    { score: 4, width: 0.12, labelRadius: 100, className: "wavelength-score-zone--4" },
   ];
   bands.forEach((band) => {
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -160,7 +160,7 @@ function wavelengthRenderZones(center) {
     path.classList.add("wavelength-score-zone", band.className);
     path.setAttribute("aria-label", `${band.score} point zone`);
     wavelengthScoreZones.appendChild(path);
-    const labelPoint = wavelengthPolar(Number(center), 150);
+    const labelPoint = wavelengthPolar(Number(center), band.labelRadius);
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
     label.textContent = `${band.score} pts`;
     label.setAttribute("x", labelPoint.x); label.setAttribute("y", labelPoint.y);
@@ -284,9 +284,10 @@ function renderWavelengthGameState(data) {
   const right = wavelengthById("wavelengthRightLabel"); if (right) right.textContent = card.right_label || "Right";
   const spectrum = wavelengthById("wavelengthCard"); if (spectrum) spectrum.textContent = `${card.left_label || "Left"} ↔ ${card.right_label || "Right"}`;
   const clue = wavelengthById("wavelengthClue"); if (clue) clue.textContent = view.clue_text || "Waiting for the Psychic…";
-  const targetVisible = Number.isFinite(Number(view.target_center));
+  const targetVisible = typeof view.target_center === "number" && Number.isFinite(view.target_center);
   if (wavelengthTargetBadge) wavelengthTargetBadge.textContent = targetVisible ? `Target · ${Number(view.target_center).toFixed(2)}` : "Target hidden";
   if (wavelengthTargetMarker) wavelengthTargetMarker.classList.toggle("is-hidden-target", !targetVisible);
+  if (wavelengthTargetMarker && targetVisible) wavelengthTargetMarker.setAttribute("transform", `rotate(${Number(view.target_center) * 90} 300 290)`);
   wavelengthRenderZones(targetVisible ? Number(view.target_center) : null);
   const pos = phase === "team_guess" ? (Number.isFinite(Number(view.team_guess_preview_pos)) ? view.team_guess_preview_pos : wavelengthGuessPosition) : view.team_guess_pos;
   wavelengthSetNeedle(Number.isFinite(Number(pos)) ? Number(pos) : 0);
@@ -326,6 +327,15 @@ function wavelengthShowTooltip(target) {
   wavelengthTooltip.style.left = `${Math.max(8, Math.min(window.innerWidth - wavelengthTooltip.offsetWidth - 8, rect.left))}px`;
   wavelengthTooltip.style.top = `${Math.min(window.innerHeight - wavelengthTooltip.offsetHeight - 8, rect.bottom + 8)}px`;
   wavelengthTooltipTimer = setTimeout(() => { if (wavelengthTooltip) wavelengthTooltip.hidden = true; }, 3000);
+}
+
+function wavelengthExplainTargetAtPoint(clientX, clientY) {
+  if (!wavelengthGamePanel) return null;
+  const candidates = [...wavelengthGamePanel.querySelectorAll("[data-wavelength-explain]")].reverse();
+  return candidates.find((candidate) => {
+    const rect = candidate.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  }) || null;
 }
 
 function wavelengthSendPreview(pos) {
@@ -373,10 +383,11 @@ if (wavelengthDial) {
 document.addEventListener("pointerdown", (event) => {
   const source = event.target.closest?.("[data-wavelength-tip]");
   if (source && !wavelengthExplainMode) wavelengthShowTooltip(source);
-  if (!wavelengthExplainMode || !wavelengthPanel?.contains(event.target)) return;
+  if (!wavelengthExplainMode || !wavelengthGamePanel?.contains(event.target)) return;
   if (event.target.closest("#wavelengthHelpBtn, #wavelengthExplainBtn, #wavelengthHelpModal, #wavelengthExplainModal")) return;
   event.preventDefault(); event.stopImmediatePropagation();
-  const target = event.target.closest("[data-wavelength-explain]");
+  const target = event.target.closest?.("[data-wavelength-explain]")
+    || wavelengthExplainTargetAtPoint(event.clientX, event.clientY);
   if (target) wavelengthShowExplanation(target.dataset.wavelengthExplain);
 }, true);
 document.addEventListener("pointerover", (event) => { const target = event.target.closest?.("[data-wavelength-tip]"); if (event.pointerType === "mouse" && target && !wavelengthExplainMode) wavelengthShowTooltip(target); }, true);

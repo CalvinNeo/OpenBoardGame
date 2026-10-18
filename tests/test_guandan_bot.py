@@ -4927,6 +4927,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
     def test_short_mcts_finishes_shared_root_panel_then_runs_one_step(self):
         state, big = self._make_state()
+        # This regression fixes the whole search at 18 visits: nine root
+        # checks and nine one-step rollouts, without checkpoint extension.
+        state["config"]["bot_search_use_remaining_budget"] = False
         bomb = [
             card["id"]
             for card in state["players"]["bot"]["hand"]

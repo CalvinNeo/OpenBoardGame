@@ -265,6 +265,9 @@ class GuandanSharedTeammateWaitTests(unittest.TestCase):
             state, _cards = self.case(
                 bot_mode="auto", bot_endgame_threshold=0, bot_think_time_ms=2000,
                 bot_mcts_sims=9, bot_mcts_depth=1, bot_mcts_tree_ply=0,
+                # Keep nine visits as the total budget so this specifically
+                # exercises the root-only override guard, not deeper replies.
+                bot_search_use_remaining_budget=False,
             )
             with self.subTest(seed=seed), \
                  mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(seed)), \
@@ -277,6 +280,23 @@ class GuandanSharedTeammateWaitTests(unittest.TestCase):
             self.assertEqual(explain["method"], "heuristic")
             self.assertEqual(explain["method_details"]["mcts_completed_depth"], 0)
             self.assertEqual(explain["method_details"]["mcts_completed_rounds"], 3)
+
+    def test_extended_mcts_budget_preserves_teammate_wait(self):
+        real_random = random.Random
+        for seed in (0, 1, 7):
+            state, _cards = self.case(
+                bot_mode="auto", bot_endgame_threshold=0, bot_think_time_ms=2000,
+                bot_mcts_sims=9, bot_mcts_depth=1, bot_mcts_tree_ply=0,
+                bot_search_use_remaining_budget=True,
+            )
+            with self.subTest(seed=seed), \
+                 mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(seed)), \
+                 mock.patch.object(guandan_ai.time, "perf_counter", return_value=0.0):
+                action = guandan.GuandanGame.bot_move(state, "bot2")
+                self.assertEqual(action["type"], "pass")
+                details = state["bot_explain"]["bot2"]["method_details"]
+                self.assertGreater(details["mcts_completed_depth"], 0)
+                self.assertGreaterEqual(details["mcts_completed_rounds"], 3)
 
     def test_extra_wait_preference_is_disabled_for_short_enemy_or_own_closeout(self):
         base, cards = self.case()

@@ -2,6 +2,24 @@
 
 入口：`python3 scripts/benchmark_guandan.py`，只用 Python 标准库。历次改进、关键复盘与评测结果统一见 [guandan_ai_review.md](guandan_ai_review.md)。
 
+## MCTS 目标层预算与残局提速候选：2026-10-18
+
+冻结目录 `.data/guandan_benchmark/strength-20261018/`：`baseline/` 为本轮开始前的资源保护 v2，`candidate/` 增加 MCTS 检查点预算及精确残局名次／下家预计算。`plan.json` 与 `PROTOCOL.md` 在对战前固定开发 seed `20261115` 的 6 对／12 局，以及正式新留出 seed `20261118` 的 90 对／180 局；双方 `auto`、公开信息、6000ms、零额外预算。开发完整结束，净收益零，全部 1,082 个动作重放通过；18 次可直接配对的实际采样搜索到达目标深度 15／9 次，但最终动作相同。870 项掼蛋和 30 项房间回归通过。
+
+正式开跑前在 `formal-6shards/` 单独声明六片各 15 对，替代原三片各 30 对以减少运行时间，seed、样本总量、级牌分配、双方源码和推广门槛保持不变。该目录保存正式 plan、runner、预定协议及运行负载；开发文件未改。正式强度结论待完整批次及重放核验，不把此前重复使用的 `20261109` 牌局并入新留出样本。
+
+MCTS 有 deadline 且 `bot_search_use_remaining_budget=true` 时，原有效模拟次数现在是**目标层访问预算**，另加 `目标深度 × 固定面板世界数 × 初始根候选数` 次中间层访问。六根候选、三个世界、目标深度八的默认场景从总计 96 次增至 240 次，仍受原 deadline 限制；无 deadline 或关闭该选项时保持原总访问上限。`--clock fixed` 只是冻结计时器，调用仍提供 deadline，因此也采用增加后的有限上限；需要复现旧有限次数语义时，应给两侧明确设置 `bot_search_use_remaining_budget=false`。不同版本的同一 `bot_mcts_sims` 数字不再保证相同总计算量。
+
+两个旧开发节点从深度 4／3 个世界、约 0.74 秒，变为深度 8／22 与 38 个配对世界、5.33 与 3.76 秒，分别不再拆 QQQQ 回单 J、或以 AAAA 压对手三带二。只比较了决策，没有把局部改选当作对战胜率证据。精确残局另对照 102 状态×三轮，全部根动作、终局值及 4,777,998 个总节点一致，合计耗时 10099→7197ms（约 −28.7%）；它只证明求解效率。复现材料位于 `tmp/guandan-strength-20261018/mcts-depth/` 和 `endgame/`，完整机制与边界见复盘文档。
+
+## 资源保护与残局搜索 v2：2026-10-18
+
+冻结候选 `.data/guandan_benchmark/strength-20261017/candidate-v2/` 对上一轮 `.data/guandan_benchmark/strength-next-20261016/candidate/`，新增不完整终局／等值后浅搜的百搭和王资源保护，以及保持根动作终局值一致的离散收益二分求解。双方游戏规则 AST、有效配置、公开信息、`auto`／6000ms／零额外预算一致。
+
+复用 seed `20261109` 的 90 对／180 局完整完成：头游 90 胜／90 负，净升级 +3，平均 **+0.01667/局**，3 正／0 负／87 零对（正收益索引 74、75、81）。配对 bootstrap 95% 区间 `[0,+0.03889]`，双侧精确符号翻转 `p=0.25`，仍为 **`inconclusive`**。这批 seed 已参与验证及改动诊断，不能作为独立留出证据；后续棋力验收须换用未参与开发的固定牌局。上一轮 −1/180 对应另一基线，不能与本批 +3/180 直接写成同一对照的前后改善。
+
+合并报告、完整 trace 和审计位于 `.data/guandan_benchmark/strength-20261017/validation-v2/`：`full-90.json`、`full-90.games.jsonl`、`full-90.trace.jsonl`、`independent-audit.json`。上级目录 `merge-audit-v2.py` 复用既有逐动作重放方式，确认 17,195 个动作合法，公开观察、配对发牌、轨迹、结算、源码 manifest、配置、摘要和诊断一致。未找到该批开跑前的协议或负载文件，报告明确保留这一限制；没有事后补造预注册。候选／基线 mean 425.6／424.8ms、p95 1983／1970ms，不能由此声称整体提速。90 个开发残局的独立求解对照仅证明动作值相同且节点下降 8.45%，不扩充对战样本量。
+
 ## 短手采样与公开收官候选：2026-10-16
 
 冻结目录 `.data/guandan_benchmark/strength-next-20261016/`：`baseline/` 为规则及公开归属修复后的 v5，`candidate/` 新增成组尾牌提议／先验和公开收官证明。两侧保持完整启发式、`auto`／公开信息／6000ms／零额外预算；仅候选新增 `bot_determinize_retained_group_odds=16` 和 `bot_determinize_group_proposal_fraction=0.5`，其余有效配置及游戏规则一致。

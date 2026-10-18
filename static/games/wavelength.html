@@ -39,8 +39,8 @@
       <main class="wavelength-board" aria-label="Wavelength game board">
         <section class="wavelength-wheel-card" data-wavelength-explain="dial">
           <div class="wavelength-wheel-header">
-            <div>
-              <span class="wavelength-eyebrow">🎯 Target dial</span>
+            <div data-wavelength-explain="spectrum">
+              <span class="wavelength-eyebrow" data-wavelength-tip="Target (🎯) is hidden until the reveal">🎯 Target dial</span>
               <h3>Find the frequency</h3>
             </div>
             <span id="wavelengthTarget" class="wavelength-target-badge" data-wavelength-explain="target">Target hidden</span>
@@ -125,7 +125,7 @@
 
         <section class="wavelength-actions" aria-label="Round actions">
           <section id="wavelengthClueCard" class="wavelength-action-card" data-wavelength-explain="clue">
-            <div class="wavelength-action-title"><span>🔮</span> Psychic clue</div>
+            <div class="wavelength-action-title"><span data-wavelength-tip="Psychic (🔮) sees the hidden target">🔮</span> Psychic clue</div>
             <div class="wavelength-action-copy" id="wavelengthClueCardCopy">Give your team one short clue for the hidden target.</div>
             <label for="wavelengthClueInput">Your clue</label>
             <div class="wavelength-inline-form">
@@ -135,7 +135,7 @@
           </section>
 
           <section id="wavelengthGuessCard" class="wavelength-action-card" data-wavelength-explain="submit_team_guess">
-            <div class="wavelength-action-title"><span>🧭</span> Team dial</div>
+            <div class="wavelength-action-title"><span data-wavelength-tip="Team dial (🧭) is the red needle">🧭</span> Team dial</div>
             <div class="wavelength-action-copy" id="wavelengthGuessCardCopy">Discuss the clue, place the needle, then lock your guess.</div>
             <div class="wavelength-guess-controls">
               <output class="wavelength-guess-pill" aria-label="Current dial position">Dial <span id="wavelengthGuessValueMirror">0.00</span></output>
@@ -148,7 +148,7 @@
           </section>
 
           <section id="wavelengthSideCard" class="wavelength-action-card" data-wavelength-explain="submit_side_guess">
-            <div class="wavelength-action-title"><span>🕵️</span> Opponent side guess</div>
+            <div class="wavelength-action-title"><span data-wavelength-tip="Opponent chooses a side after the team locks">🕵️</span> Opponent side guess</div>
             <div class="wavelength-action-copy" id="wavelengthSideCardCopy">Is the hidden target to the left or right of the needle?</div>
             <div class="wavelength-side-actions">
               <button id="wavelengthSideLeftBtn" type="button" data-wavelength-explain="submit_side_guess">⬅️ Left</button>
@@ -160,11 +160,11 @@
 
       <aside id="wavelengthSidebar" class="wavelength-sidebar" aria-label="Round details">
         <section class="wavelength-sidebar-card wavelength-scoreboard" data-wavelength-explain="score">
-          <div class="wavelength-card-heading"><span>🏆 Scoreboard</span><span class="wavelength-card-kicker">Now</span></div>
+          <div class="wavelength-card-heading"><span data-wavelength-tip="Scoreboard shows Team A (🔵) and Team B (🟠)">🏆 Scoreboard</span><span class="wavelength-card-kicker">Now</span></div>
           <div id="wavelengthScores" class="wavelength-scores"></div>
         </section>
         <section class="wavelength-sidebar-card wavelength-you-card" data-wavelength-explain="role">
-          <div class="wavelength-card-heading"><span>🎲 You</span><span class="wavelength-card-kicker">In this round</span></div>
+          <div class="wavelength-card-heading"><span data-wavelength-tip="Your team and role for this round">🎲 You</span><span class="wavelength-card-kicker">In this round</span></div>
           <dl class="wavelength-you-details">
             <div><dt>Team</dt><dd id="wavelengthYourTeam">—</dd></div>
             <div><dt>Role</dt><dd id="wavelengthYourRole">—</dd></div>

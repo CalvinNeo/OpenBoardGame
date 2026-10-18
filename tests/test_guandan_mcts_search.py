@@ -11,7 +11,7 @@ class GuandanMctsLayerTests(unittest.TestCase):
     """Deterministic search scheduling tests; no wall-clock timing assertions."""
 
     def _search(self, evaluate, *, sims=27, depth=2, tree_ply=1, clock=None,
-                determinize_cost=0.0):
+                determinize_cost=0.0, use_remaining_budget=False):
         players = [
             {"player_id": pid, "name": pid, "seat": seat, "is_bot": True}
             for seat, pid in enumerate(("bot", "opp", "mate", "opp2"))
@@ -21,6 +21,8 @@ class GuandanMctsLayerTests(unittest.TestCase):
         state["current_turn"] = "bot"
         state["current_trick"] = None
         state["config"]["bot_mcts_early_stop_gap"] = 9999.0
+        state["config"]["bot_mcts_successive_halving_min_rounds"] = 10000
+        state["config"]["bot_search_use_remaining_budget"] = use_remaining_budget
         actions = [
             {"type": "play", "card_ids": [11]},
             {"type": "play", "card_ids": [22]},
@@ -211,6 +213,51 @@ class GuandanMctsLayerTests(unittest.TestCase):
         self.assertEqual(status["stop_reason"], "visit_budget")
         self.assertFalse(status["fallback_to_reference"])
         self.assertTrue(all(item[2] == 3 and item[3]["depth"] == 0 for item in scored))
+
+    def test_remaining_time_budget_reserves_visits_for_target_depth(self):
+        _picked, scored, status, visits, worlds = self._search(
+            lambda depth, world, _branch: depth * 100.0 + world,
+            sims=27, depth=2, clock=[0.0], use_remaining_budget=True,
+        )
+        self.assertEqual(status["checkpoint_visits"], 18)
+        self.assertEqual(status["target"], 45)
+        self.assertEqual(status["attempted"], 45)
+        self.assertEqual(status["completed_depth"], 2)
+        self.assertEqual(status["completed_rounds"], 9)
+        self.assertEqual(len(worlds), 9)
+        self.assertEqual(visits[:18], list(itertools.product(range(2), range(3), (11, 22, "pass"))))
+        self.assertEqual(visits[18:], list(itertools.product((2,), range(9), (11, 22, "pass"))))
+        self.assertTrue(all(item[2] == 9 and item[3]["avg"] == 204.0 for item in scored))
+
+    def test_extended_budget_timeout_preserves_complete_paired_layer(self):
+        clock = [0.0]
+
+        def evaluate(depth, world, branch):
+            if depth == 2 and world == 2 and branch == "pass":
+                clock[0] = 11.0
+            if depth == 1:
+                return 40.0 if branch == 22 else 0.0
+            return 1000.0 if branch == 11 else 0.0
+
+        picked, scored, status, _visits, _worlds = self._search(
+            evaluate, sims=15, clock=clock, use_remaining_budget=True,
+        )
+        self.assertEqual(picked, {"type": "play", "card_ids": [22]})
+        self.assertEqual(status["completed_depth"], 1)
+        self.assertEqual(status["interrupted_depth"], 2)
+        self.assertEqual(status["completed_rounds"], 3)
+        self.assertTrue(status["deadline_limited"])
+        self.assertFalse(status["fallback_to_reference"])
+        self.assertTrue(all(item[2] == 3 and item[3]["depth"] == 1 for item in scored))
+
+    def test_remaining_budget_does_not_extend_untimed_search(self):
+        _picked, _scores, status, visits, _worlds = self._search(
+            lambda _depth, _world, _branch: 0.0,
+            sims=15, use_remaining_budget=True,
+        )
+        self.assertEqual(len(visits), 15)
+        self.assertEqual(status["checkpoint_visits"], 0)
+        self.assertEqual(status["target"], 15)
 
     def test_complete_deeper_layer_can_reverse_shallow_choice_to_pass(self):
         def evaluate(depth, _world, branch):
