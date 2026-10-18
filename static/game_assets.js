@@ -341,13 +341,13 @@ const GAME_ASSETS = {
   },
   "wavelength": {
     "scripts": [
-      "/static/games/wavelength.js?v=app_v6"
+      "/static/games/wavelength.js?v=app_v7"
     ],
     "styles": [],
     "panel": "wavelengthPanel",
     "header": "showWavelengthHeaderActions",
     "markup": "/static/games/wavelength.html?v=3",
-    "styleFragments": "/static/games/wavelength.css?v=3"
+    "styleFragments": "/static/games/wavelength.css?v=5"
   },
   "dumb_questions": {
     "scripts": [

@@ -20,6 +20,10 @@
     background: transparent;
   }
 
+  .wavelength-compatibility-fields {
+    display: none;
+  }
+
   .wavelength-scene {
     position: relative;
     min-width: 0;
@@ -269,8 +273,6 @@
   }
 
   #wavelengthNeedle {
-    transform-box: view-box;
-    transform-origin: 300px 290px;
     transition: transform .18s ease-out;
   }
 
@@ -291,8 +293,6 @@
   }
 
   .wavelength-target-marker {
-    transform-box: view-box;
-    transform-origin: 300px 290px;
     transition: opacity .2s ease;
   }
 

@@ -103,12 +103,6 @@ DEFAULT_CONFIG = {
     "bot_think_time_ms": 6000,
     "bot_think_overrun_ratio": 0.0,
     "bot_search_use_remaining_budget": True,
-    # Isolated experiment: disabled unless its explicit config is supplied.
-    "bot_post_mcts_exact_enabled": False,
-    "bot_post_mcts_exact_max_cards": 28,
-    "bot_post_mcts_exact_time_ms": 1200,
-    "bot_post_mcts_exact_worlds": 12,
-    "bot_post_mcts_exact_min_remaining_ms": 350,
     "bot_search_finalize_reserve_ms": 35,
     "bot_endgame_search_reserve_ratio": 0.5,
     "bot_mcts_time_ms": 220,
@@ -3066,23 +3060,6 @@ class GuandanGame:
                         else:
                             chosen = []
                             chosen_action_type = "pass"
-                        if config.get("bot_post_mcts_exact_enabled", False):
-                            from game import guandan_endgame
-
-                            confirmation_started = time.perf_counter()
-                            reserve = max(0, int(config.get("bot_search_finalize_reserve_ms", 35))) / 1000.0
-                            confirmation = guandan_endgame.confirm_mcts_action(
-                                sys.modules[__name__], state, bot_id, mcts_action,
-                                heuristic_action, min(search_deadline, hard_decision_deadline) - reserve,
-                            )
-                            state["_ai_eval_cache"]["post_mcts_terminal"] = confirmation
-                            _record_stage("post_mcts_terminal", confirmation_started)
-                            if confirmation.get("changed"):
-                                selected = confirmation["selected"]
-                                chosen = list(selected.get("card_ids") or [])
-                                chosen_action_type = selected["type"]
-                                method = "post_mcts_terminal"
-                                method_scores = None
                 if minimax_status.get("deadline_limited"):
                     target = "last completed minimax depth" if decided and method == "minimax" else "heuristic baseline"
                     if minimax_status.get("used_initial_incumbent"):
@@ -3134,7 +3111,7 @@ class GuandanGame:
             if decided:
                 finalize_started_at = time.perf_counter()
                 _progress("finalizing", 0.94, "Legalizing chosen action")
-                if (chosen_action_type == "play" and chosen and method not in ("exact_endgame", "post_mcts_terminal")
+                if (chosen_action_type == "play" and chosen and method != "exact_endgame"
                         and not state.get("_ai_eval_cache", {}).get("trick_boundary", {}).get("applied")):
                     upgraded = _prefer_bomb_closeout_upgrade(state, bot_id, chosen)
                     if upgraded != chosen:

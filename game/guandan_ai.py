@@ -18637,11 +18637,8 @@ def _build_bot_explain(
     if route_cache.get("exact_endgame"):
         method_meta = dict(method_meta or {})
         method_meta["exact_endgame"] = copy.deepcopy(route_cache["exact_endgame"])
-    if route_cache.get("post_mcts_terminal"):
-        method_meta = dict(method_meta or {})
-        method_meta["post_mcts_terminal"] = copy.deepcopy(route_cache["post_mcts_terminal"])
-    if method in ("exact_endgame", "post_mcts_terminal"):
-        panel = route_cache["post_mcts_terminal" if method == "post_mcts_terminal" else "exact_endgame"]
+    if method == "exact_endgame":
+        panel = route_cache["exact_endgame"]
         records = panel["candidates"]
         proven = panel.get("scope") in ("public_determined_endgame", "proven_public_runout")
         component = "proven_terminal_team_value" if proven else "sampled_terminal_team_value"

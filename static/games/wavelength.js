@@ -276,7 +276,7 @@ function renderWavelengthGameState(data) {
   if (typeof setGamePanelVisibility === "function") setGamePanelVisibility("wavelength");
   const card = view.spectrum_card || {};
   const scores = view.scores || {};
-  const phase = wavelengthById("wavelengthPhase"); if (phase) phase.textContent = wavelengthPhaseName(view.phase);
+  const phaseLabel = wavelengthById("wavelengthPhase"); if (phaseLabel) phaseLabel.textContent = wavelengthPhaseName(view.phase);
   const round = wavelengthById("wavelengthRound"); if (round) round.textContent = view.round ?? "—";
   const yourTeam = wavelengthById("wavelengthYourTeam"); if (yourTeam) yourTeam.textContent = wavelengthTeamName(view.your_team);
   const yourRole = wavelengthById("wavelengthYourRole"); if (yourRole) yourRole.textContent = view.your_role === "psychic" ? "Psychic 🔮" : "Team player";
@@ -289,7 +289,7 @@ function renderWavelengthGameState(data) {
   if (wavelengthTargetMarker) wavelengthTargetMarker.classList.toggle("is-hidden-target", !targetVisible);
   if (wavelengthTargetMarker && targetVisible) wavelengthTargetMarker.setAttribute("transform", `rotate(${Number(view.target_center) * 90} 300 290)`);
   wavelengthRenderZones(targetVisible ? Number(view.target_center) : null);
-  const pos = phase === "team_guess" ? (Number.isFinite(Number(view.team_guess_preview_pos)) ? view.team_guess_preview_pos : wavelengthGuessPosition) : view.team_guess_pos;
+  const pos = view.phase === "team_guess" ? (Number.isFinite(Number(view.team_guess_preview_pos)) ? view.team_guess_preview_pos : wavelengthGuessPosition) : view.team_guess_pos;
   wavelengthSetNeedle(Number.isFinite(Number(pos)) ? Number(pos) : 0);
   const scoresEl = wavelengthById("wavelengthScores"); wavelengthRenderScoreCards(scoresEl, scores, view);
   wavelengthRenderPlayers(view); wavelengthRenderHistory(view); wavelengthRenderRecap(view); wavelengthRenderStatus(view); wavelengthUpdateActionCards(view);

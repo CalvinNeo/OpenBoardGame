@@ -42,7 +42,7 @@ def _call(name: str, *args, **kwargs):
 
 
 def public_worlds(state: Dict, observer: str, count: int, budget: TrickBudget,
-                  phase: str = "selection", full_history: bool = False) -> List[Dict]:
+                  phase: str = "selection") -> List[Dict]:
     """Sample only public evidence; even sampler fallbacks contain no real hands."""
     budget.check()
     fields = ("config", "turn_order", "player_meta", "player_teams", "teams", "dealer_team",
@@ -88,15 +88,10 @@ def public_worlds(state: Dict, observer: str, count: int, budget: TrickBudget,
     seed = hashlib.blake2b(repr(seed_key).encode(), digest_size=8).digest()
     rng = random.Random(int.from_bytes(seed, "big"))
     worlds = []
-    # Existing callers keep the inexpensive posterior. The isolated post-MCTS
-    # confirmation requests the full history model with a fixed proposal count;
-    # its short remaining deadline must not silently change that model.
+    # Force a fixed inexpensive posterior proposal count. Timing must not
+    # change the public panel or enable the costly sequence decomposition.
     previous = getattr(ai._CORE_LOCAL, "determinize_sampling_budget", None)
-    threshold_ms = max(25.0, float(source["config"].get(
-        "bot_determinize_short_budget_threshold_ms", 350)))
-    ai._CORE_LOCAL.determinize_sampling_budget = (
-        (threshold_ms + 1.0) / 1000.0 if full_history else 0.0
-    )
+    ai._CORE_LOCAL.determinize_sampling_budget = 0.0
     try:
         for _ in range(count):
             budget.check()
