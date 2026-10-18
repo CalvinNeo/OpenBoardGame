@@ -145,27 +145,48 @@
     .ponzi-scheme-history { grid-column: 1; }
 }
 @container (max-width: 460px) {
-    .ponzi-scheme-shell { padding: 12px; font-size: 13px; }
-    .ponzi-scheme-masthead { margin-bottom: 12px; }
+    .ponzi-scheme-shell { padding: 8px; font-size: 13px; border-radius: 12px; }
+    .ponzi-scheme-masthead { gap: 8px; margin-bottom: 8px; }
+    .ponzi-scheme-eyebrow { font-size: 8px; letter-spacing: .14em; }
+    .ponzi-scheme-masthead h2 { font-size: 24px; line-height: 1.25; }
     .ponzi-scheme-tagline { font-size: 10px; }
-    .ponzi-scheme-status { padding: 10px; margin-bottom: 12px; }
-    .ponzi-scheme-box { padding: 11px; }
+    .ponzi-scheme-round { flex-basis: 48px; padding-left: 8px; }
+    .ponzi-scheme-round strong { font-size: 28px; }
+    .ponzi-scheme-status { gap: 4px 8px; padding: 7px 8px; margin-bottom: 8px; }
+    .ponzi-scheme-status > div { flex-basis: 150px; gap: 2px 8px; }
+    .ponzi-scheme-status > div > span, .ponzi-scheme-bears { font-size: 10px; }
+    .ponzi-scheme-box { padding: 8px; border-radius: 9px; }
+    .ponzi-scheme-section-head { gap: 3px 8px; margin-bottom: 7px; }
+    .ponzi-scheme-section-head h3 { font-size: 13px; }
+    .ponzi-scheme-market > .ponzi-scheme-hint { margin: 7px 0 6px; }
     .ponzi-scheme-sidebar { grid-template-columns: minmax(0, 1fr); }
     .ponzi-scheme-action, .ponzi-scheme-history { grid-column: auto; grid-row: auto; }
     .ponzi-scheme-market-row { grid-template-columns: 24px minmax(0, 1fr); gap: 5px; }
     .ponzi-scheme-row-title span { display: none; }
     .ponzi-scheme-row-title b { font-size: 20px; }
-    .ponzi-scheme-market-rows { gap: 8px; }
+    .ponzi-scheme-market-rows { gap: 5px; }
     .ponzi-scheme-market-cards { gap: 5px; }
-    .ponzi-scheme-shell .ponzi-scheme-fund { padding: 6px 3px; min-height: 112px; border-radius: 6px; }
-    .ponzi-scheme-principal { font-size: 27px; }
-    .ponzi-scheme-card-terms { flex-direction: column; font-size: 9px; margin-top: 5px; padding-top: 4px; }
+    .ponzi-scheme-shell .ponzi-scheme-fund { padding: 4px 3px; min-height: 88px; border-radius: 6px; }
+    .ponzi-scheme-principal { font-size: 24px; padding: 3px 0 1px; }
+    .ponzi-scheme-card-terms { flex-direction: column; font-size: 8px; gap: 1px; margin-top: 3px; padding-top: 3px; }
     .ponzi-scheme-card-caption { font-size: 8px; }
     .ponzi-scheme-supply { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
-    .ponzi-scheme-players { grid-template-columns: minmax(0, 1fr); }
-    .ponzi-scheme-player-industries { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .ponzi-scheme-player { padding: 10px; }
-    .ponzi-scheme-player-industries .ponzi-scheme-chip { flex-direction: column; gap: 2px; font-size: 9px; }
-    .ponzi-scheme-player-industries .ponzi-scheme-chip b { font-size: 14px; }
+    .ponzi-scheme-portfolios { margin-top: 10px; }
+    .ponzi-scheme-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .ponzi-scheme-player-industries { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
+    .ponzi-scheme-player { padding: 7px; border-radius: 7px; }
+    .ponzi-scheme-player-heading { gap: 3px; }
+    .ponzi-scheme-player-heading h4 { font-size: 11px; line-height: 1.3; }
+    .ponzi-scheme-portfolio-value { margin: 6px 0; gap: 3px; }
+    .ponzi-scheme-portfolio-value strong { font-size: 16px; }
+    .ponzi-scheme-portfolio-value > span { font-size: 9px; }
+    .ponzi-scheme-player-industries .ponzi-scheme-chip { flex-direction: column; gap: 1px; font-size: 8px; padding: 3px 2px; }
+    .ponzi-scheme-player-industries .ponzi-scheme-chip b { font-size: 13px; }
+    .ponzi-scheme-debt-track { margin: 6px 0 4px; }
+    .ponzi-scheme-debt-track > div { padding: 3px 1px; }
+    .ponzi-scheme-debt-track small { font-size: 7px; }
+    .ponzi-scheme-debt-track b { font-size: 10px; }
+    .ponzi-scheme-shell summary { font-size: 10px; padding: 2px 0; }
+    .ponzi-scheme-history { padding: 5px 8px; }
     .ponzi-scheme-dialog { padding: 14px; }
 }

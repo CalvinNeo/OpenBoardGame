@@ -1,4 +1,5 @@
-<template data-game-target="celestiaHelpModal" data-game-mode="replace"><section id="celestiaHelpModal" class="modal hidden" aria-hidden="true">
+<template data-game-target="celestiaHelpModal" data-game-mode="replace">
+  <section id="celestiaHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content">
       <div class="modal-header">
         <h2>Celestia Help</h2>
@@ -6,8 +7,10 @@
       </div>
       <div class="modal-body" id="celestiaHelpContent"></div>
     </div>
-  </section></template>
-<template data-game-target="celestiaExplainModal" data-game-mode="replace"><section id="celestiaExplainModal" class="modal hidden" aria-hidden="true">
+  </section>
+</template>
+<template data-game-target="celestiaExplainModal" data-game-mode="replace">
+  <section id="celestiaExplainModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content">
       <div class="modal-header">
         <h2>Celestia Explain</h2>
@@ -15,68 +18,104 @@
       </div>
       <div class="modal-body" id="celestiaExplainContent"></div>
     </div>
-  </section></template>
+  </section>
+</template>
 <template data-game-target="celestiaPanel" data-game-mode="contents">
-              <div class="panel-header">
-                <h3>Celestia</h3>
-                <div id="celestiaHeaderActions" class="panel-header-actions" style="display: none;">
-                  <button id="celestiaHelpBtn" type="button">Help</button>
-                  <button id="celestiaExplainBtn" type="button">Explain</button>
-                </div>
-              </div>
+  <div class="panel-header celestia-header">
+    <div class="celestia-brand">
+      <span class="celestia-brand-icon" aria-hidden="true">🎈</span>
+      <div>
+        <div class="celestia-eyebrow">An adventure above the clouds</div>
+        <h3>Celestia</h3>
+      </div>
+    </div>
+    <div class="celestia-header-right">
+      <div class="celestia-score" data-celestia-tooltip="Your score from collected treasures. The highest score wins when the target is reached.">
+        <span>💎 <span class="celestia-score-label">Your score</span></span>
+        <strong id="celestiaYourScore">—</strong>
+      </div>
+      <div id="celestiaHeaderActions" class="panel-header-actions" style="display: none;">
+        <button id="celestiaHelpBtn" type="button">Help</button>
+        <button id="celestiaExplainBtn" type="button">Explain</button>
+      </div>
+    </div>
+  </div>
 
-              <div class="row">
-                <div>Phase: <span id="celestiaPhase">-</span></div>
-                <div>Journey: <span id="celestiaJourney">-</span></div>
-                <div>Captain: <span id="celestiaCaptain">-</span></div>
-              </div>
-              <div class="row">
-                <div>Current City: <span id="celestiaCurrentCity">-</span></div>
-                <div>Next City: <span id="celestiaNextCity">-</span></div>
-                <div>Required Dice: <span id="celestiaRequiredDice">-</span></div>
-              </div>
-              <div class="row">
-                <div>Your Score: <span id="celestiaYourScore">-</span></div>
-                <div>Ready: <span id="celestiaReadyCount">-</span></div>
-                <div>Winner: <span id="celestiaWinner">-</span></div>
-              </div>
+  <div class="celestia-layout">
+    <section id="celestiaSummary" class="celestia-summary hidden" aria-label="Journey summary">
+      <div class="celestia-section-heading">
+        <h4>🏁 Journey summary</h4>
+        <span id="celestiaReadyStatus" class="celestia-badge hidden">Ready <strong id="celestiaReadyCount">—</strong></span>
+        <span id="celestiaWinnerStatus" class="celestia-badge hidden">🏆 <strong id="celestiaWinner">—</strong></span>
+      </div>
+      <div id="celestiaSummaryBody" class="celestia-summary-body">—</div>
+      <div id="celestiaSummaryRewards" class="celestia-summary-rewards"></div>
+    </section>
 
-              <div id="celestiaSummary" class="round-notice hidden">
-                <div class="round-notice-title">Journey Summary</div>
-                <div id="celestiaSummaryBody" class="round-notice-body">-</div>
-                <div id="celestiaSummaryRewards" class="celestia-summary-rewards"></div>
-              </div>
+    <section class="celestia-flight celestia-surface" aria-labelledby="celestiaRouteHeading">
+      <div class="celestia-section-heading">
+        <h4 id="celestiaRouteHeading">Sky route</h4>
+        <span class="celestia-badge">Journey <strong id="celestiaJourney">—</strong></span>
+      </div>
+      <div id="celestiaRoute" class="celestia-route" aria-label="Cities along the sky route"></div>
+      <div class="celestia-flight-meta">
+        <span class="celestia-destination" data-celestia-tooltip="Current city → next destination. Leave the airship to collect treasure from the current city.">
+          <span>City <strong id="celestiaCurrentCity">—</strong></span>
+          <span aria-hidden="true">→</span>
+          <span>City <strong id="celestiaNextCity">—</strong></span>
+        </span>
+        <span data-celestia-tooltip="The captain rolls and uses equipment to guide the airship through hazards.">🧭 <strong id="celestiaCaptain">—</strong></span>
+        <span data-celestia-tooltip="Number of dice rolled for the next city.">🎲 <strong id="celestiaRequiredDice">—</strong></span>
+      </div>
 
-              <h3>Sky Route</h3>
-              <div id="celestiaRoute" class="celestia-route"></div>
+      <div id="celestiaStatus" class="celestia-status" role="status" aria-live="polite">
+        <span id="celestiaPhase" class="celestia-phase">Preparing</span>
+        <h4 id="celestiaStatusTitle">Ready for takeoff</h4>
+        <p id="celestiaStatusHint">Your next adventure is about to begin.</p>
+      </div>
+      <div id="celestiaDice" class="celestia-dice" aria-label="Rolled hazards"></div>
+      <div id="celestiaActions" class="celestia-actions" aria-label="Available actions">
+        <button id="celestiaRollBtn" class="celestia-action-primary hidden" type="button">🎲 Roll dice</button>
+        <button id="celestiaStayBtn" class="celestia-action-primary hidden" type="button">Stay aboard</button>
+        <button id="celestiaLeaveBtn" class="celestia-action-secondary hidden" type="button">Take treasure</button>
+        <button id="celestiaPassSpecialBtn" class="celestia-action-primary hidden" type="button">Continue</button>
+        <button id="celestiaResolveCardsBtn" class="celestia-action-primary hidden" type="button">Use equipment</button>
+        <button id="celestiaResolveTelescopeBtn" class="celestia-action-secondary hidden" type="button">🔭 Use spyglass</button>
+        <button id="celestiaCrashBtn" class="celestia-action-danger hidden" type="button">Airship crashes</button>
+        <button id="celestiaJetpackUseBtn" class="celestia-action-primary hidden" type="button">🎒 Use jetpack</button>
+        <button id="celestiaJetpackSkipBtn" class="celestia-action-secondary hidden" type="button">Skip jetpack</button>
+        <button id="celestiaNextJourneyBtn" class="celestia-action-primary hidden" type="button">Next journey →</button>
+        <button id="celestiaPlayAgainBtn" class="celestia-action-primary hidden" type="button">Play again</button>
+      </div>
+    </section>
 
-              <h3>Dice</h3>
-              <div id="celestiaDice" class="celestia-dice"></div>
+    <section class="celestia-hand-section celestia-surface" aria-labelledby="celestiaHandHeading">
+      <div class="celestia-section-heading">
+        <h4 id="celestiaHandHeading">Your hand</h4>
+        <span id="celestiaHandCount" class="celestia-badge">0 cards</span>
+      </div>
+      <div id="celestiaHand" class="celestia-card-grid"></div>
+      <div id="celestiaPowerPrompt" class="celestia-power-prompt hidden">
+        <div id="celestiaSelection" class="celestia-selection"></div>
+        <button id="celestiaPlayPowerBtn" class="celestia-action-primary hidden" type="button">Play card</button>
+      </div>
+    </section>
 
-              <h3>Your Hand</h3>
-              <div id="celestiaHand" class="celestia-card-grid"></div>
+    <section class="celestia-crew-section celestia-surface" aria-labelledby="celestiaCrewHeading">
+      <div class="celestia-section-heading">
+        <h4 id="celestiaCrewHeading">Crew</h4>
+        <span class="celestia-section-caption">Together, until you jump</span>
+      </div>
+      <div id="celestiaPlayers" class="celestia-players"></div>
+    </section>
 
-              <h3>Your Treasures</h3>
-              <div id="celestiaTreasures" class="celestia-card-grid"></div>
-
-              <div id="celestiaSelection" class="celestia-selection">Selected: -</div>
-
-              <div class="row actions celestia-actions">
-                <button id="celestiaRollBtn" type="button">Roll Dice</button>
-                <button id="celestiaSoloLeaveBtn" class="hidden" type="button">Solo Leave</button>
-                <button id="celestiaStayBtn" type="button">Stay</button>
-                <button id="celestiaLeaveBtn" type="button">Leave</button>
-                <button id="celestiaPlayPowerBtn" type="button">Play Card</button>
-                <button id="celestiaPassSpecialBtn" type="button">Pass</button>
-                <button id="celestiaResolveCardsBtn" class="hidden" type="button">Use Equipment</button>
-                <button id="celestiaResolveTelescopeBtn" type="button">Use Telescope</button>
-                <button id="celestiaCrashBtn" type="button">Crash</button>
-                <button id="celestiaJetpackUseBtn" type="button">Use Jetpack</button>
-                <button id="celestiaJetpackSkipBtn" type="button">Skip Jetpack</button>
-                <button id="celestiaNextJourneyBtn" type="button">Next Journey</button>
-                <button id="celestiaPlayAgainBtn" type="button">Play Again</button>
-              </div>
-
-              <h3>Crew</h3>
-              <div id="celestiaPlayers" class="celestia-players"></div>
-            </template>
+    <details id="celestiaTreasuresDetails" class="celestia-treasures-section celestia-surface">
+      <summary>
+        <span>💎 Your treasures</span>
+        <span id="celestiaTreasureCount" class="celestia-badge">0</span>
+      </summary>
+      <div id="celestiaTreasures" class="celestia-card-grid"></div>
+    </details>
+  </div>
+  <div id="celestiaTooltip" class="celestia-tooltip" role="tooltip" hidden></div>
+</template>

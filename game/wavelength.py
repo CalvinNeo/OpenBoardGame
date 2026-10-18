@@ -182,6 +182,8 @@ def _build_new_round(state: Dict, team_id: str) -> None:
         "target_center": round(random.uniform(-1.0, 1.0), 4),
         "clue_text": "",
         "guess_pos": None,
+        "guess_preview_pos": None,
+        "preview_player_id": None,
         "side_guess": None,
     }
     state["round_number"] = state["current_round"]["round_number"]
@@ -342,10 +344,19 @@ class WavelengthGame:
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
         legal = WavelengthGame.get_legal_actions(state, player_id)
         action_type = action.get("type")
-        if action_type not in legal:
+        preview_allowed = action_type == "update_team_guess" and "submit_team_guess" in legal
+        if action_type not in legal and not preview_allowed:
             return [], "invalid action"
         events: List[Dict] = []
         round_state = state["current_round"]
+        if action_type == "update_team_guess":
+            pos = _clamp_pos(action.get("pos"))
+            if pos is None:
+                return [], "invalid pos"
+            round_state["guess_preview_pos"] = pos
+            round_state["preview_player_id"] = player_id
+            events.append({"type": "wavelength:team_guess_updated", "payload": {"player_id": player_id, "pos": pos}})
+            return events, None
         if action_type == "submit_clue":
             clue = action.get("clue")
             if not isinstance(clue, str):
@@ -362,6 +373,8 @@ class WavelengthGame:
             if pos is None:
                 return [], "invalid pos"
             round_state["guess_pos"] = pos
+            round_state["guess_preview_pos"] = None
+            round_state["preview_player_id"] = None
             state["phase"] = "opponent_guess"
             events.append({"type": "wavelength:team_guess_submitted", "payload": {"player_id": player_id, "pos": pos}})
             return events, None
@@ -438,6 +451,8 @@ class WavelengthGame:
             "spectrum_card": round_state.get("card"),
             "clue_text": round_state.get("clue_text") or "",
             "team_guess_pos": round_state.get("guess_pos") if show_round_details else None,
+            "team_guess_preview_pos": round_state.get("guess_preview_pos"),
+            "preview_player_id": round_state.get("preview_player_id"),
             "side_guess": round_state.get("side_guess") if show_round_details else None,
             "target_center": round_state.get("target_center") if show_target else None,
             "scores": dict(state.get("scores", {})),

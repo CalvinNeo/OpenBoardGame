@@ -108,6 +108,42 @@ class GuandanWildResourceTests(unittest.TestCase):
                     checked += 1
         self.assertGreater(checked, 2000)
 
+    def test_low_ace_runs_are_complete_shapes_in_fast_and_full_plans(self):
+        for ranks, kind in (([14, 14, 2, 2, 3, 3], "three_pairs"),
+                            ([14, 14, 14, 2, 2, 2], "steel_plate")):
+            for level in (2, 7, 14):
+                hand = self.hand(ranks, level=level)
+                for helper in ("_fast_hand_decomposition_summary", "_hand_decomposition_summary"):
+                    with self.subTest(kind=kind, level=level, helper=helper):
+                        summary = self.call(helper, hand, level)
+                        self.assertEqual(summary["turns"], 1)
+                        self.assertEqual(summary["grouped_cards"], 6)
+                        self.assertEqual(summary["plan_types"][0], kind)
+
+    def test_low_ace_wild_plans_account_for_real_rank_material(self):
+        for ranks, kind, high, support in (
+            ([14, 14, 2, 2, 3], "three_pairs", 3, {14: 2, 2: 2, 3: 1}),
+            ([14, 14, 14, 2, 2], "steel_plate", 2, {14: 3, 2: 2}),
+        ):
+            hand = self.hand(ranks, wilds=1, level=7)
+            candidates = self.call("_wild_structure_ranked_candidates", hand, 7)
+            candidate = next(c for c in candidates if c["kind"] == kind and c["high_value"] == high)
+            self.assertEqual(candidate["needed_wilds"], 1)
+            self.assertEqual({rank: count for suit, rank, count in candidate["requirements"]}, support)
+            self.assertTrue(self.call("_public_pool_supports_same_type_reply", hand, 6, 7,
+                                      {"type": kind, "high_value": high - 1}))
+            self.assertFalse(self.call("_public_pool_supports_same_type_reply", hand, 6, 7,
+                                       {"type": kind, "high_value": high}))
+
+    def test_low_ace_pair_run_gets_the_same_break_protection_as_other_runs(self):
+        for ranks in ((14, 2, 3), (2, 3, 4), (12, 13, 14)):
+            hand = self.hand([rank for rank in ranks for _ in range(2)], level=7)
+            for rank in ranks:
+                pair = [card for card in hand if card["rank"] == rank]
+                features = {"play_cards": pair, "before_counts": dict.fromkeys(ranks, 2)}
+                combo = guandan._evaluate_combo(pair, 7, {})
+                self.assertEqual(self.call("_lead_shared_pair_run_break_penalty", features, combo, 7), 4.2)
+
 
 if __name__ == "__main__":
     unittest.main()

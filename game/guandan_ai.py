@@ -2127,8 +2127,8 @@ def _lead_shared_pair_run_break_penalty(
         for rank, count in features["before_counts"].items()
         if count == 2
     }
-    for start in range(pair_rank - 2, pair_rank + 1):
-        if all(rank in pair_ranks for rank in (start, start + 1, start + 2)):
+    for ranks, _high_value in _CORE.THREE_PAIRS_SEQUENCES:
+        if pair_rank in ranks and all(rank in pair_ranks for rank in ranks):
             return 4.2
     return 0.0
 
@@ -2152,6 +2152,8 @@ def _hand_route_context(state: Dict, player_id: str) -> Tuple:
                tuple(sorted(_public_revealed_rank_caps_for_target(state, pid).items())))
               for pid in state.get("turn_order", [])),
         tuple(sorted(state.get("seen_cards") or [])),
+        tuple(sorted((str(card_id), owner)
+                     for card_id, owner in (state.get("known_card_owners") or {}).items())),
         tuple(state.get("finish_order") or []),
         bool(state.get("config", {}).get("hard_bomb_beats_soft")),
     )
@@ -6817,6 +6819,15 @@ def _short_hand_structured_reply_breakdown(
 
     level_rank = state["level_rank"]
     config = state.get("config", {})
+    owners = {str(cid): owner for cid, owner in (state.get("known_card_owners") or {}).items()}
+    eligible = [card for card in unknown_cards
+                if owners.get(str(card["id"]), opponent_id) == opponent_id]
+    locked = [card for card in eligible if owners.get(str(card["id"])) == opponent_id]
+    free = [card for card in eligible if owners.get(str(card["id"])) != opponent_id]
+    draws = hand_count - len(locked)
+    if not 0 <= draws <= len(free):
+        return None
+    locked_ranks = _rank_count_map(locked, level_rank)
     accepted_target = max(16, int(config.get("bot_short_hand_structured_samples", accepted_target)))
     max_attempts = max(accepted_target * 4, int(config.get("bot_short_hand_structured_max_attempts", max_attempts)))
     caps = _public_revealed_rank_caps_for_target(state, opponent_id)
@@ -6829,6 +6840,8 @@ def _short_hand_structured_reply_breakdown(
         tuple(combo.get(name) for name in ("type", "size", "tier", "rank_value", "high_value", "uses_wild")),
         # Pool order affects both the seed and Random.sample; do not sort it.
         tuple((card["id"], card.get("rank"), card.get("suit"), card.get("joker")) for card in unknown_cards),
+        tuple(sorted((str(card["id"]), owners[str(card["id"])])
+                     for card in unknown_cards if str(card["id"]) in owners)),
         tuple(sorted(caps.items())),
         tuple(sorted(history_profile.items())),
         state.get("pass_limits", {}).get(opponent_id, {}).get("single"),
@@ -6854,7 +6867,7 @@ def _short_hand_structured_reply_breakdown(
             if rank is None:
                 continue
             counts[rank] = counts.get(rank, 0) + 1
-            if counts[rank] > max(0, caps.get(rank, 8)):
+            if counts[rank] > max(locked_ranks.get(rank, 0), caps.get(rank, 8), 0):
                 return False
         return True
 
@@ -6875,7 +6888,7 @@ def _short_hand_structured_reply_breakdown(
             # must neither replace it nor poison later calls with more time.
             return None
         attempts += 1
-        hand = rng.sample(unknown_cards, hand_count)
+        hand = locked + rng.sample(free, draws)
         if not _short_hand_has_structured_shape(hand, level_rank):
             continue
         if not obey_caps(hand):
@@ -6971,13 +6984,13 @@ def _public_pool_supports_same_type_reply(
 
     threshold = combo.get("high_value", 0)
     if combo_type == "straight":
-        sequences = [([14, 2, 3, 4, 5], 5)]
-        sequences.extend((list(range(start, start + 5)), start + 4) for start in range(2, 11))
+        sequences = _CORE.STRAIGHT_SEQUENCES
         multiplicity = 1
     else:
-        length, multiplicity = (3, 2) if combo_type == "three_pairs" else (2, 3)
-        sequences = [(list(range(start, start + length)), start + length - 1)
-                     for start in range(2, 16 - length)]
+        sequences, multiplicity = (
+            (_CORE.THREE_PAIRS_SEQUENCES, 2) if combo_type == "three_pairs"
+            else (_CORE.STEEL_PLATE_SEQUENCES, 3)
+        )
     return any(
         high > threshold and sum(deficit(rank, multiplicity) for rank in ranks) <= wild_count
         for ranks, high in sequences
@@ -7021,6 +7034,13 @@ def _opponent_same_type_reply_probability(
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
     if hand_count <= 0:
         return 0.0
+    conditioned = (
+        _owner_conditioned_same_type_reply_probability(state, opponent_id, combo, unknown_cards)
+        if unknown_cards is not None else None
+    )
+    if conditioned in (0.0, 1.0):
+        # Behavioral priors cannot overturn publicly forced material.
+        return conditioned
     short_reply = None
     if unknown_cards is not None:
         short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
@@ -7065,6 +7085,12 @@ def _analytic_same_type_reply_probability(
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
     if hand_count <= 0:
         return 0.0
+    if unknown_cards is not None:
+        conditioned = _owner_conditioned_same_type_reply_probability(
+            state, opponent_id, combo, unknown_cards
+        )
+        if conditioned is not None:
+            return conditioned
 
     level_rank = state["level_rank"]
     revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id) if use_history else {}
@@ -7151,9 +7177,7 @@ def _analytic_same_type_reply_probability(
     if combo_type == "straight":
         threshold = combo.get("high_value", 0)
         probs = []
-        sequences = [([14, 2, 3, 4, 5], 5)]
-        sequences.extend((list(range(start, start + 5)), start + 4) for start in range(2, 11))
-        for seq, high_value in sequences:
+        for seq, high_value in _CORE.STRAIGHT_SEQUENCES:
             if high_value <= threshold:
                 continue
             probs.append(math.prod(rank_prob(rank, 1) for rank in seq))
@@ -7162,22 +7186,18 @@ def _analytic_same_type_reply_probability(
     if combo_type == "three_pairs":
         threshold = combo.get("high_value", 0)
         probs = []
-        for start in range(2, 14):
-            high_value = start + 2
-            if high_value <= threshold or high_value > 14:
+        for seq, high_value in _CORE.THREE_PAIRS_SEQUENCES:
+            if high_value <= threshold:
                 continue
-            seq = [start, start + 1, start + 2]
             probs.append(math.prod(rank_prob(rank, 2) for rank in seq))
         return min(1.0, _aggregate_event_probability(probs) + wild_relief)
 
     if combo_type == "steel_plate":
         threshold = combo.get("high_value", 0)
         probs = []
-        for start in range(2, 14):
-            high_value = start + 1
-            if high_value <= threshold or high_value > 14:
+        for seq, high_value in _CORE.STEEL_PLATE_SEQUENCES:
+            if high_value <= threshold:
                 continue
-            seq = [start, start + 1]
             probs.append(math.prod(rank_prob(rank, 3) for rank in seq))
         return min(1.0, _aggregate_event_probability(probs) + wild_relief)
 
@@ -7558,14 +7578,71 @@ def _analytic_bomb_reply_probability(
     return min(1.0, bomb_prob * 0.35 + heavenly_prob * 0.2)
 
 
+def _owner_conditioned_same_type_reply_probability(
+    state: Dict, target_id: str, combo: Dict, pool: List[Dict]
+) -> Optional[float]:
+    """Exact ordinary-reply prior when public ownership makes it inexpensive.
+
+    Singles need only a hypergeometric draw; small conditional hand spaces are
+    enumerated. Large grouped spaces retain the existing analytic model. This
+    conditions physical ownership, never inferred pass/rank ceilings or hidden
+    card faces, and does not change the history-free model without owner locks.
+    """
+    owners = {str(cid): owner for cid, owner in (state.get("known_card_owners") or {}).items()}
+    if not any(str(card["id"]) in owners for card in pool):
+        return None
+    count = len(state["players"].get(target_id, {}).get("hand", []))
+    eligible = [card for card in pool if owners.get(str(card["id"]), target_id) == target_id]
+    locked = [card for card in eligible if owners.get(str(card["id"])) == target_id]
+    free = [card for card in eligible if owners.get(str(card["id"])) != target_id]
+    draws = count - len(locked)
+    if not 0 <= draws <= len(free):
+        # Malformed legacy public metadata must not become a fabricated proof.
+        return None
+    level = state["level_rank"]
+    if not _public_pool_supports_same_type_reply(eligible, count, level, combo):
+        return 0.0
+    if combo.get("type") == "single":
+        threshold = combo.get("rank_value", 0)
+        if any(_single_order_value(card, level) > threshold for card in locked):
+            return 1.0
+        hits = sum(_single_order_value(card, level) > threshold for card in free)
+        return _hypergeom_hit_probability(len(free), hits, draws)
+    key = (target_id, count, level,
+           tuple(combo.get(name) for name in ("type", "size", "tier", "rank_value", "high_value", "uses_wild")),
+           tuple((card["id"], card.get("rank"), card.get("suit"), card.get("joker"),
+                  owners.get(str(card["id"]))) for card in pool),
+           bool(state.get("config", {}).get("hard_bomb_beats_soft")))
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("owner_conditioned_same_type", {})
+    if key in cache:
+        return cache[key]
+    config = state.get("config", {})
+    if _hand_has_same_type_beat(locked, level, combo, config):
+        cache[key] = 1.0
+        return 1.0
+    total = math.comb(len(free), draws)
+    if total > 256:
+        cache[key] = None
+        return None
+    hits = 0
+    for drawn in itertools.combinations(free, draws):
+        if _deadline_expired():
+            return None
+        hits += _hand_has_same_type_beat(locked + list(drawn), level, combo, config)
+    result = hits / total
+    cache[key] = result
+    return result
+
+
 def _public_reply_belief(state: Dict, observer_id: str, opponent_id: str, combo: Dict) -> Dict[str, float]:
     """Estimate ordinary and bomb reply risks from one observer's public pool.
 
     The support flags are conservative physical checks, separate from soft
     historical evidence. Probabilities remain heuristic estimates; ``any``
     uses the existing independence approximation to combine the two risks.
-    Owner locks are not conditioned on: the whole unknown pool is a superset
-    of the target's possible cards. No target card face is inspected.
+    Ordinary replies condition owner locks exactly for singles and small hand
+    spaces; larger grouped estimates remain approximate. No target card face
+    is inspected.
     """
     target = state["players"].get(opponent_id, {})
     hand_count = len(target.get("hand", []))
@@ -7589,6 +7666,12 @@ def _public_reply_belief(state: Dict, observer_id: str, opponent_id: str, combo:
     same_type_possible = combo.get("type") not in BOMB_TYPES and _public_pool_supports_same_type_reply(
         unknown_cards, hand_count, level_rank, combo
     )
+    if same_type_possible:
+        conditioned = _owner_conditioned_same_type_reply_probability(
+            state, opponent_id, combo, unknown_cards
+        )
+        if conditioned is not None:
+            same_type_possible = conditioned > 0.0
     bomb_possible = _public_pool_supports_bomb_reply(unknown_cards, hand_count, level_rank)
     same_type = _opponent_same_type_reply_probability(
         state, opponent_id, combo, unknown_total, rank_counts, wild_count, unknown_cards
@@ -9601,11 +9684,8 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
             entry["requirements"] = tuple((suit, rank, 1) for rank in seq
                                           if info["normals_by_suit"].get(suit, {}).get(rank))
         else:
-            if kind == "straight":
-                ranks, copies = signature[1], 1
-            else:
-                width, copies = (3, 2) if kind == "three_pairs" else (2, 3)
-                ranks = range(signature[1], signature[1] + width)
+            ranks = signature[1]
+            copies = {"straight": 1, "three_pairs": 2, "steel_plate": 3}[kind]
             entry["requirements"] = tuple((None, rank, min(copies, rank_counts.get(rank, 0)))
                                           for rank in ranks)
         candidates.append(entry)
@@ -9630,39 +9710,37 @@ def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List
             rank_bonus = max(0.0, strength[rank] - 50) * 0.025
             add_candidate("set_upgrade", 1, 1.2 + rank_bonus, ("set", rank), rank=float(rank))
 
-    for start in range(2, 13):
+    for ranks, high_value in _CORE.THREE_PAIRS_SEQUENCES:
         need = 0
         support = 0
-        for rank in (start, start + 1, start + 2):
+        for rank in ranks:
             count = rank_counts.get(rank, 0)
             support += min(count, 2)
             need += max(0, 2 - count)
         if 0 < need <= wild_count and support >= 4:
-            high_value = start + 2
             score = 5.4 + max(0.0, support - 4) * 0.45 + max(0, high_value - 6) * 0.045
             add_candidate(
                 "three_pairs",
                 need,
                 score,
-                ("three_pairs", start),
+                ("three_pairs", tuple(ranks)),
                 high_value=float(high_value),
             )
 
-    for start in range(2, 14):
+    for ranks, high_value in _CORE.STEEL_PLATE_SEQUENCES:
         need = 0
         support = 0
-        for rank in (start, start + 1):
+        for rank in ranks:
             count = rank_counts.get(rank, 0)
             support += min(count, 3)
             need += max(0, 3 - count)
         if 0 < need <= wild_count and support >= 4:
-            high_value = start + 1
             score = 6.1 + max(0.0, support - 4) * 0.55 + max(0, high_value - 6) * 0.05
             add_candidate(
                 "steel_plate",
                 need,
                 score,
-                ("steel_plate", start),
+                ("steel_plate", tuple(ranks)),
                 high_value=float(high_value),
             )
 
@@ -10735,15 +10813,12 @@ def _compute_fast_hand_decomposition_summary(hand: List[Dict], level_rank: int) 
         working[rank] = 0
 
     # Greedily extract high-card-saving compound shapes for the cheap tail only.
-    for start in range(13, 1, -1):
-        if start + 1 > 14:
-            continue
-        while working.get(start, 0) >= 3 and working.get(start + 1, 0) >= 3:
-            working[start] -= 3
-            working[start + 1] -= 3
+    for ranks, _high_value in reversed(_CORE.STEEL_PLATE_SEQUENCES):
+        while all(working.get(rank, 0) >= 3 for rank in ranks):
+            for rank in ranks:
+                working[rank] -= 3
             add_group("steel_plate", 6, 13.6)
-    for start in range(12, 1, -1):
-        ranks = (start, start + 1, start + 2)
+    for ranks, _high_value in reversed(_CORE.THREE_PAIRS_SEQUENCES):
         while all(working.get(rank, 0) >= 2 for rank in ranks):
             for rank in ranks:
                 working[rank] -= 2
@@ -11649,16 +11724,16 @@ def _settled_round_value(state: Dict, bot_id: str) -> Optional[float]:
         partner_rank = 4
     points = {2: 3, 3: 2, 4: 1}[partner_rank]
     magnitude = points * 100
-    # The engine upgrades the winning team before checking match victory.
-    # A settled double finish can therefore already imply the same +/-1000
-    # outcome, even though the remaining places have not been filled in yet.
+    # Match victory requires winning a round already played as the A dealer.
+    # Merely upgrading to A still leaves that final round to be played.
     if state.get("phase") == "playing":
         level = state.get("teams", {}).get(winning_team, {}).get("level", 2)
         partner_requirement_met = (
             not state.get("config", {}).get("require_partner_not_last_for_a")
             or partner_rank != 4
         )
-        if level + points >= 14 and partner_requirement_met:
+        if (winning_team == state.get("dealer_team")
+                and level >= 14 and partner_requirement_met):
             magnitude = 1000
     # Keep decided outcomes outside ordinary nonterminal shape/tempo scores.
     return float(magnitude if _team_of(state, bot_id) == winning_team else -magnitude)
@@ -12513,6 +12588,137 @@ def _clone_search_state(state: Dict, preserve_eval_cache: bool = False) -> Dict:
     return cloned
 
 
+_RETAINED_GROUP_SHAPES: Dict[Tuple, Tuple] = {}
+_RETAINED_GROUP_PROFILES: Dict[Tuple, Dict] = {}
+
+
+def _retained_group_category(card: Dict, level_rank: int) -> int:
+    if _is_joker(card):
+        return 15 if card["joker"] == "small" else 16
+    return 0 if _is_wild(card, level_rank) else card["rank"]
+
+
+def _retained_group_shapes(size: int, deadline: Optional[float] = None) -> Optional[Tuple]:
+    """Disjoint rank/wild/joker count vectors for whole-hand legal groups.
+
+    A five-card straight flush is already a legal straight by ranks. Thus
+    complete-hand legality at sizes 2--6 needs no additional suit classes.
+    Deduplicating vectors avoids counting ambiguous wildcard groups twice.
+    """
+    sequences = tuple((tuple(ranks), high) for ranks, high in _CORE.STRAIGHT_SEQUENCES)
+    pairs = tuple((tuple(ranks), high) for ranks, high in _CORE.THREE_PAIRS_SEQUENCES)
+    triples = tuple((tuple(ranks), high) for ranks, high in _CORE.STEEL_PLATE_SEQUENCES)
+    key = (size, sequences, pairs, triples)
+    if key in _RETAINED_GROUP_SHAPES:
+        return _RETAINED_GROUP_SHAPES[key]
+    templates = [{rank: size} for rank in range(2, 15)]
+    if size == 2:
+        templates.extend(({15: 2}, {16: 2}))
+    elif size == 4:
+        templates.append({15: 2, 16: 2})
+    elif size == 5:
+        templates.extend({triple: 3, pair: 2} for triple in range(2, 15)
+                         for pair in range(2, 17) if triple != pair)
+        templates.extend({rank: 1 for rank in ranks} for ranks, _high in sequences)
+    elif size == 6:
+        templates.extend({rank: 2 for rank in ranks} for ranks, _high in pairs)
+        templates.extend({rank: 3 for rank in ranks} for ranks, _high in triples)
+    shapes = set()
+    for template in templates:
+        if _deadline_expired(deadline):
+            return None
+        ranks = list(template)
+        limits = [min(2, template[rank]) if rank < 15 else 0 for rank in ranks]
+        for substitutions in itertools.product(*(range(limit + 1) for limit in limits)):
+            wilds = sum(substitutions)
+            if wilds > 2:
+                continue
+            shape = [(rank, template[rank] - wild) for rank, wild in zip(ranks, substitutions)
+                     if template[rank] > wild]
+            if wilds:
+                shape.append((0, wilds))
+            shapes.add(tuple(sorted(shape)))
+    if _deadline_expired(deadline):
+        return None
+    result = tuple(sorted(shapes))
+    _RETAINED_GROUP_SHAPES[key] = result
+    return result
+
+
+def _retained_group_proposal_profile(
+    free: List[Dict], locked: List[Dict], size: int, level_rank: int,
+    deadline: Optional[float] = None,
+) -> Optional[Dict]:
+    """Count legal full-hand groups under owner locks, using physical copies."""
+    draws = size - len(locked)
+    if not 2 <= size <= 6 or not 0 <= draws <= len(free):
+        return None
+    shapes = _retained_group_shapes(size, deadline)
+    if shapes is None:
+        return None
+    def identity(card: Dict) -> Tuple:
+        return (card["id"], card.get("rank"), card.get("suit"), card.get("joker"),
+                _retained_group_category(card, level_rank))
+
+    key = (size, level_rank, shapes, tuple(map(identity, free)), tuple(map(identity, locked)))
+    cached = _RETAINED_GROUP_PROFILES.get(key)
+    if cached is not None:
+        return cached
+    free_by: Dict[int, List[Dict]] = {}
+    locked_counts: Dict[int, int] = {}
+    for card in free:
+        free_by.setdefault(_retained_group_category(card, level_rank), []).append(card)
+    for card in locked:
+        rank = _retained_group_category(card, level_rank)
+        locked_counts[rank] = locked_counts.get(rank, 0) + 1
+    classes = []
+    for shape in shapes:
+        if _deadline_expired(deadline):
+            return None
+        counts = dict(shape)
+        if any(count > counts.get(rank, 0) for rank, count in locked_counts.items()):
+            continue
+        needs = tuple((rank, count - locked_counts.get(rank, 0)) for rank, count in shape)
+        if any(need > len(free_by.get(rank, ())) for rank, need in needs):
+            continue
+        ways = math.prod(math.comb(len(free_by.get(rank, ())), need) for rank, need in needs)
+        classes.append((needs, ways))
+    if _deadline_expired(deadline):
+        return None
+    grouped_ways = sum(ways for _needs, ways in classes)
+    result = {"classes": tuple(classes), "ways": grouped_ways,
+              "probability": grouped_ways / math.comb(len(free), draws),
+              "free_by": {rank: tuple(cards) for rank, cards in free_by.items()},
+              "locked": tuple(locked)}
+    if len(_RETAINED_GROUP_PROFILES) >= 128:
+        _RETAINED_GROUP_PROFILES.clear()
+    _RETAINED_GROUP_PROFILES[key] = result
+    return result
+
+
+def _draw_retained_group(profile: Dict, rng: random.Random) -> List[Dict]:
+    draw = rng.randrange(profile["ways"])
+    for needs, ways in profile["classes"]:
+        if draw < ways:
+            hand = list(profile["locked"])
+            for rank, need in needs:
+                hand.extend(rng.sample(profile["free_by"].get(rank, ()), need))
+            return hand
+        draw -= ways
+    raise ValueError("empty retained-group proposal")
+
+
+def _retained_group_proposal_density(
+    groups: Dict[str, bool], profiles: Dict[str, Dict], fraction: float,
+) -> float:
+    """Ratio q/U for the uniform/group-conditioned joint-deal mixture."""
+    if not profiles:
+        return 1.0
+    return (1.0 - fraction) + fraction / len(profiles) * sum(
+        1.0 / profile["probability"] for pid, profile in profiles.items() if groups.get(pid)
+    )
+
+
 def _determinize_state(
     state: Dict,
     perspective_id: str,
@@ -12575,6 +12781,7 @@ def _determinize_state(
     retained_bonus = math.log(retained_group_odds) * max(
         0.05, float(config.get("bot_determinize_temperature", 1.25))
     )
+    group_fraction = max(0.0, min(0.9, float(config.get("bot_determinize_group_proposal_fraction", 0.0))))
     remaining_budget = getattr(_CORE_LOCAL, "determinize_sampling_budget", None)
     if remaining_budget is None:
         remaining_budget = _deadline_remaining(deadline)
@@ -12591,19 +12798,43 @@ def _determinize_state(
             sample_count,
             max(1, int(config.get("bot_determinize_short_budget_samples", 2))),
         )
+    group_profiles = {}
+    if group_fraction > 0.0 and retained_targets:
+        free_cards = [id_to_card[cid] for cid in sorted(remaining_unknown)]
+        for pid, count in targets:
+            if pid not in retained_targets:
+                continue
+            profile = _retained_group_proposal_profile(
+                free_cards, locked_assignment[pid], count, det["level_rank"], deadline
+            )
+            if profile is None:
+                # An incomplete proposal family must not change its peers'
+                # mixture probabilities. Fall back to the uniform proposal.
+                group_profiles = {}
+                break
+            if profile["ways"]:
+                group_profiles[pid] = profile
     proposals: List[Tuple[Dict[str, List[Dict]], float]] = []
     for _ in range(sample_count):
         if proposals and _deadline_expired(deadline):
             break
         sample_unknown = sorted(remaining_unknown)
-        rng.shuffle(sample_unknown)
-        idx = 0
         assignment: Dict[str, List[Dict]] = {
             pid: list(cards)
             for pid, cards in locked_assignment.items()
         }
+        grouped_target = None
+        if group_profiles and rng.random() < group_fraction:
+            grouped_target = rng.choice(list(group_profiles))
+            assignment[grouped_target] = _draw_retained_group(group_profiles[grouped_target], rng)
+            used = {card["id"] for card in assignment[grouped_target]}
+            sample_unknown = [cid for cid in sample_unknown if cid not in used]
+        rng.shuffle(sample_unknown)
+        idx = 0
         failed = False
         for pid, count in targets:
+            if pid == grouped_target:
+                continue
             need = max(0, count - len(assignment[pid]))
             assigned = sample_unknown[idx : idx + need]
             idx += need
@@ -12614,27 +12845,36 @@ def _determinize_state(
         if failed:
             continue
         penalty = 0.0
+        grouped = {
+            pid: bool(_evaluate_combo(assignment[pid], det["level_rank"], config))
+            for pid in retained_targets
+        }
         for pid, cards in assignment.items():
             penalty += _pass_limit_penalty_for_hand(det, pid, cards)
             penalty += _revealed_rank_cap_penalty_for_hand(det, pid, cards)
             penalty += _public_action_line_penalty_for_hand(det, pid, cards)
-            if pid in retained_targets and _evaluate_combo(cards, det["level_rank"], config):
+            if grouped.get(pid):
                 penalty -= retained_bonus
             if not short_budget:
                 # Sequence consistency performs a full decomposition for each
                 # player/proposal. Keep it for longer searches, while the short
                 # MCTS/minimax path retains the cheaper public pass/rank evidence.
                 penalty -= _public_action_sequence_consistency_bonus(det, pid, cards)
+        if group_profiles:
+            # q/U accounts for every target that could have proposed this
+            # world, including overlapping group events. Correcting for it
+            # changes coverage without counting the proposal as extra evidence.
+            ratio = _retained_group_proposal_density(grouped, group_profiles, group_fraction)
+            penalty += max(0.05, float(config.get("bot_determinize_temperature", 1.25))) * math.log(ratio)
         proposals.append((assignment, penalty))
 
     if not proposals:
         return det
 
-    # Treat public-history signals as a likelihood, not a hard oracle. Sampling
-    # from the finite posterior keeps plausible alternative worlds alive while
-    # still strongly preferring assignments consistent with passes and revealed
-    # action lines. A non-positive temperature remains available for deterministic
-    # diagnostics.
+    # Public history is a likelihood, not a hard oracle. Finite importance
+    # resampling approximates the history-weighted posterior; exact physical
+    # proposal probabilities do not make this small panel an exact posterior.
+    # A non-positive temperature remains available for deterministic diagnostics.
     temperature = float(det.get("config", {}).get("bot_determinize_temperature", 1.25))
     if temperature <= 0.0 or len(proposals) == 1:
         chosen_assignment = min(proposals, key=lambda item: item[1])[0]
@@ -13040,6 +13280,69 @@ def _minimax_plan_risks(
     return risks
 
 
+def _minimax_incomplete_resource_risk(
+    state: Dict,
+    bot_id: str,
+    reference: Optional[Dict],
+    proposal: Optional[Dict],
+    status: Dict,
+) -> float:
+    """Require stronger evidence before a partial endgame search spends controls.
+
+    The sampled terminal solver is deliberately allowed to fall back to a
+    shallow minimax panel when it runs out of nodes or when several terminal
+    roots tie.  That fallback is useful for ordinary moves, but it should not
+    turn a small positive leaf estimate into a wildcard/joker commitment: the
+    two known failure modes were a natural four-card bomb becoming a five-card
+    wildcard bomb and an uncontested five-card run becoming two jokers.  The
+    exact panel metadata is public search state, so this guard does not inspect
+    hidden cards or change legality.
+    """
+    if (not reference or not proposal or proposal.get("type") != "play"
+            or status.get("terminal_complete")):
+        return 0.0
+    terminal = status.get("terminal_attempt") or {}
+    incomplete = terminal.get("status") == "incomplete"
+    requested = int(terminal.get("requested_worlds") or 0)
+    completed = int(terminal.get("completed_worlds") or 0)
+    if requested > 0 and completed < requested:
+        incomplete = True
+    tied_fallback = (
+        not status.get("terminal_complete")
+        and status.get("stop_reason") == "deadline"
+        and int(terminal.get("tie_break_candidates") or 0) > 1
+    )
+    if not incomplete and not tied_fallback:
+        return 0.0
+
+    hand = state["players"].get(bot_id, {}).get("hand", [])
+    hand_map = _map_hand_by_id(hand)
+    proposal_ids = proposal.get("card_ids") or []
+    if hand and len(proposal_ids) == len(hand) and set(proposal_ids) == set(hand_map):
+        # A legal finish spends every remaining resource by definition. Let
+        # the existing immediate-finish check validate it without this prior.
+        return 0.0
+
+    def special_count(action: Dict) -> int:
+        if action.get("type") != "play":
+            return 0
+        return sum(
+            1
+            for card_id in action.get("card_ids") or []
+            if card_id in hand_map
+            and (_is_joker(hand_map[card_id]) or _is_wild(hand_map[card_id], state["level_rank"]))
+        )
+
+    reference_special = special_count(reference)
+    proposal_special = special_count(proposal)
+    if proposal_special <= reference_special:
+        return 0.0
+    # A named risk raises the existing 5.5-point margin and uses the paired
+    # lower bound when available.  Keep the value intentionally coarse: the
+    # guard is for incomplete evidence, not a new global resource heuristic.
+    return 4.0 if incomplete else 3.0
+
+
 def _should_accept_minimax_override(
     state: Dict,
     bot_id: str,
@@ -13059,6 +13362,11 @@ def _should_accept_minimax_override(
         decision["reason"] = "uncovered_retained_bomb"
         return False
     risks = _minimax_plan_risks(state, bot_id, reference, proposal)
+    resource_risk = _minimax_incomplete_resource_risk(
+        state, bot_id, reference, proposal, status,
+    )
+    if resource_risk > 0.0:
+        risks["incomplete_control_reserve"] = resource_risk
     decision["plan_risks"] = risks
     if not risks:
         hand = state["players"][bot_id]["hand"]
@@ -18321,7 +18629,7 @@ def _build_bot_explain(
     if method == "exact_endgame":
         panel = route_cache["exact_endgame"]
         records = panel["candidates"]
-        proven = panel.get("scope") == "public_determined_endgame"
+        proven = panel.get("scope") in ("public_determined_endgame", "proven_public_runout")
         component = "proven_terminal_team_value" if proven else "sampled_terminal_team_value"
         chosen_key = _action_identity({"type": chosen_action_type, "card_ids": chosen_cards})
         selected = next(row for row in records if _action_identity(row["action"]) == chosen_key)

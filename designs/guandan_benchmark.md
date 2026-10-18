@@ -2,7 +2,25 @@
 
 入口：`python3 scripts/benchmark_guandan.py`，只用 Python 标准库。历次改进、关键复盘与评测结果统一见 [guandan_ai_review.md](guandan_ai_review.md)。
 
-## 最新固定对照：2026-10-15
+## 短手采样与公开收官候选：2026-10-16
+
+冻结目录 `.data/guandan_benchmark/strength-next-20261016/`：`baseline/` 为规则及公开归属修复后的 v5，`candidate/` 新增成组尾牌提议／先验和公开收官证明。两侧保持完整启发式、`auto`／公开信息／6000ms／零额外预算；仅候选新增 `bot_determinize_retained_group_odds=16` 和 `bot_determinize_group_proposal_fraction=0.5`，其余有效配置及游戏规则一致。
+
+开发 seed `20261106` 的 12 对／24 局完成：13 胜／11 负，净升级 +0.125/局，2 正／1 负／9 零对，p=0.75，不能作强度验收。候选随后不再调整，正式固定 seed `20261109`、90 对／180 局、级牌 2／7／A 各 30 对。正式结果为 −0.0056/局，4 正／5 负／81 零对，精确配对符号翻转 p=1.0，配对百分位 bootstrap 95% 区间 [−0.0500,+0.0389]，结论 `inconclusive`；17,261 个动作重放通过。两个 runner 在开跑前分别固定样本与协议，报告和源码均记录指纹；中断的 117 局目录单独保留，未与随后从零重跑的完整批次合并。独立核验见 `validation/independent-audit.json`。本轮没有把采样先验推广为已验证的强度提升。
+
+评测后工作区保留候选的整组采样参数（`bot_determinize_retained_group_odds=16`、`bot_determinize_group_proposal_fraction=0.5`），便于继续做新的固定留出实验；本批结果没有把它证明为普遍强度提升。公开收官证明继续属于默认残局流程。
+
+## 规则与公开归属固定对照：2026-10-16
+
+规则修复后的 v5 基线对公开归属校正，固定新 seed `20261102`、90 对／180 局、级牌 2／7／A 各 30 对，双方 `auto`／公开信息／6000ms／零额外预算。基线和候选共享本轮低 A 序列、抗贡、过 A 及残局估值修复，只隔离普通接牌公开归属这一项增量。
+
+双方各赢 90 局，净升级均值 0，90 对全部净差为零；符号翻转 p=1，结论为 `inconclusive`。常量样本使用保守 Hoeffding 95% 区间 [−0.8589, +0.8589]，不把 bootstrap 的退化零区间当作等效证明。88 对动作轨迹相同，2 对有差异但结果相同。保留改动作为推断正确性修复，不宣称本批证明棋力提升。
+
+运行采用三个 30 对分片（全局起点 0／30／60），12 核机器共用墙钟预算，耗时 2570 秒；性能解释须保留共享机器调度限制。全部 16,746 个动作已重放，源码、配置、配对发牌、公开观察、合法性、轨迹和结算均核对。候选／基线平均决策 439／436ms，p95 2144／2067ms；这不是提速证据。
+
+冻结源码、预定协议、完整报告、负载记录和验证脚本在 `.data/guandan_benchmark/rules-owner-20261016/`，报告为 `evaluation/full-90.json`，重放验证为 `evaluation/verification.json`。本批只评估新发牌单局，不覆盖进贡还贡后的连续局。836 项掼蛋回归和 30 项房间回归通过；详细规则来源及范围见 [guandan_ai_review.md](guandan_ai_review.md)。
+
+## 已推广的历史对照：2026-10-15
 
 v5 按用户要求完成新 seed `20261028` 的 **90 对／180 局**，双方 `auto`、公开信息、6000ms、零额外预算；级牌 2／7／A 各 30 对。候选／基线是 `tmp/guandan-strength-iteration-20261014/` 下冻结的 `terminal-candidate-v5/` 与 `structured-current-baseline/`，不是下方示例中的旧 Git 基线。预定协议 `terminal-v5-full-protocol.md`，完整报告 `terminal-v5-full-90.json`。
 
@@ -74,7 +92,7 @@ python3 scripts/benchmark_guandan.py run \
 
 `--pair-start N` 可从全局第 N 对开始（0 起算）。它保留原索引对应的 seed、级牌和 A/B 运行顺序，例如 `--pair-start 28 --pairs 2` 对应完整 30 对任务的最后两对。分段报告不会自动合并：合并前必须核对两侧实际源码 hash、规则、配置、信息/时间模式和不重不漏的牌局索引；不能用重新抽牌替换失败牌局。
 
-参数消融使用 `--candidate-config path.json` / `--baseline-config path.json`，内容是已有 `bot_*` 配置项；未知项报错。模式和共享时间预算由命令行指定，不允许在配置文件里悄悄改成不等预算。默认 `wall` + 2000ms，与当前默认思考预算一致；`bot_think_overrun_ratio` 等额外预算设置也会完整写入报告，改变时需作为实验变量说明。需要可复现的固定计算量时使用 `--clock fixed`，并将相同的有限搜索预算配置同时传给两侧。例如：
+参数消融使用 `--candidate-config path.json` / `--baseline-config path.json`，内容是已有 `bot_*` 配置项；未知项报错。模式和共享时间预算由命令行指定，不允许在配置文件里悄悄改成不等预算。CLI 默认 `wall` + 2000ms，线上默认思考目标为 6000ms；正式对照应显式传入 `--think-ms 6000`。`bot_think_overrun_ratio` 等额外预算设置也会完整写入报告，改变时需作为实验变量说明。需要可复现的固定计算量时使用 `--clock fixed`，并将相同的有限搜索预算配置同时传给两侧。例如：
 
 ```bash
 python3 scripts/benchmark_guandan.py run \

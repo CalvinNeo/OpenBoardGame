@@ -30,9 +30,10 @@ def unpruned_full_houses(hand, level, threshold, limit):
 def unpruned_runs(hand, level, threshold, limit, size, length):
     """Materialize every sequence before discovering that most cannot exist."""
     options = []
-    sequences = (guandan.STRAIGHT_SEQUENCES if size == 1 else
-                 [(list(range(start, start + length)), start + length - 1)
-                  for start in range(2, 16 - length)])
+    sequences = [
+        ([14 if rank == 1 else rank for rank in range(start, start + length)], start + length - 1)
+        for start in range(1, 16 - length)
+    ]
     hand_map = guandan._map_hand_by_id(hand)
     for ranks, high in sequences:
         if high <= threshold:

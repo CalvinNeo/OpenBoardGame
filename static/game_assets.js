@@ -341,13 +341,13 @@ const GAME_ASSETS = {
   },
   "wavelength": {
     "scripts": [
-      "/static/games/wavelength.js?v=app_v4"
+      "/static/games/wavelength.js?v=app_v5"
     ],
     "styles": [],
     "panel": "wavelengthPanel",
     "header": "showWavelengthHeaderActions",
-    "markup": "/static/games/wavelength.html?v=1",
-    "styleFragments": "/static/games/wavelength.css?v=1"
+    "markup": "/static/games/wavelength.html?v=2",
+    "styleFragments": "/static/games/wavelength.css?v=2"
   },
   "dumb_questions": {
     "scripts": [
@@ -758,13 +758,13 @@ const GAME_ASSETS = {
   },
   "celestia": {
     "scripts": [
-      "/static/games/celestia.js?v=app_v2"
+      "/static/games/celestia.js?v=app_v3"
     ],
     "styles": [],
     "panel": "celestiaPanel",
     "header": "showCelestiaHeaderActions",
-    "markup": "/static/games/celestia.html?v=1",
-    "styleFragments": "/static/games/celestia.css?v=1"
+    "markup": "/static/games/celestia.html?v=2",
+    "styleFragments": "/static/games/celestia.css?v=2"
   },
   "manila": {
     "scripts": [
@@ -880,7 +880,7 @@ const GAME_ASSETS = {
       "/static/games/ponzi_scheme.js?v=2"
     ],
     "styles": [
-      "/static/ponzi_scheme.css?v=1"
+      "/static/ponzi_scheme.css?v=2"
     ],
     "panel": "ponziSchemePanel",
     "header": "showPonziSchemeHeaderActions",

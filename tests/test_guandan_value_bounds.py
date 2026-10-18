@@ -88,12 +88,22 @@ class GuandanValueBoundsTests(unittest.TestCase):
 
     def test_known_match_winner_is_exact_even_before_remaining_places_are_settled(self):
         self._set_prefix(self.state, ("p0",))
-        self.state["teams"]["A"]["level"] = 13
+        self.state["teams"]["A"]["level"] = 14
+        self.state["dealer_team"] = "A"
         self.state["config"]["require_partner_not_last_for_a"] = False
         for player_id, expected in (("p0", 1000.0), ("p1", -1000.0)):
             self.assertIsNone(guandan_ai.call(guandan, "_settled_round_value", self.state, player_id))
             self.assertEqual(self._bounds(self.state, player_id), (expected, expected))
             self.assertEqual(guandan._evaluate_state_for_bot(self.state, player_id), expected)
+
+    def test_reaching_a_does_not_turn_round_points_into_match_victory(self):
+        self._set_prefix(self.state, ("p0",))
+        self.state["dealer_team"] = "A"
+        self.state["teams"]["A"]["level"] = 13
+        self.assertEqual(self._bounds(self.state, "p0"), (100.0, 300.0))
+        self.state["teams"]["A"]["level"] = 14
+        self.state["dealer_team"] = "B"
+        self.assertEqual(self._bounds(self.state, "p0"), (100.0, 300.0))
 
     def test_no_first_place_preserves_original_shape_value(self):
         self.assertIsNone(self._bounds(self.state, "p0"))

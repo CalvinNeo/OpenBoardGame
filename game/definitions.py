@@ -4672,6 +4672,12 @@ WAVELENGTH_ACTION_SCHEMA = {
         },
         {
             "type": "object",
+            "properties": {"type": {"const": "update_team_guess"}, "pos": {"type": "number", "minimum": -1.0, "maximum": 1.0}},
+            "required": ["type", "pos"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
             "properties": {"type": {"const": "submit_side_guess"}, "side": {"type": "string", "enum": ["LEFT", "RIGHT"]}},
             "required": ["type", "side"],
             "additionalProperties": False,

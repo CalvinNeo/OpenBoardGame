@@ -50,6 +50,10 @@ DEFAULT_CONFIG = {
     "bot_mcts_confident_sims_scale": 0.58,
     "bot_determinize_samples": 5,
     "bot_determinize_temperature": 1.25,
+    # Calibrated grouped-tail proposal; the fixed validation batch reports
+    # the effect separately and does not constitute a universal strength claim.
+    "bot_determinize_retained_group_odds": 16.0,
+    "bot_determinize_group_proposal_fraction": 0.5,
     "bot_rollout_heuristic_depth": 2,
     "bot_rollout_candidate_limit": 6,
     "bot_action_materializations": 3,
@@ -121,6 +125,11 @@ STRAIGHT_SEQUENCES.append(([14, 2, 3, 4, 5], 5))
 for start in range(2, 11):
     seq = list(range(start, start + 5))
     STRAIGHT_SEQUENCES.append((seq, start + 4))
+
+THREE_PAIRS_SEQUENCES: List[Tuple[List[int], int]] = [([14, 2, 3], 3)]
+THREE_PAIRS_SEQUENCES.extend(([start, start + 1, start + 2], start + 2) for start in range(2, 13))
+STEEL_PLATE_SEQUENCES: List[Tuple[List[int], int]] = [([14, 2], 2)]
+STEEL_PLATE_SEQUENCES.extend(([start, start + 1], start + 1) for start in range(2, 14))
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -498,15 +507,14 @@ def _evaluate_three_pairs(
         if counts[rank] > 2:
             return None
     ranks_set = set(ranks)
-    for start in range(12, 1, -1):
-        seq = {start, start + 1, start + 2}
+    for seq, high_value in reversed(THREE_PAIRS_SEQUENCES):
         if not ranks_set.issubset(seq):
             continue
         missing = 0
         for rank in seq:
             missing += 2 - counts.get(rank, 0)
         if missing <= wild_count:
-            return start + 2
+            return high_value
     return None
 
 
@@ -519,15 +527,14 @@ def _evaluate_steel_plate(
         if counts[rank] > 3:
             return None
     ranks_set = set(ranks)
-    for start in range(13, 1, -1):
-        seq = {start, start + 1}
+    for seq, high_value in reversed(STEEL_PLATE_SEQUENCES):
         if not ranks_set.issubset(seq):
             continue
         missing = 0
         for rank in seq:
             missing += 3 - counts.get(rank, 0)
         if missing <= wild_count:
-            return start + 1
+            return high_value
     return None
 
 
@@ -1058,11 +1065,9 @@ def _find_straight_to_beat(hand: List[Dict], level_rank: int, threshold: int) ->
 
 def _find_three_pairs_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
     info = _hand_info(hand, level_rank)
-    for start in range(2, 12):
-        high_value = start + 2
+    for seq, high_value in THREE_PAIRS_SEQUENCES:
         if high_value <= threshold:
             continue
-        seq = [start, start + 1, start + 2]
         cards: List[int] = []
         wilds = list(info["wild_cards"])
         needed = 0
@@ -1080,11 +1085,9 @@ def _find_three_pairs_to_beat(hand: List[Dict], level_rank: int, threshold: int)
 
 def _find_steel_plate_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
     info = _hand_info(hand, level_rank)
-    for start in range(2, 14):
-        high_value = start + 1
-        if high_value <= threshold or start + 1 > 14:
+    for seq, high_value in STEEL_PLATE_SEQUENCES:
+        if high_value <= threshold:
             continue
-        seq = [start, start + 1]
         cards: List[int] = []
         wilds = list(info["wild_cards"])
         needed = 0
@@ -1170,13 +1173,15 @@ def _materialization_residual_score(
         missing = sum(1 for rank in seq if rank_counts.get(rank, 0) <= 0)
         if missing <= wild_count:
             score += 4.0 - missing * 0.45
-        pair_missing = sum(max(0, 2 - rank_counts.get(rank, 0)) for rank in seq[-3:])
+
+    for seq, _high_value in THREE_PAIRS_SEQUENCES:
+        pair_missing = sum(max(0, 2 - rank_counts.get(rank, 0)) for rank in seq)
         if pair_missing <= wild_count:
             score += 2.2 - pair_missing * 0.3
 
-    for start in range(2, 14):
-        triple_missing = sum(max(0, 3 - rank_counts.get(rank, 0)) for rank in (start, start + 1))
-        if start + 1 <= 14 and triple_missing <= wild_count:
+    for seq, _high_value in STEEL_PLATE_SEQUENCES:
+        triple_missing = sum(max(0, 3 - rank_counts.get(rank, 0)) for rank in seq)
+        if triple_missing <= wild_count:
             score += 2.5 - triple_missing * 0.35
 
     for suit_map in info["normals_by_suit"].values():
@@ -1510,11 +1515,9 @@ def _list_three_pairs_options(
         info = _hand_info(hand, level_rank)
     missing = {rank: max(0, 2 - len(info["normals_by_rank"].get(rank, ()))) for rank in RANKS}
     wild_count = len(info["wild_cards"])
-    for start in range(2, 14):
-        high_value = start + 2
-        if high_value <= threshold or start + 2 > 14:
+    for seq, high_value in THREE_PAIRS_SEQUENCES:
+        if high_value <= threshold:
             continue
-        seq = [start, start + 1, start + 2]
         if sum(missing[rank] for rank in seq) > wild_count:
             continue
         options.extend(
@@ -1538,12 +1541,10 @@ def _list_steel_plate_options(
         info = _hand_info(hand, level_rank)
     missing = {rank: max(0, 3 - len(info["normals_by_rank"].get(rank, ()))) for rank in RANKS}
     wild_count = len(info["wild_cards"])
-    for start in range(2, 14):
-        high_value = start + 1
-        if high_value <= threshold or start + 1 > 14:
+    for seq, high_value in STEEL_PLATE_SEQUENCES:
+        if high_value <= threshold:
             continue
-        seq = [start, start + 1]
-        if missing[start] + missing[start + 1] > wild_count:
+        if sum(missing[rank] for rank in seq) > wild_count:
             continue
         options.extend(
             _materialize_rank_requirements(
@@ -1907,21 +1908,23 @@ def _setup_tribute(state: Dict) -> None:
     else:
         payers = [order[2], order[3]]
         receivers = [order[0], order[1]]
-    for pid in payers:
-        big_count = sum(1 for card in state["players"][pid]["hand"] if card.get("joker") == "big")
-        if big_count >= 2:
-            state["phase"] = "playing"
-            _set_round_tribute_memory(
-                state,
-                {
-                    "type": tribute_type,
-                    "status": "waived",
-                    "reason": "double_big_joker",
-                    "payers": list(payers),
-                    "receivers": list(receivers),
-                },
-            )
-            return
+    big_count = sum(
+        1 for pid in payers for card in state["players"][pid]["hand"]
+        if card.get("joker") == "big"
+    )
+    if big_count >= 2:
+        state["phase"] = "playing"
+        _set_round_tribute_memory(
+            state,
+            {
+                "type": tribute_type,
+                "status": "waived",
+                "reason": "double_big_joker",
+                "payers": list(payers),
+                "receivers": list(receivers),
+            },
+        )
+        return
     state["tribute"] = {
         "type": tribute_type,
         "stage": "tribute",
@@ -1981,13 +1984,16 @@ def _record_pass_limit(state: Dict, player_id: str, combo: Dict) -> None:
 
 
 def _advance_to_round_end(state: Dict) -> None:
+    _complete_finish_order(state)
+    state["phase"] = "round_end"
+    # Passing A requires winning a round already played as the A-level dealer.
+    # Check before promotion changes either the dealer or the team's level.
+    _check_game_over(state)
     _apply_round_result(state)
     state["last_round_summary"] = _summarize_round(state)
-    state["phase"] = "round_end"
     for pid in state.get("turn_order", []):
         state["players"][pid]["round_ready"] = False
     _update_round_memory_result(state)
-    _check_game_over(state)
 
 
 def _start_next_round(state: Dict) -> None:

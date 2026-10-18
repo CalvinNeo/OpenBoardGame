@@ -77,6 +77,16 @@ class TrickResourcePlanTests(unittest.TestCase):
         self.assertEqual([group["type"] for group in plan["groups"]], ["three_pairs", "three_pairs"])
         self.assertLess(plan["pace"], 2.1)
 
+    def test_ace_low_runs_are_single_resource_groups(self):
+        for ranks, kind in (([14, 14, 2, 2, 3, 3], "three_pairs"),
+                            ([14, 14, 14, 2, 2, 2], "steel_plate")):
+            with self.subTest(kind=kind):
+                hand = self.rank_hand(ranks)
+                plan = trick.resource_plan(hand, 7, trick.TrickBudget())
+                self.assert_valid_cover(hand, 7, plan)
+                self.assertEqual([group["type"] for group in plan["groups"]], [kind])
+                self.assertLessEqual(plan["pace"], 1.0)
+
     def test_small_hands_match_independent_exhaustive_partition(self):
         deck = guandan._full_deck()
         for level in (2, 7, 14):

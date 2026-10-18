@@ -20,6 +20,34 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
             {"action": proposal, "world_values": after},
         ]}
 
+    def custom_hand(self, state, labels):
+        # Build from a fresh canonical deck.  Fixture hands contain only cards
+        # still in play, so searching them first can make this helper depend on
+        # the replay prefix and can leave duplicate physical IDs in the state.
+        available = list(guandan._full_deck())
+        selected = []
+        for label in labels:
+            card = next((card for card in available
+                         if card not in selected and guandan._card_label(card) == label), None)
+            self.assertIsNotNone(card, label)
+            selected.append(card)
+        selected_ids = {card["id"] for card in selected}
+        displaced_ids = set()
+        for pid in state["turn_order"]:
+            old_hand = state["players"][pid]["hand"]
+            kept = []
+            for card in old_hand:
+                if card["id"] in selected_ids:
+                    continue
+                if pid == "bot2":
+                    displaced_ids.add(card["id"])
+                kept.append(card)
+            state["players"][pid]["hand"] = kept
+        state["players"]["bot2"]["hand"] = selected
+        seen_ids = (set(state.get("seen_cards", [])) - selected_ids) | displaced_ids
+        state["seen_cards"] = sorted(seen_ids)
+        return selected
+
     def test_saved_game_replays_to_recorded_finish(self):
         state = replay_fixture("964", len(FIXTURES["964"]["actions"]) + 1)
         self.assertEqual(state["finish_order"], ["z", "bot4", "bot2", "calvin"])
@@ -76,6 +104,139 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
         decision = state["_ai_eval_cache"]["minimax_override"]
         self.assertIn("wild_control_reserve", decision["plan_risks"])
         self.assertEqual(decision["reason"], "preserve_control_plan")
+
+    def test_incomplete_terminal_search_cannot_spend_extra_wild_resource(self):
+        state = replay_fixture("964", 65)
+        reference = {"type": "pass"}
+        proposal = self.action(state, ("♠️J", "♥️2"))
+        status = self.status(reference, proposal, [20.0, 20.0, 20.0], [27.0, 27.0, 27.0])
+        status["terminal_attempt"] = {
+            "status": "incomplete", "requested_worlds": 12, "completed_worlds": 6,
+        }
+        with mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={}):
+            self.assertFalse(self.call("_should_accept_minimax_override", state, "bot2",
+                                       reference, proposal, status))
+        decision = state["_ai_eval_cache"]["minimax_override"]
+        self.assertIn("incomplete_control_reserve", decision["plan_risks"])
+        self.assertEqual(decision["reason"], "preserve_control_plan")
+
+    def test_tied_terminal_fallback_guard_is_narrow_to_extra_special_cards(self):
+        state = replay_fixture("964", 65)
+        reference = {"type": "pass"}
+        wildcard_proposal = self.action(state, ("♠️J", "♥️2"))
+        status = self.status(reference, wildcard_proposal, [20.0, 20.0, 20.0], [22.0, 22.0, 22.0])
+        status.update(
+            stop_reason="deadline",
+            terminal_attempt={"status": "complete", "tie_break_candidates": 2},
+        )
+        with mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={}):
+            self.assertFalse(self.call("_should_accept_minimax_override", state, "bot2",
+                                       reference, wildcard_proposal, status))
+        self.assertIn(
+            "incomplete_control_reserve",
+            state["_ai_eval_cache"]["minimax_override"]["plan_risks"],
+        )
+
+        natural_proposal = self.action(state, ("♠️J",))
+        natural_status = self.status(reference, natural_proposal, [20.0, 20.0, 20.0],
+                                     [22.0, 22.0, 22.0])
+        natural_status.update(
+            stop_reason="deadline",
+            terminal_attempt={"status": "complete", "tie_break_candidates": 2},
+        )
+        with mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={}):
+            self.assertTrue(self.call("_should_accept_minimax_override", state, "bot2",
+                                      reference, natural_proposal, natural_status))
+
+    def test_pair81_four_kings_to_five_card_wild_bomb_needs_stronger_incomplete_evidence(self):
+        state = replay_fixture("964", 65)
+        hand = self.custom_hand(state, ["♠️K", "♥️K", "♣️K", "♦️K", "♥️2", "♠️3"])
+        reference = {"type": "play", "card_ids": [card["id"] for card in hand[:4]]}
+        proposal = {"type": "play", "card_ids": [card["id"] for card in hand[:5]]}
+        status = self.status(reference, proposal, [20.0] * 3, [27.0] * 3)
+        status["terminal_attempt"] = {
+            "status": "complete", "requested_worlds": 12, "completed_worlds": 12,
+            "tie_break_candidates": 2,
+        }
+        status.update(stop_reason="deadline", terminal_complete=False)
+        with (mock.patch.object(guandan_ai, "_retained_bomb_override_is_unsafe", return_value=False),
+              mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={})):
+            self.assertEqual(self.call("_minimax_incomplete_resource_risk", state, "bot2",
+                                       reference, proposal, status), 3.0)
+            self.assertFalse(self.call("_should_accept_minimax_override", state, "bot2",
+                                       reference, proposal, status))
+        decision = state["_ai_eval_cache"]["minimax_override"]
+        self.assertEqual(decision["required_gain"], 8.5)
+        self.assertEqual(decision["reason"], "preserve_control_plan")
+
+    def test_pair74_two_jokers_instead_of_natural_five_card_run_are_guarded(self):
+        state = replay_fixture("964", 65)
+        hand = self.custom_hand(state, ["🃏S", "🃏S", "♠️A", "♣️2", "♣️3", "♦️4", "♠️5"])
+        reference = {"type": "play", "card_ids": [card["id"] for card in hand[2:]]}
+        proposal = {"type": "play", "card_ids": [card["id"] for card in hand[:2]]}
+        state["current_trick"] = None
+        status = self.status(reference, proposal, [20.0] * 3, [21.0] * 3)
+        status.update(terminal_attempt={
+            "status": "incomplete", "requested_worlds": 12, "completed_worlds": 6,
+        }, terminal_complete=False)
+        with (mock.patch.object(guandan_ai, "_retained_bomb_override_is_unsafe", return_value=False),
+              mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={})):
+            self.assertEqual(self.call("_minimax_incomplete_resource_risk", state, "bot2",
+                                       reference, proposal, status), 4.0)
+            self.assertFalse(self.call("_should_accept_minimax_override", state, "bot2",
+                                       reference, proposal, status))
+        decision = state["_ai_eval_cache"]["minimax_override"]
+        self.assertEqual(decision["required_gain"], 9.5)
+        self.assertEqual(decision["reason"], "preserve_control_plan")
+
+    def test_special_card_immediate_finish_bypasses_incomplete_resource_guard(self):
+        state = replay_fixture("964", 65)
+        hand = self.custom_hand(state, ["♠️K", "♥️K", "♣️K", "♥️2"])
+        proposal = {"type": "play", "card_ids": [card["id"] for card in hand]}
+        reference = {"type": "pass"}
+        status = self.status(reference, proposal, [20.0, 20.0], [20.0, 20.0])
+        status["terminal_attempt"] = {
+            "status": "incomplete", "requested_worlds": 12, "completed_worlds": 3,
+        }
+        with (mock.patch.object(guandan_ai, "_retained_bomb_override_is_unsafe", return_value=False),
+              mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={})):
+            self.assertEqual(self.call("_minimax_incomplete_resource_risk", state, "bot2",
+                                       reference, proposal, status), 0.0)
+            self.assertTrue(self.call("_should_accept_minimax_override", state, "bot2",
+                                      reference, proposal, status))
+        self.assertEqual(state["_ai_eval_cache"]["minimax_override"]["reason"], "immediate_finish")
+
+    def test_complete_terminal_worlds_can_spend_special_resource_on_dominant_gain(self):
+        state = replay_fixture("964", 65)
+        hand = self.custom_hand(state, ["♠️J", "♥️2", "♣️Q"])
+        reference = {"type": "play", "card_ids": [hand[0]["id"]]}
+        proposal = {"type": "play", "card_ids": [hand[0]["id"], hand[1]["id"]]}
+        status = self.status(reference, proposal, [-100.0] * 3, [100.0] * 3)
+        status.update(terminal_complete=True, terminal_attempt={
+            "status": "complete", "requested_worlds": 12, "completed_worlds": 12,
+        })
+        with mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={}):
+            self.assertEqual(self.call("_minimax_incomplete_resource_risk", state, "bot2",
+                                       reference, proposal, status), 0.0)
+            self.assertTrue(self.call("_should_accept_minimax_override", state, "bot2",
+                                      reference, proposal, status))
+        decision = state["_ai_eval_cache"]["minimax_override"]
+        self.assertTrue(decision["sampled_dominance"])
+
+    def test_normal_depth_limited_gain_does_not_trigger_incomplete_resource_prior(self):
+        state = replay_fixture("964", 65)
+        reference = {"type": "pass"}
+        proposal = self.action(state, ("♠️J", "♥️2"))
+        status = self.status(reference, proposal, [20.0] * 3, [21.0] * 3)
+        status.update(stop_reason="depth_limit", terminal_attempt={
+            "status": "complete", "requested_worlds": 12, "completed_worlds": 12,
+        })
+        with mock.patch.object(guandan_ai, "_minimax_plan_risks", return_value={}):
+            self.assertEqual(self.call("_minimax_incomplete_resource_risk", state, "bot2",
+                                       reference, proposal, status), 0.0)
+            self.assertTrue(self.call("_should_accept_minimax_override", state, "bot2",
+                                      reference, proposal, status))
+        self.assertEqual(state["_ai_eval_cache"]["minimax_override"]["reason"], "search_preference")
 
     def test_consistent_large_search_gain_can_spend_wild(self):
         state = replay_fixture("964", 65)

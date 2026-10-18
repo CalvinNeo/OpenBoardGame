@@ -5,6 +5,7 @@ proof about the public-information game or the correctness of its posterior.
 """
 
 import copy
+import functools
 import itertools
 import math
 import time
@@ -66,6 +67,7 @@ class EndgameSolver:
             raise ValueError("two teams of two are required")
         self.observer_team = state["player_teams"][observer]
         self.levels = {team: data["level"] for team, data in state["teams"].items()}
+        self.dealer_team = state["dealer_team"]
         self.cards = [sorted(state["players"][actor]["hand"], key=lambda card: card["id"])
                       for actor in self.order]
         all_ids = [card["id"] for hand in self.cards for card in hand]
@@ -85,7 +87,7 @@ class EndgameSolver:
         self.combos = []
         self.combo_ids = {}
         self.plays = []
-        self.maximum = 1000.0 if max(self.levels.values()) >= 11 else 300.0
+        self.maximum = 1000.0 if self.levels[self.dealer_team] >= 14 else 300.0
         possible_values = {}
         for order in itertools.permutations(range(4)):
             value = self.terminal(order)
@@ -163,7 +165,7 @@ class EndgameSolver:
             partner = 4
         points = {2: 3, 3: 2, 4: 1}[partner]
         magnitude = points * 100.0
-        if (self.levels[winning] + points >= 14
+        if (winning == self.dealer_team and self.levels[winning] >= 14
                 and (not self.config.get("require_partner_not_last_for_a") or partner != 4)):
             magnitude = 1000.0
         return magnitude if winning == self.observer_team else -magnitude
@@ -303,9 +305,37 @@ class EndgameSolver:
         self.check()
         moves = [self.action_move(action) for action in actions]
         values = []
+        # A round can settle only at the finite point/match values produced by
+        # ``terminal``.  Searching each root with a narrow window between two
+        # adjacent values lets alpha-beta classify the root and reuse its
+        # transposition bounds, while returning the same exact utility as a
+        # full-window search.
+        possible = sorted({
+            self.terminal(order)
+            for order in itertools.permutations(range(4))
+        })
         for move in moves:
             self.check()
-            values.append(self.value(self.transition(self.initial, move), -1001.0, 1001.0))
+            child = self.transition(self.initial, move)
+            minimum, maximum = self.bounds[child[5]]
+            candidates = [value for value in possible if minimum <= value <= maximum]
+            if len(candidates) <= 1:
+                values.append(candidates[0] if candidates else self.value(child, -1001.0, 1001.0))
+                continue
+            lo, hi = 0, len(candidates) - 1
+            while lo < hi:
+                mid = (lo + hi) // 2
+                threshold = (candidates[mid] + candidates[mid + 1]) / 2.0
+                value = self.value(child, threshold - 0.5, threshold + 0.5)
+                # Terminal utilities are integral and threshold is strictly
+                # between adjacent candidates. A null-window result therefore
+                # tells which side contains the exact root value; it need not
+                # itself be the exact value returned by alpha-beta.
+                if value < threshold:
+                    hi = mid
+                else:
+                    lo = mid + 1
+            values.append(candidates[lo])
         self.check()
         return values
 
@@ -364,10 +394,120 @@ def _finish_is_maximal(rules, state: Dict, observer: str, reference: Dict) -> bo
         return False
     before = ai.call(rules, "_possible_round_value_bounds", state, observer)
     team = state["player_teams"][observer]
-    upper = before[1] if before else (1000.0 if state["teams"][team]["level"] + 3 >= 14 else 300.0)
+    can_win_match = team == state["dealer_team"] and state["teams"][team]["level"] >= 14
+    upper = before[1] if before else (1000.0 if can_win_match else 300.0)
     projected = {**state, "finish_order": [*state.get("finish_order", []), observer]}
     after = ai.call(rules, "_possible_round_value_bounds", projected, observer)
     return after is not None and after[0] >= upper
+
+
+def _public_uncontested_runout(rules, state: Dict, observer: str, reference: Dict,
+                               deadline: Optional[float]) -> Optional[Dict]:
+    """Prove a common runout against two unknown single-card hands.
+
+    Every group, including the finishing group, is unbeatable for either
+    remaining player. No future choice depends on their hidden assignment:
+    the observer finishes second and its one-card teammate inherits the lead
+    to finish third. This reaches the best possible loss after an enemy first.
+    """
+    from game import guandan_ai as ai
+
+    finish = state.get("finish_order") or []
+    hand = state["players"][observer]["hand"]
+    if (state.get("phase") != "playing" or state.get("current_turn") != observer
+            or len(finish) != 1 or rules._team_of(state, finish[0]) == rules._team_of(state, observer)
+            or not 1 <= len(hand) <= 10):
+        return None
+    others = [pid for pid in state["turn_order"] if pid != observer and pid not in finish]
+    if len(others) != 2 or any(len(state["players"][pid]["hand"]) != 1 for pid in others):
+        return None
+    limit = min(24, max(4, int(state.get("config", {}).get("bot_exact_endgame_max_cards", 20))))
+    if len(hand) + 2 > limit:
+        return None
+    bounds = ai.call(rules, "_possible_round_value_bounds", state, observer)
+    if bounds is None or bounds[1] != -100.0:
+        return None
+    own_ids = {card["id"] for card in hand}
+    seen = set(state.get("seen_cards") or [])
+    seen.update((state.get("current_trick") or {}).get("cards") or [])
+    deck = rules._full_deck()
+    deck_ids = {card["id"] for card in deck}
+    if len(own_ids) != len(hand) or own_ids & seen or not (own_ids | seen) <= deck_ids:
+        return None
+    unknown = [card for card in deck if card["id"] not in own_ids | seen]
+    if len(unknown) != 2:
+        return None
+    started = time.perf_counter()
+    stop = started + max(0.0, float(state.get("config", {}).get("bot_exact_endgame_time_ms", 2500))) / 1000.0
+    stop = min(stop, deadline) if deadline is not None else stop
+    result = {"status": "incomplete", "applied": False, "changed": False,
+              "reference": copy.deepcopy(reference), "candidates": [], "value_model": "terminal_round_v1",
+              "scope": "proven_public_runout", "solver": "public_uncontested_runout_v1",
+              "verification": {"status": "not_needed", "reason": "common_uncontested_continuation"}}
+
+    def check() -> None:
+        if time.perf_counter() >= stop:
+            raise IncompleteEndgame("deadline")
+
+    try:
+        check()
+        level, config = state["level_rank"], state.get("config", {})
+        threshold = max(rules._single_order_value(card, level) for card in unknown)
+        all_cards = (1 << len(hand)) - 1
+        groups = {}
+        roots = {}
+        target = (state.get("current_trick") or {}).get("combo")
+        for mask in range(1, all_cards + 1):
+            check()
+            selected = [card for index, card in enumerate(hand) if mask & (1 << index)]
+            combo = rules._evaluate_combo(selected, level, config)
+            if combo and (len(selected) > 1 or combo["rank_value"] >= threshold):
+                groups[mask] = [card["id"] for card in selected]
+            root_combo = rules._evaluate_combo_for_type(
+                selected, level, config, target["type"] if target else None)
+            if (root_combo and (len(selected) > 1 or root_combo["rank_value"] >= threshold)
+                    and (not target or rules._compare_combos(target, root_combo, level, config))):
+                roots[mask] = [card["id"] for card in selected]
+
+        @functools.lru_cache(None)
+        def cover(remaining: int) -> Optional[Tuple[int, ...]]:
+            check()
+            if not remaining:
+                return ()
+            first = remaining & -remaining
+            best = None
+            for mask in groups:
+                if mask & first and mask & remaining == mask:
+                    tail = cover(remaining ^ mask)
+                    if tail is not None and (best is None or len(tail) + 1 < len(best)):
+                        best = (mask,) + tail
+            return best
+
+        proofs = []
+        for mask, cards in roots.items():
+            tail = cover(all_cards ^ mask)
+            if tail is not None:
+                action = {"type": "play", "card_ids": cards}
+                proofs.append({"action": action, "value": -100.0,
+                               "runout": [cards] + [groups[group] for group in tail]})
+        check()
+        if not proofs:
+            return None
+        chosen = next((proof for proof in proofs if _action_key(proof["action"]) == _action_key(reference)), None)
+        if chosen is None:
+            chosen = min(proofs, key=lambda proof: (len(proof["runout"]), _action_key(proof["action"])))
+        changed = _action_key(chosen["action"]) != _action_key(reference)
+        result.update(status="complete", applied=True, changed=changed, candidates=proofs,
+                      selected=chosen["action"], proposed=chosen["action"],
+                      reason="public_runout_proven" if changed else "public_runout_reference",
+                      certificate={"runout": chosen["runout"], "maximum_unseen_single": threshold,
+                                   "opposing_first": finish[0], "team_value": -100.0})
+        return result
+    except IncompleteEndgame as error:
+        result["reason"] = str(error)
+        return result
+    finally:
+        result["elapsed_ms"] = (time.perf_counter() - started) * 1000.0
 
 
 def compare_actions(rules, state: Dict, observer: str, reference: Dict,
@@ -388,6 +528,9 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
         return result
     determined = _public_hands_determined(state, observer)
     if config.get("bot_exact_endgame_public_only", False) and not determined:
+        runout = _public_uncontested_runout(rules, state, observer, reference, deadline)
+        if runout is not None:
+            return runout
         result.update(status="skipped", reason="unresolved_hidden_ownership")
         return result
     counts = [len(data["hand"]) for data in state["players"].values()]

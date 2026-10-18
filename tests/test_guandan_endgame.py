@@ -169,6 +169,47 @@ class GuandanEndgameTests(unittest.TestCase):
                 self.assertEqual(state["finish_order"], ["bot", "opp2"])
                 self.assert_exact(state)
 
+    def test_match_reward_requires_the_winning_dealer_to_have_played_a(self):
+        for level, dealer, required in itertools.product((11, 13, 14), ("A", "B"), (False, True)):
+            state = make_state({"bot": [3], "opp": [4], "mate": [5], "opp2": [6]})
+            state["dealer_team"] = dealer
+            state["level_rank"] = level
+            for team in state["teams"].values():
+                team["level"] = level
+            state["config"]["require_partner_not_last_for_a"] = required
+            solver = EndgameSolver(guandan, state, "bot")
+            for order in itertools.permutations(range(4)):
+                winning = solver.teams[order[0]]
+                partner_rank = next(rank for rank, actor in enumerate(order[1:], 2)
+                                    if solver.teams[actor] == winning)
+                magnitude = {2: 300.0, 3: 200.0, 4: 100.0}[partner_rank]
+                if level == 14 and winning == dealer and (not required or partner_rank != 4):
+                    magnitude = 1000.0
+                expected = magnitude if winning == "A" else -magnitude
+                with self.subTest(level=level, dealer=dealer, required=required, order=order):
+                    self.assertEqual(solver.terminal(order), expected)
+                    settled = guandan._clone_search_state(state)
+                    settled["finish_order"] = [solver.order[index] for index in order]
+                    guandan._advance_to_round_end(settled)
+                    self.assertEqual(reference_value(settled, "bot", {}), expected)
+
+    def test_ace_low_grouped_runs_are_complete_endgame_routes(self):
+        for ranks, kind, high in (([14, 14, 2, 2, 3, 3], "three_pairs", 3),
+                                  ([14, 14, 14, 2, 2, 2], "steel_plate", 2)):
+            with self.subTest(kind=kind):
+                state = make_state({"bot": ranks, "opp": [4], "mate": [5], "opp2": [6]})
+                state["level_rank"] = 7
+                action = play([card["id"] for card in state["players"]["bot"]["hand"]])
+                solver = EndgameSolver(guandan, state, "bot")
+                move = solver.action_move(action)
+                self.assertEqual(solver.combos[move[1]]["type"], kind)
+                self.assertEqual(solver.combos[move[1]]["high_value"], high)
+                self.assertIn(move, [solver.action_move(candidate) for candidate in solver.root_actions()])
+                child = guandan._clone_search_state(state)
+                _, error = guandan.GuandanGame.apply_action(child, "bot", action)
+                self.assertIsNone(error)
+                self.assertEqual(solver.root_values([action]), [reference_value(child, "bot", {})])
+
     def test_double_down_and_guaranteed_first_place_are_terminal_rewards(self):
         state = make_state({"bot": [4, 4, 3], "opp": [14], "mate": [7, 9], "opp2": [13]})
         solver = self.assert_exact(state)
@@ -454,6 +495,7 @@ class GuandanPublicExactTests(unittest.TestCase):
 class GuandanExactSettledTests(unittest.TestCase):
     def state(self, level=14, require_partner=False):
         state = make_state({"bot": [4, 4, 9], "opp": [3], "mate": [5, 8], "opp2": [7, 10]})
+        state["dealer_team"] = "B"
         state["level_rank"] = level
         for team in state["teams"].values():
             team["level"] = level
@@ -488,8 +530,9 @@ class GuandanExactSettledTests(unittest.TestCase):
 
 
 class GuandanFinishCoverTests(unittest.TestCase):
-    def state(self):
+    def state(self, dealer_team="A"):
         state = make_state({"bot": [4, 4, 4, 4], "opp": [10], "mate": [5, 5, 9, 3], "opp2": [8]})
+        state["dealer_team"] = dealer_team
         state["current_turn"] = "mate"
         for actor, action in (("mate", play(pair(state, "mate", 5))), ("opp2", {"type": "pass"})):
             _, error = guandan.GuandanGame.apply_action(state, actor, action)
@@ -569,8 +612,9 @@ class GuandanFinishCoverTests(unittest.TestCase):
         self.assertTrue(state["bot_explain"]["bot"]["method_details"]["forced_action"])
 
     def test_guaranteed_match_win_skips_sampling_but_partner_rule_can_require_it(self):
-        state = self.state()
-        state["teams"][state["player_teams"]["bot"]]["level"] = 13
+        state = self.state(dealer_team="A")
+        state["teams"][state["player_teams"]["bot"]]["level"] = 14
+        state["level_rank"] = 14
         expected = play([card["id"] for card in state["players"]["bot"]["hand"]])
         with mock.patch("game.guandan_trick.public_worlds", side_effect=AssertionError("settled match")):
             self.assertEqual(guandan.GuandanGame.bot_move(state, "bot"), expected)
@@ -578,6 +622,26 @@ class GuandanFinishCoverTests(unittest.TestCase):
         self.assertEqual(panel["reason"], "maximal_team_finish")
         state["config"]["require_partner_not_last_for_a"] = True
         self.assertFalse(guandan_endgame._finish_is_maximal(guandan, state, "bot", expected))
+
+    def test_non_dealer_parked_at_a_still_compares_cover(self):
+        state = self.state(dealer_team="B")
+        state["teams"]["A"]["level"] = 14
+        expected = play([card["id"] for card in state["players"]["bot"]["hand"]])
+        self.assertFalse(guandan_endgame._finish_is_maximal(guandan, state, "bot", expected))
+        self.assertEqual(guandan.GuandanGame.bot_move(state, "bot"), {"type": "pass"})
+        panel = state["bot_explain"]["bot"]["method_details"]["exact_endgame"]
+        self.assertEqual(panel["reason"], "publicly_proven_change")
+        self.assertEqual(panel["paired_gain"], 200.0)
+
+    def test_reaching_a_still_compares_cover_for_a_double_finish(self):
+        state = self.state()
+        state["teams"]["A"]["level"] = 13
+        state["level_rank"] = 13
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action, {"type": "pass"})
+        panel = state["bot_explain"]["bot"]["method_details"]["exact_endgame"]
+        self.assertEqual(panel["reason"], "publicly_proven_change")
+        self.assertEqual(panel["paired_gain"], 200.0)
 
     def test_partner_first_finish_is_already_maximal_without_reading_hidden_cards(self):
         state = self.state()
@@ -753,7 +817,9 @@ class GuandanRetainedTailSamplingTests(unittest.TestCase):
         state.pop("_ai_sampled_world")
         state["current_turn"] = "bot"
         state["config"].update(bot_determinize_samples=2, bot_determinize_short_budget_samples=2,
-                               bot_determinize_temperature=1.25)
+                               bot_determinize_temperature=1.25,
+                               bot_determinize_retained_group_odds=1.0,
+                               bot_determinize_group_proposal_fraction=0.0)
         return state
 
     def draw(self, state):
@@ -773,7 +839,7 @@ class GuandanRetainedTailSamplingTests(unittest.TestCase):
                 mock.patch.object(guandan_ai, "_public_action_line_penalty_for_hand", return_value=0.0):
             return guandan._determinize_state(state, "bot", generator)
 
-    def test_observed_tail_receives_soft_group_odds_without_changing_default(self):
+    def test_observed_tail_receives_soft_group_odds_when_configured(self):
         state = self.state()
         before = copy.deepcopy(state)
         ordinary = self.draw(state)
