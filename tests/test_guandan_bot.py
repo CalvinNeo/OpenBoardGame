@@ -6154,33 +6154,42 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         action = guandan.GuandanGame.bot_move(state, "bot3")
         self.assertEqual(action.get("type"), "play")
-        chosen_labels = sorted(
-            guandan._card_label(card)
-            for card in bot_hand
-            if card["id"] in action.get("card_ids", [])
-        )
-        # The previous bug repeatedly probed with the higher isolated ten.
-        # A lower isolated five is valid with the same complete cover and
-        # preserved big joker plus two independent bombs for recovery.
+        # The original bug overvalued repeated single probes; retain its
+        # component bounds above. Accounting for public straight-flush replies
+        # changes the best cover: single ten can keep 334455 and use five
+        # groups, while pair three's cover needs eight. Do not require that
+        # future allocation to keep the wild in a second bomb. A fixed
+        # 24-world rollout found no clear loss to pair three, which is only a
+        # diagnostic and does not establish a stronger exact-action assertion.
         explanation = state["bot_explain"]["bot3"]
-        self.assertNotEqual(chosen_labels, ["♠️10"])
         chosen = [card for card in bot_hand if card["id"] in action["card_ids"]]
+        combo = guandan._evaluate_combo(chosen, state["level_rank"], state["config"])
+        self.assertNotIn(combo["type"], guandan.BOMB_TYPES)
         self.assertTrue(all(not guandan._is_joker(card)
-                            and not guandan._is_wild(card, 2)
-                            and card.get("rank", 99) <= 6 for card in chosen))
+                            and card.get("rank") != state["level_rank"]
+                            and card.get("rank", 99) <= 10 for card in chosen))
+        self.assertFalse(guandan_ai.call(
+            guandan, "_breaks_bomb_shape", bot_hand, action["card_ids"], 2,
+        ))
+        remaining = [card for card in bot_hand if card["id"] not in action["card_ids"]]
+        self.assertIn("🃏B", [guandan._card_label(card) for card in remaining])
+        self.assertIn("♥️2", [guandan._card_label(card) for card in remaining])
+        self.assertEqual(sum(card.get("rank") == 9 for card in remaining), 4)
         route = explanation["method_details"]["hand_route"]
+        self.assertTrue(explanation["method_details"]["hand_route_status"]["complete"])
         self.assertTrue(route["exact"])
         groups = [sorted(group) for group in route["groups"]]
         self.assertIn(["🃏B"], groups)
         self.assertIn(sorted(["♦️9", "♠️9", "♥️9", "♦️9"]), groups)
-        self.assertIn(sorted(["♦️8", "♥️8", "♦️8", "♥️2"]), groups)
         probe = copy.deepcopy(state)
         probe["_ai_eval_cache"] = {}
         guandan_ai.call(guandan, "_prepare_hand_route_scores", probe, "bot3",
                         guandan._list_hint_options(probe, "bot3"), None)
         panel = probe["_ai_eval_cache"]["hand_routes"]
-        self.assertLessEqual(panel[guandan._cards_key(action["card_ids"])]["cost"],
-                             panel[guandan._cards_key(pair_three)]["cost"] + 0.001)
+        chosen_route = panel[guandan._cards_key(action["card_ids"])]
+        pair_route = panel[guandan._cards_key(pair_three)]
+        self.assertLessEqual(chosen_route["cost"], pair_route["cost"] + 0.001)
+        self.assertLessEqual(chosen_route["turns"], pair_route["turns"])
 
     def test_single_response_raises_gate_for_immediate_one_card_opponent(self):
         players = [

@@ -6,50 +6,59 @@
 <template data-game-target="diceThronePanel" data-game-mode="contents">
   <section class="dice-throne-shell" aria-label="Dice Throne game">
     <header class="dice-throne-titlebar">
-      <div><span class="dt-kicker">SEASON ONE REROLLED · DUEL</span><h2>Dice Throne <span>王权骰铸</span></h2></div>
-      <div class="dt-round"><span id="diceThronePhase" data-dt-tip="Phase：the current step of the round.">Waiting</span><span id="diceThroneRevision">—</span></div>
+      <div class="dt-title"><span class="dt-kicker">THE DUEL · 王权骰铸</span><h2>Dice Throne<span class="dt-title-mark" aria-hidden="true">✦</span></h2></div>
+      <div class="dt-round"><span id="diceThroneRound" class="dt-round-number">Round 1</span><span id="diceThronePhase" data-dt-tip="Phase: the current step of the round.">Waiting</span></div>
     </header>
+    <div class="dt-phase-steps" aria-label="Turn phases">
+      <span data-dt-phase="main_1">Main I</span><span data-dt-phase="offensive_roll">Roll</span><span data-dt-phase="targeting">Attack</span><span data-dt-phase="defensive_roll">Defend</span><span data-dt-phase="main_2">Main II</span>
+    </div>
     <div id="diceThroneStatus" class="dt-status" role="status" aria-live="polite">Waiting for players</div>
+    <div id="diceThroneExplainNotice" class="dt-explain-notice hidden" role="status">Explain is on. Select an outlined item, or press Esc to leave.</div>
 
     <section id="diceThroneHeroPicker" class="dt-picker hidden" aria-label="Choose your hero">
-      <div class="dt-section-head"><h3>Choose your hero</h3><span>Two different heroes enter the arena</span></div>
+      <div class="dt-section-head"><h3>Choose your champion</h3><span>One arena. Two heroes.</span></div>
       <div id="diceThroneHeroChoices" class="dt-hero-choices"></div>
     </section>
 
     <div id="diceThroneArena" class="dt-arena hidden">
       <section id="diceThronePlayers" class="dt-players" aria-label="Players"></section>
-      <section class="dt-roll-zone">
-        <div class="dt-section-head"><h3>Attack dice</h3><span id="diceThroneRollCount">Roll 0 / 3</span></div>
-        <div id="diceThroneDice" class="dt-dice" aria-label="Your five dice"></div>
-        <div class="dt-roll-actions">
-          <button id="diceThroneRollBtn" type="button" data-dt-explain="roll" disabled>Roll dice</button>
-          <button id="diceThroneConfirmBtn" type="button" data-dt-explain="confirm" disabled>Confirm roll</button>
-          <button id="diceThroneEndBtn" type="button" data-dt-explain="end_phase" disabled>End phase</button>
-        </div>
-      </section>
-      <section id="diceThroneAbilities" class="dt-abilities" aria-label="Abilities">
-        <div class="dt-section-head"><h3>Abilities</h3><span>Choose an ability after rolling</span></div>
-        <div id="diceThroneAbilityList" class="dt-ability-list"></div>
-      </section>
-      <section id="diceThroneHandArea" class="dt-hand-area" aria-label="Your hand">
-        <div class="dt-section-head"><h3>Hand <span>🃏</span></h3><span id="diceThroneHandCount">0 / 6</span></div>
-        <div id="diceThroneHand" class="dt-hand"></div>
-      </section>
+      <div id="diceThroneActivity" class="dt-activity" aria-live="polite"></div>
       <section id="diceThroneResponse" class="dt-response hidden" aria-label="Response">
         <div class="dt-section-head"><h3 id="diceThroneResponseTitle">Response window</h3><span id="diceThroneResponseTimer"></span></div>
         <p id="diceThroneResponseText">Choose a response or pass.</p>
         <div id="diceThroneResponseActions" class="dt-response-actions"></div>
       </section>
-      <section id="diceThroneLogPanel" class="dt-log-panel">
-        <details><summary>Battle log</summary><ol id="diceThroneLog"></ol></details>
-      </section>
       <section id="diceThroneReview" class="dt-review hidden" aria-label="Round review">
         <div class="dt-section-head"><h3>Round review</h3><span id="diceThroneReady">0 / 2 ready</span></div>
         <div id="diceThroneReviewRows" class="dt-review-rows"></div>
-        <button id="diceThroneNextBtn" type="button" data-dt-explain="next_round" disabled>Next Round</button>
+        <button id="diceThroneNextBtn" class="dt-primary" type="button" data-dt-explain="next_round" disabled>Next Round</button>
       </section>
       <section id="diceThroneGameOver" class="dt-game-over hidden" aria-live="polite">
         <div id="diceThroneWinner"></div><div id="diceThroneFinalRows"></div>
+      </section>
+      <div class="dt-battle-grid">
+        <section id="diceThroneRollZone" class="dt-roll-zone" aria-label="Dice tray">
+          <div class="dt-section-head"><h3>Attack dice</h3><span id="diceThroneRollCount">Roll 0 / 3</span></div>
+          <div id="diceThroneDice" class="dt-dice" aria-label="Five dice"></div>
+          <p id="diceThroneDiceHint" class="dt-dice-hint">Roll the dice to forge your attack.</p>
+          <div class="dt-roll-actions">
+            <button id="diceThroneRollBtn" class="dt-primary" type="button" data-dt-explain="roll" disabled>🎲 Roll dice</button>
+            <button id="diceThroneConfirmBtn" class="dt-secondary" type="button" data-dt-explain="confirm" disabled>Confirm roll</button>
+            <button id="diceThroneEndBtn" class="dt-secondary" type="button" data-dt-explain="end_phase" disabled>End phase</button>
+            <button id="diceThronePassBtn" class="dt-secondary" type="button" data-dt-explain="pass" disabled>Skip attack</button>
+          </div>
+        </section>
+        <section id="diceThroneAbilities" class="dt-abilities" aria-label="Abilities">
+          <div class="dt-section-head"><h3>Hero abilities</h3><span id="diceThroneAbilityHint">Your dice unlock your attack</span></div>
+          <div id="diceThroneAbilityList" class="dt-ability-list"></div>
+        </section>
+      </div>
+      <section id="diceThroneHandArea" class="dt-hand-area" aria-label="Your hand">
+        <div class="dt-section-head"><h3 data-dt-tip="Cards (🃏): your private hand." data-dt-explain="Cards (🃏)" data-dt-description="Your hand is private. Select a Card (🃏) to play it or sell it for 1 Combat Point (⚡). Opponents can see only how many cards you hold.">🃏 Your hand</h3><span id="diceThroneHandCount">0 / 6</span></div>
+        <div id="diceThroneHand" class="dt-hand"></div>
+      </section>
+      <section id="diceThroneLogPanel" class="dt-log-panel">
+        <details><summary>Battle log</summary><ol id="diceThroneLog"></ol></details>
       </section>
     </div>
     <div id="diceThroneTooltip" class="dt-tooltip hidden" role="tooltip"></div>

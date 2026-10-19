@@ -159,6 +159,34 @@ class GuandanOwnerConditioningTests(unittest.TestCase):
         self.assertEqual(same, 1.0)
         self.assertEqual(finish, 1.0)
 
+    def test_route_bombs_respect_public_flush_rank_and_wild_overbombs(self):
+        cases = (
+            (["♠️A", "♥️A", "♣️A", "♦️A"],
+             ["♣️4", "♣️5", "♣️6", "♣️7", "♣️8"]),
+            (["♠️K", "♥️K", "♣️K", "♦️K"],
+             ["♠️A", "♥️A", "♣️A", "♦️A"]),
+            (["♠️Q", "♥️Q", "♣️Q", "♦️Q"],
+             ["♠️K", "♣️K", "♦️K", "♥️2"]),
+        )
+        for lead, reply in cases:
+            with self.subTest(lead=lead, reply=reply):
+                state = route_fixtures.GuandanHandRouteTests().make_state(
+                    lead + ["♠️3"], [reply, ["♦️9"], ["♦️10"]],
+                )
+                combo = guandan._evaluate_combo(state["players"]["bot"]["hand"][:4], 2, {})
+                enemy = state["players"]["opp"]["hand"]
+                reply_combo = guandan._evaluate_combo(enemy, 2, {})
+                self.assertTrue(guandan._compare_combos(combo, reply_combo, 2, {}))
+                state["known_card_owners"] = {card["id"]: "opp" for card in enemy}
+                for pid in ("opp", "mate", "opp2"):
+                    state["players"][pid]["hand"] = CountOnlyHand(
+                        [object()] * len(state["players"][pid]["hand"]),
+                    )
+                profile, _weight = guandan_ai.call(guandan, "_hand_route_reply_model", state, "bot")
+                with mock.patch.object(guandan_ai._CORE_LOCAL, "value", guandan, create=True):
+                    _same, bomb, _finish, _mate_finish, _continuing = profile(combo)
+                self.assertEqual(bomb, 1.0)
+
     def test_existing_route_panel_invalidates_when_public_owner_changes(self):
         fixture = route_fixtures.GuandanHandRouteTests()
         state = fixture.make_state(

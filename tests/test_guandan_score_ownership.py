@@ -29,6 +29,7 @@ class GuandanScoreOwnershipTests(unittest.TestCase):
         return producers
 
     def test_completed_exact_route_owns_recovery_without_duplicate_reward(self):
+        self.state["config"]["bot_lead_reentry_mode"] = "route_only"
         for complete, exact, expected in (
             (True, True, 0.0), (True, False, 4.0), (False, True, 4.0),
         ):
@@ -58,6 +59,7 @@ class GuandanScoreOwnershipTests(unittest.TestCase):
             self.assertAlmostEqual(before - after, 4.0)
 
     def test_finished_race_preserves_tactical_reentry_for_either_team(self):
+        self.state["config"]["bot_lead_reentry_mode"] = "route_only"
         for finish in ("opp", "mate"):
             with self.subTest(finish=finish), ExitStack() as stack:
                 self.state["finish_order"] = [finish]
@@ -72,6 +74,7 @@ class GuandanScoreOwnershipTests(unittest.TestCase):
                 self.assertEqual(direct["lead_reentry"], 4.0)
 
     def test_finish_order_change_invalidates_route_reentry_cache(self):
+        self.state["config"]["bot_lead_reentry_mode"] = "route_only"
         with ExitStack() as stack:
             self.state["_ai_eval_cache"] = {"hand_route_status": {"complete": True}}
             self.patch_refinements(stack, lead_reentry=4.0)

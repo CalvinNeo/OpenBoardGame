@@ -56,6 +56,58 @@ class GuandanTrickValueTests(unittest.TestCase):
     def value(self, routes, combo):
         return routes[guandan_ai._hand_route_key(combo)]
 
+    def test_teammate_finish_support_is_spent_once(self):
+        for count in range(2, 9):
+            with self.subTest(groups=count):
+                groups = [self.pair(rank) for rank in range(3, 3 + count)]
+                values = self.call(
+                    "_hand_route_plan_values", groups,
+                    lambda combo: (1.0, 0.0, 0.0, 1.0, 1.0), 1.6, 2, {},
+                )
+                for value in values.values():
+                    self.assertAlmostEqual(value["entry_risk"], (count - 1) * 1.6 - 1.2)
+                    self.assertEqual(value["lead_turns"], float(count))
+
+    def test_repeated_opportunities_do_not_redraw_the_teammates_hidden_hand(self):
+        for count in (2, 4, 7):
+            for chance in (0.0, 0.25, 0.5, 0.75, 1.0):
+                with self.subTest(groups=count, chance=chance):
+                    groups = [self.pair(rank) for rank in range(3, 3 + count)]
+                    values = self.call(
+                        "_hand_route_plan_values", groups,
+                        lambda combo: (1.0, 0.0, 0.0, chance, 1.0), 1.6, 2, {},
+                    )
+                    for value in values.values():
+                        self.assertAlmostEqual(value["entry_risk"],
+                                               (count - 1) * 1.6 - 1.2 * chance)
+
+    def test_nested_teammate_finish_events_only_add_new_probability(self):
+        groups = [self.pair(rank) for rank in (3, 4, 5, 6)]
+        probabilities = {combo["rank_value"]: chance
+                         for combo, chance in zip(groups, (0.25, 0.5, 0.75, 0.75))}
+
+        def profile(combo):
+            return (1.0, 0.0, 0.0, probabilities.get(combo["rank_value"], 0.0), 1.0)
+
+        values = self.call("_hand_route_plan_values", groups, profile, 1.6, 2, {})
+        for value in values.values():
+            self.assertAlmostEqual(value["entry_risk"], 3 * 1.6 - 0.75 * 1.2)
+
+    def test_shared_route_memo_keeps_teammate_support_state_between_covers(self):
+        groups = [self.pair(rank) for rank in (3, 4, 5, 6)]
+        probabilities = {combo["rank_value"]: chance
+                         for combo, chance in zip(groups, (0.75, 0.5, 0.25, 0.0))}
+
+        def profile(combo):
+            return (1.0, 0.0, 0.0, probabilities.get(combo["rank_value"], 0.0), 1.0)
+
+        shared = {}
+        for cover in (groups, groups[1:], groups[2:], list(reversed(groups)), groups[:3]):
+            with self.subTest(cover=cover):
+                cached = self.call("_hand_route_plan_values", cover, profile, 1.6, 2, {}, memo=shared)
+                fresh = self.call("_hand_route_plan_values", cover, profile, 1.6, 2, {})
+                self.assertEqual(cached, fresh)
+
     def test_low_pair_and_recovery_pair_share_one_lead(self):
         low, high = self.pair(4), self.pair(13)
         enemy_value = self.pair(10)["rank_value"]

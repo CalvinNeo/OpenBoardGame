@@ -2386,6 +2386,7 @@ def _hand_route_reply_model(
                 # hand fights for every trick.
                 bomb = _opponent_overbomb_reply_probability(
                     state, pid, combo, total, rank_counts, joker_counts,
+                    unknown_cards=unknown,
                 ) * _route_overbomb_willingness(len(state["players"][pid]["hand"]))
             else:
                 bomb = _analytic_bomb_reply_probability(
@@ -2394,9 +2395,24 @@ def _hand_route_reply_model(
                 ) * _route_bomb_willingness(len(state["players"][pid]["hand"]))
             same_probs.append(same)
             bomb_probs.append(bomb)
-            if len(state["players"][pid]["hand"]) == combo["size"]:
+            hand_count = len(state["players"][pid]["hand"])
+            if is_bomb and 4 <= hand_count <= 6:
+                # A finishing overbomb is a subset of the existing overbomb
+                # event, not an independent ordinary reply. At four cards
+                # every legal overbomb empties the hand. Five/six-card hands
+                # may instead hold a smaller bomb plus leftovers, so use the
+                # same whole-hand tail event already included in the bomb
+                # probability. Short-hand willingness is one on both paths.
+                if hand_count == 4:
+                    finish_probs.append(bomb)
+                else:
+                    tail = _retained_bomb_finish_profile_from_pool(state, pid, unknown)
+                    finish_probs.append(_four_card_bomb_reply_probability(
+                        tail, combo, state["level_rank"], state.get("config", {}),
+                    ))
+            elif hand_count == combo["size"]:
                 finish_probs.append(same)
-            elif len(state["players"][pid]["hand"]) > combo["size"]:
+            elif hand_count > combo["size"]:
                 continuing_probs.append(same)
         same = _aggregate_event_probability(same_probs)
         bomb = _aggregate_event_probability(bomb_probs)
@@ -2537,8 +2553,8 @@ def _hand_route_plan_values(
     done = (tempo_weight, 1.0, 0.0)
     empty = (0.0, 0.0, 0.0)
 
-    def route_cost(remaining, lead):
-        key = (tail_key(remaining), words[lead])
+    def route_cost(remaining, lead, mate_credited=0.0):
+        key = (tail_key(remaining), words[lead], mate_credited)
         cached = shared.get(key)
         if cached is not None:
             return cached
@@ -2547,7 +2563,13 @@ def _hand_route_plan_values(
             return done
         same, bomb, finish, mate_finish, continuing = risks[lead]
         any_reply = 1.0 - (1.0 - same) * (1.0 - bomb)
-        _future_cost, future_leads, future_risk = best_tail(tail)
+        # A teammate has one fixed hidden hand. Repeated opportunities are
+        # correlated, so never redraw the same finish event on each lead.
+        # The maximum marginal lower-bounds their union, also when
+        # different legal five/six-card families are not nested.
+        next_mate_credit = max(mate_credited, mate_finish)
+        new_mate_credit = next_mate_credit - mate_credited
+        _future_cost, future_leads, future_risk = best_tail(tail, next_mate_credit)
         risk = future_risk + any_reply * loss_weight + finish * 3.0
         leads = 1.0 + future_leads
         # Match each possible response band to the cheapest higher
@@ -2570,7 +2592,7 @@ def _hand_route_plan_values(
             # A player going out cannot be caught by our next group.
             band *= 1.0 - finish
             if band > 0.00001:
-                _cost, recovered_leads, recovered_risk = best_tail(tail ^ (1 << follow))
+                _cost, recovered_leads, recovered_risk = best_tail(tail ^ (1 << follow), next_mate_credit)
                 risk -= band * (loss_weight + future_risk - recovered_risk)
                 leads -= band * (future_leads - recovered_leads)
             previous = upper
@@ -2582,20 +2604,20 @@ def _hand_route_plan_values(
                 uncovered = max(0.0, continuing - covered_same) * (1.0 - bomb) * (1.0 - finish)
                 cover_hold = 1.0 - risks[cover][1]
                 if uncovered * cover_hold > 0.00001:
-                    _cost, recovered_leads, recovered_risk = best_tail(tail ^ (1 << cover))
+                    _cost, recovered_leads, recovered_risk = best_tail(tail ^ (1 << cover), next_mate_credit)
                     band = uncovered * cover_hold
                     risk -= band * (loss_weight + future_risk - recovered_risk)
                     leads -= band * (future_leads - recovered_leads)
-        risk -= mate_finish * min(1.2, loss_weight)
+        risk -= new_mate_credit * min(1.2, loss_weight)
         leads = max(0.0, leads)
         risk = max(0.0, risk)
         result = shared[key] = (tempo_weight * leads + 1.6 * risk, leads, risk)
         return result
 
-    def best_tail(remaining):
+    def best_tail(remaining, mate_credited=0.0):
         if not remaining:
             return empty
-        key = tail_key(remaining)
+        key = (tail_key(remaining), mate_credited)
         cached = shared.get(key)
         if cached is not None:
             return cached
@@ -2604,7 +2626,7 @@ def _hand_route_plan_values(
         while bits:
             low = bits & -bits
             bits ^= low
-            candidate = route_cost(remaining, low.bit_length() - 1)
+            candidate = route_cost(remaining, low.bit_length() - 1, mate_credited)
             if best is None or (candidate[0], candidate[2]) < (best[0], best[2]):
                 best = candidate
         shared[key] = best
@@ -3040,6 +3062,54 @@ def _apply_hand_route_order(
             )
             components["total"] = adjusted
             scored[index] = (cards, adjusted, components)
+
+    # The family/control passes establish a stable global incumbent first.
+    # Compare another ordinary shape only when it executes the same physical
+    # cover materially better. Do not transfer high scores between all covers:
+    # those anchors include stock priors the route model has not replaced.
+    if not scored or state.get("finish_order"):
+        return
+    incumbent = max(range(len(scored)), key=lambda index: scored[index][1])
+    current_cards, current_score, current_components = scored[incumbent]
+    current = panel.get(_cards_key(current_cards or []))
+    if (not current or not current["exact"] or current["family"] in BOMB_TYPES
+            or current_components.get("anytime_partial")
+            or "anytime_quick_score" in current_components):
+        return
+    current_value = (_hand_route_lead_score(state, bot_id, current_cards)
+                     + current_components.get("lead_teammate", 0.0))
+    alternatives = []
+    for index, (cards, score, components) in enumerate(scored):
+        route = panel.get(_cards_key(cards or []))
+        if (not route or not route["exact"]
+                or route["family"] in BOMB_TYPES
+                or route["family"] == current["family"]
+                or route["order_group"][1] != current["order_group"][1]
+                or route["cost"] >= current["cost"] - 0.05
+                or components.get("anytime_partial")
+                or "anytime_quick_score" in components):
+            continue
+        value = (_hand_route_lead_score(state, bot_id, cards)
+                 + components.get("lead_teammate", 0.0))
+        if value > current_value:
+            alternatives.append((value, score, index))
+    if not alternatives:
+        return
+    best_value = max(value for value, _score, _index in alternatives)
+    # Within the reply model's tolerance, preserve the tactical ordering
+    # already established above, including cheaper groups of the same type.
+    value, _score, index = max(
+        (entry for entry in alternatives if entry[0] >= best_value - 0.4),
+        key=lambda entry: entry[1],
+    )
+    cards, old_score, components = scored[index]
+    score = current_score + max(0.5, value - current_value)
+    components = dict(components)
+    components["hand_route_cross_order"] = (
+        components.get("hand_route_cross_order", 0.0) + score - old_score
+    )
+    components["total"] = score
+    scored[index] = (cards, score, components)
 
 
 # Each refinement has one producer shared by lead ordering and final scoring.

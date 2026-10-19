@@ -16,6 +16,9 @@ class GuandanFinalistDeadlineTests(unittest.TestCase):
         state["level_rank"] = 2
         state["current_turn"] = "bot"
         state["current_trick"] = None
+        # This synthetic pool replaces the random opening; stale owner locks
+        # would reject it before the deliberately slow sampler is exercised.
+        state.update(known_card_owners={}, visible_card_id=None, round_memories=[])
         state["players"]["bot"]["hand"] = deck[:3]
         unknown_cards = [deck[index] for index in (4, 58, 5, 59, 6, 60)]
         state["players"]["opp"]["hand"] = unknown_cards
