@@ -1,0 +1,64 @@
+<template data-game-target="diceThroneHeaderActions" data-game-mode="contents">
+  <button id="diceThroneHelpBtn" type="button" aria-label="Help" title="Help">Help</button>
+  <button id="diceThroneExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
+</template>
+
+<template data-game-target="diceThronePanel" data-game-mode="contents">
+  <section class="dice-throne-shell" aria-label="Dice Throne game">
+    <header class="dice-throne-titlebar">
+      <div><span class="dt-kicker">SEASON ONE REROLLED · DUEL</span><h2>Dice Throne <span>王权骰铸</span></h2></div>
+      <div class="dt-round"><span id="diceThronePhase" data-dt-tip="Phase：the current step of the round.">Waiting</span><span id="diceThroneRevision">—</span></div>
+    </header>
+    <div id="diceThroneStatus" class="dt-status" role="status" aria-live="polite">Waiting for players</div>
+
+    <section id="diceThroneHeroPicker" class="dt-picker hidden" aria-label="Choose your hero">
+      <div class="dt-section-head"><h3>Choose your hero</h3><span>Two different heroes enter the arena</span></div>
+      <div id="diceThroneHeroChoices" class="dt-hero-choices"></div>
+    </section>
+
+    <div id="diceThroneArena" class="dt-arena hidden">
+      <section id="diceThronePlayers" class="dt-players" aria-label="Players"></section>
+      <section class="dt-roll-zone">
+        <div class="dt-section-head"><h3>Attack dice</h3><span id="diceThroneRollCount">Roll 0 / 3</span></div>
+        <div id="diceThroneDice" class="dt-dice" aria-label="Your five dice"></div>
+        <div class="dt-roll-actions">
+          <button id="diceThroneRollBtn" type="button" data-dt-explain="roll" disabled>Roll dice</button>
+          <button id="diceThroneConfirmBtn" type="button" data-dt-explain="confirm" disabled>Confirm roll</button>
+          <button id="diceThroneEndBtn" type="button" data-dt-explain="end_phase" disabled>End phase</button>
+        </div>
+      </section>
+      <section id="diceThroneAbilities" class="dt-abilities" aria-label="Abilities">
+        <div class="dt-section-head"><h3>Abilities</h3><span>Choose an ability after rolling</span></div>
+        <div id="diceThroneAbilityList" class="dt-ability-list"></div>
+      </section>
+      <section id="diceThroneHandArea" class="dt-hand-area" aria-label="Your hand">
+        <div class="dt-section-head"><h3>Hand <span>🃏</span></h3><span id="diceThroneHandCount">0 / 6</span></div>
+        <div id="diceThroneHand" class="dt-hand"></div>
+      </section>
+      <section id="diceThroneResponse" class="dt-response hidden" aria-label="Response">
+        <div class="dt-section-head"><h3 id="diceThroneResponseTitle">Response window</h3><span id="diceThroneResponseTimer"></span></div>
+        <p id="diceThroneResponseText">Choose a response or pass.</p>
+        <div id="diceThroneResponseActions" class="dt-response-actions"></div>
+      </section>
+      <section id="diceThroneLogPanel" class="dt-log-panel">
+        <details><summary>Battle log</summary><ol id="diceThroneLog"></ol></details>
+      </section>
+      <section id="diceThroneReview" class="dt-review hidden" aria-label="Round review">
+        <div class="dt-section-head"><h3>Round review</h3><span id="diceThroneReady">0 / 2 ready</span></div>
+        <div id="diceThroneReviewRows" class="dt-review-rows"></div>
+        <button id="diceThroneNextBtn" type="button" data-dt-explain="next_round" disabled>Next Round</button>
+      </section>
+      <section id="diceThroneGameOver" class="dt-game-over hidden" aria-live="polite">
+        <div id="diceThroneWinner"></div><div id="diceThroneFinalRows"></div>
+      </section>
+    </div>
+    <div id="diceThroneTooltip" class="dt-tooltip hidden" role="tooltip"></div>
+  </section>
+</template>
+
+<template data-game-target="diceThroneDialog" data-game-mode="replace">
+  <dialog id="diceThroneDialog" class="dt-dialog" aria-labelledby="diceThroneDialogTitle">
+    <div class="dt-dialog-head"><h2 id="diceThroneDialogTitle">Dice Throne</h2><button id="diceThroneDialogClose" type="button">Close</button></div>
+    <div id="diceThroneDialogBody"></div>
+  </dialog>
+</template>

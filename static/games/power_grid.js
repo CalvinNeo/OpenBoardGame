@@ -234,8 +234,13 @@
     const actions=node("div","pg-inline-actions");actions.append(button("Buy Fuel",()=>send("buy_resources",{resources:{...cart}}),"resources",!can("buy_resources")||!fits||!nonempty||!affordable,true),button("Done",()=>send("done"),"done",!can("done")));box.append(actions);
   }
   function renderAction(){
-    const box=byId("Action");box.replaceChildren();if(!view)return;
+    const section=byId("ActionSection"), box=byId("Action");
+    section.removeAttribute("data-pg-build-dock");
+    box.replaceChildren();if(!view)return;
     const player=own(), active=view.current_turn===view.you;
+    const buildDock=view.phase==="building" && selectedCity!=null && player && active;
+    if(buildDock)section.setAttribute("data-pg-build-dock","true");
+    const moved=syncMobileBuildAction(buildDock);
     const labels={auction:"AUCTION DESK",resources:"BUY FUEL",building:"EXTEND YOUR NETWORK",bureaucracy:"POWER YOUR CITIES",replace:"RETIRE A PLANT",round_end:"ROUND COMPLETE",game_over:"FINAL NETWORKS"};
     text("ActionTitle",labels[view.phase]||"YOUR MOVE");text("ActionBadge",pending?"Sending…":active?"YOUR TURN":"");
     if(!player){box.append(node("p","pg-action-message","Watching this table."));return;}
@@ -297,6 +302,19 @@
       row.append(button(chosenPlants.length?"Run Plants":"Take 10 💰",()=>send("power",{plants:chosenPlants,hybrid_coal:hybridCoal}),"power",!can("power")||!option,true));
       row.append(button("Best Output",()=>{const best=[...view.dispatch_options].sort((a,b)=>b.powered-a.powered || Object.values(a.fuel).reduce((s,n)=>s+n,0)-Object.values(b.fuel).reduce((s,n)=>s+n,0))[0];chosenPlants=[...best.plants];hybridCoal=best.hybrid_coal;renderFleet();renderAction();},"power",!can("power")));box.append(row);
     }
+    if(buildDock && moved)section.scrollIntoView({block:"nearest"});
+  }
+
+  function syncMobileBuildAction(buildDock){
+    const section=byId("ActionSection"), slot=byId("ActionSlot"), mapSection=panel.querySelector(".pg-map-section");
+    if(!section||!slot||!mapSection)return false;
+    const shouldMove=buildDock && window.matchMedia("(max-width:760px)").matches;
+    let moved=false;
+    if(shouldMove && section.parentElement!==mapSection){
+      const frame=mapSection.querySelector(".pg-map-frame");
+      mapSection.insertBefore(section,frame||mapSection.firstChild);moved=true;
+    }else if(!shouldMove && section.parentElement!==slot)slot.appendChild(section);
+    return moved;
   }
 
   function svg(tag, attrs={}, value){const n=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));if(value!=null)n.textContent=value;return n;}
@@ -505,7 +523,7 @@
     if(!explaining||exempt(e.target)||!["Enter"," "].includes(e.key))return;
     e.preventDefault();e.stopImmediatePropagation();explain(e.target.closest("[data-pg-explain]"));
   },true);
-  document.addEventListener("scroll",hideTip,true);window.addEventListener("resize",()=>{hideTip();applyMapBox();});window.addEventListener("blur",hideTip);
+  document.addEventListener("scroll",hideTip,true);window.addEventListener("resize",()=>{hideTip();applyMapBox();if(view)renderAction();});window.addEventListener("blur",hideTip);
 
   const regionBox=byId("RegionChoices");
   Object.entries(regionNames).forEach(([key,label])=>{const row=node("label","",label),input=node("input");input.type="checkbox";input.value=key;input.checked=["north","west","southwest"].includes(key);row.prepend(input);regionBox.append(row);});
@@ -522,7 +540,7 @@
   }
   function clearState(){
     view=null;signature="";phaseSignature="";pending=false;selectedPlant=null;selectedCity=null;chosenPlants=[];cart=emptyFuel();mapKey="";drag=null;
-    clearTimeout(pendingTimer);clearTimeout(suppressTimer);suppressClick=false;setExplain(false);if(dialog.open)dialog.close();
+    clearTimeout(pendingTimer);clearTimeout(suppressTimer);suppressClick=false;setExplain(false);if(dialog.open)dialog.close();syncMobileBuildAction(false);
     ["Action","Market","ResourceMarket","Fleet","Players","Stats","Map","Cities","Log","Results","Phases"].forEach(id=>byId(id).replaceChildren());byId("Review").classList.add("hidden");text("Status","Waiting to start");
   }
   window.getPowerGridConfig=()=>view&&currentRoomState?.status!=="lobby"?{...view.config}:{regions:byId("AutoRegions").checked?[]:[...regionBox.querySelectorAll("input:checked")].map(n=>n.value)};

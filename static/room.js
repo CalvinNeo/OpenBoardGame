@@ -782,6 +782,7 @@ const GAME_WEIGHT = {
   ark_nova: 3.80,
   azul: 1.78,
   sagrada: 1.92,
+  dice_throne: 1.97,
   blokus: 1.73,
   blitz_sketch: 1.0,
   bohnanza_dice: 1.17,

@@ -1,0 +1,26 @@
+{
+  "game_id": "dice_throne",
+  "version": 1,
+  "public_view": {
+    "revision": "integer; sent back with every action",
+    "phase": "choose_hero|upkeep|income|main_1|offensive_roll|targeting|defensive_roll|main_2|discard|round_review|game_over",
+    "current_player": "player id or null",
+    "players": [{"player_id":"id","name":"display name","hero":"barbarian|moon_elf|null","health":"integer","combat_points":"integer","max_health":50,"statuses":[{"id":"status","stacks":"integer"}],"hand_count":"integer","upgrades":["ability/level ids"],"is_bot":"boolean"}],
+    "you": "viewer id",
+    "your_hand": [{"id":"card id","name":"display name","cost":"integer","timing":"main|roll|instant","target":"none|self|opponent|die|any_player|own_die|enemy_die","description":"string"}],
+    "dice": [{"index":"integer","face":"face token","kept":"boolean"}],
+    "abilities": [{"id":"ability id","name":"string","cost":"integer","available":"boolean","target":"none|self|opponent","description":"string"}],
+    "pending_attack": {"attacker":"id","defender":"id","damage":"integer","damage_type":"combat|unblockable|pure|ultimate","ability_id":"string"},
+    "discard_count":"integer", "legal_actions":["action type strings"], "winner":["player ids"], "game_over":"boolean", "round_review":"public event list"
+  },
+  "actions": {
+    "choose_hero": {"hero":"barbarian|moon_elf","revision":"integer"},
+    "roll": {"revision":"integer"}, "toggle_keep": {"index":"0..4","revision":"integer"},
+    "confirm_roll": {"revision":"integer"}, "use_ability":{"ability_id":"string","target":"optional player id","revision":"integer"},
+    "play_card":{"card_id":"string","target":"optional player id","die_index":"optional integer","revision":"integer"},
+    "buy_upgrade":{"ability_id":"string","level":"integer","revision":"integer"}, "sell_card":{"card_id":"string","revision":"integer"},
+    "defend":{"ability_id":"optional string","revision":"integer"}, "pass":{"revision":"integer"},
+    "next_round":{"revision":"integer"}
+  },
+  "privacy": "Opponent hand ids, hidden deck/discard order, random seed, and RNG state are omitted from public_view."
+}

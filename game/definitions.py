@@ -1,3 +1,4 @@
+from game.dice_throne import DiceThroneGame, ACTION_SCHEMA as DICE_THRONE_ACTION_SCHEMA, CONFIG_SCHEMA as DICE_THRONE_CONFIG_SCHEMA
 from game.colt_express import ColtExpressGame, ACTION_SCHEMA as COLT_EXPRESS_ACTION_SCHEMA, CONFIG_SCHEMA as COLT_EXPRESS_CONFIG_SCHEMA
 from game.dnd_starter_set import DndStarterSetGame, ACTION_SCHEMA as DND_STARTER_ACTION_SCHEMA, CONFIG_SCHEMA as DND_STARTER_CONFIG_SCHEMA
 from game.the_mind import TheMindGame, ACTION_SCHEMA as THE_MIND_ACTION_SCHEMA, CONFIG_SCHEMA as THE_MIND_CONFIG_SCHEMA
@@ -134,6 +135,15 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=DiceThroneGame.game_id, name="Dice Throne", name_zh="王权骰铸",
+        min_players=2, max_players=2, turn_mode="turn",
+        action_schema=DICE_THRONE_ACTION_SCHEMA, config_schema=DICE_THRONE_CONFIG_SCHEMA,
+        module=DiceThroneGame, serialize=DiceThroneGame.serialize, deserialize=DiceThroneGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

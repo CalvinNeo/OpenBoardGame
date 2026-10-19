@@ -21,6 +21,7 @@ const azulCenter = document.getElementById("azulCenter");
 const azulYourBoard = document.getElementById("azulYourBoard");
 const azulPlayers = document.getElementById("azulPlayers");
 const azulPlayersDetails = document.getElementById("azulPlayersDetails");
+const azulMarket = document.querySelector("#azulPanel .azul-market");
 let azulPlayersDetailsInitialized = false;
 
 const azulFloorBtn = document.getElementById("azulFloorBtn");
@@ -292,6 +293,11 @@ function renderAzulFactories(view) {
   }
   azulFactories.innerHTML = "";
   const factories = Array.isArray(view.factories) ? view.factories : [];
+  const factoryCount = String(factories.length);
+  azulFactories.dataset.factoryCount = factoryCount;
+  if (azulMarket) {
+    azulMarket.dataset.factoryCount = factoryCount;
+  }
   factories.forEach((factory, idx) => {
     const wrapper = document.createElement("div");
     wrapper.className = "azul-factory";

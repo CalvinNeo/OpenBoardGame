@@ -1,0 +1,101 @@
+#diceThronePanel { min-width: 0; }
+.dice-throne-shell { --dt-ink:#14212b; --dt-muted:#647483; --dt-paper:#f9fbfc; --dt-line:#d9e0e5; --dt-blue:#245a87; --dt-blue2:#dcecf7; --dt-amber:#bd6b24; --dt-red:#b73739; --dt-green:#25674d; color:var(--dt-ink); background:linear-gradient(135deg,#eef4f7,#f8f5ec); border:1px solid #d1dbe0; border-radius:18px; padding:clamp(12px,2vw,22px); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; min-width:0; }
+.dice-throne-shell *, .dt-dialog * { box-sizing:border-box; min-width:0; }
+.dice-throne-shell h2,.dice-throne-shell h3,.dt-dialog h2 { margin:0; }
+.dice-throne-shell button,.dt-dialog button { border:1px solid #cbd5db; background:#fff; color:var(--dt-ink); border-radius:9px; min-height:36px; padding:7px 11px; line-height:1.3; overflow-wrap:anywhere; cursor:pointer; }
+.dice-throne-shell button:disabled { opacity:.43; cursor:default; }
+.dice-throne-shell button:not(:disabled):hover { filter:brightness(.97); border-color:#8da9bb; }
+.dice-throne-shell :focus-visible,.dt-dialog :focus-visible { outline:3px solid #e4a53f; outline-offset:2px; }
+.dice-throne-titlebar,.dt-section-head,.dt-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.dice-throne-titlebar { padding-bottom:14px; border-bottom:1px solid var(--dt-line); }
+.dt-kicker { font-size:10px; letter-spacing:.14em; color:var(--dt-muted); font-weight:700; }
+.dice-throne-titlebar h2 { margin-top:5px; letter-spacing:-.03em; font-size:clamp(23px,3vw,34px); line-height:1.1; }
+.dice-throne-titlebar h2 span { color:var(--dt-muted); font-size:.45em; font-weight:500; letter-spacing:.08em; margin-left:6px; }
+.dt-round { display:flex; flex-direction:column; text-align:right; gap:3px; font-size:12px; color:var(--dt-muted); }
+.dt-status { margin:10px 0 13px; padding:10px 12px; border:1px solid #c7d7e0; border-radius:9px; background:#eaf3f8; min-height:39px; line-height:1.35; overflow-wrap:anywhere; }
+.dt-status.dt-attention { border:2px solid var(--dt-red); background:#fff0ef; }
+.dt-picker,.dt-roll-zone,.dt-abilities,.dt-hand-area,.dt-response,.dt-log-panel,.dt-review,.dt-game-over { background:var(--dt-paper); border:1px solid var(--dt-line); border-radius:12px; padding:14px; }
+.dt-section-head { margin-bottom:10px; }
+.dt-section-head h3 { font-size:14px; letter-spacing:.01em; }
+.dt-section-head > span { font-size:11px; color:var(--dt-muted); overflow-wrap:anywhere; }
+.dt-hero-choices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.dt-hero-card { text-align:left; display:flex; flex-direction:column; gap:6px; min-height:112px; padding:12px; border:1px solid #c6d3dc; border-radius:11px; background:#fff; }
+.dt-hero-card[data-hero="barbarian"] { border-top:4px solid #b53d3f; }
+.dt-hero-card[data-hero="moon_elf"] { border-top:4px solid #4b6faa; }
+.dt-hero-card strong { font-size:17px; }
+.dt-hero-card small { color:var(--dt-muted); line-height:1.45; }
+.dt-arena { display:grid; grid-template-columns:minmax(0,1.07fr) minmax(0,1fr); gap:12px; }
+.dt-players { grid-column:1 / -1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.dt-player { padding:12px; border:1px solid var(--dt-line); border-radius:12px; background:#fff; position:relative; overflow:hidden; }
+.dt-player.dt-you { box-shadow:inset 4px 0 var(--dt-blue); }
+.dt-player.dt-turn { border-color:var(--dt-amber); box-shadow:inset 4px 0 var(--dt-amber); }
+.dt-player.dt-defeated { opacity:.64; }
+.dt-player-head { display:flex; justify-content:space-between; gap:7px; align-items:flex-start; }
+.dt-player-name { font-weight:700; overflow-wrap:anywhere; }
+.dt-hero-name { font-size:11px; color:var(--dt-muted); }
+.dt-badges { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; font-size:10px; }
+.dt-badge { border-radius:4px; padding:3px 5px; background:#edf0f1; }
+.dt-health { display:flex; align-items:baseline; gap:7px; margin-top:10px; }
+.dt-health strong { font-size:25px; font-variant-numeric:tabular-nums; }
+.dt-health-bar { height:7px; flex:1; border-radius:5px; background:#edf0f1; overflow:hidden; }
+.dt-health-bar span { display:block; height:100%; border-radius:5px; background:var(--dt-red); transition:width .2s; }
+.dt-player-meta { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; font-size:11px; color:var(--dt-muted); }
+.dt-statuses { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+.dt-status-chip { font-size:10px; padding:3px 6px; border-radius:6px; background:#f6ecdb; color:#875014; }
+.dt-roll-zone { grid-column:1; }
+.dt-abilities { grid-column:2; grid-row:2 / span 2; }
+.dt-dice { display:grid; grid-template-columns:repeat(5,minmax(36px,1fr)); gap:8px; margin:12px auto; max-width:360px; }
+.dt-die { aspect-ratio:1; display:grid; place-items:center; border:2px solid #aab8c2; border-radius:10px; background:#fff; color:#243745; font-size:clamp(22px,4vw,31px); font-weight:700; cursor:pointer; position:relative; }
+.dt-die.kept { background:#dcecf7; border-color:var(--dt-blue); box-shadow:0 3px 0 #9abbd2; }
+.dt-die.kept::after { content:"KEEP"; position:absolute; bottom:2px; font-size:8px; letter-spacing:.08em; }
+.dt-die.empty { color:#a5afb5; }
+.dt-roll-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+#diceThroneRollBtn { background:var(--dt-blue); color:#fff; border-color:var(--dt-blue); }
+#diceThroneConfirmBtn { background:#edf5ef; color:var(--dt-green); border-color:#b7d6c0; }
+.dt-ability-list { display:grid; gap:7px; max-height:310px; overflow:auto; overscroll-behavior:contain; }
+.dt-ability { text-align:left; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 8px; padding:9px; background:#fff; border:1px solid var(--dt-line); border-radius:9px; }
+.dt-ability strong { overflow-wrap:anywhere; }
+.dt-ability small { grid-column:1 / -1; color:var(--dt-muted); line-height:1.4; overflow-wrap:anywhere; }
+.dt-cost { font-size:11px; white-space:nowrap; color:#876116; }
+.dt-ability.available { border-color:#9ebed3; background:#f4fafd; }
+.dt-ability.selected { border-color:var(--dt-amber); box-shadow:0 0 0 2px #f0c987; }
+.dt-hand-area { grid-column:1 / -1; }
+.dt-hand { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); gap:8px; }
+.dt-card { text-align:left; min-height:102px; padding:9px; background:#fff; border:1px solid #cbd5db; border-radius:9px; display:flex; flex-direction:column; justify-content:space-between; gap:6px; }
+.dt-card.playable { border-color:#9ebed3; }
+.dt-card.selected { border-color:var(--dt-amber); box-shadow:0 0 0 2px #f0c987; }
+.dt-card-head { display:flex; justify-content:space-between; gap:5px; font-size:12px; }
+.dt-card-cost { color:#876116; white-space:nowrap; }
+.dt-card p { margin:0; color:var(--dt-muted); font-size:11px; line-height:1.35; overflow-wrap:anywhere; }
+.dt-card .dt-card-foot { font-size:10px; color:#71808c; }
+.dt-card-confirm,.dt-target-choice { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+.dt-card-confirm button,.dt-target-choice button { min-height:29px; padding:4px 7px; font-size:11px; }
+.dt-empty { color:var(--dt-muted); font-size:12px; }
+.dt-response { grid-column:1 / -1; border-color:#ddad74; background:#fff9f0; }
+.dt-response p { margin:0 0 9px; color:#744918; font-size:12px; overflow-wrap:anywhere; }
+.dt-response-actions { display:flex; flex-wrap:wrap; gap:7px; }
+.dt-response-actions button:first-child { background:#f2e4d2; border-color:#d49a5b; }
+.dt-log-panel { grid-column:1 / -1; padding:0 12px; }
+.dt-log-panel summary { cursor:pointer; padding:10px 2px; font-size:12px; color:var(--dt-muted); }
+.dt-log-panel ol { margin:0; padding:0 4px 8px 20px; max-height:140px; overflow:auto; font-size:11px; color:#53626e; }
+.dt-log-panel li { padding:3px 0; overflow-wrap:anywhere; }
+.dt-review { grid-column:1 / -1; border-color:#9fbfa9; background:#f2f8f3; }
+.dt-review-rows { display:grid; gap:6px; margin-bottom:10px; }
+.dt-review-row { padding:8px; border-radius:7px; background:#fff; font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+.dt-review-row.self { border-left:3px solid var(--dt-blue); }
+#diceThroneNextBtn { background:var(--dt-green); color:#fff; border-color:var(--dt-green); }
+.dt-game-over { grid-column:1 / -1; border-color:#d6b56d; background:#fff9e9; text-align:center; }
+.dt-game-over h3 { font-size:20px; margin-bottom:9px; }
+.dt-final-row { display:flex; justify-content:center; gap:9px; padding:5px; font-size:12px; }
+.dt-tooltip { position:fixed; z-index:20000; max-width:min(290px,calc(100vw - 24px)); padding:8px 10px; border-radius:8px; background:#182b39; color:#fff; font-size:12px; line-height:1.45; box-shadow:0 4px 18px #0004; pointer-events:none; overflow-wrap:anywhere; }
+.dt-dialog { width:min(650px,calc(100vw - 28px)); max-height:calc(100dvh - 30px); padding:20px; border:1px solid #cad7de; border-radius:14px; color:var(--dt-ink); overflow:auto; }
+.dt-dialog::backdrop { background:#10212bcc; }
+.dt-dialog-head { margin-bottom:14px; }
+.dt-dialog h2 { font-size:20px; }
+.dt-dialog h3 { margin:16px 0 5px; font-size:15px; }
+.dt-dialog p { margin:8px 0; line-height:1.65; font-size:14px; overflow-wrap:anywhere; }
+.dt-dialog li { margin:5px 0; line-height:1.55; }
+.dice-throne-shell.dt-explaining [data-dt-explain] { outline:2px dashed #b56824; outline-offset:2px; cursor:help; }
+@media (max-width:900px) { .dt-arena { grid-template-columns:minmax(0,1fr); } .dt-roll-zone,.dt-abilities { grid-column:1; grid-row:auto; } }
+@media (max-width:480px) { .dice-throne-shell { padding:11px; border-radius:12px; } .dt-hero-choices,.dt-players { grid-template-columns:minmax(0,1fr); } .dt-roll-actions { grid-template-columns:repeat(2,minmax(0,1fr)); } .dt-roll-actions button:last-child { grid-column:1 / -1; } .dt-dice { gap:5px; } .dt-die { border-radius:8px; font-size:22px; } .dt-hand { grid-template-columns:repeat(2,minmax(0,1fr)); } .dt-card { min-height:105px; padding:8px; } }
+@media (max-width:340px) { .dt-hand { grid-template-columns:minmax(0,1fr); } .dt-roll-actions { grid-template-columns:minmax(0,1fr); } .dt-roll-actions button:last-child { grid-column:auto; } }

@@ -106,9 +106,9 @@ const GAME_ASSETS = {
     "header": "showMindTheLinesHeaderActions"
   },
   "power_grid": {
-    "scripts": ["/static/games/power_grid.js?v=5"],
-    "styles": ["/static/games/power_grid.css?v=5"],
-    "markup": "/static/games/power_grid.html?v=2",
+    "scripts": ["/static/games/power_grid.js?v=6"],
+    "styles": ["/static/games/power_grid.css?v=6"],
+    "markup": "/static/games/power_grid.html?v=3",
     "panel": "powerGridPanel",
     "header": "showPowerGridHeaderActions"
   },
@@ -118,6 +118,13 @@ const GAME_ASSETS = {
     "markup": "/static/games/a_feast_for_odin.html?v=2",
     "panel": "odinPanel",
     "header": "showOdinHeaderActions"
+  },
+  "dice_throne": {
+    "scripts": ["/static/games/dice_throne.js?v=1"],
+    "styles": ["/static/games/dice_throne.css?v=1"],
+    "markup": "/static/games/dice_throne.html?v=1",
+    "panel": "diceThronePanel",
+    "header": "showDiceThroneHeaderActions"
   },
   "no_thanks": {
     "scripts": ["/static/games/no_thanks.js?v=2"],
@@ -214,7 +221,7 @@ const GAME_ASSETS = {
     "panel": "azulPanel",
     "header": "showAzulHeaderActions",
     "markup": "/static/games/azul.html?v=1",
-    "styleFragments": "/static/games/azul.css?v=1"
+    "styleFragments": "/static/games/azul.css?v=2"
   },
   "sagrada": {
     "scripts": ["/static/games/sagrada.js?v=3"],
@@ -880,7 +887,7 @@ const GAME_ASSETS = {
       "/static/games/ponzi_scheme.js?v=3"
     ],
     "styles": [
-      "/static/ponzi_scheme.css?v=2"
+      "/static/ponzi_scheme.css?v=3"
     ],
     "panel": "ponziSchemePanel",
     "header": "showPonziSchemeHeaderActions",

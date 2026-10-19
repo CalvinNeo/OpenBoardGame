@@ -137,10 +137,14 @@ class GuandanValueBoundsTests(unittest.TestCase):
         delayed = copy.deepcopy(state)
         _, error = guandan.GuandanGame.apply_action(delayed, "p1", single_action)
         self.assertIsNone(error)
-        leaf = guandan._evaluate_state_for_bot(delayed, "p1")
-        self.assertGreater(leaf, -200.0)
-        self.assertLess(leaf, -100.0)
-        self.assertEqual(guandan._mcts_reply_tree_value(copy.deepcopy(delayed), "p1", 0, 2, 0), leaf)
+        # Detailed and bounded search leaves may estimate hand shape
+        # differently, but both must stay within the attainable losses.
+        for leaf in (
+            guandan._evaluate_state_for_bot(delayed, "p1"),
+            guandan._mcts_reply_tree_value(copy.deepcopy(delayed), "p1", 0, 2, 0),
+        ):
+            self.assertGreater(leaf, -200.0)
+            self.assertLess(leaf, -100.0)
         _, error = guandan.GuandanGame.apply_action(delayed, "p2", {"type": "play", "card_ids": [enemy["id"]]})
         self.assertIsNone(error)
         self.assertEqual(delayed["finish_order"], ["p0", "p3", "p2", "p1"])

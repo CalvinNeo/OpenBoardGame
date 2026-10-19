@@ -28,6 +28,64 @@ class GuandanScoreOwnershipTests(unittest.TestCase):
             ))
         return producers
 
+    def test_completed_exact_route_owns_recovery_without_duplicate_reward(self):
+        for complete, exact, expected in (
+            (True, True, 0.0), (True, False, 4.0), (False, True, 4.0),
+        ):
+            with self.subTest(complete=complete, exact=exact), ExitStack() as stack:
+                self.state["_ai_eval_cache"] = {"hand_route_status": {"complete": complete}}
+                self.patch_refinements(stack, lead_reentry=4.0)
+                stack.enter_context(mock.patch.object(
+                    guandan_ai, "_current_hand_routes",
+                    return_value={guandan._cards_key(self.cards): {"exact": exact}},
+                ))
+                ranked, direct = self.call("_lead_refinement_components", self.cards, self.combo)
+                self.assertEqual(ranked["lead_reentry"], expected)
+                self.assertEqual(direct.get("lead_reentry", 0.0), expected)
+
+    def test_recovery_mode_changes_invalidate_lead_cache(self):
+        with ExitStack() as stack:
+            self.state["_ai_eval_cache"] = {"hand_route_status": {"complete": True}}
+            self.patch_refinements(stack, lead_reentry=4.0)
+            stack.enter_context(mock.patch.object(
+                guandan_ai, "_current_hand_routes",
+                return_value={guandan._cards_key(self.cards): {"exact": True}},
+            ))
+            self.state["config"]["bot_lead_reentry_mode"] = "legacy"
+            before = self.call("_lead_option_score", self.cards)
+            self.state["config"]["bot_lead_reentry_mode"] = "route_only"
+            after = self.call("_lead_option_score", self.cards)
+            self.assertAlmostEqual(before - after, 4.0)
+
+    def test_finished_race_preserves_tactical_reentry_for_either_team(self):
+        for finish in ("opp", "mate"):
+            with self.subTest(finish=finish), ExitStack() as stack:
+                self.state["finish_order"] = [finish]
+                self.state["_ai_eval_cache"] = {"hand_route_status": {"complete": True}}
+                self.patch_refinements(stack, lead_reentry=4.0)
+                stack.enter_context(mock.patch.object(
+                    guandan_ai, "_current_hand_routes",
+                    return_value={guandan._cards_key(self.cards): {"exact": True}},
+                ))
+                ranked, direct = self.call("_lead_refinement_components", self.cards, self.combo)
+                self.assertEqual(ranked["lead_reentry"], 4.0)
+                self.assertEqual(direct["lead_reentry"], 4.0)
+
+    def test_finish_order_change_invalidates_route_reentry_cache(self):
+        with ExitStack() as stack:
+            self.state["_ai_eval_cache"] = {"hand_route_status": {"complete": True}}
+            self.patch_refinements(stack, lead_reentry=4.0)
+            stack.enter_context(mock.patch.object(
+                guandan_ai, "_current_hand_routes",
+                return_value={guandan._cards_key(self.cards): {"exact": True}},
+            ))
+            ranked, _direct = self.call("_lead_refinement_components", self.cards, self.combo)
+            self.assertEqual(ranked["lead_reentry"], 0.0)
+            self.state["finish_order"] = ["opp"]
+            ranked, direct = self.call("_lead_refinement_components", self.cards, self.combo)
+            self.assertEqual(ranked["lead_reentry"], 4.0)
+            self.assertEqual(direct["lead_reentry"], 4.0)
+
     def test_ranking_and_final_score_reuse_the_same_recovery_estimate(self):
         with ExitStack() as stack:
             producers = self.patch_refinements(stack, lead_reentry=2.0)

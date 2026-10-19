@@ -29,6 +29,10 @@ DEFAULT_CONFIG = {
     "bot_mcts_sims": 96,
     "bot_mcts_depth": 8,
     "bot_mcts_tree_ply": 2,
+    # Bomb replies often end with several mandatory passes. Those passes
+    # do not consume the corrected search horizon, so keep the tactical tree
+    # shallow enough to finish a paired panel within the same wall-clock turn.
+    "bot_mcts_forced_pass_tree_ply": 1,
     "bot_mcts_reply_width": 2,
     "bot_mcts_root_width": 5,
     "bot_mcts_large_hand_threshold": 18,
@@ -77,6 +81,8 @@ DEFAULT_CONFIG = {
     "bot_exact_endgame_public_only": True,
     "bot_endgame_closeout_min_hold": 0.55,
     "bot_endgame_closeout_min_gain": 0.04,
+    # Complete routes already price recovery after an opponent's response.
+    "bot_lead_reentry_mode": "route_only",
     "bot_lead_prescore_enabled": True,
     "bot_lead_prescore_min_hand": 12,
     "bot_lead_prescore_min_options": 24,

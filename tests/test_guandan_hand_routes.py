@@ -89,7 +89,8 @@ class GuandanHandRouteTests(unittest.TestCase):
     def test_saved_opening_keeps_the_wild_for_a_bomb_and_the_level_pair_whole(self):
         # bot4 led QQ here while its plan buried ♦2♦2 and the wild ♥2 in the
         # lowest three-pairs 22 33 44. The wild belongs to 888 as a bomb, the
-        # level pair stays a recovery for the low pair, and 33 leads first.
+        # level pair stays a recovery. A cheap single with the same complete
+        # cover is also valid when the retained bombs/jokers provide reentry.
         state = replay_fixture("c82", 10, {"bot_mode": "heuristic"})
         pid = state["current_turn"]
         hand = guandan._map_hand_by_id(state["players"][pid]["hand"])
@@ -120,8 +121,22 @@ class GuandanHandRouteTests(unittest.TestCase):
             self.assertIn(lead, natural_pairs)
 
         action = guandan.GuandanGame.bot_move(state, pid)
-        self.assertEqual(sorted(guandan._card_label(hand[c]) for c in action["card_ids"]),
-                         ["♠️3", "♣️3"])
+        self.assertEqual(action["type"], "play")
+        chosen = [hand[cid] for cid in action["card_ids"]]
+        # Preserve all special controls and existing bombs; do not freeze the
+        # exact order of two low groups with equivalent complete routes.
+        self.assertTrue(all(not guandan._is_joker(card)
+                            and card.get("rank") != state["level_rank"]
+                            and card.get("rank", 99) < 12 for card in chosen))
+        self.assertFalse(guandan_ai.call(
+            guandan, "_breaks_bomb_shape", list(hand.values()), action["card_ids"], 2,
+        ))
+        chosen_route = panel[guandan._cards_key(action["card_ids"])]
+        low_pair = next(route for route in panel.values()
+                        if sorted(guandan._card_label(hand[c]) for c in route["cards"])
+                        == ["♠️3", "♣️3"])
+        self.assertTrue(chosen_route["exact"])
+        self.assertLessEqual(chosen_route["cost"], low_pair["cost"] + 0.001)
         explanation = state["bot_explain"][pid]
         self.assertTrue(explanation["method_details"]["hand_route_status"]["complete"])
         groups = [sorted(group) for group in explanation["method_details"]["hand_route"]["groups"]]
@@ -129,7 +144,7 @@ class GuandanHandRouteTests(unittest.TestCase):
         self.assertIn(["♦️2", "♦️2"], groups)
         self.assertNotIn(6, [len(group) for group in groups])
         top = [sorted(entry["cards"]) for entry in explanation["top"]]
-        self.assertEqual(top[0], ["♠️3", "♣️3"])
+        self.assertEqual(top[0], sorted(guandan._card_label(card) for card in chosen))
 
     def test_two_run_finish_blocks_opponents_who_could_finish_on_the_reply(self):
         state = self.make_state([

@@ -566,19 +566,56 @@
 }
 
 @media (max-width: 720px) {
+  /* Keep the round summary scannable without making the game board taller. */
+  .azul-status {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .azul-status > div {
+    min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.72);
+    font-size: 11px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
   .azul-table {
     padding: 8px;
     gap: 12px;
   }
 
-  .azul-status {
-    gap: 4px 10px;
-    font-size: 12px;
-    margin-bottom: 8px;
+  /* Factories and the center are related choices. Keeping them beside each
+     other saves a full vertical section on narrow phones. */
+  .azul-market {
+    grid-template-columns: minmax(0, 1.35fr) minmax(84px, 0.65fr);
+    gap: 8px;
+    align-items: start;
+  }
+
+  /* The number of factories follows the player count. Give larger tables
+     the full width so their tiles stay comfortable to tap. */
+  .azul-market[data-factory-count="7"],
+  .azul-market[data-factory-count="9"] {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .azul-factories {
-    gap: 6px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  #azulFactories[data-factory-count="7"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  #azulFactories[data-factory-count="9"] {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .azul-factory {
@@ -586,12 +623,79 @@
   }
 
   .azul-tiles {
-    grid-template-columns: repeat(2, minmax(0, 28px));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     min-height: 60px;
+  }
+
+  .azul-center-choice {
+    min-height: 42px;
+  }
+
+  .azul-center-actions button {
+    min-height: 44px;
   }
 
   .azul-pattern-summary {
     gap: 3px;
+  }
+}
+
+@media (max-width: 360px) {
+  .azul-table {
+    padding: 6px;
+    gap: 10px;
+  }
+
+  .azul-status > div {
+    padding: 4px;
+    font-size: 10px;
+  }
+
+  .azul-market {
+    grid-template-columns: minmax(0, 1.3fr) minmax(78px, 0.7fr);
+    gap: 6px;
+  }
+
+  .azul-market[data-factory-count="7"],
+  .azul-market[data-factory-count="9"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .azul-table h3 {
+    font-size: 13px;
+  }
+
+  .azul-factory {
+    padding: 4px 2px;
+  }
+
+  .azul-factory-title {
+    font-size: 10px;
+  }
+
+  .azul-tiles {
+    gap: 3px;
+    min-height: 56px;
+  }
+
+  #azulFactories[data-factory-count="7"],
+  #azulFactories[data-factory-count="9"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .azul-center-wrap {
+    padding: 4px 2px;
+  }
+
+  .azul-center-choice {
+    flex-basis: 30px;
+    min-height: 40px;
+    font-size: 10px;
+  }
+
+  .azul-center-choice .azul-tile {
+    width: 20px;
+    height: 20px;
   }
 }
 

@@ -1,3 +1,4 @@
+from game.dice_throne import DiceThroneGame
 from game.colt_express import ColtExpressGame
 from game.dnd_starter_set import DndStarterSetGame
 from game.the_mind import TheMindGame

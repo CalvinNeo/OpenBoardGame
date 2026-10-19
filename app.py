@@ -184,6 +184,8 @@ async def download_room_save(source_room_id: str):
         raise HTTPException(status_code=403, detail="This Startups game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "sagrada"):
         raise HTTPException(status_code=403, detail="This Sagrada game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "dice_throne"):
+        raise HTTPException(status_code=403, detail="This Dice Throne game is still active. Reconnect to the existing room.")
     if _has_unfinished_skull_king_save(source_room_id):
         raise HTTPException(status_code=403, detail="This Skull King game is still active. Reconnect to the existing room.")
     if _has_unfinished_deception_save(source_room_id):
@@ -594,7 +596,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -727,7 +729,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type in ("gloomhaven", "the_crew"):
         return {"type": action.get("type")}
-    if game_type in ("startups", "sagrada"):
+    if game_type in ("startups", "sagrada", "dice_throne"):
         return {"type": action.get("type")}
     if game_type == "skull_king":
         return {"type": action.get("type")}
@@ -1675,6 +1677,8 @@ async def on_room_reconnect(sid, data):
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "sagrada")
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "dice_throne")
+    if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "natsumemo")
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "maskmen")
@@ -1722,7 +1726,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "natsumemo", "maskmen", "the_crew", "gloomhaven"):
+    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven"):
         await _maybe_run_bots(room)
 
 
@@ -2154,6 +2158,7 @@ async def on_room_load(sid, data):
         or _has_unfinished_private_save(source_room_id, "maskmen")
         or _has_unfinished_private_save(source_room_id, "startups")
         or _has_unfinished_private_save(source_room_id, "sagrada")
+        or _has_unfinished_private_save(source_room_id, "dice_throne")
         or _has_unfinished_private_save(source_room_id, "natsumemo")
         or _has_unfinished_skull_king_save(source_room_id)
         or _has_unfinished_deception_save(source_room_id)

@@ -1649,6 +1649,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["current_turn"] = "bot"
         state["config"]["bot_determinize_samples"] = 4
         state["config"]["bot_determinize_temperature"] = 0.0
+        # This synthetic deal has no public owner from the random opening deal.
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
 
         deck = guandan._full_deck()
         bot_card = next(card for card in deck if guandan._card_label(card) == "♣️5")
@@ -1973,6 +1976,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["dealer_team"] = "A"
         state["level_rank"] = 2
         state["current_turn"] = "bot4"
+        # The fixture replaces the deal below; its random opening-card owner
+        # is no longer an observation about these hands.
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
         state["config"]["bot_short_hand_structured_samples"] = 400
         state["config"]["bot_short_hand_structured_max_attempts"] = 6000
 
@@ -2393,6 +2400,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             }
         ]
 
+        state.update(visible_card_id=None, known_card_owners={}, game_start_time=0.0)
+        self._assert_consistent_card_zones(state)
         hand = state["players"]["bot4"]["hand"]
         hand_map = guandan._map_hand_by_id(hand)
         target_labels = {"♦️8", "♠️8", "♣️8", "♥️10", "♦️10"}
@@ -2406,7 +2415,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         neutral_state = copy.deepcopy(state)
         neutral_state["pass_limits"] = {}
         neutral_state["round_memories"] = []
-        neutral_state["players"]["calvin"]["hand"] = neutral_state["players"]["calvin"]["hand"] + neutral_state["players"]["bot3"]["hand"][:6]
+        transferred = neutral_state["players"]["bot3"]["hand"][:6]
+        neutral_state["players"]["bot3"]["hand"] = neutral_state["players"]["bot3"]["hand"][6:]
+        neutral_state["players"]["calvin"]["hand"].extend(transferred)
+        self._assert_consistent_card_zones(neutral_state)
         neutral_score = guandan._lead_option_score(neutral_state, "bot4", target_ids)
 
         risky_ranked = guandan._rank_lead_options(state, "bot4", guandan._list_hint_options(state, "bot4"))
@@ -3720,6 +3732,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         for pid in ("opp", "mate", "opp2"):
             state["players"][pid]["hand"] = deck[idx : idx + 14]
             idx += 14
+        # The unassigned cards are publicly out of play; discard opening
+        # metadata from the unrelated random deal used only to build the state.
+        state.update(
+            seen_cards=[card["id"] for card in deck[idx:]],
+            known_card_owners={}, visible_card_id=None, round_memories=[],
+            pass_limits={}, trick_plays={}, pass_count=0,
+        )
+        self._assert_consistent_card_zones(state)
 
         action = guandan.GuandanGame.bot_move(state, "bot")
         self.assertEqual(action.get("type"), "play")
@@ -6075,7 +6095,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertGreater(pass_score["total"], heart_score["total"])
         self.assertEqual(guandan.GuandanGame.bot_move(state, "bot3"), {"type": "pass"})
 
-    def test_grouped_hand_with_one_bomb_does_not_keep_leading_singles(self):
+    def test_grouped_hand_keeps_control_and_prefers_its_cheapest_route(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
@@ -6139,7 +6159,28 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             for card in bot_hand
             if card["id"] in action.get("card_ids", [])
         )
-        self.assertEqual(chosen_labels, sorted(["♣️3", "♦️3"]))
+        # The previous bug repeatedly probed with the higher isolated ten.
+        # A lower isolated five is valid with the same complete cover and
+        # preserved big joker plus two independent bombs for recovery.
+        explanation = state["bot_explain"]["bot3"]
+        self.assertNotEqual(chosen_labels, ["♠️10"])
+        chosen = [card for card in bot_hand if card["id"] in action["card_ids"]]
+        self.assertTrue(all(not guandan._is_joker(card)
+                            and not guandan._is_wild(card, 2)
+                            and card.get("rank", 99) <= 6 for card in chosen))
+        route = explanation["method_details"]["hand_route"]
+        self.assertTrue(route["exact"])
+        groups = [sorted(group) for group in route["groups"]]
+        self.assertIn(["🃏B"], groups)
+        self.assertIn(sorted(["♦️9", "♠️9", "♥️9", "♦️9"]), groups)
+        self.assertIn(sorted(["♦️8", "♥️8", "♦️8", "♥️2"]), groups)
+        probe = copy.deepcopy(state)
+        probe["_ai_eval_cache"] = {}
+        guandan_ai.call(guandan, "_prepare_hand_route_scores", probe, "bot3",
+                        guandan._list_hint_options(probe, "bot3"), None)
+        panel = probe["_ai_eval_cache"]["hand_routes"]
+        self.assertLessEqual(panel[guandan._cards_key(action["card_ids"])]["cost"],
+                             panel[guandan._cards_key(pair_three)]["cost"] + 0.001)
 
     def test_single_response_raises_gate_for_immediate_one_card_opponent(self):
         players = [

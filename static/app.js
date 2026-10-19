@@ -264,6 +264,10 @@ function renderGameState(data) {
     if (typeof renderPowerGridGameState === "function") renderPowerGridGameState(data);
     return;
   }
+  if (gameType === "dice_throne") {
+    if (typeof renderDiceThroneGameState === "function") renderDiceThroneGameState(data);
+    return;
+  }
   if (gameType === "no_thanks") {
     if (typeof renderNoThanksGameState === "function") renderNoThanksGameState(data);
     return;

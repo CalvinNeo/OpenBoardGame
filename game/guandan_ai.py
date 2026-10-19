@@ -57,11 +57,13 @@ def call(core, name: str, *args, **kwargs):
     prev = _get_core()
     previous_candidates = getattr(_CORE_LOCAL, "decomposition_candidates", None)
     previous_fast_summaries = getattr(_CORE_LOCAL, "fast_decomposition_summaries", None)
+    previous_bounded_metrics = getattr(_CORE_LOCAL, "bounded_hand_values", None)
     if prev is not core:
         # Reuse exact physical subhands across greedy/global plans and finalists
         # within this call tree. Do not leak synthetic search IDs to another turn.
         _CORE_LOCAL.decomposition_candidates = {}
         _CORE_LOCAL.fast_decomposition_summaries = {}
+        _CORE_LOCAL.bounded_hand_values = {}
     had_deadline = hasattr(_CORE_LOCAL, "deadline")
     prev_deadline = getattr(_CORE_LOCAL, "deadline", None)
     requested_deadline = kwargs.get("deadline")
@@ -84,6 +86,10 @@ def call(core, name: str, *args, **kwargs):
                 delattr(_CORE_LOCAL, "fast_decomposition_summaries")
             else:
                 _CORE_LOCAL.fast_decomposition_summaries = previous_fast_summaries
+            if previous_bounded_metrics is None:
+                delattr(_CORE_LOCAL, "bounded_hand_values")
+            else:
+                _CORE_LOCAL.bounded_hand_values = previous_bounded_metrics
         if had_deadline:
             _CORE_LOCAL.deadline = prev_deadline
         elif hasattr(_CORE_LOCAL, "deadline"):
@@ -3067,7 +3073,9 @@ _LEAD_REFINEMENTS = {
 def _lead_option_cache_key(state: Dict, player_id: str, cards: List[int]) -> Tuple:
     return (
         player_id, _bounded_finalist_scoring(), state["level_rank"],
+        state.get("config", {}).get("bot_lead_reentry_mode", "route_only"),
         state.get("round_number"), state.get("current_turn"),
+        tuple(state.get("finish_order") or ()),
         len(state.get("action_history", [])), _public_history_signature(state),
         tuple((pid, len(state["players"][pid].get("hand", [])),
                bool(state["players"][pid].get("finished")))
@@ -3092,7 +3100,21 @@ def _lead_refinement_components(
         ranked, direct = cache[key]
         return dict(ranked), dict(direct)
     ranked, direct = {}, {}
+    route_only_reentry = False
+    # Once a place is fixed, control also protects the team's remaining ranks.
+    # Personal routes do not model that race, so keep its tactical recovery.
+    if (not state.get("finish_order")
+            and state.get("config", {}).get("bot_lead_reentry_mode", "route_only") == "route_only"):
+        route_status = state.get("_ai_eval_cache", {}).get("hand_route_status") or {}
+        route = _current_hand_routes(state, player_id).get(_cards_key(cards))
+        route_only_reentry = bool(route_status.get("complete") and route and route.get("exact"))
     for name, (source, sign, signed) in _LEAD_REFINEMENTS.items():
+        if name == "lead_reentry" and route_only_reentry:
+            # A larger group left in hand is not a second source of recovery:
+            # the complete route has already priced replies and spent controls.
+            # Coarse or interrupted routes still need the legacy estimate.
+            ranked[name] = 0.0
+            continue
         if name == "deny_one_card_window":
             raw = globals()[source](state, player_id, cards)
         else:
@@ -11284,6 +11306,15 @@ def _independent_bomb_reserve(
     return best_value
 
 
+def _bounded_hand_value_cache_key(hand: List[Dict], level_rank: int, kind: str) -> Tuple:
+    # A single top-level call owns this cache. Preserve physical identity and
+    # order so bounded bomb-plan ties and floating accumulation are unchanged.
+    return (kind, level_rank, tuple(
+        (card["id"], card.get("rank"), card.get("suit"), card.get("joker"))
+        for card in hand
+    ))
+
+
 def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, float]:
     if not hand:
         return {
@@ -11314,6 +11345,10 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
         }
 
     bounded = _bounded_finalist_scoring()
+    bounded_cache = getattr(_CORE_LOCAL, "bounded_hand_values", None) if bounded else None
+    bounded_key = _bounded_hand_value_cache_key(hand, level_rank, "metrics") if bounded_cache is not None else None
+    if bounded_cache is not None and bounded_key in bounded_cache:
+        return dict(bounded_cache[bounded_key])
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
     if not bounded:
         cached = _HAND_STRUCTURE_CACHE.get(cache_key)
@@ -11415,6 +11450,10 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
         if len(_HAND_STRUCTURE_CACHE) >= _HAND_STRUCTURE_CACHE_LIMIT:
             _HAND_STRUCTURE_CACHE.clear()
         _HAND_STRUCTURE_CACHE[cache_key] = _copy_hand_structure_metrics(metrics)
+    if bounded_cache is not None and not _deadline_expired():
+        if len(bounded_cache) >= 4096:
+            bounded_cache.clear()
+        bounded_cache[bounded_key] = dict(metrics)
     return metrics
 
 
@@ -11422,6 +11461,10 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     if not hand:
         return 0.0
     bounded = _bounded_finalist_scoring()
+    bounded_cache = getattr(_CORE_LOCAL, "bounded_hand_values", None) if bounded else None
+    bounded_key = _bounded_hand_value_cache_key(hand, level_rank, "strength") if bounded_cache is not None else None
+    if bounded_cache is not None and bounded_key in bounded_cache:
+        return bounded_cache[bounded_key]
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
     if not bounded:
         cached = _HAND_STRENGTH_CACHE.get(cache_key)
@@ -11471,6 +11514,10 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
         if len(_HAND_STRENGTH_CACHE) >= _HAND_STRENGTH_CACHE_LIMIT:
             _HAND_STRENGTH_CACHE.clear()
         _HAND_STRENGTH_CACHE[cache_key] = score
+    if bounded_cache is not None and not _deadline_expired():
+        if len(bounded_cache) >= 4096:
+            bounded_cache.clear()
+        bounded_cache[bounded_key] = score
     return score
 
 
@@ -11478,6 +11525,10 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
     if not hand:
         return 0.0
     bounded = _bounded_finalist_scoring()
+    bounded_cache = getattr(_CORE_LOCAL, "bounded_hand_values", None) if bounded else None
+    bounded_key = _bounded_hand_value_cache_key(hand, level_rank, "turns") if bounded_cache is not None else None
+    if bounded_cache is not None and bounded_key in bounded_cache:
+        return bounded_cache[bounded_key]
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
     if not bounded:
         cached = _HAND_TURNS_CACHE.get(cache_key)
@@ -11500,6 +11551,10 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
             _HAND_TURNS_CACHE.clear()
         _HAND_TURNS_CACHE[cache_key] = result
+    if bounded_cache is not None and not _deadline_expired():
+        if len(bounded_cache) >= 4096:
+            bounded_cache.clear()
+        bounded_cache[bounded_key] = result
     return result
 
 def _predict_finish_order(
@@ -11979,20 +12034,23 @@ def _mcts_root_candidate_subset(
         if single is not None:
             play_actions = _merge_action_candidates([play_actions[0], single], play_actions)
 
-    selected: List[Dict] = []
-    selected_keys = set()
-    seen_families = set()
-    for action in play_actions:
+    def family(action: Dict) -> Tuple:
         combo = _action_combo(state, player_id, action) or {}
         combo_type = combo.get("type")
-        family = (
+        return (
             combo_type,
             _bomb_tier(combo) if combo_type in BOMB_TYPES else None,
             combo.get("size") if combo_type in BOMB_TYPES else None,
         )
-        if family in seen_families:
+
+    selected: List[Dict] = []
+    selected_keys = set()
+    seen_families = set()
+    for action in play_actions:
+        action_family = family(action)
+        if action_family in seen_families:
             continue
-        seen_families.add(family)
+        seen_families.add(action_family)
         selected.append(action)
         selected_keys.add(_mcts_action_key(action))
         if len(selected) >= play_limit:
@@ -12005,6 +12063,26 @@ def _mcts_root_candidate_subset(
             continue
         selected.append(action)
         selected_keys.add(key)
+
+    # The material-cost order can bury a useful tactical response when the
+    # detailed heuristic has not scored it. Use a duplicate-family slot for
+    # the quick-score leader, retaining the incumbent and every unique family.
+    duplicate_slots = []
+    seen_families.clear()
+    for index, action in enumerate(selected):
+        action_family = family(action)
+        if action_family in seen_families:
+            duplicate_slots.append(index)
+        seen_families.add(action_family)
+    if duplicate_slots:
+        quick_top = max(
+            play_actions,
+            key=lambda action: _quick_candidate_score(
+                state, player_id, action.get("card_ids") or []
+            ),
+        )
+        if _mcts_action_key(quick_top) not in selected_keys:
+            selected[duplicate_slots[-1]] = quick_top
     return selected + other_actions
 
 
@@ -13490,11 +13568,24 @@ def _mcts_check_deadline() -> None:
 
 def _mcts_leaf_value(state: Dict, bot_id: str) -> float:
     _mcts_check_deadline()
+    # MCTS evaluates many sibling frontiers in one turn.  Re-running the
+    # complete finalist decomposition at every leaf can consume the whole
+    # wall-clock window before the root panel is paired.  Use the same bounded
+    # decomposition as the anytime finalist path while the leaf is sampled;
+    # the root heuristic remains the detailed public-information estimate.
+    had_bounded = hasattr(_CORE_LOCAL, "bounded_finalist_scoring")
+    previous_bounded = getattr(_CORE_LOCAL, "bounded_finalist_scoring", False)
+    _CORE_LOCAL.bounded_finalist_scoring = True
     try:
         value = _evaluate_state_for_bot(state, bot_id)
     except _IncompleteStateEvaluation as exc:
         # A soft scoring cutoff is incomplete even before the hard deadline.
         raise _MctsSearchInterrupted from exc
+    finally:
+        if had_bounded:
+            _CORE_LOCAL.bounded_finalist_scoring = previous_bounded
+        elif hasattr(_CORE_LOCAL, "bounded_finalist_scoring"):
+            delattr(_CORE_LOCAL, "bounded_finalist_scoring")
     # Evaluation itself may exhaust the budget and use approximate components.
     # Such a value must not be published as a completed search result.
     _mcts_check_deadline()
@@ -13504,8 +13595,7 @@ def _mcts_leaf_value(state: Dict, bot_id: str) -> float:
 def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
     steps = 0
     while (
-        steps < depth
-        and not state.get("game_over")
+        not state.get("game_over")
         and state.get("phase", "playing") == "playing"
         and _settled_round_value(state, bot_id) is None
     ):
@@ -13513,14 +13603,22 @@ def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
         actor = _next_actor(state)
         if actor is None:
             break
-        action = _rollout_policy_action(state, actor)
+        # Only a real choice spends the search horizon. Resolve mandatory
+        # passes through the rules engine, including after the final choice,
+        # so a bomb and an ordinary play see equally many future decisions.
+        forced_pass = bool(state.get("current_trick")) and not _list_hint_options(state, actor)
+        _mcts_check_deadline()
+        if steps >= depth and not forced_pass:
+            break
+        action = {"type": "pass"} if forced_pass else _rollout_policy_action(state, actor)
         _mcts_check_deadline()
         if not action:
             break
         _, err = GuandanGame.apply_action(state, actor, action)
         if err:
             break
-        steps += 1
+        if not forced_pass:
+            steps += 1
     return _mcts_leaf_value(state, bot_id)
 
 
@@ -13543,6 +13641,32 @@ def _mcts_reply_tree_value(
     actor = _next_actor(state)
     if actor is None:
         return _mcts_leaf_value(state, bot_id)
+    # Resolve a chain of mandatory passes in place.  These transitions do not
+    # consume search depth, and cloning/recursing once per seat made a forced
+    # pass-heavy branch several times slower after that rule was corrected.
+    # ``state`` is already a private branch frontier, so mutating it here is
+    # safe and preserves the exact rules transition.
+    if state.get("current_trick") and not _list_hint_options(state, actor):
+        # Callers may use this helper as a pure value query on their frontier;
+        # fork once before consuming the forced transitions.
+        state = _clone_search_state(state)
+        actor = _next_actor(state)
+        if actor is None:
+            return _mcts_leaf_value(state, bot_id)
+    while state.get("current_trick") and not _list_hint_options(state, actor):
+        _mcts_check_deadline()
+        _, err = GuandanGame.apply_action(state, actor, {"type": "pass"})
+        if err is not None:
+            break
+        if (
+            state.get("game_over")
+            or state.get("phase", "playing") != "playing"
+            or _settled_round_value(state, bot_id) is not None
+        ):
+            return _mcts_leaf_value(state, bot_id)
+        actor = _next_actor(state)
+        if actor is None:
+            return _mcts_leaf_value(state, bot_id)
     if ply <= 0:
         return _rollout_value(state, bot_id, rollout_depth)
 
@@ -13553,6 +13677,10 @@ def _mcts_reply_tree_value(
         return _rollout_value(state, bot_id, rollout_depth)
 
     maximize = _team_of(state, actor) == _team_of(state, bot_id)
+    # A final ply with an open window cannot prune any rollout; a single
+    # child likewise has no ordering decision. Preserve ordering for finite
+    # windows, where fail-soft cutoff bounds depend on the first child.
+    order_children = len(actions) > 1 and (ply > 1 or alpha > -1e9 or beta < 1e9)
     ordered_children: List[Tuple[float, Dict]] = []
     for action in actions:
         _mcts_check_deadline()
@@ -13560,11 +13688,15 @@ def _mcts_reply_tree_value(
         _, err = GuandanGame.apply_action(nxt, actor, action)
         if err:
             continue
-        ordered_children.append((_mcts_leaf_value(nxt, bot_id), nxt))
+        # Static evaluation may cache response ranking penalties. Those
+        # advisory scores must not change the policy used by the continuation.
+        order_value = _mcts_leaf_value(_clone_search_state(nxt), bot_id) if order_children else 0.0
+        ordered_children.append((order_value, nxt))
     if not ordered_children:
         return _rollout_value(state, bot_id, rollout_depth)
 
-    ordered_children.sort(key=lambda item: item[0], reverse=maximize)
+    if order_children:
+        ordered_children.sort(key=lambda item: item[0], reverse=maximize)
     if maximize:
         value = -math.inf
         for _, nxt in ordered_children:
@@ -13699,6 +13831,23 @@ def _mcts_budget(
     else:
         tree_cap = tree_ply
     tree = min(tree_ply, tree_cap, depth)
+    # A trick with both Pass and a bomb response is especially likely to
+    # contain a long forced-pass chain. Since those passes are now free in the
+    # horizon, a two-ply reply tree can spend the whole deadline on one root
+    # world. Keep one tactical branching ply by default; callers can raise
+    # this for a deliberately larger search budget.
+    if (
+        combo_type in (
+            "single", "pair", "three", "full_house", "straight",
+            "three_pairs", "steel_plate",
+        )
+        and has_pass and has_bomb_response
+    ):
+        forced_pass_tree = max(
+            0,
+            int(cfg.get("bot_mcts_forced_pass_tree_ply", 1)),
+        )
+        tree = min(tree, forced_pass_tree)
 
     if critical and is_ambiguous:
         width_cap = reply_width
@@ -16596,6 +16745,7 @@ def _bot_component_cache_key(
         bot_id,
         depth,
         _bounded_finalist_scoring(),
+        state.get("config", {}).get("bot_lead_reentry_mode", "route_only"),
         state.get("round_number"),
         state.get("phase"),
         state.get("current_turn"),
@@ -16604,6 +16754,14 @@ def _bot_component_cache_key(
         pass_key,
         _cards_key(cards or []) if cards else None,
         _heuristic_score_cache_key(state, bot_id, depth),
+        tuple(
+            (name, tuple(sorted(
+                (key[1], value)
+                for key, value in state.get("_ai_eval_cache", {}).get(name, {}).items()
+                if key[0] == bot_id
+            )))
+            for name in ("response_soft_penalties", "overbomb_soft_penalties")
+        ),
     )
 
 
@@ -17894,6 +18052,8 @@ def _shared_response_tactical_components(
         current_combo.get("high_value"),
         tuple(current_trick.get("cards") or ()),
         _cards_key(cards),
+        _response_soft_pruning_penalty(state, player_id, cards),
+        _overbomb_soft_pruning_penalty(state, player_id, cards),
         tuple(
             (
                 pid,
