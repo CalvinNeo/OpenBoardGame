@@ -49,7 +49,10 @@ def _blacklist_value_scoring() -> Iterator[None]:
 
 
 def _blacklist_separate_value(state: Dict) -> bool:
-    return bool(state.get("config", {}).get("bot_blacklist_separate_value", False))
+    config = state.get("config", {})
+    # Existing NN checkpoints consume legacy heuristic features.
+    return (str(config.get("bot_mode", "auto")).strip().lower() != "nn"
+            and bool(config.get("bot_blacklist_separate_value", False)))
 
 
 def _blacklist_cache_signature(state: Dict, player_id: str) -> Tuple:
@@ -2119,43 +2122,12 @@ def _candidate_features(
     before_counts = _rank_count_map(hand, state["level_rank"])
     after_counts = _rank_count_map(remaining, state["level_rank"])
 
-    before_singletons = sum(1 for count in before_counts.values() if count == 1)
-    after_singletons = sum(1 for count in after_counts.values() if count == 1)
-    shape_score = -(after_singletons - before_singletons) * 1.3
-    for rank, before_count in before_counts.items():
-        after_count = after_counts.get(rank, 0)
-        if before_count >= 2 and 0 < after_count < before_count:
-            shape_score -= 2.2 + 0.4 * (before_count - 1)
-        elif before_count >= 2 and after_count == 0:
-            shape_score += 1.2 + 0.3 * before_count
-        elif before_count == 1 and after_count == 0:
-            shape_score += 0.9
-
-    combo_type = resolved_combo.get("type") if resolved_combo else None
-    fragment_penalty = 0.0
-    control_break = 0.0
-    for rank, before_count in before_counts.items():
-        after_count = after_counts.get(rank, 0)
-        removed = before_count - after_count
-        if removed <= 0 or after_count <= 0:
-            continue
-        if before_count >= 4 and combo_type not in BOMB_TYPES:
-            fragment_penalty += 5.2 + (before_count - 4) * 1.5 + removed * 0.7
-        elif before_count == 3 and combo_type not in ("three", "full_house", "steel_plate", "bomb"):
-            fragment_penalty += 3.4 + (1.0 if after_count == 1 else 0.0)
-        elif before_count == 2 and combo_type == "single":
-            fragment_penalty += 2.0
-
-        strength = _point_order_value(rank, state["level_rank"])
-        control = max(0.0, strength - 56)
-        if before_count >= 5:
-            control_break += 2.6 + (before_count - 4) * 0.9 + removed * 0.45 + control * 0.5
-        elif before_count == 4:
-            control_break += 2.0 + removed * 0.4 + control * 0.42
-        elif before_count == 3 and strength >= 58:
-            control_break += 1.1 + removed * 0.35 + control * 0.35
-        elif before_count == 2 and strength >= 59 and removed == 1:
-            control_break += 0.8 + control * 0.3
+    counts = (before_counts, after_counts)
+    shape_score = _shape_transition_score(hand, cards, state["level_rank"], counts)
+    fragment_penalty = _group_fragment_penalty(
+        hand, cards, state["level_rank"], resolved_combo, counts,
+    )
+    control_break = _control_group_break_penalty(hand, cards, state["level_rank"], counts)
 
     features = {
         "hand": hand,
@@ -3899,7 +3871,16 @@ def _control_group_break_penalty(
         elif before_count == 3 and strength >= 58:
             penalty += 1.1 + removed * 0.35 + control * 0.35
         elif before_count == 2 and strength >= 59 and removed == 1:
-            penalty += 0.8 + control * 0.3
+            # A surviving natural level card still controls singles; with a
+            # retained wildcard it also keeps the level-pair option. Rebuilding
+            # that pair commits the wildcard, so retain a conversion cost and
+            # the separate residual-hand/material costs. Do not price the pair
+            # as entirely lost, or count the wildcard as another natural card.
+            if (rank == level_rank and len(cards) == 1
+                    and any(_is_wild(card, level_rank) for card in hand)):
+                penalty += 0.8
+            else:
+                penalty += 0.8 + control * 0.3
     return penalty
 
 
@@ -4279,7 +4260,16 @@ def _response_material_cost(
     cards: List[int],
     combo: Optional[Dict] = None,
     natural_alternative: bool = False,
+    *,
+    include_shape_cost: bool = True,
+    include_control_cost: bool = True,
 ) -> float:
+    """Price response resources, omitting local costs already scored separately.
+
+    Ranking and conservation callers need the complete standalone cost. The
+    detailed scorer already has shape/control components; omit those inputs
+    before any type-specific discount or relief so they are charged once.
+    """
     hand = state["players"][player_id]["hand"]
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
@@ -4295,8 +4285,14 @@ def _response_material_cost(
     current_trick = state.get("current_trick")
     current_combo = current_trick.get("combo") if current_trick else None
     structure_delta = max(0.0, _play_structure_delta(hand, cards, level_rank))
-    shape_penalty = max(0.0, -_shape_transition_score(hand, cards, level_rank))
-    control_break = _control_group_break_penalty(hand, cards, level_rank)
+    shape_penalty = (
+        max(0.0, -_shape_transition_score(hand, cards, level_rank))
+        if include_shape_cost else 0.0
+    )
+    control_break = (
+        _control_group_break_penalty(hand, cards, level_rank)
+        if include_control_cost else 0.0
+    )
     fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
     bomb_break_penalty = _bomb_structure_break_penalty(hand, cards, level_rank, combo)
 
@@ -15300,7 +15296,7 @@ def _mcts_score_actions(
     )
 
     heuristic_weight = 3.8 if state.get("current_trick") and len(candidates) <= 2 else 2.2
-    separate_blacklist = bool(state.get("config", {}).get("bot_blacklist_separate_value", False))
+    separate_blacklist = _blacklist_separate_value(state)
     cached_heuristic_values = {
         _mcts_action_key(
             {"type": "pass"}
@@ -17338,7 +17334,11 @@ def _compute_bot_score_components(
     ):
         components["fragment_penalty"] = -fragment_penalty * 1.12
     if current_trick:
-        response_cost = _response_material_cost(state, bot_id, cards, combo)
+        response_cost = _response_material_cost(
+            state, bot_id, cards, combo,
+            include_shape_cost=components.get("shape_value", 0.0) >= 0.0,
+            include_control_cost="control_break_penalty" not in components,
+        )
         if response_cost > 0.001:
             components["response_material"] = -response_cost * 0.55
         special_overuse = _response_special_overuse_penalty(state, bot_id, cards, combo)

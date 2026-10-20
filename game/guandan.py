@@ -45,8 +45,8 @@ DEFAULT_CONFIG = {
     "bot_mcts_confidence_z": 1.64,
     "bot_mcts_confidence_min_pairs": 3,
     "bot_mcts_gate_score_gap": 10.0,
-    # Experimental separation; enable only in a frozen strength candidate.
-    "bot_blacklist_separate_value": False,
+    # Separate finite policy costs from value and search confidence.
+    "bot_blacklist_separate_value": True,
     "bot_mcts_ambiguity_score_gap": 2.0,
     "bot_mcts_obvious_response_margin": 2.25,
     "bot_mcts_override_margin": 5.5,

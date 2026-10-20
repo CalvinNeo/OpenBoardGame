@@ -1,3 +1,4 @@
+import copy
 import time
 import unittest
 from unittest import mock
@@ -7,11 +8,12 @@ from tests.guandan_history_fixtures import pick_card_ids, replay_fixture
 
 
 class GuandanBombCloseoutUpgradeTests(unittest.TestCase):
-    def test_saved_bomb_uses_wild_when_both_routes_take_two_plays(self):
+    def test_legacy_saved_bomb_uses_wild_when_both_routes_take_two_plays(self):
         for mode, threshold in (("heuristic", 0), ("auto", 18), ("auto", 0)):
             with self.subTest(mode=mode, threshold=threshold):
                 state = replay_fixture("b0a262", 72, {
                     "bot_mode": mode, "bot_endgame_threshold": threshold,
+                    "bot_blacklist_separate_value": False,
                 })
                 hand = state["players"]["bot4"]["hand"]
                 expected = {card["id"] for card in hand if card.get("rank") != 10}
@@ -30,6 +32,46 @@ class GuandanBombCloseoutUpgradeTests(unittest.TestCase):
                 finish = guandan.GuandanGame.bot_move(state, "bot4")
                 self.assertIsNone(guandan.GuandanGame.apply_action(state, "bot4", finish)[1])
                 self.assertEqual(state["players"]["bot4"]["finish_rank"], 2)
+
+    def test_default_policy_preserves_wild_after_sampled_bomb_comparison(self):
+        state = replay_fixture("b0a262", 72, {
+            "bot_mode": "auto", "bot_endgame_threshold": 18,
+        })
+        hand = state["players"]["bot4"]["hand"]
+        natural = [card["id"] for card in hand if card.get("rank") == 6]
+        world = copy.deepcopy(state)
+        world["_ai_sampled_world"] = True
+        pool = world["players"]["calvin"]["hand"] + world["players"]["bot2"]["hand"]
+        enemy_ids = set(pick_card_ids(pool, ("♠️7", "♥️7", "♥️K")))
+        world["players"]["calvin"]["hand"] = [card for card in pool if card["id"] in enemy_ids]
+        world["players"]["bot2"]["hand"] = [card for card in pool if card["id"] not in enemy_ids]
+        # Fix only the hidden-card particle. Real minimax terminal solving,
+        # material-prior publication and final allocation guard still run.
+        # In this legal allocation a pair tail secures the better team result.
+        with mock.patch.object(guandan, "_determinize_state", side_effect=lambda *a, **k: copy.deepcopy(world)):
+            action = guandan.GuandanGame.bot_move(state, "bot4")
+        self.assertTrue(state["config"]["bot_blacklist_separate_value"])
+        self.assertEqual(set(action["card_ids"]), set(natural))
+        explanation = state["bot_explain"]["bot4"]
+        self.assertEqual(explanation["method"], "minimax")
+        self.assertTrue(explanation["search"]["terminal_complete"])
+        rows = {len(row["cards"]): row for row in explanation["search"]["candidates"]}
+        self.assertEqual(set(rows[4]["world_values"]), {-100.0})
+        self.assertEqual(set(rows[5]["world_values"]), {-200.0})
+        self.assertEqual(rows[4]["blacklist_penalty"], 0.0)
+        self.assertEqual(rows[5]["blacklist_penalty"], 10.0)
+        self.assertNotIn("bomb_closeout_upgrade", explanation["method_details"])
+        self.assertIsNone(guandan.GuandanGame.apply_action(state, "bot4", action)[1])
+        self.assertEqual(state["current_trick"]["combo"]["size"], 4)
+        for player in ("calvin", "bot2"):
+            self.assertIsNone(guandan.GuandanGame.apply_action(state, player, {"type": "pass"})[1])
+        tail = state["players"]["bot4"]["hand"]
+        self.assertEqual({guandan._card_label(card) for card in tail}, {"♥️2", "♦️10"})
+        finish = guandan.GuandanGame.bot_move(state, "bot4")
+        self.assertEqual(set(finish["card_ids"]), {card["id"] for card in tail})
+        self.assertIsNone(guandan.GuandanGame.apply_action(state, "bot4", finish)[1])
+        self.assertEqual(state["current_trick"]["combo"]["type"], "pair")
+        self.assertEqual(state["players"]["bot4"]["finish_rank"], 2)
 
     def test_quick_and_detailed_scores_prefer_the_stronger_bomb(self):
         state = replay_fixture("b0a262", 72)

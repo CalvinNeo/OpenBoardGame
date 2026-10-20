@@ -23,6 +23,7 @@
   transition: border-color .15s, background-color .15s, box-shadow .15s;
 }
 .dice-throne-shell button:disabled { cursor: default; color: #777f80; background: #eceee9; border-color: #d8dcd6; opacity: 1; }
+.dice-throne-shell button.dt-primary[aria-disabled="true"], .dice-throne-shell button.dt-primary[aria-disabled="true"]:hover { cursor: default; color: #626c6d; background: #eceee9; border-color: #d8dcd6; box-shadow: none; }
 .dice-throne-shell button:not(:disabled):hover, .dt-dialog button:hover { border-color: #b18b40; box-shadow: 0 2px 6px #332a1212; }
 .dice-throne-shell :focus-visible, .dt-dialog :focus-visible { outline: 3px solid #ba8433; outline-offset: 3px; }
 .dice-throne-titlebar, .dt-section-head, .dt-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -88,6 +89,7 @@
 .dt-player-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .dt-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--dt-hero-pale); font-size: 21px; }
 .dt-player-identity { flex: 1; }
+.dt-player-caption, .dt-player-stats { display: contents; }
 .dt-hero-name { color: var(--dt-hero-color); font: 600 18px/1.15 Georgia, serif; overflow-wrap: anywhere; }
 .dt-player-name { margin-top: 4px; color: #65706a; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
 .dt-badges { display: flex; flex-wrap: wrap; align-self: flex-start; gap: 4px; margin-top: 4px; }
@@ -261,19 +263,23 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-status { margin: 6px 0; padding: 6px 8px; font-size: 11px; }
   .dt-arena { gap: 7px; }
   .dt-players, .dt-hero-choices { gap: 7px; }
-  .dt-player { padding: 8px; border-radius: 8px; }
-  .dt-player-head { gap: 6px; }
+  .dt-player { padding: 7px; border-radius: 8px; }
+  .dt-player-head { gap: 5px; flex-wrap: nowrap; }
   .dt-avatar { flex-basis: 25px; width: 25px; height: 25px; font-size: 17px; }
   .dt-hero-name { font-size: 14px; }
-  .dt-player-name { font-size: 10px; margin-top: 2px; }
-  .dt-badges { gap: 3px; }
-  .dt-badge { padding: 2px 4px; font-size: 8px; }
-  .dt-health { gap: 5px; margin-top: 5px; }
-  .dt-health-value { font-size: 21px; }
-  .dt-health-value small { font-size: 10px; }
-  .dt-health-bar { height: 4px; }
-  .dt-player-meta { padding-top: 4px; gap: 3px; }
-  .dt-player-meta .dt-token { padding: 2px 4px; font-size: 10px; }
+  .dt-player-caption { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+  .dt-player-name { flex: 1; margin: 0; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dt-badges { flex-shrink: 0; gap: 2px; margin: 0; }
+  .dt-badge { padding: 1px 3px; font-size: 8px; }
+  .dt-acting-badge { display: none; }
+  .dt-player.dt-turn { border-top-color: #b78331; box-shadow: 0 0 0 2px #bf944d70; }
+  .dt-player-stats { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 5px; margin-top: 6px; }
+  .dt-health { flex-direction: column; align-items: stretch; gap: 4px; margin: 0; }
+  .dt-health-value { font-size: 18px; }
+  .dt-health-value small { font-size: 9px; }
+  .dt-health-bar { flex: none; width: 100%; height: 3px; }
+  .dt-player-meta { justify-content: flex-end; padding: 0; gap: 2px; }
+  .dt-player-meta .dt-token { padding: 2px 3px; font-size: 10px; }
   .dt-statuses { gap: 3px; margin-top: 4px; }
   .dt-statuses .dt-token { font-size: 10px; padding: 2px 3px; }
   .dt-picker, .dt-abilities, .dt-hand-area, .dt-response, .dt-review, .dt-game-over { padding: 9px; }
@@ -281,16 +287,18 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-section-head h3 { font-size: 12px; }
   .dt-section-head > span { font-size: 9px; }
   .dt-battle-grid { gap: 7px; }
-  .dt-roll-zone { padding: 9px; border-radius: 9px; }
-  .dt-roll-zone .dt-section-head { margin-bottom: 7px; }
-  .dt-roll-zone .dt-section-head > span { padding: 2px 5px; }
+  .dt-roll-zone { padding: 7px; border-radius: 9px; }
+  .dt-roll-zone .dt-section-head { margin-bottom: 5px; }
+  .dt-roll-zone .dt-section-head > span { padding: 1px 4px; }
   .dt-dice { gap: 5px; }
-  .dice-throne-shell button.dt-die { min-height: 57px; padding: 6px 2px; border-radius: 7px; gap: 3px; }
-  .dt-die-symbol { font-size: 22px; }
-  .dt-die-label, .dt-die-value { font-size: 9px; }
-  .dt-keep { min-height: 8px; font-size: 7px; }
-  .dt-dice-hint { min-height: 12px; margin: 6px 0; font-size: 10px; }
-  .dt-roll-actions { gap: 5px; }
+  .dice-throne-shell button.dt-die { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 23px auto; align-content: center; min-height: 48px; padding: 4px 3px; border-radius: 7px; column-gap: 2px; row-gap: 2px; }
+  .dt-die-symbol { grid-column: 1; grid-row: 1; justify-self: center; font-size: 22px; }
+  .dt-die-value { grid-column: 2; grid-row: 1; align-self: center; font-size: 11px; }
+  .dt-die-label { grid-column: 1 / -1; grid-row: 2; font-size: 9px; }
+  .dt-keep { display: none; }
+  .dt-die.kept .dt-die-label::before { content: "🔒 "; font-size: 8px; }
+  .dt-dice-hint { display: none; }
+  .dt-roll-actions, .dt-dice-hint.hidden + .dt-roll-actions { gap: 5px; margin-top: 7px; }
   .dt-roll-actions > button { min-height: 36px; padding: 6px 7px; font-size: 11px; }
   .dt-decision-tabs { gap: 4px; padding: 4px; }
   .dice-throne-shell .dt-decision-tabs > button { min-height: 36px; padding: 6px; }
@@ -318,8 +326,8 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-player-head { gap: 4px; flex-wrap: nowrap; }
   .dt-avatar { flex-basis: 21px; width: 21px; height: 21px; font-size: 15px; }
   .dt-hero-name { font-size: 12px; }
-  .dt-badges { margin-top: 3px; }
-  .dt-health-value { font-size: 19px; }
+  .dt-badges { margin-top: 0; }
+  .dt-health-value { font-size: 17px; }
   .dt-health-value small { font-size: 9px; }
   .dt-hand-area > .dt-section-head h3 { font-size: 11px; }
 }

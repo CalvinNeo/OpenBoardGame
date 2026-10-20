@@ -118,7 +118,10 @@ class GuandanNestedScoringTests(unittest.TestCase):
         self.assertTrue(seen_pass_components[0].get("anytime_partial"))
         self.assertNotIn("pass_opportunity_cost", seen_pass_components[0])
         cached = self.state["_ai_eval_cache"]["bot_score_components"]
-        self.assertEqual(list(cached.values()), [{"total": 10.0}])
+        # The separated scorer stores raw and decision entries independently;
+        # neither entry may contain the incomplete Pass or other response.
+        self.assertEqual(len(cached), 2)
+        self.assertTrue(all(value == {"total": 10.0} for value in cached.values()))
         status = self.state["_ai_eval_cache"]["heuristic_anytime"]
         self.assertEqual(status["stop_reason"], "partial_candidate")
         self.assertEqual(status["evaluated"], 1)
@@ -243,13 +246,19 @@ class GuandanNestedScoringTests(unittest.TestCase):
             evaluations[0] += 1
             if evaluations[0] == 4:
                 clock[0] = 0.95
-                return original_evaluate(self.state, bot_id)
+                # Exercise the real leaf, not another mock evaluation when
+                # the public wrapper enters recursive raw-value mode.
+                with guandan_ai._blacklist_value_scoring():
+                    return original_evaluate(self.state, bot_id)
             if evaluations[0] == 3:
                 return 1000.0
             return 40.0 if child["current_trick"]["cards"] == self.options[1] else 0.0
 
         with ExitStack() as stack:
             self.soft_leaf_patches(stack, clock)
+            # Keep root policy preparation out of this leaf-budget clock:
+            # its tactical probes can also call the mocked leaf evaluator.
+            stack.enter_context(mock.patch.object(guandan_ai, "_blacklist_search_costs", return_value={}))
             stack.enter_context(mock.patch.object(guandan, "_candidate_actions", return_value=actions))
             stack.enter_context(mock.patch.object(
                 guandan, "_filter_overbomb_actions", side_effect=lambda _s, _p, choices: choices,

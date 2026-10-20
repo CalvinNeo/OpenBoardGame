@@ -360,7 +360,9 @@ def _action_key(action: Dict) -> Tuple:
 
 
 def _blacklist_proof_exemption(state: Dict, reason: str) -> Dict:
-    if not state.get("config", {}).get("bot_blacklist_separate_value", False):
+    from game import guandan_ai as ai
+
+    if not ai._blacklist_separate_value(state):
         return {}
     return {"blacklist_policy": {
         "status": "exempt", "reason": reason,
@@ -643,7 +645,7 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
                    for action, column in zip(actions, values)]
         result["candidates"] = records
         costs = {}
-        separate_policy = config.get("bot_blacklist_separate_value", False) and not determined
+        separate_policy = ai._blacklist_separate_value(state) and not determined
         if separate_policy:
             # Convert the root prior through the shared search scale; never
             # subtract heuristic points directly from terminal team utility.

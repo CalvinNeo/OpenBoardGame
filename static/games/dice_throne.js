@@ -185,7 +185,7 @@
     }
     section("The duel", `Choose two different heroes from the eight Season One Rerolled champions: ${Object.keys(heroes).map(heroName).join(", ")}. Start at 50 ${named("health")}, 2 ${named("cp")} and 4 ${named("card")}. Reduce your opponent to 0 Health (❤️) to win. Final results remain visible.`);
     section("This digital edition", nextEditionText());
-    section("1 · Main I", "Play or sell Cards (🃏), then Start rolling. Select a card to reveal its in-place Play / Sell / Cancel overlay. Selling gains 1 Combat Point (⚡). Main (🧭) cards are used in a main phase; Roll (🎲) cards modify rolled dice; Instant (✨) cards can be used when their listed timing permits. Unavailable cards explain why they cannot be played. Hero decks and discards are separate, and only your own hand is visible.");
+    section("1 · Main I", "Play or sell Cards (🃏), then Start rolling. Select a card to reveal its in-place Play / Sell / Cancel overlay. Selling gains 1 Combat Point (⚡). Main (🧭) cards are used in a main phase; Roll (🎲) cards modify rolled dice; Instant (✨) cards can be used when their listed timing permits. Hover an unavailable card or its Play button to see the reason. On a phone, tap the card or muted Play button for a three-second tooltip; each new tap replaces the previous tip. If a target, die, value or status is still required, Play explains the missing choice. Hero decks and discards are separate, and only your own hand is visible.");
     section("2 · Roll → attack", "Roll five Dice (🎲), up to three attempts. Tap a die to Keep (🔒) or release it. Each die shows its number and symbol. Confirm the roll, choose a matching ability, then confirm on its overlay. Abilities have no Combat Points (⚡) cost. Skip attack advances without attacking. Abilities and Hand share one panel; switch tabs to consult either without scrolling the page.");
     section("3 · Defense", "Normal Damage (🗡️) allows the defender to use the hero's Defense (🛡️), or Pass. Each hero's defensive dice and effects are listed below. Undefendable damage skips the defensive roll; Ultimate (👑) damage also ignores prevention. The defender acknowledges these attacks with Pass. Roll (🎲) and Instant (✨) cards follow the available action window, with no cards allowed after an Ultimate is confirmed. Status tokens resolve as described in the glossary. The attack and defensive result remain in the public battle log.");
     section("4 · Main II → review", "Play or sell cards, then Finish turn. Both players confirm Next Round after reviewing the turn; Bots confirm automatically. The other hero then takes the next turn, receiving 1 Combat Point (⚡) and drawing 1 Card (🃏), except for the opening turn. Health (❤️) is capped at 50 and CP at 15. This digital edition limits the hand to 6 cards on draw, and reshuffles only that hero's own discard pile when its deck runs out.");
@@ -262,12 +262,17 @@
       const head = el("div", "dt-player-head");
       const identity = el("div", "dt-player-identity");
       const avatar = describe(el("span", "dt-avatar", hero?.icon || "🎲"), heroName(player.hero), hero ? `${hero.name_zh || hero.name} · ${hero.name}` : "Choose a hero", true);
-      identity.append(el("h3", "dt-hero-name", hero?.name_zh || hero?.name || "Choose a hero"), el("div", "dt-player-name", player.name));
+      identity.append(el("h3", "dt-hero-name", hero?.name_zh || hero?.name || "Choose a hero"));
+      const caption = el("div", "dt-player-caption");
+      const playerName = describe(el("div", "dt-player-name", player.name), "Player", player.name, true);
       head.append(avatar, identity);
       const badges = el("div", "dt-badges");
       if (player.player_id === view.you) badges.append(el("span", "dt-badge", "You"));
       if (player.is_bot) badges.append(el("span", "dt-badge", "Bot"));
-      if (player.player_id === view.current_player) badges.append(el("span", "dt-badge", "Acting"));
+      if (player.player_id === view.current_player) badges.append(el("span", "dt-badge dt-acting-badge", "Acting"));
+      caption.append(playerName, badges);
+      identity.append(caption);
+      describe(head, heroName(player.hero), `${player.name}${player.player_id === view.you ? " · You" : ""}${player.player_id === view.current_player ? " · Acting" : ""}`, true);
       const health = describe(el("div", "dt-health"), named("health"), terms.health[2], true);
       const number = el("div", "dt-health-value");
       number.append(el("span", "", "❤️"), el("strong", "", player.health), el("small", "", `/ ${player.max_health || 50}`));
@@ -277,13 +282,15 @@
       bar.append(fill);
       health.append(number, bar);
       const meta = el("div", "dt-player-meta");
-      meta.append(token("cp", `⚡ ${player.combat_points} CP`), token("card", `🃏 ${player.hand_count ?? 0}`));
+      meta.append(token("cp", `⚡ ${player.combat_points}`), token("card", `🃏 ${player.hand_count ?? 0}`));
       if (player.upgrades?.length) meta.append(token("upgrade", `⬆️ ${player.upgrades.length}`));
       const statuses = el("div", "dt-statuses");
       (player.statuses || []).forEach(status => {
         if (terms[status.id]) statuses.append(token(status.id, `${terms[status.id][1]} ${terms[status.id][0]} ×${status.stacks}`));
       });
-      card.append(head, badges, health, meta, statuses);
+      const stats = el("div", "dt-player-stats");
+      stats.append(health, meta);
+      card.append(head, stats, statuses);
       list.append(card);
     });
   }
@@ -297,7 +304,7 @@
       const node = button("", `dt-die dt-face-${key || "empty"}${die?.kept ? " kept" : ""}${!die ? " empty" : ""}`, () => send({type: "toggle_keep", index}));
       node.dataset.index = index;
       node.setAttribute("aria-pressed", String(Boolean(die?.kept)));
-      node.setAttribute("aria-label", `Die ${index + 1}: ${term ? named(key) : "not rolled"}${die?.kept ? ", Kept (🔒)" : ""}`);
+      node.setAttribute("aria-label", `Die ${index + 1}: ${die?.value ? `${die.value} · ` : ""}${term ? named(key) : "not rolled"}${die?.kept ? ", Kept (🔒)" : ""}`);
       node.append(el("span", "dt-die-value", die?.value || ""), el("span", "dt-die-symbol", term?.[1] || "🎲"), el("span", "dt-die-label", term?.[0] || "—"), el("span", "dt-keep", die?.kept ? "🔒 Kept" : ""));
       describe(node, `Die ${index + 1}${term ? ` · ${named(key)}` : " (🎲)"}`, `${term ? named(key) + ". " : ""}Click to keep or release this die before rolling again. Kept (🔒) dice stay unchanged. This turn allows up to ${view.roll_limit || 3} rolls.`);
       node.disabled = !die || !legal("toggle_keep");
@@ -332,6 +339,7 @@
     root.querySelector(".dt-detail-confirm select:not(:disabled), .dt-detail-confirm button:not(:disabled), .selected .dt-inline-confirm button:not(:disabled)")?.focus({preventScroll: true});
   }
   function cancelSelection(restoreFocus = true) {
+    hideTip();
     const previous = selected;
     selected = null;
     renderHeroPicker();
@@ -341,6 +349,7 @@
       const selector = previous.kind === "hero" ? `.dt-hero-card[data-hero="${previous.id}"] .dt-hero-trigger` : `[data-dt-selection="${previous.kind}-${previous.index}"] > button`;
       root.querySelector(selector)?.focus({preventScroll: true});
     }
+    hideTip();
   }
   function targets(kind, id, target) {
     const box = el("div", "dt-target-choice");
@@ -412,6 +421,32 @@
     ["index", "value", "source_index", "status"].forEach(key => { if (inputs[key] != null && inputs[key] !== "") action[key] = inputs[key]; });
     return action;
   }
+  function cardUnavailableReason(card) {
+    if (pending) return "上一项操作正在提交，请稍候。";
+    if (view.game_over) return "对局已经结束。";
+    const reason = card.unavailable_reason || "";
+    if (reason === "CP 不足" || (!reason && (ownPlayer()?.combat_points || 0) < card.cost)) {
+      return `需要 ${card.cost} Combat Points (⚡)，当前只有 ${ownPlayer()?.combat_points || 0}。`;
+    }
+    if (["仅可在掷骰或防御时使用", "仅可在主要阶段或防御时使用", "当前不能使用这张牌"].includes(reason)) {
+      const timing = {main: "Main I / Main II（主要阶段）", roll: "Offensive roll / Choose an ability（掷骰或选技能）", defense: "Defense（防御阶段）"};
+      return `这张牌只能在 ${timing[card.timing] || named(card.timing)} 使用；当前是 ${phases[view.phase] || "等待阶段"}。`;
+    }
+    if (reason) return reason;
+    if (!legal("play_card") || card.can_play === false) {
+      return view.current_player !== view.you ? "等待自己的行动机会。" : "当前阶段不能使用这张牌。";
+    }
+    return "";
+  }
+  function setUnavailableTip(node, reason) {
+    if (reason) {
+      node.dataset.dtUnavailable = reason;
+      node.dataset.dtTip = `Cannot play — ${reason}`;
+    } else {
+      delete node.dataset.dtUnavailable;
+      delete node.dataset.dtTip;
+    }
+  }
   function cardConfirm(card, expanded) {
     const confirm = el("div", expanded ? "dt-detail-confirm" : "dt-inline-confirm");
     confirm.setAttribute("aria-label", `Confirm ${card.name}`);
@@ -422,9 +457,32 @@
     let refresh = () => {};
     const controls = el("div", "dt-input-grid");
     const actionButtons = el("div", "dt-confirm-actions");
-    const playable = legal("play_card") && card.can_play !== false && (ownPlayer()?.combat_points || 0) >= card.cost;
-    const ready = () => required.every(key => inputs[key] != null && inputs[key] !== "");
-    const play = button(`Play · ${card.cost} ⚡`, "dt-primary", () => send(cardAction(card, inputs)), `Play ${card.name} for ${card.cost} Combat Points (⚡).`);
+    function unavailableReason() {
+      const reason = cardUnavailableReason(card);
+      if (reason) return reason;
+      if (["clean_one", "clean_all"].includes(card.effect) && inputs.target) {
+        const target = view.players.find(player => player.player_id === inputs.target);
+        if (!(target?.statuses || []).some(status => !view.status_catalog?.[status.id]?.companion && status.id !== "blessing")) {
+          return "所选玩家没有可以移除的状态；伙伴和神佑不能移除。";
+        }
+      }
+      const missing = required.find(key => inputs[key] == null || inputs[key] === "");
+      return {target: "请先选择目标玩家。", index: "请先选择要修改的骰子。", source_index: "请先选择另一枚作为点数来源的骰子。", value: "请先选择新的骰子点数。", status: "请先选择要移除的状态。"}[missing] || "";
+    }
+    const play = button(`Play · ${card.cost} ⚡`, "dt-primary", () => {
+      // aria-disabled keeps the unavailable control reachable for its reason.
+      // Never submit until both the server rules and local choices permit it.
+      if (unavailableReason()) { showTip(play, true); return; }
+      send(cardAction(card, inputs));
+    });
+    function updatePlay() {
+      hideTip();
+      const reason = unavailableReason();
+      play.setAttribute("aria-disabled", String(Boolean(reason)));
+      play.setAttribute("aria-description", reason || `Play ${card.name}.`);
+      describe(play, `Play · ${card.name}`, reason || `Play ${card.name} for ${card.cost} Combat Points (⚡).`);
+      setUnavailableTip(play, reason);
+    }
     function choice(key, label, options, number = false) {
       required.push(key);
       const row = el("label", "dt-input-field");
@@ -436,7 +494,7 @@
       select.addEventListener("change", () => {
         inputs[key] = select.value === "" ? "" : number ? Number(select.value) : select.value;
         refresh();
-        play.disabled = !playable || !ready();
+        updatePlay();
       });
       selectors[key] = select;
       row.append(el("span", "", label), select);
@@ -473,12 +531,11 @@
     };
     refresh();
     if (controls.children.length) confirm.append(controls);
-    play.disabled = !playable || !ready();
+    updatePlay();
     const sell = button("Sell · +1 ⚡", "dt-secondary", () => send({type: "sell_card", card_id: card.id || card.cardid}), "Discard this Card (🃏) for 1 Combat Point (⚡). Available in a main phase.");
     sell.disabled = !legal("sell_card") || card.can_sell === false;
     actionButtons.append(play, sell, button("Cancel", "dt-secondary", cancelSelection, "Cancel this local selection without taking an action."));
     confirm.append(actionButtons);
-    if (expanded && !playable && card.unavailable_reason) confirm.append(el("p", "dt-confirm-reason", card.unavailable_reason));
     return confirm;
   }
   function renderHand() {
@@ -493,10 +550,15 @@
     cards.forEach((card, index) => {
       const id = card.id || card.cardid;
       const active = selected?.kind === "card" && selected.index === index;
-      const canPlay = legal("play_card") && card.can_play !== false && (ownPlayer()?.combat_points || 0) >= card.cost;
+      const reason = cardUnavailableReason(card);
+      const canPlay = !reason;
       const node = el("article", `dt-card${canPlay ? " playable" : ""}${active ? " selected" : ""}`);
       node.dataset.dtSelection = `card-${index}`;
-      const trigger = button("", "dt-card-trigger", () => active ? cancelSelection() : chooseSelection({kind: "card", id, index, inputs: {}}, node));
+      const trigger = button("", "dt-card-trigger", () => {
+        if (active) { cancelSelection(); return; }
+        chooseSelection({kind: "card", id, index, inputs: {}}, node);
+        if (reason) showTip(root.querySelector(".dt-detail-confirm [data-dt-unavailable], .dt-card.selected .dt-inline-confirm [data-dt-unavailable]"), true);
+      });
       trigger.setAttribute("aria-expanded", String(active));
       trigger.inert = active;
       const head = el("div", "dt-card-head");
@@ -504,7 +566,8 @@
       const foot = el("div", "dt-card-foot");
       foot.append(token(card.timing in terms ? card.timing : "main"), el("span", "dt-target", card.target === "self" ? "You" : card.target === "opponent" ? "Opponent" : "Choose target"));
       trigger.append(head, el("p", "dt-card-effect", namedText(card.description)), foot);
-      describe(trigger, `Card (🃏) · ${card.name}`, `Cost: ${card.cost} ${named("cp")}. Timing: ${named(card.timing in terms ? card.timing : "main")}. Effect: ${namedText(card.description)} ${card.unavailable_reason || "Select for Play or Sell."} Sell gains 1 Combat Point (⚡).`);
+      describe(trigger, `Card (🃏) · ${card.name}`, `Cost: ${card.cost} ${named("cp")}. Timing: ${named(card.timing in terms ? card.timing : "main")}. Effect: ${namedText(card.description)} ${reason || "Select for Play or Sell."} Sell gains 1 Combat Point (⚡).`);
+      setUnavailableTip(trigger, reason);
       node.append(trigger);
       if (active) {
         const expanded = Boolean(card.inputs?.length || card.target === "any_player");
@@ -673,7 +736,11 @@
     pointerStart = null;
   });
   root.addEventListener("pointerover", event => {
-    if (event.pointerType === "mouse") showTip(event.target.closest("[data-dt-tip]"));
+    if (event.pointerType === "mouse") showTip(event.target.closest("[data-dt-unavailable]") || event.target.closest("[data-dt-tip]"));
+  });
+  root.addEventListener("focusin", event => {
+    const node = event.target.closest("[data-dt-unavailable]");
+    if (node) showTip(node, true);
   });
   root.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
   document.addEventListener("scroll", () => {
@@ -681,6 +748,8 @@
     if (pointerStart) pointerStart.scrolled = true;
   }, {capture: true, passive: true});
   window.addEventListener("resize", hideTip);
+  $("Tooltip").setAttribute("aria-live", "polite");
+  $("Tooltip").setAttribute("aria-atomic", "true");
   const actionHelp = {
     RollBtn: ["Roll Dice (🎲)", "Roll again up to the limit shown on the tray; statuses and cards can change it. Kept (🔒) dice remain unchanged."],
     ConfirmBtn: ["Confirm roll", "Keep the current Dice (🎲) result and move to ability selection. Roll at least once first."],

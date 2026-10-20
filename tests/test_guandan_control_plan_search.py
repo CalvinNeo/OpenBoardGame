@@ -328,14 +328,44 @@ class GuandanControlPlanSearchTests(unittest.TestCase):
 
     def test_saved_level_two_response_keeps_the_wildcard_plan(self):
         state = replay_fixture("964", 65)
+        hand_before = copy.deepcopy(state["players"]["bot2"]["hand"])
         with mock.patch.object(guandan_ai.random, "Random", return_value=random.Random(7)):
             action = guandan.GuandanGame.bot_move(state, "bot2")
         self.assertEqual(action, {"type": "pass"})
         explain = state["bot_explain"]["bot2"]
         self.assertEqual(explain["chosen"]["cards"], ["Pass"])
-        self.assertIsNone(explain["search"])
-        self.assertEqual(explain["method_details"]["heuristic_search_gate"]["reason"],
-                         "clear_heuristic_margin")
+        # Removing duplicated response costs makes the value margin small
+        # enough to search, even though policy deductions favor passing.
+        gate = explain["method_details"]["heuristic_search_gate"]
+        self.assertFalse(gate["confident"])
+        self.assertEqual(gate["reason"], "ambiguous_heuristic")
+        self.assertTrue(gate["blacklist_separated"])
+        self.assertGreaterEqual(gate["decision_score_gap"], gate["required_gap"])
+        self.assertLess(gate["value_score_gap"], gate["required_gap"])
+        self.assertEqual(gate["score_gap"], min(gate["decision_score_gap"],
+                                               gate["value_score_gap"]))
+
+        search = explain["search"]
+        self.assertEqual(search["method"], "minimax")
+        decision = search["decision"]
+        self.assertEqual(decision["reference"], ["Pass"])
+        self.assertCountEqual(decision["proposal"], ["♠️J", "♥️2"])
+        self.assertFalse(decision["accepted"])
+        self.assertEqual(decision["reason"], "preserve_control_plan")
+        self.assertGreater(decision["plan_risks"]["wild_control_reserve"], 0.0)
+        self.assertGreater(decision["plan_risks"]["incomplete_control_reserve"], 0.0)
+        self.assertFalse(decision["terminal_complete"])
+        self.assertFalse(decision["sampled_dominance"])
+        self.assertGreater(decision["paired_gain"], decision["required_gain"])
+        self.assertLess(decision["paired_gain_lower"], decision["required_gain"])
+
+        # The legal chosen pass must leave the entire planned hand, including
+        # its level-rank heart wildcard, available for the following trick.
+        self.assertTrue(any(guandan._is_wild(card, state["level_rank"])
+                            for card in hand_before))
+        _, error = guandan.GuandanGame.apply_action(state, "bot2", action)
+        self.assertIsNone(error)
+        self.assertEqual(state["players"]["bot2"]["hand"], hand_before)
 
 
 class GuandanShortRunnerTests(unittest.TestCase):

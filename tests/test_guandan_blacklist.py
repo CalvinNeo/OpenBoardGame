@@ -33,6 +33,22 @@ class GuandanBlacklistTests(unittest.TestCase):
         return [card["id"] for card in state["players"]["p0"]["hand"]
                 if card["rank"] == rank]
 
+    def test_nn_mode_keeps_legacy_scoring_when_new_default_is_enabled(self):
+        for mode in ("nn", " NN "):
+            with self.subTest(mode=mode):
+                state = self.fixture()
+                state["config"]["bot_mode"] = mode
+                cards = self.cards_of_rank(state, 9)[:1]
+                self.set_penalties(state, cards, response=10.0)
+                legacy = copy.deepcopy(state)
+                legacy["config"]["bot_blacklist_separate_value"] = False
+                self.assertFalse(guandan_ai._blacklist_separate_value(state))
+                self.assertEqual(self.call("_bot_score_components", state, cards, 1),
+                                 self.call("_bot_score_components", legacy, cards, 1))
+                self.assertEqual(self.call("_evaluate_state_for_bot", state),
+                                 self.call("_evaluate_state_for_bot", legacy))
+                self.assertEqual(guandan_endgame._blacklist_proof_exemption(state, "proof"), {})
+
     def test_rule_profile_keeps_both_reasons_and_relay_only_waives_response(self):
         state = self.fixture((7, 13, 13, 13, 13, 8))
         cards = self.cards_of_rank(state, 13)

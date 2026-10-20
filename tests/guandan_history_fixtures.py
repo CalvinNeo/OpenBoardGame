@@ -2465,6 +2465,52 @@ FIXTURES = {
 }
 
 
+FIXTURES["88f335"] = {
+    "turn_order": ("seat0", "seat1", "seat2", "seat3"),
+    "start_player": "seat0",
+    "dealer_team": "A",
+    "level_rank": 2,
+    "visible_card": "♣️4",
+    "lock_visible_card": True,
+    "initial_hands": {
+        "seat0": (
+            "🃏B", "🃏S", "♦️2", "♠️A", "♥️A", "♣️A", "♦️A", "♠️Q", "♠️J",
+            "♥️10", "♥️10", "♦️10", "♦️10", "♠️9", "♣️9", "♦️9", "♠️7", "♠️7",
+            "♥️6", "♣️6", "♣️5", "♥️4", "♣️4", "♦️4", "♣️3", "♦️3", "♦️3",
+        ),
+        "seat1": (
+            "♠️2", "♦️2", "♠️A", "♦️A", "♣️K", "♦️K", "♥️Q", "♦️Q", "♣️J",
+            "♦️J", "♠️10", "♣️10", "♣️10", "♠️9", "♥️9", "♠️8", "♥️8", "♣️8",
+            "♥️7", "♦️7", "♥️6", "♣️6", "♦️6", "♠️5", "♥️5", "♥️5", "♦️5",
+        ),
+        "seat2": (
+            "🃏B", "🃏S", "♣️2", "♣️A", "♠️K", "♥️K", "♦️K", "♥️Q", "♣️Q",
+            "♦️Q", "♠️J", "♥️J", "♥️J", "♣️J", "♥️9", "♣️9", "♦️9", "♠️8",
+            "♥️8", "♥️7", "♣️7", "♠️6", "♠️4", "♠️4", "♥️4", "♦️4", "♥️3",
+        ),
+        "seat3": (
+            "♠️2", "♥️2", "♥️2", "♣️2", "♥️A", "♠️K", "♥️K", "♣️K", "♠️Q",
+            "♣️Q", "♦️J", "♠️10", "♣️8", "♦️8", "♦️8", "♣️7", "♦️7", "♠️6",
+            "♦️6", "♠️5", "♣️5", "♦️5", "♣️4", "♠️3", "♠️3", "♥️3", "♣️3",
+        ),
+    },
+    "actions": (
+        ("seat0", ("♣️4", "♥️4", "♦️4", "♣️3", "♦️3", "♦️3")),
+        ("seat1", ()),
+        ("seat2", ()),
+        ("seat3", ()),
+        ("seat0", ("♣️5",)),
+        ("seat1", ("♣️8",)),
+        ("seat2", ("♣️A",)),
+        ("seat3", ()),
+        ("seat0", ()),
+        ("seat1", ()),
+        ("seat2", ("♥️3",)),
+        ("seat3", ("♣️4",)),
+    ),
+}
+
+
 def pick_card_ids(hand: List[Dict], labels: Sequence[str]) -> List[int]:
     """Resolve duplicate card faces to distinct IDs already owned by a player."""
     available = list(hand)
@@ -2537,7 +2583,7 @@ def replay_fixture(
     players = [
         {"player_id": player_id, "name": player_id, "seat": seat,
          "is_bot": player_id.startswith("bot")}
-        for seat, player_id in enumerate(("calvin", "bot2", "z", "bot4"))
+        for seat, player_id in enumerate(fixture.get("turn_order", ("calvin", "bot2", "z", "bot4")))
     ]
     state = guandan.GuandanGame.init_game(config or {}, players)
     deck = guandan._full_deck()
