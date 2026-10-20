@@ -187,7 +187,7 @@
     section("This digital edition", nextEditionText());
     section("1 · Main I", "Play or sell Cards (🃏), then Start rolling. Select a card to reveal its in-place Play / Sell / Cancel overlay. Selling gains 1 Combat Point (⚡). Main (🧭) cards are used in a main phase; Roll (🎲) cards modify rolled dice; Instant (✨) cards can be used when their listed timing permits. Hover an unavailable card or its Play button to see the reason. On a phone, tap the card or muted Play button for a three-second tooltip; each new tap replaces the previous tip. If a target, die, value or status is still required, Play explains the missing choice. Hero decks and discards are separate, and only your own hand is visible.");
     section("2 · Roll → attack", "Roll five Dice (🎲), up to three attempts. Tap a die to Keep (🔒) or release it. Each die shows its number and symbol. Confirm the roll, choose a matching ability, then confirm on its overlay. Abilities have no Combat Points (⚡) cost. Skip attack advances without attacking. Abilities and Hand share one panel; switch tabs to consult either without scrolling the page.");
-    section("3 · Defense", "Normal Damage (🗡️) allows the defender to use the hero's Defense (🛡️), or Pass. Each hero's defensive dice and effects are listed below. Undefendable damage skips the defensive roll; Ultimate (👑) damage also ignores prevention. The defender acknowledges these attacks with Pass. Roll (🎲) and Instant (✨) cards follow the available action window, with no cards allowed after an Ultimate is confirmed. Status tokens resolve as described in the glossary. The attack and defensive result remain in the public battle log.");
+    section("3 · Defense", "Normal Damage (🗡️) allows the defender to use the hero's Defense (🛡️), or Pass. After Defend, the dice tray shows the actual defense Dice (🎲), final Damage (🗡️) taken, damage blocked by the roll, and any Healing (💚), Combat Points (⚡), status gains or total return damage. This result stays through Main II and round review until the next turn, including after reconnect. Pass does not roll defense dice. Each hero's defensive dice and effects are listed below. Undefendable damage skips the defensive roll; Ultimate (👑) damage also ignores prevention. The defender acknowledges these attacks with Pass. Roll (🎲) and Instant (✨) cards follow the available action window, with no cards allowed after an Ultimate is confirmed. Status tokens resolve as described in the glossary. The attack and defensive roll remain in the public battle log.");
     section("4 · Main II → review", "Play or sell cards, then Finish turn. Both players confirm Next Round after reviewing the turn; Bots confirm automatically. The other hero then takes the next turn, receiving 1 Combat Point (⚡) and drawing 1 Card (🃏), except for the opening turn. Health (❤️) is capped at 50 and CP at 15. This digital edition limits the hand to 6 cards on draw, and reshuffles only that hero's own discard pile when its deck runs out.");
     const legend = section("Symbols & colors", "The same symbols, names and colors are used on the board, in tooltips and in Explain.");
     const grid = el("div", "dt-legend");
@@ -201,6 +201,7 @@
       const details = el("details", "dt-rule-section");
       details.append(el("summary", "", `${heroName(id)} · ability reference`));
       details.append(el("p", "", `${hero.name_zh || hero.name} · ${hero.subtitle}`));
+      details.append(heroFaceReference(hero));
       const defense = hero.defense;
       if (defense) details.append(el("p", "", `Defense (🛡️) · ${defense.name}: ${namedText(defense.description || "")} (${defense.dice} Dice 🎲)`));
       const ids = (hero.abilities || []).map(ability => ability.id);
@@ -212,11 +213,41 @@
       });
       content.append(details);
     }
-    section("Controls", "Help opens these rules. Explain lets you inspect a die, resource, status, card, ability or disabled control without taking an action. It blocks other controls until you inspect a target or press Esc. Hover a static icon on desktop or tap it on a phone for a three-second tooltip; the latest tap replaces the previous tip. Click empty space or Cancel to deselect a card. Scrolling preserves the selection. Esc closes the dialog or cancels the selection. Battle log retains recent public actions, including defensive rolls after reconnect; opponent card identities are never shown.");
+    section("Controls", "Click a hero's name on either player panel or in the hero picker to see all six numbered Dice (🎲) faces, including repeated symbols. Close or Esc returns to the board. Help opens these rules. Explain lets you inspect a die, resource, status, card, ability or disabled control without taking an action. It blocks other controls until you inspect a target or press Esc. Hover a static icon on desktop or tap it on a phone for a three-second tooltip; the latest tap replaces the previous tip. Click empty space or Cancel to deselect a card. Scrolling preserves the selection. Esc closes the dialog or cancels the selection. Battle log retains recent public actions, including defensive rolls after reconnect; opponent card identities are never shown.");
     return content;
   }
   function nextEditionText() {
     return view?.edition_note || "A playable digital adaptation of all eight Season One Rerolled heroes. Status spending and companions are automated, and upgrade effects use the values shown here. The displayed descriptions specify this edition's behavior; full printed card-by-card parity is not claimed.";
+  }
+  function heroFaceName(hero, key) {
+    return `${hero.symbol_names?.[key] || termFor(key)[0]} (${hero.symbol_icons?.[key] || termFor(key)[1]})`;
+  }
+  function heroFaceReference(hero) {
+    const grid = el("div", "dt-face-reference");
+    grid.setAttribute("aria-label", "Six dice faces");
+    (hero.dice_faces || []).forEach((key, index) => {
+      const face = el("div", "dt-reference-face");
+      face.setAttribute("aria-label", `Face ${index + 1}: ${heroFaceName(hero, key)}`);
+      face.append(el("span", "dt-reference-value", index + 1), el("span", "dt-reference-symbol", hero.symbol_icons?.[key] || termFor(key)[1]), el("span", "dt-reference-name", hero.symbol_names?.[key] || termFor(key)[0]));
+      grid.append(face);
+    });
+    return grid;
+  }
+  function showHeroDice(id) {
+    const hero = heroes[id];
+    if (!hero) return;
+    const content = el("div", "dt-hero-reference");
+    content.append(el("p", "", "Each die has these six faces. Repeated symbols appear on multiple sides."), heroFaceReference(hero));
+    if (hero.defense) content.append(el("p", "", `Defense (🛡️) · ${hero.defense.name}: ${hero.defense.dice} Dice (🎲). ${namedText(hero.defense.description)}`));
+    openDialog(`${hero.name_zh || hero.name} · ${heroName(id)} · Dice (🎲)`, content);
+  }
+  function heroNameButton(id) {
+    const hero = heroes[id];
+    const node = button(hero.name_zh || hero.name, "dt-hero-name-button", () => showHeroDice(id));
+    node.dataset.hero = id;
+    node.setAttribute("aria-haspopup", "dialog");
+    node.setAttribute("aria-label", `${hero.name_zh || hero.name} · View dice faces`);
+    return describe(node, `${heroName(id)} · Dice (🎲)`, (hero.dice_faces || []).map((key, index) => `${index + 1}: ${heroFaceName(hero, key)}`).join("; "));
   }
   function renderHeroPicker() {
     const choosing = view.phase === "choose_hero";
@@ -233,7 +264,11 @@
         renderHeroPicker();
         root.querySelector(".dt-hero-card.selected .dt-inline-confirm button:not(:disabled)")?.focus({preventScroll: true});
       });
-      trigger.append(el("span", "dt-avatar", hero.icon), el("strong", "", hero.name_zh || hero.name), el("small", "", `${hero.name} · ${hero.subtitle || ""}`));
+      const heading = el("div", "dt-hero-choice-heading");
+      heading.append(el("span", "dt-avatar", hero.icon), heroNameButton(id));
+      heading.inert = active;
+      trigger.setAttribute("aria-label", `Select hero · ${hero.name_zh || hero.name}`);
+      trigger.append(el("small", "", `${hero.name} · ${hero.subtitle || ""}`));
       const faces = el("div", "dt-requirement");
       hero.faces.forEach(key => faces.append(token(key)));
       trigger.append(faces);
@@ -242,7 +277,7 @@
       trigger.setAttribute("aria-expanded", String(active));
       trigger.inert = active;
       node.classList.toggle("selected", active || ownPlayer()?.hero === id);
-      node.append(trigger);
+      node.append(heading, trigger);
       if (active) {
         const confirm = el("div", "dt-inline-confirm");
         confirm.append(button("Choose hero", "dt-primary", () => send({type: "choose_hero", hero: id})), button("Cancel", "dt-secondary", cancelSelection));
@@ -262,7 +297,9 @@
       const head = el("div", "dt-player-head");
       const identity = el("div", "dt-player-identity");
       const avatar = describe(el("span", "dt-avatar", hero?.icon || "🎲"), heroName(player.hero), hero ? `${hero.name_zh || hero.name} · ${hero.name}` : "Choose a hero", true);
-      identity.append(el("h3", "dt-hero-name", hero?.name_zh || hero?.name || "Choose a hero"));
+      const heroHeading = el("h3", "dt-hero-name");
+      heroHeading.append(hero ? heroNameButton(player.hero) : document.createTextNode("Choose a hero"));
+      identity.append(heroHeading);
       const caption = el("div", "dt-player-caption");
       const playerName = describe(el("div", "dt-player-name", player.name), "Player", player.name, true);
       head.append(avatar, identity);
@@ -297,7 +334,36 @@
   function renderDice() {
     const area = $("Dice");
     area.replaceChildren();
-    for (let index = 0; index < 5; index++) {
+    const result = view.defense_result?.dice?.length ? view.defense_result : null;
+    $("RollTitle").textContent = result ? "Defense result" : "Attack dice";
+    area.classList.toggle("dt-defense-dice", Boolean(result));
+    area.setAttribute("aria-label", result ? `${labelPlayer(result.defender)} · Defense dice` : "Five attack dice");
+    const summary = $("DefenseResult");
+    summary.replaceChildren();
+    summary.classList.toggle("hidden", !result);
+    if (result) {
+      area.style.setProperty("--dt-result-count", result.dice.length);
+      result.dice.forEach((die, index) => {
+        const term = termFor(die.face);
+        const node = el("div", `dt-result-die dt-face-${die.face}`);
+        node.append(el("span", "dt-die-value", die.value), el("span", "dt-die-symbol", term[1]), el("span", "dt-die-label", term[0]));
+        describe(node, `Defense die ${index + 1} · ${named(die.face)}`, `Rolled ${die.value}. ${labelPlayer(result.defender)} · ${result.defense_name}. This is the settled result.`, true);
+        area.append(node);
+      });
+      summary.append(el("div", "dt-defense-name", `${labelPlayer(result.defender)} · ${result.defense_name}`));
+      const effects = el("div", "dt-defense-effects");
+      function effect(key, label, amount, explanation) {
+        effects.append(describe(el("span", `dt-token dt-tone-${key}`, `${termFor(key)[1]} ${label} ${amount}`), `${label} · ${named(key)}`, explanation, true));
+      }
+      effect("damage", "Taken", result.damage_taken, `Final incoming Damage (🗡️): ${result.damage_taken}, after Defense (🛡️), cards and statuses. The original attack was ${result.attack_damage}.`);
+      effect("defense", "Roll block", result.prevented, `Damage (🗡️) blocked directly by this Defense (🛡️) roll: ${result.prevented}. Other prevention and Healing (💚) are separate.`);
+      if (result.healing) effect("heal", "Healed", result.healing, `Actual Healing (💚) from the defense roll: ${result.healing}, capped at maximum Health (❤️), before incoming damage.`);
+      if (result.cp_gained) effect("cp", "Gained", result.cp_gained, `Actual Combat Points (⚡) gained from the defense roll: ${result.cp_gained}, capped at 15.`);
+      if (result.returned_damage) effect("damage", "Total return", result.returned_damage, `Total return Damage (🗡️) dealt to the attacker: ${result.returned_damage}. Includes defense, status and card returns after prevention.`);
+      Object.entries(result.status_gains || {}).forEach(([key, count]) => effects.append(describe(el("span", `dt-token dt-tone-${key}`, `${termFor(key)[1]} ${termFor(key)[0]} +${count}`), named(key), `Gained ${count} ${named(key)} from this defense roll. Tokens may already have been consumed by damage resolution.`, true)));
+      summary.append(effects);
+    }
+    for (let index = 0; !result && index < 5; index++) {
       const die = view.dice[index];
       const key = die?.face;
       const term = terms[key];
@@ -310,7 +376,7 @@
       node.disabled = !die || !legal("toggle_keep");
       area.append(node);
     }
-    $("RollCount").textContent = `${view.roll_count} / ${view.roll_limit || 3} rolls`;
+    $("RollCount").textContent = result ? `${result.dice.length} Dice (🎲)` : `${view.roll_count} / ${view.roll_limit || 3} rolls`;
     const actor = view.pending_attack?.attacker || view.current_player;
     $("DiceHint").textContent = view.phase === "offensive_roll" ? actor === view.you ? "Tap dice to keep them between rolls." : `${labelPlayer(actor)} is rolling…` : "";
     $("DiceHint").classList.toggle("hidden", !$("DiceHint").textContent);
@@ -713,8 +779,8 @@
     if (event.key === "Escape") {
       setExplain(false);
       hideTip();
-      if (selected) cancelSelection();
       if ($("Dialog").open) $("Dialog").close();
+      else if (selected) cancelSelection();
     } else if (explainMode && ["Enter", " "].includes(event.key) && !exempt(event.target)) {
       event.preventDefault();
       event.stopImmediatePropagation();

@@ -199,7 +199,8 @@ def _check_winner(state: Dict) -> None:
 def _begin_turn(state: Dict, pid: str, first: bool = False) -> None:
     player = state["players"][pid]
     state.update(phase="main_1", current_player=pid, turn_player=pid, dice=[],
-                 kept=[False] * 5, rolls=0, roll_limit=RULES["roll_attempts"], defense_dice=[], pending_attack=None)
+                 kept=[False] * 5, rolls=0, roll_limit=RULES["roll_attempts"], defense_dice=[],
+                 defense_result=None, pending_attack=None)
     player["shadows_started_turn"] = bool(player["statuses"].get("shadows"))
     _remove_status(player, "fire_mastery")
     upkeep = player["statuses"].get("poison", 0) + (2 if player["statuses"].get("burn") else 0)
@@ -225,7 +226,8 @@ def _begin_turn(state: Dict, pid: str, first: bool = False) -> None:
 
 def _start_offense(state: Dict, pid: str) -> None:
     player = state["players"][pid]
-    state.update(dice=[], kept=[False] * 5, rolls=0, roll_limit=RULES["roll_attempts"], defense_dice=[])
+    state.update(dice=[], kept=[False] * 5, rolls=0, roll_limit=RULES["roll_attempts"],
+                 defense_dice=[], defense_result=None)
     if player["statuses"].get("stun"):
         _remove_status(player, "stun")
         state["phase"] = "main_2"
@@ -281,11 +283,16 @@ def _finish_attack(state: Dict, defend: bool) -> None:
     attacker, defender = state["players"][attacker_id], state["players"][defender_id]
     incoming = max(0, attack["damage"] - attack.get("prevent", 0))
     returned = 0
+    state.update(defense_dice=[], defense_result=None)
+    result = None
     if defend and attack["damage_type"] == "normal":
         defense = HEROES[defender["hero"]]["defense"]
         dice = _roll_dice(state, defender["hero"], defense["dice"])
         state["defense_dice"] = copy.deepcopy(dice)
         counts = _counts(dice)
+        health_before, cp_before = defender["health"], defender["combat_points"]
+        statuses_before = dict(defender["statuses"])
+        incoming_before = incoming
         _heal(defender, sum(counts.get(face, 0) * n for face, n in defense.get("heal_per", {}).items()))
         _cp(defender, sum(counts.get(face, 0) * n for face, n in defense.get("cp_per", {}).items()))
         for face, status in defense.get("status_per", {}).items():
@@ -296,15 +303,29 @@ def _finish_attack(state: Dict, defend: bool) -> None:
             incoming //= 2
         returned += sum(counts.get(face, 0) * n for face, n in defense.get("return_per", {}).items())
         returned += sum(counts.get(face, 0) // n for face, n in defense.get("return_groups", {}).items())
+        result = {"attacker": attacker_id, "defender": defender_id, "hero": defender["hero"],
+                  "defense_name": defense["name"], "dice": copy.deepcopy(dice),
+                  "attack_damage": attack["damage"], "prevented": incoming_before - incoming,
+                  "healing": defender["health"] - health_before,
+                  "cp_gained": defender["combat_points"] - cp_before,
+                  "status_gains": {status: count - statuses_before.get(status, 0)
+                                   for status, count in defender["statuses"].items()
+                                   if count > statuses_before.get(status, 0)}}
         _log(state, defender_id, f"🛡️ {defense['name']}：" + _dice_text(defender["hero"], dice))
     if attack["damage_type"] != "ultimate" and incoming > 0 and defender["statuses"].get("retribution"):
         _remove_status(defender, "retribution")
         returned += (incoming + 1) // 2
     dealt = _damage(state, defender_id, incoming, attack["damage_type"], attack=True)
+    returned_dealt = 0
     if returned:
-        _damage(state, attacker_id, returned, "return")
+        returned_dealt += _damage(state, attacker_id, returned, "return")
     if attack.get("return_damage"):
-        _damage(state, attacker_id, attack["return_damage"], "return")
+        returned_dealt += _damage(state, attacker_id, attack["return_damage"], "return")
+    if result is not None:
+        # Keep the roll's gains even when its statuses are immediately spent.
+        # Return damage includes all resolved return sources, after mitigation.
+        result.update(damage_taken=dealt, returned_damage=returned_dealt)
+        state["defense_result"] = result
     ability = next((a for a in HEROES[attacker["hero"]]["abilities"] if a["id"] == attack.get("ability_id")), None)
     if ability:
         _apply_effects(state, attacker_id, defender_id, ability, attack.get("level", 1))
@@ -323,6 +344,7 @@ def _activate_ability(state: Dict, pid: str, action: Dict) -> None:
     if not found or not _condition(found[0], state["dice"]):
         raise ValueError("ability pattern not met")
     ability, level = found
+    state.update(defense_dice=[], defense_result=None)
     if not ability.get("damage"):
         _apply_effects(state, pid, target, ability, level)
         state["phase"] = "main_2"
@@ -380,7 +402,6 @@ def _activate_ability(state: Dict, pid: str, action: Dict) -> None:
                                "damage_type": kind, "ability_id": ability["id"], "ability_name": ability["name"],
                                "level": level, "prevent": 0, "extra_dice": extra_dice,
                                "return_damage": ability.get("return_damage", 0), "concussion": concussion}
-    state["defense_dice"] = []
     state["phase"] = "defensive_roll"
     state["current_player"] = target
     _log(state, pid, f"⚔️ 发动 {ability['name']}：{damage} 点待结算伤害。")
@@ -512,7 +533,8 @@ class DiceThroneGame:
                                         "statuses": {}, "hand": [], "upgrades": [], "deck": [], "discard": [],
                                         "shadows_started_turn": False} for p in players},
             "dice": [], "kept": [False] * 5, "rolls": 0, "roll_limit": RULES["roll_attempts"],
-            "defense_dice": [], "rng_state": rng.getstate(), "deck": [], "discard": [], "pending_attack": None,
+            "defense_dice": [], "defense_result": None, "rng_state": rng.getstate(),
+            "deck": [], "discard": [], "pending_attack": None,
             "winner": [], "game_over": False, "round": 1, "turn_count": 0,
             "round_review": [], "next_round_ready": [], "log": [],
         }
@@ -669,6 +691,7 @@ class DiceThroneGame:
                 "dice": [{"index": i, "face": die["face"], "value": die["value"], "kept": state["kept"][i]} for i, die in enumerate(state.get("dice", []))],
                 "roll_count": state.get("rolls", 0), "roll_limit": state.get("roll_limit", 3),
                 "defense_dice": copy.deepcopy(state.get("defense_dice", [])), "abilities": abilities,
+                "defense_result": copy.deepcopy(state.get("defense_result")),
                 "pending_attack": copy.deepcopy(state.get("pending_attack")),
                 "discard_count": sum(len(p.get("discard", [])) for p in state["players"].values()),
                 "legal_actions": legal, "winner": list(state.get("winner", [])), "game_over": state.get("game_over", False),
@@ -769,5 +792,6 @@ class DiceThroneGame:
             state["rules_version"] = 2
         state.setdefault("roll_limit", 3)
         state.setdefault("defense_dice", [])
+        state.setdefault("defense_result", None)
         state.setdefault("log", [])
         return state

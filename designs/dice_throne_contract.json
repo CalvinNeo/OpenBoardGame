@@ -84,6 +84,21 @@
     "turn_player": "player whose turn is in progress, including during a defensive response",
     "roll_limit": "integer; current maximum roll attempts after cards/statuses",
     "defense_dice": "public array of value/face from the most recent defense",
+    "defense_result": {
+      "nullable": "null until a normal Defend roll; retained through main_2, round_review and game_over; cleared by new turn/offense/attack or defensive Pass",
+      "attacker": "attacking player id",
+      "defender": "defending player id",
+      "hero": "defending hero id",
+      "defense_name": "defensive ability display name",
+      "dice": "array of value/face objects from this defense roll",
+      "attack_damage": "attack damage before cards, defense roll and statuses",
+      "prevented": "damage blocked by the defense roll's direct prevention/halving only, after prior card prevention; excludes status mitigation",
+      "healing": "actual capped HP gained from this roll before damage settlement",
+      "cp_gained": "actual capped CP gained from this roll",
+      "status_gains": "object mapping status ids to actual capped stack gains from this roll, including stacks immediately consumed during settlement",
+      "damage_taken": "resolved incoming damage after all mitigation, matching combat damage accounting; not capped to remaining HP",
+      "returned_damage": "sum of resolved return damage from defense, Retribution and pending attack return sources after attacker mitigation; not capped to remaining HP"
+    },
     "log": "last 40 public activity entries"
   },
   "actions": {

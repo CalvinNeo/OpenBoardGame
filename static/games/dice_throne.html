@@ -38,8 +38,9 @@
       </section>
       <div class="dt-battle-grid">
         <section id="diceThroneRollZone" class="dt-roll-zone" aria-label="Dice tray">
-          <div class="dt-section-head"><h3>Attack dice</h3><span id="diceThroneRollCount">Roll 0 / 3</span></div>
+          <div class="dt-section-head"><h3 id="diceThroneRollTitle">Attack dice</h3><span id="diceThroneRollCount">Roll 0 / 3</span></div>
           <div id="diceThroneDice" class="dt-dice" aria-label="Five dice"></div>
+          <div id="diceThroneDefenseResult" class="dt-defense-result hidden" aria-live="polite"></div>
           <p id="diceThroneDiceHint" class="dt-dice-hint">Roll the dice to forge your attack.</p>
           <div class="dt-roll-actions">
             <button id="diceThroneRollBtn" class="dt-primary" type="button" data-dt-explain="roll" disabled>🎲 Roll dice</button>

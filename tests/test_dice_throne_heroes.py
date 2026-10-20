@@ -73,7 +73,7 @@ class DiceThroneHeroTests(unittest.TestCase):
         self.fail(f"{hero}/{ability['id']} cannot be rolled on its hero's dice")
 
     def incoming_attack(self, hero="monk", damage=9, damage_type="normal", statuses=None, seed=5):
-        state = self.make_state("barbarian", hero)
+        state = self.make_state("moon_elf" if hero == "barbarian" else "barbarian", hero)
         state["phase"] = "defensive_roll"
         state["current_player"] = "p1"
         state["players"]["p1"]["statuses"] = dict(statuses or {})
@@ -232,6 +232,153 @@ class DiceThroneHeroTests(unittest.TestCase):
                 self.assertEqual(state["players"]["p0"]["health"], attacker_health)
                 self.assertEqual(state["players"]["p1"]["combat_points"], cp)
                 self.assertEqual(state["players"]["p1"]["statuses"], statuses)
+
+    def test_defense_result_records_roll_and_resolved_effects_for_every_hero(self):
+        # Seed 5 rolls 5, 3, 6, 3, 6; ninja then rolls a successful smoke bomb.
+        expectations = {
+            "barbarian": (0, 2, 0, {}, 10, 0),
+            "moon_elf": (0, 0, 0, {}, 10, 1),
+            "monk": (1, 0, 0, {"chi": 1}, 8, 1),
+            "paladin": (2, 1, 1, {}, 8, 0),
+            "pyromancer": (0, 0, 0, {"fire_mastery": 1}, 10, 1),
+            "shadow_thief": (0, 0, 1, {"shadows": 1}, 0, 0),
+            "treant": (1, 2, 0, {"seedling": 1}, 9, 0),
+            "ninja": (1, 0, 0, {"smoke_bomb": 1}, 0, 0),
+        }
+        for hero, (prevented, healing, cp, statuses, taken, returned) in expectations.items():
+            with self.subTest(hero=hero):
+                state = self.incoming_attack(hero, damage=10)
+                state["players"]["p1"]["health"] = 30
+                self.act(state, "p1", "defend")
+                defense = HEROES[hero]["defense"]
+                values = [5, 3, 6, 3, 6][:defense["dice"]]
+                self.assertEqual(state["defense_result"], {
+                    "attacker": "p0", "defender": "p1", "hero": hero,
+                    "defense_name": defense["name"],
+                    "dice": [{"value": value, "face": HEROES[hero]["dice_faces"][value - 1]}
+                             for value in values],
+                    "attack_damage": 10, "prevented": prevented,
+                    "healing": healing, "cp_gained": cp, "status_gains": statuses,
+                    "damage_taken": taken, "returned_damage": returned,
+                })
+                self.assertEqual(state["defense_result"]["dice"], state["defense_dice"])
+                self.assertEqual(state["players"]["p1"]["health"], 30 + healing - taken)
+                self.assertEqual(state["players"]["p0"]["health"], 50 - returned)
+
+    def test_defense_result_uses_capped_gains_and_roll_only_prevention(self):
+        state = self.incoming_attack("paladin", damage=10)
+        state["players"]["p1"]["combat_points"] = 15
+        self.act(state, "p1", "defend")
+        self.assertEqual(state["defense_result"]["healing"], 0)
+        self.assertEqual(state["defense_result"]["cp_gained"], 0)
+
+        state = self.incoming_attack("treant", damage=10,
+                                     statuses={"seedling": STATUSES["seedling"]["limit"]})
+        state["players"]["p1"]["health"] = 49
+        self.act(state, "p1", "defend")
+        self.assertEqual(state["defense_result"]["healing"], 1)
+        self.assertEqual(state["defense_result"]["status_gains"], {})
+
+        state = self.incoming_attack("moon_elf", damage=10, seed=0)
+        state["pending_attack"]["prevent"] = 3
+        self.act(state, "p1", "defend")
+        self.assertEqual(state["defense_result"]["attack_damage"], 10)
+        self.assertEqual(state["defense_result"]["prevented"], 4)
+        self.assertEqual(state["defense_result"]["damage_taken"], 3)
+
+        state = self.incoming_attack("paladin", damage=1)
+        state["pending_attack"]["prevent"] = 6
+        self.act(state, "p1", "defend")
+        self.assertEqual(state["defense_result"]["prevented"], 0)
+        self.assertEqual(state["defense_result"]["damage_taken"], 0)
+
+    def test_defense_result_totals_mitigated_returns_from_all_sources(self):
+        state = self.incoming_attack("monk", damage=10, statuses={"retribution": 1})
+        state["players"]["p0"]["statuses"] = {"chi": 2}
+        state["pending_attack"].update(prevent=2, return_damage=3)
+        self.act(state, "p1", "defend")
+        result = state["defense_result"]
+        self.assertEqual(result["prevented"], 1)
+        self.assertEqual(result["status_gains"], {"chi": 1})
+        self.assertEqual(result["damage_taken"], 6)
+        # Defense returns 1 + Retribution 4 - attacker's Chi 2 + separate return 3.
+        self.assertEqual(result["returned_damage"], 6)
+        self.assertEqual(state["players"]["p0"]["health"], 44)
+
+    def test_defense_result_survives_review_and_game_over_but_clears_next_turn(self):
+        state = self.incoming_attack()
+        self.act(state, "p1", "defend")
+        result = copy.deepcopy(state["defense_result"])
+        self.assertEqual(state["phase"], "main_2")
+        self.act(state, "p0", "end_phase")
+        self.assertEqual(state["phase"], "round_review")
+        self.assertEqual(state["defense_result"], result)
+        self.act(state, "p0", "next_round")
+        self.assertEqual(state["defense_result"], result)
+        self.act(state, "p1", "next_round")
+        self.assertEqual(state["phase"], "main_1")
+        self.assertIsNone(state["defense_result"])
+        self.assertEqual(state["defense_dice"], [])
+
+        state = self.incoming_attack()
+        state["players"]["p1"]["health"] = 1
+        self.act(state, "p1", "defend")
+        self.assertEqual(state["phase"], "game_over")
+        self.assertIsNotNone(Game.get_public_view(state, "p1")["defense_result"])
+
+    def test_new_offense_and_attack_clear_previous_defense_result(self):
+        state = self.incoming_attack()
+        self.act(state, "p1", "defend")
+        state.update(phase="main_1", current_player="p0")
+        self.act(state, "p0", "end_phase")
+        self.assertIsNone(state["defense_result"])
+        self.assertEqual(state["defense_dice"], [])
+
+        state = self.incoming_attack()
+        self.act(state, "p1", "defend")
+        self.set_attack(state)
+        self.act(state, "p0", "use_ability", ability_id="smack")
+        self.assertEqual(state["phase"], "defensive_roll")
+        self.assertIsNone(state["defense_result"])
+        self.assertEqual(state["defense_dice"], [])
+
+    def test_passing_defense_never_displays_a_roll_or_stale_result(self):
+        for damage_type in ("normal", "undefendable", "ultimate"):
+            with self.subTest(damage_type=damage_type):
+                state = self.incoming_attack()
+                self.act(state, "p1", "defend")
+                state.update(phase="defensive_roll", current_player="p1", pending_attack={
+                    "attacker": "p0", "defender": "p1", "damage": 3,
+                    "damage_type": damage_type,
+                })
+                rng_before = copy.deepcopy(state["rng_state"])
+                self.act(state, "p1", "pass")
+                self.assertIsNone(state["defense_result"])
+                self.assertEqual(state["defense_dice"], [])
+                self.assertEqual(state["rng_state"], rng_before)
+
+    def test_defense_result_public_view_and_save_restore_do_not_alias(self):
+        state = self.incoming_attack()
+        self.act(state, "p1", "defend")
+        before = copy.deepcopy(state)
+        for viewer in ("p0", "p1", "spectator"):
+            with self.subTest(viewer=viewer):
+                view = Game.get_public_view(state, viewer)
+                self.assertEqual(view["defense_result"], state["defense_result"])
+                view["defense_result"]["dice"][0]["value"] = 99
+                view["defense_result"]["status_gains"]["chi"] = 99
+                self.assertEqual(state, before)
+        payload = Game.serialize(state)
+        restored = Game.deserialize(json.loads(json.dumps(payload)))
+        self.assertEqual(restored, state)
+        payload["defense_result"]["dice"].clear()
+        restored["defense_result"]["status_gains"].clear()
+        self.assertEqual(state, before)
+        # Old saves can retain legacy dice without claiming a new result.
+        payload = Game.serialize(state)
+        payload.pop("defense_result")
+        self.assertIsNone(Game.deserialize(payload)["defense_result"])
+        self.assertIsNone(Game.get_public_view(payload, "p1")["defense_result"])
 
     def test_chi_protect_and_retribution_apply_their_printed_mitigation(self):
         state = self.incoming_attack(damage=5, statuses={"chi": 3})
