@@ -2,54 +2,6 @@
 
 入口：`python3 scripts/benchmark_guandan.py`，只用 Python 标准库。历次改进、关键复盘与评测结果统一见 [guandan_ai_review.md](guandan_ai_review.md)。
 
-## MCTS 目标层预算与残局提速候选：2026-10-18
-
-冻结目录 `.data/guandan_benchmark/strength-20261018/`：`baseline/` 为本轮开始前的资源保护 v2，`candidate/` 增加 MCTS 检查点预算及精确残局名次／下家预计算。`plan.json` 与 `PROTOCOL.md` 在对战前固定开发 seed `20261115` 的 6 对／12 局，以及正式新留出 seed `20261118` 的 90 对／180 局；双方 `auto`、公开信息、6000ms、零额外预算。开发完整结束，净收益零，全部 1,082 个动作重放通过；18 次可直接配对的实际采样搜索到达目标深度 15／9 次，但最终动作相同。870 项掼蛋和 30 项房间回归通过。
-
-正式开跑前在 `formal-6shards/` 单独声明六片各 15 对，替代原三片各 30 对以减少运行时间，seed、样本总量、级牌分配、双方源码和推广门槛保持不变。该目录保存正式 plan、runner、预定协议及运行负载；开发文件未改。正式批次已完成并通过 native verification 与独立审计：17,110 动作、90 对／180 局、净总 +9（+0.05/局），bootstrap 95% `[0,+0.1167]`、sign-flip `p=0.125`、4／1／85 正负零对，结论 `inconclusive`，不能按预定门槛推广。
-
-正式诊断显示预算修正确实增加了 MCTS 深度和配对世界，但实际动作只改变 10 次，收益集中在 4 个正对和 1 个负对。针对负对设计的 MCTS 后机会式终局复核没有发布：真实节点总牌约 40 张，3 个采样世界中 2 个在 500,000 节点上限内未完成；若只求解出牌后降至 24 张，会让 pass 与 play 使用不同价值尺度。隔离草案及 9 项原子性测试保存在 `tmp/guandan-strength-20261018/post-mcts-experiment/`，生产默认保持已验收的 MCTS 调度和残局提速。
-
-MCTS 有 deadline 且 `bot_search_use_remaining_budget=true` 时，原有效模拟次数现在是**目标层访问预算**，另加 `目标深度 × 固定面板世界数 × 初始根候选数` 次中间层访问。六根候选、三个世界、目标深度八的默认场景从总计 96 次增至 240 次，仍受原 deadline 限制；无 deadline 或关闭该选项时保持原总访问上限。`--clock fixed` 只是冻结计时器，调用仍提供 deadline，因此也采用增加后的有限上限；需要复现旧有限次数语义时，应给两侧明确设置 `bot_search_use_remaining_budget=false`。不同版本的同一 `bot_mcts_sims` 数字不再保证相同总计算量。
-
-两个旧开发节点从深度 4／3 个世界、约 0.74 秒，变为深度 8／22 与 38 个配对世界、5.33 与 3.76 秒，分别不再拆 QQQQ 回单 J、或以 AAAA 压对手三带二。只比较了决策，没有把局部改选当作对战胜率证据。精确残局另对照 102 状态×三轮，全部根动作、终局值及 4,777,998 个总节点一致，合计耗时 10099→7197ms（约 −28.7%）；它只证明求解效率。复现材料位于 `tmp/guandan-strength-20261018/mcts-depth/` 和 `endgame/`，完整机制与边界见复盘文档。
-
-## 资源保护与残局搜索 v2：2026-10-18
-
-冻结候选 `.data/guandan_benchmark/strength-20261017/candidate-v2/` 对上一轮 `.data/guandan_benchmark/strength-next-20261016/candidate/`，新增不完整终局／等值后浅搜的百搭和王资源保护，以及保持根动作终局值一致的离散收益二分求解。双方游戏规则 AST、有效配置、公开信息、`auto`／6000ms／零额外预算一致。
-
-复用 seed `20261109` 的 90 对／180 局完整完成：头游 90 胜／90 负，净升级 +3，平均 **+0.01667/局**，3 正／0 负／87 零对（正收益索引 74、75、81）。配对 bootstrap 95% 区间 `[0,+0.03889]`，双侧精确符号翻转 `p=0.25`，仍为 **`inconclusive`**。这批 seed 已参与验证及改动诊断，不能作为独立留出证据；后续棋力验收须换用未参与开发的固定牌局。上一轮 −1/180 对应另一基线，不能与本批 +3/180 直接写成同一对照的前后改善。
-
-合并报告、完整 trace 和审计位于 `.data/guandan_benchmark/strength-20261017/validation-v2/`：`full-90.json`、`full-90.games.jsonl`、`full-90.trace.jsonl`、`independent-audit.json`。上级目录 `merge-audit-v2.py` 复用既有逐动作重放方式，确认 17,195 个动作合法，公开观察、配对发牌、轨迹、结算、源码 manifest、配置、摘要和诊断一致。未找到该批开跑前的协议或负载文件，报告明确保留这一限制；没有事后补造预注册。候选／基线 mean 425.6／424.8ms、p95 1983／1970ms，不能由此声称整体提速。90 个开发残局的独立求解对照仅证明动作值相同且节点下降 8.45%，不扩充对战样本量。
-
-## 短手采样与公开收官候选：2026-10-16
-
-冻结目录 `.data/guandan_benchmark/strength-next-20261016/`：`baseline/` 为规则及公开归属修复后的 v5，`candidate/` 新增成组尾牌提议／先验和公开收官证明。两侧保持完整启发式、`auto`／公开信息／6000ms／零额外预算；仅候选新增 `bot_determinize_retained_group_odds=16` 和 `bot_determinize_group_proposal_fraction=0.5`，其余有效配置及游戏规则一致。
-
-开发 seed `20261106` 的 12 对／24 局完成：13 胜／11 负，净升级 +0.125/局，2 正／1 负／9 零对，p=0.75，不能作强度验收。候选随后不再调整，正式固定 seed `20261109`、90 对／180 局、级牌 2／7／A 各 30 对。正式结果为 −0.0056/局，4 正／5 负／81 零对，精确配对符号翻转 p=1.0，配对百分位 bootstrap 95% 区间 [−0.0500,+0.0389]，结论 `inconclusive`；17,261 个动作重放通过。两个 runner 在开跑前分别固定样本与协议，报告和源码均记录指纹；中断的 117 局目录单独保留，未与随后从零重跑的完整批次合并。独立核验见 `validation/independent-audit.json`。本轮没有把采样先验推广为已验证的强度提升。
-
-评测后工作区保留候选的整组采样参数（`bot_determinize_retained_group_odds=16`、`bot_determinize_group_proposal_fraction=0.5`），便于继续做新的固定留出实验；本批结果没有把它证明为普遍强度提升。公开收官证明继续属于默认残局流程。
-
-## 规则与公开归属固定对照：2026-10-16
-
-规则修复后的 v5 基线对公开归属校正，固定新 seed `20261102`、90 对／180 局、级牌 2／7／A 各 30 对，双方 `auto`／公开信息／6000ms／零额外预算。基线和候选共享本轮低 A 序列、抗贡、过 A 及残局估值修复，只隔离普通接牌公开归属这一项增量。
-
-双方各赢 90 局，净升级均值 0，90 对全部净差为零；符号翻转 p=1，结论为 `inconclusive`。常量样本使用保守 Hoeffding 95% 区间 [−0.8589, +0.8589]，不把 bootstrap 的退化零区间当作等效证明。88 对动作轨迹相同，2 对有差异但结果相同。保留改动作为推断正确性修复，不宣称本批证明棋力提升。
-
-运行采用三个 30 对分片（全局起点 0／30／60），12 核机器共用墙钟预算，耗时 2570 秒；性能解释须保留共享机器调度限制。全部 16,746 个动作已重放，源码、配置、配对发牌、公开观察、合法性、轨迹和结算均核对。候选／基线平均决策 439／436ms，p95 2144／2067ms；这不是提速证据。
-
-冻结源码、预定协议、完整报告、负载记录和验证脚本在 `.data/guandan_benchmark/rules-owner-20261016/`，报告为 `evaluation/full-90.json`，重放验证为 `evaluation/verification.json`。本批只评估新发牌单局，不覆盖进贡还贡后的连续局。836 项掼蛋回归和 30 项房间回归通过；详细规则来源及范围见 [guandan_ai_review.md](guandan_ai_review.md)。
-
-## 已推广的历史对照：2026-10-15
-
-v5 按用户要求完成新 seed `20261028` 的 **90 对／180 局**，双方 `auto`、公开信息、6000ms、零额外预算；级牌 2／7／A 各 30 对。候选／基线是 `tmp/guandan-strength-iteration-20261014/` 下冻结的 `terminal-candidate-v5/` 与 `structured-current-baseline/`，不是下方示例中的旧 Git 基线。预定协议 `terminal-v5-full-protocol.md`，完整报告 `terminal-v5-full-90.json`。
-
-净升级收益 +0.1167/局，配对 bootstrap 95% [+0.0222, +0.2278]，双侧精确符号翻转 p=0.02722，达到该批预定推广条件；93 胜／87 负，胜率区间 [50.00%, 53.89%]，不另称胜率显著提高。90 对中 12 正、2 负、76 零；保守净收益参考界 [−0.7423, +0.9756]，前期多次开发尝试不共享单批置信度。
-
-`validate_full_batch.py` 已重放全部 17117 动作并核对公开观察、动作合法性、轨迹和结算、预定发牌与两侧源码。`summarize_terminal_trace.py` 将采样终局面板、等价路线浅搜和公开确定接管分开统计。两者只作验证和诊断，不是额外独立强度样本。生产默认采用本次候选完整 effective_config，运行代码除默认字典外与验证快照一致。
-
-启用后 815 项掼蛋及房间回归通过，205.992 秒；`terminal-v5-promotion-verification.json` 保存源码、默认配置等价核对及最终测试日志指纹。结算重放与单元回归不会扩充 180 局强度样本。
-
 ## 评测什么
 
 两名 candidate 组成一队，对战两名 baseline。同一副牌打两次：candidate 分别坐 A 队（0、2）和 B 队（1、3），牌、级牌、先手保持一致。每对牌局是一个统计样本。每对还交替实际运行 A/B 的顺序。
@@ -63,13 +15,13 @@ v5 按用户要求完成新 seed `20261028` 的 **90 对／180 局**，双方 `a
 
 ## 用 Git commit 固定基线
 
-本轮基线：`68e62abe6b9213ea69d85df044c86732edffd5ad`。使用 `--baseline-ref` 指定 commit、tag 或分支；启动时将其解析成完整 commit ID，后续只读取这个不可变 ID，即使分支移动也不会切换版本。
+下方历史命令示例基线为 `68e62abe6b9213ea69d85df044c86732edffd5ad`；2026-10-19 各批固定对手是 `d6d39f243d23f5e2a0da09722bfd6d6a9ccef1ff`，完整结果见主报告。使用 `--baseline-ref` 指定 commit、tag 或分支；启动时将其解析成完整 commit ID，后续只读取这个不可变 ID，即使分支移动也不会切换版本。
 
-实现使用只读 `git cat-file blob COMMIT:path`，把 `game/guandan.py`、`game/guandan_ai.py`、`game/memories.py` 的字节直接加载到独立进程内存。**不 checkout、不建 worktree、不复制历史源码文件**。报告记录请求的 ref、实际 commit ID 和全部源码 SHA-256；`snapshot` 复制命令已移除。
+实现使用只读 `git cat-file blob COMMIT:path`，把 `game/guandan.py`、`game/guandan_ai.py`、`game/memories.py`，以及该版本存在的 `game/guandan_trick.py`／`game/guandan_endgame.py` 的字节直接加载到独立进程内存。**不 checkout、不建 worktree、不复制历史源码文件**。报告记录请求的 ref、实际 commit ID 和全部源码 SHA-256；`snapshot` 复制命令已移除。
 
 候选默认读取当前工作区（包括未提交修改）；`--candidate-ref` 可对称指定历史版本。因此，同一个仓库即可运行“工作区改进 vs 某 commit”或“commit vs commit”。基线和候选分别在独立 Python 进程加载自己的模块，每盘重启；模块只允许使用已捕获的 `game.*` 依赖，缺失依赖直接报错，不会回退到工作区或 `.pyc`。worker 启动时返回实际加载字节的 hash，与报告版本核对。
 
-裁判始终使用当前仓库规则，启动后其模块也来自捕获的内存字节。此机制适用于兼容的状态/动作协议；规则协议发生变化时应新建评测版本，而不是把非法动作当成策略退步。
+裁判使用 runner 启动时捕获的规则源码；从冻结候选目录启动时，裁判也是该冻结版本，不能理解为持续读取变化中的工作区。此机制适用于兼容的状态/动作协议；规则协议发生变化时应新建评测版本，而不是把非法动作当成策略退步。
 
 `auto` 对当前 `heuristic` 是搜索消融；`auto` 对**冻结版本的** `auto` 才是版本进步对比。`greedy` 和 `random` 是诊断对手：使用提示候选，不使用复杂动作评分；候选生成仍属于对应版本的源码，不是穷尽全部合法组合。两个诊断策略均优先一手出完。它们不是唯一验收标准。
 
@@ -125,6 +77,8 @@ python3 scripts/benchmark_guandan.py run \
   --output .data/guandan_benchmark/fixed_candidate_vs_baseline.json
 ```
 
+MCTS 有 deadline 且 `bot_search_use_remaining_budget=true` 时，原有效模拟次数是目标层访问预算，另加 `目标深度 × 固定面板世界数 × 初始根候选数` 次中间层访问；无 deadline 或关闭该选项时保留旧总次数上限。`--clock fixed` 仍提供 deadline，故也采用这个有限扩展；同一 `bot_mcts_sims` 数字跨版本不保证相同计算量。
+
 这里的 [固定预算示例](guandan_benchmark_fixed_budget.json) 是有限宽度/深度的开发配置，不修改游戏默认参数；冻结时钟后真实单步耗时可能明显超过 `think-ms`。先用 1 对估算成本，再决定完整评测的计算量。
 
 ## 信息与复现边界
@@ -178,13 +132,13 @@ python3 scripts/benchmark_guandan.py run \
 
 ### 强度统计
 
-2026-10-15 的实验性 `game/guandan_endgame.py` 也纳入可选运行时快照、源码指纹和固定时钟；冻结旧 commit 不存在此文件时不会从工作区补入。该实验默认关闭。启用时逐步解释的 `method_details.exact_endgame` 记录初选／独立确认、完成世界、节点与中断原因，`method=exact_endgame` 才表示最终采用。汇总的 `diagnostics.<side>.exact_endgame` 单独记录状态、原因、complete / (complete + incomplete)、采用与实际改牌次数、采样数、重复世界复用次数、节点和面板延迟。完成但保留原动作计入采用，不计入改牌；超范围／确定最高团队收益的跳过不进入完成率分母。中断世界已经访问的节点计入计算量，未完成收益不进入候选排名。初选和确认仍独立抽样，抽中相同实体分配时仅复用确定性的求解值，不删除样本或伪造额外样本。
+2026-10-15 的实验性 `game/guandan_endgame.py` 也纳入可选运行时快照、源码指纹和固定时钟；冻结旧 commit 不存在此文件时不会从工作区补入。当前 `bot_exact_endgame_enabled=true`、`bot_exact_endgame_public_only=true`；默认关闭的是独立的整墩替换实验。最新未定归属全手出完采样候选未启用。启用时逐步解释的 `method_details.exact_endgame` 记录初选／独立确认、完成世界、节点与中断原因，`method=exact_endgame` 才表示最终采用。汇总的 `diagnostics.<side>.exact_endgame` 单独记录状态、原因、complete / (complete + incomplete)、采用与实际改牌次数、采样数、重复世界复用次数、节点和面板延迟。完成但保留原动作计入采用，不计入改牌；超范围／确定最高团队收益的跳过不进入完成率分母。中断世界已经访问的节点计入计算量，未完成收益不进入候选排名。初选和确认仍独立抽样，抽中相同实体分配时仅复用确定性的求解值，不删除样本或伪造额外样本。
 
 它不是 `trick_boundary` 面板，不能用后者的完成率代替精确搜索完成率。默认关闭高耗的正式续打 shadow 只减少无效计算，不等于棋力提升。正在运行的隔离旧快照不含新增诊断时，应从完整 trace 汇总，不能把缺字段当作零次调用。
 
 `bot_exact_endgame_public_only=true` 将实验接管限制在公开归属已确定的局面：自己的牌、公开已出牌和已知归属足以唯一确定剩余分配，且完整实体分区校验通过。此时只求解一个确定世界，`scope=public_determined_endgame`、`solver=exact_public_v1`，解释采用 `proven_terminal`。`reason=publicly_proven_change` 表示相对参考动作严格提高最坏情况团队终局值，`publicly_optimal_reference` 表示参考已经最优；平手保留参考。`verification` 为 `not_needed/public_hands_determined`，不是省略随机样本的独立确认。归属不确定直接 `skipped/unresolved_hidden_ownership`，仍走当前 auto；不能把服务端可见的暗牌当作公开确定。
 
-单个确定残局的最优值并不能证明完整对战平均更强：对手可能不按最坏情况应对，证明分支也可能很少出现。`public-proof-candidate-v2` 按预先固定的 seed `20261026` 完成 60 对／120 完整局，双方公开信息、相同 6 秒预算：净收益 +0.0333/局、95% 配对区间 [0.000, +0.075]、双侧符号翻转 p=0.25，仍为 `inconclusive`。候选还含炸弹接风分配修正，结果属于这组增量的联合比较，不能分别归因。58 个证明面板全部完成、两次证明改选，并不意味着整体显著；端到端仍有超六秒情况，且记录过无关系统 CPU 高负载。协议与冻结清单在 `tmp/guandan-strength-iteration-20261014/public-proof-full-protocol.md`；默认精确残局仍关闭。
+单个确定残局的最优值并不能证明完整对战平均更强：对手可能不按最坏情况应对，证明分支也可能很少出现。公开证明 v2、后续 v5 及最新候选各批结果统一见 [主报告](guandan_ai_review.md)；不能把历史“默认关闭”描述套到当前已启用的公开残局流程。
 
 置信区间以**一对交换对局**为重采样单位，满 30 对且有样本方差时使用 5,000 次 paired percentile bootstrap 的近似 95% 区间。统计采样也固定独立种子，不影响牌局随机流；保留同一对里的相关性，并利用实际方差衡量小幅改进。
 

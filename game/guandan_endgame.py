@@ -359,6 +359,15 @@ def _action_key(action: Dict) -> Tuple:
     return action["type"], tuple(sorted(action.get("card_ids") or []))
 
 
+def _blacklist_proof_exemption(state: Dict, reason: str) -> Dict:
+    if not state.get("config", {}).get("bot_blacklist_separate_value", False):
+        return {}
+    return {"blacklist_policy": {
+        "status": "exempt", "reason": reason,
+        "rules": ["response_material_prior", "overbomb_prior"],
+    }}
+
+
 def _paired_gain(reference: List[float], challenger: List[float]) -> Tuple[float, float]:
     deltas = [after - before for before, after in zip(reference, challenger)]
     mean = sum(deltas) / len(deltas)
@@ -517,6 +526,7 @@ def _public_uncontested_runout(rules, state: Dict, observer: str, reference: Dic
                       reason="public_runout_proven" if changed else "public_runout_reference",
                       certificate={"runout": chosen["runout"], "maximum_unseen_single": threshold,
                                    "opposing_first": finish[0], "team_value": -100.0})
+        result.update(_blacklist_proof_exemption(state, "common_public_runout_proven"))
         return result
     except IncompleteEndgame as error:
         result["reason"] = str(error)
@@ -530,7 +540,9 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
     """Compare every physical root route on paired public sampled deals.
 
     Selection and confirmation use disjoint seeded sample streams. Terminal
-    utility is never combined with heuristic scores. An incomplete panel or
+    utility is never altered by heuristic policy costs. Sampled root choices
+    can use a separate finite policy cost, while proof scopes waive the two
+    resource-conservation priors. An incomplete panel or
     unconfirmed change keeps the reference within this completed comparison.
     Only interrupted panels fall back to the ordinary depth-limited search.
     """
@@ -555,12 +567,14 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
         return result
     if _finish_is_maximal(rules, state, observer, reference):
         result.update(status="skipped", reason="maximal_team_finish")
+        result.update(_blacklist_proof_exemption(state, "maximal_team_finish_proven"))
         return result
     from game import guandan_ai as ai
 
     bounds = ai.call(rules, "_possible_round_value_bounds", state, observer)
     if bounds is not None and bounds[0] == bounds[1]:
         result.update(status="skipped", reason="settled_team_value")
+        result.update(_blacklist_proof_exemption(state, "team_value_already_settled"))
         return result
     started = time.perf_counter()
     stop = started + max(0.0, float(config.get("bot_exact_endgame_time_ms", 2500))) / 1000.0
@@ -628,7 +642,22 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
         records = [{"action": action, "world_values": column, "value": sum(column) / len(column)}
                    for action, column in zip(actions, values)]
         result["candidates"] = records
-        best_index = max(range(len(records)), key=lambda index: records[index]["value"])
+        costs = {}
+        separate_policy = config.get("bot_blacklist_separate_value", False) and not determined
+        if separate_policy:
+            # Convert the root prior through the shared search scale; never
+            # subtract heuristic points directly from terminal team utility.
+            costs = ai.call(rules, "_blacklist_search_costs", state, observer, actions,
+                            budget_check=budget.check)
+            budget.check()
+            for record in records:
+                cost = costs.get(ai._action_identity(record["action"]), {})
+                record.update(blacklist_penalty=cost.get("penalty", 0.0),
+                              blacklist_score_penalty=cost.get("score_penalty", 0.0),
+                              decision_value=record["value"] - cost.get("score_penalty", 0.0))
+            result["blacklist_policy"] = {"status": "applied", "model": "normalized_root_prior_v1"}
+        best_index = max(range(len(records)), key=lambda index: records[index].get(
+            "decision_value", records[index]["value"]))
         best = records[best_index]
         if determined:
             gain = best["value"] - records[0]["value"]
@@ -639,10 +668,18 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
                           solver="exact_public_v1", reason="publicly_proven_change" if best_index else "publicly_optimal_reference")
             result["sampling"] = {"model": "public_partition", "proposals": 1}
             result["verification"] = {"status": "not_needed", "reason": "public_hands_determined"}
+            result.update(_blacklist_proof_exemption(state, "public_hands_determined"))
             return result
         gain, lower = _paired_gain(values[0], values[best_index])
         result.update(proposed=best["action"], paired_gain=gain, paired_gain_lower=lower)
-        if best_index == 0 or lower <= 0.0:
+        cost_delta = (best.get("blacklist_score_penalty", 0.0)
+                      - records[0].get("blacklist_score_penalty", 0.0))
+        if separate_policy:
+            result.update(decision_paired_gain=gain - cost_delta,
+                          decision_paired_gain_lower=lower - cost_delta)
+        # A cheaper policy must not manufacture evidence that the team's
+        # outcome improves. Require both raw and policy-adjusted support.
+        if best_index == 0 or lower <= 0.0 or lower - cost_delta <= 0.0:
             budget.check()
             result.update(status="complete", applied=True, selected=reference, reason="no_supported_change")
             return result
@@ -650,12 +687,20 @@ def compare_actions(rules, state: Dict, observer: str, reference: Dict,
         worlds = sampling.public_worlds(sampled_state, observer, count, budget, phase="exact_confirmation")
         verified_actions, verified_values = evaluate(worlds, [actions[0], best["action"]])
         gain, lower = _paired_gain(verified_values[0], verified_values[1])
-        passed = lower > 0.0
+        passed = lower > 0.0 and lower - cost_delta > 0.0
         result["verification"] = {
             "status": "complete", "passed": passed, "paired_gain": gain, "paired_gain_lower": lower,
             "candidates": [{"action": action, "world_values": column, "value": sum(column) / len(column)}
                            for action, column in zip(verified_actions, verified_values)],
         }
+        if separate_policy:
+            result["verification"].update(decision_paired_gain=gain - cost_delta,
+                                          decision_paired_gain_lower=lower - cost_delta)
+            for record in result["verification"]["candidates"]:
+                cost = costs.get(ai._action_identity(record["action"]), {})
+                record.update(blacklist_penalty=cost.get("penalty", 0.0),
+                              blacklist_score_penalty=cost.get("score_penalty", 0.0),
+                              decision_value=record["value"] - cost.get("score_penalty", 0.0))
         budget.check()
         result.update(status="complete", applied=True, changed=passed,
                       selected=best["action"] if passed else reference,

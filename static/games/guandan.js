@@ -1520,6 +1520,61 @@ function formatGuandanSearchValue(value) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(2) : "-";
 }
 
+function escapeGuandanBotExplainText(text) {
+  return String(text).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[character]));
+}
+
+function buildGuandanBotBlacklistText(policy) {
+  if (!policy || typeof policy !== "object") return "";
+  const scopes = {
+    heuristic_points_uncalibrated: "Heuristic points (uncalibrated)",
+    mcts_value_plus_normalized_prior: "MCTS search score",
+    minimax_search: "Minimax search score",
+    proven_terminal: "Proven terminal team value",
+    sampled_terminal: "Sampled terminal team value",
+    forced_action_no_comparison: "Only legal action (no score comparison)",
+  };
+  const scope = scopes[policy.scope] || policy.scope || "Decision score";
+  const lines = [policy.scope === "quick_decision_only"
+    ? `Quick decision ${formatGuandanSearchValue(policy.decision_score)}; value / penalty split unavailable.`
+    : `${scope}: original value ${formatGuandanSearchValue(policy.value_score)} − finite penalty ${formatGuandanSearchValue(policy.penalty)} = decision ${formatGuandanSearchValue(policy.decision_score)}`];
+  if (policy.scope !== "heuristic_points_uncalibrated" && policy.heuristic_penalty > 0) {
+    lines.push(`Policy conversion: ${formatGuandanSearchValue(policy.heuristic_penalty)} heuristic points × ${formatGuandanSearchValue(policy.penalty_scale)} = ${formatGuandanSearchValue(policy.penalty)} search points.`);
+  }
+  const ruleNames = {
+    response_material_prior: "Preserve response material",
+    overbomb_prior: "Preserve a bomb",
+  };
+  for (const rule of Array.isArray(policy.rules) ? policy.rules : []) {
+    const cost = rule.waived_penalty > 0
+      ? `${formatGuandanSearchValue(rule.waived_penalty)} heuristic points waived`
+      : `${formatGuandanSearchValue(rule.penalty)} heuristic points`;
+    lines.push(`${ruleNames[rule.id] || rule.id || "Rule"}: ${cost}${rule.reason ? `. ${rule.reason}` : ""}`);
+  }
+  if (policy.exemption) {
+    const exemptions = {
+      common_public_runout_proven: "A common public runout proves the team result.",
+      public_hands_determined: "Public card ownership determines the complete endgame.",
+      maximal_team_finish_proven: "Finishing reaches the best possible team result.",
+      team_value_already_settled: "The team result is already settled.",
+    };
+    lines.push(`Exemption: ${exemptions[policy.exemption] || policy.exemption}`);
+  }
+  if (policy.selection_reason) lines.push(policy.selection_reason);
+  return lines.join("\n");
+}
+
+function buildGuandanBotBlacklistHtml(policy) {
+  const text = buildGuandanBotBlacklistText(policy);
+  if (!text) return "";
+  const lines = text.split("\n").map(escapeGuandanBotExplainText);
+  return `<div class="guandan-bot-policy"><div>${lines[0]}</div>${lines.length > 1
+    ? `<details><summary>Policy rules and exemptions</summary>${lines.slice(1).map((line) => `<div>${line}</div>`).join("")}</details>`
+    : ""}</div>`;
+}
+
 function buildGuandanBotSearchText(explain) {
   if (explain.method_details && explain.method_details.forced_action) {
     return "Only one legal action. Scoring and search were skipped.";
@@ -1552,6 +1607,13 @@ function buildGuandanBotSearchText(explain) {
   lines.push(`Completed search depth: ${search.completed_depth ?? "-"}. Search values and heuristic scores are separate.`);
   for (const candidate of search.candidates || []) {
     lines.push(`${candidate.selected ? "Chosen: " : "Alternative: "}${candidate.cards.join(" ")} | search=${formatGuandanSearchValue(candidate.value)} mean=${formatGuandanSearchValue(candidate.mean)} std=${formatGuandanSearchValue(candidate.std)} samples=${candidate.samples} heuristic=${formatGuandanSearchValue(candidate.heuristic_score)}`);
+    if (Object.prototype.hasOwnProperty.call(candidate, "decision_score")) {
+      lines.push(buildGuandanBotBlacklistText({
+        scope: "minimax_search", value_score: candidate.value_score,
+        penalty: candidate.penalty, decision_score: candidate.decision_score,
+        heuristic_penalty: candidate.blacklist_penalty, penalty_scale: candidate.penalty_scale,
+      }));
+    }
   }
   return lines.join("\n");
 }
@@ -1559,9 +1621,7 @@ function buildGuandanBotSearchText(explain) {
 function buildGuandanBotSearchHtml(explain) {
   const text = buildGuandanBotSearchText(explain);
   if (!text) return "";
-  const escaped = text.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[character]));
+  const escaped = escapeGuandanBotExplainText(text);
   const lines = escaped.split("\n");
   return `<div><strong>Search decision:</strong> ${lines[0]}</div>${lines.length > 1
     ? `<details><summary>Search comparison and control plan</summary>${lines.slice(1).map((line) => `<div class="hint">${line}</div>`).join("")}</details>`
@@ -1604,7 +1664,8 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
         .map((entry, index) => {
           const cards = Array.isArray(entry.cards) ? entry.cards.join(" ") : "-";
           const score = typeof entry.score === "number" ? Math.round(entry.score * 10) / 10 : "-";
-          return `${index + 1}) ${cards} @${score} :: ${formatGuandanBotComponentsText(entry.components)}`;
+          const policyText = buildGuandanBotBlacklistText(entry.blacklist);
+          return `${index + 1}) ${cards} @${score} :: ${formatGuandanBotComponentsText(entry.components)}${policyText ? `\n${policyText}` : ""}`;
         })
         .join("\n")
     : "-";
@@ -1660,6 +1721,7 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
     `hand_after=${remainingHand.join(" ") || "-"}`,
     `chosen=${chosenCards.join(" ") || "-"} score=${typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-"} comps=${formatGuandanBotComponentsText(chosen.components)}`,
     `score_model=${explain.score_model || "heuristic"}`,
+    ...(chosen.blacklist ? [buildGuandanBotBlacklistText(chosen.blacklist)] : []),
     buildGuandanBotSearchText(explain),
     "top=",
     topLines,
@@ -1728,6 +1790,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
   const chosenCards = Array.isArray(chosen.cards) ? chosen.cards.join(" ") : "-";
   const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";
   const chosenComponents = formatGuandanBotComponents(chosen.components);
+  const chosenPolicy = buildGuandanBotBlacklistHtml(chosen.blacklist);
   const timingHtml = buildGuandanBotTimingHtml(explain.timing || null);
   const searchHtml = buildGuandanBotSearchHtml(explain);
   const scoreLabel = explain.score_model === "heuristic" ? "Heuristic score" : "Score";
@@ -1774,7 +1837,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
           <td>${index + 1}</td>
           <td>${cards}</td>
           <td>${score}</td>
-          <td>${comps}</td>
+          <td>${comps}${buildGuandanBotBlacklistHtml(entry.blacklist)}</td>
         </tr>
       `;
     })
@@ -1821,6 +1884,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
     ${handBlock}
     <div><strong>Target:</strong> ${targetSummary}</div>
     <div><strong>Chosen:</strong> ${chosenCards} <span class="hint">(${chosenScoreText})</span></div>
+    ${chosenPolicy}
     <div><strong>${scoreLabel} breakdown:</strong> ${chosenComponents}</div>
     <table class="guandan-bot-explain-table">
       <thead>

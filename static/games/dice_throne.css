@@ -1,4 +1,4 @@
-/* Dice Throne — warm paper, two hero colors, and a midnight dice tray. */
+/* Dice Throne — compact combat desk, hero colors, and a midnight dice tray. */
 #diceThronePanel { min-width: 0; }
 .dice-throne-shell, .dt-dialog {
   --dt-ink: #263339; --dt-muted: #6c777a; --dt-paper: #fffdf7; --dt-line: #e1ded4;
@@ -7,7 +7,7 @@
   font-family: "Work Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 .dice-throne-shell {
-  container-type: inline-size; min-width: 0; padding: clamp(12px, 2vw, 24px);
+  container-type: inline-size; min-width: 0; padding: clamp(10px, 1.5vw, 18px);
   background: #f5f3ea;
   background-image: radial-gradient(ellipse at 100% 0, #e5eee6 0, transparent 40%), radial-gradient(ellipse at 0 10%, #f5e8d6 0, transparent 40%);
   border: 1px solid #e1ded2; border-radius: 18px;
@@ -26,52 +26,79 @@
 .dice-throne-shell button:not(:disabled):hover, .dt-dialog button:hover { border-color: #b18b40; box-shadow: 0 2px 6px #332a1212; }
 .dice-throne-shell :focus-visible, .dt-dialog :focus-visible { outline: 3px solid #ba8433; outline-offset: 3px; }
 .dice-throne-titlebar, .dt-section-head, .dt-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.dice-throne-titlebar { padding-bottom: 15px; }
+.dice-throne-titlebar { padding-bottom: 10px; }
 .dt-title { flex: 1; }
 .dt-kicker { display: block; margin-bottom: 5px; font-size: 9px; font-weight: 600; letter-spacing: .17em; color: #80765c; }
-.dice-throne-titlebar h2 { font: 600 clamp(27px, 4vw, 38px)/1.1 Georgia, "Times New Roman", serif; letter-spacing: -.045em; }
+.dice-throne-titlebar h2 { font: 600 clamp(24px, 3vw, 32px)/1.1 Georgia, "Times New Roman", serif; letter-spacing: -.045em; }
 .dt-title-mark { display: inline-block; margin-left: 9px; color: #b38b40; font-size: .6em; vertical-align: middle; }
 .dt-round { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; max-width: 40%; text-align: right; font-size: 11px; color: var(--dt-muted); overflow-wrap: anywhere; }
 .dt-round-number { color: #6b572f; font-weight: 600; font-size: 12px; padding: 4px 8px; background: #eee6d2; border-radius: 5px; }
 .dt-phase-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid #dcdacf; border-bottom: 1px solid #dcdacf; }
-.dt-phase-steps > span { padding: 9px 3px; position: relative; color: #858980; font-size: 10px; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.dt-phase-steps > span { padding: 6px 3px; position: relative; color: #858980; font-size: 10px; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
 .dt-phase-steps > span + span::before { position: absolute; left: -2px; top: 50%; transform: translateY(-50%); content: "›"; color: #b5b6a8; }
 .dt-phase-steps > span.active, .dt-phase-steps > span.current, .dt-phase-steps > span[aria-current="step"] { color: #755723; background: #eee5cf; box-shadow: inset 0 -2px #b98c38; }
-.dt-status { margin: 11px 0; padding: 10px 12px; border-radius: 7px; border: 1px solid #dddcd0; background: #fffdf5b3; color: #5a655e; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.dt-status { margin: 8px 0; padding: 7px 10px; border-radius: 7px; border: 1px solid #dddcd0; background: #fffdf5b3; color: #5a655e; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
 .dt-has-action .dt-status { color: #743f2e; background: #fff1df; border-color: #dfbd90; box-shadow: inset 3px 0 #b66a35; }
 .dt-explain-notice { margin: 10px 0; padding: 10px 12px; border: 1px dashed #9a7130; border-radius: 7px; background: #fff2d4; color: #715421; font-size: 12px; line-height: 1.45; }
-.dt-arena { display: grid; gap: 13px; }
-.dt-section-head { flex-wrap: wrap; margin-bottom: 12px; }
+.dt-arena { display: grid; gap: 9px; }
+.dt-section-head { flex-wrap: wrap; margin-bottom: 9px; }
 .dt-section-head h3 { font-size: 13px; font-weight: 600; }
 .dt-section-head > span { color: var(--dt-muted); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
-.dt-picker, .dt-abilities, .dt-hand-area { background: var(--dt-paper); border: 1px solid var(--dt-line); border-radius: 12px; padding: 14px; }
+.dt-picker { background: var(--dt-paper); border: 1px solid var(--dt-line); border-radius: 12px; padding: 14px; }
+.dt-decisions { position: relative; background: var(--dt-paper); border: 1px solid var(--dt-line); border-radius: 12px; overflow: hidden; isolation: isolate; }
+.dt-decision-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; padding: 5px; border-bottom: 1px solid var(--dt-line); background: #ebeadd; }
+.dice-throne-shell .dt-decision-tabs > button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 38px; padding: 7px; border: 1px solid transparent; background: transparent; color: #6a7365; }
+.dice-throne-shell .dt-decision-tabs > button[aria-selected="true"] { color: #624b20; border-color: #d7c699; background: #fffdf2; box-shadow: 0 1px 3px #4b411312; }
+.dt-tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; padding: 1px 5px; border-radius: 10px; font-size: 10px; line-height: 1.4; color: #655738; background: #e8e2d0; }
+.dt-abilities, .dt-hand-area { padding: 11px; }
+.dt-decisions[data-active-tab="abilities"] .dt-hand-area, .dt-decisions[data-active-tab="hand"] .dt-abilities { display: none; }
+.dt-decisions .dt-section-head { flex-wrap: nowrap; height: 27px; min-height: 27px; }
+.dt-decisions .dt-section-head > span { max-width: 64%; text-align: right; }
 .dt-hero-choices, .dt-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.dice-throne-shell .dt-hero-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 130px; padding: 17px; text-align: left; background: #fff8ef; border-color: #ddbeaa; border-top: 3px solid var(--dt-rust); }
+.dice-throne-shell .dt-hero-card { position: relative; display: flex; flex-direction: column; align-items: stretch; min-height: 144px; padding: 0; border: 1px solid #ddbeaa; border-top: 3px solid var(--dt-rust); border-radius: 9px; text-align: left; background: #fff8ef; isolation: isolate; }
+.dice-throne-shell .dt-hero-trigger { display: flex; flex: 1 0 auto; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; min-height: 140px; padding: 14px; border: 0; background: transparent; text-align: left; box-shadow: none; }
+.dice-throne-shell .dt-hero-trigger:disabled { background: transparent; }
+.dt-hero-trigger > * { flex-shrink: 0; }
+.dt-hero-card.selected { border-color: #b78331; box-shadow: 0 0 0 2px #d2a354; }
+.dt-hero-card .dt-inline-confirm > button { grid-column: 1 / -1; }
 .dice-throne-shell .dt-hero-card[data-hero="moon_elf"] { background: #eff6ef; border-color: #b5cfc6; border-top-color: var(--dt-teal); }
+.dice-throne-shell .dt-hero-card[data-hero="monk"] { background: #f5f0e1; border-color: #d4cba9; border-top-color: #887034; }
+.dice-throne-shell .dt-hero-card[data-hero="paladin"] { background: #f0f3fb; border-color: #c2ccdf; border-top-color: #456aa0; }
+.dice-throne-shell .dt-hero-card[data-hero="pyromancer"] { background: #fff0e4; border-color: #e6c1a0; border-top-color: #c65c29; }
+.dice-throne-shell .dt-hero-card[data-hero="shadow_thief"] { background: #f3edf8; border-color: #cfc0df; border-top-color: #785292; }
+.dice-throne-shell .dt-hero-card[data-hero="treant"] { background: #edf3e6; border-color: #c2d2ac; border-top-color: #5c7c3e; }
+.dice-throne-shell .dt-hero-card[data-hero="ninja"] { background: #eef0f4; border-color: #c5cbd5; border-top-color: #4e5b70; }
 .dt-hero-card strong { font: 600 20px/1.15 Georgia, serif; }
 .dt-hero-card small { color: var(--dt-muted); font-size: 11px; line-height: 1.5; font-weight: 400; }
 .dt-hero-card > span { font-size: 12px; line-height: 1.5; }
 .dt-player {
   --dt-hero-color: var(--dt-rust); --dt-hero-pale: #f5e5d8; --dt-hero-bg: #fff8ed;
-  position: relative; padding: 15px; border: 1px solid #dfd4c4; border-top: 3px solid var(--dt-hero-color);
+  position: relative; padding: 11px; border: 1px solid #dfd4c4; border-top: 3px solid var(--dt-hero-color);
   border-radius: 11px; background: var(--dt-hero-bg); box-shadow: 0 2px 3px #40341405;
 }
 .dt-player.dt-moon_elf { --dt-hero-color: var(--dt-teal); --dt-hero-pale: #dceae2; --dt-hero-bg: #f2f8f0; border-color: #cbdcd0; border-top-color: var(--dt-hero-color); }
+.dt-player.dt-monk { --dt-hero-color: #887034; --dt-hero-pale: #ebe2c9; --dt-hero-bg: #f9f5e9; }
+.dt-player.dt-paladin { --dt-hero-color: #456aa0; --dt-hero-pale: #dce4f2; --dt-hero-bg: #f1f5fc; }
+.dt-player.dt-pyromancer { --dt-hero-color: #b85124; --dt-hero-pale: #f5ddc8; --dt-hero-bg: #fff3e6; }
+.dt-player.dt-shadow_thief { --dt-hero-color: #785292; --dt-hero-pale: #e7dcef; --dt-hero-bg: #f6f0fa; }
+.dt-player.dt-treant { --dt-hero-color: #5c7c3e; --dt-hero-pale: #dfebd0; --dt-hero-bg: #f2f7ea; }
+.dt-player.dt-ninja { --dt-hero-color: #4e5b70; --dt-hero-pale: #dde2ea; --dt-hero-bg: #f2f4f8; }
 .dt-player.dt-turn { box-shadow: 0 0 0 2px #bf944d55, 0 3px 8px #5d4e1012; }
 .dt-player.dt-defeated { filter: saturate(.5); }
 .dt-player-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.dt-avatar { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border-radius: 50%; background: var(--dt-hero-pale); font-size: 23px; }
+.dt-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--dt-hero-pale); font-size: 21px; }
 .dt-player-identity { flex: 1; }
 .dt-hero-name { color: var(--dt-hero-color); font: 600 18px/1.15 Georgia, serif; overflow-wrap: anywhere; }
 .dt-player-name { margin-top: 4px; color: #65706a; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
-.dt-badges { display: flex; flex-wrap: wrap; align-self: flex-start; gap: 4px; }
+.dt-badges { display: flex; flex-wrap: wrap; align-self: flex-start; gap: 4px; margin-top: 4px; }
+.dt-badges:empty { display: none; }
 .dt-badge { padding: 3px 5px; background: var(--dt-hero-pale); color: var(--dt-hero-color); border-radius: 4px; font-size: 9px; font-weight: 600; line-height: 1.3; }
-.dt-health { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.dt-health { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
 .dt-health-value { flex-shrink: 0; color: var(--dt-hero-color); font-variant-numeric: tabular-nums; font-size: 25px; font-weight: 600; letter-spacing: -.055em; line-height: 1.1; }
 .dt-health-value small { color: #7b8579; font-size: 11px; font-weight: 400; letter-spacing: 0; }
 .dt-health-bar { height: 6px; flex: 1; min-width: 10px; border-radius: 5px; overflow: hidden; background: #dfdfd2; }
 .dt-health-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--dt-hero-color); transition: width .25s ease; }
-.dt-player-meta { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
+.dt-player-meta { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
 .dt-resource { display: inline-flex; align-items: center; gap: 3px; padding: 4px 7px; border-radius: 5px; font-size: 11px; line-height: 1.3; background: #fff9; border: 1px solid #dfdccc; }
 .dt-statuses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
 .dt-statuses:empty { display: none; }
@@ -96,9 +123,9 @@
 .dt-tone-instant { color: #8a5e8d; background: #f2e5f1; }
 .dt-activity { color: #748078; font-size: 11px; line-height: 1.4; padding: 0 3px; overflow-wrap: anywhere; }
 .dt-activity:empty { display: none; }
-.dt-battle-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 13px; }
-.dt-roll-zone { padding: 18px; border-radius: 12px; color: #f8f6ea; background: var(--dt-navy); box-shadow: inset 0 0 0 1px #ffffff08; }
-.dt-roll-zone .dt-section-head { margin-bottom: 18px; }
+.dt-battle-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 9px; }
+.dt-roll-zone { padding: 13px; border-radius: 12px; color: #f8f6ea; background: var(--dt-navy); box-shadow: inset 0 0 0 1px #ffffff08; }
+.dt-roll-zone .dt-section-head { margin-bottom: 10px; }
 .dt-roll-zone .dt-section-head > span { color: #b8c9ca; padding: 4px 7px; border-radius: 4px; background: #ffffff0c; font-variant-numeric: tabular-nums; }
 .dt-dice { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; max-width: 430px; margin: 0 auto; }
 .dice-throne-shell button.dt-die { --dt-die-accent: #7d827a; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; min-height: 84px; padding: 11px 3px 8px; background: #fffdf1; border: 2px solid #e4e1d0; border-radius: 10px; color: #364238; box-shadow: 0 3px 0 #111f27; }
@@ -106,6 +133,7 @@
 .dice-throne-shell button.dt-die.kept { background: #fff1be; border-color: #e9bd62; box-shadow: 0 3px 0 #a4762d, 0 0 0 2px #e8b95422; }
 .dt-die-symbol { font-size: 28px; line-height: 1; }
 .dt-die-label { font-size: 10px; line-height: 1.1; color: var(--dt-die-accent); }
+.dt-die-value { font-size: 10px; line-height: 1.1; color: var(--dt-die-accent); font-variant-numeric: tabular-nums; }
 .dt-keep { min-height: 10px; font-size: 8px; line-height: 1; font-weight: 600; letter-spacing: .04em; color: #8c691f; text-transform: uppercase; }
 .dice-throne-shell button.dt-face-sword { --dt-die-accent: #a14f3b; }
 .dice-throne-shell button.dt-face-heart { --dt-die-accent: #a94955; }
@@ -115,8 +143,9 @@
 .dice-throne-shell button.dt-face-moon { --dt-die-accent: #685397; }
 .dice-throne-shell button.dt-die.empty { color: #a7a89b; background: #344b57; border: 1px dashed #72818a; box-shadow: none; }
 .dice-throne-shell button.dt-die.empty .dt-die-label, .dice-throne-shell button.dt-die.empty .dt-keep { color: #c2cdcf; }
-.dt-dice-hint { min-height: 16px; margin: 14px 0; color: #b5c7c8; font-size: 11px; line-height: 1.45; text-align: center; overflow-wrap: anywhere; }
+.dt-dice-hint { min-height: 14px; margin: 9px 0; color: #b5c7c8; font-size: 11px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
 .dt-roll-actions { display: flex; flex-wrap: wrap; gap: 7px; max-width: 430px; margin: 0 auto; }
+.dt-dice-hint.hidden + .dt-roll-actions { margin-top: 8px; }
 .dt-roll-actions > button { flex: 1 1 40%; }
 .dice-throne-shell button.dt-primary { color: #fff; background: #a54b34; border-color: #a54b34; }
 .dt-roll-zone button.dt-primary { color: #3e321a; background: #ebc36c; border-color: #ebc36c; }
@@ -125,12 +154,13 @@
 .dice-throne-shell .dt-roll-zone button.dt-die:disabled { color: #364238; background: #fffdf1; border-color: #e4e1d0; box-shadow: 0 3px 0 #111f27; }
 .dice-throne-shell .dt-roll-zone button.dt-die.kept:disabled { background: #fff1be; border-color: #e9bd62; box-shadow: 0 3px 0 #a4762d, 0 0 0 2px #e8b95422; }
 .dice-throne-shell .dt-roll-zone button.dt-die.empty:disabled { color: #a7a89b; background: #344b57; border-color: #72818a; box-shadow: none; }
-.dt-ability-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-height: 340px; overflow-y: auto; overscroll-behavior: contain; padding: 2px 4px 4px 2px; margin: -2px -4px -4px -2px; scrollbar-width: thin; scrollbar-color: #b39c68 #eee9dd; scrollbar-gutter: stable; }
+.dt-ability-list, .dt-hand { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 7px; height: clamp(238px, 36dvh, 310px); overflow-y: auto; overscroll-behavior: contain; padding: 3px; margin: -3px; scrollbar-width: thin; scrollbar-color: #b39c68 #eee9dd; scrollbar-gutter: stable; }
 .dt-ability-list::-webkit-scrollbar, .dt-hand::-webkit-scrollbar { width: 6px; }
 .dt-ability-list::-webkit-scrollbar-track, .dt-hand::-webkit-scrollbar-track { border-radius: 6px; background: #eee9dd; }
 .dt-ability-list::-webkit-scrollbar-thumb, .dt-hand::-webkit-scrollbar-thumb { border: 1px solid #eee9dd; border-radius: 6px; background: #b39c68; }
-.dt-ability { position: relative; display: flex; flex-direction: column; border: 1px solid #e2dfd5; border-radius: 8px; background: #f6f5ef; }
-.dice-throne-shell .dt-ability-trigger { display: flex; flex: 1; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; padding: 10px; text-align: left; border: 0; border-radius: 7px; background: transparent; box-shadow: none; }
+.dt-ability { position: relative; display: flex; flex-direction: column; min-height: 124px; border: 1px solid #e2dfd5; border-radius: 8px; background: #f6f5ef; isolation: isolate; }
+.dice-throne-shell .dt-ability-trigger { display: flex; flex: 1 0 auto; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; padding: 10px; text-align: left; border: 0; border-radius: 7px; background: transparent; box-shadow: none; }
+.dt-ability-trigger > *, .dt-card-trigger > * { flex-shrink: 0; }
 .dice-throne-shell .dt-ability-trigger:disabled { color: #69716b; background: transparent; }
 .dt-ability-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 5px; }
 .dt-ability-head strong { flex: 1 1 68px; font-size: 12px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
@@ -145,16 +175,25 @@
 .dt-ability.dt-ultimate { border-color: #d5c9df; background: #f5f0f6; }
 .dt-ability.dt-ultimate .dt-ability-head strong { color: #71578a; }
 .dt-ability.selected, .dt-card.selected { border-color: #b78331; box-shadow: 0 0 0 2px #d2a354; }
-.dt-inline-confirm { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 8px 8px; padding-top: 8px; border-top: 1px solid #decba4; }
-.dt-inline-confirm > button { flex: 1; }
-.dt-inline-confirm button { min-height: 34px; padding: 6px 7px; font-size: 10px; }
-.dt-target-choice { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: 5px; }
-.dt-target-choice button { flex: 1; }
-.dt-hand { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.dt-card { display: flex; flex-direction: column; position: relative; border: 1px solid #e0dacd; border-radius: 8px; background: #fffef8; }
+.dt-inline-confirm, .dt-confirm { position: absolute; inset: 0; z-index: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: center; gap: 6px; margin: 0; padding: 8px; border: 0; border-radius: inherit; background: #fff8e7ed; backdrop-filter: blur(2px); overflow-y: auto; overscroll-behavior: contain; }
+.dt-inline-confirm > button:last-child, .dt-confirm > button:last-child { grid-column: 1 / -1; }
+.dice-throne-shell .dt-inline-confirm button, .dice-throne-shell .dt-confirm button { min-height: 36px; padding: 7px 4px; font-size: 11px; }
+.dt-confirm-title { grid-column: 1 / -1; font-size: 12px; text-align: center; overflow-wrap: anywhere; }
+.dt-detail-confirm { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 14px; border-radius: inherit; background: #fff8e7f5; backdrop-filter: blur(3px); overflow-y: auto; overscroll-behavior: contain; }
+.dt-detail-confirm .dt-confirm-title { margin: 0; color: #705021; font-size: 14px; font-weight: 600; text-align: left; }
+.dt-detail-confirm p { margin: 0; color: #68715f; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.dt-input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dt-input-grid label { display: flex; flex-direction: column; gap: 4px; color: #6b6045; font-size: 11px; font-weight: 600; overflow-wrap: anywhere; }
+.dt-input-grid select { width: 100%; min-width: 0; min-height: 38px; padding: 6px; border: 1px solid #cabc97; border-radius: 6px; color: var(--dt-ink); background: var(--dt-paper); font: 12px/1.4 "Work Sans", system-ui, sans-serif; }
+.dt-detail-confirm > .dt-confirm-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.dt-confirm-actions > button { flex: 1 1 35%; }
+.dt-inline-confirm > .dt-confirm-actions, .dt-confirm > .dt-confirm-actions { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.dt-inline-confirm > .dt-confirm-actions > button:last-child, .dt-confirm > .dt-confirm-actions > button:last-child { grid-column: 1 / -1; }
+.dt-target-choice { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); gap: 5px; }
+.dt-card { display: flex; flex-direction: column; position: relative; min-height: 130px; border: 1px solid #e0dacd; border-radius: 8px; background: #fffef8; isolation: isolate; }
 .dt-card::before { content: ""; height: 3px; width: 26px; margin: 0 10px; border-radius: 0 0 3px 3px; background: #b9a47d; }
 .dt-card.playable::before { background: var(--dt-teal); }
-.dice-throne-shell .dt-card-trigger { display: flex; flex: 1; flex-direction: column; align-items: stretch; gap: 11px; width: 100%; min-height: 126px; padding: 10px; border: 0; background: transparent; text-align: left; box-shadow: none; }
+.dice-throne-shell .dt-card-trigger { display: flex; flex: 1 0 auto; flex-direction: column; align-items: stretch; gap: 11px; width: 100%; min-height: 126px; padding: 10px; border: 0; background: transparent; text-align: left; box-shadow: none; }
 .dice-throne-shell .dt-card-trigger:disabled { color: #737b74; background: transparent; }
 .dt-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 5px; }
 .dt-card-head strong { font-size: 12px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
@@ -167,7 +206,7 @@
 .dt-response-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .dt-response-actions > button { flex: 1; }
 .dt-review { background: #eef5eb; border-color: #bed1b5; }
-.dt-review-rows { display: grid; gap: 6px; margin-bottom: 10px; }
+.dt-review-rows { display: grid; gap: 6px; max-height: 180px; margin-bottom: 10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .dt-review-row { padding: 9px 10px; border-radius: 6px; background: #fffdf7; color: #68725f; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .dt-review-row.self { border-left: 3px solid var(--dt-rust); color: #4e5f4c; }
 .dice-throne-shell #diceThroneNextBtn { background: #477c5a; border-color: #477c5a; }
@@ -200,79 +239,92 @@ body.dt-needs-action #roomControlsPanel.collapsed, body.dt-needs-action.room-con
 body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227; border-color: #bb4b3a; }
 
 @container (min-width: 650px) {
-  .dt-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dt-ability-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dt-hero-choices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-@container (max-width: 819px) {
-  .dt-hand { max-height: 310px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b39c68 #eee9dd; scrollbar-gutter: stable; padding: 2px 4px 4px 2px; margin: -2px -4px -4px -2px; }
+@container (min-width: 700px) {
+  .dt-battle-grid { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+  .dt-roll-zone { padding: 17px 15px; }
+  .dt-roll-zone .dt-section-head { margin-bottom: 16px; }
+  .dt-dice-hint { margin: 14px 0; }
+  .dt-ability-list, .dt-hand { height: 340px; }
 }
-@container (min-width: 820px) {
-  .dt-battle-grid { grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); }
-  .dt-battle-grid:has(> .dt-abilities.hidden) { grid-template-columns: minmax(0, 1fr); }
-  .dt-roll-zone { padding: 22px 18px; }
-  .dt-roll-zone .dt-section-head { margin-bottom: 25px; }
-  .dt-dice-hint { margin: 18px 0; }
-  .dt-ability-list { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 385px; overflow-y: auto; overscroll-behavior: contain; padding: 2px 3px 3px; margin: -2px -3px -3px; }
-  .dt-hand { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (min-width: 1100px) {
+  .dt-ability-list, .dt-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @container (max-width: 430px) {
-  .dice-throne-titlebar { padding-bottom: 11px; }
-  .dt-kicker { font-size: 8px; letter-spacing: .12em; }
-  .dice-throne-titlebar h2 { font-size: 27px; }
+  .dice-throne-titlebar { padding-bottom: 7px; }
+  .dt-kicker { margin-bottom: 3px; font-size: 8px; letter-spacing: .1em; }
+  .dice-throne-titlebar h2 { font-size: 23px; }
   .dt-round { gap: 3px; font-size: 9px; }
   .dt-round-number { padding: 3px 5px; font-size: 10px; }
-  .dt-phase-steps > span { font-size: 9px; padding: 8px 2px; }
-  .dt-status { padding: 8px 10px; font-size: 11px; }
-  .dt-arena { gap: 10px; }
-  .dt-players, .dt-hero-choices { gap: 8px; }
-  .dt-player { padding: 10px; }
+  .dt-phase-steps > span { font-size: 9px; padding: 5px 2px; }
+  .dt-status { margin: 6px 0; padding: 6px 8px; font-size: 11px; }
+  .dt-arena { gap: 7px; }
+  .dt-players, .dt-hero-choices { gap: 7px; }
+  .dt-player { padding: 8px; border-radius: 8px; }
   .dt-player-head { gap: 6px; }
-  .dt-avatar { flex-basis: 28px; width: 28px; height: 28px; font-size: 18px; }
-  .dt-hero-name { font-size: 15px; }
-  .dt-player-name { font-size: 10px; margin-top: 3px; }
+  .dt-avatar { flex-basis: 25px; width: 25px; height: 25px; font-size: 17px; }
+  .dt-hero-name { font-size: 14px; }
+  .dt-player-name { font-size: 10px; margin-top: 2px; }
   .dt-badges { gap: 3px; }
   .dt-badge { padding: 2px 4px; font-size: 8px; }
-  .dt-health { flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .dt-health-value { font-size: 23px; }
-  .dt-health-bar { flex-basis: 100%; height: 4px; }
-  .dt-player-meta { padding-top: 8px; gap: 4px; }
-  .dt-resource { padding: 3px 5px; font-size: 10px; }
-  .dt-statuses .dt-token { font-size: 9px; padding: 3px 4px; }
-  .dt-picker, .dt-abilities, .dt-hand-area, .dt-response, .dt-review, .dt-game-over { padding: 11px; }
-  .dt-section-head { gap: 5px; margin-bottom: 9px; }
+  .dt-health { gap: 5px; margin-top: 5px; }
+  .dt-health-value { font-size: 21px; }
+  .dt-health-value small { font-size: 10px; }
+  .dt-health-bar { height: 4px; }
+  .dt-player-meta { padding-top: 4px; gap: 3px; }
+  .dt-player-meta .dt-token { padding: 2px 4px; font-size: 10px; }
+  .dt-statuses { gap: 3px; margin-top: 4px; }
+  .dt-statuses .dt-token { font-size: 10px; padding: 2px 3px; }
+  .dt-picker, .dt-abilities, .dt-hand-area, .dt-response, .dt-review, .dt-game-over { padding: 9px; }
+  .dt-section-head { gap: 4px; margin-bottom: 7px; }
   .dt-section-head h3 { font-size: 12px; }
   .dt-section-head > span { font-size: 9px; }
-  .dt-roll-zone { padding: 13px 11px; }
-  .dt-roll-zone .dt-section-head { margin-bottom: 14px; }
-  .dt-dice { gap: 6px; }
-  .dice-throne-shell button.dt-die { min-height: 72px; padding: 10px 2px 7px; border-radius: 8px; gap: 5px; }
-  .dt-die-symbol { font-size: 25px; }
-  .dt-die-label { font-size: 9px; }
-  .dt-dice-hint { margin: 12px 0; font-size: 10px; }
-  .dt-roll-actions { gap: 6px; }
-  .dt-roll-actions > button { min-height: 36px; padding: 7px 8px; font-size: 11px; }
-  .dt-ability-list, .dt-hand { gap: 6px; }
-  .dice-throne-shell .dt-ability-trigger { padding: 8px; gap: 7px; }
-  .dt-ability-head strong, .dt-card-head strong { font-size: 11px; }
+  .dt-battle-grid { gap: 7px; }
+  .dt-roll-zone { padding: 9px; border-radius: 9px; }
+  .dt-roll-zone .dt-section-head { margin-bottom: 7px; }
+  .dt-roll-zone .dt-section-head > span { padding: 2px 5px; }
+  .dt-dice { gap: 5px; }
+  .dice-throne-shell button.dt-die { min-height: 57px; padding: 6px 2px; border-radius: 7px; gap: 3px; }
+  .dt-die-symbol { font-size: 22px; }
+  .dt-die-label, .dt-die-value { font-size: 9px; }
+  .dt-keep { min-height: 8px; font-size: 7px; }
+  .dt-dice-hint { min-height: 12px; margin: 6px 0; font-size: 10px; }
+  .dt-roll-actions { gap: 5px; }
+  .dt-roll-actions > button { min-height: 36px; padding: 6px 7px; font-size: 11px; }
+  .dt-decision-tabs { gap: 4px; padding: 4px; }
+  .dice-throne-shell .dt-decision-tabs > button { min-height: 36px; padding: 6px; }
+  .dt-ability-list, .dt-hand { gap: 6px; height: clamp(224px, 31dvh, 280px); }
+  .dice-throne-shell .dt-ability-trigger { padding: 7px; gap: 6px; }
+  .dt-ability-head strong, .dt-card-head strong { font-size: 12px; }
   .dt-cost { padding: 2px 3px; font-size: 9px; }
   .dt-requirement .dt-token { padding: 2px 3px; font-size: 10px; }
-  .dt-effect { font-size: 12px; }
-  .dice-throne-shell .dt-card-trigger { padding: 8px; gap: 9px; min-height: 132px; }
-  .dt-card-effect { font-size: 12px; }
-  .dt-card-foot { font-size: 8px; }
-  .dice-throne-shell .dt-hero-card { min-height: 145px; padding: 11px; }
+  .dt-effect, .dt-card-effect { font-size: 11px; line-height: 1.4; }
+  .dt-effect .dt-token { padding: 2px 3px; font-size: 10px; }
+  .dice-throne-shell .dt-card-trigger { padding: 7px; gap: 7px; min-height: 125px; }
+  .dt-card-foot { padding-top: 5px; font-size: 9px; }
+  .dt-card-foot .dt-token { padding: 2px 3px; font-size: 10px; }
+  .dt-inline-confirm, .dt-confirm { padding: 6px; gap: 5px; }
+  .dice-throne-shell .dt-inline-confirm button, .dice-throne-shell .dt-confirm button { font-size: 10px; }
+  .dt-detail-confirm { padding: 11px; gap: 8px; justify-content: flex-start; }
+  .dice-throne-shell .dt-hero-card { min-height: 140px; }
+  .dice-throne-shell .dt-hero-trigger { min-height: 136px; padding: 10px; gap: 6px; }
   .dt-hero-card strong { font-size: 17px; }
   .dt-hero-card small { font-size: 10px; }
+  .dt-log-panel summary { padding-top: 8px; }
 }
 @container (max-width: 320px) {
-  .dt-player { padding: 9px; }
-  .dt-player-head { gap: 5px; flex-wrap: nowrap; }
-  .dt-avatar { flex-basis: 24px; width: 24px; height: 24px; font-size: 16px; }
-  .dt-hero-name { font-size: 13px; overflow-wrap: normal; }
+  .dt-player { padding: 7px; }
+  .dt-player-head { gap: 4px; flex-wrap: nowrap; }
+  .dt-avatar { flex-basis: 21px; width: 21px; height: 21px; font-size: 15px; }
+  .dt-hero-name { font-size: 12px; }
   .dt-badges { margin-top: 3px; }
+  .dt-health-value { font-size: 19px; }
+  .dt-health-value small { font-size: 9px; }
+  .dt-hand-area > .dt-section-head h3 { font-size: 11px; }
 }
 @media (max-width: 480px) {
-  .dice-throne-shell { padding: 11px; border-radius: 11px; }
+  .dice-throne-shell { padding: 8px; border-radius: 10px; }
   .dt-dialog { padding: 16px; }
   .dt-dialog-head { top: -16px; gap: 8px; }
   .dt-dialog h2 { font-size: 21px; }

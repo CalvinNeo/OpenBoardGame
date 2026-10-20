@@ -1,6 +1,8 @@
 # Guandan AI Notes
 
-2026-09-19: a paired, source-snapshot benchmark is now available in
+Runtime reviews, rule fixes, benchmark outcomes, and current optimization priorities are consolidated in [guandan_ai_review.md](guandan_ai_review.md). This document remains an architecture and experimental training guide; it does not establish NN strength or validate the historical training targets.
+
+Paired evaluation with recorded source hashes and direct Git-blob baseline loading is available in
 `scripts/benchmark_guandan.py`. See [usage and evaluation limits](guandan_benchmark.md)
 and the [source audit / improvement plan](guandan_ai_review.md) (Chinese).
 
@@ -287,7 +289,7 @@ The current NN is useful as an experimental path, but it has several clear limit
 - The value target is still coarse.
 - The model input is not yet rich enough to represent card structure naturally.
 - The NN is not yet deeply integrated with MCTS.
-- Source-snapshot paired evaluation is now available; a held-out tactical corpus
+- Paired evaluation with pinned source identities is available; a held-out tactical corpus
   and a multi-opponent checkpoint league remain future work.
 
 

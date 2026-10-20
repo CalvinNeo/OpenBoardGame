@@ -1,26 +1,143 @@
 {
   "game_id": "dice_throne",
-  "version": 1,
+  "version": 2,
   "public_view": {
     "revision": "integer; sent back with every action",
-    "phase": "choose_hero|upkeep|income|main_1|offensive_roll|targeting|defensive_roll|main_2|discard|round_review|game_over",
+    "phase": "choose_hero|main_1|offensive_roll|targeting|defensive_roll|main_2|round_review|game_over",
     "current_player": "player id or null",
-    "players": [{"player_id":"id","name":"display name","hero":"barbarian|moon_elf|null","health":"integer","combat_points":"integer","max_health":50,"statuses":[{"id":"status","stacks":"integer"}],"hand_count":"integer","upgrades":["ability/level ids"],"is_bot":"boolean"}],
+    "players": [
+      {
+        "player_id": "id",
+        "name": "display name",
+        "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|null",
+        "health": "integer",
+        "combat_points": "integer",
+        "max_health": 50,
+        "statuses": [
+          {
+            "id": "status",
+            "stacks": "integer"
+          }
+        ],
+        "hand_count": "integer",
+        "upgrades": [
+          "ability/level ids"
+        ],
+        "is_bot": "boolean"
+      }
+    ],
     "you": "viewer id",
-    "your_hand": [{"id":"card id","name":"display name","cost":"integer","timing":"main|roll|instant","target":"none|self|opponent|die|any_player|own_die|enemy_die","description":"string"}],
-    "dice": [{"index":"integer","face":"face token","kept":"boolean"}],
-    "abilities": [{"id":"ability id","name":"string","cost":"integer","available":"boolean","target":"none|self|opponent","description":"string"}],
-    "pending_attack": {"attacker":"id","defender":"id","damage":"integer","damage_type":"combat|unblockable|pure|ultimate","ability_id":"string"},
-    "discard_count":"integer", "legal_actions":["action type strings"], "winner":["player ids"], "game_over":"boolean", "round_review":"public event list"
+    "your_hand": [
+      {
+        "id": "card id",
+        "name": "display name",
+        "cost": "integer",
+        "timing": "main|roll|instant|defense",
+        "target": "self|opponent|any_player",
+        "description": "string",
+        "inputs": "array: die|value|source_die|status",
+        "can_play": "boolean",
+        "can_sell": "boolean",
+        "unavailable_reason": "string"
+      }
+    ],
+    "dice": [
+      {
+        "index": "integer",
+        "face": "face token",
+        "kept": "boolean",
+        "value": "1..6; determines face using the hero dice_faces array"
+      }
+    ],
+    "abilities": [
+      {
+        "id": "ability id",
+        "name": "string",
+        "cost": "0; abilities are activated by their dice pattern",
+        "available": "boolean",
+        "target": "none|self|opponent",
+        "description": "string",
+        "condition": "counts of symbols or straight length",
+        "level": "integer 1..3",
+        "pattern_met": "boolean; dice match condition"
+      }
+    ],
+    "pending_attack": {
+      "attacker": "id",
+      "defender": "id",
+      "damage": "integer",
+      "damage_type": "normal|undefendable|ultimate",
+      "ability_id": "string"
+    },
+    "discard_count": "integer",
+    "legal_actions": [
+      "action type strings"
+    ],
+    "winner": [
+      "player ids"
+    ],
+    "game_over": "boolean",
+    "round_review": "public event list",
+    "hero_catalog": "object keyed by hero id; public name/name_zh/icon/subtitle/dice_faces/symbol_icons/symbol_names/abilities/defense",
+    "status_catalog": "object keyed by status id; public name/name_zh/icon/limit/description/positive/companion",
+    "edition_note": "explicit simplified digital rules scope",
+    "turn_player": "player whose turn is in progress, including during a defensive response",
+    "roll_limit": "integer; current maximum roll attempts after cards/statuses",
+    "defense_dice": "public array of value/face from the most recent defense",
+    "log": "last 40 public activity entries"
   },
   "actions": {
-    "choose_hero": {"hero":"barbarian|moon_elf","revision":"integer"},
-    "roll": {"revision":"integer"}, "toggle_keep": {"index":"0..4","revision":"integer"},
-    "confirm_roll": {"revision":"integer"}, "use_ability":{"ability_id":"string","target":"optional player id","revision":"integer"},
-    "play_card":{"card_id":"string","target":"optional player id","die_index":"optional integer","revision":"integer"},
-    "buy_upgrade":{"ability_id":"string","level":"integer","revision":"integer"}, "sell_card":{"card_id":"string","revision":"integer"},
-    "defend":{"ability_id":"optional string","revision":"integer"}, "pass":{"revision":"integer"},
-    "next_round":{"revision":"integer"}
+    "choose_hero": {
+      "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja",
+      "revision": "integer"
+    },
+    "roll": {
+      "revision": "integer"
+    },
+    "toggle_keep": {
+      "index": "0..4",
+      "revision": "integer"
+    },
+    "confirm_roll": {
+      "revision": "integer"
+    },
+    "use_ability": {
+      "ability_id": "string",
+      "target": "optional player id",
+      "revision": "integer"
+    },
+    "play_card": {
+      "card_id": "string",
+      "target": "optional player id",
+      "revision": "integer",
+      "index": "optional integer 0..4",
+      "value": "optional integer 1..6",
+      "source_index": "optional integer 0..4",
+      "status": "optional public status id"
+    },
+    "buy_upgrade": {
+      "ability_id": "string",
+      "level": "integer",
+      "revision": "integer"
+    },
+    "sell_card": {
+      "card_id": "string",
+      "revision": "integer"
+    },
+    "defend": {
+      "ability_id": "optional string",
+      "revision": "integer"
+    },
+    "pass": {
+      "revision": "integer"
+    },
+    "next_round": {
+      "revision": "integer"
+    },
+    "end_phase": {
+      "revision": "integer"
+    }
   },
-  "privacy": "Opponent hand ids, hidden deck/discard order, random seed, and RNG state are omitted from public_view."
+  "privacy": "Per-player hidden deck/discard orders, opponent hand identities, seed and RNG state are omitted from public_view. Catalogs and public logs contain no private cards.",
+  "rules_scope": "Eight playable Season One Rerolled hero identities in a simplified digital adaptation. Ability numbers, abbreviated decks/upgrades and automatic status/companion spending are local rules, not printed card-for-card parity."
 }

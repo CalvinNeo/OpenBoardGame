@@ -1027,6 +1027,19 @@ body.guandan-explain-mode button.has-explanation:hover {
   color: #374151;
 }
 
+#guandanBotExplainContent .guandan-bot-policy {
+  max-width: 100%;
+  margin: 4px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  color: #374151;
+}
+
+#guandanBotExplainContent .guandan-bot-policy details {
+  margin-top: 3px;
+}
+
 #guandanBotExplainContent .guandan-bot-timing-card {
   margin: 8px 0;
   padding: 8px 10px;

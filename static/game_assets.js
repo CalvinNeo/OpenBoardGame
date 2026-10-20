@@ -120,9 +120,9 @@ const GAME_ASSETS = {
     "header": "showOdinHeaderActions"
   },
   "dice_throne": {
-    "scripts": ["/static/games/dice_throne.js?v=2"],
-    "styles": ["/static/games/dice_throne.css?v=2"],
-    "markup": "/static/games/dice_throne.html?v=2",
+    "scripts": ["/static/games/dice_throne.js?v=3"],
+    "styles": ["/static/games/dice_throne.css?v=3"],
+    "markup": "/static/games/dice_throne.html?v=3",
     "panel": "diceThronePanel",
     "header": "showDiceThroneHeaderActions"
   },
@@ -506,13 +506,13 @@ const GAME_ASSETS = {
   },
   "guandan": {
     "scripts": [
-      "/static/games/guandan.js?v=app_v18"
+      "/static/games/guandan.js?v=app_v19"
     ],
     "styles": [],
     "panel": "guandanPanel",
     "header": "showGuandanHeaderActions",
     "markup": "/static/games/guandan.html?v=3",
-    "styleFragments": "/static/games/guandan.css?v=4"
+    "styleFragments": "/static/games/guandan.css?v=5"
   },
   "cabo": {
     "scripts": [

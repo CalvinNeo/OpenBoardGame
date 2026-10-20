@@ -23,6 +23,133 @@ UNKNOWN_PUBLIC_HAND_AFTER = 99.0
 _CORE_LOCAL = threading.local()
 
 
+BLACKLIST_COMPONENTS = {
+    "response_material_prior": "soft_candidate_prior",
+    "overbomb_prior": "soft_overbomb_prior",
+}
+BLACKLIST_REASONS = {
+    "response_material_prior": "An alternative response preserves more material.",
+    "overbomb_prior": "A clean ordinary response can preserve the bomb.",
+}
+
+
+def _blacklist_value_mode() -> bool:
+    return bool(getattr(_CORE_LOCAL, "blacklist_value_mode", False))
+
+
+@contextmanager
+def _blacklist_value_scoring() -> Iterator[None]:
+    """Evaluate value recursively without the two candidate policy penalties."""
+    previous = _blacklist_value_mode()
+    _CORE_LOCAL.blacklist_value_mode = True
+    try:
+        yield
+    finally:
+        _CORE_LOCAL.blacklist_value_mode = previous
+
+
+def _blacklist_separate_value(state: Dict) -> bool:
+    return bool(state.get("config", {}).get("bot_blacklist_separate_value", False))
+
+
+def _blacklist_cache_signature(state: Dict, player_id: str) -> Tuple:
+    cache = state.get("_ai_eval_cache") or {}
+    return (
+        "candidate_blacklist_v1", _blacklist_separate_value(state), _blacklist_value_mode(),
+        tuple((name, tuple(sorted((key[1], value) for key, value in cache.get(name, {}).items()
+                                 if key[0] == player_id)))
+              for name in ("response_soft_penalties", "overbomb_soft_penalties")),
+    )
+
+
+def _candidate_blacklist_penalties(
+    state: Dict, player_id: str, cards: Optional[List[int]], *, relay_bonus: float = 0.0,
+) -> Dict[str, float]:
+    """Read finite policy costs. Never prune candidates or trigger scoring."""
+    if not cards:
+        return {}
+    penalties = {}
+    response = _response_soft_pruning_penalty(state, player_id, cards)
+    overbomb = _overbomb_soft_pruning_penalty(state, player_id, cards)
+    if math.isfinite(response) and response > 0.001 and relay_bonus <= 0.001:
+        penalties["response_material_prior"] = response
+    if math.isfinite(overbomb) and overbomb > 0.001:
+        penalties["overbomb_prior"] = overbomb
+    return penalties
+
+
+def _blacklist_component_penalty(components: Dict[str, float]) -> float:
+    return sum(max(0.0, -components.get(name, 0.0)) for name in BLACKLIST_COMPONENTS.values())
+
+
+def _blacklist_action_components(
+    state: Dict, player_id: str, cards: Optional[List[int]],
+    value_components: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
+    if not cards or not state.get("current_trick"):
+        return {}
+    if not _candidate_blacklist_penalties(state, player_id, cards):
+        return {}
+    if value_components is None:
+        features = _candidate_features(state, player_id, cards)
+        combo = features.get("combo")
+        if not combo:
+            return {}
+        with _blacklist_value_scoring():
+            value_components = _shared_response_tactical_components(
+                state, player_id, cards, combo, features,
+            )
+    penalties = _candidate_blacklist_penalties(
+        state, player_id, cards, relay_bonus=value_components.get("clean_single_relay", 0.0),
+    )
+    return {BLACKLIST_COMPONENTS[name]: -penalty for name, penalty in penalties.items()}
+
+
+def _blacklist_search_costs(
+    state: Dict, player_id: str, actions: List[Dict],
+    budget_check: Optional[Callable[[], None]] = None,
+) -> Dict[Tuple, Dict]:
+    """Convert root policy costs using the existing MCTS heuristic-prior scale.
+
+    This is an explicit policy prior, not a calibrated terminal-value estimate.
+    World outcomes and confidence intervals must remain unmodified.
+    """
+    if not _blacklist_separate_value(state) or not state.get("current_trick"):
+        return {}
+    if budget_check:
+        budget_check()
+    options = [action["card_ids"] for action in actions if action.get("type") == "play"]
+    _filter_overbomb_options(state, player_id, _rank_response_options(state, player_id, options))
+    depth = state.get("config", {}).get("bot_search_depth", 1)
+    cached = _get_cached_heuristic_scored_candidates(state, player_id, depth) or []
+    scores = {_cards_key(cards or []): (score, components) for cards, score, components in cached}
+    values = []
+    costs = {}
+    for action in actions:
+        if budget_check:
+            budget_check()
+        cards = action.get("card_ids") if action.get("type") == "play" else None
+        entry = scores.get(_cards_key(cards or []))
+        if (entry is not None and not entry[1].get("anytime_partial")
+                and "anytime_quick_score" not in entry[1]):
+            value = entry[0] + _blacklist_component_penalty(entry[1])
+            components = _blacklist_action_components(state, player_id, cards, entry[1])
+        else:
+            with _blacklist_value_scoring():
+                value = _quick_candidate_score(state, player_id, cards)
+            components = _blacklist_action_components(state, player_id, cards)
+        values.append(value)
+        costs[_action_identity(action)] = {"penalty": -sum(components.values())}
+    center = sum(values) / max(1, len(values))
+    scale = max(1.0, max((abs(value - center) for value in values), default=0.0))
+    weight = 3.8 if len(actions) <= 2 else 2.2
+    for cost in costs.values():
+        cost.update(score_penalty=cost["penalty"] * weight / scale, scale=weight / scale)
+    if budget_check:
+        budget_check()
+    return costs
+
+
 @contextmanager
 def complete_heuristic_scoring() -> Iterator[None]:
     """Finish the real decision; deadlines still bound subsequent tree search.
@@ -8112,6 +8239,13 @@ def _prefer_bomb_closeout_upgrade(state: Dict, player_id: str, cards: List[int])
             upgraded = cards + list(added)
             if any(_cards_key(base) == _cards_key(cards)
                    for base in _bomb_closeout_bases(state, player_id, upgraded)):
+                if _blacklist_separate_value(state):
+                    # The allocation floor promises this much raw benefit. A
+                    # final rewrite must still pay any additional policy cost.
+                    before = -sum(_blacklist_action_components(state, player_id, cards).values())
+                    after = -sum(_blacklist_action_components(state, player_id, upgraded).values())
+                    if 0.5 * len(added) < after - before:
+                        continue
                 return upgraded
     return cards
 
@@ -10548,7 +10682,8 @@ def _public_history_signature(state: Dict) -> Tuple:
     return public_evidence, entry.get("round_number"), entry.get("level_rank"), tuple(tricks)
 
 
-def _heuristic_score_cache_key(state: Dict, bot_id: str, depth: int) -> Tuple:
+def _heuristic_position_cache_key(state: Dict, bot_id: str, depth: int) -> Tuple:
+    """Identify the public position independently of candidate policy costs."""
     hand = state["players"].get(bot_id, {}).get("hand", [])
     hand_key = tuple(sorted(card["id"] for card in hand))
     current_trick = state.get("current_trick") or {}
@@ -10580,6 +10715,13 @@ def _heuristic_score_cache_key(state: Dict, bot_id: str, depth: int) -> Tuple:
         hand_key,
         trick_key,
     )
+
+
+def _heuristic_score_cache_key(state: Dict, bot_id: str, depth: int) -> Tuple:
+    position = _heuristic_position_cache_key(state, bot_id, depth)
+    policy = (_blacklist_cache_signature(state, bot_id) if _blacklist_separate_value(state)
+              else ("legacy", _blacklist_value_mode()))
+    return position[:2] + (policy,) + position[2:]
 
 
 def _store_heuristic_scored_candidates(
@@ -11689,7 +11831,9 @@ def _public_finish_turn_panels(state: Dict, observer_id: str) -> List[Dict[str, 
     known owners are locked; voluntary passes do not rule out a hand. These
     inexpensive shape estimates are an ordering prior, not a rollout result.
     """
-    key = (_heuristic_score_cache_key(state, observer_id, 0), _bounded_finalist_scoring())
+    # Policy costs must not redraw the public hand panel or alter its seed.
+    # All candidates and raw/net evaluations compare the same sampled worlds.
+    key = (_heuristic_position_cache_key(state, observer_id, 0), _bounded_finalist_scoring())
     cache = state.setdefault("_ai_eval_cache", {}).setdefault("public_finish_turns", {})
     if key in cache:
         return cache[key]
@@ -11887,6 +12031,9 @@ class _IncompleteStateEvaluation(Exception):
 
 
 def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
+    if _blacklist_separate_value(state) and not _blacklist_value_mode():
+        with _blacklist_value_scoring():
+            return _evaluate_state_for_bot(state, bot_id)
     if state.get("game_over"):
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
     settled = _settled_round_value(state, bot_id)
@@ -12192,6 +12339,7 @@ def _heuristic_search_confidence(
     if not cached or len(cached) != status.get("evaluated"):
         return result
     values = {}
+    value_estimates = {}
     for cards, score, components in cached:
         if (not math.isfinite(score) or "anytime_quick_score" in components
                 or components.get("anytime_partial")):
@@ -12200,6 +12348,9 @@ def _heuristic_search_confidence(
         if key in values and not math.isclose(values[key], score, abs_tol=1e-9):
             return result
         values[key] = score
+        value_estimates[key] = score + (
+            _blacklist_component_penalty(components) if _blacklist_separate_value(state) else 0.0
+        )
     if "pass" in GuandanGame.get_legal_actions(state, bot_id) and ("pass",) not in values:
         result["reason"] = "pass_not_compared"
         return result
@@ -12210,7 +12361,14 @@ def _heuristic_search_confidence(
     if action is not None and _action_identity(action) != ordered[0][0]:
         result["reason"] = "incumbent_changed"
         return result
-    gap = ordered[0][1] - ordered[1][1]
+    decision_gap = ordered[0][1] - ordered[1][1]
+    incumbent_key = ordered[0][0]
+    value_gap = min(value_estimates[incumbent_key] - value
+                    for key, value in value_estimates.items() if key != incumbent_key)
+    gap = min(decision_gap, value_gap)
+    if _blacklist_separate_value(state):
+        result.update(decision_score_gap=decision_gap, value_score_gap=value_gap,
+                      blacklist_separated=True)
     confident = gap >= required_gap and gap > 1e-9
     result.update(confident=confident, reason="clear_heuristic_margin" if confident else "ambiguous_heuristic",
                   score_gap=gap, candidates=len(values))
@@ -13216,8 +13374,11 @@ def _should_accept_mcts_override(
             {"type": "pass"}
             if cards is None
             else {"type": "play", "card_ids": cards}
-        ): score
-        for cards, score, _components in cached_finalists
+        ): score + (_blacklist_component_penalty(components)
+                    if _blacklist_separate_value(state) else 0.0)
+        for cards, score, components in cached_finalists
+        if (not _blacklist_separate_value(state)
+            or (not components.get("anytime_partial") and "anytime_quick_score" not in components))
     }
     cached_components = {
         _mcts_action_key(
@@ -13232,13 +13393,17 @@ def _should_accept_mcts_override(
         key = _mcts_action_key(action)
         if key in cached_values:
             return cached_values[key]
-        if deadline is not None:
-            return _quick_candidate_score(
-                state,
-                bot_id,
-                action.get("card_ids") if action.get("type") == "play" else None,
-            )
-        return _mcts_root_heuristic_value(state, bot_id, action, depth)
+        def evaluate() -> float:
+            if deadline is not None:
+                return _quick_candidate_score(
+                    state, bot_id,
+                    action.get("card_ids") if action.get("type") == "play" else None,
+                )
+            return _mcts_root_heuristic_value(state, bot_id, action, depth)
+        if _blacklist_separate_value(state):
+            with _blacklist_value_scoring():
+                return evaluate()
+        return evaluate()
 
     heuristic_score = guard_score(heuristic_action)
     mcts_score = guard_score(mcts_action)
@@ -13516,6 +13681,17 @@ def _should_accept_minimax_override(
     if resource_risk > 0.0:
         risks["incomplete_control_reserve"] = resource_risk
     decision["plan_risks"] = risks
+    has_shortcut_penalties = False
+    if (_blacklist_separate_value(state)
+            and status.get("stop_reason") in
+            {"forced_relay", "teammate_control_defer", "public_closeout"}):
+        has_shortcut_penalties = any(
+            _blacklist_action_components(
+                state, bot_id,
+                action.get("card_ids") if action.get("type") == "play" else None,
+            )
+            for action in (reference, proposal)
+        )
     if not risks:
         hand = state["players"][bot_id]["hand"]
         cards = proposal.get("card_ids") or []
@@ -13528,12 +13704,13 @@ def _should_accept_minimax_override(
         shortcuts = {"forced_relay": _forced_endgame_control_relay_action,
                      "teammate_control_defer": _deferred_teammate_bomb_pass}
         shortcut = shortcuts.get(status.get("stop_reason"))
-        if shortcut is not None:
+        if shortcut is not None and not has_shortcut_penalties:
             checked = shortcut(state, bot_id, [reference, proposal])
             if checked is not None and _action_identity(checked) == _action_identity(proposal):
                 decision.update(accepted=True, reason=status["stop_reason"])
                 return True
-    if set(risks) <= {"same_type_control"} and status.get("stop_reason") == "public_closeout":
+    if (set(risks) <= {"same_type_control"} and status.get("stop_reason") == "public_closeout"
+            and not has_shortcut_penalties):
         closeout = _public_endgame_closeout_action(state, bot_id, [reference, proposal])
         if closeout is not None and _action_identity(closeout[0]) == _action_identity(proposal):
             decision.update(accepted=True, reason="public_closeout_control",
@@ -13560,14 +13737,26 @@ def _should_accept_minimax_override(
     variance = sum((delta - gain) ** 2 for delta in deltas) / (len(deltas) - 1)
     lower_gain = gain - 1.64 * math.sqrt(variance / len(deltas))
     margin = 5.5 + max(risks.values()) if risks else 0.0
+    blacklist_delta = (challenger.get("blacklist_score_penalty", 0.0)
+                       - baseline.get("blacklist_score_penalty", 0.0))
     sampled_dominance = terminal_complete and min(deltas) >= -1e-9 and gain > margin
     accepted = sampled_dominance or (lower_gain >= margin if risks else
                                     lower_gain > 1e-9 if terminal_complete else gain > 1e-9)
+    # A cheaper policy cost can prefer an action, but cannot create evidence
+    # for overriding a completed incumbent. A dearer one must be paid for.
+    if _blacklist_separate_value(state):
+        accepted = accepted and gain - blacklist_delta > 1e-9
+        if risks or terminal_complete:
+            accepted = accepted and (gain if sampled_dominance else lower_gain) - max(0.0, blacklist_delta) >= margin
     reason = ("supported_plan_change" if accepted else "preserve_control_plan") if risks else (
         "search_preference" if accepted else "no_search_gain" if gain <= 1e-9 else "preserve_heuristic")
     decision.update(accepted=accepted, reason=reason,
                     paired_gain=gain, paired_gain_lower=lower_gain, required_gain=margin,
                     terminal_complete=terminal_complete, sampled_dominance=sampled_dominance)
+    if _blacklist_separate_value(state):
+        decision.update(blacklist_score_delta=blacklist_delta,
+                        decision_paired_gain=gain - blacklist_delta,
+                        decision_paired_gain_lower=lower_gain - blacklist_delta)
     return accepted
 
 
@@ -14959,6 +15148,7 @@ def _mcts_finalize_scores(
     effective_tree_ply: int,
     effective_reply_width: int,
     confidence_z: float,
+    blacklist_penalties: Optional[Dict[Tuple, float]] = None,
 ) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
     scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     for action in candidates:
@@ -14967,6 +15157,7 @@ def _mcts_finalize_scores(
         count = int(sample.get("count", 0))
         heuristic = heuristic_values.get(key, 0.0)
         heuristic_norm = (heuristic - heuristic_center) / heuristic_scale
+        blacklist_penalty = max(0.0, (blacklist_penalties or {}).get(key, 0.0))
         paired = paired_samples.get(key, {})
         paired_count = int(paired.get("count", 0))
         if paired_count > 0:
@@ -15003,6 +15194,12 @@ def _mcts_finalize_scores(
             min_val = sample.get("min", avg)
             max_val = sample.get("max", avg)
             adjusted = avg - risk_lambda * std + heuristic_norm * heuristic_weight
+        value_adjusted = adjusted
+        blacklist_score_penalty = (
+            blacklist_penalty * heuristic_weight / heuristic_scale
+            if count > 0 else blacklist_penalty
+        )
+        adjusted -= blacklist_score_penalty
         stats = {
             "avg": avg,
             "adjusted": adjusted,
@@ -15023,6 +15220,14 @@ def _mcts_finalize_scores(
             "tree_ply": effective_tree_ply if count > 0 else 0,
             "reply_width": max(1, effective_reply_width) if count > 0 else 1,
         }
+        if blacklist_penalties is not None:
+            stats.update(
+                heuristic=heuristic - blacklist_penalty,
+                heuristic_value=heuristic,
+                blacklist_penalty=blacklist_penalty,
+                blacklist_score_penalty=blacklist_score_penalty,
+                value_adjusted=value_adjusted,
+            )
         scored.append((action, adjusted, count, stats))
     scored.sort(key=lambda item: item[1], reverse=True)
     return scored
@@ -15095,6 +15300,7 @@ def _mcts_score_actions(
     )
 
     heuristic_weight = 3.8 if state.get("current_trick") and len(candidates) <= 2 else 2.2
+    separate_blacklist = bool(state.get("config", {}).get("bot_blacklist_separate_value", False))
     cached_heuristic_values = {
         _mcts_action_key(
             {"type": "pass"}
@@ -15103,10 +15309,19 @@ def _mcts_score_actions(
         ): score
         for cards, score, _components in cached_finalists
     }
+    cached_components = {
+        _mcts_action_key(
+            {"type": "pass"} if cards is None else {"type": "play", "card_ids": cards}
+        ): components
+        for cards, _score, components in cached_finalists
+    }
     heuristic_values: Dict[Tuple, float] = {}
+    value_heuristics: Dict[Tuple, float] = {}
+    blacklist_penalties: Dict[Tuple, float] = {}
     for action in candidates:
         key = _mcts_action_key(action)
         cards = action.get("card_ids") or []
+        use_quick_score = False
         if key in cached_heuristic_values:
             # The preceding heuristic stage already paid for this finalist.
             # Reuse the value so the small MCTS budget is spent on rollouts.
@@ -15120,6 +15335,7 @@ def _mcts_score_actions(
                 bot_id,
                 cards if action.get("type") == "play" else None,
             )
+            use_quick_score = True
         elif (
             action.get("type") == "play"
             and _overbomb_soft_pruning_penalty(state, bot_id, cards) > 0.0
@@ -15127,8 +15343,41 @@ def _mcts_score_actions(
             # Deferred bombs stay searchable, but they should not consume the
             # root's detailed-scoring budget before ordinary responses finish.
             heuristic_values[key] = _quick_candidate_score(state, bot_id, cards)
+            use_quick_score = True
         else:
             heuristic_values[key] = _CORE._mcts_root_heuristic_value(state, bot_id, action, depth)
+        if separate_blacklist:
+            components = cached_components.get(key)
+            if (components is not None and "anytime_quick_score" not in components
+                    and not components.get("anytime_partial")):
+                value_heuristics[key] = heuristic_values[key] + _blacklist_component_penalty(components)
+                # Expanding the root reservoir can publish additional policy
+                # penalties after finalists were read. Their value is reusable,
+                # but the local decision snapshot must use the current panel.
+                penalty = sum(_candidate_blacklist_penalties(
+                    state, bot_id, cards,
+                    relay_bonus=components.get("clean_single_relay", 0.0),
+                ).values())
+                heuristic_values[key] = value_heuristics[key] - penalty
+            else:
+                # Pass and closeout floors have nested score dependencies, so
+                # recompute in value mode instead of removing top-level terms.
+                if components is not None and "anytime_quick_score" in components:
+                    heuristic_values[key] = _quick_candidate_score(
+                        state, bot_id, cards if action.get("type") == "play" else None,
+                    )
+                with _blacklist_value_scoring():
+                    if use_quick_score or (components is not None and "anytime_quick_score" in components):
+                        value_heuristics[key] = _quick_candidate_score(
+                            state, bot_id, cards if action.get("type") == "play" else None,
+                        )
+                    else:
+                        value_heuristics[key] = _CORE._mcts_root_heuristic_value(
+                            state, bot_id, action, depth,
+                        )
+                penalty = max(0.0, value_heuristics[key] - heuristic_values[key])
+            blacklist_penalties[key] = penalty
+    scoring_heuristics = value_heuristics if separate_blacklist else heuristic_values
     effective_sims, effective_depth, effective_tree_ply, effective_reply_width = _CORE._mcts_budget(
         state,
         sims,
@@ -15137,17 +15386,18 @@ def _mcts_score_actions(
         reply_width,
         len(candidates),
         candidates=candidates,
-        heuristic_values=heuristic_values,
+        heuristic_values=scoring_heuristics,
     )
-    heuristic_center = sum(heuristic_values.values()) / len(heuristic_values)
-    heuristic_scale = max(1.0, max(abs(value - heuristic_center) for value in heuristic_values.values()))
+    heuristic_center = sum(scoring_heuristics.values()) / len(scoring_heuristics)
+    heuristic_scale = max(1.0, max(abs(value - heuristic_center) for value in scoring_heuristics.values()))
+    has_blacklist_penalties = separate_blacklist and any(value > 1e-9 for value in blacklist_penalties.values())
 
     if len(candidates) == 1:
         only = candidates[0]
         heuristic = heuristic_values[_mcts_action_key(only)]
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Single forced candidate")
         store_status("single_candidate")
-        return [
+        single_scores = [
             (
                 only,
                 heuristic,
@@ -15167,8 +15417,17 @@ def _mcts_score_actions(
                 },
             )
         ]
+        if separate_blacklist:
+            only_key = _mcts_action_key(only)
+            single_scores[0][3].update(
+                heuristic_value=value_heuristics[only_key],
+                blacklist_penalty=blacklist_penalties[only_key],
+                blacklist_score_penalty=blacklist_penalties[only_key],
+                value_adjusted=value_heuristics[only_key],
+            )
+        return single_scores
 
-    structured_runout_scores = _mcts_structured_runout_bomb_scores(
+    structured_runout_scores = None if has_blacklist_penalties else _mcts_structured_runout_bomb_scores(
         state,
         bot_id,
         candidates,
@@ -15186,12 +15445,13 @@ def _mcts_score_actions(
         store_status("fast_path")
         return structured_runout_scores
 
-    obvious_scores = _CORE._mcts_obvious_response_scores(state, bot_id, candidates, heuristic_values)
+    obvious_scores = (None if has_blacklist_penalties else
+                      _CORE._mcts_obvious_response_scores(state, bot_id, candidates, heuristic_values))
     if obvious_scores:
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path obvious response")
         store_status("fast_path")
         return obvious_scores
-    natural_structure_scores = _mcts_natural_structure_takeover_scores(
+    natural_structure_scores = None if has_blacklist_penalties else _mcts_natural_structure_takeover_scores(
         state,
         bot_id,
         candidates,
@@ -15208,7 +15468,7 @@ def _mcts_score_actions(
         )
         store_status("fast_path")
         return natural_structure_scores
-    high_single_joker_scores = _mcts_high_single_joker_scores(
+    high_single_joker_scores = None if has_blacklist_penalties else _mcts_high_single_joker_scores(
         state,
         bot_id,
         candidates,
@@ -15225,7 +15485,8 @@ def _mcts_score_actions(
         )
         store_status("fast_path")
         return high_single_joker_scores
-    high_single_bomb_scores = _CORE._mcts_high_single_bomb_scores(state, bot_id, candidates, heuristic_values)
+    high_single_bomb_scores = (None if has_blacklist_penalties else
+                              _CORE._mcts_high_single_bomb_scores(state, bot_id, candidates, heuristic_values))
     if high_single_bomb_scores:
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path bomb decision")
         store_status("fast_path")
@@ -15361,8 +15622,8 @@ def _mcts_score_actions(
     def paired_bounds(item: Tuple[Dict, float, int, Dict[str, float]]) -> Tuple[float, float, float]:
         stats = item[3]
         prior = stats.get("heuristic_norm", 0.0) * heuristic_weight
-        # Rank and eliminate with the same risk-adjusted objective used for the
-        # final action. A high mean alone must not discard a safer, better score.
+        # In separated mode this prior contains value only. A blacklist
+        # deduction must not manufacture search confidence or eliminate roots.
         center = stats.get("paired_delta", 0.0) + prior - risk_lambda * stats.get("std", 0.0)
         radius = max(0.0, stats.get("paired_ucb", 0.0) - stats.get("paired_delta", 0.0))
         # Standard deviation is estimated too. Keep an extra empirical risk
@@ -15521,8 +15782,9 @@ def _mcts_score_actions(
                 continue
             final_scored = _mcts_finalize_scores(
                 candidates, samples, paired_samples, reference_key,
-                heuristic_values, heuristic_center, heuristic_scale, heuristic_weight,
+                scoring_heuristics, heuristic_center, heuristic_scale, heuristic_weight,
                 risk_lambda, search_depth, round_tree_ply, effective_reply_width, confidence_z,
+                blacklist_penalties=blacklist_penalties if separate_blacklist else None,
             )
             active_keys = {_mcts_action_key(action) for action in active_candidates}
             published_scored = final_scored
@@ -15566,6 +15828,17 @@ def _mcts_score_actions(
             top_key = _mcts_action_key(confidence_ranked[0][0])
             _center, top_lcb, _ucb = paired_bounds(confidence_ranked[0])
             runner_ucb = max(paired_bounds(item)[2] for item in confidence_ranked[1:])
+            if has_blacklist_penalties:
+                # Penalties can only make this stopping test more demanding.
+                # Value evidence must cover a leader's additional deduction;
+                # deductions on rivals never count as evidence for stopping.
+                top_penalty = confidence_ranked[0][3]["blacklist_score_penalty"]
+                runner_ucb = max(
+                    paired_bounds(item)[2] + max(
+                        0.0, top_penalty - item[3]["blacklist_score_penalty"],
+                    )
+                    for item in confidence_ranked[1:]
+                )
             enough_pairs = all(
                 item[3].get("paired_count", 0) >= confidence_min_pairs
                 for item in confidence_ranked
@@ -15581,8 +15854,11 @@ def _mcts_score_actions(
                 previous_top_key = top_key
                 stable_rounds = 0
 
+            # Value-only bounds cannot safely prune a lower-value root whose
+            # smaller policy deduction could still make it the net winner.
             if (
                 len(active_candidates) > 2
+                and not has_blacklist_penalties
                 and round_idx >= next_halving_round
                 and attempted_visits < total_visits_target
             ):
@@ -15612,8 +15888,9 @@ def _mcts_score_actions(
         samples, paired_samples = empty_samples()
         published_scored = _mcts_finalize_scores(
             candidates, samples, paired_samples, reference_key,
-            heuristic_values, heuristic_center, heuristic_scale, heuristic_weight,
+            scoring_heuristics, heuristic_center, heuristic_scale, heuristic_weight,
             risk_lambda, 0, 0, effective_reply_width, confidence_z,
+            blacklist_penalties=blacklist_penalties if separate_blacklist else None,
         )
     confidence_ready = stop_reason != "cost_guard" and completed_depth is not None and all(
         item[3].get("paired_count", 0) >= confidence_min_pairs
@@ -16217,6 +16494,8 @@ def _minimax_pick_action(
     if not actions:
         store_status("no_candidates")
         return None
+    blacklist_costs = _blacklist_search_costs(public_state or state, bot_id, actions)
+    has_blacklist_penalties = any(cost["penalty"] > 0.0 for cost in blacklist_costs.values())
     if deadline is not None and time.perf_counter() >= deadline:
         store_status("deadline", 0, len(actions), True)
         if incumbent_action:
@@ -16229,7 +16508,7 @@ def _minimax_pick_action(
         bot_id,
         actions,
     )
-    if deferred_pass is not None:
+    if deferred_pass is not None and not has_blacklist_penalties:
         _report_progress_scaled(
             progress_callback,
             "minimax",
@@ -16241,7 +16520,7 @@ def _minimax_pick_action(
         store_status("teammate_control_defer", 1, len(actions))
         return deferred_pass
     closeout = _public_endgame_closeout_action(public_state or state, bot_id, actions)
-    if closeout is not None:
+    if closeout is not None and not has_blacklist_penalties:
         closeout_action, hold_probability, runner_probability = closeout
         state.setdefault("_ai_eval_cache", {})["public_closeout"] = {
             "hold_probability": hold_probability,
@@ -16258,7 +16537,7 @@ def _minimax_pick_action(
         store_status("public_closeout", 1, len(actions))
         return dict(closeout_action)
     forced_relay = _forced_endgame_control_relay_action(state, bot_id, actions)
-    if forced_relay is not None:
+    if forced_relay is not None and not has_blacklist_penalties:
         _report_progress_scaled(
             progress_callback,
             "minimax",
@@ -16378,10 +16657,17 @@ def _minimax_pick_action(
                           zip(values, terminal_values[reference_index])]
                 gain = sum(deltas) / particle_count_used
                 paired_std = math.sqrt(sum((delta - gain) ** 2 for delta in deltas) / particle_count_used)
+                cost = blacklist_costs.get(_action_identity(action), {})
+                value = mean - risk_lambda * paired_std
                 root_values.append({"action": dict(action), "mean": mean,
                                     "std": math.sqrt(sum((value - mean) ** 2 for value in values) / particle_count_used),
-                                    "paired_std": paired_std, "value": mean - risk_lambda * paired_std,
+                                    "paired_std": paired_std, "value": value - cost.get("score_penalty", 0.0),
                                     "lead_penalty": 0.0, "world_values": values})
+                if _blacklist_separate_value(public_state or state):
+                    root_values[-1].update(value_score=value,
+                                          blacklist_penalty=cost.get("penalty", 0.0),
+                                          blacklist_score_penalty=cost.get("score_penalty", 0.0),
+                                          blacklist_scale=cost.get("scale", 0.0))
             best = max(root_values, key=lambda record: (
                 record["value"], _action_identity(record["action"]) == _action_identity(incumbent_action)))
             reference = root_values[reference_index]
@@ -16482,6 +16768,9 @@ def _minimax_pick_action(
                 action,
             )
             aggregate_value -= lead_penalty
+            value_score = aggregate_value
+            cost = blacklist_costs.get(_action_identity(action), {})
+            aggregate_value -= cost.get("score_penalty", 0.0)
             layer_scored.append((action, aggregate_value))
             layer_records.append({
                 "action": dict(action), "mean": mean_value,
@@ -16489,6 +16778,11 @@ def _minimax_pick_action(
                 "paired_std": math.sqrt(max(0.0, variance)), "value": aggregate_value,
                 "lead_penalty": lead_penalty, "world_values": list(values),
             })
+            if _blacklist_separate_value(public_state or state):
+                layer_records[-1].update(value_score=value_score,
+                                        blacklist_penalty=cost.get("penalty", 0.0),
+                                        blacklist_score_penalty=cost.get("score_penalty", 0.0),
+                                        blacklist_scale=cost.get("scale", 0.0))
         if not layer_scored:
             break
         root_scored = layer_scored
@@ -17393,6 +17687,17 @@ def _bot_score_components(
     if cached is not None and not cached.get("anytime_partial"):
         return dict(cached)
     component_cache.pop(cache_key, None)
+    if _blacklist_separate_value(state) and not _blacklist_value_mode():
+        with _blacklist_value_scoring():
+            components = _bot_score_components(state, bot_id, cards, depth)
+        penalties = _blacklist_action_components(state, bot_id, cards, components)
+        components.update(penalties)
+        components["total"] += sum(penalties.values())
+        if _deadline_expired():
+            components["anytime_partial"] = 1.0
+        if not components.get("anytime_partial") and not _deadline_expired():
+            component_cache[_bot_component_cache_key(state, bot_id, cards, depth)] = dict(components)
+        return components
     components = _compute_bot_score_components(state, bot_id, cards, depth)
     if cards and not components.get("anytime_partial"):
         for base in _bomb_closeout_bases(state, bot_id, cards):
@@ -18112,6 +18417,7 @@ def _shared_response_tactical_components(
     )
     cache_key = (
         player_id,
+        _blacklist_value_mode(),
         tuple(sorted(card["id"] for card in features.get("hand", []))),
         state.get("current_turn"),
         int(state.get("pass_count", 0)),
@@ -18284,12 +18590,13 @@ def _shared_response_tactical_components(
     if next_closeout > 0.001:
         components["block_next_closeout"] = next_closeout
 
-    soft_pruning = _response_soft_pruning_penalty(state, player_id, cards)
-    if soft_pruning > 0.001 and relay <= 0.001:
-        components["soft_candidate_prior"] = -soft_pruning
-    overbomb = _overbomb_soft_pruning_penalty(state, player_id, cards)
-    if overbomb > 0.001:
-        components["soft_overbomb_prior"] = -overbomb
+    if not _blacklist_value_mode():
+        components.update({
+            BLACKLIST_COMPONENTS[name]: -penalty
+            for name, penalty in _candidate_blacklist_penalties(
+                state, player_id, cards, relay_bonus=relay,
+            ).items()
+        })
 
     tail = _retained_bomb_takeover_profile(state, player_id, cards, combo)
     if tail["risk"] > 0.001:
@@ -18300,6 +18607,14 @@ def _shared_response_tactical_components(
 
 
 def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int]]) -> float:
+    if _blacklist_separate_value(state) and not _blacklist_value_mode():
+        with _blacklist_value_scoring():
+            value = _compute_quick_candidate_score(state, player_id, cards)
+        return value + sum(_blacklist_action_components(state, player_id, cards).values())
+    return _compute_quick_candidate_score(state, player_id, cards)
+
+
+def _compute_quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int]]) -> float:
     current_trick = state.get("current_trick")
     if not cards:
         return sum(_shared_pass_tactical_components(state, player_id).values())
@@ -18798,7 +19113,7 @@ def _bot_explain_snapshot(state: Dict) -> Dict:
     }
 
 
-def _build_bot_explain(
+def _build_bot_explain_details(
     state: Dict,
     bot_id: str,
     chosen_cards: List[int],
@@ -18878,12 +19193,12 @@ def _build_bot_explain(
         def exact_row(row: Dict) -> Dict:
             action = row["action"]
             return {"cards": label_action(action["type"], action.get("card_ids") or []),
-                    "score": row["value"], "components": {component: row["value"]}}
+                    "score": row.get("decision_value", row["value"]), "components": {component: row["value"]}}
 
         return {"method": method, "score_model": "proven_terminal" if proven else "sampled_terminal", "method_details": method_meta,
                 "timing": timing_meta or {}, "chosen": exact_row(selected), "decision": decision,
                 "hand_before": hand_before_labels, "hand": hand_labels_for(chosen_action_type),
-                "top": [exact_row(row) for row in sorted(records, key=lambda row: row["value"], reverse=True)[:3]]}
+                "top": [exact_row(row) for row in sorted(records, key=lambda row: row.get("decision_value", row["value"]), reverse=True)[:3]]}
     if route_cache.get("trick_boundary"):
         method_meta = dict(method_meta or {})
         method_meta["trick_boundary"] = copy.deepcopy(route_cache["trick_boundary"])
@@ -19105,6 +19420,14 @@ def _build_bot_explain(
                 "samples": len(record["world_values"]), "world_values": list(record["world_values"]),
                 "heuristic_score": heuristic_values.get(key), "selected": key == selected_key,
             })
+            if _blacklist_separate_value(state):
+                records[-1].update(
+                    value_score=record.get("value_score", record["value"]),
+                    blacklist_penalty=record.get("blacklist_penalty", 0.0),
+                    penalty=record.get("blacklist_score_penalty", 0.0),
+                    decision_score=record["value"],
+                    penalty_scale=record.get("blacklist_scale", 0.0),
+                )
         for key in ("reference", "proposal"):
             action = override.get(key)
             if action:
@@ -19130,6 +19453,112 @@ def _build_bot_explain(
         "hand": hand_labels_for(chosen_action_type),
         "top": top,
     }
+
+
+def _build_bot_explain(
+    state: Dict,
+    bot_id: str,
+    chosen_cards: List[int],
+    method: str,
+    depth: int,
+    method_scores: Optional[List[Tuple[Dict, float, int, Dict[str, float]]]] = None,
+    method_meta: Optional[Dict] = None,
+    chosen_action_type: str = "play",
+    timing_meta: Optional[Dict] = None,
+) -> Dict:
+    explanation = _build_bot_explain_details(
+        state, bot_id, chosen_cards, method, depth, method_scores, method_meta,
+        chosen_action_type, timing_meta,
+    )
+    if not _blacklist_separate_value(state) or method == "nn":
+        return explanation
+
+    hand_map = _map_hand_by_id(state["players"][bot_id]["hand"])
+
+    def labels(action: Dict) -> Tuple:
+        if action.get("type") == "pass":
+            return ("Pass",)
+        return tuple(_card_label(hand_map[cid]) if cid in hand_map else str(cid)
+                     for cid in action.get("card_ids", []))
+
+    search_rows = {labels(action): (action, stats) for action, _, _, stats in (method_scores or [])}
+    exact = state.get("_ai_eval_cache", {}).get("exact_endgame", {})
+    exact_rows = {labels(row["action"]): row for row in exact.get("candidates", [])}
+    for row in [explanation["chosen"]] + explanation.get("top", []):
+        components = row.get("components", {})
+        rule_costs = {rule: max(0.0, -components.get(component, 0.0))
+                      for rule, component in BLACKLIST_COMPONENTS.items()}
+        raw_penalty = sum(rule_costs.values())
+        score_penalty = raw_penalty
+        decision_score = row.get("score")
+        value_score = decision_score + score_penalty if decision_score is not None else None
+        scale = 1.0
+        scope = "heuristic_points_uncalibrated"
+        exception = None
+        if "anytime_quick_score" in components and not any(
+            name in components for name in BLACKLIST_COMPONENTS.values()
+        ):
+            # Older quick checkpoints contain only a net score. Do not invent
+            # a value/penalty split or rescore a timed-out turn for its log.
+            value_score = None
+            raw_penalty = None
+            score_penalty = None
+            scale = None
+            scope = "quick_decision_only"
+        if method == "mcts":
+            entry = search_rows.get(tuple(row.get("cards", [])))
+            if entry is not None:
+                action, stats = entry
+                raw_penalty = stats.get("blacklist_penalty", 0.0)
+                score_penalty = stats.get("blacklist_score_penalty", 0.0)
+                value_score = stats.get("value_adjusted", decision_score)
+                rule_costs = _candidate_blacklist_penalties(state, bot_id, action.get("card_ids"))
+                if sum(rule_costs.values()) > raw_penalty + 1e-9:
+                    rule_costs.pop("response_material_prior", None)  # Clean relay exemption.
+                scale = score_penalty / raw_penalty if raw_penalty > 0.0 else 0.0
+                scope = "mcts_value_plus_normalized_prior"
+        elif method == "exact_endgame":
+            exact_row = exact_rows.get(tuple(row.get("cards", [])), {})
+            value_score = exact_row.get("value", decision_score)
+            raw_penalty = exact_row.get("blacklist_penalty", 0.0)
+            score_penalty = exact_row.get("blacklist_score_penalty", 0.0)
+            decision_score = exact_row.get("decision_value", value_score)
+            scale = score_penalty / raw_penalty if raw_penalty > 0.0 else 0.0
+            scope = explanation.get("score_model")
+            exception = exact.get("blacklist_policy", {}).get("reason")
+            rule_costs = _candidate_blacklist_penalties(
+                state, bot_id, exact_row.get("action", {}).get("card_ids"),
+            )
+            if not exception and sum(rule_costs.values()) > raw_penalty + 1e-9:
+                rule_costs.pop("response_material_prior", None)
+        if (method_meta or {}).get("forced_action"):
+            scope = "forced_action_no_comparison"
+        row["blacklist"] = {
+            "value_score": value_score, "penalty": score_penalty,
+            "decision_score": decision_score, "heuristic_penalty": raw_penalty,
+            "penalty_scale": scale, "scope": scope,
+            "rules": [{"id": rule, "penalty": 0.0 if exception else cost,
+                       "waived_penalty": cost if exception else 0.0, "reason": BLACKLIST_REASONS[rule]}
+                      for rule, cost in rule_costs.items() if cost > 0.0],
+            "exemption": exception,
+        }
+    chosen = explanation["chosen"]["blacklist"]
+    chosen["selection_reason"] = (
+        "Selected with a finite policy penalty; the method/search comparison records the selection evidence."
+        if (chosen["penalty"] or 0.0) > 0.0 else
+        "Quick fallback; the value/penalty split was not recorded."
+        if chosen["penalty"] is None else "No policy penalty was charged."
+    )
+    alternative_scores = [row["blacklist"]["decision_score"] for row in explanation.get("top", [])
+                          if row.get("cards") != explanation["chosen"].get("cards")
+                          and row["blacklist"]["decision_score"] is not None]
+    if alternative_scores and chosen["decision_score"] is not None:
+        chosen["decision_margin_vs_shown_alternatives"] = chosen["decision_score"] - max(alternative_scores)
+    explanation["blacklist_policy"] = {
+        "version": "candidate_blacklist_v1", "mode": "finite_penalty",
+        "confidence_includes_penalty": False,
+    }
+    return explanation
 
 
 def _suggest_hint_cards(state: Dict, player_id: str) -> Optional[List[int]]:
