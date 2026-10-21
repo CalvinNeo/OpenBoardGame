@@ -12,6 +12,7 @@
   let pointerStart = null;
   let blockedPointer = false;
   let suppressUntil = 0;
+  let layoutFrame = null;
   const activity = [];
   let activityLegend = "Public activity: Health (❤️), Combat Points (⚡), Cards (🃏), Damage (🗡️).";
 
@@ -143,6 +144,25 @@
     $("ExplainBtn").setAttribute("aria-pressed", String(value));
     $("ExplainNotice").classList.toggle("hidden", !value);
     hideTip();
+    scheduleMobileLayout();
+  }
+  function scheduleMobileLayout() {
+    if (layoutFrame != null) return;
+    layoutFrame = requestAnimationFrame(() => {
+      layoutFrame = null;
+      if (!view || root.clientWidth > 448 || $("Arena").classList.contains("hidden")) {
+        root.style.removeProperty("--dt-list-height");
+        return;
+      }
+      const list = activeTab === "hand" ? $("Hand") : $("AbilityList");
+      // Use document position, so scrolling the page never resizes its content.
+      // Reserve room for the collapsed log and bottom padding, while allowing
+      // very short screens to scroll rather than squeezing cards unreadably.
+      const listTop = list.getBoundingClientRect().top + window.scrollY;
+      const viewportHeight = window.visualViewport?.height || innerHeight;
+      const height = Math.max(148, Math.min(340, Math.floor(viewportHeight - listTop - 56)));
+      root.style.setProperty("--dt-list-height", `${height}px`);
+    });
   }
   function showTip(node, temporary = false) {
     if (!node?.dataset.dtTip || explainMode) return;
@@ -213,7 +233,7 @@
       });
       content.append(details);
     }
-    section("Controls", "Click a hero's name on either player panel or in the hero picker to see all six numbered Dice (🎲) faces, including repeated symbols. Close or Esc returns to the board. Help opens these rules. Explain lets you inspect a die, resource, status, card, ability or disabled control without taking an action. It blocks other controls until you inspect a target or press Esc. Hover a static icon on desktop or tap it on a phone for a three-second tooltip; the latest tap replaces the previous tip. Click empty space or Cancel to deselect a card. Scrolling preserves the selection. Esc closes the dialog or cancels the selection. Battle log retains recent public actions, including defensive rolls after reconnect; opponent card identities are never shown.");
+    section("Controls", "Click a hero's name on either player panel or in the hero picker to see all six numbered Dice (🎲) faces, including repeated symbols. Close or Esc returns to the board. On phones, status tokens show symbols and counts; tap for their names and effects. The current phase remains in the phase strip, and Battle log contains the detailed activity. Abilities and Hand use the remaining screen height and scroll inside their panel; short screens can still scroll the page. Help opens these rules. Explain lets you inspect a die, resource, status, card, ability or disabled control without taking an action. It blocks other controls until you inspect a target or press Esc. Hover a static icon on desktop or tap it on a phone for a three-second tooltip; the latest tap replaces the previous tip. Click empty space or Cancel to deselect a card. Scrolling preserves the selection. Esc closes the dialog or cancels the selection. Battle log retains recent public actions, including defensive rolls after reconnect; opponent card identities are never shown.");
     return content;
   }
   function nextEditionText() {
@@ -323,7 +343,12 @@
       if (player.upgrades?.length) meta.append(token("upgrade", `⬆️ ${player.upgrades.length}`));
       const statuses = el("div", "dt-statuses");
       (player.statuses || []).forEach(status => {
-        if (terms[status.id]) statuses.append(token(status.id, `${terms[status.id][1]} ${terms[status.id][0]} ×${status.stacks}`));
+        if (terms[status.id]) {
+          const chip = token(status.id);
+          chip.setAttribute("aria-label", `${named(status.id)} ×${status.stacks}`);
+          chip.replaceChildren(el("span", "", terms[status.id][1]), el("span", "dt-status-name", terms[status.id][0]), el("span", "", `×${status.stacks}`));
+          statuses.append(chip);
+        }
       });
       const stats = el("div", "dt-player-stats");
       stats.append(health, meta);
@@ -350,7 +375,8 @@
         describe(node, `Defense die ${index + 1} · ${named(die.face)}`, `Rolled ${die.value}. ${labelPlayer(result.defender)} · ${result.defense_name}. This is the settled result.`, true);
         area.append(node);
       });
-      summary.append(el("div", "dt-defense-name", `${labelPlayer(result.defender)} · ${result.defense_name}`));
+      const resultName = `${labelPlayer(result.defender)} · ${result.defense_name}`;
+      summary.append(describe(el("div", "dt-defense-name", resultName), "Defense (🛡️)", resultName, true));
       const effects = el("div", "dt-defense-effects");
       function effect(key, label, amount, explanation) {
         effects.append(describe(el("span", `dt-token dt-tone-${key}`, `${termFor(key)[1]} ${label} ${amount}`), `${label} · ${named(key)}`, explanation, true));
@@ -386,6 +412,7 @@
     $("EndBtn").disabled = !legal("end_phase");
     $("EndBtn").textContent = view.phase === "main_2" ? "Finish turn →" : "Start rolling →";
     const main = ["main_1", "main_2"].includes(view.phase);
+    $("RollZone").classList.toggle("dt-unrolled", !result && !view.dice.length && main);
     $("RollZone").querySelector(".dt-roll-actions").classList.toggle("hidden", !main && !["offensive_roll", "targeting"].includes(view.phase));
     $("EndBtn").classList.toggle("hidden", !main);
     $("RollBtn").classList.toggle("hidden", view.phase !== "offensive_roll");
@@ -443,6 +470,7 @@
     });
     const nextList = tab === "hand" ? $("Hand") : $("AbilityList");
     nextList.scrollTop = listScroll[tab];
+    scheduleMobileLayout();
   }
   function renderAbilities() {
     const list = $("AbilityList");
@@ -696,6 +724,7 @@
     const prompts = {choose_hero: "Choose your hero to enter the duel.", main_1: "Play cards or start rolling.", offensive_roll: "Roll, keep your best dice, then confirm.", targeting: "Choose a ready ability or skip the attack.", defensive_roll: "An attack is incoming. Choose your response.", main_2: "Play cards or finish your turn.", round_review: "Review the turn, then ready up.", game_over: "The duel is complete."};
     const hasAction = !view.game_over && Boolean(view.legal_actions?.length);
     $("Status").textContent = pending ? "Sending your action…" : hasAction ? prompts[view.phase] : view.phase === "round_review" ? "Ready · waiting for the other player." : view.game_over ? prompts.game_over : `Waiting for ${labelPlayer(view.current_player)}…`;
+    describe($("Status"), phases[view.phase] || "Waiting", $("Status").textContent, true);
     root.classList.toggle("dt-has-action", hasAction);
     document.body.classList.toggle("dt-needs-action", hasAction);
     root.querySelectorAll("[data-dt-phase]").forEach(node => node.classList.toggle("active", node.dataset.dtPhase === view.phase));
@@ -709,6 +738,7 @@
     renderResponse();
     renderReview();
     $("Log").replaceChildren(...(publicLog.length ? publicLog : activity).slice(-40).map(text => describe(el("li", "", text), "Battle activity", activityLegend, true)));
+    scheduleMobileLayout();
   }
   function recordChanges(previous, next) {
     const who = id => next.players.find(player => player.player_id === id)?.name || "Player";
@@ -813,7 +843,11 @@
     hideTip();
     if (pointerStart) pointerStart.scrolled = true;
   }, {capture: true, passive: true});
-  window.addEventListener("resize", hideTip);
+  window.addEventListener("resize", () => { hideTip(); scheduleMobileLayout(); });
+  window.visualViewport?.addEventListener("resize", scheduleMobileLayout);
+  const layoutObserver = new ResizeObserver(scheduleMobileLayout);
+  [root, document.getElementById("roomControlsPanel")].filter(Boolean).forEach(node => layoutObserver.observe(node));
+  document.fonts?.ready?.then(scheduleMobileLayout);
   $("Tooltip").setAttribute("aria-live", "polite");
   $("Tooltip").setAttribute("aria-atomic", "true");
   const actionHelp = {

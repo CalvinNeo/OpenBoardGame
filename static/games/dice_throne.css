@@ -272,14 +272,15 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-ability-list, .dt-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @container (max-width: 430px) {
-  .dice-throne-titlebar { padding-bottom: 7px; }
-  .dt-kicker { margin-bottom: 3px; font-size: 8px; letter-spacing: .1em; }
-  .dice-throne-titlebar h2 { font-size: 23px; }
+  .dice-throne-titlebar { padding-bottom: 4px; }
+  .dt-kicker, .dt-round #diceThronePhase { display: none; }
+  .dice-throne-titlebar h2 { font-size: 19px; }
   .dt-round { gap: 3px; font-size: 9px; }
   .dt-round-number { padding: 3px 5px; font-size: 10px; }
-  .dt-phase-steps > span { font-size: 9px; padding: 5px 2px; }
-  .dt-status { margin: 6px 0; padding: 6px 8px; font-size: 11px; }
-  .dt-arena { gap: 7px; }
+  .dt-phase-steps > span { font-size: 9px; padding: 3px 2px; }
+  .dt-status { margin: 4px 0; padding: 4px 7px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dt-arena { gap: 5px; }
+  .dt-activity, .dt-decisions .dt-section-head { display: none; }
   .dt-players, .dt-hero-choices { gap: 7px; }
   .dt-player { padding: 7px; border-radius: 8px; }
   .dt-player-head { gap: 5px; flex-wrap: nowrap; }
@@ -291,28 +292,31 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-badge { padding: 1px 3px; font-size: 8px; }
   .dt-acting-badge { display: none; }
   .dt-player.dt-turn { border-top-color: #b78331; box-shadow: 0 0 0 2px #bf944d70; }
-  .dt-player-stats { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 5px; margin-top: 6px; }
+  .dt-player-stats { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px; margin-top: 3px; }
   .dt-health { flex-direction: column; align-items: stretch; gap: 4px; margin: 0; }
   .dt-health-value { font-size: 18px; }
   .dt-health-value small { font-size: 9px; }
   .dt-health-bar { flex: none; width: 100%; height: 3px; }
   .dt-player-meta { justify-content: flex-end; padding: 0; gap: 2px; }
   .dt-player-meta .dt-token { padding: 2px 3px; font-size: 10px; }
-  .dt-statuses { gap: 3px; margin-top: 4px; }
-  .dt-statuses .dt-token { font-size: 10px; padding: 2px 3px; }
-  .dt-picker, .dt-abilities, .dt-hand-area, .dt-response, .dt-review, .dt-game-over { padding: 9px; }
-  .dt-section-head { gap: 4px; margin-bottom: 7px; }
+  .dt-statuses { gap: 2px; margin-top: 2px; }
+  .dt-statuses .dt-token { font-size: 10px; padding: 1px 2px; }
+  .dt-statuses .dt-status-name { display: none; }
+  .dt-picker, .dt-abilities, .dt-hand-area, .dt-response, .dt-review, .dt-game-over { padding: 7px; }
+  .dt-section-head { gap: 4px; margin-bottom: 5px; }
   .dt-section-head h3 { font-size: 12px; }
   .dt-section-head > span { font-size: 9px; }
-  .dt-battle-grid { gap: 7px; }
-  .dt-roll-zone { padding: 7px; border-radius: 9px; }
-  .dt-roll-zone .dt-section-head { margin-bottom: 5px; }
+  .dt-battle-grid { gap: 5px; }
+  .dt-roll-zone { padding: 5px; border-radius: 9px; }
+  .dt-roll-zone.dt-unrolled .dt-dice { display: none; }
+  .dt-roll-zone.dt-unrolled .dt-roll-actions { margin-top: 0; }
+  .dt-roll-zone .dt-section-head { margin-bottom: 3px; }
   .dt-roll-zone .dt-section-head > span { padding: 1px 4px; }
   .dt-dice { gap: 5px; }
   .dt-result-die { grid-template-rows: 23px auto; min-height: 48px; padding: 4px 3px; column-gap: 2px; row-gap: 2px; }
   .dt-result-die .dt-die-symbol { font-size: 22px; }
-  .dt-defense-result { margin: 7px 0; }
-  .dt-defense-name { font-size: 10px; margin-bottom: 4px; }
+  .dt-defense-result { margin: 5px 0; }
+  .dt-defense-name { font-size: 10px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dt-defense-effects { gap: 4px; }
   .dt-defense-effects .dt-token { font-size: 10px; padding: 3px 4px; }
   .dice-throne-shell button.dt-die { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 23px auto; align-content: center; min-height: 48px; padding: 4px 3px; border-radius: 7px; column-gap: 2px; row-gap: 2px; }
@@ -322,11 +326,11 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-keep { display: none; }
   .dt-die.kept .dt-die-label::before { content: "🔒 "; font-size: 8px; }
   .dt-dice-hint { display: none; }
-  .dt-roll-actions, .dt-dice-hint.hidden + .dt-roll-actions { gap: 5px; margin-top: 7px; }
+  .dt-roll-actions, .dt-dice-hint.hidden + .dt-roll-actions { gap: 4px; margin-top: 5px; }
   .dt-roll-actions > button { min-height: 36px; padding: 6px 7px; font-size: 11px; }
-  .dt-decision-tabs { gap: 4px; padding: 4px; }
-  .dice-throne-shell .dt-decision-tabs > button { min-height: 36px; padding: 6px; }
-  .dt-ability-list, .dt-hand { gap: 6px; height: clamp(224px, 31dvh, 280px); }
+  .dt-decision-tabs { gap: 3px; padding: 3px; }
+  .dice-throne-shell .dt-decision-tabs > button { min-height: 36px; padding: 5px; }
+  .dt-ability-list, .dt-hand { gap: 6px; height: var(--dt-list-height, clamp(190px, 25dvh, 230px)); }
   .dice-throne-shell .dt-ability-trigger { padding: 7px; gap: 6px; }
   .dt-ability-head strong, .dt-card-head strong { font-size: 12px; }
   .dt-cost { padding: 2px 3px; font-size: 9px; }
@@ -345,7 +349,7 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dice-throne-shell .dt-hero-choice-heading + .dt-hero-trigger { min-height: 102px; }
   .dt-hero-card strong { font-size: 17px; }
   .dt-hero-card small { font-size: 10px; }
-  .dt-log-panel summary { padding-top: 8px; }
+  .dt-log-panel summary { padding-top: 5px; }
 }
 @container (max-width: 320px) {
   .dt-player { padding: 7px; }

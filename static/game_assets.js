@@ -120,8 +120,8 @@ const GAME_ASSETS = {
     "header": "showOdinHeaderActions"
   },
   "dice_throne": {
-    "scripts": ["/static/games/dice_throne.js?v=6"],
-    "styles": ["/static/games/dice_throne.css?v=6"],
+    "scripts": ["/static/games/dice_throne.js?v=7"],
+    "styles": ["/static/games/dice_throne.css?v=7"],
     "markup": "/static/games/dice_throne.html?v=4",
     "panel": "diceThronePanel",
     "header": "showDiceThroneHeaderActions"

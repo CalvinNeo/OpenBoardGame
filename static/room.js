@@ -758,6 +758,13 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  skull_king: 1.73,
+  exploding_kittens: 1.08,
+  gloomhaven: 3.92,
+  night_of_the_ninja: 1.84,
+  the_mind: 1.07,
+  moshimo_yusha: 2.00,
+  dnd_starter_set: null, // No matching BGG entry for Heroes of the Borderlands (2025) as of 2026-10-21.
   colt_express: 1.83,
   mall_of_horror: 1.94,
   startups: 1.58,
@@ -769,7 +776,7 @@ const GAME_WEIGHT = {
   cheaty_mages: 1.61,
   love_letter: 1.18,
   spirit_island: 4.08,
-  red_doors: null, // BLACK MAZE DEEP has no BGG weight votes as of 2026-09-22.
+  red_doors: null, // BLACK MAZE DEEP has no BGG weight votes as of 2026-10-21.
   cryptid: 2.26,
   eternal_decks: 2.83,
   take_time: 1.77,
@@ -844,7 +851,7 @@ const GAME_WEIGHT = {
   lost_code: 2.38,
   criminal_dance: 1.16,
   wavelength: 1.11,
-  word_decode: null, // No BGG entry found as of 2026-09-22.
+  word_decode: null, // No BGG entry found as of 2026-10-21.
   guandan: 2.33,
   acquire: 2.49,
   ra: 2.31,

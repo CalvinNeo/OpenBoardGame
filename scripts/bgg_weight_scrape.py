@@ -14,6 +14,12 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "skull_king": "https://boardgamegeek.com/boardgame/150145/skull-king",
+    "exploding_kittens": "https://boardgamegeek.com/boardgame/172225/exploding-kittens",
+    "gloomhaven": "https://boardgamegeek.com/boardgame/174430/gloomhaven",
+    "night_of_the_ninja": "https://boardgamegeek.com/boardgame/306321/night-of-the-ninja",
+    "the_mind": "https://boardgamegeek.com/boardgame/244992/the-mind",
+    "moshimo_yusha": "https://boardgamegeek.com/boardgame/408266/moshimoyong-zhe-gairunonara-if-you-have-a-brave",
     "colt_express": "https://boardgamegeek.com/boardgame/158899/colt-express",
     "mall_of_horror": "https://boardgamegeek.com/boardgame/16772/mall-of-horror",
     "natsumemo": "https://boardgamegeek.com/boardgame/280811/natsumemo-natsumemo",
@@ -70,7 +76,9 @@ GAME_URLS = {
     "mind_the_lines": "https://boardgamegeek.com/boardgame/419639/mind-the-lines",
     "no_thanks": "https://boardgamegeek.com/boardgame/12942/no-thanks",
     "power_grid": "https://boardgamegeek.com/boardgame/2651/power-grid",
-    # word_decode is intentionally omitted: no BGG entry found as of 2026-09-22.
+    # dnd_starter_set is intentionally omitted: no matching BGG boardgame entry
+    # found for Heroes of the Borderlands (2025) as of 2026-10-21.
+    # word_decode is intentionally omitted: no BGG entry found as of 2026-10-21.
 }
 
 BGG_DYNAMIC_INFO_URL = "https://api.geekdo.com/api/dynamicinfo?objecttype=thing&objectid={object_id}"
