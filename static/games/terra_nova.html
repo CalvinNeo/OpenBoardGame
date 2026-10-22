@@ -1,0 +1,39 @@
+<template data-game-target="terraNovaHeaderActions" data-game-mode="contents">
+  <button id="terraNovaHelpBtn" type="button">Help</button>
+  <button id="terraNovaExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+
+<template data-game-target="terraNovaPanel" data-game-mode="contents">
+  <div class="tn-topbar">
+    <div class="tn-brand"><div class="tn-brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 3 35 12v17L20 38 5 29V12Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m9 26 8-13 7 9 4-5 5 10H9Z" fill="currentColor"/><circle cx="28" cy="11" r="3" fill="currentColor"/></svg></div><div><div class="tn-kicker">A new land awaits</div><h2>Terra Nova</h2></div></div>
+    <div class="tn-status" id="terraNovaStatus" aria-live="polite"></div>
+  </div>
+  <div class="tn-rounds" id="terraNovaRounds"></div>
+  <div class="tn-players" id="terraNovaPlayers"></div>
+  <div id="terraNovaRecentEvent" class="tn-recent-event" aria-live="polite" hidden></div>
+  <div id="terraNovaReview"></div>
+  <div class="tn-main">
+    <section class="tn-board-panel">
+      <div class="tn-section-top"><div><div class="tn-kicker">The shared world</div><h3>神秘小地</h3></div><div class="tn-map-controls"><button type="button" id="terraNovaZoomOut" aria-label="Zoom out" data-tn-explain="map">−</button><button type="button" id="terraNovaZoomIn" aria-label="Zoom in" data-tn-explain="map">+</button><button type="button" id="terraNovaResetMap" data-tn-explain="map">Reset</button></div></div>
+      <div class="tn-map-viewport" id="terraNovaMapViewport"><svg id="terraNovaMap" class="tn-map-svg" role="group" aria-label="神秘小地六角地图"></svg></div>
+      <div class="tn-map-caption"><span>Drag to pan · Pinch to zoom</span><span id="terraNovaMapHint"></span></div>
+      <details class="tn-legend-disclosure"><summary data-tn-explain="map">Legend</summary><div class="tn-legend" id="terraNovaLegend"></div></details>
+    </section>
+    <aside class="tn-sidebar">
+      <section class="tn-actions-panel" id="terraNovaActionsPanel">
+        <div class="tn-actions-head"><h3 id="terraNovaActionTitle" data-tn-explain="actions">行动</h3><span class="tn-action-count" id="terraNovaActionCount"></span></div>
+        <p class="tn-action-hint" id="terraNovaActionHint"></p>
+        <div id="terraNovaCellDetail"></div><div id="terraNovaCategories" class="tn-action-categories"></div>
+        <div class="tn-action-stage"><div id="terraNovaConfirmation"></div><div id="terraNovaActions" class="tn-action-grid"></div></div>
+      </section>
+      <section class="tn-shared-panel" aria-label="Shared power actions"><div class="tn-section-top"><h3>Shared actions</h3><span class="tn-kicker">Power</span></div><div class="tn-shared-stage"><div id="terraNovaSharedConfirmation"></div><div class="tn-shared-actions" id="terraNovaSharedActions"></div></div></section>
+      <section class="tn-detail-panel" id="terraNovaFaction"></section>
+    </aside>
+  </div>
+  <details class="tn-log-panel"><summary class="tn-section-top" data-tn-explain="log"><h3>Game Log</h3><span class="tn-kicker">Latest first</span></summary><div class="tn-log" id="terraNovaLog"></div></details>
+  <div class="tn-sr-only" id="terraNovaLive" aria-live="polite"></div>
+</template>
+
+<template data-game-target="terraNovaModal" data-game-mode="replace">
+  <div id="terraNovaModal" class="tn-modal" hidden><div class="tn-modal-card" role="dialog" aria-modal="true" aria-labelledby="terraNovaModalTitle"><div class="tn-modal-head"><h3 id="terraNovaModalTitle"></h3><button type="button" data-tn-ui="close">Close</button></div><div class="tn-modal-body" id="terraNovaModalBody"></div></div></div>
+</template>
