@@ -25,29 +25,68 @@
   let hintHideTimer = null;
   let hintGesture = null;
   let consumedHintTap = null;
-  const icons = {credits: '💳', ore: '⛏️', knowledge: '🧠', qic: '🟩', vp: '⭐', power: '⚡', tokens: '🟣', charge: '⚡', token_iii: 'Ⅲ', gaiaformers: '🌱'};
+  // Token art follows the physical components: yellow credit discs, white ore cubes, blue knowledge discs,
+  // green Q.I.C. cubes, magenta power discs, brown VP squares, hexagonal Gaiaformers, the purple Brainstone
+  // and shield-shaped federation tokens. Numbers sit inside the token like the printed icons.
+  const tokenSymbols = {
+    credits: '<ellipse cx="16" cy="20" rx="13.5" ry="9" fill="#a67f08"/><ellipse cx="16" cy="15" rx="13.5" ry="9.5" fill="#f8d324" stroke="#8c6c04" stroke-width="1.2"/><ellipse cx="14" cy="12" rx="7" ry="3" fill="#fff" opacity=".28"/>',
+    ore: '<path d="M4 10 L10 4 H30 L24 10 Z" fill="#fbfbfc" stroke="#6d7784" stroke-width="1.2" stroke-linejoin="round"/><path d="M24 10 L30 4 V24 L24 30 Z" fill="#aab2bc" stroke="#6d7784" stroke-width="1.2" stroke-linejoin="round"/><rect x="4" y="10" width="20" height="20" fill="#e9ecef" stroke="#6d7784" stroke-width="1.2" stroke-linejoin="round"/>',
+    knowledge: '<ellipse cx="16" cy="20" rx="13.5" ry="9" fill="#196f9a"/><ellipse cx="16" cy="15" rx="13.5" ry="9.5" fill="#3bb7ec" stroke="#135e84" stroke-width="1.2"/><ellipse cx="14" cy="12" rx="7" ry="3" fill="#fff" opacity=".3"/>',
+    qic: '<path d="M4 10 L10 4 H30 L24 10 Z" fill="#8be06a" stroke="#215f14" stroke-width="1.2" stroke-linejoin="round"/><path d="M24 10 L30 4 V24 L24 30 Z" fill="#3c8f29" stroke="#215f14" stroke-width="1.2" stroke-linejoin="round"/><rect x="4" y="10" width="20" height="20" fill="#5cc43c" stroke="#215f14" stroke-width="1.2" stroke-linejoin="round"/><g fill="#2a7a1b" opacity=".55"><circle cx="8.5" cy="14.5" r="1.4"/><circle cx="14" cy="14.5" r="1.4"/><circle cx="19.5" cy="14.5" r="1.4"/><circle cx="8.5" cy="20" r="1.4"/><circle cx="14" cy="20" r="1.4"/><circle cx="19.5" cy="20" r="1.4"/><circle cx="8.5" cy="25.5" r="1.4"/><circle cx="14" cy="25.5" r="1.4"/><circle cx="19.5" cy="25.5" r="1.4"/></g>',
+    power: '<circle cx="16" cy="16" r="13" fill="#c73aa5" stroke="#7a1b66" stroke-width="1.4"/><ellipse cx="13" cy="11" rx="6" ry="3.2" fill="#fff" opacity=".22"/>',
+    charge: '<path d="M5 15 A11.5 11.5 0 0 1 27 13" fill="none" stroke="#f0a2e2" stroke-width="2.2" stroke-linecap="round"/><path d="M23 9.5 L28 13.5 L22.5 15" fill="none" stroke="#f0a2e2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="19" r="10.5" fill="#c73aa5" stroke="#7a1b66" stroke-width="1.4"/><ellipse cx="13.5" cy="15" rx="5" ry="2.6" fill="#fff" opacity=".22"/>',
+    tokens: '<circle cx="16" cy="17" r="11.5" fill="#c73aa5" stroke="#7a1b66" stroke-width="1.4"/><ellipse cx="13.5" cy="13" rx="5.5" ry="2.8" fill="#fff" opacity=".22"/><circle cx="26" cy="7" r="5.2" fill="#fff" stroke="#7a1b66" stroke-width="1.2"/><path d="M26 4.4 V9.6 M23.4 7 H28.6" stroke="#7a1b66" stroke-width="1.6" stroke-linecap="round"/>',
+    token_iii: '<circle cx="16" cy="14" r="11.5" fill="#c73aa5" stroke="#7a1b66" stroke-width="1.4"/><ellipse cx="13.5" cy="10" rx="5.5" ry="2.8" fill="#fff" opacity=".22"/><rect x="7" y="25" width="18" height="6" rx="2" fill="#2a1030" stroke="#8a4d80" stroke-width=".8"/><text x="16" y="29.8" font-size="5.6" font-weight="700" fill="#f3c9ec" text-anchor="middle" font-family="system-ui,sans-serif">III</text>',
+    vp: '<rect x="3" y="3" width="26" height="26" rx="3" fill="#8a5a2b" stroke="#4a2c10" stroke-width="1.4"/><g stroke="#f6dea8" stroke-width="1" opacity=".42"><path d="M16 5 V27 M5 16 H27 M8 8 L24 24 M24 8 L8 24"/></g><rect x="7" y="7" width="18" height="18" fill="#9a6633" opacity=".65"/>',
+    gaiaformers: '<path d="M16 2 L28 9 V23 L16 30 L4 23 V9 Z" fill="#a9e6f7" stroke="#1f7f9e" stroke-width="1.4" stroke-linejoin="round"/><g stroke="#1f7f9e" stroke-width="1.5" stroke-linecap="round" opacity=".75"><path d="M16 7 V25 M8.2 11.5 L23.8 20.5 M23.8 11.5 L8.2 20.5"/><path d="M13 9.5 L16 11.5 L19 9.5 M13 22.5 L16 20.5 L19 22.5 M9 14 L11.5 16 L9 18 M23 14 L20.5 16 L23 18"/></g>',
+    brain: '<path d="M16 2 L27 9 L29 20 L21 30 H11 L3 20 L5 9 Z" fill="#7c3fc7" stroke="#3d1a6b" stroke-width="1.3" stroke-linejoin="round"/><path d="M16 2 L27 9 L16 14 L5 9 Z" fill="#b48af0"/><path d="M5 9 L16 14 L11 30 L3 20 Z" fill="#9a63df"/><path d="M27 9 L29 20 L21 30 L16 14 Z" fill="#5f2aa3"/><path d="M16 14 L21 30 H11 Z" fill="#8a4fd6"/>',
+    green_federation: '<path d="M16 2 L29 8 V20 L16 30 L3 20 V8 Z" fill="#1d6a35" stroke="#a8b0ba" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 5 L19 11 L16 10 L13 11 Z M10.5 7 L14.5 11 L12 11.5 Z M21.5 7 L17.5 11 L20 11.5 Z" fill="#e4b73f"/><circle cx="16" cy="13" r="1.8" fill="#86e26a" stroke="#e4b73f" stroke-width=".8"/>',
+    gray_federation: '<path d="M16 2 L29 8 V20 L16 30 L3 20 V8 Z" fill="#7b838c" stroke="#b8bec6" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 5 L19 11 L16 10 L13 11 Z M10.5 7 L14.5 11 L12 11.5 Z M21.5 7 L17.5 11 L20 11.5 Z" fill="#c9ced4"/><circle cx="16" cy="13" r="1.8" fill="#9aa1a9" stroke="#c9ced4" stroke-width=".8"/>',
+  };
+  // Structure silhouettes use currentColor so one symbol serves every faction colour.
+  const buildingSymbols = {
+    mine: '<path d="M4 21 V11 H10 L13 6 H20 V21 Z"/><path d="M8 14 H10 V17 H8 Z" fill="#07111e" opacity=".45"/>',
+    trading_station: '<path d="M3 21 V11 H21 V21 Z"/><path d="M2 11 L12 3 L22 11 Z"/><path d="M15.5 6.8 V2 H17.5 V8.4 Z" fill="#07111e" opacity=".45"/><path d="M9 14 H15 V18 H9 Z" fill="#07111e" opacity=".45"/>',
+    lab: '<path d="M3 21 V14 A9 9 0 0 1 21 14 V21 Z"/><path d="M5 18 H19 V21 H5 Z" fill="#07111e" opacity=".35"/><circle cx="12" cy="12" r="2.2" fill="#07111e" opacity=".45"/>',
+    institute: '<path d="M2 22 V12 H8 V6 H16 V12 H22 V22 Z"/><path d="M10 2 H14 V6 H10 Z"/><path d="M4 15 H7 V18 H4 Z M17 15 H20 V18 H17 Z M10.5 9 H13.5 V12 H10.5 Z" fill="#07111e" opacity=".45"/>',
+    academy_knowledge: '<path d="M8 22 V8 L12 2 L16 8 V22 Z"/><path d="M3 22 V15 H8 M21 22 V15 H16" fill="none" stroke="currentColor" stroke-width="3"/><path d="M10.5 11 H13.5 V14 H10.5 Z M10.5 16 H13.5 V19 H10.5 Z" fill="#07111e" opacity=".45"/>',
+    academy_qic: '<path d="M8 22 V8 L12 2 L16 8 V22 Z"/><path d="M3 22 V15 H8 M21 22 V15 H16" fill="none" stroke="currentColor" stroke-width="3"/><path d="M10.5 11 H13.5 V14 H10.5 Z M10.5 16 H13.5 V19 H10.5 Z" fill="#07111e" opacity=".45"/>',
+    lost_mine: '<path d="M4 21 V11 H10 L13 6 H20 V21 Z"/><path d="M17 1 L18.2 4.1 L21.5 4.3 L18.9 6.3 L19.8 9.5 L17 7.7 L14.2 9.5 L15.1 6.3 L12.5 4.3 L15.8 4.1 Z" fill="#fff"/>',
+    station: '<path d="M12 2 L21 7 V17 L12 22 L3 17 V7 Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="2.5"/>',
+  };
+  const tokenNumberStyle = {credits: 'dark', ore: 'dark', gaiaformers: 'dark'};
+  const tokenNumberY = {credits: 19.5, knowledge: 19.5, ore: 24.5, qic: 24.5, power: 20.5, charge: 23.5, tokens: 21.5, token_iii: 18.5, vp: 20.5, gaiaformers: 20.5, brain: 23};
+  const tokenSprite = () => `<svg class="gaia-sprite" aria-hidden="true" focusable="false">${Object.entries(tokenSymbols).map(([k, body]) => `<symbol id="gtk-${k}" viewBox="0 0 32 32">${body}</symbol>`).join('')}${Object.entries(buildingSymbols).map(([k, body]) => `<symbol id="gbd-${k}" viewBox="0 0 24 24" fill="currentColor" stroke="#07111e" stroke-width="1" stroke-linejoin="round">${body}</symbol>`).join('')}</svg>`;
+  const token = (key, number = '', size = '') => {
+    const label = number === '' ? '' : String(number);
+    const fontSize = label.length > 2 ? 9.5 : label.length > 1 ? 12 : 14.5;
+    return `<svg class="gaia-tk gaia-tk-${key} ${size}" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><use href="#gtk-${key}"/>${label ? `<text x="${['ore', 'qic'].includes(key) ? 14 : 16}" y="${tokenNumberY[key] || 20.5}" class="gaia-tk-num ${tokenNumberStyle[key] || 'light'}" font-size="${fontSize}">${esc(label)}</text>` : ''}</svg>`;
+  };
+  const building = (kind, fill, size = '') => `<svg class="gaia-bd ${size}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="color:${fill}"><use href="#gbd-${kind}"/></svg>`;
   const hintDefinitions = {
-    credits: ['信用点', '用于建造和升级建筑。最多储存 30；终局可计入剩余资源得分。'],
-    ore: ['矿石', '用于建造、升级和地形改造。最多储存 15。'],
-    knowledge: ['知识', '通常支付 4 知识推进一级研究。最多储存 15。'],
-    qic: ['QIC · 量子智能方块', '可延长一次行动的航程、使盖亚星适居，或支付公共 QIC 行动。'],
-    vp: ['胜利点 · VP', '星号旁的数字是分数。通过建设、研究和计分目标得分，终局总分最高者获胜。'],
-    power: ['能量费用', '支付能量行动或资源兑换的费用；从 III 碗消费，使用后回到 I 碗。'],
-    tokens: ['能量枚数', '表示实体能量的数量；获得新能量时放入 I 碗。它与充能次数不同。'],
-    charge: ['充能', '表示移动能量的次数：先 I → II，I 碗空后再 II → III。'],
-    token_iii: ['III 碗能量', '这里按实体能量枚数计算；内华拉人可将其移至盖亚区换取知识。'],
-    gaiaformers: ['盖亚改造器', '用于将紫色超维星转为盖亚星。状态栏数字表示当前可以派出的数量。'],
+    credits: ['信用点 · 黄色圆片', '用于建造和升级建筑。最多储存 30；终局可计入剩余资源得分。'],
+    ore: ['矿石 · 白色方块', '用于建造、升级和地形改造。最多储存 15。'],
+    knowledge: ['知识 · 蓝色圆片', '通常支付 4 知识推进一级研究。最多储存 15。'],
+    qic: ['QIC · 绿色量子智能方块', '可延长一次行动的航程、使盖亚星适居，或支付公共 QIC 行动。'],
+    vp: ['胜利点 VP · 棕色方牌', '方牌中的数字是分数。通过建设、研究和计分目标得分，终局总分最高者获胜。'],
+    power: ['能量费用 · 紫红圆片', '支付能量行动或资源兑换的费用；从 III 碗消费，使用后回到 I 碗。'],
+    tokens: ['能量枚数 · 紫红圆片 +', '表示实体能量的数量；获得新能量时放入 I 碗。它与充能次数不同。'],
+    charge: ['充能 · 带弧形箭头的紫红圆片', '表示移动能量的次数：先 I → II，I 碗空后再 II → III。'],
+    token_iii: ['III 碗能量 · 紫红圆片', '这里按实体能量枚数计算；内华拉人可将其移至盖亚区换取知识。'],
+    gaiaformers: ['盖亚改造器 · 雪花六边形', '用于将紫色超维星转为盖亚星。状态栏数字表示当前可以派出的数量。'],
     bowl_i: ['I 碗 · 待充能', '普通能量枚数。充能时先从这里移到 II 碗；不能直接消费。'],
     bowl_ii: ['II 碗 · 充能中', '普通能量枚数。I 碗空后可充至 III 碗；也可燃烧两枚，将其中一枚升至 III。'],
     bowl_iii: ['III 碗 · 可用能量', '普通能量枚数。可支付能量行动或资源兑换，使用后回到 I 碗；脑石另记。'],
     gaia_bowl: ['盖亚区 · 暂存能量', '暂存于盖亚区的普通能量，当前不能消费；通常在下轮盖亚阶段返回能量碗。'],
-    brain: ['脑石', '塔克隆人的特殊能量。显示所在能量碗；按一枚移动，在 III 碗消费时值 3 能量。'],
-    green_federation: ['绿色联邦标记', '尚未使用的资格：翻至灰面可获取高级科技或进入研究第 5 级，每次分别消耗一枚。'],
-    gray_federation: ['灰色联邦标记', '不能再用于获取高级科技或进入研究第 5 级；仍计入联邦数量，可重算标记奖励。'],
+    brain: ['脑石 · 紫色宝石', '塔克隆人的特殊能量。显示所在能量碗；按一枚移动，在 III 碗消费时值 3 能量。'],
+    green_federation: ['绿色联邦标记 · 绿面盾牌', '尚未使用的资格：翻至灰面可获取高级科技或进入研究第 5 级，每次分别消耗一枚。'],
+    gray_federation: ['灰色联邦标记 · 灰面盾牌', '不能再用于获取高级科技或进入研究第 5 级；仍计入联邦数量，可重算标记奖励。'],
     objective: ['终局目标', '终局按此指标排名得分。两人局中的“中立”数字是参与排名的虚拟第三位玩家。'],
     seat: ['玩家标记', '数字对应玩家席位，颜色对应母星；标记所在格表示该玩家的研究等级。'],
+    structure: ['建筑', '建筑剪影按玩家颜色显示：小屋矿场、尖顶交易站、圆顶研究所、宽楼行星学院、高塔学院、六边形空间站。'],
   };
-  const resourceNames = Object.fromEntries(Object.entries(hintDefinitions).map(([key, value]) => [key, value[0]]));
+  const resourceNames = Object.fromEntries(Object.entries(hintDefinitions).map(([key, value]) => [key, value[0].split(' · ')[0]]));
+  const inlineTokens = html => html.replace(/(\d+)\s*(⚡|⭐)/g, (_, n, symbol) => token(symbol === '⚡' ? 'charge' : 'vp', n)).replace(/⚡/g, token('charge')).replace(/⭐/g, token('vp'));
   const metricNames = {mines: '矿场', labs: '研究所', trading: '交易站', big: '学院／大学', gaia: '盖亚星', federations: '联邦标记', types: '星球种类', sectors: '殖民星区'};
   const phaseNames = {faction: '选择种族', placement: '放置起始建筑', booster: '选择首轮推进器', income: '领取收入', gaia: '盖亚阶段', action: '行动阶段', round_end: '轮末回顾', game_over: '终局'};
   const mainLabels = {academy: '大学行动', bescods: '最低轨道研究', ambas: '交换行星学院', firaks: '降级研究所', ivits: '放置空间站', knowledge_3: '获得 3 知识', knowledge_2: '获得 2 知识', ore_2: '获得 2 矿石', credits_7: '获得 7 信用点', tokens_2: '获得 2 能量', tech: '获取科技', rescore: '重算联邦', diversity: '星球种类计分'};
@@ -74,7 +113,7 @@
   const seat = id => view.players.findIndex(p => p.player_id === id) + 1;
   const hintAttributes = (key, label = '') => `data-gaia-hint-key="${key}" data-gaia-hint="${esc(hintDefinitions[key][1])}" data-gaia-hint-name="${esc(key === 'seat' && label ? label : hintDefinitions[key][0])}" aria-label="${esc(label || hintDefinitions[key][0])}" data-gaia-explain="${esc(hintDefinitions[key].join('：'))}"`;
   const hint = (key, html, label = '', extraClass = '') => `<span class="gaia-hint-target ${extraClass}" ${hintAttributes(key, label)}>${html}</span>`;
-  const resources = data => Object.entries(data || {}).filter(([k, n]) => icons[k] && typeof n === 'number' && n).map(([k, n]) => hint(k, `${icons[k]} ${esc(n)}`, `${resourceNames[k]} ${n}`)).join(' ');
+  const resources = data => Object.entries(data || {}).filter(([k, n]) => tokenSymbols[k] && typeof n === 'number' && n).map(([k, n]) => hint(k, token(k, n), `${resourceNames[k]} ${n}`, 'gaia-tk-wrap')).join(' ');
   const info = kind => `data-gaia-explain="${esc(explainText[kind] || kind)}"`;
   const button = (label, command, extra = '', explanation = '') => `<button type="button" data-gaia-command="${command}" ${extra} ${explanation ? info(explanation) : ''}>${label}</button>`;
   const activeOptions = () => view?.options || [];
