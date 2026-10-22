@@ -21,8 +21,17 @@
 
 #terraNovaPanel *, .tn-modal *, .tn-tooltip { box-sizing: border-box; }
 #terraNovaPanel [data-tn-tip]:focus-visible { outline: 2px solid #b58630; outline-offset: 2px; }
-body.terra-nova-needs-action #roomControlsPanel.collapsed,
-body.terra-nova-needs-action #roomControlsToggleBtn { border: 2px solid #c43f46; box-shadow: 0 0 0 2px #c43f4626; }
+/* The reminder only targets the collapsed Room Controls dock; an open drawer keeps its normal frame. */
+body.terra-nova-needs-action.room-controls-docked #roomControlsPanel.collapsed {
+  border: 2px solid #c43f46;
+  box-shadow: 0 0 0 2px #c43f4633, 0 8px 24px #c43f4626;
+}
+body.terra-nova-needs-action.room-controls-docked #roomControlsPanel.collapsed .room-controls-heading { color: #a12f36; }
+body.terra-nova-needs-action.room-controls-drawer-closed #roomControlsPanel .collapse-btn {
+  border-color: #c43f46;
+  color: #a12f36;
+  box-shadow: inset 0 0 0 1px #c43f46, 0 4px 12px #c43f4633;
+}
 #terraNovaPanel h2, #terraNovaPanel h3, #terraNovaPanel h4, #terraNovaPanel p { margin: 0; color: inherit; }
 #terraNovaPanel button, .tn-modal button {
   min-width: 0;

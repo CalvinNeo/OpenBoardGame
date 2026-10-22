@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v123" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v124" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -600,11 +600,11 @@
               </div>
               <div class="panel-body">
                 <div class="row room-summary">
-                  <div>Room ID: <span id="roomIdLabel">-</span></div>
-                  <div>Status: <span id="roomStatus">-</span></div>
-                  <div>Game: <span id="gameTypeLabel">-</span></div>
-                  <div id="forestShuffleRoomLanguageRow" class="hidden">Language: <span id="forestShuffleRoomLanguage">-</span></div>
-                  <div id="catanStarfarersRoomSetupRow" class="hidden">Setup: <span id="catanStarfarersRoomSetup">-</span> · Language: <span id="catanStarfarersRoomLanguage">-</span></div>
+                  <div>ID <span id="roomIdLabel">-</span></div>
+                  <div>Status <span id="roomStatus">-</span></div>
+                  <div>Game <span id="gameTypeLabel">-</span></div>
+                  <div id="forestShuffleRoomLanguageRow" class="hidden">Language <span id="forestShuffleRoomLanguage">-</span></div>
+                  <div id="catanStarfarersRoomSetupRow" class="hidden">Setup <span id="catanStarfarersRoomSetup">-</span> · Language <span id="catanStarfarersRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
                   <div class="game-config-card hidden" id="yahtzeeConfigBox" aria-hidden="true"></div>
@@ -1087,18 +1087,17 @@
                     <div class="hint" data-kronologic-copy="config_hint">原创兼容案件；不包含商业版案件。</div>
                   </div>
                 </div>
-                <div class="row hidden toggle-row" id="autoSaveRow">
-                  <label for="autoSaveToggle">Auto Save</label>
+                <div class="row hidden toggle-row auto-save-row" id="autoSaveRow">
                   <input id="autoSaveToggle" type="checkbox" />
-                  <span class="hint">Save after each game state change.</span>
+                  <label for="autoSaveToggle" title="Save after each game state change.">Auto Save</label>
                 </div>
                 <div id="roomActionStatus" class="room-feedback" role="status" aria-live="polite"></div>
                 <div class="row actions room-actions">
-                  <button id="readyBtn" type="button" disabled>Toggle Ready</button>
+                  <button id="readyBtn" type="button" title="Toggle Ready" disabled>Ready</button>
                   <button id="startBtn" type="button" disabled>Start Game</button>
                   <button id="reopenBtn" type="button" class="hidden" aria-hidden="true" disabled>Reopen</button>
-                  <button id="downloadMemoriesBtn" type="button" disabled>Download Memories</button>
-                  <button id="leaveBtn" type="button" disabled>Leave Room</button>
+                  <button id="downloadMemoriesBtn" type="button" title="Download Memories" aria-label="Download Memories" disabled>Memories</button>
+                  <button id="leaveBtn" type="button" title="Leave Room" disabled>Leave</button>
                 </div>
                 <div class="room-players-header">
                   <h4>Players</h4>
@@ -1656,7 +1655,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=121" defer></script>
+  <script src="/static/game_assets.js?v=122" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1692,6 +1691,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v57" defer></script>
-  <script src="/static/room.js?v=app_v79" defer></script>
+  <script src="/static/room.js?v=app_v80" defer></script>
 </body>
 </html>

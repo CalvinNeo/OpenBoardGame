@@ -173,12 +173,16 @@ h1 {
 .room-controls-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .room-controls-section + .room-controls-section {
   border-top: 1px solid #eee;
-  padding-top: 12px;
+  padding-top: 8px;
+}
+
+.room-controls-section > .panel-header {
+  margin-bottom: 6px;
 }
 
 @keyframes room-controls-unfold {
@@ -308,13 +312,13 @@ h1 {
 }
 
 #roomPanel .room-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px 12px;
-  margin-bottom: 6px;
-  font-size: 13px;
-  line-height: 1.4;
-  color: #475569;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #64748b;
 }
 
 #roomPanel .room-summary > div {
@@ -322,13 +326,59 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-#roomPanel .room-summary > div:nth-child(n + 3) {
-  grid-column: 1 / -1;
-}
-
 #roomPanel .room-summary span {
   color: #1e293b;
   font-weight: 600;
+}
+
+#roomPanel .auto-save-row {
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+
+#roomPanel .auto-save-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+#roomPanel .auto-save-row label {
+  width: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+#roomPanel .room-feedback {
+  margin: 4px 0;
+}
+
+#roomPanel .room-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+#roomPanel .room-actions > button {
+  min-width: 0;
+  min-height: 28px;
+  margin: 0;
+  padding: 3px 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+#roomPanel .room-players-header {
+  margin-bottom: 4px;
+}
+
+#roomPanel #playersList {
+  padding: 4px 6px;
+  font-size: 13px;
 }
 
 .room-controls.compact.collapsed {
@@ -519,7 +569,8 @@ input, select {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 2px 0;
+  padding: 1px 0;
+  line-height: 1.35;
 }
 
 #playersList .player-row > :first-child {
@@ -731,7 +782,7 @@ body.log-open {
 .room-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   max-height: 280px;
   overflow-y: auto;
   padding-right: 4px;
@@ -740,18 +791,19 @@ body.log-open {
 .room-item {
   border: 1px solid #e3e3e3;
   border-radius: 6px;
-  padding: 6px;
+  padding: 4px 6px;
   background: #fafafa;
   position: relative;
 }
 
 .room-item-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  margin-bottom: 2px;
 }
 
 .room-item-header > div,
@@ -771,25 +823,38 @@ body.log-open {
 }
 
 .room-item-meta {
+  flex: 1 1 auto;
   font-size: 12px;
+  font-weight: 400;
   color: #555;
-  margin-bottom: 4px;
+}
+
+.room-item-meta::before {
+  content: "·";
+  margin-right: 6px;
+  color: #999;
 }
 
 .room-item-players {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   font-size: 12px;
   color: #555;
+}
+
+.room-item-source {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 2px;
 }
 
 .room-item-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
-  margin-top: 6px;
+  margin-top: 4px;
   flex-wrap: nowrap;
 }
 
@@ -797,8 +862,8 @@ body.log-open {
   flex: 1 1 auto;
   width: auto;
   min-width: 0;
-  min-height: 32px;
-  padding: 6px;
+  min-height: 26px;
+  padding: 3px 6px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   background: #f8fafc;
@@ -810,10 +875,10 @@ body.log-open {
 
 .room-item-actions .room-reconnect-btn,
 .room-item-actions .room-delete-btn {
-  flex: 0 0 32px;
-  width: 32px;
-  padding: 4px;
-  font-size: 16px;
+  flex: 0 0 28px;
+  width: 28px;
+  padding: 3px;
+  font-size: 14px;
   line-height: 1;
 }
 
@@ -2745,22 +2810,6 @@ button.splendor-card {
 
   .target-slots {
     flex-wrap: wrap;
-  }
-
-  #roomPanel .room-actions {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-
-  #roomPanel .room-actions > button {
-    min-width: 0;
-    min-height: 28px;
-    padding: 3px 4px;
-    font-size: 12px;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
   }
 
   .log-panel {

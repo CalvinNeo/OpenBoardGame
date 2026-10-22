@@ -2109,17 +2109,17 @@ function renderRoomList(rooms) {
     header.className = "room-item-header";
     const title = document.createElement("div");
     title.textContent = room.room_id || "-";
-    const status = document.createElement("div");
-    status.className = "room-pill";
-    status.textContent = room.status || "-";
-    header.appendChild(title);
-    header.appendChild(status);
-
     const meta = document.createElement("div");
     meta.className = "room-item-meta";
     const maxPlayers = Number.isFinite(room.max_players) ? room.max_players : null;
     const count = `${room.player_count || 0}/${maxPlayers !== null ? maxPlayers : "-"}`;
     meta.textContent = `${room.game_type || "-"} · ${count}`;
+    const status = document.createElement("div");
+    status.className = "room-pill";
+    status.textContent = room.status || "-";
+    header.appendChild(title);
+    header.appendChild(meta);
+    header.appendChild(status);
 
     const players = document.createElement("div");
     players.className = "room-item-players";
@@ -2205,10 +2205,9 @@ function renderRoomList(rooms) {
     actions.appendChild(deleteBtn);
 
     wrapper.appendChild(header);
-    wrapper.appendChild(meta);
     if (isLoaded) {
       const source = document.createElement("div");
-      source.className = "room-item-meta";
+      source.className = "room-item-source";
       source.textContent = `Loaded from ${room.source_room_id}`;
       wrapper.appendChild(source);
     }

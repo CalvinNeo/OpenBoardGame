@@ -943,7 +943,7 @@ const GAME_ASSETS = {
       "/static/games/terra_nova.js?v=2"
     ],
     "styles": [
-      "/static/games/terra_nova.css?v=2"
+      "/static/games/terra_nova.css?v=3"
     ],
     "markup": "/static/games/terra_nova.html?v=1",
     "panel": "terraNovaPanel",
