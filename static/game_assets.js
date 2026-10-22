@@ -516,11 +516,11 @@ const GAME_ASSETS = {
   },
   "cabo": {
     "scripts": [
-      "/static/games/cabo.js?v=app_v8"
+      "/static/games/cabo.js?v=app_v9"
     ],
     "styles": [],
     "panel": "caboPanel",
-    "markup": "/static/games/cabo.html?v=1",
+    "markup": "/static/games/cabo.html?v=2",
     "styleFragments": "/static/games/cabo.css?v=1"
   },
   "flip7": {

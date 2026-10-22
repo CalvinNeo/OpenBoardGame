@@ -248,6 +248,26 @@ class CaboGameTests(unittest.TestCase):
                 _, error = CaboGame.apply_action(self.state, "p2", action)
                 self.assertIsNone(error)
 
+    def test_pending_choice_can_be_skipped(self):
+        self.state["phase"] = "drawn"
+        self.state["current_turn"] = "p1"
+        self.state["last_drawn"] = {"value": 11, "choice": "swap"}
+
+        _, error = CaboGame.apply_action(self.state, "p1", {"type": "discard_drawn"})
+
+        self.assertIsNone(error)
+        self.assertEqual(self.state["phase"], "choice_pending")
+        self.assertIn("skip_choice", CaboGame.get_legal_actions(self.state, "p1"))
+
+        events, error = CaboGame.apply_action(self.state, "p1", {"type": "skip_choice"})
+
+        self.assertIsNone(error)
+        self.assertEqual([event["type"] for event in events], ["game:skip_choice"])
+        self.assertEqual(self.state["phase"], "turn")
+        self.assertIsNone(self.state["pending_choice"])
+        self.assertEqual(self.state["current_turn"], "p2")
+        self.assertEqual(self.state["discard"][-1], {"value": 11, "choice": "swap"})
+
     def test_discarded_choice_without_a_target_is_skipped(self):
         self.state["phase"] = "drawn"
         self.state["current_turn"] = "p2"

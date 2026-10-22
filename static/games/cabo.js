@@ -24,6 +24,7 @@ const actionButtons = {
   discard_drawn: document.getElementById("discardDrawnBtn"),
   call_cabo: document.getElementById("callCaboBtn"),
   use_choice_action: document.getElementById("choiceBtn"),
+  skip_choice: document.getElementById("skipChoiceBtn"),
   next_round: document.getElementById("nextRoundBtn"),
 };
 
@@ -74,8 +75,8 @@ function updateCaboChoicePrompt() {
   }
   const discardNote =
     currentCaboView && currentCaboView.phase === "drawn"
-      ? "The drawn card will be discarded automatically."
-      : "The choice card has already been discarded.";
+      ? "The drawn card will be discarded automatically, or press Discard Drawn to choose later."
+      : "The choice card has already been discarded. Press Skip Choice to pass on it.";
   const promptByType = {
     peek: `Peek is ready: select one of your cards, then use Peek. ${discardNote}`,
     spy: `Spy is ready: select one highlighted opponent card, then use Spy. ${discardNote}`,
@@ -578,6 +579,14 @@ if (actionButtons.call_cabo) {
 if (actionButtons.next_round) {
   actionButtons.next_round.addEventListener("click", () => {
     sendAction({ type: "next_round" });
+  });
+}
+
+if (actionButtons.skip_choice) {
+  actionButtons.skip_choice.addEventListener("click", () => {
+    sendAction({ type: "skip_choice" });
+    clearSelection();
+    clearTargetSelection();
   });
 }
 

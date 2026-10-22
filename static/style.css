@@ -208,27 +208,6 @@ h1 {
   gap: 6px;
 }
 
-#connectionPanel .room-entry-actions {
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 8px;
-}
-
-#connectionPanel .room-entry-actions button {
-  width: auto;
-  max-width: 100%;
-  min-height: 32px;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #f8fafc;
-  color: #334155;
-  font-size: 13px;
-  line-height: 1.2;
-  cursor: pointer;
-}
-
 #connectionInfo {
   min-width: 0;
   margin-bottom: 0;
@@ -305,10 +284,19 @@ h1 {
   cursor: pointer;
 }
 
-#connectionPanel .room-entry-actions button:hover:not(:disabled),
+#roomControlsPanel .room-icon-btn-primary {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
 #roomControlsPanel .room-icon-btn:hover:not(:disabled) {
   border-color: #94a3b8;
   background: #eef2f6;
+}
+
+#roomControlsPanel .room-icon-btn-primary:hover:not(:disabled) {
+  border-color: #2563eb;
+  background: #dbeafe;
 }
 
 #roomPanel .room-summary {

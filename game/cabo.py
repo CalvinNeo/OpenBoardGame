@@ -378,9 +378,10 @@ class CaboGame:
             return actions
         if phase == "choice_pending":
             pending = state.get("pending_choice") or {}
+            actions = ["skip_choice"]
             if _choice_targets(state, player_id, pending.get("type")):
-                return ["use_choice_action"]
-            return []
+                actions.insert(0, "use_choice_action")
+            return actions
         return []
 
     @staticmethod
@@ -571,8 +572,16 @@ class CaboGame:
             return [], "invalid action for phase"
 
         if phase == "choice_pending":
+            if action_type == "skip_choice":
+                state["phase"] = "turn"
+                state["pending_choice"] = None
+                events.append({"type": "game:skip_choice", "payload": {"player_id": player_id}})
+                summary = _advance_turn(state, player_id)
+                if summary:
+                    events.append({"type": "game:round_end", "payload": summary})
+                return events, None
             if action_type != "use_choice_action":
-                return [], "must resolve choice action"
+                return [], "must resolve or skip choice action"
             pending = state["pending_choice"]
             if not pending:
                 return [], "no pending choice"
@@ -716,7 +725,7 @@ class CaboGame:
             choice = pending["type"]
             targets = _choice_targets(state, bot_id, choice)
             if not targets:
-                return None
+                return {"type": "skip_choice"}
             return {
                 "type": "use_choice_action",
                 "choice_type": choice,

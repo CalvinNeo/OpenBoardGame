@@ -1688,7 +1688,11 @@ function getRoomStartReason() {
 }
 
 function updateRoomCreateButtonLabel() {
-  createBtn.textContent = pendingRoomRequest?.event === "room:create" ? "Creating..." : "Create Room";
+  const creating = pendingRoomRequest?.event === "room:create";
+  createBtn.textContent = creating ? "⏳" : "➕";
+  const label = creating ? "Creating room..." : "Create room";
+  createBtn.title = label;
+  createBtn.setAttribute("aria-label", label);
 }
 
 function updateRoomActionButtons() {
