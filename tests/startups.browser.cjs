@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const base = process.env.ROOM_TEST_URL || 'http://127.0.0.1:8767';
 const output = 'tmp/startups-qa';
+const viewports = [1440, 1024, 390, 320];
 
 (async () => {
   const browser = await chromium.launch({channel: 'chrome', headless: true});
@@ -49,6 +50,103 @@ const output = 'tmp/startups-qa';
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Page overflow at ${width}`);
     await page.locator('#startupsPanel').screenshot({path: `${output}/${suffix}-${width}.png`});
   }
+  async function confirmInPlace(page, area, width, cancelMethod, touch = false) {
+    await page.setViewportSize({width, height: width > 500 ? 1000 : 900});
+    const cards = page.locator(`#startups${area} button[data-card-id]`);
+    const selection = page.locator(`#startups${area}Selection`);
+    const beforeHeight = await page.locator(`#startups${area}`).evaluate(node =>
+      node.closest('.startups-card-area')?.getBoundingClientRect().height);
+    assert.ok(beforeHeight > 0, `${area} has a dedicated card area`);
+    if (area === 'Hand' && width <= 390) {
+      const tops = await cards.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top));
+      assert.equal(tops.length, 4, 'The active player has four cards');
+      assert.ok(Math.max(...tops) - Math.min(...tops) < 1, `Four hand cards stay in one row at ${width}`);
+    }
+    if (touch) await cards.first().tap(); else await cards.first().click();
+    assert.equal(await selection.isVisible(), true);
+    const geometry = await selection.evaluate(node => {
+      const area = node.closest('.startups-card-area');
+      if (!area) return null;
+      const bounds = area.getBoundingClientRect(), overlay = node.getBoundingClientRect();
+      const within = rect => rect.width > 0 && rect.height > 0 && rect.left >= overlay.left - 1 &&
+        rect.right <= overlay.right + 1 && rect.top >= overlay.top - 1 && rect.bottom <= overlay.bottom + 1;
+      return {
+        areaHeight: bounds.height,
+        contained: overlay.left >= bounds.left - 1 && overlay.right <= bounds.right + 1 &&
+          overlay.top >= bounds.top - 1 && overlay.bottom <= bounds.bottom + 1,
+        coversCards: overlay.width >= bounds.width * .9 && overlay.height >= bounds.height * .9,
+        buttonsInside: [...node.querySelectorAll('button')].every(button => within(button.getBoundingClientRect())),
+        buttonCount: node.querySelectorAll('button').length,
+      };
+    });
+    assert.ok(geometry, `${area} confirmation belongs to the card area`);
+    assert.ok(Math.abs(geometry.areaHeight - beforeHeight) < 1, `${area} selection adds no height at ${width}`);
+    assert.equal(geometry.contained, true, `${area} overlay stays inside its card area at ${width}`);
+    assert.equal(geometry.coversCards, true, `${area} confirmation covers its cards at ${width}`);
+    assert.equal(geometry.buttonsInside, true, `${area} actions stay inside the overlay at ${width}`);
+    assert.equal(geometry.buttonCount, area === 'Hand' ? 3 : 2);
+    await layout(page, width, `${area.toLowerCase()}-confirmation${touch ? '-touch' : ''}`);
+    if (cancelMethod === 'explain') {
+      const before = (await state(page)).revision;
+      if (touch) await page.locator('#startupsExplainBtn').tap(); else await page.locator('#startupsExplainBtn').click();
+      await selection.scrollIntoViewIfNeeded();
+      const point = await selection.evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        const cardBounds = [...node.closest('.startups-card-area').querySelectorAll('button[data-card-id]')]
+          .map(card => card.getBoundingClientRect());
+        for (let y = Math.max(0, rect.top) + 4; y < Math.min(innerHeight, rect.bottom) - 4; y += 4) {
+          for (let x = rect.left + 4; x < rect.right - 4; x += 4) {
+            if (document.elementFromPoint(x, y) === node && cardBounds.some(card =>
+              x > card.left + 1 && x < card.right - 1 && y > card.top + 1 && y < card.bottom - 1)) return {x, y};
+          }
+        }
+        return null;
+      });
+      assert.ok(point, `${area} overlay has blank space over a card to test Explain interception`);
+      if (touch) await page.touchscreen.tap(point.x, point.y); else await page.mouse.click(point.x, point.y);
+      assert.equal(await page.locator('#startupsDialog').evaluate(node => node.open), false, 'Explain does not reach a covered card');
+      assert.equal(await page.locator('#startupsExplainBtn').getAttribute('aria-pressed'), 'true');
+      assert.equal(await selection.isVisible(), true, 'Explain on overlay blank space does not cancel selection');
+      assert.equal((await state(page)).revision, before, 'Explain on blank space sends no action');
+      await page.keyboard.press('Escape');
+    } else if (cancelMethod === 'escape') {
+      await page.keyboard.press('Escape');
+    } else {
+      const target = cancelMethod === 'blank'
+        ? page.locator(area === 'Hand' ? '#startupsHandTitle' : '.startups-market-box h3')
+        : page.locator(`#startups${area}Cancel`);
+      if (touch) await target.tap(); else await target.click();
+    }
+    assert.equal(await selection.isVisible(), false, `${area} ${cancelMethod} cancels selection`);
+  }
+  async function swipeWithSelection(page, width, cdp) {
+    await page.setViewportSize({width, height: 900});
+    await page.locator('#startupsHand button[data-card-id]').first().tap();
+    const selection = page.locator('#startupsHandSelection');
+    await selection.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+    const gesture = await selection.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const direction = document.documentElement.scrollHeight - innerHeight - scrollY >= 20 ? -1 : 1;
+      return {x: rect.left + 4, y: rect.top + 8, direction, scroll: scrollY};
+    });
+    const revision = (await state(page)).revision;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: [{x: gesture.x, y: gesture.y, id: 0}],
+    });
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove', touchPoints: [{x: gesture.x, y: gesture.y + gesture.direction * step * 16, id: 0}],
+      });
+      await page.waitForTimeout(35);
+    }
+    await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    await page.waitForFunction(previous => Math.abs(scrollY - previous) > 20, gesture.scroll);
+    await page.waitForTimeout(200);
+    assert.equal(await selection.isVisible(), true, `A real page swipe keeps selection at ${width}`);
+    assert.equal((await state(page)).revision, revision, `A real page swipe sends no action at ${width}`);
+    await page.locator('#startupsHandCancel').tap();
+    assert.equal(await selection.isVisible(), false, `Cancel still works after a real swipe at ${width}`);
+  }
   try {
     for (let i = 0; i < 3; i++) pages.push(await newPage());
     const host = pages[0];
@@ -82,15 +180,17 @@ const output = 'tmp/startups-qa';
     await first.waitForFunction(() => lastGameStatePayload.view.phase === 'place');
     await waitRevision((await state(first)).revision);
     for (const page of pages) assert.equal((await state(page)).hand.length, page === first ? 4 : 3);
-    await first.locator('#startupsHand button').first().click();
-    assert.equal(await first.locator('#startupsHandSelection').isVisible(), true);
-    await first.keyboard.press('Escape');
-    assert.equal(await first.locator('#startupsHandSelection').isVisible(), false);
+    for (const [index, width] of viewports.entries()) {
+      await confirmInPlace(first, 'Hand', width, ['button', 'escape', 'blank', 'explain'][index]);
+    }
     await first.locator('#startupsHand button').first().click();
     await first.locator('#startupsDiscard').click();
     await first.waitForFunction(() => lastGameStatePayload.view.phase === 'take');
     await waitRevision((await state(first)).revision);
     const second = await actor();
+    for (const [index, width] of viewports.entries()) {
+      await confirmInPlace(second, 'Market', width, ['button', 'escape', 'blank', 'explain'][index]);
+    }
     await second.locator('#startupsMarket button').first().click();
     await second.locator('#startupsTake').click();
     await second.waitForFunction(() => lastGameStatePayload.view.phase === 'place');
@@ -98,6 +198,7 @@ const output = 'tmp/startups-qa';
     await second.locator(`#startupsHand button[data-card-id="${same.id}"]`).click();
     assert.equal(await second.locator('#startupsDiscard').isDisabled(), true);
     await second.locator('#startupsExplainBtn').click();
+    await second.locator('#startupsDiscard').scrollIntoViewIfNeeded();
     const noDiscard = await second.locator('#startupsDiscard').boundingBox();
     await second.mouse.click(noDiscard.x + noDiscard.width / 2, noDiscard.y + noDiscard.height / 2);
     assert.match(await second.locator('#startupsDialogBody').textContent(), /同公司/);
@@ -117,7 +218,7 @@ const output = 'tmp/startups-qa';
       }
       await waitRevision((await state(page)).revision);
     }
-    for (const width of [1440, 390, 320]) await layout(host, width, 'playing');
+    for (const width of viewports) await layout(host, width, 'playing');
     await host.locator('#startupsDeck').click();
     assert.equal(await host.locator('#startupsTooltip').isVisible(), true);
     await host.locator('#startupsCapital').click();
@@ -130,7 +231,7 @@ const output = 'tmp/startups-qa';
     assert.deepEqual((await state(host)).hand, beforeReload.hand);
     assert.equal((await state(host)).revision, beforeReload.revision);
     assert.equal(await host.locator('script[src*="/startups.js"]').count(), 1);
-    console.log('Lazy loading, live actions, private hands, Help, disabled Explain, Esc, tips, reload and 1440/390/320 layouts passed.');
+    console.log('In-place market/hand confirmation, cancellation, Explain overlay interception, four-card mobile row and 1440/1024/390/320 layouts passed.');
     let reviewed = 0;
     for (let step = 0; step < 800; step++) {
       const current = await state(host);
@@ -158,7 +259,7 @@ const output = 'tmp/startups-qa';
     assert.equal((await state(host)).game_over, true);
     assert.equal((await state(host)).score_history.length, 4);
     assert.equal(reviewed, 3);
-    for (const width of [1440, 390, 320]) await layout(host, width, 'results');
+    for (const width of viewports) await layout(host, width, 'results');
     console.log('Four-round game, all-player review barrier and final settlement passed.');
     const botPage = await newPage();
     await botPage.evaluate(() => socket.emit('room:create', {name: 'Bot practice', game_type: 'startups'}));
@@ -199,7 +300,16 @@ const output = 'tmp/startups-qa';
     const mobile = dense[densityView.players.findIndex(player => player.player_id === densityView.current_turn)];
     await mobile.locator('#startupsDraw').tap();
     await mobile.waitForFunction(() => lastGameStatePayload.view.phase === 'place');
-    await layout(mobile, 320, 'seven-players-four-cards');
+    for (const [index, width] of viewports.entries()) {
+      await layout(mobile, width, 'seven-players-four-cards');
+      await confirmInPlace(mobile, 'Hand', width, ['button', 'escape', 'blank', 'explain'][index], true);
+    }
+    const mobileCdp = await mobile.context().newCDPSession(mobile);
+    try {
+      for (const width of [390, 320]) await swipeWithSelection(mobile, width, mobileCdp);
+    } finally {
+      await mobileCdp.detach();
+    }
     await mobile.locator('#startupsDeck').tap();
     assert.equal(await mobile.locator('#startupsTooltip').isVisible(), true);
     await mobile.locator('#startupsCapital').tap();
@@ -215,9 +325,9 @@ const output = 'tmp/startups-qa';
     await mobile.locator('#startupsHand button').first().tap();
     await mobile.locator('#startupsHandTitle').tap();
     assert.equal(await mobile.locator('#startupsHandSelection').isVisible(), false);
-    console.log('Seven players, long names, four cards and real touch tooltips / disabled Explain / blank-area cancellation passed at 320 px.');
+    console.log('Seven players, long names, four cards and touch confirmation passed at 1440/1024/390/320 px; real swipes preserve selection at 390/320 px; touch tips and disabled Explain passed at 320 px.');
     assert.deepEqual(errors, []);
-    fs.writeFileSync(`${output}/result.json`, JSON.stringify({ok: true, errors, rounds: 4, reviewBarriers: reviewed, viewports: [1440, 390, 320], botRoomCompleted: true, sevenPlayerTouch: true}, null, 2));
+    fs.writeFileSync(`${output}/result.json`, JSON.stringify({ok: true, errors, rounds: 4, reviewBarriers: reviewed, viewports, inPlaceConfirmation: true, singleRowMobileHand: true, overlayExplainInterception: true, realTouchScroll: [390, 320], botRoomCompleted: true, sevenPlayerTouch: true}, null, 2));
   } finally {
     for (const context of contexts) await context.close();
     await browser.close();

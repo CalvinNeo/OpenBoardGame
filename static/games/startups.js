@@ -6,11 +6,13 @@
   let view = null, selection = null, pending = false, explaining = false;
   let pendingTimer, tipTimer, suppressTimer, suppressClick = false, focusBeforeDialog;
   let configSignature = null, renderSignature = null;
+  let pointerGesture = null;
   const explanations = {
     round: ["Round · 局数", "默认单局。四局赛每局按财富排名：第一名 +2、第二名 +1、最后一名 −1，其余 0。下局由上局最后一名先手，所有资本和牌重置。"],
     deck: ["Deck（🂠）· 牌堆", "45 张股份，每局暗移除 5 张，每人发 3 张。剩余数量不包括手牌、市场和公开投资。抽走最后一张的玩家仍须放一张牌，随后全部手牌同时计入股份并结算。"],
     company: ["Company（公司）· 发行量", "🦒 Giraffe Beer 5、🐶 Bowwow Games 6、🦩 Flamingo Soft 7、🐙 Octo Coffee 8、🦛 Hippo Powertech 9、🐘 Elephant Mars Travel 10。牌上数字是整副牌的发行总量，不是分值。每张代表一股。"],
-    marker: ["Anti-Monopoly（🚫）· 反垄断标记", "公开持股最多者持有标记。首张投资取得标记，追平时原持有者保留，严格超过才转移。持有者不能从市场拿该公司股份，但抽牌时不必给该公司市场牌付资本。结算最高并列时标记不破平，所有人都不收付。"],
+    marker: ["Anti-Monopoly（🚫）· 反垄断标记", "公开持股最多者持有标记。手机上的 # 数字对应 Investors 的玩家座位号。首张投资取得标记，追平时原持有者保留，严格超过才转移。持有者不能从市场拿该公司股份，但抽牌时不必给该公司市场牌付资本。结算最高并列时标记不破平，所有人都不收付。"],
+    player: ["Investor · 玩家", "# 数字为玩家座位号，与公司反垄断标记（🚫）上的编号一致。You 是自己，Turn 是当前行动玩家。点击或悬停姓名可以查看完整名字。"],
     capital: ["Capital（💰）· 资本", "每局从 10 枚开始，抽牌费用按市场中需要付费的牌逐张计算；从市场拿牌时收走牌上资本。每枚未支出的资本价值 1。结算时支付方每张小股东股份只失去 1；收到的筹码翻为 3 分。"],
     draw: ["Draw · 从牌堆抽牌", "先给市场中未被自己反垄断标记（🚫）豁免的每张牌支付 1 枚资本（💰），再秘密抽 1 张。相同公司有多张牌也逐张收费。资本不够不能抽。空市场或全部豁免时免费。"],
     take: ["Take Card · 从市场拿牌", "拿走选中的股份和上面全部资本（💰）。持有反垄断标记（🚫）的公司不能拿。随后必须放一张手牌，本回合不能把同公司的任何手牌弃回市场。"],
@@ -33,7 +35,7 @@
     <p class="startups-rule-example">例如 A 有 4 股、B 有 2 股、C 有 1 股：<br>A 收入 3 枚筹码＝+9 分；B 支出 2；C 支出 1。<br>最终 Wealth（💰，财富）＝结算前资本 − 支出 + 3 × 收入筹码。<br>B 若只剩 1 枚资本且没有其他收入，最终为 −1。</p>
     <p>本局先比财富，再比收入筹码数，仍相同则最近完成回合者优先。结算卡片展示资本、支出、收入和财富；Company settlements 可展开查看逐公司收付。</p>
     <h3>四局赛 · Match points（🏆）</h3><p>可在开始前选择 Four-round match。每局第一名 +2、第二名 +1、最后一名 −1，其余 0。所有玩家点击 <strong>Next Round</strong> 后，回收全部牌并重新准备，上一局最后一名先手。四局后比累计积分、第一名次数、第二名次数，最后按第四局排名破平。此最后一步也明确覆盖第四局冠军不在并列者中的情形。</p>
-    <h3>操作</h3><p>点选市场或手牌后，在同一区域确认；点击空白、Cancel 或 Esc 取消。Draw 和 Next Round 直接执行。Help 集中规则，Explain 再点牌面、指标或按钮可解释，灰色按钮也支持。Esc 退出解释或关闭弹窗。静态图标可悬停，手机点击提示三秒后消失。机器人只使用自己的手牌及公开信息，是练习级对手。</p>
+    <h3>操作</h3><p>点选市场或手牌后，在牌区的半透明蒙版上确认；点击空白、Cancel 或 Esc 取消。Draw 和 Next Round 直接执行。手机公司标记中的 # 数字对应 Investors 的玩家座位号，点击标记或姓名可看完整信息。Help 集中规则，Explain 再点牌面、指标或按钮可解释，灰色按钮也支持。Esc 退出解释或关闭弹窗。静态图标可悬停，手机点击提示三秒后消失。机器人只使用自己的手牌及公开信息，是练习级对手。</p>
     <p><a href="https://oinkgames.com/en/games/analog/startups/" target="_blank" rel="noopener noreferrer">Oink Games · Startups</a> · <a href="https://hobbygames.ru/download/rules/startups-rules.pdf" target="_blank" rel="noopener noreferrer">Rules reference</a></p>`;
 
   function el(tag, className, value) {
@@ -63,8 +65,10 @@
     node.setAttribute("aria-pressed", String(selection?.id === card.id && selection?.area === area));
     node.setAttribute("aria-label", `${c.name}, ${c.supply} total shares${area === "market" ? `, ${coins} capital${blocked ? ", blocked by your anti-monopoly marker" : ""}` : ""}`);
     const top = el("span", "startups-card-top");
-    top.append(el("span", "", `${c.supply}×`), el("span", "", blocked ? "🚫" : "SHARE"));
-    node.append(top, el("span", "startups-card-icon", c.emoji), el("span", "startups-card-name", c.name));
+    top.append(el("span", "", `${c.supply}×`), el("span", blocked ? "" : "startups-card-kind", blocked ? "🚫" : "SHARE"));
+    const cardName = el("span", "startups-card-name");
+    cardName.append(el("span", "startups-card-full-name", c.name), el("span", "startups-card-short-name", c.name.split(" ")[0]));
+    node.append(top, el("span", "startups-card-icon", c.emoji), cardName);
     if (area === "market") node.append(el("span", "startups-card-coins", `💰 +${coins}`));
     tip(node, area === "market" ? blocked ? "marker" : "take" : "hand",
       `${label(c.id)}：全牌组 ${c.supply} 股。${area === "market" ? `拿牌可获得 ${coins} 枚资本（💰）。${blocked ? "你的反垄断标记（🚫）阻止拿取。" : ""}` : "你的隐藏股份，结算时也会计入持股。"}`);
@@ -77,7 +81,11 @@
         `${label(c.id)}：发行 ${c.supply} 股。反垄断标记（🚫）：${view.anti_monopoly[c.id] ? name(view.anti_monopoly[c.id]) : "无人持有"}。`);
       const top = el("div", "startups-company-top");
       top.append(el("span", "", c.emoji), tip(el("span", "", `${c.supply}×`), "company", `${label(c.id)}：整副牌中有 ${c.supply} 张股份，不是分值。`));
-      node.append(top, el("strong", "", c.name), el("span", "startups-marker-name", view.anti_monopoly[c.id] ? `🚫 ${name(view.anti_monopoly[c.id])}` : "— Open"));
+      const holder = view.anti_monopoly[c.id];
+      const marker = el("span", "startups-marker-name");
+      marker.append(el("span", "startups-marker-owner", holder ? `🚫 ${name(holder)}` : "— Open"),
+        el("span", "startups-marker-seat", holder ? `🚫#${view.players.findIndex(player => player.player_id === holder) + 1}` : "Open"));
+      node.append(top, el("strong", "", c.name), marker);
       container.append(node);
     }
   }
@@ -92,12 +100,14 @@
     container.scrollTop = scroll;
     byId("Draw").disabled = !can("draw");
     text("Draw", `Draw · 💰 ${view.draw_cost ?? "—"}`);
-    let hint = view.hands_revealed ? "Market shares and capital are not scored." : "Select a share, or draw from the deck.";
+    let hint = "";
     if (!view.hands_revealed && view.you === view.current_turn && view.phase === "take" && !view.legal_actions.includes("draw")) hint = "Not enough capital to draw. Take an available market share.";
-    if (view.phase === "place") hint = view.taken_company ? `${label(view.taken_company)} cannot be returned to the market this turn.` : "Card drawn. Choose one share from your hand.";
+    if (view.phase === "place" && view.you === view.current_turn && view.taken_company) hint = `${label(view.taken_company)} cannot be returned this turn.`;
     text("MarketHint", hint);
+    byId("MarketHint").classList.toggle("hidden", !hint);
     const chosen = selection?.area === "market" ? view.market.find(entry => entry.card.id === selection.id) : null;
     byId("MarketSelection").classList.toggle("hidden", !chosen);
+    container.inert = !!chosen;
     if (chosen) text("MarketLabel", `${label(chosen.card.company)} · 💰 +${chosen.coins}`);
     byId("Take").disabled = !chosen || !can("take_market");
   }
@@ -109,24 +119,29 @@
     const own = view.players.find(player => player.player_id === view.you);
     text("Capital", own ? `💰 ${own.capital}` : "💰 —");
     text("HandTitle", view.hands_revealed ? "Revealed hand" : "Your hand");
-    text("HandHint", view.hands_revealed ? "These shares are included in the final holdings." : can("invest") ? "Select one share to invest or send to the market." : "Your three hidden shares also count at settlement.");
+    text("HandHint", view.hands_revealed ? "Included in the final holdings." : "");
+    byId("HandHint").classList.toggle("hidden", !view.hands_revealed);
     const chosen = selection?.area === "hand" ? view.hand.find(card => card.id === selection.id) : null;
     byId("HandSelection").classList.toggle("hidden", !chosen);
+    container.inert = !!chosen;
     if (chosen) text("HandLabel", label(chosen.company));
     byId("Invest").disabled = !chosen || !can("invest");
     byId("Discard").disabled = !chosen || !can("discard") || !view.legal_discard_ids.includes(chosen.id);
   }
   function renderPlayers() {
     const container = byId("Players"); container.replaceChildren();
-    for (const player of view.players) {
+    for (const [index, player] of view.players.entries()) {
       const node = el("article", "startups-player");
       node.classList.toggle("is-current", player.player_id === view.current_turn);
       node.classList.toggle("is-winner", view.winner_ids.includes(player.player_id));
       const heading = el("div", "startups-player-heading");
-      heading.append(el("strong", "", player.name || player.player_id), el("small", "", [player.player_id === view.you ? "You" : "", player.is_bot ? "Bot" : "", view.ready.includes(player.player_id) ? "Ready ✓" : player.player_id === view.current_turn ? "Turn" : ""].filter(Boolean).join(" · ")));
+      const playerName = `#${index + 1} ${player.name || player.player_id}`;
+      heading.append(tip(el("strong", "", playerName), "player", playerName), el("small", "", [player.player_id === view.you ? "You" : "", player.is_bot ? "Bot" : "", view.ready.includes(player.player_id) ? "Ready ✓" : player.player_id === view.current_turn ? "Turn" : ""].filter(Boolean).join(" · ")));
       const stats = el("div", "startups-player-stats");
+      const handCount = tip(el("span", "", `🃏 ${player.hand_count}`), "hand", view.hands_revealed ? `Hand（🃏）：${player.hand.map(card => label(card.company)).join(" · ")}` : explanations.hand[1]);
+      handCount.append(el("span", "startups-hand-visibility", view.hands_revealed ? " revealed" : " hidden"));
       stats.append(tip(el("span", "", `💰 ${view.hands_revealed ? player.round_score : player.capital}`), view.hands_revealed ? "wealth" : "capital"),
-        tip(el("span", "", `🃏 ${player.hand_count}${view.hands_revealed ? " revealed" : " hidden"}`), "hand", view.hands_revealed ? `Hand（🃏）：${player.hand.map(card => label(card.company)).join(" · ")}` : explanations.hand[1]));
+        handCount);
       if (view.config.rounds === 4) stats.append(tip(el("span", "", `🏆 ${player.match_points}`), "points"));
       const shares = el("div", "startups-shares");
       for (const c of view.companies) {
@@ -191,9 +206,20 @@
     if (view.game_over) status = `Winner: ${view.winner_ids.map(name).join(" · ")}`;
     if (!socket.connected) status = "Disconnected · Reconnecting…";
     text("Status", status);
+    document.body.classList.toggle("startups-needs-action", !view.game_over && view.you === view.current_turn && view.legal_actions.length > 0);
     renderCompanies(); renderMarket(); renderHand(); renderPlayers(); renderReview(); renderHistory();
   }
-  function deselect() { if (!selection) return; selection = null; if (view) { renderMarket(); renderHand(); } }
+  function deselect() {
+    if (!selection) return;
+    const previous = selection, restoreFocus = document.activeElement?.closest(".startups-selection");
+    selection = null;
+    if (view) { renderMarket(); renderHand(); }
+    if (restoreFocus) {
+      const cards = byId(previous.area === "market" ? "Market" : "Hand").querySelectorAll("button");
+      [...cards].find(card => card.dataset.cardId === previous.id)?.focus({preventScroll: true});
+      hideTip();
+    }
+  }
   function dispatch(kind, extra = {}) {
     if (explaining || !can(kind)) return;
     const context = {game_token: view.game_token, round_number: view.round_number, turn_number: view.turn_number};
@@ -203,9 +229,10 @@
   }
   ["Market", "Hand"].forEach(suffix => byId(suffix).addEventListener("click", event => {
     const card = event.target.closest("button[data-card-id]");
-    if (!card || card.disabled || explaining) return;
+    if (!card || card.disabled || explaining || (event.detail && pointerGesture?.moved)) return;
     selection = selection?.id === card.dataset.cardId ? null : {id: card.dataset.cardId, area: card.dataset.area};
     hideTip(); renderMarket(); renderHand();
+    if (selection) byId(selection.area === "market" ? "Take" : "Invest").focus({preventScroll: true});
   }));
   byId("Draw").addEventListener("click", () => dispatch("draw"));
   byId("Take").addEventListener("click", () => { if (selection?.area === "market") dispatch("take_market", {card_id: selection.id}); });
@@ -248,16 +275,21 @@
   });
   const exempt = target => target.closest("#startupsHelpBtn, #startupsExplainBtn, #startupsDialog");
   document.addEventListener("pointerdown", event => {
+    pointerGesture = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, active: true};
     suppressClick = false;
     if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
     event.preventDefault(); event.stopImmediatePropagation();
-    const direct = event.target.closest("[data-su-explain]");
-    const target = direct || [...panel.querySelectorAll("[data-su-explain]")].find(node => {
-      const rect = node.getBoundingClientRect();
-      return rect.width && rect.height && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-    });
+    // Hit-test the visible layer so disabled controls work without reaching covered cards.
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-su-explain]");
     suppressClick = true; clearTimeout(suppressTimer);
     suppressTimer = setTimeout(() => { suppressClick = false; }, 750); explain(target);
+  }, true);
+  document.addEventListener("pointermove", event => {
+    if (pointerGesture?.id === event.pointerId && Math.hypot(event.clientX - pointerGesture.x, event.clientY - pointerGesture.y) > 8) pointerGesture.moved = true;
+  }, {capture: true, passive: true});
+  document.addEventListener("pointerup", () => { if (pointerGesture) pointerGesture.active = false; }, true);
+  document.addEventListener("pointercancel", () => {
+    if (pointerGesture) { pointerGesture.moved = true; pointerGesture.active = false; }
   }, true);
   document.addEventListener("click", event => {
     if (suppressClick) { suppressClick = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
@@ -271,6 +303,7 @@
     event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-su-explain]"));
   }, true);
   document.addEventListener("click", event => {
+    if (event.detail && pointerGesture?.moved) return;
     if (!panel.classList.contains("hidden") && !dialog.open && !event.target.closest("button, input, select, dialog, summary, a")) deselect();
   });
   panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-su-tip]")); });
@@ -286,10 +319,16 @@
     const target = event.target.closest("[data-su-tip]");
     if (target && !target.closest("button")) showTip(target, true); else hideTip();
   });
-  document.addEventListener("scroll", hideTip, true); window.addEventListener("resize", hideTip); window.addEventListener("blur", hideTip);
+  document.addEventListener("scroll", () => {
+    if (pointerGesture?.active) pointerGesture.moved = true;
+    hideTip();
+  }, true);
+  window.addEventListener("resize", hideTip); window.addEventListener("blur", hideTip);
 
   function clearState() {
-    view = null; selection = null; pending = false; renderSignature = null;
+    view = null; selection = null; pending = false; renderSignature = null; pointerGesture = null;
+    document.body.classList.remove("startups-needs-action");
+    ["Market", "Hand"].forEach(suffix => { byId(suffix).inert = false; });
     suppressClick = false; clearTimeout(pendingTimer); clearTimeout(suppressTimer);
     setExplain(false); hideTip(); if (dialog.open) dialog.close();
     ["Companies", "Market", "Hand", "Players", "Scores", "Settlements", "History", "ScoreHistory"].forEach(suffix => byId(suffix).replaceChildren());

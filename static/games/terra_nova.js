@@ -46,6 +46,7 @@
     pass: ["🍂", "退出本轮"], next_round: ["→", "Next Round"],
   };
   const EXPLANATIONS = {
+    info: ["Explain", ""],
     map: ["大地地图", "在可达地形上改造(⛏️)、建造房屋(🏠)，或选择已有建筑升级。发光轮廓表示当前有合法行动。淡虚线是预设桥位；选择桥梁(🌉)行动后，可建桥位会高亮，选择卡片后显示两端坐标。直接相邻与桥梁连接可用于城镇；航运(⛵)使你跨越河流扩张。地图区域支持拖动、双指缩放和 + / −；Reset 恢复完整地图。"],
     rounds: ["五轮计分", "游戏共有五轮；每轮计分片指定某种行动及其奖励分数(⭐)。只有在对应轮完成该行动才获得此奖励。五轮计分片始终公开，便于规划。"],
     players: ["玩家资源与建筑", "金币(💰)支付建造等费用。魔力(🟣)在 I、II、III 三碗之间循环；III 碗中的魔力可以支付。航运(⛵)表示可跨越的河流距离。房屋(🏠)、贸易站(🏪)、左/右宫殿(🏰)显示在地图上的数量。分数(⭐)为当前已获得分数。"],
@@ -65,6 +66,7 @@
   let selectedCategory = null;
   let selectedSource = null;
   let stagedAction = null;
+  let confirmationArea = "actions";
   let pending = false;
   let pendingTimer = null;
   let explainMode = false;
@@ -83,6 +85,9 @@
   let gestureCell = null;
   let boardSignature = "";
   let previousPhase = "";
+  let panelPointer = null;
+  let explanationClickUntil = 0;
+  const recentCells = new Set();
 
   const panel = document.getElementById("terraNovaPanel");
   const header = document.getElementById("terraNovaHeaderActions");
@@ -102,7 +107,7 @@
   const byId = (id) => document.getElementById(id);
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const list = (value) => Array.isArray(value) ? value : Object.values(value || {});
-  const directory = (key) => (view && view[key]) || {};
+  const directory = (key) => view?.[key] || window.TERRA_NOVA_RULES?.[key] || {};
   const getDef = (key, id) => {
     if (id && typeof id === "object") return id;
     const defs = directory(key);
@@ -148,6 +153,7 @@
   const tip = (node, text) => {
     node.dataset.tnTip = text;
     node.setAttribute("tabindex", "0");
+    if (!node.dataset.tnExplain) explanation(node, "info", text);
     return node;
   };
   const button = (label, handler, className = "", explainKey = "actions", body = "") => {
@@ -159,26 +165,8 @@
 
   function mount() {
     if (!panel || mapInitialized) return;
-    panel.innerHTML = `
-      <div class="tn-topbar">
-        <div class="tn-brand"><div class="tn-brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 3 35 12v17L20 38 5 29V12Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m9 26 8-13 7 9 4-5 5 10H9Z" fill="currentColor"/><circle cx="28" cy="11" r="3" fill="currentColor"/></svg></div><div><div class="tn-kicker">A new land awaits</div><h2>Terra Nova</h2></div></div>
-        <div class="tn-status" id="terraNovaStatus" aria-live="polite"></div>
-      </div>
-      <div class="tn-rounds" id="terraNovaRounds" data-tn-explain="rounds"></div>
-      <div class="tn-players" id="terraNovaPlayers" data-tn-explain="players"></div>
-      <div id="terraNovaReview"></div>
-      <div class="tn-main">
-        <section class="tn-board-panel">
-          <div class="tn-section-top"><div><div class="tn-kicker">The shared world</div><h3>神秘小地</h3></div><div class="tn-map-controls"><button type="button" id="terraNovaZoomOut" aria-label="Zoom out" data-tn-explain="map">−</button><button type="button" id="terraNovaZoomIn" aria-label="Zoom in" data-tn-explain="map">+</button><button type="button" id="terraNovaResetMap" data-tn-explain="map">Reset</button></div></div>
-          <div class="tn-map-viewport" id="terraNovaMapViewport"><svg id="terraNovaMap" class="tn-map-svg" role="group" aria-label="神秘小地六角地图"></svg></div>
-          <div class="tn-map-caption"><span>Drag to pan · Pinch to zoom</span><span id="terraNovaMapHint"></span></div>
-          <div class="tn-legend" id="terraNovaLegend"></div>
-          <div class="tn-shared-actions" id="terraNovaSharedActions"></div>
-        </section>
-        <aside class="tn-sidebar"><section class="tn-actions-panel" id="terraNovaActionsPanel" data-tn-explain="actions"><div class="tn-actions-head"><h3 id="terraNovaActionTitle">行动</h3><span class="tn-action-count" id="terraNovaActionCount"></span></div><p class="tn-action-hint" id="terraNovaActionHint"></p><div id="terraNovaCellDetail"></div><div id="terraNovaCategories" class="tn-action-categories"></div><div id="terraNovaConfirmation"></div><div id="terraNovaActions" class="tn-action-grid"></div></section><section class="tn-detail-panel" id="terraNovaFaction" data-tn-explain="faction"></section></aside>
-      </div>
-      <section class="tn-log-panel"><div class="tn-section-top"><h3 data-tn-explain="log">Game Log</h3><span class="tn-kicker">Latest first</span></div><div class="tn-log" id="terraNovaLog"></div></section>
-      <div class="tn-sr-only" id="terraNovaLive" aria-live="polite"></div>`;
+    const required = ["terraNovaZoomOut", "terraNovaZoomIn", "terraNovaResetMap", "terraNovaMapViewport", "terraNovaLegend"];
+    if (!required.every((id) => byId(id))) return;
     byId("terraNovaZoomOut").addEventListener("click", () => zoomMap(mapTransform.scale / 1.3));
     byId("terraNovaZoomIn").addEventListener("click", () => zoomMap(mapTransform.scale * 1.3));
     byId("terraNovaResetMap").addEventListener("click", () => { mapTransform = { x: 0, y: 0, scale: 1 }; updateMapTransform(); });
@@ -195,7 +183,7 @@
     legend.append(bridges);
     installMapGestures();
     panel.addEventListener("click", (event) => {
-      if (event.target.closest("button, [data-tn-cell], [data-tn-tip]")) return;
+      if ((event.detail > 0 && panelPointer?.moved) || event.target.closest("button, summary, [data-tn-cell], [data-tn-tip]")) return;
       clearSelection();
     });
     mapInitialized = true;
@@ -220,7 +208,7 @@
     target.append(el("span", "tn-badge", `第 ${view.round || 1} / 5 轮`));
     target.append(el("span", "tn-badge", PHASES[view.phase] || "行动中"));
     if (view.current_turn && !["round_end", "game_over"].includes(view.phase)) {
-      target.append(el("span", `tn-badge${view.current_turn === myId() ? " tn-turn" : ""}`, view.current_turn === myId() ? "Your turn" : `${playerName(view.current_turn)} 的回合`));
+      target.append(el("span", `tn-badge${view.current_turn === myId() ? " tn-turn" : ""}`, view.current_turn === myId() ? "Your turn" : `${playerName(view.current_turn)} · Playing`));
     }
   }
 
@@ -238,7 +226,7 @@
       const id = rounds[index];
       const def = getDef("round_tiles", id);
       const current = index + 1 === Number(view.round || 1);
-      const item = explanation(el("div", `tn-round${current ? " tn-current" : ""}${index + 1 < view.round ? " tn-complete" : ""}`), "rounds", def.description || def.text || "");
+      const item = explanation(el("div", `tn-round${current ? " tn-current" : ""}${index + 1 < view.round ? " tn-complete" : ""}`), "rounds", `${nameOf(def, "计分片")}：每次获得分数(⭐) ${def.points || def.vp || def.score || 0}。`);
       item.append(el("div", "tn-round-number", `ROUND ${index + 1}`));
       item.append(el("div", "tn-round-label", nameOf(def, "计分片")));
       if (def.points || def.vp || def.score) item.append(el("div", "tn-round-points", `⭐ ${def.points || def.vp || def.score} / 次`));
@@ -264,7 +252,7 @@
       card.style.setProperty("--tn-player-color", item.faction ? factionColor(item.faction) : "#b3bba6");
       const top = el("div", "tn-player-head");
       top.append(el("div", "tn-player-name", `${item.name || id}${id === myId() ? " · You" : ""}`), tip(el("span", "tn-player-score", `⭐ ${item.score ?? 0}`), "分数(⭐)：当前已获得的分数，终局另加资源和区域得分。"));
-      card.append(top, tip(el("div", "tn-player-faction", `${FACTION_ICONS[item.faction] || "🌱"} ${nameOf(faction, item.faction ? "种族" : "尚未选择")}${item.passed ? " · 已退出" : ""}`), item.faction ? `${nameOf(faction)}：${faction.ability || "在原生地形建造。"}` : "选择种族后，原生地形和独特能力会显示在这里。"));
+      card.append(top, tip(el("div", "tn-player-faction", `${FACTION_ICONS[item.faction] || "🌱"} ${nameOf(faction, item.faction ? "种族" : "尚未选择")}${item.passed ? " · 已退出" : ""}`), item.faction ? `${nameOf(faction)}(${FACTION_ICONS[item.faction] || "🌱"})：${faction.ability || "在原生地形建造。"}` : "选择种族后，原生地形和独特能力会显示在这里。"));
       const resources = el("div", "tn-resource-line");
       resources.append(resource("💰", item.coins, "金币(💰)：支付改造、建造、升级、航运及桥梁费用。"), resource("⛵", item.sailing ?? item.shipping, "航运(⛵)：可连续跨越的河流格数。"));
       const power = Array.isArray(item.power) ? { I: item.power[0], II: item.power[1], III: item.power[2] } : item.power || {};
@@ -320,7 +308,7 @@
       const definition = BUILDINGS[cell.building];
       const connections = bridgeSitesForCell(cell.id).flatMap((site) => site.cell_ids.filter((id) => String(id) !== String(cell.id)));
       const cellLabel = `${cell.id} · ${terrain.label}(${terrain.emoji})${cell.owner ? ` · ${playerName(cell.owner)}的${definition ? `${definition.label}(${definition.emoji})` : "建筑"}` : ""}${cell.town_id ? " · 已属城镇(🏘️)" : ""}${connections.length ? ` · 预设桥位(🌉)可连 ${connections.join("、")}` : ""}`;
-      const node = svgEl("g", { class: `tn-cell${legal.has(String(cell.id)) ? " tn-legal" : ""}${selectedCell === String(cell.id) ? " tn-selected" : ""}${previewCells.has(String(cell.id)) ? " tn-preview" : ""}`, "data-tn-cell": cell.id, "data-cell-id": cell.id, "data-tn-explain": "map", "data-tn-explanation": cellLabel, role: "button", tabindex: "0", "aria-label": cellLabel, "aria-pressed": selectedCell === String(cell.id) ? "true" : "false" });
+      const node = svgEl("g", { class: `tn-cell${recentCells.has(String(cell.id)) ? " tn-recent" : ""}${legal.has(String(cell.id)) ? " tn-legal" : ""}${selectedCell === String(cell.id) ? " tn-selected" : ""}${previewCells.has(String(cell.id)) ? " tn-preview" : ""}`, "data-tn-cell": cell.id, "data-cell-id": cell.id, "data-tn-explain": "map", "data-tn-explanation": cellLabel, role: "button", tabindex: "0", "aria-label": cellLabel, "aria-pressed": selectedCell === String(cell.id) ? "true" : "false" });
       const points = Array.from({ length: 6 }, (_, i) => { const angle = (60 * i - 30) * Math.PI / 180; return `${point.x + 23.2 * Math.cos(angle)},${point.y + 23.2 * Math.sin(angle)}`; }).join(" ");
       node.append(svgEl("polygon", { points, class: "tn-hex", fill: terrain.color }));
       const title = svgEl("title"); title.textContent = cellLabel; node.append(title);
@@ -438,7 +426,7 @@
       const a = pointers[0]; const b = pointers[1];
       const center = b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : a;
       const dx = center.x - gestureStart.center.x; const dy = center.y - gestureStart.center.y;
-      if (!gestureMoved && !b && Math.hypot(dx, dy) < 5) return;
+      if (!gestureMoved && !b && !panelPointer?.moved) return;
       gestureMoved = true;
       viewport.classList.add("tn-dragging");
       const ratio = b && gestureStart.distance > 0 ? Math.hypot(a.x - b.x, a.y - b.y) / gestureStart.distance : 1;
@@ -534,31 +522,68 @@
     return parts.join(" · ");
   }
 
-  function showConfirm(option) {
+  function showConfirm(option, area = "actions") {
     stagedAction = option;
+    confirmationArea = area;
+    const fromList = byId("terraNovaActions").contains(document.activeElement);
     renderMap(); renderActions();
-    const target = byId("terraNovaConfirmation");
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const target = byId(confirmationArea === "shared" ? "terraNovaSharedConfirmation" : "terraNovaConfirmation");
+    target.querySelector("button")?.focus({ preventScroll: true });
+    if (!fromList && area !== "shared") target.scrollIntoView({ block: "nearest" });
+  }
+
+  function optionPresentation(option) {
+    const action = option.action || {};
+    const type = actionType(option);
+    const parts = optionLabel(option).split(" · ");
+    let cost = "", reward = "";
+    const resource = parts.at(-1)?.match(/^(💰|🟣) (\d+)$/u);
+    if (resource) {
+      parts.pop();
+      if (type === "pass") reward = resource[0];
+      else cost = resource[0];
+    }
+    let title = parts.join(" · ");
+    if (["exchange_power", "druid_exchange"].includes(type)) {
+      const amount = Number(action.amount || 0);
+      cost = `🟣 ${type === "druid_exchange" ? 3 * amount : amount}`;
+      reward = type === "druid_exchange" ? `⭐ ${2 * amount}` : `💰 ${amount}`;
+      title = type === "druid_exchange" ? "魔力换分" : "魔力换金";
+    }
+    if (type === "build_bridge" && action.source === "paid") cost = "💰 10";
+    if (action.source === "inventor_post") cost = [cost, "🟣 6"].filter(Boolean).join(" · ");
+    if (type === "power_coins") reward = "💰 7";
+    const data = optionDefinition(option);
+    if (data.kind === "town") reward = townDescription(data.def);
+    if (data.kind === "bonus") {
+      const income = data.def.income || {};
+      const recurring = [income.coins ? `💰 ${income.coins}` : "", income.power ? `🟣 ${income.power}` : ""].filter(Boolean).join(" · ");
+      if (recurring) reward = [reward, `收入 ${recurring}`].filter(Boolean).join(" / ");
+    }
+    return { title, cost, reward };
   }
 
   function renderOption(option, disabled = false) {
     const data = optionDefinition(option);
+    const presentation = optionPresentation(option);
     const meta = actionMeta(option);
     const selected = stagedAction && actionKey(stagedAction) === actionKey(option);
-    const card = button("", () => showConfirm(option), `tn-option${selected ? " tn-chosen" : ""}${data.kind === "faction" ? " tn-faction-option" : ""}`, data.kind === "action" ? "actions" : data.kind, `${optionLabel(option)}${descriptionOf(option) ? `：${descriptionOf(option)}` : ""}`);
+    const card = button("", () => ["next_round", "end_turn", "finish_terraform"].includes(actionType(option)) ? send(option) : showConfirm(option), `tn-option${selected ? " tn-chosen" : ""}${data.kind === "faction" ? " tn-faction-option" : ""}`, data.kind === "action" ? "actions" : data.kind, `${data.kind === "faction" ? `${FACTION_ICONS[data.id] || "🌿"} ` : ""}${optionLabel(option)}${descriptionOf(option) ? `：${descriptionOf(option)}` : ""}`);
     card.dataset.tnAction = "option";
     card.dataset.optionIndex = String(options().findIndex((item) => actionKey(item) === actionKey(option)));
     card.dataset.actionType = actionType(option);
     if (data.kind === "faction") card.style.setProperty("--tn-faction-color", factionColor(data.id));
     if (["faction", "town", "bonus"].includes(data.kind)) card.append(el("span", "tn-option-emoji", data.kind === "faction" ? FACTION_ICONS[data.id] || "🌿" : data.kind === "town" ? "🏘️" : "🎁"));
-    card.append(el("span", "tn-option-title", `${data.kind === "action" ? `${meta[0]} ` : ""}${optionLabel(option)}`));
+    if (presentation.cost) card.append(el("span", "tn-option-cost", `Cost · ${presentation.cost}`));
+    card.append(el("span", "tn-option-title", `${data.kind === "action" && !/^[^\p{L}\p{N}\s]/u.test(presentation.title) ? `${meta[0]} ` : ""}${presentation.title}`));
     const description = descriptionOf(option);
     if (description) card.append(el("span", "tn-option-detail", description));
     else if (cellIds(option).length) card.append(el("span", "tn-option-detail", cellIds(option).join(" ↔ ")));
+    if (presentation.reward) card.append(el("span", "tn-option-reward", `Gain · ${presentation.reward}`));
     if (data.kind === "faction") {
       const terrain = TERRAIN[factionTerrain(data.id)] || TERRAIN.forest;
       const used = players().some((item) => item.faction && factionTerrain(item.faction) === factionTerrain(data.id));
-      card.append(el("span", "tn-option-detail", `${terrain.emoji} ${terrain.label} · ${disabled ? used ? "该颜色已使用" : "等待当前玩家" : "原生地形"}`));
+      card.append(el("span", "tn-option-detail", `${terrain.emoji} ${terrain.label} · ${disabled ? used ? "该颜色已使用" : "Waiting for current player" : "原生地形"}`));
     }
     card.disabled = pending || disabled;
     return card;
@@ -570,14 +595,16 @@
     const hint = byId("terraNovaActionHint");
     const target = byId("terraNovaActions");
     const categories = byId("terraNovaCategories");
-    const confirm = byId("terraNovaConfirmation");
+    const confirm = byId(confirmationArea === "shared" ? "terraNovaSharedConfirmation" : "terraNovaConfirmation");
     const cellDetail = byId("terraNovaCellDetail");
-    target.replaceChildren(); categories.replaceChildren(); confirm.replaceChildren(); cellDetail.replaceChildren();
+    const scrollTop = target.scrollTop;
+    target.replaceChildren(); categories.replaceChildren();
+    byId("terraNovaConfirmation").replaceChildren(); byId("terraNovaSharedConfirmation").replaceChildren(); cellDetail.replaceChildren();
     const choices = options();
     const phase = view.phase;
     title.textContent = PHASES[phase] || "当前行动";
     byId("terraNovaActionCount").textContent = pending ? "Sending…" : "";
-    hint.textContent = choices.length ? (phase === "choose_faction" ? "选择你的民族，开拓独特的文明。" : phase === "setup_house" ? "在发光的原生地形上选择初始房屋位置。" : phase === "post_action" ? "可继续兑换魔力，再点击 End Turn。" : phase === "terraform" ? "选择改造目标，完成当前铲子行动。" : phase === "town_choice" ? "城镇已成立，选择一片奖励。" : phase === "choose_bonus" ? "选择本轮为你提供支持的奖励片。" : phase === "round_end" ? "可先兑换魔力；查看局面后点击 Next Round。" : "点击地格或选择行动。") : (phase === "game_over" ? "五轮旅程已结束。" : phase === "round_end" ? "已确认，等待其他玩家。" : `等待 ${playerName(view.current_turn)}。`);
+    hint.textContent = choices.length ? (phase === "choose_faction" ? "选择你的民族，开拓独特的文明。" : phase === "setup_house" ? "在发光的原生地形上选择初始房屋位置。" : phase === "post_action" ? "可继续兑换魔力，再点击 End Turn。" : phase === "terraform" ? "选择改造目标，完成当前铲子行动。" : phase === "town_choice" ? "城镇已成立，选择一片奖励。" : phase === "choose_bonus" ? "选择本轮为你提供支持的奖励片。" : phase === "round_end" ? "可先兑换魔力；查看局面后点击 Next Round。" : "点击地格或选择行动。") : (phase === "game_over" ? "五轮旅程已结束。" : phase === "round_end" ? "Ready · Waiting for other players." : `Waiting for ${playerName(view.current_turn)}.`);
     if (view.pending_choice && view.pending_choice.description) hint.textContent = view.pending_choice.description;
     if (phase === "terraform" && view.pending && view.pending.remaining === 0) hint.textContent = choices.some((option) => actionType(option) === "terraform_build") ? "铲子已用完；可在已改造地格建一屋，或选择完成改造。" : "铲子已用完，选择完成改造继续。";
     if (selectedCategory === "build_bridge") hint.textContent = "选择桥的一端，再确认两端坐标和费用。";
@@ -630,9 +657,12 @@
       });
     }
     if (!shown.length && phase !== "choose_faction") {
-      const message = selectedCell ? "此地格当前没有可执行行动。" : spatial.length ? "✦ 点击地图中发光的地格" : phase === "game_over" ? "🏆 查看上方最终计分" : phase === "round_end" ? "所有玩家确认后继续" : "🌿 等待下一步";
+      const message = selectedCell ? "此地格当前没有可执行行动。" : spatial.length ? "✦ 点击地图中发光的地格" : phase === "game_over" ? "🏆 查看上方最终计分" : phase === "round_end" ? "Waiting for all players to be ready" : "Waiting for the next action";
       target.append(el("div", "tn-empty", message));
     }
+    target.inert = Boolean(stagedAction && confirmationArea === "actions");
+    byId("terraNovaSharedActions").inert = Boolean(stagedAction && confirmationArea === "shared");
+    target.scrollTop = scrollTop;
     byId("terraNovaLive").textContent = `${title.textContent}。${hint.textContent}`;
   }
 
@@ -645,27 +675,32 @@
 
   function renderFaction() {
     const target = byId("terraNovaFaction");
+    const abilitiesOpen = target.querySelector("details")?.open || false;
     target.replaceChildren();
     const me = player(myId());
     const item = me.faction ? me : player(view.current_turn);
     if (!item.faction) {
-      target.append(el("div", "tn-detail-title", "🌱 五种地形，十个民族"), el("div", "tn-ability", "相同颜色的两个种族不能同时登场。"));
+      target.append(explanation(el("div", "tn-detail-title", "🌱 五种地形，十个民族"), "faction", EXPLANATIONS.faction[1]), el("div", "tn-ability", "相同颜色的两个种族不能同时登场。"));
       return;
     }
     const def = factionDef(item.faction);
-    target.append(tip(el("div", "tn-detail-title", `${FACTION_ICONS[item.faction] || "🌿"} ${nameOf(def, item.faction)}`), `${nameOf(def, item.faction)}：原生地形是${(TERRAIN[factionTerrain(item.faction)] || TERRAIN.forest).label}。`));
+    target.append(explanation(tip(el("div", "tn-detail-title", `${FACTION_ICONS[item.faction] || "🌿"} ${nameOf(def, item.faction)}`), `${nameOf(def, item.faction)}(${FACTION_ICONS[item.faction] || "🌿"})：原生地形是${(TERRAIN[factionTerrain(item.faction)] || TERRAIN.forest).label}。`), "faction", `${nameOf(def, item.faction)}(${FACTION_ICONS[item.faction] || "🌿"})：${def.ability || ""}`));
+    const details = el("details", "tn-faction-details");
+    details.open = abilitiesOpen;
+    details.append(el("summary", "", "Abilities"));
+    target.append(details);
     const base = factionAbility(def, "ability") || factionAbility(def, "base_ability") || def.description || def.base || "";
-    if (base) target.append(el("div", "tn-ability", base));
+    if (base) details.append(explanation(el("div", "tn-ability", base), "faction", `${nameOf(def)}(${FACTION_ICONS[item.faction] || "🌿"})：${base}`));
     [["palace_left", "左宫殿"], ["palace_right", "右宫殿"]].forEach(([key, name]) => {
       const text = factionAbility(def, key) || factionAbility(def, `${key}_ability`) || factionAbility(def, key === "palace_left" ? "left_ability" : "right_ability") || factionAbility(def, key === "palace_left" ? "left_palace" : "right_palace");
       if (!text) return;
       const built = item.buildings && item.buildings[key] > 0;
       const row = el("div", `tn-ability${built ? "" : " tn-locked"}`);
       row.append(el("strong", "", `🏰 ${name}${built ? " ✓" : ""} · `), document.createTextNode(text));
-      target.append(row);
+      details.append(explanation(row, "faction", `${name}(🏰)：${text}`));
     });
     const bonus = getDef("bonus_tiles", item.bonus_tile);
-    if (item.bonus_tile) target.append(explanation(el("div", "tn-bonus-line", `🎁 ${nameOf(bonus, item.bonus_tile)} · ${bonusDescription(bonus)}`), "bonus"));
+    if (item.bonus_tile) details.append(explanation(el("div", "tn-bonus-line", `🎁 ${nameOf(bonus, item.bonus_tile)} · ${bonusDescription(bonus)}`), "bonus"));
     if (item.income && Object.keys(item.income).length) {
       const income = item.income;
       target.append(tip(el("div", "tn-bonus-line", `收入 · 💰 ${income.coins || 0} · 🟣 ${income.power || 0}`), "收入：下一轮开始时，由当前建筑、种族和奖励片提供的金币(💰)与魔力(🟣)。"));
@@ -684,7 +719,7 @@
         if (cellIds(offered[0]).length) {
           selectedSource = source; selectedCategory = actionType(offered[0]);
           selectedCell = null; stagedAction = null; renderMap(); renderActions();
-        } else showConfirm(offered[0]);
+        } else showConfirm(offered[0], "shared");
       }, `tn-shared-action${used ? " tn-used" : ""}`, "power", `${name}：支付 ${cost} 魔力(🟣)。${used ? "本轮已被使用，下一轮恢复。" : "每轮限一位玩家使用一次。"}`);
       control.append(el("span", "", name), el("strong", "", used ? "Used ✓" : `🟣 ${cost}`));
       control.disabled = pending || !offered.length;
@@ -722,8 +757,8 @@
     const summary = view.round_summary || {};
     players().forEach((item) => {
       const detail = Array.isArray(summary) ? summary.find((entry) => entry.player_id === item.id || entry.id === item.id) || {} : summary[item.id] || {};
-      const box = el("div", "tn-review-player");
-      box.append(el("strong", "", item.name || item.id), tip(el("div", "", `⭐ ${item.score} · 💰 ${item.coins}`), `分数(⭐) ${item.score}，金币(💰) ${item.coins}。`));
+      const box = el("div", `tn-review-player${item.id === myId() ? " tn-review-you" : ""}`);
+      box.append(el("strong", "", `${item.name || item.id}${item.id === myId() ? " · You" : ""}`), tip(el("div", "", `⭐ ${item.score} · 💰 ${item.coins}`), `分数(⭐) ${item.score}，金币(💰) ${item.coins}。`));
       if (detail.round_points !== undefined || detail.points !== undefined || detail.score_gain !== undefined) box.append(el("div", "", `本轮 +${detail.round_points ?? detail.points ?? detail.score_gain} 分`));
       content.append(box);
     });
@@ -742,6 +777,14 @@
     const target = byId("terraNovaLog");
     target.replaceChildren();
     const entries = list(view.log || view.logs || view.activity || []).slice(-60).reverse();
+    const recent = byId("terraNovaRecentEvent");
+    if (recent) {
+      const latest = entries[0];
+      const message = typeof latest === "string" ? latest : latest?.message || latest?.text || "";
+      const progress = view.pending ? `${playerName(view.pending.owner)} · 铲子(⛏️) ${view.pending.remaining}` : "";
+      recent.textContent = [message, progress].filter(Boolean).join(" · ");
+      recent.hidden = !recent.textContent;
+    }
     if (!entries.length) target.append(el("div", "tn-log-entry", "新世界等待开拓。"));
     entries.forEach((entry) => target.append(el("div", "tn-log-entry", typeof entry === "string" ? entry : entry.message || entry.text || entry.label || "游戏状态已更新")));
   }
@@ -762,7 +805,7 @@
     const trade = def.trading_post_income || [];
     const trading = incomeTrackHTML("trading_post", "贸易站(🏪)收入 · 第 1–4 槽", trade.map((entry) => entry.coins || 0), trade.map((entry) => entry.power || 0), 4);
     const leftIncome = def.palace_left_income || {};
-    return `<div class="tn-help-card" data-tn-help-faction="${escape(id)}"><strong>${escape(FACTION_ICONS[id] || "🌿")} ${escape(nameOf(def, id))} · ${escape((TERRAIN[factionTerrain(id)] || TERRAIN.forest).label)}</strong><p>${escape(factionAbility(def, "ability") || factionAbility(def, "base_ability") || def.description || "")}</p><p>左宫殿(🏰)：${escape(factionAbility(def, "left_ability") || factionAbility(def, "palace_left") || factionAbility(def, "palace_left_ability") || factionAbility(def, "left_palace") || "参见种族面板")}</p><p>右宫殿(🏰)：${escape(factionAbility(def, "right_ability") || factionAbility(def, "palace_right") || factionAbility(def, "palace_right_ability") || factionAbility(def, "right_palace") || "参见种族面板")}</p><p>初始金币(💰) ${escape(def.starting_coins ?? 0)} · 初始房屋(🏠) ${escape(def.starting_houses ?? 0)}。</p><p>固定收入：金币(💰) ${escape(def.income_coins ?? 0)} / 魔力(🟣) ${escape(def.income_power ?? 0)}。左宫殿收入：金币(💰) ${escape(leftIncome.coins ?? 0)} / 魔力(🟣) ${escape(leftIncome.power ?? 0)}。</p>${house}${trading}</div>`;
+    return `<div class="tn-help-card" data-tn-help-faction="${escape(id)}"><strong>${escape(FACTION_ICONS[id] || "🌿")} ${escape(nameOf(def, id))} · ${escape((TERRAIN[factionTerrain(id)] || TERRAIN.forest).label)}(${escape((TERRAIN[factionTerrain(id)] || TERRAIN.forest).emoji)})</strong><p>${escape(factionAbility(def, "ability") || factionAbility(def, "base_ability") || def.description || "")}</p><p>左宫殿(🏰)：${escape(factionAbility(def, "left_ability") || factionAbility(def, "palace_left") || factionAbility(def, "palace_left_ability") || factionAbility(def, "left_palace") || "参见种族面板")}</p><p>右宫殿(🏰)：${escape(factionAbility(def, "right_ability") || factionAbility(def, "palace_right") || factionAbility(def, "palace_right_ability") || factionAbility(def, "right_palace") || "参见种族面板")}</p><p>初始金币(💰) ${escape(def.starting_coins ?? 0)} · 初始房屋(🏠) ${escape(def.starting_houses ?? 0)}。</p><p>固定收入：金币(💰) ${escape(def.income_coins ?? 0)} / 魔力(🟣) ${escape(def.income_power ?? 0)}。左宫殿收入：金币(💰) ${escape(leftIncome.coins ?? 0)} / 魔力(🟣) ${escape(leftIncome.power ?? 0)}。</p>${house}${trading}</div>`;
   }
 
   function helpHTML() {
@@ -772,9 +815,9 @@
     const sailingRewards = list(directory("sailing_points")).slice(1).map((points, index) => `${index + 1} 级得 ${points} 分`).join("，");
     return `<h4>开拓自己的神秘小地</h4><p>2–4 位玩家扮演不同种族，在五轮中改造地形、发展建筑、创立城镇，争取最多分数(⭐)。地图、资源、种族能力与五轮计分片公开可见。</p>
       <h4>标记速查</h4><p>金币(💰)、魔力(🟣)、分数(⭐)、航运(⛵)、铲子(⛏️)、桥梁(🌉)、房屋(🏠)、贸易站(🏪)、左/右宫殿(🏰)、城镇(🏘️)和奖励片(🎁)。魔力的三碗按 I → II → III 排列，只有 III 碗中的魔力可以支付。地图的淡虚线是可供规划的预设桥位，实线表示已建桥梁。</p>
-      <h4>准备与五轮流程</h4><ol><li>依次选择种族；同种颜色只能选一个种族。按提示顺序在原生地形放置初始房屋(🏠)，再逆序选择奖励片(🎁)。</li><li>每轮先获得建筑、奖励片及种族提供的金币(💰)与魔力(🟣)收入。</li><li>从起始玩家开始，尚未退出的玩家依次执行一次主要行动；行动次数不限，直到所有人退出。主要行动后可继续兑换魔力，再点击 End Turn。</li><li>退出时结算奖励片和种族的退出分数，并选择可用的新奖励片。第一个退出的人下轮先手；第五轮仍换片并领取片上累积金币。</li><li>本轮结束后保留局面，可先完成额外兑换；所有玩家点击 Next Round 后进入下一轮，第五轮确认后终局计分。</li></ol>
+      <h4>准备与五轮流程</h4><ol><li>依次选择种族；同种颜色只能选一个种族。初始分数(⭐)为 0、航运(⛵)为 0，每人 8 枚魔力(🟣)按 I / II / III 碗分配为 2 / 2 / 4。随机公开五张计分片，奖励片池为玩家人数加三片。先按顺序、再按逆序各放置一座初始房屋(🏠)；拜日族随后放第三座，再逆序选择奖励片(🎁)。</li><li>每轮先获得建筑、奖励片及种族提供的金币(💰)与魔力(🟣)收入。</li><li>从起始玩家开始，尚未退出的玩家依次执行一次主要行动；行动次数不限，直到所有人退出。主要行动后可继续兑换魔力，再点击 End Turn。</li><li>退出时结算奖励片和种族的退出分数，并选择可用的新奖励片。第一个退出的人下轮先手；第五轮仍换片并领取片上累积金币。</li><li>本轮结束后保留局面，可先完成额外兑换；所有玩家点击 Next Round 后进入下一轮，第五轮确认后终局计分。</li></ol>
       <h4>地形与可达性</h4><p>地形环依次为湖泊(💧) → 森林(🌲) → 荒地(🌋) → 沙漠(☀️) → 沼泽(🌑) → 湖泊(💧)；河流(〰)不能建造。每个种族只在自己的原生地形建造。沿地形环的较短方向改造，通常需要 0、1 或 2 铲子(⛏️)，每铲支付 6 金币(💰)。一次改造行动可以同时建一座房屋(🏠)。免费一铲行动可按每铲 6 金币补足差额；免费两铲行动不得补钱购买更多铲子。两铲可分配给多个合法地格，但其中最多建一座房屋；所有目标都必须在本次行动开始时已经可达，不能用本次新建的房屋延伸范围。可以先改造两格，再选择其中一格付 4 金币建屋，或直接完成改造。</p><p>地块必须与你的建筑直接相邻、通过桥梁(🌉)连接，或通过航运(⛵)可达。航运等级决定可跨越的连续河流格数。邻居优惠、邻接魔力和城镇使用直接相邻／桥梁连接；最终连通区域还可以利用永久航运等级，远航奖励片的临时 +1 范围不计入终局。</p>
-      <h4>主要行动与建筑</h4><p>选择改造/建造、升级、提升航运(⛵)、造桥(🌉)、公共魔力行动(🟣)、种族/奖励片的特殊行动，或退出。界面显示完整合法选择及费用，选中后 Confirm 执行。</p><table class="tn-help-table"><thead><tr><th>建筑</th><th>基础金币费用(💰)</th><th>力量</th></tr></thead><tbody><tr><td>房屋(🏠)</td><td>4；另外支付地形改造费</td><td>1</td></tr><tr><td>贸易站(🏪)</td><td>房屋升级：邻接对手 7，否则 10</td><td>2</td></tr><tr><td>宫殿(🏰)</td><td>贸易站升级：14</td><td>3</td></tr></tbody></table><p>提升一级航运(⛵)花费 8 金币并获得轨道分数(⭐)：${escape(sailingRewards)}；造桥(🌉)花费 10 金币，必须选地图预设的桥位且至少一端有自己的建筑。每人有 8 座房屋、4 座贸易站、左右宫殿各 1 座和 3 座桥。种族能力可能改变费用。旧建筑升级后回到供应，新建筑从供应取出。收入依据当前已建出的建筑计算，升级后相应收入也会改变。</p>
+      <h4>主要行动与建筑</h4><p>选择改造/建造、升级、提升航运(⛵)、造桥(🌉)、公共魔力行动(🟣)、种族/奖励片的特殊行动，或退出。界面显示完整合法选择及费用，选中后 Confirm 执行。End Turn、完成改造与 Next Round 直接执行；退出需选择下一片奖励片后确认。</p><table class="tn-help-table"><thead><tr><th>建筑</th><th>基础金币费用(💰)</th><th>力量</th></tr></thead><tbody><tr><td>房屋(🏠)</td><td>4；另外支付地形改造费</td><td>1</td></tr><tr><td>贸易站(🏪)</td><td>房屋升级：邻接对手 7，否则 10</td><td>2</td></tr><tr><td>宫殿(🏰)</td><td>贸易站升级：14</td><td>3</td></tr></tbody></table><p>提升一级航运(⛵)花费 8 金币并获得轨道分数(⭐)：${escape(sailingRewards)}；造桥(🌉)花费 10 金币，必须选地图预设的桥位且至少一端有自己的建筑。每人有 8 座房屋、4 座贸易站、左右宫殿各 1 座和 3 座桥。种族能力可能改变费用。旧建筑升级后回到供应，新建筑从供应取出。收入依据当前已建出的建筑计算，升级后相应收入也会改变。</p>
       <h4>建筑收入</h4><p>每个种族的房屋、贸易站及左宫殿收入可能不同，下方种族卡分别列出完整金币(💰)与魔力(🟣)收入轨。已建 N 座房屋时累加其房屋轨第 1–N 槽，贸易站同理；再加种族固定收入、已建左宫殿收入和当前奖励片收入。升级后旧建筑回到供应，对应已揭开的收入槽会重新被盖住。右宫殿提供能力，不提供常规收入。</p>
       <h4>魔力(🟣)与金币(💰)</h4><p>魔力分 I、II、III 三碗。获得魔力时先将 I 碗移到 II，I 碗清空后才从 II 移到 III；每移动一枚消耗一点获得的魔力。支付时将 III 碗的魔力返回 I。没有可移动的魔力时，多余获得值丢弃。相邻玩家建造或升级时，你的每座相邻建筑获得 1 点魔力，与建筑力量无关，无需支付分数。III 碗魔力可按 1:1 兑换金币，兑换不占主要行动；可在主要行动前、结算后和轮末确认前兑换。</p><p>公共魔力行动：3 或 4 魔力建桥(🌉)；4 魔力提升航运(⛵)；4 魔力获得 7 金币(💰)；4 魔力获得一铲(⛏️)；6 魔力获得两铲(⛏️)。每个格每轮只能由一位玩家使用一次，个人特殊行动的每轮次数单独记录，下一轮恢复。</p>
       <h4>城镇(🏘️)</h4><p>直接相邻或桥梁相连的建筑群，通常至少四座建筑、总力量至少七即可建立城镇；部分种族可以改变要求。满足条件立即选择一片自己尚未使用的城镇奖励。既有城镇中的建筑不能重复用于成立另一个城镇。城镇奖励可能提供分数(⭐)、金币(💰)、魔力(🟣)或航运(⛵)。</p>
@@ -788,17 +831,15 @@
 
   function ensureModal() {
     if (modal) return;
-    modal = el("div", "tn-modal");
-    modal.id = "terraNovaModal";
-    modal.hidden = true;
-    modal.innerHTML = '<div class="tn-modal-card" role="dialog" aria-modal="true" aria-labelledby="terraNovaModalTitle"><div class="tn-modal-head"><h3 id="terraNovaModalTitle"></h3><button type="button" data-tn-ui="close">Close</button></div><div class="tn-modal-body" id="terraNovaModalBody"></div></div>';
-    modal.querySelector("button").addEventListener("click", closeModal);
+    modal = byId("terraNovaModal");
+    if (!modal) return;
+    modal.querySelector("button[data-tn-ui='close']")?.addEventListener("click", closeModal);
     modal.addEventListener("click", (event) => { if (event.target === modal) closeModal(); });
-    document.body.append(modal);
   }
 
   function openModal(title, content, html = false) {
     ensureModal(); hideTooltip();
+    if (!modal) return;
     modalReturnFocus = document.activeElement;
     byId("terraNovaModalTitle").textContent = title;
     const body = byId("terraNovaModalBody");
@@ -819,14 +860,14 @@
     explainMode = enabled;
     if (panel) panel.classList.toggle("tn-explain-mode", enabled);
     if (explainBtn) { explainBtn.classList.toggle("active", enabled); explainBtn.setAttribute("aria-pressed", enabled ? "true" : "false"); }
-    if (enabled) { hideTooltip(); clearSelection(); }
+    if (enabled) hideTooltip();
   }
 
   function openExplanation(node) {
     const pair = EXPLANATIONS[node.dataset.tnExplain] || EXPLANATIONS.actions;
     const content = node.dataset.tnExplanation;
     setExplainMode(false);
-    openModal(pair[0], content ? `${content}\n\n${pair[1]}` : pair[1]);
+    openModal(pair[0], content ? [content, pair[1]].filter(Boolean).join("\n\n") : pair[1]);
   }
 
   function hideTooltip() {
@@ -836,7 +877,7 @@
 
   function showTooltip(node) {
     if (explainMode || !node.dataset.tnTip) return;
-    if (!tooltip) { tooltip = el("div", "tn-tooltip"); tooltip.setAttribute("role", "tooltip"); document.body.append(tooltip); }
+    if (!tooltip) { tooltip = el("div", "tn-tooltip"); tooltip.id = "terraNovaTooltip"; tooltip.setAttribute("role", "tooltip"); document.body.append(tooltip); }
     tooltip.textContent = node.dataset.tnTip;
     tooltip.hidden = false;
     const rect = node.getBoundingClientRect();
@@ -851,57 +892,109 @@
   function render(payload) {
     const incoming = payload && payload.view ? payload.view : payload;
     if (!incoming || (incoming.game_id && incoming.game_id !== "terra_nova")) return;
+    const previous = new Map((view?.board || []).map((cell) => [String(cell.id), cell]));
+    const changed = (incoming.board || []).filter((cell) => {
+      const before = previous.get(String(cell.id));
+      return before && ["owner", "terrain", "building", "town_id"].some((key) => before[key] !== cell[key]);
+    });
+    if (changed.length) { recentCells.clear(); changed.forEach((cell) => recentCells.add(String(cell.id))); }
     view = incoming; active = true; pending = false;
     window.clearTimeout(pendingTimer);
     mount();
-    if (!panel) return;
+    if (!panel || !mapInitialized) return;
     const signature = (view.board || []).map((cell) => cell.id).join("|");
-    if (signature !== boardSignature) { mapTransform = { x: 0, y: 0, scale: 1 }; boardSignature = signature; }
+    if (signature !== boardSignature) { recentCells.clear(); mapTransform = { x: 0, y: 0, scale: 1 }; boardSignature = signature; }
     if (`${view.phase}:${view.current_turn}:${view.round}` !== previousPhase) { selectedCell = null; selectedCategory = null; selectedSource = null; stagedAction = null; }
     previousPhase = `${view.phase}:${view.current_turn}:${view.round}`;
     if (stagedAction && !options().some((option) => actionKey(option) === actionKey(stagedAction))) stagedAction = null;
     panel.classList.toggle("tn-choice-phase", ["choose_faction", "choose_bonus", "town_choice"].includes(view.phase));
+    const needsAction = options().length > 0 && !view.game_over;
+    panel.classList.toggle("tn-needs-action", needsAction);
+    document.body.classList.toggle("terra-nova-needs-action", needsAction);
     renderStatus(); renderRounds(); renderPlayers(); renderMap(); renderActions(); renderFaction(); renderSharedActions(); renderReview(); renderLog();
   }
 
   function showHeaderActions(visible) {
     active = visible;
     if (header) { header.style.display = visible ? "flex" : "none"; header.classList.toggle("hidden", !visible); }
-    if (!visible) { setExplainMode(false); closeModal(); hideTooltip(); clearSelection(); }
+    if (!visible) { setExplainMode(false); closeModal(); hideTooltip(); clearSelection(); document.body.classList.remove("terra-nova-needs-action"); }
   }
 
   function clear() {
     view = null; pending = false; selectedCell = null; selectedCategory = null; selectedSource = null; stagedAction = null;
-    pointerState.clear(); gestureStart = null; boardSignature = ""; previousPhase = "";
+    pointerState.clear(); gestureStart = null; boardSignature = ""; previousPhase = ""; recentCells.clear(); panelPointer = null;
     mapTransform = { x: 0, y: 0, scale: 1 };
     window.clearTimeout(pendingTimer); setExplainMode(false); closeModal(); hideTooltip();
-    if (panel && mapInitialized) ["terraNovaPlayers", "terraNovaActions", "terraNovaMap", "terraNovaReview", "terraNovaLog"].forEach((id) => { const node = byId(id); if (node) node.replaceChildren(); });
+    document.body.classList.remove("terra-nova-needs-action");
+    panel?.classList.remove("tn-needs-action", "tn-choice-phase");
+    byId("terraNovaMapViewport")?.classList.remove("tn-dragging");
+    if (panel && mapInitialized) {
+      ["terraNovaStatus", "terraNovaRounds", "terraNovaPlayers", "terraNovaActions", "terraNovaMap", "terraNovaReview", "terraNovaLog", "terraNovaRecentEvent", "terraNovaFaction", "terraNovaSharedActions", "terraNovaConfirmation", "terraNovaSharedConfirmation", "terraNovaCellDetail", "terraNovaCategories", "terraNovaActionHint", "terraNovaActionCount"].forEach((id) => byId(id)?.replaceChildren());
+      byId("terraNovaActions").inert = false;
+      byId("terraNovaSharedActions").inert = false;
+    }
   }
 
   if (helpBtn) helpBtn.addEventListener("click", () => { setExplainMode(false); openModal("Help · 神秘小地", helpHTML(), true); });
   if (explainBtn) explainBtn.addEventListener("click", () => setExplainMode(!explainMode));
 
+  function explanationTarget(target) {
+    // A control must opt in itself; a parent's explanation must never turn an
+    // unrelated control (or the confirmation backdrop) into an Explain target.
+    const control = target.closest("button, summary, input, select, a, [role='button']");
+    if (control) return control.matches("[data-tn-explain]") ? control : null;
+    return target.closest("[data-tn-explain]");
+  }
+
+  function explainExempt(target) {
+    return target.closest("#terraNovaHelpBtn, #terraNovaExplainBtn, #terraNovaModal");
+  }
+
   document.addEventListener("pointerdown", (event) => {
-    if (!active || !explainMode || !panel || !panel.contains(event.target)) return;
+    if (!active) return;
+    explanationClickUntil = 0;
+    panelPointer = {
+      id: event.pointerId, x: event.clientX, y: event.clientY,
+      moved: false, explain: explainMode && !explainExempt(event.target),
+      target: event.target, scrollX: window.scrollX, scrollY: window.scrollY,
+    };
+  }, true);
+  document.addEventListener("pointermove", (event) => {
+    if (!active || !panelPointer || panelPointer.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - panelPointer.x, event.clientY - panelPointer.y) > 8) panelPointer.moved = true;
+  }, true);
+  document.addEventListener("pointercancel", () => { if (panelPointer) panelPointer.moved = true; }, true);
+  document.addEventListener("pointerup", (event) => {
+    if (!active || !panelPointer || panelPointer.id !== event.pointerId) return;
+    const pointer = panelPointer;
+    pointer.moved ||= Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 8 ||
+      Math.abs(window.scrollY - pointer.scrollY) > 8 || Math.abs(window.scrollX - pointer.scrollX) > 8;
+    if (!pointer.explain) return;
     event.preventDefault(); event.stopImmediatePropagation();
-    let node = event.target.closest("[data-tn-explain]");
-    // Browser hit testing respects clipped scroll containers and disabled buttons.
-    const visibleHit = document.elementFromPoint(event.clientX, event.clientY);
-    const hit = visibleHit && visibleHit.closest("button[data-tn-explain]");
-    if (hit && panel.contains(hit)) node = hit;
-    suppressClickUntil = Date.now() + 600;
-    if (node) openExplanation(node);
+    explanationClickUntil = Date.now() + 600;
+    const hit = document.elementFromPoint(event.clientX, event.clientY);
+    if (!pointer.moved && hit && panel?.contains(hit)) {
+      const node = explanationTarget(hit);
+      if (node) openExplanation(node);
+    }
   }, true);
 
   document.addEventListener("click", (event) => {
-    if (!active || !panel || !panel.contains(event.target)) return;
-    if ((Date.now() < suppressClickUntil && (event.target.closest("#terraNovaMapViewport") || (modal && !modal.hidden))) || explainMode) {
+    if (!active || explainExempt(event.target)) return;
+    if (explainMode || Date.now() < explanationClickUntil) {
       event.preventDefault(); event.stopImmediatePropagation();
-      if (explainMode) { const node = event.target.closest("[data-tn-explain]"); if (node) openExplanation(node); }
+      if (explainMode && (event.detail === 0 || !panelPointer?.moved) && panel?.contains(event.target)) {
+        const node = explanationTarget(event.target);
+        if (node) openExplanation(node);
+      }
       return;
     }
+    if (!panel?.contains(event.target)) return;
+    if ((event.detail > 0 && panelPointer?.moved) || (Date.now() < suppressClickUntil && event.target.closest("#terraNovaMapViewport"))) {
+      event.preventDefault(); event.stopImmediatePropagation(); return;
+    }
     const node = event.target.closest("[data-tn-tip]");
-    if (node && !node.closest("button")) { event.stopPropagation(); showTooltip(node); }
+    if (node && !node.closest("button, summary, [role='button']")) { event.stopPropagation(); showTooltip(node); }
   }, true);
 
   document.addEventListener("pointerover", (event) => {
@@ -920,6 +1013,12 @@
   });
   document.addEventListener("keydown", (event) => {
     if (!active) return;
+    if (explainMode && ["Enter", " "].includes(event.key) && !explainExempt(event.target)) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      const node = panel?.contains(event.target) && explanationTarget(event.target);
+      if (node) openExplanation(node);
+      return;
+    }
     if (event.key === "Escape") {
       event.preventDefault();
       if (modal && !modal.hidden) closeModal();
@@ -933,9 +1032,19 @@
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }
-  });
+  }, true);
 
   window.renderTerraNovaGameState = render;
   window.showTerraNovaHeaderActions = showHeaderActions;
   window.clearTerraNovaState = clear;
+  const initialize = () => {
+    mount();
+    if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "terra_nova") {
+      showHeaderActions(true);
+      if (currentRoomState.status !== "lobby" && typeof lastGameStatePayload !== "undefined" &&
+          lastGameStatePayload?.room_id === currentRoomState.room_id && lastGameStatePayload?.view?.game_id === "terra_nova") render(lastGameStatePayload);
+    }
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
+  else initialize();
 })();

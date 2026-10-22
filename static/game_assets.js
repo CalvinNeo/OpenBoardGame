@@ -78,9 +78,9 @@ const GAME_ASSETS = {
     "header": "showMaskmenHeaderActions"
   },
   "startups": {
-    "scripts": ["/static/games/startups.js?v=2"],
-    "styles": ["/static/games/startups.css?v=2"],
-    "markup": "/static/games/startups.html?v=2",
+    "scripts": ["/static/games/startups.js?v=3"],
+    "styles": ["/static/games/startups.css?v=3"],
+    "markup": "/static/games/startups.html?v=3",
     "panel": "startupsPanel",
     "header": "showStartupsHeaderActions"
   },
@@ -939,11 +939,13 @@ const GAME_ASSETS = {
   },
   "terra_nova": {
     "scripts": [
-      "/static/games/terra_nova.js?v=1"
+      "/static/games/terra_nova_rules.js?v=1",
+      "/static/games/terra_nova.js?v=2"
     ],
     "styles": [
-      "/static/terra_nova.css?v=1"
+      "/static/games/terra_nova.css?v=2"
     ],
+    "markup": "/static/games/terra_nova.html?v=1",
     "panel": "terraNovaPanel",
     "header": "showTerraNovaHeaderActions"
   },

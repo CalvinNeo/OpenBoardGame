@@ -301,7 +301,7 @@ function renderGameState(data) {
     return;
   }
   if (gameType === "terra_nova") {
-    renderTerraNovaGameState(data);
+    if (typeof renderTerraNovaGameState === "function") renderTerraNovaGameState(data);
     return;
   }
   if (gameType === "spirit_island") {

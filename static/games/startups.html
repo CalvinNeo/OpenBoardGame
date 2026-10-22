@@ -15,14 +15,18 @@
     <div class="startups-main">
       <section class="startups-market-box" aria-label="Market">
         <div class="startups-section-heading"><div><span class="startups-eyebrow">01 / TAKE A SHARE</span><h3>Market</h3></div><button id="startupsDraw" class="startups-primary" type="button" data-su-explain="draw" disabled>Draw · 💰 0</button></div>
-        <div id="startupsMarket" class="startups-market"></div>
-        <div id="startupsMarketSelection" class="startups-selection hidden"><strong id="startupsMarketLabel"></strong><div class="startups-actions"><button id="startupsTake" class="startups-primary" type="button" data-su-explain="take">Take Card</button><button id="startupsMarketCancel" type="button" data-su-explain="cancel">Cancel</button></div></div>
+        <div class="startups-card-area">
+          <div id="startupsMarket" class="startups-market"></div>
+          <div id="startupsMarketSelection" class="startups-selection hidden" role="group" aria-labelledby="startupsMarketLabel"><strong id="startupsMarketLabel"></strong><div class="startups-actions"><button id="startupsTake" class="startups-primary" type="button" data-su-explain="take">Take Card</button><button id="startupsMarketCancel" type="button" data-su-explain="cancel">Cancel</button></div></div>
+        </div>
         <p id="startupsMarketHint" class="startups-hint">The market starts empty.</p>
       </section>
       <section class="startups-hand-box" aria-label="Your hand">
         <div class="startups-section-heading"><div><span class="startups-eyebrow">02 / MAKE YOUR MOVE</span><h3 id="startupsHandTitle">Your hand</h3></div><span id="startupsCapital" class="startups-capital" tabindex="0" data-su-explain="capital" data-su-tip="Capital（💰，资本）：支付抽牌费用；结算前每枚价值 1。">💰 —</span></div>
-        <div id="startupsHand" class="startups-hand"></div>
-        <div id="startupsHandSelection" class="startups-selection hidden"><strong id="startupsHandLabel"></strong><div class="startups-actions"><button id="startupsInvest" class="startups-primary" type="button" data-su-explain="invest">Invest</button><button id="startupsDiscard" type="button" data-su-explain="discard">To Market</button><button id="startupsHandCancel" type="button" data-su-explain="cancel">Cancel</button></div></div>
+        <div class="startups-card-area">
+          <div id="startupsHand" class="startups-hand"></div>
+          <div id="startupsHandSelection" class="startups-selection hidden" role="group" aria-labelledby="startupsHandLabel"><strong id="startupsHandLabel"></strong><div class="startups-actions"><button id="startupsInvest" class="startups-primary" type="button" data-su-explain="invest">Invest</button><button id="startupsDiscard" type="button" data-su-explain="discard">To Market</button><button id="startupsHandCancel" type="button" data-su-explain="cancel">Cancel</button></div></div>
+        </div>
         <p id="startupsHandHint" class="startups-hint">Your shares will appear here.</p>
       </section>
     </div>
