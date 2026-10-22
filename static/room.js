@@ -129,6 +129,10 @@ const gameReconnectBtn = document.getElementById("gameReconnectBtn");
 const ROOM_AUTH_KEY = "openboardgame:room_auth";
 const NAME_STORAGE_KEY = "openboardgame:name";
 const LAST_ROOM_ID_KEY = "openboardgame:last_room_id";
+const GAME_SORT_KEY = "openboardgame:game_sort";
+const RECENT_GAMES_KEY = "openboardgame:recent_games";
+const RECENT_GAMES_LIMIT = 50;
+const GAME_SORT_KEYS = new Set(["alpha", "recent", "dev_order", "difficulty_asc", "difficulty_desc"]);
 
 // Private browsing or a storage quota must not interrupt a live room session.
 function readRoomStorage(key) {
@@ -174,6 +178,34 @@ function clearStoredName() {
   playerName = "";
   updateRoomControlsName();
   removeRoomStorage(NAME_STORAGE_KEY);
+}
+
+function loadStoredGameSort() {
+  const value = readRoomStorage(GAME_SORT_KEY);
+  return GAME_SORT_KEYS.has(value) ? value : "alpha";
+}
+
+function saveStoredGameSort(sortKey) {
+  if (!GAME_SORT_KEYS.has(sortKey)) return;
+  writeRoomStorage(GAME_SORT_KEY, sortKey);
+}
+
+// Most recent first; a game appears at most once.
+function loadRecentGames() {
+  try {
+    const parsed = JSON.parse(readRoomStorage(RECENT_GAMES_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string" && id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordRecentGame(gameId) {
+  if (typeof gameId !== "string" || !gameId) return;
+  const recent = loadRecentGames();
+  if (recent[0] === gameId) return;
+  const next = [gameId, ...recent.filter((id) => id !== gameId)].slice(0, RECENT_GAMES_LIMIT);
+  writeRoomStorage(RECENT_GAMES_KEY, JSON.stringify(next));
 }
 
 function updateRoomControlsName() {
@@ -901,6 +933,22 @@ function getGameDevOrder(game) {
 
 function sortGames(games, sortKey) {
   const ordered = [...games];
+  if (sortKey === "recent") {
+    const recentRank = new Map(loadRecentGames().map((id, index) => [id, index]));
+    ordered.sort((a, b) => {
+      const aRank = recentRank.get(a.game_id);
+      const bRank = recentRank.get(b.game_id);
+      if (aRank !== undefined && bRank !== undefined) {
+        return aRank - bRank;
+      } else if (aRank !== undefined) {
+        return -1;
+      } else if (bRank !== undefined) {
+        return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return ordered;
+  }
   if (sortKey === "dev_order") {
     ordered.sort((a, b) => {
       const aOrder = getGameDevOrder(a);
@@ -1035,6 +1083,7 @@ function createRoomForGame(gameId, config = null) {
   if (config && typeof config === "object") {
     payload.config = config;
   }
+  recordRecentGame(gameId);
   sendRoomRequest("room:create", payload, "Creating room...", false);
 }
 
@@ -1254,7 +1303,7 @@ async function openCreateRoomModal() {
     playerCountFilter.value = "";
   }
   if (gameSortSelect) {
-    gameSortSelect.value = "alpha";
+    gameSortSelect.value = loadStoredGameSort();
   }
   selectedGameTagIds.clear();
   if (gameTypeFilterDetails) {
@@ -2547,6 +2596,9 @@ socket.on("room:session_replaced", () => {
 
 socket.on("room:state", (state) => {
   renderRoomState(state);
+  if (state && state.room_id) {
+    recordRecentGame(state.game_type);
+  }
   if (pendingRoomRequest?.event === "room:start" && state.status === "in_game") {
     finishRoomRequest();
     setRoomFeedback();
@@ -2863,6 +2915,7 @@ if (playerCountFilter) {
 
 if (gameSortSelect) {
   gameSortSelect.addEventListener("change", () => {
+    saveStoredGameSort(gameSortSelect.value);
     applyGameFilters();
   });
 }

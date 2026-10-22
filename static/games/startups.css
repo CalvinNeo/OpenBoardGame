@@ -114,14 +114,14 @@ body.startups-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn {
   #startupsStatus { flex-basis: 100%; font-size: 12px; }
   .startups-counters { font-size: 11px; gap: 5px; }
   .startups-counters > span { padding: 2px 5px; }
-  .startups-companies { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; margin: 6px 0; }
+  .startups-companies { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 6px 0; }
   .startups-company { padding: 4px 2px; }
   .startups-company > strong { display: none; }
   .startups-company-top { justify-content: center; gap: 1px; font-size: 10px; }
   .startups-company-top > span:first-child { font-size: 16px; }
-  .startups-marker-name { margin-top: 3px; text-align: center; }
-  .startups-marker-owner { display: none; }
-  .startups-marker-seat { display: inline; }
+  .startups-marker-name { margin-top: 3px; text-align: center; font-size: 10px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+  .startups-marker-owner { display: inline; }
+  .startups-marker-seat { display: none; }
   .startups-layout, .startups-main { gap: 7px; }
   .startups-market-box, .startups-hand-box, .startups-investors, .startups-review { padding: 7px; border-radius: 9px; }
   .startups-panel h3 { font-size: 14px; }
@@ -130,10 +130,10 @@ body.startups-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn {
   .startups-capital { font-size: 14px !important; padding: 4px 7px; }
   .startups-hand { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
   .startups-hand[data-count="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .startups-market { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; max-height: 170px; min-height: 0; scrollbar-gutter: auto; }
+  .startups-market { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; max-height: 128px; min-height: 0; scrollbar-gutter: auto; }
   .startups-empty { min-height: 40px; padding: 8px; font-size: 11px; }
   .startups-empty > span { display: none; }
-  .startups-panel .startups-card { min-height: 100px; gap: 3px; padding: 5px 3px; }
+  .startups-panel .startups-card { min-height: 82px; gap: 2px; padding: 4px 3px; }
   .startups-card-top { font-size: 11px; }
   .startups-card-kind { display: none; }
   .startups-card-icon { font-size: 24px; }

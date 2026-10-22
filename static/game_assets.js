@@ -79,7 +79,7 @@ const GAME_ASSETS = {
   },
   "startups": {
     "scripts": ["/static/games/startups.js?v=3"],
-    "styles": ["/static/games/startups.css?v=3"],
+    "styles": ["/static/games/startups.css?v=4"],
     "markup": "/static/games/startups.html?v=3",
     "panel": "startupsPanel",
     "header": "showStartupsHeaderActions"
