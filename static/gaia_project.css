@@ -71,7 +71,7 @@
 .gaia-tabs button { border-color:transparent; background:transparent; color:var(--gaia-muted); padding:7px 12px; flex:1 1 auto; }
 .gaia-tabs button.active { background:#264242; color:#a6f2d5; }
 .gaia-tab-content { min-width:0; padding:12px; }
-.gaia-map-tools { display:flex; align-items:center; gap:5px; }
+.gaia-map-tools { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
 .gaia-map-tools button { padding:4px 10px; min-height:30px; }
 .gaia-map-tools span { font-size:10px; margin-left:auto; color:var(--gaia-muted); }
 .gaia-map-wrap { width:100%; min-width:0; overflow:hidden; border-radius:10px; margin-top:7px; background:radial-gradient(ellipse at 45% 42%,#192c45,#0a1524 75%); touch-action:none; overscroll-behavior:contain; }

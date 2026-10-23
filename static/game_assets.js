@@ -1043,10 +1043,10 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v5"
+      "/static/games/gaia_project.js?v=gaia_v6"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v4"
+      "/static/gaia_project.css?v=gaia_v5"
     ],
     "panel": "gaiaProjectPanel",
     "header": "showGaiaProjectHeaderActions"

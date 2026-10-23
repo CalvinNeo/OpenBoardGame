@@ -8,6 +8,7 @@
   let selectedHex = null;
   let selectedOption = null;
   let activeTab = 'galaxy';
+  let legendOpen = false;
   let explainMode = false;
   let suppressClickUntil = 0;
   let federationMode = false;
@@ -281,7 +282,7 @@
       const center = positions.find(p => p.h.id === `${sector}-9`);
       return `<text x="${center.x}" y="${center.y + 4}" class="gaia-sector">${esc(sector.replace('outlined', ''))}</text>`;
     }).join('');
-    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}<span>${federationMode ? '选择建筑与卫星连接格' : '点击星球 · 拖动平移'}</span></div><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div><div class="gaia-legend">${['mine', 'trading_station', 'lab', 'institute', 'academy_knowledge', 'station'].map(kind => hint('structure', `${building(kind, '#9ecbff', 'legend')}${esc(defs().buildings[kind].name)}`, defs().buildings[kind].name, 'gaia-legend-structure')).join('')}</div>`;
+    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}${button(`Legend ${legendOpen ? '▾' : '▸'}`, 'toggle-legend', `aria-expanded="${legendOpen}" aria-controls="gaiaMapLegend"`)}<span>${federationMode ? '选择建筑与卫星连接格' : '点击星球 · 拖动平移'}</span></div><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div><div id="gaiaMapLegend"${legendOpen ? '' : ' hidden'}><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div><div class="gaia-legend">${['mine', 'trading_station', 'lab', 'institute', 'academy_knowledge', 'station'].map(kind => hint('structure', `${building(kind, '#9ecbff', 'legend')}${esc(defs().buildings[kind].name)}`, defs().buildings[kind].name, 'gaia-legend-structure')).join('')}</div></div>`;
   }
   function renderResearch() {
     const descriptions = {
@@ -496,6 +497,13 @@
         if (action.type === 'gaiaform') payment(action);
         dispatch(action);
       } else if (command === 'cancel') cancelSelection();
+      else if (command === 'toggle-legend') {
+        legendOpen = !legendOpen;
+        hideHint();
+        panel.querySelector('#gaiaMapLegend').hidden = !legendOpen;
+        commandEl.setAttribute('aria-expanded', String(legendOpen));
+        commandEl.textContent = `Legend ${legendOpen ? '▾' : '▸'}`;
+      }
       else if (command === 'tab') { activeTab = commandEl.dataset.gaiaTab; render(); }
       else if (command === 'federation') { federationMode = true; selectedOption = null; selectedHex = null; activeTab = 'galaxy'; render(); }
       else if (command === 'form-federation') { dispatch(payment({type:'federation', hexes:[...federationHexes], token:panel.querySelector('input[name="gaiaFederationToken"]:checked')?.value})); }
@@ -583,13 +591,14 @@
   };
   window.clearGaiaProjectState = () => {
     finishMapDrag(); hideHint(); hintGesture = null; consumedHintTap = null;
+    legendOpen = false;
     view=null; selectedHex=null; selectedOption=null; viewKey=''; federationMode=false; federationHexes.clear(); activeTab='galaxy'; mapZoom=1; mapCenter=null; setExplain(false); closeModal(); if (panel) panel.innerHTML='';
   };
   window.renderGaiaProjectGameState = data => {
     const next = data.view;
     const key = `${data.room_id}|${data.state_version ?? ''}|${next.round}|${next.phase}|${next.current_turn}|${JSON.stringify(next.pending)}|${next.log.length}|${next.main_done}`;
     if (key !== viewKey) { selectedOption=null; federationMode=false; federationHexes.clear(); }
-    if (viewKey && viewKey.split('|')[0] !== String(data.room_id)) { hideHint(); selectedHex=null; activeTab='galaxy'; mapZoom=1; mapCenter=null; }
+    if (viewKey && viewKey.split('|')[0] !== String(data.room_id)) { hideHint(); selectedHex=null; activeTab='galaxy'; legendOpen=false; mapZoom=1; mapCenter=null; }
     viewKey=key; view=next;
     if (currentGameType !== 'gaia_project') { currentGameType='gaia_project'; setGamePanelVisibility('gaia_project'); }
     if (view.phase==='faction' && activeTab==='galaxy') activeTab='players';

@@ -320,9 +320,10 @@ h1 {
 }
 
 #roomPanel .auto-save-row {
-  gap: 6px;
-  margin: 0 0 4px;
+  gap: 5px;
+  margin: 0;
   font-size: 12px;
+  flex-wrap: nowrap;
 }
 
 #roomPanel .auto-save-row input[type="checkbox"] {
@@ -336,6 +337,7 @@ h1 {
   font-size: 12px;
   font-weight: 600;
   color: #475569;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -392,18 +394,23 @@ h1 {
 .game-configs {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 8px 0;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.game-configs:empty {
+  display: none;
 }
 
 .game-config-card {
   border: 1px solid #e5e7eb;
   background: #f8fafc;
   border-radius: 6px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  font-size: 12px;
 }
 
 .game-config-title {
@@ -414,6 +421,55 @@ h1 {
 
 .game-config-card .row {
   margin-bottom: 0;
+  gap: 4px 8px;
+}
+
+.game-config-card label {
+  font-size: 12px;
+}
+
+.game-config-card select,
+.game-config-card input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]) {
+  padding: 2px 6px;
+  font-size: 12px;
+  min-height: 24px;
+}
+
+.game-config-card .hint,
+.game-config-card p.hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.game-config-card > label,
+.game-config-card > p {
+  margin: 0;
+}
+
+.game-config-card .toggle-row .hint {
+  flex-basis: 100%;
+}
+
+.game-config-card .row > label + input[type="number"] {
+  flex: 1 1 56px;
+  width: auto;
+  max-width: 72px;
+}
+
+.game-config-card button[id$="HelpBtn"] {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+}
+
+.game-config-card .guandan-timing-rows {
+  gap: 4px;
+}
+
+.game-config-card .guandan-time-row {
+  gap: 4px 6px;
 }
 
 .row.actions button {
@@ -2371,8 +2427,40 @@ button.splendor-card {
     border-color: rgba(180, 200, 224, 0.4);
   }
 
+  #roomControlsPanel .game-configs {
+    gap: 4px;
+    margin: 4px 0;
+  }
+
   #roomControlsPanel .game-config-card {
-    padding: 6px;
+    padding: 5px 6px;
+    gap: 3px;
+  }
+
+  #roomControlsPanel .game-config-card .row {
+    margin-bottom: 0;
+    gap: 3px 6px;
+  }
+
+  #roomControlsPanel .game-config-card label {
+    font-size: 12px;
+  }
+
+  #roomControlsPanel .game-config-card select,
+  #roomControlsPanel .game-config-card input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]) {
+    min-height: 28px;
+    padding: 3px 6px;
+    font-size: 13px;
+  }
+
+  #roomControlsPanel .game-config-card button {
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+
+  #roomControlsPanel .game-config-card .toggle-row .hint {
+    flex: 1 1 100%;
   }
 
   #roomControlsPanel .panel-header {

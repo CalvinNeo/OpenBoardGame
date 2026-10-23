@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v125" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v127" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -595,6 +595,12 @@
             <section class="room-controls-section" id="roomPanel">
               <div class="panel-header">
                 <h3>Room</h3>
+                <div class="panel-header-actions">
+                  <div class="row hidden toggle-row auto-save-row" id="autoSaveRow">
+                    <input id="autoSaveToggle" type="checkbox" />
+                    <label for="autoSaveToggle" title="Save after each game state change.">Auto Save</label>
+                  </div>
+                </div>
               </div>
               <div class="panel-body">
                 <div class="row room-summary">
@@ -836,6 +842,8 @@
                     <div class="row">
                       <label for="texasSmallBlindInput">Small Blind</label>
                       <input id="texasSmallBlindInput" type="number" min="1" step="1" value="5" />
+                    </div>
+                    <div class="row">
                       <label for="texasBigBlindInput">Big Blind</label>
                       <input id="texasBigBlindInput" type="number" min="1" step="1" value="10" />
                     </div>
@@ -1084,10 +1092,6 @@
                     </div>
                     <div class="hint" data-kronologic-copy="config_hint">原创兼容案件；不包含商业版案件。</div>
                   </div>
-                </div>
-                <div class="row hidden toggle-row auto-save-row" id="autoSaveRow">
-                  <input id="autoSaveToggle" type="checkbox" />
-                  <label for="autoSaveToggle" title="Save after each game state change.">Auto Save</label>
                 </div>
                 <div id="roomActionStatus" class="room-feedback" role="status" aria-live="polite"></div>
                 <div class="row actions room-actions">
@@ -1653,7 +1657,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=124" defer></script>
+  <script src="/static/game_assets.js?v=125" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
