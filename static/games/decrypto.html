@@ -36,16 +36,11 @@
               </div>
 
               <div id="decryptoTeams" data-decrypto-explain="teams"></div>
+              <div class="decrypto-review-actions">
+                <button id="decryptoReviewBtn" class="hidden" type="button" aria-haspopup="dialog" aria-controls="decryptoSummary">Last Round Review</button>
+              </div>
               <div class="decrypto-workspace">
               <div class="decrypto-main">
-              <details id="decryptoSummary" class="decrypto-summary hidden" data-decrypto-explain="results">
-                <summary id="decryptoSummaryTitle">Last Round</summary>
-                <div id="decryptoSummaryBody" class="decrypto-summary-body"></div>
-                <div id="decryptoNextRoundArea" class="decrypto-next-round hidden">
-                  <div id="decryptoReadyStatus" role="status"></div>
-                  <button id="decryptoNextRoundBtn" type="button">Next Round</button>
-                </div>
-              </details>
               <div id="decryptoEncryptionArea">
                 <h3>Submit Clues</h3>
                 <div class="row actions decrypto-clue-row">
@@ -156,27 +151,31 @@
                 </section>
               </div>
               </div>
-              <aside id="decryptoReferenceHome">
-                <div id="decryptoReference">
-                  <details id="decryptoHistoryDetails" class="decrypto-reference-section" open data-decrypto-explain="history">
-                    <summary>History <span class="decrypto-section-note">Colors identify clue authors</span></summary>
+              <aside id="decryptoReference">
+                  <section id="decryptoHistorySection" class="decrypto-reference-section" data-decrypto-explain="history">
+                    <h3>History <span class="decrypto-section-note">Colors identify clue authors</span></h3>
                     <div id="decryptoHistory"></div>
-                  </details>
+                  </section>
                   <details class="decrypto-reference-section" id="decryptoCurrentCluesDetails">
                     <summary>Current Clues</summary>
                     <div id="decryptoCurrentClues"></div>
                   </details>
-                </div>
               </aside>
               </div>
-              <button id="decryptoHistoryBtn" class="decrypto-history-dock" type="button" aria-controls="decryptoHistoryModal" aria-expanded="false">History</button>
-              <section id="decryptoHistoryModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="decryptoHistoryTitle" aria-hidden="true">
-                <div class="modal-content decrypto-history-drawer">
+              <section id="decryptoSummary" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="decryptoSummaryTitle" aria-hidden="true">
+                <div class="modal-content decrypto-review-modal">
                   <div class="modal-header">
-                    <h2 id="decryptoHistoryTitle">Clue Reference</h2>
-                    <button id="decryptoHistoryCloseBtn" type="button">Close</button>
+                    <h2 id="decryptoSummaryTitle">Last Round Review</h2>
+                    <div class="decrypto-review-header-actions">
+                      <button id="decryptoReviewExplainBtn" class="decrypto-header-btn" type="button" aria-pressed="false">Explain</button>
+                      <button id="decryptoReviewCloseBtn" type="button">Close</button>
+                    </div>
                   </div>
-                  <div id="decryptoHistoryDockHost" class="modal-body"></div>
+                  <div id="decryptoSummaryBody" class="modal-body decrypto-summary-body" data-decrypto-explain="results"></div>
+                  <div id="decryptoNextRoundArea" class="decrypto-next-round hidden">
+                    <div id="decryptoReadyStatus" role="status"></div>
+                    <button id="decryptoNextRoundBtn" type="button">Next Round</button>
+                  </div>
                 </div>
               </section>
               <div id="decryptoTooltip" class="decrypto-tooltip hidden" role="tooltip"></div>

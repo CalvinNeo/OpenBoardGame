@@ -761,7 +761,7 @@ class DecryptoGame:
             team = state["teams"][team_id]
             history = _public_history(state, team_id)
             keywords = None
-            if state.get("game_over") or viewer_team == team_id:
+            if viewer_team == team_id:
                 keywords = list(team["keywords"])
             data = state["round_data"].get(team_id, {})
             show_clues = state.get("phase") != "encryption"

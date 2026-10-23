@@ -83,9 +83,9 @@ const decryptoInterceptClueLabels = [
 ];
 const decryptoSubmitInterceptBtn = document.getElementById("decryptoSubmitInterceptBtn");
 const decryptoNextRoundBtn = document.getElementById("decryptoNextRoundBtn");
-const decryptoHistoryBtn = document.getElementById("decryptoHistoryBtn");
-const decryptoHistoryModal = document.getElementById("decryptoHistoryModal");
-const decryptoHistoryCloseBtn = document.getElementById("decryptoHistoryCloseBtn");
+const decryptoReviewBtn = document.getElementById("decryptoReviewBtn");
+const decryptoReviewCloseBtn = document.getElementById("decryptoReviewCloseBtn");
+const decryptoReviewExplainBtn = document.getElementById("decryptoReviewExplainBtn");
 const decryptoTooltip = document.getElementById("decryptoTooltip");
 const DECRYPTO_PLAYER_COLORS = [
   { name: "Blue", background: "#dbeafe", foreground: "#1e3a8a" },
@@ -114,7 +114,7 @@ const DECRYPTO_HELP_TEXT = `
     <li><strong>Encryption</strong>: the encryptor sees a 3-digit code (numbers 1-4) and writes 3 clues for their team.</li>
     <li><strong>Guessing</strong>: teammates submit a decrypt guess for the code.</li>
     <li><strong>Intercept</strong>: from round 2 onward, the opposing team may guess your code.</li>
-    <li><strong>Round results</strong>: both teams review their own decrypt and their intercept of the other team. Every player chooses Next Round before encryptors rotate. Bots confirm automatically.</li>
+    <li><strong>Round results</strong>: a review dialog opens automatically with each team's decrypt and intercept results. Every player chooses Next Round before encryptors rotate. Bots confirm automatically.</li>
   </ol>
 
   <h3>Scoring</h3>
@@ -130,9 +130,10 @@ const DECRYPTO_HELP_TEXT = `
   <ul>
     <li>History groups revealed clues under keyword numbers 1–4. Hover over a colored clue, or tap it on a phone, to see its author and round.</li>
     <li>Intercept choices show a number and a short preview of that number's latest public clues, limited to 10 characters. Opponent keywords stay secret.</li>
-    <li>On a phone, open the right-side History tab while deciding. Close it or press Esc to return to your unchanged selections.</li>
+    <li>History stays on the game board while writing clues or guessing, including on phones. Long histories scroll inside their own panel.</li>
     <li>Last Round is grouped by the team making the guess: Decrypt targets its own clues; Intercept targets the opposing team's clues.</li>
-    <li>Correct order and Submitted order show the same three positions. Your team's keywords are shown with their clues; an opponent's unrevealed keywords are replaced with public clues.</li>
+    <li>Correct order and Submitted order show the same three positions. Only your team's keywords can appear. Opponent keywords are never shown, including in the final review; only their public clues and numbers appear.</li>
+    <li>Close or Esc dismisses the review without confirming. Use Last Round Review to reopen it. The round stays paused until all players confirm.</li>
     <li>Correct (✓, green) and Wrong (✗, red) mark each submitted position and the overall result. Intercepts (🎯) reach 2 to win; Miscommunications (⚠) reach 2 to lose.</li>
   </ul>
 `;
@@ -154,9 +155,9 @@ const DECRYPTO_BUTTON_EXPLANATIONS = {
     name: "Next Round",
     description: "Confirm that you have reviewed the round results. The next round begins only after every player confirms; bots confirm automatically.",
   },
-  decryptoHistoryBtn: {
-    name: "History",
-    description: "Open the clue reference drawer. Colors match the players who submitted the clues. Closing it preserves your current guesses.",
+  decryptoReviewBtn: {
+    name: "Last Round Review",
+    description: "Reopen the latest round's results. Each team's own decrypt and its intercept of the opponent are listed separately. Opponent keywords are never displayed. Closing the dialog does not confirm readiness.",
   },
 };
 
@@ -245,6 +246,10 @@ function getDecryptoHistoryEntries(team) {
 function trimDecryptoPreview(text) {
   const characters = Array.from(text.trim().replace(/\s+/g, " "));
   return characters.length > 10 ? `${characters.slice(0, 9).join("")}…` : characters.join("");
+}
+
+function getDecryptoTeamKeywords(view, teamId) {
+  return teamId && teamId === view.team_id ? view.teams?.[teamId]?.keywords : null;
 }
 
 function updateDecryptoPackRow() {
@@ -468,9 +473,9 @@ function resetDecryptoInputs() {
 
 function clearDecryptoState() {
   currentDecryptoView = null;
-  setDecryptoHistoryOpen(false);
+  setDecryptoReviewOpen(false);
   hideDecryptoTooltip();
-  decryptoSummary.open = false;
+  decryptoReviewBtn.classList.add("hidden");
   if (decryptoPhaseLabel) {
     decryptoPhaseLabel.textContent = "-";
   }
@@ -977,10 +982,11 @@ function renderDecryptoTeams(view) {
     } | Intercept: ${interceptStatus}`;
     wrapper.appendChild(statusLine);
 
-    if (team.keywords && team.keywords.length) {
+    const keywords = getDecryptoTeamKeywords(view, teamId);
+    if (keywords?.length) {
       const keywordRow = document.createElement("div");
       keywordRow.className = "decrypto-keywords";
-      team.keywords.forEach((word, index) => {
+      keywords.forEach((word, index) => {
         const item = document.createElement("div");
         item.className = "decrypto-keyword";
         item.textContent = `${index + 1}. ${word}`;
@@ -1059,11 +1065,12 @@ function renderDecryptoHistory(view) {
     table.setAttribute("aria-label", `${formatDecryptoTeamLabel(teamId)} clue history by keyword`);
     const head = document.createElement("thead");
     const headRow = document.createElement("tr");
+    const keywords = getDecryptoTeamKeywords(view, teamId);
     for (let index = 1; index <= 4; index += 1) {
       const th = document.createElement("th");
       th.scope = "col";
       th.textContent = `${index}`;
-      setDecryptoTip(th, `Keyword ${index}${team.keywords?.[index - 1] ? `: ${team.keywords[index - 1]}` : " · Hidden"}`);
+      setDecryptoTip(th, `Keyword ${index}${keywords?.[index - 1] ? `: ${keywords[index - 1]}` : " · Hidden"}`);
       headRow.appendChild(th);
     }
     head.appendChild(headRow);
@@ -1118,12 +1125,12 @@ function createDecryptoSequence(view, targetId, info, sequence, submitted = fals
     digit.textContent = `${number}${submitted ? (correct ? " ✓" : " ✗") : ""}`;
     item.appendChild(digit);
     const words = document.createElement("div");
-    const keyword = team?.keywords?.[number - 1];
+    const keyword = getDecryptoTeamKeywords(view, targetId)?.[number - 1];
     const clueIndex = info.code?.indexOf(number) ?? -1;
     const clue = clueIndex >= 0 ? info.clues?.[clueIndex] : history[number]?.at(-1)?.clue;
     const word = document.createElement("span");
     word.className = "decrypto-sequence-word";
-    word.textContent = keyword || clue || "No revealed clue";
+    word.textContent = keyword || (clue ? `Clue: ${clue}` : "No revealed clue");
     words.appendChild(word);
     if (keyword && clue) {
       const hint = document.createElement("span");
@@ -1141,16 +1148,17 @@ function createDecryptoSequence(view, targetId, info, sequence, submitted = fals
   return wrapper;
 }
 
-function createDecryptoResultRow(view, summary, actorId, intercept) {
+function createDecryptoResultGroup(view, summary, actorId, intercept) {
   const targetId = intercept ? getDecryptoOpponentTeam(actorId) : actorId;
   const info = summary.teams[targetId];
   const guess = intercept ? info.intercept_guess : info.decrypt_guess;
   const correct = intercept ? info.intercept_correct : info.decrypt_correct;
   const available = !intercept || summary.round > 1;
+  const group = document.createElement("tbody");
+  group.dataset.decryptoAction = intercept ? "intercept" : "decrypt";
+  group.dataset.decryptoActorTeam = actorId;
+  group.dataset.decryptoTargetTeam = targetId;
   const row = document.createElement("tr");
-  row.dataset.decryptoAction = intercept ? "intercept" : "decrypt";
-  row.dataset.decryptoActorTeam = actorId;
-  row.dataset.decryptoTargetTeam = targetId;
   const description = document.createElement("th");
   description.scope = "row";
   const heading = document.createElement("strong");
@@ -1179,17 +1187,29 @@ function createDecryptoResultRow(view, summary, actorId, intercept) {
     description.appendChild(score);
   }
   row.appendChild(description);
-  const actualCell = document.createElement("td");
-  const guessCell = document.createElement("td");
+  group.appendChild(row);
   if (available) {
-    actualCell.appendChild(createDecryptoSequence(view, targetId, info, info.code));
-    guessCell.appendChild(createDecryptoSequence(view, targetId, info, guess, true));
+    const actualItems = [...createDecryptoSequence(view, targetId, info, info.code).children];
+    const guessItems = [...createDecryptoSequence(view, targetId, info, guess, true).children];
+    description.rowSpan = actualItems.length;
+    actualItems.forEach((actual, index) => {
+      const positionRow = index === 0 ? row : document.createElement("tr");
+      const actualCell = document.createElement("td");
+      const guessCell = document.createElement("td");
+      actualCell.appendChild(actual);
+      if (guessItems[index]) guessCell.appendChild(guessItems[index]);
+      else guessCell.textContent = "—";
+      positionRow.append(actualCell, guessCell);
+      if (index > 0) group.appendChild(positionRow);
+    });
   } else {
+    const actualCell = document.createElement("td");
+    const guessCell = document.createElement("td");
     actualCell.textContent = "—";
     guessCell.textContent = "—";
+    row.append(actualCell, guessCell);
   }
-  row.append(actualCell, guessCell);
-  return row;
+  return group;
 }
 
 function renderDecryptoSummary(view) {
@@ -1198,12 +1218,14 @@ function renderDecryptoSummary(view) {
   }
   const summary = view.last_round_summary;
   if (!summary || !summary.teams) {
-    decryptoSummary.classList.add("hidden");
+    setDecryptoReviewOpen(false);
+    decryptoReviewBtn.classList.add("hidden");
     decryptoSummaryBody.textContent = "-";
     return;
   }
-  decryptoSummary.classList.remove("hidden");
-  document.getElementById("decryptoSummaryTitle").textContent = `Last Round · ${summary.round}`;
+  decryptoReviewBtn.classList.remove("hidden");
+  document.getElementById("decryptoSummaryTitle").textContent = `Last Round Review · ${summary.round}`;
+  decryptoReviewBtn.textContent = `Last Round Review · ${summary.round}`;
   const scrollTop = decryptoSummaryBody.scrollTop;
   decryptoSummaryBody.replaceChildren();
   ["white", "black"].forEach((teamId) => {
@@ -1225,10 +1247,8 @@ function renderDecryptoSummary(view) {
     });
     head.appendChild(headings);
     table.appendChild(head);
-    const body = document.createElement("tbody");
-    body.appendChild(createDecryptoResultRow(view, summary, teamId, false));
-    body.appendChild(createDecryptoResultRow(view, summary, teamId, true));
-    table.appendChild(body);
+    table.appendChild(createDecryptoResultGroup(view, summary, teamId, false));
+    table.appendChild(createDecryptoResultGroup(view, summary, teamId, true));
     decryptoSummaryBody.appendChild(table);
   });
   decryptoSummaryBody.scrollTop = scrollTop;
@@ -1291,10 +1311,7 @@ function renderDecryptoGameState(data) {
     decryptoCurrentCodeLabel.textContent = view.current_code ? formatDecryptoCode(view.current_code) : "-";
     document.getElementById("decryptoCurrentCodeRow").classList.toggle("hidden", !view.current_code || view.phase !== "encryption");
   }
-  const teamKeywords =
-    view.team_id && view.teams && view.teams[view.team_id]
-      ? view.teams[view.team_id].keywords
-      : null;
+  const teamKeywords = getDecryptoTeamKeywords(view, view.team_id);
   const opponentId = getDecryptoOpponentTeam(view.team_id);
   const opponent = view.teams?.[opponentId];
   updateDecryptoClueCodeLabels(view.current_code, teamKeywords);
@@ -1323,10 +1340,6 @@ function renderDecryptoGameState(data) {
     });
     updateDecryptoGuessSelectOptions(selects);
   });
-  if (!previousView || previousView.phase !== view.phase || roundChanged || newGameStarted) {
-    decryptoSummary.open = view.phase === "round_end" || !!view.game_over;
-    if (view.phase === "round_end" || view.game_over) setDecryptoHistoryOpen(false);
-  }
   if (previousView?.last_round_summary?.round !== view.last_round_summary?.round) {
     decryptoSummaryBody.scrollTop = 0;
   }
@@ -1335,6 +1348,9 @@ function renderDecryptoGameState(data) {
   renderDecryptoCurrentClues(view);
   renderDecryptoHistory(view);
   renderDecryptoSummary(view);
+  if (!previousView || previousView.phase !== view.phase || roundChanged || newGameStarted) {
+    setDecryptoReviewOpen(view.phase === "round_end" || !!view.game_over);
+  }
 
   logGameEvents(data);
   updateDecryptoActionButtons();
@@ -1431,7 +1447,7 @@ function setDecryptoModalVisible(modal, visible) {
   hideDecryptoTooltip();
   if (visible) decryptoModalFocus.set(modal, document.activeElement);
   setModalVisible(modal, visible);
-  document.body.classList.toggle("decrypto-dialog-open", [decryptoHelpModal, decryptoExplainModal, decryptoHistoryModal].some((item) => !item.classList.contains("hidden")));
+  document.body.classList.toggle("decrypto-dialog-open", [decryptoHelpModal, decryptoExplainModal, decryptoSummary].some((item) => !item.classList.contains("hidden")));
   if (visible) {
     modal.querySelector("button")?.focus({ preventScroll: true });
   } else {
@@ -1441,15 +1457,10 @@ function setDecryptoModalVisible(modal, visible) {
   }
 }
 
-function setDecryptoHistoryOpen(open) {
-  const reference = document.getElementById("decryptoReference");
-  const host = document.getElementById(open ? "decryptoHistoryDockHost" : "decryptoReferenceHome");
-  if (!reference || !host) return;
-  const scrollTop = decryptoHistory.scrollTop;
-  host.appendChild(reference);
-  decryptoHistory.scrollTop = scrollTop;
-  decryptoHistoryBtn.setAttribute("aria-expanded", String(open));
-  setDecryptoModalVisible(decryptoHistoryModal, open);
+function setDecryptoReviewOpen(open) {
+  if (open && !currentDecryptoView?.last_round_summary) return;
+  if (!open) exitDecryptoExplainMode();
+  setDecryptoModalVisible(decryptoSummary, open);
 }
 
 function hideDecryptoTooltip() {
@@ -1480,15 +1491,12 @@ function showDecryptoHeaderActions(show) {
     decryptoHeaderActions.style.display = show ? "flex" : "none";
   }
   document.body.classList.toggle("decrypto-active", show);
-  const title = document.querySelector(".game-panel-title h2");
-  if (title && show) title.textContent = "Decrypto";
-  if (title && !show && title.textContent === "Decrypto") title.textContent = "Game";
   if (!show) {
     document.body.classList.remove("decrypto-needs-action");
     exitDecryptoExplainMode();
     closeDecryptoHelpModal();
     closeDecryptoExplainModal();
-    setDecryptoHistoryOpen(false);
+    setDecryptoReviewOpen(false);
     hideDecryptoTooltip();
   }
 }
@@ -1521,9 +1529,10 @@ function updateDecryptoExplainModeClasses(enabled) {
 }
 
 function findDecryptoButtonAtPoint(clientX, clientY) {
+  const modal = [decryptoExplainModal, decryptoHelpModal, decryptoSummary].find((item) => !item.classList.contains("hidden"));
   for (const buttonId of Object.keys(DECRYPTO_BUTTON_EXPLANATIONS)) {
     const btn = document.getElementById(buttonId);
-    if (!btn) continue;
+    if (!btn || (modal && !modal.contains(btn))) continue;
     const rect = btn.getBoundingClientRect();
     if (rect.width && rect.height && clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
       return buttonId;
@@ -1541,6 +1550,8 @@ function toggleDecryptoExplainMode() {
     decryptoExplainBtn.classList.toggle("active", decryptoExplainMode);
     decryptoExplainBtn.setAttribute("aria-pressed", String(decryptoExplainMode));
   }
+  decryptoReviewExplainBtn.classList.toggle("active", decryptoExplainMode);
+  decryptoReviewExplainBtn.setAttribute("aria-pressed", String(decryptoExplainMode));
 }
 
 function exitDecryptoExplainMode() {
@@ -1554,6 +1565,8 @@ function exitDecryptoExplainMode() {
     decryptoExplainBtn.classList.remove("active");
     decryptoExplainBtn.setAttribute("aria-pressed", "false");
   }
+  decryptoReviewExplainBtn.classList.remove("active");
+  decryptoReviewExplainBtn.setAttribute("aria-pressed", "false");
 }
 
 function showDecryptoButtonExplanation(buttonId) {
@@ -1597,7 +1610,7 @@ if (decryptoExplainModalCloseBtn) {
 }
 
 function isDecryptoExplainExempt(target) {
-  return [decryptoHelpBtn, decryptoExplainBtn, decryptoHelpModalCloseBtn, decryptoExplainModalCloseBtn, decryptoHistoryCloseBtn].includes(target.closest("button"));
+  return [decryptoHelpBtn, decryptoExplainBtn, decryptoReviewExplainBtn, decryptoHelpModalCloseBtn, decryptoExplainModalCloseBtn, decryptoReviewCloseBtn].includes(target.closest("button"));
 }
 
 function getDecryptoExplainKey(event) {
@@ -1623,12 +1636,18 @@ document.addEventListener("pointerup", (event) => {
   decryptoExplainPress = null;
   if (!decryptoExplainMode || !press || press.pointerId !== event.pointerId) return;
   decryptoSuppressExplainClick = true;
-  if (!press.key || Math.hypot(event.clientX - press.clientX, event.clientY - press.clientY) > 10) return;
+  if (!press.key || press.moved || Math.hypot(event.clientX - press.clientX, event.clientY - press.clientY) > 10) return;
   if (getDecryptoExplainKey(event) !== press.key) return;
   event.preventDefault();
   event.stopPropagation();
   showDecryptoButtonExplanation(press.key);
   exitDecryptoExplainMode();
+}, true);
+
+document.addEventListener("pointermove", (event) => {
+  [decryptoExplainPress, decryptoTipPress].forEach((press) => {
+    if (press && Math.hypot(event.clientX - press.clientX, event.clientY - press.clientY) > 10) press.moved = true;
+  });
 }, true);
 
 document.addEventListener("pointercancel", () => {
@@ -1648,7 +1667,9 @@ document.addEventListener("click", (event) => {
   if (!target) return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  const key = DECRYPTO_BUTTON_EXPLANATIONS[target.id] ? target.id : target.closest("[data-decrypto-explain]")?.dataset.decryptoExplain;
+  const key = target.matches("button")
+    ? (DECRYPTO_BUTTON_EXPLANATIONS[target.id] ? target.id : null)
+    : target.closest("[data-decrypto-explain]")?.dataset.decryptoExplain;
   if (key && event.detail === 0) {
     showDecryptoButtonExplanation(key);
     exitDecryptoExplainMode();
@@ -1657,11 +1678,11 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (currentGameType !== "decrypto") return;
-  const modal = [decryptoExplainModal, decryptoHelpModal, decryptoHistoryModal].find((item) => !item.classList.contains("hidden"));
+  const modal = [decryptoExplainModal, decryptoHelpModal, decryptoSummary].find((item) => !item.classList.contains("hidden"));
   if (event.key === "Escape") {
     exitDecryptoExplainMode();
     hideDecryptoTooltip();
-    if (modal === decryptoHistoryModal) setDecryptoHistoryOpen(false);
+    if (modal === decryptoSummary) setDecryptoReviewOpen(false);
     else if (modal) setDecryptoModalVisible(modal, false);
     if (modal) event.preventDefault();
   } else if (event.key === "Tab" && modal) {
@@ -1678,12 +1699,13 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-decryptoHistoryBtn.addEventListener("click", () => setDecryptoHistoryOpen(true));
-decryptoHistoryCloseBtn.addEventListener("click", () => setDecryptoHistoryOpen(false));
-[decryptoHelpModal, decryptoExplainModal, decryptoHistoryModal].forEach((modal) => {
+decryptoReviewBtn.addEventListener("click", () => setDecryptoReviewOpen(true));
+decryptoReviewCloseBtn.addEventListener("click", () => setDecryptoReviewOpen(false));
+decryptoReviewExplainBtn.addEventListener("click", toggleDecryptoExplainMode);
+[decryptoHelpModal, decryptoExplainModal, decryptoSummary].forEach((modal) => {
   modal.addEventListener("click", (event) => {
     if (event.target !== modal) return;
-    if (modal === decryptoHistoryModal) setDecryptoHistoryOpen(false);
+    if (modal === decryptoSummary) setDecryptoReviewOpen(false);
     else setDecryptoModalVisible(modal, false);
   });
 });
@@ -1703,7 +1725,7 @@ decryptoPanel.addEventListener("click", (event) => {
   const press = decryptoTipPress;
   decryptoTipPress = null;
   const target = event.target.closest("[data-decrypto-tip]");
-  if (target && (event.detail === 0 || (press && Math.hypot(event.clientX - press.clientX, event.clientY - press.clientY) <= 10))) showDecryptoTooltip(target);
+  if (target && (event.detail === 0 || (press && !press.moved && Math.hypot(event.clientX - press.clientX, event.clientY - press.clientY) <= 10))) showDecryptoTooltip(target);
   else hideDecryptoTooltip();
 });
 decryptoPanel.addEventListener("focusin", (event) => {
@@ -1713,5 +1735,4 @@ decryptoPanel.addEventListener("focusout", hideDecryptoTooltip);
 window.addEventListener("scroll", hideDecryptoTooltip, true);
 window.addEventListener("resize", () => {
   hideDecryptoTooltip();
-  if (window.innerWidth > 720) setDecryptoHistoryOpen(false);
 });

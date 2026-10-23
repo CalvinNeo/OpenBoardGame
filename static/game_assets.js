@@ -185,12 +185,13 @@ const GAME_ASSETS = {
   },
   "for_sale": {
     "scripts": [
-      "/static/games/for_sale.js?v=2"
+      "/static/games/for_sale.js?v=3"
     ],
     "styles": [
-      "/static/for_sale.css?v=2"
+      "/static/for_sale.css?v=3"
     ],
     "panel": "forSalePanel",
+    "panelTitle": "🏡 地产达人",
     "header": "showForSaleHeaderActions"
   },
   "blokus": {
@@ -205,13 +206,14 @@ const GAME_ASSETS = {
   },
   "carcassonne": {
     "scripts": [
-      "/static/games/carcassonne.js?v=app_v6"
+      "/static/games/carcassonne.js?v=app_v7"
     ],
     "styles": [],
     "panel": "carcassonnePanel",
+    "panelTitle": "🏰 卡卡颂",
     "header": "showCarcassonneHeaderActions",
     "markup": "/static/games/carcassonne.html?v=1",
-    "styleFragments": "/static/games/carcassonne.css?v=1"
+    "styleFragments": "/static/games/carcassonne.css?v=2"
   },
   "azul": {
     "scripts": [
@@ -304,9 +306,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "centurySpiceRoadPanel",
+    "panelTitle": "🌶️ 香料之路",
     "header": "showCenturyHeaderActions",
     "markup": "/static/games/century_spice_road.html?v=2",
-    "styleFragments": "/static/games/century_spice_road.css?v=2"
+    "styleFragments": "/static/games/century_spice_road.css?v=3"
   },
   "splendor": {
     "scripts": [
@@ -322,9 +325,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "pokemonSplendorPanel",
+    "panelTitle": "💎 璀璨宝石：宝可梦",
     "header": "showPokemonSplendorHeaderActions",
     "markup": "/static/games/splendor_pokemon.html?v=1",
-    "styleFragments": "/static/games/splendor_pokemon.css?v=1"
+    "styleFragments": "/static/games/splendor_pokemon.css?v=2"
   },
   "project_l": {
     "scripts": [
@@ -338,13 +342,14 @@ const GAME_ASSETS = {
   },
   "decrypto": {
     "scripts": [
-      "/static/games/decrypto.js?v=app_v5"
+      "/static/games/decrypto.js?v=app_v6"
     ],
     "styles": [],
     "panel": "decryptoPanel",
+    "panelTitle": "Decrypto",
     "header": "showDecryptoHeaderActions",
-    "markup": "/static/games/decrypto.html?v=2",
-    "styleFragments": "/static/games/decrypto.css?v=2"
+    "markup": "/static/games/decrypto.html?v=3",
+    "styleFragments": "/static/games/decrypto.css?v=3"
   },
   "wavelength": {
     "scripts": [
@@ -510,9 +515,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "guandanPanel",
+    "panelTitle": "🃏 掼蛋",
     "header": "showGuandanHeaderActions",
     "markup": "/static/games/guandan.html?v=3",
-    "styleFragments": "/static/games/guandan.css?v=5"
+    "styleFragments": "/static/games/guandan.css?v=6"
   },
   "cabo": {
     "scripts": [
@@ -606,9 +612,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "inAGrovePanel",
+    "panelTitle": "🎋 竹林之中",
     "header": "showInAGroveHeaderActions",
-    "markup": "/static/games/in_a_grove.html?v=1",
-    "styleFragments": "/static/games/in_a_grove.css?v=1"
+    "markup": "/static/games/in_a_grove.html?v=3",
+    "styleFragments": "/static/games/in_a_grove.css?v=3"
   },
   "citadels": {
     "scripts": [
@@ -750,9 +757,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "wanderingTowersPanel",
+    "panelTitle": "🧙 巫师飞塔",
     "header": "showWanderingTowersHeaderActions",
     "markup": "/static/games/wandering_towers.html?v=1",
-    "styleFragments": "/static/games/wandering_towers.css?v=1"
+    "styleFragments": "/static/games/wandering_towers.css?v=2"
   },
   "incan_gold": {
     "scripts": [
@@ -808,9 +816,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "poisonPanel",
+    "panelTitle": "☠️ 毒药",
     "header": "showPoisonHeaderActions",
-    "markup": "/static/games/poison.html?v=1",
-    "styleFragments": "/static/games/poison.css?v=2"
+    "markup": "/static/games/poison.html?v=2",
+    "styleFragments": "/static/games/poison.css?v=3"
   },
   "bohnanza_dice": {
     "scripts": [
@@ -943,10 +952,11 @@ const GAME_ASSETS = {
       "/static/games/terra_nova.js?v=2"
     ],
     "styles": [
-      "/static/games/terra_nova.css?v=3"
+      "/static/games/terra_nova.css?v=4"
     ],
-    "markup": "/static/games/terra_nova.html?v=1",
+    "markup": "/static/games/terra_nova.html?v=2",
     "panel": "terraNovaPanel",
+    "panelTitle": "🌄 神秘小地",
     "header": "showTerraNovaHeaderActions"
   },
   "bomb_busters": {

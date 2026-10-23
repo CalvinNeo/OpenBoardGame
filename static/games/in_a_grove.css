@@ -26,8 +26,6 @@
   margin: 0;
 }
 
-.in-a-grove-topbar,
-.in-a-grove-brand,
 .in-a-grove-section-heading,
 .in-a-grove-scene-meta,
 .in-a-grove-player-heading {
@@ -38,48 +36,11 @@
   min-width: 0;
 }
 
-.in-a-grove-topbar {
-  justify-content: flex-end;
-  margin-bottom: 14px;
-}
-
-.in-a-grove-brand {
-  justify-content: flex-start;
-}
-
-.in-a-grove-brand-mark {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  flex-shrink: 0;
-  border: 1px solid #cdd9c5;
-  border-radius: 14px;
-  background: #e2e9d6;
-  font-size: 28px;
-}
-
-.in-a-grove-brand h3 {
-  font-family: Georgia, serif;
-  font-size: clamp(22px, 3vw, 29px);
-  font-weight: 600;
-  letter-spacing: -0.04em;
-}
-
-.in-a-grove-brand p {
-  padding-top: 4px;
-  color: var(--grove-muted);
-  font-size: 12px;
-}
-
 .in-a-grove-round-badge {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 7px 14px;
-  border: 1px solid var(--grove-line);
-  border-radius: 12px;
+  gap: 5px;
+  margin-left: auto;
   color: var(--grove-muted);
   font-size: 11px;
   white-space: nowrap;
@@ -87,7 +48,7 @@
 
 .in-a-grove-round-badge strong {
   color: var(--grove-ink);
-  font-size: 22px;
+  font-size: 14px;
 }
 
 .in-a-grove-status,
@@ -107,6 +68,10 @@
 .in-a-grove-status.is-your-turn {
   background: #d9eacb;
   box-shadow: inset 3px 0 var(--grove-green);
+}
+
+.in-a-grove-status {
+  flex-wrap: wrap;
 }
 
 .in-a-grove-phase {
@@ -640,12 +605,6 @@ body.in-a-grove-explain-mode #inAGrovePanel button.has-explanation {
 }
 
 @container (max-width: 400px) {
-  .in-a-grove-topbar { margin-bottom: 10px; }
-  .in-a-grove-brand { gap: 8px; }
-  .in-a-grove-brand-mark { width: 34px; height: 40px; font-size: 24px; }
-  .in-a-grove-brand h3 { font-size: 22px; }
-  .in-a-grove-brand p { font-size: 10px; }
-  .in-a-grove-round-badge { padding: 5px 9px; }
   .in-a-grove-status { padding: 8px; gap: 8px; font-size: 12px; }
   .in-a-grove-evidence,
   .in-a-grove-scoreboard,

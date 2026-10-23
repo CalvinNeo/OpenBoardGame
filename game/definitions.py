@@ -2794,17 +2794,14 @@ DECRYPTO_ACTION_SCHEMA = {
             "required": ["type", "guess"],
             "additionalProperties": False,
         },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
     ],
 }
-
-DECRYPTO_ACTION_SCHEMA["oneOf"].append(
-    {
-        "type": "object",
-        "properties": {"type": {"const": "next_round"}},
-        "required": ["type"],
-        "additionalProperties": False,
-    }
-)
 
 DECRYPTO_CONFIG_SCHEMA = {
     "type": "object",
