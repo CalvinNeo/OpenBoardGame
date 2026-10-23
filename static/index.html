@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v127" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v128" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -595,7 +595,11 @@
             <section class="room-controls-section" id="roomPanel">
               <div class="panel-header">
                 <h3>Room</h3>
-                <div class="panel-header-actions">
+                <div class="panel-header-actions room-header-actions">
+                  <button id="readyBtn" class="room-icon-btn" type="button" title="Toggle Ready" aria-label="Toggle Ready" disabled>✅</button>
+                  <button id="startBtn" class="room-icon-btn room-icon-btn-primary" type="button" title="Start Game" aria-label="Start Game" disabled>▶️</button>
+                  <button id="reopenBtn" class="room-icon-btn hidden" type="button" title="Reopen" aria-label="Reopen" aria-hidden="true" disabled>↩️</button>
+                  <button id="leaveBtn" class="room-icon-btn room-icon-btn-danger" type="button" title="Leave Room" aria-label="Leave Room" disabled>🚪</button>
                   <div class="row hidden toggle-row auto-save-row" id="autoSaveRow">
                     <input id="autoSaveToggle" type="checkbox" />
                     <label for="autoSaveToggle" title="Save after each game state change.">Auto Save</label>
@@ -1094,13 +1098,6 @@
                   </div>
                 </div>
                 <div id="roomActionStatus" class="room-feedback" role="status" aria-live="polite"></div>
-                <div class="row actions room-actions">
-                  <button id="readyBtn" type="button" title="Toggle Ready" disabled>Ready</button>
-                  <button id="startBtn" type="button" disabled>Start Game</button>
-                  <button id="reopenBtn" type="button" class="hidden" aria-hidden="true" disabled>Reopen</button>
-                  <button id="downloadMemoriesBtn" type="button" title="Download Memories" aria-label="Download Memories" disabled>Memories</button>
-                  <button id="leaveBtn" type="button" title="Leave Room" disabled>Leave</button>
-                </div>
                 <div class="room-players-header">
                   <h4>Players</h4>
                   <div class="room-player-actions" role="group" aria-label="Bot controls">
@@ -1693,6 +1690,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v57" defer></script>
-  <script src="/static/room.js?v=app_v81" defer></script>
+  <script src="/static/room.js?v=app_v82" defer></script>
 </body>
 </html>

@@ -345,21 +345,45 @@ h1 {
   margin: 4px 0;
 }
 
-#roomPanel .room-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+#roomPanel .room-header-actions {
+  display: flex;
+  align-items: center;
   gap: 4px;
-  margin-bottom: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
-#roomPanel .room-actions > button {
-  min-width: 0;
+#roomPanel .room-header-actions .room-icon-btn {
+  flex: 0 0 28px;
+  width: 28px;
   min-height: 28px;
-  margin: 0;
-  padding: 3px 4px;
-  font-size: 12px;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+#roomPanel .room-header-actions .auto-save-row {
+  margin-left: 4px;
+}
+
+#roomControlsPanel .room-icon-btn-danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+#roomControlsPanel .room-icon-btn-danger:hover:not(:disabled) {
+  border-color: #ef4444;
+  background: #fee2e2;
+}
+
+#roomControlsPanel .room-icon-btn-active {
+  border-color: #86efac;
+  background: #dcfce7;
+  box-shadow: inset 0 0 0 1px #4ade80;
+}
+
+#roomControlsPanel .room-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 #roomPanel .room-players-header {
@@ -918,12 +942,19 @@ body.log-open {
 }
 
 .room-item-actions .room-reconnect-btn,
+.room-item-actions .room-memories-btn,
 .room-item-actions .room-delete-btn {
   flex: 0 0 28px;
   width: 28px;
   padding: 3px;
   font-size: 14px;
   line-height: 1;
+}
+
+.room-item-actions .room-memories-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 .room-item-actions .room-delete-btn {

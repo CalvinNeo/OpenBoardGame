@@ -581,6 +581,13 @@ def _seat_list_payload(room: Room) -> List[Dict]:
     ]
 
 
+def _game_supports_memories(game_def) -> bool:
+    return bool(game_def and any(
+        callable(getattr(game_def.module, name, None))
+        for name in ("download_memories", "build_memories_html")
+    ))
+
+
 async def _emit_room_state(room: Room) -> None:
     game_def = _get_game_definition(room.game_type)
     payload = {
@@ -591,10 +598,7 @@ async def _emit_room_state(room: Room) -> None:
         "host_player_id": _room_host_player_id(room) if room.game_type == "the_crew" else None,
         "max_players": game_def.max_players if game_def else len(room.players),
         "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
-        "supports_memories": bool(game_def and any(
-            callable(getattr(game_def.module, name, None))
-            for name in ("download_memories", "build_memories_html")
-        )),
+        "supports_memories": _game_supports_memories(game_def),
         "game_config": {key: value for key, value in room.game_config.items()
                         if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
@@ -628,6 +632,7 @@ def _room_list_payload() -> List[Dict]:
                 "source_room_id": room.source_room_id,
                 "player_count": len(room.players),
                 "max_players": max_players,
+                "supports_memories": _game_supports_memories(game_def),
                 "players": [
                     {
                         "name": p.name,

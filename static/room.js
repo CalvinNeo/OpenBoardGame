@@ -66,7 +66,6 @@ const createBtn = document.getElementById("createBtn");
 const createGameRow = document.getElementById("createGameRow");
 const leaveBtn = document.getElementById("leaveBtn");
 const reopenBtn = document.getElementById("reopenBtn");
-const downloadMemoriesBtn = document.getElementById("downloadMemoriesBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const autoSaveRow = document.getElementById("autoSaveRow");
@@ -1409,23 +1408,23 @@ function parseDownloadFilename(headerValue) {
   return match[1].trim().replace(/^\"|\"$/g, "");
 }
 
-async function downloadMemoriesFile(activeRoomId) {
+async function downloadMemoriesFile(activeRoomId, button = null) {
   if (!activeRoomId) {
     log("Not in a room");
     return;
   }
   const url = `/api/room/memories?room_id=${encodeURIComponent(activeRoomId)}`;
-  const originalLabel = downloadMemoriesBtn ? downloadMemoriesBtn.textContent : "";
+  const originalLabel = button ? button.textContent : "";
   try {
-    if (downloadMemoriesBtn) {
-      downloadMemoriesBtn.disabled = true;
-      downloadMemoriesBtn.textContent = "Preparing...";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "⏳";
     }
     await downloadRoomFile(url, "text/html");
   } finally {
-    if (downloadMemoriesBtn) {
-      downloadMemoriesBtn.textContent = originalLabel || "Download Memories";
-      updateRoomActionButtons();
+    if (button && document.contains(button)) {
+      button.textContent = originalLabel || "📜";
+      button.disabled = false;
     }
   }
 }
@@ -1704,10 +1703,21 @@ function updateRoomActionButtons() {
   const maxPlayers = currentRoomState?.max_players ?? gameMeta?.max_players;
   const reason = getRoomStartReason();
   const startBtn = document.getElementById("startBtn");
+  const starting = pendingRoomRequest?.event === "room:start";
   startBtn.disabled = !available || Boolean(reason);
-  startBtn.title = reason;
-  startBtn.textContent = pendingRoomRequest?.event === "room:start" ? "Starting..." : "Start Game";
-  document.getElementById("readyBtn").disabled = !available || !inLobby;
+  startBtn.textContent = starting ? "⏳" : "▶️";
+  const startLabel = starting ? "Starting..." : reason || "Start Game";
+  startBtn.title = startLabel;
+  startBtn.setAttribute("aria-label", startLabel);
+  const readyBtn = document.getElementById("readyBtn");
+  const me = players.find((player) => player.player_id === playerId);
+  const isReady = Boolean(me && me.ready);
+  readyBtn.disabled = !available || !inLobby;
+  readyBtn.classList.toggle("room-icon-btn-active", isReady);
+  readyBtn.setAttribute("aria-pressed", isReady.toString());
+  const readyLabel = pendingRoomRequest?.event === "room:ready" ? "Updating..." : isReady ? "Ready (click to unready)" : "Ready";
+  readyBtn.title = readyLabel;
+  readyBtn.setAttribute("aria-label", readyLabel);
   const addBotBtn = document.getElementById("addBotBtn");
   addBotBtn.disabled = !available || !inLobby || !Number.isFinite(maxPlayers) || players.length >= maxPlayers;
   addBotBtn.textContent = pendingRoomRequest?.event === "room:add_bot" ? "Adding..." : "Add Bot";
@@ -1716,7 +1726,6 @@ function updateRoomActionButtons() {
   reopenBtn.disabled = !available || !["in_game", "game_over"].includes(currentRoomState?.status)
     || (currentRoomState?.game_type === "the_crew" && currentRoomState.host_player_id !== playerId);
   autoSaveToggle.disabled = !available || Boolean(currentRoomState?.auto_save);
-  downloadMemoriesBtn.disabled = !available || !currentRoomState?.supports_memories || inLobby;
   createBtn.disabled = busy;
   updateRoomCreateButtonLabel();
   document.querySelectorAll("#createRoomModal .game-item, #forestShuffleEnglishBtn, #forestShuffleChineseBtn, [data-catan-starfarers-setup], #theCrewSetupCreate, #guandanSetupCreateBtn")
@@ -1819,7 +1828,10 @@ function updateReopenButton() {
   reopenBtn.classList.toggle("hidden", !showButton);
   reopenBtn.setAttribute("aria-hidden", (!showButton).toString());
   const theCrew = currentRoomState?.game_type === "the_crew";
-  reopenBtn.textContent = theCrew ? "Restart" : "Reopen";
+  const reopenLabel = theCrew ? "Restart" : "Reopen";
+  reopenBtn.textContent = theCrew ? "🔁" : "↩️";
+  reopenBtn.title = reopenLabel;
+  reopenBtn.setAttribute("aria-label", reopenLabel);
   reopenBtn.disabled = !showButton || (theCrew && currentRoomState.host_player_id !== playerId);
 }
 
@@ -2173,6 +2185,24 @@ function renderRoomList(rooms) {
       });
       actions.appendChild(joinReadyBtn);
     }
+
+    const memoriesBtn = document.createElement("button");
+    memoriesBtn.type = "button";
+    memoriesBtn.className = "room-memories-btn";
+    memoriesBtn.textContent = "📜";
+    const memoriesAvailable = Boolean(room.supports_memories) && room.status !== "lobby";
+    const memoriesLabel = !room.supports_memories
+      ? "Memories not supported for this game"
+      : room.status === "lobby"
+        ? "Memories available once the game starts"
+        : "Download Memories";
+    memoriesBtn.disabled = !memoriesAvailable;
+    memoriesBtn.title = memoriesLabel;
+    memoriesBtn.setAttribute("aria-label", memoriesLabel);
+    memoriesBtn.addEventListener("click", () => {
+      downloadMemoriesFile(room.room_id, memoriesBtn);
+    });
+    actions.appendChild(memoriesBtn);
 
     if (canReconnect) {
       const reconnectBtn = document.createElement("button");
@@ -3022,13 +3052,6 @@ document.getElementById("startBtn").addEventListener("click", () => {
 
 if (reopenBtn) {
   reopenBtn.addEventListener("click", requestRoomReopen);
-}
-
-if (downloadMemoriesBtn) {
-  downloadMemoriesBtn.addEventListener("click", () => {
-    const activeRoomId = roomId || (currentRoomState && currentRoomState.room_id);
-    downloadMemoriesFile(activeRoomId);
-  });
 }
 
 document.getElementById("addBotBtn").addEventListener("click", () => {
