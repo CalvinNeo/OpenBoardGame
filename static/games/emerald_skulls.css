@@ -3,7 +3,7 @@
 
 /* Emerald Skulls --------------------------------------------------------- */
 
-.emerald-skulls-panel {
+.game-panel.emerald-skulls-game-panel {
   --emerald-ink: #eaf7ef;
   --emerald-muted: #a8c5b3;
   --emerald-green: #36d693;
@@ -23,6 +23,30 @@
     radial-gradient(circle at 8% 0%, rgba(52, 214, 147, 0.16), transparent 30%),
     linear-gradient(145deg, #061c17 0%, #0a251e 56%, #071914 100%);
   box-shadow: 0 22px 55px rgba(2, 15, 12, 0.28);
+}
+
+.emerald-skulls-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+.game-panel.emerald-skulls-game-panel > .panel-header {
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(167, 225, 194, 0.2);
+}
+
+.emerald-skulls-game-panel .game-panel-title h2 {
+  color: #eaf7ef;
+  font-size: clamp(18px, 2vw, 25px);
+  letter-spacing: 0.02em;
+}
+
+.emerald-skulls-game-panel .game-reconnect-btn {
+  border-color: #32664f;
+  background: #0d2c24;
+  color: #dff8e9;
 }
 
 .emerald-skulls-panel *,
@@ -49,35 +73,7 @@
   justify-content: space-between;
   gap: 14px;
   min-width: 0;
-  padding: 18px 20px 15px;
-  border-bottom: 1px solid rgba(167, 225, 194, 0.14);
-}
-
-.emerald-skulls-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.emerald-skulls-brand-icon {
-  display: grid;
-  flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  font-size: 27px;
-  border: 1px solid rgba(104, 241, 181, 0.38);
-  border-radius: 15px;
-  background: rgba(30, 107, 82, 0.56);
-  box-shadow: inset 0 0 18px rgba(71, 239, 170, 0.13);
-}
-
-.emerald-skulls-brand h2 {
-  margin: 1px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(25px, 3vw, 36px);
-  line-height: 1;
+  padding: 0;
 }
 
 .emerald-skulls-eyebrow {
@@ -91,7 +87,9 @@
 }
 
 .emerald-skulls-meta {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.6fr);
+  width: 100%;
   align-items: stretch;
   justify-content: flex-end;
   gap: 7px;
@@ -101,10 +99,10 @@
 
 .emerald-skulls-meta > span {
   display: flex;
-  min-width: 84px;
+  min-width: 0;
   flex-direction: column;
   gap: 2px;
-  padding: 7px 10px;
+  padding: 6px 8px;
   color: var(--emerald-muted);
   font-size: 10px;
   font-weight: 700;
@@ -124,8 +122,8 @@
 }
 
 .emerald-skulls-status {
-  margin: 12px 16px 0;
-  padding: 10px 13px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
   color: #dff8e9;
   font-size: 13px;
   line-height: 1.42;
@@ -144,7 +142,35 @@
 }
 
 .emerald-skulls-player-section {
-  padding: 14px 16px 0;
+  padding: 9px 0 0;
+}
+
+.emerald-skulls-player-section > summary {
+  cursor: pointer;
+  min-height: 32px;
+  margin-bottom: 0;
+  list-style: none;
+}
+
+.emerald-skulls-player-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.emerald-skulls-player-section > summary strong {
+  font-size: 12px;
+}
+
+.emerald-skulls-player-section > summary strong::before {
+  content: "▸ ";
+  color: #76dfb3;
+}
+
+.emerald-skulls-player-section[open] > summary strong::before {
+  content: "▾ ";
+}
+
+.emerald-skulls-player-section[open] > summary {
+  margin-bottom: 7px;
 }
 
 .emerald-skulls-section-heading,
@@ -208,6 +234,8 @@
 }
 
 .emerald-skulls-player-top strong {
+  min-width: 0;
+  flex: 1 1 0;
   overflow: hidden;
   font-size: 13px;
   text-overflow: ellipsis;
@@ -246,17 +274,14 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
-  gap: 12px;
+  gap: 18px;
   min-width: 0;
-  padding: 14px 16px 0;
+  padding: 12px 0 0;
 }
 
 .emerald-skulls-table,
 .emerald-skulls-betting {
-  padding: 14px;
-  border: 1px solid rgba(157, 218, 186, 0.16);
-  border-radius: 15px;
-  background: rgba(5, 24, 19, 0.56);
+  padding: 0;
 }
 
 .emerald-skulls-floor,
@@ -483,6 +508,7 @@ button.emerald-skulls-die {
 }
 
 .emerald-skulls-action-dock button,
+.emerald-skulls-bet-decision button,
 .emerald-skulls-payout-button,
 .emerald-skulls-result-actions button,
 .emerald-skulls-header-btn {
@@ -499,6 +525,7 @@ button.emerald-skulls-die {
 }
 
 .emerald-skulls-action-dock button:hover:not(:disabled),
+.emerald-skulls-bet-decision button:hover:not(:disabled),
 .emerald-skulls-payout-button:hover:not(:disabled),
 .emerald-skulls-result-actions button:hover:not(:disabled),
 .emerald-skulls-header-btn:hover:not(:disabled) {
@@ -515,6 +542,7 @@ button.emerald-skulls-die {
 }
 
 .emerald-skulls-action-dock button:disabled,
+.emerald-skulls-bet-decision button:disabled,
 .emerald-skulls-payout-button:disabled,
 .emerald-skulls-result-actions button:disabled,
 .emerald-skulls-buy-button:disabled {
@@ -560,6 +588,34 @@ button.emerald-skulls-buy-button {
   gap: 8px;
 }
 
+.emerald-skulls-bet-decision {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+  min-width: 0;
+}
+
+.emerald-skulls-bet-decision > span {
+  min-width: 0;
+  color: #b6dfc8;
+  font-size: 11px;
+}
+
+.emerald-skulls-bet-decision button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-color: #c1a577;
+  background: #3d3222;
+  color: #ffe0ac;
+}
+
+.emerald-skulls-bet-preview {
+  display: none;
+}
+
 .emerald-skulls-bet-card {
   position: relative;
   display: grid;
@@ -588,8 +644,8 @@ button.emerald-skulls-bet {
   min-height: 106px;
   flex-direction: column;
   align-items: stretch;
-  gap: 5px;
-  padding: 9px 12px;
+  gap: 4px;
+  padding: 8px 10px;
   color: #f4ebdf;
   text-align: left;
   border: 0;
@@ -623,9 +679,15 @@ button.emerald-skulls-bet.is-loser {
 
 .emerald-skulls-bet strong {
   color: #ffddb5;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.emerald-skulls-bet-english {
+  color: #e0b987;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 14px;
-  line-height: 1.25;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .emerald-skulls-bet-description {
@@ -684,7 +746,7 @@ button.emerald-skulls-bet.is-loser {
 .emerald-skulls-payout-choice,
 .emerald-skulls-result,
 .emerald-skulls-log-card {
-  margin: 12px 16px 0;
+  margin: 12px 0 0;
   padding: 13px;
   border: 1px solid rgba(158, 224, 190, 0.18);
   border-radius: 14px;
@@ -949,8 +1011,7 @@ button.emerald-skulls-bet.is-loser {
 }
 
 .emerald-skulls-result-heading > div,
-.emerald-skulls-roll-heading > div,
-.emerald-skulls-brand > div {
+.emerald-skulls-roll-heading > div {
   min-width: 0;
 }
 
@@ -1036,7 +1097,7 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin: 12px 12px 0;
+    margin: 8px 0 0;
   }
 
   .emerald-skulls-tabs button {
@@ -1055,12 +1116,47 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   }
 
   .emerald-skulls-panel[data-mobile-tab="bets"] .emerald-skulls-table,
+  .emerald-skulls-panel[data-mobile-tab="bets"] .emerald-skulls-status,
   .emerald-skulls-panel[data-mobile-tab="skull"] .emerald-skulls-betting {
     display: none;
   }
 
   .emerald-skulls-workspace {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .emerald-skulls-bet-preview {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 8px;
+    padding: 7px;
+    border-radius: 9px;
+    background: rgba(40, 107, 80, 0.24);
+  }
+
+  .emerald-skulls-bet-preview > span:not(.emerald-skulls-bet-context) {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    text-align: center;
+    color: #a8c5b3;
+    font-size: 10px;
+  }
+
+  .emerald-skulls-bet-preview strong {
+    color: #eaf7ef;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .emerald-skulls-bet-context {
+    grid-column: 1 / -1;
+    padding-top: 3px;
+    color: #b6dfc8;
+    font-size: 11px;
+    text-align: center;
   }
 
   .emerald-skulls-bet-cards {
@@ -1073,10 +1169,9 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
 }
 
 @media (max-width: 720px) {
-  .emerald-skulls-topbar {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 14px;
+  .game-panel.emerald-skulls-game-panel {
+    padding: 10px;
+    border-radius: 12px;
   }
 
   .emerald-skulls-meta {
@@ -1086,26 +1181,26 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
 
   .emerald-skulls-meta > span {
     min-width: 0;
-    flex: 1 1 90px;
+    padding: 5px 7px;
   }
 
   .emerald-skulls-status,
   .emerald-skulls-payout-choice,
   .emerald-skulls-result,
   .emerald-skulls-log-card {
-    margin-right: 12px;
-    margin-left: 12px;
+    margin-right: 0;
+    margin-left: 0;
   }
 
   .emerald-skulls-player-section,
   .emerald-skulls-workspace {
-    padding-right: 12px;
-    padding-left: 12px;
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .emerald-skulls-table,
   .emerald-skulls-betting {
-    padding: 11px;
+    padding: 0;
   }
 
   .emerald-skulls-bet-cards {
@@ -1118,13 +1213,24 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
 }
 
 @media (max-width: 520px) {
-  .emerald-skulls-panel {
-    border-radius: 14px;
+  .emerald-skulls-game-panel .game-panel-title {
+    gap: 6px;
   }
 
-  .emerald-skulls-brand-icon {
-    width: 42px;
-    height: 42px;
+  .emerald-skulls-game-panel .game-panel-title h2 {
+    font-size: 18px;
+  }
+
+  .emerald-skulls-meta strong {
+    font-size: 11px;
+  }
+
+  .emerald-skulls-status {
+    font-size: 12px;
+  }
+
+  .emerald-skulls-section-heading h3 {
+    font-size: 15px;
   }
 
   .emerald-skulls-section-heading {
@@ -1133,6 +1239,34 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
 
   .emerald-skulls-section-heading > span {
     max-width: 48%;
+  }
+
+  .emerald-skulls-player-section > summary > span {
+    max-width: none;
+    font-size: 11px;
+  }
+
+  .emerald-skulls-player-section {
+    padding-top: 4px;
+  }
+
+  .emerald-skulls-player-section > summary {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .emerald-skulls-tabs {
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .emerald-skulls-tabs button {
+    min-height: 38px;
+    padding: 6px;
+  }
+
+  .emerald-skulls-workspace {
+    padding-top: 8px;
   }
 
   .emerald-skulls-players {
@@ -1144,13 +1278,12 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   }
 
   .emerald-skulls-player small {
-    display: none;
+    font-size: 10px;
   }
 
   .emerald-skulls-board {
-    min-height: 260px;
-    padding-right: 4px;
-    padding-left: 4px;
+    min-height: 246px;
+    padding: 8px 4px;
   }
 
   button.emerald-skulls-level {
@@ -1173,7 +1306,9 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
 
   .emerald-skulls-action-dock {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 7px;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
 
   .emerald-skulls-buy-options {
@@ -1185,13 +1320,31 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   }
 
   button.emerald-skulls-bet {
-    min-height: 108px;
-    padding-right: 10px;
-    padding-left: 10px;
+    min-height: 92px;
+    gap: 3px;
+    padding: 6px 8px;
+  }
+
+  .emerald-skulls-bet strong {
+    font-size: 12px;
+  }
+
+  .emerald-skulls-bet-english {
+    font-size: 10px;
   }
 
   .emerald-skulls-bet-description {
     min-height: 0;
+    font-size: 11px;
+  }
+
+  .emerald-skulls-card-number {
+    padding: 2px 8px;
+  }
+
+  .emerald-skulls-bet-marker,
+  .emerald-skulls-bet-vacancy {
+    height: 28px;
   }
 
   .emerald-skulls-rule-grid {
@@ -1208,14 +1361,14 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   .emerald-skulls-payout-choice,
   .emerald-skulls-result,
   .emerald-skulls-log-card {
-    margin-right: 9px;
-    margin-left: 9px;
+    margin-right: 0;
+    margin-left: 0;
   }
 
   .emerald-skulls-player-section,
   .emerald-skulls-workspace {
-    padding-right: 9px;
-    padding-left: 9px;
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .emerald-skulls-players {
@@ -1235,7 +1388,13 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   }
 
   button.emerald-skulls-bet {
-    min-height: 108px;
+    min-height: 92px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .emerald-skulls-marker-stack {
+    gap: 3px;
   }
 }
 

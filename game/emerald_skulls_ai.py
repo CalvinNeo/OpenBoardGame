@@ -217,11 +217,13 @@ def choose_move(view: Dict) -> Optional[Dict]:
         return None
     position = _position(view)
     if "place_bet" in legal:
-        return _choose_bet(view, position)
+        bet = _choose_bet(view, position)
+        if bet:
+            return bet
+    if "pass_bet" in legal:
+        return {"type": "pass_bet", "delay_ms": 350}
     if "roll" in legal:
-        human_bettors = any(not player["is_bot"] and player["player_id"] != view["active_player_id"]
-                            and player["bet_markers_left"] for player in view["players"])
-        return {"type": "roll", "delay_ms": 4500 if human_bettors else 650}
+        return {"type": "roll", "delay_ms": 650}
     search = TurnSearch(view["gear_supply"])
     if "buy_dice" in legal:
         me = next(player for player in view["players"] if player["player_id"] == view["you"])

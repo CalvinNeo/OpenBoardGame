@@ -24,6 +24,7 @@ BET_SPECS = (
         "card_number": 1,
         "side": "left",
         "name": "Pick n' Bust",
+        "name_zh": "挖鼻爆仓",
         "description": "Bust Out after at least one Nose Pick",
         "payouts": [10, 8, 5],
     },
@@ -32,6 +33,7 @@ BET_SPECS = (
         "card_number": 1,
         "side": "right",
         "name": "Mad Nargash",
+        "name_zh": "疯狂纳迦什",
         "description": "Gem Out with only skull dice",
         "payouts": [8, 5, 3],
     },
@@ -40,6 +42,7 @@ BET_SPECS = (
         "card_number": 2,
         "side": "left",
         "name": "Grim Grin",
+        "name_zh": "狰狞笑容",
         "description": "Run Out with dice only on the teeth",
         "payouts": [5, 3, 2],
     },
@@ -48,6 +51,7 @@ BET_SPECS = (
         "card_number": 2,
         "side": "right",
         "name": "Emerald Skull",
+        "name_zh": "翡翠骷髅",
         "description": "Double Out with a Full Skull",
         "payouts": [10, 8, 5],
     },
@@ -56,6 +60,7 @@ BET_SPECS = (
         "card_number": 3,
         "side": "left",
         "name": "Busted Fowl",
+        "name_zh": "爆仓怂鸡",
         "description": "Bust Out or Chicken Out",
         "payouts": [5, 3, 2],
     },
@@ -64,6 +69,7 @@ BET_SPECS = (
         "card_number": 3,
         "side": "right",
         "name": "Final Jewel",
+        "name_zh": "最终宝石",
         "description": "Gem Out",
         "payouts": [2, 1],
     },
@@ -72,6 +78,7 @@ BET_SPECS = (
         "card_number": 4,
         "side": "left",
         "name": "Empty Hands",
+        "name_zh": "两手空空",
         "description": "Run Out",
         "payouts": [2, 1],
     },
@@ -80,6 +87,7 @@ BET_SPECS = (
         "card_number": 4,
         "side": "right",
         "name": "Empty n' Shiny",
+        "name_zh": "空手闪耀",
         "description": "Double Out",
         "payouts": [5, 3, 2],
     },
@@ -142,6 +150,7 @@ def _reset_turn_surface(state: Dict) -> None:
     state["nose_picks"] = 0
     state["roll_count"] = 0
     state["bet_sequence"] = 0
+    state["betting_passed"] = []
     state["bet_stacks"] = {spec["bet_id"]: [] for spec in BET_SPECS}
     state["result"] = None
     state["payout_options"] = []
@@ -182,7 +191,7 @@ def _available_bet_ids(state: Dict, player_id: str) -> List[str]:
     player_state = state.get("players", {}).get(player_id)
     if state.get("phase") != "await_roll" or not player_state or player_id == state.get("active_player_id"):
         return []
-    if len(player_state.get("bets", [])) >= 2:
+    if len(player_state.get("bets", [])) >= 2 or player_id in state.get("betting_passed", []):
         return []
     available = []
     for spec in BET_SPECS:
@@ -190,6 +199,15 @@ def _available_bet_ids(state: Dict, player_id: str) -> List[str]:
         if len(stack) < len(spec["payouts"]):
             available.append(spec["bet_id"])
     return available
+
+
+def _pending_bettors(state: Dict) -> List[str]:
+    return [player_id for player_id in state.get("turn_order", []) if _available_bet_ids(state, player_id)]
+
+
+def _open_betting(state: Dict) -> None:
+    state["phase"] = "await_roll"
+    state["betting_passed"] = []
 
 
 def _placement_options(state: Dict) -> Dict[int, List[str]]:
@@ -495,6 +513,11 @@ def _assert_state(state: Dict) -> None:
         raise AssertionError("invalid turn order")
     if state.get("active_player_id") not in order:
         raise AssertionError("unknown active player")
+    passed = state.get("betting_passed", [])
+    if not isinstance(passed, list) or any(player_id not in order for player_id in passed):
+        raise AssertionError("invalid betting confirmations")
+    if len(passed) != len(set(passed)) or state["active_player_id"] in passed:
+        raise AssertionError("invalid betting confirmations")
     dice = state.get("dice", [])
     if len(dice) != 7 or {die.get("die_id") for die in dice} != set(DIE_IDS):
         raise AssertionError("exactly seven stable dice are required")
@@ -579,8 +602,8 @@ class EmeraldSkullsGame:
             return ["buy_dice"] if player_id == active else []
         if phase == "await_roll":
             if player_id == active:
-                return ["roll"]
-            return ["place_bet"] if _available_bet_ids(state, player_id) else []
+                return [] if _pending_bettors(state) else ["roll"]
+            return ["place_bet", "pass_bet"] if _available_bet_ids(state, player_id) else []
         if player_id != active:
             return []
         if phase == "after_roll":
@@ -624,7 +647,7 @@ class EmeraldSkullsGame:
             state["dice_cost"] = cost
             for die in state["dice"][:count]:
                 die["zone"] = "pool"
-            state["phase"] = "await_roll"
+            _open_betting(state)
             _record(
                 state,
                 events,
@@ -651,6 +674,16 @@ class EmeraldSkullsGame:
                 player_id=player_id,
                 bet_id=bet_id,
                 position=len(state["bet_stacks"][bet_id]),
+            )
+
+        elif action_type == "pass_bet":
+            state.setdefault("betting_passed", []).append(player_id)
+            _record(
+                state,
+                events,
+                "bet_passed",
+                f"{_player_name(state, player_id)} will not bet again before this roll.",
+                player_id=player_id,
             )
 
         elif action_type == "roll":
@@ -731,7 +764,7 @@ class EmeraldSkullsGame:
             if supply:
                 added = supply[0]["die_id"]
                 supply[0]["zone"] = "pool"
-            state["phase"] = "await_roll"
+            _open_betting(state)
             _record(
                 state,
                 events,
@@ -756,7 +789,7 @@ class EmeraldSkullsGame:
             target["level"] = None
             state["nose_picks"] = int(state.get("nose_picks", 0)) + 1
             state["minimum_level"] = max(3, int(state.get("minimum_level", 1)))
-            state["phase"] = "await_roll"
+            _open_betting(state)
             _record(
                 state,
                 events,
@@ -768,7 +801,7 @@ class EmeraldSkullsGame:
             )
 
         elif action_type == "continue_roll":
-            state["phase"] = "await_roll"
+            _open_betting(state)
             _record(
                 state,
                 events,
@@ -842,6 +875,7 @@ class EmeraldSkullsGame:
                     "reroll_cubes": int(pdata.get("reroll_cubes", 0)),
                     "bets": copy.deepcopy(pdata.get("bets", [])),
                     "bet_markers_left": 2 - len(pdata.get("bets", [])),
+                    "betting_passed": pid in state.get("betting_passed", []),
                     "ready": pid in state.get("review_ready", []),
                     "rematch_ready": pid in state.get("rematch_ready", []),
                 }
@@ -877,6 +911,7 @@ class EmeraldSkullsGame:
             "roll_count": int(state.get("roll_count", 0)),
             "betting_options": betting_options,
             "available_bet_ids": _available_bet_ids(state, viewer_id),
+            "pending_bettors": _pending_bettors(state),
             "placement_options": placement_options,
             "result": state.get("result"),
             "payout_options": copy.deepcopy(state.get("payout_options", [])),
@@ -898,19 +933,6 @@ class EmeraldSkullsGame:
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         from game.emerald_skulls_ai import choose_move
 
-        legal = EmeraldSkullsGame.get_legal_actions(state, bot_id)
-        if not legal:
-            return None
-        if "roll" in legal:
-            # The room runner visits seats in order. Yield to willing bot
-            # gamblers so a tumbler in an earlier seat cannot skip their bets.
-            for player_id in state["turn_order"]:
-                if player_id == bot_id or not state["player_meta"][player_id].get("is_bot"):
-                    continue
-                if _available_bet_ids(state, player_id):
-                    view = EmeraldSkullsGame.get_public_view(state, player_id)
-                    if choose_move(view) is not None:
-                        return None
         return choose_move(EmeraldSkullsGame.get_public_view(state, bot_id))
 
     @staticmethod
@@ -922,6 +944,7 @@ class EmeraldSkullsGame:
         if not isinstance(payload, dict):
             raise ValueError("invalid Emerald Skulls save payload")
         state = copy.deepcopy(payload)
+        state.setdefault("betting_passed", [])
         try:
             _assert_state(state)
         except AssertionError as exc:

@@ -3,14 +3,14 @@
   <button id="diceThroneExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
 </template>
 
-<template data-game-target="diceThronePanel" data-game-mode="contents">
-  <section class="dice-throne-shell" aria-label="Dice Throne game">
-    <header class="dice-throne-titlebar">
-      <div class="dt-title"><span class="dt-kicker">THE DUEL · 王权骰铸</span><h2>Dice Throne<span class="dt-title-mark" aria-hidden="true">✦</span></h2></div>
-      <div class="dt-round"><span id="diceThroneRound" class="dt-round-number">Round 1</span><span id="diceThronePhase" data-dt-tip="Phase: the current step of the round.">Waiting</span></div>
-    </header>
-    <div class="dt-phase-steps" aria-label="Turn phases">
-      <span data-dt-phase="main_1">Main I</span><span data-dt-phase="offensive_roll">Roll</span><span data-dt-phase="targeting">Attack</span><span data-dt-phase="defensive_roll">Defend</span><span data-dt-phase="main_2">Main II</span>
+<template data-game-target="diceThronePanel" data-game-mode="replace">
+  <section id="diceThronePanel" class="dice-throne-shell hidden" aria-label="Dice Throne game">
+    <div class="dt-turnbar">
+      <span id="diceThroneRound" class="dt-round-number">Round 1</span>
+      <div class="dt-phase-steps" aria-label="Turn phases">
+        <span data-dt-phase="main_1">Main I</span><span data-dt-phase="offensive_roll">Roll</span><span data-dt-phase="targeting">Attack</span><span data-dt-phase="defensive_roll">Defend</span><span data-dt-phase="main_2">Main II</span>
+      </div>
+      <span id="diceThronePhase" class="dt-phase-label" data-dt-tip="Phase: the current step of the round.">Waiting</span>
     </div>
     <div id="diceThroneStatus" class="dt-status" role="status" aria-live="polite">Waiting for players</div>
     <div id="diceThroneExplainNotice" class="dt-explain-notice hidden" role="status">Explain is on. Select an outlined item, or press Esc to leave.</div>
@@ -22,7 +22,6 @@
 
     <div id="diceThroneArena" class="dt-arena hidden">
       <section id="diceThronePlayers" class="dt-players" aria-label="Players"></section>
-      <div id="diceThroneActivity" class="dt-activity" aria-live="polite"></div>
       <section id="diceThroneResponse" class="dt-response hidden" aria-label="Response">
         <div class="dt-section-head"><h3 id="diceThroneResponseTitle">Response window</h3><span id="diceThroneResponseTimer"></span></div>
         <p id="diceThroneResponseText">Choose a response or pass.</p>
@@ -51,15 +50,13 @@
         </section>
         <div id="diceThroneDecisions" class="dt-decisions" data-active-tab="abilities">
           <div class="dt-decision-tabs" role="tablist" aria-label="Combat choices">
-            <button id="diceThroneAbilitiesTab" type="button" role="tab" data-dt-tab="abilities" aria-controls="diceThroneAbilities" aria-selected="true">⚔️ Abilities</button>
-            <button id="diceThroneHandTab" type="button" role="tab" data-dt-tab="hand" aria-controls="diceThroneHandArea" aria-selected="false" tabindex="-1">🃏 Hand <span id="diceThroneHandTabCount" class="dt-tab-count">0</span></button>
+            <button id="diceThroneAbilitiesTab" type="button" role="tab" data-dt-tab="abilities" aria-controls="diceThroneAbilities" aria-selected="true">⚔️ Abilities <span id="diceThroneAbilityHint" class="dt-tab-count">0</span></button>
+            <button id="diceThroneHandTab" type="button" role="tab" data-dt-tab="hand" aria-controls="diceThroneHandArea" aria-selected="false" tabindex="-1" data-dt-explain="Cards (🃏)" data-dt-description="Your hand is private. Select a Card (🃏) to play it or sell it for 1 Combat Point (⚡). Opponents can see only how many cards you hold.">🃏 Hand <span id="diceThroneHandTabCount" class="dt-tab-count">0/6</span></button>
           </div>
           <section id="diceThroneAbilities" class="dt-abilities" role="tabpanel" aria-labelledby="diceThroneAbilitiesTab">
-            <div class="dt-section-head"><h3>Hero abilities</h3><span id="diceThroneAbilityHint">Your dice unlock your attack</span></div>
             <div id="diceThroneAbilityList" class="dt-ability-list"></div>
           </section>
           <section id="diceThroneHandArea" class="dt-hand-area" role="tabpanel" aria-labelledby="diceThroneHandTab">
-            <div class="dt-section-head"><h3 data-dt-tip="Cards (🃏): your private hand." data-dt-explain="Cards (🃏)" data-dt-description="Your hand is private. Select a Card (🃏) to play it or sell it for 1 Combat Point (⚡). Opponents can see only how many cards you hold.">🃏 Your hand</h3><span id="diceThroneHandCount">0 / 6</span></div>
             <div id="diceThroneHand" class="dt-hand"></div>
           </section>
         </div>

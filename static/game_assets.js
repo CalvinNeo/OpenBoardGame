@@ -120,9 +120,9 @@ const GAME_ASSETS = {
     "header": "showOdinHeaderActions"
   },
   "dice_throne": {
-    "scripts": ["/static/games/dice_throne.js?v=7"],
-    "styles": ["/static/games/dice_throne.css?v=7"],
-    "markup": "/static/games/dice_throne.html?v=4",
+    "scripts": ["/static/games/dice_throne.js?v=8"],
+    "styles": ["/static/games/dice_throne.css?v=8"],
+    "markup": "/static/games/dice_throne.html?v=5",
     "panel": "diceThronePanel",
     "header": "showDiceThroneHeaderActions"
   },
@@ -824,13 +824,13 @@ const GAME_ASSETS = {
   },
   "emerald_skulls": {
     "scripts": [
-      "/static/games/emerald_skulls.js?v=app_v5"
+      "/static/games/emerald_skulls.js?v=app_v6"
     ],
     "styles": [],
     "panel": "emeraldSkullsPanel",
     "header": "showEmeraldSkullsHeaderActions",
-    "markup": "/static/games/emerald_skulls.html?v=1",
-    "styleFragments": "/static/games/emerald_skulls.css?v=1"
+    "markup": "/static/games/emerald_skulls.html?v=2",
+    "styleFragments": "/static/games/emerald_skulls.css?v=2"
   },
   "wriggle_roulette": {
     "scripts": [

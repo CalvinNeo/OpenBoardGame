@@ -1,17 +1,22 @@
 /* Dice Throne — compact combat desk, hero colors, and a midnight dice tray. */
 #diceThronePanel { min-width: 0; }
-.dice-throne-shell, .dt-dialog {
+.game-panel.dt-game-panel, .dice-throne-shell, .dt-dialog {
   --dt-ink: #263339; --dt-muted: #6c777a; --dt-paper: #fffdf7; --dt-line: #e1ded4;
   --dt-rust: #a74431; --dt-teal: #277771; --dt-gold: #d8ad54; --dt-navy: #213541;
   color: var(--dt-ink);
   font-family: "Work Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-.dice-throne-shell {
-  container-type: inline-size; min-width: 0; padding: clamp(10px, 1.5vw, 18px);
+.game-panel.dt-game-panel {
+  min-width: 0; padding: 10px 12px;
   background: #f5f3ea;
   background-image: radial-gradient(ellipse at 100% 0, #e5eee6 0, transparent 40%), radial-gradient(ellipse at 0 10%, #f5e8d6 0, transparent 40%);
-  border: 1px solid #e1ded2; border-radius: 18px;
+  border-color: #d9d3c2; border-radius: 12px;
 }
+.game-panel.dt-game-panel > .panel-header { gap: 6px 10px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #dcdacf; flex-wrap: wrap; }
+.game-panel.dt-game-panel .game-panel-title { gap: 7px; flex-wrap: wrap; }
+.game-panel.dt-game-panel .game-panel-title h2 { display: flex; align-items: center; gap: 7px; color: #493e2b; font: 600 clamp(19px, 2.5vw, 26px)/1.15 Georgia, "Times New Roman", serif; letter-spacing: -.035em; white-space: nowrap; }
+.game-panel.dt-game-panel .game-panel-title h2::before { content: "✦"; color: #b38b40; font-size: .65em; }
+.dice-throne-shell { container-type: inline-size; min-width: 0; }
 .dice-throne-shell *, .dt-dialog * { box-sizing: border-box; min-width: 0; }
 .dice-throne-shell .hidden, .dt-dialog .hidden { display: none !important; }
 .dice-throne-shell h2, .dice-throne-shell h3, .dt-dialog h2 { margin: 0; }
@@ -26,36 +31,30 @@
 .dice-throne-shell button.dt-primary[aria-disabled="true"], .dice-throne-shell button.dt-primary[aria-disabled="true"]:hover { cursor: default; color: #626c6d; background: #eceee9; border-color: #d8dcd6; box-shadow: none; }
 .dice-throne-shell button:not(:disabled):hover, .dt-dialog button:hover { border-color: #b18b40; box-shadow: 0 2px 6px #332a1212; }
 .dice-throne-shell :focus-visible, .dt-dialog :focus-visible { outline: 3px solid #ba8433; outline-offset: 3px; }
-.dice-throne-titlebar, .dt-section-head, .dt-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.dice-throne-titlebar { padding-bottom: 10px; }
-.dt-title { flex: 1; }
-.dt-kicker { display: block; margin-bottom: 5px; font-size: 9px; font-weight: 600; letter-spacing: .17em; color: #80765c; }
-.dice-throne-titlebar h2 { font: 600 clamp(24px, 3vw, 32px)/1.1 Georgia, "Times New Roman", serif; letter-spacing: -.045em; }
-.dt-title-mark { display: inline-block; margin-left: 9px; color: #b38b40; font-size: .6em; vertical-align: middle; }
-.dt-round { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; max-width: 40%; text-align: right; font-size: 11px; color: var(--dt-muted); overflow-wrap: anywhere; }
-.dt-round-number { color: #6b572f; font-weight: 600; font-size: 12px; padding: 4px 8px; background: #eee6d2; border-radius: 5px; }
-.dt-phase-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid #dcdacf; border-bottom: 1px solid #dcdacf; }
-.dt-phase-steps > span { padding: 6px 3px; position: relative; color: #858980; font-size: 10px; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.dt-section-head, .dt-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dt-turnbar { display: flex; align-items: center; gap: 7px; }
+.dt-round-number { flex-shrink: 0; color: #6b572f; font-weight: 600; font-size: 11px; padding: 4px 6px; background: #eee6d2; border-radius: 5px; }
+.dt-phase-label { color: var(--dt-muted); font-size: 11px; overflow-wrap: anywhere; }
+.dt-phase-steps { display: grid; flex: 1; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid #dcdacf; border-radius: 5px; overflow: hidden; }
+.dt-phase-steps > span { padding: 4px 3px; position: relative; color: #858980; font-size: 10px; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
 .dt-phase-steps > span + span::before { position: absolute; left: -2px; top: 50%; transform: translateY(-50%); content: "›"; color: #b5b6a8; }
 .dt-phase-steps > span.active, .dt-phase-steps > span.current, .dt-phase-steps > span[aria-current="step"] { color: #755723; background: #eee5cf; box-shadow: inset 0 -2px #b98c38; }
-.dt-status { margin: 8px 0; padding: 7px 10px; border-radius: 7px; border: 1px solid #dddcd0; background: #fffdf5b3; color: #5a655e; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.dt-status { margin: 5px 0; padding: 4px 8px; border-radius: 6px; border: 1px solid #dddcd0; background: #fffdf5b3; color: #5a655e; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
 .dt-has-action .dt-status { color: #743f2e; background: #fff1df; border-color: #dfbd90; box-shadow: inset 3px 0 #b66a35; }
-.dt-explain-notice { margin: 10px 0; padding: 10px 12px; border: 1px dashed #9a7130; border-radius: 7px; background: #fff2d4; color: #715421; font-size: 12px; line-height: 1.45; }
-.dt-arena { display: grid; gap: 9px; }
-.dt-section-head { flex-wrap: wrap; margin-bottom: 9px; }
+.dt-explain-notice { margin: 6px 0; padding: 6px 8px; border: 1px dashed #9a7130; border-radius: 7px; background: #fff2d4; color: #715421; font-size: 12px; line-height: 1.45; }
+.dt-arena { display: grid; gap: 7px; }
+.dt-section-head { flex-wrap: wrap; margin-bottom: 6px; }
 .dt-section-head h3 { font-size: 13px; font-weight: 600; }
 .dt-section-head > span { color: var(--dt-muted); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
 .dt-picker { background: var(--dt-paper); border: 1px solid var(--dt-line); border-radius: 12px; padding: 14px; }
 .dt-decisions { position: relative; background: var(--dt-paper); border: 1px solid var(--dt-line); border-radius: 12px; overflow: hidden; isolation: isolate; }
-.dt-decision-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; padding: 5px; border-bottom: 1px solid var(--dt-line); background: #ebeadd; }
-.dice-throne-shell .dt-decision-tabs > button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 38px; padding: 7px; border: 1px solid transparent; background: transparent; color: #6a7365; }
+.dt-decision-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 3px; border-bottom: 1px solid var(--dt-line); background: #ebeadd; }
+.dice-throne-shell .dt-decision-tabs > button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 5px; border: 1px solid transparent; background: transparent; color: #6a7365; }
 .dice-throne-shell .dt-decision-tabs > button[aria-selected="true"] { color: #624b20; border-color: #d7c699; background: #fffdf2; box-shadow: 0 1px 3px #4b411312; }
 .dt-tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; padding: 1px 5px; border-radius: 10px; font-size: 10px; line-height: 1.4; color: #655738; background: #e8e2d0; }
-.dt-abilities, .dt-hand-area { padding: 11px; }
+.dt-abilities, .dt-hand-area { padding: 8px; }
 .dt-decisions[data-active-tab="abilities"] .dt-hand-area, .dt-decisions[data-active-tab="hand"] .dt-abilities { display: none; }
-.dt-decisions .dt-section-head { flex-wrap: nowrap; height: 27px; min-height: 27px; }
-.dt-decisions .dt-section-head > span { max-width: 64%; text-align: right; }
-.dt-hero-choices, .dt-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dt-hero-choices, .dt-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .dice-throne-shell .dt-hero-card { position: relative; display: flex; flex-direction: column; align-items: stretch; min-height: 144px; padding: 0; border: 1px solid #ddbeaa; border-top: 3px solid var(--dt-rust); border-radius: 9px; text-align: left; background: #fff8ef; isolation: isolate; }
 .dice-throne-shell .dt-hero-trigger { display: flex; flex: 1 0 auto; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; min-height: 140px; padding: 14px; border: 0; background: transparent; text-align: left; box-shadow: none; }
 .dice-throne-shell .dt-hero-trigger:disabled { background: transparent; }
@@ -74,7 +73,7 @@
 .dt-hero-card > span { font-size: 12px; line-height: 1.5; }
 .dt-player {
   --dt-hero-color: var(--dt-rust); --dt-hero-pale: #f5e5d8; --dt-hero-bg: #fff8ed;
-  position: relative; padding: 11px; border: 1px solid #dfd4c4; border-top: 3px solid var(--dt-hero-color);
+  position: relative; padding: 8px 10px; border: 1px solid #dfd4c4; border-top: 2px solid var(--dt-hero-color);
   border-radius: 11px; background: var(--dt-hero-bg); box-shadow: 0 2px 3px #40341405;
 }
 .dt-player.dt-moon_elf { --dt-hero-color: var(--dt-teal); --dt-hero-pale: #dceae2; --dt-hero-bg: #f2f8f0; border-color: #cbdcd0; border-top-color: var(--dt-hero-color); }
@@ -86,27 +85,28 @@
 .dt-player.dt-ninja { --dt-hero-color: #4e5b70; --dt-hero-pale: #dde2ea; --dt-hero-bg: #f2f4f8; }
 .dt-player.dt-turn { box-shadow: 0 0 0 2px #bf944d55, 0 3px 8px #5d4e1012; }
 .dt-player.dt-defeated { filter: saturate(.5); }
-.dt-player-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.dt-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--dt-hero-pale); font-size: 21px; }
+.dt-player-head { display: flex; align-items: center; gap: 7px; }
+.dt-avatar { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--dt-hero-pale); font-size: 19px; }
 .dt-player-identity { flex: 1; }
-.dt-player-caption, .dt-player-stats { display: contents; }
-.dt-hero-name { color: var(--dt-hero-color); font: 600 18px/1.15 Georgia, serif; overflow-wrap: anywhere; }
+.dt-player-caption { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+.dt-player-stats { display: flex; align-items: center; gap: 7px; margin-top: 5px; }
+.dt-hero-name { color: var(--dt-hero-color); font: 600 16px/1.15 Georgia, serif; overflow-wrap: anywhere; }
 .dice-throne-shell button.dt-hero-name-button { min-height: 24px; padding: 2px 0; border: 0; border-radius: 3px; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
 .dice-throne-shell button.dt-hero-name-button:hover { background: #ffffff70; box-shadow: none; }
 .dt-hero-choice-heading { display: flex; align-items: center; gap: 7px; padding: 10px 12px 0; font: 600 18px/1.2 Georgia, serif; }
 .dice-throne-shell .dt-hero-choice-heading + .dt-hero-trigger { min-height: 98px; padding-top: 7px; }
-.dt-player-name { margin-top: 4px; color: #65706a; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
-.dt-badges { display: flex; flex-wrap: wrap; align-self: flex-start; gap: 4px; margin-top: 4px; }
+.dt-player-name { flex: 1; color: #65706a; font-size: 11px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dt-badges { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 3px; }
 .dt-badges:empty { display: none; }
-.dt-badge { padding: 3px 5px; background: var(--dt-hero-pale); color: var(--dt-hero-color); border-radius: 4px; font-size: 9px; font-weight: 600; line-height: 1.3; }
-.dt-health { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
-.dt-health-value { flex-shrink: 0; color: var(--dt-hero-color); font-variant-numeric: tabular-nums; font-size: 25px; font-weight: 600; letter-spacing: -.055em; line-height: 1.1; }
+.dt-badge { padding: 2px 4px; background: var(--dt-hero-pale); color: var(--dt-hero-color); border-radius: 4px; font-size: 9px; font-weight: 600; line-height: 1.3; }
+.dt-health { display: flex; flex: 1; align-items: center; gap: 7px; }
+.dt-health-value { flex-shrink: 0; color: var(--dt-hero-color); font-variant-numeric: tabular-nums; font-size: 21px; font-weight: 600; letter-spacing: -.055em; line-height: 1.1; }
 .dt-health-value small { color: #7b8579; font-size: 11px; font-weight: 400; letter-spacing: 0; }
 .dt-health-bar { height: 6px; flex: 1; min-width: 10px; border-radius: 5px; overflow: hidden; background: #dfdfd2; }
 .dt-health-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--dt-hero-color); transition: width .25s ease; }
-.dt-player-meta { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
+.dt-player-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
 .dt-resource { display: inline-flex; align-items: center; gap: 3px; padding: 4px 7px; border-radius: 5px; font-size: 11px; line-height: 1.3; background: #fff9; border: 1px solid #dfdccc; }
-.dt-statuses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.dt-statuses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .dt-statuses:empty { display: none; }
 .dt-token { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; padding: 3px 5px; border-radius: 4px; color: #56635b; background: #eaece5; font-size: 11px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .dt-tone-sword, .dt-tone-damage { color: #953e2c; background: #fae7dc; }
@@ -127,11 +127,11 @@
 .dt-tone-kept { color: #8a6a22; background: #f7e8bc; }
 .dt-tone-main { color: #7b683d; background: #efe9d9; }
 .dt-tone-instant { color: #8a5e8d; background: #f2e5f1; }
-.dt-activity { color: #748078; font-size: 11px; line-height: 1.4; padding: 0 3px; overflow-wrap: anywhere; }
-.dt-activity:empty { display: none; }
-.dt-battle-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 9px; }
-.dt-roll-zone { padding: 13px; border-radius: 12px; color: #f8f6ea; background: var(--dt-navy); box-shadow: inset 0 0 0 1px #ffffff08; }
-.dt-roll-zone .dt-section-head { margin-bottom: 10px; }
+.dt-battle-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 7px; }
+.dt-roll-zone { padding: 10px; border-radius: 10px; color: #f8f6ea; background: var(--dt-navy); box-shadow: inset 0 0 0 1px #ffffff08; }
+.dt-roll-zone .dt-section-head { margin-bottom: 6px; }
+.dt-roll-zone.dt-unrolled .dt-dice { display: none; }
+.dt-roll-zone.dt-unrolled .dt-roll-actions { margin-top: 0; }
 .dt-roll-zone .dt-section-head > span { color: #b8c9ca; padding: 4px 7px; border-radius: 4px; background: #ffffff0c; font-variant-numeric: tabular-nums; }
 .dt-dice { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; max-width: 430px; margin: 0 auto; }
 .dt-dice.dt-defense-dice { grid-template-columns: repeat(var(--dt-result-count), minmax(0, 1fr)); }
@@ -142,13 +142,14 @@
 .dt-defense-result { margin: 9px 0; }
 .dt-defense-name { margin-bottom: 6px; font-size: 11px; line-height: 1.4; color: #d1e3dd; overflow-wrap: anywhere; }
 .dt-defense-effects { display: flex; flex-wrap: wrap; gap: 5px; }
-.dice-throne-shell button.dt-die { --dt-die-accent: #7d827a; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; min-height: 84px; padding: 11px 3px 8px; background: #fffdf1; border: 2px solid #e4e1d0; border-radius: 10px; color: #364238; box-shadow: 0 3px 0 #111f27; }
+.dice-throne-shell button.dt-die { --dt-die-accent: #7d827a; position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 28px auto; align-content: center; align-items: center; justify-items: center; gap: 4px 2px; min-height: 64px; padding: 6px 4px; background: #fffdf1; border: 2px solid #e4e1d0; border-radius: 8px; color: #364238; box-shadow: 0 3px 0 #111f27; }
 .dice-throne-shell button.dt-die:not(:disabled):hover { background: #fff9e1; border-color: #e4ba5d; }
 .dice-throne-shell button.dt-die.kept { background: #fff1be; border-color: #e9bd62; box-shadow: 0 3px 0 #a4762d, 0 0 0 2px #e8b95422; }
-.dt-die-symbol { font-size: 28px; line-height: 1; }
-.dt-die-label { font-size: 10px; line-height: 1.1; color: var(--dt-die-accent); }
-.dt-die-value { font-size: 10px; line-height: 1.1; color: var(--dt-die-accent); font-variant-numeric: tabular-nums; }
-.dt-keep { min-height: 10px; font-size: 8px; line-height: 1; font-weight: 600; letter-spacing: .04em; color: #8c691f; text-transform: uppercase; }
+.dt-die-symbol { grid-area: 1 / 1; font-size: 28px; line-height: 1; }
+.dt-die-label { grid-area: 2 / 1 / auto / -1; font-size: 10px; line-height: 1.1; color: var(--dt-die-accent); overflow-wrap: anywhere; }
+.dt-die-value { grid-area: 1 / 2; font-size: 11px; line-height: 1.1; color: var(--dt-die-accent); font-variant-numeric: tabular-nums; }
+.dt-keep { display: none; }
+.dt-die.kept .dt-die-label::before { content: "🔒 "; font-size: 9px; }
 .dice-throne-shell button.dt-face-sword { --dt-die-accent: #a14f3b; }
 .dice-throne-shell button.dt-face-heart { --dt-die-accent: #a94955; }
 .dice-throne-shell button.dt-face-power { --dt-die-accent: #88701f; }
@@ -157,7 +158,7 @@
 .dice-throne-shell button.dt-face-moon { --dt-die-accent: #685397; }
 .dice-throne-shell button.dt-die.empty { color: #a7a89b; background: #344b57; border: 1px dashed #72818a; box-shadow: none; }
 .dice-throne-shell button.dt-die.empty .dt-die-label, .dice-throne-shell button.dt-die.empty .dt-keep { color: #c2cdcf; }
-.dt-dice-hint { min-height: 14px; margin: 9px 0; color: #b5c7c8; font-size: 11px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.dt-dice-hint { min-height: 14px; margin: 7px 0; color: #b5c7c8; font-size: 11px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
 .dt-roll-actions { display: flex; flex-wrap: wrap; gap: 7px; max-width: 430px; margin: 0 auto; }
 .dt-dice-hint.hidden + .dt-roll-actions { margin-top: 8px; }
 .dt-roll-actions > button { flex: 1 1 40%; }
@@ -168,7 +169,7 @@
 .dice-throne-shell .dt-roll-zone button.dt-die:disabled { color: #364238; background: #fffdf1; border-color: #e4e1d0; box-shadow: 0 3px 0 #111f27; }
 .dice-throne-shell .dt-roll-zone button.dt-die.kept:disabled { background: #fff1be; border-color: #e9bd62; box-shadow: 0 3px 0 #a4762d, 0 0 0 2px #e8b95422; }
 .dice-throne-shell .dt-roll-zone button.dt-die.empty:disabled { color: #a7a89b; background: #344b57; border-color: #72818a; box-shadow: none; }
-.dt-ability-list, .dt-hand { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 7px; height: clamp(238px, 36dvh, 310px); overflow-y: auto; overscroll-behavior: contain; padding: 3px; margin: -3px; scrollbar-width: thin; scrollbar-color: #b39c68 #eee9dd; scrollbar-gutter: stable; }
+.dt-ability-list, .dt-hand { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 7px; height: var(--dt-list-height, clamp(220px, 32dvh, 290px)); overflow-y: auto; overscroll-behavior: contain; padding: 3px; margin: -3px; scrollbar-width: thin; scrollbar-color: #b39c68 #eee9dd; scrollbar-gutter: stable; }
 .dt-ability-list::-webkit-scrollbar, .dt-hand::-webkit-scrollbar { width: 6px; }
 .dt-ability-list::-webkit-scrollbar-track, .dt-hand::-webkit-scrollbar-track { border-radius: 6px; background: #eee9dd; }
 .dt-ability-list::-webkit-scrollbar-thumb, .dt-hand::-webkit-scrollbar-thumb { border: 1px solid #eee9dd; border-radius: 6px; background: #b39c68; }
@@ -229,7 +230,7 @@
 .dt-game-over h3 { color: #8f6721; font: 600 24px/1.3 Georgia, serif; margin-bottom: 9px; }
 .dt-final-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; padding: 5px; font-size: 12px; overflow-wrap: anywhere; }
 .dt-log-panel { padding: 0 2px; border-top: 1px solid #dcddd2; }
-.dt-log-panel summary { padding: 11px 2px 0; color: #7b8175; font-size: 11px; cursor: pointer; }
+.dt-log-panel summary { padding: 5px 2px 0; color: #7b8175; font-size: 11px; cursor: pointer; }
 .dt-log-panel ol { max-height: 150px; margin: 10px 0 0; padding: 0 6px 0 22px; overflow-y: auto; overscroll-behavior: contain; color: #78806f; font-size: 11px; line-height: 1.5; }
 .dt-log-panel li { padding: 3px 0; overflow-wrap: anywhere; }
 .dt-tooltip { position: fixed; z-index: 20000; width: max-content; max-width: min(290px, calc(100vw - 24px)); padding: 9px 11px; border: 1px solid #ffffff20; border-radius: 7px; background: #213541; color: #f9f7eb; font-size: 12px; line-height: 1.5; box-shadow: 0 4px 20px #12222d40; overflow-wrap: anywhere; pointer-events: none; }
@@ -261,26 +262,23 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
 @container (min-width: 650px) {
   .dt-hero-choices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-@container (min-width: 700px) {
-  .dt-battle-grid { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
-  .dt-roll-zone { padding: 17px 15px; }
-  .dt-roll-zone .dt-section-head { margin-bottom: 16px; }
-  .dt-dice-hint { margin: 14px 0; }
-  .dt-ability-list, .dt-hand { height: 340px; }
+@container (min-width: 600px) {
+  .dt-battle-grid { grid-template-columns: minmax(280px, .8fr) minmax(0, 1.2fr); }
+}
+@container (min-width: 600px) and (max-width: 800px) {
+  .dt-dice { gap: 5px; }
+  .dice-throne-shell button.dt-die { grid-template-rows: 23px auto; padding: 5px 3px; }
+  .dt-die-symbol { font-size: 22px; }
 }
 @container (min-width: 1100px) {
   .dt-ability-list, .dt-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @container (max-width: 430px) {
-  .dice-throne-titlebar { padding-bottom: 4px; }
-  .dt-kicker, .dt-round #diceThronePhase { display: none; }
-  .dice-throne-titlebar h2 { font-size: 19px; }
-  .dt-round { gap: 3px; font-size: 9px; }
+  .dt-turnbar { gap: 4px; }
   .dt-round-number { padding: 3px 5px; font-size: 10px; }
   .dt-phase-steps > span { font-size: 9px; padding: 3px 2px; }
-  .dt-status { margin: 4px 0; padding: 4px 7px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dt-status { margin: 4px 0; padding: 4px 7px; font-size: 11px; }
   .dt-arena { gap: 5px; }
-  .dt-activity, .dt-decisions .dt-section-head { display: none; }
   .dt-players, .dt-hero-choices { gap: 7px; }
   .dt-player { padding: 7px; border-radius: 8px; }
   .dt-player-head { gap: 5px; flex-wrap: nowrap; }
@@ -308,8 +306,6 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-section-head > span { font-size: 9px; }
   .dt-battle-grid { gap: 5px; }
   .dt-roll-zone { padding: 5px; border-radius: 9px; }
-  .dt-roll-zone.dt-unrolled .dt-dice { display: none; }
-  .dt-roll-zone.dt-unrolled .dt-roll-actions { margin-top: 0; }
   .dt-roll-zone .dt-section-head { margin-bottom: 3px; }
   .dt-roll-zone .dt-section-head > span { padding: 1px 4px; }
   .dt-dice { gap: 5px; }
@@ -359,10 +355,14 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .dt-badges { margin-top: 0; }
   .dt-health-value { font-size: 17px; }
   .dt-health-value small { font-size: 9px; }
-  .dt-hand-area > .dt-section-head h3 { font-size: 11px; }
+}
+@media (max-width: 900px) {
+  .game-panel.dt-game-panel { padding: 6px; border-radius: 8px; }
+  .game-panel.dt-game-panel > .panel-header { gap: 4px 6px; margin-bottom: 4px; padding-bottom: 4px; }
+  .game-panel.dt-game-panel .game-panel-title { gap: 6px; }
+  .game-panel.dt-game-panel .game-panel-title h2 { gap: 5px; font-size: 19px; }
 }
 @media (max-width: 480px) {
-  .dice-throne-shell { padding: 8px; border-radius: 10px; }
   .dt-dialog { padding: 16px; }
   .dt-dialog-head { top: -16px; gap: 8px; }
   .dt-dialog h2 { font-size: 21px; }

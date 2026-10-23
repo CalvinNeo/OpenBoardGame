@@ -91,6 +91,7 @@ class EmeraldSkullsAITests(unittest.TestCase):
         state["gear_supply"] = 3
         # On a failed roll, the earlier Busted Fowl marker takes the whole pot.
         EmeraldSkullsGame.apply_action(state, gamblers[0], {"type": "place_bet", "bet_id": "busted_fowl"})
+        self.assertEqual(self.assert_legal_move(state, gamblers[1])["type"], "pass_bet")
         self.assertIsNone(EmeraldSkullsGame.bot_move(state, gamblers[1]))
 
     def test_tumbler_yields_to_bot_bettors_regardless_of_seat_order(self):
@@ -104,10 +105,19 @@ class EmeraldSkullsAITests(unittest.TestCase):
                 self.assert_legal_move(state, pid)
         self.assertEqual(EmeraldSkullsGame.bot_move(state, active)["type"], "roll")
 
-    def test_humans_have_time_to_bet_and_review_is_not_skipped(self):
+    def test_humans_must_explicitly_finish_betting_and_review_is_not_skipped(self):
         state, active = self.make_state(phase="await_roll", faces=(None, None, None))
         state["player_meta"][active]["is_bot"] = True
-        self.assertGreaterEqual(EmeraldSkullsGame.bot_move(state, active)["delay_ms"], 4000)
+        before = copy.deepcopy(state)
+        for attempt in range(12):
+            self.assertIsNone(EmeraldSkullsGame.bot_move(state, active), attempt)
+        self.assertEqual(state, before)
+        gamblers = [player_id for player_id in state["turn_order"] if player_id != active]
+        for gambler in gamblers:
+            self.assertIsNone(EmeraldSkullsGame.bot_move(state, active))
+            _, error = EmeraldSkullsGame.apply_action(state, gambler, {"type": "pass_bet"})
+            self.assertIsNone(error)
+        self.assertEqual(EmeraldSkullsGame.bot_move(state, active), {"type": "roll", "delay_ms": 650})
         state["phase"] = "post_place"
         state["dice"][0].update(zone="board", face=1, level=1)
         EmeraldSkullsGame.apply_action(state, active, {"type": "chicken_out"})

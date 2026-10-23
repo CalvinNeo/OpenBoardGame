@@ -2,6 +2,9 @@
   "use strict";
   const root = document.querySelector(".dice-throne-shell");
   if (!root) return;
+  const gamePanel = root.closest(".game-panel");
+  const gameHeading = gamePanel?.querySelector(".game-panel-title h2");
+  let previousGameTitle = null;
   const $ = id => document.getElementById(`diceThrone${id}`);
   let view = null;
   let pending = false;
@@ -150,7 +153,7 @@
     if (layoutFrame != null) return;
     layoutFrame = requestAnimationFrame(() => {
       layoutFrame = null;
-      if (!view || root.clientWidth > 448 || $("Arena").classList.contains("hidden")) {
+      if (!view || root.clientWidth >= 600 || $("Arena").classList.contains("hidden")) {
         root.style.removeProperty("--dt-list-height");
         return;
       }
@@ -160,7 +163,7 @@
       // very short screens to scroll rather than squeezing cards unreadably.
       const listTop = list.getBoundingClientRect().top + window.scrollY;
       const viewportHeight = window.visualViewport?.height || innerHeight;
-      const height = Math.max(148, Math.min(340, Math.floor(viewportHeight - listTop - 56)));
+      const height = Math.max(168, Math.min(340, Math.floor(viewportHeight - listTop - 44)));
       root.style.setProperty("--dt-list-height", `${height}px`);
     });
   }
@@ -478,7 +481,10 @@
     list.replaceChildren();
 
     const usable = view.abilities.filter(ability => ability.available && legal("use_ability")).length;
-    $("AbilityHint").textContent = view.phase === "targeting" ? usable ? `${usable} ready · ${view.abilities.length} abilities` : "No ready ability · you can skip" : "Confirm your roll to choose";
+    const hint = view.phase === "targeting" ? usable ? `${usable} ready · ${view.abilities.length} abilities` : "No ready ability · you can skip" : "Confirm your roll to choose";
+    $("AbilityHint").textContent = view.phase === "targeting" ? `${usable} ready` : view.abilities.length;
+    $("AbilitiesTab").setAttribute("aria-label", `Abilities · ${hint}`);
+    describe($("AbilitiesTab"), "Abilities (⚔️)", `${hint}. View your hero's dice patterns and effects; select a ready ability to confirm its target.`);
     view.abilities.forEach((ability, index) => {
       const active = selected?.kind === "ability" && selected.index === index;
       const canUse = ability.available && legal("use_ability");
@@ -639,8 +645,8 @@
     $("Decisions").querySelectorAll(".dt-decision-tabs, .dt-abilities, .dt-hand-area").forEach(node => { node.inert = false; });
     hand.replaceChildren();
     const cards = view.your_hand || [];
-    $("HandCount").textContent = `${cards.length} / 6 · private`;
-    $("HandTabCount").textContent = cards.length;
+    $("HandTabCount").textContent = `${cards.length}/6`;
+    $("HandTab").setAttribute("aria-label", `Your hand · ${cards.length} of 6 Cards (🃏) · private`);
     cards.forEach((card, index) => {
       const id = card.id || card.cardid;
       const active = selected?.kind === "card" && selected.index === index;
@@ -727,10 +733,16 @@
     describe($("Status"), phases[view.phase] || "Waiting", $("Status").textContent, true);
     root.classList.toggle("dt-has-action", hasAction);
     document.body.classList.toggle("dt-needs-action", hasAction);
-    root.querySelectorAll("[data-dt-phase]").forEach(node => node.classList.toggle("active", node.dataset.dtPhase === view.phase));
+    root.querySelectorAll("[data-dt-phase]").forEach(node => {
+      const active = node.dataset.dtPhase === view.phase;
+      node.classList.toggle("active", active);
+      if (active) node.setAttribute("aria-current", "step");
+      else node.removeAttribute("aria-current");
+    });
+    const combatPhase = Boolean(root.querySelector("[data-dt-phase].active"));
+    root.querySelector(".dt-phase-steps").classList.toggle("hidden", !combatPhase);
+    $("Phase").classList.toggle("hidden", combatPhase);
     const publicLog = (view.log || []).map(entry => `${labelPlayer(entry.player_id)} · ${entry.text}`);
-    $("Activity").textContent = publicLog.at(-1) || activity.at(-1) || "";
-    describe($("Activity"), "Battle activity", activityLegend, true);
     renderPlayers();
     renderDice();
     renderAbilities();
@@ -888,6 +900,16 @@
   };
   window.showDiceThroneHeaderActions = show => {
     $("HeaderActions").style.display = show ? "flex" : "none";
+    if (gamePanel && gameHeading) {
+      if (show && !gamePanel.classList.contains("dt-game-panel")) {
+        previousGameTitle = gameHeading.textContent;
+        gameHeading.textContent = "Dice Throne";
+      } else if (!show && gamePanel.classList.contains("dt-game-panel")) {
+        gameHeading.textContent = previousGameTitle;
+        previousGameTitle = null;
+      }
+      gamePanel.classList.toggle("dt-game-panel", show);
+    }
     if (!show) {
       view = null;
       selected = null;

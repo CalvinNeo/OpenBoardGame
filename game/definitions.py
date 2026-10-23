@@ -855,7 +855,7 @@ EMERALD_SKULLS_ACTION_SCHEMA = {
         },
         {
             "type": "object",
-            "properties": {"type": {"enum": ["continue_roll", "chicken_out", "accept_bust", "next_turn", "play_again"]}},
+            "properties": {"type": {"enum": ["pass_bet", "continue_roll", "chicken_out", "accept_bust", "next_turn", "play_again"]}},
             "required": ["type"],
             "additionalProperties": False,
         },

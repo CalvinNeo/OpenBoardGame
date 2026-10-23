@@ -11,9 +11,14 @@
   let emeraldSkullsTipTarget = null;
   let emeraldSkullsModalFocus = null;
   let emeraldSkullsSuppressClick = false;
+  let emeraldSkullsPreviousTitle = null;
   const emeraldSkullsSelectedDice = new Set();
 
   const emeraldSkullsPanel = document.getElementById("emeraldSkullsPanel");
+  const emeraldSkullsGamePanel = emeraldSkullsPanel?.closest(".game-panel");
+  const emeraldSkullsGameHeading = emeraldSkullsGamePanel?.querySelector(".game-panel-title h2");
+  const emeraldSkullsPlayerSection = document.getElementById("emeraldSkullsPlayerSection");
+  const emeraldSkullsPlayerSummary = document.getElementById("emeraldSkullsPlayerSummary");
   const emeraldSkullsHeaderActions = document.getElementById("emeraldSkullsHeaderActions");
   const emeraldSkullsHelpBtn = document.getElementById("emeraldSkullsHelpBtn");
   const emeraldSkullsExplainBtn = document.getElementById("emeraldSkullsExplainBtn");
@@ -45,6 +50,9 @@
   const emeraldSkullsBustBtn = document.getElementById("emeraldSkullsBustBtn");
   const emeraldSkullsMarkersLabel = document.getElementById("emeraldSkullsMarkersLabel");
   const emeraldSkullsBetCards = document.getElementById("emeraldSkullsBetCards");
+  const emeraldSkullsBetPreview = document.getElementById("emeraldSkullsBetPreview");
+  const emeraldSkullsBetStatus = document.getElementById("emeraldSkullsBetStatus");
+  const emeraldSkullsPassBetBtn = document.getElementById("emeraldSkullsPassBetBtn");
   const emeraldSkullsPayoutChoice = document.getElementById("emeraldSkullsPayoutChoice");
   const emeraldSkullsPayoutOptions = document.getElementById("emeraldSkullsPayoutOptions");
   const emeraldSkullsResult = document.getElementById("emeraldSkullsResult");
@@ -71,31 +79,31 @@
       detail: "本回合至少使用过一次挖鼻（Pick a Nose 👃），最后因骰子无处可放而爆掉（Bust Out 💥），才算押中。主动收手不算。",
     },
     mad_nargash: {
-      summary: "仅用百搭骷髅骰到达宝石层",
+      summary: "全骷髅骰到达宝石层",
       detail: "到达宝石层（Gem Out 💎），且头骨板上放置的所有骰子都是百搭骷髅骰（💀），即可押中。手中可以还有骰子；同时放完全部骰子（Double Out ✨）也算。",
     },
     grim_grin: {
-      summary: "放完全部骰子，且只放在上下颚",
+      summary: "骰子放完，且只占牙齿层",
       detail: "放完手中全部骰子（Run Out 🏃），且所有骰子都只放在牙齿区域（🦷，第 1、2 层上下颚），即可押中。可以使用百搭骷髅骰（💀）。",
     },
     emerald_skull: {
-      summary: "摆满头骨：3牙齿、1鼻子、2眼睛、1宝石",
+      summary: "满头骨：3牙、1鼻、2眼、1宝石",
       detail: "放完全部 7 颗骰子并到达宝石层（Double Out ✨），组成完整头骨（Full Skull 💚💀）：上下颚合计 3 颗（🦷）、鼻子 1 颗（👃）、眼睛 2 颗（👁️）、宝石 1 颗（💎）。可以使用百搭骷髅骰（💀）。",
     },
     busted_fowl: {
-      summary: "爆掉，或主动收手结束回合",
+      summary: "爆掉或主动收手",
       detail: "因骰子无处可放而爆掉（Bust Out 💥），或手中还有骰子时主动收手（Chicken Out 🐔），任一结果都算押中。",
     },
     final_jewel: {
-      summary: "到达宝石层（不必放完骰子）",
+      summary: "到达宝石层即可",
       detail: "在宝石层（💎，第 5 层）放入骰子，达成 Gem Out，即可押中。同时放完全部骰子（Double Out ✨）也算；放入百搭骷髅骰（💀）同样有效。",
     },
     empty_hands: {
-      summary: "放完全部骰子（也可到达宝石层）",
+      summary: "全部骰子放完即可",
       detail: "将手中全部骰子放到头骨板上（Run Out 🏃），即可押中。同时到达宝石层（Double Out ✨）也算。",
     },
     empty_shiny: {
-      summary: "放完全部骰子，同时到达宝石层",
+      summary: "骰子放完且到达宝石层",
       detail: "将最后一颗骰子放入宝石层（💎），同时满足放完全部骰子和到达宝石层（Double Out ✨），才算押中。不要求摆出完整头骨。",
     },
   };
@@ -138,7 +146,7 @@
     },
     roll: {
       title: "Roll Dice (🎲)",
-      body: "Roll Dice (🎲) closes the current betting window. The tumbler should allow a fair moment for gamblers to wager before rolling.",
+      body: "所有押注者用完两枚标记（🎟️）或明确点击“不下注”后，才能掷骰（🎲）。没有下注倒计时，人类和机器人掷骰玩家都不能跳过尚未决定的玩家。",
     },
     reroll: {
       title: "Spend a Reroll Cube",
@@ -162,7 +170,11 @@
     },
     bets: {
       title: "Standard Bets",
-      body: "每位押注者每回合有两枚押注标记（🎟️），可在开放押注时使用，也可都押在同一结果上。越早下注，占据的奖励位置越靠前，押中后获得的齿轮（⚙️）越多。下注后不能移动或撤回；当前掷骰玩家不能下注。",
+      body: "每位押注者每回合有两枚押注标记（🎟️），可在开放押注时使用，也可都押在同一结果上。越早下注，占据的奖励位置越靠前，押中后获得的齿轮（⚙️）越多。下注后不能移动或撤回；当前掷骰玩家不能下注。用完两枚标记，或点击“不下注 / 不再下注”，才结束本次下注决定；不会超时跳过。",
+    },
+    pass: {
+      title: "不下注 · Pass",
+      body: "本次掷骰前不再下注，已有的押注不变，未使用的标记（🎟️）保留。之后继续掷骰、使用重掷方块（🟩）或挖鼻（👃）时，会重新开放剩余标记。所有押注者都决定后才能掷骰；没有倒计时。",
     },
     bet: {
       title: "Bet Outcome",
@@ -238,18 +250,19 @@
       </ul>
       <h3>Bets and game end</h3>
       <ul>
-        <li><strong>Pick n' Bust (👃💥):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.pick_bust.detail}</li>
-        <li><strong>Mad Nargash (💀💎):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.mad_nargash.detail}</li>
-        <li><strong>Grim Grin (🦷):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.grim_grin.detail}</li>
-        <li><strong>Emerald Skull (💚💀):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.emerald_skull.detail}</li>
-        <li><strong>Busted Fowl (💥🐔):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.busted_fowl.detail}</li>
-        <li><strong>Final Jewel (💎):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.final_jewel.detail}</li>
-        <li><strong>Empty Hands (🏃):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.empty_hands.detail}</li>
-        <li><strong>Empty n' Shiny (✨):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.empty_shiny.detail}</li>
+        <li><strong>挖鼻爆仓 · Pick n' Bust (👃💥):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.pick_bust.detail}</li>
+        <li><strong>疯狂纳迦什 · Mad Nargash (💀💎):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.mad_nargash.detail}</li>
+        <li><strong>狰狞笑容 · Grim Grin (🦷):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.grim_grin.detail}</li>
+        <li><strong>翡翠骷髅 · Emerald Skull (💚💀):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.emerald_skull.detail}</li>
+        <li><strong>爆仓怂鸡 · Busted Fowl (💥🐔):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.busted_fowl.detail}</li>
+        <li><strong>最终宝石 · Final Jewel (💎):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.final_jewel.detail}</li>
+        <li><strong>两手空空 · Empty Hands (🏃):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.empty_hands.detail}</li>
+        <li><strong>空手闪耀 · Empty n' Shiny (✨):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.empty_shiny.detail}</li>
       </ul>
       <p>每位押注者每回合有两枚押注标记（🎟️），也可都押在同一结果上；当前掷骰玩家不能下注。下注后不能移动或撤回。奖励格从左到右对应下注先后，越早下注，押中后获得的齿轮（⚙️）越多。Double Out（✨）也同时满足 Final Jewel（💎）和 Empty Hands（🏃）。先结算掷骰玩家，再按第 1–4 张牌、每张先左后右的顺序结算押注。中央齿轮池耗尽即停止支付并结束游戏，齿轮最多者获胜；平手依次比较重掷方块（🟩）数量、最近担任掷骰玩家的顺序。</p>
       <h3>Playing with AI</h3>
-      <p>Add a Bot (🤖) in the room before starting. AI players buy dice, place dice, manage rerolls, choose payouts and bet using the public board. An AI tumbler allows 4.5 seconds before rolling while humans still have bet markers. Turns pause for every human to confirm Next Turn; bots confirm automatically.</p>
+      <p>每次掷骰前，所有押注者必须用完两枚标记（🎟️），或明确点击“不下注 / 不再下注”。只押一枚后仍需决定另一枚是否保留。没有下注倒计时；跳过只影响本次掷骰，之后继续掷骰、重掷或挖鼻时，仍可使用剩余标记。</p>
+      <p>Add a Bot (🤖) in the room before starting. AI players buy dice, place dice, manage rerolls, choose payouts and bet using the public board. AI tumblers wait for every gambler to finish betting or explicitly pass, with no timeout. Turns pause for every human to confirm Next Turn; bots confirm automatically.</p>
     </div>`;
 
   function emeraldSkullsSetModal(modal, visible, returnFocus = null) {
@@ -504,6 +517,15 @@
   function emeraldSkullsRenderPlayers(view) {
     if (!emeraldSkullsPlayers) return;
     emeraldSkullsPlayers.innerHTML = "";
+    const me = emeraldSkullsPlayer(view, view.you);
+    if (emeraldSkullsPlayerSummary) {
+      emeraldSkullsPlayerSummary.textContent = me
+        ? `You · ⚙️ ${me.gears} · 🟩 ${me.reroll_cubes} · 🎟️ ${me.bet_markers_left}`
+        : `${(view.players || []).length} players`;
+      emeraldSkullsPlayerSummary.setAttribute("aria-label", me
+        ? `Your resources: ${me.gears} gears, ${me.reroll_cubes} reroll cubes, ${me.bet_markers_left} bet markers`
+        : "Players");
+    }
     (view.players || []).forEach((player) => {
       const card = document.createElement("article");
       card.className = "emerald-skulls-player";
@@ -526,6 +548,7 @@
       const note = document.createElement("small");
       if (view.phase === "turn_result") note.textContent = player.ready ? "Ready ✓" : "Reviewing…";
       else if (view.game_over) note.textContent = player.rematch_ready ? "Rematch ready ✓" : "Final score";
+      else if (view.phase === "await_roll" && player.player_id !== view.active_player_id) note.textContent = (view.pending_bettors || []).includes(player.player_id) ? "Deciding bet…" : "Betting done ✓";
       else if ((player.bets || []).length) note.textContent = `${player.bets.length} bet${player.bets.length === 1 ? "" : "s"} locked`;
       else note.textContent = player.player_id === view.active_player_id ? "Rolling the bones" : "Watching the roll";
       card.append(top, resources, note);
@@ -568,8 +591,10 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "emerald-skulls-bet";
+        button.dataset.betId = bet.bet_id;
         button.dataset.emeraldSkullsExplain = "bet";
-        const label = `${EMERALD_SKULLS_BET_ICONS[bet.bet_id] || "🎟️"} ${bet.name}`;
+        const icon = EMERALD_SKULLS_BET_ICONS[bet.bet_id] || "🎟️";
+        const label = `${icon} ${bet.name_zh || bet.name}${bet.name_zh ? ` · ${bet.name}` : ""}`;
         const text = EMERALD_SKULLS_BET_DESCRIPTIONS[bet.bet_id];
         const summary = text ? text.summary : bet.description;
         button.dataset.emeraldSkullsExplainTitle = label;
@@ -579,7 +604,10 @@
         if (bet.won === false && view.result) button.classList.add("is-loser");
         button.disabled = !bet.available || !emeraldSkullsHasAction("place_bet") || emeraldSkullsPending;
         const heading = document.createElement("strong");
-        heading.textContent = label;
+        heading.textContent = `${icon} ${bet.name_zh || bet.name}`;
+        const english = document.createElement("span");
+        english.className = "emerald-skulls-bet-english";
+        english.textContent = bet.name;
         const description = document.createElement("span");
         description.className = "emerald-skulls-bet-description";
         description.textContent = summary;
@@ -596,7 +624,7 @@
             stack.appendChild(vacancy);
           }
         });
-        button.append(heading, description, stack);
+        button.append(heading, english, description, stack);
         button.addEventListener("click", () => {
           if (bet.available && emeraldSkullsHasAction("place_bet")) emeraldSkullsDispatch({ type: "place_bet", bet_id: bet.bet_id });
         });
@@ -609,6 +637,41 @@
       emeraldSkullsMarkersLabel.textContent = view.you === view.active_player_id ? "🎟️ Gamblers only" : `🎟️ ${me ? me.bet_markers_left : 0} left`;
       emeraldSkullsSetTip(emeraldSkullsMarkersLabel, "Bet markers (🎟️): each gambler has two per turn. The tumbler cannot bet.");
     }
+    const canPass = emeraldSkullsHasAction("pass_bet");
+    emeraldSkullsSetActionButton(emeraldSkullsPassBetBtn, view.phase === "await_roll" && !!me && view.you !== view.active_player_id, canPass);
+    if (emeraldSkullsPassBetBtn) {
+      emeraldSkullsPassBetBtn.textContent = me?.betting_passed ? "已跳过 ✓" : me?.bet_markers_left === 0 ? "已下注 ✓" : me?.bets?.length ? "不再下注" : "不下注";
+    }
+    if (emeraldSkullsBetStatus) {
+      const waiting = (view.pending_bettors || []).length;
+      emeraldSkullsBetStatus.textContent = canPass ? "下注或跳过 · 无倒计时"
+        : view.phase === "await_roll" ? waiting ? `等待 ${waiting} 人决定` : "下注完成 · 等待掷骰"
+        : view.result ? "本回合下注已结算" : "下次掷骰前开放下注";
+    }
+    emeraldSkullsRenderBetPreview(view);
+  }
+
+  function emeraldSkullsRenderBetPreview(view) {
+    if (!emeraldSkullsBetPreview) return;
+    emeraldSkullsBetPreview.replaceChildren();
+    const levels = [{ level: 1, icon: "🦷" }, { level: 2, icon: "🦷" }, { level: 3, icon: "👃" }, { level: 4, icon: "👁️" }, { level: 5, icon: "💎" }];
+    levels.forEach(({ level, icon }) => {
+      const dice = (view.dice || []).filter((die) => die.zone === "board" && Number(die.level) === level);
+      const cell = document.createElement("span");
+      const label = document.createElement("span");
+      label.textContent = `${level} ${icon}`;
+      const faces = document.createElement("strong");
+      faces.textContent = dice.length ? dice.map((die) => die.face === "skull" ? "💀" : String(die.face)).join(" ") : "—";
+      emeraldSkullsSetTip(cell, `${EMERALD_SKULLS_LEVELS[level]} · ${dice.length} dice. ${dice.filter((die) => die.face === "skull").length} wild skulls (💀).`);
+      cell.append(label, faces);
+      emeraldSkullsBetPreview.appendChild(cell);
+    });
+    const hand = (view.dice || []).filter((die) => ["pool", "rolled"].includes(die.zone)).length;
+    const context = document.createElement("span");
+    context.className = "emerald-skulls-bet-context";
+    context.textContent = `🎲 ${hand} · ↑ ${view.minimum_level} · 👃 ${view.nose_picks}/2`;
+    emeraldSkullsSetTip(context, `Dice in hand (🎲): ${hand}. Minimum placement level (↑): ${view.minimum_level}. Nose picks (👃): ${view.nose_picks} of 2 used.`);
+    emeraldSkullsBetPreview.appendChild(context);
   }
 
   function emeraldSkullsRenderBuy(view) {
@@ -717,7 +780,7 @@
         item.className = "emerald-skulls-result-item";
         const title = document.createElement("strong");
         const bet = (view.betting_options || []).find((option) => option.bet_id === award.bet_id);
-        title.textContent = `${emeraldSkullsPlayerName(view, award.player_id)} · ${bet ? bet.name : award.bet_id}`;
+        title.textContent = `${emeraldSkullsPlayerName(view, award.player_id)} · ${bet ? bet.name_zh || bet.name : award.bet_id}`;
         const reward = document.createElement("span");
         reward.textContent = `${award.paid}/${award.due} ⚙️ · stack #${award.position}`;
         item.append(title, reward);
@@ -790,7 +853,12 @@
     const youAreActive = view.you === view.active_player_id;
     let text = `${EMERALD_SKULLS_PHASES[view.phase] || view.phase}. `;
     if (view.phase === "buy_dice") text += youAreActive ? "Choose your dice pool." : `${activeName} is choosing a dice pool.`;
-    else if (view.phase === "await_roll") text += youAreActive ? "Bets are open — give gamblers a moment, then roll." : emeraldSkullsHasAction("place_bet") ? "Place up to two bets before the dice roll." : `Waiting for ${activeName} to roll.`;
+    else if (view.phase === "await_roll") {
+      const waiting = (view.pending_bettors || []).length;
+      text = emeraldSkullsHasAction("pass_bet") ? "下注中 · 请选择下注，或点击“不下注”。"
+        : waiting ? `等待 ${waiting} 位押注者决定 · 不会超时跳过。`
+        : youAreActive ? "下注完成 · 可以掷骰。" : `等待 ${activeName} 掷骰。`;
+    }
     else if (view.phase === "after_roll") text += youAreActive ? "Select matching dice for one level, or use a reroll action." : `${activeName} is studying the roll.`;
     else if (view.phase === "post_place") text += youAreActive ? "Bank the current board or press your luck." : `${activeName} must stop or roll again.`;
     else if (view.phase === "choose_payout") text += youAreActive ? "A jackpot is available — choose one payout." : `${activeName} is choosing a payout.`;
@@ -814,10 +882,10 @@
     const view = data && data.view;
     if (!view) return;
     emeraldSkullsView = view;
-    const mobileContext = `${view.game_index}:${view.turn_number}:${view.active_player_id}:${view.result ? "review" : "play"}`;
+    const mobileContext = `${view.game_index}:${view.turn_number}:${view.active_player_id}:${view.you}:${view.result ? "review" : view.phase === "await_roll" ? `bet-${view.roll_count}` : "play"}`;
     if (mobileContext !== emeraldSkullsMobileContext) {
       emeraldSkullsMobileContext = mobileContext;
-      emeraldSkullsSetMobileTab(view.you === view.active_player_id || view.result ? "skull" : "bets");
+      emeraldSkullsSetMobileTab(view.you !== view.active_player_id && view.phase === "await_roll" ? "bets" : "skull");
     }
     emeraldSkullsPending = false;
     if (emeraldSkullsPendingTimer) window.clearTimeout(emeraldSkullsPendingTimer);
@@ -897,6 +965,16 @@
 
   function emeraldSkullsShowHeaderActions(show) {
     if (emeraldSkullsHeaderActions) emeraldSkullsHeaderActions.style.display = show ? "flex" : "none";
+    if (emeraldSkullsGamePanel && emeraldSkullsGameHeading) {
+      if (show && !emeraldSkullsGamePanel.classList.contains("emerald-skulls-game-panel")) {
+        emeraldSkullsPreviousTitle = emeraldSkullsGameHeading.textContent;
+        emeraldSkullsGameHeading.textContent = "💀 翡翠骰骨";
+      } else if (!show) {
+        if (emeraldSkullsGameHeading.textContent === "💀 翡翠骰骨") emeraldSkullsGameHeading.textContent = emeraldSkullsPreviousTitle || "Game";
+        emeraldSkullsPreviousTitle = null;
+      }
+      emeraldSkullsGamePanel.classList.toggle("emerald-skulls-game-panel", show);
+    }
     if (!show) {
       emeraldSkullsMobileContext = "";
       emeraldSkullsSelectedDice.clear();
@@ -907,6 +985,7 @@
   }
 
   if (emeraldSkullsHelpContent) emeraldSkullsHelpContent.innerHTML = EMERALD_SKULLS_HELP_HTML;
+  if (emeraldSkullsPlayerSection) emeraldSkullsPlayerSection.open = !window.matchMedia("(max-width: 940px)").matches;
   if (emeraldSkullsPanel) {
     emeraldSkullsPanel.querySelectorAll("[data-emerald-skulls-tab]").forEach((button) => {
       button.addEventListener("click", () => emeraldSkullsSetMobileTab(button.dataset.emeraldSkullsTab));
@@ -938,6 +1017,7 @@
     });
   }
   if (emeraldSkullsRollBtn) emeraldSkullsRollBtn.addEventListener("click", () => emeraldSkullsHasAction("roll") && emeraldSkullsDispatch({ type: "roll" }));
+  if (emeraldSkullsPassBetBtn) emeraldSkullsPassBetBtn.addEventListener("click", () => emeraldSkullsHasAction("pass_bet") && emeraldSkullsDispatch({ type: "pass_bet" }));
   if (emeraldSkullsRerollBtn) emeraldSkullsRerollBtn.addEventListener("click", () => emeraldSkullsHasAction("spend_reroll_cube") && emeraldSkullsDispatch({ type: "spend_reroll_cube" }));
   if (emeraldSkullsPickNoseBtn) {
     emeraldSkullsPickNoseBtn.addEventListener("click", () => {

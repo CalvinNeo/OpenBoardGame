@@ -29,13 +29,19 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         self.assertIsNone(error, error)
         return events
 
+    def roll(self, state):
+        active = state["active_player_id"]
+        for player_id in EmeraldSkullsGame.get_public_view(state, active)["pending_bettors"]:
+            self.act(state, player_id, {"type": "pass_bet"})
+        return self.act(state, active, {"type": "roll"})
+
     def buy_and_roll(self, state, count=3):
         active = state["active_player_id"]
         cost = DICE_COSTS[count]
         if cost:
             self.give_gears(state, active, cost)
         self.act(state, active, {"type": "buy_dice", "count": count})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         return active
 
     @staticmethod
@@ -111,7 +117,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         )
         self.assertEqual(state["minimum_level"], 3)
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         remaining = self.set_rolled_faces(state, [2, 4])
         _, error = EmeraldSkullsGame.apply_action(
             state, active, {"type": "place_dice", "level": 2, "die_ids": [remaining[0]]}
@@ -143,7 +149,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         self.give_gears(state, active, 0)
         state["players"][active]["reroll_cubes"] = 1
         self.act(state, active, {"type": "buy_dice", "count": 3})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         self.act(state, active, {"type": "spend_reroll_cube"})
         self.assertEqual(state["players"][active]["reroll_cubes"], 0)
         self.assertEqual(len([die for die in state["dice"] if die["zone"] == "pool"]), 4)
@@ -153,7 +159,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         die_ids = self.set_rolled_faces(state, [3, 1, 1])
         self.act(state, active, {"type": "place_dice", "level": 3, "die_ids": [die_ids[0]]})
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         self.set_rolled_faces(state, [1, 2])
         self.act(state, active, {"type": "pick_nose", "die_id": die_ids[0]})
         self.assertEqual(state["nose_picks"], 1)
@@ -187,7 +193,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         dice = self.set_rolled_faces(state, [1, 1, 5])
         self.act(state, active, {"type": "place_dice", "level": 1, "die_ids": dice[:2]})
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         last = self.set_rolled_faces(state, [5])
         self.act(state, active, {"type": "place_dice", "level": 5, "die_ids": last})
         self.assertEqual(state["result"], "double_out")
@@ -197,7 +203,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         dice = self.set_rolled_faces(state, [4, 1, 1])
         self.act(state, active, {"type": "place_dice", "level": 4, "die_ids": [dice[0]]})
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         self.set_rolled_faces(state, [1, 2])
         self.assertEqual(state["result"], "bust_out")
 
@@ -207,7 +213,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         dice = self.set_rolled_faces(state, ["skull", "skull", "skull"])
         self.act(state, active, {"type": "place_dice", "level": 1, "die_ids": dice[:2]})
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         final_die = self.set_rolled_faces(state, ["skull"])
         self.act(state, active, {"type": "place_dice", "level": 5, "die_ids": final_die})
         option_ids = {option["option_id"] for option in state["payout_options"]}
@@ -229,15 +235,15 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         dice = self.set_rolled_faces(state, [1, 1, 1, 3, 4, 4, 5])
         self.act(state, active, {"type": "place_dice", "level": 1, "die_ids": dice[:3]})
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         remaining = self.set_rolled_faces(state, [3, 4, 4, 5])
         self.act(state, active, {"type": "place_dice", "level": 3, "die_ids": [remaining[0]]})
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         remaining = self.set_rolled_faces(state, [4, 4, 5])
         self.act(state, active, {"type": "place_dice", "level": 4, "die_ids": remaining[:2]})
         self.act(state, active, {"type": "continue_roll"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         remaining = self.set_rolled_faces(state, [5])
         self.act(state, active, {"type": "place_dice", "level": 5, "die_ids": remaining})
         options = {option["option_id"]: option for option in state["payout_options"]}
@@ -251,7 +257,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         self.act(state, active, {"type": "buy_dice", "count": 3})
         for pid in gamblers:
             self.act(state, pid, {"type": "place_bet", "bet_id": "busted_fowl"})
-        self.act(state, active, {"type": "roll"})
+        self.roll(state)
         dice = self.set_rolled_faces(state, [1, 2, 3])
         self.act(state, active, {"type": "place_dice", "level": 1, "die_ids": [dice[0]]})
         self.act(state, active, {"type": "chicken_out"})
@@ -337,6 +343,101 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         broken["dice"].pop()
         with self.assertRaises(ValueError):
             EmeraldSkullsGame.deserialize(broken)
+
+    def test_roll_waits_for_every_gambler_to_bet_or_explicitly_pass(self):
+        state = self.make_state(3)
+        active = state["active_player_id"]
+        gamblers = [player_id for player_id in state["turn_order"] if player_id != active]
+        self.act(state, active, {"type": "buy_dice", "count": 3})
+        self.assertEqual(EmeraldSkullsGame.get_public_view(state, active)["pending_bettors"], gamblers)
+        before = copy.deepcopy(state)
+        _, error = EmeraldSkullsGame.apply_action(state, active, {"type": "roll"})
+        self.assertIsNotNone(error)
+        self.assertEqual(state, before)
+        self.act(state, gamblers[0], {"type": "place_bet", "bet_id": "pick_bust"})
+        self.act(state, gamblers[0], {"type": "place_bet", "bet_id": "pick_bust"})
+        self.assertNotIn("roll", EmeraldSkullsGame.get_legal_actions(state, active))
+        self.assertEqual(EmeraldSkullsGame.get_legal_actions(state, gamblers[0]), [])
+        self.act(state, gamblers[1], {"type": "place_bet", "bet_id": "busted_fowl"})
+        self.assertNotIn("roll", EmeraldSkullsGame.get_legal_actions(state, active))
+        events = self.act(state, gamblers[1], {"type": "pass_bet"})
+        self.assertEqual(events[0]["type"], "emerald_skulls:bet_passed")
+        self.assertEqual(len(state["players"][gamblers[1]]["bets"]), 1)
+        self.assertEqual(EmeraldSkullsGame.get_public_view(state, active)["pending_bettors"], [])
+        self.assertEqual(EmeraldSkullsGame.get_legal_actions(state, active), ["roll"])
+        self.act(state, active, {"type": "roll"})
+        self.assertEqual(state["roll_count"], 1)
+
+    def test_pass_is_only_valid_for_an_undecided_gambler(self):
+        state = self.make_state(2)
+        active = state["active_player_id"]
+        gambler = next(player_id for player_id in state["turn_order"] if player_id != active)
+        _, error = EmeraldSkullsGame.apply_action(state, gambler, {"type": "pass_bet"})
+        self.assertIsNotNone(error)
+        self.act(state, active, {"type": "buy_dice", "count": 3})
+        for player_id in (active, "spectator"):
+            before = copy.deepcopy(state)
+            _, error = EmeraldSkullsGame.apply_action(state, player_id, {"type": "pass_bet"})
+            self.assertIsNotNone(error)
+            self.assertEqual(state, before)
+        self.act(state, gambler, {"type": "pass_bet"})
+        self.assertEqual(EmeraldSkullsGame.get_legal_actions(state, gambler), [])
+        for action in ({"type": "pass_bet"}, {"type": "place_bet", "bet_id": "final_jewel"}):
+            before = copy.deepcopy(state)
+            _, error = EmeraldSkullsGame.apply_action(state, gambler, action)
+            self.assertIsNotNone(error)
+            self.assertEqual(state, before)
+        self.assertEqual(state["players"][gambler]["bets"], [])
+
+    def test_each_new_roll_reopens_unused_markers(self):
+        for action_type in ("continue_roll", "spend_reroll_cube", "pick_nose"):
+            with self.subTest(action=action_type):
+                state = self.make_state(2)
+                active = self.buy_and_roll(state)
+                gambler = next(player_id for player_id in state["turn_order"] if player_id != active)
+                die_ids = self.set_rolled_faces(state, [3, 1, 1])
+                if action_type in {"continue_roll", "pick_nose"}:
+                    self.act(state, active, {"type": "place_dice", "level": 3, "die_ids": [die_ids[0]]})
+                if action_type == "pick_nose":
+                    self.act(state, active, {"type": "continue_roll"})
+                    self.roll(state)
+                    self.set_rolled_faces(state, [1, 2])
+                if action_type == "spend_reroll_cube":
+                    state["players"][active]["reroll_cubes"] = 1
+                action = {"type": action_type}
+                if action_type == "pick_nose":
+                    action["die_id"] = die_ids[0]
+                self.act(state, active, action)
+                self.assertEqual(state["betting_passed"], [])
+                self.assertIn("pass_bet", EmeraldSkullsGame.get_legal_actions(state, gambler))
+                self.assertNotIn("roll", EmeraldSkullsGame.get_legal_actions(state, active))
+
+    def test_betting_confirmations_survive_reconnect_and_old_saves(self):
+        state = self.make_state(3)
+        active = state["active_player_id"]
+        gamblers = [player_id for player_id in state["turn_order"] if player_id != active]
+        self.act(state, active, {"type": "buy_dice", "count": 3})
+        self.act(state, gamblers[0], {"type": "pass_bet"})
+        restored = EmeraldSkullsGame.deserialize(EmeraldSkullsGame.serialize(state))
+        view = EmeraldSkullsGame.get_public_view(restored, gamblers[0])
+        self.assertEqual(view["legal_actions"], [])
+        self.assertEqual(view["pending_bettors"], gamblers[1:])
+        self.assertTrue(next(player for player in view["players"] if player["player_id"] == gamblers[0])["betting_passed"])
+        state.pop("betting_passed")
+        restored = EmeraldSkullsGame.deserialize(state)
+        self.assertEqual(EmeraldSkullsGame.get_public_view(restored, active)["pending_bettors"], gamblers)
+
+    def test_bets_have_bilingual_names_and_pass_schema(self):
+        from jsonschema import validate
+        from game.definitions import EMERALD_SKULLS_ACTION_SCHEMA
+
+        state = self.make_state()
+        view = EmeraldSkullsGame.get_public_view(state, state["active_player_id"])
+        self.assertEqual(len(view["betting_options"]), 8)
+        for bet in view["betting_options"]:
+            self.assertTrue(bet["name"])
+            self.assertRegex(bet["name_zh"], r"[\u4e00-\u9fff]")
+        validate({"type": "pass_bet"}, EMERALD_SKULLS_ACTION_SCHEMA)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,5 @@
 <template data-game-target="emeraldSkullsPanel" data-game-mode="contents">
               <header class="emerald-skulls-topbar">
-                <div class="emerald-skulls-brand">
-                  <span class="emerald-skulls-brand-icon" aria-hidden="true">💀</span>
-                  <div>
-                    <span class="emerald-skulls-eyebrow">Kulbak dice table · Standard bets</span>
-                    <h2>Emerald Skulls</h2>
-                  </div>
-                </div>
                 <div class="emerald-skulls-meta" aria-label="Game status">
                   <span>Turn <strong id="emeraldSkullsTurnLabel">-</strong></span>
                   <span>Tumbler <strong id="emeraldSkullsTumblerLabel">-</strong></span>
@@ -16,13 +9,13 @@
 
               <div id="emeraldSkullsStatus" class="emerald-skulls-status" role="status" aria-live="polite">Waiting for game state…</div>
 
-              <section class="emerald-skulls-player-section" aria-labelledby="emeraldSkullsPlayersHeading" data-emerald-skulls-explain="players">
-                <div class="emerald-skulls-section-heading">
-                  <h3 id="emeraldSkullsPlayersHeading">Players</h3>
-                  <span>⚙️ Gears · 🟩 Reroll cubes · 🎟️ Bets</span>
-                </div>
+              <details id="emeraldSkullsPlayerSection" class="emerald-skulls-player-section" data-emerald-skulls-explain="players" open>
+                <summary class="emerald-skulls-section-heading">
+                  <strong id="emeraldSkullsPlayersHeading">Players</strong>
+                  <span id="emeraldSkullsPlayerSummary">⚙️ Gears · 🟩 Reroll cubes · 🎟️ Bets</span>
+                </summary>
                 <div id="emeraldSkullsPlayers" class="emerald-skulls-players"></div>
-              </section>
+              </details>
 
               <section id="emeraldSkullsPayoutChoice" class="emerald-skulls-payout-choice hidden" aria-labelledby="emeraldSkullsPayoutHeading">
                 <div>
@@ -58,7 +51,6 @@
                 <section id="emeraldSkullsTable" class="emerald-skulls-table" aria-labelledby="emeraldSkullsBoardHeading" data-emerald-skulls-explain="board">
                   <div class="emerald-skulls-section-heading">
                     <div>
-                      <span class="emerald-skulls-eyebrow">Ascending placement</span>
                       <h3 id="emeraldSkullsBoardHeading">The Skull</h3>
                     </div>
                     <span id="emeraldSkullsFloorLabel" class="emerald-skulls-floor">Floor · 1</span>
@@ -119,10 +111,14 @@
                 <section id="emeraldSkullsBetting" class="emerald-skulls-betting" aria-labelledby="emeraldSkullsBetsHeading" data-emerald-skulls-explain="bets">
                   <div class="emerald-skulls-section-heading">
                     <div>
-                      <span class="emerald-skulls-eyebrow">First marker earns the most</span>
-                      <h3 id="emeraldSkullsBetsHeading">Standard Bets</h3>
+                      <h3 id="emeraldSkullsBetsHeading">🎟️ 下注 · Bets</h3>
                     </div>
                     <span id="emeraldSkullsMarkersLabel">🎟️ 0 left</span>
+                  </div>
+                  <div id="emeraldSkullsBetPreview" class="emerald-skulls-bet-preview" data-emerald-skulls-explain="board" aria-label="Current skull board"></div>
+                  <div class="emerald-skulls-bet-decision">
+                    <span id="emeraldSkullsBetStatus" role="status" aria-live="polite"></span>
+                    <button id="emeraldSkullsPassBetBtn" type="button" data-emerald-skulls-explain="pass" disabled>不下注</button>
                   </div>
                   <div id="emeraldSkullsBetCards" class="emerald-skulls-bet-cards"></div>
                 </section>
