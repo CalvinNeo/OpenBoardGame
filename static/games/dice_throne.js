@@ -138,7 +138,11 @@
     focusBeforeDialog = document.activeElement;
     $("DialogTitle").textContent = title;
     $("DialogBody").replaceChildren(typeof content === "string" ? el("p", "", content) : content);
+    dialog.classList.toggle("dt-hero-dialog", content instanceof Element && content.classList.contains("dt-hero-reference"));
+    dialog.append($("Tooltip"));
     if (!dialog.open) dialog.showModal();
+    dialog.scrollTop = 0;
+    $("DialogBody").scrollTop = 0;
     $("DialogClose").focus();
   }
   function setExplain(value) {
@@ -236,7 +240,7 @@
       });
       content.append(details);
     }
-    section("Controls", "Click a hero's name on either player panel or in the hero picker to see all six numbered Dice (🎲) faces, including repeated symbols. Close or Esc returns to the board. On phones, status tokens show symbols and counts; tap for their names and effects. The current phase remains in the phase strip, and Battle log contains the detailed activity. Abilities and Hand use the remaining screen height and scroll inside their panel; short screens can still scroll the page. Help opens these rules. Explain lets you inspect a die, resource, status, card, ability or disabled control without taking an action. It blocks other controls until you inspect a target or press Esc. Hover a static icon on desktop or tap it on a phone for a three-second tooltip; the latest tap replaces the previous tip. Click empty space or Cancel to deselect a card. Scrolling preserves the selection. Esc closes the dialog or cancels the selection. Battle log retains recent public actions, including defensive rolls after reconnect; opponent card identities are never shown.");
+    section("Controls", "Click a hero's name on either player panel or in the hero picker to see all six numbered Dice (🎲) faces, Defense (🛡️), and every ability's pattern and effect. Repeated dice symbols stay visible; current Upgrade (⬆️) bonuses appear beside the base effects. Close or Esc returns to the board. On phones, status tokens show symbols and counts; tap for their names and effects. The current phase remains in the phase strip, and Battle log contains the detailed activity. Abilities and Hand use the remaining screen height and scroll inside their panel; short screens can still scroll the page. Help opens these rules. Explain lets you inspect a die, resource, status, card, ability or disabled control without taking an action. It blocks other controls until you inspect a target or press Esc. Hover a static icon on desktop or tap it on a phone for a three-second tooltip; the latest tap replaces the previous tip. Click empty space or Cancel to deselect a card. Scrolling preserves the selection. Esc closes the dialog or cancels the selection. Battle log retains recent public actions, including defensive rolls after reconnect; opponent card identities are never shown.");
     return content;
   }
   function nextEditionText() {
@@ -250,27 +254,60 @@
     grid.setAttribute("aria-label", "Six dice faces");
     (hero.dice_faces || []).forEach((key, index) => {
       const face = el("div", "dt-reference-face");
-      face.setAttribute("aria-label", `Face ${index + 1}: ${heroFaceName(hero, key)}`);
+      const label = `Face ${index + 1}: ${heroFaceName(hero, key)}`;
+      face.setAttribute("aria-label", label);
+      describe(face, label, "One of this hero's six die faces. Repeated symbols appear on multiple sides.", true);
       face.append(el("span", "dt-reference-value", index + 1), el("span", "dt-reference-symbol", hero.symbol_icons?.[key] || termFor(key)[1]), el("span", "dt-reference-name", hero.symbol_names?.[key] || termFor(key)[0]));
       grid.append(face);
     });
     return grid;
   }
-  function showHeroDice(id) {
+  function showHeroReference(id) {
     const hero = heroes[id];
     if (!hero) return;
     const content = el("div", "dt-hero-reference");
-    content.append(el("p", "", "Each die has these six faces. Repeated symbols appear on multiple sides."), heroFaceReference(hero));
-    if (hero.defense) content.append(el("p", "", `Defense (🛡️) · ${hero.defense.name}: ${hero.defense.dice} Dice (🎲). ${namedText(hero.defense.description)}`));
-    openDialog(`${hero.name_zh || hero.name} · ${heroName(id)} · Dice (🎲)`, content);
+    const player = view?.players?.find(entry => entry.hero === id);
+    const dice = el("section", "dt-reference-dice");
+    dice.setAttribute("aria-label", "Dice (🎲) · six faces");
+    dice.append(heroFaceReference(hero));
+    const legend = el("div", "dt-reference-symbols");
+    hero.faces.forEach(key => legend.append(el("span", "", heroFaceName(hero, key))));
+    dice.append(legend);
+    content.append(dice);
+    if (hero.defense) {
+      const defense = el("section", "dt-reference-defense");
+      const heading = el("div", "dt-reference-heading");
+      heading.append(el("h3", "", `Defense (🛡️) · ${hero.defense.name}`), el("span", "dt-reference-label", `${hero.defense.dice} Dice (🎲)`));
+      defense.append(heading, el("p", "", namedText(hero.defense.description)));
+      content.append(defense);
+    }
+    const heading = el("div", "dt-reference-heading");
+    heading.append(el("h3", "", `Abilities (⚔️) · ${hero.abilities.length}`), el("span", "dt-reference-label", "No CP (⚡) cost"));
+    const abilities = el("div", "dt-reference-abilities");
+    hero.abilities.forEach(ability => {
+      const entry = el("article", `dt-reference-ability${ability.damage_type === "ultimate" ? " dt-reference-ultimate" : ""}`);
+      entry.dataset.dtAbility = ability.id;
+      const head = el("div", "dt-reference-heading");
+      head.append(el("h4", "", ability.name));
+      const level = [3, 2].find(value => player?.upgrades?.includes(`${ability.id}_${value}`)) || 1;
+      if (level > 1) head.append(token("upgrade", `⬆️ ${level}`));
+      const pattern = requirement(ability.id);
+      pattern.setAttribute("aria-label", `Roll: ${conditionText(ability.id)}`);
+      if (ability.damage_type === "ultimate") pattern.append(token("ultimate", named("ultimate")));
+      entry.append(head, pattern, el("p", "dt-reference-effect", namedText(ability.description)));
+      if (level > 1) entry.append(el("p", "dt-reference-upgrade", `Upgrade (⬆️): base damage/healing +${level - 1}; resource-only abilities gain +${level - 1} CP (⚡).`));
+      abilities.append(entry);
+    });
+    content.append(heading, abilities);
+    openDialog(`${hero.icon} ${hero.name_zh || hero.name} · ${hero.name}`, content);
   }
   function heroNameButton(id) {
     const hero = heroes[id];
-    const node = button(hero.name_zh || hero.name, "dt-hero-name-button", () => showHeroDice(id));
+    const node = button(hero.name_zh || hero.name, "dt-hero-name-button", () => showHeroReference(id));
     node.dataset.hero = id;
     node.setAttribute("aria-haspopup", "dialog");
-    node.setAttribute("aria-label", `${hero.name_zh || hero.name} · View dice faces`);
-    return describe(node, `${heroName(id)} · Dice (🎲)`, (hero.dice_faces || []).map((key, index) => `${index + 1}: ${heroFaceName(hero, key)}`).join("; "));
+    node.setAttribute("aria-label", `${hero.name_zh || hero.name} · View dice and abilities`);
+    return describe(node, `${heroName(id)} · Dice (🎲) & abilities (⚔️)`, `Open this hero's six dice faces, Defense (🛡️), and all ${hero.abilities.length} abilities with their roll patterns, effects and current Upgrade (⬆️) bonuses.`);
   }
   function renderHeroPicker() {
     const choosing = view.phase === "choose_hero";
@@ -830,27 +867,29 @@
       if (node) showExplanation(node);
     }
   }, true);
-  root.addEventListener("pointerdown", event => {
-    pointerStart = {x: event.clientX, y: event.clientY, moved: false, scrolled: false};
-  });
   document.addEventListener("pointermove", event => {
     if (pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 8) pointerStart.moved = true;
   }, {passive: true});
-  root.addEventListener("click", event => {
-    const deliberate = !pointerStart || (!pointerStart.moved && !pointerStart.scrolled);
-    const staticIcon = event.target.closest("[data-dt-tip]");
-    if (deliberate && staticIcon && !staticIcon.closest("button") && (event.pointerType === "touch" || matchMedia("(hover: none)").matches)) showTip(staticIcon, true);
-    if (deliberate && selected && !event.target.closest("button,[data-dt-tip],details,summary,select,label,.dt-inline-confirm,.dt-detail-confirm")) cancelSelection();
-    pointerStart = null;
+  [root, $("Dialog")].forEach(surface => {
+    surface.addEventListener("pointerdown", event => {
+      pointerStart = {x: event.clientX, y: event.clientY, moved: false, scrolled: false};
+    });
+    surface.addEventListener("click", event => {
+      const deliberate = !pointerStart || (!pointerStart.moved && !pointerStart.scrolled);
+      const staticIcon = event.target.closest("[data-dt-tip]");
+      if (deliberate && staticIcon && !staticIcon.closest("button") && (event.pointerType === "touch" || matchMedia("(hover: none)").matches)) showTip(staticIcon, true);
+      if (surface === root && deliberate && selected && !event.target.closest("button,[data-dt-tip],details,summary,select,label,.dt-inline-confirm,.dt-detail-confirm")) cancelSelection();
+      pointerStart = null;
+    });
+    surface.addEventListener("pointerover", event => {
+      if (event.pointerType === "mouse") showTip(event.target.closest("[data-dt-unavailable]") || event.target.closest("[data-dt-tip]"));
+    });
+    surface.addEventListener("focusin", event => {
+      const node = event.target.closest("[data-dt-unavailable]");
+      if (node) showTip(node, true);
+    });
+    surface.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
   });
-  root.addEventListener("pointerover", event => {
-    if (event.pointerType === "mouse") showTip(event.target.closest("[data-dt-unavailable]") || event.target.closest("[data-dt-tip]"));
-  });
-  root.addEventListener("focusin", event => {
-    const node = event.target.closest("[data-dt-unavailable]");
-    if (node) showTip(node, true);
-  });
-  root.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
   document.addEventListener("scroll", () => {
     hideTip();
     if (pointerStart) pointerStart.scrolled = true;
@@ -883,7 +922,12 @@
   $("HelpBtn").addEventListener("click", () => { setExplain(false); openDialog("Dice Throne · Help", helpContent()); });
   $("ExplainBtn").addEventListener("click", () => setExplain(!explainMode));
   $("DialogClose").addEventListener("click", () => $("Dialog").close());
-  $("Dialog").addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus({preventScroll: true}); });
+  $("Dialog").addEventListener("close", () => {
+    if ($("Dialog").open) return;
+    hideTip();
+    root.append($("Tooltip"));
+    if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus({preventScroll: true});
+  });
   window.renderDiceThroneGameState = data => {
     if (!data?.view || (data.view.game_id && data.view.game_id !== "dice_throne")) return;
     if (view?.revision !== data.view.revision) selected = null;

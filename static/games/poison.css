@@ -3,7 +3,7 @@
 
 /* Poison --------------------------------------------------------------- */
 
-.poison-panel {
+.game-panel[data-game-theme="poison"] {
   --poison-ink: #ecfdf5;
   --poison-muted: #a7b7b2;
   --poison-line: rgba(167, 243, 208, 0.2);
@@ -12,10 +12,7 @@
   --poison-accent: #86efac;
   --poison-warning: #fdba74;
   box-sizing: border-box;
-  display: grid;
-  gap: 14px;
   isolation: isolate;
-  max-width: 100%;
   overflow: hidden;
   padding: clamp(12px, 2vw, 20px);
   position: relative;
@@ -29,11 +26,28 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 36px rgba(3, 12, 11, 0.18);
 }
 
+.poison-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.game-panel[data-game-theme="poison"] > .panel-header button {
+  border-color: var(--poison-line);
+  background: var(--poison-surface-raised);
+  color: var(--poison-ink);
+}
+
+.game-panel[data-game-theme="poison"] > .panel-header button:hover:not(:disabled) {
+  background: #204c40;
+}
+
 .poison-panel.hidden {
   display: none;
 }
 
-.poison-panel::before {
+.game-panel[data-game-theme="poison"]::before {
   position: absolute;
   z-index: -1;
   inset: 0;
@@ -742,11 +756,13 @@ body.poison-explain-mode button.has-explanation[data-poison-explanation]:disable
 }
 
 @media (max-width: 480px) {
-  .poison-panel {
-    gap: 10px;
-    margin-inline: -2px;
+  .game-panel[data-game-theme="poison"] {
     padding: 9px;
     border-radius: 14px;
+  }
+
+  .poison-panel {
+    gap: 10px;
   }
 
   .poison-topbar {

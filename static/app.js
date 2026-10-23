@@ -86,6 +86,12 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  const gamePanel = document.querySelector(".game-panel");
+  const gameHeading = gamePanel?.querySelector(".game-panel-title h2");
+  if (gamePanel?.dataset.gameTheme) {
+    delete gamePanel.dataset.gameTheme;
+    if (gameHeading) gameHeading.textContent = "Game";
+  }
   Object.entries(GAME_ASSETS).forEach(([id, assets]) => {
     const visible = id === gameType && isGameAssetsLoaded(id);
     document.getElementById(assets.panel)?.classList.toggle("hidden", !visible);
@@ -93,6 +99,11 @@ function setGamePanelVisibility(gameType) {
       window[assets.header](visible);
     }
   });
+  const panelTitle = isGameAssetsLoaded(gameType) && GAME_ASSETS[gameType]?.panelTitle;
+  if (panelTitle && gamePanel && gameHeading) {
+    gamePanel.dataset.gameTheme = gameType;
+    gameHeading.textContent = panelTitle;
+  }
   document.body.classList.toggle("trekking-active", gameType === "trekking_history");
   syncGameAssetsStatus(gameType);
   if (typeof syncRoomControlsExplainButton === "function") {

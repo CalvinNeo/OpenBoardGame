@@ -65,6 +65,10 @@ fixtures.long_names.current_player = 'p1';
 fixtures.long_names.legal_actions = [];
 fixtures.long_log = structuredClone(fixtures.review);
 fixtures.long_log.log = Array.from({ length: 50 }, (_, index) => ({ player_id: 'p0', text: `Public action ${index + 1} · rolled Dice (🎲).` }));
+fixtures.upgraded = structuredClone(fixtures.rolled);
+fixtures.upgraded.players.forEach(player => {
+    player.upgrades = [`${fixtures.upgraded.hero_catalog[player.hero].abilities[0].id}_3`];
+});
 
 async function render(page, key) {
     await page.evaluate(view => {
@@ -133,6 +137,67 @@ async function touchScroll(page, selector) {
     await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForTimeout(200);
     await session.detach();
+}
+
+async function heroReferences(page, width) {
+    await render(page, 'choose_hero');
+    for (const [heroId, hero] of Object.entries(fixtures.choose_hero.hero_catalog)) {
+        const trigger = page.locator(`#diceThroneHeroChoices .dt-hero-name-button[data-hero="${heroId}"]`);
+        await trigger.click();
+        await page.locator('#diceThroneDialog[open]').waitFor();
+        assert.equal(await page.locator('.dt-reference-face').count(), 6);
+        assert.deepEqual(await page.locator('.dt-reference-value').allTextContents(), ['1', '2', '3', '4', '5', '6']);
+        assert.deepEqual(await page.locator('.dt-reference-symbol').allTextContents(), hero.dice_faces.map(face => hero.symbol_icons[face]));
+        assert.equal(await page.locator('.dt-reference-ability').count(), hero.abilities.length);
+        assert.match(await page.locator('.dt-reference-defense').innerText(), new RegExp(hero.defense.name));
+        for (const ability of hero.abilities) {
+            const entry = page.locator(`[data-dt-ability="${ability.id}"]`);
+            assert.equal(await entry.locator('h4').innerText(), ability.name);
+            assert.equal(await entry.locator('.dt-reference-effect').innerText(), ability.description.replace(/\bCP\b/g, 'Combat Points (⚡)'));
+            const pattern = await entry.locator('.dt-requirement').innerText();
+            if (ability.condition.straight) assert(pattern.includes(`${ability.condition.straight}-straight`));
+            for (const [symbol, count] of Object.entries(ability.condition.counts || {})) {
+                assert(pattern.includes(`${hero.symbol_icons[symbol]} ×${count}`));
+            }
+        }
+        await bounds(page, `${width}px / ${heroId} reference`);
+        const layout = await page.locator('#diceThroneDialog').evaluate(dialog => {
+            const box = dialog.getBoundingClientRect();
+            const header = dialog.querySelector('.dt-dialog-head').getBoundingClientRect();
+            const body = dialog.querySelector('#diceThroneDialogBody');
+            const faces = [...dialog.querySelectorAll('.dt-reference-face')].map(node => node.getBoundingClientRect().top);
+            const columns = getComputedStyle(dialog.querySelector('.dt-reference-abilities')).gridTemplateColumns.split(' ').length;
+            const entries = [...dialog.querySelectorAll('.dt-reference-ability')].map(node => node.getBoundingClientRect());
+            const overlap = entries.some((entry, index) => entries.slice(index + 1).some(other =>
+                Math.min(entry.right, other.right) - Math.max(entry.left, other.left) > 1 &&
+                Math.min(entry.bottom, other.bottom) - Math.max(entry.top, other.top) > 1));
+            return { inside: box.top >= 0 && box.bottom <= innerHeight, headerAboveBody: header.bottom <= body.getBoundingClientRect().top,
+                singleDiceRow: faces.every(top => Math.abs(top - faces[0]) < 1), columns, overlap, height: box.height };
+        });
+        assert(layout.inside && layout.headerAboveBody && layout.singleDiceRow && !layout.overlap, JSON.stringify(layout));
+        assert.equal(layout.columns, width <= 560 ? 1 : 2);
+        if (width >= 1024) assert(layout.height < 650, 'Desktop reference must remain compact.');
+        if (['barbarian', 'treant'].includes(heroId)) {
+            await page.screenshot({ path: `${output}/${width}-hero-${heroId}.png`, fullPage: true });
+        }
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => document.activeElement?.classList.contains('dt-hero-name-button'));
+        await actions(page, []);
+    }
+    await render(page, 'upgraded');
+    for (const player of fixtures.upgraded.players) {
+        await page.locator(`#diceThronePlayers .dt-hero-name-button[data-hero="${player.hero}"]`).click();
+        const abilityId = fixtures.upgraded.hero_catalog[player.hero].abilities[0].id;
+        const entry = page.locator(`[data-dt-ability="${abilityId}"]`);
+        assert.equal(await entry.locator('.dt-reference-heading .dt-token').innerText(), '⬆️ 3');
+        assert.match(await entry.locator('.dt-reference-upgrade').innerText(), /\+2/);
+        await bounds(page, `${width}px / upgraded ${player.hero}`);
+        await page.locator('#diceThroneDialogClose').click();
+    }
+    await render(page, 'spectator');
+    await page.locator('#diceThronePlayers .dt-hero-name-button').last().click();
+    assert.equal(await page.locator('.dt-reference-ability').count(), 8);
+    await page.keyboard.press('Escape');
 }
 
 async function interactions(page) {
@@ -222,8 +287,27 @@ async function interactions(page) {
     await page.locator('#diceThroneTooltip').waitFor({ state: 'hidden', timeout: 4000 });
     await page.locator('.dt-player .dt-hero-name-button').first().tap();
     assert.equal(await page.locator('.dt-reference-face').count(), 6);
+    assert.equal(await page.locator('.dt-reference-ability').count(), 8);
     assert.equal(await page.locator('#diceThroneTooltip').isVisible(), false);
     await bounds(page, 'Hero dice reference');
+    await page.locator('.dt-reference-face').first().tap();
+    assert.match(await page.locator('#diceThroneTooltip').innerText(), /Face 1/);
+    assert.equal(await page.locator('#diceThroneTooltip').evaluate(node => node.parentElement.id), 'diceThroneDialog');
+    await page.locator('.dt-reference-face').last().tap();
+    assert.match(await page.locator('#diceThroneTooltip').innerText(), /Face 6/);
+    await page.locator('#diceThroneTooltip').waitFor({ state: 'hidden', timeout: 4000 });
+    const headerTop = await page.locator('.dt-dialog-head').evaluate(node => node.getBoundingClientRect().top);
+    await touchScroll(page, '#diceThroneDialogBody');
+    assert(await page.locator('#diceThroneDialogBody').evaluate(node => node.scrollTop) > 0);
+    assert.equal(await page.locator('#diceThroneTooltip').isVisible(), false, 'Scrolling must not open a tooltip.');
+    assert.equal(await page.locator('.dt-dialog-head').evaluate(node => node.getBoundingClientRect().top), headerTop);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.getElementById('diceThroneTooltip').parentElement.id === 'diceThronePanel');
+    await page.locator('.dt-player .dt-hero-name-button').last().tap();
+    assert.equal(await page.locator('#diceThroneDialogBody').evaluate(node => node.scrollTop), 0);
+    await page.locator('#diceThroneDialogClose').tap();
+    await page.locator('#diceThroneHelpBtn').tap();
+    assert.equal(await page.locator('#diceThroneDialog.dt-hero-dialog').count(), 0, 'Hero layout must not leak into Help.');
     await page.keyboard.press('Escape');
 
     await render(page, 'long_log');
@@ -269,6 +353,13 @@ async function desktop(browser) {
             await page.keyboard.press('Escape');
             await page.evaluate(() => setRoomControlsCollapsed(true));
             await page.screenshot({ path: `${output}/${width}-desktop.png`, fullPage: true });
+            await page.locator('.dt-player .dt-hero-name-button').first().click();
+            await page.locator('.dt-reference-face').first().hover();
+            assert.match(await page.locator('#diceThroneTooltip').innerText(), /Face 1/);
+            await bounds(page, `${width}px / hero tooltip`);
+            await page.locator('.dt-reference-ability .dt-token').first().hover();
+            assert.match(await page.locator('#diceThroneTooltip').innerText(), /Sword/);
+            await page.locator('#diceThroneDialogClose').click();
         }
     } finally {
         await context.close();
@@ -304,6 +395,7 @@ async function desktop(browser) {
             assert.equal(await page.locator('#diceThroneLogPanel details').getAttribute('open'), null);
             if (viewport.width >= 1024) assert(measurements[viewport.width].sideBySide, 'Desktop dice and decisions must share a row.');
             if (viewport.width <= 390) assert(measurements[viewport.width].panelBottom <= viewport.height, 'Normal mobile combat must fit the viewport.');
+            await heroReferences(page, viewport.width);
         }
         fs.writeFileSync(`${output}/measurements.json`, JSON.stringify(measurements, null, 2));
         console.log(JSON.stringify(measurements, null, 2));
@@ -312,6 +404,7 @@ async function desktop(browser) {
         assert.deepEqual(errors, [], 'Browser console errors');
         console.log(`${Object.keys(fixtures).length} states fit at 320, 390, 768, 1024 and 1440px.`);
         console.log('Touch scrolling, selection, card inputs, dice controls, Help/Explain, Esc, tooltips, round review and game switching passed.');
+        console.log('All eight hero references, six dice faces, every ability, opponent upgrades, spectators, modal tooltips and compact layouts passed.');
     } catch (error) {
         await page.screenshot({ path: `${output}/failure.png`, fullPage: true });
         throw error;

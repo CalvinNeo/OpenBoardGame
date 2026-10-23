@@ -1,4 +1,4 @@
-#terraNovaPanel {
+.game-panel[data-game-theme="terra_nova"] {
   --tn-ink: #25392f;
   --tn-muted: #718073;
   --tn-line: #d6ddcb;
@@ -9,12 +9,15 @@
   border: 1px solid #cdd5c0;
   border-radius: 22px;
   padding: clamp(12px, 2.2vw, 24px);
+  font-family: "Work Sans", system-ui, sans-serif;
+}
+
+#terraNovaPanel {
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  font-family: "Work Sans", system-ui, sans-serif;
 }
-#terraNovaPanel.tn-needs-action {
+.game-panel[data-game-theme="terra_nova"]:has(#terraNovaPanel.tn-needs-action) {
   border-color: #b24e4e;
   box-shadow: 0 0 0 2px #b24e4e66, 0 12px 28px #6d25251f;
 }
@@ -261,7 +264,7 @@ body.terra-nova-needs-action.room-controls-drawer-closed #roomControlsPanel .col
   .tn-detail-panel { padding: 10px 12px; }
 }
 @media (max-width: 390px) {
-  #terraNovaPanel { border-radius: 15px; padding: 10px; }
+  .game-panel[data-game-theme="terra_nova"] { border-radius: 15px; padding: 10px; }
   .tn-brand-mark { width: 39px; height: 39px; border-radius: 11px; }
   .tn-brand-mark svg { width: 29px; height: 29px; }
   .tn-brand { gap: 8px; }

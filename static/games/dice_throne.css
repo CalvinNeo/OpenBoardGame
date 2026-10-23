@@ -249,6 +249,30 @@
 .dt-reference-value { grid-area: 1 / 2; align-self: start; color: #786237; font-size: 12px; font-weight: 600; }
 .dt-reference-symbol { grid-area: 1 / 1; font-size: 27px; line-height: 1; }
 .dt-reference-name { grid-area: 2 / 1 / auto / -1; color: #56635b; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.dt-dialog.dt-hero-dialog { width: min(860px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 12px; overflow: hidden; }
+.dt-hero-dialog[open] { display: flex; flex-direction: column; }
+.dt-hero-dialog .dt-dialog-head { position: static; flex-shrink: 0; margin: 0 0 6px; padding: 0 0 6px; }
+.dt-hero-dialog .dt-dialog-head h2 { font-size: 19px; line-height: 1.25; }
+.dt-hero-dialog #diceThroneDialogBody { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-gutter: stable; padding: 2px 3px 3px; }
+.dt-hero-reference { display: grid; gap: 7px; }
+.dt-hero-reference .dt-face-reference { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 0; }
+.dt-hero-reference .dt-reference-face { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 24px; gap: 2px; padding: 4px 3px; border-radius: 6px; }
+.dt-hero-reference .dt-reference-value { grid-area: 1 / 1; align-self: center; font-size: 10px; }
+.dt-hero-reference .dt-reference-symbol { grid-area: 1 / 2; font-size: 22px; }
+.dt-hero-reference .dt-reference-name { display: none; }
+.dt-reference-symbols { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 4px; color: var(--dt-muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.dt-reference-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 3px 6px; }
+.dt-hero-reference h3, .dt-hero-reference h4 { margin: 0; color: #755930; font: 600 12px/1.35 "Work Sans", system-ui, sans-serif; overflow-wrap: anywhere; }
+.dt-reference-label { color: var(--dt-muted); font-size: 11px; line-height: 1.35; }
+.dt-hero-reference p { margin: 0; font-size: 12px; line-height: 1.45; }
+.dt-reference-defense { display: grid; gap: 4px; padding: 6px 8px; border: 1px solid #d5e0dc; border-radius: 6px; background: #edf3ed; }
+.dt-reference-abilities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.dt-reference-ability { display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: 4px 6px; padding: 6px 8px; border: 1px solid #e1ded4; border-radius: 6px; background: #f8f5eb; }
+.dt-reference-ability > .dt-reference-heading { flex: 1 1 130px; }
+.dt-reference-ability > p { flex: 0 0 100%; }
+.dt-hero-reference .dt-token { padding: 2px 3px; font-size: 10px; }
+.dt-reference-upgrade { color: #806122; }
+.dt-reference-ultimate { border-color: #d6c19c; background: #fbf1d9; }
 .dt-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .dt-legend > div, .dt-legend > p { margin: 0; padding: 9px; border: 1px solid #e6e0d0; border-radius: 7px; background: #f9f5e9; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .dt-rule-section { margin-top: 18px; padding-top: 1px; border-top: 1px solid #e7dfcc; }
@@ -361,6 +385,13 @@ body.dt-needs-action #roomControlsPanel.collapsed .collapse-btn { color: #a83227
   .game-panel.dt-game-panel > .panel-header { gap: 4px 6px; margin-bottom: 4px; padding-bottom: 4px; }
   .game-panel.dt-game-panel .game-panel-title { gap: 6px; }
   .game-panel.dt-game-panel .game-panel-title h2 { gap: 5px; font-size: 19px; }
+}
+@media (max-width: 560px) {
+  .dt-dialog.dt-hero-dialog { padding: 8px; border-radius: 10px; }
+  .dt-hero-dialog .dt-dialog-head h2 { font-size: 16px; }
+  .dt-hero-reference .dt-reference-symbol { font-size: 18px; }
+  .dt-reference-abilities { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .dt-reference-ability { padding: 5px 6px; }
 }
 @media (max-width: 480px) {
   .dt-dialog { padding: 16px; }

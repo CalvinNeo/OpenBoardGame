@@ -9,6 +9,8 @@
   let emeraldSkullsMobileContext = "";
   let emeraldSkullsTipTimer = null;
   let emeraldSkullsTipTarget = null;
+  let emeraldSkullsTipPointer = null;
+  let emeraldSkullsTouchInput = false;
   let emeraldSkullsModalFocus = null;
   let emeraldSkullsSuppressClick = false;
   let emeraldSkullsPreviousTitle = null;
@@ -122,6 +124,13 @@
     gem_out: "💎 Gem Out",
     run_out: "🏃 Run Out",
     double_out: "✨ Double Out",
+  };
+  const EMERALD_SKULLS_RESULT_TIPS = {
+    bust_out: "爆掉 · Bust Out（💥）：骰子无处可放，掷骰者不获奖励。",
+    chicken_out: "主动收手 · Chicken Out（🐔）：手中还有骰子，停止掷骰并结算已放置的骰子。",
+    gem_out: "宝石出局 · Gem Out（💎）：到达宝石层，手中仍有骰子；骷髅骰也参与计分。",
+    run_out: "空手出局 · Run Out（🏃）：放完全部骰子，但未到达宝石层。",
+    double_out: "双重出局 · Double Out（✨）：放完全部骰子，同时到达宝石层（💎）。",
   };
   const EMERALD_SKULLS_EXPLANATIONS = {
     players: {
@@ -291,6 +300,7 @@
   }
 
   function emeraldSkullsHideTip() {
+    emeraldSkullsTipPointer = null;
     if (emeraldSkullsTipTimer) window.clearTimeout(emeraldSkullsTipTimer);
     emeraldSkullsTipTimer = null;
     if (emeraldSkullsTipTarget) emeraldSkullsTipTarget.removeAttribute("aria-describedby");
@@ -299,10 +309,16 @@
     if (tip) tip.classList.add("hidden");
   }
 
+  function emeraldSkullsFindTipTarget(element) {
+    const target = element?.closest?.("[data-emerald-skulls-tip]");
+    if (!target || !emeraldSkullsPanel?.contains(target)) return null;
+    const control = target.closest("button, a[href], input, select, textarea, summary, [role='button']");
+    return control && !control.matches(":disabled, [aria-disabled='true']") ? null : target;
+  }
+
   function emeraldSkullsShowTip(target, autoHide = false) {
     emeraldSkullsHideTip();
-    if (emeraldSkullsExplainMode || !target || !target.dataset.emeraldSkullsTip) return;
-    if (target.closest("button, a[href], input, select, textarea, summary, [role='button']")) return;
+    if (emeraldSkullsExplainMode || !target?.isConnected || emeraldSkullsFindTipTarget(target) !== target) return;
     let tip = document.getElementById("emeraldSkullsTip");
     if (!tip) {
       tip = document.createElement("div");
@@ -338,6 +354,7 @@
 
   function emeraldSkullsDispatch(action) {
     if (emeraldSkullsPending) return;
+    emeraldSkullsHideTip();
     emeraldSkullsPending = true;
     if (emeraldSkullsPendingTimer) window.clearTimeout(emeraldSkullsPendingTimer);
     emeraldSkullsPendingTimer = window.setTimeout(() => {
@@ -488,6 +505,7 @@
       emeraldSkullsDiceCount.textContent = reviewing
         ? `${pool.length + rolled.length} unplaced · ${supply.length} supply`
         : `${rolled.length + pool.length} in hand · ${supply.length} supply`;
+      emeraldSkullsSetTip(emeraldSkullsDiceCount, `手中未放置的骰子（🎲）：${rolled.length + pool.length}。备用骰子：${supply.length}，使用重掷方块（🟩）时可加入一颗。`);
     }
     if (emeraldSkullsRollHeading) {
       emeraldSkullsRollHeading.textContent = reviewing
@@ -551,6 +569,14 @@
       else if (view.phase === "await_roll" && player.player_id !== view.active_player_id) note.textContent = (view.pending_bettors || []).includes(player.player_id) ? "Deciding bet…" : "Betting done ✓";
       else if ((player.bets || []).length) note.textContent = `${player.bets.length} bet${player.bets.length === 1 ? "" : "s"} locked`;
       else note.textContent = player.player_id === view.active_player_id ? "Rolling the bones" : "Watching the roll";
+      if (view.phase === "turn_result" || view.game_over) {
+        emeraldSkullsSetTip(note, view.game_over
+          ? player.rematch_ready ? "已确认再来一局（✓）。" : "最终得分；尚未确认再来一局。"
+          : player.ready ? "已确认本回合结算（✓），等待其他玩家。" : "正在查看结算；点击 Next Turn 后才算确认。");
+      } else if (view.phase === "await_roll" && player.player_id !== view.active_player_id) {
+        emeraldSkullsSetTip(note, (view.pending_bettors || []).includes(player.player_id)
+          ? "尚未完成下注决定；游戏不会超时跳过。" : "下注决定已完成（✓）：已用完标记，或明确选择不下注。");
+      }
       card.append(top, resources, note);
       emeraldSkullsPlayers.appendChild(card);
     });
@@ -757,11 +783,17 @@
       emeraldSkullsResultTitle.textContent = view.game_over
         ? winners.length ? `${winners.join(" & ")} ${winners.length === 1 ? "Wins" : "Win"}` : "Game Over"
         : emeraldSkullsResultText(summary.result);
+      emeraldSkullsSetTip(emeraldSkullsResultTitle, view.game_over
+        ? "最终排名：先比较齿轮（⚙️），再比较重掷方块（🟩），仍相同时比较最近担任掷骰者的顺序。"
+        : EMERALD_SKULLS_RESULT_TIPS[summary.result]);
     }
     if (emeraldSkullsReviewProgress) {
       emeraldSkullsReviewProgress.textContent = view.game_over
         ? "Final standings"
         : `${view.review_progress.done} / ${view.review_progress.total} ready`;
+      emeraldSkullsSetTip(emeraldSkullsReviewProgress, view.game_over
+        ? "最终排名已锁定；所有人确认 Play Again 后开始新游戏。"
+        : `${view.review_progress.done} / ${view.review_progress.total}：已确认人数 / 总人数。所有人确认 Next Turn 后才进入下一回合。`);
     }
     if (emeraldSkullsResultBody) {
       emeraldSkullsResultBody.innerHTML = "";
@@ -769,10 +801,12 @@
       outcome.className = "emerald-skulls-result-item is-tumbler";
       const outcomeTitle = document.createElement("strong");
       outcomeTitle.textContent = `${emeraldSkullsPlayerName(view, summary.tumbler_id)} · ${emeraldSkullsResultText(summary.result)}`;
+      emeraldSkullsSetTip(outcomeTitle, EMERALD_SKULLS_RESULT_TIPS[summary.result]);
       const outcomePay = document.createElement("span");
       const tumblerParts = [`${summary.tumbler_gears_paid}/${summary.tumbler_gears_due} ⚙️`];
       if (Number(summary.tumbler_reroll_cubes || 0)) tumblerParts.push(`${summary.tumbler_reroll_cubes} 🟩`);
       outcomePay.textContent = `${summary.payout_label} · ${tumblerParts.join(" + ")}`;
+      emeraldSkullsSetTip(outcomePay, `齿轮 · Gears（⚙️）：${summary.tumbler_gears_paid}/${summary.tumbler_gears_due} 表示实得 / 应得。重掷方块 · Reroll cubes（🟩）：本回合获得 ${summary.tumbler_reroll_cubes || 0}，可用于重掷。`);
       outcome.append(outcomeTitle, outcomePay);
       emeraldSkullsResultBody.appendChild(outcome);
       (summary.bet_awards || []).forEach((award) => {
@@ -781,8 +815,10 @@
         const title = document.createElement("strong");
         const bet = (view.betting_options || []).find((option) => option.bet_id === award.bet_id);
         title.textContent = `${emeraldSkullsPlayerName(view, award.player_id)} · ${bet ? bet.name_zh || bet.name : award.bet_id}`;
+        if (bet) emeraldSkullsSetTip(title, `${EMERALD_SKULLS_BET_ICONS[bet.bet_id] || "🎟️"} ${bet.name_zh || bet.name} · ${bet.name}：${EMERALD_SKULLS_BET_DESCRIPTIONS[bet.bet_id]?.summary || bet.description}。`);
         const reward = document.createElement("span");
         reward.textContent = `${award.paid}/${award.due} ⚙️ · stack #${award.position}`;
+        emeraldSkullsSetTip(reward, `齿轮 · Gears（⚙️）：${award.paid}/${award.due} 表示实得 / 应得。stack #${award.position}：此下注区第 ${award.position} 枚标记，按下注先后分配奖励。`);
         item.append(title, reward);
         emeraldSkullsResultBody.appendChild(item);
       });
@@ -796,6 +832,7 @@
         const exhausted = document.createElement("p");
         exhausted.className = "emerald-skulls-pot-empty";
         exhausted.textContent = "⚙️ The pot ran dry. Remaining payouts were cancelled and the game ended immediately.";
+        emeraldSkullsSetTip(exhausted, "齿轮池（⚙️）已耗尽：实得奖励可能少于应得奖励，剩余支付取消，游戏立即结束。");
         emeraldSkullsResultBody.appendChild(exhausted);
       }
     }
@@ -807,6 +844,7 @@
         badge.className = "emerald-skulls-ready-badge";
         badge.classList.toggle("is-ready", ready);
         badge.textContent = `${ready ? "✓" : "○"} ${player.name || player.player_id}`;
+        emeraldSkullsSetTip(badge, `${player.name || player.player_id}：${ready ? "已确认（✓）" : "尚未确认（○）"}${view.game_over ? "再来一局 · Play Again" : "回合结算 · Next Turn"}。`);
         emeraldSkullsReadyList.appendChild(badge);
       });
     }
@@ -814,11 +852,15 @@
       emeraldSkullsNextBtn.classList.toggle("hidden", view.game_over);
       emeraldSkullsNextBtn.textContent = (view.review_ready || []).includes(view.you) ? "Ready ✓" : "Next Turn";
       emeraldSkullsNextBtn.disabled = !emeraldSkullsHasAction("next_turn") || emeraldSkullsPending;
+      emeraldSkullsSetTip(emeraldSkullsNextBtn, (view.review_ready || []).includes(view.you)
+        ? "已确认（✓）本回合结算，等待其他玩家点击 Next Turn。" : EMERALD_SKULLS_EXPLANATIONS.next.body);
     }
     if (emeraldSkullsPlayAgainBtn) {
       emeraldSkullsPlayAgainBtn.classList.toggle("hidden", !view.game_over);
       emeraldSkullsPlayAgainBtn.textContent = (view.rematch_ready || []).includes(view.you) ? "Rematch Ready ✓" : "Play Again";
       emeraldSkullsPlayAgainBtn.disabled = !emeraldSkullsHasAction("play_again") || emeraldSkullsPending;
+      emeraldSkullsSetTip(emeraldSkullsPlayAgainBtn, (view.rematch_ready || []).includes(view.you)
+        ? "已确认（✓）再来一局，等待其他玩家点击 Play Again。" : EMERALD_SKULLS_EXPLANATIONS.again.body);
     }
   }
 
@@ -881,6 +923,7 @@
   function emeraldSkullsRenderGameState(data) {
     const view = data && data.view;
     if (!view) return;
+    emeraldSkullsHideTip();
     emeraldSkullsView = view;
     const mobileContext = `${view.game_index}:${view.turn_number}:${view.active_player_id}:${view.you}:${view.result ? "review" : view.phase === "await_roll" ? `bet-${view.roll_count}` : "play"}`;
     if (mobileContext !== emeraldSkullsMobileContext) {
@@ -996,26 +1039,40 @@
     });
     emeraldSkullsPanel.addEventListener("pointerover", (event) => {
       if (event.pointerType !== "mouse") return;
-      const target = event.target.closest("[data-emerald-skulls-tip]");
-      if (target) emeraldSkullsShowTip(target);
-    });
+      emeraldSkullsShowTip(emeraldSkullsFindTipTarget(event.target));
+    }, true);
     emeraldSkullsPanel.addEventListener("pointerout", (event) => {
-      if (event.pointerType === "mouse" && !event.target.contains(event.relatedTarget)) emeraldSkullsHideTip();
-    });
+      if (event.pointerType === "mouse" && emeraldSkullsFindTipTarget(event.target) !== emeraldSkullsFindTipTarget(event.relatedTarget)) emeraldSkullsHideTip();
+    }, true);
     emeraldSkullsPanel.addEventListener("pointerdown", (event) => {
-      if (event.pointerType === "mouse") return;
-      const target = event.target.closest("[data-emerald-skulls-tip]");
-      if (target) emeraldSkullsShowTip(target, true);
-      else emeraldSkullsHideTip();
-    });
+      emeraldSkullsTouchInput = event.pointerType !== "mouse";
+      emeraldSkullsHideTip();
+      const target = emeraldSkullsFindTipTarget(event.target);
+      if (emeraldSkullsTouchInput && event.isPrimary && !emeraldSkullsExplainMode && target) {
+        emeraldSkullsTipPointer = { pointerId: event.pointerId, target, clientX: event.clientX, clientY: event.clientY };
+      }
+    }, true);
     emeraldSkullsPanel.addEventListener("focusin", (event) => {
-      // Touch-triggered focus must not cancel the three-second dismiss timer.
-      if (!emeraldSkullsTipTimer) emeraldSkullsShowTip(event.target.closest("[data-emerald-skulls-tip]"));
+      if (!emeraldSkullsTouchInput && !emeraldSkullsTipTimer) emeraldSkullsShowTip(emeraldSkullsFindTipTarget(event.target));
     });
     emeraldSkullsPanel.addEventListener("focusout", () => {
-      if (!emeraldSkullsTipTimer) emeraldSkullsHideTip();
+      if (!emeraldSkullsTouchInput && !emeraldSkullsTipTimer) emeraldSkullsHideTip();
     });
   }
+
+  document.addEventListener("pointermove", (event) => {
+    const pointer = emeraldSkullsTipPointer;
+    if (pointer?.pointerId === event.pointerId && Math.hypot(event.clientX - pointer.clientX, event.clientY - pointer.clientY) > 10) emeraldSkullsHideTip();
+  }, true);
+  document.addEventListener("pointerup", (event) => {
+    const pointer = emeraldSkullsTipPointer;
+    if (pointer?.pointerId !== event.pointerId) return;
+    emeraldSkullsTipPointer = null;
+    if (Math.hypot(event.clientX - pointer.clientX, event.clientY - pointer.clientY) > 10) return;
+    const target = emeraldSkullsFindTipTarget(document.elementFromPoint(event.clientX, event.clientY));
+    if (target === pointer.target) emeraldSkullsShowTip(target, true);
+  }, true);
+  document.addEventListener("pointercancel", () => emeraldSkullsHideTip(), true);
   if (emeraldSkullsRollBtn) emeraldSkullsRollBtn.addEventListener("click", () => emeraldSkullsHasAction("roll") && emeraldSkullsDispatch({ type: "roll" }));
   if (emeraldSkullsPassBetBtn) emeraldSkullsPassBetBtn.addEventListener("click", () => emeraldSkullsHasAction("pass_bet") && emeraldSkullsDispatch({ type: "pass_bet" }));
   if (emeraldSkullsRerollBtn) emeraldSkullsRerollBtn.addEventListener("click", () => emeraldSkullsHasAction("spend_reroll_cube") && emeraldSkullsDispatch({ type: "spend_reroll_cube" }));
@@ -1109,6 +1166,7 @@
   });
 
   document.addEventListener("keydown", (event) => {
+    emeraldSkullsTouchInput = false;
     emeraldSkullsSuppressClick = false;
     const modal = [emeraldSkullsHelpModal, emeraldSkullsExplainModal].find((element) => element && !element.classList.contains("hidden"));
     if (modal && event.key === "Tab") {

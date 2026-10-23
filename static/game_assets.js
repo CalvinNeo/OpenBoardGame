@@ -120,8 +120,8 @@ const GAME_ASSETS = {
     "header": "showOdinHeaderActions"
   },
   "dice_throne": {
-    "scripts": ["/static/games/dice_throne.js?v=8"],
-    "styles": ["/static/games/dice_throne.css?v=8"],
+    "scripts": ["/static/games/dice_throne.js?v=9"],
+    "styles": ["/static/games/dice_throne.css?v=9"],
     "markup": "/static/games/dice_throne.html?v=5",
     "panel": "diceThronePanel",
     "header": "showDiceThroneHeaderActions"
@@ -338,13 +338,13 @@ const GAME_ASSETS = {
   },
   "decrypto": {
     "scripts": [
-      "/static/games/decrypto.js?v=app_v4"
+      "/static/games/decrypto.js?v=app_v5"
     ],
     "styles": [],
     "panel": "decryptoPanel",
     "header": "showDecryptoHeaderActions",
-    "markup": "/static/games/decrypto.html?v=1",
-    "styleFragments": "/static/games/decrypto.css?v=1"
+    "markup": "/static/games/decrypto.html?v=2",
+    "styleFragments": "/static/games/decrypto.css?v=2"
   },
   "wavelength": {
     "scripts": [
@@ -824,7 +824,7 @@ const GAME_ASSETS = {
   },
   "emerald_skulls": {
     "scripts": [
-      "/static/games/emerald_skulls.js?v=app_v6"
+      "/static/games/emerald_skulls.js?v=app_v7"
     ],
     "styles": [],
     "panel": "emeraldSkullsPanel",

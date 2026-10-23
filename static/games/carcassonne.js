@@ -8,7 +8,6 @@ const carcExplainModalCloseBtn = document.getElementById("carcExplainModalCloseB
 const carcHelpContent = document.getElementById("carcHelpContent");
 const carcExplainContent = document.getElementById("carcExplainContent");
 const carcGamePanel = document.getElementById("carcassonnePanel");
-const carcGameHeading = document.querySelector(".game-panel > .panel-header > h2");
 
 const carcPhaseLabel = document.getElementById("carcPhase");
 const carcTurnLabel = document.getElementById("carcTurn");
@@ -1391,13 +1390,6 @@ let carcExplainMode = false;
 function showCarcassonneHeaderActions(show) {
   if (carcHeaderActions) {
     carcHeaderActions.style.display = show ? "flex" : "none";
-  }
-  if (carcGameHeading) {
-    if (show) {
-      carcGameHeading.textContent = "Carcassonne";
-    } else if (carcGameHeading.textContent === "Carcassonne") {
-      carcGameHeading.textContent = "Game";
-    }
   }
   if (!show) {
     exitCarcassonneExplainMode();

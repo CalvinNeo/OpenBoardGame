@@ -1,15 +1,13 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-century_spice_road-1 {
 
-#centurySpiceRoadPanel {
+.game-panel[data-game-theme="century_spice_road"] {
   --century-ink: #29231b;
   --century-muted: #706658;
   --century-line: #d9cdbb;
   --century-paper: #fffdf7;
   --century-gold: #b67a18;
-  position: relative;
   padding: 8px;
-  overflow: hidden;
   border: 1px solid #ded2bf;
   border-radius: 12px;
   background:
@@ -17,6 +15,12 @@
     radial-gradient(circle at 2% 42%, rgba(44, 122, 106, 0.09), transparent 20%),
     #f7f1e5;
   color: var(--century-ink);
+}
+
+#centurySpiceRoadPanel {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
   container-type: inline-size;
   font-size: 12px;
 }

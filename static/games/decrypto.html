@@ -1,16 +1,16 @@
-<template data-game-target="decryptoHelpModal" data-game-mode="replace"><section id="decryptoHelpModal" class="modal hidden" aria-hidden="true">
+<template data-game-target="decryptoHelpModal" data-game-mode="replace"><section id="decryptoHelpModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="decryptoHelpTitle" aria-hidden="true">
     <div class="modal-content decrypto-help-modal">
       <div class="modal-header">
-        <h2>Decrypto - Game Rules</h2>
+        <h2 id="decryptoHelpTitle">Decrypto - Game Rules</h2>
         <button id="decryptoHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body decrypto-help-content" id="decryptoHelpContent"></div>
     </div>
   </section></template>
-<template data-game-target="decryptoExplainModal" data-game-mode="replace"><section id="decryptoExplainModal" class="modal hidden" aria-hidden="true">
+<template data-game-target="decryptoExplainModal" data-game-mode="replace"><section id="decryptoExplainModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="decryptoExplainTitle" aria-hidden="true">
     <div class="modal-content decrypto-explain-modal">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2 id="decryptoExplainTitle">Explanation</h2>
         <button id="decryptoExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
@@ -19,15 +19,15 @@
     </div>
   </section></template>
 <template data-game-target="decryptoPanel" data-game-mode="contents">
-              <div class="row">
+              <div class="row decrypto-meta">
                 <div>Phase: <span id="decryptoPhase">-</span></div>
                 <div>Round: <span id="decryptoRound">-</span>/<span id="decryptoMaxRounds">-</span></div>
-                <div>Winner: <span id="decryptoWinner">-</span></div>
+                <div id="decryptoWinnerRow" class="hidden">Winner: <span id="decryptoWinner">-</span></div>
               </div>
-              <div class="row">
+              <div class="row decrypto-meta">
                 <div>Your Team: <span id="decryptoYourTeam">-</span></div>
                 <div>Your Role: <span id="decryptoYourRole">-</span></div>
-                <div>Current Code: <span id="decryptoCurrentCode">-</span></div>
+                <div id="decryptoCurrentCodeRow" class="hidden">Code: <span id="decryptoCurrentCode">-</span></div>
               </div>
 
               <div id="decryptoStatus" class="decrypto-status waiting" role="status" aria-live="polite">
@@ -35,38 +35,40 @@
                 <div id="decryptoStatusBody" class="decrypto-status-body">-</div>
               </div>
 
-              <h3>Teams</h3>
-              <div id="decryptoTeams"></div>
-
-              <h3>Current Clues</h3>
-              <div id="decryptoCurrentClues"></div>
-
-              <h3>History</h3>
-              <div id="decryptoHistory"></div>
-
+              <div id="decryptoTeams" data-decrypto-explain="teams"></div>
+              <div class="decrypto-workspace">
+              <div class="decrypto-main">
+              <details id="decryptoSummary" class="decrypto-summary hidden" data-decrypto-explain="results">
+                <summary id="decryptoSummaryTitle">Last Round</summary>
+                <div id="decryptoSummaryBody" class="decrypto-summary-body"></div>
+                <div id="decryptoNextRoundArea" class="decrypto-next-round hidden">
+                  <div id="decryptoReadyStatus" role="status"></div>
+                  <button id="decryptoNextRoundBtn" type="button">Next Round</button>
+                </div>
+              </details>
               <div id="decryptoEncryptionArea">
                 <h3>Submit Clues</h3>
                 <div class="row actions decrypto-clue-row">
                   <div class="decrypto-clue-entry">
-                    <div class="decrypto-clue-code">
+                    <label class="decrypto-clue-code" for="decryptoClue1">
                       <span class="decrypto-clue-digit" id="decryptoClueDigit1">-</span>
                       <span class="decrypto-clue-word" id="decryptoClueWord1">-</span>
-                    </div>
-                    <input id="decryptoClue1" type="text" placeholder="Clue 1" />
+                    </label>
+                    <input id="decryptoClue1" type="text" placeholder="Clue 1" autocomplete="off" />
                   </div>
                   <div class="decrypto-clue-entry">
-                    <div class="decrypto-clue-code">
+                    <label class="decrypto-clue-code" for="decryptoClue2">
                       <span class="decrypto-clue-digit" id="decryptoClueDigit2">-</span>
                       <span class="decrypto-clue-word" id="decryptoClueWord2">-</span>
-                    </div>
-                    <input id="decryptoClue2" type="text" placeholder="Clue 2" />
+                    </label>
+                    <input id="decryptoClue2" type="text" placeholder="Clue 2" autocomplete="off" />
                   </div>
                   <div class="decrypto-clue-entry">
-                    <div class="decrypto-clue-code">
+                    <label class="decrypto-clue-code" for="decryptoClue3">
                       <span class="decrypto-clue-digit" id="decryptoClueDigit3">-</span>
                       <span class="decrypto-clue-word" id="decryptoClueWord3">-</span>
-                    </div>
-                    <input id="decryptoClue3" type="text" placeholder="Clue 3" />
+                    </label>
+                    <input id="decryptoClue3" type="text" placeholder="Clue 3" autocomplete="off" />
                   </div>
                   <button id="decryptoSubmitCluesBtn">Submit Clues</button>
                 </div>
@@ -76,7 +78,8 @@
               </div>
 
               <div id="decryptoGuessArea">
-                <h3>Submit Decrypt Guess</h3>
+                <section id="decryptoDecryptArea" class="decrypto-guess-section" data-decrypto-explain="decrypt">
+                <h3>Decrypt <span class="decrypto-section-note">Your team's clues</span></h3>
                 <div class="decrypto-guess-grid">
                   <div class="decrypto-guess-row">
                     <label class="decrypto-guess-clue" id="decryptoDecryptClueLabel1" for="decryptoDecryptSelect1">Clue 1: -</label>
@@ -112,7 +115,9 @@
                 <div class="row actions">
                   <button id="decryptoSubmitDecryptBtn">Submit Decrypt</button>
                 </div>
-                <h3>Submit Intercept Guess</h3>
+                </section>
+                <section id="decryptoInterceptArea" class="decrypto-guess-section" data-decrypto-explain="intercept">
+                <h3>Intercept <span class="decrypto-section-note">Opponent's clues</span></h3>
                 <div class="decrypto-guess-grid">
                   <div class="decrypto-guess-row">
                     <label class="decrypto-guess-clue" id="decryptoInterceptClueLabel1" for="decryptoInterceptSelect1">Clue 1: -</label>
@@ -148,11 +153,31 @@
                 <div class="row actions">
                   <button id="decryptoSubmitInterceptBtn">Submit Intercept</button>
                 </div>
+                </section>
               </div>
-
-              <div id="decryptoSummary" class="round-notice hidden">
-                <div class="round-notice-title">Last Round</div>
-                <div id="decryptoSummaryBody" class="round-notice-body">-</div>
               </div>
-
+              <aside id="decryptoReferenceHome">
+                <div id="decryptoReference">
+                  <details id="decryptoHistoryDetails" class="decrypto-reference-section" open data-decrypto-explain="history">
+                    <summary>History <span class="decrypto-section-note">Colors identify clue authors</span></summary>
+                    <div id="decryptoHistory"></div>
+                  </details>
+                  <details class="decrypto-reference-section" id="decryptoCurrentCluesDetails">
+                    <summary>Current Clues</summary>
+                    <div id="decryptoCurrentClues"></div>
+                  </details>
+                </div>
+              </aside>
+              </div>
+              <button id="decryptoHistoryBtn" class="decrypto-history-dock" type="button" aria-controls="decryptoHistoryModal" aria-expanded="false">History</button>
+              <section id="decryptoHistoryModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="decryptoHistoryTitle" aria-hidden="true">
+                <div class="modal-content decrypto-history-drawer">
+                  <div class="modal-header">
+                    <h2 id="decryptoHistoryTitle">Clue Reference</h2>
+                    <button id="decryptoHistoryCloseBtn" type="button">Close</button>
+                  </div>
+                  <div id="decryptoHistoryDockHost" class="modal-body"></div>
+                </div>
+              </section>
+              <div id="decryptoTooltip" class="decrypto-tooltip hidden" role="tooltip"></div>
             </template>

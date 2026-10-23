@@ -54,7 +54,7 @@
 @media all, obg-game-guandan-2 {
 
 /* Guandan Help/Explain */
-#guandanPanel {
+.game-panel[data-game-theme="guandan"] {
   --guandan-open: #b7791f;
   --guandan-you: #2563eb;
   --guandan-teammate: #15803d;
@@ -72,6 +72,10 @@
   color: var(--guandan-ink);
   font-family: "Work Sans", Arial, sans-serif;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+#guandanPanel {
+  min-width: 0;
 }
 
 #guandanPanel .guandan-status-bar {
@@ -323,7 +327,7 @@
 }
 
 @media (max-width: 640px) {
-  #guandanPanel {
+  .game-panel[data-game-theme="guandan"] {
     padding: 7px;
     border-radius: 11px;
   }

@@ -1,7 +1,7 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-carcassonne-1 {
 
-#carcassonnePanel {
+.game-panel[data-game-theme="carcassonne"] {
   --carc-ink: #2c251b;
   --carc-muted: #6e6251;
   --carc-parchment: #f8f2e4;
@@ -12,12 +12,7 @@
   --carc-gold: #c9912d;
   --carc-blue: #2c6573;
   color: var(--carc-ink);
-  container-type: inline-size;
   font-family: "Work Sans", Arial, sans-serif;
-}
-
-.carc-game-shell {
-  position: relative;
   padding: 18px;
   border: 1px solid #b89e6b;
   border-radius: 22px;
@@ -27,6 +22,16 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.78),
     0 18px 42px rgba(74, 52, 25, 0.15);
+}
+
+#carcassonnePanel {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.carc-game-shell {
+  position: relative;
+  min-width: 0;
 }
 
 .carc-status-bar {
@@ -757,7 +762,7 @@
 }
 
 @media (max-width: 720px) {
-  .carc-game-shell {
+  .game-panel[data-game-theme="carcassonne"] {
     padding: 10px;
     border-radius: 16px;
   }

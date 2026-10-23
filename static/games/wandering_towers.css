@@ -62,15 +62,12 @@ body.wandering-towers-explain-mode .wandering-cell.has-explanation:hover {
   margin-top: 0;
 }
 
-.wandering-towers-panel {
+.game-panel[data-game-theme="wandering_towers"] {
   --wandering-ink: #182234;
   --wandering-muted: #65738a;
   --wandering-purple: #6658c9;
   --wandering-purple-soft: #eeecff;
   --wandering-sky: #eaf5ff;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
   padding: 10px;
   border: 1px solid #dfe4ee;
   border-radius: 14px;
@@ -78,6 +75,13 @@ body.wandering-towers-explain-mode .wandering-cell.has-explanation:hover {
     radial-gradient(circle at 86% 5%, rgba(168, 145, 255, 0.13), transparent 24%),
     linear-gradient(155deg, #fbfcff 0%, #f4f7fb 100%);
   color: var(--wandering-ink);
+}
+
+.wandering-towers-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
 }
 
 .wandering-status-strip {
@@ -817,11 +821,13 @@ button.wandering-wizard-chip.selected {
 }
 
 @media (max-width: 700px) {
-  .wandering-towers-panel {
-    gap: 5px;
-    margin: 0 -5px;
+  .game-panel[data-game-theme="wandering_towers"] {
     padding: 6px;
     border-radius: 10px;
+  }
+
+  .wandering-towers-panel {
+    gap: 5px;
   }
 
   .wandering-status-strip {
@@ -1127,8 +1133,7 @@ button.wandering-wizard-chip.selected {
 }
 
 @media (max-width: 360px) {
-  .wandering-towers-panel {
-    margin: 0 -6px;
+  .game-panel[data-game-theme="wandering_towers"] {
     padding: 5px;
   }
 

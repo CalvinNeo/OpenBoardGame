@@ -209,7 +209,7 @@
     function render() {
         if (!view) return;
         const logScroll = panel.querySelector(".fs-log")?.scrollTop || 0;
-        panel.innerHTML = `<div class="fs-surface"><div class="fs-banner"><div><span class="fs-eyebrow">SMALL BIDS. GRAND AMBITIONS.</span><h2>地产达人 <small>For Sale</small></h2></div><div class="fs-phase-label"><b>${view.stage === "buy" ? "01 · BUY" : "02 · SELL"}</b><span>Round ${view.stage_round} / ${view.rounds_per_stage}</span></div></div>
+        panel.innerHTML = `<div class="fs-surface"><div class="fs-banner"><div class="fs-phase-label"><b>${view.stage === "buy" ? "01 · BUY" : "02 · SELL"}</b><span>Round ${view.stage_round} / ${view.rounds_per_stage}</span></div></div>
             <div class="fs-stage-track"><span class="${view.stage === "buy" ? "is-active" : ""}">01 买入地产</span><span class="fs-track-line" aria-hidden="true"></span><span class="${view.stage === "sell" ? "is-active" : ""}">02 售出获利</span></div>
             <div class="fs-status" role="status" aria-live="polite">${esc(statusText())}</div><div class="fs-layout"><div class="fs-main">${renderFinal()}${renderResult()}${renderMarket()}${renderPortfolio()}</div><aside class="fs-sidebar">${renderPlayers()}<section class="fs-box fs-log-box"><div class="fs-section-heading"><h3>Activity</h3>${info("Public log", "log")}</div><div class="fs-log">${view.log.slice().reverse().map(entry => `<p><small>R${entry.round}</small><span>${esc(entry.text)}</span></p>`).join("") || '<p class="fs-muted">No activity yet.</p>'}</div></section></aside></div></div>`;
         panel.querySelector(".fs-log").scrollTop = logScroll;

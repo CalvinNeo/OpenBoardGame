@@ -307,6 +307,7 @@ def _start_round(state: Dict, increment_round: bool) -> None:
     if increment_round:
         state["round"] += 1
     state["phase"] = "encryption"
+    state["next_round_ready"] = []
     state["round_data"] = {}
     for team_id in TEAM_IDS:
         state["round_data"][team_id] = {
@@ -381,6 +382,24 @@ def _history_by_keyword(history: List[Dict]) -> Dict[str, List[str]]:
     return mapping
 
 
+def _public_history(state: Dict, team_id: str) -> List[Dict]:
+    team = state["teams"][team_id]
+    summaries = {
+        entry["round"]: entry.get("teams", {}).get(team_id, {})
+        for entry in state.get("round_history", [])
+    }
+    history = []
+    for entry in team["history"]:
+        public_entry = dict(entry)
+        summary = summaries.get(entry.get("round"), {})
+        author = entry.get("clues_by") or summary.get("clues_by") or summary.get("encryptor_id")
+        if not author and team["player_ids"] and isinstance(entry.get("round"), int):
+            author = team["player_ids"][(entry["round"] - 1) % len(team["player_ids"])]
+        public_entry["clues_by"] = author
+        history.append(public_entry)
+    return history
+
+
 def _apply_round_results(state: Dict) -> None:
     summary = {"round": state["round"], "teams": {}}
     tokens_before = {
@@ -445,6 +464,7 @@ def _apply_round_results(state: Dict) -> None:
         state["teams"][team_id]["history"].append(
             {
                 "round": state["round"],
+                "clues_by": data.get("clues_by") or _current_encryptor(state, team_id),
                 "code": code,
                 "clues": clues,
                 "decrypt_guess": decrypt_guess,
@@ -517,8 +537,8 @@ def _resolve_round(state: Dict) -> None:
     _check_end_conditions(state)
     if state.get("game_over"):
         return
-    _rotate_encryptors(state)
-    _start_round(state, increment_round=True)
+    state["phase"] = "round_end"
+    state["next_round_ready"] = []
 
 
 class DecryptoGame:
@@ -610,6 +630,8 @@ class DecryptoGame:
 
         phase = state.get("phase")
         actions: List[str] = []
+        if phase == "round_end":
+            return [] if player_id in state.get("next_round_ready", []) else ["next_round"]
         if phase == "encryption":
             encryptor = _current_encryptor(state, team_id)
             team_data = state["round_data"][team_id]
@@ -641,6 +663,20 @@ class DecryptoGame:
         action_type = action.get("type")
         events: List[Dict] = []
         phase = state.get("phase")
+
+        if phase == "round_end":
+            if action_type != "next_round":
+                return [], "invalid action"
+            ready = state.setdefault("next_round_ready", [])
+            if player_id in ready:
+                return [], None
+            ready.append(player_id)
+            events.append({"type": "decrypto:next_ready", "payload": {"player_id": player_id}})
+            if all(pid in ready for pid in state["player_teams"]):
+                _rotate_encryptors(state)
+                _start_round(state, increment_round=True)
+                events.append({"type": "decrypto:next_round", "payload": {"round": state["round"]}})
+            return events, None
 
         if phase == "encryption":
             if action_type == "submit_clues":
@@ -723,6 +759,7 @@ class DecryptoGame:
         teams_view: Dict[str, Dict] = {}
         for team_id in TEAM_IDS:
             team = state["teams"][team_id]
+            history = _public_history(state, team_id)
             keywords = None
             if state.get("game_over") or viewer_team == team_id:
                 keywords = list(team["keywords"])
@@ -750,8 +787,8 @@ class DecryptoGame:
                 "keywords": keywords,
                 "intercepts": team["intercepts"],
                 "miscommunications": team["miscommunications"],
-                "history": list(team["history"]),
-                "history_by_keyword": _history_by_keyword(team["history"]),
+                "history": history,
+                "history_by_keyword": _history_by_keyword(history),
                 "clues_submitted": bool(data.get("clues")),
                 "decrypt_submitted": data.get("decrypt_guess") is not None,
                 "intercept_submitted": data.get("intercept_guess") is not None,
@@ -777,6 +814,7 @@ class DecryptoGame:
             "teams": teams_view,
             "players": players_view,
             "last_round_summary": state.get("last_round_summary"),
+            "next_round_ready": list(state.get("next_round_ready", [])),
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
             "legal_actions": DecryptoGame.get_legal_actions(state, viewer_id),
@@ -786,6 +824,10 @@ class DecryptoGame:
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         team_id = state.get("player_teams", {}).get(bot_id)
         if not team_id or state.get("game_over"):
+            return None
+        if state.get("phase") == "round_end":
+            if bot_id not in state.get("next_round_ready", []):
+                return {"type": "next_round"}
             return None
         strategy_id = None
         clue_directness = None

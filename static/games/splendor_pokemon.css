@@ -186,7 +186,7 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
 }
 
 /* Splendor: Pokemon board */
-.pokemon-splendor-panel {
+.game-panel[data-game-theme="splendor_pokemon"] {
   --pokemon-ink: #172033;
   --pokemon-muted: #64748b;
   --pokemon-line: #d9e2ec;
@@ -199,6 +199,10 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
     radial-gradient(circle at 0% 12%, rgba(37, 99, 235, 0.08), transparent 28%),
     #f8fafc;
   color: var(--pokemon-ink);
+}
+
+.pokemon-splendor-panel {
+  min-width: 0;
 }
 
 .pokemon-section-heading {
@@ -994,7 +998,7 @@ body.pokemon-splendor-explain-mode .token-picker.has-explanation {
 }
 
 @media (min-width: 981px) {
-  .pokemon-splendor-panel {
+  .game-panel[data-game-theme="splendor_pokemon"] {
     padding: 12px;
   }
 
@@ -1169,7 +1173,7 @@ body.pokemon-splendor-explain-mode .token-picker.has-explanation {
 }
 
 @media (max-width: 760px) {
-  .pokemon-splendor-panel {
+  .game-panel[data-game-theme="splendor_pokemon"] {
     padding: 11px;
     border-radius: 13px;
   }

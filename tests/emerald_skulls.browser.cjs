@@ -45,6 +45,32 @@ next_roll = copy.deepcopy(s)
 _, error = Game.apply_action(next_roll, 'p1', {'type':'continue_roll'})
 assert error is None, error
 views['next_bets'] = Game.get_public_view(next_roll, 'p2')
+reward_state = copy.deepcopy(next_roll)
+reward_state['player_meta']['p6']['is_bot'] = False
+_, error = Game.apply_action(reward_state, 'p3', {'type':'place_bet', 'bet_id':'busted_fowl'})
+assert error is None, error
+for player_id in Game.get_public_view(reward_state, 'p1')['pending_bettors']:
+    _, error = Game.apply_action(reward_state, player_id, {'type':'pass_bet'})
+    assert error is None, error
+_, error = Game.apply_action(reward_state, 'p1', {'type':'roll'})
+assert error is None, error
+for die in reward_state['dice']:
+    if die['zone'] == 'rolled':
+        die['face'] = 3 if die['die_id'] == 'die-4' else 1
+_, error = Game.apply_action(reward_state, 'p1', {'type':'place_dice', 'level':3, 'die_ids':['die-4']})
+assert error is None, error
+exhausted_state = copy.deepcopy(reward_state)
+exhausted_state['players']['p1']['gears'] += exhausted_state['gear_supply'] - 3
+exhausted_state['gear_supply'] = 3
+_, error = Game.apply_action(exhausted_state, 'p1', {'type':'chicken_out'})
+assert error is None, error
+views['review_exhausted'] = Game.get_public_view(exhausted_state, 'p1')
+_, error = Game.apply_action(reward_state, 'p1', {'type':'chicken_out'})
+assert error is None, error
+views['review_rewards'] = Game.get_public_view(reward_state, 'p1')
+_, error = Game.apply_action(reward_state, 'p1', {'type':'next_turn'})
+assert error is None, error
+views['review_confirmed'] = Game.get_public_view(reward_state, 'p1')
 act('p1', {'type':'chicken_out'})
 save('review')
 full = copy.deepcopy(views['review'])
@@ -69,7 +95,7 @@ async function render(page, key) {
 
 async function bounds(page, label) {
   const result = await page.evaluate(() => {
-    const bad = [...document.querySelectorAll('.emerald-skulls-game-panel > .panel-header *, #emeraldSkullsPanel *, .emerald-skulls-modal-content *')].filter(el => {
+    const bad = [...document.querySelectorAll('.emerald-skulls-game-panel > .panel-header *, #emeraldSkullsPanel *, .emerald-skulls-modal-content *, #emeraldSkullsTip')].filter(el => {
       if (!el.checkVisibility()) return false;
       const r = el.getBoundingClientRect();
       return r.width && r.height && (r.left < -1 || r.right > innerWidth + 1 ||
@@ -96,6 +122,43 @@ async function pointClick(page, locator) {
   await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2);
 }
 
+async function pointTap(page, locator) {
+  await locator.scrollIntoViewIfNeeded();
+  const box = await locator.boundingBox();
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+async function swipeUp(page, locator) {
+  await locator.scrollIntoViewIfNeeded();
+  const box = await locator.boundingBox();
+  const clientX = box.x + box.width / 2;
+  const clientY = box.y + box.height / 2;
+  const touch = await page.context().newCDPSession(page);
+  try {
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: clientX, y: clientY }] });
+    assert.equal(await page.locator('#emeraldSkullsTip').isVisible(), false, 'Touch down alone must not show a tooltip');
+    for (const distance of [20, 40, 60, 80]) {
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: clientX, y: clientY - distance }] });
+    }
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } finally {
+    await touch.detach();
+  }
+  assert.equal(await page.locator('#emeraldSkullsTip').isVisible(), false, 'Scrolling across information must not show a tooltip');
+}
+
+const reviewTipCases = [
+  ['#emeraldSkullsResultTitle', /Chicken Out.*🐔/],
+  ['#emeraldSkullsResultBody .is-tumbler strong', /Chicken Out.*🐔/],
+  ['#emeraldSkullsResultBody .is-tumbler > span', /Gears.*⚙️.*实得.*应得.*Reroll cubes.*🟩.*1/],
+  ['#emeraldSkullsResultBody .emerald-skulls-result-item:not(.is-tumbler) > span', /5\/5.*实得.*应得.*stack #1/],
+  ['#emeraldSkullsReviewProgress', /已确认人数.*总人数/],
+  ['#emeraldSkullsReadyList .is-ready', /已确认（✓）.*Next Turn/],
+  ['#emeraldSkullsReadyList .emerald-skulls-ready-badge:not(.is-ready)', /尚未确认（○）.*Next Turn/],
+  ['#emeraldSkullsLevel1 .is-wild', /Wild skull/],
+  ['#emeraldSkullsBoard [data-level="3"] .emerald-skulls-level-label', /Nose.*👃.*🟩/],
+];
+
 (async () => {
   const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 'chrome', headless: true });
   const errors = [];
@@ -111,7 +174,7 @@ async function pointClick(page, locator) {
     });
     for (const width of [320, 360, 390, 393, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
-      for (const key of ['buy', 'waiting', 'roll', 'bets', 'bet_once', 'bet_passed', 'next_bets', 'press', 'review', 'full', 'over']) {
+      for (const key of ['buy', 'waiting', 'roll', 'bets', 'bet_once', 'bet_passed', 'next_bets', 'press', 'review', 'review_rewards', 'review_confirmed', 'review_exhausted', 'full', 'over']) {
         await render(page, key);
         await page.locator('#emeraldSkullsPlayerSection').evaluate((el, expanded) => { el.open = expanded; }, width > 940);
         await bounds(page, `${width}px ${key}`);
@@ -119,7 +182,7 @@ async function pointClick(page, locator) {
       await page.locator('#emeraldSkullsPlayerSection').evaluate(el => { el.open = true; });
       await bounds(page, `${width}px expanded players`);
     }
-    console.log('PASS layout: 77 viewport/phase combinations, expanded players, long names and seven dice');
+    console.log('PASS layout: 98 viewport/phase combinations, expanded players, long names and seven dice');
     await render(page, 'waiting');
     assert.equal(await page.locator('#emeraldSkullsRollBtn').isDisabled(), true, 'Tumbler cannot roll before all gamblers decide');
     assert.match(await page.locator('#emeraldSkullsStatus').textContent(), /不会超时跳过/);
@@ -191,6 +254,38 @@ async function pointClick(page, locator) {
     assert.equal(await page.locator('.game-panel-title h2').textContent(), 'Game', 'A subsequent game must not restore a stale Emerald Skulls title');
     await render(page, 'roll');
     console.log('PASS dice selection, Help, keyboard focus, disabled Explain and desktop tips');
+
+    for (const width of [1024, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await render(page, 'review_rewards');
+      for (const [selector, expected] of reviewTipCases) {
+        await page.locator(selector).first().hover();
+        assert.match(await page.locator('#emeraldSkullsTip').textContent(), expected);
+        assert.equal(await page.locator('#emeraldSkullsTip').isVisible(), true);
+        await bounds(page, `${width}px review tooltip ${selector}`);
+      }
+      await page.locator('[data-bet-id="busted_fowl"] .emerald-skulls-bet-marker b').hover();
+      assert.match(await page.locator('#emeraldSkullsTip').textContent(), /Player 3.*marker #1.*5 gears/);
+      await page.locator('[data-bet-id="final_jewel"] .emerald-skulls-bet-vacancy').first().hover();
+      assert.match(await page.locator('#emeraldSkullsTip').textContent(), /Marker #1.*gears/);
+      await page.locator('#emeraldSkullsResultBody .is-tumbler > span').focus();
+      assert.equal(await page.locator('#emeraldSkullsTip').isVisible(), true, 'Keyboard focus describes passive rewards');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#emeraldSkullsTip').isVisible(), false);
+      await page.locator('#emeraldSkullsNextBtn').hover();
+      assert.equal(await page.locator('#emeraldSkullsTip').isVisible(), false, 'Actionable Next Turn must not show tips');
+      await render(page, 'review_exhausted');
+      await page.locator('#emeraldSkullsResultBody .emerald-skulls-result-item:not(.is-tumbler) > span').hover();
+      assert.match(await page.locator('#emeraldSkullsTip').textContent(), /1\/5.*实得.*应得/);
+      await page.locator('.emerald-skulls-pot-empty').hover();
+      assert.match(await page.locator('#emeraldSkullsTip').textContent(), /⚙️.*实得.*应得/);
+      await render(page, 'review_rewards');
+      assert.equal(await page.locator('#emeraldSkullsTip').isVisible(), false, 'State changes dismiss stale tooltips');
+      await page.locator('#emeraldSkullsResultBody .is-tumbler > span').hover();
+      await page.screenshot({ path: `${output}/review-tip-desktop-${width}.png` });
+    }
+    assert.equal(await page.evaluate(() => emeraldSkullsQAActions.length), 0, 'Review tooltips must not dispatch actions');
+    console.log('PASS desktop review rewards, result icons, readiness, locked board/bets, keyboard focus and partial payouts');
 
     const mobileContext = await browser.newContext({ viewport: { width: 390, height: 852 }, isMobile: true, hasTouch: true });
     const mobile = await mobileContext.newPage();
@@ -282,17 +377,7 @@ async function pointClick(page, locator) {
     }
     await render(mobile, 'bets');
     const swipeTarget = mobile.locator('.emerald-skulls-bet').nth(4);
-    await swipeTarget.scrollIntoViewIfNeeded();
-    const swipeBox = await swipeTarget.boundingBox();
-    const swipeX = swipeBox.x + swipeBox.width / 2;
-    const swipeY = swipeBox.y + swipeBox.height / 2;
-    const touch = await mobileContext.newCDPSession(mobile);
-    await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: swipeX, y: swipeY }] });
-    for (const distance of [20, 40, 60, 80]) {
-      await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: swipeX, y: swipeY - distance }] });
-    }
-    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await touch.detach();
+    await swipeUp(mobile, swipeTarget);
     assert.equal(await mobile.evaluate(() => emeraldSkullsQAActions.length), 0, 'Scrolling across a bet must not place it');
     await render(mobile, 'review');
     assert.equal(await mobile.locator('#emeraldSkullsResult').isVisible(), true);
@@ -309,6 +394,50 @@ async function pointClick(page, locator) {
     }
     assert.deepEqual(errors, []);
     console.log('PASS bilingual bets, explicit pass, reopening bets, touch scrolling, tabs, tips, review and scrollable log');
+
+    for (const width of [320, 390]) {
+      await mobile.setViewportSize({ width, height: 852 });
+      await render(mobile, 'review_rewards');
+      for (const [selector, expected] of reviewTipCases) {
+        await pointTap(mobile, mobile.locator(selector).first());
+        assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), expected);
+        assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), true);
+        await bounds(mobile, `${width}px review tooltip ${selector}`);
+      }
+      await mobile.locator('[data-emerald-skulls-tab="bets"]').tap();
+      assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Switching tabs is an action, not a tooltip');
+      const reviewBet = mobile.locator('[data-bet-id="busted_fowl"]');
+      await pointTap(mobile, reviewBet.locator('.emerald-skulls-bet-marker b'));
+      assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), /Player 3.*marker #1.*5 gears/);
+      await pointTap(mobile, reviewBet.locator('.emerald-skulls-bet-vacancy').first());
+      assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), /Marker #2.*gears/);
+      await pointTap(mobile, reviewBet.locator('strong'));
+      assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), /爆仓怂鸡.*Busted Fowl/);
+      await mobile.locator('#emeraldSkullsTip').waitFor({ state: 'hidden', timeout: 4000 });
+      await swipeUp(mobile, reviewBet);
+      await mobile.locator('[data-emerald-skulls-tab="skull"]').tap();
+      const reward = mobile.locator('#emeraldSkullsResultBody .is-tumbler > span');
+      await reward.tap();
+      assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), true);
+      await swipeUp(mobile, reward);
+      await reward.tap();
+      await mobile.screenshot({ path: `${output}/review-tip-mobile-${width}.png` });
+      await render(mobile, 'review_confirmed');
+      assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Re-render dismisses stale reward tips');
+      await pointTap(mobile, mobile.locator('#emeraldSkullsNextBtn'));
+      assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), /已确认（✓）.*Next Turn/);
+      await render(mobile, 'review_exhausted');
+      await mobile.locator('#emeraldSkullsResultBody .emerald-skulls-result-item:not(.is-tumbler) > span').tap();
+      assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), /1\/5.*实得.*应得/);
+      await mobile.locator('.emerald-skulls-pot-empty').tap();
+      assert.match(await mobile.locator('#emeraldSkullsTip').textContent(), /齿轮池.*⚙️.*实得/);
+      assert.equal(await mobile.evaluate(() => emeraldSkullsQAActions.length), 0, 'Read-only review and disabled buttons must not perform actions');
+      await render(mobile, 'review_rewards');
+      await mobile.locator('#emeraldSkullsNextBtn').tap();
+      assert.deepEqual(await mobile.evaluate(() => emeraldSkullsQAActions.pop()), { type: 'next_turn' });
+      assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Confirming review stays tooltip-free');
+    }
+    console.log('PASS mobile review tips, latest-tap replacement, three-second dismiss, disabled controls and scroll gestures');
 
     const liveContexts = [];
     const livePages = [];

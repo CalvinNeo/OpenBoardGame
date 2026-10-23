@@ -1,8 +1,9 @@
 #forSalePanel { min-width: 0; width: 100%; color: #233d33; }
-.fs-surface { --fs-green: #244d3e; --fs-copper: #a16d44; --fs-line: #dddcc9; min-width: 0; padding: clamp(12px, 2vw, 24px); border: 1px solid #c8d1be; border-radius: 18px; background: radial-gradient(ellipse at top right, #dce5ce 0, transparent 45%), #f5f3e7; overflow-wrap: anywhere; }
+.game-panel[data-game-theme="for_sale"] { --fs-green: #244d3e; --fs-copper: #a16d44; --fs-line: #dddcc9; color: #233d33; padding: clamp(12px, 2vw, 24px); border: 1px solid #c8d1be; border-radius: 18px; background: radial-gradient(ellipse at top right, #dce5ce 0, transparent 45%), #f5f3e7; overflow-wrap: anywhere; }
+.fs-surface { min-width: 0; }
 .fs-surface *, .fs-dialog *, .fs-tooltip { box-sizing: border-box; }
 .fs-banner, .fs-section-heading, .fs-player-heading, .fs-player-line, .fs-player-assets, .fs-card-top, .fs-auction-line, .fs-sale-confirm { display: flex; align-items: center; justify-content: space-between; min-width: 0; gap: 9px; }
-.fs-banner { flex-wrap: wrap; margin-bottom: 15px; }
+.fs-banner { flex-wrap: wrap; justify-content: flex-end; margin-bottom: 15px; }
 .fs-banner > div { min-width: 0; }
 .fs-eyebrow { display: block; font-size: 9px; letter-spacing: .15em; font-weight: 700; color: #7c7256; line-height: 1.5; }
 #forSalePanel h2 { margin: 5px 0 0; font-size: clamp(23px, 3vw, 32px); color: #244d3e; line-height: 1.3; }
@@ -147,7 +148,7 @@
     .fs-log { max-height: 115px; }
 }
 @media (max-width: 520px) {
-    .fs-surface { padding: 12px; border-radius: 13px; }
+    .game-panel[data-game-theme="for_sale"] { padding: 12px; border-radius: 13px; }
     .fs-banner { gap: 8px; margin-bottom: 11px; }
     .fs-eyebrow { font-size: 8px; letter-spacing: .1em; }
     .fs-phase-label { font-size: 9px; padding-left: 9px; }
@@ -184,7 +185,7 @@
     .fs-dialog { padding: 16px; }
 }
 @media (max-width: 360px) {
-    .fs-surface { padding: 10px; }
+    .game-panel[data-game-theme="for_sale"] { padding: 10px; }
     .fs-box { padding: 9px; }
     .fs-banner { align-items: flex-start; }
     #forSalePanel h2 { font-size: 23px; }

@@ -407,6 +407,29 @@ h1 {
   padding: 16px 20px;
 }
 
+.game-panel[data-game-theme] {
+  min-width: 0;
+}
+
+.game-panel[data-game-theme] > .panel-header {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.game-panel[data-game-theme] .game-panel-title {
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.game-panel[data-game-theme] .game-panel-title h2 {
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 .row {
   display: flex;
   align-items: center;

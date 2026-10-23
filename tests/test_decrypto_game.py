@@ -1,6 +1,8 @@
 import unittest
 
-from game import decrypto
+from jsonschema import ValidationError, validate
+
+from game import decrypto, get_game
 
 
 def _make_players():
@@ -21,6 +23,12 @@ def _non_encryptor(state, team_id):
 
 
 class DecryptoGameTests(unittest.TestCase):
+    def test_next_round_action_schema(self):
+        schema = get_game("decrypto").action_schema
+        validate({"type": "next_round"}, schema)
+        with self.assertRaises(ValidationError):
+            validate({"type": "next_round", "player_id": "p2"}, schema)
+
     def test_normalize_guess_and_validate_clues(self):
         self.assertIsNone(decrypto._normalize_guess([1, 1, 2]))
         self.assertIsNone(decrypto._normalize_guess([1, 2]))
@@ -83,8 +91,8 @@ class DecryptoGameTests(unittest.TestCase):
         )
         self.assertIsNone(error)
         self.assertTrue(any(event["type"] == "decrypto:round_resolved" for event in events))
-        self.assertEqual(state["round"], 2)
-        self.assertEqual(state["phase"], "encryption")
+        self.assertEqual(state["round"], 1)
+        self.assertEqual(state["phase"], "round_end")
         self.assertEqual(state["teams"]["white"]["miscommunications"], 0)
         self.assertEqual(state["teams"]["black"]["miscommunications"], 1)
         self.assertEqual(state["teams"]["white"]["intercepts"], 0)
@@ -92,6 +100,8 @@ class DecryptoGameTests(unittest.TestCase):
         summary = state["last_round_summary"]["teams"]
         self.assertIsNone(summary["white"]["intercept_correct"])
         self.assertIsNone(summary["black"]["intercept_correct"])
+        self.assertEqual(state["teams"]["white"]["history"][0]["clues_by"], white_encryptor)
+        self.assertEqual(state["teams"]["black"]["history"][0]["clues_by"], black_encryptor)
 
     def test_round_two_requires_intercepts(self):
         state = decrypto.DecryptoGame.init_game(None, _make_players())
@@ -197,8 +207,130 @@ class DecryptoGameTests(unittest.TestCase):
         self.assertEqual(state["teams"]["black"]["intercepts"], 0)
         self.assertEqual(state["teams"]["white"]["miscommunications"], 0)
         self.assertEqual(state["teams"]["black"]["miscommunications"], 1)
-        self.assertEqual(state["round"], 3)
+        self.assertEqual(state["round"], 2)
+        self.assertEqual(state["phase"], "round_end")
+
+        view = decrypto.DecryptoGame.get_public_view(state, white_decrypter)
+        summary = view["last_round_summary"]["teams"]
+        self.assertTrue(summary["white"]["decrypt_correct"])
+        self.assertFalse(summary["white"]["intercept_correct"])
+        self.assertEqual(summary["white"]["intercept_by"], black_decrypter)
+        self.assertFalse(summary["black"]["decrypt_correct"])
+        self.assertTrue(summary["black"]["intercept_correct"])
+        self.assertEqual(summary["black"]["intercept_by"], white_decrypter)
+        self.assertIsNone(view["teams"]["black"]["keywords"])
+
+    def make_round_end_state(self):
+        state = decrypto.DecryptoGame.init_game(None, _make_players())
+        for team_id in decrypto.TEAM_IDS:
+            data = state["round_data"][team_id]
+            data.update({
+                "code": [1, 2, 3],
+                "clues": ["first", "second", "third"],
+                "clues_by": decrypto._current_encryptor(state, team_id),
+                "decrypt_guess": [1, 2, 3],
+                "decrypt_by": _non_encryptor(state, team_id),
+            })
+        decrypto._resolve_round(state)
+        return state
+
+    def test_next_round_waits_for_every_player_and_rotates_once(self):
+        state = self.make_round_end_state()
+        old_codes = {team_id: list(state["round_data"][team_id]["code"]) for team_id in decrypto.TEAM_IDS}
+        for player in _make_players()[:-1]:
+            player_id = player["player_id"]
+            self.assertEqual(decrypto.DecryptoGame.get_legal_actions(state, player_id), ["next_round"])
+            events, error = decrypto.DecryptoGame.apply_action(state, player_id, {"type": "next_round"})
+            self.assertIsNone(error)
+            self.assertEqual(events[0]["type"], "decrypto:next_ready")
+            self.assertEqual(state["round"], 1)
+            self.assertEqual(state["phase"], "round_end")
+            self.assertEqual(decrypto.DecryptoGame.get_legal_actions(state, player_id), [])
+            self.assertEqual(state["teams"]["white"]["encryptor_index"], 0)
+            self.assertEqual(state["round_data"]["white"]["code"], old_codes["white"])
+        events, error = decrypto.DecryptoGame.apply_action(state, "p1", {"type": "next_round"})
+        self.assertEqual(events, [])
+        self.assertIsNone(error)
+        self.assertEqual(state["next_round_ready"], ["p1", "p2", "p3"])
+        view = decrypto.DecryptoGame.get_public_view(state, "p4")
+        self.assertEqual(view["next_round_ready"], ["p1", "p2", "p3"])
+        self.assertEqual(view["last_round_summary"]["round"], 1)
+        events, error = decrypto.DecryptoGame.apply_action(state, "p4", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(events[-1]["type"], "decrypto:next_round")
         self.assertEqual(state["phase"], "encryption")
+        self.assertEqual(state["round"], 2)
+        self.assertEqual(state["next_round_ready"], [])
+        self.assertEqual(decrypto._current_encryptor(state, "white"), "p2")
+        self.assertEqual(decrypto._current_encryptor(state, "black"), "p4")
+        self.assertEqual(state["teams"]["white"]["history"][0]["clues_by"], "p1")
+        self.assertEqual(len(state["round_history"]), 1)
+
+    def test_round_confirmation_rejects_spectators_and_wrong_actions(self):
+        state = self.make_round_end_state()
+        self.assertEqual(decrypto.DecryptoGame.get_legal_actions(state, "spectator"), [])
+        for player_id, action in [("spectator", "next_round"), ("p1", "submit_clues"), ("p2", "submit_decrypt")]:
+            with self.subTest(player_id=player_id, action=action):
+                _, error = decrypto.DecryptoGame.apply_action(state, player_id, {"type": action})
+                self.assertIsNotNone(error)
+                self.assertEqual(state["next_round_ready"], [])
+        decrypto._start_round(state, increment_round=True)
+        _, error = decrypto.DecryptoGame.apply_action(state, "p1", {"type": "next_round"})
+        self.assertIsNotNone(error)
+
+    def test_bots_confirm_without_skipping_human_review(self):
+        state = self.make_round_end_state()
+        for player_id in ["p2", "p3", "p4"]:
+            state["player_meta"][player_id]["is_bot"] = True
+            action = decrypto.DecryptoGame.bot_move(state, player_id)
+            self.assertEqual(action, {"type": "next_round"})
+            _, error = decrypto.DecryptoGame.apply_action(state, player_id, action)
+            self.assertIsNone(error)
+            self.assertIsNone(decrypto.DecryptoGame.bot_move(state, player_id))
+        self.assertEqual(state["phase"], "round_end")
+        _, error = decrypto.DecryptoGame.apply_action(state, "p1", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(state["round"], 2)
+
+    def test_round_confirmation_survives_save_and_reload(self):
+        state = self.make_round_end_state()
+        decrypto.DecryptoGame.apply_action(state, "p1", {"type": "next_round"})
+        restored = decrypto.DecryptoGame.deserialize(decrypto.DecryptoGame.serialize(state))
+        self.assertEqual(restored["next_round_ready"], ["p1"])
+        self.assertEqual(restored["phase"], "round_end")
+        self.assertEqual(restored["teams"]["white"]["history"][0]["clues_by"], "p1")
+        for player_id in ["p2", "p3", "p4"]:
+            _, error = decrypto.DecryptoGame.apply_action(restored, player_id, {"type": "next_round"})
+            self.assertIsNone(error)
+        self.assertEqual(restored["round"], 2)
+
+    def test_game_over_does_not_offer_next_round(self):
+        state = self.make_round_end_state()
+        state["config"]["max_rounds"] = 2
+        decrypto._start_round(state, increment_round=True)
+        decrypto._resolve_round(state)
+        self.assertTrue(state["game_over"])
+        self.assertEqual(state["phase"], "game_over")
+        self.assertEqual(decrypto.DecryptoGame.get_legal_actions(state, "p1"), [])
+        self.assertIsNone(decrypto.DecryptoGame.bot_move(state, "p2"))
+        _, error = decrypto.DecryptoGame.apply_action(state, "p1", {"type": "next_round"})
+        self.assertEqual(error, "game over")
+
+    def test_legacy_history_recovers_authors_without_revealing_keywords(self):
+        state = self.make_round_end_state()
+        for team in state["teams"].values():
+            team["history"][0].pop("clues_by")
+        state["round_history"][0]["teams"]["white"]["clues_by"] = "p2"
+        view = decrypto.DecryptoGame.get_public_view(state, "spectator")
+        self.assertEqual(view["teams"]["white"]["history"][0]["clues_by"], "p2")
+        self.assertEqual(view["teams"]["black"]["history"][0]["clues_by"], "p3")
+        self.assertEqual(view["teams"]["white"]["history_by_keyword"], {"1": ["first"], "2": ["second"], "3": ["third"], "4": []})
+        for team in view["teams"].values():
+            self.assertIsNone(team["keywords"])
+        self.assertNotIn("clues_by", state["teams"]["white"]["history"][0])
+        state.pop("round_history")
+        view = decrypto.DecryptoGame.get_public_view(state, "p1")
+        self.assertEqual(view["teams"]["white"]["history"][0]["clues_by"], "p1")
 
     def test_public_view_scopes_keywords_and_code(self):
         state = decrypto.DecryptoGame.init_game(None, _make_players())

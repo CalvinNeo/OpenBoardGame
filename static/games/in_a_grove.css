@@ -1,13 +1,11 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-in_a_grove-1 {
 
-#inAGrovePanel {
+.game-panel[data-game-theme="in_a_grove"] {
   --grove-ink: #253b33;
   --grove-muted: #617369;
   --grove-green: #286249;
   --grove-line: #d6ded1;
-  container-type: inline-size;
-  min-width: 0;
   padding: clamp(10px, 2vw, 20px);
   color: var(--grove-ink);
   border: 1px solid var(--grove-line);
@@ -15,6 +13,11 @@
   background: linear-gradient(135deg, #f6f4e9, #edf2e8);
   font-family: "Work Sans", Arial, sans-serif;
   overflow-wrap: anywhere;
+}
+
+#inAGrovePanel {
+  container-type: inline-size;
+  min-width: 0;
 }
 
 #inAGrovePanel h3,
@@ -36,6 +39,7 @@
 }
 
 .in-a-grove-topbar {
+  justify-content: flex-end;
   margin-bottom: 14px;
 }
 
