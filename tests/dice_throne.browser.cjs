@@ -59,6 +59,11 @@ for hero_id, hero in HEROES.items():
     state["dice"] = [{"value": value, "face": hero["dice_faces"][value - 1]} for value in [1, 2, 3, 5, 6]]
     state["kept"][0] = True
     views["hero_" + hero_id] = Game.get_public_view(state, "p0")
+    if hero_id == "cursed_pirate":
+        state["phase"] = "main_1"
+        state["players"]["p0"]["hand"] = ["get_outta_here"]
+        state["players"]["p0"]["statuses"]["wither"] = 2
+        views["pirate_clean"] = Game.get_public_view(state, "p0")
 print(json.dumps(views))
 `], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));
 fixtures.long_names = structuredClone(fixtures.rolled);
@@ -74,10 +79,15 @@ fixtures.upgraded = structuredClone(fixtures.rolled);
 fixtures.upgraded.players.forEach(player => {
     player.upgrades = [`${fixtures.upgraded.hero_catalog[player.hero].abilities[0].id}_3`];
 });
-for (const [hero, statuses] of Object.entries({ gunslinger: ['reload', 'bounty'], samurai: ['honor', 'shame', 'back_strike'], vampire_lord: ['blood_power', 'bleed', 'mesmerize'], seraph: ['flight', 'holy_presence', 'blinding_light'] })) {
+for (const [hero, statuses] of Object.entries({ gunslinger: ['reload', 'bounty'], samurai: ['honor', 'shame', 'back_strike'], vampire_lord: ['blood_power', 'bleed', 'mesmerize'], seraph: ['flight', 'holy_presence', 'blinding_light'], artificer: ['synth', 'shock_bot', 'heal_bot', 'nanobot'], huntress: ['nyras_bond', 'bleed'], tactician: ['tactical_advantage', 'constrict'], cursed_pirate: ['cursed', 'wither', 'powder_keg'] })) {
     fixtures[`statuses_${hero}`] = structuredClone(fixtures[`hero_${hero}`]);
     fixtures[`statuses_${hero}`].players.find(player => player.player_id === 'p0').statuses = statuses.map(id => ({ id, stacks: fixtures.rolled.status_catalog[id].limit }));
 }
+fixtures.huntress_inactive = structuredClone(fixtures.statuses_huntress);
+fixtures.huntress_inactive.players.find(player => player.player_id === 'p0').companion.health = 0;
+fixtures.constrict_no_cp = structuredClone(fixtures.statuses_tactician);
+fixtures.constrict_no_cp.players.find(player => player.player_id === 'p0').combat_points = 0;
+fixtures.constrict_no_cp.legal_actions = fixtures.constrict_no_cp.legal_actions.filter(action => action !== 'roll');
 
 async function render(page, key) {
     await page.evaluate(view => {
@@ -236,6 +246,7 @@ async function heroReferences(page, width) {
         assert.deepEqual(await page.locator('.dt-reference-symbol').allTextContents(), hero.dice_faces.map(face => hero.symbol_icons[face]));
         assert.equal(await page.locator('.dt-reference-ability').count(), hero.abilities.length);
         assert.match(await page.locator('.dt-reference-defense').innerText(), new RegExp(hero.defense.name));
+        if (hero.passive) assert((await page.locator('.dt-reference-passive').innerText()).includes(hero.passive.split('（')[0]));
         for (const ability of hero.abilities) {
             const entry = page.locator(`[data-dt-ability="${ability.id}"]`);
             assert.equal(await entry.locator('h4').innerText(), ability.name);
@@ -263,7 +274,7 @@ async function heroReferences(page, width) {
         assert(layout.inside && layout.headerAboveBody && layout.singleDiceRow && !layout.overlap, JSON.stringify(layout));
         assert.equal(layout.columns, width <= 560 ? 1 : 2);
         if (width >= 1024) assert(layout.height < 650, 'Desktop reference must remain compact.');
-        if (['barbarian', 'treant', 'vampire_lord', 'seraph'].includes(heroId)) {
+        if (['barbarian', 'treant', 'vampire_lord', 'seraph', 'artificer', 'huntress', 'tactician', 'cursed_pirate'].includes(heroId)) {
             await page.screenshot({ path: `${output}/${width}-hero-${heroId}.png`, fullPage: true });
         }
         await page.keyboard.press('Escape');
@@ -416,18 +427,20 @@ async function interactions(page) {
 }
 
 async function seasonTwoPicker(page, width) {
-    const seasonTwo = ['gunslinger', 'samurai', 'vampire_lord', 'seraph'];
+    const seasonTwo = ['gunslinger', 'samurai', 'vampire_lord', 'seraph', 'artificer', 'huntress', 'tactician', 'cursed_pirate'];
     await render(page, 'choose_hero');
-    assert.equal(await page.locator('.dt-hero-card').count(), 12);
+    assert.equal(await page.locator('.dt-hero-card').count(), 16);
     await page.locator('[data-dt-season="2"]').click();
     assert.equal(await page.locator('[data-dt-season="2"]').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('[data-dt-season="all"]').getAttribute('aria-pressed'), 'false');
-    assert.equal(await page.locator('#diceThroneHeroCount').innerText(), '4 / 12 heroes');
+    assert.equal(await page.locator('#diceThroneHeroCount').innerText(), '8 / 16 heroes');
     assert.deepEqual(await page.locator('.dt-hero-card').evaluateAll(nodes => nodes.map(node => node.dataset.hero)), seasonTwo);
     await bounds(page, `${width}px / Season Two picker`);
     await page.mouse.move(0, 0);
     await page.locator('.dt-hero-filters').evaluate(node => Promise.all(node.getAnimations({ subtree: true }).map(animation => animation.finished)));
     await page.screenshot({ path: `${output}/${width}-season-two.png`, fullPage: true });
+    await page.locator('.dt-hero-card[data-hero="cursed_pirate"]').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${output}/${width}-season-two-new.png`, fullPage: true });
     for (const hero of seasonTwo) {
         await page.locator(`.dt-hero-card[data-hero="${hero}"] .dt-hero-trigger`).click();
         assert.equal(await page.locator('.dt-hero-card.selected').count(), 1);
@@ -438,14 +451,14 @@ async function seasonTwoPicker(page, width) {
     await page.locator('[data-dt-season="1"]').click();
     assert.equal(await page.locator('.dt-hero-card').count(), 8);
     await page.locator('[data-dt-season="all"]').click();
-    assert.equal(await page.locator('.dt-hero-card').count(), 12);
+    assert.equal(await page.locator('.dt-hero-card').count(), 16);
     if (width <= 390) {
         await touchScroll(page, '#diceThroneHeroChoices');
         assert.equal(await page.locator('.dt-hero-card.selected').count(), 0, 'Scrolling the hero list does not choose a hero.');
         assert((await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop)) > 0);
-        await page.locator('.dt-hero-card[data-hero="seraph"] .dt-hero-trigger').scrollIntoViewIfNeeded();
+        await page.locator('.dt-hero-card[data-hero="cursed_pirate"] .dt-hero-trigger').scrollIntoViewIfNeeded();
         const before = await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop);
-        await page.locator('.dt-hero-card[data-hero="seraph"] .dt-hero-trigger').tap();
+        await page.locator('.dt-hero-card[data-hero="cursed_pirate"] .dt-hero-trigger').tap();
         assert(Math.abs(await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop) - before) <= 1, 'Hero confirmation preserves list position.');
         await page.getByRole('button', { name: 'Cancel', exact: true }).tap();
         assert(Math.abs(await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop) - before) <= 1, 'Cancel preserves list position.');
@@ -477,6 +490,32 @@ async function seasonTwoPicker(page, width) {
         await page.mouse.move(0, 0);
         await page.screenshot({ path: `${output}/${width}-combat-${hero}.png`, fullPage: true });
     }
+}
+
+async function newHeroInteractions(page) {
+    await render(page, 'hero_huntress');
+    assert.match(await page.locator('.dt-companion').innerText(), /Nyra 6\/6/);
+    await page.locator('.dt-companion').tap();
+    assert.match(await page.locator('#diceThroneTooltip').innerText(), /奈拉/);
+    await render(page, 'huntress_inactive');
+    assert.match(await page.locator('.dt-companion-inactive').innerText(), /Nyra 0\/6/);
+    await render(page, 'statuses_tactician');
+    assert.match(await page.locator('#diceThroneRollBtn').innerText(), /1⚡/);
+    await render(page, 'constrict_no_cp');
+    assert.equal(await page.locator('#diceThroneRollBtn').isDisabled(), true);
+    assert.match(await page.locator('#diceThroneRollBtn').innerText(), /Need 1 CP/);
+    assert.equal(await page.locator('#diceThroneConfirmBtn').isEnabled(), true);
+    await render(page, 'pirate_clean');
+    await page.locator('.dt-card').filter({ hasText: 'Get That Outta Here' }).locator('.dt-card-trigger').tap();
+    await page.getByLabel('Target', { exact: true }).selectOption('p0');
+    const choices = await page.getByLabel('Status', { exact: true }).locator('option').evaluateAll(nodes => nodes.map(node => node.value));
+    assert(choices.includes('wither'));
+    assert(!choices.includes('cursed_doubloon'));
+    await actions(page, []);
+    await page.getByLabel('Status', { exact: true }).selectOption('wither');
+    await page.getByRole('button', { name: 'Play · 1 ⚡', exact: true }).tap();
+    await actions(page, [{ type: 'play_card', card_id: 'get_outta_here', target: 'p0', status: 'wither', revision: fixtures.pirate_clean.revision }]);
+    console.log('Companion health, defeated Nyra, Constrict cost and protected Pirate token inputs passed.');
 }
 
 async function desktop(browser) {
@@ -558,7 +597,7 @@ async function liveRerolls(browser) {
             await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'choose_hero');
             await page.evaluate(() => setRoomControlsCollapsed(true));
             await page.locator('[data-dt-season="2"]').tap();
-            const hero = index ? 'seraph' : 'gunslinger';
+            const hero = index ? 'huntress' : 'artificer';
             await page.locator(`.dt-hero-card[data-hero="${hero}"] .dt-hero-trigger`).tap();
             await page.getByRole('button', { name: 'Choose hero', exact: true }).tap();
             await page.waitForFunction(hero => lastGameStatePayload.view.players.some(player => player.hero === hero), hero);
@@ -566,6 +605,7 @@ async function liveRerolls(browser) {
         for (const page of pages) {
             await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'main_1');
             await page.evaluate(() => setRoomControlsCollapsed(true));
+            assert.match(await page.locator('.dt-companion').innerText(), /Nyra 6\/6/);
         }
         const active = await host.evaluate(() => lastGameStatePayload.view.current_player === playerId) ? host : guest;
         await active.locator('#diceThroneEndBtn').tap();
@@ -643,12 +683,13 @@ async function liveRerolls(browser) {
         await interactions(page);
         await page.setViewportSize({ width: 390, height: 844 });
         await rerollFeedback(page);
+        await newHeroInteractions(page);
         await desktop(browser);
         await liveRerolls(browser);
         assert.deepEqual(errors, [], 'Browser console errors');
         console.log(`${Object.keys(fixtures).length} states fit at 320, 390, 768, 1024 and 1440px.`);
         console.log('Touch scrolling, selection, card inputs, dice controls, Help/Explain, Esc, tooltips, round review and game switching passed.');
-        console.log('All twelve hero references, season filters, scroll-preserving selection, six dice faces, every ability, opponent upgrades, spectators, modal tooltips and compact layouts passed.');
+        console.log('All sixteen hero references, season filters, scroll-preserving selection, six dice faces, every ability, opponent upgrades, spectators, modal tooltips and compact layouts passed.');
         console.log('Reroll counts, all-kept guard, repeated-result feedback, spectators, reduced motion and error recovery passed.');
     } catch (error) {
         await page.screenshot({ path: `${output}/failure.png`, fullPage: true });

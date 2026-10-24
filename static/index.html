@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v130" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v131" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -446,14 +446,43 @@
         <h2 id="playerNameModalTitle">Choose your name</h2>
       </div>
       <form id="playerNameForm" class="modal-body room-entry-form">
-        <label for="nameInput">Name</label>
-        <input id="nameInput" type="text" placeholder="Your name" autocomplete="nickname" enterkeyhint="done" required aria-describedby="playerNameError" />
+        <div class="room-entry-mode" role="group" aria-label="Player entry method">
+          <button id="playerNameModeBtn" type="button" aria-pressed="true">New player</button>
+          <button id="playerAccessKeyModeBtn" type="button" aria-pressed="false">Access key</button>
+        </div>
+        <div id="playerNameField" class="room-entry-field">
+          <label for="nameInput">Name</label>
+          <input id="nameInput" type="text" placeholder="Your name" autocomplete="nickname" enterkeyhint="done" required aria-describedby="playerNameError" />
+        </div>
+        <div id="playerAccessKeyField" class="room-entry-field hidden">
+          <label for="accessKeyInput">Access key</label>
+          <input id="accessKeyInput" type="password" placeholder="Paste your access key" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" maxlength="2048" disabled aria-describedby="playerAccessKeyHint playerNameError" />
+        </div>
+        <p id="playerAccessKeyHint" class="room-entry-hint hidden">Return to your previous room and seat without creating a new player. Keep your key private.</p>
         <p id="playerNameError" class="room-entry-error hidden" role="alert"></p>
         <div class="room-entry-modal-actions">
           <button id="playerNameCancelBtn" type="button">Cancel</button>
           <button type="submit">Continue</button>
         </div>
       </form>
+    </div>
+  </section>
+
+  <section id="logoutModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle" aria-describedby="logoutDescription">
+    <div class="modal-content room-entry-modal">
+      <div class="modal-header">
+        <h2 id="logoutModalTitle">Log out?</h2>
+      </div>
+      <div class="modal-body room-entry-form">
+        <p id="logoutDescription" class="room-entry-hint">Logging out clears this browser's room credentials. Copy your access key to keep your seat and continue in another browser.</p>
+        <p id="logoutKeyHint" class="room-entry-hint">The key only works while your previous room and seat still exist. It is not a permanent account.</p>
+        <p id="logoutError" class="room-entry-error hidden" role="alert"></p>
+        <div class="room-entry-modal-actions">
+          <button id="logoutCancelBtn" type="button">Cancel</button>
+          <button id="logoutConfirmBtn" type="button">Confirm</button>
+          <button id="logoutCopyBtn" class="room-entry-primary logout-copy-btn" type="button">Confirm &amp; Copy Access Key</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1654,7 +1683,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=140" defer></script>
+  <script src="/static/game_assets.js?v=143" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1690,6 +1719,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v58" defer></script>
-  <script src="/static/room.js?v=app_v83" defer></script>
+  <script src="/static/room.js?v=app_v84" defer></script>
 </body>
 </html>

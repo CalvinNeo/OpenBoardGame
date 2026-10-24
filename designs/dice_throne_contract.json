@@ -9,10 +9,19 @@
       {
         "player_id": "id",
         "name": "display name",
-        "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|gunslinger|samurai|vampire_lord|seraph|null",
+        "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|gunslinger|samurai|vampire_lord|seraph|artificer|huntress|tactician|cursed_pirate|null",
         "health": "integer",
         "combat_points": "integer",
         "max_health": 50,
+        "companion": {
+          "nullable": "null except for Huntress's persistent Nyra companion; zero health disables her until healed",
+          "id": "nyra",
+          "name": "Nyra",
+          "name_zh": "奈拉",
+          "icon": "🐯",
+          "health": "integer 0..6",
+          "max_health": 6
+        },
         "statuses": [
           {
             "id": "status",
@@ -79,8 +88,8 @@
     ],
     "game_over": "boolean",
     "round_review": "public event list",
-    "hero_catalog": "object keyed by hero id; public name/name_zh/icon/subtitle/dice_faces/symbol_icons/symbol_names/abilities/defense/season (1 or 2)",
-    "status_catalog": "object keyed by status id; public name/name_zh/icon/limit/description/positive/companion",
+    "hero_catalog": "object keyed by hero id; public name/name_zh/icon/subtitle/dice_faces/symbol_icons/symbol_names/abilities/defense/season (1 or 2)/passive (local rules text)/starting_statuses (status-to-count map)/companion (nullable definition without current health)",
+    "status_catalog": "object keyed by status id; public name/name_zh/icon/limit/description/positive/companion/removable; companion tokens, Blessing, Cursed Doubloons and the Cursed form are not removable",
     "edition_note": "explicit simplified digital rules scope",
     "turn_player": "player whose turn is in progress, including during a defensive response",
     "roll_limit": "integer; current maximum roll attempts after cards/statuses",
@@ -104,7 +113,7 @@
   },
   "actions": {
     "choose_hero": {
-      "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|gunslinger|samurai|vampire_lord|seraph",
+      "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|gunslinger|samurai|vampire_lord|seraph|artificer|huntress|tactician|cursed_pirate",
       "revision": "integer"
     },
     "roll": {
@@ -155,5 +164,5 @@
     }
   },
   "privacy": "Per-player hidden deck/discard orders, opponent hand identities, seed and RNG state are omitted from public_view. Catalogs and public logs contain no private cards.",
-  "rules_scope": "Twelve playable hero identities: all eight Season One Rerolled heroes plus Season Two Gunslinger, Samurai, Vampire Lord and Seraph. This is a simplified digital adaptation: dice distributions, abilities, abbreviated decks/upgrades and automatic status/companion spending are local rules, not printed card-for-card parity. Blood Power automatically chooses damage or lifesteal, Mesmerize checks at opponent roll confirmation, and Flight is defensive only. Other printed token options and passive abilities are not included."
+  "rules_scope": "Sixteen playable hero identities: all eight Season One Rerolled heroes and all eight Season Two heroes. This is a simplified digital adaptation: dice distributions, abilities, abbreviated decks/upgrades and automatic status/companion spending are local rules, not printed card-for-card parity. Blood Power automatically chooses damage or lifesteal, Mesmerize checks at opponent roll confirmation, and Flight is defensive only. Artificer starts with two Synth and Shock Bot; bots automatically spend Synth and do not upgrade. Huntress has a six-health Nyra who can absorb damage with Bond and revive through healing. Tactical Advantage automatically chooses damage or undefendable; Constrict charges one CP per reroll after the first roll and is cleared on confirm/pass. Cursed Pirate starts with three unremovable Doubloons, spends one each own turn end, and permanently transforms at the next own upkeep after depletion, using the same ability board. Other printed token options, bot upgrades, dual boards and passive abilities not described by the catalog are not included."
 }

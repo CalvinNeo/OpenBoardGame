@@ -64,6 +64,15 @@ def _heal(player: Dict, amount: int) -> None:
     player["health"] = min(RULES["max_health"], player["health"] + max(0, int(amount)))
 
 
+def _heal_companion(player: Dict, amount: int) -> int:
+    companion = player.get("companion")
+    if not companion:
+        return 0
+    before = companion["health"]
+    companion["health"] = min(companion["max_health"], before + max(0, int(amount)))
+    return companion["health"] - before
+
+
 def _draw(state: Dict, pid: str, count: int = 1) -> None:
     player = state["players"][pid]
     for _ in range(count):
@@ -164,6 +173,18 @@ def _damage(state: Dict, target: str, amount: int, kind: str = "normal", attack:
         chi = min(amount, player["statuses"].get("chi", 0))
         _remove_status(player, "chi", chi)
         amount -= chi
+        if attack and amount > 0 and player["statuses"].get("heal_bot") and player["statuses"].get("synth"):
+            _remove_status(player, "synth")
+            before = player["health"]
+            _heal(player, 2)
+            _log(state, target, f"🚑 治疗机器人消耗 1 合成物，治疗 {player['health'] - before} 点。")
+        companion = player.get("companion")
+        if attack and amount > 0 and companion and companion["health"] > 0 and player["statuses"].get("nyras_bond"):
+            _remove_status(player, "nyras_bond")
+            absorbed = min(amount, companion["health"])
+            companion["health"] -= absorbed
+            amount -= absorbed
+            _log(state, target, f"🐯 奈拉承担 {absorbed} 点伤害，剩余 {companion['health']} 生命。")
     player["health"] = max(0, player["health"] - amount)
     if player["health"] == 0 and player["statuses"].get("blessing"):
         _remove_status(player, "blessing")
@@ -181,8 +202,12 @@ def _apply_effects(state: Dict, pid: str, target: str, data: Dict, level: int = 
         healing = scale[index]
     if healing:
         _heal(player, healing + level - 1)
+    companion_healing = data.get("heal_companion", 0)
+    if companion_healing:
+        healed = _heal_companion(player, companion_healing + level - 1)
+        _log(state, pid, f"🐯 奈拉恢复 {healed} 生命。")
     gain = data.get("gain_cp", 0)
-    if not data.get("damage") and not healing:
+    if not data.get("damage") and not healing and not companion_healing:
         gain += level - 1
     _cp(player, gain)
     if data.get("draw"):
@@ -202,6 +227,44 @@ def _check_winner(state: Dict) -> None:
         state["winner"] = alive  # Empty means simultaneous knockout / draw.
 
 
+def _expansion_upkeep(state: Dict, pid: str) -> int:
+    player = state["players"][pid]
+    if player["hero"] == "cursed_pirate" and not player["statuses"].get("cursed_doubloon") and not player["statuses"].get("cursed"):
+        _status(player, "cursed")
+        _log(state, pid, "💀 金币耗尽，永久变为诅咒形态。")
+    damage = 1 if player["statuses"].get("cursed") else 0
+    if damage:
+        _log(state, pid, "💀 诅咒形态造成 1 点维护伤害。")
+    if player["statuses"].get("nanite"):
+        values = _roll_values(state, player["statuses"]["nanite"])
+        _remove_status(player, "nanite", values.count(6))
+        _log(state, pid, "🐜 纳米虫维护检定：" + " · ".join(map(str, values)) + "。")
+    if player["statuses"].get("powder_keg"):
+        value = _roll_values(state, 1)[0]
+        _log(state, pid, f"💣 火药桶检定：{value}。")
+        if value <= 2:
+            _remove_status(player, "powder_keg")
+            damage += 4
+            _log(state, pid, "💣 火药桶爆炸，造成 4 点持续伤害。")
+        elif value == 6:
+            _remove_status(player, "powder_keg")
+            _status(state["players"][_other(state, pid)], "powder_keg")
+            _log(state, pid, "💣 尝试将火药桶转交对手（可被净化阻止）。")
+    return damage
+
+
+def _activate_nanobot(state: Dict, pid: str) -> None:
+    player = state["players"][pid]
+    target = _other(state, pid)
+    nanites = state["players"][target]["statuses"].get("nanite", 0)
+    if nanites and player["statuses"].get("nanobot") and player["statuses"].get("synth"):
+        _remove_status(player, "synth")
+        _remove_status(state["players"][target], "nanite", nanites)
+        dealt = _damage(state, target, nanites * 2, "persistent")
+        _log(state, pid, f"⚙️ 纳米机器人消耗 1 合成物，引爆 {nanites} 枚纳米虫，造成 {dealt} 点伤害。")
+        _check_winner(state)
+
+
 def _begin_turn(state: Dict, pid: str, first: bool = False) -> None:
     player = state["players"][pid]
     state.update(phase="main_1", current_player=pid, turn_player=pid, dice=[],
@@ -210,6 +273,7 @@ def _begin_turn(state: Dict, pid: str, first: bool = False) -> None:
     player["shadows_started_turn"] = bool(player["statuses"].get("shadows"))
     _remove_status(player, "fire_mastery")
     upkeep = player["statuses"].get("poison", 0) + (2 if player["statuses"].get("burn") else 0)
+    upkeep += _expansion_upkeep(state, pid)
     if player["statuses"].get("bleed"):
         values = _roll_values(state, player["statuses"]["bleed"])
         wounds = sum(value <= 4 for value in values)
@@ -228,6 +292,9 @@ def _begin_turn(state: Dict, pid: str, first: bool = False) -> None:
         _check_winner(state)
         if state["game_over"]:
             return
+    _activate_nanobot(state, pid)
+    if state["game_over"]:
+        return
     if player["statuses"].get("sapling"):
         _remove_status(player, "sapling")
         _heal(player, 2)
@@ -270,6 +337,9 @@ def _start_offense(state: Dict, pid: str) -> None:
 
 def _finish_turn(state: Dict, pid: str) -> None:
     player = state["players"][pid]
+    if player["hero"] == "cursed_pirate" and player["statuses"].get("cursed_doubloon"):
+        _remove_status(player, "cursed_doubloon")
+        _log(state, pid, "💰 回合结束，消耗 1 枚诅咒金币。")
     if player["statuses"].get("delayed_poison"):
         amount = player["statuses"].pop("delayed_poison") * 3
         dealt = _damage(state, pid, amount, "persistent")
@@ -289,6 +359,7 @@ def _finish_turn(state: Dict, pid: str) -> None:
 def _finish_offense(state: Dict, pid: str) -> None:
     """Settle effects owed by rolling even when the player skips the attack."""
     player = state["players"][pid]
+    _remove_status(player, "constrict")
     if player["statuses"].get("barbed_vine"):
         _remove_status(player, "barbed_vine")
         dealt = _damage(state, pid, max(0, state["rolls"] - 1), "persistent")
@@ -312,6 +383,9 @@ def _finish_attack(state: Dict, defend: bool) -> None:
         statuses_before = dict(defender["statuses"])
         incoming_before = incoming
         _heal(defender, sum(counts.get(face, 0) * n for face, n in defense.get("heal_per", {}).items()))
+        companion_healing = _heal_companion(defender, sum(counts.get(face, 0) * count for face, count in defense.get("heal_companion_per", {}).items()))
+        if companion_healing:
+            _log(state, defender_id, f"🐯 防御使奈拉恢复 {companion_healing} 生命。")
         _cp(defender, sum(counts.get(face, 0) * n for face, n in defense.get("cp_per", {}).items()))
         for face, status in defense.get("status_per", {}).items():
             _status(defender, status, counts.get(face, 0))
@@ -377,8 +451,28 @@ def _resolve_mesmerize(state: Dict, pid: str) -> None:
         _log(state, opponent_id, f"👁️ 重掷对手第 {index + 1} 枚骰子：{previous} → {state['dice'][index]['value']}。")
 
 
-def _season_two_attack_modifiers(state: Dict, pid: str, target: str, damage: int) -> Tuple[int, bool]:
+def _season_two_attack_modifiers(state: Dict, pid: str, target: str, damage: int, kind: str) -> Tuple[int, str, bool]:
     player = state["players"][pid]
+    if player["statuses"].get("shock_bot") and player["statuses"].get("synth"):
+        _remove_status(player, "synth")
+        damage += 2
+        _log(state, pid, "🤖 电击机器人消耗 1 合成物，攻击伤害 +2。")
+    if (player.get("companion") or {}).get("health", 0) > 0:
+        damage += 1
+        _log(state, pid, "🐯 奈拉协同攻击，伤害 +1。")
+    if player["statuses"].get("cursed"):
+        damage += 2
+        _log(state, pid, "💀 诅咒形态，攻击伤害 +2。")
+    advantage = player["statuses"].get("tactical_advantage", 0)
+    if advantage:
+        if advantage >= 3 and kind == "normal":
+            _remove_status(player, "tactical_advantage", 3)
+            kind = "undefendable"
+            _log(state, pid, "🧭 消耗 3 战术优势，攻击变为不可防御。")
+        else:
+            _remove_status(player, "tactical_advantage")
+            damage += 2
+            _log(state, pid, "🧭 消耗 1 战术优势，攻击伤害 +2。")
     if player["statuses"].get("reload"):
         _remove_status(player, "reload")
         value = _roll_values(state, 1)[0]
@@ -403,7 +497,15 @@ def _season_two_attack_modifiers(state: Dict, pid: str, target: str, damage: int
     if shame:
         damage -= shame
         _log(state, pid, f"😔 移除 {shame} 耻辱，攻击伤害 -{shame}。")
-    return max(0, damage), lifesteal
+    wither = player["statuses"].get("wither", 0)
+    if wither:
+        damage -= wither
+        _log(state, pid, f"🥀 衰弱使攻击伤害 -{wither}。")
+    if player["statuses"].get("parlay"):
+        _remove_status(player, "parlay")
+        damage = 0
+        _log(state, pid, "🏳️ 停战：攻击伤害变为 0，附加效果仍然生效。")
+    return max(0, damage), kind, lifesteal
 
 
 def _activate_ability(state: Dict, pid: str, action: Dict) -> None:
@@ -481,7 +583,7 @@ def _activate_ability(state: Dict, pid: str, action: Dict) -> None:
         damage += 2
     lifesteal = False
     if kind != "ultimate":
-        damage, lifesteal = _season_two_attack_modifiers(state, pid, target, damage)
+        damage, kind, lifesteal = _season_two_attack_modifiers(state, pid, target, damage, kind)
     if diminished:
         damage //= 2
     state["pending_attack"] = {"attacker": pid, "defender": target, "damage": damage,
@@ -530,7 +632,7 @@ def _card_reason(state: Dict, pid: str, card: Dict) -> str:
 
 
 def _removable(status: str) -> bool:
-    return status in STATUSES and status != "blessing" and not STATUSES[status].get("companion")
+    return status in STATUSES and status != "blessing" and STATUSES[status].get("removable", True) and not STATUSES[status].get("companion")
 
 
 def _play_card(state: Dict, pid: str, action: Dict) -> None:
@@ -629,7 +731,13 @@ class DiceThroneGame:
     @staticmethod
     def _start(state: Dict) -> None:
         for pid in state["turn_order"]:
-            state["players"][pid]["deck"] = list(DECKS[state["players"][pid]["hero"]])
+            player = state["players"][pid]
+            hero = HEROES[player["hero"]]
+            player["deck"] = list(DECKS[player["hero"]])
+            for status, count in hero["starting_statuses"].items():
+                _status(player, status, count)
+            if hero.get("companion"):
+                player["companion"] = {**copy.deepcopy(hero["companion"]), "health": hero["companion"]["max_health"]}
             _draw(state, pid, RULES["starting_hand"])
         _begin_turn(state, state["turn_order"][0], first=True)
 
@@ -651,7 +759,9 @@ class DiceThroneGame:
             return ["play_card", "buy_upgrade", "sell_card", "end_phase", "pass"]
         if phase == "offensive_roll":
             actions = ["play_card", "pass"]
-            if state.get("rolls", 0) < state.get("roll_limit", 3) and not all(state["kept"]):
+            player = state["players"][player_id]
+            can_pay = not state.get("rolls") or not player["statuses"].get("constrict") or player["combat_points"] >= 1
+            if state.get("rolls", 0) < state.get("roll_limit", 3) and not all(state["kept"]) and can_pay:
                 actions.insert(0, "roll")
             if state.get("dice"):
                 actions.extend(["toggle_keep", "confirm_roll"])
@@ -682,6 +792,9 @@ class DiceThroneGame:
             elif typ == "roll":
                 if state["rolls"] >= state.get("roll_limit", 3):
                     raise ValueError("no rolls remaining")
+                if state["rolls"] and player["statuses"].get("constrict"):
+                    _cp(player, -1)
+                    _log(state, pid, "⛓️ 压制：支付 1 CP 进行额外重掷。")
                 dice = state["dice"] or [None] * 5
                 state["dice"] = [die if state["kept"][i] else _roll_dice(state, player["hero"], 1)[0] for i, die in enumerate(dice)]
                 state["rolls"] += 1
@@ -752,7 +865,8 @@ class DiceThroneGame:
                             "combat_points": player["combat_points"], "statuses": [{"id": key, "stacks": count} for key, count in player["statuses"].items()],
                             "hand_count": len(player["hand"]), "deck_count": len(player.get("deck", [])),
                             "upgrades": [f"{u['ability']}_{u['level']}" for u in player["upgrades"]],
-                            "is_bot": bool(state["player_meta"][pid].get("is_bot"))})
+                            "is_bot": bool(state["player_meta"][pid].get("is_bot")),
+                            "companion": copy.deepcopy(player.get("companion"))})
         own = state["players"].get(viewer_id, {})
         legal = DiceThroneGame.get_legal_actions(state, viewer_id)
         hand = []

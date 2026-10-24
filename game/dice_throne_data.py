@@ -1,4 +1,4 @@
-"""Playable data for Season One Rerolled and selected Season Two heroes.
+"""Playable data for the Season One Rerolled and Season Two rosters.
 
 This is an explicitly simplified digital adaptation, not a transcription of
 printed hero boards. Hero identities and token themes were checked against
@@ -14,17 +14,20 @@ RULES = {
 }
 
 RULES_NOTE = (
-    "数字简化版：收录第一季重制版 8 位英雄及第二季的枪手、武士、吸血鬼领主、炽天使，共 12 位；"
+    "数字简化版：收录第一季重制版和第二季各 8 位英雄，共 16 位；"
     "骰面分布、技能数值、精简牌组、升级和自动消耗指示物采用本页面规则，"
     "不等同于实体版逐张复刻。技能免费发动；每人使用独立牌堆。状态与伙伴按说明自动结算，"
     "未实现自由选择消耗时机、完整响应链及全部实体卡牌。第二季的血之力仅自动选择增伤或吸血，"
-    "魅惑在对手确认进攻骰时检定，飞行仅自动用于防御；不包含实体版全部可选用法或被动能力。"
+    "魅惑在对手确认进攻骰时检定，飞行仅自动用于防御。工匠机器人自动消耗合成物启动，"
+    "奈拉以 6 生命的伙伴实现，战术优势自动转为增伤或不可防御，海盗金币耗尽后永久变身；"
+    "不包含实体版全部可选用法、机器人升级、双面技能板或其他未列出的被动能力。"
 )
 
 
-def _token(name, name_zh, icon, limit, description, positive=False, companion=False):
+def _token(name, name_zh, icon, limit, description, positive=False, companion=False, removable=True):
     return {"name": name, "name_zh": name_zh, "icon": icon, "limit": limit,
-            "description": description, "positive": positive, "companion": companion}
+            "description": description, "positive": positive, "companion": companion,
+            "removable": removable and not companion}
 
 
 STATUSES = {
@@ -41,7 +44,7 @@ STATUSES = {
     "retribution": _token("Retribution", "惩戒", "⚖️", 1, "受到非终极进攻伤害时自动消耗，反弹减伤前一半伤害（向上取整）。", True),
     "crit": _token("Crit", "暴击", "💢", 1, "下次基础伤害至少为 5 的非终极攻击自动消耗，伤害 +4。", True),
     "accuracy": _token("Accuracy", "精准", "🏹", 1, "下次普通攻击自动消耗，将该攻击变为不可防御。", True),
-    "blessing": _token("Blessing of Divinity", "神佑", "🌟", 1, "生命降至 0 时自动移除并将生命设为 1；不能被卡牌移除或转移。", True),
+    "blessing": _token("Blessing of Divinity", "神佑", "🌟", 1, "生命降至 0 时自动移除并将生命设为 1；不能被卡牌移除或转移。", True, removable=False),
     "fire_mastery": _token("Fire Mastery", "火焰精通", "🔥", 5, "每枚使自己的攻击伤害 +1；自己回合开始时减少 1 枚。", True),
     "burn": _token("Burn", "燃烧", "♨️", 1, "自己回合开始时受到 2 点持续伤害；此状态不会自动移除。"),
     "poison": _token("Poison", "中毒", "☠️", 3, "自己回合开始时每枚造成 1 点持续伤害；不会自动移除。"),
@@ -66,6 +69,19 @@ STATUSES = {
     "flight": _token("Flight", "飞行", "🕊️", 3, "受到非终极进攻伤害时自动消耗 1 枚并掷 2 骰：有 6 则避免此次进攻伤害；不用于持续伤害或反弹。", True),
     "holy_presence": _token("Holy Presence", "神圣威仪", "🌟", 2, "自己回合开始时每枚对对手造成 1 点持续伤害；不会自动移除，可用卡牌移除。", True),
     "blinding_light": _token("Blinding Light", "炫目圣光", "🌤️", 1, "下次非终极进攻技能发动时移除并掷 1 骰：1 技能及效果失效；2–3 最终攻击伤害减半（向下取整）；4–6 无影响。"),
+    "synth": _token("Synth", "合成物", "🔩", 7, "机器人的能源。电击机器人进攻增伤、治疗机器人防御治疗、纳米机器人维护引爆，各自动消耗 1 枚合成物。", True),
+    "shock_bot": _token("Shock Bot", "电击机器人", "🤖", 1, "永久伙伴：发动非终极攻击时，有合成物则自动消耗 1 枚，攻击伤害 +2。每次攻击一次。", True, True),
+    "heal_bot": _token("Heal Bot", "治疗机器人", "🚑", 1, "永久伙伴：受到非终极进攻伤害前，有合成物则自动消耗 1 枚并治疗 2。每次攻击一次；完全阻挡的伤害不触发。", True, True),
+    "nanobot": _token("Nanobot", "纳米机器人", "⚙️", 1, "永久伙伴：自己维护时，对手有纳米虫且自己有合成物，则消耗 1 枚合成物并移除对手全部纳米虫，每枚造成 2 点持续伤害。", True, True),
+    "nanite": _token("Nanite", "纳米虫", "🐜", 3, "等待纳米机器人引爆，每枚造成 2 点伤害。自己回合开始时每枚掷 1 骰：6 移除该枚；其余保留。"),
+    "nyras_bond": _token("Nyra's Bond", "奈拉羁绊", "🐾", 1, "受到非终极进攻伤害时，若自己是女猎手且奈拉仍有生命，自动消耗此状态，由奈拉承担最多等同其剩余生命的伤害，余下伤害由自己承担。", True),
+    "tactical_advantage": _token("Tactical Advantage", "战术优势", "🧭", 5, "发动非终极攻击时自动消耗：普通攻击且有至少 3 枚时，消耗 3 枚使其不可防御；否则消耗 1 枚使伤害 +2。", True),
+    "constrict": _token("Constrict", "压制", "⛓️", 1, "进攻首掷免费，每次额外重掷自动支付 1 CP；CP 不足时不能重掷。确认骰子或主动跳过进攻后移除。"),
+    "cursed_doubloon": _token("Cursed Doubloon", "诅咒金币", "💰", 3, "海盗开局持有 3 枚，每个自己的回合结束时消耗 1 枚。金币耗尽后，下个自己回合开始时永久变为诅咒形态。不可移除或转移。", True, removable=False),
+    "cursed": _token("Cursed Form", "诅咒形态", "💀", 1, "永久形态：非终极攻击伤害 +2；每个自己的回合开始时受到 1 点持续伤害。不会变回人类，不可移除或转移。", True, removable=False),
+    "wither": _token("Wither", "衰弱", "🥀", 2, "每枚使自己的非终极攻击伤害 -1，最低为 0；不会自动移除。"),
+    "parlay": _token("Parlay", "停战", "🏳️", 1, "下次非终极攻击的最终伤害变为 0，然后移除此状态；技能附加效果仍正常结算。辅助技能和跳过进攻不消耗此状态。"),
+    "powder_keg": _token("Powder Keg", "火药桶", "💣", 1, "自己维护时掷 1 骰：1–2 移除此状态并受到 4 点持续伤害；3–5 保留；6 移除此状态并转交对手（可被净化阻止）。重复施加只保留 1 枚。"),
 }
 
 
@@ -206,14 +222,58 @@ SERAPH_ABILITIES = [
 ]
 
 
-def _hero(name, name_zh, icon, subtitle, symbols, abilities, defense, season=1):
+ARTIFICER_ABILITIES = [
+    _basic("wrench_strike", "Wrench Strike · 扳手重击", "wrench", [4, 6, 8]),
+    _ability("assemble", "Assemble · 组装", {"counts": {"gear": 3}}, "获得 3 合成物并建造治疗机器人。", self_status=["synth"] * 3 + ["heal_bot"]),
+    _ability("nanite_swarm", "Nanite Swarm · 纳米虫群", {"counts": {"wrench": 2, "gear": 2}}, "造成 5 点伤害；施加 2 纳米虫。", 5, opponent_status=["nanite"] * 2),
+    _ability("shock_wave", "Shock Wave · 电击波", {"straight": 4}, "造成 7 点伤害；建造电击机器人并获得 1 合成物。", 7, self_status=["shock_bot", "synth"]),
+    _ability("repair_protocol", "Repair Protocol · 修复程序", {"counts": {"core": 3}}, "治疗 3；获得 2 合成物。", heal=3, self_status=["synth"] * 2),
+    _ability("detonation_matrix", "Detonation Matrix · 引爆矩阵", {"counts": {"core": 4}}, "造成 8 点不可防御伤害；建造纳米机器人并施加 1 纳米虫。", 8, "undefendable", self_status=["nanobot"], opponent_status=["nanite"]),
+    _ability("overclock", "Overclock · 超频", {"straight": 5}, "造成 10 点伤害；获得 2 合成物。", 10, self_status=["synth"] * 2),
+    _ability("mechanical_overlord", "Mechanical Overlord · 机械霸主", {"counts": {"core": 5}}, "造成 12 点终极伤害；建造三种机器人，获得 3 合成物并施加 3 纳米虫。", 12, "ultimate", self_status=["shock_bot", "heal_bot", "nanobot"] + ["synth"] * 3, opponent_status=["nanite"] * 3),
+]
+HUNTRESS_ABILITIES = [
+    _basic("hunting_strike", "Hunting Strike · 狩猎打击", "claw", [4, 6, 8]),
+    _ability("wild_bond", "Wild Bond · 荒野羁绊", {"counts": {"paw": 3}}, "奈拉恢复 4 生命（可唤醒倒下的奈拉）；获得奈拉羁绊。", heal_companion=4, self_status=["nyras_bond"]),
+    _ability("rending_pounce", "Rending Pounce · 撕裂扑击", {"counts": {"claw": 2, "paw": 2}}, "造成 5 点伤害；施加流血。", 5, opponent_status=["bleed"]),
+    _ability("pack_hunt", "Pack Hunt · 协同狩猎", {"straight": 4}, "造成 7 点伤害；获得奈拉羁绊。", 7, self_status=["nyras_bond"]),
+    _ability("primal_recovery", "Primal Recovery · 野性复苏", {"counts": {"wild_moon": 3}}, "自己治疗 3；奈拉恢复 6 生命。", heal=3, heal_companion=6),
+    _ability("savage_instinct", "Savage Instinct · 凶猛本能", {"counts": {"wild_moon": 4}}, "造成 8 点不可防御伤害；施加流血并获得奈拉羁绊。", 8, "undefendable", self_status=["nyras_bond"], opponent_status=["bleed"]),
+    _ability("twin_fangs", "Twin Fangs · 双重獠牙", {"straight": 5}, "造成 10 点伤害；奈拉恢复 2 生命。", 10, heal_companion=2),
+    _ability("apex_predator", "Apex Predator · 顶级掠食者", {"counts": {"wild_moon": 5}}, "造成 12 点终极伤害；奈拉恢复 6 生命，获得奈拉羁绊并施加 2 流血。", 12, "ultimate", heal_companion=6, self_status=["nyras_bond"], opponent_status=["bleed"] * 2),
+]
+TACTICIAN_ABILITIES = [
+    _basic("saber_strike", "Saber Strike · 军刀突击", "saber", [4, 6, 8]),
+    _ability("battle_plan", "Battle Plan · 作战计划", {"counts": {"command": 3}}, "获得 3 战术优势和 1 CP。", gain_cp=1, self_status=["tactical_advantage"] * 3),
+    _ability("flanking_order", "Flanking Order · 侧翼指令", {"counts": {"saber": 2, "command": 2}}, "造成 5 点伤害；施加锁定（从下次攻击生效）。", 5, opponent_status=["targeted"]),
+    _ability("encirclement", "Encirclement · 包围", {"straight": 4}, "造成 7 点伤害；施加压制。", 7, opponent_status=["constrict"]),
+    _ability("entrench", "Entrench · 固守", {"counts": {"strategy": 3}}, "获得守护和 2 战术优势。", self_status=["protect"] + ["tactical_advantage"] * 2),
+    _ability("precision_assault", "Precision Assault · 精准强攻", {"counts": {"strategy": 4}}, "造成 8 点不可防御伤害；施加锁定。", 8, "undefendable", opponent_status=["targeted"]),
+    _ability("decisive_maneuver", "Decisive Maneuver · 制胜机动", {"straight": 5}, "造成 10 点伤害；获得 2 战术优势。", 10, self_status=["tactical_advantage"] * 2),
+    _ability("grand_strategy", "Grand Strategy · 全局谋略", {"counts": {"strategy": 5}}, "造成 12 点终极伤害；获得 3 战术优势，施加压制和锁定。", 12, "ultimate", self_status=["tactical_advantage"] * 3, opponent_status=["constrict", "targeted"]),
+]
+CURSED_PIRATE_ABILITIES = [
+    _basic("cutlass_slash", "Cutlass Slash · 弯刀斩", "cutlass", [4, 6, 8]),
+    _ability("plunder", "Plunder · 劫掠", {"counts": {"coin_symbol": 3}}, "获得 3 CP 并抽 1 张牌。", gain_cp=3, draw=1),
+    _ability("keg_toss", "Keg Toss · 投掷火药桶", {"counts": {"cutlass": 2, "coin_symbol": 2}}, "造成 5 点伤害；施加火药桶。", 5, opponent_status=["powder_keg"]),
+    _ability("broadside", "Broadside · 舷侧齐射", {"straight": 4}, "造成 7 点伤害；施加衰弱。", 7, opponent_status=["wither"]),
+    _ability("parlay_flag", "Parlay Flag · 停战旗", {"counts": {"skull_symbol": 3}}, "治疗 2；对手获得停战。", heal=2, opponent_status=["parlay"]),
+    _ability("soul_rend", "Soul Rend · 撕裂灵魂", {"counts": {"skull_symbol": 4}}, "造成 8 点不可防御伤害；施加衰弱。", 8, "undefendable", opponent_status=["wither"]),
+    _ability("dead_mans_tide", "Dead Man's Tide · 亡者潮汐", {"straight": 5}, "造成 10 点伤害；施加火药桶。", 10, opponent_status=["powder_keg"]),
+    _ability("davy_jones", "Davy Jones · 深海亡魂", {"counts": {"skull_symbol": 5}}, "造成 13 点终极伤害；施加 2 衰弱和火药桶。", 13, "ultimate", opponent_status=["wither"] * 2 + ["powder_keg"]),
+]
+
+
+def _hero(name, name_zh, icon, subtitle, symbols, abilities, defense, season=1,
+          passive="", starting_statuses=None, companion=None):
     faces, icons, names = [], {}, {}
     for key, symbol_icon, symbol_name, count in symbols:
         faces.extend([key] * count)
         icons[key], names[key] = symbol_icon, symbol_name
     return {"name": name, "name_zh": name_zh, "icon": icon, "subtitle": subtitle,
             "dice_faces": faces, "symbol_icons": icons, "symbol_names": names,
-            "abilities": abilities, "defense": defense, "season": season}
+            "abilities": abilities, "defense": defense, "season": season,
+            "passive": passive, "starting_statuses": starting_statuses or {}, "companion": companion}
 
 
 def _defense(id_, name, dice, description, **effects):
@@ -233,6 +293,10 @@ HEROES = {
     "samurai": _hero("Samurai", "武士", "⛩️", "荣誉 · 耻辱 · 反击", [("katana", "🗡️", "Katana · 太刀", 3), ("helm", "🛡️", "Helm · 兜", 2), ("banner", "🎌", "Banner · 战旗", 1)], SAMURAI_ABILITIES, _defense("blade_guard", "Blade Guard · 刀锋守势", 3, "每顶兜阻挡 1；每面战旗获得反击，可立即用于本次进攻。", prevent_per={"helm": 1}, status_per={"banner": "back_strike"}), season=2),
     "vampire_lord": _hero("Vampire Lord", "吸血鬼领主", "🧛", "血之力 · 流血 · 魅惑", [("fang", "🦷", "Fang · 尖牙", 3), ("blood_symbol", "🩸", "Blood · 鲜血", 2), ("gaze", "👁️", "Gaze · 凝视", 1)], VAMPIRE_LORD_ABILITIES, _defense("blood_ward", "Blood Ward · 血之守护", 3, "每个鲜血阻挡 1；每个凝视治疗 1 并获得 1 血之力。", prevent_per={"blood_symbol": 1}, heal_per={"gaze": 1}, status_per={"gaze": "blood_power"}), season=2),
     "seraph": _hero("Seraph", "炽天使", "👼", "飞行 · 圣光 · 神圣威仪", [("holy_sword", "⚔️", "Holy Sword · 圣剑", 3), ("grace", "✨", "Grace · 恩典", 2), ("halo", "😇", "Halo · 光环", 1)], SERAPH_ABILITIES, _defense("celestial_guard", "Celestial Guard · 天界守护", 3, "每个恩典阻挡 1；每个光环获得飞行，可立即用于本次进攻。", prevent_per={"grace": 1}, status_per={"halo": "flight"}), season=2),
+    "artificer": _hero("Artificer", "工匠", "🛠️", "合成物 · 机器人 · 纳米虫", [("wrench", "🔧", "Wrench · 扳手", 3), ("gear", "⚙️", "Gear · 齿轮", 2), ("core", "💎", "Core · 核心", 1)], ARTIFICER_ABILITIES, _defense("reactive_armor", "Reactive Armor · 反应装甲", 3, "每个齿轮阻挡 1；每个核心获得 1 合成物，可立即供治疗机器人使用。", prevent_per={"gear": 1}, status_per={"core": "synth"}), season=2, starting_statuses={"synth": 2, "shock_bot": 1}, passive="开局有 2 合成物（🔩）和电击机器人（🤖）。技能和专属卡建造永久机器人；每次启动自动花费 1 合成物。本版不含机器人升级。"),
+    "huntress": _hero("Huntress", "女猎手", "🐯", "奈拉 · 羁绊 · 流血", [("claw", "🐅", "Claw · 利爪", 3), ("paw", "🐾", "Paw · 兽爪", 2), ("wild_moon", "🌙", "Wild Moon · 荒野之月", 1)], HUNTRESS_ABILITIES, _defense("feral_guard", "Feral Guard · 野性守护", 3, "每个兽爪阻挡 1 并使奈拉恢复 2 生命；每个荒野之月获得奈拉羁绊，可立即用于本次伤害。", prevent_per={"paw": 1}, heal_companion_per={"paw": 2}, status_per={"wild_moon": "nyras_bond"}), season=2, companion={"id": "nyra", "name": "Nyra", "name_zh": "奈拉", "icon": "🐯", "max_health": 6}, passive="奈拉（🐯）开局有 6 生命；存活时非终极攻击伤害 +1。奈拉羁绊（🐾）让她承担部分进攻伤害。降至 0 时暂停增伤和护卫，恢复生命后重新生效。伙伴不能被状态移除卡移除。"),
+    "tactician": _hero("Tactician", "战术家", "🎖️", "战术优势 · 压制 · 锁定", [("saber", "⚔️", "Saber · 军刀", 3), ("command", "📜", "Command · 指令", 2), ("strategy", "♟️", "Strategy · 谋略", 1)], TACTICIAN_ABILITIES, _defense("strategic_guard", "Strategic Guard · 战术防御", 3, "每个指令阻挡 1；每个谋略获得 1 战术优势。", prevent_per={"command": 1}, status_per={"strategy": "tactical_advantage"}), season=2, passive="战术优势（🧭）自动用于攻击：3 枚可将普通攻击变为不可防御；否则消耗 1 枚增伤 2。压制（⛓️）使对手每次额外重掷支付 1 CP（⚡）。"),
+    "cursed_pirate": _hero("Cursed Pirate", "诅咒海盗", "🏴‍☠️", "金币 · 火药桶 · 永久变身", [("cutlass", "🗡️", "Cutlass · 弯刀", 3), ("coin_symbol", "🟡", "Doubloon · 金币", 2), ("skull_symbol", "💀", "Skull · 骷髅", 1)], CURSED_PIRATE_ABILITIES, _defense("ghostly_guard", "Ghostly Guard · 幽魂守护", 3, "每枚金币获得 1 CP；每个骷髅阻挡 2。", cp_per={"coin_symbol": 1}, prevent_per={"skull_symbol": 2}), season=2, starting_statuses={"cursed_doubloon": 3}, passive="开局有 3 诅咒金币（💰），每个自己的回合结束消耗 1 枚。耗尽后的下个自己回合开始永久变为诅咒形态（💀）：非终极攻击 +2，每次维护受到 1 伤害；本版仍使用同一技能板。"),
 }
 
 CARDS = {}
@@ -248,9 +312,9 @@ _card("getting_paid", "Getting Paid! · 发薪", 0, "instant", "self", "获得 2
 _card("double_up", "Double Up! · 双倍收获", 1, "instant", "self", "抽 2 张牌；手牌最多 6 张。", "gain", draw=2)
 _card("triple_up", "Triple Up! · 三倍收获", 2, "instant", "self", "抽 3 张牌；手牌最多 6 张。", "gain", draw=3)
 _card("vegas_baby", "Vegas Baby! · 赌一把", 0, "main", "self", "掷 1 骰；获得点数一半的 CP（向上取整）。", "vegas")
-_card("what_status", "What Status Effects? · 状态清零", 2, "main", "any_player", "移除所选玩家的所有可移除状态（不影响伙伴或神佑）。", "clean_all")
-_card("get_outta_here", "Get That Outta Here! · 移除状态", 1, "main", "any_player", "移除所选玩家的 1 枚指定状态（不影响伙伴或神佑）。", "clean_one", inputs=["status"])
-_card("bye_bye", "Bye, Bye! · 再见", 2, "instant", "any_player", "移除所选玩家的 1 枚指定状态（不影响伙伴或神佑）。", "clean_one", inputs=["status"])
+_card("what_status", "What Status Effects? · 状态清零", 2, "main", "any_player", "移除所选玩家的所有可移除状态（不影响伙伴、神佑或海盗金币/形态）。", "clean_all")
+_card("get_outta_here", "Get That Outta Here! · 移除状态", 1, "main", "any_player", "移除所选玩家的 1 枚指定状态（不影响伙伴、神佑或海盗金币/形态）。", "clean_one", inputs=["status"])
+_card("bye_bye", "Bye, Bye! · 再见", 2, "instant", "any_player", "移除所选玩家的 1 枚指定状态（不影响伙伴、神佑或海盗金币/形态）。", "clean_one", inputs=["status"])
 _card("six_it", "Six-It! · 指定六点", 1, "roll", "self", "将自己选中的进攻骰改为 6。", "set_die", inputs=["die"], fixed_value=6)
 _card("so_wild", "So Wild! · 任意骰", 2, "roll", "self", "将自己选中的进攻骰改为指定点数。", "set_die", inputs=["die", "value"])
 _card("tip_it", "Tip It! · 推一把", 1, "roll", "self", "将自己选中的进攻骰提高或降低 1 点（范围 1–6）。", "tip_die", inputs=["die", "value"])
@@ -272,6 +336,10 @@ _HERO_ACTIONS = {
     "samurai": [("code_of_honor", "Code of Honor · 荣誉准则", 1, "self", {"self_status": ["honor"] * 2}, "获得 2 荣誉。"), ("disgrace", "Disgrace · 奇耻大辱", 1, "opponent", {"opponent_status": ["shame"] * 2}, "施加 2 耻辱。")],
     "vampire_lord": [("blood_reserve", "Blood Reserve · 血能储备", 1, "self", {"self_status": ["blood_power"] * 3}, "获得 3 血之力。"), ("mesmerism", "Mesmerism · 催眠术", 1, "self", {"self_status": ["mesmerize"]}, "获得魅惑。")],
     "seraph": [("wings_of_light", "Wings of Light · 光之翼", 1, "self", {"self_status": ["flight"] * 2}, "获得 2 飞行。"), ("sacred_presence", "Sacred Presence · 神圣降临", 2, "self", {"self_status": ["holy_presence"], "heal": 2}, "获得神圣威仪并治疗 2。")],
+    "artificer": [("spare_parts", "Spare Parts · 备用零件", 1, "self", {"self_status": ["synth"] * 3}, "获得 3 合成物。"), ("field_workshop", "Field Workshop · 战地工坊", 2, "self", {"self_status": ["heal_bot", "nanobot", "synth"]}, "建造治疗机器人、纳米机器人，并获得 1 合成物。")],
+    "huntress": [("call_nyra", "Call Nyra · 呼唤奈拉", 1, "self", {"heal_companion": 4, "self_status": ["nyras_bond"]}, "奈拉恢复 4 生命；获得奈拉羁绊。"), ("track_prey", "Track Prey · 追踪猎物", 2, "opponent", {"opponent_status": ["targeted", "bleed"]}, "施加锁定和流血。")],
+    "tactician": [("supply_lines", "Supply Lines · 补给线", 1, "self", {"gain_cp": 1, "self_status": ["tactical_advantage"] * 2}, "获得 1 CP 和 2 战术优势。"), ("pin_down", "Pin Down · 压制火力", 2, "opponent", {"opponent_status": ["constrict", "targeted"]}, "施加压制和锁定。")],
+    "cursed_pirate": [("black_spot", "Black Spot · 黑斑", 1, "opponent", {"opponent_status": ["wither"] * 2}, "施加 2 衰弱。"), ("loaded_keg", "Loaded Keg · 装填火药", 1, "opponent", {"opponent_status": ["powder_keg"]}, "施加火药桶。")],
 }
 for hero, actions in _HERO_ACTIONS.items():
     for sid, name, cost, target, effects, description in actions:

@@ -46,6 +46,7 @@
   #decryptoTeams {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 10px;
     margin-bottom: 14px;
   }
@@ -110,9 +111,9 @@
 
   .decrypto-keywords {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
-    margin-top: 6px;
   }
 
   .decrypto-keyword {
@@ -162,6 +163,24 @@
 
   .decrypto-history-team + .decrypto-history-team {
     margin-top: 14px;
+  }
+
+  .decrypto-history-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin-bottom: 5px;
+  }
+
+  .decrypto-history-heading .decrypto-team-header {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  .decrypto-history-heading .decrypto-player-list {
+    flex: 1 1 100px;
+    margin: 0;
   }
 
   .decrypto-history-table,
@@ -604,8 +623,8 @@
     }
 
     #decryptoTeams {
-      gap: 6px;
-      margin-bottom: 10px;
+      gap: 4px 6px;
+      margin-bottom: 8px;
     }
 
     .decrypto-team {
@@ -616,6 +635,15 @@
       font-size: 13px;
     }
 
+    #decryptoTeams .decrypto-team-header,
+    #decryptoTeams .decrypto-team-meta {
+      margin-bottom: 4px;
+    }
+
+    #decryptoTeams .decrypto-player-list {
+      margin-bottom: 0;
+    }
+
     .decrypto-team-progress {
       display: none;
     }
@@ -624,8 +652,16 @@
       gap: 4px;
     }
 
-    .decrypto-keywords {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .decrypto-player {
+      padding: 2px 5px;
+    }
+
+    .decrypto-encryptor .decrypto-player-role {
+      display: none;
+    }
+
+    .decrypto-encryptor::after {
+      content: " ✎";
     }
 
     .decrypto-keyword {
@@ -646,7 +682,24 @@
     }
 
     .decrypto-history-team + .decrypto-history-team {
-      margin-top: 10px;
+      margin-top: 8px;
+    }
+
+    .decrypto-history-heading {
+      margin-bottom: 3px;
+    }
+
+    .decrypto-history-table th {
+      padding: 1px 4px;
+      line-height: 1.2;
+    }
+
+    .decrypto-history-table td {
+      padding: 3px;
+    }
+
+    .decrypto-history-table .decrypto-history-clue {
+      padding: 2px 4px;
     }
 
     .decrypto-summary-body {

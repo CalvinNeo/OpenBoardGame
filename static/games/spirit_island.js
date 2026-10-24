@@ -262,7 +262,7 @@
         if (!view) return;
         mapNavigation.detach();
         const over = view.phase === "game_over" || view.game_over;
-        panel.innerHTML = `<div class="si-shell"><div class="si-top"><div><span class="si-eyebrow">SPIRIT ISLAND · COOPERATIVE</span><h2>灵迹岛 <span>Spirit Island</span></h2></div><div class="si-round-badge"><span>ROUND ${view.round || 1}</span><strong>${esc(phaseNames[view.phase] || view.phase || "")}</strong></div></div>
+        panel.innerHTML = `<div class="si-shell"><div class="si-round-badge"><span>ROUND ${view.round || 1}</span><strong>${esc(phaseNames[view.phase] || view.phase || "")}</strong></div>
             ${playersHTML()}${overviewHTML()}
             ${view.phase !== "choose_spirit" ? `<div class="si-phase-bar">${phaseSteps.map(([key, emoji, label]) => `<span class="${view.phase === key ? "is-active" : ""}" data-si-tip="${esc(`${label}(${emoji})：${key === "round_end" ? explanations.next : key === "growth" ? explanations.growth : ["fear", "ravage", "build", "explore"].includes(key) ? explanations.invader_plan : key === "play" ? explanations.card : explanations.power}`)}" tabindex="0">${emoji}<small>${label}</small></span>`).join("")}</div>` : ""}
             ${over ? `<div class="si-result-banner">${view.victory || view.won || view.result?.victory ? "🌿 岛屿重获安宁" : view.victory === false ? "☠️ 岛屿失守" : "🏝️ 守护之战结束"}<span>${esc(view.end_reason || view.result?.reason || "请查看最终地图与日志。")}</span></div>` : ""}

@@ -38,6 +38,7 @@ state["round_data"]["black"]["code"] = [4, 2, 1]
 act("p2", "submit_clues", clues=["蓝色", "果园", "正点"])
 act("p4", "submit_clues", clues=["宇宙", "树叶", "山顶"])
 save("guessing", "p1")
+save("black_guessing", "p3")
 save("encryptor_guessing", "p2")
 save("spectator_guessing", "observer")
 act("p1", "submit_decrypt", guess=[1, 2, 3])
@@ -55,6 +56,10 @@ state["game_over"] = True
 state["phase"] = "game_over"
 state["winner"] = "white"
 save("game_over", "p1")
+for count in (6, 8):
+    members = [{"player_id": "group_" + str(index), "seat": index, "name": "Player " + str(index + 1)} for index in range(count)]
+    group_state = Game.init_game(None, members)
+    views["players_" + str(count)] = Game.get_public_view(group_state, "group_0")
 print(json.dumps(views))
 `], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }));
 
@@ -133,6 +138,24 @@ async function bounds(page, label) {
       const guess = row.cells[row.cells.length - 1]?.querySelector(".decrypto-sequence-item");
       if (actual && guess && row.checkVisibility() && Math.abs(actual.getBoundingClientRect().top - guess.getBoundingClientRect().top) > 1) issues.push("Result positions do not align");
     }
+    if (innerWidth <= 720) {
+      const teams = document.getElementById("decryptoTeams");
+      const keywordRow = teams.querySelector(":scope > .decrypto-keywords");
+      if (keywordRow) {
+        const box = keywordRow.getBoundingClientRect();
+        const teamBox = teams.getBoundingClientRect();
+        if (Math.abs(box.width - teamBox.width) > 1) issues.push("Own keywords must span both team summaries");
+        const words = [...keywordRow.children].map((word) => word.getBoundingClientRect());
+        if (words.length !== 4 || words.some((word) => Math.abs(word.top - words[0].top) > 1)) issues.push("Four keywords must share one row");
+      }
+      for (const card of teams.querySelectorAll(":scope > .decrypto-team")) {
+        const last = [...card.children].filter((child) => child.checkVisibility()).at(-1);
+        if (last && card.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom > 8) issues.push("Team summary has empty keyword space");
+      }
+      for (const head of document.querySelectorAll(".decrypto-history-table thead")) {
+        if (head.getBoundingClientRect().height > 20) issues.push("History number row is too tall");
+      }
+    }
     return { pageOverflow: document.documentElement.scrollWidth > innerWidth, issues };
   });
   assert.deepEqual(result, { pageOverflow: false, issues: [] }, label);
@@ -159,12 +182,27 @@ async function bounds(page, label) {
       for (const name of Object.keys(fixtures)) {
         await render(page, name);
         await bounds(page, `${width}px / ${name}`);
+        if (width <= 720 && ["encryption", "guessing", "black_guessing"].includes(name)) {
+          const compact = await page.evaluate(() => {
+            const inlineLegends = [...document.querySelectorAll(".decrypto-history-heading")].every((heading) => {
+              const title = heading.querySelector(".decrypto-team-header").getBoundingClientRect();
+              return [...heading.querySelectorAll(".decrypto-player")].every((badge) => {
+                const box = badge.getBoundingClientRect();
+                return Math.abs((box.top + box.bottom) / 2 - (title.top + title.bottom) / 2) < 2;
+              });
+            });
+            const teamHeight = document.getElementById("decryptoTeams").getBoundingClientRect().height;
+            return { inlineLegends, teamHeight };
+          });
+          assert(compact.inlineLegends, `${width}px / ${name}: history title and player colors must share a row`);
+          assert(compact.teamHeight <= 120, `${width}px / ${name}: team summaries and keywords should stay compact (${compact.teamHeight}px)`);
+        }
         if (["guessing", "round_end"].includes(name)) {
           await page.screenshot({ path: `${output}/${name}-${width}.png`, fullPage: true });
         }
       }
     }
-    console.log(`All ${Object.keys(fixtures).length} states fit at 320, 390, 1024 and 1440px; Review docks without a layout row or obstructing controls/history.`);
+    console.log(`All ${Object.keys(fixtures).length} states fit at 320, 390, 1024 and 1440px, including 6/8 players and long names. Mobile history headings share a row, number rows stay below 20px, and team cards have no empty keyword area.`);
 
     await render(page, "round_end");
     const resultRows = await page.locator(".decrypto-result-table tbody").evaluateAll((rows) => rows.map((row) => ({
@@ -220,6 +258,11 @@ async function bounds(page, label) {
     assert.equal(await page.locator("#decryptoHistoryBtn").count(), 0);
     assert.equal(await page.locator("#decryptoHistory").isVisible(), true);
     assert.equal(await page.locator("#decryptoReference #decryptoHistory").count(), 1);
+    const encryptor = page.locator("#decryptoTeams .decrypto-encryptor").first();
+    await encryptor.tap();
+    assert.match(await page.locator("#decryptoTooltip").innerText(), /Bob.*Encryptor/);
+    assert.equal(await encryptor.locator(".decrypto-player-role").isVisible(), false);
+    await page.keyboard.press("Escape");
     await bounds(page, "390px permanent history");
     const clues = page.locator("#decryptoHistory .decrypto-history-clue");
     await clues.first().tap();

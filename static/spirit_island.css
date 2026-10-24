@@ -1,4 +1,4 @@
-#spiritIslandPanel {
+.game-panel[data-game-theme="spirit_island"] {
     --si-ink: #244840;
     --si-muted: #748980;
     --si-line: #d9e2d5;
@@ -6,21 +6,24 @@
     --si-green: #326b58;
     min-width: 0;
     color: var(--si-ink);
+    padding: 20px;
+    border: 1px solid #cbdacf;
+    border-radius: 19px;
+    background: radial-gradient(ellipse at 0 0, #e3ece2 0, transparent 60%), #f4f4e9;
 }
+.game-panel[data-game-theme="spirit_island"] > .panel-header button { color: var(--si-ink); background: #fffdf4; border-color: #ccd7c8; }
+.game-panel[data-game-theme="spirit_island"] > .panel-header button[aria-pressed="true"] { color: #fffdf4; background: var(--si-green); }
+#spiritIslandPanel, .si-shell { min-width: 0; }
 #spiritIslandPanel *, .spirit-island-dialog *, .spirit-island-tip { box-sizing: border-box; }
 #spiritIslandPanel button, .spirit-island-dialog button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; font: inherit; cursor: pointer; }
 #spiritIslandPanel button { color: var(--si-ink); border: 1px solid #ccd7c8; background: #fffdf4; border-radius: 9px; transition: background .15s, border-color .15s, box-shadow .15s; }
 #spiritIslandPanel button:hover:not(:disabled) { border-color: #51856e; background: #eff3e6; }
 #spiritIslandPanel button:disabled { cursor: default; opacity: .48; }
 #spiritIslandPanel button:focus-visible, #spiritIslandPanel [tabindex]:focus-visible { outline: 3px solid #cd9a46; outline-offset: 2px; }
-.si-shell { padding: 20px; border: 1px solid #cbdacf; border-radius: 19px; min-width: 0; background: radial-gradient(ellipse at 0 0, #e3ece2 0, transparent 60%), #f4f4e9; }
-.si-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 15px; }
 .si-eyebrow { display: block; font-size: 9px; font-weight: 700; letter-spacing: .18em; line-height: 1.7; color: #6f8c7c; overflow-wrap: anywhere; }
-.si-top h2 { margin: 4px 0 0; color: #234f42; font-size: clamp(24px, 3vw, 32px); letter-spacing: .06em; line-height: 1.25; }
-.si-top h2 > span { font-size: 15px; font-family: Georgia, serif; font-weight: normal; letter-spacing: .02em; margin-left: 10px; }
-.si-round-badge { padding: 8px 12px; border-left: 2px solid #bca371; text-align: right; }
-.si-round-badge > span { display: block; font-size: 10px; letter-spacing: .14em; color: #859181; }
-.si-round-badge strong { display: block; margin-top: 2px; font-size: 14px; }
+.si-round-badge { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 6px 10px; margin-bottom: 12px; border-left: 2px solid #bca371; }
+.si-round-badge > span { font-size: 11px; letter-spacing: .1em; color: #6f8071; }
+.si-round-badge strong { font-size: 14px; }
 .si-team { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 7px; margin-bottom: 12px; }
 .si-player { display: flex; align-items: center; gap: 8px; padding: 9px 10px; min-width: 0; border: 1px solid #dde3d7; border-radius: 10px; background: #fffdf5; }
 .si-player.is-me { border-color: var(--player-color); box-shadow: inset 0 -2px var(--player-color); }
@@ -181,7 +184,7 @@
     .si-power-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 980px) {
-    .si-shell { padding: 14px; }
+    .game-panel[data-game-theme="spirit_island"] { padding: 14px; }
     .si-overview { grid-template-columns: minmax(0, 1fr) minmax(0, .7fr); }
     .si-invader-line { grid-column: 1 / -1; }
     .si-layout { grid-template-columns: minmax(0, 1fr) minmax(235px, 270px); gap: 10px; }
@@ -210,19 +213,15 @@
     .si-hand { grid-row: 3; }
     .si-option-list { max-height: 170px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .si-team { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .si-top h2 > span { font-size: 13px; }
     .si-power-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .si-phase-bar > span { flex-direction: column; font-size: 12px; }
 }
 @media (max-width: 480px) {
-    .si-shell { padding: 9px; border-radius: 12px; }
-    .si-top { gap: 7px; margin-bottom: 10px; }
+    .game-panel[data-game-theme="spirit_island"] { padding: 9px; border-radius: 12px; }
     .si-eyebrow { font-size: 7px; }
-    .si-top h2 { font-size: 24px; }
-    .si-top h2 > span { display: block; margin: 3px 0 0; font-size: 11px; }
-    .si-round-badge { padding: 6px 8px; }
-    .si-round-badge > span { font-size: 8px; }
-    .si-round-badge strong { font-size: 11px; }
+    .si-round-badge { padding: 4px 8px; margin-bottom: 10px; }
+    .si-round-badge > span { font-size: 10px; }
+    .si-round-badge strong { font-size: 12px; }
     .si-team { gap: 5px; }
     .si-player { padding: 7px; gap: 5px; }
     .si-player-dot { flex-basis: 17px; height: 17px; font-size: 9px; }

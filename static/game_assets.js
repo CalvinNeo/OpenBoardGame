@@ -31,10 +31,11 @@ const GAME_ASSETS = {
     "header": "showTheMindHeaderActions"
   },
   "night_of_the_ninja": {
-    "scripts": ["/static/games/night_of_the_ninja.js?v=2"],
-    "styles": ["/static/games/night_of_the_ninja.css?v=3"],
+    "scripts": ["/static/games/night_of_the_ninja.js?v=3"],
+    "styles": ["/static/games/night_of_the_ninja.css?v=4"],
     "markup": "/static/games/night_of_the_ninja.html?v=1",
     "panel": "nightNinjaPanel",
+    "panelTitle": "🌙 忍者杀",
     "header": "showNightNinjaHeaderActions"
   },
   "gloomhaven": {
@@ -126,8 +127,8 @@ const GAME_ASSETS = {
     "header": "showOdinHeaderActions"
   },
   "dice_throne": {
-    "scripts": ["/static/games/dice_throne.js?v=11"],
-    "styles": ["/static/games/dice_throne.css?v=11"],
+    "scripts": ["/static/games/dice_throne.js?v=12"],
+    "styles": ["/static/games/dice_throne.css?v=12"],
     "markup": "/static/games/dice_throne.html?v=6",
     "panel": "diceThronePanel",
     "header": "showDiceThroneHeaderActions"
@@ -351,14 +352,14 @@ const GAME_ASSETS = {
   },
   "decrypto": {
     "scripts": [
-      "/static/games/decrypto.js?v=app_v7"
+      "/static/games/decrypto.js?v=app_v8"
     ],
     "styles": [],
     "panel": "decryptoPanel",
     "panelTitle": "Decrypto",
     "header": "showDecryptoHeaderActions",
     "markup": "/static/games/decrypto.html?v=4",
-    "styleFragments": "/static/games/decrypto.css?v=4"
+    "styleFragments": "/static/games/decrypto.css?v=5"
   },
   "wavelength": {
     "scripts": [
@@ -934,12 +935,13 @@ const GAME_ASSETS = {
   },
   "cryptid": {
     "scripts": [
-      "/static/games/cryptid.js?v=5"
+      "/static/games/cryptid.js?v=6"
     ],
     "styles": [
-      "/static/cryptid.css?v=4"
+      "/static/cryptid.css?v=5"
     ],
     "panel": "cryptidPanel",
+    "panelTitle": "🔎 诡影寻踪",
     "header": "showCryptidHeaderActions",
     "markup": "/static/games/cryptid.html?v=1"
   },
@@ -957,12 +959,13 @@ const GAME_ASSETS = {
     "scripts": [
       "/static/games/spirit_island_map.js?v=1",
       "/static/games/spirit_island_navigation.js?v=1",
-      "/static/games/spirit_island.js?v=3"
+      "/static/games/spirit_island.js?v=4"
     ],
     "styles": [
-      "/static/spirit_island.css?v=2"
+      "/static/spirit_island.css?v=3"
     ],
     "panel": "spiritIslandPanel",
+    "panelTitle": "🏝️ 灵迹岛",
     "header": "showSpiritIslandHeaderActions"
   },
   "terra_nova": {
@@ -1094,12 +1097,13 @@ const GAME_ASSETS = {
   },
   "love_letter": {
     "scripts": [
-      "/static/games/love_letter.js?v=2"
+      "/static/games/love_letter.js?v=3"
     ],
     "styles": [
-      "/static/love_letter.css?v=1"
+      "/static/love_letter.css?v=2"
     ],
     "panel": "loveLetterPanel",
+    "panelTitle": "💌 情书",
     "header": "showLoveLetterHeaderActions"
   }
 };

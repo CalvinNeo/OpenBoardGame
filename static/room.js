@@ -36,6 +36,7 @@ let catanStarfarersSelectedLanguage = null;
 let playerName = "";
 let pendingPlayerNameAction = null;
 let pendingJoinRequest = null;
+let logoutCopyRequest = null;
 const roomEntryReturnFocus = new WeakMap();
 const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
@@ -44,6 +45,9 @@ const nameInput = document.getElementById("nameInput");
 const playerNameModal = document.getElementById("playerNameModal");
 const playerNameForm = document.getElementById("playerNameForm");
 const playerNameError = document.getElementById("playerNameError");
+const playerNameModeBtn = document.getElementById("playerNameModeBtn");
+const playerAccessKeyModeBtn = document.getElementById("playerAccessKeyModeBtn");
+const accessKeyInput = document.getElementById("accessKeyInput");
 const joinRoomModal = document.getElementById("joinRoomModal");
 const joinRoomForm = document.getElementById("joinRoomForm");
 const roomIdInput = document.getElementById("roomIdInput");
@@ -68,6 +72,10 @@ const leaveBtn = document.getElementById("leaveBtn");
 const reopenBtn = document.getElementById("reopenBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
+const logoutModal = document.getElementById("logoutModal");
+const logoutConfirmBtn = document.getElementById("logoutConfirmBtn");
+const logoutCopyBtn = document.getElementById("logoutCopyBtn");
+const logoutError = document.getElementById("logoutError");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const logEl = document.getElementById("log");
@@ -250,6 +258,19 @@ function setRoomAuth(roomId, auth) {
 function getRoomAuth(roomId) {
   const map = loadRoomAuthMap();
   return map[roomId] || null;
+}
+
+function parseRoomAccessKey(value) {
+  const match = /^obg1:([A-Za-z0-9_-]{1,64}):([A-Za-z0-9_-]{1,128}):([A-Za-z0-9_-]{1,128})$/.exec(value.trim());
+  return match ? { room_id: match[1], player_id: match[2], reconnect_token: match[3] } : null;
+}
+
+function buildRoomAccessKey() {
+  const rid = getQuickReconnectRoomId();
+  const auth = rid ? getRoomAuth(rid) : null;
+  if (!auth?.player_id || !auth?.reconnect_token) return null;
+  const key = `obg1:${rid}:${auth.player_id}:${auth.reconnect_token}`;
+  return parseRoomAccessKey(key) ? key : null;
 }
 
 function clearRoomAuth(roomId) {
@@ -565,6 +586,14 @@ function closeRoomEntryModal(modal) {
   if (modal === playerNameModal) {
     pendingPlayerNameAction = null;
     nameInput.value = "";
+    accessKeyInput.value = "";
+    if (pendingRoomRequest?.accessKeyEntry) {
+      socket.disconnect();
+      socket.connect();
+    }
+  }
+  if (modal === logoutModal) {
+    logoutCopyRequest = null;
   }
   const returnFocus = roomEntryReturnFocus.get(modal);
   if (returnFocus && returnFocus.isConnected) {
@@ -579,10 +608,54 @@ function requirePlayerName(action, message = "") {
     return;
   }
   pendingPlayerNameAction = action;
+  setPlayerEntryMode(false);
   nameInput.value = getPlayerName();
   openRoomEntryModal(playerNameModal, nameInput, playerNameError);
   if (message) {
     showRoomEntryError(nameInput, playerNameError, message);
+  }
+}
+
+function setPlayerEntryMode(useAccessKey) {
+  playerNameModeBtn.setAttribute("aria-pressed", (!useAccessKey).toString());
+  playerAccessKeyModeBtn.setAttribute("aria-pressed", useAccessKey.toString());
+  document.getElementById("playerNameField").classList.toggle("hidden", useAccessKey);
+  document.getElementById("playerAccessKeyField").classList.toggle("hidden", !useAccessKey);
+  document.getElementById("playerAccessKeyHint").classList.toggle("hidden", !useAccessKey);
+  document.getElementById("playerNameModalTitle").textContent = useAccessKey ? "Return to your room" : "Choose your name";
+  playerNameForm.querySelector('button[type="submit"]').textContent = useAccessKey ? "Reconnect" : "Continue";
+  nameInput.disabled = useAccessKey;
+  nameInput.required = !useAccessKey;
+  accessKeyInput.disabled = !useAccessKey;
+  accessKeyInput.required = useAccessKey;
+  accessKeyInput.value = "";
+  nameInput.removeAttribute("aria-invalid");
+  accessKeyInput.removeAttribute("aria-invalid");
+  playerNameError.textContent = "";
+  playerNameError.classList.add("hidden");
+  if (!playerNameModal.classList.contains("hidden")) {
+    (useAccessKey ? accessKeyInput : nameInput).focus();
+  }
+}
+
+function reconnectWithAccessKey() {
+  const credentials = parseRoomAccessKey(accessKeyInput.value);
+  if (!credentials) {
+    showRoomEntryError(accessKeyInput, playerNameError, "Enter the complete access key copied when logging out.");
+    return;
+  }
+  if (!socket.connected) {
+    showRoomEntryError(accessKeyInput, playerNameError, "Connect to the server, then try again.");
+    socket.connect();
+    return;
+  }
+  if (sendRoomRequest("room:reconnect", credentials, "Reconnecting to your previous room...", false)) {
+    pendingRoomRequest.accessKeyEntry = true;
+    pendingJoinRequest = null;
+    playerNameError.textContent = "";
+    playerNameError.classList.add("hidden");
+    accessKeyInput.removeAttribute("aria-invalid");
+    updateRoomActionButtons();
   }
 }
 
@@ -1571,11 +1644,52 @@ function renderSeatList(payload) {
   }
 }
 
-function performLogout() {
+function openLogoutModal() {
+  roomEntryReturnFocus.set(logoutModal, document.activeElement);
+  logoutError.textContent = "";
+  logoutError.classList.add("hidden");
+  logoutConfirmBtn.disabled = false;
+  logoutCopyBtn.disabled = !buildRoomAccessKey();
+  document.getElementById("logoutKeyHint").textContent = logoutCopyBtn.disabled
+    ? "No room credentials are available to copy."
+    : "The key only works while your previous room and seat still exist. It is not a permanent account.";
+  setModalVisible(logoutModal, true);
+  document.getElementById("logoutCancelBtn").focus();
+}
+
+async function copyAccessKeyAndLogout() {
+  const key = buildRoomAccessKey();
+  if (!key || logoutCopyRequest) return;
+  const request = {};
+  logoutCopyRequest = request;
+  logoutConfirmBtn.disabled = true;
+  logoutCopyBtn.disabled = true;
+  logoutError.classList.add("hidden");
+  const copied = await copyTextToClipboard(key);
+  if (logoutCopyRequest !== request) return;
+  logoutCopyRequest = null;
+  logoutConfirmBtn.disabled = false;
+  logoutCopyBtn.disabled = false;
+  if (!copied || key !== buildRoomAccessKey()) {
+    logoutError.textContent = !copied
+      ? "Could not copy the access key. You are still logged in. Allow clipboard access and try again."
+      : "Your room changed while copying. Try again to copy the current access key.";
+    logoutError.classList.remove("hidden");
+    logoutCopyBtn.focus();
+    return;
+  }
+  performLogout({ preserveSeat: true });
+}
+
+function performLogout({ preserveSeat = false } = {}) {
   pendingJoinRequest = null;
-  if (roomId) {
+  if (preserveSeat) {
+    socket.disconnect();
+  } else if (roomId && socket.connected) {
     socket.emit("room:leave", { room_id: roomId });
   }
+  closeRoomEntryModal(logoutModal);
+  closeCreateRoomModal();
   closeLoadModal();
   closeSeatClaimModal();
   closeRoomEntryModal(joinRoomModal);
@@ -1588,7 +1702,11 @@ function performLogout() {
     nameInput.value = "";
   }
   setConnectionInfo("logged out");
-  requestRoomList();
+  if (socket.connected) {
+    requestRoomList();
+  } else {
+    socket.connect();
+  }
   log("Logged out");
 }
 
@@ -1696,6 +1814,12 @@ function updateRoomCreateButtonLabel() {
 
 function updateRoomActionButtons() {
   const busy = Boolean(pendingRoomRequest);
+  const importingAccessKey = Boolean(pendingRoomRequest?.accessKeyEntry);
+  playerNameModeBtn.disabled = importingAccessKey;
+  playerAccessKeyModeBtn.disabled = importingAccessKey;
+  accessKeyInput.readOnly = importingAccessKey;
+  playerNameForm.querySelector('button[type="submit"]').disabled = importingAccessKey;
+  logoutBtn.disabled = busy;
   const available = socket.connected && roomSessionReady && Boolean(roomId) && !busy;
   const inLobby = currentRoomState?.status === "lobby";
   const players = currentRoomState?.players || [];
@@ -1768,6 +1892,9 @@ function sendRoomRequest(event, payload, message, requiresRoom = true) {
     if (error) {
       roomSessionReady = false;
       setRoomFeedback("No response from the server. Reconnect to check the room before trying again.", true);
+      if (request.accessKeyEntry && !playerNameModal.classList.contains("hidden")) {
+        showRoomEntryError(accessKeyInput, playerNameError, "No response from the server. Try reconnecting again.");
+      }
     } else {
       setRoomFeedback();
     }
@@ -2576,6 +2703,7 @@ socket.on("system:info", (data) => {
     playerId = data.player_id;
   }
   if (data.reconnect_token && data.room_id && data.player_id) {
+    const importedAccessKey = pendingRoomRequest?.accessKeyEntry;
     roomSessionReady = true;
     pendingJoinRequest = null;
     const nameValue = data.name || getPlayerName();
@@ -2586,6 +2714,10 @@ socket.on("system:info", (data) => {
     });
     closeCreateRoomModal();
     finishRoomRequest();
+    if (importedAccessKey) {
+      closeRoomEntryModal(playerNameModal);
+      closeRoomEntryModal(joinRoomModal);
+    }
     setRoomFeedback();
     // The room snapshot arrives before identity, so refresh the player's controls.
     if (currentRoomState) renderRoomState(currentRoomState);
@@ -2599,6 +2731,14 @@ socket.on("system:info", (data) => {
 socket.on("system:error", (data) => {
   const failedRequest = pendingRoomRequest;
   finishRoomRequest();
+  if (failedRequest?.accessKeyEntry) {
+    const message = data.message === "room not found"
+      ? "Your previous room no longer exists."
+      : "Could not restore your seat. Check your access key and try again.";
+    showRoomEntryError(accessKeyInput, playerNameError, message);
+    setRoomFeedback(message, true);
+    return;
+  }
   if (failedRequest?.event === "room:reconnect" &&
       ["room not found", "player not found", "invalid reconnect token"].includes(data.message)) {
     clearRoomAuth(failedRequest.roomId);
@@ -2754,6 +2894,10 @@ updateRoomControlsDock();
 
 playerNameForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (!accessKeyInput.disabled) {
+    reconnectWithAccessKey();
+    return;
+  }
   const name = nameInput.value.trim();
   if (!name) {
     showRoomEntryError(nameInput, playerNameError, "Enter your name to continue.");
@@ -2766,6 +2910,9 @@ playerNameForm.addEventListener("submit", (event) => {
     action();
   }
 });
+
+playerNameModeBtn.addEventListener("click", () => setPlayerEntryMode(false));
+playerAccessKeyModeBtn.addEventListener("click", () => setPlayerEntryMode(true));
 
 joinRoomForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2781,6 +2928,7 @@ joinRoomForm.addEventListener("submit", (event) => {
 [
   [joinRoomModal, "joinRoomCancelBtn"],
   [playerNameModal, "playerNameCancelBtn"],
+  [logoutModal, "logoutCancelBtn"],
 ].forEach(([modal, cancelId]) => {
   document.getElementById(cancelId).addEventListener("click", () => closeRoomEntryModal(modal));
   modal.addEventListener("click", (event) => {
@@ -2791,10 +2939,11 @@ joinRoomForm.addEventListener("submit", (event) => {
 });
 
 if (logoutBtn) {
-  logoutBtn.addEventListener("click", () => {
-    performLogout();
-  });
+  logoutBtn.addEventListener("click", openLogoutModal);
 }
+
+logoutConfirmBtn.addEventListener("click", () => performLogout());
+logoutCopyBtn.addEventListener("click", copyAccessKeyAndLogout);
 
 if (gameReconnectBtn) {
   gameReconnectBtn.addEventListener("click", () => {
@@ -2839,6 +2988,9 @@ cleanupEmptyRoomsBtn.addEventListener("click", () => {
 });
 
 socket.on("disconnect", (reason) => {
+  if (pendingRoomRequest?.accessKeyEntry && !playerNameModal.classList.contains("hidden")) {
+    showRoomEntryError(accessKeyInput, playerNameError, "Connection lost. Try reconnecting when the server is available.");
+  }
   recordRoomConnectionEvent("disconnected", reason);
   roomSessionReady = false;
   finishRoomRequest();
@@ -2995,14 +3147,14 @@ if (reopenConfirmModal) {
 }
 
 document.addEventListener("keydown", (event) => {
-  const entryModal = [playerNameModal, joinRoomModal].find((modal) => !modal.classList.contains("hidden"));
+  const entryModal = [logoutModal, playerNameModal, joinRoomModal].find((modal) => !modal.classList.contains("hidden"));
   if (entryModal) {
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopImmediatePropagation();
       closeRoomEntryModal(entryModal);
     } else if (event.key === "Tab") {
-      const controls = entryModal.querySelectorAll("input, button");
+      const controls = entryModal.querySelectorAll("input:not(:disabled), button:not(:disabled)");
       const first = controls[0];
       const last = controls[controls.length - 1];
       if (event.shiftKey && document.activeElement === first) {

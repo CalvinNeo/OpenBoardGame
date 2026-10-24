@@ -1088,6 +1088,22 @@ body.log-open {
   font-size: 16px;
 }
 
+.room-entry-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.room-entry-hint {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.room-entry-mode,
 .room-entry-modal-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1095,6 +1111,7 @@ body.log-open {
   margin-top: 4px;
 }
 
+.room-entry-mode button,
 .room-entry-modal-actions button {
   min-width: 0;
   min-height: 40px;
@@ -1107,10 +1124,22 @@ body.log-open {
   cursor: pointer;
 }
 
-.room-entry-modal-actions button[type="submit"] {
+.room-entry-mode button[aria-pressed="true"],
+.room-entry-modal-actions button[type="submit"],
+.room-entry-modal-actions .room-entry-primary {
   border-color: #2563eb;
   background: #2563eb;
   color: #fff;
+}
+
+.room-entry-modal-actions .logout-copy-btn {
+  grid-column: 1 / -1;
+  white-space: normal;
+}
+
+.room-entry-modal-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .room-entry-error {

@@ -168,8 +168,7 @@
             : view.current_turn === view.you ? "轮到你了 · 选择一张手牌打出" : `等待 ${name(view.current_turn)} 出牌`;
         if (view.playable_cards.length === 1 && view.playable_cards[0] === 7) status = "必须打出伯爵夫人 🌹";
         panel.innerHTML = `<div class="ll-surface">
-            <div class="ll-banner"><div><span class="ll-eyebrow">THE ROYAL COURT · CLASSIC 16</span><h2>${info("💌", "情书：让你的信件送达公主。", "result")} 情书 <small>Love Letter</small></h2></div><div class="ll-round">Round <b>${view.round}</b></div></div>
-            <div class="ll-stats">${info(`🂠 ${view.deck_count} Deck`, explanations.deck, "deck")}${info(`✉️ ${view.reserve_count} Reserve`, explanations.reserve, "reserve")}${info(`❤️ ${view.token_goal} to win`, explanations.tokens, "tokens")}</div>
+            <div class="ll-stats"><span class="ll-round">Round <b>${view.round}</b></span>${info(`🂠 ${view.deck_count} Deck`, explanations.deck, "deck")}${info(`✉️ ${view.reserve_count} Reserve`, explanations.reserve, "reserve")}${info(`❤️ ${view.token_goal} to win`, explanations.tokens, "tokens")}</div>
             <div class="ll-status" role="status" aria-live="polite">${status.includes("伯爵夫人") ? info(esc(status), cards[7][5], "card-7") : esc(status)}</div>
             <div class="ll-layout"><main class="ll-main"><div class="ll-players">${renderPlayers()}</div>${renderResult()}
                 ${view.phase === "play" ? `<section class="ll-box"><div class="ll-section-title"><h3>Your Letter</h3><span>${own?.alive ? "Private hand" : "Out this round"}</span></div>${renderHand()}${renderChoice()}</section>` : ""}

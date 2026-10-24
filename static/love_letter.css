@@ -1,13 +1,12 @@
-#loveLetterPanel { min-width: 0; width: 100%; color: #392d31; }
-.ll-surface { --ll-wine: #7e2940; --ll-gold: #a37b39; --ll-line: #e3d7cc; padding: clamp(12px, 2vw, 23px); border: 1px solid #d8c6b8; border-radius: 18px; background: radial-gradient(ellipse at 100% 0, #efdbd4 0, transparent 45%), #f8f2e8; overflow-wrap: anywhere; }
-.ll-banner, .ll-stats, .ll-section-title, .ll-player-heading, .ll-player-status, .ll-card-top, .ll-confirm { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
-.ll-banner { flex-wrap: wrap; margin-bottom: 13px; }
-.ll-banner > div { min-width: 0; }
-.ll-eyebrow { font-size: 9px; letter-spacing: .15em; color: #855f62; font-weight: 700; }
-#loveLetterPanel h2 { margin: 6px 0 0; color: var(--ll-wine); font-size: clamp(22px, 3vw, 30px); font-family: Georgia, serif; line-height: 1.3; }
-#loveLetterPanel h2 small { font-size: .5em; font-weight: 400; white-space: nowrap; }
-.ll-round { border-left: 1px solid #d9bcb5; padding-left: 14px; font-size: 11px; color: #845462; }
-.ll-round b { font: 27px Georgia, serif; margin-left: 5px; }
+.game-panel[data-game-theme="love_letter"] { --ll-wine: #7e2940; --ll-gold: #a37b39; --ll-line: #e3d7cc; color: #392d31; padding: clamp(12px, 2vw, 23px); border: 1px solid #d8c6b8; border-radius: 18px; background: radial-gradient(ellipse at 100% 0, #efdbd4 0, transparent 45%), #f8f2e8; overflow-wrap: anywhere; }
+.game-panel[data-game-theme="love_letter"] .game-panel-title h2 { color: var(--ll-wine); font-family: Georgia, serif; }
+.game-panel[data-game-theme="love_letter"] > .panel-header button { color: var(--ll-wine); background: #fff8f0; border-color: #d8c2b8; }
+.game-panel[data-game-theme="love_letter"] > .panel-header button[aria-pressed="true"] { color: #fff8ed; background: var(--ll-wine); }
+#loveLetterPanel { min-width: 0; width: 100%; }
+.ll-surface { min-width: 0; }
+.ll-stats, .ll-section-title, .ll-player-heading, .ll-player-status, .ll-card-top, .ll-confirm { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.ll-round { color: #845462; }
+.ll-round b { font: bold 16px Georgia, serif; margin-left: 3px; }
 .ll-stats { justify-content: flex-start; flex-wrap: wrap; gap: 7px; }
 .ll-stats > span { border: 1px solid var(--ll-line); background: #fffcf6; padding: 6px 9px; border-radius: 6px; font-size: 11px; }
 .ll-status { margin: 13px 0; padding: 10px 12px; background: #7e2940; color: #fff8ed; border-radius: 8px; font-size: 12px; line-height: 1.5; }
@@ -102,7 +101,6 @@
     .ll-hand { gap: 9px; }
     #loveLetterPanel .ll-card { min-height: 172px; padding: 8px; }
     .ll-card-icon { font-size: 32px; }
-    .ll-banner { gap: 7px; }
     .ll-stats { gap: 4px; }
     .ll-stats > span { font-size: 10px; padding: 5px 6px; }
     .ll-result-rows > div { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -110,10 +108,9 @@
     .ll-help-cards { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 360px) {
-    .ll-surface { padding: 10px; }
+    .game-panel[data-game-theme="love_letter"] { padding: 10px; border-radius: 12px; }
     .ll-box, .ll-result { padding: 10px; }
     .ll-player-heading { flex-wrap: wrap; gap: 4px; }
     .ll-guesses { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .ll-card strong { font-size: 15px; }
-    .ll-round { border: 0; padding: 0; }
 }

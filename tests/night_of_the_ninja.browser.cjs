@@ -149,7 +149,7 @@ async function pointClick(page,locator,touch=false) {
     assert.equal(await page.evaluate(()=>nnTestActions.length),0);
     await page.keyboard.press('Escape');
     await page.locator('[data-nn-card]').first().click();
-    await page.locator('.nn-banner h2').click();
+    await page.locator('.nn-night').click();
     assert.equal(await page.locator('.nn-card.is-selected').count(),0);
     await page.locator('[data-nn-card]').first().click();await page.keyboard.press('Escape');
     assert.equal(await page.locator('.nn-card.is-selected').count(),0);

@@ -14,6 +14,7 @@ from game.dice_throne_data import CARDS, DECKS, HEROES, STATUSES
 ROSTER = (
     "barbarian", "moon_elf", "monk", "paladin", "ninja", "shadow_thief",
     "pyromancer", "treant", "gunslinger", "samurai", "vampire_lord", "seraph",
+    "artificer", "huntress", "tactician", "cursed_pirate",
 )
 
 
@@ -90,7 +91,7 @@ class DiceThroneHeroTests(unittest.TestCase):
         self.act(state, pid, "end_phase")
         self.assertEqual(state["phase"], "round_review")
 
-    def test_all_twelve_heroes_can_be_selected_and_have_distinct_kits(self):
+    def test_all_sixteen_heroes_can_be_selected_and_have_distinct_kits(self):
         self.assertEqual(set(HEROES), set(ROSTER))
         self.assertEqual(set(ACTION_SCHEMA["properties"]["hero"]["enum"]), set(ROSTER))
         ability_kits = set()
@@ -106,9 +107,9 @@ class DiceThroneHeroTests(unittest.TestCase):
                 ids = tuple(ability["id"] for ability in HEROES[hero]["abilities"])
                 self.assertEqual(len(ids), len(set(ids)))
                 ability_kits.add(ids)
-        self.assertEqual(len(ability_kits), 12)
+        self.assertEqual(len(ability_kits), 16)
         self.assertEqual({hero for hero, data in HEROES.items() if data["season"] == 2},
-                         {"gunslinger", "samurai", "vampire_lord", "seraph"})
+                         {"gunslinger", "samurai", "vampire_lord", "seraph", "artificer", "huntress", "tactician", "cursed_pirate"})
         all_ids = [ability["id"] for hero in HEROES.values() for ability in hero["abilities"]]
         self.assertEqual(len(all_ids), len(set(all_ids)))
 
@@ -184,12 +185,14 @@ class DiceThroneHeroTests(unittest.TestCase):
                 self.assertGreater(state["players"]["p1"]["health"], 0)
                 self.assertLessEqual(state["players"]["p1"]["health"], 50)
 
-    def test_all_96_abilities_are_reachable_and_apply_their_statuses(self):
+    def test_all_128_abilities_are_reachable_and_apply_their_statuses(self):
         for hero in ROSTER:
             for ability in HEROES[hero]["abilities"]:
                 with self.subTest(hero=hero, ability=ability["id"]):
                     state = self.make_state(hero, "moon_elf" if hero == "barbarian" else "barbarian")
                     self.set_attack(state, values=self.matching_values(hero, ability))
+                    state["players"]["p0"]["statuses"] = {}
+                    state["players"]["p1"]["statuses"] = {}
                     state["players"]["p0"]["combat_points"] = 6
                     state["players"]["p0"]["health"] = 20
                     shown = next(item for item in Game.get_public_view(state, "p0")["abilities"]
@@ -225,6 +228,10 @@ class DiceThroneHeroTests(unittest.TestCase):
             "samurai": (21, 48, 2, {}),
             "vampire_lord": (22, 50, 2, {"blood_power": 1}),
             "seraph": (30, 50, 2, {}),
+            "artificer": (21, 50, 2, {"synth": 3, "shock_bot": 1}),
+            "huntress": (27, 50, 2, {}),
+            "tactician": (21, 50, 2, {"tactical_advantage": 1}),
+            "cursed_pirate": (22, 50, 3, {"cursed_doubloon": 3}),
         }
         for hero, (health, attacker_health, cp, statuses) in expectations.items():
             with self.subTest(hero=hero):
@@ -256,6 +263,10 @@ class DiceThroneHeroTests(unittest.TestCase):
             "samurai": (1, 0, 0, {"back_strike": 1}, 9, 2),
             "vampire_lord": (1, 1, 0, {"blood_power": 1}, 9, 0),
             "seraph": (1, 0, 0, {"flight": 1}, 0, 0),
+            "artificer": (1, 0, 0, {"synth": 1}, 9, 0),
+            "huntress": (1, 0, 0, {"nyras_bond": 1}, 3, 0),
+            "tactician": (1, 0, 0, {"tactical_advantage": 1}, 9, 0),
+            "cursed_pirate": (2, 0, 1, {}, 8, 0),
         }
         for hero, (prevented, healing, cp, statuses, taken, returned) in expectations.items():
             with self.subTest(hero=hero):
@@ -484,13 +495,15 @@ class DiceThroneHeroTests(unittest.TestCase):
                 player["combat_points"] = 6
                 player["hand"] = [card_id]
                 state["current_player"] = "p0"
+                statuses_before = {pid: dict(data["statuses"]) for pid, data in state["players"].items()}
                 self.act(state, "p0", "play_card", card_id=card_id,
                          target="p1" if card["target"] == "opponent" else "p0")
                 self.assertEqual(player["hand"], [])
                 self.assertEqual(player["health"], 20 + card.get("heal", 0))
                 self.assertEqual(player["combat_points"], 6 - card["cost"] + card.get("gain_cp", 0))
                 for pid, key in (("p0", "self_status"), ("p1", "opponent_status")):
-                    self.assertEqual(state["players"][pid]["statuses"], dict(Counter(card.get(key, []))))
+                    expected = Counter(statuses_before[pid]) + Counter(card.get(key, []))
+                    self.assertEqual(state["players"][pid]["statuses"], {status: min(count, STATUSES[status]["limit"]) for status, count in expected.items()})
 
     def test_free_attacks_cp_cap_and_card_draw_cap(self):
         for hero in ROSTER:
@@ -857,6 +870,260 @@ class DiceThroneHeroTests(unittest.TestCase):
         self.act(state, "p1", "pass")
         self.assertEqual(state["players"]["p1"]["statuses"], {})
 
+    def begin_reviewed_turn(self, state, player_id):
+        previous = next(other for other in state["turn_order"] if other != player_id)
+        state.update(phase="round_review", current_player=None, turn_player=previous, next_round_ready=[])
+        self.act(state, previous, "next_round")
+        self.act(state, player_id, "next_round")
+
+    def test_new_heroes_start_with_distinct_public_resources(self):
+        for hero in ("artificer", "huntress", "tactician", "cursed_pirate"):
+            with self.subTest(hero=hero):
+                state = self.make_state(hero, "barbarian")
+                player = state["players"]["p0"]
+                self.assertEqual(player["statuses"], HEROES[hero]["starting_statuses"])
+                for viewer in ("p0", "p1", "visitor"):
+                    public = next(item for item in Game.get_public_view(state, viewer)["players"] if item["player_id"] == "p0")
+                    self.assertEqual(public["companion"], player.get("companion"))
+                if hero == "huntress":
+                    self.assertEqual(player["companion"]["health"], 6)
+                    public["companion"]["health"] = 0
+                    self.assertEqual(player["companion"]["health"], 6)
+                self.assertEqual(Game.deserialize(json.loads(json.dumps(Game.serialize(state)))), state)
+
+    def test_artificer_shock_bot_spends_energy_once_per_non_ultimate_attack(self):
+        for synth, expected in ((0, 8), (1, 10), (3, 10)):
+            with self.subTest(synth=synth):
+                state = self.make_state("artificer", "barbarian")
+                self.set_attack(state)
+                state["players"]["p0"]["statuses"] = {"shock_bot": 1, **({"synth": synth} if synth else {})}
+                self.act(state, "p0", "use_ability", ability_id="wrench_strike")
+                self.assertEqual(state["pending_attack"]["damage"], expected)
+                self.assertEqual(state["players"]["p0"]["statuses"].get("synth", 0), max(0, synth - 1))
+                self.act(state, "p1", "pass")
+                self.assertEqual(state["players"]["p0"]["statuses"]["shock_bot"], 1)
+
+    def test_heal_bot_only_spends_for_remaining_non_ultimate_attack_damage(self):
+        for kind, prevent, expected_health, expected_synth in (("normal", 0, 43, 1), ("undefendable", 0, 43, 1), ("ultimate", 0, 41, 2), ("normal", 7, 48, 2)):
+            with self.subTest(kind=kind, prevent=prevent):
+                state = self.incoming_attack("artificer", damage=7, damage_type=kind, statuses={"heal_bot": 1, "synth": 2})
+                state["players"]["p1"]["health"] = 48
+                state["pending_attack"]["prevent"] = prevent
+                self.act(state, "p1", "pass")
+                self.assertEqual(state["players"]["p1"]["health"], expected_health)
+                self.assertEqual(state["players"]["p1"]["statuses"], {"heal_bot": 1, "synth": expected_synth})
+
+    def test_nanobot_detonates_once_in_owners_upkeep_and_checks_lethal(self):
+        for health in (50, 5):
+            with self.subTest(health=health):
+                state = self.make_state("artificer", "barbarian")
+                state["players"]["p0"]["statuses"] = {"nanobot": 1, "synth": 2}
+                state["players"]["p1"]["statuses"] = {"nanite": 3}
+                state["players"]["p1"]["health"] = health
+                cp_before = state["players"]["p0"]["combat_points"]
+                self.begin_reviewed_turn(state, "p0")
+                self.assertEqual(state["players"]["p0"]["statuses"], {"nanobot": 1, "synth": 1})
+                self.assertNotIn("nanite", state["players"]["p1"]["statuses"])
+                self.assertEqual(state["players"]["p1"]["health"], max(0, health - 6))
+                self.assertEqual(state["game_over"], health < 6)
+                self.assertEqual(state["players"]["p0"]["combat_points"], cp_before + (1 if health > 6 else 0))
+
+    def test_nanites_only_decay_on_six_and_survive_without_bot_energy(self):
+        state = self.make_state("artificer", "barbarian")
+        state["players"]["p0"]["statuses"] = {"nanobot": 1}
+        state["players"]["p1"]["statuses"] = {"nanite": 3}
+        self.begin_reviewed_turn(state, "p0")
+        self.assertEqual(state["players"]["p1"]["health"], 50)
+        state["rng_state"] = random.Random(5).getstate()
+        self.begin_reviewed_turn(state, "p1")
+        self.assertEqual(state["players"]["p1"]["statuses"], {"nanite": 2})
+        self.assertEqual(state["players"]["p1"]["health"], 50)
+
+    def test_huntress_bond_shares_damage_after_mitigation_without_spending_on_ultimate(self):
+        for kind, statuses, health, nyra_health, bond in (
+            ("normal", {"nyras_bond": 1}, 47, 0, False),
+            ("undefendable", {"nyras_bond": 1, "protect": 1}, 50, 2, False),
+            ("ultimate", {"nyras_bond": 1}, 41, 6, True),
+            ("normal", {"nyras_bond": 1, "shadows": 1}, 50, 6, True),
+        ):
+            with self.subTest(kind=kind, statuses=statuses):
+                state = self.incoming_attack("huntress", damage=9, damage_type=kind, statuses=statuses)
+                self.act(state, "p1", "pass")
+                self.assertEqual(state["players"]["p1"]["health"], health)
+                self.assertEqual(state["players"]["p1"]["companion"]["health"], nyra_health)
+                self.assertEqual("nyras_bond" in state["players"]["p1"]["statuses"], bond)
+
+    def test_nyra_damage_bonus_stops_at_zero_and_companion_healing_restores_it(self):
+        for companion_health, expected in ((0, 8), (1, 9), (6, 9)):
+            with self.subTest(companion_health=companion_health):
+                state = self.make_state("huntress", "barbarian")
+                self.set_attack(state)
+                state["players"]["p0"]["companion"]["health"] = companion_health
+                self.act(state, "p0", "use_ability", ability_id="hunting_strike")
+                self.assertEqual(state["pending_attack"]["damage"], expected)
+        state = self.make_state("huntress", "barbarian")
+        self.set_attack(state, values=[4] * 5)
+        state["players"]["p0"]["companion"]["health"] = 0
+        state["players"]["p0"]["upgrades"] = [{"ability": "wild_bond", "level": 3}]
+        cp_before = state["players"]["p0"]["combat_points"]
+        self.act(state, "p0", "use_ability", ability_id="wild_bond")
+        self.assertEqual(state["players"]["p0"]["companion"]["health"], 6)
+        self.assertEqual(state["players"]["p0"]["combat_points"], cp_before)
+        self.set_attack(state)
+        self.act(state, "p0", "use_ability", ability_id="hunting_strike")
+        self.assertEqual(state["pending_attack"]["damage"], 9)
+
+    def test_huntress_defense_restores_nyra_before_absorbing_damage(self):
+        state = self.incoming_attack("huntress", damage=5, seed=5)
+        state["players"]["p1"]["companion"]["health"] = 0
+        self.act(state, "p1", "defend")
+        self.assertEqual(state["players"]["p1"]["companion"]["health"], 0)
+        self.assertEqual(state["players"]["p1"]["health"], 48)
+        self.assertEqual(state["defense_result"]["prevented"], 1)
+        self.assertEqual(state["defense_result"]["damage_taken"], 2)
+
+    def test_tactical_advantage_chooses_undefendable_or_bonus_damage(self):
+        for count, values, ability, kind, damage, remaining in (
+            (2, [1] * 5, "saber_strike", "normal", 10, 1),
+            (3, [1] * 5, "saber_strike", "undefendable", 8, 0),
+            (5, [6] * 4 + [1], "precision_assault", "undefendable", 10, 4),
+            (5, [6] * 5, "grand_strategy", "ultimate", 12, 5),
+        ):
+            with self.subTest(count=count, ability=ability):
+                state = self.make_state("tactician", "barbarian")
+                self.set_attack(state, values=values)
+                state["players"]["p0"]["statuses"] = {"tactical_advantage": count}
+                self.act(state, "p0", "use_ability", ability_id=ability)
+                self.assertEqual(state["pending_attack"]["damage_type"], kind)
+                self.assertEqual(state["pending_attack"]["damage"], damage)
+                self.assertEqual(state["players"]["p0"]["statuses"].get("tactical_advantage", 0), remaining)
+                self.assertEqual("defend" in Game.get_legal_actions(state, "p1"), kind == "normal")
+
+    def test_constrict_charges_only_rerolls_and_rejects_unaffordable_roll_atomically(self):
+        state = self.make_state("tactician", "barbarian")
+        state["current_player"] = "p0"
+        state["players"]["p0"]["statuses"] = {"constrict": 1}
+        state["players"]["p0"]["combat_points"] = 1
+        self.act(state, "p0", "end_phase")
+        self.act(state, "p0", "roll")
+        self.assertEqual(state["players"]["p0"]["combat_points"], 1)
+        self.act(state, "p0", "roll")
+        self.assertEqual(state["players"]["p0"]["combat_points"], 0)
+        self.assertNotIn("roll", Game.get_legal_actions(state, "p0"))
+        self.assert_rejected(state, "p0", "roll")
+        self.assertIn("confirm_roll", Game.get_legal_actions(state, "p0"))
+        self.act(state, "p0", "confirm_roll")
+        self.assertNotIn("constrict", state["players"]["p0"]["statuses"])
+
+    def test_constrict_allows_first_roll_without_cp_and_clears_on_skip(self):
+        state = self.make_state("tactician", "barbarian")
+        state["current_player"] = "p0"
+        state["players"]["p0"]["statuses"] = {"constrict": 1}
+        state["players"]["p0"]["combat_points"] = 0
+        self.act(state, "p0", "end_phase")
+        self.act(state, "p0", "roll")
+        self.assertNotIn("roll", Game.get_legal_actions(state, "p0"))
+        self.act(state, "p0", "pass")
+        self.assertNotIn("constrict", state["players"]["p0"]["statuses"])
+
+    def test_pirate_transforms_only_after_three_completed_own_turns(self):
+        state = self.make_state("cursed_pirate", "barbarian")
+        state["current_player"] = "p0"
+        for remaining in (2, 1, 0):
+            self.finish_empty_turn(state, "p0")
+            self.assertEqual(state["players"]["p0"]["statuses"].get("cursed_doubloon", 0), remaining)
+            self.assertNotIn("cursed", state["players"]["p0"]["statuses"])
+            self.act(state, "p0", "next_round")
+            self.act(state, "p1", "next_round")
+            self.assertNotIn("cursed", state["players"]["p0"]["statuses"])
+            self.finish_empty_turn(state, "p1")
+            self.act(state, "p0", "next_round")
+            self.act(state, "p1", "next_round")
+        self.assertEqual(state["players"]["p0"]["statuses"], {"cursed": 1})
+        self.assertEqual(state["players"]["p0"]["health"], 49)
+        self.set_attack(state)
+        self.act(state, "p0", "use_ability", ability_id="cutlass_slash")
+        self.assertEqual(state["pending_attack"]["damage"], 10)
+
+    def test_parlay_preserves_skill_effects_and_wither_persists(self):
+        state = self.make_state("cursed_pirate", "barbarian")
+        self.set_attack(state, values=[1, 1, 4, 4, 6])
+        state["players"]["p0"]["statuses"] = {"parlay": 1, "wither": 2, "cursed": 1}
+        self.act(state, "p0", "use_ability", ability_id="keg_toss")
+        self.assertEqual(state["pending_attack"]["damage"], 0)
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["players"]["p1"]["health"], 50)
+        self.assertEqual(state["players"]["p1"]["statuses"], {"powder_keg": 1})
+        self.assertEqual(state["players"]["p0"]["statuses"], {"wither": 2, "cursed": 1})
+        self.set_attack(state)
+        self.act(state, "p0", "use_ability", ability_id="cutlass_slash")
+        self.assertEqual(state["pending_attack"]["damage"], 8)
+        self.assertEqual(state["players"]["p0"]["statuses"]["wither"], 2)
+
+    def test_powder_keg_can_explode_remain_or_transfer_with_cleanse(self):
+        for seed, cleanse, health, owner, recipient in ((2, False, 46, False, False), (0, False, 50, True, False), (19, False, 50, False, True), (19, True, 50, False, False)):
+            with self.subTest(seed=seed, cleanse=cleanse):
+                state = self.make_state("barbarian", "moon_elf")
+                state["players"]["p0"]["statuses"] = {"powder_keg": 1}
+                state["players"]["p1"]["statuses"] = {"cleanse": 1} if cleanse else {}
+                state["rng_state"] = random.Random(seed).getstate()
+                self.begin_reviewed_turn(state, "p0")
+                self.assertEqual(state["players"]["p0"]["health"], health)
+                self.assertEqual("powder_keg" in state["players"]["p0"]["statuses"], owner)
+                self.assertEqual("powder_keg" in state["players"]["p1"]["statuses"], recipient)
+                if cleanse:
+                    self.assertNotIn("cleanse", state["players"]["p1"]["statuses"])
+
+    def test_new_hero_upkeep_death_stops_bots_and_income(self):
+        for hero, statuses, health in (("cursed_pirate", {"cursed": 1}, 1), ("artificer", {"powder_keg": 1, "nanobot": 1, "synth": 1}, 4)):
+            with self.subTest(hero=hero):
+                state = self.make_state(hero, "barbarian")
+                state["players"]["p0"]["statuses"] = statuses
+                state["players"]["p0"]["health"] = health
+                state["players"]["p1"]["statuses"] = {"nanite": 3}
+                state["rng_state"] = random.Random(2).getstate()
+                cp_before = state["players"]["p0"]["combat_points"]
+                self.begin_reviewed_turn(state, "p0")
+                self.assertEqual(state["winner"], ["p1"])
+                self.assertEqual(state["players"]["p0"]["combat_points"], cp_before)
+                self.assertEqual(state["players"]["p1"]["health"], 50)
+                self.assertEqual(state["players"]["p1"]["statuses"], {"nanite": 3})
+
+    def test_robot_and_pirate_tokens_cannot_be_removed_by_cards(self):
+        for protected in ("shock_bot", "heal_bot", "nanobot", "cursed_doubloon", "cursed"):
+            with self.subTest(status=protected):
+                state = self.make_state("barbarian", "moon_elf")
+                state["current_player"] = "p0"
+                player = state["players"]["p0"]
+                player["statuses"] = {protected: 1, "wither": 2}
+                player["hand"] = ["get_outta_here", "what_status"]
+                player["combat_points"] = 10
+                self.assert_rejected(state, "p0", "play_card", card_id="get_outta_here", target="p0", status=protected)
+                self.act(state, "p0", "play_card", card_id="what_status", target="p0")
+                self.assertEqual(state["players"]["p0"]["statuses"], {protected: 1})
+
+    def test_new_hero_modifiers_do_not_affect_ultimate_damage(self):
+        state = self.make_state("huntress", "artificer")
+        self.set_attack(state, values=[6] * 5)
+        statuses = {"shock_bot": 1, "synth": 3, "cursed": 1, "tactical_advantage": 3, "wither": 2, "parlay": 1}
+        state["players"]["p0"]["statuses"] = dict(statuses)
+        state["players"]["p1"]["statuses"] = {"heal_bot": 1, "synth": 3}
+        self.act(state, "p0", "use_ability", ability_id="apex_predator")
+        self.assertEqual(state["pending_attack"]["damage"], 12)
+        self.assertEqual(state["players"]["p0"]["statuses"], statuses)
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["players"]["p1"]["health"], 38)
+        self.assertEqual(state["players"]["p1"]["statuses"]["synth"], 3)
+
+    def test_companion_and_pirate_form_survive_json_restore_without_reset(self):
+        state = self.make_state("huntress", "cursed_pirate")
+        state["players"]["p0"]["companion"]["health"] = 0
+        state["players"]["p1"]["statuses"] = {"cursed": 1}
+        restored = Game.deserialize(json.loads(json.dumps(Game.serialize(state))))
+        self.assertEqual(restored, state)
+        restored["players"]["p0"]["companion"]["health"] = 6
+        self.assertEqual(state["players"]["p0"]["companion"]["health"], 0)
+
     def test_json_save_restore_preserves_next_roll_for_every_hero(self):
         for hero in ROSTER:
             with self.subTest(hero=hero):
@@ -901,7 +1168,7 @@ class DiceThroneHeroTests(unittest.TestCase):
                 view["your_hand"].clear()
                 self.assertEqual(state, before)
 
-    def test_bot_games_finish_for_all_66_unique_hero_pairings(self):
+    def test_bot_games_finish_for_all_120_unique_hero_pairings(self):
         for number, (first, second) in enumerate(itertools.combinations(ROSTER, 2)):
             with self.subTest(first=first, second=second):
                 state = self.make_state(first, second, seed=2700 + number)

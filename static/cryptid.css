@@ -1,20 +1,24 @@
-#cryptidPanel {
+.game-panel[data-game-theme="cryptid"] {
     --cryptid-ink: #243d37;
     --cryptid-paper: #f7f4e9;
     --cryptid-line: #d9dfd3;
     --cryptid-accent: #35634e;
     color: var(--cryptid-ink);
     min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--cryptid-line);
+    border-radius: 18px;
+    background: var(--cryptid-paper);
 }
+.game-panel[data-game-theme="cryptid"] > .panel-header button { color: var(--cryptid-ink); background: #fffdf6; border-color: #c6d8bd; }
+.game-panel[data-game-theme="cryptid"] > .panel-header button[aria-pressed="true"] { color: #fffdf6; background: var(--cryptid-accent); }
+#cryptidPanel, .cryptid-shell { min-width: 0; }
 #cryptidPanel *, .cryptid-dialog, .cryptid-dialog *, .cryptid-tip { box-sizing: border-box; }
 #cryptidPanel button, .cryptid-dialog button { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
 #cryptidPanel button { border-radius: 9px; }
 .cryptid-config-label { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .cryptid-config-label select { width: auto; max-width: 100%; }
-.cryptid-shell { padding: 16px; border: 1px solid var(--cryptid-line); border-radius: 18px; background: var(--cryptid-paper); min-width: 0; }
-.cryptid-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
-.cryptid-top h2 { margin: 3px 0; font-size: clamp(21px, 3vw, 29px); letter-spacing: -.025em; }
-.cryptid-eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #61766d; }
+.cryptid-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
 .cryptid-badge { border: 1px solid #c6d8bd; background: #e7efdf; padding: 6px 9px; border-radius: 7px; font-size: 12px; overflow-wrap: anywhere; }
 .cryptid-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 7px; margin-bottom: 13px; }
 .cryptid-player { padding: 8px; border: 1px solid var(--cryptid-line); background: #fffdf6; border-radius: 9px; min-width: 0; font-size: 12px; }
@@ -116,9 +120,7 @@
     .cryptid-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) {
-    .cryptid-shell { padding: 9px; border-radius: 12px; }
-    .cryptid-top { gap: 7px; }
-    .cryptid-top h2 { font-size: 22px; }
+    .game-panel[data-game-theme="cryptid"] { padding: 9px; border-radius: 12px; }
     .cryptid-players { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
     .cryptid-player { padding: 7px 6px; font-size: 11px; }
     .cryptid-map { height: auto; aspect-ratio: 4 / 5; min-height: 280px; max-height: 390px; }

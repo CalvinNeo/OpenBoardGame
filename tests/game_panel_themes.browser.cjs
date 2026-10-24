@@ -34,6 +34,10 @@ const games = [
     {id: 'hive', help: '#hiveHelp', explain: '#hiveExplain', target: '#hiveFit', modal: '#hiveDialog', reopen: true},
     {id: 'las_vegas', prefix: 'lasVegas', target: '.lv-round-marker [data-lv-explain]', surface: '.lv-surface', modal: '#lasVegasDialog', reopen: true},
     {id: 'las_vegas', caseName: 'las_vegas-royale', config: {edition: 'royale'}, prefix: 'lasVegas', target: '.lv-round-marker [data-lv-explain]', surface: '.lv-surface', modal: '#lasVegasDialog', reopen: true},
+    {id: 'night_of_the_ninja', prefix: 'nightNinja', target: '[data-nn-action="draft"]', surface: '.nn-surface', modal: '#nightNinjaDialog', reopen: true},
+    {id: 'love_letter', prefix: 'loveLetter', target: '.ll-card:visible', surface: '.ll-surface', modal: '#loveLetterDialog', reopen: true},
+    {id: 'spirit_island', playerCount: 4, prefix: 'spiritIsland', target: '.si-spirit-choice:visible', surface: '.si-shell', modal: '.spirit-island-dialog', reopen: true},
+    {id: 'cryptid', prefix: 'cryptid', target: '[data-cryptid-action="in"]', surface: '.cryptid-shell', modal: '#cryptidDialog', reopen: true},
 ];
 const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
 
@@ -128,6 +132,55 @@ const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
         results.push({game: game.caseName || game.id, width, title: measurement.title});
     }
 
+    async function mapInteraction(page, game, mobile) {
+        const spirit = game.id === 'spirit_island';
+        const map = page.locator(spirit ? '.si-island' : '.cryptid-map');
+        const selected = page.locator(spirit ? '.si-land.is-selected' : '.cryptid-cell.is-selected');
+        const activate = async locator => mobile ? locator.tap() : locator.click();
+        const fit = page.locator(spirit ? '[data-si-action="map-fit"]' : '[data-cryptid-action="fit"]');
+        const zoom = page.locator(spirit ? '[data-si-action="zoom-in"]' : '[data-cryptid-action="in"]');
+        await activate(fit);
+        const fitted = await map.getAttribute('viewBox');
+        if (spirit) {
+            await activate(page.locator('.si-land-number').first());
+            assert.equal(await selected.count(), 1, 'Spirit Island map tap selects a land');
+            await page.keyboard.press('Escape');
+            assert.equal(await selected.count(), 0, 'Escape cancels land selection');
+        }
+        await activate(zoom);
+        const zoomed = await map.getAttribute('viewBox');
+        assert.notEqual(zoomed, fitted, `${game.id} zoom remains functional`);
+        assert.equal(await map.evaluate(node => getComputedStyle(node).touchAction), 'none');
+        await map.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+        const bounds = await map.boundingBox();
+        const horizontal = bounds.x + bounds.width / 2;
+        const vertical = Math.min(page.viewportSize().height - 60, Math.max(100, bounds.y + bounds.height / 2));
+        const scroll = await page.evaluate(() => scrollY);
+        if (mobile) {
+            const session = await page.context().newCDPSession(page);
+            await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: horizontal, y: vertical, id: 1}]});
+            await session.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: horizontal + 35, y: vertical - 30, id: 1}]});
+            await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+            assert.notEqual(await map.getAttribute('viewBox'), zoomed, `${game.id} touch pans the map`);
+            const panned = await map.getAttribute('viewBox');
+            await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: horizontal - 22, y: vertical, id: 1}, {x: horizontal + 22, y: vertical, id: 2}]});
+            await session.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: horizontal - 45, y: vertical, id: 1}, {x: horizontal + 45, y: vertical, id: 2}]});
+            await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+            assert.notEqual(await map.getAttribute('viewBox'), panned, `${game.id} pinch zooms the map`);
+            await session.detach();
+        } else {
+            await page.mouse.move(horizontal, vertical);
+            await page.mouse.down();
+            await page.mouse.move(bounds.x - 6, vertical + 24, {steps: 6});
+            await page.mouse.up();
+            assert.notEqual(await map.getAttribute('viewBox'), zoomed, `${game.id} drag ends outside the map`);
+        }
+        assert.equal(await page.evaluate(() => scrollY), scroll, `${game.id} map gestures do not scroll the page`);
+        assert.equal(await map.evaluate(node => node.classList.contains('is-dragging')), false);
+        assert.equal(await selected.count(), 0, `${game.id} dragging must not select a location`);
+        await activate(fit);
+    }
+
     async function interact(page, game, mobile) {
         const activate = async locator => mobile ? locator.tap() : locator.click();
         const help = page.locator(game.help || `#${game.prefix}HelpBtn`);
@@ -163,6 +216,29 @@ const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
             }
         }
         assert.equal(await page.evaluate(() => lastGameStatePayload.state_version), before, `${game.id} Explain must not make a move`);
+        if (game.id === 'love_letter' && await page.locator('.ll-card:enabled').count()) {
+            await activate(page.locator('.ll-card:enabled').first());
+            assert.equal(await page.locator('.ll-card.is-selected').count(), 1);
+            await activate(page.locator('.ll-round'));
+            assert.equal(await page.locator('.ll-card.is-selected').count(), 0, 'Round label remains a blank-space cancellation target');
+            await activate(page.locator('.ll-card:enabled').first());
+            await page.keyboard.press('Escape');
+            assert.equal(await page.locator('.ll-card.is-selected').count(), 0);
+        }
+        if (game.id === 'cryptid') {
+            for (const kind of ['notes', 'clue']) {
+                await activate(page.locator(`[data-cryptid-action="${kind}"]`));
+                await helpModal.waitFor({state: 'visible'});
+                const bounds = await helpModal.boundingBox();
+                assert(bounds && bounds.x >= 0 && bounds.x + bounds.width <= page.viewportSize().width + 1, `${kind} dock stays inside the viewport`);
+                assert.equal(await helpModal.getAttribute('data-kind'), kind);
+                await page.keyboard.press('Escape');
+                await helpModal.waitFor({state: 'hidden'});
+            }
+            await mapInteraction(page, game, mobile);
+        }
+        if (game.id === 'spirit_island' && game.caseName === 'spirit_island-map') await mapInteraction(page, game, mobile);
+        assert.equal(await page.evaluate(() => lastGameStatePayload.state_version), before, `${game.id} preview and navigation must not submit a move`);
         if (mobile && game.id === 'kronologic') {
             const dock = page.locator('#kronologicNotebookDockBtn');
             const notebook = page.locator('#kronologicNotebookSection');
@@ -190,7 +266,7 @@ const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
             console.log(`Checking ${caseName}`);
             let playing = [];
             try {
-                const count = await desktop.evaluate(id => Math.max(2, cachedGameList.find(game => game.game_id === id).min_players), game.id);
+                const count = game.playerCount || await desktop.evaluate(id => Math.max(2, cachedGameList.find(game => game.game_id === id).min_players), game.id);
                 playing = peers.slice(0, count);
                 await desktop.evaluate(({id, config}) => socket.emit('room:create', {name: 'Frame QA 1', game_type: id, config}), game);
                 await desktop.waitForFunction(id => roomSessionReady && currentGameType === id && isGameAssetsLoaded(id), game.id);
@@ -222,6 +298,21 @@ const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
                 await desktop.setViewportSize({width: 1440, height: 1000});
                 await interact(desktop, game, false);
                 await interact(mobile, game, true);
+                if (game.id === 'spirit_island') {
+                    for (const page of playing) {
+                        await page.evaluate(() => setRoomControlsCollapsed(true));
+                        await page.locator('.si-spirit-choice:enabled').first().click();
+                        await page.locator('[data-si-action="confirm"]').click();
+                        await page.waitForFunction(() => lastGameStatePayload.view.players.find(player => player.id === playerId)?.spirit_id);
+                    }
+                    for (const page of playing) await page.waitForFunction(() => lastGameStatePayload.view.phase === 'growth');
+                    const mapGame = {...game, caseName: 'spirit_island-map', target: '[data-si-action="zoom-in"]'};
+                    for (const [page, width] of [[desktop, 1440], [desktop, 1024], [mobile, 390], [mobile, 320]]) await layout(page, mapGame, width);
+                    await desktop.setViewportSize({width: 1440, height: 1000});
+                    await interact(desktop, mapGame, false);
+                    await interact(mobile, mapGame, true);
+                    console.log('PASS spirit_island-map: four-player map, four widths, pan, pinch, selection, Help/Explain');
+                }
                 console.log(`PASS ${caseName}: four widths, Help/Explain, Escape`);
             } catch (error) {
                 failures.push({game: caseName, error: error.stack});

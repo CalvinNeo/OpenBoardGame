@@ -107,6 +107,7 @@ const DECRYPTO_HELP_TEXT = `
     <li>Players split into White and Black teams.</li>
     <li>Each team gets 4 secret keywords.</li>
     <li>Each player has a fixed seat color. Player badges and clue backgrounds use that color to identify the clue's author, not its keyword number.</li>
+    <li>Your four keywords appear in a shared-width strip below the team summaries. On phones, the pencil (✎) beside a player's name identifies the Encryptor.</li>
   </ul>
 
   <h3>Round Flow</h3>
@@ -164,7 +165,7 @@ const DECRYPTO_BUTTON_EXPLANATIONS = {
 const DECRYPTO_AREA_EXPLANATIONS = {
   teams: {
     name: "Teams & Player Colors",
-    description: "Each player keeps a distinct seat color; their clues use the same background. Intercepts (🎯): 2 wins. Miscommunications (⚠): 2 loses. Only your team's keywords are revealed during play.",
+    description: "Each player keeps a distinct seat color; their clues use the same background. The pencil (✎) identifies the Encryptor on phones. Intercepts (🎯): 2 wins. Miscommunications (⚠): 2 loses. The full-width keyword strip belongs to your team; opponent keywords remain hidden.",
   },
   history: {
     name: "Clue History",
@@ -214,7 +215,15 @@ function setDecryptoTip(element, message) {
 function createDecryptoPlayerBadge(view, player, label = "") {
   const badge = document.createElement("span");
   badge.className = "decrypto-player";
-  badge.textContent = `${player.name || player.player_id}${label ? ` · ${label}` : ""}`;
+  badge.textContent = player.name || player.player_id;
+  if (label) {
+    const role = document.createElement("span");
+    role.className = "decrypto-player-role";
+    role.textContent = ` · ${label}`;
+    badge.appendChild(role);
+    badge.classList.toggle("decrypto-encryptor", label === "Encryptor");
+    badge.setAttribute("aria-label", `${player.name || player.player_id} · ${label}`);
+  }
   setDecryptoPlayerColor(badge, view, player.player_id);
   const color = getDecryptoPlayerColor(view, player.player_id);
   setDecryptoTip(badge, `${player.name || player.player_id}${color ? ` · ${color.name}` : ""}${label ? ` · ${label}` : ""}`);
@@ -982,26 +991,22 @@ function renderDecryptoTeams(view) {
     } | Intercept: ${interceptStatus}`;
     wrapper.appendChild(statusLine);
 
-    const keywords = getDecryptoTeamKeywords(view, teamId);
-    if (keywords?.length) {
-      const keywordRow = document.createElement("div");
-      keywordRow.className = "decrypto-keywords";
-      keywords.forEach((word, index) => {
-        const item = document.createElement("div");
-        item.className = "decrypto-keyword";
-        item.textContent = `${index + 1}. ${word}`;
-        keywordRow.appendChild(item);
-      });
-      wrapper.appendChild(keywordRow);
-    } else {
-      const hidden = document.createElement("div");
-      hidden.className = "decrypto-section-note";
-      hidden.textContent = "Keywords hidden";
-      wrapper.appendChild(hidden);
-    }
-
     decryptoTeams.appendChild(wrapper);
   });
+  const keywords = getDecryptoTeamKeywords(view, view.team_id);
+  if (keywords?.length) {
+    const keywordRow = document.createElement("div");
+    keywordRow.className = "decrypto-keywords";
+    keywordRow.setAttribute("role", "group");
+    keywordRow.setAttribute("aria-label", `Your ${formatDecryptoTeamLabel(view.team_id)} team keywords`);
+    keywords.forEach((word, index) => {
+      const item = document.createElement("div");
+      item.className = "decrypto-keyword";
+      item.textContent = `${index + 1}. ${word}`;
+      keywordRow.appendChild(item);
+    });
+    decryptoTeams.appendChild(keywordRow);
+  }
 }
 
 function renderDecryptoCurrentClues(view) {
@@ -1051,14 +1056,17 @@ function renderDecryptoHistory(view) {
     const section = document.createElement("div");
     section.className = "decrypto-history-team";
 
+    const heading = document.createElement("div");
+    heading.className = "decrypto-history-heading";
     const header = document.createElement("div");
     header.className = "decrypto-team-header";
     header.textContent = `${formatDecryptoTeamLabel(teamId)} History`;
-    section.appendChild(header);
+    heading.appendChild(header);
     const legend = document.createElement("div");
     legend.className = "decrypto-player-list";
     (team.players || []).forEach((player) => legend.appendChild(createDecryptoPlayerBadge(view, player)));
-    section.appendChild(legend);
+    heading.appendChild(legend);
+    section.appendChild(heading);
 
     const table = document.createElement("table");
     table.className = "decrypto-history-table";

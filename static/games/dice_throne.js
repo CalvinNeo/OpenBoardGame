@@ -84,6 +84,7 @@
   const labelPlayer = id => view?.players?.find(player => player.player_id === id)?.name || id || "Player";
   const ownPlayer = () => view?.players?.find(player => player.player_id === view.you);
   const legal = type => Boolean(view && !pendingAction && view.legal_actions?.includes(type));
+  const removableStatus = status => status.id !== "blessing" && !view.status_catalog?.[status.id]?.companion && view.status_catalog?.[status.id]?.removable !== false;
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -230,6 +231,7 @@
       const details = el("details", "dt-rule-section");
       details.append(el("summary", "", `${heroName(id)} · ability reference`));
       details.append(el("p", "", `${hero.name_zh || hero.name} · ${hero.subtitle}`));
+      if (hero.passive) details.append(el("p", "", namedText(hero.passive)));
       details.append(heroFaceReference(hero));
       const defense = hero.defense;
       if (defense) details.append(el("p", "", `Defense (🛡️) · ${defense.name}: ${namedText(defense.description || "")} (${defense.dice} Dice 🎲)`));
@@ -246,7 +248,7 @@
     return content;
   }
   function nextEditionText() {
-    return view?.edition_note || "A playable digital adaptation of Season One Rerolled and selected Season Two heroes. Status spending and companions are automated, and upgrade effects use the values shown here. The displayed descriptions specify this edition's behavior; full printed card-by-card parity is not claimed.";
+    return view?.edition_note || "A playable digital adaptation of the Season One Rerolled and Season Two rosters. Status spending and companions are automated, and upgrade effects use the values shown here. The displayed descriptions specify this edition's behavior; full printed card-by-card parity is not claimed.";
   }
   function heroFaceName(hero, key) {
     return `${hero.symbol_names?.[key] || termFor(key)[0]} (${hero.symbol_icons?.[key] || termFor(key)[1]})`;
@@ -276,6 +278,7 @@
     hero.faces.forEach(key => legend.append(el("span", "", heroFaceName(hero, key))));
     dice.append(legend);
     content.append(dice);
+    if (hero.passive) content.append(el("p", "dt-reference-passive", namedText(hero.passive)));
     if (hero.defense) {
       const defense = el("section", "dt-reference-defense");
       const heading = el("div", "dt-reference-heading");
@@ -297,7 +300,7 @@
       pattern.setAttribute("aria-label", `Roll: ${conditionText(ability.id)}`);
       if (ability.damage_type === "ultimate") pattern.append(token("ultimate", named("ultimate")));
       entry.append(head, pattern, el("p", "dt-reference-effect", namedText(ability.description)));
-      if (level > 1) entry.append(el("p", "dt-reference-upgrade", `Upgrade (⬆️): base damage/healing +${level - 1}; resource-only abilities gain +${level - 1} CP (⚡).`));
+      if (level > 1) entry.append(el("p", "dt-reference-upgrade", `Upgrade (⬆️): base damage/healing (including companions) +${level - 1}; resource-only abilities gain +${level - 1} CP (⚡).`));
       abilities.append(entry);
     });
     content.append(heading, abilities);
@@ -389,6 +392,13 @@
       meta.append(token("cp", `⚡ ${player.combat_points}`), token("card", `🃏 ${player.hand_count ?? 0}`));
       if (player.upgrades?.length) meta.append(token("upgrade", `⬆️ ${player.upgrades.length}`));
       const statuses = el("div", "dt-statuses");
+      if (player.companion) {
+        const companion = player.companion;
+        const title = `${companion.name} (${companion.icon}) · Health ${companion.health}/${companion.max_health}`;
+        const chip = describe(el("span", `dt-token dt-companion${companion.health ? "" : " dt-companion-inactive"}`, `${companion.icon} ${companion.name} ${companion.health}/${companion.max_health}`), title, hero?.passive || "Companion health", true);
+        chip.setAttribute("aria-label", title);
+        statuses.append(chip);
+      }
       (player.statuses || []).forEach(status => {
         if (terms[status.id]) {
           const chip = token(status.id);
@@ -455,8 +465,11 @@
     $("DiceHint").textContent = view.phase === "offensive_roll" ? actor === view.you ? "Tap dice to keep them between rolls." : `${labelPlayer(actor)} is rolling…` : "";
     $("DiceHint").classList.toggle("hidden", !$("DiceHint").textContent);
     const rerollCount = view.dice.length ? view.dice.filter(die => !die.kept).length : 5;
+    const rollingPlayer = view.players.find(player => player.player_id === view.current_player);
+    const rollCost = view.phase === "offensive_roll" && view.roll_count > 0 && rollingPlayer?.statuses?.some(status => status.id === "constrict") ? 1 : 0;
     $("RollBtn").disabled = !legal("roll") || !rerollCount;
     $("RollBtn").textContent = pendingAction === "roll" ? "🎲 Rolling…" : !rerollCount ? "🔒 All kept" : view.roll_count ? `🎲 Roll again · ${rerollCount}` : "🎲 Roll dice";
+    if (rollCost && rerollCount && pendingAction !== "roll") $("RollBtn").textContent = rollingPlayer.combat_points < rollCost ? "⚡ Need 1 CP" : `🎲 Reroll ${rerollCount} · 1⚡`;
     area.setAttribute("aria-busy", String(pendingAction === "roll"));
     $("ConfirmBtn").disabled = !legal("confirm_roll") || !view.dice.length;
     $("EndBtn").disabled = !legal("end_phase");
@@ -621,8 +634,8 @@
       if (reason) return reason;
       if (["clean_one", "clean_all"].includes(card.effect) && inputs.target) {
         const target = view.players.find(player => player.player_id === inputs.target);
-        if (!(target?.statuses || []).some(status => !view.status_catalog?.[status.id]?.companion && status.id !== "blessing")) {
-          return "所选玩家没有可以移除的状态；伙伴和神佑不能移除。";
+        if (!(target?.statuses || []).some(removableStatus)) {
+          return "所选玩家没有可以移除的状态；伙伴、神佑及海盗专属金币和形态不能移除。";
         }
       }
       const missing = required.find(key => inputs[key] == null || inputs[key] === "");
@@ -672,7 +685,7 @@
     refresh = () => {
       if (selectors.status) {
         const target = view.players.find(player => player.player_id === inputs.target);
-        const statuses = (target?.statuses || []).filter(status => !view.status_catalog?.[status.id]?.companion && status.id !== "blessing");
+        const statuses = (target?.statuses || []).filter(removableStatus);
         selectors.status.replaceChildren(new Option("Choose…", ""), ...statuses.map(status => new Option(named(status.id), status.id)));
         selectors.status.value = statuses.some(status => status.id === inputs.status) ? inputs.status : "";
         inputs.status = selectors.status.value;
@@ -924,7 +937,7 @@
   $("Tooltip").setAttribute("aria-live", "polite");
   $("Tooltip").setAttribute("aria-atomic", "true");
   const actionHelp = {
-    RollBtn: ["Roll Dice (🎲)", "Reroll only unlocked dice, up to the limit shown on the tray. The button shows how many dice will reroll. Kept (🔒) dice remain unchanged; release a die if all are kept. Each roll is independent: repeating a number or symbol is a valid result, and several numbered faces share a symbol."],
+    RollBtn: ["Roll Dice (🎲)", "Reroll only unlocked dice, up to the limit shown on the tray. The button shows how many dice will reroll. Constrict (⛓️) costs 1 Combat Point (⚡) for each roll after the first; without enough CP you can still confirm or skip. Kept (🔒) dice remain unchanged; release a die if all are kept. Each roll is independent: repeating a number or symbol is a valid result, and several numbered faces share a symbol."],
     ConfirmBtn: ["Confirm roll", "Keep the current Dice (🎲) result and move to ability selection. Roll at least once first."],
     EndBtn: ["Continue the turn", "Main I continues to rolling Dice (🎲). Main II ends the turn and opens the shared review."],
     PassBtn: ["Skip attack", "Continue to Main II without using an ability or spending Combat Points (⚡)."],
