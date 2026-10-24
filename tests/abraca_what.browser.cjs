@@ -198,6 +198,17 @@ async function checkInteractions(page, width) {
   assert.equal(await page.locator('#abracaRollBtn').isVisible(), false);
   assert.equal(await page.locator('#abracaSecretBtn').isVisible(), false);
   assert.equal(await page.locator('#abracaNextRoundBtn').isVisible(), false);
+  const endTurn = await page.locator('#abracaEndTurnBtn').boundingBox();
+  const actionHint = await page.locator('#abracaActionHint').boundingBox();
+  const actionHeading = await page.locator('.abraca-action-heading').boundingBox();
+  assert(endTurn.width < 110, 'End Turn stays compact instead of spanning the panel');
+  assert(endTurn.height >= (mobile ? 44 : 40), 'End Turn retains a comfortable touch target');
+  assert(actionHint.x + actionHint.width <= endTurn.x, 'End Turn sits to the right of the hint');
+  assert(actionHint.y >= endTurn.y && actionHint.y + actionHint.height <= endTurn.y + endTurn.height,
+    'End Turn and the action hint share one row');
+  assert(endTurn.y >= actionHeading.y && endTurn.y + endTurn.height <= actionHeading.y + actionHeading.height,
+    'End Turn stays inside the Actions heading');
+  assert.equal(await page.locator('#abracaTurnActions').isVisible(), false, 'End Turn leaves no empty action row');
 
   await activate(page, '#abracaSpellBtn2', mobile);
   assert.equal(await confirmation.isVisible(), true);
@@ -242,6 +253,11 @@ async function checkInteractions(page, width) {
   assert.equal(await page.locator('#abracaHelpModal').isVisible(), false);
 
   const beforeExplain = await actionCount();
+  await activate(page, '#abracaExplainBtn', mobile);
+  await activate(page, '#abracaEndTurnBtn', mobile);
+  assert.equal(await explanation.isVisible(), true, 'Relocated End Turn still explains');
+  assert.match(await page.locator('#abracaExplainContent').textContent(), /End Turn/);
+  await page.keyboard.press('Escape');
   await activate(page, '#abracaExplainBtn', mobile);
   await page.locator('#abracaSpellBtn2').focus();
   await page.keyboard.press('Enter');
@@ -312,6 +328,11 @@ async function checkInteractions(page, width) {
   await render(page, { current_turn: 'p1', legal_actions: [], allowed_spells: [] });
   assert.equal(await page.locator('#abracaSpellButtons button:enabled').count(), 0);
   assert.equal(await page.locator('#abracaActionHint').textContent(), 'Watching the current turn');
+  assert.equal(await page.locator('#abracaEndTurnBtn').isDisabled(), true);
+  await activate(page, '#abracaExplainBtn', mobile);
+  await pointActivate(page, '#abracaEndTurnBtn', mobile);
+  assert.equal(await explanation.isVisible(), true, 'Disabled End Turn still explains');
+  await page.keyboard.press('Escape');
   await render(page, { you: 'spectator', legal_actions: [], allowed_spells: [] });
   assert.equal(await page.locator('#abracaSpellButtons button:enabled').count(), 0);
 
@@ -380,7 +401,7 @@ async function checkInteractions(page, width) {
       measurements[width] = await checkBounds(page, `${width}px`);
       await panelScreenshot(page, `${baseline ? 'before' : 'after'}-${width}`);
       if (!baseline) {
-        if (width <= 390) assert(measurements[width].height < 750, 'Five-player mobile panel stays compact');
+        if (width <= 390) assert(measurements[width].height < 660, 'Inline End Turn reduces five-player mobile height');
         await checkInteractions(page, width);
       }
       await context.close();

@@ -96,6 +96,8 @@
     .manila-action-panel { grid-area: action; border-left: 3px solid #c7cfb9; padding: 0 0 0 12px; }
     .manila-action-panel.is-active { border-color: #b56933; }
     .manila-facilities { grid-area: facilities; }
+    .manila-harbor-context { display: none; }
+    .manila-harbor-cargo { border-left: 3px solid var(--cargo); background: var(--cargo-wash); border-radius: 4px; padding: 5px; font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
     .manila-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
     .manila-section-heading h3 { font-size: 14px; font-weight: 700; }
     .manila-sea { display: grid; gap: 10px; padding: 12px; border: 1px solid #bfd3c9; border-radius: 10px; background: repeating-linear-gradient(0deg, #e7f0e9 0, #e7f0e9 25px, #dde9e3 26px, #e7f0e9 27px); }
@@ -206,6 +208,7 @@
     #manilaExplainBtn[aria-pressed="true"] { background: #e2ead7; border-color: #528166; }
     body.manila-turn-active #roomControlsPanel.collapsed { border-color: #bd503b; box-shadow: 0 0 0 2px #bd503b35; }
     body.manila-turn-active #roomControlsPanel.collapsed .room-controls-title-short { color: #a83c29; }
+    body.manila-turn-active.room-controls-drawer-closed #roomControlsPanel .collapse-btn { border-color: #bd503b; background: #fff1e9; color: #a83c29; }
 
     @media (max-width: 1100px) {
         .manila-play-area { grid-template-columns: minmax(0, 1.1fr) minmax(240px, 1fr); gap: 12px; }
@@ -244,6 +247,7 @@
         .manila-ship-status, .manila-ship-value { font-size: 11px; }
         .manila-panel .manila-seat, .manila-occupant { min-height: 40px; padding: 4px 2px; gap: 2px; font-size: 11px; }
         .manila-board { gap: 7px; }
+        .manila-harbor-context:not(:empty) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: 7px; }
         .manila-special-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .manila-special-slots > :last-child { grid-column: auto; }
         .manila-zone { padding: 7px; }

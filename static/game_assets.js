@@ -575,8 +575,8 @@ const GAME_ASSETS = {
     "panel": "abracaPanel",
     "panelTitle": "Abraca What",
     "header": "showAbracaHeaderActions",
-    "markup": "/static/games/abraca_what.html?v=2",
-    "styleFragments": "/static/games/abraca_what.css?v=2"
+    "markup": "/static/games/abraca_what.html?v=3",
+    "styleFragments": "/static/games/abraca_what.css?v=3"
   },
   "fang_niao": {
     "scripts": [

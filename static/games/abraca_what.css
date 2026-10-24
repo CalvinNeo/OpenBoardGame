@@ -270,13 +270,16 @@
 
   .abraca-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .abraca-section-heading > span { min-width: 0; font-size: 11px; color: #746486; overflow-wrap: anywhere; text-align: right; }
+  .abraca-action-heading { align-items: center; gap: 6px; margin-top: 5px; }
+  #abracaPanel .abraca-action-heading h3 { margin: 0; }
+  .abraca-action-heading > span { flex: 1; text-align: left; }
   #abracaActionHint { font-size: 12px; }
 
   .abraca-turn-actions { display: flex; flex-wrap: wrap; gap: 5px; }
   .abraca-turn-actions:not(:has(> button:not(.hidden))) { display: none; }
 
-  .abraca-turn-actions button {
-    flex: 1;
+  .abraca-turn-actions button,
+  #abracaEndTurnBtn {
     min-width: 0;
     min-height: 40px;
     padding: 6px 12px;
@@ -288,7 +291,10 @@
     box-shadow: none;
   }
 
-  .abraca-turn-actions button.action-allowed { border-color: #a98ac6; background: #e9ddf5; }
+  .abraca-turn-actions button { flex: 1; }
+  #abracaEndTurnBtn { flex: 0 0 auto; padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  .abraca-turn-actions button.action-allowed,
+  #abracaEndTurnBtn.action-allowed { border-color: #a98ac6; background: #e9ddf5; }
   #abracaPanel .round-notice { padding: 7px 9px; margin: 8px 0; overflow-wrap: anywhere; }
   #abracaPanel .round-notice-title { font-size: 12px; }
   #abracaPanel .round-notice-body { font-size: 12px; }
@@ -354,7 +360,7 @@
     .abraca-spell-label { font-size: 11px; }
     .abraca-status { gap: 4px 7px; }
     .abraca-resources { margin-top: 3px; gap: 10px; }
-    .abraca-turn-actions button { min-height: 44px; }
+    .abraca-turn-actions button, #abracaEndTurnBtn { min-height: 44px; }
     .abraca-cast-confirm { gap: 4px; padding: 6px; }
   }
 }

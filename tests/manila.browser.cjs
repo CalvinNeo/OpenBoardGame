@@ -320,6 +320,7 @@ async function swipe(page, locator) {
             await bounds(page, `${width}px expanded players`);
             assert.equal(await page.evaluate(() => window.manilaInjected), undefined);
             await render(page, 'placement');
+            if (width < 720) assert.equal(await page.locator('#manilaHarborContext .manila-harbor-cargo').count(), 3);
             await page.locator('[data-manila-op="seat"]').first().click();
             await bounds(page, `${width}px seat confirmation`);
             await blank(page);
@@ -392,8 +393,14 @@ async function swipe(page, locator) {
         await page.screenshot({path: path.join(output, 'mobile-320.png'), fullPage: true});
         await page.setViewportSize({width: 1440, height: 1000});
         await render(page, 'placement');
+        assert.equal(await page.locator('#roomControlsToggleBtn').evaluate(node => getComputedStyle(node).borderRightColor), 'rgb(189, 80, 59)');
         await page.mouse.move(1400, 20);
         await page.screenshot({path: path.join(output, 'desktop-1440.png'), fullPage: true});
+        await page.setViewportSize({width: 1024, height: 1000});
+        await page.evaluate(() => setRoomControlsCollapsed(false));
+        await page.screenshot({path: path.join(output, 'desktop-1024-sidebar.png'), fullPage: true});
+        await page.evaluate(() => setRoomControlsCollapsed(true));
+        await page.setViewportSize({width: 1440, height: 1000});
         await render(page, 'review');
         await page.screenshot({path: path.join(output, 'desktop-review.png'), fullPage: true});
         await page.evaluate(() => {

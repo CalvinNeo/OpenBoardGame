@@ -104,8 +104,29 @@ async function changed(page, before) {
         await pages[2].locator('[data-manila-op="next-round"]').click();
         await Promise.all(pages.map(page => page.waitForFunction(round => lastGameStatePayload.view.round === round + 1 && lastGameStatePayload.view.phase === 'auction', firstRound)));
         for (const page of pages) assert.deepEqual(await page.evaluate(() => window.manilaServerErrors), []);
+        const retryContext = await browser.newContext({viewport: {width: 390, height: 844}});
+        contexts.push(retryContext);
+        const retryPage = await retryContext.newPage();
+        retryPage.on('pageerror', error => errors.push(error.message));
+        let styleAttempts = 0;
+        await retryPage.route('https://fonts.googleapis.com/**', route => route.abort());
+        await retryPage.route('**/static/games/manila.css?*', route => {
+            styleAttempts++;
+            return styleAttempts === 1 ? route.abort() : route.continue();
+        });
+        await retryPage.goto(base);
+        await retryPage.waitForFunction(() => typeof socket !== 'undefined' && socket.connected);
+        await retryPage.evaluate(() => socket.emit('room:create', {name: 'Manila retry QA', game_type: 'manila'}));
+        await retryPage.locator('#gameAssetsRetryBtn').waitFor({state: 'visible'});
+        await retryPage.evaluate(() => setRoomControlsCollapsed(true));
+        await retryPage.locator('#gameAssetsRetryBtn').click();
+        await retryPage.waitForFunction(() => isGameAssetsLoaded('manila'));
+        assert(styleAttempts >= 2);
+        assert.equal(await retryPage.locator('script[src*="games/manila.js"]').count(), 1);
+        assert.equal(await retryPage.locator('#manilaHelpModal').count(), 1);
+        assert.equal(await retryPage.locator('#manilaPanel').isVisible(), true);
         assert.deepEqual(errors, []);
-        console.log('PASS: three real clients, lazy entry, auction/setup, paid placement, three movements, all-player ready barrier, second voyage, page reload and Socket.IO reconnect.');
+        console.log('PASS: three real clients, lazy entry/retry, auction/setup, paid placement, three movements, all-player ready barrier, second voyage, page reload and Socket.IO reconnect.');
     } finally {
         await Promise.all(contexts.map(context => context.close()));
         await browser.close();

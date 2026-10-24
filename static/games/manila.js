@@ -323,6 +323,11 @@
     }
 
     function renderBoard() {
+        byId("HarborContext").innerHTML = (view.cargo_slots || []).filter(cargo => cargoData[cargo] && view.boats?.[cargo]).map(cargo => {
+            const boat = view.boats[cargo];
+            const result = boat.plundered ? boat.plunder_result === "port" ? "⚓" : "🛠️" : boat.arrived ? "⚓" : `${boat.position}/13`;
+            return `<span class="manila-harbor-cargo manila-cargo-${cargo}" ${tip(`${cargoLabel(cargo)} · ${shipStatus(boat, false)}${boat.last_roll ? ` · 最近骰点 ${boat.last_roll}` : ""}`, "voyage")}>${cargoData[cargo].icon} ${result}</span>`;
+        }).join("");
         byId("Board").innerHTML = ["port", "shipyard"].map(type => `<div class="manila-zone"><div class="manila-zone-heading"><strong ${tip(explanations[type][1], type)}>${type === "port" ? "⚓ 码头" : "🛠️ 修船厂"}</strong></div>
             <div class="manila-zone-slots">${["A", "B", "C"].map(slot => renderInvestment(type, slot)).join("")}</div>${confirmation(type)}</div>`).join("") +
             `<div class="manila-zone manila-zone-wide"><div class="manila-zone-heading"><strong>特殊职位</strong></div>
@@ -620,7 +625,7 @@
         setError();
         [helpDialog, explainDialog].forEach(dialog => { if (dialog.open) dialog.close(); });
         document.body.classList.remove("manila-turn-active");
-        ["Market", "Stages", "Wallet", "ActionBody", "Board", "Players", "Review", "FinanceBody"].forEach(id => byId(id).replaceChildren());
+        ["Market", "Stages", "Wallet", "ActionBody", "Board", "HarborContext", "Players", "Review", "FinanceBody"].forEach(id => byId(id).replaceChildren());
         byId("Boats").innerHTML = '<div class="manila-empty">Waiting for game</div>';
         byId("RoundLabel").textContent = "等待启航";
         byId("Turn").textContent = "Waiting for game";
