@@ -562,6 +562,12 @@
     panel.innerHTML = `${tokenSprite()}<div class="gaia-title"><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div><div class="gaia-goals">${goals}</div>${p ? renderGaiaDashboard(p) : ''}${renderBoosterPrompt()}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}${controls ? `<section class="gaia-controls gaia-inline-controls" aria-label="Actions">${controls}</section>` : ''}</div></section></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
     panel.classList.toggle('gaia-explaining', explainMode);
     prepareHints();
+    const boosterGrid = panel.querySelector('.gaia-booster-grid');
+    if (boosterGrid) boosterGrid.scrollTop = Math.min(boosterScrollTop, Math.max(0, boosterGrid.scrollHeight - boosterGrid.clientHeight));
+    if (boosterFocusPending) {
+      boosterFocusPending = false;
+      panel.querySelector('.gaia-booster-dock-button')?.focus({preventScroll:true});
+    }
   }
   function cancelSelection() {
     selectedOption = null; selectedHex = null; federationMode = false; federationHexes.clear(); render();
