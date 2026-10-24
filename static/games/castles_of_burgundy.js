@@ -190,7 +190,7 @@
   function render() {
     if (!view) return;
     const focused = document.activeElement?.getAttribute("data-burgundy");
-    panel.innerHTML = `<header class="burgundy-header"><div><span class="burgundy-eyebrow">THE LOIRE VALLEY · 15TH CENTURY</span><h2>勃艮第城堡</h2><p>The Castles of Burgundy</p></div><div class="burgundy-header-right"><div class="burgundy-inline">${button("Help", "help", "Read the game rules.")}${button(explain ? "Explain · On" : "Explain", "explain", "Inspect controls without triggering an action.", explain ? "is-selected" : "")}</div><strong>Phase ${"ABCDE"[view.stage-1]} · Round ${view.round} / 5</strong><small>Region bonus +${12 - view.stage * 2} ⭐</small></div></header>
+    panel.innerHTML = `<header class="burgundy-header"><div class="burgundy-header-right"><div class="burgundy-inline">${button("Help", "help", "Read the game rules.")}${button(explain ? "Explain · On" : "Explain", "explain", "Inspect controls without triggering an action.", explain ? "is-selected" : "")}</div><strong>Phase ${"ABCDE"[view.stage-1]} · Round ${view.round} / 5</strong><small>Region bonus +${12 - view.stage * 2} ⭐</small></div></header>
       ${renderPlayers()}<nav class="burgundy-mobile-tabs" aria-label="Game panels">${button("🏰 Estate", "tab", "Show the selected player's estate and storage.", ui.tab !== "depots" ? "is-selected" : "", false, attr("tab", "estate"))}${button("⛵ Depots", "tab", "Show the common tile market and goods depots.", ui.tab === "depots" ? "is-selected" : "", false, attr("tab", "depots"))}</nav>
       <div class="burgundy-layout">${renderEstate()}<div class="burgundy-right">${renderActions()}${renderDepots()}</div></div>
       <div class="burgundy-footer"><div class="burgundy-bonuses">${Object.entries(view.bonuses).map(([k,ids]) => `<span>${kinds[k][0]} ${ids.length}/2</span>`).join("")}<small>Next goods: ${view.round_goods.map(n => `${colours[n-1]}${n}`).join(" ") || "Phase end"}</small></div>
@@ -254,6 +254,7 @@
     if (e.key === "Escape" && !dialog.open) { explain = false; resetSelection(); render(); }
   });
   document.addEventListener("pointerdown", e => {
+    suppressClickUntil = 0;
     if (!explain || panel.classList.contains("hidden") || dialog.open) return;
     const target = [...panel.querySelectorAll("button[data-explain]")].find(b => {
       if (["help", "explain"].includes(b.dataset.burgundy)) return false;
@@ -268,8 +269,9 @@
     openDialog("Explain", `<p>${esc(text)}</p>`);
   }, true);
   document.addEventListener("click", e => {
-    if (panel.classList.contains("hidden") || e.target.closest("dialog, [data-burgundy='help'], [data-burgundy='explain']")) return;
-    if (performance.now() < suppressClickUntil) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    if (panel.classList.contains("hidden")) return;
+    if (e.detail && performance.now() < suppressClickUntil) { suppressClickUntil = 0; e.preventDefault(); e.stopImmediatePropagation(); return; }
+    if (e.target.closest("dialog, [data-burgundy='help'], [data-burgundy='explain']")) return;
     if (!explain) return;
     const b = e.target.closest("button");
     if (!b) return;

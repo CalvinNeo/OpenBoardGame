@@ -195,7 +195,7 @@
         document.body.classList.toggle("ce-needs-action", yours);
         const status = !connected() ? "Disconnected" : busy ? "Sending…" : view.phase === "round_end" ? "查看本轮结果，再一起出发" : view.phase === "game_over" ? "赏金归于赢家" : `${playerName(view.current_turn)}${view.current_turn === view.you ? " · 轮到你了" : " 正在行动"}`;
         const last = (view.log || []).at(-1);
-        surface.innerHTML = `<header class="ce-banner"><div><div class="ce-eyebrow">COLT EXPRESS · THE GREAT TRAIN ROBBERY</div><h2>柯尔特快车</h2><p>西部旷野 · 一场精心策划的抢劫</p></div><div class="ce-ticket" data-ce-explain="review" data-ce-tip="${esc(details.review)}" tabindex="0"><span>ROUND</span><strong>${view.round || 1} / ${view.total_rounds || 5}</strong><span>WEST</span></div></header><div class="ce-status ${yours ? "is-yours" : ""}"><strong>${yours ? '<span class="ce-live" aria-hidden="true"></span>' : ""}${esc(phaseNames[view.phase] || view.phase)}</strong><span class="ce-turn-copy" aria-live="polite">${esc(status)}</span></div><div class="ce-content">${roundCard()}<div class="ce-columns"><main class="ce-main">${board()}${queue()}${last ? `<div class="ce-box ce-history"><div class="ce-muted">最近行动</div>${logRows([last])}</div>` : ""}</main><aside class="ce-actions-panel">${actionPanel()}</aside></div>${crew()}<details class="ce-box ce-history" data-ce-detail="log"><summary>📖 行动记录 · ${(view.log || []).length}</summary><div class="ce-scroll" data-ce-scroll="log">${logRows(view.log)}</div></details></div>`;
+        surface.innerHTML = `<div class="ce-status ${yours ? "is-yours" : ""}"><div class="ce-ticket" data-ce-explain="review" data-ce-tip="${esc(details.review)}" tabindex="0"><span>Round</span><strong>${view.round || 1} / ${view.total_rounds || 5}</strong></div><strong>${yours ? '<span class="ce-live" aria-hidden="true"></span>' : ""}${esc(phaseNames[view.phase] || view.phase)}</strong><span class="ce-turn-copy" aria-live="polite">${esc(status)}</span></div><div class="ce-content">${roundCard()}<div class="ce-columns"><main class="ce-main">${board()}${queue()}${last ? `<div class="ce-box ce-history"><div class="ce-muted">最近行动</div>${logRows([last])}</div>` : ""}</main><aside class="ce-actions-panel">${actionPanel()}</aside></div>${crew()}<details class="ce-box ce-history" data-ce-detail="log"><summary>📖 行动记录 · ${(view.log || []).length}</summary><div class="ce-scroll" data-ce-scroll="log">${logRows(view.log)}</div></details></div>`;
         surface.querySelectorAll("[data-ce-scroll]").forEach(el=>{if (positions[el.dataset.ceScroll] != null) el.scrollTop = positions[el.dataset.ceScroll];});
         surface.querySelectorAll("details[data-ce-detail]").forEach(el=>{if (opened[el.dataset.ceDetail] != null) el.open = opened[el.dataset.ceDetail];});
     }
@@ -231,6 +231,7 @@
         setExplain(false); openDialog("Explain", `<p>${esc(text)}</p>`);
     }
     document.addEventListener("pointerdown", event=>{
+        suppressUntil = 0;
         if (!explaining || exempt(event.target)) return;
         event.preventDefault(); event.stopImmediatePropagation();
         let el = event.target.closest("[data-ce-explain]");
@@ -241,7 +242,7 @@
         if (el) { suppressUntil = performance.now() + 700; explain(el); }
     }, true);
     document.addEventListener("click", event=>{
-        if (performance.now() < suppressUntil && !exempt(event.target)) { suppressUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
+        if (event.detail && performance.now() < suppressUntil) { suppressUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
         if (!explaining || exempt(event.target)) return;
         event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-ce-explain]"));
     }, true);

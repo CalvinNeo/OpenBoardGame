@@ -1,4 +1,6 @@
-.od-root { --od-gold:#eac27c; --od-ink:#eef3ed; --od-muted:#a6bab9; --od-line:#3b555a; background:#102b34; color:var(--od-ink); padding:18px; border-radius:16px; font:14px/1.45 system-ui,sans-serif; color-scheme:dark; overflow-wrap:anywhere; }
+.game-panel[data-game-theme="a_feast_for_odin"] { --od-gold:#eac27c; --od-ink:#eef3ed; --od-muted:#a6bab9; --od-line:#3b555a; background:#102b34; color:var(--od-ink); padding:18px; border-color:var(--od-line); border-radius:16px; font:14px/1.45 system-ui,sans-serif; color-scheme:dark; overflow-wrap:anywhere; }
+.od-root { min-width:0; }
+.game-panel[data-game-theme="a_feast_for_odin"] > .panel-header button { color:var(--od-ink); background:#213f48; border-color:var(--od-line); }
 .od-root *, .od-dialog * { box-sizing:border-box; min-width:0; }
 .od-root h2, .od-root h3, .od-root p { color:inherit; margin:0; }
 .od-root h3 { font-size:14px; }
@@ -10,7 +12,7 @@
 .od-hero { display:flex; justify-content:space-between; align-items:center; gap:14px; padding-bottom:12px; border-bottom:1px solid var(--od-line); }
 .od-wordmark { color:var(--od-gold); font:32px/1.05 Georgia,serif; letter-spacing:.18em; }
 .od-subtitle { color:var(--od-muted); font-size:12px; margin-top:6px; }
-.od-season { display:grid; gap:3px; text-align:right; font-size:12px; }
+.od-season { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; font-size:12px; }
 .od-season strong { font-size:16px; color:var(--od-gold); }
 .od-players { display:grid; grid-template-columns:repeat(var(--od-players),minmax(0,1fr)); gap:8px; margin:12px 0; }
 .od-root .od-player { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:5px; text-align:left; border-left:4px solid var(--od-player); padding:8px; background:#193842; }
@@ -113,11 +115,11 @@
 .od-explaining button:disabled { opacity:.8; }
 @media(max-width:1050px) {
   .od-layout { grid-template-columns:minmax(0,1.2fr) minmax(265px,1fr); }
-  .od-root { padding:12px; }
+  .game-panel[data-game-theme="a_feast_for_odin"] { padding:12px; }
   .od-grid-wrap { padding:5px; }
 }
 @media(max-width:760px) {
-  .od-root { padding:10px; font-size:13px; }
+  .game-panel[data-game-theme="a_feast_for_odin"] { padding:10px; font-size:13px; }
   .od-hero { gap:8px; }
   .od-wordmark { font-size:27px; }
   .od-layout { display:flex; flex-direction:column; gap:11px; }
@@ -137,7 +139,7 @@
   .od-card-list { max-height:420px; }
 }
 @media(max-width:360px) {
-  .od-root { padding:8px; }
+  .game-panel[data-game-theme="a_feast_for_odin"] { padding:8px; }
   .od-wordmark { font-size:23px; }
   .od-season { font-size:10px; }
   .od-season strong { font-size:13px; }

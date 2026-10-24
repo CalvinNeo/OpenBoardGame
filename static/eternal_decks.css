@@ -1,6 +1,7 @@
 #eternalDecksPanel { min-width: 0; }
 #eternalDecksPanel.eternal-decks-has-dock { padding-bottom: var(--ed-dock-height, 90px); }
-.eternal-decks-shell { --ed-ink: #173c32; --ed-line: #cfdbcd; --ed-gold: #e2bd72; color: var(--ed-ink); background: #f3f3e9; border: 1px solid #cbd6c8; border-radius: 18px; padding: 22px; font-size: 14px; line-height: 1.5; }
+.game-panel[data-game-theme="eternal_decks"] { --ed-ink: #173c32; --ed-line: #cfdbcd; --ed-gold: #e2bd72; color: var(--ed-ink); background: #f3f3e9; border: 1px solid #cbd6c8; border-radius: 18px; padding: 22px; font-size: 14px; line-height: 1.5; }
+.eternal-decks-shell { min-width: 0; }
 .eternal-decks-shell *, .eternal-decks-dialog * { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
 .eternal-decks-shell h2, .eternal-decks-shell h3, .eternal-decks-shell p { margin: 0; }
 .eternal-decks-shell h3 { font-size: 15px; }
@@ -136,13 +137,13 @@
 .eternal-decks-config-toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .eternal-decks-config-toggle input { width: auto; flex: 0 0 auto; margin: 0; }
 @media (max-width: 1050px) {
-  .eternal-decks-shell { padding: 14px; }
+  .game-panel[data-game-theme="eternal_decks"] { padding: 14px; }
   .eternal-decks-layout { grid-template-columns: minmax(0, 1.5fr) minmax(230px, 1fr); gap: 10px; }
   .eternal-decks-seven, .eternal-decks-five { gap: 4px; }
   .eternal-decks-field, .eternal-decks-river { padding: 9px; }
 }
 @media (max-width: 760px) {
-  .eternal-decks-shell { padding: 12px; border-radius: 14px; font-size: 13px; }
+  .game-panel[data-game-theme="eternal_decks"] { padding: 12px; border-radius: 14px; font-size: 13px; }
   .eternal-decks-title { margin-bottom: 10px; }
   .eternal-decks-eyebrow { display: none; }
   .eternal-decks-title h2 { font-size: 24px; line-height: 1.15; }
@@ -187,7 +188,7 @@
   .eternal-decks-sleeping button { padding: 4px 6px; }
 }
 @media (max-width: 420px) {
-  .eternal-decks-shell { padding: 8px; border-radius: 12px; font-size: 12px; }
+  .game-panel[data-game-theme="eternal_decks"] { padding: 8px; border-radius: 12px; font-size: 12px; }
   .eternal-decks-title { gap: 7px; }
   .eternal-decks-title h2 { font-size: 21px; }
   .eternal-decks-title h2 small { display: block; font-size: 12px; }

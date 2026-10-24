@@ -291,12 +291,31 @@
     margin-bottom: 0;
   }
 
-  .decrypto-review-actions {
-    margin-bottom: 10px;
+  #decryptoPanel .decrypto-review-dock {
+    position: fixed;
+    z-index: 190;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    min-height: 88px;
+    max-height: calc(100dvh - 24px);
+    padding: 10px 6px;
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 1.4;
+    border: 1px solid #c5d4e9;
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+    background: #e8f0fc;
+    color: #1e3a8a;
+    box-shadow: 0 2px 10px #0f172a22;
+    cursor: pointer;
   }
 
-  .decrypto-review-actions:has(.hidden) {
-    display: none;
+  #decryptoPanel .decrypto-review-dock:hover {
+    background: #dbeafe;
   }
 
   .decrypto-summary-body {
@@ -578,6 +597,10 @@
   @media (max-width: 720px) {
     #decryptoPanel {
       padding-bottom: 10px;
+    }
+
+    #decryptoPanel:has(#decryptoReviewBtn:not(.hidden)) {
+      padding-right: 24px;
     }
 
     #decryptoTeams {

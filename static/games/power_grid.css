@@ -1,4 +1,5 @@
-.power-grid-panel { --pg-green:#214f42; --pg-ink:#183a32; --pg-muted:#61776c; --pg-line:#d7dfd1; --pg-paper:#fcfcf3; color:var(--pg-ink); background:#eef1e6; border:1px solid #d0dbc9; border-radius:18px; padding:clamp(12px,2vw,22px); min-width:0; font-family:"Work Sans",Arial,sans-serif; }
+.game-panel[data-game-theme="power_grid"] { --pg-green:#214f42; --pg-ink:#183a32; --pg-muted:#61776c; --pg-line:#d7dfd1; --pg-paper:#fcfcf3; color:var(--pg-ink); background:#eef1e6; border:1px solid #d0dbc9; border-radius:18px; padding:clamp(12px,2vw,22px); min-width:0; font-family:"Work Sans",Arial,sans-serif; }
+.power-grid-panel { min-width:0; }
 .power-grid-panel *, .pg-dialog *, #powerGridConfigBox * { box-sizing:border-box; min-width:0; }
 .power-grid-panel h2, .power-grid-panel h3, .pg-dialog h2 { margin:0; }
 .power-grid-panel button, .pg-dialog button { border:1px solid #bccbbd; border-radius:7px; padding:9px 12px; color:var(--pg-ink,#183a32); background:#fffef7; font:inherit; font-size:12px; cursor:pointer; white-space:normal; overflow-wrap:anywhere; }
@@ -8,7 +9,7 @@
 .power-grid-panel .pg-primary { background:var(--pg-green); color:#fffced; border-color:var(--pg-green); }
 .power-grid-panel .pg-primary:not(:disabled):hover { background:#326e57; color:white; }
 .pg-heading, .pg-section-heading, .pg-status-line { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.pg-heading { margin-bottom:16px; flex-wrap:wrap; }
+.pg-heading { margin-bottom:8px; flex-wrap:wrap; }
 .pg-heading h2 { font-size:clamp(24px,3vw,34px); letter-spacing:-.04em; font-weight:750; margin-top:3px; }
 .pg-heading h2 span { font-size:13px; font-weight:500; letter-spacing:.12em; display:inline-block; margin-left:8px; }
 .pg-eyebrow { font-size:9px; letter-spacing:.17em; color:var(--pg-muted); }

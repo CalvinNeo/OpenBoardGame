@@ -1,4 +1,5 @@
 [
   {"pack_id": "basic", "pack_name": "Basic", "language": "zh-CN", "total_count": 216, "path": "basicwords.json"},
-  {"pack_id": "ext1", "pack_name": "Ext1", "language": "zh-CN", "total_count": 250, "path": "ext1words.json"}
+  {"pack_id": "ext1", "pack_name": "Ext1", "language": "zh-CN", "total_count": 250, "path": "ext1words.json"},
+  {"pack_id": "ext2", "pack_name": "Ext2", "language": "zh-CN", "total_count": 500, "path": "ext2words.json"}
 ]

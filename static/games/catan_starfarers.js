@@ -48,6 +48,7 @@
   let pendingTimer = null;
   let selectedShipId = null;
   let explainMode = false;
+  let suppressClickUntil = 0;
   let preferredLanguage = "en";
   let draftKey = "";
   let discardDraft = blankBundle();
@@ -64,7 +65,6 @@
   const explainCloseBtn = document.getElementById("catanStarfarersExplainCloseBtn");
   const helpContent = document.getElementById("catanStarfarersHelpContent");
   const explainContent = document.getElementById("catanStarfarersExplainContent");
-  const brandKickerEl = document.getElementById("catanStarfarersBrandKicker");
   const turnLabelEl = document.getElementById("catanStarfarersTurnLabel");
   const phaseLabelEl = document.getElementById("catanStarfarersPhaseLabel");
   const setupLabelEl = document.getElementById("catanStarfarersSetupLabel");
@@ -234,7 +234,6 @@
   }
 
   function applyStaticCopy() {
-    if (brandKickerEl) brandKickerEl.textContent = localized("Frontier command · 2019 base game", "边疆指挥部 · 2019基础版");
     if (turnLabelEl) turnLabelEl.textContent = localized("Turn", "回合");
     if (phaseLabelEl) phaseLabelEl.textContent = localized("Phase", "阶段");
     if (setupLabelEl) setupLabelEl.textContent = localized("Setup", "布局");
@@ -1163,9 +1162,11 @@
   }
 
   document.addEventListener("pointerdown", (event) => {
+    suppressClickUntil = 0;
     if (!explainMode) return;
     const hit = document.elementFromPoint(event.clientX, event.clientY);
     if (!hit) return;
+    suppressClickUntil = performance.now() + 650;
     if (hit === explainBtn || explainBtn && explainBtn.contains(hit)) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -1176,6 +1177,13 @@
     event.preventDefault();
     event.stopImmediatePropagation();
     if (target) openExplanation(target.dataset.catanStarfarersExplain);
+  }, true);
+
+  document.addEventListener("click", (event) => {
+    if (!event.detail || performance.now() >= suppressClickUntil) return;
+    suppressClickUntil = 0;
+    event.preventDefault();
+    event.stopImmediatePropagation();
   }, true);
 
   document.addEventListener("keydown", (event) => {

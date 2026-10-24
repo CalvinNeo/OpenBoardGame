@@ -1,4 +1,4 @@
-.moshimo-yusha-panel {
+.game-panel[data-game-theme="moshimo_yusha"] {
     --my-ink: #263547;
     --my-muted: #657283;
     --my-paper: #fffcf4;
@@ -9,6 +9,7 @@
     border-radius: 16px;
     min-width: 0;
 }
+.moshimo-yusha-panel { min-width: 0; }
 .moshimo-yusha-panel *,
 .my-dialog * {
     box-sizing: border-box;
@@ -446,6 +447,12 @@ body.my-needs-action #roomControlsPanel.collapsed {
     }
 }
 @media (max-width: 480px) {
+    .game-panel[data-game-theme="moshimo_yusha"] .game-panel-title {
+        display: contents;
+    }
+    .game-panel[data-game-theme="moshimo_yusha"] .game-panel-title h2 {
+        flex-basis: 100%;
+    }
     .my-brand {
         padding: 13px;
     }

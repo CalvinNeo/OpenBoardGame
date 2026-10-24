@@ -128,7 +128,7 @@ async function pointClick(page, locator, touch=false) {
     await host.evaluate(()=>{socket.emit('room:leave',{});window.maskmenTestActions=[];sendAction=a=>maskmenTestActions.push(a);setRoomControlsCollapsed(true);});
     await render(host,'playing');
     await host.locator('#maskmenHand button[data-mask="blue"]').click();
-    await host.locator('.maskmen-heading h2').click();assert.equal(await host.locator('#maskmenSelection').isVisible(),false);
+    await host.locator('#maskmenStatus').click();assert.equal(await host.locator('#maskmenSelection').isVisible(),false);
     await host.locator('#maskmenHand button[data-mask="blue"]').click();
     await host.keyboard.press('Escape');assert.equal(await host.locator('#maskmenSelection').isVisible(),false);
     await host.locator('#maskmenHand button[data-mask="blue"]').click();

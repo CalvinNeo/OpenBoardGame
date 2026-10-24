@@ -1984,7 +1984,7 @@ function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
   const restoreFocus = collapsed && roomControlsPanel.contains(document.activeElement);
   roomControlsPanel.classList.toggle("collapsed", collapsed);
   if (roomControlsToggleBtn) {
-    roomControlsToggleBtn.textContent = collapsed ? "Show" : "Hide";
+    roomControlsToggleBtn.textContent = collapsed ? "Show RC" : "Hide";
     roomControlsToggleBtn.setAttribute("aria-expanded", (!collapsed).toString());
   }
   roomControlsAutoCollapsed = auto && collapsed;

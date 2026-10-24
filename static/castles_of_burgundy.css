@@ -1,4 +1,4 @@
-#burgundyPanel {
+.game-panel[data-game-theme="castles_of_burgundy"] {
   --burgundy-ink: #392c32;
   --burgundy-muted: #78666c;
   --burgundy-wine: #7f2947;
@@ -11,6 +11,7 @@
   max-width: 100%;
   font-size: 13px;
 }
+#burgundyPanel { min-width: 0; max-width: 100%; }
 #burgundyPanel *, .burgundy-dialog * { box-sizing: border-box; }
 #burgundyPanel h2, #burgundyPanel h3, #burgundyPanel h4, #burgundyPanel p { margin: 0; }
 #burgundyPanel button, .burgundy-dialog button {
@@ -38,7 +39,7 @@
 .burgundy-eyebrow { font-size: 9px; letter-spacing: .16em; color: #98664c; }
 #burgundyPanel .burgundy-header h2 { font-size: clamp(22px, 2.4vw, 32px); font-family: Georgia, serif; color: var(--burgundy-wine); line-height: 1.3; margin: 5px 0; }
 .burgundy-header p { color: var(--burgundy-muted); font-family: Georgia, serif; font-style: italic; }
-.burgundy-header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex-shrink: 0; }
+.burgundy-header-right { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px; width: 100%; }
 .burgundy-header-right strong { font-size: 12px; }
 .burgundy-header-right small { font-size: 11px; color: var(--burgundy-muted); }
 .burgundy-inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -145,7 +146,7 @@
   .burgundy-card { padding: 10px; }
 }
 @media (max-width: 760px) {
-  #burgundyPanel { padding: 10px; }
+  .game-panel[data-game-theme="castles_of_burgundy"] { padding: 10px; }
   .burgundy-layout { display: flex; flex-direction: column; }
   .burgundy-right { display: contents; }
   .burgundy-action-card { order: 0; width: 100%; }
@@ -174,6 +175,5 @@
 @media (max-width: 360px) {
   #burgundyPanel .burgundy-header h2 { font-size: 21px; }
   #burgundyPanel .burgundy-header button { padding: 5px 6px; font-size: 11px; }
-  .burgundy-header-right { max-width: 130px; }
   .burgundy-player small { font-size: 10px; }
 }

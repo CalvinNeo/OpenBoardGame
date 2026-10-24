@@ -9,7 +9,7 @@
   <button id="powerGridExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
 </template>
 <template data-game-target="powerGridPanel" data-game-mode="contents">
-  <header class="pg-heading"><div><span class="pg-eyebrow">THE ENERGY NETWORK · CLASSIC GERMANY</span><h2>POWER GRID <span>电力公司</span></h2></div><div id="powerGridRound" class="pg-round" data-pg-explain="steps" data-pg-tip="Round：当前轮次。Step：决定城市容纳量与补货速度。" tabindex="0">Round 1 · Step 1</div></header>
+  <header class="pg-heading"><div id="powerGridRound" class="pg-round" data-pg-explain="steps" data-pg-tip="Round：当前轮次。Step：决定城市容纳量与补货速度。" tabindex="0">Round 1 · Step 1</div></header>
   <div id="powerGridPhases" class="pg-phases" aria-label="Round phases"></div>
   <div class="pg-status-line"><strong id="powerGridStatus" role="status" aria-live="polite">Waiting to start</strong><span id="powerGridThreshold" data-pg-explain="winning" data-pg-tip="🏁：触发终局的城市数；仍需有足够电厂与燃料才能获胜。" tabindex="0"></span></div>
   <div id="powerGridStats" class="pg-stats"></div>

@@ -66,7 +66,7 @@ async function render(page,key) {
     setGamePanelVisibility('a_feast_for_odin');renderGameState({room_id:'odin-test',game_type:'a_feast_for_odin',view});
     window.scrollTo(0,0);
   },fixtures[key]);
-  await page.locator('.od-wordmark').waitFor({state:'visible'});
+  await page.locator('.od-season > strong').waitFor({state:'visible'});
 }
 async function intercept(page) {
   await page.evaluate(()=>{
@@ -99,7 +99,7 @@ async function intercept(page) {
     await live.waitForFunction(()=>currentRoomState.players.every(p=>p.ready));
     await live.evaluate(()=>emitRoomStart());
     await live.waitForFunction(()=>lastGameStatePayload?.view?.game_id==='a_feast_for_odin');
-    await live.locator('.od-wordmark').waitFor({state:'visible'});
+    await live.locator('.od-season > strong').waitFor({state:'visible'});
     assert.equal(await live.evaluate(()=>lastGameStatePayload.view.rounds),6);
     // A real submitted action, followed by automatic bot resolution and a round barrier.
     for(let i=0;i<90;i++) {
@@ -199,7 +199,7 @@ async function intercept(page) {
     await page.getByRole('button',{name:'Confirm placement',exact:true}).click();
     assert.deepEqual(await page.evaluate(()=>odinCaptured.at(-1).action),{type:'place',revision:fixtures.action.revision,board:0,good:'rune',x:0,y:10,rotation:1,flip:true});
     await render(page,'action');await page.locator('[data-od-action="good:rune"]').click();
-    await page.locator('.od-wordmark').click();assert.equal(await page.locator('.od-placement').count(),0);
+    await page.locator('.od-season > strong').click();assert.equal(await page.locator('.od-placement').count(),0);
     await render(page,'feast');
     await page.locator('.od-feast .od-options button').first().click();
     assert.equal(await page.locator('.od-feast .od-selection').count(),1);

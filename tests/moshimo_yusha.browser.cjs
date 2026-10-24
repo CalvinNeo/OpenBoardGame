@@ -253,7 +253,7 @@ async function nextAll(pages) {
         assert.equal(await page.evaluate(() => myTestActions.length), 0);
         await page.keyboard.press("Escape");
         await page.locator("#myHand .my-card").first().click();
-        await page.locator(".my-brand h2").click();
+        await page.locator("#myStatus").click();
         assert.equal(await page.locator(".my-card.is-selected").count(), 0);
         await page.locator("#myHand .my-card").first().click();
         await page.keyboard.press("Escape");

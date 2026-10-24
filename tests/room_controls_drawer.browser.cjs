@@ -16,6 +16,7 @@ const output = 'build/room-controls-drawer';
     const toggle = page.locator('#roomControlsToggleBtn');
     const collapse = page.locator('#roomControlsCollapseBtn');
     const body = page.locator('#roomControlsBody');
+    const expandHint = page.locator('.room-controls-expand-hint');
     async function setOpen(open) {
         if ((await toggle.getAttribute('aria-expanded') === 'true') !== open) {
             await (open ? toggle : collapse).click();
@@ -82,8 +83,19 @@ const output = 'build/room-controls-drawer';
             assert.equal(closed.inert, false);
             assert.equal(await collapse.isVisible(), false);
             assert.equal(await toggle.evaluate(element => getComputedStyle(element).fontSize), '0px', 'No Show or Hide label in the mobile bar');
+            assert.equal(await expandHint.isVisible(), true, 'Collapsed RC explains how to reopen it');
+            assert.equal((await expandHint.textContent()).trim(), 'Tap to show RC');
+            const hintRect = await expandHint.boundingBox();
+            const nameRect = await page.locator('.room-controls-heading').boundingBox();
+            const explainRect = await page.locator('#mobileExplainSlot > button').boundingBox();
+            assert(nameRect.x + nameRect.width <= hintRect.x, 'Long player names must not overlap the hint');
+            assert(hintRect.x + hintRect.width <= explainRect.x, 'Hint must not cover Explain');
+            assert.equal(await page.locator('.room-controls-heading').evaluate(element => getComputedStyle(element).textOverflow), 'ellipsis');
+            assert.equal(await page.locator('.room-controls-expand-arrow').isVisible(), true);
             assert.equal((await page.locator('#mobileExplainSlot > button').boundingBox()).width, 64);
-            await setOpen(true);
+            await page.touchscreen.tap(hintRect.x + hintRect.width / 2, hintRect.y + hintRect.height / 2);
+            await page.waitForFunction(() => document.body.classList.contains('room-controls-drawer-open'));
+            assert.equal(await expandHint.isVisible(), false, 'Hide the expand hint while the drawer is open');
             await body.evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished)));
             const opened = await geometry();
             assert.equal(opened.game.y, closed.game.y, 'Opening the drawer must not move Game');
@@ -184,6 +196,9 @@ const output = 'build/room-controls-drawer';
             if (width === 1280) await page.screenshot({ path: `${output}/desktop-expanded.png` });
             await toggle.click();
             assert(await page.evaluate(() => document.body.classList.contains('room-controls-drawer-closed')));
+            assert.equal(await toggle.textContent(), 'Show RC');
+            assert.equal(await toggle.getAttribute('aria-label'), 'Open Room Controls');
+            assert.equal(await expandHint.isVisible(), false, 'Desktop uses the labeled Show RC tab');
             assert.equal((await geometry()).overflow, false);
         }
         await page.setViewportSize({ width: 390, height: 844 });

@@ -1,6 +1,7 @@
-#coltExpressPanel { min-width:0; --ce-ink:#302a23; --ce-muted:#746c5b; --ce-gold:#cf9c51; --ce-navy:#24343c; }
+.game-panel[data-game-theme="colt_express"] { --ce-ink:#302a23; --ce-muted:#746c5b; --ce-gold:#cf9c51; --ce-navy:#24343c; color:var(--ce-ink); background:#efe9dc; border:1px solid #c2b79e; border-radius:16px; padding:14px; }
+#coltExpressPanel { min-width:0; }
 #coltExpressPanel *, .ce-dialog * { box-sizing:border-box; min-width:0; }
-.ce-surface { color:var(--ce-ink); background:#efe9dc; border:1px solid #c2b79e; border-radius:16px; overflow:hidden; overflow-wrap:anywhere; }
+.ce-surface { min-width:0; overflow-wrap:anywhere; }
 .ce-surface h2,.ce-surface h3,.ce-surface p { margin:0; }
 #coltExpressPanel button,.ce-dialog button { margin:0; min-height:36px; padding:8px 10px; border:1px solid #c9bda6; border-radius:7px; color:#393024; background:#faf6ec; box-shadow:none; font-size:12px; line-height:1.45; white-space:normal; overflow-wrap:anywhere; }
 #coltExpressPanel button:hover:not(:disabled),.ce-dialog button:hover { background:#e9d7b7; border-color:#b49056; }
@@ -10,16 +11,16 @@
 .ce-banner h2 { font-family:Georgia,"Songti SC",serif; font-size:clamp(27px,3vw,37px); letter-spacing:.12em; line-height:1.25; }
 .ce-eyebrow { font-size:10px; font-weight:600; color:#d7b880; letter-spacing:.25em; margin-bottom:8px; }
 .ce-banner p { color:#c9cec8; font-size:11px; margin-top:8px; letter-spacing:.07em; }
-.ce-ticket { flex:0 0 82px; padding:10px 8px; text-align:center; color:#e8c688; border:1px solid #9d8965; border-radius:9px; font-family:Georgia,serif; }
-.ce-ticket span { display:block; font-size:9px; letter-spacing:.15em; }
-.ce-ticket strong { display:block; font-size:26px; line-height:1.4; font-weight:normal; }
+.ce-ticket { display:inline-flex; align-items:center; gap:5px; padding:4px 7px; color:#654722; border:1px solid #bca77f; border-radius:6px; }
+.ce-ticket span { font-size:10px; }
+.ce-ticket strong { font-size:12px; }
 .ce-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
 .ce-status { padding:10px 16px; display:flex; align-items:center; flex-wrap:wrap; gap:7px 12px; background:#e4dccb; border-bottom:1px solid #cec2a9; font-size:12px; }
 .ce-status.is-yours { border-left:4px solid #a74632; background:#f2dfbe; padding-left:12px; }
 .ce-status strong { color:#654722; }
 .ce-status .ce-turn-copy { flex:1 1 180px; }
 .ce-live { width:7px; height:7px; border-radius:50%; background:#a74632; display:inline-block; margin-right:6px; }
-.ce-content { padding:14px; }
+.ce-content { padding-top:12px; }
 .ce-round { display:flex; flex-wrap:wrap; align-items:center; gap:9px 16px; padding:10px 12px; margin-bottom:13px; border:1px solid #cfc3ac; background:#f8f3e8; border-radius:9px; }
 .ce-round-title { font-size:12px; font-weight:700; flex:1 1 150px; }
 .ce-round-turns { display:flex; flex-wrap:wrap; gap:5px; }
@@ -130,8 +131,8 @@ body.ce-needs-action #roomControlsPanel.collapsed,body.ce-needs-action #roomCont
 @media(max-width:800px) { .ce-columns { grid-template-columns:minmax(0,1fr) minmax(230px,.9fr); }.ce-train { grid-template-columns:repeat(2,minmax(0,1fr)); }.ce-crew { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:640px) {
   .ce-banner { padding:12px 13px; gap:9px; }.ce-banner h2 { font-size:25px; }.ce-eyebrow { font-size:9px; letter-spacing:.12em; margin-bottom:5px; }.ce-banner p { display:none; }
-  .ce-ticket { flex-basis:55px; padding:5px 4px; }.ce-ticket strong { font-size:20px; line-height:1.2; }.ce-ticket span { font-size:8px; letter-spacing:.07em; }
-  .ce-content { padding:9px; }.ce-status { padding:10px 11px; font-size:11px; }.ce-status.is-yours { padding-left:7px; }.ce-status .ce-turn-copy { flex-basis:150px; }
+  .ce-ticket { padding:3px 5px; }.ce-ticket strong { font-size:11px; }
+  .game-panel[data-game-theme="colt_express"] { padding:9px; }.ce-content { padding-top:9px; }.ce-status { padding:10px 11px; font-size:11px; }.ce-status.is-yours { padding-left:7px; }.ce-status .ce-turn-copy { flex-basis:150px; }
   .ce-round { gap:7px; padding:8px; margin-bottom:9px; }.ce-round-title { flex-basis:70px; }.ce-round-step { padding:4px 5px; font-size:10px; }
   .ce-columns { display:flex; flex-direction:column; gap:10px; }.ce-main { width:100%; }.ce-actions-panel { order:-1; width:100%; }.ce-box { padding:10px; }
   .ce-hand { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }#coltExpressPanel .ce-card { min-height:76px; gap:4px; }.ce-card .ce-card-icon { font-size:23px; }.ce-card .ce-card-small { font-size:10px; }

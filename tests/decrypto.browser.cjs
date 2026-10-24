@@ -113,6 +113,21 @@ async function bounds(page, label) {
           !["auto", "scroll", "hidden", "clip"].includes(style.overflowX) && !element.matches("input, select, option");
         return outsideViewport || contentOverflow;
       }).map((element) => `${element.id || element.className || element.tagName}: ${element.textContent.slice(0, 45)}`);
+    const dock = document.getElementById("decryptoReviewBtn");
+    if (dock.checkVisibility() && !document.body.classList.contains("decrypto-dialog-open")) {
+      const tab = dock.getBoundingClientRect();
+      if (getComputedStyle(dock).position !== "fixed" || Math.abs(tab.right - innerWidth) > 1 || tab.top < 0 || tab.bottom > innerHeight) issues.push("Review must dock inside the right viewport edge");
+      for (const control of document.querySelectorAll(".decrypto-main button, .decrypto-main select, .decrypto-main input, #decryptoHistory")) {
+        if (!control.checkVisibility()) continue;
+        const box = control.getBoundingClientRect();
+        if (Math.min(box.right, tab.right) > Math.max(box.left, tab.left) && Math.min(box.bottom, tab.bottom) > Math.max(box.top, tab.top)) issues.push("Review dock overlaps " + control.id);
+      }
+      const workspace = document.querySelector("#decryptoPanel .decrypto-workspace");
+      const top = workspace.getBoundingClientRect().top;
+      dock.style.display = "none";
+      if (Math.abs(workspace.getBoundingClientRect().top - top) > 1) issues.push("Review dock must not occupy a layout row");
+      dock.style.removeProperty("display");
+    }
     for (const row of document.querySelectorAll(".decrypto-result-table tbody tr")) {
       const actual = row.cells[row.cells.length - 2]?.querySelector(".decrypto-sequence-item");
       const guess = row.cells[row.cells.length - 1]?.querySelector(".decrypto-sequence-item");
@@ -149,7 +164,7 @@ async function bounds(page, label) {
         }
       }
     }
-    console.log(`All ${Object.keys(fixtures).length} states fit at 320, 390, 1024 and 1440px; result positions align.`);
+    console.log(`All ${Object.keys(fixtures).length} states fit at 320, 390, 1024 and 1440px; Review docks without a layout row or obstructing controls/history.`);
 
     await render(page, "round_end");
     const resultRows = await page.locator(".decrypto-result-table tbody").evaluateAll((rows) => rows.map((row) => ({
@@ -310,7 +325,10 @@ async function bounds(page, label) {
       assert.equal(await page.locator("#decryptoHelpModal").isVisible(), false);
       await page.locator("#decryptoReviewBtn").click();
       assert.equal(await page.locator("#decryptoSummary").isVisible(), true);
+      assert.equal(await page.locator("#decryptoReviewBtn").getAttribute("aria-expanded"), "true");
       await page.locator("#decryptoReviewCloseBtn").click();
+      assert.equal(await page.locator("#decryptoReviewBtn").getAttribute("aria-expanded"), "false");
+      assert.equal(await page.locator("#decryptoReviewBtn").getAttribute("aria-label"), "Last Round Review · 2");
       assert.equal(await page.locator("#decryptoHistory").isVisible(), true);
     }
     await render(page, "game_over");

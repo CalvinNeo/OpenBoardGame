@@ -267,7 +267,7 @@
         root.classList.toggle("od-pending", turn);
         const resources = ["silver", "wood", "stone", "ore"].map(g => passive(`${good(g).icon} ${p.stock[g] || 0}`, goodName(g))).join("");
         const harvest = view.catalog.harvest[view.round-1];
-        root.innerHTML = `<header class="od-hero"><div><div class="od-wordmark">ODIN</div><div class="od-subtitle">奥丁的盛宴 · A FEAST FOR ODIN</div></div><div class="od-season"><strong>Round ${view.round} / ${view.rounds}</strong><span>${phases[view.phase]}</span>${passive(harvest ? `🌾 收获 ${harvest}` : "🌾 无收获", "本轮开始时自动获得对应等级的橙色农产品。")}</div></header>
+        root.innerHTML = `<header class="od-hero"><div class="od-season"><strong>Round ${view.round} / ${view.rounds}</strong><span>${phases[view.phase]}</span>${passive(harvest ? `🌾 收获 ${harvest}` : "🌾 无收获", "本轮开始时自动获得对应等级的橙色农产品。")}</div></header>
             <div class="od-players ${view.players.length === 1 ? "od-single" : ""}" style="--od-players:${view.players.length}">${view.players.map((other,i) => button(`<span class="od-player-name">${other.player_id === view.first_player ? "🫎 " : ""}${esc(other.name)}${other.is_bot ? " · AI" : ""}</span><span class="od-score">${other.projected.total}⭐</span><small>🧑‍🌾 ${other.workers} · 🪙 ${other.stock.silver || 0} · 收入 ${other.income}</small>`, `player:${i}`, "score", false, `class="od-player ${other.player_id === view.current_turn ? "od-turn" : ""}" style="--od-player:${playerColors[i]}" aria-pressed="${inspected === other.player_id}"`)).join("")}</div>
             <div class="od-resources">${resources}${passive(`🪙 收入 ${p.income}`, "income")}${passive(`🍽️ ${p.feast_length} 格`, "feast")}${passive(`🐑 ${p.stock.sheep || 0}+${p.stock.pregnant_sheep || 0}`, "绵羊(🐑)：普通数量 + 怀孕数量。两只普通羊隔轮繁殖；怀孕羊下次产一只羊。")}${passive(`🐄 ${p.stock.cattle || 0}+${p.stock.pregnant_cattle || 0}`, "牛(🐄)：普通数量 + 怀孕数量。繁殖规则同羊；普通牛 3 分，怀孕牛 4 分。")}</div>
             ${feastHtml()}${reviewHtml()}<div class="od-layout"><section class="od-panel"><nav class="od-tabs" aria-label="Player board">${[["home","🏡 拼板"],["harbor","⛵ 港湾"],["islands","🧭 探索"],["jobs","📜 职业"]].map(([k,label]) => button(label, `tab:${k}`, `查看${label}。`, false, `aria-pressed="${tab === k}"`)).join("")}</nav><div class="od-board-body">${({home:boardHtml, harbor:harborHtml, islands:islandsHtml, jobs:jobsHtml})[tab]()}</div></section><aside class="od-console" aria-label="Actions">${consoleHtml()}</aside></div>
@@ -393,14 +393,16 @@
         openDialog("Explain", target.dataset.odExplain);
     }
     document.addEventListener("pointerdown", event => {
+        suppressedUntil = 0;
         if (!explaining || !activePanel() || exempt(event.target)) return;
         event.preventDefault(); event.stopImmediatePropagation(); suppressedUntil = Date.now()+650;
         const target = document.elementsFromPoint(event.clientX,event.clientY).map(el => el.closest("[data-od-explain]")).find(el => el && root.contains(el));
         showExplanation(target);
     }, true);
     document.addEventListener("click", event => {
-        if (!activePanel() || exempt(event.target)) return;
-        if (Date.now() < suppressedUntil) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+        if (!activePanel()) return;
+        if (event.detail && Date.now() < suppressedUntil) { suppressedUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
+        if (exempt(event.target)) return;
         if (explaining) { event.preventDefault(); event.stopImmediatePropagation(); showExplanation(event.target.closest("[data-od-explain]")); }
     }, true);
     document.addEventListener("keydown", event => {

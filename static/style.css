@@ -100,6 +100,7 @@ h1 {
 }
 
 .room-controls-title-short,
+.room-controls-expand-hint,
 .room-controls-backdrop,
 .room-controls-collapse-btn,
 .mobile-explain-slot {
@@ -2455,8 +2456,38 @@ button.splendor-card {
   }
 
   #roomControlsPanel .room-controls-heading {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 16px;
     line-height: 1.25;
+  }
+
+  #roomControlsPanel > .panel-header > .panel-header-actions {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  #roomControlsPanel.collapsed .room-controls-expand-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #365b80;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .room-controls-expand-arrow {
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
   }
 
   #roomControlsPanel .room-controls-body {

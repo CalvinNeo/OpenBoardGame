@@ -133,7 +133,7 @@ const DECRYPTO_HELP_TEXT = `
     <li>History stays on the game board while writing clues or guessing, including on phones. Long histories scroll inside their own panel.</li>
     <li>Last Round is grouped by the team making the guess: Decrypt targets its own clues; Intercept targets the opposing team's clues.</li>
     <li>Correct order and Submitted order show the same three positions. Only your team's keywords can appear. Opponent keywords are never shown, including in the final review; only their public clues and numbers appear.</li>
-    <li>Close or Esc dismisses the review without confirming. Use Last Round Review to reopen it. The round stays paused until all players confirm.</li>
+    <li>Close or Esc dismisses the review without confirming. Use the right-edge Review tab to reopen Last Round Review. The round stays paused until all players confirm.</li>
     <li>Correct (✓, green) and Wrong (✗, red) mark each submitted position and the overall result. Intercepts (🎯) reach 2 to win; Miscommunications (⚠) reach 2 to lose.</li>
   </ul>
 `;
@@ -157,7 +157,7 @@ const DECRYPTO_BUTTON_EXPLANATIONS = {
   },
   decryptoReviewBtn: {
     name: "Last Round Review",
-    description: "Reopen the latest round's results. Each team's own decrypt and its intercept of the opponent are listed separately. Opponent keywords are never displayed. Closing the dialog does not confirm readiness.",
+    description: "The right-edge Review tab reopens the latest round's results. Each team's own decrypt and its intercept of the opponent are listed separately. Opponent keywords are never displayed. Closing the dialog does not confirm readiness.",
   },
 };
 
@@ -1225,7 +1225,8 @@ function renderDecryptoSummary(view) {
   }
   decryptoReviewBtn.classList.remove("hidden");
   document.getElementById("decryptoSummaryTitle").textContent = `Last Round Review · ${summary.round}`;
-  decryptoReviewBtn.textContent = `Last Round Review · ${summary.round}`;
+  decryptoReviewBtn.textContent = `Review · ${summary.round}`;
+  decryptoReviewBtn.setAttribute("aria-label", `Last Round Review · ${summary.round}`);
   const scrollTop = decryptoSummaryBody.scrollTop;
   decryptoSummaryBody.replaceChildren();
   ["white", "black"].forEach((teamId) => {
@@ -1460,6 +1461,7 @@ function setDecryptoModalVisible(modal, visible) {
 function setDecryptoReviewOpen(open) {
   if (open && !currentDecryptoView?.last_round_summary) return;
   if (!open) exitDecryptoExplainMode();
+  decryptoReviewBtn.setAttribute("aria-expanded", String(open));
   setDecryptoModalVisible(decryptoSummary, open);
 }
 

@@ -13,6 +13,17 @@ const games = [
     {id: 'poison', prefix: 'poison', target: '#poisonPanel [data-poison-explanation]:visible'},
     {id: 'for_sale', prefix: 'forSale', target: '.fs-property:visible', surface: '.fs-surface', modal: '#forSaleDialog'},
     {id: 'terra_nova', prefix: 'terraNova', target: '[data-tn-explain="map"]:visible', modal: '#terraNovaModal'},
+    {id: 'bohnanza_dice', prefix: 'bohnanzaDice', target: '[data-bohnanza-dice-explain="dice"]:visible'},
+    {id: 'catan_starfarers', prefix: 'catanStarfarers', target: '[data-catan-starfarers-explain="status"]:visible', reopen: true},
+    {id: 'castles_of_burgundy', help: '[data-burgundy="help"]', explain: '[data-burgundy="explain"]', target: '[data-burgundy="player"]:visible', modal: '.burgundy-dialog', reopen: true},
+    {id: 'gaia_project', prefix: 'gaiaProject', target: 'button[data-gaia-explain]:visible', modal: '.gaia-modal'},
+    {id: 'take_time', prefix: 'takeTime', target: 'button[data-tt-explain]:visible', surface: '.take-time-shell', modal: '#takeTimeDialog'},
+    {id: 'eternal_decks', prefix: 'eternalDecks', target: 'button[data-ed-explain]:visible', surface: '.eternal-decks-shell', modal: '#eternalDecksDialog'},
+    {id: 'maskmen', prefix: 'maskmen', target: '#maskmenSeason', modal: '#maskmenDialog'},
+    {id: 'power_grid', prefix: 'powerGrid', target: '#powerGridRound', modal: '#powerGridDialog'},
+    {id: 'a_feast_for_odin', prefix: 'odin', target: '.od-season [data-od-explain]', surface: '.od-root', modal: '#odinDialog', reopen: true},
+    {id: 'moshimo_yusha', prefix: 'moshimoYusha', target: '#myConfirm', modal: '#moshimoYushaDialog'},
+    {id: 'colt_express', prefix: 'coltExpress', target: '.ce-ticket', surface: '.ce-surface', modal: '#coltExpressDialog', reopen: true},
 ];
 
 (async () => {
@@ -49,6 +60,7 @@ const games = [
             syncRoomControlsExplainButton();
             document.activeElement?.blur();
         });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const measurement = await page.evaluate(({id, surface}) => {
             const assets = GAME_ASSETS[id];
             const outer = document.querySelector('.game-panel');
@@ -56,6 +68,13 @@ const games = [
             const roots = [panel, ...(surface ? [panel.querySelector(surface)] : [])];
             const frame = node => {
                 const style = getComputedStyle(node);
+                let dockClearance = '0px';
+                if (node === panel && id === 'eternal_decks' && panel.classList.contains('eternal-decks-has-dock')) {
+                    dockClearance = style.getPropertyValue('--ed-dock-height').trim() || '90px';
+                }
+                if (node === panel && id === 'carcassonne' && innerWidth <= 720 && panel.matches('.carc-can-place.carc-panel-visible')) {
+                    dockClearance = '82px';
+                }
                 return {
                     id: node.id || node.className,
                     border: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth],
@@ -64,6 +83,7 @@ const games = [
                     background: style.backgroundColor,
                     image: style.backgroundImage,
                     shadow: style.boxShadow,
+                    dockClearance,
                 };
             };
             return {
@@ -75,6 +95,7 @@ const games = [
                 panelOverflow: panel.scrollWidth > panel.clientWidth + 1,
                 roots: roots.map(frame),
                 outerBackground: getComputedStyle(outer).backgroundImage,
+                outerColor: getComputedStyle(outer).backgroundColor,
             };
         }, game);
         assert.equal(measurement.theme, game.id);
@@ -82,10 +103,10 @@ const games = [
         assert.equal(measurement.pageOverflow, false, `${game.id} page overflow at ${width}`);
         assert.equal(measurement.outerOverflow, false, `${game.id} outer overflow at ${width}`);
         assert.equal(measurement.panelOverflow, false, `${game.id} panel overflow at ${width}`);
-        assert.notEqual(measurement.outerBackground, 'none', `${game.id} theme belongs on Game`);
+        assert(measurement.outerBackground !== 'none' || !['rgba(0, 0, 0, 0)', 'rgb(255, 255, 255)'].includes(measurement.outerColor), `${game.id} theme belongs on Game`);
         for (const root of measurement.roots) {
             assert.deepEqual(root.border, ['0px', '0px', '0px', '0px'], `${game.id} inner border: ${root.id}`);
-            assert.deepEqual(root.padding, ['0px', '0px', '0px', '0px'], `${game.id} inner padding: ${root.id}`);
+            assert.deepEqual(root.padding, ['0px', '0px', root.dockClearance, '0px'], `${game.id} inner padding: ${root.id}`);
             assert.equal(root.radius, '0px', `${game.id} inner radius: ${root.id}`);
             assert.equal(root.background, 'rgba(0, 0, 0, 0)', `${game.id} inner background: ${root.id}`);
             assert.equal(root.image, 'none', `${game.id} inner image: ${root.id}`);
@@ -97,8 +118,9 @@ const games = [
 
     async function interact(page, game, mobile) {
         const activate = async locator => mobile ? locator.tap() : locator.click();
-        const help = page.locator(`#${game.prefix}HelpBtn`);
-        const explain = page.locator(`#${game.prefix}ExplainBtn`);
+        const help = page.locator(game.help || `#${game.prefix}HelpBtn`);
+        const explainSelector = game.explain || `#${game.prefix}ExplainBtn`;
+        const explain = page.locator(explainSelector);
         const helpModal = page.locator(game.modal || `#${game.prefix}HelpModal`);
         const explainModal = page.locator(game.modal || `#${game.prefix}ExplainModal`);
         const before = await page.evaluate(() => lastGameStatePayload.state_version);
@@ -106,24 +128,27 @@ const games = [
         await helpModal.waitFor({state: 'visible'});
         await page.keyboard.press('Escape');
         await helpModal.waitFor({state: 'hidden'});
-        await activate(explain);
-        const target = page.locator(game.target).first();
-        await target.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
-        await page.waitForFunction(selector => {
-            const node = document.querySelector(selector);
-            return node && (node.classList.contains('active') || node.getAttribute('aria-pressed') === 'true');
-        }, `#${game.prefix}ExplainBtn`);
-        const bounds = await target.boundingBox();
-        assert(bounds, `${game.id} explanation target is visible`);
-        const horizontal = bounds.x + bounds.width / 2;
-        const vertical = bounds.y + bounds.height / 2;
-        if (mobile) await page.touchscreen.tap(horizontal, vertical);
-        else await page.mouse.click(horizontal, vertical);
-        await explainModal.waitFor({state: 'visible'});
-        await page.keyboard.press('Escape');
-        await explainModal.waitFor({state: 'hidden'});
-        if (await explain.evaluate(node => node.classList.contains('active') || node.getAttribute('aria-pressed') === 'true')) {
+        for (let attempt = 0; attempt < (game.reopen ? 2 : 1); attempt += 1) {
             await activate(explain);
+            const target = page.locator(game.target).first();
+            await target.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+            await page.waitForFunction(selector => {
+                const node = document.querySelector(selector);
+                return node && (node.classList.contains('active') || node.classList.contains('is-selected') || node.getAttribute('aria-pressed') === 'true');
+            }, explainSelector);
+            const bounds = await target.boundingBox();
+            assert(bounds, `${game.id} explanation target is visible`);
+            const horizontal = bounds.x + bounds.width / 2;
+            const vertical = bounds.y + bounds.height / 2;
+            if (mobile) await page.touchscreen.tap(horizontal, vertical);
+            else await page.mouse.click(horizontal, vertical);
+            await explainModal.waitFor({state: 'visible'});
+            if (game.reopen && attempt === 0) await activate(explainModal.locator('button').first());
+            else await page.keyboard.press('Escape');
+            await explainModal.waitFor({state: 'hidden'});
+            if (await explain.evaluate(node => node.classList.contains('active') || node.classList.contains('is-selected') || node.getAttribute('aria-pressed') === 'true')) {
+                await activate(explain);
+            }
         }
         assert.equal(await page.evaluate(() => lastGameStatePayload.state_version), before, `${game.id} Explain must not make a move`);
     }

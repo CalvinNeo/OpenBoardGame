@@ -1,13 +1,15 @@
-.gaia-panel { --gaia-bg:#0e1929; --gaia-card:#152438; --gaia-line:#2b4058; --gaia-muted:#a5b7ce; --gaia-accent:#81e2c1; min-width:0; padding:18px; color:#eaf1fa; background:var(--gaia-bg); border-radius:16px; font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+.game-panel[data-game-theme="gaia_project"] { --gaia-bg:#0e1929; --gaia-card:#152438; --gaia-line:#2b4058; --gaia-muted:#a5b7ce; --gaia-accent:#81e2c1; min-width:0; padding:18px; color:#eaf1fa; background:var(--gaia-bg); border-color:var(--gaia-line); border-radius:16px; font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+.gaia-panel { min-width:0; }
+.game-panel[data-game-theme="gaia_project"] > .panel-header button { color:#eaf1fa; background:var(--gaia-card); border-color:var(--gaia-line); }
 .gaia-panel *, .gaia-modal * { box-sizing:border-box; }
 .gaia-panel h2,.gaia-panel h3,.gaia-modal h2,.gaia-modal h3 { color:inherit; margin:0 0 12px; }
 .gaia-panel p { line-height:1.65; margin:9px 0; font-size:13px; overflow-wrap:anywhere; }
-.gaia-title { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+.gaia-title { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
 .gaia-title small { color:var(--gaia-accent); font-size:9px; letter-spacing:2px; }
 .gaia-title h2 { margin:6px 0 0; font-size:25px; letter-spacing:2px; }
 .gaia-title h2 span { color:var(--gaia-muted); font-size:11px; font-weight:400; letter-spacing:2px; margin-left:10px; }
-.gaia-status { font-size:12px; color:var(--gaia-muted); text-align:right; }
-.gaia-status span { display:block; font-size:10px; margin-top:4px; }
+.gaia-status { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:12px; color:var(--gaia-muted); }
+.gaia-status span { font-size:11px; }
 .gaia-status.your-turn { color:var(--gaia-accent); }
 .gaia-rounds { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; }
 .gaia-round-tile { border:1px solid var(--gaia-line); padding:9px 10px; border-radius:8px; background:#142136; min-width:0; }
@@ -161,5 +163,5 @@
 .gaia-dialog-body .gaia-bd { width:18px; height:18px; }
 .gaia-dialog-body a { color:#9adcff; }
 .gaia-dialog-body summary { cursor:pointer; padding:6px 0; }
-@media(max-width:1050px) { .gaia-layout { grid-template-columns:minmax(0,1fr) 240px; } .gaia-panel { padding:12px; } .gaia-research { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-player-grid { grid-template-columns:1fr; } }
-@media(max-width:760px) { .gaia-layout { grid-template-columns:minmax(0,1fr); } .gaia-controls { max-height:none; } .gaia-controls>.gaia-options { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-options.gaia-faction-options { max-height:340px; overflow:auto; } .gaia-title h2 { font-size:21px; } .gaia-title h2 span { display:block; margin:5px 0 0; font-size:9px; } .gaia-rounds { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-round-tile { padding:7px 8px; } .gaia-round-tile strong { font-size:10px; margin-top:3px; } .gaia-dashboard { gap:8px; } .gaia-dashboard>strong { width:100%; } .gaia-tech-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-tab-content { padding:8px; } #gaiaGalaxy { min-height:250px; max-height:55vh; } .gaia-panel { padding:10px; } .gaia-goals { font-size:10px; gap:6px; } .gaia-map-tools span { font-size:9px; } .gaia-tabs button { padding:7px 5px; font-size:11px; } .gaia-confirm { scroll-margin-top:10px; } .gaia-resources { gap:6px 8px; font-size:13px; } .gaia-dashboard-resources .gaia-tk { width:27px; height:27px; } .gaia-tk { width:24px; height:24px; } }
+@media(max-width:1050px) { .gaia-layout { grid-template-columns:minmax(0,1fr) 240px; } .game-panel[data-game-theme="gaia_project"] { padding:12px; } .gaia-research { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-player-grid { grid-template-columns:1fr; } }
+@media(max-width:760px) { .gaia-layout { grid-template-columns:minmax(0,1fr); } .gaia-controls { max-height:none; } .gaia-controls>.gaia-options { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-options.gaia-faction-options { max-height:340px; overflow:auto; } .gaia-title h2 { font-size:21px; } .gaia-title h2 span { display:block; margin:5px 0 0; font-size:9px; } .gaia-rounds { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-round-tile { padding:7px 8px; } .gaia-round-tile strong { font-size:10px; margin-top:3px; } .gaia-dashboard { gap:8px; } .gaia-dashboard>strong { width:100%; } .gaia-tech-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-tab-content { padding:8px; } #gaiaGalaxy { min-height:250px; max-height:55vh; } .game-panel[data-game-theme="gaia_project"] { padding:10px; } .gaia-goals { font-size:10px; gap:6px; } .gaia-map-tools span { font-size:9px; } .gaia-tabs button { padding:7px 5px; font-size:11px; } .gaia-confirm { scroll-margin-top:10px; } .gaia-resources { gap:6px 8px; font-size:13px; } .gaia-dashboard-resources .gaia-tk { width:27px; height:27px; } .gaia-tk { width:24px; height:24px; } }

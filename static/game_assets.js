@@ -1,10 +1,11 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "colt_express": {
-    "scripts": ["/static/games/colt_express.js?v=1"],
-    "styles": ["/static/games/colt_express.css?v=1"],
+    "scripts": ["/static/games/colt_express.js?v=2"],
+    "styles": ["/static/games/colt_express.css?v=2"],
     "markup": "/static/games/colt_express.html?v=1",
     "panel": "coltExpressPanel",
+    "panelTitle": "🚂 柯尔特快车",
     "header": "showColtExpressHeaderActions"
   },
   "dnd_starter_set": {
@@ -16,9 +17,10 @@ const GAME_ASSETS = {
   },
   "moshimo_yusha": {
     "scripts": ["/static/games/moshimo_yusha.js?v=2"],
-    "styles": ["/static/games/moshimo_yusha.css?v=2"],
-    "markup": "/static/games/moshimo_yusha.html?v=2",
+    "styles": ["/static/games/moshimo_yusha.css?v=3"],
+    "markup": "/static/games/moshimo_yusha.html?v=3",
     "panel": "moshimoYushaPanel",
+    "panelTitle": "🗡️ 如果勇者在的话就好了",
     "header": "showMoshimoYushaHeaderActions"
   },
   "the_mind": {
@@ -72,9 +74,10 @@ const GAME_ASSETS = {
   },
   "maskmen": {
     "scripts": ["/static/games/maskmen.js?v=3"],
-    "styles": ["/static/games/maskmen.css?v=2"],
-    "markup": "/static/games/maskmen.html?v=2",
+    "styles": ["/static/games/maskmen.css?v=3"],
+    "markup": "/static/games/maskmen.html?v=3",
     "panel": "maskmenPanel",
+    "panelTitle": "🎭 面具摔跤手",
     "header": "showMaskmenHeaderActions"
   },
   "startups": {
@@ -107,16 +110,18 @@ const GAME_ASSETS = {
   },
   "power_grid": {
     "scripts": ["/static/games/power_grid.js?v=6"],
-    "styles": ["/static/games/power_grid.css?v=6"],
-    "markup": "/static/games/power_grid.html?v=3",
+    "styles": ["/static/games/power_grid.css?v=7"],
+    "markup": "/static/games/power_grid.html?v=4",
     "panel": "powerGridPanel",
+    "panelTitle": "⚡ 电力公司",
     "header": "showPowerGridHeaderActions"
   },
   "a_feast_for_odin": {
-    "scripts": ["/static/games/a_feast_for_odin.js?v=2"],
-    "styles": ["/static/games/a_feast_for_odin.css?v=2"],
+    "scripts": ["/static/games/a_feast_for_odin.js?v=3"],
+    "styles": ["/static/games/a_feast_for_odin.css?v=3"],
     "markup": "/static/games/a_feast_for_odin.html?v=2",
     "panel": "odinPanel",
+    "panelTitle": "🛡️ 奥丁的盛宴",
     "header": "showOdinHeaderActions"
   },
   "dice_throne": {
@@ -342,14 +347,14 @@ const GAME_ASSETS = {
   },
   "decrypto": {
     "scripts": [
-      "/static/games/decrypto.js?v=app_v6"
+      "/static/games/decrypto.js?v=app_v7"
     ],
     "styles": [],
     "panel": "decryptoPanel",
     "panelTitle": "Decrypto",
     "header": "showDecryptoHeaderActions",
-    "markup": "/static/games/decrypto.html?v=3",
-    "styleFragments": "/static/games/decrypto.css?v=3"
+    "markup": "/static/games/decrypto.html?v=4",
+    "styleFragments": "/static/games/decrypto.css?v=4"
   },
   "wavelength": {
     "scripts": [
@@ -827,9 +832,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "bohnanzaDicePanel",
+    "panelTitle": "🌱 种豆：骰子游戏",
     "header": "showBohnanzaDiceHeaderActions",
-    "markup": "/static/games/bohnanza_dice.html?v=1",
-    "styleFragments": "/static/games/bohnanza_dice.css?v=1"
+    "markup": "/static/games/bohnanza_dice.html?v=2",
+    "styleFragments": "/static/games/bohnanza_dice.css?v=2"
   },
   "emerald_skulls": {
     "scripts": [
@@ -853,34 +859,37 @@ const GAME_ASSETS = {
   },
   "catan_starfarers": {
     "scripts": [
-      "/static/games/catan_starfarers.js?v=app_v4"
+      "/static/games/catan_starfarers.js?v=app_v5"
     ],
     "styles": [
-      "/static/catan_starfarers.css?v=app_v4"
+      "/static/catan_starfarers.css?v=app_v5"
     ],
     "panel": "catanStarfarersPanel",
+    "panelTitle": "🪐 星际卡坦",
     "header": "showCatanStarfarersHeaderActions",
-    "markup": "/static/games/catan_starfarers.html?v=1"
+    "markup": "/static/games/catan_starfarers.html?v=2"
   },
   "take_time": {
     "scripts": [
       "/static/games/take_time.js?v=2"
     ],
     "styles": [
-      "/static/take_time.css?v=2"
+      "/static/take_time.css?v=3"
     ],
     "panel": "takeTimePanel",
+    "panelTitle": "⏳ 时序谜局",
     "header": "showTakeTimeHeaderActions",
     "markup": "/static/games/take_time.html?v=1"
   },
   "eternal_decks": {
     "scripts": [
-      "/static/games/eternal_decks.js?v=3"
+      "/static/games/eternal_decks.js?v=4"
     ],
     "styles": [
-      "/static/eternal_decks.css?v=3"
+      "/static/eternal_decks.css?v=4"
     ],
     "panel": "eternalDecksPanel",
+    "panelTitle": "♾️ 永恒牌",
     "header": "showEternalDecksHeaderActions",
     "markup": "/static/games/eternal_decks.html?v=2"
   },
@@ -1053,22 +1062,24 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v6"
+      "/static/games/gaia_project.js?v=gaia_v7"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v5"
+      "/static/gaia_project.css?v=gaia_v6"
     ],
     "panel": "gaiaProjectPanel",
+    "panelTitle": "🌌 盖亚计划",
     "header": "showGaiaProjectHeaderActions"
   },
   "castles_of_burgundy": {
     "scripts": [
-      "/static/games/castles_of_burgundy.js?v=2"
+      "/static/games/castles_of_burgundy.js?v=3"
     ],
     "styles": [
-      "/static/castles_of_burgundy.css?v=2"
+      "/static/castles_of_burgundy.css?v=3"
     ],
     "panel": "burgundyPanel",
+    "panelTitle": "🏰 勃艮第城堡",
     "header": "showBurgundyHeaderActions"
   },
   "love_letter": {

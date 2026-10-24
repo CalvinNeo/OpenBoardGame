@@ -42,7 +42,7 @@ const widths = [320, 390, 1024, 1440];
             const panel = document.getElementById('terraNovaPanel'), bounds = panel.getBoundingClientRect();
             return [...panel.querySelectorAll('*')].filter(node => {
                 const r = node.getBoundingClientRect();
-                if (!r.width || !r.height || node.closest('svg, .tn-sr-only')) return false;
+                if (!node.checkVisibility() || !r.width || !r.height || node.closest('svg, .tn-sr-only')) return false;
                 // Vertically clipped lists are intentional. Their children must still fit horizontally.
                 return r.left < bounds.left - 2 || r.right > bounds.right + 2;
             }).map(node => ({tag: node.tagName, id: node.id, class: node.className}));
@@ -93,7 +93,7 @@ const widths = [320, 390, 1024, 1440];
         assert.equal(await page.locator('.tn-confirm').isVisible(), true);
         assert.equal(await version(page), rev);
         await page.keyboard.press('Escape');
-        if (method === 'blank') await page.locator('.tn-brand h2').click();
+        if (method === 'blank') await page.locator('#terraNovaStatus .tn-badge').first().click();
         else if (method === 'escape') await page.keyboard.press('Escape');
         else await page.locator('.tn-confirm button').filter({hasText: 'Cancel'}).click();
         assert.equal(await page.locator('.tn-confirm').count(), 0, `${method} cancels selection`);
