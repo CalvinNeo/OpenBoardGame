@@ -172,6 +172,7 @@ async function pointClick(page, locator) {
     await touchPage.waitForFunction(() => isGameAssetsLoaded('hive'));
     await touchPage.evaluate(() => { window.hiveTestActions=[]; sendAction = action => hiveTestActions.push(action); });
     await render(touchPage, 'opening');
+    await touchPage.locator('#roomControlsCollapseBtn').click();
     await touchPage.locator('[data-hive-piece="ant"]').tap();
     await touchPage.locator('#hiveTiles [data-hive-cell="0,0"]').tap();
     assert.equal(await touchPage.locator('#hiveConfirm').isEnabled(), true);

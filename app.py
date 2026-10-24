@@ -1266,7 +1266,7 @@ async def _on_shutdown() -> None:
     logger.info("Server shutdown complete.")
 
 
-async def _leave_session(sid: str) -> None:
+async def _leave_session(sid: str, *, preserve_seat: bool = False) -> None:
     session = SESSIONS.pop(sid, None)
     if not session:
         return
@@ -1277,7 +1277,7 @@ async def _leave_session(sid: str) -> None:
     if not player:
         return
     await sio.leave_room(sid, room.room_id)
-    if room.status == "lobby":
+    if room.status == "lobby" and not preserve_seat:
         room.players = [p for p in room.players if p.player_id != player.player_id]
         if not room.players:
             ROOMS.pop(room.room_id, None)
@@ -1287,7 +1287,7 @@ async def _leave_session(sid: str) -> None:
         player.connected = False
         player.socket_id = None
         player.last_seen = time.time()
-    if room.game_type == "the_crew" and room.host_player_id == player.player_id:
+    if not preserve_seat and room.game_type == "the_crew" and room.host_player_id == player.player_id:
         room.host_player_id = next((p.player_id for p in sorted(room.players, key=lambda p: p.seat)
                                     if p.player_id != player.player_id and not p.is_bot and p.connected), None)
         room.state_version += 1
@@ -1703,7 +1703,7 @@ async def on_room_reconnect(sid, data):
         return
     existing = SESSIONS.get(sid)
     if existing and (existing.get("room_id") != room_id or existing.get("player_id") != player_id):
-        await _leave_session(sid)
+        await _leave_session(sid, preserve_seat=True)
     # A suspended mobile connection can outlive its replacement until heartbeat
     # expiry. A valid reconnect token transfers the seat immediately.
     previous_sid = player.socket_id

@@ -284,6 +284,79 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(app.SESSIONS["mobile"]["player_id"], player.player_id)
         self.assertFalse(any(event["event"] == "system:error" for event in app.sio.emits))
 
+    async def test_reconnect_between_saved_lobbies_preserves_both_seats(self):
+        first_room_id = await self._create_room("first-browser", "Alice")
+        first_player = app.ROOMS[first_room_id].players[0]
+        await app.disconnect("first-browser")
+        second_room_id = await self._create_room("second-browser", "Alice")
+        second_player = app.ROOMS[second_room_id].players[0]
+        credentials = {
+            room_id: {"room_id": room_id, "player_id": player.player_id,
+                      "reconnect_token": player.reconnect_token}
+            for room_id, player in [(first_room_id, first_player), (second_room_id, second_player)]
+        }
+
+        for target_room_id in [first_room_id, second_room_id, first_room_id]:
+            await app.on_room_reconnect("second-browser", credentials[target_room_id])
+            self.assertEqual(set(app.ROOMS), {first_room_id, second_room_id})
+            self.assertEqual(app.SESSIONS["second-browser"]["room_id"], target_room_id)
+            for saved_room_id, player in [(first_room_id, first_player), (second_room_id, second_player)]:
+                self.assertEqual(app.ROOMS[saved_room_id].players, [player])
+                self.assertEqual(player.connected, saved_room_id == target_room_id)
+                self.assertEqual(player.socket_id, "second-browser" if player.connected else None)
+                self.assertEqual(player.reconnect_token, credentials[saved_room_id]["reconnect_token"])
+                self.assertEqual(player.seat, 0)
+                self.assertTrue(player.ready)
+                self.assertTrue(player.seat_claimed)
+        self.assertFalse(any(event["event"] == "system:error" for event in app.sio.emits))
+
+    async def test_reconnect_between_rooms_preserves_the_crew_host(self):
+        crew_room_id = await self._create_room("host", "Alice", "the_crew")
+        crew_room = app.ROOMS[crew_room_id]
+        original_host = crew_room.players[0]
+        await app.on_room_join("partner", {"room_id": crew_room_id, "name": "Bob"})
+        other_room_id = await self._create_room("previous-browser", "Alice")
+        other_player = app.ROOMS[other_room_id].players[0]
+        await app.disconnect("previous-browser")
+
+        await app.on_room_reconnect("host", {
+            "room_id": other_room_id,
+            "player_id": other_player.player_id,
+            "reconnect_token": other_player.reconnect_token,
+        })
+
+        self.assertEqual(crew_room.host_player_id, original_host.player_id)
+        self.assertFalse(original_host.connected)
+        self.assertEqual(len(crew_room.players), 2)
+        await app.on_room_reconnect("host", {
+            "room_id": crew_room_id,
+            "player_id": original_host.player_id,
+            "reconnect_token": original_host.reconnect_token,
+        })
+        self.assertEqual(crew_room.host_player_id, original_host.player_id)
+        self.assertTrue(original_host.connected)
+        self.assertEqual(app.ROOMS[other_room_id].players, [other_player])
+        self.assertFalse(other_player.connected)
+
+    async def test_invalid_saved_room_credentials_keep_current_lobby_session(self):
+        current_room_id = await self._create_room("current", "Alice")
+        other_room_id = await self._create_room("other", "Bob")
+        current_player = app.ROOMS[current_room_id].players[0]
+        other_player = app.ROOMS[other_room_id].players[0]
+
+        await app.on_room_reconnect("current", {
+            "room_id": other_room_id,
+            "player_id": other_player.player_id,
+            "reconnect_token": "wrong-token",
+        })
+
+        self.assertEqual(app.SESSIONS["current"]["room_id"], current_room_id)
+        self.assertEqual(app.ROOMS[current_room_id].players, [current_player])
+        self.assertTrue(current_player.connected)
+        self.assertEqual(current_player.socket_id, "current")
+        self.assertEqual(other_player.socket_id, "other")
+        self.assertFalse(app.sio.left)
+
     async def test_room_snapshot_has_start_limits_without_fetching_game_list(self):
         await self._create_room("mobile", "Alice", "citadels")
         snapshot = next(event["payload"] for event in reversed(app.sio.emits)
@@ -327,7 +400,7 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         error = next(event for event in reversed(app.sio.emits) if event["event"] == "system:error")
         self.assertIn("language", error["payload"]["message"])
 
-    async def test_reconnect_cleans_previous_session(self):
+    async def test_reconnect_leaves_previous_session_but_preserves_seat(self):
         sid_old = "sid-old"
         room_id_old = await self._create_room(sid_old, "Alice")
 
@@ -346,7 +419,11 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-        self.assertNotIn(room_id_old, app.ROOMS)
+        self.assertIn(room_id_old, app.ROOMS)
+        previous_player = app.ROOMS[room_id_old].players[0]
+        self.assertFalse(previous_player.connected)
+        self.assertIsNone(previous_player.socket_id)
+        self.assertIn((sid_old, room_id_old), app.sio.left)
         self.assertEqual(app.SESSIONS[sid_old]["room_id"], room_id_new)
         self.assertTrue(target_player.connected)
         self.assertEqual(target_player.socket_id, sid_old)

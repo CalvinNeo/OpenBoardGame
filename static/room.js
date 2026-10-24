@@ -35,8 +35,10 @@ let reopenConfirmReturnFocus = null;
 let catanStarfarersSelectedLanguage = null;
 let playerName = "";
 let pendingPlayerNameAction = null;
+let pendingPlayerNameRoomId = null;
 let pendingJoinRequest = null;
 let logoutCopyRequest = null;
+let logReturnFocus = null;
 const roomEntryReturnFocus = new WeakMap();
 const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
@@ -53,6 +55,10 @@ const joinRoomForm = document.getElementById("joinRoomForm");
 const roomIdInput = document.getElementById("roomIdInput");
 const joinRoomError = document.getElementById("joinRoomError");
 const connectionInfo = document.getElementById("connectionInfo");
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsModal = document.getElementById("settingsModal");
+const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+const disableDoubleTapZoomToggle = document.getElementById("disableDoubleTapZoomToggle");
 const roomActionStatus = document.getElementById("roomActionStatus");
 const roomFeedbackTooltip = document.getElementById("roomFeedbackTooltip");
 const createRoomStatus = document.getElementById("createRoomStatus");
@@ -138,7 +144,9 @@ const NAME_STORAGE_KEY = "openboardgame:name";
 const LAST_ROOM_ID_KEY = "openboardgame:last_room_id";
 const GAME_SORT_KEY = "openboardgame:game_sort";
 const RECENT_GAMES_KEY = "openboardgame:recent_games";
+const DISABLE_DOUBLE_TAP_ZOOM_KEY = "openboardgame:disable_double_tap_zoom";
 const RECENT_GAMES_LIMIT = 50;
+const PLAYER_ACCESS_KEY_MAX_LENGTH = 1048576;
 const GAME_SORT_KEYS = new Set(["alpha", "recent", "dev_order", "difficulty_asc", "difficulty_desc"]);
 
 // Private browsing or a storage quota must not interrupt a live room session.
@@ -161,6 +169,42 @@ function removeRoomStorage(key) {
   roomStorageCache.delete(key);
   try { localStorage.removeItem(key); } catch {}
 }
+
+function applyDoubleTapZoomPreference(disabled) {
+  document.documentElement.classList.toggle("disable-double-tap-zoom", disabled);
+  disableDoubleTapZoomToggle.checked = disabled;
+}
+
+applyDoubleTapZoomPreference(readRoomStorage(DISABLE_DOUBLE_TAP_ZOOM_KEY) !== "false");
+
+disableDoubleTapZoomToggle.addEventListener("change", () => {
+  const disabled = disableDoubleTapZoomToggle.checked;
+  applyDoubleTapZoomPreference(disabled);
+  writeRoomStorage(DISABLE_DOUBLE_TAP_ZOOM_KEY, String(disabled));
+});
+
+function openSettingsModal() {
+  setModalVisible(settingsModal, true);
+  settingsBtn.setAttribute("aria-expanded", "true");
+  document.body.classList.add("settings-open");
+  document.querySelector(".container").inert = true;
+  settingsCloseBtn.focus({ preventScroll: true });
+}
+
+function closeSettingsModal() {
+  if (settingsModal.classList.contains("hidden")) return;
+  setModalVisible(settingsModal, false);
+  settingsBtn.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("settings-open");
+  document.querySelector(".container").inert = false;
+  settingsBtn.focus({ preventScroll: true });
+}
+
+settingsBtn.addEventListener("click", openSettingsModal);
+settingsCloseBtn.addEventListener("click", closeSettingsModal);
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) closeSettingsModal();
+});
 
 function loadStoredName() {
   try {
@@ -260,17 +304,57 @@ function getRoomAuth(roomId) {
   return map[roomId] || null;
 }
 
-function parseRoomAccessKey(value) {
-  const match = /^obg1:([A-Za-z0-9_-]{1,64}):([A-Za-z0-9_-]{1,128}):([A-Za-z0-9_-]{1,128})$/.exec(value.trim());
-  return match ? { room_id: match[1], player_id: match[2], reconnect_token: match[3] } : null;
+function normalizeRoomAccessAuth(rid, auth) {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(rid) || ["__proto__", "constructor", "prototype"].includes(rid)
+      || !auth || typeof auth !== "object" || Array.isArray(auth)
+      || ![auth.player_id, auth.reconnect_token].every(value => typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value))
+      || (auth.name !== undefined && typeof auth.name !== "string")) {
+    return null;
+  }
+  return { player_id: auth.player_id, reconnect_token: auth.reconnect_token, ...(auth.name !== undefined ? { name: auth.name } : {}) };
 }
 
-function buildRoomAccessKey() {
-  const rid = getQuickReconnectRoomId();
-  const auth = rid ? getRoomAuth(rid) : null;
-  if (!auth?.player_id || !auth?.reconnect_token) return null;
-  const key = `obg1:${rid}:${auth.player_id}:${auth.reconnect_token}`;
-  return parseRoomAccessKey(key) ? key : null;
+function parsePlayerAccessKey(value) {
+  if (typeof value !== "string" || value.length > PLAYER_ACCESS_KEY_MAX_LENGTH) return null;
+  const key = value.trim();
+  const legacy = /^obg1:([A-Za-z0-9_-]{1,64}):([A-Za-z0-9_-]{1,128}):([A-Za-z0-9_-]{1,128})$/.exec(key);
+  if (legacy) {
+    const auth = normalizeRoomAccessAuth(legacy[1], { player_id: legacy[2], reconnect_token: legacy[3] });
+    return auth ? { rooms: { [legacy[1]]: auth }, last_room_id: legacy[1] } : null;
+  }
+  if (!/^obg2:[A-Za-z0-9_-]+$/.test(key)) return null;
+  try {
+    const bytes = Uint8Array.from(atob(key.slice(5).replace(/-/g, "+").replace(/_/g, "/")), character => character.charCodeAt(0));
+    const payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (!payload || typeof payload !== "object" || !payload.rooms || typeof payload.rooms !== "object" || Array.isArray(payload.rooms)) return null;
+    const rooms = {};
+    for (const [rid, value] of Object.entries(payload.rooms)) {
+      const auth = normalizeRoomAccessAuth(rid, value);
+      if (!auth) return null;
+      rooms[rid] = auth;
+    }
+    const roomIds = Object.keys(rooms);
+    if (!roomIds.length || typeof payload.last_room_id !== "string" || !Object.hasOwn(rooms, payload.last_room_id)) return null;
+    return { rooms, last_room_id: payload.last_room_id };
+  } catch {
+    return null;
+  }
+}
+
+function buildPlayerAccessKey() {
+  const rooms = {};
+  for (const [rid, value] of Object.entries(loadRoomAuthMap()).sort(([left], [right]) => left.localeCompare(right))) {
+    const auth = normalizeRoomAccessAuth(rid, value);
+    if (auth) rooms[rid] = auth;
+  }
+  const roomIds = Object.keys(rooms);
+  if (!roomIds.length) return null;
+  const preferredRoomId = getQuickReconnectRoomId();
+  const lastRoomId = Object.hasOwn(rooms, preferredRoomId) ? preferredRoomId : roomIds[roomIds.length - 1];
+  const bytes = new TextEncoder().encode(JSON.stringify({ rooms, last_room_id: lastRoomId }));
+  const encoded = btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(""));
+  const key = `obg2:${encoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
+  return key.length <= PLAYER_ACCESS_KEY_MAX_LENGTH ? key : null;
 }
 
 function clearRoomAuth(roomId) {
@@ -585,6 +669,7 @@ function closeRoomEntryModal(modal) {
   setModalVisible(modal, false);
   if (modal === playerNameModal) {
     pendingPlayerNameAction = null;
+    pendingPlayerNameRoomId = null;
     nameInput.value = "";
     accessKeyInput.value = "";
     if (pendingRoomRequest?.accessKeyEntry) {
@@ -602,12 +687,13 @@ function closeRoomEntryModal(modal) {
   roomEntryReturnFocus.delete(modal);
 }
 
-function requirePlayerName(action, message = "") {
+function requirePlayerName(action, message = "", targetRoomId = null) {
   if (getPlayerName() && !message) {
     action();
     return;
   }
   pendingPlayerNameAction = action;
+  pendingPlayerNameRoomId = targetRoomId;
   setPlayerEntryMode(false);
   nameInput.value = getPlayerName();
   openRoomEntryModal(playerNameModal, nameInput, playerNameError);
@@ -622,8 +708,8 @@ function setPlayerEntryMode(useAccessKey) {
   document.getElementById("playerNameField").classList.toggle("hidden", useAccessKey);
   document.getElementById("playerAccessKeyField").classList.toggle("hidden", !useAccessKey);
   document.getElementById("playerAccessKeyHint").classList.toggle("hidden", !useAccessKey);
-  document.getElementById("playerNameModalTitle").textContent = useAccessKey ? "Return to your room" : "Choose your name";
-  playerNameForm.querySelector('button[type="submit"]').textContent = useAccessKey ? "Reconnect" : "Continue";
+  document.getElementById("playerNameModalTitle").textContent = useAccessKey ? "Restore your rooms" : "Choose your name";
+  playerNameForm.querySelector('button[type="submit"]').textContent = useAccessKey ? "Restore access" : "Continue";
   nameInput.disabled = useAccessKey;
   nameInput.required = !useAccessKey;
   accessKeyInput.disabled = !useAccessKey;
@@ -639,7 +725,7 @@ function setPlayerEntryMode(useAccessKey) {
 }
 
 function reconnectWithAccessKey() {
-  const credentials = parseRoomAccessKey(accessKeyInput.value);
+  const credentials = parsePlayerAccessKey(accessKeyInput.value);
   if (!credentials) {
     showRoomEntryError(accessKeyInput, playerNameError, "Enter the complete access key copied when logging out.");
     return;
@@ -649,8 +735,16 @@ function reconnectWithAccessKey() {
     socket.connect();
     return;
   }
-  if (sendRoomRequest("room:reconnect", credentials, "Reconnecting to your previous room...", false)) {
-    pendingRoomRequest.accessKeyEntry = true;
+  const roomIds = [...new Set([pendingPlayerNameRoomId, credentials.last_room_id, ...Object.keys(credentials.rooms).reverse()])]
+    .filter(rid => typeof rid === "string" && Object.hasOwn(credentials.rooms, rid));
+  reconnectImportedRoom({ rooms: credentials.rooms, roomIds });
+}
+
+function reconnectImportedRoom(accessKeyEntry) {
+  const rid = accessKeyEntry.roomIds.shift();
+  const auth = accessKeyEntry.rooms[rid];
+  if (sendRoomRequest("room:reconnect", { room_id: rid, player_id: auth.player_id, reconnect_token: auth.reconnect_token }, "Restoring access to your rooms...", false)) {
+    pendingRoomRequest.accessKeyEntry = accessKeyEntry;
     pendingJoinRequest = null;
     playerNameError.textContent = "";
     playerNameError.classList.add("hidden");
@@ -1645,20 +1739,21 @@ function renderSeatList(payload) {
 }
 
 function openLogoutModal() {
+  closeSettingsModal();
   roomEntryReturnFocus.set(logoutModal, document.activeElement);
   logoutError.textContent = "";
   logoutError.classList.add("hidden");
   logoutConfirmBtn.disabled = false;
-  logoutCopyBtn.disabled = !buildRoomAccessKey();
+  logoutCopyBtn.disabled = !buildPlayerAccessKey();
   document.getElementById("logoutKeyHint").textContent = logoutCopyBtn.disabled
     ? "No room credentials are available to copy."
-    : "The key only works while your previous room and seat still exist. It is not a permanent account.";
+    : "Includes all saved room credentials from this browser. Rooms and seats must still exist; this is not a permanent account.";
   setModalVisible(logoutModal, true);
   document.getElementById("logoutCancelBtn").focus();
 }
 
 async function copyAccessKeyAndLogout() {
-  const key = buildRoomAccessKey();
+  const key = buildPlayerAccessKey();
   if (!key || logoutCopyRequest) return;
   const request = {};
   logoutCopyRequest = request;
@@ -1670,10 +1765,10 @@ async function copyAccessKeyAndLogout() {
   logoutCopyRequest = null;
   logoutConfirmBtn.disabled = false;
   logoutCopyBtn.disabled = false;
-  if (!copied || key !== buildRoomAccessKey()) {
+  if (!copied || key !== buildPlayerAccessKey()) {
     logoutError.textContent = !copied
       ? "Could not copy the access key. You are still logged in. Allow clipboard access and try again."
-      : "Your room changed while copying. Try again to copy the current access key.";
+      : "Your room credentials changed while copying. Try again to copy the current access key.";
     logoutError.classList.remove("hidden");
     logoutCopyBtn.focus();
     return;
@@ -1725,9 +1820,19 @@ function setLogPanelVisible(visible) {
   if (!logPanel) {
     return;
   }
+  if (visible && logPanel.classList.contains("hidden")) {
+    closeSettingsModal();
+    logReturnFocus = document.activeElement;
+  }
   logPanel.classList.toggle("hidden", !visible);
   logPanel.setAttribute("aria-hidden", (!visible).toString());
   document.body.classList.toggle("log-open", visible);
+  if (visible) {
+    logCloseBtn.focus({ preventScroll: true });
+  } else if (logReturnFocus?.isConnected) {
+    logReturnFocus.focus({ preventScroll: true });
+    logReturnFocus = null;
+  }
 }
 
 function toggleLogPanel() {
@@ -2175,8 +2280,13 @@ function attemptJoinRoom(rid, options = {}) {
     log("Room ID required");
     return;
   }
+  const auth = getRoomAuth(rid);
+  if (auth?.player_id && auth?.reconnect_token) {
+    attemptReconnect(rid, auth, options);
+    return;
+  }
   if (!name) {
-    requirePlayerName(() => attemptJoinRoom(rid, options));
+    requirePlayerName(() => attemptJoinRoom(rid, options), "", rid);
     return;
   }
   const summary = getRoomSummary(rid);
@@ -2198,20 +2308,27 @@ function attemptJoinRoom(rid, options = {}) {
   sendRoomRequest("room:join", { name, room_id: rid }, "Joining room...", false);
 }
 
-function attemptReconnect(rid, auth) {
+function attemptReconnect(rid, auth, options = {}) {
   if (!rid || !auth) {
     log("Reconnect info missing");
     return;
   }
   if (roomSessionReady && socket.connected && rid === roomId) {
-    setRoomFeedback("Connected to room.");
+    if (options.readyAfterJoin && currentRoomState?.status === "lobby") {
+      sendRoomRequest("room:ready", { room_id: rid, ready: true }, "Updating ready status...");
+    } else {
+      setRoomFeedback("Connected to room.");
+    }
     return;
   }
-  sendRoomRequest("room:reconnect", {
+  if (sendRoomRequest("room:reconnect", {
     room_id: rid,
     player_id: auth.player_id,
     reconnect_token: auth.reconnect_token,
-  }, "Reconnecting to room...", false);
+  }, "Reconnecting to room...", false)) {
+    pendingReadyAfterJoin = Boolean(options.readyAfterJoin);
+    pendingReadyRoomId = pendingReadyAfterJoin ? rid : null;
+  }
 }
 
 function startCreateRoomFlow() {
@@ -2285,15 +2402,17 @@ function renderRoomList(rooms) {
     const claimableSeats = (room.players || []).filter(
       (player) => !player.is_bot && !(player.seat_claimed || player.connected),
     );
-    const joinDisabled = isLoaded
+    const joinDisabled = !canReconnect && (isLoaded
       ? claimableSeats.length === 0
-      : room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers);
+      : room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers));
     const joinBtn = document.createElement("button");
     joinBtn.type = "button";
-    joinBtn.textContent = isLoaded ? "Claim Seat" : "Join";
+    joinBtn.textContent = canReconnect ? "Reconnect" : isLoaded ? "Claim Seat" : "Join";
     joinBtn.disabled = joinDisabled;
     joinBtn.addEventListener("click", () => {
-      if (isLoaded) {
+      if (canReconnect) {
+        attemptReconnect(room.room_id, auth);
+      } else if (isLoaded) {
         requestSeatClaim(room.room_id, room.source_room_id, true);
       } else {
         attemptJoinRoom(room.room_id);
@@ -2306,7 +2425,7 @@ function renderRoomList(rooms) {
       joinReadyBtn.type = "button";
       joinReadyBtn.textContent = "Join Ready";
       joinReadyBtn.title = "Join room and mark ready";
-      joinReadyBtn.disabled = joinDisabled;
+      joinReadyBtn.disabled = joinDisabled || room.status !== "lobby";
       joinReadyBtn.addEventListener("click", () => {
         attemptJoinRoom(room.room_id, { readyAfterJoin: true });
       });
@@ -2704,6 +2823,9 @@ socket.on("system:info", (data) => {
   }
   if (data.reconnect_token && data.room_id && data.player_id) {
     const importedAccessKey = pendingRoomRequest?.accessKeyEntry;
+    if (importedAccessKey) {
+      saveRoomAuthMap({ ...loadRoomAuthMap(), ...importedAccessKey.rooms });
+    }
     roomSessionReady = true;
     pendingJoinRequest = null;
     const nameValue = data.name || getPlayerName();
@@ -2717,6 +2839,7 @@ socket.on("system:info", (data) => {
     if (importedAccessKey) {
       closeRoomEntryModal(playerNameModal);
       closeRoomEntryModal(joinRoomModal);
+      renderRoomList(currentRoomList);
     }
     setRoomFeedback();
     // The room snapshot arrives before identity, so refresh the player's controls.
@@ -2732,9 +2855,16 @@ socket.on("system:error", (data) => {
   const failedRequest = pendingRoomRequest;
   finishRoomRequest();
   if (failedRequest?.accessKeyEntry) {
+    if (["room not found", "player not found", "invalid reconnect token"].includes(data.message)) {
+      delete failedRequest.accessKeyEntry.rooms[failedRequest.roomId];
+      if (failedRequest.accessKeyEntry.roomIds.length) {
+        reconnectImportedRoom(failedRequest.accessKeyEntry);
+        return;
+      }
+    }
     const message = data.message === "room not found"
-      ? "Your previous room no longer exists."
-      : "Could not restore your seat. Check your access key and try again.";
+      ? "None of your saved rooms are available. A previous room no longer exists."
+      : "Could not restore your saved seats. Check your access key and try again.";
     showRoomEntryError(accessKeyInput, playerNameError, message);
     setRoomFeedback(message, true);
     return;
@@ -2742,8 +2872,11 @@ socket.on("system:error", (data) => {
   if (failedRequest?.event === "room:reconnect" &&
       ["room not found", "player not found", "invalid reconnect token"].includes(data.message)) {
     clearRoomAuth(failedRequest.roomId);
-    removeRoomStorage(LAST_ROOM_ID_KEY);
-    resetRoomState();
+    renderRoomList(currentRoomList);
+    if (!roomId || roomId === failedRequest.roomId) {
+      removeRoomStorage(LAST_ROOM_ID_KEY);
+      resetRoomState();
+    }
   }
   const joinRequest = pendingJoinRequest;
   pendingJoinRequest = null;
@@ -2755,6 +2888,7 @@ socket.on("system:error", (data) => {
       requirePlayerName(
         () => attemptJoinRoom(joinRequest.rid, joinRequest.options),
         "That name is already taken in this room. Choose another name.",
+        joinRequest.rid,
       );
     }
   }
@@ -3147,6 +3281,25 @@ if (reopenConfirmModal) {
 }
 
 document.addEventListener("keydown", (event) => {
+  if (!settingsModal.classList.contains("hidden")) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeSettingsModal();
+    } else if (event.key === "Tab") {
+      const controls = settingsModal.querySelectorAll("input:not(:disabled), button:not(:disabled)");
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!settingsModal.contains(document.activeElement) || (!event.shiftKey && document.activeElement === last)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    return;
+  }
   const entryModal = [logoutModal, playerNameModal, joinRoomModal].find((modal) => !modal.classList.contains("hidden"));
   if (entryModal) {
     if (event.key === "Escape") {

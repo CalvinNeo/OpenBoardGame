@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="disable-double-tap-zoom">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v131" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v132" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -456,9 +456,9 @@
         </div>
         <div id="playerAccessKeyField" class="room-entry-field hidden">
           <label for="accessKeyInput">Access key</label>
-          <input id="accessKeyInput" type="password" placeholder="Paste your access key" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" maxlength="2048" disabled aria-describedby="playerAccessKeyHint playerNameError" />
+          <input id="accessKeyInput" type="password" placeholder="Paste key" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" maxlength="1048576" disabled aria-describedby="playerAccessKeyHint playerNameError" />
         </div>
-        <p id="playerAccessKeyHint" class="room-entry-hint hidden">Return to your previous room and seat without creating a new player. Keep your key private.</p>
+        <p id="playerAccessKeyHint" class="room-entry-hint hidden">Restore access to all your previous rooms and seats without creating a new player. Keep your key private.</p>
         <p id="playerNameError" class="room-entry-error hidden" role="alert"></p>
         <div class="room-entry-modal-actions">
           <button id="playerNameCancelBtn" type="button">Cancel</button>
@@ -468,14 +468,35 @@
     </div>
   </section>
 
+  <section id="settingsModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="modal-content settings-content">
+      <div class="modal-header">
+        <h2 id="settingsModalTitle">Settings</h2>
+        <button id="settingsCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <label class="settings-option" for="disableDoubleTapZoomToggle">
+          <input id="disableDoubleTapZoomToggle" type="checkbox" checked aria-describedby="doubleTapZoomHint" />
+          <span>Disable double-tap zoom</span>
+        </label>
+        <p id="doubleTapZoomHint" class="settings-hint">Keep scrolling and pinch zoom available. Your preference is saved in this browser.</p>
+        <div class="settings-actions">
+          <button id="logOpenBtn" type="button"><span aria-hidden="true">📋</span> Log</button>
+          <button id="logoutBtn" type="button"><span aria-hidden="true">🚪</span> Logout</button>
+        </div>
+        <div id="connectionInfo" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="logoutModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle" aria-describedby="logoutDescription">
     <div class="modal-content room-entry-modal">
       <div class="modal-header">
         <h2 id="logoutModalTitle">Log out?</h2>
       </div>
       <div class="modal-body room-entry-form">
-        <p id="logoutDescription" class="room-entry-hint">Logging out clears this browser's room credentials. Copy your access key to keep your seat and continue in another browser.</p>
-        <p id="logoutKeyHint" class="room-entry-hint">The key only works while your previous room and seat still exist. It is not a permanent account.</p>
+        <p id="logoutDescription" class="room-entry-hint">Logging out clears this browser's room credentials. Copy your access key to continue in any of your previous rooms in another browser.</p>
+        <p id="logoutKeyHint" class="room-entry-hint">Includes all saved room credentials from this browser. Rooms and seats must still exist; this is not a permanent account.</p>
         <p id="logoutError" class="room-entry-error hidden" role="alert"></p>
         <div class="room-entry-modal-actions">
           <button id="logoutCancelBtn" type="button">Cancel</button>
@@ -502,16 +523,20 @@
             <div class="panel-header-actions">
               <span class="room-controls-expand-hint" aria-hidden="true">Tap to show RC <span class="room-controls-expand-arrow"></span></span>
               <div id="mobileExplainSlot" class="mobile-explain-slot"></div>
+              <button id="settingsBtn" class="room-settings-btn" type="button" title="Settings" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsModal" aria-expanded="false"><span aria-hidden="true">⚙️</span></button>
               <button class="collapse-btn" id="roomControlsToggleBtn" type="button" aria-expanded="true" aria-controls="roomControlsBody" aria-label="Hide Room Controls">Hide</button>
             </div>
           </div>
           <div class="panel-body room-controls-body" id="roomControlsBody">
-            <section class="room-controls-section" id="connectionPanel">
+            <section class="room-controls-section" id="roomListPanel">
               <div class="panel-header">
-                <h3>Connection</h3>
+                <h3>Rooms</h3>
                 <div class="panel-header-actions">
-                  <button id="logOpenBtn" class="log-open-btn" type="button" aria-label="Open log">Log</button>
-                  <button id="logoutBtn" type="button">Logout</button>
+                  <button id="createBtn" class="room-icon-btn room-icon-btn-primary" type="button" title="Create room" aria-label="Create room" disabled>➕</button>
+                  <button id="joinBtn" class="room-icon-btn" type="button" title="Join room by ID" aria-label="Join room by ID">🔗</button>
+                  <button id="loadBtn" class="room-icon-btn" type="button" title="Load saved game" aria-label="Load saved game">📂</button>
+                  <button id="refreshRoomsBtn" class="room-icon-btn" type="button" title="Refresh rooms" aria-label="Refresh rooms">🔄</button>
+                  <button id="cleanupEmptyRoomsBtn" class="room-icon-btn" type="button" title="Clear rooms with no online players" aria-label="Clear rooms with no online players">🗑️</button>
                 </div>
               </div>
               <div class="panel-body">
@@ -601,22 +626,6 @@
                     <option value="fang_niao">Square Bird</option>
                   </select>
                 </div>
-                <div class="row" id="connectionInfo" role="status" aria-live="polite"></div>
-              </div>
-            </section>
-
-            <section class="room-controls-section" id="roomListPanel">
-              <div class="panel-header">
-                <h3>Rooms</h3>
-                <div class="panel-header-actions">
-                  <button id="createBtn" class="room-icon-btn room-icon-btn-primary" type="button" title="Create room" aria-label="Create room" disabled>➕</button>
-                  <button id="joinBtn" class="room-icon-btn" type="button" title="Join room by ID" aria-label="Join room by ID">🔗</button>
-                  <button id="loadBtn" class="room-icon-btn" type="button" title="Load saved game" aria-label="Load saved game">📂</button>
-                  <button id="refreshRoomsBtn" class="room-icon-btn" type="button" title="Refresh rooms" aria-label="Refresh rooms">🔄</button>
-                  <button id="cleanupEmptyRoomsBtn" class="room-icon-btn" type="button" title="Clear rooms with no online players" aria-label="Clear rooms with no online players">🗑️</button>
-                </div>
-              </div>
-              <div class="panel-body">
                 <div id="roomList" class="room-list"></div>
               </div>
             </section>
@@ -1719,6 +1728,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v58" defer></script>
-  <script src="/static/room.js?v=app_v84" defer></script>
+  <script src="/static/room.js?v=app_v86" defer></script>
 </body>
 </html>
