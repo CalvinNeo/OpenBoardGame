@@ -228,13 +228,13 @@ const GAME_ASSETS = {
   },
   "azul": {
     "scripts": [
-      "/static/games/azul.js?v=app_v5"
+      "/static/games/azul.js?v=app_v6"
     ],
     "styles": [],
     "panel": "azulPanel",
     "header": "showAzulHeaderActions",
-    "markup": "/static/games/azul.html?v=1",
-    "styleFragments": "/static/games/azul.css?v=2"
+    "markup": "/static/games/azul.html?v=2",
+    "styleFragments": "/static/games/azul.css?v=3"
   },
   "sagrada": {
     "scripts": ["/static/games/sagrada.js?v=3"],
@@ -1081,7 +1081,7 @@ const GAME_ASSETS = {
       "/static/games/gaia_project.js?v=gaia_v11"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v10"
+      "/static/gaia_project.css?v=gaia_v11"
     ],
     "panel": "gaiaProjectPanel",
     "panelTitle": "🌌 盖亚计划",

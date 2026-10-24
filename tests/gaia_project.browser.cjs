@@ -140,6 +140,13 @@ async function render(page, key, tab) {
       for (const [key, tab] of [['action', 'galaxy'], ['action', 'research'], ['action', 'technology'], ['action', 'players'], ['late', 'galaxy'], ['over', 'players']]) {
         await render(page, key, tab);
         await bounds(page, `${width} ${key} ${tab}`);
+        if (key === 'action' && tab === 'galaxy') {
+          assert.equal(await page.locator('.gaia-dashboard').count(), 1);
+          assert.equal(await page.locator('.gaia-dashboard-power-block').count(), 1);
+          assert.equal(await page.locator('.gaia-dashboard>.gaia-income-panel').count(), 1);
+          const dashboardHeight = await page.locator('.gaia-dashboard').evaluate(el => el.getBoundingClientRect().height);
+          assert(dashboardHeight < (width <= 390 ? 340 : 220), `${width}: dashboard is too tall (${dashboardHeight})`);
+        }
         if (tab === 'players') {
           const players = views[key].players.length;
           assert.equal(await page.locator('.gaia-player-board').count(), players);

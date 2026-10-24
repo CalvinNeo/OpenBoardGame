@@ -72,6 +72,13 @@
   color: #21675f;
 }
 
+.patchwork-turn-status.active {
+  border-color: #c85d4c;
+  color: #7f2f26;
+  background: #ffe9e0;
+  box-shadow: 0 0 0 2px rgba(200, 93, 76, 0.14);
+}
+
 .patchwork-status-icon {
   font-size: 15px;
   line-height: 1;
@@ -400,6 +407,39 @@
   margin-top: 7px;
 }
 
+.patchwork-upcoming-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 5px;
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid #e1d9cd;
+  border-radius: 8px;
+  color: var(--patchwork-muted);
+  background: #fffdf8;
+  font-size: 9px;
+  line-height: 1.15;
+}
+
+.patchwork-upcoming-card strong,
+.patchwork-upcoming-card > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patchwork-upcoming-card > span:last-child {
+  grid-column: 2;
+}
+
+.patchwork-upcoming-order {
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: #9a5b19;
+  font-weight: 800;
+}
+
 .patchwork-main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
@@ -536,6 +576,12 @@
   border-style: dashed;
   border-color: #c28a36;
   background: #fff7df;
+}
+
+.patchwork-board-cell.pivot {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 2px #d96b58, inset 0 0 0 2px rgba(255, 255, 255, 0.86);
 }
 
 .patchwork-selection-hint,
@@ -1027,6 +1073,10 @@ body.patchwork-turn-active #roomControlsPanel.collapsed {
     grid-column: 1 / -1;
   }
 
+  .patchwork-players-card {
+    grid-column: 1 / -1;
+  }
+
   .patchwork-preview-card {
     display: none;
   }
@@ -1071,6 +1121,11 @@ body.patchwork-turn-active #roomControlsPanel.collapsed {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 3px 4px;
     font-size: 9px;
+  }
+
+  .patchwork-player-stats > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .patchwork-placement-actions {

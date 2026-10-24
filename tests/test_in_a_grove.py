@@ -117,6 +117,37 @@ class InAGroveGameTests(unittest.TestCase):
         self.assertEqual(state["blocked_suspect_index"], 2)
         self.assertEqual(events[0]["type"], "in_a_grove:bet")
 
+    def test_current_round_exposes_each_player_peeking_each_card_and_resets_next_round(self):
+        state = InAGroveGame.init_game(
+            {"inspection_mode": "choose_one"},
+            [
+                {"player_id": "a", "name": "A", "seat": 0},
+                {"player_id": "b", "name": "B", "seat": 1},
+                {"player_id": "c", "name": "C", "seat": 2},
+            ],
+        )
+
+        first = state["current_turn"]
+        InAGroveGame.apply_action(state, first, {"type": "peek_suspects", "suspect_indexes": [0]})
+        first_view = InAGroveGame.get_public_view(state, "b")
+        self.assertEqual(first_view["suspects"][0]["peeked_by"], [first])
+        self.assertEqual(first_view["suspects"][1]["peeked_by"], [])
+        InAGroveGame.apply_action(state, first, {"type": "place_bet", "suspect_index": 0})
+
+        second = state["current_turn"]
+        InAGroveGame.apply_action(state, second, {"type": "peek_suspects", "suspect_indexes": [1]})
+        InAGroveGame.apply_action(state, second, {"type": "place_bet", "suspect_index": 1})
+        third = state["current_turn"]
+        InAGroveGame.apply_action(state, third, {"type": "peek_suspects", "suspect_indexes": [2]})
+        current_view = InAGroveGame.get_public_view(state, "a")
+        self.assertEqual([suspect["peeked_by"] for suspect in current_view["suspects"]], [[first], [second], [third]])
+        InAGroveGame.apply_action(state, third, {"type": "place_bet", "suspect_index": 2})
+
+        for player_id in state["turn_order"]:
+            InAGroveGame.apply_action(state, player_id, {"type": "next_round"})
+        next_view = InAGroveGame.get_public_view(state, "a")
+        self.assertEqual([suspect["peeked_by"] for suspect in next_view["suspects"]], [[], [], []])
+
     def test_round_end_waits_for_all_players_before_next_round(self):
         state = InAGroveGame.init_game(
             None,

@@ -14,6 +14,10 @@
   let boosterFocusPending = false;
   let boosterSwipe = null;
   let suppressBoosterClickUntil = 0;
+  let passDialogOpen = false;
+  let passDocked = false;
+  let passSelected = null;
+  let passScrollTop = 0;
   let legendOpen = false;
   let explainMode = false;
   let suppressClickUntil = 0;
@@ -174,35 +178,47 @@
     if (spec.passing) rows.push(`<span class="gaia-booster-effect-row"><b>放弃奖励</b><span>每${metricNames[spec.passing[0]] || esc(spec.passing[0])} +${resources({vp: spec.passing[1]})}</span></span>`);
     return rows.join('') || '<span class="gaia-booster-effect-empty">本轮没有额外收入或特殊效果</span>';
   }
-  function renderBoosterCard(o, index) {
+  function renderBoosterCard(o, index, selectedId, mode = 'initial') {
     const booster = defs().boosters[o.action.booster];
-    const boosterId = o.action.booster;
-    return `<button type="button" class="gaia-booster-card${boosterSelected === boosterId ? ' selected' : ''}" data-gaia-booster="${esc(boosterId)}" aria-pressed="${boosterSelected === boosterId}" ${info('booster')}>
-      <span class="gaia-booster-card-heading"><strong>${esc(booster?.name || o.label)}</strong><small>推进器</small></span>
-      <span class="gaia-booster-card-effect">${boosterEffectRows(booster)}</span>
+    const boosterId = o.action.booster || '__pass__';
+    const selected = selectedId === boosterId;
+    const passCard = mode === 'pass' && !booster;
+    return `<button type="button" class="gaia-booster-card${selected ? ' selected' : ''}${passCard ? ' gaia-booster-card-pass' : ''}" data-gaia-booster="${esc(boosterId)}" aria-pressed="${selected}" ${info('booster')}>
+      <span class="gaia-booster-card-heading"><strong>${esc(passCard ? '结束本轮' : (booster?.name || o.label))}</strong><small>${passCard ? '不换推进器' : '推进器'}</small></span>
+      <span class="gaia-booster-card-effect">${passCard ? '<span>第六轮不再领取新推进器</span>' : boosterEffectRows(booster)}</span>
     </button>`;
   }
   function selectedBoosterOption(choices) {
     return choices.find(({o}) => o.action.booster === boosterSelected)?.o || null;
   }
-  function renderBoosterSelection(option) {
+  function renderBoosterSelection(option, mode = 'initial') {
     if (!option) return '';
     const booster = defs().boosters[option.action.booster];
-    return `<div class="gaia-booster-selected" aria-live="polite"><div><small>SELECTED</small><strong>${esc(booster?.name || option.label)}</strong></div><div class="gaia-booster-selected-effects">${boosterEffectRows(booster)}</div><div class="gaia-confirm-buttons"><button type="button" data-gaia-command="confirm-booster">Confirm</button><button type="button" data-gaia-command="cancel-booster">Cancel</button></div></div>`;
+    const pass = mode === 'pass';
+    return `<div class="gaia-booster-selected" aria-live="polite"><div><small>SELECTED</small><strong>${esc(pass && !booster ? '结束本轮' : (booster?.name || option.label))}</strong></div><div class="gaia-booster-selected-effects">${pass && !booster ? '<span>本轮不再领取新推进器</span>' : boosterEffectRows(booster)}</div><div class="gaia-confirm-buttons"><button type="button" data-gaia-command="${pass ? 'confirm-pass' : 'confirm-booster'}">${pass ? 'Confirm pass' : 'Confirm'}</button><button type="button" data-gaia-command="cancel-booster">Cancel</button></div></div>`;
   }
-  function renderBoosterPrompt() {
-    if (view.phase !== 'booster' || !me() || view.current_turn !== view.you) return '';
-    const choices = activeOptions().map((o, index) => ({o, index})).filter(({o}) => o.action.type === 'choose_booster');
+  function renderBoosterPrompt(mode = 'initial') {
+    const initial = mode === 'initial';
+    if (!me() || view.current_turn !== view.you) return '';
+    if (initial && view.phase !== 'booster') return '';
+    if (!initial && (view.phase !== 'action' || !passDialogOpen)) return '';
+    const type = initial ? 'choose_booster' : 'pass';
+    const choices = activeOptions().map((o, index) => ({o, index})).filter(({o}) => o.action.type === type);
     if (!choices.length) return '';
-    const dockClass = boosterDocked ? 'gaia-booster-layer-docked' : 'gaia-booster-layer-floating';
-    const selected = selectedBoosterOption(choices);
+    const docked = initial ? boosterDocked : passDocked;
+    const selectedId = initial ? boosterSelected : passSelected;
+    const selected = choices.find(({o}) => (o.action.booster || '__pass__') === selectedId)?.o || null;
+    const dockClass = docked ? 'gaia-booster-layer-docked' : 'gaia-booster-layer-floating';
     const utility = `${button('Help', 'booster-help')}${button(explainMode ? 'Explaining…' : 'Explain', 'booster-explain', `aria-pressed="${explainMode}"`)}`;
-    const dockedBody = selected ? `<div class="gaia-booster-docked-summary"><small>当前选择</small><strong>${esc(defs().boosters[selected.action.booster]?.name || selected.label)}</strong><span>${boosterEffectRows(defs().boosters[selected.action.booster])}</span></div>${renderBoosterSelection(selected)}` : '<p class="gaia-booster-docked-empty">主板已解锁。查看完毕后点击 Resume 继续选择。</p>';
-    return `<div class="gaia-booster-layer ${dockClass}" data-gaia-booster-layer>
+    const selectedBooster = selected && defs().boosters[selected.action.booster];
+    const dockedBody = selected ? `<div class="gaia-booster-docked-summary"><small>当前选择</small><strong>${esc(!selectedBooster && !initial ? '结束本轮' : (selectedBooster?.name || selected.label))}</strong><span>${!selectedBooster && !initial ? '本轮不再领取新推进器' : boosterEffectRows(selectedBooster)}</span></div>${renderBoosterSelection(selected, mode)}` : '<p class="gaia-booster-docked-empty">主板已解锁。查看完毕后点击 Resume 继续选择。</p>';
+    const title = initial ? '选择首轮推进器' : '放弃本轮并选择推进器';
+    const intro = initial ? '按座次逆序选择一张。推进器收入在本轮收入阶段生效，特殊行动和放弃奖励在对应时机使用。' : '先结算本轮放弃奖励，再选择市场中的一张推进器。新推进器从下一轮收入开始生效。';
+    return `<div class="gaia-booster-layer ${dockClass} ${initial ? '' : 'gaia-pass-layer'}" data-gaia-booster-layer data-gaia-booster-mode="${mode}">
       ${boosterDocked ? '' : '<div class="gaia-booster-scrim" aria-hidden="true"></div>'}
       <section class="gaia-booster-dialog" role="dialog" ${boosterDocked ? '' : 'aria-modal="true"'} aria-labelledby="gaiaBoosterTitle">
-        <header class="gaia-booster-header"><div><small>ROUND 1</small><h2 id="gaiaBoosterTitle">选择首轮推进器</h2></div><div class="gaia-booster-header-actions">${utility}<button type="button" class="gaia-booster-dock-button" data-gaia-command="toggle-booster-dock" aria-label="${boosterDocked ? '重新打开推进器选择窗口' : '暂时收起并查看主板'}">${boosterDocked ? 'Resume' : 'View board'}</button></div></header>
-        ${boosterDocked ? dockedBody : `<p class="gaia-booster-intro">按座次逆序选择一张。推进器收入在本轮收入阶段生效，特殊行动和放弃奖励在对应时机使用。</p><div class="gaia-booster-grid" tabindex="0">${choices.map(({o, index}) => renderBoosterCard(o, index)).join('')}</div>${renderBoosterSelection(selected)}`}
+        <header class="gaia-booster-header"><div><small>${initial ? 'ROUND 1' : 'PASS'}</small><h2 id="gaiaBoosterTitle">${title}</h2></div><div class="gaia-booster-header-actions">${utility}<button type="button" class="gaia-booster-dock-button" data-gaia-command="toggle-booster-dock" aria-label="${docked ? '重新打开推进器选择窗口' : '暂时收起并查看主板'}">${docked ? 'Resume' : 'View board'}</button></div></header>
+        ${docked ? dockedBody : `<p class="gaia-booster-intro">${intro}</p><div class="gaia-booster-grid" tabindex="0">${choices.map(({o, index}) => renderBoosterCard(o, index, selectedId, mode)).join('')}</div>${renderBoosterSelection(selected, mode)}`}
       </section>
     </div>`;
   }
@@ -454,9 +470,9 @@
   }
   function renderGaiaDashboard(p) {
     return `<section class="gaia-dashboard" ${info('player')} aria-label="我的盖亚计划状态">
-      <div class="gaia-dashboard-heading"><strong style="color:${color(view.you)}">${p.faction ? esc(defs().factions[p.faction].name) : esc(p.name)}</strong><span>${hint('vp', token('vp', p.vp), `胜利点 ${p.vp}`, 'gaia-tk-wrap')}</span></div>
+      <div class="gaia-dashboard-heading"><strong style="color:${color(view.you)}">${p.faction ? esc(defs().factions[p.faction].name) : esc(p.name)}</strong><span class="gaia-dashboard-vp">${hint('vp', token('vp', p.vp), `胜利点 ${p.vp}`, 'gaia-tk-wrap')} <small>VP</small></span></div>
       <div class="gaia-dashboard-resource-block"><strong>当前资源</strong><div class="gaia-resources gaia-dashboard-resources">${resources({credits:p.credits,ore:p.ore,knowledge:p.knowledge,qic:p.qic})}</div></div>
-      ${renderPowerBowls(p)}
+      <div class="gaia-dashboard-power-block"><strong>能量与改造器</strong>${renderPowerBowls(p)}</div>
       <div class="gaia-dashboard-status">${renderGaiaBooster(p)}${renderGaiaFederations(p)}${renderGaiaTech(p)}</div>
       ${renderGaiaIncome(p)}
     </section>`;

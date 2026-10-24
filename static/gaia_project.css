@@ -18,20 +18,23 @@
 .gaia-round-tile.current { border-color:var(--gaia-accent); background:#1b393e; }
 .gaia-round-tile.past { opacity:.5; }
 .gaia-goals { display:flex; flex-wrap:wrap; gap:8px 24px; font-size:11px; color:#d2daed; padding:12px 2px; }
-.gaia-dashboard { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px 20px; border:1px solid var(--gaia-line); border-radius:10px; padding:12px; margin-bottom:14px; background:#122135; }
-.gaia-dashboard-heading { display:flex; flex-direction:column; align-items:flex-start; gap:5px; min-width:150px; }
-.gaia-dashboard-heading>strong { font-size:12px; }
-.gaia-dashboard-heading>span { display:inline-flex; align-items:center; min-height:26px; }
+.gaia-dashboard { display:grid; grid-template-columns:minmax(118px,.72fr) minmax(190px,1.12fr) minmax(250px,1.55fr) minmax(220px,1.28fr); grid-template-areas:"identity resources power income" "status status status status"; align-items:stretch; gap:8px; border:1px solid var(--gaia-line); border-radius:10px; padding:10px; margin-bottom:14px; background:#122135; }
+.gaia-dashboard-heading { grid-area:identity; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start; gap:4px; min-width:0; padding:7px 8px; border:1px solid #304962; border-radius:7px; background:#14263b; }
+.gaia-dashboard-heading>strong { min-width:0; max-width:100%; font-size:12px; line-height:1.25; overflow-wrap:anywhere; }
+.gaia-dashboard-heading>span { display:inline-flex; align-items:center; min-height:24px; gap:3px; }
+.gaia-dashboard-heading small { color:#9eb6ce; font-size:9px; }
+.gaia-dashboard-vp .gaia-tk { width:25px; height:25px; }
 .gaia-resources { display:flex; gap:8px 10px; flex-wrap:wrap; font-size:14px; align-items:center; }
 .gaia-resources span { white-space:nowrap; }
-.gaia-power-bowls { display:flex; flex-wrap:wrap; gap:7px; font-size:10px; align-items:center; }
+.gaia-power-bowls { display:flex; flex-wrap:wrap; gap:5px; font-size:10px; align-items:center; }
 .gaia-power-bowls>.gaia-bowl-chip { display:inline-flex; align-items:center; gap:4px; border:1px solid #6b3f7a; border-radius:7px; padding:3px 6px 3px 5px; background:#2c1836; border-bottom-style:solid; line-height:1; }
 .gaia-power-bowls>.gaia-bowl-chip:nth-child(4) { border-color:#2f7a52; background:#153328; }
 .gaia-power-bowls>.gaia-brain-chip { border-color:#7c5ac9; background:#241a3c; }
 .gaia-bowl-name { font-weight:700; letter-spacing:.5px; color:#f1d6ef; }
 .gaia-power-bowls b { margin-left:3px; }
-.gaia-dashboard>.gaia-power-bowls { flex:1 1 350px; min-width:0; }
-.gaia-dashboard-status { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); flex:1 1 100%; gap:8px; min-width:0; }
+.gaia-dashboard-power-block { grid-area:power; min-width:0; padding:7px 8px; border:1px solid #304962; border-radius:7px; background:#14263b; }
+.gaia-dashboard-power-block>strong { display:block; margin-bottom:5px; color:#a9bed5; font-size:10px; }
+.gaia-dashboard-status { grid-area:status; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; min-width:0; }
 .gaia-status-item { min-width:0; padding:8px 9px; border:1px solid #304962; border-radius:7px; background:#14263b; font-size:10px; }
 .gaia-status-item>strong { display:block; margin-bottom:5px; color:#a9bed5; font-size:10px; }
 .gaia-status-item>span,.gaia-status-item>div { min-width:0; color:#d9e6f4; overflow-wrap:anywhere; }
@@ -51,10 +54,10 @@
 .gaia-tk-num.light { fill:#fff; stroke:#1a0a1c; stroke-width:1.6px; }
 .gaia-tk-num.dark { fill:#1d1a12; stroke:#fff8; stroke-width:1.4px; }
 .gaia-panel .gaia-tk-wrap { display:inline-flex; align-items:center; gap:2px; border-bottom:none; vertical-align:middle; }
-.gaia-dashboard-resource-block { display:flex; flex-direction:column; gap:4px; flex:1 1 260px; min-width:0; }
+.gaia-dashboard-resource-block { grid-area:resources; display:flex; flex-direction:column; justify-content:center; gap:4px; min-width:0; padding:7px 8px; border:1px solid #304962; border-radius:7px; background:#14263b; }
 .gaia-dashboard-resource-block>strong { color:#a9bed5; font-size:10px; }
 .gaia-dashboard-resources { min-width:0; padding-top:2px; }
-.gaia-dashboard-resources .gaia-tk { width:30px; height:30px; }
+.gaia-dashboard-resources .gaia-tk { width:28px; height:28px; }
 .gaia-bd { display:inline-block; width:22px; height:22px; vertical-align:middle; flex:none; filter:drop-shadow(0 1px 1px #0008); }
 .gaia-bd.inline { width:18px; height:18px; }
 .gaia-bd.legend { width:16px; height:16px; }
@@ -181,13 +184,13 @@
 .gaia-building-count { color:#9eb6ce; font-size:9px; white-space:nowrap; }
 .gaia-building-ability { grid-column:1 / -1; min-width:0; color:#a6daca; font-size:9px; line-height:1.45; overflow-wrap:anywhere; }
 .gaia-building-row-third .gaia-building-ability { padding:2px 1px 1px; }
-.gaia-income-panel { min-width:0; margin-top:10px; padding:9px; border:1px solid #35516a; border-radius:7px; background:#122338; }
-.gaia-dashboard>.gaia-income-panel { flex:1 1 100%; width:100%; margin-top:0; }
+.gaia-income-panel { grid-area:income; min-width:0; margin-top:0; padding:7px 8px; border:1px solid #35516a; border-radius:7px; background:#122338; }
+.gaia-dashboard>.gaia-income-panel { width:auto; }
 .gaia-income-total { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 10px; }
-.gaia-income-total>strong { color:#d9e7f5; font-size:11px; }
-.gaia-income-total-value { flex:1 1 180px; min-width:0; justify-content:flex-end; }
+.gaia-income-total>strong { color:#d9e7f5; font-size:10px; }
+.gaia-income-total-value { min-width:0; justify-content:flex-end; gap:4px 6px; font-size:12px; }
 .gaia-income-sources { margin-top:7px; border-top:1px solid #2d4761; }
-.gaia-income-sources summary { padding:7px 0 2px; color:#aac0d6; font-size:10px; }
+.gaia-income-sources summary { padding:5px 0 1px; color:#aac0d6; font-size:9px; }
 .gaia-income-source-list { display:flex; flex-direction:column; gap:4px; margin-top:4px; }
 .gaia-income-source { display:grid; grid-template-columns:minmax(62px,auto) minmax(0,1fr); align-items:center; gap:6px; min-width:0; font-size:9px; }
 .gaia-income-source>span:first-child { min-width:0; color:#91abc4; overflow-wrap:anywhere; }
@@ -271,3 +274,31 @@
 @media(max-width:1050px) { .game-panel[data-game-theme="gaia_project"] { padding:12px; } .gaia-research { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-player-grid { grid-template-columns:1fr; } }
 @media(max-width:760px) { .gaia-layout { grid-template-columns:minmax(0,1fr); } .gaia-controls { max-height:none; } .gaia-controls>.gaia-options { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-options.gaia-faction-options { max-height:340px; overflow:auto; } .gaia-title h2 { font-size:21px; } .gaia-title h2 span { display:block; margin:5px 0 0; font-size:9px; } .gaia-rounds { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-round-tile { padding:7px 8px; } .gaia-round-tile strong { font-size:10px; margin-top:3px; } .gaia-dashboard { gap:8px; } .gaia-dashboard-heading { min-width:120px; } .gaia-dashboard-status { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-status-tech { grid-column:1 / -1; } .gaia-tech-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-tab-content { padding:8px; } #gaiaGalaxy { min-height:250px; max-height:55vh; } .game-panel[data-game-theme="gaia_project"] { padding:10px; } .gaia-goals { font-size:10px; gap:6px; } .gaia-map-tools span { font-size:9px; } .gaia-tabs button { padding:7px 5px; font-size:11px; } .gaia-confirm { scroll-margin-top:10px; } .gaia-resources { gap:6px 8px; font-size:13px; } .gaia-dashboard-resources .gaia-tk { width:27px; height:27px; } .gaia-tk { width:24px; height:24px; } .gaia-building-groups { gap:5px; } .gaia-building-group h4 { padding-left:6px; padding-right:6px; } .gaia-income-panel { padding:8px; } .gaia-inline-controls { margin-left:-8px; margin-right:-8px; margin-bottom:-8px; } .gaia-booster-layer-floating { padding:10px; } .gaia-booster-dialog { max-height:calc(100vh - 20px); border-radius:12px; } .gaia-booster-header { padding:11px 12px 9px; gap:8px; } .gaia-booster-header h2 { font-size:16px; } .gaia-booster-header-actions { gap:3px; } .gaia-booster-header-actions button { padding:5px 6px; font-size:9px; } .gaia-booster-intro { padding:9px 12px 2px; font-size:10px; } .gaia-booster-grid { grid-template-columns:1fr; gap:6px; max-height:calc(100vh - 235px); padding:8px 12px 10px; } .gaia-booster-card { min-height:0; padding:9px 10px; gap:5px; } .gaia-booster-card-heading strong { font-size:12px; } .gaia-booster-card-effect { font-size:9px; } .gaia-booster-selected { margin:0 12px 12px; padding:9px 10px; } .gaia-booster-layer-docked { inset:auto 8px max(8px,env(safe-area-inset-bottom)) auto; width:min(320px,calc(100vw - 16px)); } }
 @media(max-width:340px) { .gaia-booster-header-actions button:not(.gaia-booster-dock-button) { display:none; } .gaia-booster-header h2 { font-size:14px; } .gaia-booster-intro { line-height:1.4; } .gaia-booster-grid { max-height:calc(100vh - 210px); } }
+
+@media(max-width:760px) {
+  .gaia-dashboard { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-areas:"identity resources" "power power" "income income" "status status"; gap:6px; padding:7px; }
+  .gaia-dashboard-heading,.gaia-dashboard-resource-block,.gaia-dashboard-power-block,.gaia-income-panel { padding:6px; }
+  .gaia-dashboard-heading { min-width:0; }
+  .gaia-dashboard-heading>strong { font-size:11px; }
+  .gaia-dashboard-resource-block { justify-content:space-between; }
+  .gaia-dashboard-resources .gaia-tk { width:24px; height:24px; }
+  .gaia-dashboard-power-block>strong { margin-bottom:3px; font-size:9px; }
+  .gaia-dashboard-power-block .gaia-power-bowls { gap:4px; }
+  .gaia-dashboard-power-block .gaia-bowl-chip { padding:2px 4px; }
+  .gaia-dashboard-power-block .gaia-tk.bowl { width:19px; height:19px; }
+  .gaia-dashboard-status { gap:6px; }
+  .gaia-dashboard-status .gaia-status-item { padding:6px; font-size:9px; }
+  .gaia-dashboard-status .gaia-status-item>strong { margin-bottom:3px; font-size:9px; }
+  .gaia-dashboard-status .gaia-status-tech .gaia-owned-tech { gap:3px; }
+  .gaia-income-total { gap:4px 6px; }
+  .gaia-income-total-value { justify-content:flex-start; }
+}
+@media(max-width:340px) {
+  .gaia-dashboard { gap:5px; padding:6px; }
+  .gaia-dashboard-heading,.gaia-dashboard-resource-block,.gaia-dashboard-power-block,.gaia-income-panel { padding:5px; }
+  .gaia-dashboard-heading>strong { font-size:10px; }
+  .gaia-dashboard-resources .gaia-tk { width:22px; height:22px; }
+  .gaia-dashboard-power-block .gaia-bowl-chip { gap:2px; padding:2px 3px; }
+  .gaia-dashboard-power-block .gaia-tk.bowl { width:18px; height:18px; }
+  .gaia-dashboard-status .gaia-status-item { padding:5px; }
+}

@@ -533,6 +533,22 @@
   font-size: 13px;
 }
 
+.azul-player-score-trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.azul-player-score-trigger:hover {
+  color: #1d4ed8;
+}
+
 .azul-pattern-summary {
   display: flex;
   flex-wrap: wrap;
@@ -553,6 +569,51 @@
   font-size: 12px;
   color: #6b7280;
   margin-top: 4px;
+}
+
+.azul-score-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 1100;
+  width: min(480px, calc(100vw - 24px));
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  background: #172a43;
+  color: #f8fafc;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.28);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.azul-score-banner.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.azul-score-banner-title {
+  display: block;
+  margin-bottom: 3px;
+  color: #bfdbfe;
+  font-size: 13px;
+}
+
+.azul-score-banner-details,
+.azul-score-banner-pending {
+  color: #f8fafc;
+}
+
+.azul-score-banner-pending {
+  margin-top: 2px;
+  color: #cbd5e1;
+  font-size: 11px;
 }
 
 @container (min-width: 660px) {

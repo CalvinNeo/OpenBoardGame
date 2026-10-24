@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from game.azul import AzulGame
+from game.azul import AzulGame, _apply_end_game_bonuses, _resolve_round
 
 
 class AzulGameTests(unittest.TestCase):
@@ -124,6 +124,53 @@ class AzulGameTests(unittest.TestCase):
 
         self.assertTrue(state["game_over"])
         self.assertTrue(state["winner"])
+
+    def test_score_breakdown_tracks_wall_points_and_floor_penalties(self):
+        state = AzulGame.init_game({}, self._players())
+        pdata = state["players"]["p1"]
+        pdata["score"] = 10
+        pdata["score_breakdown"]["wall_points"] = 10
+        pdata["pattern_lines"][0] = {"color": "blue", "tiles": ["blue"]}
+        pdata["floor"] = ["red"]
+        state["factories"] = [[] for _ in range(5)]
+        state["center"] = []
+
+        _resolve_round(state)
+
+        self.assertEqual(pdata["score"], 10)
+        self.assertEqual(
+            pdata["score_breakdown"],
+            {
+                "wall_points": 11,
+                "floor_penalty": -1,
+                "floor_clamp": 0,
+                "row_bonus": 0,
+                "column_bonus": 0,
+                "color_bonus": 0,
+            },
+        )
+        public_player = AzulGame.get_public_view(state, "p1")["players"][0]
+        self.assertEqual(public_player["score_breakdown"]["total"], 10)
+        self.assertEqual(public_player["score_breakdown"]["pending_floor_penalty"], 0)
+
+    def test_score_breakdown_tracks_end_game_bonuses(self):
+        state = AzulGame.init_game({}, self._players())
+        state["players"]["p1"]["wall"] = [[True] * 5 for _ in range(5)]
+
+        _apply_end_game_bonuses(state)
+
+        self.assertEqual(state["players"]["p1"]["score"], 95)
+        self.assertEqual(
+            state["players"]["p1"]["score_breakdown"],
+            {
+                "wall_points": 0,
+                "floor_penalty": 0,
+                "floor_clamp": 0,
+                "row_bonus": 10,
+                "column_bonus": 35,
+                "color_bonus": 50,
+            },
+        )
 
 
 if __name__ == "__main__":

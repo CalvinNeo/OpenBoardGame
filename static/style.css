@@ -875,19 +875,6 @@ body.settings-open {
   overflow: hidden;
 }
 
-.log-panel .log-validation-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #333;
-  cursor: pointer;
-}
-
-.log-panel .log-validation-toggle input {
-  margin: 0;
-}
-
 .log-panel .log-action-btn {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #ddd;
@@ -1167,6 +1154,23 @@ body.settings-open {
   font-size: 12px;
   line-height: 1.5;
   color: #64748b;
+}
+
+.settings-tools {
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.settings-tool-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.settings-tool-actions button {
+  min-width: 0;
+  white-space: normal;
 }
 
 .settings-actions {

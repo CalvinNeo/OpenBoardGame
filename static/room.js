@@ -12,6 +12,7 @@ let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
 let roomControlsPopoverOpen = false;
 let roomControlsDockSide = "left";
+let roomControlsDockPositions = null;
 let roomControlsDragState = null;
 let roomControlsSuppressClick = false;
 let roomControlsExplainDockDeferred = false;
@@ -48,6 +49,7 @@ const roomEntryReturnFocus = new WeakMap();
 const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
 const ROOM_CONTROLS_DOCK_KEY = "openboardgame:room_controls_dock";
+const ROOM_CONTROLS_DOCK_POSITION_KEY = "openboardgame:room_controls_dock_position";
 
 const nameInput = document.getElementById("nameInput");
 const playerNameModal = document.getElementById("playerNameModal");
@@ -305,6 +307,12 @@ function updateRoomTurnSound(data) {
 }
 
 const ROOM_CONTROLS_DOCK_SIDES = new Set(["left", "right", "top", "bottom"]);
+const ROOM_CONTROLS_DOCK_POSITION_DEFAULTS = {
+  left: 0.5,
+  right: 0.5,
+  top: 0.5,
+  bottom: 0.5,
+};
 
 function normalizeRoomControlsDockSide(side) {
   return ROOM_CONTROLS_DOCK_SIDES.has(side) ? side : "left";
@@ -312,6 +320,63 @@ function normalizeRoomControlsDockSide(side) {
 
 function readRoomControlsDockSide() {
   return normalizeRoomControlsDockSide(readRoomStorage(ROOM_CONTROLS_DOCK_KEY));
+}
+
+function normalizeRoomControlsDockPosition(position) {
+  const value = Number(position);
+  if (!Number.isFinite(value)) return 0.5;
+  return Math.min(1, Math.max(0, value));
+}
+
+function readRoomControlsDockPositions() {
+  const positions = { ...ROOM_CONTROLS_DOCK_POSITION_DEFAULTS };
+  const raw = readRoomStorage(ROOM_CONTROLS_DOCK_POSITION_KEY);
+  if (!raw) return positions;
+  try {
+    const parsed = JSON.parse(raw);
+    for (const side of ROOM_CONTROLS_DOCK_SIDES) {
+      if (parsed && Object.hasOwn(parsed, side)) {
+        positions[side] = normalizeRoomControlsDockPosition(parsed[side]);
+      }
+    }
+  } catch {
+    // Ignore malformed position data and use centered docks.
+  }
+  return positions;
+}
+
+function writeRoomControlsDockPositions() {
+  writeRoomStorage(ROOM_CONTROLS_DOCK_POSITION_KEY, JSON.stringify(roomControlsDockPositions));
+}
+
+function getRoomControlsDockPosition(side) {
+  if (!roomControlsDockPositions) {
+    roomControlsDockPositions = readRoomControlsDockPositions();
+  }
+  return normalizeRoomControlsDockPosition(roomControlsDockPositions[side]);
+}
+
+function applyRoomControlsDockPosition(side) {
+  if (!roomControlsPanel) return;
+  if (roomControlsDragState?.moved) return;
+  const vertical = side === "left" || side === "right";
+  const viewportSize = vertical ? window.innerHeight : window.innerWidth;
+  const panelRect = roomControlsPanel.getBoundingClientRect();
+  const panelSize = vertical ? panelRect.height : panelRect.width;
+  const center = getRoomControlsDockPosition(side) * viewportSize;
+  const maxStart = Math.max(0, viewportSize - panelSize);
+  const start = Math.min(maxStart, Math.max(0, center - panelSize / 2));
+  roomControlsPanel.style.setProperty("--room-controls-dock-edge-offset", `${start}px`);
+}
+
+function setRoomControlsDockPosition(side, position, persist = false) {
+  const normalizedSide = normalizeRoomControlsDockSide(side);
+  if (!roomControlsDockPositions) {
+    roomControlsDockPositions = readRoomControlsDockPositions();
+  }
+  roomControlsDockPositions[normalizedSide] = normalizeRoomControlsDockPosition(position);
+  applyRoomControlsDockPosition(normalizedSide);
+  if (persist) writeRoomControlsDockPositions();
 }
 
 function isDesktopRoomControlsDock() {
@@ -328,6 +393,7 @@ function applyRoomControlsDockSide(side, persist = false) {
     "room-controls-dock-bottom",
   );
   document.body.classList.add(`room-controls-dock-${roomControlsDockSide}`);
+  applyRoomControlsDockPosition(roomControlsDockSide);
   if (persist) writeRoomStorage(ROOM_CONTROLS_DOCK_KEY, roomControlsDockSide);
 }
 
@@ -370,6 +436,14 @@ function updateRoomControlsDragPreview(clientX, clientY) {
   roomControlsPanel.style.transform = "none";
 }
 
+function roomControlsDockPositionFromPointer(side, clientX, clientY) {
+  const vertical = side === "left" || side === "right";
+  const viewportSize = vertical ? window.innerHeight : window.innerWidth;
+  const pointer = vertical ? clientY : clientX;
+  const center = Math.min(viewportSize, Math.max(0, pointer));
+  return viewportSize ? center / viewportSize : 0.5;
+}
+
 function finishRoomControlsDrag(event, persist = true) {
   const drag = roomControlsDragState;
   if (!drag) return;
@@ -379,12 +453,16 @@ function finishRoomControlsDrag(event, persist = true) {
   if (roomControlsPanel?.hasPointerCapture?.(drag.pointerId)) {
     roomControlsPanel.releasePointerCapture(drag.pointerId);
   }
-  if (!persist && drag.side !== drag.originSide) {
-    applyRoomControlsDockSide(drag.originSide);
-  } else if (persist && drag.moved) {
-    applyRoomControlsDockSide(drag.side, true);
-  }
+  const targetSide = persist && drag.moved ? drag.side : drag.originSide;
+  applyRoomControlsDockSide(targetSide);
   clearRoomControlsDragPreview();
+  if (persist && drag.moved) {
+    const finalRect = roomControlsPanel.getBoundingClientRect();
+    const clientX = event?.clientX ?? drag.lastX ?? drag.startX;
+    const clientY = event?.clientY ?? drag.lastY ?? drag.startY;
+    const position = roomControlsDockPositionFromPointer(targetSide, clientX, clientY);
+    setRoomControlsDockPosition(targetSide, position, true);
+  }
   if (drag.moved) {
     // Pointer movement over a button can otherwise trigger its click after the
     // dock has been moved. Suppress just that synthetic click.
@@ -411,6 +489,8 @@ function startRoomControlsDrag(event) {
     startY: event.clientY,
     grabOffsetX: event.clientX - roomControlsPanel.getBoundingClientRect().left,
     grabOffsetY: event.clientY - roomControlsPanel.getBoundingClientRect().top,
+    lastX: event.clientX,
+    lastY: event.clientY,
     moved: false,
   };
 }
@@ -430,6 +510,8 @@ function moveRoomControlsDrag(event) {
   // side is applied only on release, so changing from a vertical to a
   // horizontal dock cannot make the grabbed point jump away from the cursor.
   drag.side = roomControlsDockSideAtPoint(event.clientX, event.clientY);
+  drag.lastX = event.clientX;
+  drag.lastY = event.clientY;
   updateRoomControlsDragPreview(event.clientX, event.clientY);
   event.preventDefault();
 }

@@ -21,8 +21,10 @@ const azulCenter = document.getElementById("azulCenter");
 const azulYourBoard = document.getElementById("azulYourBoard");
 const azulPlayers = document.getElementById("azulPlayers");
 const azulPlayersDetails = document.getElementById("azulPlayersDetails");
+const azulScoreBanner = document.getElementById("azulScoreBanner");
 const azulMarket = document.querySelector("#azulPanel .azul-market");
 let azulPlayersDetailsInitialized = false;
+let azulScoreBannerTimer = null;
 
 const azulFloorBtn = document.getElementById("azulFloorBtn");
 const azulTakeBtn = document.getElementById("azulTakeBtn");
@@ -71,6 +73,7 @@ const AZUL_HELP_TEXT = `
   <p>Tile colors: Blue (🟦), Yellow (🟨), Red (🟥), Black (⬛), and White (🔹, a turquoise diamond on white). Faded wall spaces are empty; solid spaces are filled. Player summaries show each line as row: filled/capacity; pts means points.</p>
 
   <h3>Scoring</h3>
+  <p>Click any player's name and score in Players to see the current score components. The banner disappears automatically.</p>
   <ul>
     <li>When all factories and the center are empty, move one tile from each full pattern line to the wall and score.</li>
     <li>New tile scores 1 if isolated, otherwise score connected row + column lengths.</li>
@@ -117,6 +120,83 @@ function azulRowLabel(row) {
     return "Floor";
   }
   return `Row ${row + 1}`;
+}
+
+function formatAzulScoreComponent(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount === 0) {
+    return "0";
+  }
+  return amount > 0 ? `+${amount}` : `−${Math.abs(amount)}`;
+}
+
+function hideAzulScoreBanner() {
+  if (!azulScoreBanner) {
+    return;
+  }
+  window.clearTimeout(azulScoreBannerTimer);
+  azulScoreBannerTimer = null;
+  azulScoreBanner.classList.remove("is-visible");
+  window.setTimeout(() => {
+    if (!azulScoreBanner.classList.contains("is-visible")) {
+      azulScoreBanner.hidden = true;
+    }
+  }, 180);
+}
+
+function showAzulScoreBanner(player) {
+  if (!azulScoreBanner || !player) {
+    return;
+  }
+  window.clearTimeout(azulScoreBannerTimer);
+  azulScoreBannerTimer = null;
+
+  const title = document.createElement("strong");
+  title.className = "azul-score-banner-title";
+  title.textContent = `${player.name || "Player"} · ${Number(player.score) || 0} pts`;
+  azulScoreBanner.replaceChildren(title);
+
+  const breakdown = player.score_breakdown;
+  if (breakdown && typeof breakdown === "object") {
+    const parts = [
+      ["Wall tiles", breakdown.wall_points],
+      ["Floor penalties", breakdown.floor_penalty],
+      ["Zero-score protection", breakdown.floor_clamp],
+      ["Rows", breakdown.row_bonus],
+      ["Columns", breakdown.column_bonus],
+      ["Colors", breakdown.color_bonus],
+    ];
+    const details = document.createElement("div");
+    details.className = "azul-score-banner-details";
+    details.textContent = parts
+      .map(([label, value]) => `${label} ${formatAzulScoreComponent(value)}`)
+      .join(" · ");
+    azulScoreBanner.appendChild(details);
+
+    const pendingPenalty = Number(breakdown.pending_floor_penalty);
+    if (Number.isFinite(pendingPenalty) && pendingPenalty < 0) {
+      const pending = document.createElement("div");
+      pending.className = "azul-score-banner-pending";
+      pending.textContent = `Current floor (pending) ${formatAzulScoreComponent(pendingPenalty)}`;
+      azulScoreBanner.appendChild(pending);
+    }
+    if (breakdown.legacy) {
+      const legacy = document.createElement("div");
+      legacy.className = "azul-score-banner-pending";
+      legacy.textContent = "Earlier scoring is grouped under Wall tiles.";
+      azulScoreBanner.appendChild(legacy);
+    }
+  } else {
+    const unavailable = document.createElement("div");
+    unavailable.className = "azul-score-banner-pending";
+    unavailable.textContent = "Detailed score components are unavailable for this saved game.";
+    azulScoreBanner.appendChild(unavailable);
+  }
+
+  azulScoreBanner.hidden = false;
+  azulScoreBanner.classList.remove("is-visible");
+  window.requestAnimationFrame(() => azulScoreBanner.classList.add("is-visible"));
+  azulScoreBannerTimer = window.setTimeout(hideAzulScoreBanner, 4200);
 }
 
 function updateAzulSelectionLabels() {
@@ -567,12 +647,14 @@ function renderAzulPlayers(view) {
     if (player.player_id === view.you) {
       card.classList.add("self");
     }
-    const header = document.createElement("div");
-    header.className = "azul-player-name";
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "azul-player-name azul-player-score-trigger";
     const tokenMark = player.has_first_player_token ? " ★" : "";
-    header.textContent = `${player.name} · ${player.score} pts${tokenMark}`;
-    header.tabIndex = 0;
-    setAzulTip(header, `${player.name}: ${player.score} points (pts).${player.has_first_player_token ? " Star (★): holds the First Player token (1st) and starts next round." : ""}`);
+    const playerName = player.name || "Player";
+    header.textContent = `${playerName} · ${player.score} pts${tokenMark}`;
+    header.setAttribute("aria-label", `Show ${playerName}'s score breakdown`);
+    header.addEventListener("click", () => showAzulScoreBanner(player));
     card.appendChild(header);
 
     const patternSummary = document.createElement("div");
@@ -653,6 +735,7 @@ function clearAzulState() {
   currentAzulView = null;
   azulPlayersDetailsInitialized = false;
   hideAzulTip();
+  hideAzulScoreBanner();
   clearAzulSelection();
   if (azulPhaseLabel) azulPhaseLabel.textContent = "-";
   if (azulRoundLabel) azulRoundLabel.textContent = "-";

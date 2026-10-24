@@ -270,6 +270,7 @@
 }
 
 .in-a-grove-suspect {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -368,6 +369,41 @@
   font-size: 11px;
   line-height: 1.4;
   font-weight: 600;
+}
+
+.in-a-grove-peekers {
+  position: absolute;
+  top: 28px;
+  left: 3px;
+  right: 3px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  max-height: 30px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.in-a-grove-peeker {
+  max-width: 100%;
+  padding: 1px 4px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--peeker-color, #64748b) 55%, white);
+  border-radius: 999px;
+  color: #fff;
+  background: color-mix(in srgb, var(--peeker-color, #64748b) 84%, #1f3429);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.in-a-grove-peek-legend {
+  color: #c8d6c9;
+  font-size: 10px;
 }
 
 .in-a-grove-stack {
@@ -618,6 +654,8 @@ body.in-a-grove-explain-mode #inAGrovePanel button.has-explanation {
   .in-a-grove-suspects { gap: 7px; }
   .in-a-grove-suspect { min-height: 157px; padding: 8px 4px; gap: 6px; border-radius: 9px; }
   .in-a-grove-suspect-face { width: 49px; height: 62px; font-size: 38px; }
+  .in-a-grove-peekers { top: 25px; max-height: 27px; }
+  .in-a-grove-peeker { padding: 1px 3px; font-size: 8px; }
   .in-a-grove-suspect-label,
   .in-a-grove-suspect-status { font-size: 10px; }
   .in-a-grove-chip { padding: 5px 4px; gap: 3px; font-size: 10px; }

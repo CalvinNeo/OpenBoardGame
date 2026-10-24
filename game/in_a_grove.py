@@ -56,6 +56,20 @@ def _peek_count(state: Dict) -> int:
     return 1 if _inspection_mode(state) == "choose_one" else 2
 
 
+def _round_peeked_by(state: Dict) -> List[List[str]]:
+    """Return the public, per-card inspection history for the current round."""
+    value = state.get("round_peeked_by")
+    if (
+        isinstance(value, list)
+        and len(value) == 3
+        and all(isinstance(viewers, list) for viewers in value)
+    ):
+        return value
+    value = [[], [], []]
+    state["round_peeked_by"] = value
+    return value
+
+
 def _valid_suspect_indexes(indexes: object, count: int) -> Optional[List[int]]:
     if not isinstance(indexes, list) or len(indexes) != count:
         return None
@@ -194,6 +208,7 @@ def _deal_round(state: Dict, first_player: str) -> None:
         "viewed_indexes": [],
         "acted_count": 0,
     }
+    state["round_peeked_by"] = [[], [], []]
     state["pending_next_first_player"] = None
     state["pending_game_over"] = False
 
@@ -355,6 +370,10 @@ class InAGroveGame:
             if blocked is not None and blocked in indexes:
                 return [], "cannot inspect blocked suspect"
             state["turn_context"]["viewed_indexes"] = indexes
+            round_peeked_by = _round_peeked_by(state)
+            for index in indexes:
+                if player_id not in round_peeked_by[index]:
+                    round_peeked_by[index].append(player_id)
             if player_id == state.get("first_player"):
                 unseen_indexes = [index for index in range(3) if index not in indexes]
                 state["unseen_suspect_indexes"] = unseen_indexes
@@ -425,6 +444,7 @@ class InAGroveGame:
             for entry in summary.get("suspects", []):
                 summary_by_index[entry["index"]] = entry
 
+        round_peeked_by = _round_peeked_by(state)
         for index, suspect in enumerate(state.get("suspects", [])):
             visible_label = None
             if state.get("game_over") or state.get("phase") == "round_end":
@@ -438,6 +458,7 @@ class InAGroveGame:
                     "stack": list(suspect.get("stack", [])),
                     "blocked": state.get("blocked_suspect_index") == index,
                     "unseen": index in unseen_indexes,
+                    "peeked_by": list(round_peeked_by[index]) if index < len(round_peeked_by) else [],
                     "last_round": summary_by_index.get(index),
                 }
             )
@@ -508,4 +529,5 @@ class InAGroveGame:
         payload["config"].setdefault("inspection_mode", "both")
         if payload.get("phase") == "swap_or_bet":
             payload["phase"] = "bet"
+        _round_peeked_by(payload)
         return payload

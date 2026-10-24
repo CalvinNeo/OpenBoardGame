@@ -112,6 +112,22 @@ function inAGrovePlayerColor(id) {
     return ["#ad573e", "#38827e", "#987127", "#6d65a4", "#457ca2"][index] || "#64748b";
 }
 
+function buildInAGrovePeekers(view, suspect) {
+    const peekedBy = Array.isArray(suspect.peeked_by) ? suspect.peeked_by : [];
+    if (!peekedBy.length) return null;
+    const names = peekedBy.map((id) => inAGrovePlayerName(view, id));
+    const wrap = inAGroveElement("span", "in-a-grove-peekers");
+    wrap.title = "Seen this round by " + names.join(", ");
+    wrap.setAttribute("aria-label", "Seen this round by " + names.join(", "));
+    names.forEach((name, index) => {
+        const badge = inAGroveElement("span", "in-a-grove-peeker", name);
+        badge.title = name;
+        badge.style.setProperty("--peeker-color", inAGrovePlayerColor(peekedBy[index]));
+        wrap.append(badge);
+    });
+    return wrap;
+}
+
 function clearInAGroveSelection() {
     inAGroveSelectedPeekIndexes = [];
     inAGroveSelectedTargetIndex = null;
@@ -222,9 +238,14 @@ function renderInAGroveSuspects(view) {
         const unseen = inAGroveElement("span", "in-a-grove-unseen", suspect.unseen ? "👁 First skipped" : "");
         if (!revealed && view.current_turn !== view.you && !suspect.blocked) status = "Await your turn";
         card.append(label, face, caption, unseen, inAGroveElement("span", "in-a-grove-suspect-status", status));
+        const peekers = buildInAGrovePeekers(view, suspect);
+        if (peekers) card.append(peekers);
+        const peekedByNames = (suspect.peeked_by || []).map((id) => inAGrovePlayerName(view, id));
         card.setAttribute("aria-label", "Suspect " + (suspect.index + 1) + ", " +
             (suspect.label ? "value " + suspect.label : "hidden") + ", " + status +
-            (suspect.unseen ? ", not inspected by the first detective" : "") + (selected ? ", selected" : ""));
+            (suspect.unseen ? ", not inspected by the first detective" : "") +
+            (peekedByNames.length ? ", seen this round by " + peekedByNames.join(", ") : "") +
+            (selected ? ", selected" : ""));
         card.addEventListener("click", () => {
             if (inAGroveExplainMode || !inAGroveCanSelectSuspect(suspect)) return;
             if (inAGroveHasLegalAction("peek_suspects")) {

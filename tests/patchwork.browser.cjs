@@ -18,12 +18,14 @@ const server = http.createServer((request, response) => {
         response.end(JSON.stringify([{game_id: 'patchwork', name: 'Patchwork', min_players: 2, max_players: 2}]));
         return;
     }
-    const file = path.resolve(root, url.pathname === '/' ? 'static/index.html' : `.${decodeURIComponent(url.pathname)}`);
+    const file = url.pathname.startsWith('/static/patchwork/')
+        ? path.resolve(root, 'game/assets/patchwork', decodeURIComponent(url.pathname.slice('/static/patchwork/'.length)))
+        : path.resolve(root, url.pathname === '/' ? 'static/index.html' : `.${decodeURIComponent(url.pathname)}`);
     if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         response.writeHead(404).end();
         return;
     }
-    const types = {'.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json'};
+    const types = {'.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml'};
     response.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream');
     response.end(fs.readFileSync(file));
 });
@@ -98,10 +100,12 @@ async function bounds(page, label) {
             await render(page, 'start');
             await bounds(page, `${width} start`);
             await page.locator('#patchworkPanel').screenshot({path: path.join(output, `${width}-start.png`)});
-            assert.equal(await page.locator('.patchwork-market-card').count(), 33);
+            assert.equal(await page.locator('.patchwork-market-card').count(), 3);
             assert.equal(await page.locator('.patchwork-market-card.selectable').count(), 3);
+            assert.equal(await page.locator('.patchwork-upcoming-card').count(), 30);
             assert.equal(await page.locator('#patchworkYourBoard .patchwork-board-cell').count(), 81);
-            assert.equal(await page.locator('#patchworkMarketMobile').evaluate(node => getComputedStyle(node).overflowX), 'auto');
+            assert.notEqual(await page.locator('#patchworkMarketMobile').evaluate(node => getComputedStyle(node).overflowX), 'auto');
+            assert.equal(await page.locator('#patchworkMarketMobile').evaluate(node => node.scrollWidth <= node.clientWidth), true);
         }
 
         await render(page, 'start');
@@ -121,7 +125,7 @@ async function bounds(page, label) {
 
         await page.locator('.patchwork-market-card.selectable').first().click();
         assert.equal(await page.locator('#patchworkTransformActions').evaluate(node => !node.hidden), true);
-        await page.locator('#patchworkYourBoard .patchwork-board-cell').first().click();
+        await page.locator('#patchworkYourBoard .patchwork-board-cell').nth(40).click();
         await bounds(page, 'placement preview');
         assert.equal(await page.locator('.patchwork-placement-actions').evaluate(node => !node.hidden), true);
         await page.locator('#patchworkRotateBtn').click();

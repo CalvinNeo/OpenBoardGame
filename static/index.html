@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v139" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v140" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -13,12 +13,6 @@
     <div class="panel-header">
       <h2>Log</h2>
       <div class="panel-header-actions">
-        <label class="log-validation-toggle" for="skipValidationToggle" title="Skip schema validation for room start and actions">
-          <input id="skipValidationToggle" type="checkbox" />
-          <span>Skip Validation</span>
-        </label>
-        <button id="copyStateBtn" class="log-action-btn" type="button" title="Copy current game state for debugging">Copy State</button>
-        <button id="copyActLogBtn" class="log-action-btn" type="button" title="Copy action log for debugging">Copy ActLog</button>
         <button id="logCloseBtn" class="log-action-btn log-close-btn" type="button">Close</button>
       </div>
     </div>
@@ -485,6 +479,16 @@
           <span>Play a sound on my turn</span>
         </label>
         <p id="turnSoundHint" class="settings-hint">A short chime when it is your turn to act. Off by default; saved in this browser.</p>
+        <div class="settings-tools">
+          <label class="settings-option" for="skipValidationToggle" title="Skip schema validation for room start and actions">
+            <input id="skipValidationToggle" type="checkbox" />
+            <span>Skip Validation</span>
+          </label>
+          <div class="settings-tool-actions">
+            <button id="copyStateBtn" type="button" title="Copy current game state for debugging">Copy State</button>
+            <button id="copyActLogBtn" type="button" title="Copy action log for debugging">Copy ActLog</button>
+          </div>
+        </div>
         <div class="settings-actions">
           <button id="logOpenBtn" type="button"><span aria-hidden="true">📋</span> Log</button>
           <button id="logoutBtn" type="button"><span aria-hidden="true">🚪</span> Logout</button>

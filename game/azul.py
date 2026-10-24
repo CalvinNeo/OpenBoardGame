@@ -143,6 +143,37 @@ def _complete_colors(wall: List[List[bool]]) -> int:
     return total
 
 
+def _new_score_breakdown() -> Dict:
+    """Return the running score components kept for the public score summary."""
+    return {
+        "wall_points": 0,
+        "floor_penalty": 0,
+        "floor_clamp": 0,
+        "row_bonus": 0,
+        "column_bonus": 0,
+        "color_bonus": 0,
+    }
+
+
+def _ensure_score_breakdown(pdata: Dict) -> Dict:
+    """Get a player's score components, including for older saved games."""
+    breakdown = pdata.get("score_breakdown")
+    if not isinstance(breakdown, dict):
+        # Older saved games did not retain scoring components.  Treat the
+        # already recorded score as wall points so future scoring remains
+        # consistent, while marking the view as a legacy summary.
+        breakdown = _new_score_breakdown()
+        breakdown["wall_points"] = int(pdata.get("score", 0) or 0)
+        breakdown["legacy"] = True
+        pdata["score_breakdown"] = breakdown
+    else:
+        for key, default in _new_score_breakdown().items():
+            value = breakdown.get(key)
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                breakdown[key] = default
+    return breakdown
+
+
 def _drafting_complete(state: Dict) -> bool:
     if any(factory for factory in state["factories"]):
         return False
@@ -164,6 +195,7 @@ def _advance_turn(state: Dict) -> None:
 def _resolve_round(state: Dict) -> None:
     for pid in state["turn_order"]:
         pdata = state["players"][pid]
+        breakdown = _ensure_score_breakdown(pdata)
         wall = pdata["wall"]
         for row in range(5):
             line = pdata["pattern_lines"][row]
@@ -173,7 +205,9 @@ def _resolve_round(state: Dict) -> None:
                 col = _wall_col_for_color(row, color)
                 if col is not None and not wall[row][col]:
                     wall[row][col] = True
-                    pdata["score"] += _score_placement(wall, row, col)
+                    placement_points = _score_placement(wall, row, col)
+                    pdata["score"] += placement_points
+                    breakdown["wall_points"] += placement_points
                 leftovers = line["tiles"][:-1]
                 if leftovers:
                     state["discard"].extend(leftovers)
@@ -183,7 +217,13 @@ def _resolve_round(state: Dict) -> None:
         penalty = 0
         for idx in range(min(len(pdata["floor"]), len(FLOOR_PENALTIES))):
             penalty += FLOOR_PENALTIES[idx]
-        pdata["score"] = max(0, pdata["score"] + penalty)
+        score_before_penalty = pdata["score"]
+        score_after_penalty = score_before_penalty + penalty
+        pdata["score"] = max(0, score_after_penalty)
+        breakdown["floor_penalty"] += penalty
+        # Keep the points protected by Azul's minimum score of zero visible so
+        # the displayed components still add up to the player's total.
+        breakdown["floor_clamp"] += max(0, -score_after_penalty)
 
         for tile in pdata["floor"]:
             if tile != "first_player":
@@ -210,8 +250,15 @@ def _apply_end_game_bonuses(state: Dict) -> None:
         rows = _complete_rows(wall)
         cols = _complete_cols(wall)
         colors = _complete_colors(wall)
-        bonus = rows * 2 + cols * 7 + colors * 10
+        row_bonus = rows * 2
+        column_bonus = cols * 7
+        color_bonus = colors * 10
+        bonus = row_bonus + column_bonus + color_bonus
         pdata["score"] += bonus
+        breakdown = _ensure_score_breakdown(pdata)
+        breakdown["row_bonus"] += row_bonus
+        breakdown["column_bonus"] += column_bonus
+        breakdown["color_bonus"] += color_bonus
         row_counts[pid] = rows
 
     scores = {pid: pdata["score"] for pid, pdata in state["players"].items()}
@@ -476,6 +523,7 @@ class AzulGame:
         for p in players:
             state["players"][p["player_id"]] = {
                 "score": 0,
+                "score_breakdown": _new_score_breakdown(),
                 "pattern_lines": [
                     {"color": None, "tiles": []},
                     {"color": None, "tiles": []},
@@ -623,6 +671,13 @@ class AzulGame:
                     "seat": meta.get("seat"),
                     "is_bot": meta.get("is_bot"),
                     "score": pdata["score"],
+                    "score_breakdown": {
+                        **_ensure_score_breakdown(pdata),
+                        "pending_floor_penalty": sum(
+                            FLOOR_PENALTIES[:min(len(pdata.get("floor", [])), len(FLOOR_PENALTIES))]
+                        ),
+                        "total": pdata["score"],
+                    },
                     "pattern_lines": pattern_lines,
                     "wall": pdata["wall"],
                     "floor": list(pdata["floor"]),
