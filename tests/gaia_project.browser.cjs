@@ -87,7 +87,12 @@ async function render(page, key, tab) {
           const players = views[key].players.length;
           assert.equal(await page.locator('.gaia-player-board').count(), players);
           assert.equal(await page.locator('.gaia-building-group-iii').count(), players);
-          assert.equal(await page.locator('.gaia-income-total').count(), players);
+          assert.equal(await page.locator('.gaia-dashboard .gaia-income-total').count(), 1);
+          assert.equal(await page.locator('.gaia-player-card-self .gaia-income-panel').count(), 0);
+          assert.equal(await page.locator('.gaia-dashboard .gaia-status-booster').count(), 1);
+          assert.equal(await page.locator('.gaia-dashboard .gaia-status-federations').count(), 1);
+          assert.equal(await page.locator('.gaia-dashboard .gaia-status-tech').count(), 1);
+          assert.equal(await page.locator('.gaia-player-card-self .gaia-status-item').count(), 0);
           assert.equal(await page.locator('.gaia-building-ability').count(), players * 3);
         }
         await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-${key}-${tab}.png`});
@@ -127,7 +132,7 @@ async function render(page, key, tab) {
     // Hover hint shows the token name with the physical description.
     await page.setViewportSize({width: 1440, height: 1000});
     await render(page, 'action', 'galaxy');
-    await page.locator('.gaia-dashboard [data-gaia-hint-key="credits"]').hover();
+    await page.locator('.gaia-dashboard-resources [data-gaia-hint-key="credits"]').first().hover();
     await page.waitForSelector('#gaiaInlineHint');
     assert.match(await page.locator('#gaiaInlineHint').textContent(), /信用点 · 黄色圆片/);
     assert.equal(await page.evaluate(() => gaiaTestActions.length), 0);

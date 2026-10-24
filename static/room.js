@@ -13,6 +13,7 @@ let roomControlsAutoCollapsed = false;
 let roomControlsPopoverOpen = false;
 let roomControlsDockSide = "left";
 let roomControlsDragState = null;
+let roomControlsSuppressClick = false;
 let roomControlsExplainDockDeferred = false;
 let roomControlsExplainButton = null;
 let roomControlsExplainAnchor = null;
@@ -142,6 +143,7 @@ const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 const roomControlsCollapseBtn = document.getElementById("roomControlsCollapseBtn");
 const roomControlsBackdrop = document.getElementById("roomControlsBackdrop");
 const roomControlsDragHandle = document.getElementById("roomControlsDragHandle");
+const roomControlsExplainPlaceholder = document.getElementById("roomControlsExplainPlaceholder");
 const roomControlsMain = document.querySelector(".layout > .main");
 const mobileExplainSlot = document.getElementById("mobileExplainSlot");
 const gameReconnectBtn = document.getElementById("gameReconnectBtn");
@@ -339,41 +341,96 @@ function roomControlsDockSideAtPoint(clientX, clientY) {
   return Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0];
 }
 
+function clearRoomControlsDragPreview() {
+  if (!roomControlsPanel) return;
+  roomControlsPanel.style.removeProperty("position");
+  roomControlsPanel.style.removeProperty("left");
+  roomControlsPanel.style.removeProperty("right");
+  roomControlsPanel.style.removeProperty("top");
+  roomControlsPanel.style.removeProperty("bottom");
+  roomControlsPanel.style.removeProperty("transform");
+}
+
+function updateRoomControlsDragPreview(clientX, clientY) {
+  if (!roomControlsPanel || !roomControlsDragState) return;
+  const drag = roomControlsDragState;
+  const rect = roomControlsPanel.getBoundingClientRect();
+  const maxLeft = Math.max(0, window.innerWidth - rect.width);
+  const maxTop = Math.max(0, window.innerHeight - rect.height);
+  const left = Math.min(maxLeft, Math.max(0, clientX - drag.grabOffsetX));
+  const top = Math.min(maxTop, Math.max(0, clientY - drag.grabOffsetY));
+  // Keep the preview in the browser viewport even though the dock lives in
+  // the sidebar DOM subtree. Inline coordinates also override the side's
+  // resting transform while the pointer is moving.
+  roomControlsPanel.style.position = "fixed";
+  roomControlsPanel.style.left = `${left}px`;
+  roomControlsPanel.style.right = "auto";
+  roomControlsPanel.style.top = `${top}px`;
+  roomControlsPanel.style.bottom = "auto";
+  roomControlsPanel.style.transform = "none";
+}
+
 function finishRoomControlsDrag(event, persist = true) {
   const drag = roomControlsDragState;
   if (!drag) return;
   roomControlsDragState = null;
   document.body.classList.remove("room-controls-dragging");
   roomControlsPanel?.classList.remove("is-dragging");
-  if (roomControlsDragHandle?.hasPointerCapture?.(drag.pointerId)) {
-    roomControlsDragHandle.releasePointerCapture(drag.pointerId);
+  if (roomControlsPanel?.hasPointerCapture?.(drag.pointerId)) {
+    roomControlsPanel.releasePointerCapture(drag.pointerId);
   }
-  if (persist) applyRoomControlsDockSide(drag.side, true);
-  if (event) event.preventDefault();
+  if (!persist && drag.side !== drag.originSide) {
+    applyRoomControlsDockSide(drag.originSide);
+  } else if (persist && drag.moved) {
+    applyRoomControlsDockSide(drag.side, true);
+  }
+  clearRoomControlsDragPreview();
+  if (drag.moved) {
+    // Pointer movement over a button can otherwise trigger its click after the
+    // dock has been moved. Suppress just that synthetic click.
+    roomControlsSuppressClick = true;
+    window.setTimeout(() => {
+      roomControlsSuppressClick = false;
+    }, 0);
+    event?.preventDefault();
+  }
 }
 
 function startRoomControlsDrag(event) {
-  if (!isDesktopRoomControlsDock() || event.button !== 0 || !roomControlsDragHandle) return;
+  if (
+    !isDesktopRoomControlsDock()
+    || event.button !== 0
+    || !roomControlsPanel
+    || !roomControlsPanel.classList.contains("collapsed")
+  ) return;
   roomControlsDragState = {
     pointerId: event.pointerId,
     side: roomControlsDockSide,
+    originSide: roomControlsDockSide,
+    startX: event.clientX,
+    startY: event.clientY,
+    grabOffsetX: event.clientX - roomControlsPanel.getBoundingClientRect().left,
+    grabOffsetY: event.clientY - roomControlsPanel.getBoundingClientRect().top,
     moved: false,
   };
-  roomControlsDragHandle.setPointerCapture?.(event.pointerId);
-  roomControlsPanel?.classList.add("is-dragging");
-  document.body.classList.add("room-controls-dragging");
-  event.preventDefault();
 }
 
 function moveRoomControlsDrag(event) {
   const drag = roomControlsDragState;
   if (!drag || event.pointerId !== drag.pointerId) return;
-  const nextSide = roomControlsDockSideAtPoint(event.clientX, event.clientY);
-  drag.moved = drag.moved || nextSide !== drag.side;
-  if (nextSide !== drag.side) {
-    drag.side = nextSide;
-    applyRoomControlsDockSide(nextSide);
+  const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+  if (!drag.moved && distance >= 5) {
+    drag.moved = true;
+    roomControlsPanel?.setPointerCapture?.(event.pointerId);
+    roomControlsPanel?.classList.add("is-dragging");
+    document.body.classList.add("room-controls-dragging");
   }
+  if (!drag.moved) return;
+  // Keep the compact dock's shape stable while it follows the pointer. The
+  // side is applied only on release, so changing from a vertical to a
+  // horizontal dock cannot make the grabbed point jump away from the cursor.
+  drag.side = roomControlsDockSideAtPoint(event.clientX, event.clientY);
+  updateRoomControlsDragPreview(event.clientX, event.clientY);
   event.preventDefault();
 }
 
@@ -2366,6 +2423,7 @@ function restoreRoomControlsExplainButton() {
   }
   roomControlsExplainButton = null;
   roomControlsExplainAnchor = null;
+  if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = roomControlsDockQuery.matches;
 }
 
 function roomControlsExplainSourceIsVisible() {
@@ -2387,12 +2445,17 @@ function syncRoomControlsExplainButton() {
     roomControlsPanel?.classList.contains("collapsed") ||
     document.body.classList.contains("room-controls-desktop-popover")
     ));
+  if (roomControlsExplainPlaceholder) {
+    roomControlsExplainPlaceholder.hidden = roomControlsDockQuery.matches || !shouldDockExplain || Boolean(roomControlsExplainButton);
+  }
   if (!mobileExplainSlot || !shouldDockExplain) {
     restoreRoomControlsExplainButton();
+    if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = true;
     updateRoomControlsDock();
     return;
   }
   if (roomControlsExplainSourceIsVisible()) {
+    if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = true;
     updateRoomControlsDock();
     return;
   }
@@ -2406,11 +2469,14 @@ function syncRoomControlsExplainButton() {
     button.getClientRects().length > 0
   ));
   if (explainButton && explainButton.parentNode) {
+    if (!explainButton.getAttribute("aria-label")) explainButton.setAttribute("aria-label", "Explain");
+    if (!explainButton.title) explainButton.title = "Explain";
     roomControlsExplainAnchor = document.createComment("mobile Explain button anchor");
     explainButton.parentNode.insertBefore(roomControlsExplainAnchor, explainButton);
     explainButton.classList.add("room-controls-mobile-explain");
     mobileExplainSlot.appendChild(explainButton);
     roomControlsExplainButton = explainButton;
+    if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = true;
   }
   updateRoomControlsDock();
 }
@@ -3643,6 +3709,15 @@ document.addEventListener("click", (event) => {
   btn.setAttribute("aria-expanded", (!collapsed).toString());
 });
 
+if (roomControlsPanel) {
+  roomControlsPanel.addEventListener("click", (event) => {
+    if (!roomControlsSuppressClick) return;
+    roomControlsSuppressClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+}
+
 roomControlsBackdrop.addEventListener("click", () => {
   setRoomControlsCollapsed(true);
 });
@@ -3686,11 +3761,18 @@ updateRoomActionButtons();
 // Start once at page load; filtering and opening the picker share this request.
 fetchGameList().catch(() => {});
 
+if (roomControlsPanel) {
+  // The whole compact dock is the drag surface. Movement is observed on the
+  // window until the threshold is crossed, so a simple button click keeps its
+  // native target while a real drag can leave the tiny dock immediately.
+  roomControlsPanel.addEventListener("pointerdown", startRoomControlsDrag);
+}
+
+window.addEventListener("pointermove", moveRoomControlsDrag);
+window.addEventListener("pointerup", (event) => finishRoomControlsDrag(event));
+window.addEventListener("pointercancel", (event) => finishRoomControlsDrag(event, false));
+
 if (roomControlsDragHandle) {
-  roomControlsDragHandle.addEventListener("pointerdown", startRoomControlsDrag);
-  roomControlsDragHandle.addEventListener("pointermove", moveRoomControlsDrag);
-  roomControlsDragHandle.addEventListener("pointerup", (event) => finishRoomControlsDrag(event));
-  roomControlsDragHandle.addEventListener("pointercancel", (event) => finishRoomControlsDrag(event, false));
   roomControlsDragHandle.addEventListener("click", () => {
     if (!isDesktopRoomControlsDock()) {
       setRoomControlsCollapsed(!roomControlsPanel.classList.contains("collapsed"), { user: true });

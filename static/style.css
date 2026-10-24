@@ -137,6 +137,10 @@ h1 {
   outline: none;
 }
 
+.room-controls-explain-placeholder {
+  display: none;
+}
+
 body.room-controls-dragging,
 body.room-controls-dragging * {
   cursor: grabbing !important;
@@ -1316,7 +1320,7 @@ body.settings-open {
 .create-room-modal {
   width: min(1120px, calc(100vw - 48px));
   max-width: 1120px;
-  max-height: min(88vh, 860px);
+  max-height: min(92vh, 860px);
 }
 
 .create-room-modal .modal-header {
@@ -1351,6 +1355,7 @@ body.settings-open {
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .forest-shuffle-language-step {
@@ -1661,9 +1666,11 @@ body.settings-open {
 
 .game-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-auto-rows: minmax(50px, auto);
   gap: 8px;
-  max-height: min(62vh, 620px);
+  min-height: 0;
+  max-height: min(72vh, 680px);
   padding: 1px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1673,11 +1680,12 @@ body.settings-open {
 .game-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px 12px;
+  gap: 6px 8px;
   align-items: center;
   width: 100%;
-  min-height: 54px;
-  padding: 8px 10px;
+  min-width: 0;
+  min-height: 50px;
+  padding: 6px 8px;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   background: #f9fafb;
@@ -1711,15 +1719,26 @@ body.settings-open {
   min-width: 0;
   gap: 2px;
   line-height: 1.2;
+  overflow: hidden;
 }
 
 .game-item-name-en {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 
 .game-item-name-zh {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -1727,18 +1746,20 @@ body.settings-open {
   display: flex;
   grid-column: 2;
   grid-row: 1;
-  flex-wrap: wrap;
-  gap: 5px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  gap: 3px;
   align-items: center;
   justify-content: flex-end;
 }
 
 .game-item-weight,
 .game-item-players {
-  padding: 2px 5px;
+  flex: 0 0 auto;
+  padding: 2px 4px;
   border-radius: 999px;
   background: #eef2f7;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -2473,6 +2494,13 @@ button.splendor-card {
 
 
 @media (min-width: 901px) {
+  /* The compact desktop dock gives the placeholder its own display rule. Keep
+     the semantic hidden state authoritative so it cannot sit beside a real
+     game Explain button. */
+  .room-controls-explain-placeholder[hidden] {
+    display: none !important;
+  }
+
   body.room-controls-drawer-closed .layout,
   body.room-controls-desktop-popover .layout {
     gap: 0;
@@ -2493,11 +2521,11 @@ button.splendor-card {
 
   body.room-controls-drawer-closed #roomControlsPanel,
   body.room-controls-desktop-popover #roomControlsPanel {
-    position: fixed;
+    position: fixed !important;
     z-index: 220;
     margin: 0;
     border: 1px solid rgba(148, 163, 184, 0.48);
-    background: rgba(248, 250, 252, 0.78);
+    background: rgba(248, 250, 252, 0.46);
     box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.72);
     -webkit-backdrop-filter: blur(18px) saturate(145%);
     backdrop-filter: blur(18px) saturate(145%);
@@ -2505,30 +2533,80 @@ button.splendor-card {
 
   body.room-controls-drawer-closed #roomControlsPanel {
     display: flex;
-    width: max-content;
-    max-width: calc(100vw - 24px);
-    padding: 8px;
+    width: 36px;
+    min-width: 36px;
+    max-width: calc(100vw - 16px);
+    min-height: 0;
+    padding: 3px;
     overflow: hidden;
-    border-radius: 14px;
+    border-radius: 10px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
   }
 
-  body.room-controls-drawer-closed #roomControlsPanel > .panel-header > h2,
+  body.room-controls-drawer-closed #roomControlsPanel.is-dragging {
+    cursor: grabbing;
+  }
+
   body.room-controls-drawer-closed #roomControlsPanel .room-controls-expand-hint {
     display: none;
   }
 
   body.room-controls-drawer-closed #roomControlsPanel > .panel-header {
+    display: grid;
+    grid-template-columns: 14px 14px;
+    grid-auto-rows: min-content;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
     margin: 0;
-    gap: 8px;
+    gap: 3px;
+  }
+
+  body.room-controls-drawer-closed #roomControlsPanel > .panel-header > h2 {
+    display: none;
   }
 
   body.room-controls-drawer-closed #roomControlsPanel > .panel-header > .panel-header-actions {
-    gap: 8px;
+    display: flex;
+    grid-column: 1 / -1;
+    width: auto;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
   }
 
   body.room-controls-drawer-closed #roomControlsPanel .room-controls-drag-handle {
-    border-color: rgba(148, 163, 184, 0.5);
-    background: rgba(255, 255, 255, 0.44);
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  body.room-controls-drawer-closed #roomControlsPanel .room-controls-heading {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: -0.2px;
+  }
+
+  body.room-controls-drawer-closed #roomControlsPanel .room-controls-title-short {
+    display: inline;
+  }
+
+  body.room-controls-drawer-closed #roomControlsPanel .room-controls-title-full {
+    display: none;
   }
 
   body.room-controls-drawer-closed #roomControlsPanel #mobileExplainSlot:not(:empty) {
@@ -2540,33 +2618,67 @@ button.splendor-card {
   body.room-controls-drawer-closed #roomControlsPanel .collapse-btn,
   body.room-controls-drawer-closed #roomControlsPanel #mobileExplainSlot > button,
   body.room-controls-drawer-closed #roomControlsPanel .room-settings-btn {
-    min-height: 40px;
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 26px;
+    padding: 0;
     border: 1px solid rgba(148, 163, 184, 0.52);
-    border-radius: 9px;
-    background: rgba(255, 255, 255, 0.5);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.34);
     color: #334155;
     font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  body.room-controls-drawer-closed #roomControlsPanel .panel-header-actions > .room-controls-explain-placeholder {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(148, 163, 184, 0.52);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.34);
+    color: #64748b;
+    font-size: 17px;
+    line-height: 1;
+    cursor: not-allowed;
   }
 
   body.room-controls-drawer-closed #roomControlsPanel .collapse-btn {
-    min-width: 86px;
-    padding: 8px 10px;
-    font-size: 12px;
-    line-height: 1.1;
+    font-size: 0;
     white-space: nowrap;
   }
 
   body.room-controls-drawer-closed #roomControlsPanel #mobileExplainSlot > button {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    padding: 0;
+    display: grid;
+    place-items: center;
+    font-size: 0;
   }
 
-  body.room-controls-drawer-closed #roomControlsPanel .room-settings-btn {
-    width: 40px;
-    flex-basis: 40px;
-    height: 40px;
+  body.room-controls-drawer-closed #roomControlsPanel .collapse-btn::before {
+    display: block;
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  body.room-controls-dock-left.room-controls-drawer-closed #roomControlsPanel .collapse-btn::before {
+    content: "›";
+  }
+
+  body.room-controls-dock-right.room-controls-drawer-closed #roomControlsPanel .collapse-btn::before {
+    content: "‹";
+  }
+
+  body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel .collapse-btn::before {
+    content: "⌄";
+  }
+
+  body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel .collapse-btn::before {
+    content: "⌃";
   }
 
   body.room-controls-drawer-closed #roomControlsPanel .collapse-btn:hover,
@@ -2584,11 +2696,13 @@ button.splendor-card {
   }
 
   body.room-controls-dock-left.room-controls-drawer-closed #roomControlsPanel {
-    left: 12px;
+    left: 0;
+    border-radius: 0 10px 10px 0;
   }
 
   body.room-controls-dock-right.room-controls-drawer-closed #roomControlsPanel {
-    right: 12px;
+    right: 0;
+    border-radius: 10px 0 0 10px;
   }
 
   body.room-controls-dock-left.room-controls-drawer-closed #roomControlsPanel > .panel-header,
@@ -2603,16 +2717,54 @@ button.splendor-card {
 
   body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel,
   body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel {
+    width: max-content;
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    padding: 4px 6px;
+  }
+
+  body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel > .panel-header,
+  body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel > .panel-header,
+  body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel > .panel-header > .panel-header-actions,
+  body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel > .panel-header > .panel-header-actions {
+    width: auto;
+    flex-direction: row;
+  }
+
+  body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel > .panel-header,
+  body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel > .panel-header {
+    display: flex;
+    gap: 4px;
+  }
+
+  body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel > .panel-header > .panel-header-actions,
+  body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel > .panel-header > .panel-header-actions {
+    grid-column: auto;
+  }
+
+
+  body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel,
+  body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel {
     left: 50%;
     transform: translateX(-50%);
   }
 
   body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel {
-    top: 12px;
+    top: 0;
+    border-radius: 0 0 10px 10px;
   }
 
   body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel {
-    bottom: 12px;
+    bottom: 0;
+    border-radius: 10px 10px 0 0;
+  }
+
+  body.room-controls-drawer-closed #roomControlsPanel.is-dragging {
+    z-index: 230;
+    /* The inline viewport coordinates set by room.js are the source of truth
+       while dragging; this rule keeps the preview independent of the panel
+       that originally contained the dock. */
+    position: fixed !important;
   }
 
   body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel > .panel-header,
@@ -2623,43 +2775,99 @@ button.splendor-card {
   body.room-controls-desktop-popover #roomControlsPanel {
     display: flex;
     flex-direction: column;
-    width: min(390px, calc(100vw - 24px));
-    max-height: calc(100vh - 24px);
+    width: min(340px, calc(100vw - 24px));
+    max-height: min(700px, calc(100vh - 24px));
     padding: 12px;
     overflow: hidden;
     border-radius: 16px;
+    background: rgba(248, 250, 252, 0.54);
+  }
+
+  /* When the RC popover is open, the active game's Explain control lives in
+     the RC header. This keeps it available without leaving a second control
+     behind in the game header. */
+  body.room-controls-desktop-popover #roomControlsPanel #mobileExplainSlot:not(:empty) {
+    display: flex;
+    position: relative;
+    z-index: 2;
+  }
+
+  body.room-controls-desktop-popover #roomControlsPanel #mobileExplainSlot > button {
+    flex: 0 0 32px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(148, 163, 184, 0.52);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.42);
+    color: #334155;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  body.room-controls-desktop-popover #roomControlsPanel .panel-header-actions > .room-controls-explain-placeholder {
+    display: grid;
+    place-items: center;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(148, 163, 184, 0.52);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.30);
+    color: #64748b;
+    font-size: 18px;
+    line-height: 1;
+    cursor: not-allowed;
   }
 
   body.room-controls-desktop-popover #roomControlsPanel .room-controls-body {
+    flex: 1 1 auto;
     min-height: 0;
-    max-height: calc(100vh - 112px);
+    max-height: none;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
   }
 
   body.room-controls-dock-left.room-controls-desktop-popover #roomControlsPanel {
-    top: 12px;
-    bottom: 12px;
-    left: 12px;
+    top: 50%;
+    left: 0;
+    right: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+    border-radius: 0 16px 16px 0;
   }
 
   body.room-controls-dock-right.room-controls-desktop-popover #roomControlsPanel {
-    top: 12px;
-    right: 12px;
-    bottom: 12px;
+    top: 50%;
+    right: 0;
+    left: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+    border-radius: 16px 0 0 16px;
   }
 
   body.room-controls-dock-top.room-controls-desktop-popover #roomControlsPanel {
-    top: 12px;
-    right: 12px;
-    left: 12px;
+    top: 0;
+    right: auto;
+    left: 50%;
+    width: min(520px, calc(100vw - 24px));
+    max-height: min(680px, calc(100vh - 24px));
+    transform: translateX(-50%);
+    border-radius: 0 0 16px 16px;
   }
 
   body.room-controls-dock-bottom.room-controls-desktop-popover #roomControlsPanel {
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
+    bottom: 0;
+    right: auto;
+    left: 50%;
+    width: min(520px, calc(100vw - 24px));
+    max-height: min(680px, calc(100vh - 24px));
+    transform: translateX(-50%);
+    border-radius: 16px 16px 0 0;
   }
 }
 
@@ -2734,14 +2942,14 @@ button.splendor-card {
     max-height: calc(100dvh - max(8px, env(safe-area-inset-bottom)));
     padding: max(4px, env(safe-area-inset-top)) 6px 4px;
     overflow: hidden;
-    background: #f3f8fe;
+    background: rgba(243, 248, 254, 0.68);
     border-color: rgba(180, 200, 224, 0.65);
     box-shadow: 0 8px 28px rgba(36, 63, 96, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.7);
   }
 
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     #roomControlsPanel {
-      background: linear-gradient(125deg, rgba(255, 255, 255, 0.88), rgba(233, 244, 255, 0.72) 55%, rgba(255, 255, 255, 0.82));
+      background: linear-gradient(125deg, rgba(255, 255, 255, 0.70), rgba(233, 244, 255, 0.52) 55%, rgba(255, 255, 255, 0.64));
       -webkit-backdrop-filter: blur(22px) saturate(160%);
       backdrop-filter: blur(22px) saturate(160%);
     }

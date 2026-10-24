@@ -1078,10 +1078,10 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v8"
+      "/static/games/gaia_project.js?v=gaia_v10"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v7"
+      "/static/gaia_project.css?v=gaia_v9"
     ],
     "panel": "gaiaProjectPanel",
     "panelTitle": "🌌 盖亚计划",
