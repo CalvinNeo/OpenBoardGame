@@ -24,7 +24,18 @@ const games = [
     {id: 'a_feast_for_odin', prefix: 'odin', target: '.od-season [data-od-explain]', surface: '.od-root', modal: '#odinDialog', reopen: true},
     {id: 'moshimo_yusha', prefix: 'moshimoYusha', target: '#myConfirm', modal: '#moshimoYushaDialog'},
     {id: 'colt_express', prefix: 'coltExpress', target: '.ce-ticket', surface: '.ce-surface', modal: '#coltExpressDialog', reopen: true},
+    {id: 'the_crew', prefix: 'theCrew', target: '#theCrewMission', modal: '#theCrewDialog', color: 'rgb(19, 34, 63)', reopen: true},
+    {id: 'the_crew', caseName: 'the_crew-deep-sea', config: {edition: 2}, prefix: 'theCrew', target: '#theCrewMission', modal: '#theCrewDialog', color: 'rgb(16, 60, 70)', reopen: true},
+    {id: 'cheaty_mages', prefix: 'cheatyMages', target: '.cm-fighter-select:visible', surface: '.cm-surface', modal: '#cheatyMagesDialog', reopen: true},
+    {id: 'ponzi_scheme', prefix: 'ponziScheme', target: 'button[data-ps-explain]:visible', surface: '.ponzi-scheme-shell', modal: '#ponziSchemeDialog', reopen: true},
+    {id: 'kronologic', prefix: 'kronologic', target: '#kronologicTimeModeBtn', surface: '.kronologic-game-shell', reopen: true},
+    {id: 'wriggle_roulette', prefix: 'wriggleRoulette', target: '[data-wriggle-roulette-explain="bag"]', reopen: true},
+    {id: 'criminal_dance', prefix: 'criminalDance', target: '#criminalDancePanel [data-criminal-dance-explain-key="status"]', surface: '.criminal-dance-surface', reopen: true},
+    {id: 'hive', help: '#hiveHelp', explain: '#hiveExplain', target: '#hiveFit', modal: '#hiveDialog', reopen: true},
+    {id: 'las_vegas', prefix: 'lasVegas', target: '.lv-round-marker [data-lv-explain]', surface: '.lv-surface', modal: '#lasVegasDialog', reopen: true},
+    {id: 'las_vegas', caseName: 'las_vegas-royale', config: {edition: 'royale'}, prefix: 'lasVegas', target: '.lv-round-marker [data-lv-explain]', surface: '.lv-surface', modal: '#lasVegasDialog', reopen: true},
 ];
+const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
 
 (async () => {
     fs.mkdirSync(output, {recursive: true});
@@ -103,6 +114,7 @@ const games = [
         assert.equal(measurement.pageOverflow, false, `${game.id} page overflow at ${width}`);
         assert.equal(measurement.outerOverflow, false, `${game.id} outer overflow at ${width}`);
         assert.equal(measurement.panelOverflow, false, `${game.id} panel overflow at ${width}`);
+        if (game.color) assert.equal(measurement.outerColor, game.color, `${game.caseName || game.id} edition theme`);
         assert(measurement.outerBackground !== 'none' || !['rgba(0, 0, 0, 0)', 'rgb(255, 255, 255)'].includes(measurement.outerColor), `${game.id} theme belongs on Game`);
         for (const root of measurement.roots) {
             assert.deepEqual(root.border, ['0px', '0px', '0px', '0px'], `${game.id} inner border: ${root.id}`);
@@ -112,8 +124,8 @@ const games = [
             assert.equal(root.image, 'none', `${game.id} inner image: ${root.id}`);
             assert.equal(root.shadow, 'none', `${game.id} inner shadow: ${root.id}`);
         }
-        await page.screenshot({path: `${output}/${game.id}-${width}.png`, fullPage: true});
-        results.push({game: game.id, width, title: measurement.title});
+        await page.screenshot({path: `${output}/${game.caseName || game.id}-${width}.png`, fullPage: true});
+        results.push({game: game.caseName || game.id, width, title: measurement.title});
     }
 
     async function interact(page, game, mobile) {
@@ -151,20 +163,45 @@ const games = [
             }
         }
         assert.equal(await page.evaluate(() => lastGameStatePayload.state_version), before, `${game.id} Explain must not make a move`);
+        if (mobile && game.id === 'kronologic') {
+            const dock = page.locator('#kronologicNotebookDockBtn');
+            const notebook = page.locator('#kronologicNotebookSection');
+            await activate(dock);
+            await notebook.waitFor({state: 'visible'});
+            await activate(page.locator('[data-notebook-time="2"]'));
+            assert.equal(await page.locator('[data-notebook-time="2"]').getAttribute('aria-pressed'), 'true');
+            const bounds = await notebook.boundingBox();
+            assert(bounds && bounds.x >= 0 && bounds.x + bounds.width <= page.viewportSize().width, 'Notebook stays inside the viewport');
+            await page.keyboard.press('Escape');
+            await notebook.waitFor({state: 'hidden'});
+            await activate(dock);
+            await activate(page.locator('#kronologicNotebookCloseBtn'));
+            await notebook.waitFor({state: 'hidden'});
+            assert.equal(await page.evaluate(() => lastGameStatePayload.state_version), before, 'Browsing notebook times must not make a move');
+        }
     }
 
     try {
         const desktop = await newPage();
         const mobile = await newPage(true);
         const peers = [desktop, mobile, await newPage(), await newPage()];
-        for (const game of games) {
-            console.log(`Checking ${game.id}`);
+        for (const game of games.filter(game => !selectedGames || selectedGames.includes(game.id))) {
+            const caseName = game.caseName || game.id;
+            console.log(`Checking ${caseName}`);
             let playing = [];
             try {
                 const count = await desktop.evaluate(id => Math.max(2, cachedGameList.find(game => game.game_id === id).min_players), game.id);
                 playing = peers.slice(0, count);
-                await desktop.evaluate(id => socket.emit('room:create', {name: 'Frame QA 1', game_type: id}), game.id);
+                await desktop.evaluate(({id, config}) => socket.emit('room:create', {name: 'Frame QA 1', game_type: id, config}), game);
                 await desktop.waitForFunction(id => roomSessionReady && currentGameType === id && isGameAssetsLoaded(id), game.id);
+                if (game.id === 'las_vegas') {
+                    const setup = await desktop.locator('#lasVegasSetup').evaluate(node => {
+                        const style = getComputedStyle(node);
+                        return [style.backgroundColor, style.backgroundImage, style.borderWidth, style.borderRadius, style.padding];
+                    });
+                    assert.deepEqual(setup, ['rgba(0, 0, 0, 0)', 'none', '0px', '0px', '0px'], 'Las Vegas lobby has no nested frame');
+                    assert.equal(await desktop.locator('#lasVegasEdition').inputValue(), game.config?.edition || 'classic');
+                }
                 const room = await desktop.evaluate(() => roomId);
                 for (let index = 1; index < playing.length; index += 1) {
                     await playing[index].evaluate(({room, index}) => socket.emit('room:join', {room_id: room, name: `Frame QA ${index + 1}`}), {room, index});
@@ -176,17 +213,20 @@ const games = [
                 for (const page of playing) {
                     await page.waitForFunction(id => lastGameStatePayload?.game_type === id && lastGameStatePayload.view, game.id);
                 }
+                if (game.id === 'kronologic') {
+                    assert.equal(await desktop.locator('#kronologicCaseTitle').textContent(), await desktop.evaluate(() => lastGameStatePayload.view.case.title), 'Current case title is preserved');
+                }
                 for (const [page, width] of [[desktop, 1440], [desktop, 1024], [mobile, 390], [mobile, 320]]) {
                     await layout(page, game, width);
                 }
                 await desktop.setViewportSize({width: 1440, height: 1000});
                 await interact(desktop, game, false);
                 await interact(mobile, game, true);
-                console.log(`PASS ${game.id}: four widths, Help/Explain, Escape`);
+                console.log(`PASS ${caseName}: four widths, Help/Explain, Escape`);
             } catch (error) {
-                failures.push({game: game.id, error: error.stack});
-                console.error(`FAIL ${game.id}: ${error.message}`);
-                await desktop.screenshot({path: `${output}/${game.id}-failure.png`, fullPage: true});
+                failures.push({game: caseName, error: error.stack});
+                console.error(`FAIL ${caseName}: ${error.message}`);
+                await desktop.screenshot({path: `${output}/${caseName}-failure.png`, fullPage: true});
             } finally {
                 for (const page of [...playing].reverse()) await leave(page);
                 assert.equal(await desktop.locator('.game-panel-title h2').textContent(), 'Game');
@@ -195,7 +235,7 @@ const games = [
             }
         }
         await desktop.evaluate(async () => {
-            for (const id of ['cabo', 'dice_throne', 'emerald_skulls']) await ensureGameAssets(id);
+            for (const id of ['cabo', 'dice_throne', 'emerald_skulls', 'poison', 'guandan', 'for_sale']) await ensureGameAssets(id);
         });
         const transitions = ['poison', 'cabo', 'emerald_skulls', 'dice_throne', 'guandan', 'emerald_skulls', 'for_sale', 'dice_throne', 'cabo', null];
         for (const id of transitions) {

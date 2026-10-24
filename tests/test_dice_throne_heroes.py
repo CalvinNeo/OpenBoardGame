@@ -1,4 +1,4 @@
-"""Behavioral coverage for the Season One Rerolled hero roster."""
+"""Behavioral coverage for the Season One and Season Two hero roster."""
 
 import copy
 import itertools
@@ -13,7 +13,7 @@ from game.dice_throne_data import CARDS, DECKS, HEROES, STATUSES
 
 ROSTER = (
     "barbarian", "moon_elf", "monk", "paladin", "ninja", "shadow_thief",
-    "pyromancer", "treant",
+    "pyromancer", "treant", "gunslinger", "samurai", "vampire_lord", "seraph",
 )
 
 
@@ -90,7 +90,7 @@ class DiceThroneHeroTests(unittest.TestCase):
         self.act(state, pid, "end_phase")
         self.assertEqual(state["phase"], "round_review")
 
-    def test_all_eight_heroes_can_be_selected_and_have_distinct_kits(self):
+    def test_all_twelve_heroes_can_be_selected_and_have_distinct_kits(self):
         self.assertEqual(set(HEROES), set(ROSTER))
         self.assertEqual(set(ACTION_SCHEMA["properties"]["hero"]["enum"]), set(ROSTER))
         ability_kits = set()
@@ -106,7 +106,11 @@ class DiceThroneHeroTests(unittest.TestCase):
                 ids = tuple(ability["id"] for ability in HEROES[hero]["abilities"])
                 self.assertEqual(len(ids), len(set(ids)))
                 ability_kits.add(ids)
-        self.assertEqual(len(ability_kits), 8)
+        self.assertEqual(len(ability_kits), 12)
+        self.assertEqual({hero for hero, data in HEROES.items() if data["season"] == 2},
+                         {"gunslinger", "samurai", "vampire_lord", "seraph"})
+        all_ids = [ability["id"] for hero in HEROES.values() for ability in hero["abilities"]]
+        self.assertEqual(len(all_ids), len(set(all_ids)))
 
     def test_duplicate_and_unknown_hero_selections_are_atomic(self):
         for hero in ROSTER:
@@ -180,7 +184,7 @@ class DiceThroneHeroTests(unittest.TestCase):
                 self.assertGreater(state["players"]["p1"]["health"], 0)
                 self.assertLessEqual(state["players"]["p1"]["health"], 50)
 
-    def test_all_64_abilities_are_reachable_and_apply_their_statuses(self):
+    def test_all_96_abilities_are_reachable_and_apply_their_statuses(self):
         for hero in ROSTER:
             for ability in HEROES[hero]["abilities"]:
                 with self.subTest(hero=hero, ability=ability["id"]):
@@ -217,6 +221,10 @@ class DiceThroneHeroTests(unittest.TestCase):
             "shadow_thief": (30, 50, 3, {"shadows": 1}),
             "treant": (23, 50, 2, {"seedling": 1}),
             "ninja": (30, 50, 2, {}),
+            "gunslinger": (21, 50, 2, {}),
+            "samurai": (21, 48, 2, {}),
+            "vampire_lord": (22, 50, 2, {"blood_power": 1}),
+            "seraph": (30, 50, 2, {}),
         }
         for hero, (health, attacker_health, cp, statuses) in expectations.items():
             with self.subTest(hero=hero):
@@ -244,6 +252,10 @@ class DiceThroneHeroTests(unittest.TestCase):
             "shadow_thief": (0, 0, 1, {"shadows": 1}, 0, 0),
             "treant": (1, 2, 0, {"seedling": 1}, 9, 0),
             "ninja": (1, 0, 0, {"smoke_bomb": 1}, 0, 0),
+            "gunslinger": (1, 0, 0, {"evasive": 1}, 9, 0),
+            "samurai": (1, 0, 0, {"back_strike": 1}, 9, 2),
+            "vampire_lord": (1, 1, 0, {"blood_power": 1}, 9, 0),
+            "seraph": (1, 0, 0, {"flight": 1}, 0, 0),
         }
         for hero, (prevented, healing, cp, statuses, taken, returned) in expectations.items():
             with self.subTest(hero=hero):
@@ -639,6 +651,212 @@ class DiceThroneHeroTests(unittest.TestCase):
                 self.assertEqual(state["players"][active]["combat_points"], old_cp[active])
                 self.assertEqual(state["players"][incoming]["combat_points"], old_cp[incoming] + 1)
 
+    def test_gunslinger_reload_and_persistent_bounty_modify_only_later_attacks(self):
+        state = self.make_state("gunslinger", "samurai")
+        self.set_attack(state, values=[1, 1, 4, 4, 6])
+        self.act(state, "p0", "use_ability", ability_id="bounty_hunter")
+        self.assertEqual(state["pending_attack"]["damage"], 5)
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["players"]["p1"]["statuses"], {"bounty": 1})
+        state["players"]["p0"]["statuses"] = {"reload": 2}
+        state["players"]["p1"]["statuses"]["shadows"] = 1
+        self.set_attack(state)
+        state["players"]["p0"]["combat_points"] = 14
+        state["rng_state"] = random.Random(5).getstate()
+        self.act(state, "p0", "use_ability", ability_id="six_shooter")
+        self.assertEqual(state["pending_attack"]["damage"], 12)
+        self.assertEqual(state["players"]["p0"]["statuses"], {"reload": 1})
+        self.assertEqual(state["players"]["p0"]["combat_points"], 15)
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["players"]["p1"]["health"], 45)
+        self.assertEqual(state["players"]["p1"]["statuses"]["bounty"], 1)
+
+    def test_samurai_honor_and_shame_are_consumed_once(self):
+        for honor, expected in ((1, 8), (2, 11)):
+            with self.subTest(honor=honor):
+                state = self.make_state("samurai", "gunslinger")
+                self.set_attack(state)
+                state["players"]["p0"]["statuses"] = {"honor": honor, "shame": 2}
+                self.act(state, "p0", "use_ability", ability_id="katana_cut")
+                self.assertEqual(state["pending_attack"]["damage"], expected)
+                self.assertEqual(state["players"]["p0"]["statuses"], {})
+                self.act(state, "p1", "pass")
+                self.set_attack(state)
+                self.act(state, "p0", "use_ability", ability_id="katana_cut")
+                self.assertEqual(state["pending_attack"]["damage"], 8)
+
+    def test_back_strike_returns_damage_before_status_mitigation(self):
+        state = self.incoming_attack("samurai", damage=7, statuses={"back_strike": 1, "shadows": 1}, seed=5)
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["players"]["p1"]["health"], 50)
+        self.assertEqual(state["players"]["p0"]["health"], 47)
+        self.assertEqual(state["players"]["p1"]["statuses"], {"shadows": 1})
+
+    def test_blood_power_chooses_damage_or_resolved_lifesteal(self):
+        for stacks, expected_damage, remaining in ((1, 10, 0), (3, 10, 2), (4, 8, 0), (5, 8, 1)):
+            with self.subTest(stacks=stacks):
+                state = self.make_state("vampire_lord", "gunslinger")
+                self.set_attack(state)
+                state["players"]["p0"]["health"] = 20
+                state["players"]["p0"]["statuses"] = {"blood_power": stacks}
+                state["players"]["p1"]["statuses"] = {"protect": 1}
+                self.act(state, "p0", "use_ability", ability_id="rending_claws")
+                self.assertEqual(state["pending_attack"]["damage"], expected_damage)
+                self.assertEqual(state["pending_attack"]["lifesteal"], stacks >= 4)
+                self.assertEqual(state["players"]["p0"]["statuses"].get("blood_power", 0), remaining)
+                self.assertEqual(state["players"]["p0"]["health"], 20)
+                restored = Game.deserialize(json.loads(json.dumps(Game.serialize(state))))
+                self.act(state, "p1", "pass")
+                self.act(restored, "p1", "pass")
+                self.assertEqual(restored, state)
+                self.assertEqual(state["players"]["p0"]["health"], 24 if stacks >= 4 else 20)
+
+    def test_lifesteal_respects_damage_avoidance_and_health_cap(self):
+        for health, statuses, expected in ((20, {"shadows": 1}, 20), (49, {}, 50)):
+            with self.subTest(health=health):
+                state = self.make_state("vampire_lord", "gunslinger")
+                self.set_attack(state)
+                state["players"]["p0"]["health"] = health
+                state["players"]["p0"]["statuses"] = {"blood_power": 4}
+                state["players"]["p1"]["statuses"] = statuses
+                self.act(state, "p0", "use_ability", ability_id="rending_claws")
+                self.act(state, "p1", "pass")
+                self.assertEqual(state["players"]["p0"]["health"], expected)
+                self.assertNotIn("blood_power", state["players"]["p0"]["statuses"])
+
+    def test_mesmerize_rerolls_highest_kept_die_only_when_confirmed(self):
+        for seed, success in ((5, True), (2, False)):
+            with self.subTest(seed=seed):
+                state = self.make_state("gunslinger", "vampire_lord")
+                self.set_attack(state, values=[6, 6, 6, 1, 5])
+                state["phase"] = "offensive_roll"
+                state["kept"] = [True] * 5
+                state["players"]["p1"]["statuses"] = {"mesmerize": 1}
+                state["rng_state"] = random.Random(seed).getstate()
+                before = copy.deepcopy(state["dice"])
+                self.act(state, "p0", "confirm_roll")
+                self.assertEqual(state["phase"], "targeting")
+                self.assertEqual(state["rolls"], 1)
+                self.assertEqual(state["kept"], [True] * 5)
+                self.assertEqual(state["dice"][1:], before[1:])
+                self.assertEqual(state["dice"][0]["value"], 3 if success else 6)
+                self.assertNotIn("mesmerize", state["players"]["p1"]["statuses"])
+                shown = Game.get_public_view(state, "p0")
+                self.assertEqual(shown["dice"][0]["face"], HEROES["gunslinger"]["dice_faces"][state["dice"][0]["value"] - 1])
+                self.assertEqual(next(ability for ability in shown["abilities"] if ability["id"] == "deadeye")["available"], not success)
+
+    def test_mesmerize_is_not_spent_when_the_opponent_skips(self):
+        state = self.make_state("gunslinger", "vampire_lord")
+        state["current_player"] = "p0"
+        state["players"]["p1"]["statuses"] = {"mesmerize": 1}
+        self.act(state, "p0", "end_phase")
+        rng_before = state["rng_state"]
+        self.act(state, "p0", "pass")
+        self.assertEqual(state["rng_state"], rng_before)
+        self.assertEqual(state["players"]["p1"]["statuses"], {"mesmerize": 1})
+
+    def test_flight_spends_one_token_for_a_two_die_check(self):
+        for seed, expected_health in ((19, 50), (2, 43)):
+            with self.subTest(seed=seed):
+                state = self.incoming_attack("seraph", damage=7, statuses={"flight": 2}, seed=seed)
+                expected_rng = random.Random(seed)
+                expected_rng.randint(1, 6)
+                expected_rng.randint(1, 6)
+                self.act(state, "p1", "pass")
+                self.assertEqual(state["players"]["p1"]["health"], expected_health)
+                self.assertEqual(state["players"]["p1"]["statuses"], {"flight": 1})
+                self.assertEqual(state["rng_state"], expected_rng.getstate())
+
+    def test_blinding_light_cancels_or_halves_only_non_ultimate_abilities(self):
+        for seed, expected_damage in ((2, None), (1, 4), (5, 8)):
+            with self.subTest(seed=seed):
+                state = self.make_state("samurai", "seraph")
+                self.set_attack(state)
+                state["players"]["p0"]["statuses"] = {"blinding_light": 1}
+                state["rng_state"] = random.Random(seed).getstate()
+                self.act(state, "p0", "use_ability", ability_id="katana_cut")
+                self.assertNotIn("blinding_light", state["players"]["p0"]["statuses"])
+                if expected_damage is None:
+                    self.assertIsNone(state["pending_attack"])
+                    self.assertEqual(state["phase"], "main_2")
+                else:
+                    self.assertEqual(state["pending_attack"]["damage"], expected_damage)
+        state = self.make_state("samurai", "seraph")
+        self.set_attack(state, values=[4] * 5)
+        state["players"]["p0"]["statuses"] = {"blinding_light": 1}
+        state["rng_state"] = random.Random(2).getstate()
+        self.act(state, "p0", "use_ability", ability_id="bushido")
+        self.assertEqual(state["players"]["p0"]["statuses"], {})
+        self.assertEqual(state["phase"], "main_2")
+
+    def test_season_two_tokens_do_not_modify_or_spend_on_ultimates(self):
+        state = self.make_state("barbarian", "seraph")
+        self.set_attack(state, values=[6] * 5)
+        offense = {"reload": 2, "honor": 2, "shame": 2, "blood_power": 5, "blinding_light": 1}
+        defense = {"bounty": 1, "back_strike": 1, "flight": 3}
+        state["players"]["p0"]["statuses"] = dict(offense)
+        state["players"]["p1"]["statuses"] = dict(defense)
+        rng_before = state["rng_state"]
+        self.act(state, "p0", "use_ability", ability_id="rage")
+        self.assertEqual(state["pending_attack"]["damage"], 15)
+        self.assertFalse(state["pending_attack"]["lifesteal"])
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["rng_state"], rng_before)
+        self.assertEqual(state["players"]["p0"]["statuses"], offense)
+        self.assertEqual(state["players"]["p1"]["statuses"], {**defense, "stun": 1})
+        self.assertEqual(state["players"]["p1"]["health"], 35)
+
+    def test_bleed_and_holy_presence_resolve_in_upkeep_before_income(self):
+        state = self.make_state("gunslinger", "seraph")
+        state.update(phase="round_review", current_player=None, turn_player="p0", next_round_ready=[])
+        state["players"]["p1"]["statuses"] = {"bleed": 2, "holy_presence": 2, "flight": 2}
+        state["rng_state"] = random.Random(5).getstate()
+        cp_before = state["players"]["p1"]["combat_points"]
+        self.act(state, "p0", "next_round")
+        self.act(state, "p1", "next_round")
+        self.assertEqual(state["players"]["p1"]["health"], 49)
+        self.assertEqual(state["players"]["p0"]["health"], 48)
+        self.assertEqual(state["players"]["p1"]["statuses"], {"bleed": 1, "holy_presence": 2, "flight": 2})
+        self.assertEqual(state["players"]["p1"]["combat_points"], cp_before + 1)
+
+    def test_lethal_season_two_upkeep_stops_later_effects_and_income(self):
+        for lethal_bleed in (True, False):
+            with self.subTest(lethal_bleed=lethal_bleed):
+                state = self.make_state("gunslinger", "seraph")
+                state.update(phase="round_review", current_player=None, turn_player="p0", next_round_ready=[])
+                state["players"]["p1"]["statuses"] = {"holy_presence": 2, **({"bleed": 1} if lethal_bleed else {})}
+                state["players"]["p1" if lethal_bleed else "p0"]["health"] = 1
+                state["rng_state"] = random.Random(2).getstate()
+                cp_before = state["players"]["p1"]["combat_points"]
+                self.act(state, "p0", "next_round")
+                self.act(state, "p1", "next_round")
+                self.assertTrue(state["game_over"])
+                self.assertEqual(state["winner"], ["p0" if lethal_bleed else "p1"])
+                self.assertEqual(state["players"]["p1"]["combat_points"], cp_before)
+                if lethal_bleed:
+                    self.assertEqual(state["players"]["p0"]["health"], 50)
+
+    def test_season_two_status_caps_cleanse_and_removal(self):
+        state = self.make_state("vampire_lord", "seraph")
+        self.set_attack(state, values=[6] * 5)
+        state["players"]["p0"]["statuses"] = {"blood_power": 4}
+        self.act(state, "p0", "use_ability", ability_id="blood_moon")
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["players"]["p0"]["statuses"]["blood_power"], 5)
+        state["players"]["p1"]["statuses"] = {"cleanse": 1}
+        state["players"]["p0"]["hand"] = ["gunslinger_wanted_poster"]
+        self.assert_rejected(state, "p0", "play_card", card_id="gunslinger_wanted_poster", target="p1")
+        state["players"]["p0"]["hand"] = ["what_status"]
+        state["players"]["p0"]["combat_points"] = 10
+        self.act(state, "p0", "play_card", card_id="what_status", target="p0")
+        self.assertEqual(state["players"]["p0"]["statuses"], {})
+        state = self.make_state("gunslinger", "seraph")
+        self.set_attack(state, values=[1, 1, 4, 4, 6])
+        state["players"]["p1"]["statuses"] = {"cleanse": 1}
+        self.act(state, "p0", "use_ability", ability_id="bounty_hunter")
+        self.act(state, "p1", "pass")
+        self.assertEqual(state["players"]["p1"]["statuses"], {})
+
     def test_json_save_restore_preserves_next_roll_for_every_hero(self):
         for hero in ROSTER:
             with self.subTest(hero=hero):
@@ -683,7 +901,7 @@ class DiceThroneHeroTests(unittest.TestCase):
                 view["your_hand"].clear()
                 self.assertEqual(state, before)
 
-    def test_bot_games_finish_for_all_28_unique_hero_pairings(self):
+    def test_bot_games_finish_for_all_66_unique_hero_pairings(self):
         for number, (first, second) in enumerate(itertools.combinations(ROSTER, 2)):
             with self.subTest(first=first, second=second):
                 state = self.make_state(first, second, seed=2700 + number)

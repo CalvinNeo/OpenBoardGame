@@ -1,16 +1,16 @@
 <template data-game-target="abracaHelpModal" data-game-mode="replace"><section id="abracaHelpModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content abraca-help-modal">
+    <div class="modal-content abraca-help-modal" role="dialog" aria-modal="true" aria-labelledby="abracaHelpTitle">
       <div class="modal-header">
-        <h2>Abraca What - Game Rules</h2>
+        <h2 id="abracaHelpTitle">Abraca What · Help</h2>
         <button id="abracaHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body abraca-help-content" id="abracaHelpContent"></div>
     </div>
   </section></template>
 <template data-game-target="abracaExplainModal" data-game-mode="replace"><section id="abracaExplainModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content abraca-explain-modal">
+    <div class="modal-content abraca-explain-modal" role="dialog" aria-modal="true" aria-labelledby="abracaExplainTitle">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2 id="abracaExplainTitle">Explain</h2>
         <button id="abracaExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
@@ -19,52 +19,69 @@
     </div>
   </section></template>
 <template data-game-target="abracaPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="abracaPhase">-</span></div>
-                <div>Round: <span id="abracaRound">-</span></div>
-                <div>Current Turn: <span id="abracaTurn">-</span></div>
+              <div class="abraca-status">
+                <div class="abraca-round">Round <strong id="abracaRound">-</strong></div>
+                <div class="abraca-turn">Turn <strong id="abracaTurn">-</strong></div>
+                <span id="abracaPhase" class="abraca-phase">-</span>
               </div>
-              <div class="row">
-                <div>Deck: <span id="abracaDeck">-</span></div>
-                <div>Secret Pool: <span id="abracaSecretPool">-</span></div>
-                <div>Discarded: <span id="abracaDiscard">-</span></div>
-              </div>
-              <div class="row">
-                <div>Chain Min: <span id="abracaChainMin">-</span></div>
-                <div>Last Action: <span id="abracaLastAction">-</span></div>
-              </div>
-              <div class="row">
-                <div>Round Result: <span id="abracaRoundResult">-</span></div>
+              <div class="abraca-resources">
+                <span data-abraca-tip="Deck (🃏): cards available to refill hands." tabindex="0">🃏 <span id="abracaDeck">-</span></span>
+                <span data-abraca-tip="Secret pool (🔒): cards available for the Owl spell." tabindex="0">🔒 <span id="abracaSecretPool">-</span></span>
+                <span data-abraca-tip="Discarded (♻️): all spells used this round." tabindex="0">♻️ <span id="abracaDiscard">-</span></span>
+                <span class="abraca-chain" data-abraca-tip="Chain minimum (↑): your next spell must have this number or higher." tabindex="0">Cast ≥ <strong id="abracaChainMin">-</strong></span>
               </div>
               <div id="abracaRoundNotice" class="round-notice hidden">
                 <div id="abracaRoundNoticeTitle" class="round-notice-title">Round Result</div>
                 <div id="abracaRoundNoticeBody" class="round-notice-body">-</div>
               </div>
 
-              <h3>Spells</h3>
-              <div id="abracaSpells" class="spell-list"></div>
+              <div class="abraca-section-heading">
+                <h3>Spells</h3>
+                <span data-abraca-tip="Used / total: discarded copies versus all copies of that spell. Cards in hands and the secret pool are not counted as used." tabindex="0">Used / total</span>
+              </div>
+              <div id="abracaSpells" class="abraca-spells">
+                <div id="abracaSpellButtons" class="abraca-spell-grid">
+                  <button id="abracaSpellBtn0" type="button" data-spell="0" disabled>1 Dragon</button>
+                  <button id="abracaSpellBtn1" type="button" data-spell="1" disabled>2 Ghost</button>
+                  <button id="abracaSpellBtn2" type="button" data-spell="2" disabled>3 Dreams</button>
+                  <button id="abracaSpellBtn3" type="button" data-spell="3" disabled>4 Owl</button>
+                  <button id="abracaSpellBtn4" type="button" data-spell="4" disabled>5 Lightning</button>
+                  <button id="abracaSpellBtn5" type="button" data-spell="5" disabled>6 Blizzard</button>
+                  <button id="abracaSpellBtn6" type="button" data-spell="6" disabled>7 Fireball</button>
+                  <button id="abracaSpellBtn7" type="button" data-spell="7" disabled>8 Potion</button>
+                </div>
+                <div id="abracaCastConfirm" class="abraca-cast-confirm hidden" role="group" aria-label="Confirm spell">
+                  <strong id="abracaCastName"></strong>
+                  <span id="abracaCastDescription"></span>
+                  <div class="abraca-confirm-actions">
+                    <button id="abracaCastBtn" type="button">Cast</button>
+                    <button id="abracaCancelCastBtn" type="button">Cancel</button>
+                  </div>
+                </div>
+              </div>
 
-              <h3>Actions</h3>
-              <div class="row actions" id="abracaSpellButtons">
-                <button id="abracaSpellBtn0" data-spell="0">1 Dragon</button>
-                <button id="abracaSpellBtn1" data-spell="1">2 Ghost</button>
-                <button id="abracaSpellBtn2" data-spell="2">3 Dreams</button>
-                <button id="abracaSpellBtn3" data-spell="3">4 Owl</button>
-                <button id="abracaSpellBtn4" data-spell="4">5 Lightning</button>
-                <button id="abracaSpellBtn5" data-spell="5">6 Blizzard</button>
-                <button id="abracaSpellBtn6" data-spell="6">7 Fireball</button>
-                <button id="abracaSpellBtn7" data-spell="7">8 Potion</button>
+              <div class="abraca-section-heading abraca-action-heading">
+                <h3>Actions</h3>
+                <span id="abracaActionHint" role="status">Waiting for the game</span>
               </div>
-              <div class="row actions">
-                <button id="abracaRollBtn">Roll Dice</button>
-                <button id="abracaSecretBtn">Take Secret</button>
-                <button id="abracaEndTurnBtn">End Turn</button>
-                <button id="abracaNextRoundBtn">Start Next Round</button>
+              <div class="abraca-turn-actions" id="abracaTurnActions">
+                <button id="abracaRollBtn" type="button" class="hidden">🎲 Roll Dice</button>
+                <button id="abracaSecretBtn" type="button" class="hidden">🔒 Take Secret</button>
+                <button id="abracaEndTurnBtn" type="button" class="hidden">End Turn</button>
+                <button id="abracaNextRoundBtn" type="button" class="hidden">Next Round</button>
               </div>
-              <div class="row actions hidden" id="abracaNewGameRow">
-                <button id="abracaNewGameBtn">Start New Game</button>
+              <div class="abraca-turn-actions hidden" id="abracaNewGameRow">
+                <button id="abracaNewGameBtn" type="button">Start New Game</button>
               </div>
 
               <h3>Players</h3>
               <div id="abracaPlayers"></div>
+              <details id="abracaActivity" class="abraca-activity">
+                <summary>Activity <span id="abracaActivitySummary">No spells cast yet</span></summary>
+                <div class="abraca-activity-body">
+                  <div>Last Action: <span id="abracaLastAction">-</span></div>
+                  <div>Round Result: <span id="abracaRoundResult">-</span></div>
+                </div>
+              </details>
+              <div id="abracaTooltip" class="abraca-tooltip hidden" role="tooltip"></div>
             </template>

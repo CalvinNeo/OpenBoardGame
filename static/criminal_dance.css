@@ -1,15 +1,15 @@
 #criminalDancePanel {
     width: 100%;
     min-width: 0;
-    color: #35354c;
     container-type: inline-size;
     container-name: criminal-dance;
 }
 
-#criminalDancePanel .criminal-dance-surface {
+.game-panel[data-game-theme="criminal_dance"] {
     --criminal-dance-ink: #35354c;
     --criminal-dance-muted: #747180;
     --criminal-dance-line: #e4ded7;
+    color: var(--criminal-dance-ink);
     padding: clamp(12px, 2vw, 22px);
     border: 1px solid #ddd5cb;
     border-radius: 18px;
@@ -17,7 +17,10 @@
     overflow-wrap: anywhere;
 }
 
-#criminalDancePanel .criminal-dance-banner,
+@media (max-width: 500px) {
+    .game-panel[data-game-theme="criminal_dance"] { padding: 10px; border-radius: 12px; }
+}
+
 #criminalDancePanel .criminal-dance-section-heading,
 #criminalDancePanel .criminal-dance-round-meta,
 #criminalDancePanel .criminal-dance-action-fields,
@@ -28,10 +31,6 @@
     min-width: 0;
 }
 
-#criminalDancePanel .criminal-dance-banner { justify-content: space-between; flex-wrap: wrap; margin-bottom: 15px; }
-#criminalDancePanel .criminal-dance-brand { min-width: 0; }
-#criminalDancePanel .criminal-dance-eyebrow { margin: 0 0 5px; color: var(--criminal-dance-muted); font-size: 12px; letter-spacing: .1em; }
-#criminalDancePanel h2 { margin: 0; color: #49415e; font-size: clamp(21px, 2.5vw, 29px); line-height: 1.4; }
 #criminalDancePanel .criminal-dance-status-chip { max-width: 100%; padding: 6px 10px; border: 1px solid #d7cee6; border-radius: 20px; background: #faf7ff; color: #615479; font-size: 12px; font-weight: 650; }
 #criminalDancePanel .criminal-dance-status { margin-bottom: 13px; padding: 11px 13px; border: 1px solid #ded8e9; border-left: 4px solid #8074b7; border-radius: 10px; background: #f2eef9; }
 #criminalDancePanel .criminal-dance-round-meta { flex-wrap: wrap; gap: 5px 16px; color: #716881; font-size: 12px; }
@@ -147,7 +146,6 @@ body.criminal-dance-explain-mode #criminalDancePanel [data-criminal-dance-explai
 @container criminal-dance (max-width: 760px) {
     #criminalDancePanel .criminal-dance-layout,
     #criminalDancePanel .criminal-dance-records { grid-template-columns: minmax(0, 1fr); }
-    #criminalDancePanel .criminal-dance-banner { margin-bottom: 12px; }
     #criminalDancePanel .criminal-dance-section,
     #criminalDancePanel .criminal-dance-results { padding: 11px; }
     #criminalDancePanel .criminal-dance-public-list,

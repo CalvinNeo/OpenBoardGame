@@ -1,376 +1,360 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-abraca_what-1 {
+  #abracaPanel [data-spell="0"] { --abraca-tint: #fee2e2; --abraca-ink: #7f1d1d; --abraca-edge: #f5bcbc; }
+  #abracaPanel [data-spell="1"] { --abraca-tint: #e0e7ff; --abraca-ink: #3730a3; --abraca-edge: #c7d2fe; }
+  #abracaPanel [data-spell="2"] { --abraca-tint: #fce7f3; --abraca-ink: #9d174d; --abraca-edge: #f5c5df; }
+  #abracaPanel [data-spell="3"] { --abraca-tint: #fef3c7; --abraca-ink: #92400e; --abraca-edge: #f3d98e; }
+  #abracaPanel [data-spell="4"] { --abraca-tint: #fef9c3; --abraca-ink: #854d0e; --abraca-edge: #e8dc86; }
+  #abracaPanel [data-spell="5"] { --abraca-tint: #cffafe; --abraca-ink: #0e7490; --abraca-edge: #a5e7ef; }
+  #abracaPanel [data-spell="6"] { --abraca-tint: #ffedd5; --abraca-ink: #9a3412; --abraca-edge: #f5c99b; }
+  #abracaPanel [data-spell="7"] { --abraca-tint: #dcfce7; --abraca-ink: #166534; --abraca-edge: #b1e6c1; }
 
-.player-slot.abraca-card {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-  min-width: 64px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border-color: #d1d5db;
-  background: #f8fafc;
-  color: #111827;
-}
+  #abracaPlayers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+    gap: 6px;
+  }
 
-.player-slot.abraca-card.abraca-card-compact {
-  min-width: 54px;
-  padding: 4px 6px;
-}
+  #abracaPlayers .player-card {
+    min-width: 0;
+    margin: 0;
+    padding: 7px 8px;
+    border-color: #e5e0ef;
+    border-radius: 8px;
+    background: #fff;
+  }
 
-.player-slot.abraca-card.abraca-card-hidden {
-  background: #e5e7eb;
-  border-style: dashed;
-  color: #6b7280;
-}
+  #abracaPlayers .player-card.current {
+    border-color: #9b7ac5;
+    background: #faf7ff;
+    box-shadow: inset 3px 0 #8b5fb5;
+  }
 
-.player-slot.abraca-card[data-spell="0"] {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #7f1d1d;
-}
+  #abracaPlayers .player-header {
+    gap: 4px 8px;
+    margin-bottom: 5px;
+    align-items: baseline;
+  }
 
-.player-slot.abraca-card[data-spell="1"] {
-  background: #e0e7ff;
-  border-color: #c7d2fe;
-  color: #3730a3;
-}
+  #abracaPlayers .player-name {
+    min-width: 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
 
-.player-slot.abraca-card[data-spell="2"] {
-  background: #fce7f3;
-  border-color: #fbcfe8;
-  color: #9d174d;
-}
+  .abraca-player-tag {
+    font-size: 10px;
+    font-weight: 500;
+    color: #746486;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
 
-.player-slot.abraca-card[data-spell="3"] {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #92400e;
-}
+  #abracaPlayers .player-badges {
+    flex: 0 0 auto;
+    gap: 4px;
+    align-items: center;
+  }
 
-.player-slot.abraca-card[data-spell="4"] {
-  background: #fef9c3;
-  border-color: #fef08a;
-  color: #854d0e;
-}
+  #abracaPlayers .badge {
+    padding: 2px 4px;
+    font-size: 11px;
+    line-height: 1.3;
+    white-space: nowrap;
+    border-radius: 4px;
+    background: #f4f1f9;
+    color: #4c3f61;
+  }
 
-.player-slot.abraca-card[data-spell="5"] {
-  background: #cffafe;
-  border-color: #a5f3fc;
-  color: #0e7490;
-}
+  #abracaPlayers .abraca-hp {
+    background: #fff0f2;
+    color: #9f2444;
+  }
 
-.player-slot.abraca-card[data-spell="6"] {
-  background: #ffedd5;
-  border-color: #fed7aa;
-  color: #9a3412;
-}
+  #abracaPlayers .player-hand {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin: 0;
+  }
 
-.player-slot.abraca-card[data-spell="7"] {
-  background: #dcfce7;
-  border-color: #bbf7d0;
-  color: #166534;
-}
+  #abracaPlayers .player-slot {
+    min-width: 0;
+    padding: 4px 2px;
+    border-radius: 5px;
+  }
 
-#abracaSpellButtons button[data-spell] {
-  background: #f8fafc;
-  border-color: #d1d5db;
-  color: #111827;
-}
+  #abracaPlayers .abraca-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2px 4px;
+    border-color: var(--abraca-edge, #d9d2e4);
+    background: var(--abraca-tint, #f1edf6);
+    color: var(--abraca-ink, #746486);
+    line-height: 1.25;
+  }
 
-#abracaSpellButtons button[data-spell="0"] {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #7f1d1d;
-}
+  #abracaPlayers .abraca-card-hidden {
+    border-style: dashed;
+    font-weight: 600;
+  }
 
-#abracaSpellButtons button[data-spell="1"] {
-  background: #e0e7ff;
-  border-color: #c7d2fe;
-  color: #3730a3;
-}
+  .abraca-card-number {
+    font-size: 12px;
+    font-weight: 700;
+  }
 
-#abracaSpellButtons button[data-spell="2"] {
-  background: #fce7f3;
-  border-color: #fbcfe8;
-  color: #9d174d;
-}
+  .abraca-card-icon { font-size: 14px; }
 
-#abracaSpellButtons button[data-spell="3"] {
-  background: #fef3c7;
-  border-color: #fde68a;
-  color: #92400e;
-}
-
-#abracaSpellButtons button[data-spell="4"] {
-  background: #fef9c3;
-  border-color: #fef08a;
-  color: #854d0e;
-}
-
-#abracaSpellButtons button[data-spell="5"] {
-  background: #cffafe;
-  border-color: #a5f3fc;
-  color: #0e7490;
-}
-
-#abracaSpellButtons button[data-spell="6"] {
-  background: #ffedd5;
-  border-color: #fed7aa;
-  color: #9a3412;
-}
-
-#abracaSpellButtons button[data-spell="7"] {
-  background: #dcfce7;
-  border-color: #bbf7d0;
-  color: #166534;
-}
-
-.abraca-card-number {
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.85;
-}
-
-.abraca-card-name {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.abraca-card-compact .abraca-card-number {
-  font-size: 10px;
-}
-
-.abraca-card-compact .abraca-card-name {
-  font-size: 11px;
-}
+  .abraca-card-name {
+    flex-basis: 100%;
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
 }
 
 @media all, obg-game-abraca_what-2 {
+  #abracaPlayers .abraca-secret-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    margin-top: 4px;
+  }
 
-.player-meta.abraca-secret-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+  .abraca-secret-label {
+    font-size: 11px;
+    color: #746486;
+  }
 
-.abraca-secret-label {
-  font-weight: 600;
-  color: #374151;
-}
+  .abraca-secret-list {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    min-width: 0;
+    gap: 4px;
+  }
 
-.abraca-secret-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
+  #abracaPlayers .abraca-card-compact {
+    flex: 0 0 38px;
+    padding: 2px;
+  }
+
+  .abraca-card-compact .abraca-card-name { display: none; }
 }
 
 @media all, obg-game-abraca_what-3 {
+  .abraca-spells { position: relative; }
 
-.abraca-spell-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
+  .abraca-spell-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
 
-.abraca-spell-table th,
-.abraca-spell-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  text-align: left;
-  vertical-align: top;
-}
+  #abracaSpellButtons button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 62px;
+    padding: 5px 3px;
+    border: 1px solid var(--abraca-edge);
+    border-radius: 7px;
+    background: var(--abraca-tint);
+    color: var(--abraca-ink);
+    box-shadow: none;
+    line-height: 1.2;
+    cursor: pointer;
+  }
 
-.abraca-spell-table th {
-  background: #f8fafc;
-  color: #374151;
-  font-weight: 600;
-}
+  #abracaSpellButtons button:disabled {
+    opacity: 1;
+    border-style: dashed;
+    background: color-mix(in srgb, var(--abraca-tint) 50%, #fbf9fd);
+    cursor: not-allowed;
+  }
 
-.abraca-spell-table tbody tr:last-child td {
-  border-bottom: none;
-}
+  #abracaSpellButtons button.action-allowed:hover,
+  #abracaSpellButtons button[aria-pressed="true"] {
+    border-color: var(--abraca-ink);
+    box-shadow: inset 0 0 0 1px var(--abraca-ink);
+  }
 
-.abraca-spell-name {
-  font-weight: 600;
-  white-space: nowrap;
-  position: relative;
-  cursor: pointer;
-}
+  .abraca-spell-symbol { font-size: 17px; font-weight: 700; }
+  .abraca-spell-label { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+  .abraca-spell-used { font-size: 11px; font-variant-numeric: tabular-nums; }
 
-.abraca-spell-count,
-.abraca-spell-total {
-  text-align: center;
-  white-space: nowrap;
-  font-weight: 600;
-}
+  .abraca-cast-confirm {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid #ad91c8;
+    border-radius: 8px;
+    background: rgb(252 249 255 / 97%);
+    box-shadow: 0 3px 10px #4c266b18;
+    text-align: center;
+    user-select: none;
+    z-index: 2;
+  }
 
-.abraca-spell-bubble {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  transform: translateY(6px);
-  background: #111827;
-  color: #f9fafb;
-  border-radius: 6px;
-  padding: 6px 8px;
-  font-size: 11px;
-  line-height: 1.3;
-  min-width: 200px;
-  max-width: 360px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
-  opacity: 0;
-  pointer-events: auto;
-  z-index: 5;
-  transition: opacity 0.15s ease-in-out;
-}
+  #abracaCastName { font-size: 14px; }
+  #abracaCastDescription { max-width: 420px; font-size: 12px; line-height: 1.3; }
 
-.abraca-spell-bubble.show {
-  opacity: 1;
-}
+  .abraca-confirm-actions { display: flex; gap: 8px; width: min(100%, 280px); }
 
-.abraca-spell-table tbody tr[data-spell="0"] td {
-  background: #fee2e2;
-  color: #7f1d1d;
-}
+  .abraca-confirm-actions button {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    border: 1px solid #cab9da;
+    border-radius: 6px;
+    background: #fff;
+    color: #5c377c;
+  }
 
-.abraca-spell-table tbody tr[data-spell="1"] td {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.abraca-spell-table tbody tr[data-spell="2"] td {
-  background: #fce7f3;
-  color: #9d174d;
-}
-
-.abraca-spell-table tbody tr[data-spell="3"] td {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.abraca-spell-table tbody tr[data-spell="4"] td {
-  background: #fef9c3;
-  color: #854d0e;
-}
-
-.abraca-spell-table tbody tr[data-spell="5"] td {
-  background: #cffafe;
-  color: #0e7490;
-}
-
-.abraca-spell-table tbody tr[data-spell="6"] td {
-  background: #ffedd5;
-  color: #9a3412;
-}
-
-.abraca-spell-table tbody tr[data-spell="7"] td {
-  background: #dcfce7;
-  color: #166534;
-}
+  #abracaCastBtn { background: #69418b; border-color: #69418b; color: #fff; }
 }
 
 @media all, obg-game-abraca_what-4 {
+  .game-panel[data-game-theme="abraca_what"] {
+    background: linear-gradient(150deg, #f8f4ff, #fff 45%);
+    border-color: #ded3ec;
+    color: #30233e;
+  }
 
-/* Abraca What Help/Explain */
-.abraca-header-btn {
-  padding: 4px 10px;
-  font-size: 13px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #f9fafb;
-  cursor: pointer;
-}
+  .game-panel[data-game-theme="abraca_what"] > .panel-header {
+    margin-bottom: 8px;
+    padding-bottom: 7px;
+  }
 
-.abraca-header-btn:hover {
-  background: #f3f4f6;
-}
+  #abracaPanel { min-width: 0; font-size: 13px; }
+  #abracaPanel .hidden { display: none; }
+  #abracaPanel h3 { margin: 10px 0 6px; font-size: 14px; line-height: 1.3; }
+  #abracaPanel button { touch-action: manipulation; }
+  #abracaPanel :focus-visible { outline: 2px solid #8152aa; outline-offset: 2px; }
 
-.abraca-header-btn.active {
-  background: #dbeafe;
-  border-color: #3b82f6;
-  color: #1d4ed8;
-}
+  .abraca-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    line-height: 1.4;
+  }
 
-body.abraca-explain-mode button.has-explanation {
-  outline: 2px dashed #3b82f6;
-  outline-offset: 2px;
-  cursor: help;
-}
+  .abraca-round { white-space: nowrap; color: #746486; }
+  .abraca-turn { flex: 1; min-width: 64px; overflow-wrap: anywhere; }
 
-body.abraca-explain-mode button.has-explanation:hover {
-  outline-color: #1d4ed8;
-  outline-style: solid;
-}
+  .abraca-phase {
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: #ebe3f5;
+    color: #62427d;
+    font-size: 11px;
+  }
 
-.abraca-help-modal {
-  max-width: 720px;
-}
+  .abraca-resources { display: flex; align-items: center; gap: 12px; margin-top: 5px; }
+  .abraca-resources > span { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; }
+  .abraca-chain { margin-left: auto; color: #62427d; font-size: 12px; }
 
-.abraca-help-content {
-  max-height: 70vh;
-  overflow-y: auto;
-  line-height: 1.6;
-}
+  .abraca-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .abraca-section-heading > span { min-width: 0; font-size: 11px; color: #746486; overflow-wrap: anywhere; text-align: right; }
+  #abracaActionHint { font-size: 12px; }
 
-.abraca-help-content h3 {
-  margin: 16px 0 8px;
-  font-size: 16px;
-  color: #111827;
-}
+  .abraca-turn-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+  .abraca-turn-actions:not(:has(> button:not(.hidden))) { display: none; }
 
-.abraca-help-content h3:first-child {
-  margin-top: 0;
-}
+  .abraca-turn-actions button {
+    flex: 1;
+    min-width: 0;
+    min-height: 40px;
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1px solid #cbb9dd;
+    border-radius: 6px;
+    background: #f1eaf8;
+    color: #5e3b7c;
+    box-shadow: none;
+  }
 
-.abraca-help-content h4 {
-  margin: 12px 0 6px;
-  font-size: 14px;
-  color: #374151;
-}
+  .abraca-turn-actions button.action-allowed { border-color: #a98ac6; background: #e9ddf5; }
+  #abracaPanel .round-notice { padding: 7px 9px; margin: 8px 0; overflow-wrap: anywhere; }
+  #abracaPanel .round-notice-title { font-size: 12px; }
+  #abracaPanel .round-notice-body { font-size: 12px; }
 
-.abraca-help-content ul {
-  margin: 8px 0;
-  padding-left: 20px;
-}
+  .abraca-activity { margin-top: 8px; border-top: 1px solid #e7e1ed; color: #746486; font-size: 12px; }
+  .abraca-activity summary { padding: 8px 0 2px; cursor: pointer; overflow-wrap: anywhere; }
+  #abracaActivitySummary { margin-left: 8px; font-size: 11px; }
+  .abraca-activity-body { max-height: 150px; overflow: auto; padding: 7px 0 2px; line-height: 1.6; overflow-wrap: anywhere; }
 
-.abraca-help-content ol {
-  margin: 8px 0;
-  padding-left: 20px;
-}
+  #abracaPanel [data-abraca-tip] { cursor: help; }
 
-.abraca-help-content li {
-  margin-bottom: 4px;
-}
+  .abraca-tooltip {
+    position: fixed;
+    max-width: min(280px, calc(100vw - 16px));
+    padding: 8px 10px;
+    border-radius: 7px;
+    background: #30233e;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    box-shadow: 0 4px 16px #30233e33;
+    pointer-events: none;
+    z-index: 1100;
+  }
 
-.abraca-help-content p {
-  margin: 8px 0;
-}
+  .abraca-header-btn { border: 1px solid #cab9da; border-radius: 5px; background: #fff; cursor: pointer; }
+  .abraca-header-btn.active { border-color: #8152aa; background: #e9ddf5; color: #5c377c; }
+  body.abraca-explain-mode button.has-explanation,
+  body.abraca-explain-mode #abracaPanel [data-abraca-tip] { outline: 2px dashed #8152aa; outline-offset: 1px; cursor: help; }
 
-.abraca-explain-modal {
-  max-width: 520px;
-}
+  .abraca-help-modal { max-width: 680px; }
+  .abraca-help-content { line-height: 1.6; }
+  .abraca-help-content h3 { margin: 14px 0 6px; font-size: 16px; }
+  .abraca-help-content h3:first-child { margin-top: 0; }
+  .abraca-help-content ul, .abraca-help-content ol { margin: 6px 0; padding-left: 20px; }
+  .abraca-help-content li { margin-bottom: 4px; }
+  .abraca-help-content p { margin: 6px 0; }
+  .abraca-explain-modal { max-width: 480px; }
+  #abracaExplainContent { line-height: 1.6; }
+  #abracaExplainContent h4 { margin: 0 0 8px; font-size: 15px; }
+  #abracaExplainContent p { margin: 6px 0; }
+  #abracaExplainContent .hint { color: #746486; font-size: 12px; }
+  #abracaHelpModal .modal-header, #abracaExplainModal .modal-header { gap: 8px; }
+  #abracaHelpModal .modal-header h2, #abracaExplainModal .modal-header h2 { min-width: 0; font-size: 18px; overflow-wrap: anywhere; }
+  #abracaHelpModalCloseBtn, #abracaExplainModalCloseBtn { flex-shrink: 0; min-height: 36px; }
 
-#abracaExplainContent {
-  line-height: 1.6;
-}
-
-#abracaExplainContent h4 {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: #111827;
-}
-
-#abracaExplainContent p {
-  margin: 6px 0;
-  color: #374151;
-}
-
-#abracaExplainContent .hint {
-  color: #6b7280;
-  font-size: 12px;
-}
+  @media (max-width: 600px) {
+    .game-panel[data-game-theme="abraca_what"] > .panel-header { gap: 5px; margin-bottom: 6px; padding-bottom: 5px; }
+    .game-panel[data-game-theme="abraca_what"] .game-panel-title { gap: 5px; }
+    .game-panel[data-game-theme="abraca_what"] .game-panel-title h2 { font-size: 17px; }
+    #abracaPanel { font-size: 12px; }
+    #abracaPanel h3 { margin: 8px 0 5px; font-size: 13px; }
+    #abracaPlayers { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+    #abracaPlayers .player-card { padding: 5px 7px; }
+    #abracaPlayers .player-header { margin-bottom: 4px; gap: 4px; }
+    #abracaPlayers .player-name { font-size: 12px; }
+    #abracaPlayers .player-badges { gap: 3px; }
+    #abracaPlayers .badge { font-size: 10px; padding: 2px 3px; }
+    #abracaPlayers .player-slot { padding: 3px 2px; }
+    #abracaPlayers .abraca-card-name { display: none; }
+    #abracaSpellButtons button { min-height: 58px; padding: 4px 2px; }
+    .abraca-spell-label { font-size: 11px; }
+    .abraca-status { gap: 4px 7px; }
+    .abraca-resources { margin-top: 3px; gap: 10px; }
+    .abraca-turn-actions button { min-height: 44px; }
+    .abraca-cast-confirm { gap: 4px; padding: 6px; }
+  }
 }

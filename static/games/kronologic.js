@@ -1515,6 +1515,7 @@
   });
 
   document.addEventListener("pointerdown", (event) => {
+    kronologicSuppressClickUntil = 0;
     if (!kronologicExplainMode) return;
     const exempt = event.target.closest("#kronologicHelpBtn, #kronologicExplainBtn, #kronologicHelpCloseBtn, #kronologicExplainCloseBtn, #kronologicAccusationCloseBtn, #kronologicNotebookDockBtn, #kronologicNotebookCloseBtn, #kronologicNotebookBackdrop");
     if (exempt) return;
@@ -1531,7 +1532,8 @@
   }, true);
 
   document.addEventListener("click", (event) => {
-    if (Date.now() < kronologicSuppressClickUntil) {
+    if (event.detail && Date.now() < kronologicSuppressClickUntil) {
+      kronologicSuppressClickUntil = 0;
       event.preventDefault();
       event.stopPropagation();
       return;

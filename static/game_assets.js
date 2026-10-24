@@ -67,9 +67,10 @@ const GAME_ASSETS = {
   },
   "the_crew": {
     "scripts": ["/static/games/the_crew.js?v=3"],
-    "styles": ["/static/games/the_crew.css?v=3"],
-    "markup": "/static/games/the_crew.html?v=2",
+    "styles": ["/static/games/the_crew.css?v=4"],
+    "markup": "/static/games/the_crew.html?v=3",
     "panel": "theCrewPanel",
+    "panelTitle": "🧑‍🚀 宇航员",
     "header": "showTheCrewHeaderActions"
   },
   "maskmen": {
@@ -125,9 +126,9 @@ const GAME_ASSETS = {
     "header": "showOdinHeaderActions"
   },
   "dice_throne": {
-    "scripts": ["/static/games/dice_throne.js?v=10"],
-    "styles": ["/static/games/dice_throne.css?v=10"],
-    "markup": "/static/games/dice_throne.html?v=5",
+    "scripts": ["/static/games/dice_throne.js?v=11"],
+    "styles": ["/static/games/dice_throne.css?v=11"],
+    "markup": "/static/games/dice_throne.html?v=6",
     "panel": "diceThronePanel",
     "header": "showDiceThroneHeaderActions"
   },
@@ -161,31 +162,34 @@ const GAME_ASSETS = {
   },
   "hive": {
     "scripts": ["/static/games/hive.js?v=3"],
-    "styles": ["/static/games/hive.css?v=3"],
-    "markup": "/static/games/hive.html?v=3",
+    "styles": ["/static/games/hive.css?v=4"],
+    "markup": "/static/games/hive.html?v=4",
     "panel": "hivePanel",
+    "panelTitle": "🐝 昆虫棋",
     "header": "showHiveHeaderActions"
   },
   "cheaty_mages": {
     "scripts": [
-      "/static/games/cheaty_mages.js?v=2"
+      "/static/games/cheaty_mages.js?v=3"
     ],
     "styles": [
-      "/static/cheaty_mages.css?v=1"
+      "/static/cheaty_mages.css?v=2"
     ],
     "markup": "/static/games/cheaty_mages.html?v=1",
     "panel": "cheatyMagesPanel",
+    "panelTitle": "🧙 诈赌巫师",
     "header": "showCheatyMagesHeaderActions"
   },
   "las_vegas": {
     "scripts": [
-      "/static/games/las_vegas.js?v=4"
+      "/static/games/las_vegas.js?v=5"
     ],
     "styles": [
-      "/static/las_vegas.css?v=3"
+      "/static/las_vegas.css?v=4"
     ],
-    "markup": "/static/games/las_vegas.html?v=2",
+    "markup": "/static/games/las_vegas.html?v=3",
     "panel": "lasVegasPanel",
+    "panelTitle": "🎲 拉斯维加斯",
     "header": "showLasVegasHeaderActions"
   },
   "for_sale": {
@@ -565,13 +569,14 @@ const GAME_ASSETS = {
   },
   "abraca_what": {
     "scripts": [
-      "/static/games/abraca_what.js?v=app_v4"
+      "/static/games/abraca_what.js?v=app_v5"
     ],
     "styles": [],
     "panel": "abracaPanel",
+    "panelTitle": "Abraca What",
     "header": "showAbracaHeaderActions",
-    "markup": "/static/games/abraca_what.html?v=1",
-    "styleFragments": "/static/games/abraca_what.css?v=1"
+    "markup": "/static/games/abraca_what.html?v=2",
+    "styleFragments": "/static/games/abraca_what.css?v=2"
   },
   "fang_niao": {
     "scripts": [
@@ -667,11 +672,12 @@ const GAME_ASSETS = {
       "/static/games/criminal_dance.js?v=app_v5"
     ],
     "styles": [
-      "/static/criminal_dance.css?v=1"
+      "/static/criminal_dance.css?v=2"
     ],
     "panel": "criminalDancePanel",
+    "panelTitle": "🕵️ 犯人在跳舞",
     "header": "showCriminalDanceHeaderActions",
-    "markup": "/static/games/criminal_dance.html?v=2",
+    "markup": "/static/games/criminal_dance.html?v=3",
     "styleFragments": "/static/games/criminal_dance.css?v=1"
   },
   "turing_machine": {
@@ -686,13 +692,14 @@ const GAME_ASSETS = {
   },
   "kronologic": {
     "scripts": [
-      "/static/games/kronologic.js?v=app_v3"
+      "/static/games/kronologic.js?v=app_v4"
     ],
     "styles": [],
     "panel": "kronologicPanel",
+    "panelTitle": "🕰️ 时空神探",
     "header": "showKronologicHeaderActions",
     "markup": "/static/games/kronologic.html?v=1",
-    "styleFragments": "/static/games/kronologic.css?v=1"
+    "styleFragments": "/static/games/kronologic.css?v=2"
   },
   "halli_galli": {
     "scripts": [
@@ -788,13 +795,14 @@ const GAME_ASSETS = {
   },
   "manila": {
     "scripts": [
-      "/static/games/manila.js?v=app_v5"
+      "/static/games/manila.js?v=app_v6"
     ],
     "styles": [],
     "panel": "manilaPanel",
+    "panelTitle": "Manila · 马尼拉",
     "header": "showManilaHeaderActions",
-    "markup": "/static/games/manila.html?v=1",
-    "styleFragments": "/static/games/manila.css?v=1"
+    "markup": "/static/games/manila.html?v=2",
+    "styleFragments": "/static/games/manila.css?v=2"
   },
   "kobayakawa": {
     "scripts": [
@@ -853,9 +861,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "wriggleRoulettePanel",
+    "panelTitle": "🌙 鳗载而归",
     "header": "showWriggleRouletteHeaderActions",
-    "markup": "/static/games/wriggle_roulette.html?v=1",
-    "styleFragments": "/static/games/wriggle_roulette.css?v=1"
+    "markup": "/static/games/wriggle_roulette.html?v=2",
+    "styleFragments": "/static/games/wriggle_roulette.css?v=2"
   },
   "catan_starfarers": {
     "scripts": [
@@ -902,12 +911,13 @@ const GAME_ASSETS = {
   },
   "ponzi_scheme": {
     "scripts": [
-      "/static/games/ponzi_scheme.js?v=3"
+      "/static/games/ponzi_scheme.js?v=4"
     ],
     "styles": [
-      "/static/ponzi_scheme.css?v=3"
+      "/static/ponzi_scheme.css?v=4"
     ],
     "panel": "ponziSchemePanel",
+    "panelTitle": "🏦 庞氏骗局",
     "header": "showPonziSchemeHeaderActions",
     "markup": "/static/games/ponzi_scheme.html?v=1"
   },

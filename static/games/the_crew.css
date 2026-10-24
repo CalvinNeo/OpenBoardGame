@@ -1,5 +1,8 @@
-.the-crew-panel { --tc-accent:#a9c4ff; --tc-bg:#13223f; --tc-line:#40516a; background:var(--tc-bg); color:#f3f6ff; border-radius:18px; padding:20px; min-width:0; font-family:system-ui,sans-serif; }
-.the-crew-panel[data-edition="2"] { --tc-accent:#83e6d8; --tc-bg:#103c46; --tc-line:#3e6970; }
+.game-panel[data-game-theme="the_crew"] { --tc-accent:#a9c4ff; --tc-bg:#13223f; --tc-line:#40516a; background:var(--tc-bg); color:#f3f6ff; border-color:var(--tc-line); border-radius:18px; padding:20px; min-width:0; font-family:system-ui,sans-serif; }
+.game-panel[data-game-theme="the_crew"]:has(.the-crew-panel[data-edition="2"]) { --tc-accent:#83e6d8; --tc-bg:#103c46; --tc-line:#3e6970; }
+.game-panel[data-game-theme="the_crew"] > .panel-header button { color:#f3f6ff; background:#ffffff0d; border-color:var(--tc-line); }
+.game-panel[data-game-theme="the_crew"] > .panel-header button[aria-pressed="true"] { color:var(--tc-bg); background:var(--tc-accent); }
+.the-crew-panel { min-width:0; }
 .the-crew-panel *, .the-crew-setup *, .the-crew-dialog * { box-sizing:border-box; min-width:0; overflow-wrap:anywhere; }
 .the-crew-panel h2, .the-crew-panel h3, .the-crew-setup h3 { margin:0; }
 .the-crew-panel h3 { font-size:14px; letter-spacing:.02em; }
@@ -7,10 +10,8 @@
 .the-crew-panel button:focus-visible, .the-crew-setup button:focus-visible { outline:3px solid #4ea2ff; outline-offset:3px; }
 .the-crew-panel button:disabled { cursor:default; }
 .the-crew-heading, .the-crew-section-heading, .the-crew-status, .the-crew-dialog-heading { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-.the-crew-heading { padding-bottom:16px; flex-wrap:wrap; }
-.the-crew-eyebrow { font-size:10px; letter-spacing:.15em; color:var(--tc-accent); margin-bottom:6px; }
-.the-crew-heading h2 { font-size:27px; letter-spacing:.08em; color:inherit; }
-.the-crew-heading h2 span { font-size:15px; letter-spacing:.12em; opacity:.7; display:inline-block; }
+.the-crew-heading { padding-bottom:10px; flex-wrap:wrap; }
+.the-crew-eyebrow { font-size:10px; letter-spacing:.15em; color:var(--tc-accent); }
 .the-crew-mission-mark { font-size:12px; line-height:1.6; text-align:right; color:var(--tc-accent); }
 .the-crew-status { padding:10px 12px; background:#ffffff0d; border:1px solid var(--tc-line); border-radius:9px; font-size:13px; flex-wrap:wrap; }
 .the-crew-status span { color:#d0deee; font-size:12px; }
@@ -110,17 +111,15 @@ button.the-crew-card:disabled { opacity:.64; }
 .the-crew-mission-dialog .the-crew-primary:disabled { opacity:.5; cursor:default; }
 .the-crew-mission-dialog :is(button, select):focus-visible { outline:3px solid #4ea2ff; outline-offset:3px; }
 @media (max-width:900px) {
-  .the-crew-panel { padding:14px; }
+  .game-panel[data-game-theme="the_crew"] { padding:14px; }
   .the-crew-layout { grid-template-columns:minmax(0,1fr); }
   .the-crew-tasks { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); max-height:240px; }
   .the-crew-trick { min-height:110px; }
   .the-crew-objectives { padding:13px; }
 }
 @media (max-width:480px) {
-  .the-crew-panel { padding:10px; border-radius:12px; }
-  .the-crew-heading { gap:8px; padding-bottom:11px; }
-  .the-crew-heading h2 { font-size:21px; }
-  .the-crew-heading h2 span { font-size:12px; }
+  .game-panel[data-game-theme="the_crew"] { padding:10px; border-radius:12px; }
+  .the-crew-heading { gap:4px 8px; padding-bottom:8px; }
   .the-crew-eyebrow { font-size:8px; letter-spacing:.08em; }
   .the-crew-mission-mark { font-size:10px; text-align:left; }
   .the-crew-players { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }

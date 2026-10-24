@@ -1,1412 +1,268 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-manila-1 {
-
-.manila-panel {
-  --manila-ink: #0f172a;
-  --manila-muted: #475569;
-  --manila-wave: #eff6ff;
-  --manila-sand: #fef3c7;
-  --manila-teal: #0f766e;
-  --manila-ember: #f97316;
-  position: relative;
-  padding: 18px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #e0f2fe 0%, #fef9c3 45%, #fff1f2 100%);
-  border: 1px solid #cbd5f5;
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
-  overflow: hidden;
-  font-family: "Work Sans", "Segoe UI", sans-serif;
-  color: var(--manila-ink);
-}
-
-.manila-tooltip {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.92);
-  color: #f8fafc;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 3;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.25);
-}
-
-.manila-panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 10% 10%, rgba(14, 116, 144, 0.12), transparent 40%),
-    radial-gradient(circle at 80% 20%, rgba(249, 115, 22, 0.12), transparent 45%),
-    radial-gradient(circle at 30% 80%, rgba(59, 130, 246, 0.12), transparent 45%);
-  pointer-events: none;
-}
-
-.manila-hero,
-.manila-price-bar,
-.manila-columns {
-  position: relative;
-  z-index: 1;
-}
-
-.manila-title {
-  font-family: "Cinzel", "Times New Roman", serif;
-  font-size: 28px;
-  letter-spacing: 0.04em;
-}
-
-.manila-subtitle {
-  color: var(--manila-muted);
-  font-size: 13px;
-  margin-top: 4px;
-}
-
-.manila-hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.manila-status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.manila-chip {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--manila-ink);
-}
-
-.manila-price-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
-  color: #f8fafc;
-  margin-bottom: 16px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-}
-
-.manila-auction-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  margin-bottom: 16px;
-  justify-content: space-between;
-}
-
-.manila-auction-title {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-  color: #0f172a;
-}
-
-.manila-auction-info {
-  font-size: 13px;
-  color: var(--manila-muted);
-}
-
-.manila-auction-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.manila-auction-bids {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--manila-ink);
-}
-
-.manila-auction-bidlist {
-  display: grid;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.manila-auction-bid-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.05);
-  font-size: 12px;
-  color: var(--manila-ink);
-}
-
-.manila-auction-bid-row.leader {
-  background: rgba(14, 116, 144, 0.18);
-  border: 1px solid rgba(14, 116, 144, 0.3);
-}
-
-.manila-auction-bid-row.passed {
-  opacity: 0.55;
-  text-decoration: line-through;
-}
-
-.manila-price-title {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-}
-
-.manila-price-values {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.manila-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 16px;
-}
-
-.manila-column {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.manila-scene {
-  display: grid;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.45) 100%);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
-}
-
-.manila-map {
-  padding: 10px;
-  border-radius: 14px;
-  background: linear-gradient(160deg, #fde68a 0%, #fef3c7 45%, #ffe4e6 100%);
-  border: 1px solid rgba(180, 83, 9, 0.25);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
-}
-
-.manila-pass-facility {
-  margin-top: 0;
-  padding: 6px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.06);
-  border: 1px dashed rgba(15, 23, 42, 0.25);
-  display: grid;
-  gap: 4px;
-}
-
-.manila-pass-facility.manila-zone {
-  box-shadow: none;
-}
-
-.manila-pass-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--manila-ink);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.manila-pass-hint {
-  font-size: 11px;
-  color: var(--manila-muted);
-}
-
-.manila-pass-facility button {
-  height: 30px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: #f8fafc;
-  font-weight: 600;
-}
-
-.manila-pledge-facility {
-  display: grid;
-  gap: 6px;
-}
-
-.manila-pledge-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-  align-items: center;
-}
-
-.manila-pledge-row select {
-  height: 30px;
-}
-
-.manila-pledge-row button {
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: #f8fafc;
-  font-weight: 600;
-}
-
-.manila-round-end {
-  margin: 10px 0;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(30, 64, 175, 0.25);
-  background: linear-gradient(160deg, rgba(224, 242, 254, 0.9), rgba(191, 219, 254, 0.75));
-  display: grid;
-  gap: 10px;
-}
-
-.manila-round-end-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.manila-round-end-title {
-  font-size: 14px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #1e3a8a;
-}
-
-.manila-round-end-hint {
-  font-size: 12px;
-  color: #1e40af;
-}
-
-.manila-round-end-players {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-}
-
-.manila-round-end-player {
-  padding: 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  display: grid;
-  gap: 4px;
-}
-
-.manila-round-end-player.ready {
-  border-color: rgba(16, 185, 129, 0.6);
-  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2);
-}
-
-.manila-round-end-player-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--manila-ink);
-}
-
-.manila-round-end-player-status {
-  font-size: 11px;
-  color: var(--manila-muted);
-}
-
-.manila-round-end-breakdown {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-}
-
-.manila-round-end-block {
-  padding: 6px;
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.04);
-  display: grid;
-  gap: 4px;
-}
-
-.manila-round-end-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--manila-ink);
-}
-
-.manila-round-end-list {
-  display: grid;
-  gap: 2px;
-}
-
-.manila-round-end-line {
-  font-size: 11px;
-  color: var(--manila-muted);
-}
-
-.manila-round-end-line.muted {
-  font-style: italic;
-}
-
-.manila-round-end-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.manila-round-end-status {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1e3a8a;
-}
-
-.manila-round-end-actions button {
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(30, 64, 175, 0.4);
-  background: #eff6ff;
-  font-weight: 700;
-}
-
-.manila-map-grid {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-}
-
-.manila-sea {
-  padding: 10px;
-  border-radius: 14px;
-  background: linear-gradient(160deg, #e0f2fe 0%, #bae6fd 45%, #cffafe 100%);
-  border: 1px solid rgba(14, 116, 144, 0.25);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.manila-map-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-}
-
-.manila-zone {
-  padding: 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
-}
-
-.manila-zone-compact {
-  padding: 6px;
-}
-
-.manila-zone-compact .manila-zone-title {
-  font-size: 10px;
-  margin-bottom: 4px;
-}
-
-.manila-zone-compact .manila-zone-grid {
-  gap: 6px;
-}
-
-.manila-zone-compact .manila-slot {
-  padding: 6px;
-  gap: 3px;
-}
-
-.manila-zone-compact .manila-slot-label {
-  font-size: 11px;
-}
-
-.manila-zone-compact .manila-slot-meta {
-  font-size: 10px;
-}
-
-.manila-zone-compact .manila-slot-occupant {
-  font-size: 11px;
-}
-
-.manila-zone-stack {
-  display: grid;
-  gap: 10px;
-}
-
-.manila-zone-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-.manila-zone-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-}
-
-.manila-slot {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px dashed rgba(15, 23, 42, 0.3);
-  background: rgba(255, 255, 255, 0.8);
-  text-align: left;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-
-.manila-slot:hover:not(.disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
-}
-
-.manila-slot.occupied {
-  border-style: solid;
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(209, 250, 229, 0.6);
-}
-
-.manila-slot-label {
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.manila-slot-meta {
-  font-size: 11px;
-  color: var(--manila-muted);
-}
-
-.manila-slot-occupant {
-  font-size: 12px;
-  color: var(--manila-ink);
-}
-
-.manila-boat-card {
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-  overflow: hidden;
-}
-
-.manila-boat-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.15;
-  background: radial-gradient(circle at 80% 10%, rgba(15, 118, 110, 0.35), transparent 55%);
-  pointer-events: none;
-}
-
-.manila-boat-card.inactive {
-  opacity: 0.7;
-}
-
-.manila-boat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.manila-cargo-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  border: 1px solid transparent;
-  background: rgba(15, 23, 42, 0.06);
-}
-
-.manila-boat-value {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--manila-ink);
-}
-
-.manila-track {
-  display: grid;
-  grid-template-columns: repeat(14, minmax(0, 1fr));
-  gap: 3px;
-  align-items: center;
-}
-
-.manila-track-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: rgba(15, 23, 42, 0.12);
-  color: #0f172a;
-  font-size: 8px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.manila-track-dot.port {
-  background: #fb923c;
-  color: #7c2d12;
-}
-
-.manila-track-dot.active {
-  background: #0f766e;
-  color: #f8fafc;
-  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
-}
-
-.manila-track-dot.inactive {
-  background: rgba(148, 163, 184, 0.35);
-  color: #64748b;
-}
-
-.manila-axis-vertical {
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  display: grid;
-  gap: 6px;
-}
-
-.manila-axis-title {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--manila-ink);
-}
-
-.manila-axis-header {
-  display: grid;
-  gap: 8px;
-}
-
-.manila-axis-row {
-  display: grid;
-  grid-template-columns: 40px 1fr;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.manila-axis-row.port .manila-axis-tick-label {
-  color: #9a3412;
-}
-
-.manila-axis-row.pending .manila-axis-tick-label {
-  color: #0f766e;
-}
-
-.manila-axis-row.arrived .manila-axis-tick-label {
-  color: #0f766e;
-}
-
-.manila-axis-tick-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--manila-muted);
-  text-align: center;
-  padding-top: 6px;
-}
-
-.manila-axis-arrived {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.manila-axis-arrived-slot {
-  display: grid;
-  gap: 6px;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px dashed rgba(15, 118, 110, 0.35);
-  background: rgba(240, 253, 250, 0.7);
-}
-
-.manila-axis-arrived-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #0f766e;
-}
-
-.manila-axis-arrived-empty {
-  font-size: 12px;
-  color: var(--manila-muted);
-  padding: 6px;
-  text-align: center;
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.04);
-}
-
-.manila-axis-markers {
-  min-height: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: stretch;
-  padding: 4px 6px;
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.05);
-}
-
-.manila-axis-boat {
-  padding: 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.manila-axis-boat.inactive {
-  opacity: 0.7;
-}
-
-.manila-axis-boat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.manila-axis-boat-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--manila-ink);
-}
-
-.manila-axis-boat-value {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--manila-ink);
-}
-
-.manila-axis-boat-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.05);
-}
-
-.manila-axis-boat-control-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #0f172a;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.manila-axis-boat-control-buttons {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.manila-axis-boat-control-note {
-  font-size: 11px;
-  font-weight: 600;
-  color: #0f766e;
-  width: 100%;
-}
-
-.manila-pilot-btn {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.2);
-  background: #f8fafc;
-  color: #0f172a;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.manila-pilot-btn.selected {
-  background: #0f766e;
-  border-color: #0f766e;
-  color: #f8fafc;
-}
-
-.manila-axis-seat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 6px;
-}
-
-.manila-dice-bar {
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  display: grid;
-  gap: 8px;
-}
-
-.manila-dice-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--manila-ink);
-}
-
-.manila-dice-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-}
-
-.manila-dice-chip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.06);
-  font-size: 12px;
-  color: var(--manila-ink);
-  font-weight: 600;
-}
-
-.manila-dice-chip .manila-dice-value {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.manila-axis-boat.manila-cargo-nutmeg {
-  border-left: 4px solid #b45309;
-}
-
-.manila-axis-boat.manila-cargo-silk {
-  border-left: 4px solid #ca8a04;
-}
-
-.manila-axis-boat.manila-cargo-ginseng {
-  border-left: 4px solid #15803d;
-}
-
-.manila-axis-boat.manila-cargo-jade {
-  border-left: 4px solid #2563eb;
-}
-
-.manila-axis-boat.manila-cargo-neutral {
-  border-left: 4px solid #64748b;
-}
-
-
-.manila-seat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 6px;
-}
-
-.manila-seat {
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(255, 255, 255, 0.8);
-  padding: 6px;
-  font-size: 11px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.manila-seat.inactive {
-  opacity: 0.6;
-}
-
-.manila-seat-title {
-  font-weight: 700;
-  font-size: 11px;
-}
-
-.manila-seat-meta {
-  font-size: 11px;
-  color: var(--manila-muted);
-}
-
-.manila-seat-occupant {
-  font-size: 11px;
-  color: var(--manila-ink);
-}
-
-.manila-boat-footer {
-  font-size: 11px;
-  color: var(--manila-muted);
-}
-
-.manila-action-hint {
-  font-size: 12px;
-  color: var(--manila-muted);
-}
-
-.manila-cargo-nutmeg {
-  --manila-cargo: #b45309;
-}
-
-.manila-cargo-silk {
-  --manila-cargo: #ca8a04;
-}
-
-.manila-cargo-ginseng {
-  --manila-cargo: #15803d;
-}
-
-.manila-cargo-jade {
-  --manila-cargo: #2563eb;
-}
-
-.manila-cargo-neutral {
-  --manila-cargo: #64748b;
-}
-
-.manila-boat-card.manila-cargo-nutmeg,
-.manila-boat-card.manila-cargo-silk,
-.manila-boat-card.manila-cargo-ginseng,
-.manila-boat-card.manila-cargo-jade,
-.manila-boat-card.manila-cargo-neutral {
-  border-left: 4px solid var(--manila-cargo);
-}
-
-.manila-cargo-chip.manila-cargo-nutmeg {
-  background: rgba(245, 158, 11, 0.18);
-  border-color: rgba(245, 158, 11, 0.6);
-  color: #92400e;
-}
-
-.manila-cargo-chip.manila-cargo-silk {
-  background: rgba(250, 204, 21, 0.18);
-  border-color: rgba(250, 204, 21, 0.6);
-  color: #a16207;
-}
-
-.manila-cargo-chip.manila-cargo-ginseng {
-  background: rgba(34, 197, 94, 0.18);
-  border-color: rgba(34, 197, 94, 0.6);
-  color: #166534;
-}
-
-.manila-cargo-chip.manila-cargo-jade {
-  background: rgba(59, 130, 246, 0.18);
-  border-color: rgba(59, 130, 246, 0.6);
-  color: #1d4ed8;
-}
-
-.manila-cargo-chip.manila-cargo-neutral {
-  background: rgba(148, 163, 184, 0.18);
-  border-color: rgba(148, 163, 184, 0.6);
-  color: #475569;
-}
-
-.manila-section-title {
-  margin: 0 0 6px;
-  font-size: 15px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #0f172a;
-}
-
-.manila-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-}
-
-.manila-card {
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
-}
-
-.manila-card-title {
-  font-weight: 700;
-  margin-bottom: 6px;
-  color: #0f172a;
-}
-
-.manila-card-line {
-  font-size: 12px;
-  color: var(--manila-muted);
-}
-
-.manila-empty {
-  color: var(--manila-muted);
-  font-style: italic;
-}
-
-.manila-action-box {
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.08);
-  border: 1px dashed rgba(15, 23, 42, 0.3);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.manila-cycle-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-}
-
-#manilaCycleToggleBtn,
-#manilaCycleCloseBtn {
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.2);
-  background: #f8fafc;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-#manilaCycleToggleBtn:hover,
-#manilaCycleCloseBtn:hover {
-  background: #e0f2fe;
-}
-
-.manila-cycle-status {
-  font-size: 12px;
-  color: var(--manila-muted);
-}
-
-.manila-cycle-panel {
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.manila-cycle-modal {
-  max-width: 920px;
-}
-
-.manila-cycle-modal .modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-}
-
-.manila-cycle-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.manila-cycle-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.manila-cycle-title {
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-
-.manila-cycle-subtitle {
-  font-size: 12px;
-  color: var(--manila-muted);
-}
-
-.manila-cycle-recap {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.06);
-  font-size: 12px;
-  color: var(--manila-ink);
-}
-
-.manila-cycle-recap span {
-  font-weight: 600;
-}
-
-.manila-cycle-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.manila-action-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-}
-
-.manila-pirate-facility {
-  padding: 6px;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-}
-
-.manila-pirate-facility .manila-action-title {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-}
-
-.manila-pirate-facility .manila-action-row {
-  gap: 6px;
-}
-
-.manila-pirate-facility .manila-action-row select,
-.manila-pirate-facility .manila-action-row button {
-  height: 30px;
-}
-
-.manila-action-title {
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #0f172a;
-}
-
-.manila-action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.manila-action-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-}
-
-.manila-action-grid button.selected {
-  background: #0f766e;
-  color: #f8fafc;
-}
-
-.manila-position-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px;
-}
-
-.manila-position-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.manila-position-row input {
-  width: 80px;
-}
-
-.manila-placement-ships {
-  display: grid;
-  gap: 8px;
-}
-
-.manila-pilot-rows {
-  display: grid;
-  gap: 8px;
-}
-
-.manila-pilot-facility {
-  margin-top: 10px;
-}
-
-.manila-pilot-status {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.manila-pilot-status.active {
-  border-color: rgba(15, 118, 110, 0.45);
-  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.12);
-}
-
-.manila-pilot-status-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.manila-pilot-status-title-wrap {
-  display: grid;
-  gap: 2px;
-}
-
-.manila-pilot-status-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.manila-pilot-status-owner,
-.manila-pilot-status-hint,
-.manila-pilot-draft-text {
-  font-size: 12px;
-  color: var(--manila-muted);
-}
-
-.manila-pilot-status-badge {
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(15, 118, 110, 0.12);
-  color: #0f766e;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.manila-pilot-draft {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.manila-action-label {
-  min-width: 90px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.manila-action-row select,
-.manila-action-row button {
-  height: 36px;
-}
-
-.manila-buy-stock-btn,
-.manila-cargo-select-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.manila-buy-cost {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--manila-ink);
-}
-
-.manila-action-payload {
-  width: 100%;
-  min-height: 120px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.manila-legal {
-  font-size: 12px;
-  color: var(--manila-muted);
-}
-
-.manila-auction-self {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1e3a8a;
-}
-
-.manila-action-group button:disabled,
-.manila-action-group select:disabled,
-.manila-action-group input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.manila-header-btn {
-  padding: 4px 10px;
-  font-size: 13px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #f8fafc;
-  cursor: pointer;
-}
-
-.manila-header-btn:hover {
-  background: #eef2ff;
-}
-
-.manila-header-btn.active {
-  background: #dbeafe;
-  border-color: #3b82f6;
-  color: #1d4ed8;
-}
-
-body.manila-explain-mode button.has-explanation {
-  outline: 2px dashed #3b82f6;
-  outline-offset: 2px;
-  cursor: help;
-}
-
-body.manila-explain-mode button.has-explanation:hover {
-  outline-color: #1d4ed8;
-  outline-style: solid;
-}
-
-.manila-help-modal {
-  max-width: 720px;
-}
-
-.manila-explain-modal {
-  max-width: 460px;
-}
-
-#manilaExplainModal {
-  z-index: 1100;
-}
-
-.manila-help-content {
-  max-height: 70vh;
-  overflow-y: auto;
-  line-height: 1.6;
-}
-
-.manila-help-content h3 {
-  margin: 16px 0 8px;
-  font-size: 16px;
-  color: #0f172a;
-}
-
-.manila-help-content h3:first-child {
-  margin-top: 0;
-}
-
-.manila-help-content ul,
-.manila-help-content ol {
-  padding-left: 18px;
-  margin: 6px 0;
-}
-
-.manila-help-content li {
-  margin: 4px 0;
-}
-
-#manilaExplainContent {
-  line-height: 1.6;
-}
-
-#manilaExplainContent h4 {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: #0f172a;
-}
-
-#manilaExplainContent p {
-  margin: 6px 0;
-  color: #334155;
-}
-
-#manilaExplainContent .explain-cost {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-top: 8px;
-}
-
-#manilaExplainContent .explain-cost.free {
-  background: #dcfce7;
-  color: #166534;
-}
-
-#manilaExplainContent .explain-cost.pay {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-#manilaExplainContent .explain-cost.gain {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-#manilaExplainContent .explain-cost.end {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-@media (max-width: 980px) {
-  .manila-columns {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .manila-map-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .manila-seat-grid {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  }
-}
+    .game-panel[data-game-theme="manila"] {
+        --manila-ink: #203b43;
+        --manila-muted: #64726e;
+        --manila-paper: #faf6ec;
+        --manila-line: #d6d7c6;
+        --manila-teal: #216b6b;
+        background: var(--manila-paper);
+        color: var(--manila-ink);
+        border-color: #bcc9bc;
+        border-top: 4px solid var(--manila-teal);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px #223d4210;
+    }
+
+    .game-panel[data-game-theme="manila"] > .panel-header {
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--manila-line);
+    }
+
+    .game-panel[data-game-theme="manila"] .game-panel-title h2 {
+        color: var(--manila-ink);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 24px;
+        letter-spacing: 0.06em;
+    }
+
+    .manila-panel { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+    .manila-panel *, .manila-dialog * { min-width: 0; }
+    .manila-panel h3, .manila-panel p, .manila-dialog h2 { margin: 0; }
+    .manila-panel button, .manila-panel input, .manila-dialog button { font: inherit; color: inherit; max-width: 100%; }
+    .manila-panel button, .manila-dialog button, .manila-header-btn {
+        border: 1px solid #c8d2c6;
+        border-radius: 7px;
+        background: #fffdf7;
+        color: #203b43;
+        min-height: 38px;
+        padding: 7px 10px;
+        cursor: pointer;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.3;
+        transition: background 120ms, border-color 120ms;
+    }
+
+    .manila-panel button:hover:not(:disabled), .manila-dialog button:hover { background: #e8efe4; border-color: #739b8b; }
+    .manila-panel button:disabled { cursor: default; color: #66726c; background: #eeeede; border-color: #d6dbcd; }
+    .manila-panel button:focus-visible, .manila-panel [tabindex]:focus-visible, .manila-panel summary:focus-visible,
+    .manila-panel input:focus-visible, .manila-dialog button:focus-visible, .manila-header-btn:focus-visible {
+        outline: 3px solid #c97c39;
+        outline-offset: 2px;
+    }
+
+    .manila-panel button.manila-primary { background: #216b6b; color: #fff; border-color: #216b6b; font-weight: 700; }
+    .manila-panel button.manila-primary:hover:not(:disabled) { background: #185757; }
+    .manila-panel button.manila-primary:disabled { background: #dfe6dc; color: #526660; border-color: #c6d0c3; }
+    .manila-caption, .manila-activity, .manila-small { font-size: 12px; color: var(--manila-muted); }
+    .manila-eyebrow { font-size: 10px; letter-spacing: 0.14em; font-weight: 700; color: var(--manila-muted); }
+    .manila-voyage-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 13px 0; }
+    .manila-round-heading { display: grid; gap: 2px; flex-shrink: 0; }
+    .manila-round-heading > strong { font-size: 17px; }
+    .manila-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; margin: 0; list-style: none; gap: 5px; width: min(100%, 370px); }
+    .manila-stages li { border-top: 3px solid #d8ddce; padding-top: 5px; color: #737e74; font-size: 12px; text-align: center; }
+    .manila-stages .is-current { border-color: #a95128; color: #8c401e; font-weight: 700; }
+    .manila-stages .is-done { border-color: #52887a; color: #396d61; }
+    .manila-market { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+    .manila-market-card {
+        --cargo: #7b6546;
+        border: 1px solid #d5d7c7;
+        border-top: 3px solid var(--cargo);
+        background: #fffdf7;
+        border-radius: 7px;
+        padding: 8px 10px;
+        display: grid;
+        gap: 4px;
+        text-align: left;
+    }
+    .manila-market-name { font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .manila-market-numbers { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; font-size: 12px; }
+    .manila-market-price { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .manila-market-holding { color: #65726b; }
+    .manila-panel button.manila-market-card { border-top: 3px solid var(--cargo); padding: 8px 10px; }
+    .manila-market-card.is-selected { outline: 2px solid #216b6b; outline-offset: -2px; background: #e9f1e7; }
+    .manila-market-card.is-sailing { background-image: linear-gradient(120deg, transparent 60%, #e3eee340); }
+    .manila-cargo-nutmeg { --cargo: #99613c; --cargo-wash: #f3e5d8; }
+    .manila-cargo-silk { --cargo: #b5821f; --cargo-wash: #f8edca; }
+    .manila-cargo-ginseng { --cargo: #458253; --cargo-wash: #e3efdc; }
+    .manila-cargo-jade { --cargo: #447fac; --cargo-wash: #e0edf6; }
+    .manila-turnbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; }
+    .manila-turn-copy { display: grid; gap: 3px; }
+    #manilaTurn { font-size: 14px; }
+    .manila-wallet { display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
+    .manila-wallet > span { border-radius: 6px; padding: 6px 8px; background: #e8ecdf; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .manila-play-area { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(270px, 1fr); gap: 16px; align-items: start; grid-template-areas: "sea action" "sea facilities"; }
+    .manila-waterfront { grid-area: sea; }
+    .manila-action-panel { grid-area: action; border-left: 3px solid #c7cfb9; padding: 0 0 0 12px; }
+    .manila-action-panel.is-active { border-color: #b56933; }
+    .manila-facilities { grid-area: facilities; }
+    .manila-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .manila-section-heading h3 { font-size: 14px; font-weight: 700; }
+    .manila-sea { display: grid; gap: 10px; padding: 12px; border: 1px solid #bfd3c9; border-radius: 10px; background: repeating-linear-gradient(0deg, #e7f0e9 0, #e7f0e9 25px, #dde9e3 26px, #e7f0e9 27px); }
+    .manila-ship { padding: 11px; border: 1px solid #c4d3c2; border-left: 4px solid var(--cargo); border-radius: 8px; background: #fffdf6; }
+    .manila-ship.is-preview { background: #fafbf4; }
+    .manila-ship-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .manila-ship-name { font-size: 15px; font-weight: 700; }
+    .manila-ship-value { font-size: 12px; color: #526858; text-align: right; }
+    .manila-ship-status { color: var(--manila-muted); font-size: 12px; margin-top: 3px; }
+    .manila-track { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 2px; margin: 10px 0; }
+    .manila-track-cell { display: flex; align-items: center; justify-content: center; height: 27px; background: #eaf0e5; border-radius: 3px; color: #6a7c70; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .manila-track-cell.is-passed { background: var(--cargo-wash); }
+    .manila-track-cell.is-boat { color: #fff; background: var(--cargo); font-size: 13px; box-shadow: 0 2px 4px #203b4320; }
+    .manila-vessel { display: block; width: min(16px, 100%); height: 16px; }
+    .manila-track-cell.is-port { border: 1px solid #98b7a1; }
+    .manila-track-cell.is-draft { outline: 2px dashed var(--cargo); outline-offset: -2px; }
+    .manila-seats { display: grid; grid-template-columns: repeat(var(--seats, 3), minmax(0, 1fr)); gap: 5px; }
+    .manila-panel .manila-seat { padding: 6px 3px; min-height: 46px; display: grid; gap: 4px; align-content: center; text-align: center; font-size: 12px; }
+    .manila-seat-cost { font-weight: 700; }
+    .manila-occupant { background: #e8eddf; border-radius: 6px; display: grid; padding: 6px 3px; min-height: 46px; gap: 4px; text-align: center; align-content: center; font-size: 12px; border: 1px solid #cdd9c3; }
+    .manila-occupant.is-you { background: #e1ebda; border-color: #6e9464; color: #2d5d39; font-weight: 700; }
+    .manila-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .manila-zone { padding: 9px; background: #f1f0e4; border: 1px solid #d8dac9; border-radius: 8px; }
+    .manila-zone-heading { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-bottom: 7px; font-size: 12px; }
+    .manila-zone-slots { display: grid; gap: 5px; }
+    .manila-zone-wide { grid-column: 1 / -1; }
+    .manila-special-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    .manila-panel .manila-investment, .manila-investment { display: grid; gap: 4px; text-align: left; padding: 7px; min-height: 57px; border: 1px solid #c8d2c6; border-radius: 7px; background: #fffdf7; }
+    .manila-investment-top { display: flex; justify-content: space-between; align-items: baseline; gap: 5px; }
+    .manila-investment-name { font-weight: 700; font-size: 12px; }
+    .manila-investment-cost { font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+    .manila-investment-reward { font-size: 11px; color: #376348; }
+    .manila-investment .manila-owner { font-size: 11px; color: #4f6053; }
+    .manila-panel .manila-investment.is-you { border-color: #6e9464; background: #e3eddc; }
+    .manila-action-title { font-size: 15px; margin-bottom: 5px; font-weight: 700; }
+    .manila-action-note { font-size: 12px; color: var(--manila-muted); margin-bottom: 9px !important; }
+    .manila-placement-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .manila-placement-line .manila-action-note { margin-bottom: 0 !important; }
+    .manila-placement-line > button { flex: 0 0 70px; }
+    .manila-action-buttons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 9px; }
+    .manila-action-buttons > button { flex: 1 1 auto; }
+    .manila-stepper { display: flex; gap: 5px; align-items: center; }
+    .manila-stepper > button { flex: 0 0 38px; padding: 7px; font-size: 17px; }
+    .manila-stepper input { width: 100%; min-width: 50px; background: #fffdf7; border: 1px solid #b7c8b7; padding: 8px 5px; border-radius: 6px; text-align: center; font-weight: 700; height: 38px; }
+    .manila-bid-label { display: grid; gap: 5px; flex: 1; }
+    .manila-bid-label > span { font-size: 12px; }
+    .manila-bid-buttons { display: flex; align-items: end; gap: 5px; }
+    .manila-bid-buttons > button { flex-shrink: 0; }
+    .manila-bid-list { display: grid; gap: 4px; margin-top: 9px; max-height: 150px; overflow-y: auto; scrollbar-width: thin; }
+    .manila-bid-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; border-radius: 5px; padding: 4px 6px; }
+    .manila-bid-row.is-leader { background: #e5ead9; font-weight: 700; }
+    .manila-bid-row.is-passed { color: #68736c; }
+    .manila-bid-row > span:last-child { flex-shrink: 0; }
+    .manila-move-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 8px; }
+    .manila-move-controls .manila-stepper { flex: 1; }
+    .manila-move-controls output { font-weight: 700; text-align: center; flex: 1; }
+    .manila-position-label { font-size: 12px; }
+    .manila-finance { border-top: 1px solid var(--manila-line); margin-top: 10px; padding-top: 8px; }
+    .manila-finance summary, .manila-table-details summary, .manila-result-card summary { cursor: pointer; padding: 5px 0; font-size: 12px; }
+    .manila-finance-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; padding-top: 7px; }
+    .manila-finance-body > p { grid-column: 1 / -1; }
+    .manila-confirm { grid-column: 1 / -1; background: #f7efdc; border: 1px solid #bf8c4f; border-radius: 7px; padding: 9px; margin-top: 8px; }
+    .manila-confirm-title { font-weight: 700; font-size: 13px; }
+    .manila-confirm-note { font-size: 12px; margin-top: 3px !important; color: #695e45; }
+    .manila-confirm-options { display: flex; gap: 5px; margin-top: 7px; }
+    .manila-confirm-options > button { flex: 1; }
+    .manila-panel [aria-pressed="true"] { background: #e1eddf; border-color: #427d65; box-shadow: inset 0 0 0 1px #427d65; }
+    .manila-selected { outline: 2px solid #b87937; outline-offset: -2px; }
+    .manila-review { background: #edf0e1; border: 1px solid #b6c6a7; border-radius: 9px; padding: 12px; margin-bottom: 14px; }
+    .manila-review-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+    .manila-review-heading > div { display: grid; gap: 4px; }
+    .manila-review-heading h3 { font-size: 16px; }
+    .manila-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; max-height: 330px; overflow-y: auto; scrollbar-width: thin; }
+    .manila-result-card { background: #fffdf6; border: 1px solid #d2dbc4; border-radius: 7px; padding: 8px; }
+    .manila-result-card.is-you { border-color: #6e9464; background: #f2f6e8; }
+    .manila-result-name { font-weight: 700; font-size: 13px; }
+    .manila-result-total { display: flex; justify-content: space-between; gap: 6px; margin-top: 5px; font-size: 12px; }
+    .manila-gain { color: #256445; }
+    .manila-loss { color: #9b3f26; }
+    .manila-ledger-line { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; padding: 3px 0; }
+    .manila-ledger-line > span:last-child { flex-shrink: 0; }
+    .manila-table-details { border-top: 1px solid var(--manila-line); margin-top: 15px; padding-top: 7px; }
+    .manila-table-details > summary { font-weight: 700; }
+    .manila-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 7px; margin-top: 7px; max-height: 270px; overflow-y: auto; }
+    .manila-player { padding: 9px; border: 1px solid var(--manila-line); border-radius: 7px; background: #fffdf6; font-size: 12px; }
+    .manila-player.is-you { border-color: #6e9464; }
+    .manila-player > strong { display: block; margin-bottom: 5px; }
+    .manila-player-resources { display: flex; flex-wrap: wrap; gap: 7px; }
+    .manila-empty { text-align: center; padding: 28px 12px; color: #5f756c; font-size: 13px; }
+    .manila-empty p { margin-top: 6px; }
+    .manila-harbor-art { font-size: 32px; padding: 24px 0; letter-spacing: 0.12em; }
+    .manila-setup-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+    .manila-setup-footer > button { flex-shrink: 0; }
+    .manila-error { padding: 8px; background: #fbede3; color: #913e27; border: 1px solid #dca98c; border-radius: 6px; margin-bottom: 10px !important; }
+    .manila-tooltip { position: fixed; z-index: 1300; max-width: min(280px, calc(100vw - 24px)); padding: 9px 12px; background: #203b43; color: #fffdf4; border-radius: 7px; box-shadow: 0 4px 20px #18292e30; font-size: 12px; line-height: 1.5; pointer-events: none; }
+    .manila-dialog { width: min(620px, calc(100vw - 24px)); max-height: min(86dvh, 800px); padding: 0; border: 1px solid #9aafa0; border-top: 4px solid #216b6b; border-radius: 12px; color: #203b43; background: #faf6ec; box-shadow: 0 15px 65px #152e3e45; overflow-wrap: anywhere; }
+    .manila-dialog::backdrop { background: #18323880; }
+    .manila-dialog { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .manila-dialog-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #d6d7c6; }
+    .manila-dialog-header h2 { font-size: 18px; }
+    .manila-dialog-header button { flex-shrink: 0; }
+    .manila-dialog-body { padding: 4px 16px 16px; font-size: 14px; line-height: 1.7; }
+    .manila-dialog-body h3 { font-size: 15px; margin: 15px 0 5px; }
+    .manila-dialog-body p { margin: 8px 0; }
+    .manila-dialog-body ul, .manila-dialog-body ol { padding-left: 20px; }
+    .manila-explain-dialog { width: min(440px, calc(100vw - 24px)); }
+    body.manila-explaining [data-manila-explain] { outline: 2px dashed #b76a28; outline-offset: 1px; cursor: help !important; }
+    #manilaExplainBtn[aria-pressed="true"] { background: #e2ead7; border-color: #528166; }
+    body.manila-turn-active #roomControlsPanel.collapsed { border-color: #bd503b; box-shadow: 0 0 0 2px #bd503b35; }
+    body.manila-turn-active #roomControlsPanel.collapsed .room-controls-title-short { color: #a83c29; }
+
+    @media (max-width: 1100px) {
+        .manila-play-area { grid-template-columns: minmax(0, 1.1fr) minmax(240px, 1fr); gap: 12px; }
+        .manila-sea { padding: 8px; }
+        .manila-ship { padding: 9px; }
+        .manila-special-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .manila-special-slots > :last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 720px) {
+        .game-panel[data-game-theme="manila"] { padding: 10px; border-radius: 8px; }
+        .game-panel[data-game-theme="manila"] .game-panel-title h2 { font-size: 18px; letter-spacing: 0.02em; }
+        .manila-play-area { grid-template-columns: minmax(0, 1fr); grid-template-areas: "action" "sea" "facilities"; gap: 12px; }
+        .manila-action-panel { padding-left: 9px; }
+        .manila-finance:not([open]) { margin-top: 6px; padding-top: 4px; }
+        .manila-voyage-header { gap: 9px; margin: 10px 0; }
+        .manila-eyebrow { font-size: 9px; letter-spacing: 0.06em; }
+        .manila-round-heading > strong { font-size: 15px; }
+        .manila-stages li { font-size: 11px; }
+        .manila-stages { gap: 3px; }
+        .manila-market { gap: 5px; }
+        .manila-market-card, .manila-panel button.manila-market-card { padding: 7px 5px; }
+        .manila-market-name { font-size: 12px; flex-wrap: wrap; }
+        .manila-market-numbers { font-size: 11px; gap: 2px 4px; }
+        .manila-market-holding { flex-basis: 100%; }
+        .manila-turnbar { padding: 10px 0; align-items: start; }
+        .manila-turn-copy { flex: 1; }
+        .manila-wallet { gap: 4px; max-width: 126px; justify-content: end; }
+        .manila-wallet > span { padding: 5px 6px; font-size: 12px; }
+        .manila-activity { font-size: 11px; }
+        .manila-sea { gap: 8px; }
+        .manila-track { margin: 8px 0; gap: 2px; }
+        .manila-track-cell { height: 24px; }
+        .manila-track-cell:not(.is-landmark):not(.is-boat) { font-size: 0; }
+        .manila-ship-name { font-size: 14px; }
+        .manila-ship-status, .manila-ship-value { font-size: 11px; }
+        .manila-panel .manila-seat, .manila-occupant { min-height: 40px; padding: 4px 2px; gap: 2px; font-size: 11px; }
+        .manila-board { gap: 7px; }
+        .manila-special-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .manila-special-slots > :last-child { grid-column: auto; }
+        .manila-zone { padding: 7px; }
+        .manila-results { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 310px; }
+        .manila-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .manila-confirm { padding: 8px; }
+        .manila-review { padding: 9px; }
+    }
+
+    @media (max-width: 360px) {
+        .manila-special-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .manila-special-slots > :last-child { grid-column: 1 / -1; }
+        .manila-market-name { gap: 2px; }
+        .manila-caption { font-size: 11px; }
+        .manila-panel .manila-investment { padding: 6px; }
+        .manila-investment-top { flex-wrap: wrap; gap: 2px 5px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .manila-panel button { transition: none; }
+    }
 }

@@ -192,7 +192,7 @@ async function pointClick(page, locator, touch=false) {
     await render(host,'playing1');
     const playable=host.locator('#theCrewHand button:enabled').first();await playable.click();
     assert.equal(await host.locator('#theCrewSelection').isVisible(),true);
-    await host.locator('.the-crew-heading h2').click();assert.equal(await host.locator('#theCrewSelection').isVisible(),false);
+    await host.locator('#theCrewEdition').click();assert.equal(await host.locator('#theCrewSelection').isVisible(),false);
     await playable.click();await host.keyboard.press('Escape');assert.equal(await host.locator('#theCrewSelection').isVisible(),false);
     await playable.click();await host.locator('#theCrewSelectedActions button').filter({hasText:/^Play$/}).click();
     assert.equal(await host.evaluate(()=>theCrewTestActions.at(-1).type),'play');

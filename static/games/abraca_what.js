@@ -19,7 +19,6 @@ const abracaRoundResultLabel = document.getElementById("abracaRoundResult");
 const abracaRoundNotice = document.getElementById("abracaRoundNotice");
 const abracaRoundNoticeTitle = document.getElementById("abracaRoundNoticeTitle");
 const abracaRoundNoticeBody = document.getElementById("abracaRoundNoticeBody");
-const abracaSpells = document.getElementById("abracaSpells");
 const abracaPlayers = document.getElementById("abracaPlayers");
 const abracaRollBtn = document.getElementById("abracaRollBtn");
 const abracaSecretBtn = document.getElementById("abracaSecretBtn");
@@ -31,6 +30,14 @@ const abracaSpellButtonsContainer = document.getElementById("abracaSpellButtons"
 const abracaSpellButtons = abracaSpellButtonsContainer
   ? Array.from(abracaSpellButtonsContainer.querySelectorAll("button[data-spell]"))
   : [];
+const abracaCastConfirm = document.getElementById("abracaCastConfirm");
+const abracaCastName = document.getElementById("abracaCastName");
+const abracaCastDescription = document.getElementById("abracaCastDescription");
+const abracaCastBtn = document.getElementById("abracaCastBtn");
+const abracaCancelCastBtn = document.getElementById("abracaCancelCastBtn");
+const abracaActionHint = document.getElementById("abracaActionHint");
+const abracaActivitySummary = document.getElementById("abracaActivitySummary");
+const abracaTooltip = document.getElementById("abracaTooltip");
 
 const abracaSpellData = [
   {
@@ -38,6 +45,7 @@ const abracaSpellData = [
     number: 1,
     name: "Ancient Dragon",
     short: "Dragon",
+    icon: "🐉",
     desc: "Roll 1-3. Others lose that many HP. Miscast: you lose that many HP.",
     total: 1,
   },
@@ -46,6 +54,7 @@ const abracaSpellData = [
     number: 2,
     name: "Dark Ghost",
     short: "Ghost",
+    icon: "👻",
     desc: "Others -1 HP. You +1 HP (max 6).",
     total: 2,
   },
@@ -54,6 +63,7 @@ const abracaSpellData = [
     number: 3,
     name: "Sweet Dreams",
     short: "Dream",
+    icon: "💤",
     desc: "Roll 1-3. You heal that many HP (max 6).",
     total: 3,
   },
@@ -62,6 +72,7 @@ const abracaSpellData = [
     number: 4,
     name: "Owl",
     short: "Owl",
+    icon: "🦉",
     desc: "Draw a secret card. Survive to score +1 per secret.",
     total: 4,
   },
@@ -70,12 +81,13 @@ const abracaSpellData = [
     number: 5,
     name: "Lightning Storm",
     short: "Lightning",
+    icon: "⚡",
     desc: "Left and right neighbors -1 HP (2 players: opponent -1 HP).",
     total: 5,
   },
-  { id: 5, number: 6, name: "Blizzard", short: "Blizzard", desc: "Left neighbor -1 HP.", total: 6 },
-  { id: 6, number: 7, name: "Fireball", short: "Fireball", desc: "Right neighbor -1 HP.", total: 7 },
-  { id: 7, number: 8, name: "Magic Potion", short: "Potion", desc: "You +1 HP (max 6).", total: 8 },
+  { id: 5, number: 6, name: "Blizzard", short: "Blizzard", icon: "❄️", desc: "Left neighbor -1 HP.", total: 6 },
+  { id: 6, number: 7, name: "Fireball", short: "Fireball", icon: "🔥", desc: "Right neighbor -1 HP.", total: 7 },
+  { id: 7, number: 8, name: "Magic Potion", short: "Potion", icon: "🧪", desc: "You +1 HP (max 6).", total: 8 },
 ];
 
 const ABRACA_HELP_TEXT = `
@@ -110,24 +122,21 @@ const ABRACA_HELP_TEXT = `
 
   <h3>Spells</h3>
   <ul>
-    <li>1 Ancient Dragon: roll 1-3, others lose that many HP. Miscast: you lose that many.</li>
-    <li>2 Dark Ghost: others -1 HP, you +1 HP (max 6).</li>
-    <li>3 Sweet Dreams: roll 1-3, you heal that many HP (max 6).</li>
-    <li>4 Owl: draw a secret card. Survive to score +1 per secret.</li>
-    <li>5 Lightning Storm: left and right neighbors -1 HP (2p: opponent -1).</li>
-    <li>6 Blizzard: left neighbor -1 HP.</li>
-    <li>7 Fireball: right neighbor -1 HP.</li>
-    <li>8 Magic Potion: you +1 HP (max 6).</li>
+    ${abracaSpellData.map((spell) => `<li>${spell.number} ${spell.name} (${spell.icon}): ${spell.desc}</li>`).join("")}
   </ul>
+  <h3>Symbols & Controls</h3>
+  <p>Health (❤️) is shown out of a maximum of 6. Score (⭐) counts toward the target score. Secrets (🔒) score if you survive. Deck (🃏) refills hands; Discarded (♻️) counts spent spells. Roll Dice (🎲) resolves a pending roll. Chain minimum (↑ / Cast ≥) is the lowest spell number you may cast.</p>
+  <p>Each spell shows used / total copies. Used counts discarded cards, not cards in hands or the secret pool. Dimmed spells cannot currently be cast; Explain still describes them.</p>
+  <p>Select a spell, then Cast or Cancel in place. Click empty space or press Esc to cancel. End Turn and Next Round act immediately. Hover a symbol or card for details; on a phone, tap for a three-second tip. Activity holds the last action and round result. Help shows these rules; Explain lets you inspect controls without playing.</p>
 `;
 
 const ABRACA_BUTTON_EXPLANATIONS = {
   abracaRollBtn: {
-    name: "Roll Dice",
+    name: "Roll Dice (🎲)",
     description: "Roll a 1-3 die to resolve spell effects that require a dice result.",
   },
   abracaSecretBtn: {
-    name: "Take Secret",
+    name: "Take Secret (🔒)",
     description: "Draw a secret card into your private pool (Owl effect).",
     note: "Secret cards score +1 each if you survive the round.",
   },
@@ -137,19 +146,27 @@ const ABRACA_BUTTON_EXPLANATIONS = {
     note: "After ending, you draw back up to 5 cards.",
   },
   abracaNextRoundBtn: {
-    name: "Start Next Round",
+    name: "Next Round",
     description: "Begin the next round after a round has ended.",
   },
   abracaNewGameBtn: {
     name: "Start New Game",
     description: "Restart the game after someone reaches 8 points.",
   },
+  abracaCastBtn: {
+    name: "Cast",
+    description: "Confirm the selected spell. A successful cast resolves its effect; a miscast costs health.",
+  },
+  abracaCancelCastBtn: {
+    name: "Cancel",
+    description: "Dismiss the selection without casting a spell.",
+  },
 };
 
 abracaSpellData.forEach((spell) => {
   const buttonId = `abracaSpellBtn${spell.id}`;
   ABRACA_BUTTON_EXPLANATIONS[buttonId] = {
-    name: `${spell.number}. ${spell.name}`,
+    name: `${spell.number}. ${spell.name} (${spell.icon})`,
     description: spell.desc,
     note: "You can only cast spells allowed by the current chain minimum.",
   };
@@ -157,36 +174,71 @@ abracaSpellData.forEach((spell) => {
 
 let currentAbracaView = null;
 let abracaLastRoundNotice = null;
+let abracaSelectedSpell = null;
+let abracaTooltipTimer = null;
+let abracaTooltipAnchor = null;
+let abracaPointerGesture = null;
+let abracaIgnoreClickUntil = 0;
+let abracaModalReturnFocus = null;
 
-function toggleAbracaSpellBubble(anchor, message) {
-  if (!anchor || !message) {
-    return;
-  }
-  const existing = anchor.querySelector(".abraca-spell-bubble");
-  if (existing) {
-    existing.remove();
-    return;
-  }
-  const table = anchor.closest(".abraca-spell-table");
-  if (table) {
-    table.querySelectorAll(".abraca-spell-bubble").forEach((bubble) => bubble.remove());
-  }
-  const bubble = document.createElement("div");
-  bubble.className = "abraca-spell-bubble";
-  bubble.textContent = message;
-  bubble.addEventListener("click", (event) => {
-    event.stopPropagation();
-    bubble.remove();
-  });
-  anchor.appendChild(bubble);
-  requestAnimationFrame(() => {
-    bubble.classList.add("show");
-  });
+function setAbracaTip(element, message) {
+  element.dataset.abracaTip = message;
+  element.tabIndex = 0;
+  element.setAttribute("aria-label", message);
+}
+
+function hideAbracaTooltip() {
+  clearTimeout(abracaTooltipTimer);
+  abracaTooltip?.classList.add("hidden");
+  abracaTooltipAnchor?.removeAttribute("aria-describedby");
+  abracaTooltipAnchor = null;
+}
+
+function showAbracaTooltip(anchor) {
+  if (!abracaTooltip || !anchor?.dataset.abracaTip || anchor.closest("button")) return;
+  hideAbracaTooltip();
+  abracaTooltip.textContent = anchor.dataset.abracaTip;
+  abracaTooltip.classList.remove("hidden");
+  abracaTooltipAnchor = anchor;
+  anchor.setAttribute("aria-describedby", "abracaTooltip");
+  const target = anchor.getBoundingClientRect();
+  const bubble = abracaTooltip.getBoundingClientRect();
+  const left = Math.max(8, Math.min(target.left + target.width / 2 - bubble.width / 2, innerWidth - bubble.width - 8));
+  const top = target.top >= bubble.height + 14 ? target.top - bubble.height - 6 : target.bottom + 6;
+  abracaTooltip.style.left = `${left}px`;
+  abracaTooltip.style.top = `${Math.max(8, Math.min(top, innerHeight - bubble.height - 8))}px`;
+  abracaTooltipTimer = setTimeout(hideAbracaTooltip, 3000);
+}
+
+function clearAbracaCastSelection(restoreFocus = false) {
+  const previous = abracaSelectedSpell;
+  abracaSelectedSpell = null;
+  abracaCastConfirm?.classList.add("hidden");
+  if (abracaSpellButtonsContainer) abracaSpellButtonsContainer.inert = false;
+  abracaSpellButtons.forEach((button) => button.setAttribute("aria-pressed", "false"));
+  if (restoreFocus && previous !== null) abracaSpellButtons[previous]?.focus({ preventScroll: true });
+}
+
+function selectAbracaSpell(spellType) {
+  if (!isAbracaActionAvailable("cast_spell", spellType) || !abracaCastConfirm) return;
+  const spell = abracaSpellData[spellType];
+  hideAbracaTooltip();
+  abracaSelectedSpell = spellType;
+  abracaCastName.textContent = `${spell.number} ${spell.name} (${spell.icon})`;
+  abracaCastDescription.textContent = spell.desc;
+  abracaSpellButtons.forEach((button) => button.setAttribute("aria-pressed", String(Number(button.dataset.spell) === spellType)));
+  abracaCastConfirm.classList.remove("hidden");
+  abracaSpellButtonsContainer.inert = true;
+  abracaCastBtn.focus({ preventScroll: true });
 }
 
 function clearAbracaState() {
   currentAbracaView = null;
   abracaLastRoundNotice = null;
+  abracaPointerGesture = null;
+  abracaIgnoreClickUntil = 0;
+  clearAbracaCastSelection();
+  hideAbracaTooltip();
   if (abracaPhaseLabel) {
     abracaPhaseLabel.textContent = "-";
   }
@@ -224,9 +276,9 @@ function clearAbracaState() {
     abracaRoundNotice.classList.remove("muted");
     abracaRoundNotice.classList.add("hidden");
   }
-  if (abracaSpells) {
-    abracaSpells.innerHTML = "";
-  }
+  renderAbracaSpells({});
+  if (abracaActivitySummary) abracaActivitySummary.textContent = "No spells cast yet";
+  document.getElementById("abracaActivity")?.removeAttribute("open");
   if (abracaPlayers) {
     abracaPlayers.innerHTML = "";
   }
@@ -319,35 +371,13 @@ function updateAbracaRoundNotice(view) {
   if (!abracaRoundNotice || !abracaRoundNoticeBody) {
     return;
   }
-  let notice = null;
-  let title = "Round Result";
-  let isFresh = false;
-  if (view.round_result) {
-    notice = formatAbracaRoundNotice(view, view.round_result);
-    if (notice) {
-      abracaLastRoundNotice = notice;
-    }
-    if (view.game_over) {
-      title = "Game Over";
-    } else if (view.phase === "round_end") {
-      title = "Round Over";
-    }
-    isFresh = true;
-  } else if (abracaLastRoundNotice) {
-    if (Number.isInteger(view.round) && Number.isInteger(abracaLastRoundNotice.round)) {
-      if (view.round === abracaLastRoundNotice.round + 1) {
-        notice = abracaLastRoundNotice;
-        title = "Last Round Result";
-      }
-    }
-  }
-
-  if (notice && notice.text) {
+  const notice = view.round_result ? formatAbracaRoundNotice(view, view.round_result) : null;
+  if (notice?.text) {
+    abracaLastRoundNotice = notice;
     abracaRoundNoticeBody.textContent = notice.text;
     if (abracaRoundNoticeTitle) {
-      abracaRoundNoticeTitle.textContent = title;
+      abracaRoundNoticeTitle.textContent = view.game_over ? "Game Over" : "Round Over";
     }
-    abracaRoundNotice.classList.toggle("muted", !isFresh);
     abracaRoundNotice.classList.remove("hidden");
   } else {
     abracaRoundNotice.classList.add("hidden");
@@ -355,63 +385,16 @@ function updateAbracaRoundNotice(view) {
 }
 
 function renderAbracaSpells(view) {
-  if (!abracaSpells) {
-    return;
-  }
-  abracaSpells.innerHTML = "";
   const discardCounts = Array.isArray(view.discard_counts) ? view.discard_counts : [];
-  const table = document.createElement("table");
-  table.className = "abraca-spell-table";
-
-  const thead = document.createElement("thead");
-  const headerRow = document.createElement("tr");
-  const headers = ["Spell", "Used", "Total"];
-  headers.forEach((label) => {
-    const th = document.createElement("th");
-    th.textContent = label;
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-  abracaSpellData.forEach((spell) => {
-    const row = document.createElement("tr");
-    row.className = "abraca-spell-row";
-    row.dataset.spell = String(spell.id);
-
-    const name = document.createElement("td");
-    name.className = "abraca-spell-name";
-    name.textContent = `${spell.number}. ${spell.name}`;
-    name.tabIndex = 0;
-    name.setAttribute("role", "button");
-    name.setAttribute("aria-label", `${spell.number}. ${spell.name} details`);
-    name.addEventListener("click", () => {
-      toggleAbracaSpellBubble(name, spell.desc);
-    });
-    name.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        toggleAbracaSpellBubble(name, spell.desc);
-      }
-    });
-
+  abracaSpellButtons.forEach((button) => {
+    const spell = abracaSpellData[Number(button.dataset.spell)];
     const used = discardCounts[spell.id] ?? 0;
-    const usedCell = document.createElement("td");
-    usedCell.className = "abraca-spell-count";
-    usedCell.textContent = String(used);
-
-    const totalCell = document.createElement("td");
-    totalCell.className = "abraca-spell-total";
-    totalCell.textContent = String(spell.total);
-
-    row.appendChild(name);
-    row.appendChild(usedCell);
-    row.appendChild(totalCell);
-    tbody.appendChild(row);
+    if (!button.querySelector(".abraca-spell-used")) {
+      button.innerHTML = `<span class="abraca-spell-symbol" aria-hidden="true">${spell.number} ${spell.icon}</span><span class="abraca-spell-label">${spell.short}</span><span class="abraca-spell-used"></span>`;
+    }
+    button.querySelector(".abraca-spell-used").textContent = `${used} / ${spell.total}`;
+    button.setAttribute("aria-label", `${spell.number}. ${spell.name} (${spell.icon}). Used ${used} of ${spell.total}. ${spell.desc}`);
   });
-  table.appendChild(tbody);
-  abracaSpells.appendChild(table);
 }
 
 function renderAbracaPlayers(view) {
@@ -428,7 +411,7 @@ function renderAbracaPlayers(view) {
     if (!cardInfo || cardInfo.hidden) {
       slot.classList.add("abraca-card-hidden");
       slot.textContent = "?";
-      slot.title = "Hidden card";
+      setAbracaTip(slot, "Hidden card (?): other players can see this spell, but you cannot.");
       return slot;
     }
 
@@ -452,9 +435,14 @@ function renderAbracaPlayers(view) {
     const nameEl = document.createElement("div");
     nameEl.className = "abraca-card-name";
     nameEl.textContent = shortName;
+    const iconEl = document.createElement("span");
+    iconEl.className = "abraca-card-icon";
+    iconEl.textContent = spell?.icon || "✨";
+    iconEl.setAttribute("aria-hidden", "true");
     slot.appendChild(numberEl);
+    slot.appendChild(iconEl);
     slot.appendChild(nameEl);
-    slot.title = `${number}. ${fullName}`;
+    setAbracaTip(slot, `${number}. ${fullName} (${spell?.icon || "✨"}). ${spell?.desc || ""}`);
     return slot;
   };
   view.players.forEach((player) => {
@@ -462,6 +450,7 @@ function renderAbracaPlayers(view) {
     card.className = "player-card";
     if (player.player_id === view.current_turn) {
       card.classList.add("current");
+      card.setAttribute("aria-current", "true");
     }
 
     const header = document.createElement("div");
@@ -469,40 +458,35 @@ function renderAbracaPlayers(view) {
     const name = document.createElement("div");
     name.className = "player-name";
     name.textContent = player.name || player.player_id;
+    const labels = [];
+    if (player.player_id === view.you) labels.push("You");
+    if (player.is_bot) labels.push("Bot");
+    if (player.player_id === view.current_turn && !view.game_over && view.phase !== "round_end") labels.push("Turn");
+    if (labels.length) {
+      const tag = document.createElement("span");
+      tag.className = "abraca-player-tag";
+      tag.textContent = labels.join(" · ");
+      name.appendChild(tag);
+    }
     header.appendChild(name);
 
     const badges = document.createElement("div");
     badges.className = "player-badges";
     const score = document.createElement("span");
     score.className = "badge";
-    score.textContent = `score ${player.score}`;
+    score.textContent = `⭐ ${player.score}`;
+    setAbracaTip(score, `Score (⭐): ${player.score} / ${view.config?.target_score || 8} points.`);
     badges.appendChild(score);
     const hp = document.createElement("span");
-    hp.className = "badge";
-    hp.textContent = `hp ${player.hp}/6`;
+    hp.className = "badge abraca-hp";
+    hp.textContent = `❤️ ${player.hp}`;
+    setAbracaTip(hp, `Health (❤️): ${player.hp} / 6. Reaching 0 ends the round.`);
     badges.appendChild(hp);
     const secrets = document.createElement("span");
     secrets.className = "badge";
-    secrets.textContent = `secret ${player.secret_count}`;
+    secrets.textContent = `🔒 ${player.secret_count}`;
+    setAbracaTip(secrets, `Secrets (🔒): ${player.secret_count}. Each scores 1 point if this player survives.`);
     badges.appendChild(secrets);
-    if (player.player_id === view.you) {
-      const you = document.createElement("span");
-      you.className = "badge";
-      you.textContent = "you";
-      badges.appendChild(you);
-    }
-    if (player.is_bot) {
-      const bot = document.createElement("span");
-      bot.className = "badge";
-      bot.textContent = "bot";
-      badges.appendChild(bot);
-    }
-    if (player.player_id === view.current_turn) {
-      const turn = document.createElement("span");
-      turn.className = "badge highlight";
-      turn.textContent = "turn";
-      badges.appendChild(turn);
-    }
     header.appendChild(badges);
     card.appendChild(header);
 
@@ -526,7 +510,7 @@ function renderAbracaPlayers(view) {
       meta.className = "player-meta abraca-secret-meta";
       const label = document.createElement("div");
       label.className = "abraca-secret-label";
-      label.textContent = "Secret cards";
+      label.textContent = "Your secrets";
       const list = document.createElement("div");
       list.className = "abraca-secret-list";
       player.secret_cards.forEach((cardInfo) => {
@@ -567,19 +551,39 @@ function updateAbracaActionButtons() {
     });
   }
   const buttonMap = [
-    { type: "roll_dice", el: abracaRollBtn },
-    { type: "take_secret", el: abracaSecretBtn },
-    { type: "end_turn", el: abracaEndTurnBtn },
-    { type: "start_next_round", el: abracaNextRoundBtn },
+    { type: "roll_dice", el: abracaRollBtn, phases: ["wait_dice"] },
+    { type: "take_secret", el: abracaSecretBtn, phases: ["wait_see"] },
+    { type: "end_turn", el: abracaEndTurnBtn, phases: ["wait_goon", "wait_draw"] },
+    { type: "start_next_round", el: abracaNextRoundBtn, phases: ["round_end"] },
   ];
-  buttonMap.forEach(({ type, el }) => {
+  buttonMap.forEach(({ type, el, phases }) => {
     if (!el) {
       return;
     }
     const allowed = isAbracaActionAvailable(type);
     el.disabled = !allowed;
     el.classList.toggle("action-allowed", allowed);
+    el.classList.toggle("hidden", !phases.includes(currentAbracaView?.phase));
   });
+  if (abracaSelectedSpell !== null && !isAbracaActionAvailable("cast_spell", abracaSelectedSpell)) {
+    clearAbracaCastSelection();
+  }
+  if (abracaActionHint) {
+    const hints = {
+      wait_use: "Choose a spell to cast",
+      wait_goon: "Cast again or end turn",
+      wait_dice: "Roll to resolve the spell",
+      wait_see: "Take your secret card",
+      wait_draw: "End turn to refill",
+      round_end: "Review the round result",
+      game_over: "Final scores",
+    };
+    const view = currentAbracaView;
+    abracaActionHint.textContent = !view ? "Waiting for the game"
+      : view.phase === "round_end" || view.game_over || view.current_turn === view.you
+      ? hints[view.phase] || "Waiting"
+      : "Watching the current turn";
+  }
 }
 
 function updateAbracaNewGameRow(view) {
@@ -591,6 +595,13 @@ function updateAbracaNewGameRow(view) {
 
 function renderAbracaGameState(data) {
   const view = data.view;
+  const previous = currentAbracaView;
+  if (previous && (previous.round !== view.round || previous.phase !== view.phase || previous.current_turn !== view.current_turn ||
+      previous.discard_total !== view.discard_total ||
+      JSON.stringify(previous.last_action) !== JSON.stringify(view.last_action))) {
+    clearAbracaCastSelection();
+  }
+  hideAbracaTooltip();
   currentAbracaView = view;
   if (currentGameType !== "abraca_what") {
     currentGameType = "abraca_what";
@@ -598,7 +609,11 @@ function renderAbracaGameState(data) {
   }
 
   if (abracaPhaseLabel) {
-    abracaPhaseLabel.textContent = view.phase || "-";
+    const phases = {
+      wait_use: "Cast", wait_goon: "Chain", wait_dice: "Roll dice",
+      wait_see: "Take secret", wait_draw: "Refill", round_end: "Round over", game_over: "Game over",
+    };
+    abracaPhaseLabel.textContent = phases[view.phase] || view.phase || "-";
   }
   if (abracaRoundLabel) {
     abracaRoundLabel.textContent = view.round ?? "-";
@@ -620,14 +635,19 @@ function renderAbracaGameState(data) {
     if (Number.isInteger(view.min_spell)) {
       abracaChainMinLabel.textContent = String(view.min_spell + 1);
     } else {
-      abracaChainMinLabel.textContent = "-";
+      abracaChainMinLabel.textContent = "1";
     }
   }
   if (abracaLastActionLabel) {
     abracaLastActionLabel.textContent = formatAbracaLastAction(view);
   }
   if (abracaRoundResultLabel) {
-    abracaRoundResultLabel.textContent = formatAbracaRoundResult(view);
+    abracaRoundResultLabel.textContent = view.round_result ? formatAbracaRoundResult(view) : abracaLastRoundNotice?.text || "-";
+  }
+  if (abracaActivitySummary) {
+    const last = view.last_action;
+    const spell = abracaSpellData[last?.spell_type];
+    abracaActivitySummary.textContent = spell ? `${spell.number} ${spell.short} · ${last.success ? "Success" : "Miscast"}` : "No spells cast yet";
   }
   updateAbracaRoundNotice(view);
   updateAbracaNewGameRow(view);
@@ -645,6 +665,8 @@ function showAbracaHeaderActions(show) {
     abracaHeaderActions.style.display = show ? "flex" : "none";
   }
   if (!show) {
+    clearAbracaCastSelection();
+    hideAbracaTooltip();
     exitAbracaExplainMode();
     closeAbracaHelpModal();
     closeAbracaExplainModal();
@@ -658,12 +680,17 @@ function showAbracaHelpModal() {
   if (abracaHelpContent) {
     abracaHelpContent.innerHTML = ABRACA_HELP_TEXT;
   }
+  exitAbracaExplainMode();
+  hideAbracaTooltip();
+  abracaModalReturnFocus = document.activeElement;
   setModalVisible(abracaHelpModal, true);
+  abracaHelpModalCloseBtn?.focus({ preventScroll: true });
 }
 
 function closeAbracaHelpModal() {
-  if (abracaHelpModal) {
+  if (abracaHelpModal && !abracaHelpModal.classList.contains("hidden")) {
     setModalVisible(abracaHelpModal, false);
+    abracaModalReturnFocus?.focus({ preventScroll: true });
   }
 }
 
@@ -676,12 +703,12 @@ function updateAbracaExplainModeClasses(enabled) {
   });
 }
 
-function findAbracaButtonAtPoint(x, y) {
+function findAbracaButtonAtPoint(clientX, clientY) {
   for (const buttonId of Object.keys(ABRACA_BUTTON_EXPLANATIONS)) {
     const btn = document.getElementById(buttonId);
-    if (!btn) continue;
+    if (!btn || !btn.getClientRects().length || btn.closest("[inert]")) continue;
     const rect = btn.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+    if (rect.width > 0 && rect.height > 0 && clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
       return buttonId;
     }
   }
@@ -689,11 +716,13 @@ function findAbracaButtonAtPoint(x, y) {
 }
 
 function toggleAbracaExplainMode() {
+  hideAbracaTooltip();
   abracaExplainMode = !abracaExplainMode;
   document.body.classList.toggle("abraca-explain-mode", abracaExplainMode);
   updateAbracaExplainModeClasses(abracaExplainMode);
   if (abracaExplainBtn) {
     abracaExplainBtn.classList.toggle("active", abracaExplainMode);
+    abracaExplainBtn.setAttribute("aria-pressed", String(abracaExplainMode));
   }
 }
 
@@ -706,6 +735,7 @@ function exitAbracaExplainMode() {
   updateAbracaExplainModeClasses(false);
   if (abracaExplainBtn) {
     abracaExplainBtn.classList.remove("active");
+    abracaExplainBtn.setAttribute("aria-pressed", "false");
   }
 }
 
@@ -720,12 +750,25 @@ function showAbracaButtonExplanation(buttonId) {
     <p>${explanation.description}</p>
     ${note}
   `;
+  abracaModalReturnFocus = document.activeElement;
   setModalVisible(abracaExplainModal, true);
+  abracaExplainModalCloseBtn?.focus({ preventScroll: true });
+}
+
+function showAbracaInfoExplanation(element) {
+  abracaExplainContent.replaceChildren();
+  const text = document.createElement("p");
+  text.textContent = element.dataset.abracaTip;
+  abracaExplainContent.appendChild(text);
+  abracaModalReturnFocus = document.activeElement;
+  setModalVisible(abracaExplainModal, true);
+  abracaExplainModalCloseBtn?.focus({ preventScroll: true });
 }
 
 function closeAbracaExplainModal() {
-  if (abracaExplainModal) {
+  if (abracaExplainModal && !abracaExplainModal.classList.contains("hidden")) {
     setModalVisible(abracaExplainModal, false);
+    abracaModalReturnFocus?.focus({ preventScroll: true });
   }
 }
 
@@ -736,10 +779,19 @@ if (abracaSpellButtons.length) {
       if (!Number.isInteger(spellType)) {
         return;
       }
-      sendAction({ type: "cast_spell", spell_type: spellType });
+      selectAbracaSpell(spellType);
     });
   });
 }
+
+abracaCastBtn?.addEventListener("click", () => {
+  const spellType = abracaSelectedSpell;
+  if (spellType === null || !isAbracaActionAvailable("cast_spell", spellType)) return;
+  clearAbracaCastSelection(true);
+  sendAction({ type: "cast_spell", spell_type: spellType });
+});
+
+abracaCancelCastBtn?.addEventListener("click", () => clearAbracaCastSelection(true));
 
 if (abracaRollBtn) {
   abracaRollBtn.addEventListener("click", () => {
@@ -791,43 +843,136 @@ if (abracaExplainModalCloseBtn) {
   abracaExplainModalCloseBtn.addEventListener("click", closeAbracaExplainModal);
 }
 
-document.addEventListener("pointerdown", (e) => {
-  if (!abracaExplainMode) return;
+function isAbracaUtilityButton(button) {
+  return [abracaHelpBtn, abracaExplainBtn, abracaHelpModalCloseBtn, abracaExplainModalCloseBtn].includes(button);
+}
 
-  const buttonId = findAbracaButtonAtPoint(e.clientX, e.clientY);
-  if (buttonId) {
-    e.preventDefault();
-    e.stopPropagation();
-    showAbracaButtonExplanation(buttonId);
-    exitAbracaExplainMode();
+document.addEventListener("pointerdown", (event) => {
+  if (currentGameType !== "abraca_what" || !event.isPrimary || event.button !== 0) return;
+  abracaIgnoreClickUntil = 0;
+  abracaPointerGesture = {
+    pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY,
+    scrollX, scrollY, moved: false,
+    explain: abracaExplainMode,
+  };
+}, true);
+
+document.addEventListener("pointermove", (event) => {
+  if (!abracaPointerGesture || event.pointerId !== abracaPointerGesture.pointerId) return;
+  if (Math.hypot(event.clientX - abracaPointerGesture.clientX, event.clientY - abracaPointerGesture.clientY) > 10) {
+    abracaPointerGesture.moved = true;
+  }
+}, true);
+
+document.addEventListener("pointercancel", () => {
+  if (!abracaPointerGesture) return;
+  abracaIgnoreClickUntil = Date.now() + 600;
+  abracaPointerGesture = null;
+}, true);
+
+document.addEventListener("pointerup", (event) => {
+  const gesture = abracaPointerGesture;
+  if (!gesture || event.pointerId !== gesture.pointerId) return;
+  abracaPointerGesture = null;
+  if (gesture.moved || scrollX !== gesture.scrollX || scrollY !== gesture.scrollY ||
+      Math.hypot(event.clientX - gesture.clientX, event.clientY - gesture.clientY) > 10) {
+    abracaIgnoreClickUntil = Date.now() + 600;
     return;
   }
-
-  const button = e.target.closest("button");
-  if (button === abracaExplainBtn || button === abracaHelpBtn) return;
-  if (button === abracaHelpModalCloseBtn || button === abracaExplainModalCloseBtn) return;
-
-  if (button) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-}, true);
-
-document.addEventListener("click", (e) => {
-  if (!abracaExplainMode) return;
-
-  const button = e.target.closest("button");
-  if (!button) return;
-
-  if (button === abracaExplainBtn || button === abracaHelpBtn) return;
-  if (button === abracaHelpModalCloseBtn || button === abracaExplainModalCloseBtn) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-}, true);
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && abracaExplainMode) {
+  if (!gesture.explain || !abracaExplainMode || isAbracaUtilityButton(event.target.closest("button"))) return;
+  const buttonId = findAbracaButtonAtPoint(event.clientX, event.clientY);
+  const tip = event.target.closest("[data-abraca-tip]");
+  if (buttonId || tip) {
+    event.preventDefault();
+    event.stopPropagation();
+    abracaIgnoreClickUntil = Date.now() + 600;
+    if (buttonId) showAbracaButtonExplanation(buttonId);
+    else showAbracaInfoExplanation(tip);
     exitAbracaExplainMode();
   }
+}, true);
+
+document.addEventListener("click", (event) => {
+  if (currentGameType !== "abraca_what") return;
+  if (event.detail > 0 && Date.now() < abracaIgnoreClickUntil) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
+  const button = event.target.closest("button");
+  const tip = event.target.closest("#abracaPanel [data-abraca-tip]");
+  if (abracaExplainMode && !isAbracaUtilityButton(button)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (button && ABRACA_BUTTON_EXPLANATIONS[button.id]) {
+      showAbracaButtonExplanation(button.id);
+      exitAbracaExplainMode();
+    } else if (tip) {
+      showAbracaInfoExplanation(tip);
+      exitAbracaExplainMode();
+    }
+    return;
+  }
+  if (tip && !button) showAbracaTooltip(tip);
+  else hideAbracaTooltip();
+  if (abracaSelectedSpell !== null && !event.target.closest("#abracaSpells, button, summary, [data-abraca-tip], .modal")) {
+    clearAbracaCastSelection();
+  }
+}, true);
+
+abracaPanel?.addEventListener("pointerover", (event) => {
+  if (event.pointerType !== "mouse" || abracaExplainMode) return;
+  const target = event.target.closest("[data-abraca-tip]");
+  if (target && !target.contains(event.relatedTarget)) showAbracaTooltip(target);
 });
+
+abracaPanel?.addEventListener("pointerout", (event) => {
+  const target = event.target.closest("[data-abraca-tip]");
+  if (target && !target.contains(event.relatedTarget)) hideAbracaTooltip();
+});
+
+abracaPanel?.addEventListener("focusin", (event) => {
+  if (!abracaExplainMode && event.target.matches("[data-abraca-tip]:focus-visible")) showAbracaTooltip(event.target);
+});
+
+abracaPanel?.addEventListener("focusout", hideAbracaTooltip);
+window.addEventListener("resize", hideAbracaTooltip);
+document.addEventListener("scroll", () => {
+  hideAbracaTooltip();
+  if (abracaPointerGesture) abracaPointerGesture.moved = true;
+}, true);
+
+[abracaHelpModal, abracaExplainModal].forEach((modal) => {
+  modal?.addEventListener("click", (event) => {
+    if (event.target !== modal) return;
+    if (modal === abracaHelpModal) closeAbracaHelpModal();
+    else closeAbracaExplainModal();
+  });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (currentGameType !== "abraca_what") return;
+  if (event.key === "Escape") {
+    exitAbracaExplainMode();
+    hideAbracaTooltip();
+    closeAbracaHelpModal();
+    closeAbracaExplainModal();
+    clearAbracaCastSelection(true);
+  }
+  const modal = [abracaHelpModal, abracaExplainModal].find((element) => element && !element.classList.contains("hidden"));
+  if (event.key === "Tab" && modal) {
+    event.preventDefault();
+    modal.querySelector("button")?.focus();
+  }
+  if ((event.key === "Enter" || event.key === " ") && event.target.matches("#abracaPanel [data-abraca-tip]")) {
+    event.preventDefault();
+    if (abracaExplainMode) {
+      showAbracaInfoExplanation(event.target);
+      exitAbracaExplainMode();
+    } else showAbracaTooltip(event.target);
+  }
+});
+
+renderAbracaSpells({});
+updateAbracaActionButtons();
+abracaExplainBtn?.setAttribute("aria-pressed", "false");

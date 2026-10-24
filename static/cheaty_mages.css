@@ -1,6 +1,9 @@
 #cheatyMagesPanel { min-width: 0; }
-.cm-surface, .cm-dialog, .cm-tooltip { --cm-ink: #edf0ff; --cm-muted: #a6aac4; --cm-line: #393850; --cm-gold: #f2cb76; color: var(--cm-ink); font-family: "Work Sans", system-ui, sans-serif; }
-.cm-surface { background: radial-gradient(ellipse at 85% 0%, #3a285a99, transparent 45%), #171826; border: 1px solid #444059; border-radius: 20px; padding: clamp(12px, 2vw, 24px); overflow: hidden; }
+.game-panel[data-game-theme="cheaty_mages"], .cm-dialog, .cm-tooltip { --cm-ink: #edf0ff; --cm-muted: #a6aac4; --cm-line: #393850; --cm-gold: #f2cb76; color: var(--cm-ink); font-family: "Work Sans", system-ui, sans-serif; }
+.game-panel[data-game-theme="cheaty_mages"] { background: radial-gradient(ellipse at 85% 0%, #3a285a99, transparent 45%), #171826; border: 1px solid #444059; border-radius: 20px; padding: clamp(12px, 2vw, 24px); overflow: hidden; }
+.game-panel[data-game-theme="cheaty_mages"] > .panel-header button { color: var(--cm-ink); background: #302d44; border-color: #57526d; }
+.game-panel[data-game-theme="cheaty_mages"] > .panel-header button[aria-pressed="true"] { border-color: var(--cm-gold); background: #4a3c38; }
+.cm-surface { min-width: 0; }
 .cm-surface *, .cm-dialog *, .cm-tooltip { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
 .cm-surface h2, .cm-surface h3, .cm-dialog h2, .cm-dialog h3, .cm-surface p { margin: 0; color: inherit; }
 .cm-surface button, .cm-dialog button { font: inherit; font-size: 13px; border: 1px solid #57526d; color: var(--cm-ink); background: #302d44; border-radius: 9px; padding: 9px 12px; cursor: pointer; max-width: 100%; white-space: normal; line-height: 1.35; }
@@ -10,17 +13,11 @@
 .cm-surface button.is-selected, .cm-surface button[aria-pressed="true"] { border-color: var(--cm-gold); box-shadow: inset 0 0 0 1px var(--cm-gold); background-color: #4a3c38; }
 .cm-surface button.cm-primary { background: var(--cm-gold); color: #302236; border-color: var(--cm-gold); font-weight: 700; }
 .cm-surface button.cm-primary:hover:not(:disabled) { background: #ffe4a9; }
-.cm-banner, .cm-section-heading, .cm-player-heading, .cm-judge, .cm-status-row, .cm-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.cm-banner { margin-bottom: 15px; }
-.cm-brand { display: flex; align-items: center; gap: 12px; }
-.cm-brand-mark { font-size: 35px; width: 54px; height: 54px; flex: 0 0 54px; display: grid; place-items: center; border-radius: 16px; background: #3c3158; border: 1px solid #6b577e; }
-.cm-eyebrow { display: block; color: #c1a1e1; font-size: 10px; letter-spacing: .18em; font-weight: 700; line-height: 1.5; }
-.cm-banner h2 { font-size: clamp(21px, 3vw, 29px); line-height: 1.25; margin-top: 2px; }
-.cm-banner h2 small { display: block; font-size: 12px; font-weight: 400; color: var(--cm-muted); letter-spacing: .05em; margin-top: 2px; }
-.cm-round { text-align: right; flex: 0 0 auto; font-size: 11px; color: var(--cm-muted); }
-.cm-round b { display: block; font-size: 25px; color: var(--cm-gold); line-height: 1.2; }
+.cm-section-heading, .cm-player-heading, .cm-judge, .cm-status-row, .cm-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.cm-round { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; font-size: 11px; color: var(--cm-muted); }
+.cm-round b { font-size: 18px; color: var(--cm-gold); line-height: 1.2; }
 .cm-status-row { flex-wrap: wrap; margin-bottom: 14px; background: #ffffff05; border-block: 1px solid #ffffff0f; padding: 10px 0; }
-.cm-status { font-size: 13px; color: #d9c1ff; }
+.cm-status { flex: 1 1 180px; font-size: 13px; color: #d9c1ff; }
 .cm-stats, .cm-badges { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 11px; color: var(--cm-muted); }
 .cm-stats span, .cm-badges span { display: inline-block; }
 .cm-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 7px; margin-bottom: 13px; }
@@ -123,5 +120,5 @@
 .cm-tooltip[hidden] { display: none; }
 @media (max-width: 850px) { .cm-workspace { grid-template-columns: minmax(0, 1fr) 230px; } .cm-players { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cm-fighter-select { padding: 8px !important; } .cm-fighter-name { font-size: 13px; } }
 @media (max-width: 640px) { .cm-workspace { display: flex; flex-direction: column-reverse; } .cm-workspace > * { width: 100%; } .cm-arena { gap: 7px; grid-template-columns: repeat(3, minmax(0, 1fr)); } .cm-arena .cm-fighter:nth-child(4) { grid-column: 1; } .cm-judge { align-items: flex-start; padding: 10px; } .cm-judge-rules { max-width: 43%; gap: 4px; font-size: 11px; } .cm-fighter-icon { font-size: 29px; padding: 0; } .cm-fighter-en { display: none; } .cm-spells { max-height: 95px; } .cm-hand { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .cm-surface button.cm-card { min-height: 130px; padding: 7px 5px; } .cm-card-en { display: none; } .cm-card-top { font-size: 9px; } .cm-card-name { font-size: 12px; } .cm-card-stats { font-size: 10px; } .cm-result-fighters { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cm-history-content { grid-template-columns: 1fr; } .cm-mode-tabs { margin-bottom: 8px; } .cm-choice-label { margin-top: 9px; } }
-@media (max-width: 410px) { .cm-surface { padding: 10px; border-radius: 13px; } .cm-brand { gap: 8px; } .cm-brand-mark { width: 40px; height: 44px; flex-basis: 40px; font-size: 27px; } .cm-eyebrow { font-size: 8px; letter-spacing: .1em; } .cm-banner h2 { font-size: 20px; } .cm-round b { font-size: 23px; } .cm-players { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cm-player { padding: 8px; } .cm-arena { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cm-arena .cm-fighter:nth-child(4) { grid-column: auto; } .cm-fighter:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; } .cm-fighter:last-child .cm-fighter-select { grid-row: 1 / 3; border-radius: 11px 0 0 11px; } .cm-fighter:last-child .cm-fighter-stats { padding-top: 8px; } .cm-fighter:last-child .cm-spells { margin-top: 0; } .cm-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cm-box { padding: 10px; } .cm-result-fighters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cm-help-grid { grid-template-columns: 1fr; } .cm-judge-main strong { font-size: 12px; } .cm-judge-icon { font-size: 21px; } .cm-judge { gap: 6px; } .cm-judge-rules { max-width: 45%; } .cm-dialog-body { padding: 13px; } }
+@media (max-width: 410px) { .game-panel[data-game-theme="cheaty_mages"] { padding: 10px; border-radius: 13px; } .cm-round b { font-size: 16px; } .cm-players { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cm-player { padding: 8px; } .cm-arena { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cm-arena .cm-fighter:nth-child(4) { grid-column: auto; } .cm-fighter:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; } .cm-fighter:last-child .cm-fighter-select { grid-row: 1 / 3; border-radius: 11px 0 0 11px; } .cm-fighter:last-child .cm-fighter-stats { padding-top: 8px; } .cm-fighter:last-child .cm-spells { margin-top: 0; } .cm-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cm-box { padding: 10px; } .cm-result-fighters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cm-help-grid { grid-template-columns: 1fr; } .cm-judge-main strong { font-size: 12px; } .cm-judge-icon { font-size: 21px; } .cm-judge { gap: 6px; } .cm-judge-rules { max-width: 45%; } .cm-dialog-body { padding: 13px; } }
 @media (prefers-reduced-motion: reduce) { .cm-surface *, .cm-dialog * { scroll-behavior: auto !important; } }

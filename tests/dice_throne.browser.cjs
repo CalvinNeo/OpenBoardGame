@@ -74,6 +74,10 @@ fixtures.upgraded = structuredClone(fixtures.rolled);
 fixtures.upgraded.players.forEach(player => {
     player.upgrades = [`${fixtures.upgraded.hero_catalog[player.hero].abilities[0].id}_3`];
 });
+for (const [hero, statuses] of Object.entries({ gunslinger: ['reload', 'bounty'], samurai: ['honor', 'shame', 'back_strike'], vampire_lord: ['blood_power', 'bleed', 'mesmerize'], seraph: ['flight', 'holy_presence', 'blinding_light'] })) {
+    fixtures[`statuses_${hero}`] = structuredClone(fixtures[`hero_${hero}`]);
+    fixtures[`statuses_${hero}`].players.find(player => player.player_id === 'p0').statuses = statuses.map(id => ({ id, stacks: fixtures.rolled.status_catalog[id].limit }));
+}
 
 async function render(page, key) {
     await page.evaluate(view => {
@@ -259,7 +263,7 @@ async function heroReferences(page, width) {
         assert(layout.inside && layout.headerAboveBody && layout.singleDiceRow && !layout.overlap, JSON.stringify(layout));
         assert.equal(layout.columns, width <= 560 ? 1 : 2);
         if (width >= 1024) assert(layout.height < 650, 'Desktop reference must remain compact.');
-        if (['barbarian', 'treant'].includes(heroId)) {
+        if (['barbarian', 'treant', 'vampire_lord', 'seraph'].includes(heroId)) {
             await page.screenshot({ path: `${output}/${width}-hero-${heroId}.png`, fullPage: true });
         }
         await page.keyboard.press('Escape');
@@ -411,6 +415,70 @@ async function interactions(page) {
     assert.equal(await page.locator('script[src*="/dice_throne.js"]').count(), 1);
 }
 
+async function seasonTwoPicker(page, width) {
+    const seasonTwo = ['gunslinger', 'samurai', 'vampire_lord', 'seraph'];
+    await render(page, 'choose_hero');
+    assert.equal(await page.locator('.dt-hero-card').count(), 12);
+    await page.locator('[data-dt-season="2"]').click();
+    assert.equal(await page.locator('[data-dt-season="2"]').getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('[data-dt-season="all"]').getAttribute('aria-pressed'), 'false');
+    assert.equal(await page.locator('#diceThroneHeroCount').innerText(), '4 / 12 heroes');
+    assert.deepEqual(await page.locator('.dt-hero-card').evaluateAll(nodes => nodes.map(node => node.dataset.hero)), seasonTwo);
+    await bounds(page, `${width}px / Season Two picker`);
+    await page.mouse.move(0, 0);
+    await page.locator('.dt-hero-filters').evaluate(node => Promise.all(node.getAnimations({ subtree: true }).map(animation => animation.finished)));
+    await page.screenshot({ path: `${output}/${width}-season-two.png`, fullPage: true });
+    for (const hero of seasonTwo) {
+        await page.locator(`.dt-hero-card[data-hero="${hero}"] .dt-hero-trigger`).click();
+        assert.equal(await page.locator('.dt-hero-card.selected').count(), 1);
+        await bounds(page, `${width}px / ${hero} confirmation`);
+        await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await actions(page, []);
+    }
+    await page.locator('[data-dt-season="1"]').click();
+    assert.equal(await page.locator('.dt-hero-card').count(), 8);
+    await page.locator('[data-dt-season="all"]').click();
+    assert.equal(await page.locator('.dt-hero-card').count(), 12);
+    if (width <= 390) {
+        await touchScroll(page, '#diceThroneHeroChoices');
+        assert.equal(await page.locator('.dt-hero-card.selected').count(), 0, 'Scrolling the hero list does not choose a hero.');
+        assert((await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop)) > 0);
+        await page.locator('.dt-hero-card[data-hero="seraph"] .dt-hero-trigger').scrollIntoViewIfNeeded();
+        const before = await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop);
+        await page.locator('.dt-hero-card[data-hero="seraph"] .dt-hero-trigger').tap();
+        assert(Math.abs(await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop) - before) <= 1, 'Hero confirmation preserves list position.');
+        await page.getByRole('button', { name: 'Cancel', exact: true }).tap();
+        assert(Math.abs(await page.locator('#diceThroneHeroChoices').evaluate(node => node.scrollTop) - before) <= 1, 'Cancel preserves list position.');
+    }
+    await page.locator('[data-dt-season="2"]').click();
+    await page.locator('.dt-hero-card[data-hero="gunslinger"] .dt-hero-trigger').click();
+    await page.getByRole('button', { name: 'Choose hero', exact: true }).click();
+    await actions(page, [{ type: 'choose_hero', hero: 'gunslinger', revision: fixtures.choose_hero.revision }]);
+    await render(page, 'choose_hero');
+    const taken = structuredClone(fixtures.choose_hero);
+    taken.players.find(player => player.player_id !== taken.you).hero = 'gunslinger';
+    taken.revision += 1;
+    await page.evaluate(view => renderDiceThroneGameState({ view }), taken);
+    await page.locator('[data-dt-season="2"]').click();
+    assert.equal(await page.locator('.dt-hero-card[data-hero="gunslinger"] .dt-hero-trigger').isDisabled(), true);
+    await actions(page, []);
+    for (const hero of seasonTwo) {
+        await render(page, `hero_${hero}`);
+        await bounds(page, `${width}px / ${hero} combat`);
+        await render(page, `statuses_${hero}`);
+        for (const token of await page.locator('.dt-you .dt-statuses .dt-token').all()) {
+            await token.tap();
+            assert.equal(await page.locator('#diceThroneTooltip').isVisible(), true);
+            assert((await page.locator('#diceThroneTooltip').innerText()).includes(await token.getAttribute('data-dt-explain')));
+            await bounds(page, `${width}px / ${hero} status tooltip`);
+        }
+        await page.locator('.dt-you .dt-hero-name-button').click();
+        await page.keyboard.press('Escape');
+        await page.mouse.move(0, 0);
+        await page.screenshot({ path: `${output}/${width}-combat-${hero}.png`, fullPage: true });
+    }
+}
+
 async function desktop(browser) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -488,8 +556,12 @@ async function liveRerolls(browser) {
         await host.evaluate(() => socket.emit('room:start', { room_id: roomId }));
         for (const [index, page] of pages.entries()) {
             await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'choose_hero');
-            await page.evaluate(hero => sendAction({ type: 'choose_hero', hero, revision: lastGameStatePayload.view.revision }), index ? 'moon_elf' : 'barbarian');
-            await page.waitForFunction(hero => lastGameStatePayload.view.players.some(player => player.hero === hero), index ? 'moon_elf' : 'barbarian');
+            await page.evaluate(() => setRoomControlsCollapsed(true));
+            await page.locator('[data-dt-season="2"]').tap();
+            const hero = index ? 'seraph' : 'gunslinger';
+            await page.locator(`.dt-hero-card[data-hero="${hero}"] .dt-hero-trigger`).tap();
+            await page.getByRole('button', { name: 'Choose hero', exact: true }).tap();
+            await page.waitForFunction(hero => lastGameStatePayload.view.players.some(player => player.hero === hero), hero);
         }
         for (const page of pages) {
             await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'main_1');
@@ -522,7 +594,7 @@ async function liveRerolls(browser) {
             await bounds(page, 'Live reroll');
         }
         assert.deepEqual(errors, []);
-        console.log('Live two-player room: roll, keep all, release one, reroll and synchronized feedback passed.');
+        console.log('Live Season Two room: filtered hero selection, roll, keep all, release one, reroll and synchronized feedback passed.');
     } finally {
         for (const page of pages) {
             await page.evaluate(() => { if (roomId) socket.emit('room:leave', { room_id: roomId }); }).catch(() => {});
@@ -564,6 +636,7 @@ async function liveRerolls(browser) {
             if (viewport.width >= 1024) assert(measurements[viewport.width].sideBySide, 'Desktop dice and decisions must share a row.');
             if (viewport.width <= 390) assert(measurements[viewport.width].panelBottom <= viewport.height, 'Normal mobile combat must fit the viewport.');
             await heroReferences(page, viewport.width);
+            await seasonTwoPicker(page, viewport.width);
         }
         fs.writeFileSync(`${output}/measurements.json`, JSON.stringify(measurements, null, 2));
         console.log(JSON.stringify(measurements, null, 2));
@@ -575,7 +648,7 @@ async function liveRerolls(browser) {
         assert.deepEqual(errors, [], 'Browser console errors');
         console.log(`${Object.keys(fixtures).length} states fit at 320, 390, 768, 1024 and 1440px.`);
         console.log('Touch scrolling, selection, card inputs, dice controls, Help/Explain, Esc, tooltips, round review and game switching passed.');
-        console.log('All eight hero references, six dice faces, every ability, opponent upgrades, spectators, modal tooltips and compact layouts passed.');
+        console.log('All twelve hero references, season filters, scroll-preserving selection, six dice faces, every ability, opponent upgrades, spectators, modal tooltips and compact layouts passed.');
         console.log('Reroll counts, all-kept guard, repeated-result feedback, spectators, reduced motion and error recovery passed.');
     } catch (error) {
         await page.screenshot({ path: `${output}/failure.png`, fullPage: true });

@@ -1,5 +1,7 @@
 #ponziSchemePanel { min-width: 0; container-type: inline-size; }
-.ponzi-scheme-shell { --ps-ink: #203f37; --ps-muted: #6e7e73; --ps-line: #d6ddcf; --ps-gold: #b08b46; color: var(--ps-ink); background: #f3f2e9; border: 1px solid #bccbbd; border-radius: 18px; padding: clamp(12px, 2vw, 24px); font: 14px/1.5 "Work Sans", system-ui, sans-serif; }
+.game-panel[data-game-theme="ponzi_scheme"] { --ps-ink: #203f37; --ps-muted: #6e7e73; --ps-line: #d6ddcf; --ps-gold: #b08b46; color: var(--ps-ink); background: #f3f2e9; border: 1px solid #bccbbd; border-radius: 18px; padding: clamp(12px, 2vw, 24px); font: 14px/1.5 "Work Sans", system-ui, sans-serif; }
+.game-panel[data-game-theme="ponzi_scheme"] > .panel-header button { color: var(--ps-ink); background: #fffdf6; border-color: #b8c6b7; }
+.ponzi-scheme-shell { min-width: 0; }
 .ponzi-scheme-shell *, .ponzi-scheme-dialog * { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
 .ponzi-scheme-shell h2, .ponzi-scheme-shell h3, .ponzi-scheme-shell h4, .ponzi-scheme-shell p { margin: 0; }
 .ponzi-scheme-shell button, .ponzi-scheme-dialog button { font: inherit; color: #23483e; background: #fffdf6; border: 1px solid #b8c6b7; border-radius: 8px; padding: 8px 11px; min-height: 36px; line-height: 1.3; max-width: 100%; margin: 0; cursor: pointer; white-space: normal; }
@@ -7,13 +9,11 @@
 .ponzi-scheme-shell button:disabled { cursor: default; opacity: .5; }
 .ponzi-scheme-shell button:focus-visible, .ponzi-scheme-shell summary:focus-visible, .ponzi-scheme-shell input:focus-visible, .ponzi-scheme-dialog button:focus-visible { outline: 3px solid #bc8e34; outline-offset: 3px; }
 .ponzi-scheme-shell button.is-selected { outline: 2px solid #376952; outline-offset: 2px; background: #dce9d3; }
-.ponzi-scheme-masthead { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 18px; }
-.ponzi-scheme-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .2em; color: #8c7145; }
-.ponzi-scheme-masthead h2 { font: 700 clamp(25px, 3vw, 35px)/1.45 Georgia, "Songti SC", serif; letter-spacing: .08em; margin: 3px 0; }
-.ponzi-scheme-tagline { font-size: 12px; color: var(--ps-muted); }
-.ponzi-scheme-round { flex: 0 0 64px; text-align: center; border-left: 1px solid var(--ps-line); padding-left: 14px; }
-.ponzi-scheme-round span { display: block; font-size: 9px; letter-spacing: .12em; color: var(--ps-muted); }
-.ponzi-scheme-round strong { font: 38px/1.2 Georgia, serif; }
+.ponzi-scheme-masthead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 14px; margin-bottom: 10px; }
+.ponzi-scheme-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #8c7145; }
+.ponzi-scheme-round { display: flex; align-items: baseline; gap: 6px; flex: 0 0 auto; }
+.ponzi-scheme-round span { font-size: 11px; color: var(--ps-muted); }
+.ponzi-scheme-round strong { font: 22px/1.2 Georgia, serif; }
 .ponzi-scheme-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; background: #203f37; color: #f7f5e8; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; }
 .ponzi-scheme-status > div { display: flex; flex: 1 1 180px; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
 .ponzi-scheme-status > div > span { color: #d3ddcf; font-size: 12px; }
@@ -132,6 +132,9 @@
 .ponzi-scheme-immediate-tip { position: fixed; z-index: 20000; box-sizing: border-box; width: max-content; max-width: min(360px, calc(100vw - 24px)); max-height: min(240px, 42vh); overflow-y: auto; padding: 12px 14px; border: 1px solid #7c986d; border-radius: 10px; background: #203f37; color: #fcfbec; box-shadow: 0 5px 20px #10261d33; font: 12px/1.7 system-ui, sans-serif; white-space: normal; overflow-wrap: anywhere; }
 .ponzi-scheme-immediate-tip[hidden] { display: none; }
 .ponzi-scheme-immediate-tip.is-touch { pointer-events: none; padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+@media (max-width: 600px) {
+    .game-panel[data-game-theme="ponzi_scheme"] { padding: 10px; border-radius: 12px; }
+}
 @container (max-width: 720px) {
     .ponzi-scheme-layout { grid-template-columns: minmax(0, 1fr); }
     .ponzi-scheme-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
@@ -139,13 +142,10 @@
     .ponzi-scheme-history { grid-column: 1; }
 }
 @container (max-width: 460px) {
-    .ponzi-scheme-shell { padding: 8px; font-size: 13px; border-radius: 12px; }
+    .ponzi-scheme-shell { font-size: 13px; }
     .ponzi-scheme-masthead { gap: 8px; margin-bottom: 8px; }
-    .ponzi-scheme-eyebrow, .ponzi-scheme-round span { display: none; }
-    .ponzi-scheme-masthead h2 { font-size: 24px; line-height: 1.25; }
-    .ponzi-scheme-tagline, .ponzi-scheme-footer { display: none; }
-    .ponzi-scheme-round { flex-basis: 48px; padding-left: 8px; }
-    .ponzi-scheme-round strong { font-size: 28px; }
+    .ponzi-scheme-footer { display: none; }
+    .ponzi-scheme-round strong { font-size: 20px; }
     .ponzi-scheme-status { gap: 4px 8px; padding: 7px 8px; margin-bottom: 8px; }
     .ponzi-scheme-status > div { flex-basis: 150px; gap: 2px 8px; }
     .ponzi-scheme-status > div > span, .ponzi-scheme-bears { font-size: 10px; }

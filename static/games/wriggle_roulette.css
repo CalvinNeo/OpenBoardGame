@@ -2,7 +2,7 @@
 @media all, obg-game-wriggle_roulette-1 {
 
 /* Wriggle Roulette */
-.wriggle-roulette-panel {
+.game-panel[data-game-theme="wriggle_roulette"] {
   --wrr-ink: #edf8ec;
   --wrr-muted: #a7bcae;
   --wrr-panel: #142a2a;
@@ -24,8 +24,18 @@
   overflow: hidden;
 }
 
-.wriggle-roulette-panel::before,
-.wriggle-roulette-panel::after {
+.wriggle-roulette-panel {
+  min-width: 0;
+}
+
+.game-panel[data-game-theme="wriggle_roulette"] > .panel-header button {
+  color: var(--wrr-ink);
+  background: var(--wrr-panel);
+  border-color: var(--wrr-line);
+}
+
+.game-panel[data-game-theme="wriggle_roulette"]::before,
+.game-panel[data-game-theme="wriggle_roulette"]::after {
   position: absolute;
   z-index: -1;
   color: rgba(166, 214, 176, 0.08);
@@ -34,17 +44,17 @@
   pointer-events: none;
 }
 
-.wriggle-roulette-panel::before {
+.game-panel[data-game-theme="wriggle_roulette"]::before {
   content: "〰";
   top: 8rem;
-  right: -1rem;
+  right: 2rem;
   transform: rotate(-18deg);
 }
 
-.wriggle-roulette-panel::after {
+.game-panel[data-game-theme="wriggle_roulette"]::after {
   content: "☾";
   bottom: 4rem;
-  left: -1rem;
+  left: 1rem;
 }
 
 .wriggle-roulette-panel h2,
@@ -70,44 +80,6 @@
 
 .wriggle-roulette-topbar {
   margin-bottom: 14px;
-}
-
-.wriggle-roulette-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.wriggle-roulette-brand-mark {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
-  color: #26352a;
-  background: #e3e4ad;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  box-shadow: 0 0 28px rgba(224, 230, 171, 0.22);
-  font-size: 28px;
-}
-
-.wriggle-roulette-brand h2 {
-  margin: 1px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.35rem, 3vw, 2rem);
-  line-height: 1.05;
-  letter-spacing: 0.01em;
-}
-
-.wriggle-roulette-brand h2 small {
-  display: inline-block;
-  color: var(--wrr-eel);
-  font-family: inherit;
-  font-size: 0.62em;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .wriggle-roulette-kicker {
@@ -645,19 +617,13 @@ body.wriggle-roulette-explain-mode [data-wriggle-roulette-explain].has-explanati
 }
 
 @media (max-width: 640px) {
-  .wriggle-roulette-panel {
+  .game-panel[data-game-theme="wriggle_roulette"] {
     padding: 10px;
     border-radius: 14px;
   }
 
   .wriggle-roulette-topbar {
     align-items: flex-start;
-  }
-
-  .wriggle-roulette-brand-mark {
-    width: 42px;
-    height: 42px;
-    font-size: 22px;
   }
 
   .wriggle-roulette-kicker {

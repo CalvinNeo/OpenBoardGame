@@ -1,4 +1,4 @@
-"""Two-player Dice Throne digital adaptation with the eight Season One heroes."""
+"""Two-player Dice Throne adaptation with Season One and Season Two heroes."""
 from __future__ import annotations
 
 import copy
@@ -145,6 +145,12 @@ def _damage(state: Dict, target: str, amount: int, kind: str = "normal", attack:
         if attack and player["statuses"].get("shadows"):
             _log(state, target, "🌑 暗影避免了本次进攻伤害。")
             return 0
+        if attack and player["statuses"].get("flight"):
+            _remove_status(player, "flight")
+            values = _roll_values(state, 2)
+            _log(state, target, f"🕊️ 飞行检定：{values[0]} · {values[1]}。")
+            if 6 in values:
+                return 0
         for status, success in (("evasive", 2), ("smoke_bomb", 3)):
             if player["statuses"].get(status):
                 _remove_status(player, status)
@@ -204,9 +210,21 @@ def _begin_turn(state: Dict, pid: str, first: bool = False) -> None:
     player["shadows_started_turn"] = bool(player["statuses"].get("shadows"))
     _remove_status(player, "fire_mastery")
     upkeep = player["statuses"].get("poison", 0) + (2 if player["statuses"].get("burn") else 0)
+    if player["statuses"].get("bleed"):
+        values = _roll_values(state, player["statuses"]["bleed"])
+        wounds = sum(value <= 4 for value in values)
+        _remove_status(player, "bleed", len(values) - wounds)
+        upkeep += wounds
+        _log(state, pid, "🩹 流血检定：" + " · ".join(map(str, values)) + f"；{wounds} 点持续伤害。")
     if upkeep:
         dealt = _damage(state, pid, upkeep, "persistent")
         _log(state, pid, f"☠️ 维护阶段受到 {dealt} 点持续伤害。")
+        _check_winner(state)
+        if state["game_over"]:
+            return
+    if player["statuses"].get("holy_presence"):
+        dealt = _damage(state, _other(state, pid), player["statuses"]["holy_presence"], "persistent")
+        _log(state, pid, f"🌟 神圣威仪对对手造成 {dealt} 点持续伤害。")
         _check_winner(state)
         if state["game_over"]:
             return
@@ -315,12 +333,21 @@ def _finish_attack(state: Dict, defend: bool) -> None:
     if attack["damage_type"] != "ultimate" and incoming > 0 and defender["statuses"].get("retribution"):
         _remove_status(defender, "retribution")
         returned += (incoming + 1) // 2
+    if attack["damage_type"] != "ultimate" and incoming > 0 and defender["statuses"].get("back_strike"):
+        _remove_status(defender, "back_strike")
+        value = _roll_values(state, 1)[0]
+        returned += (value + 1) // 2
+        _log(state, defender_id, f"↩️ 反击掷出 {value}，反弹 {(value + 1) // 2} 点伤害。")
     dealt = _damage(state, defender_id, incoming, attack["damage_type"], attack=True)
     returned_dealt = 0
     if returned:
         returned_dealt += _damage(state, attacker_id, returned, "return")
     if attack.get("return_damage"):
         returned_dealt += _damage(state, attacker_id, attack["return_damage"], "return")
+    if attack.get("lifesteal"):
+        health_before = attacker["health"]
+        _heal(attacker, dealt)
+        _log(state, attacker_id, f"🩸 血之力吸血治疗 {attacker['health'] - health_before} 点。")
     if result is not None:
         # Keep the roll's gains even when its statuses are immediately spent.
         # Return damage includes all resolved return sources, after mitigation.
@@ -335,6 +362,50 @@ def _finish_attack(state: Dict, defend: bool) -> None:
     state.update(phase="main_2", current_player=attacker_id, pending_attack=None)
 
 
+def _resolve_mesmerize(state: Dict, pid: str) -> None:
+    opponent_id = _other(state, pid)
+    opponent = state["players"][opponent_id]
+    if not opponent["statuses"].get("mesmerize"):
+        return
+    _remove_status(opponent, "mesmerize")
+    value = _roll_values(state, 1)[0]
+    _log(state, opponent_id, f"👁️ 魅惑检定：{value}。")
+    if value >= 5:
+        index = max(range(len(state["dice"])), key=lambda index: state["dice"][index]["value"])
+        previous = state["dice"][index]["value"]
+        state["dice"][index] = _roll_dice(state, state["players"][pid]["hero"], 1)[0]
+        _log(state, opponent_id, f"👁️ 重掷对手第 {index + 1} 枚骰子：{previous} → {state['dice'][index]['value']}。")
+
+
+def _season_two_attack_modifiers(state: Dict, pid: str, target: str, damage: int) -> Tuple[int, bool]:
+    player = state["players"][pid]
+    if player["statuses"].get("reload"):
+        _remove_status(player, "reload")
+        value = _roll_values(state, 1)[0]
+        damage += (value + 1) // 2
+        _log(state, pid, f"🔄 装填掷出 {value}，攻击伤害 +{(value + 1) // 2}。")
+    honor = player["statuses"].pop("honor", 0)
+    if honor:
+        damage += 5 if honor >= 2 else 2
+        _log(state, pid, f"🏅 消耗 {honor} 荣誉，攻击伤害 +{5 if honor >= 2 else 2}。")
+    blood_power = player["statuses"].get("blood_power", 0)
+    lifesteal = blood_power >= 4
+    if blood_power:
+        _remove_status(player, "blood_power", 4 if lifesteal else 1)
+        if not lifesteal:
+            damage += 2
+        _log(state, pid, "🩸 消耗 4 血之力，本次攻击吸血。" if lifesteal else "🩸 消耗 1 血之力，攻击伤害 +2。")
+    if state["players"][target]["statuses"].get("bounty"):
+        damage += 1
+        _cp(player, 1)
+        _log(state, pid, "💰 悬赏：攻击伤害 +1，获得 1 CP（上限 15）。")
+    shame = player["statuses"].pop("shame", 0)
+    if shame:
+        damage -= shame
+        _log(state, pid, f"😔 移除 {shame} 耻辱，攻击伤害 -{shame}。")
+    return max(0, damage), lifesteal
+
+
 def _activate_ability(state: Dict, pid: str, action: Dict) -> None:
     player, target = state["players"][pid], action.get("target") or _other(state, pid)
     if target != _other(state, pid):
@@ -345,6 +416,16 @@ def _activate_ability(state: Dict, pid: str, action: Dict) -> None:
         raise ValueError("ability pattern not met")
     ability, level = found
     state.update(defense_dice=[], defense_result=None)
+    diminished = False
+    if player["statuses"].get("blinding_light") and ability["damage_type"] != "ultimate":
+        _remove_status(player, "blinding_light")
+        value = _roll_values(state, 1)[0]
+        _log(state, pid, f"🌤️ 炫目圣光检定：{value}。")
+        if value == 1:
+            state["phase"] = "main_2"
+            _log(state, pid, "技能及其效果失效。")
+            return
+        diminished = value <= 3
     if not ability.get("damage"):
         _apply_effects(state, pid, target, ability, level)
         state["phase"] = "main_2"
@@ -398,10 +479,16 @@ def _activate_ability(state: Dict, pid: str, action: Dict) -> None:
     if state["players"][target]["statuses"].get("targeted"):
         _remove_status(state["players"][target], "targeted")
         damage += 2
+    lifesteal = False
+    if kind != "ultimate":
+        damage, lifesteal = _season_two_attack_modifiers(state, pid, target, damage)
+    if diminished:
+        damage //= 2
     state["pending_attack"] = {"attacker": pid, "defender": target, "damage": damage,
                                "damage_type": kind, "ability_id": ability["id"], "ability_name": ability["name"],
                                "level": level, "prevent": 0, "extra_dice": extra_dice,
-                               "return_damage": ability.get("return_damage", 0), "concussion": concussion}
+                               "return_damage": ability.get("return_damage", 0), "concussion": concussion,
+                               "lifesteal": lifesteal}
     state["phase"] = "defensive_roll"
     state["current_player"] = target
     _log(state, pid, f"⚔️ 发动 {ability['name']}：{damage} 点待结算伤害。")
@@ -605,6 +692,7 @@ class DiceThroneGame:
                     raise ValueError("invalid die")
                 state["kept"][index] = not state["kept"][index]
             elif typ == "confirm_roll":
+                _resolve_mesmerize(state, pid)
                 state["phase"] = "targeting"
                 _finish_offense(state, pid)
             elif typ == "use_ability":

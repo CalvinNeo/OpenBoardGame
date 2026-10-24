@@ -9,6 +9,7 @@
   let view = null;
   let pendingAction = null;
   let selected = null;
+  let heroSeason = "all";
   let explainMode = false;
   let tipTimer = null;
   let focusBeforeDialog = null;
@@ -211,7 +212,7 @@
       content.append(node);
       return node;
     }
-    section("The duel", `Choose two different heroes from the eight Season One Rerolled champions: ${Object.keys(heroes).map(heroName).join(", ")}. Start at 50 ${named("health")}, 2 ${named("cp")} and 4 ${named("card")}. Reduce your opponent to 0 Health (❤️) to win. Final results remain visible.`);
+    section("The duel", `Choose two different heroes from ${Object.keys(heroes).length} champions across Season One Rerolled and Season Two: ${Object.keys(heroes).map(heroName).join(", ")}. Use the Season filters to browse heroes; the selection list scrolls inside its panel. Start at 50 ${named("health")}, 2 ${named("cp")} and 4 ${named("card")}. Reduce your opponent to 0 Health (❤️) to win. Final results remain visible.`);
     section("This digital edition", nextEditionText());
     section("1 · Main I", "Play or sell Cards (🃏), then Start rolling. Select a card to reveal its in-place Play / Sell / Cancel overlay. Selling gains 1 Combat Point (⚡). Main (🧭) cards are used in a main phase; Roll (🎲) cards modify rolled dice; Instant (✨) cards can be used when their listed timing permits. Hover an unavailable card or its Play button to see the reason. On a phone, tap the card or muted Play button for a three-second tooltip; each new tap replaces the previous tip. If a target, die, value or status is still required, Play explains the missing choice. Hero decks and discards are separate, and only your own hand is visible.");
     section("2 · Roll → attack", "Roll five Dice (🎲), up to three attempts. Tap a die to Keep (🔒) or release it; Roll again shows how many unlocked dice will reroll. All kept? Release a die or confirm, without spending another attempt. Each die independently rolls one of six equally likely numbers, so a reroll can repeat its previous number or symbol. Several numbered faces share a symbol; check the numbers or open a hero's dice reference. Rerolled dice animate even when the result repeats; kept dice stay still. Confirm the roll, choose a matching ability, then confirm on its overlay. Abilities have no Combat Points (⚡) cost. Skip attack advances without attacking. Abilities and Hand share one panel; switch tabs to consult either without scrolling the page.");
@@ -245,7 +246,7 @@
     return content;
   }
   function nextEditionText() {
-    return view?.edition_note || "A playable digital adaptation of all eight Season One Rerolled heroes. Status spending and companions are automated, and upgrade effects use the values shown here. The displayed descriptions specify this edition's behavior; full printed card-by-card parity is not claimed.";
+    return view?.edition_note || "A playable digital adaptation of Season One Rerolled and selected Season Two heroes. Status spending and companions are automated, and upgrade effects use the values shown here. The displayed descriptions specify this edition's behavior; full printed card-by-card parity is not claimed.";
   }
   function heroFaceName(hero, key) {
     return `${hero.symbol_names?.[key] || termFor(key)[0]} (${hero.symbol_icons?.[key] || termFor(key)[1]})`;
@@ -315,8 +316,12 @@
     $("HeroPicker").classList.toggle("hidden", !choosing);
     if (!choosing) return;
     const list = $("HeroChoices");
+    const scrollTop = list.scrollTop;
+    const visibleHeroes = Object.entries(heroes).filter(([, hero]) => heroSeason === "all" || String(hero.season || 1) === heroSeason);
+    $("HeroCount").textContent = `${visibleHeroes.length} / ${Object.keys(heroes).length} heroes`;
+    root.querySelectorAll("[data-dt-season]").forEach(node => node.setAttribute("aria-pressed", String(node.dataset.dtSeason === heroSeason)));
     list.replaceChildren();
-    Object.entries(heroes).forEach(([id, hero]) => {
+    visibleHeroes.forEach(([id, hero]) => {
       const active = selected?.kind === "hero" && selected.id === id;
       const node = el("article", `dt-hero-card dt-${id}${active ? " selected" : ""}`);
       node.dataset.hero = id;
@@ -329,7 +334,7 @@
       heading.append(el("span", "dt-avatar", hero.icon), heroNameButton(id));
       heading.inert = active;
       trigger.setAttribute("aria-label", `Select hero · ${hero.name_zh || hero.name}`);
-      trigger.append(el("small", "", `${hero.name} · ${hero.subtitle || ""}`));
+      trigger.append(el("small", "dt-hero-edition", `Season ${hero.season || 1} · ${hero.name}`), el("small", "", hero.subtitle || ""));
       const faces = el("div", "dt-requirement");
       hero.faces.forEach(key => faces.append(token(key)));
       trigger.append(faces);
@@ -346,6 +351,7 @@
       }
       list.append(node);
     });
+    list.scrollTop = scrollTop;
   }
 
   function renderPlayers() {
@@ -925,6 +931,15 @@
     NextBtn: ["Next Round", "Confirm the round review. Both players must be ready; Bots confirm automatically. No second confirmation is needed."],
   };
   Object.entries(actionHelp).forEach(([id, text]) => describe($(id), ...text));
+  root.querySelectorAll("[data-dt-season]").forEach(node => {
+    describe(node, `${node.textContent} heroes`, "Filter the available heroes by season. Both seasons can duel each other. Filtering does not choose a hero or spend an action.");
+    node.addEventListener("click", () => {
+      heroSeason = node.dataset.dtSeason;
+      selected = null;
+      $("HeroChoices").scrollTop = 0;
+      renderHeroPicker();
+    });
+  });
   [["RollBtn", "roll"], ["ConfirmBtn", "confirm_roll"], ["EndBtn", "end_phase"], ["PassBtn", "pass"], ["NextBtn", "next_round"]].forEach(([id, type]) => $(id).addEventListener("click", () => send({type})));
   root.querySelectorAll("[data-dt-tab]").forEach(node => {
     node.addEventListener("click", () => setDecisionTab(node.dataset.dtTab, true));
@@ -975,6 +990,7 @@
     if (!show) {
       view = null;
       selected = null;
+      heroSeason = "all";
       pendingAction = null;
       activity.length = 0;
       setExplain(false);

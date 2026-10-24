@@ -210,7 +210,7 @@
         if (!view) return;
         hideImmediateTip();
         panel.innerHTML = `<div class="ponzi-scheme-shell ${explaining ? "ponzi-scheme-explaining" : ""}">
-            <div class="ponzi-scheme-masthead"><div><p class="ponzi-scheme-eyebrow">PONZI SCHEME · ${view.advanced ? "ADVANCED" : "BASIC"}</p><h2>庞氏骗局</h2><p class="ponzi-scheme-tagline">承诺下一个明天，撑过这一个今天。</p></div><div class="ponzi-scheme-round"><span>ROUND</span><strong>${view.round}</strong></div></div>
+            <div class="ponzi-scheme-masthead"><span class="ponzi-scheme-eyebrow">${view.advanced ? "ADVANCED" : "BASIC"}</span><div class="ponzi-scheme-round"><span>Round</span><strong>${view.round}</strong></div></div>
             <div class="ponzi-scheme-status" role="status"><div><b>${phaseNames[view.phase]}</b><span>${view.current_turn ? `${view.current_turn === view.you ? "Your turn" : "Waiting for"} · ${esc(name(view.current_turn))}` : view.game_over ? "Game over" : `${view.next_ready.length} / ${view.players.length} ready`}</span></div><span class="ponzi-scheme-bears ${view.bear_count >= view.players.length ? "is-danger" : ""}">🐻 ${view.bear_count} / ${view.players.length} 崩盘</span></div>
             ${reviewHTML()}<div class="ponzi-scheme-layout"><div>${marketHTML()}</div><aside class="ponzi-scheme-sidebar">${cashHTML()}${actionHTML()}${historyHTML()}</aside></div>${playersHTML()}
             <p class="ponzi-scheme-footer">72 张资金牌 · 16 张熊牌 · ${view.first_round_trading ? "首轮可交易" : "首轮跳过交易"} · ${view.advanced ? "进阶：现金不计分" : "基础：现金最多 4 分"}</p></div>`;

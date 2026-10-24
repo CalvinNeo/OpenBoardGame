@@ -1,4 +1,4 @@
-"""Playable data for the Season One Rerolled roster.
+"""Playable data for Season One Rerolled and selected Season Two heroes.
 
 This is an explicitly simplified digital adaptation, not a transcription of
 printed hero boards. Hero identities and token themes were checked against
@@ -14,9 +14,11 @@ RULES = {
 }
 
 RULES_NOTE = (
-    "数字简化版：收录第一季重制版 8 位英雄；技能数值、精简牌组、升级和自动消耗指示物采用本页面规则，"
+    "数字简化版：收录第一季重制版 8 位英雄及第二季的枪手、武士、吸血鬼领主、炽天使，共 12 位；"
+    "骰面分布、技能数值、精简牌组、升级和自动消耗指示物采用本页面规则，"
     "不等同于实体版逐张复刻。技能免费发动；每人使用独立牌堆。状态与伙伴按说明自动结算，"
-    "未实现自由选择消耗时机、完整响应链及全部实体卡牌。"
+    "未实现自由选择消耗时机、完整响应链及全部实体卡牌。第二季的血之力仅自动选择增伤或吸血，"
+    "魅惑在对手确认进攻骰时检定，飞行仅自动用于防御；不包含实体版全部可选用法或被动能力。"
 )
 
 
@@ -53,6 +55,17 @@ STATUSES = {
     "dryad": _token("Dryad Spirit", "树灵", "🌳", 1, "伙伴：下次非终极攻击自动消耗，伤害 +3。", True, True),
     "barbed_vine": _token("Barbed Vine", "荆棘", "🌵", 1, "下次进攻掷骰结束时，每次额外重掷造成 1 点伤害，然后移除。"),
     "wellspring": _token("Wellspring", "生命泉", "💧", 2, "自己回合开始时每枚治疗 1，然后全部移除。", True),
+    "reload": _token("Reload", "装填", "🔄", 2, "下次非终极攻击自动消耗 1 枚并掷 1 骰，伤害增加点数的一半（向上取整）。", True),
+    "bounty": _token("Bounty", "悬赏", "💰", 1, "每次受到非终极攻击时，该攻击伤害 +1，攻击者获得 1 CP；此状态不会自动移除。"),
+    "honor": _token("Honor", "荣誉", "🏅", 2, "下次非终极攻击自动消耗全部荣誉：1 枚使伤害 +2，2 枚使伤害 +5。", True),
+    "shame": _token("Shame", "耻辱", "😔", 2, "下次非终极攻击自动移除全部耻辱，每枚使攻击伤害 -1，最低为 0。"),
+    "back_strike": _token("Back Strike", "反击", "↩️", 1, "受到非终极进攻伤害时自动消耗并掷 1 骰，反弹点数一半（向上取整）的伤害；在闪避和状态减伤前触发。", True),
+    "blood_power": _token("Blood Power", "血之力", "🩸", 5, "非终极攻击发动时自动消耗：至少 4 枚则消耗 4 枚，结算后治疗本次实际造成的伤害；否则消耗 1 枚，使伤害 +2。", True),
+    "bleed": _token("Bleed", "流血", "🩹", 2, "自己回合开始时每枚掷 1 骰：1–4 造成 1 点持续伤害；5–6 移除该枚。"),
+    "mesmerize": _token("Mesmerize", "魅惑", "👁️", 1, "对手确认进攻骰时自动消耗并掷 1 骰：5–6 时重掷其点数最高的一枚（同点取最左，可影响锁定骰）；不消耗对手掷骰次数。", True),
+    "flight": _token("Flight", "飞行", "🕊️", 3, "受到非终极进攻伤害时自动消耗 1 枚并掷 2 骰：有 6 则避免此次进攻伤害；不用于持续伤害或反弹。", True),
+    "holy_presence": _token("Holy Presence", "神圣威仪", "🌟", 2, "自己回合开始时每枚对对手造成 1 点持续伤害；不会自动移除，可用卡牌移除。", True),
+    "blinding_light": _token("Blinding Light", "炫目圣光", "🌤️", 1, "下次非终极进攻技能发动时移除并掷 1 骰：1 技能及效果失效；2–3 最终攻击伤害减半（向下取整）；4–6 无影响。"),
 }
 
 
@@ -151,14 +164,56 @@ NINJA_ABILITIES = [
 ]
 
 
-def _hero(name, name_zh, icon, subtitle, symbols, abilities, defense):
+GUNSLINGER_ABILITIES = [
+    _basic("six_shooter", "Six Shooter · 六连发", "bullet", [4, 6, 8]),
+    _ability("reload_and_aim", "Reload & Aim · 装填瞄准", {"counts": {"dash": 3}}, "获得 2 装填和 1 闪避。", self_status=["reload"] * 2 + ["evasive"]),
+    _ability("bounty_hunter", "Bounty Hunter · 赏金猎人", {"counts": {"bullet": 2, "dash": 2}}, "造成 5 点伤害；施加悬赏（从下次攻击生效）。", 5, opponent_status=["bounty"]),
+    _ability("quick_draw", "Quick Draw · 快速拔枪", {"straight": 4}, "造成 7 点伤害；获得装填。", 7, self_status=["reload"]),
+    _ability("deadeye", "Deadeye · 神射", {"counts": {"bullseye": 3}}, "造成 5 点不可防御伤害；施加悬赏。", 5, "undefendable", opponent_status=["bounty"]),
+    _ability("fan_the_hammer", "Fan the Hammer · 连珠射击", {"counts": {"bullseye": 4}}, "造成 8 点伤害；施加击倒。", 8, opponent_status=["knockdown"]),
+    _ability("duel_at_dawn", "Duel at Dawn · 黎明决斗", {"straight": 5}, "造成 10 点伤害；获得闪避和装填。", 10, self_status=["evasive", "reload"]),
+    _ability("dead_mans_hand", "Dead Man's Hand · 亡者之手", {"counts": {"bullseye": 5}}, "造成 12 点终极伤害；施加悬赏并获得 2 装填。", 12, "ultimate", self_status=["reload"] * 2, opponent_status=["bounty"]),
+]
+SAMURAI_ABILITIES = [
+    _basic("katana_cut", "Katana Cut · 居合斩", "katana", [4, 6, 8]),
+    _ability("bushido", "Bushido · 武士道", {"counts": {"helm": 3}}, "获得 2 荣誉和反击。", self_status=["honor"] * 2 + ["back_strike"]),
+    _ability("dishonor", "Dishonor · 蒙羞", {"counts": {"katana": 2, "helm": 2}}, "造成 5 点伤害；施加 2 耻辱。", 5, opponent_status=["shame"] * 2),
+    _ability("rising_sun", "Rising Sun · 旭日", {"straight": 4}, "造成 7 点伤害；获得荣誉。", 7, self_status=["honor"]),
+    _ability("stand_firm", "Stand Firm · 坚守", {"counts": {"banner": 3}}, "治疗 3；获得荣誉和反击。", heal=3, self_status=["honor", "back_strike"]),
+    _ability("crimson_blade", "Crimson Blade · 绯红之刃", {"counts": {"banner": 4}}, "造成 8 点不可防御伤害；施加耻辱。", 8, "undefendable", opponent_status=["shame"]),
+    _ability("sword_storm", "Sword Storm · 剑岚", {"straight": 5}, "造成 10 点伤害；获得反击。", 10, self_status=["back_strike"]),
+    _ability("shoguns_judgment", "Shogun's Judgment · 将军裁决", {"counts": {"banner": 5}}, "造成 13 点终极伤害；获得 2 荣誉并施加 2 耻辱。", 13, "ultimate", self_status=["honor"] * 2, opponent_status=["shame"] * 2),
+]
+VAMPIRE_LORD_ABILITIES = [
+    _basic("rending_claws", "Rending Claws · 撕裂之爪", "fang", [4, 6, 8]),
+    _ability("blood_ritual", "Blood Ritual · 血之仪式", {"counts": {"blood_symbol": 3}}, "获得 3 血之力；治疗 2。", heal=2, self_status=["blood_power"] * 3),
+    _ability("hemorrhage", "Hemorrhage · 血涌", {"counts": {"fang": 2, "blood_symbol": 2}}, "造成 5 点伤害；施加流血。", 5, opponent_status=["bleed"]),
+    _ability("sanguine_strike", "Sanguine Strike · 猩红打击", {"straight": 4}, "造成 7 点伤害；获得 2 血之力。", 7, self_status=["blood_power"] * 2),
+    _ability("mesmerizing_gaze", "Mesmerizing Gaze · 魅惑凝视", {"counts": {"gaze": 3}}, "获得魅惑和 2 血之力；治疗 2。", heal=2, self_status=["mesmerize"] + ["blood_power"] * 2),
+    _ability("night_feast", "Night Feast · 暗夜盛宴", {"counts": {"gaze": 4}}, "造成 7 点不可防御伤害；治疗 3 并施加流血。", 7, "undefendable", heal=3, opponent_status=["bleed"]),
+    _ability("crimson_reign", "Crimson Reign · 猩红统治", {"straight": 5}, "造成 10 点伤害；获得 2 血之力并施加流血。", 10, self_status=["blood_power"] * 2, opponent_status=["bleed"]),
+    _ability("blood_moon", "Blood Moon · 血月", {"counts": {"gaze": 5}}, "造成 12 点终极伤害；获得 4 血之力、魅惑并施加 2 流血。", 12, "ultimate", self_status=["blood_power"] * 4 + ["mesmerize"], opponent_status=["bleed"] * 2),
+]
+SERAPH_ABILITIES = [
+    _basic("holy_blade", "Holy Blade · 圣刃", "holy_sword", [4, 6, 8]),
+    _ability("ascend", "Ascend · 升空", {"counts": {"grace": 3}}, "获得 2 飞行；治疗 2。", heal=2, self_status=["flight"] * 2),
+    _ability("radiant_strike", "Radiant Strike · 光辉打击", {"counts": {"holy_sword": 2, "grace": 2}}, "造成 5 点伤害；施加炫目圣光。", 5, opponent_status=["blinding_light"]),
+    _ability("angelic_fury", "Angelic Fury · 天使之怒", {"straight": 4}, "造成 7 点伤害；获得神圣威仪。", 7, self_status=["holy_presence"]),
+    _ability("holy_light", "Holy Light · 圣光", {"counts": {"halo": 3}}, "治疗 4；获得净化和神圣威仪。", heal=4, self_status=["cleanse", "holy_presence"]),
+    _ability("judgment_ray", "Judgment Ray · 审判光束", {"counts": {"halo": 4}}, "造成 8 点不可防御伤害；施加炫目圣光。", 8, "undefendable", opponent_status=["blinding_light"]),
+    _ability("heavens_wrath", "Heaven's Wrath · 天罚", {"straight": 5}, "造成 10 点伤害；获得飞行。", 10, self_status=["flight"]),
+    _ability("divine_ascension", "Divine Ascension · 神圣升华", {"counts": {"halo": 5}}, "造成 12 点终极伤害；获得 2 神圣威仪、飞行并施加炫目圣光。", 12, "ultimate", self_status=["holy_presence"] * 2 + ["flight"], opponent_status=["blinding_light"]),
+]
+
+
+def _hero(name, name_zh, icon, subtitle, symbols, abilities, defense, season=1):
     faces, icons, names = [], {}, {}
     for key, symbol_icon, symbol_name, count in symbols:
         faces.extend([key] * count)
         icons[key], names[key] = symbol_icon, symbol_name
     return {"name": name, "name_zh": name_zh, "icon": icon, "subtitle": subtitle,
             "dice_faces": faces, "symbol_icons": icons, "symbol_names": names,
-            "abilities": abilities, "defense": defense}
+            "abilities": abilities, "defense": defense, "season": season}
 
 
 def _defense(id_, name, dice, description, **effects):
@@ -174,6 +229,10 @@ HEROES = {
     "shadow_thief": _hero("Shadow Thief", "影贼", "🗡️", "偷袭 · 中毒 · 暗影", [("dagger", "🗡️", "Dagger · 匕首", 3), ("bag", "💰", "Bag · 钱袋", 2), ("shadow", "🌑", "Shadow · 暗影", 1)], SHADOW_THIEF_ABILITIES, _defense("shadow_defense", "Shadow Defense · 暗影防御", 3, "每个钱袋获得 1 CP；掷出暗影时获得暗影，可立即避免本次普通进攻伤害。", cp_per={"bag": 1}, status_per={"shadow": "shadows"})),
     "treant": _hero("Treant", "树人", "🌳", "精灵伙伴 · 生长 · 恢复", [("branch", "🪵", "Branch · 枝干", 3), ("leaf", "🍃", "Leaf · 叶", 2), ("spirit", "🌳", "Spirit · 精灵", 1)], TREANT_ABILITIES, _defense("rooted", "Rooted · 扎根", 3, "每片叶子阻挡 1；每个精灵符号治疗 2 并获得 1 幼苗精灵。", prevent_per={"leaf": 1}, heal_per={"spirit": 2}, status_per={"spirit": "seedling"})),
     "ninja": _hero("Ninja", "忍者", "🥷", "忍术 · 烟雾弹 · 延迟毒素", [("blade", "⚔️", "Blade · 忍刀", 3), ("star", "✴️", "Star · 手里剑", 2), ("mask", "🥷", "Mask · 面罩", 1)], NINJA_ABILITIES, _defense("shadow_form", "Shadow Form · 影遁", 3, "每个手里剑阻挡 1；每个面罩获得烟雾弹，可立即用于本次伤害。", prevent_per={"star": 1}, status_per={"mask": "smoke_bomb"})),
+    "gunslinger": _hero("Gunslinger", "枪手", "🤠", "装填 · 悬赏 · 闪避", [("bullet", "🔫", "Bullet · 子弹", 3), ("dash", "💨", "Dash · 疾行", 2), ("bullseye", "🎯", "Bullseye · 靶心", 1)], GUNSLINGER_ABILITIES, _defense("dodge_roll", "Dodge Roll · 翻滚闪避", 3, "每个疾行阻挡 1；每个靶心获得闪避，可立即用于本次伤害。", prevent_per={"dash": 1}, status_per={"bullseye": "evasive"}), season=2),
+    "samurai": _hero("Samurai", "武士", "⛩️", "荣誉 · 耻辱 · 反击", [("katana", "🗡️", "Katana · 太刀", 3), ("helm", "🛡️", "Helm · 兜", 2), ("banner", "🎌", "Banner · 战旗", 1)], SAMURAI_ABILITIES, _defense("blade_guard", "Blade Guard · 刀锋守势", 3, "每顶兜阻挡 1；每面战旗获得反击，可立即用于本次进攻。", prevent_per={"helm": 1}, status_per={"banner": "back_strike"}), season=2),
+    "vampire_lord": _hero("Vampire Lord", "吸血鬼领主", "🧛", "血之力 · 流血 · 魅惑", [("fang", "🦷", "Fang · 尖牙", 3), ("blood_symbol", "🩸", "Blood · 鲜血", 2), ("gaze", "👁️", "Gaze · 凝视", 1)], VAMPIRE_LORD_ABILITIES, _defense("blood_ward", "Blood Ward · 血之守护", 3, "每个鲜血阻挡 1；每个凝视治疗 1 并获得 1 血之力。", prevent_per={"blood_symbol": 1}, heal_per={"gaze": 1}, status_per={"gaze": "blood_power"}), season=2),
+    "seraph": _hero("Seraph", "炽天使", "👼", "飞行 · 圣光 · 神圣威仪", [("holy_sword", "⚔️", "Holy Sword · 圣剑", 3), ("grace", "✨", "Grace · 恩典", 2), ("halo", "😇", "Halo · 光环", 1)], SERAPH_ABILITIES, _defense("celestial_guard", "Celestial Guard · 天界守护", 3, "每个恩典阻挡 1；每个光环获得飞行，可立即用于本次进攻。", prevent_per={"grace": 1}, status_per={"halo": "flight"}), season=2),
 }
 
 CARDS = {}
@@ -209,6 +268,10 @@ _HERO_ACTIONS = {
     "shadow_thief": [("poison_tip", "Poison Tip · 毒药", 1, "opponent", {"opponent_status": ["poison"]}, "施加中毒。"), ("cloak_and_dagger", "Cloak and Dagger · 斗篷与匕首", 2, "self", {"self_status": ["shadows", "sneak_attack"]}, "获得暗影和偷袭。")],
     "treant": [("new_growth", "New Growth · 新芽", 1, "self", {"self_status": ["seedling", "sapling"]}, "获得幼苗精灵和树苗精灵。"), ("ancient_spirit", "Ancient Spirit · 古老树灵", 2, "self", {"self_status": ["dryad", "wellspring"]}, "获得树灵和生命泉。")],
     "ninja": [("smoke_and_mirrors", "Smoke and Mirrors · 镜花水月", 1, "self", {"self_status": ["smoke_bomb"]}, "获得烟雾弹。"), ("deadly_art", "Deadly Art · 致命忍术", 1, "self", {"self_status": ["ninjutsu"] * 2}, "获得 2 忍术。")],
+    "gunslinger": [("powder_reserve", "Powder Reserve · 弹药储备", 1, "self", {"self_status": ["reload"] * 2}, "获得 2 装填。"), ("wanted_poster", "Wanted Poster · 通缉令", 1, "opponent", {"opponent_status": ["bounty"]}, "施加悬赏。")],
+    "samurai": [("code_of_honor", "Code of Honor · 荣誉准则", 1, "self", {"self_status": ["honor"] * 2}, "获得 2 荣誉。"), ("disgrace", "Disgrace · 奇耻大辱", 1, "opponent", {"opponent_status": ["shame"] * 2}, "施加 2 耻辱。")],
+    "vampire_lord": [("blood_reserve", "Blood Reserve · 血能储备", 1, "self", {"self_status": ["blood_power"] * 3}, "获得 3 血之力。"), ("mesmerism", "Mesmerism · 催眠术", 1, "self", {"self_status": ["mesmerize"]}, "获得魅惑。")],
+    "seraph": [("wings_of_light", "Wings of Light · 光之翼", 1, "self", {"self_status": ["flight"] * 2}, "获得 2 飞行。"), ("sacred_presence", "Sacred Presence · 神圣降临", 2, "self", {"self_status": ["holy_presence"], "heal": 2}, "获得神圣威仪并治疗 2。")],
 }
 for hero, actions in _HERO_ACTIONS.items():
     for sid, name, cost, target, effects, description in actions:

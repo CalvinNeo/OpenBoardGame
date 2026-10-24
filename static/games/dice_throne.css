@@ -58,6 +58,11 @@
 .dt-abilities, .dt-hand-area { padding: 8px; }
 .dt-decisions[data-active-tab="abilities"] .dt-hand-area, .dt-decisions[data-active-tab="hand"] .dt-abilities { display: none; }
 .dt-hero-choices, .dt-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dt-hero-choices { max-height: min(540px, 58dvh); overflow-y: auto; overscroll-behavior: contain; padding: 3px; scroll-padding: 3px; }
+.dt-hero-filters { display: flex; gap: 5px; margin-bottom: 7px; }
+.dice-throne-shell .dt-hero-filters button { flex: 1; min-height: 32px; padding: 5px 7px; }
+.dice-throne-shell .dt-hero-filters button[aria-pressed="true"] { color: #624b20; border-color: #b58d45; background: #f9ebc7; }
+.dt-hero-trigger .dt-hero-edition { color: #665b42; font-weight: 600; }
 .dice-throne-shell .dt-hero-card { position: relative; display: flex; flex-direction: column; align-items: stretch; min-height: 144px; padding: 0; border: 1px solid #ddbeaa; border-top: 3px solid var(--dt-rust); border-radius: 9px; text-align: left; background: #fff8ef; isolation: isolate; }
 .dice-throne-shell .dt-hero-trigger { display: flex; flex: 1 0 auto; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; min-height: 140px; padding: 14px; border: 0; background: transparent; text-align: left; box-shadow: none; }
 .dice-throne-shell .dt-hero-trigger:disabled { background: transparent; }
@@ -71,6 +76,10 @@
 .dice-throne-shell .dt-hero-card[data-hero="shadow_thief"] { background: #f3edf8; border-color: #cfc0df; border-top-color: #785292; }
 .dice-throne-shell .dt-hero-card[data-hero="treant"] { background: #edf3e6; border-color: #c2d2ac; border-top-color: #5c7c3e; }
 .dice-throne-shell .dt-hero-card[data-hero="ninja"] { background: #eef0f4; border-color: #c5cbd5; border-top-color: #4e5b70; }
+.dice-throne-shell .dt-hero-card[data-hero="gunslinger"] { background: #fff2e3; border-color: #d9b789; border-top-color: #98652a; }
+.dice-throne-shell .dt-hero-card[data-hero="samurai"] { background: #faeeec; border-color: #dbb8b3; border-top-color: #9d4048; }
+.dice-throne-shell .dt-hero-card[data-hero="vampire_lord"] { background: #f8edf3; border-color: #d2b5c8; border-top-color: #86385e; }
+.dice-throne-shell .dt-hero-card[data-hero="seraph"] { background: #edf5fc; border-color: #b7cee2; border-top-color: #397a9c; }
 .dt-hero-card strong { font: 600 20px/1.15 Georgia, serif; }
 .dt-hero-card small { color: var(--dt-muted); font-size: 11px; line-height: 1.5; font-weight: 400; }
 .dt-hero-card > span { font-size: 12px; line-height: 1.5; }
@@ -86,6 +95,10 @@
 .dt-player.dt-shadow_thief { --dt-hero-color: #785292; --dt-hero-pale: #e7dcef; --dt-hero-bg: #f6f0fa; }
 .dt-player.dt-treant { --dt-hero-color: #5c7c3e; --dt-hero-pale: #dfebd0; --dt-hero-bg: #f2f7ea; }
 .dt-player.dt-ninja { --dt-hero-color: #4e5b70; --dt-hero-pale: #dde2ea; --dt-hero-bg: #f2f4f8; }
+.dt-player.dt-gunslinger { --dt-hero-color: #98652a; --dt-hero-pale: #f3dfbf; --dt-hero-bg: #fff5e9; }
+.dt-player.dt-samurai { --dt-hero-color: #9d4048; --dt-hero-pale: #f1d8d7; --dt-hero-bg: #fbf0ee; }
+.dt-player.dt-vampire_lord { --dt-hero-color: #86385e; --dt-hero-pale: #ead6e2; --dt-hero-bg: #f9eff6; }
+.dt-player.dt-seraph { --dt-hero-color: #397a9c; --dt-hero-pale: #d6e8f2; --dt-hero-bg: #eff7fc; }
 .dt-player.dt-turn { box-shadow: 0 0 0 2px #bf944d55, 0 3px 8px #5d4e1012; }
 .dt-player.dt-defeated { filter: saturate(.5); }
 .dt-player-head { display: flex; align-items: center; gap: 5px; }
@@ -131,6 +144,11 @@
 .dt-tone-kept { color: #8a6a22; background: #f7e8bc; }
 .dt-tone-main { color: #7b683d; background: #efe9d9; }
 .dt-tone-instant { color: #8a5e8d; background: #f2e5f1; }
+.dt-tone-reload, .dt-tone-bounty, .dt-tone-honor, .dt-tone-bullseye, .dt-tone-banner { color: #806020; background: #f6e8c7; }
+.dt-tone-blood_power, .dt-tone-bleed, .dt-tone-blood_symbol, .dt-tone-fang { color: #943f5d; background: #f5e0e9; }
+.dt-tone-flight, .dt-tone-holy_presence, .dt-tone-grace, .dt-tone-halo { color: #356b8d; background: #dfeef7; }
+.dt-tone-mesmerize, .dt-tone-gaze { color: #714875; background: #eee1f1; }
+.dt-tone-back_strike, .dt-tone-shame, .dt-tone-blinding_light { color: #805337; background: #f4e7dd; }
 .dt-battle-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 7px; }
 .dt-roll-zone { padding: 10px; border-radius: 10px; color: #f8f6ea; background: var(--dt-navy); box-shadow: inset 0 0 0 1px #ffffff08; }
 .dt-roll-zone .dt-section-head { margin-bottom: 6px; }
@@ -170,6 +188,10 @@
 .dice-throne-shell button.dt-face-arrow { --dt-die-accent: #32714c; }
 .dice-throne-shell button.dt-face-foot { --dt-die-accent: #257773; }
 .dice-throne-shell button.dt-face-moon { --dt-die-accent: #685397; }
+.dice-throne-shell button.dt-face-bullet, .dice-throne-shell button.dt-face-dash, .dice-throne-shell button.dt-face-bullseye { --dt-die-accent: #98652a; }
+.dice-throne-shell button.dt-face-katana, .dice-throne-shell button.dt-face-helm, .dice-throne-shell button.dt-face-banner { --dt-die-accent: #9d4048; }
+.dice-throne-shell button.dt-face-fang, .dice-throne-shell button.dt-face-blood_symbol, .dice-throne-shell button.dt-face-gaze { --dt-die-accent: #86385e; }
+.dice-throne-shell button.dt-face-holy_sword, .dice-throne-shell button.dt-face-grace, .dice-throne-shell button.dt-face-halo { --dt-die-accent: #397a9c; }
 .dice-throne-shell button.dt-die.empty { color: #a7a89b; background: #344b57; border: 1px dashed #72818a; box-shadow: none; }
 .dice-throne-shell button.dt-die.empty .dt-die-label, .dice-throne-shell button.dt-die.empty .dt-keep { color: #c2cdcf; }
 .dt-dice-hint { min-height: 14px; margin: 7px 0; color: #b5c7c8; font-size: 11px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }

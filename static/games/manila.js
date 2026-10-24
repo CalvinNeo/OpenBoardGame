@@ -1,1931 +1,806 @@
-let currentManilaView = null;
-let manilaSelectedCargo = [];
-let manilaCycleOpen = false;
-let manilaCycleUserOverride = null;
-let manilaLastPhase = null;
-let manilaTooltipTimer = null;
-let manilaPilotDraft = null;
-
-const manilaPhaseLabel = document.getElementById("manilaPhase");
-const manilaRoundLabel = document.getElementById("manilaRound");
-const manilaCurrentLabel = document.getElementById("manilaCurrent");
-const manilaHarborLabel = document.getElementById("manilaHarbor");
-const manilaHarborBidLabel = document.getElementById("manilaHarborBid");
-const manilaPricesLabel = document.getElementById("manilaPrices");
-const manilaBoats = document.getElementById("manilaBoats");
-const manilaDiceBar = document.getElementById("manilaDiceBar");
-const manilaBoard = document.getElementById("manilaBoard");
-const manilaPlayers = document.getElementById("manilaPlayers");
-const manilaLegalActions = document.getElementById("manilaLegalActions");
-const manilaTooltip = document.getElementById("manilaTooltip");
-
-const manilaAuctionInfo = document.getElementById("manilaAuctionInfo");
-const manilaAuctionBidList = document.getElementById("manilaAuctionBidList");
-const manilaBidInput = document.getElementById("manilaBidInput");
-const manilaBidBtn = document.getElementById("manilaBidBtn");
-const manilaPassBidBtn = document.getElementById("manilaPassBidBtn");
-const manilaPledgeSelect = document.getElementById("manilaPledgeSelect");
-const manilaPledgeBtn = document.getElementById("manilaPledgeBtn");
-
-const manilaBuyStockGroup = document.getElementById("manilaBuyStockGroup");
-const manilaBuyStockButtons = document.getElementById("manilaBuyStockButtons");
-const manilaSkipBuyBtn = document.getElementById("manilaSkipBuyBtn");
-
-const manilaSelectCargoGroup = document.getElementById("manilaSelectCargoGroup");
-const manilaSelectCargoButtons = document.getElementById("manilaSelectCargoButtons");
-const manilaConfirmCargoBtn = document.getElementById("manilaConfirmCargoBtn");
-const manilaResetCargoBtn = document.getElementById("manilaResetCargoBtn");
-
-const manilaPositionsGroup = document.getElementById("manilaPositionsGroup");
-const manilaPositionsWrap = document.getElementById("manilaPositionsWrap");
-const manilaPositionsSum = document.getElementById("manilaPositionsSum");
-const manilaConfirmPositionsBtn = document.getElementById("manilaConfirmPositionsBtn");
-
-const manilaPassFacility = document.getElementById("manilaPassFacility");
-const manilaPassBtn = document.getElementById("manilaPassBtn");
-
-const manilaPilotGroup = document.getElementById("manilaPilotGroup");
-const manilaPilotRows = document.getElementById("manilaPilotRows");
-
-const manilaPirateGroup = document.getElementById("manilaPirateGroup");
-const manilaPirateRole = document.getElementById("manilaPirateRole");
-const manilaPirateTargetSelect = document.getElementById("manilaPirateTargetSelect");
-const manilaPirateResultSelect = document.getElementById("manilaPirateResultSelect");
-const manilaPirateBoardBtn = document.getElementById("manilaPirateBoardBtn");
-const manilaPiratePlunderBtn = document.getElementById("manilaPiratePlunderBtn");
-const manilaPirateSkipBtn = document.getElementById("manilaPirateSkipBtn");
-
-const manilaCycleModal = document.getElementById("manilaCycleModal");
-const manilaCycleToggleBtn = document.getElementById("manilaCycleToggleBtn");
-const manilaCycleCloseBtn = document.getElementById("manilaCycleCloseBtn");
-const manilaCycleExplainBtn = document.getElementById("manilaCycleExplainBtn");
-const manilaCycleStatus = document.getElementById("manilaCycleStatus");
-const manilaCyclePhase = document.getElementById("manilaCyclePhase");
-const manilaCycleRecap = document.getElementById("manilaCycleRecap");
-
-const manilaPledgeGroup = document.getElementById("manilaPledgeGroup");
-
-const manilaRoundEndPanel = document.getElementById("manilaRoundEndPanel");
-const manilaRoundEndPlayers = document.getElementById("manilaRoundEndPlayers");
-const manilaRoundEndStatus = document.getElementById("manilaRoundEndStatus");
-const manilaNextRoundBtn = document.getElementById("manilaNextRoundBtn");
-
-const manilaHeaderActions = document.getElementById("manilaHeaderActions");
-const manilaHelpBtn = document.getElementById("manilaHelpBtn");
-const manilaExplainBtn = document.getElementById("manilaExplainBtn");
-const manilaHelpModal = document.getElementById("manilaHelpModal");
-const manilaHelpModalCloseBtn = document.getElementById("manilaHelpModalCloseBtn");
-const manilaExplainModal = document.getElementById("manilaExplainModal");
-const manilaExplainModalCloseBtn = document.getElementById("manilaExplainModalCloseBtn");
-const manilaExplainContent = document.getElementById("manilaExplainContent");
-
-const MANILA_CARGO_ORDER = ["nutmeg", "silk", "ginseng", "jade"];
-
-const MANILA_CARGO_META = {
-  nutmeg: {
-    label: "Nutmeg",
-    icon: "🟫",
-    accent: "nutmeg",
-    totalValue: 24,
-    seatCosts: [2, 3, 4],
-  },
-  silk: {
-    label: "Silk",
-    icon: "🟨",
-    accent: "silk",
-    totalValue: 18,
-    seatCosts: [1, 2, 3],
-  },
-  ginseng: {
-    label: "Ginseng",
-    icon: "🟩",
-    accent: "ginseng",
-    totalValue: 36,
-    seatCosts: [3, 4, 5, 5],
-  },
-  jade: {
-    label: "Jade",
-    icon: "🟦",
-    accent: "jade",
-    totalValue: 30,
-    seatCosts: [3, 4, 5],
-  },
-};
-
-const MANILA_BOARD_VALUES = {
-  port: {
-    A: { cost: 4, payout: 6 },
-    B: { cost: 3, payout: 8 },
-    C: { cost: 2, payout: 15 },
-  },
-  shipyard: {
-    A: { cost: 4, payout: 6 },
-    B: { cost: 3, payout: 8 },
-    C: { cost: 2, payout: 15 },
-  },
-  pirates: { cost: 5 },
-  pilots: { small: 2, big: 5 },
-  insurance: { cost: 0, reward: 10 },
-};
-
-const MANILA_CYCLE_PHASES = new Set([
-  "auction",
-  "harbormaster_pay",
-  "harbormaster_buy",
-  "harbormaster_cargo",
-  "harbormaster_position",
-  "placement",
-]);
-
-const MANILA_DYNAMIC_EXPLANATIONS = {
-  port: {
-    name: "Port Slot",
-    description: "Pays out when ships successfully reach port (based on arrival order).",
-    cost: "🪙 Pay slot cost",
-    costType: "pay",
-  },
-  shipyard: {
-    name: "Shipyard Slot",
-    description: "Pays out when ships fail to reach port (based on failure order).",
-    cost: "🪙 Pay slot cost",
-    costType: "pay",
-  },
-  pirate: {
-    name: "Pirate Role",
-    description: "Join pirates to board ships that hit port exactly on day 2, or plunder ships that hit port exactly on day 3. First player becomes Captain, second becomes Pirate.",
-    cost: "🪙 Pay slot cost",
-    costType: "pay",
-  },
-  pilot: {
-    name: "Pilot Role",
-    description: "Adjust ships by +/- before the final dice movement (big pilot can split or push one ship twice).",
-    cost: "🪙 Pay slot cost",
-    costType: "pay",
-  },
-  insurance: {
-    name: "Insurance Broker",
-    description: "Gain immediate cash, then pay per failed ship this round.",
-    cost: "🪙 Pay slot cost",
-    costType: "pay",
-  },
-};
-
-const MANILA_HELP_TEXT = `
-<h3>Game Overview</h3>
-<p>Manila is a wagering-and-placement game where players invest in cargo ships, place workers in harbor roles, and profit as ships (hopefully) reach port.</p>
-
-<h3>Round Structure</h3>
-<ol>
-  <li><strong>Auction</strong> – Bid to become Harbormaster.</li>
-  <li><strong>Harbormaster Setup</strong> – Optional stock buy, choose 3 cargo, set initial positions.</li>
-  <li><strong>Placement (3 mini-rounds)</strong> – Place workers on ships, port, shipyard, pirate, pilot, insurance.</li>
-  <li><strong>Movement & Resolve</strong> – Ships move by dice (with pilots/pirates), then payouts occur.</li>
-</ol>
-
-<h3>Key Ideas</h3>
-<ul>
-  <li><strong>Ship seats</strong> share profits when a ship arrives.</li>
-  <li><strong>Port</strong> pays for successful ships; <strong>Shipyard</strong> pays for failures.</li>
-  <li><strong>Arrival order</strong> fills Port A/B/C when ships move past space 13.</li>
-  <li><strong>Pirates</strong> can board ships that hit port exactly on day 2, and plunder ships that hit port exactly on day 3.</li>
-  <li><strong>Plundered ships</strong> still resolve to Port or Shipyard based on the Captain's choice.</li>
-  <li><strong>Pilots</strong> can adjust ships by +/- before the last roll; big pilot can split across two ships or push one ship twice.</li>
-  <li><strong>Insurance</strong> pays immediately but collects per failed ship.</li>
-  <li><strong>Pledge Stock</strong> gives instant cash but costs more at final scoring.</li>
-</ul>
-
-<h3>Placement Tip</h3>
-<p>During placement, click a dock slot or ship seat directly on the board/boats. During the pilot phase, click the +/- buttons beside ships.</p>
-`;
-
-const MANILA_BUTTON_EXPLANATIONS = {
-  manilaCycleToggleBtn: {
-    name: "Harbormaster Panel",
-    description: "Open or hide the Harbormaster cycle panel to review auction/setup actions.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaBidBtn: {
-    name: "Bid",
-    description: "Place a higher bid to become Harbormaster this round.",
-    cost: "🪙 Pay bid if you win",
-    costType: "pay",
-  },
-  manilaPassBidBtn: {
-    name: "Pass",
-    description: "Pass on the auction. You cannot bid again this round.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaPayBidBtn: {
-    name: "Pay Bid",
-    description: "Pay your winning bid to become Harbormaster and start setup.",
-    cost: "🪙 Pay bid",
-    costType: "pay",
-  },
-  manilaSkipBuyBtn: {
-    name: "Skip Buy",
-    description: "Skip the optional stock purchase and move to cargo selection.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaConfirmCargoBtn: {
-    name: "Confirm Cargo",
-    description: "Lock in the 3 cargo types that will sail this round.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaResetCargoBtn: {
-    name: "Reset Cargo",
-    description: "Clear your current cargo selection.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaConfirmPositionsBtn: {
-    name: "Confirm Positions",
-    description: "Set the three ships' starting positions (must sum to 9).",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaPassBtn: {
-    name: "Pass Placement",
-    description: "Pass your placement turn without placing a worker.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaNextRoundBtn: {
-    name: "Next Round",
-    description: "Mark yourself ready. The next round starts when everyone is ready.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaPirateBoardBtn: {
-    name: "Board",
-    description: "Send your pirate to board a ship (take a seat).",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaPiratePlunderBtn: {
-    name: "Plunder",
-    description: "As Captain, plunder a ship that hit port exactly.",
-    cost: "Gain ship value",
-    costType: "gain",
-  },
-  manilaPirateSkipBtn: {
-    name: "Skip",
-    description: "Skip your pirate action.",
-    cost: "Free",
-    costType: "free",
-  },
-  manilaPledgeBtn: {
-    name: "Pledge Stock",
-    description: "Pledge one stock for immediate cash. You repay more at final scoring.",
-    cost: "Gain loan",
-    costType: "gain",
-  },
-};
-
-let manilaExplainMode = false;
-
-function formatManilaPlayerName(view, playerId) {
-  if (!view || !Array.isArray(view.players)) {
-    return playerId || "-";
-  }
-  const match = view.players.find((p) => p.player_id === playerId);
-  if (!match) {
-    return playerId || "-";
-  }
-  return match.name || match.player_id || "-";
-}
-
-function formatManilaSeat(seat, view) {
-  if (!seat) {
-    return "-";
-  }
-  return formatManilaPlayerName(view, seat);
-}
-
-function formatManilaBidLine(view) {
-  if (!view || !view.auction || !view.auction.bids || !Array.isArray(view.players)) {
-    return "";
-  }
-  const parts = view.players.map((player) => {
-    const amount = view.auction.bids[player.player_id] ?? 0;
-    const name = player.name || player.player_id;
-    return `${name} ${amount}`;
-  });
-  return parts.length ? `Bids: ${parts.join(" · ")}` : "";
-}
-
-function renderManilaBidList(view) {
-  if (!view || !view.auction || !view.auction.bids || !Array.isArray(view.players)) {
-    return "";
-  }
-  const active = new Set(view.auction.active || []);
-  const rows = view.players.map((player) => {
-    const amount = view.auction.bids[player.player_id] ?? 0;
-    const name = player.name || player.player_id;
-    const isLeader = view.auction.leader === player.player_id;
-    const isPassed = !active.has(player.player_id);
-    return `
-      <div class="manila-auction-bid-row ${isLeader ? "leader" : ""} ${isPassed ? "passed" : ""}">
-        <span>${name}${isPassed ? " (Passed)" : ""}</span>
-        <span>${isPassed ? "—" : `🪙 ${amount}`}</span>
-      </div>
-    `;
-  });
-  return rows.join("");
-}
-
-function getCargoList(view) {
-  if (!view) {
-    return MANILA_CARGO_ORDER.slice();
-  }
-  const cargos = new Set();
-  if (view.price_track) {
-    Object.keys(view.price_track).forEach((key) => cargos.add(key));
-  }
-  if (Array.isArray(view.cargo_slots)) {
-    view.cargo_slots.forEach((key) => cargos.add(key));
-  }
-  Object.keys(view.boats || {}).forEach((key) => cargos.add(key));
-  return cargos.size ? Array.from(cargos) : MANILA_CARGO_ORDER.slice();
-}
-
-function getCargoOrder(view) {
-  const base = MANILA_CARGO_ORDER.slice();
-  const extra = getCargoList(view).filter((cargo) => !base.includes(cargo));
-  return base.concat(extra);
-}
-
-function getCargoMeta(cargo) {
-  return MANILA_CARGO_META[cargo] || { label: cargo, icon: "⬜", accent: "neutral" };
-}
-
-function renderManilaCargoChip(cargo) {
-  const meta = getCargoMeta(cargo);
-  const label = meta.label || cargo;
-  const accent = meta.accent || "neutral";
-  return `<span class="manila-cargo-chip manila-cargo-${accent}">${meta.icon} ${label}</span>`;
-}
-
-function showManilaTooltip(message) {
-  if (!manilaTooltip) {
-    return;
-  }
-  manilaTooltip.textContent = message;
-  setVisible(manilaTooltip, true);
-  if (manilaTooltipTimer) {
-    clearTimeout(manilaTooltipTimer);
-  }
-  manilaTooltipTimer = window.setTimeout(() => {
-    setVisible(manilaTooltip, false);
-    manilaTooltipTimer = null;
-  }, 3000);
-}
-
-function isActionAvailable(view, actionType) {
-  if (!view || !Array.isArray(view.legal_actions)) {
-    return false;
-  }
-  return view.legal_actions.includes(actionType);
-}
-
-function canPlaceWorker(view) {
-  if (!view) {
-    return false;
-  }
-  return view.phase === "placement" && view.current_player === view.you && isActionAvailable(view, "place_worker");
-}
-
-function getActivePilotSize(view) {
-  if (!view || view.phase !== "pilot") {
-    return null;
-  }
-  const pending = Array.isArray(view.pending_pilots) ? view.pending_pilots : [];
-  return pending.length ? pending[0] : null;
-}
-
-function syncManilaPilotDraft(view) {
-  const activeSize = getActivePilotSize(view);
-  if (activeSize !== "big" || !manilaPilotDraft || manilaPilotDraft.size !== "big") {
-    manilaPilotDraft = null;
-    return;
-  }
-  const boats = view && view.boats ? view.boats : {};
-  const nextMoves = manilaPilotDraft.moves.filter((move) => {
-    const boat = boats[move.cargo];
-    return boat && !boat.arrived;
-  });
-  if (!nextMoves.length) {
-    manilaPilotDraft = null;
-    return;
-  }
-  manilaPilotDraft.moves = nextMoves.slice(0, 1);
-}
-
-function getPilotRemainingMoves(view, size) {
-  const pending = new Set(Array.isArray(view && view.pending_pilots) ? view.pending_pilots : []);
-  if (!pending.has(size)) {
-    return 0;
-  }
-  if (size === "big" && manilaPilotDraft && manilaPilotDraft.size === "big") {
-    return Math.max(0, 2 - manilaPilotDraft.moves.length);
-  }
-  return size === "big" ? 2 : 1;
-}
-
-function rerenderManilaPilotUi() {
-  if (!currentManilaView) {
-    return;
-  }
-  renderManilaBoats(currentManilaView);
-  updatePilotActions(currentManilaView);
-}
-
-function queueManilaPilotMove(cargoId, delta) {
-  const view = currentManilaView;
-  const activeSize = getActivePilotSize(view);
-  const boardPilots = view && view.board ? view.board.pilots || {} : {};
-  const isMyPilotTurn =
-    !!view &&
-    activeSize &&
-    view.current_player === view.you &&
-    boardPilots[activeSize] === view.you &&
-    isActionAvailable(view, activeSize === "big" ? "pilot_split" : "pilot_move");
-  if (!isMyPilotTurn) {
-    return;
-  }
-  const boat = view && view.boats ? view.boats[cargoId] : null;
-  if (!boat || boat.arrived) {
-    return;
-  }
-  if (delta < 0 && Number(boat.position || 0) <= 0) {
-    return;
-  }
-
-  if (activeSize === "small") {
-    sendAction({ type: "pilot_move", size: "small", cargo: cargoId, delta });
-    return;
-  }
-
-  if (!manilaPilotDraft || manilaPilotDraft.size !== "big") {
-    manilaPilotDraft = { size: "big", moves: [] };
-  }
-
-  const firstMove = manilaPilotDraft.moves[0];
-  if (!firstMove) {
-    manilaPilotDraft.moves = [{ cargo: cargoId, delta }];
-    showManilaTooltip(
-      `Big Pilot queued ${getCargoMeta(cargoId).label} ${delta > 0 ? "+1" : "-1"}. Click the same sign again for ${delta > 0 ? "+2" : "-2"}, or choose another ship to split.`
-    );
-    rerenderManilaPilotUi();
-    return;
-  }
-
-  manilaPilotDraft = null;
-  if (firstMove.cargo === cargoId) {
-    if (firstMove.delta !== delta) {
-      showManilaTooltip("Big Pilot cannot reverse the same ship. Start over or click the same sign again.");
-      rerenderManilaPilotUi();
-      return;
-    }
-    sendAction({
-      type: "pilot_move",
-      size: "big",
-      cargo: cargoId,
-      delta: delta * 2,
-    });
-    return;
-  }
-
-  sendAction({
-    type: "pilot_split",
-    size: "big",
-    cargo_a: firstMove.cargo,
-    delta_a: firstMove.delta,
-    cargo_b: cargoId,
-    delta_b: delta,
-  });
-}
-
-function setVisible(el, visible) {
-  if (!el) {
-    return;
-  }
-  el.classList.toggle("hidden", !visible);
-  el.setAttribute("aria-hidden", (!visible).toString());
-}
-
-function setDisabled(el, disabled) {
-  if (!el) {
-    return;
-  }
-  el.disabled = !!disabled;
-  el.classList.toggle("disabled", !!disabled);
-}
-
-function formatManilaPhase(phase) {
-  if (!phase) {
-    return "-";
-  }
-  return phase.replace(/_/g, " ");
-}
-
-function setManilaCycleOpen(open) {
-  manilaCycleOpen = open;
-  if (typeof setModalVisible === "function") {
-    setModalVisible(manilaCycleModal, open);
-  } else {
-    setVisible(manilaCycleModal, open);
-  }
-  if (manilaCycleToggleBtn) {
-    manilaCycleToggleBtn.textContent = open ? "Hide Harbormaster Panel" : "Open Harbormaster Panel";
-  }
-}
-
-function updateManilaCycleRecap(view) {
-  if (!manilaCycleRecap) {
-    return;
-  }
-  if (!view) {
-    manilaCycleRecap.textContent = "No cycle data yet.";
-    return;
-  }
-  const phaseLabel = formatManilaPhase(view.phase);
-  const harbor = formatManilaPlayerName(view, view.harbormaster);
-  const bid = view.harbormaster_bid ?? 0;
-  const cargoSlots = Array.isArray(view.cargo_slots) ? view.cargo_slots : [];
-  const cargoLabel = cargoSlots.length ? cargoSlots.map((cargo) => renderManilaCargoChip(cargo)).join(" ") : "-";
-  const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
-  const cash = you ? Number(you.cash || 0) : 0;
-  const stockCount = you && you.stocks ? Object.values(you.stocks).reduce((sum, val) => sum + (val || 0), 0) : 0;
-  const selfLine = you ? `You: 🪙 ${cash} · Pledge ${stockCount}` : "";
-  manilaCycleRecap.innerHTML = `
-    <div>Phase: <span>${phaseLabel}</span></div>
-    <div>Harbormaster: <span>${harbor}</span></div>
-    <div>Bid: <span>🪙 ${bid}</span></div>
-    ${selfLine ? `<div class="manila-auction-self">${selfLine}</div>` : ""}
-    <div>Cargo Slots: <span>${cargoLabel}</span></div>
-  `;
-}
-
-function updateManilaCyclePanel(view) {
-  if (!view) {
-    setManilaCycleOpen(false);
-    if (manilaCycleStatus) {
-      manilaCycleStatus.textContent = "Cycle: -";
-    }
-    if (manilaCyclePhase) {
-      manilaCyclePhase.textContent = "Phase: -";
-    }
-    return;
-  }
-  const phase = view.phase;
-  const inCycle = MANILA_CYCLE_PHASES.has(phase);
-  const wasInCycle = MANILA_CYCLE_PHASES.has(manilaLastPhase);
-
-  if (inCycle && !wasInCycle) {
-    manilaCycleUserOverride = null;
-  }
-  if (!inCycle && wasInCycle) {
-    manilaCycleUserOverride = null;
-  }
-
-  if (inCycle) {
-    if (manilaCycleUserOverride === "closed") {
-      setManilaCycleOpen(false);
-    } else {
-      setManilaCycleOpen(true);
-    }
-  } else {
-    if (manilaCycleUserOverride === "open") {
-      setManilaCycleOpen(true);
-    } else {
-      setManilaCycleOpen(false);
-    }
-  }
-
-  const phaseLabel = formatManilaPhase(phase);
-  if (manilaCycleStatus) {
-    manilaCycleStatus.textContent = inCycle ? `Cycle: ${phaseLabel}` : "Cycle: Review only";
-  }
-  if (manilaCyclePhase) {
-    manilaCyclePhase.textContent = `Phase: ${phaseLabel}`;
-  }
-  updateManilaCycleRecap(view);
-  manilaLastPhase = phase;
-}
-
-function showManilaHeaderActions(show) {
-  if (manilaHeaderActions) {
-    manilaHeaderActions.style.display = show ? "flex" : "none";
-  }
-}
-
-function showManilaHelpModal() {
-  if (!manilaHelpModal) {
-    return;
-  }
-  const content = manilaHelpModal.querySelector(".manila-help-content");
-  if (content) {
-    content.innerHTML = MANILA_HELP_TEXT;
-  }
-  if (typeof setModalVisible === "function") {
-    setModalVisible(manilaHelpModal, true);
-  } else {
-    setVisible(manilaHelpModal, true);
-  }
-}
-
-function closeManilaHelpModal() {
-  if (!manilaHelpModal) {
-    return;
-  }
-  if (typeof setModalVisible === "function") {
-    setModalVisible(manilaHelpModal, false);
-  } else {
-    setVisible(manilaHelpModal, false);
-  }
-}
-
-function updateManilaExplainClasses(enabled) {
-  Object.keys(MANILA_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const btn = document.getElementById(buttonId);
-    if (btn) {
-      btn.classList.toggle("has-explanation", enabled);
-    }
-  });
-  document.querySelectorAll("[data-manila-explain]").forEach((node) => {
-    node.classList.toggle("has-explanation", enabled);
-  });
-}
-
-function findManilaExplainTargetAtPoint(x, y) {
-  for (const buttonId of Object.keys(MANILA_BUTTON_EXPLANATIONS)) {
-    const btn = document.getElementById(buttonId);
-    if (!btn) continue;
-    const rect = btn.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return { type: "button", key: buttonId };
-    }
-  }
-  const nodes = document.querySelectorAll("[data-manila-explain]");
-  for (const node of nodes) {
-    const rect = node.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return { type: "dynamic", key: node.dataset.manilaExplain };
-    }
-  }
-  return null;
-}
-
-function toggleManilaExplainMode() {
-  manilaExplainMode = !manilaExplainMode;
-  document.body.classList.toggle("manila-explain-mode", manilaExplainMode);
-  updateManilaExplainClasses(manilaExplainMode);
-  if (manilaExplainBtn) {
-    manilaExplainBtn.classList.toggle("active", manilaExplainMode);
-  }
-  if (manilaCycleExplainBtn) {
-    manilaCycleExplainBtn.classList.toggle("active", manilaExplainMode);
-  }
-}
-
-function exitManilaExplainMode() {
-  if (!manilaExplainMode) {
-    return;
-  }
-  manilaExplainMode = false;
-  document.body.classList.remove("manila-explain-mode");
-  updateManilaExplainClasses(false);
-  if (manilaExplainBtn) {
-    manilaExplainBtn.classList.remove("active");
-  }
-  if (manilaCycleExplainBtn) {
-    manilaCycleExplainBtn.classList.remove("active");
-  }
-}
-
-function showManilaButtonExplanation(target) {
-  let explanation = null;
-  if (target.type === "button") {
-    explanation = MANILA_BUTTON_EXPLANATIONS[target.key];
-  } else if (target.type === "dynamic") {
-    explanation = MANILA_DYNAMIC_EXPLANATIONS[target.key];
-  }
-  if (!explanation || !manilaExplainContent || !manilaExplainModal) {
-    return;
-  }
-  let costClass = "free";
-  if (explanation.costType === "pay") costClass = "pay";
-  else if (explanation.costType === "gain") costClass = "gain";
-  else if (explanation.costType === "end") costClass = "end";
-
-  manilaExplainContent.innerHTML = `
-    <h4>${explanation.name}</h4>
-    <p>${explanation.description}</p>
-    <span class="explain-cost ${costClass}">${explanation.cost}</span>
-  `;
-  if (typeof setModalVisible === "function") {
-    setModalVisible(manilaExplainModal, true);
-  } else {
-    setVisible(manilaExplainModal, true);
-  }
-}
-
-function closeManilaExplainModal() {
-  if (!manilaExplainModal) {
-    return;
-  }
-  if (typeof setModalVisible === "function") {
-    setModalVisible(manilaExplainModal, false);
-  } else {
-    setVisible(manilaExplainModal, false);
-  }
-}
-
-function createSlotButton({ label, meta, occupant, onClick, disabled, explainId }) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "manila-slot";
-  if (explainId) {
-    btn.dataset.manilaExplain = explainId;
-  }
-  if (occupant) {
-    btn.classList.add("occupied");
-  }
-  btn.innerHTML = `
-    <div class=\"manila-slot-label\">${label}</div>
-    ${meta ? `<div class=\"manila-slot-meta\">${meta}</div>` : ""}
-    <div class=\"manila-slot-occupant\">${occupant || "Empty"}</div>
-  `;
-  btn.addEventListener("click", () => {
-    if (disabled) {
-      return;
-    }
-    onClick();
-  });
-  setDisabled(btn, disabled);
-  return btn;
-}
-
-function renderManilaBoats(view) {
-  if (!manilaBoats) {
-    return;
-  }
-  manilaBoats.innerHTML = "";
-  if (!view) {
-    return;
-  }
-  const selected = Array.isArray(view.cargo_slots) ? view.cargo_slots : [];
-  const cargoIds = selected.length ? selected : [];
-  if (!cargoIds.length) {
-    const empty = document.createElement("div");
-    empty.className = "manila-empty";
-    empty.textContent = "Harbormaster has not selected cargo yet.";
-    manilaBoats.appendChild(empty);
-    if (manilaDiceBar) {
-      setVisible(manilaDiceBar, false);
-      manilaDiceBar.innerHTML = "";
-    }
-    return;
-  }
-  const canPlace = canPlaceWorker(view);
-
-  const axis = document.createElement("div");
-  axis.className = "manila-axis-vertical";
-  const axisHeader = document.createElement("div");
-  axisHeader.className = "manila-axis-header";
-  const axisTitle = document.createElement("div");
-  axisTitle.className = "manila-axis-title";
-  axisTitle.textContent = "Shared Route Axis";
-  axisHeader.appendChild(axisTitle);
-
-  const positionMap = {};
-  const portArrivals = view.port_arrivals || {};
-  const arrivalSlots = ["A", "B", "C"];
-  const arrivedCargo = new Set(
-    arrivalSlots.map((slot) => portArrivals[slot]).filter((cargoId) => !!cargoId),
-  );
-  const pending = [];
-  cargoIds.forEach((cargoId) => {
-    const boat = view.boats ? view.boats[cargoId] : null;
-    if (!boat || typeof boat.position !== "number") {
-      pending.push(cargoId);
-      return;
-    }
-    if (arrivedCargo.has(cargoId) || boat.arrived || boat.plundered) {
-      return;
-    }
-    const pos = boat.position;
-    if (!positionMap[pos]) {
-      positionMap[pos] = [];
-    }
-    positionMap[pos].push(cargoId);
-  });
-
-  if (manilaDiceBar) {
-    const diceEmoji = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
-    const rolls = cargoIds.map((cargoId) => {
-      const boat = view.boats ? view.boats[cargoId] : null;
-      return {
-        cargoId,
-        roll: boat && typeof boat.last_roll === "number" ? boat.last_roll : null,
-      };
-    });
-    const hasRoll = rolls.some((entry) => entry.roll !== null);
-    if (!hasRoll) {
-      setVisible(manilaDiceBar, false);
-      manilaDiceBar.innerHTML = "";
-    } else {
-      setVisible(manilaDiceBar, true);
-      manilaDiceBar.innerHTML = "";
-      const title = document.createElement("div");
-      title.className = "manila-dice-title";
-      title.textContent = "Last Dice Roll";
-      const row = document.createElement("div");
-      row.className = "manila-dice-row";
-      rolls.forEach((entry) => {
-        const meta = getCargoMeta(entry.cargoId);
-        const chip = document.createElement("div");
-        chip.className = "manila-dice-chip";
-        const label = document.createElement("span");
-        label.textContent = `${meta.icon} ${meta.label || entry.cargoId}`;
-        const value = document.createElement("span");
-        value.className = "manila-dice-value";
-        value.textContent = entry.roll ? `${diceEmoji[entry.roll]} ${entry.roll}` : "—";
-        chip.appendChild(label);
-        chip.appendChild(value);
-        row.appendChild(chip);
-      });
-      manilaDiceBar.appendChild(title);
-      manilaDiceBar.appendChild(row);
-    }
-    axisHeader.appendChild(manilaDiceBar);
-  }
-
-  axis.appendChild(axisHeader);
-
-  if (pending.length) {
-    const row = document.createElement("div");
-    row.className = "manila-axis-row pending";
-    const tick = document.createElement("div");
-    tick.className = "manila-axis-tick-label";
-    tick.textContent = "Pending";
-    row.appendChild(tick);
-    const markers = document.createElement("div");
-    markers.className = "manila-axis-markers";
-    pending.forEach((cargoId) => {
-      const boat = view.boats ? view.boats[cargoId] : null;
-      markers.appendChild(buildManilaAxisBoat(cargoId, boat, view, canPlace));
-    });
-    row.appendChild(markers);
-    axis.appendChild(row);
-  }
-
-  const arrivedRow = document.createElement("div");
-  arrivedRow.className = "manila-axis-row arrived";
-  const arrivedTick = document.createElement("div");
-  arrivedTick.className = "manila-axis-tick-label";
-  arrivedTick.textContent = "Arrived";
-  arrivedRow.appendChild(arrivedTick);
-  const arrivedMarkers = document.createElement("div");
-  arrivedMarkers.className = "manila-axis-arrived";
-  arrivalSlots.forEach((slot) => {
-    const slotWrap = document.createElement("div");
-    slotWrap.className = "manila-axis-arrived-slot";
-    const slotLabel = document.createElement("div");
-    slotLabel.className = "manila-axis-arrived-label";
-    slotLabel.textContent = `Port ${slot}`;
-    slotWrap.appendChild(slotLabel);
-    const cargoId = portArrivals[slot];
-    if (cargoId) {
-      const boat = view.boats ? view.boats[cargoId] : null;
-      slotWrap.appendChild(buildManilaAxisBoat(cargoId, boat, view, canPlace));
-    } else {
-      const empty = document.createElement("div");
-      empty.className = "manila-axis-arrived-empty";
-      empty.textContent = "Empty";
-      slotWrap.appendChild(empty);
-    }
-    arrivedMarkers.appendChild(slotWrap);
-  });
-  arrivedRow.appendChild(arrivedMarkers);
-  axis.appendChild(arrivedRow);
-
-  for (let i = 13; i >= 0; i -= 1) {
-    const row = document.createElement("div");
-    row.className = "manila-axis-row";
-    if (i === 13) {
-      row.classList.add("port");
-    }
-    const tick = document.createElement("div");
-    tick.className = "manila-axis-tick-label";
-    tick.textContent = String(i);
-    row.appendChild(tick);
-    const markers = document.createElement("div");
-    markers.className = "manila-axis-markers";
-    const cargosHere = positionMap[i] || [];
-    cargosHere.forEach((cargoId) => {
-      const boat = view.boats ? view.boats[cargoId] : null;
-      markers.appendChild(buildManilaAxisBoat(cargoId, boat, view, canPlace));
-    });
-    row.appendChild(markers);
-    axis.appendChild(row);
-  }
-
-  manilaBoats.appendChild(axis);
-}
-
-function buildManilaAxisBoat(cargoId, boat, view, canPlace) {
-  const meta = getCargoMeta(cargoId);
-  const wrapper = document.createElement("div");
-  wrapper.className = `manila-axis-boat manila-cargo-${meta.accent}`;
-  if (!boat) {
-    wrapper.classList.add("inactive");
-  }
-
-  const header = document.createElement("div");
-  header.className = "manila-axis-boat-header";
-  const title = document.createElement("div");
-  title.className = "manila-axis-boat-title";
-  title.textContent = `${meta.icon} ${meta.label || cargoId}`;
-  const value = document.createElement("div");
-  value.className = "manila-axis-boat-value";
-  const totalValue = boat && typeof boat.total_value === "number" ? boat.total_value : meta.totalValue ?? 0;
-  value.textContent = `💰 ${totalValue}`;
-  header.appendChild(title);
-  header.appendChild(value);
-  wrapper.appendChild(header);
-
-  const activePilotSize = getActivePilotSize(view);
-  const activePilotHolder =
-    activePilotSize && view && view.board && view.board.pilots ? view.board.pilots[activePilotSize] : null;
-  const canPilotMove =
-    !!boat &&
-    !boat.arrived &&
-    activePilotSize &&
-    view.current_player === view.you &&
-    activePilotHolder === view.you &&
-    isActionAvailable(view, activePilotSize === "big" ? "pilot_split" : "pilot_move");
-  if (canPilotMove) {
-    const controls = document.createElement("div");
-    controls.className = "manila-axis-boat-controls";
-
-    const controlLabel = document.createElement("div");
-    controlLabel.className = "manila-axis-boat-control-label";
-    controlLabel.textContent = activePilotSize === "big" ? "Big Pilot" : "Small Pilot";
-    controls.appendChild(controlLabel);
-
-    const controlButtons = document.createElement("div");
-    controlButtons.className = "manila-axis-boat-control-buttons";
-    const draftMove =
-      activePilotSize === "big" && manilaPilotDraft && manilaPilotDraft.size === "big"
-        ? manilaPilotDraft.moves[0]
-        : null;
-    const position = Number(boat.position || 0);
-    [-1, 1].forEach((delta) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "manila-pilot-btn";
-      btn.textContent = delta > 0 ? "+" : "-";
-      const draftSelected = draftMove && draftMove.cargo === cargoId && draftMove.delta === delta;
-      if (draftSelected) {
-        btn.classList.add("selected");
-      }
-      const blockedByDraft =
-        !!draftMove &&
-        draftMove.cargo === cargoId &&
-        draftMove.delta !== delta &&
-        activePilotSize === "big";
-      setDisabled(btn, (delta < 0 && position <= 0) || blockedByDraft);
-      btn.addEventListener("click", () => queueManilaPilotMove(cargoId, delta));
-      controlButtons.appendChild(btn);
-    });
-    controls.appendChild(controlButtons);
-
-    if (draftMove && draftMove.cargo === cargoId) {
-      const queued = document.createElement("div");
-      queued.className = "manila-axis-boat-control-note";
-      queued.textContent = `Queued ${draftMove.delta > 0 ? "+1" : "-1"}`;
-      controls.appendChild(queued);
-    }
-    wrapper.appendChild(controls);
-  }
-
-  const seatWrap = document.createElement("div");
-  seatWrap.className = "manila-axis-seat-grid";
-  const seats = boat && Array.isArray(boat.seats) ? boat.seats : [];
-  const costs =
-    boat && Array.isArray(boat.seat_costs)
-      ? boat.seat_costs
-      : Array.isArray(meta.seatCosts)
-        ? meta.seatCosts
-        : [];
-  costs.forEach((cost, idx) => {
-    const seatBtn = document.createElement("button");
-    seatBtn.type = "button";
-    seatBtn.className = "manila-seat";
-    const occupant = seats[idx];
-    const occupantLabel = boat ? (occupant ? formatManilaSeat(occupant, view) : "Empty") : "Not sailing";
-    seatBtn.innerHTML = `
-      <span class=\"manila-seat-title\">Seat ${idx + 1}</span>
-      <span class=\"manila-seat-meta\">🪙 ${cost}</span>
-      <span class=\"manila-seat-occupant\">${occupantLabel}</span>
-    `;
-    seatBtn.addEventListener("click", () => {
-      if (!boat) {
-        return;
-      }
-      sendAction({ type: "place_worker", location: { type: "ship", cargo: cargoId, seat: idx } });
-    });
-    if (!boat) {
-      seatBtn.classList.add("inactive");
-    }
-    setDisabled(seatBtn, !canPlace || !boat || !!occupant);
-    seatWrap.appendChild(seatBtn);
-  });
-  wrapper.appendChild(seatWrap);
-
-  return wrapper;
-}
-
-function renderManilaBoard(view) {
-  if (!manilaBoard) {
-    return;
-  }
-  manilaBoard.innerHTML = "";
-  if (!view || !view.board) {
-    return;
-  }
-  const board = view.board;
-  const canPlace = canPlaceWorker(view);
-
-  const map = document.createElement("div");
-  map.className = "manila-map-grid";
-
-  const portZone = document.createElement("div");
-  portZone.className = "manila-zone manila-zone-port";
-  portZone.innerHTML = "<div class=\"manila-zone-title\">Port</div>";
-  const portGrid = document.createElement("div");
-  portGrid.className = "manila-zone-grid";
-  ["A", "B", "C"].forEach((slot) => {
-    const info = MANILA_BOARD_VALUES.port[slot];
-    const occupantId = board.port ? board.port[slot] : null;
-    const btn = createSlotButton({
-      label: slot,
-      meta: `🪙 ${info.cost} · 💰 ${info.payout}`,
-      occupant: occupantId ? formatManilaSeat(occupantId, view) : "",
-      disabled: !canPlace || !!occupantId,
-      onClick: () => sendAction({ type: "place_worker", location: { type: "port", slot } }),
-      explainId: "port",
-    });
-    portGrid.appendChild(btn);
-  });
-  portZone.appendChild(portGrid);
-
-  const shipyardZone = document.createElement("div");
-  shipyardZone.className = "manila-zone manila-zone-shipyard";
-  shipyardZone.innerHTML = "<div class=\"manila-zone-title\">Shipyard</div>";
-  const shipyardGrid = document.createElement("div");
-  shipyardGrid.className = "manila-zone-grid";
-  ["A", "B", "C"].forEach((slot) => {
-    const info = MANILA_BOARD_VALUES.shipyard[slot];
-    const occupantId = board.shipyard ? board.shipyard[slot] : null;
-    const btn = createSlotButton({
-      label: slot,
-      meta: `🪙 ${info.cost} · 💰 ${info.payout}`,
-      occupant: occupantId ? formatManilaSeat(occupantId, view) : "",
-      disabled: !canPlace || !!occupantId,
-      onClick: () => sendAction({ type: "place_worker", location: { type: "shipyard", slot } }),
-      explainId: "shipyard",
-    });
-    shipyardGrid.appendChild(btn);
-  });
-  shipyardZone.appendChild(shipyardGrid);
-
-  const rolesZone = document.createElement("div");
-  rolesZone.className = "manila-zone manila-zone-roles";
-  rolesZone.innerHTML = "<div class=\"manila-zone-title\">Harbor Roles</div>";
-  const rolesGrid = document.createElement("div");
-  rolesGrid.className = "manila-zone-grid";
-  const pirates = board.pirates || {};
-  const pirateOccupants = [
-    `Captain: ${pirates.captain ? formatManilaSeat(pirates.captain, view) : "-"}`,
-    `Pirate: ${pirates.pirate ? formatManilaSeat(pirates.pirate, view) : "-"}`,
-  ].join(" · ");
-  rolesGrid.appendChild(
-    createSlotButton({
-      label: "Pirates",
-      meta: `🪙 ${MANILA_BOARD_VALUES.pirates.cost} · First = Captain`,
-      occupant: pirateOccupants,
-      disabled: !canPlace || (!!pirates.captain && !!pirates.pirate),
-      onClick: () => sendAction({ type: "place_worker", location: { type: "pirate" } }),
-      explainId: "pirate",
-    })
-  );
-  const pilots = board.pilots || {};
-  rolesGrid.appendChild(
-    createSlotButton({
-      label: "Pilot (Big)",
-      meta: `🪙 ${MANILA_BOARD_VALUES.pilots.big}`,
-      occupant: pilots.big ? formatManilaSeat(pilots.big, view) : "",
-      disabled: !canPlace || !!pilots.big,
-      onClick: () => sendAction({ type: "place_worker", location: { type: "pilot", size: "big" } }),
-      explainId: "pilot",
-    })
-  );
-  rolesGrid.appendChild(
-    createSlotButton({
-      label: "Pilot (Small)",
-      meta: `🪙 ${MANILA_BOARD_VALUES.pilots.small}`,
-      occupant: pilots.small ? formatManilaSeat(pilots.small, view) : "",
-      disabled: !canPlace || !!pilots.small,
-      onClick: () => sendAction({ type: "place_worker", location: { type: "pilot", size: "small" } }),
-      explainId: "pilot",
-    })
-  );
-  rolesZone.appendChild(rolesGrid);
-
-  const insuranceZone = document.createElement("div");
-  insuranceZone.className = "manila-zone manila-zone-insurance manila-zone-compact";
-  insuranceZone.innerHTML = "<div class=\"manila-zone-title\">Insurance</div>";
-  const insuranceGrid = document.createElement("div");
-  insuranceGrid.className = "manila-zone-grid";
-  insuranceGrid.appendChild(
-    createSlotButton({
-      label: "Broker",
-      meta: `🪙 ${MANILA_BOARD_VALUES.insurance.cost} · 💰 +${MANILA_BOARD_VALUES.insurance.reward}`,
-      occupant: board.insurance ? formatManilaSeat(board.insurance, view) : "",
-      disabled: !canPlace || !!board.insurance,
-      onClick: () => sendAction({ type: "place_worker", location: { type: "insurance" } }),
-      explainId: "insurance",
-    })
-  );
-  insuranceZone.appendChild(insuranceGrid);
-
-  const insuranceStack = document.createElement("div");
-  insuranceStack.className = "manila-zone-stack";
-  if (manilaPledgeGroup) {
-    insuranceStack.appendChild(manilaPledgeGroup);
-  }
-  if (manilaPirateGroup) {
-    manilaPirateGroup.classList.add("manila-pirate-facility", "manila-zone", "manila-zone-compact");
-    insuranceStack.appendChild(manilaPirateGroup);
-  }
-  insuranceStack.appendChild(insuranceZone);
-  if (manilaPassFacility) {
-    insuranceStack.appendChild(manilaPassFacility);
-  }
-
-  map.appendChild(portZone);
-  map.appendChild(shipyardZone);
-  map.appendChild(rolesZone);
-  map.appendChild(insuranceStack);
-  manilaBoard.appendChild(map);
-}
-
-function renderManilaPlayers(view) {
-  if (!manilaPlayers) {
-    return;
-  }
-  manilaPlayers.innerHTML = "";
-  if (!view || !Array.isArray(view.players)) {
-    return;
-  }
-  view.players.forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "manila-card";
-
-    const tags = [];
-    if (player.player_id === view.you) {
-      tags.push("you");
-    }
-    if (player.is_bot) {
-      tags.push("bot");
+(() => {
+    "use strict";
+
+    const byId = suffix => document.getElementById(`manila${suffix}`);
+    const panel = byId("Panel");
+    const header = byId("HeaderActions");
+    const tooltip = byId("Tooltip");
+    const helpDialog = byId("HelpModal");
+    const explainDialog = byId("ExplainModal");
+    const cargoOrder = ["nutmeg", "silk", "ginseng", "jade"];
+    const cargoData = {
+        nutmeg: {name: "肉豆蔻", english: "Nutmeg", icon: "🟫", value: 24, costs: [2, 3, 4]},
+        silk: {name: "丝绸", english: "Silk", icon: "🟨", value: 18, costs: [1, 2, 3]},
+        ginseng: {name: "人参", english: "Ginseng", icon: "🟩", value: 36, costs: [3, 4, 5, 5]},
+        jade: {name: "翡翠", english: "Jade", icon: "🟦", value: 30, costs: [3, 4, 5]},
+    };
+    const phaseNames = {
+        auction: "竞选港务长", harbormaster_pay: "支付竞拍款", harbormaster_buy: "购买股票",
+        harbormaster_cargo: "选择货物", harbormaster_position: "安排起点", placement: "派遣工人",
+        pilot: "领航调整", pirate: "海盗行动", round_end: "航次结算", game_over: "最终结算",
+    };
+    const explanations = {
+        market: ["货物与股价", "四种货物各有股票。只有港务长可以每航次购买一张，价格至少为 💰5。成功入港的货物股价上升一档；持有数只向自己显示。"],
+        cargo: ["选择三种货物", "从肉豆蔻（🟫）、丝绸（🟨）、人参（🟩）、翡翠（🟦）中选三种出航。再次点击可取消，点击空白处取消当前选择。选择顺序对应三艘船。"],
+        voyage: ["航道与入港", "⛵ 从 0–13 格航道出发，每次派遣结束后各掷一个 🎲。驶过 13 格入港；正好在 13 格的船可能遇上海盗。绿色入港标记和 🛠️ 修船结果以结算状态为准。"],
+        ship: ["⛵ 船上工人", "支付该座位的入场费，派遣一名工人。船成功入港且未被劫掠时，船上全部工人平分货物总收益，多名自己的工人可以获得多份分红。"],
+        port: ["⚓ 码头", "A / B / C 分别在至少 1 / 2 / 3 艘船入港时支付收益。入场费依次为 💰4 / 3 / 2，收益为 💰6 / 8 / 15。"],
+        shipyard: ["🛠️ 修船厂", "A / B / C 分别在至少 1 / 2 / 3 艘船失败时支付收益。入场费依次为 💰4 / 3 / 2，收益为 💰6 / 8 / 15。"],
+        pirate: ["🏴‍☠️ 海盗", "每个位置入场费 💰5，先当船长，再当船员。第 2 次移动后可登上停在 13 格且有空位的船；第 3 次移动后由船长劫掠目标，海盗平分货物价值，船长决定船去码头或修船厂。"],
+        pilot: ["🧭 领航员", "大领航员入场费 💰5，小领航员 💰2。最后一次掷骰前，大领航员先行动，可移动一船最多两格，或两船各一格；小领航员随后移动一船最多一格。先用 + / − 预览，再 Confirm。"],
+        insurance: ["🛡️ 保险", "派一名工人，入场费 💰0，立即获得 💰10。结算时每艘失败的船需赔付 💰10，现金不足可能强制抵押股票。"],
+        pledge: ["🏦 抵押股票", "抵押一张自己持有的股票获得现金。默认贷款 💰12、终局扣除 💰15，以房间设置为准。已抵押的股票不再按股价计分，也不能赎回。"],
+        bid: ["竞选港务长", "出价必须是高于当前最高价的整数。竞得后支付出价，可先抵押股票补款。Pass 后本次拍卖不能重新参与。港务长可以买股、选择货物和安排起点。"],
+        position: ["安排起点", "三艘船的起点各在 0–13 格，合计必须为 9。用船旁 + / − 调整，航道实时预览，Confirm 后才发送。"],
+        pass: ["Pass", "放弃这一次派遣机会，不花钱、不消耗工人。本次派遣轮仍会继续，已派遣的工人保留在原位。"],
+        next: ["Next Round", "确认已看完结算。所有玩家准备后才开始下一航次；准备状态会实时显示。点击只发送一次，不再弹出确认。"],
+        cash: ["现金（💰）", "可用于竞拍、买股和派遣工人的现金。收益与费用分开显示；抵押股票可以补充现金。"],
+        workers: ["工人（👤）", "显示本航次剩余 / 总工人数。每次派遣使用一名工人，下一航次全部收回。"],
+        result: ["航次账本", "绿色 + 是本航次收入，红色 − 是支出，净额是两者之差，不是最终得分。终局胜者由服务器按现金、股票市值和抵押债务计算。"],
+        confirm: ["Confirm / Cancel", "Confirm 提交当前预览，Cancel 或点击周围空白取消。确认前不会发送行动；等待服务器响应时不能重复提交。"],
+    };
+    const help = `
+        <h3>目标 · 成为最富有的商人</h3>
+        <p>在马尼拉投资货船（⛵）、股票和港湾职位。任一股价达到 💰30 时游戏结束；现金 + 未抵押股票市值 − 抵押债务最高者获胜，可以并列。</p>
+        <h3>货物与资源</h3>
+        <p>肉豆蔻 Nutmeg（🟫）：总收益 💰24，3 个座位；丝绸 Silk（🟨）：💰18，3 个座位；人参 Ginseng（🟩）：💰36，4 个座位；翡翠 Jade（🟦）：💰30，3 个座位。颜色与文字同时标识货物。</p>
+        <p>现金（💰）、工人（👤）、股票（📜）、抵押债务（🏦）、骰子（🎲）、隐藏持仓（🔒）。P1–P5 对应座次，YOU 是自己，Winner（🏆）是胜者。收益 + 与入场费分开显示。股票种类对其他玩家保密。</p>
+        <h3>每一航次</h3>
+        <ol><li><strong>拍卖：</strong>轮流提高出价或 Pass。竞得者支付费用成为港务长，现金不足时先抵押股票。</li>
+        <li><strong>备航：</strong>港务长可买一张股票（价格至少 💰5），再选三种货物；三船起点合计 9，每船 0–13 格。</li>
+        <li><strong>出航：</strong>共三次派遣。每位玩家依次放一名工人或 Pass，每次派遣结束后各船掷 🎲1–6 前进。三人游戏每人 4 名工人，四至五人每人 3 名。</li>
+        <li><strong>结算：</strong>各职位支付收益，成功货物股价按 0 → 5 → 10 → 20 → 30 上升。账本保留，所有玩家点击 Next Round 后才继续。</li></ol>
+        <h3>船、码头和修船厂</h3>
+        <p>⛵ 船驶过 13 格入港；正好停在 13 格可能受到海盗影响。成功且未被劫掠的船，其货物收益由船上全部工人平分，每位玩家所得向上取整。</p>
+        <p>⚓ 码头 A / B / C 押注至少 1 / 2 / 3 船成功；🛠️ 修船厂 A / B / C 押注至少 1 / 2 / 3 船失败。各组入场费为 💰4 / 3 / 2，收益为 💰6 / 8 / 15。</p>
+        <h3>特殊职位</h3>
+        <p>🏴‍☠️ 海盗：入场费 💰5，先船长后船员。第二次移动可登上停在 13 格、有空位的船，也可以 Skip。第三次移动由船长劫掠目标，海盗平分价值；船上工人无收益，船长选择该船算码头或修船厂。第三次不能 Skip。</p>
+        <p>🧭 领航员：最后一次掷骰前，大领航员（入场费 💰5）先移动一船最多两格，或两船各一格；小领航员（💰2）随后移动一船最多一格。可以不移动。经领航到达 13 格的船受海盗保护，超过 13 格立即入港。</p>
+        <p>🛡️ 保险：入场费 💰0，立即领 💰10，每艘失败船赔 💰10。🏦 抵押：默认每股借 💰12、终局扣 💰15，房间可配置；不再计入持股，不能赎回。</p>
+        <h3>操作与查看</h3>
+        <p>点选座位或职位，在原处 Confirm；Cancel 或点空白处撤销。货物再次点击可以取消，三个起点和领航移动均可预览。规则不挡住棋盘；Help 查看规则，Explain 再点目标查看解释，灰色按钮也可解释。Esc 退出解释或关闭对话框。静态图标可悬停查看，手机轻点后的提示 3 秒消失，滑动不会选择。</p>
+        <p>轮到你时收起的 Room Controls 显示红色边框。Players 可展开查看公开现金、工人和持股总数；航次结算突出 YOU，Details 可查看收支。终局保留棋盘与胜者，重新开局使用 Room Controls。</p>`;
+
+    let view = null;
+    let roomKey = null;
+    let stateSignature = "";
+    let contextKey = "";
+    let selection = null;
+    let selectedCargo = [];
+    let positions = {};
+    let pilotMoves = {};
+    let bidAmount = null;
+    let pending = false;
+    let explaining = false;
+    let tipTimer = null;
+    let tipTarget = null;
+    let pointer = null;
+    let suppressClickUntil = 0;
+    let focusBeforeDialog = null;
+    let lastActivity = "";
+
+    const escape = value => String(value ?? "").replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
+    const own = () => view?.players?.find(player => player.player_id === view.you);
+    const playerName = playerId => view?.players?.find(player => player.player_id === playerId)?.name || playerId || "—";
+    const playerToken = playerId => playerId === view?.you ? "YOU" : `P${Math.max(0, view?.players?.findIndex(player => player.player_id === playerId)) + 1}`;
+    const connected = () => typeof socket !== "undefined" && socket.connected && (typeof roomSessionReady === "undefined" || roomSessionReady);
+    const can = type => !!view && !pending && connected() && !!own() && view.legal_actions?.includes(type);
+    const hasAction = type => !!view?.legal_actions?.includes(type);
+    const activePilot = () => view?.phase === "pilot" ? view.pending_pilots?.[0] : null;
+    const canPilot = () => can("pilot_move") && view.current_player === view.you && view.board?.pilots?.[activePilot()] === view.you;
+    const canPlace = cost => can("place_worker") && view.current_player === view.you && own().workers_available > 0 && own().cash >= cost;
+    const cargoLabel = cargo => `${cargoData[cargo].icon} ${cargoData[cargo].name}`;
+    const total = values => Object.values(values || {}).reduce((sum, amount) => sum + amount, 0);
+    const tip = (message, key = "") => `data-manila-tip="${escape(message)}" tabindex="0"${key ? ` data-manila-explain="${key}"` : ""}`;
+    const explanation = (key, detail = "") => `data-manila-explain="${key}"${detail ? ` data-manila-detail="${escape(detail)}"` : ""}`;
+    const button = (label, operation, {disabled = false, key = "confirm", detail = "", extra = "", className = ""} = {}) => `<button type="button" class="${className}" data-manila-op="${operation}" ${explanation(key, detail)} ${extra}${disabled ? " disabled" : ""}>${label}</button>`;
+    const visible = (node, show) => node.classList.toggle("hidden", !show);
+
+    function isOurTurn() {
+        if (!view || !own() || view.game_over) return false;
+        if (view.phase === "round_end") return hasAction("next_round");
+        if (view.phase === "pilot") return view.current_player === view.you && view.board?.pilots?.[activePilot()] === view.you;
+        return view.current_player === view.you && view.legal_actions?.length > 0;
     }
 
-    const title = document.createElement("div");
-    title.className = "manila-card-title";
-    title.textContent = `${player.name || player.player_id} (${tags.join(", ") || "player"})`;
-    card.appendChild(title);
-
-    const line1 = document.createElement("div");
-    line1.className = "manila-card-line";
-    line1.textContent = `🪙 ${player.cash ?? 0} · 👥 ${player.workers_available ?? 0}/${player.workers_total ?? 0}`;
-    card.appendChild(line1);
-
-    if (player.stocks) {
-      const stocksLine = document.createElement("div");
-      stocksLine.className = "manila-card-line";
-      const stockParts = Object.entries(player.stocks).map(([cargo, count]) => {
-        const meta = getCargoMeta(cargo);
-        return `${meta.icon}${count}`;
-      });
-      stocksLine.textContent = `Stocks: ${stockParts.join(" ") || "-"}`;
-      card.appendChild(stocksLine);
-
-      const pledgedLine = document.createElement("div");
-      pledgedLine.className = "manila-card-line";
-      const pledgeParts = Object.entries(player.pledged || {}).map(([cargo, count]) => {
-        const meta = getCargoMeta(cargo);
-        return `${meta.icon}${count}`;
-      });
-      pledgedLine.textContent = `Pledged: ${pledgeParts.join(" ") || "-"}`;
-      card.appendChild(pledgedLine);
-    } else {
-      const line2 = document.createElement("div");
-      line2.className = "manila-card-line";
-      line2.textContent = `Stocks: ${player.stock_count ?? 0} · Pledged: ${player.pledged_count ?? 0}`;
-      card.appendChild(line2);
+    function loanConfig(key, fallback) {
+        const config = typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "manila" ? currentRoomState.game_config : null;
+        return Number.isFinite(config?.[key]) ? config[key] : fallback;
     }
 
-    manilaPlayers.appendChild(card);
-  });
-}
-
-function updateAuctionActions(view) {
-  const visible = view && view.phase === "auction";
-  setVisible(document.getElementById("manilaAuctionGroup"), visible);
-  if (!visible) {
-    return;
-  }
-  const isMyTurn = view.current_player === view.you;
-  const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
-  const cash = you ? Number(you.cash || 0) : 0;
-  const stockCount = you && you.stocks ? Object.values(you.stocks).reduce((sum, val) => sum + (val || 0), 0) : 0;
-  if (manilaBidInput) {
-    const currentBid = view.auction ? view.auction.highest_bid || 0 : 0;
-    const minBid = currentBid + 1;
-    manilaBidInput.min = String(minBid);
-    manilaBidInput.value = String(minBid);
-  }
-  setDisabled(manilaBidBtn, !isMyTurn);
-  setDisabled(manilaPassBidBtn, !isMyTurn);
-  if (manilaAuctionInfo && view.auction) {
-    const leader = view.auction.leader ? formatManilaPlayerName(view, view.auction.leader) : "-";
-    const highest = view.auction.highest_bid ?? 0;
-    const bidsLine = formatManilaBidLine(view);
-    manilaAuctionInfo.innerHTML = `
-      <div>Highest bid ${highest} · Leader ${leader}</div>
-      ${bidsLine ? `<div class="manila-auction-bids">${bidsLine}</div>` : ""}
-    `;
-  }
-  if (manilaAuctionBidList) {
-    manilaAuctionBidList.innerHTML = renderManilaBidList(view);
-  }
-}
-
-function updatePayBidActions(view) {
-  return;
-}
-
-function updatePledgeActions(view) {
-  setVisible(manilaPledgeGroup, !!view);
-  if (!manilaPledgeSelect || !manilaPledgeBtn) {
-    return;
-  }
-  const cargos = getCargoList(view);
-  manilaPledgeSelect.innerHTML = "";
-  cargos.forEach((cargo) => {
-    const opt = document.createElement("option");
-    opt.value = cargo;
-    opt.textContent = cargo;
-    manilaPledgeSelect.appendChild(opt);
-  });
-  const legal = view.legal_actions || [];
-  setDisabled(manilaPledgeBtn, !legal.includes("pledge_stock"));
-}
-
-function updateBuyStockActions(view) {
-  const visible = view && view.phase === "harbormaster_buy";
-  setVisible(manilaBuyStockGroup, visible);
-  if (!visible || !manilaBuyStockButtons) {
-    return;
-  }
-  const isMyTurn = view.current_player === view.you;
-  const cargos = getCargoList(view);
-  manilaBuyStockButtons.innerHTML = "";
-  cargos.forEach((cargo) => {
-    const price = view.price_track && view.price_track[cargo] ? view.price_track[cargo] : 0;
-    const cost = price > 0 ? price : 5;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.classList.add("manila-buy-stock-btn");
-    btn.innerHTML = `Buy ${renderManilaCargoChip(cargo)} <span class="manila-buy-cost">🪙 ${cost}</span>`;
-    btn.addEventListener("click", () => sendAction({ type: "buy_stock", cargo }));
-    setDisabled(btn, !isMyTurn);
-    manilaBuyStockButtons.appendChild(btn);
-  });
-  setDisabled(manilaSkipBuyBtn, !isMyTurn);
-}
-
-function updateSelectCargoActions(view) {
-  const visible = view && view.phase === "harbormaster_cargo";
-  setVisible(manilaSelectCargoGroup, visible);
-  if (!visible || !manilaSelectCargoButtons) {
-    return;
-  }
-  const cargos = getCargoList(view);
-  if (!manilaSelectedCargo.length || manilaSelectedCargo.some((c) => !cargos.includes(c))) {
-    manilaSelectedCargo = [];
-  }
-  manilaSelectCargoButtons.innerHTML = "";
-  cargos.forEach((cargo) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    const isSelected = manilaSelectedCargo.includes(cargo);
-    btn.className = isSelected ? "selected" : "";
-    btn.classList.add("manila-cargo-select-btn");
-    btn.innerHTML = renderManilaCargoChip(cargo);
-    btn.addEventListener("click", () => {
-      if (manilaSelectedCargo.includes(cargo)) {
-        manilaSelectedCargo = manilaSelectedCargo.filter((c) => c !== cargo);
-      } else if (manilaSelectedCargo.length < 3) {
-        manilaSelectedCargo = [...manilaSelectedCargo, cargo];
-      }
-      updateSelectCargoActions(view);
-    });
-    manilaSelectCargoButtons.appendChild(btn);
-  });
-  setDisabled(manilaConfirmCargoBtn, manilaSelectedCargo.length !== 3 || view.current_player !== view.you);
-  setDisabled(manilaResetCargoBtn, view.current_player !== view.you);
-}
-
-function updatePositionsActions(view) {
-  const visible = view && view.phase === "harbormaster_position";
-  setVisible(manilaPositionsGroup, visible);
-  if (!visible || !manilaPositionsWrap) {
-    return;
-  }
-  manilaPositionsWrap.innerHTML = "";
-  const cargos = Array.isArray(view.cargo_slots) ? view.cargo_slots : [];
-  cargos.forEach((cargo, idx) => {
-    const row = document.createElement("div");
-    row.className = "manila-position-row";
-    const label = document.createElement("div");
-    label.innerHTML = renderManilaCargoChip(cargo);
-    const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
-    input.max = "13";
-    input.value = idx === 0 ? 0 : idx === 1 ? 4 : 5;
-    input.addEventListener("input", () => {
-      const sum = updatePositionsSum();
-      const isMyTurn = view.current_player === view.you;
-      setDisabled(manilaConfirmPositionsBtn, !isMyTurn || sum !== 9);
-    });
-    row.appendChild(label);
-    row.appendChild(input);
-    manilaPositionsWrap.appendChild(row);
-  });
-  const sum = updatePositionsSum();
-  const isMyTurn = view.current_player === view.you;
-  setDisabled(manilaConfirmPositionsBtn, !isMyTurn || sum !== 9);
-}
-
-function updatePositionsSum() {
-  if (!manilaPositionsWrap || !manilaPositionsSum) {
-    return 0;
-  }
-  const inputs = Array.from(manilaPositionsWrap.querySelectorAll("input"));
-  const values = inputs.map((input) => Number.parseInt(input.value, 10) || 0);
-  const sum = values.reduce((acc, val) => acc + val, 0);
-  manilaPositionsSum.textContent = String(sum);
-  return sum;
-}
-
-function updatePlacementActions(view) {
-  const visible = view && view.phase === "placement";
-  setVisible(manilaPassFacility, visible);
-  if (!visible) {
-    return;
-  }
-  const isMyTurn = view.current_player === view.you;
-  setDisabled(manilaPassBtn, !isMyTurn);
-}
-
-function updatePilotActions(view) {
-  const visible = view && view.phase === "pilot";
-  setVisible(manilaPilotGroup, visible);
-  if (!visible || !manilaPilotRows) {
-    return;
-  }
-  manilaPilotRows.innerHTML = "";
-  syncManilaPilotDraft(view);
-  const pending = new Set(Array.isArray(view.pending_pilots) ? view.pending_pilots : []);
-  const activeSize = getActivePilotSize(view);
-  const pilots = view.board ? view.board.pilots || {} : {};
-
-  if (!pending.size) {
-    const empty = document.createElement("div");
-    empty.className = "manila-empty";
-    empty.textContent = "No pilots to move.";
-    manilaPilotRows.appendChild(empty);
-    return;
-  }
-
-  ["big", "small"].forEach((size) => {
-    const row = document.createElement("div");
-    row.className = "manila-pilot-status";
-    if (size === activeSize) {
-      row.classList.add("active");
+    function setError(message = "") {
+        byId("Error").textContent = message;
+        visible(byId("Error"), !!message);
     }
 
-    const header = document.createElement("div");
-    header.className = "manila-pilot-status-header";
-
-    const titleWrap = document.createElement("div");
-    titleWrap.className = "manila-pilot-status-title-wrap";
-    const title = document.createElement("div");
-    title.className = "manila-pilot-status-title";
-    title.textContent = size === "big" ? "Pilot (Big)" : "Pilot (Small)";
-    titleWrap.appendChild(title);
-
-    const owner = document.createElement("div");
-    owner.className = "manila-pilot-status-owner";
-    owner.textContent = pilots[size] ? formatManilaPlayerName(view, pilots[size]) : "Unoccupied";
-    titleWrap.appendChild(owner);
-    header.appendChild(titleWrap);
-
-    const remaining = getPilotRemainingMoves(view, size);
-    const badge = document.createElement("div");
-    badge.className = "manila-pilot-status-badge";
-    badge.textContent = !pilots[size] ? "Empty" : pending.has(size) ? `${remaining} left` : "0 left";
-    header.appendChild(badge);
-    row.appendChild(header);
-
-    const hint = document.createElement("div");
-    hint.className = "manila-pilot-status-hint";
-    if (!pilots[size]) {
-      hint.textContent = "No one claimed this role.";
-    } else if (!pending.has(size)) {
-      hint.textContent = "Already used this round.";
-    } else if (size === "big") {
-      hint.textContent =
-        size === activeSize
-          ? "Click +/- beside ships. Same sign twice on one ship makes ±2; another ship makes a split."
-          : "Waiting for the Small Pilot to finish first.";
-    } else {
-      hint.textContent =
-        size === activeSize ? "Click +/- beside one ship to resolve this move." : "Waiting for this pilot's turn.";
-    }
-    row.appendChild(hint);
-
-    if (size === "big" && size === activeSize && manilaPilotDraft && manilaPilotDraft.moves.length) {
-      const draftRow = document.createElement("div");
-      draftRow.className = "manila-pilot-draft";
-      const move = manilaPilotDraft.moves[0];
-      const queued = document.createElement("div");
-      queued.className = "manila-pilot-draft-text";
-      queued.textContent = `Queued: ${getCargoMeta(move.cargo).label} ${move.delta > 0 ? "+1" : "-1"}`;
-      const resetBtn = document.createElement("button");
-      resetBtn.type = "button";
-      resetBtn.textContent = "Reset";
-      resetBtn.addEventListener("click", () => {
-        manilaPilotDraft = null;
-        rerenderManilaPilotUi();
-      });
-      draftRow.appendChild(queued);
-      draftRow.appendChild(resetBtn);
-      row.appendChild(draftRow);
+    function dispatch(action) {
+        if (explaining || !can(action.type)) return;
+        if (action.type.startsWith("pilot_") && !canPilot()) return;
+        pending = true;
+        selection = null;
+        hideTip();
+        setError();
+        render();
+        sendAction(action);
     }
 
-    manilaPilotRows.appendChild(row);
-  });
-}
-
-function updatePirateActions(view) {
-  const visible = view && view.phase === "pirate";
-  setVisible(manilaPirateGroup, visible);
-  if (!visible) {
-    return;
-  }
-  const isMyTurn = view.current_player === view.you;
-  const pirates = view.board ? view.board.pirates || {} : {};
-  const day = view.pirate_day || 3;
-  if (manilaPirateRole) {
-    let role = "-";
-    if (pirates.captain === view.you) {
-      role = "Captain";
-    } else if (pirates.pirate === view.you) {
-      role = "Pirate";
+    function hideTip() {
+        clearTimeout(tipTimer);
+        tipTimer = null;
+        tipTarget?.removeAttribute("aria-describedby");
+        tipTarget = null;
+        visible(tooltip, false);
     }
-    manilaPirateRole.textContent = role;
-  }
-  if (manilaPirateTargetSelect) {
-    manilaPirateTargetSelect.innerHTML = "";
-    (view.pirate_targets || []).forEach((cargo) => {
-      const opt = document.createElement("option");
-      opt.value = cargo;
-      opt.textContent = cargo;
-      manilaPirateTargetSelect.appendChild(opt);
-    });
-  }
-  const hasTargets = (view.pirate_targets || []).length > 0;
-  const isCaptain = pirates.captain === view.you;
 
-  if (manilaPirateResultSelect) {
-    setVisible(manilaPirateResultSelect, day === 3);
-  }
-
-  const showBoard = day === 2;
-  const showPlunder = day === 3;
-  setVisible(manilaPirateBoardBtn, showBoard);
-  setVisible(manilaPiratePlunderBtn, showPlunder);
-  setVisible(manilaPirateSkipBtn, day === 2);
-
-  setDisabled(manilaPirateBoardBtn, !isMyTurn || !hasTargets);
-  setDisabled(manilaPiratePlunderBtn, !isMyTurn || !isCaptain || !hasTargets);
-  setDisabled(manilaPirateSkipBtn, !isMyTurn);
-}
-
-function formatManilaLedgerLabel(label) {
-  if (!label) {
-    return label;
-  }
-  if (label.startsWith("Ship ")) {
-    const cargo = label.slice(5).toLowerCase();
-    return `Ship ${renderManilaCargoChip(cargo)}`;
-  }
-  if (label.startsWith("Seat ")) {
-    const match = label.match(/^Seat\s+([A-Za-z]+)\s+#(\d+)/);
-    if (match) {
-      const cargo = match[1].toLowerCase();
-      const seatNo = match[2];
-      return `Seat ${renderManilaCargoChip(cargo)} #${seatNo}`;
+    function showTip(target, autoHide = false) {
+        if (!target || explaining || helpDialog.open || explainDialog.open || target.closest("button, input, select, summary, a")) return;
+        hideTip();
+        tipTarget = target;
+        target.setAttribute("aria-describedby", tooltip.id);
+        tooltip.textContent = target.dataset.manilaTip;
+        visible(tooltip, true);
+        const anchor = target.getBoundingClientRect();
+        const box = tooltip.getBoundingClientRect();
+        tooltip.style.left = `${Math.max(12, Math.min(anchor.left, innerWidth - box.width - 12))}px`;
+        tooltip.style.top = `${anchor.bottom + box.height + 12 < innerHeight ? anchor.bottom + 6 : Math.max(12, anchor.top - box.height - 6)}px`;
+        if (autoHide) tipTimer = setTimeout(hideTip, 3000);
     }
-  }
-  if (label.startsWith("Buy ")) {
-    const cargo = label.slice(4).toLowerCase();
-    return `Buy ${renderManilaCargoChip(cargo)}`;
-  }
-  return label;
-}
 
-function updateRoundEnd(view) {
-  const visible = view && view.phase === "round_end";
-  setVisible(manilaRoundEndPanel, visible);
-  if (!visible) {
-    return;
-  }
-  const players = Array.isArray(view.players) ? view.players : [];
-  const readyMap = new Map(players.map((player) => [player.player_id, !!player.round_ready]));
-  const ledger = view.round_ledger || {};
-  if (manilaRoundEndPlayers) {
-    manilaRoundEndPlayers.innerHTML = "";
-    players.forEach((player) => {
-      const card = document.createElement("div");
-      card.className = "manila-round-end-player";
-      if (readyMap.get(player.player_id)) {
-        card.classList.add("ready");
-      }
-      const name = document.createElement("div");
-      name.className = "manila-round-end-player-name";
-      name.textContent = formatManilaPlayerName(view, player.player_id);
-      const status = document.createElement("div");
-      status.className = "manila-round-end-player-status";
-      status.textContent = readyMap.get(player.player_id) ? "Ready" : "Waiting";
-      card.appendChild(name);
-      card.appendChild(status);
+    function setExplain(value) {
+        explaining = value;
+        document.body.classList.toggle("manila-explaining", value);
+        byId("ExplainBtn").setAttribute("aria-pressed", String(value));
+        byId("ExplainBtn").title = value ? "Choose an item · Esc to exit" : "Explain";
+        hideTip();
+    }
 
-      const entry = ledger[player.player_id] || { earn: {}, spend: {} };
-      const earnEntries = entry.earn || {};
-      const spendEntries = entry.spend || {};
-      const earnTotal = Object.values(earnEntries).reduce((sum, val) => sum + Number(val || 0), 0);
-      const spendTotal = Object.values(spendEntries).reduce((sum, val) => sum + Number(val || 0), 0);
+    function openDialog(dialog) {
+        hideTip();
+        focusBeforeDialog = document.activeElement;
+        if (!dialog.open) dialog.showModal();
+        dialog.querySelector("button").focus({preventScroll: true});
+    }
 
-      const breakdown = document.createElement("div");
-      breakdown.className = "manila-round-end-breakdown";
+    function showExplanation(target) {
+        const entry = explanations[target?.dataset.manilaExplain];
+        if (!entry) return;
+        setExplain(false);
+        byId("ExplainTitle").textContent = entry[0];
+        byId("ExplainBody").innerHTML = `<p>${escape(entry[1])}</p>${target.dataset.manilaDetail ? `<p>${escape(target.dataset.manilaDetail)}</p>` : ""}`;
+        openDialog(explainDialog);
+    }
+    function confirmation(host) {
+        if (!selection || selection.host !== host) return "";
+        const options = selection.kind === "plunder" ? `<div class="manila-confirm-options" role="group" aria-label="Plunder destination">
+            ${["port", "shipyard"].map(result => button(result === "port" ? "⚓ 码头" : "🛠️ 修船厂", "destination", {
+                key: "pirate", extra: `data-result="${result}" aria-pressed="${selection.action.result === result}"`,
+            })).join("")}</div>` : "";
+        return `<div class="manila-confirm" data-manila-selection="${escape(selection.key)}">
+            <div class="manila-confirm-title">${escape(selection.title)}</div>
+            <p class="manila-confirm-note">${escape(selection.note)}</p>${options}
+            <div class="manila-confirm-options">
+                ${button("Confirm", "confirm", {className: "manila-primary", disabled: pending})}
+                ${button("Cancel", "cancel")}
+            </div>
+        </div>`;
+    }
 
-      const earnBlock = document.createElement("div");
-      earnBlock.className = "manila-round-end-block";
-      const earnTitle = document.createElement("div");
-      earnTitle.className = "manila-round-end-label";
-      earnTitle.textContent = `Earned +${earnTotal}`;
-      earnBlock.appendChild(earnTitle);
-      const earnList = document.createElement("div");
-      earnList.className = "manila-round-end-list";
-      const earnItems = Object.entries(earnEntries);
-      if (!earnItems.length) {
-        const empty = document.createElement("div");
-        empty.className = "manila-round-end-line muted";
-        empty.textContent = "None";
-        earnList.appendChild(empty);
-      } else {
-        earnItems.forEach(([label, amount]) => {
-          const line = document.createElement("div");
-          line.className = "manila-round-end-line";
-          line.innerHTML = `${formatManilaLedgerLabel(label)}: +${amount}`;
-          earnList.appendChild(line);
+    function renderMarket() {
+        const choosing = view.phase === "harbormaster_cargo" && view.harbormaster === view.you;
+        const buying = view.phase === "harbormaster_buy" && view.harbormaster === view.you;
+        byId("Market").innerHTML = cargoOrder.map(cargo => {
+            const meta = cargoData[cargo];
+            const price = view.price_track?.[cargo] || 0;
+            const buyPrice = Math.max(5, price);
+            const selected = selectedCargo.includes(cargo) || selection?.key === `buy-${cargo}`;
+            const sailing = view.cargo_slots?.includes(cargo);
+            const holdings = own() ? `持有 ${own().stocks?.[cargo] || 0}` : "🔒 持仓";
+            const contents = `<span class="manila-market-name"><span>${meta.icon}</span><span>${meta.name}</span></span>
+                <span class="manila-market-numbers"><span class="manila-market-price">💰 ${price}</span><span class="manila-market-holding">${holdings}</span></span>
+                ${buying ? `<span class="manila-small">买入 💰${buyPrice}</span>` : ""}`;
+            const className = `manila-market-card manila-cargo-${cargo}${selected ? " is-selected" : ""}${sailing ? " is-sailing" : ""}`;
+            if (choosing || buying) return button(contents, choosing ? "cargo" : "buy", {
+                key: choosing ? "cargo" : "market", className,
+                disabled: choosing ? !can("select_cargo") || (!selected && selectedCargo.length === 3) : !can("buy_stock") || own().cash < buyPrice,
+                extra: `data-cargo="${cargo}" aria-pressed="${selected}" data-manila-focus="market-${cargo}"`,
+                detail: `${cargoLabel(cargo)} · 股价 💰${price} · ${holdings} · 货物总收益 💰${meta.value}`,
+            });
+            return `<div class="${className}" ${tip(`${meta.name} ${meta.english}（${meta.icon}）· 股价 💰${price} · ${holdings} · 货物收益 💰${meta.value}${sailing ? " · 本航次出航" : ""}`, "market")}>${contents}</div>`;
+        }).join("") + confirmation("market");
+    }
+
+    function shipStatus(boat, preview) {
+        if (preview) return view.harbormaster === view.you ? "备航预览" : "等待港务长确认起点";
+        if (boat.plundered) return `🏴‍☠️ 已劫掠 → ${boat.plunder_result === "port" ? "⚓ 码头" : "🛠️ 修船厂"}`;
+        if (boat.arrived) return `⚓ 已入港${boat.arrived_slot ? ` · ${boat.arrived_slot}` : ""}`;
+        if (view.phase === "round_end" || view.game_over) return "🛠️ 未入港";
+        if (boat.position === 13) return boat.safe_from_pirates ? "13 格 · 海盗保护" : "13 格 · 海盗水域";
+        return `第 ${boat.position} 格 · 距港口 ${13 - boat.position}`;
+    }
+
+    function pilotAllowed(cargo, next) {
+        if (!canPilot() || view.boats?.[cargo]?.arrived) return false;
+        const draft = {...pilotMoves, [cargo]: next};
+        const used = Object.values(draft).reduce((sum, delta) => sum + Math.abs(delta), 0);
+        if (used > (activePilot() === "big" ? 2 : 1)) return false;
+        return (view.boats[cargo].position + next >= 0) || Math.abs(next) < Math.abs(pilotMoves[cargo] || 0);
+    }
+
+    function renderBoats() {
+        let cargos = (view.cargo_slots || []).filter(cargo => cargoData[cargo]);
+        if (view.phase === "harbormaster_cargo" && view.harbormaster === view.you) cargos = selectedCargo;
+        if (!cargos.length) {
+            byId("Boats").innerHTML = `<div class="manila-empty"><div class="manila-harbor-art" aria-hidden="true">⛵ &nbsp; ⛵ &nbsp; ⛵</div><strong>风起之前，先选航线</strong><p>港务长选定三种货物后启航</p></div>`;
+            return;
+        }
+        const settingPositions = view.phase === "harbormaster_position" && view.harbormaster === view.you;
+        byId("Boats").innerHTML = cargos.map(cargo => {
+            const meta = cargoData[cargo];
+            const liveBoat = view.boats?.[cargo];
+            const preview = !liveBoat;
+            const boat = liveBoat || {position: positions[cargo] ?? 3, seats: [], total_value: meta.value, seat_costs: meta.costs};
+            const delta = pilotMoves[cargo] || 0;
+            const knownPosition = !!liveBoat || settingPositions;
+            const position = Math.max(0, Math.min(13, (settingPositions ? positions[cargo] : boat.position) + delta));
+            const status = shipStatus(boat, preview);
+            const vessel = '<svg class="manila-vessel" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M10 1v9H2L10 1Zm2 3 3 6h-3V4ZM1 12h14l-3 3H4l-3-3Z"/></svg>';
+            const track = Array.from({length: 14}, (_, index) => `<span aria-hidden="true" class="manila-track-cell${knownPosition && index < position ? " is-passed" : ""}${knownPosition && index === position ? " is-boat" : ""}${index === 13 ? " is-port" : ""}${[0, 3, 6, 9, 13].includes(index) ? " is-landmark" : ""}${delta && index === position ? " is-draft" : ""}">${knownPosition && index === position ? vessel : index}</span>`).join("");
+            const seats = preview ? "" : `<div class="manila-seats" style="--seats:${boat.seats.length}">${boat.seats.map((occupant, seat) => {
+                const cost = boat.seat_costs[seat];
+                if (occupant) return `<div class="manila-occupant${occupant === view.you ? " is-you" : ""}" ${tip(`👤 ${playerName(occupant)} · ${meta.name}第 ${seat + 1} 个座位`, "ship")}><span>👤 ${playerToken(occupant)}</span><span>座位 ${seat + 1}</span></div>`;
+                return button(`<span class="manila-seat-cost">💰 ${cost}</span><span>座位 ${seat + 1}</span>`, "seat", {
+                    key: "ship", disabled: !canPlace(cost) || boat.plundered,
+                    className: `manila-seat${selection?.key === `seat-${cargo}-${seat}` ? " manila-selected" : ""}`,
+                    extra: `data-cargo="${cargo}" data-seat="${seat}" data-manila-focus="seat-${cargo}-${seat}"`,
+                    detail: `${meta.name} · 入场费 💰${cost} · 货物总收益 💰${boat.total_value}`,
+                });
+            }).join("")}</div>`;
+            let controls = "";
+            if (settingPositions) controls = `<div class="manila-move-controls"><span class="manila-position-label">起点</span><div class="manila-stepper">
+                ${button("−", "position", {key: "position", disabled: !can("set_positions") || position <= 0, extra: `data-cargo="${cargo}" data-delta="-1" aria-label="${meta.name}起点减一" data-manila-focus="position-${cargo}-minus"`})}
+                <output aria-label="${meta.name}起点">${position}</output>
+                ${button("+", "position", {key: "position", disabled: !can("set_positions") || position >= 13, extra: `data-cargo="${cargo}" data-delta="1" aria-label="${meta.name}起点加一" data-manila-focus="position-${cargo}-plus"`})}
+            </div></div>`;
+            if (view.phase === "pilot" && !boat.arrived) controls = `<div class="manila-move-controls"><span class="manila-position-label">领航预览</span><div class="manila-stepper">
+                ${button("−", "pilot", {key: "pilot", disabled: !pilotAllowed(cargo, delta - 1), extra: `data-cargo="${cargo}" data-delta="-1" aria-label="${meta.name}后退一格" data-manila-focus="pilot-${cargo}-minus"`})}
+                <output aria-label="${meta.name}领航调整">${delta > 0 ? "+" : ""}${delta}</output>
+                ${button("+", "pilot", {key: "pilot", disabled: !pilotAllowed(cargo, delta + 1), extra: `data-cargo="${cargo}" data-delta="1" aria-label="${meta.name}前进一格" data-manila-focus="pilot-${cargo}-plus"`})}
+            </div></div>`;
+            if (view.phase === "pirate" && view.pirate_targets?.includes(cargo)) {
+                const boarding = view.pirate_day === 2;
+                controls = `<div class="manila-action-buttons">${button(boarding ? "🏴‍☠️ 登船" : "🏴‍☠️ 劫掠", "pirate", {
+                    key: "pirate", className: "manila-primary", disabled: !can("pirate_action") || view.current_player !== view.you || (boarding && !boat.seats.includes(null)),
+                    extra: `data-cargo="${cargo}" data-manila-focus="pirate-${cargo}"`,
+                })}</div>`;
+            }
+            return `<article class="manila-ship manila-cargo-${cargo}${preview ? " is-preview" : ""}" data-cargo="${cargo}">
+                <div class="manila-ship-header"><div><div class="manila-ship-name" ${tip(`${meta.name}（${meta.icon}）· ${meta.english}`, "ship")}>${cargoLabel(cargo)}</div>
+                <div class="manila-ship-status" ${tip(status, "voyage")}>${escape(status)}</div></div>
+                <div class="manila-ship-value"><div ${tip(`船成功且未被劫掠时，船上工人平分 💰${boat.total_value}。`, "ship")}>收益 💰${boat.total_value}</div>
+                ${boat.last_roll ? `<span ${tip(`最近一次骰子：${boat.last_roll} 点。`, "voyage")}>🎲 ${boat.last_roll}</span>` : ""}</div></div>
+                <div class="manila-track" ${tip(knownPosition ? `${meta.name}在第 ${position} 格${delta ? `，包含领航预览 ${delta > 0 ? "+" : ""}${delta}` : ""}。` : `${meta.name}的起点尚未确认。`, "voyage")}>${track}</div>
+                ${seats}${controls}${confirmation(`ship-${cargo}`)}</article>`;
+        }).join("");
+        if (settingPositions) {
+            const sum = cargos.reduce((amount, cargo) => amount + positions[cargo], 0);
+            byId("Boats").insertAdjacentHTML("beforeend", `<div class="manila-setup-footer"><strong>起点合计 ${sum} / 9</strong>${button("Confirm", "positions-confirm", {key: "position", className: "manila-primary", disabled: !can("set_positions") || sum !== 9})}</div>`);
+        }
+        if (view.phase === "pilot" && view.board?.pilots?.[activePilot()] === view.you) {
+            const used = Object.values(pilotMoves).reduce((sum, delta) => sum + Math.abs(delta), 0);
+            const limit = activePilot() === "big" ? 2 : 1;
+            byId("Boats").insertAdjacentHTML("beforeend", `<div class="manila-setup-footer"><strong>领航 ${used} / ${limit} 格</strong>${button(used ? "Confirm" : "不移动", "pilot-confirm", {key: "pilot", className: "manila-primary", disabled: !canPilot() || !cargos.some(cargo => !view.boats[cargo]?.arrived)})}</div>`);
+        }
+    }
+
+    function locationInfo(type, slot) {
+        const board = view.board || {};
+        if (type === "port" || type === "shipyard") {
+            const index = ["A", "B", "C"].indexOf(slot);
+            return {title: `${type === "port" ? "⚓ 码头" : "🛠️ 修船厂"} ${slot}`, cost: [4, 3, 2][index],
+                reward: `≥${index + 1} 船${type === "port" ? "成功" : "失败"} → +${[6, 8, 15][index]}`,
+                occupant: board[type]?.[slot], location: {type, slot}, key: type};
+        }
+        if (type === "pirate") return {title: slot === "captain" ? "🏴‍☠️ 船长" : "🏴‍☠️ 船员", cost: 5,
+            reward: "登船 / 分享劫掠", occupant: board.pirates?.[slot], location: {type}, key: "pirate"};
+        if (type === "pilot") return {title: slot === "big" ? "🧭 大领航" : "🧭 小领航", cost: slot === "big" ? 5 : 2,
+            reward: slot === "big" ? "最多 ±2 格" : "最多 ±1 格", occupant: board.pilots?.[slot], location: {type, size: slot}, key: "pilot"};
+        return {title: "🛡️ 保险", cost: 0, reward: "即得 +10 / 失败赔10", occupant: board.insurance, location: {type: "insurance"}, key: "insurance"};
+    }
+
+    function renderInvestment(type, slot) {
+        const info = locationInfo(type, slot);
+        const selected = selection?.key === `${type}-${slot}`;
+        const name = ["port", "shipyard"].includes(type) ? slot : info.title;
+        const content = `<span class="manila-investment-top"><span class="manila-investment-name">${name}${info.occupant ? ` <span class="manila-owner">👤 ${playerToken(info.occupant)}</span>` : ""}</span><span class="manila-investment-cost">💰${info.cost}</span></span>
+            <span class="manila-investment-reward">${info.reward}</span>`;
+        const detail = `${info.title} · 入场费 💰${info.cost} · ${info.reward}${info.occupant ? ` · ${playerName(info.occupant)}` : ""}`;
+        if (info.occupant) return `<div class="manila-investment${info.occupant === view.you ? " is-you" : ""}" ${tip(detail, info.key)}>${content}</div>`;
+        return button(content, "investment", {
+            key: info.key, detail, className: `manila-investment${selected ? " manila-selected" : ""}`,
+            disabled: !canPlace(info.cost) || (type === "pirate" && slot === "pirate" && !view.board?.pirates?.captain),
+            extra: `data-location="${type}" data-slot="${slot}" data-manila-focus="${type}-${slot}"`,
         });
-      }
-      earnBlock.appendChild(earnList);
+    }
 
-      const spendBlock = document.createElement("div");
-      spendBlock.className = "manila-round-end-block";
-      const spendTitle = document.createElement("div");
-      spendTitle.className = "manila-round-end-label";
-      spendTitle.textContent = `Spent -${spendTotal}`;
-      spendBlock.appendChild(spendTitle);
-      const spendList = document.createElement("div");
-      spendList.className = "manila-round-end-list";
-      const spendItems = Object.entries(spendEntries);
-      if (!spendItems.length) {
-        const empty = document.createElement("div");
-        empty.className = "manila-round-end-line muted";
-        empty.textContent = "None";
-        spendList.appendChild(empty);
-      } else {
-        spendItems.forEach(([label, amount]) => {
-          const line = document.createElement("div");
-          line.className = "manila-round-end-line";
-          line.innerHTML = `${formatManilaLedgerLabel(label)}: -${amount}`;
-          spendList.appendChild(line);
+    function renderBoard() {
+        byId("Board").innerHTML = ["port", "shipyard"].map(type => `<div class="manila-zone"><div class="manila-zone-heading"><strong ${tip(explanations[type][1], type)}>${type === "port" ? "⚓ 码头" : "🛠️ 修船厂"}</strong></div>
+            <div class="manila-zone-slots">${["A", "B", "C"].map(slot => renderInvestment(type, slot)).join("")}</div>${confirmation(type)}</div>`).join("") +
+            `<div class="manila-zone manila-zone-wide"><div class="manila-zone-heading"><strong>特殊职位</strong></div>
+            <div class="manila-special-slots">${renderInvestment("pirate", "captain")}${renderInvestment("pirate", "pirate")}${renderInvestment("pilot", "big")}${renderInvestment("pilot", "small")}${renderInvestment("insurance", "broker")}</div>${confirmation("special")}</div>`;
+    }
+    function bidLimits() {
+        return {minimum: (view.auction?.highest_bid || 0) + 1, maximum: (own()?.cash || 0) + total(own()?.stocks) * loanConfig("loan_amount", 12)};
+    }
+
+    function validBid() {
+        const limits = bidLimits();
+        return Number.isInteger(bidAmount) && bidAmount >= limits.minimum && bidAmount <= limits.maximum;
+    }
+
+    function renderActions() {
+        const phase = view.phase;
+        const acting = isOurTurn();
+        byId("ActionPanel").classList.toggle("is-active", acting);
+        let contents = `<div class="manila-action-title">${phaseNames[phase] || "Waiting for game"}</div>`;
+        if (phase === "auction") {
+            const auction = view.auction || {};
+            const limits = bidLimits();
+            contents += `<p class="manila-action-note">最高出价 💰${auction.highest_bid || 0}${auction.leader ? ` · ${escape(playerName(auction.leader))}` : " · 尚无人出价"}</p>`;
+            if (acting) contents += `<div class="manila-bid-buttons"><label class="manila-bid-label" for="manilaBidInput"><span>出价 · 至少 💰${limits.minimum}</span>
+                <span class="manila-stepper">${button("−", "bid-step", {key: "bid", disabled: !can("bid") || bidAmount <= limits.minimum, extra: 'data-delta="-1" aria-label="出价减一" data-manila-focus="bid-minus"'})}
+                <input id="manilaBidInput" data-manila-focus="bid-input" type="number" inputmode="numeric" min="${limits.minimum}" max="${Math.max(limits.minimum, limits.maximum)}" step="1" value="${Number.isFinite(bidAmount) ? bidAmount : ""}" ${!can("bid") ? "disabled" : ""} ${explanation("bid")} />
+                ${button("+", "bid-step", {key: "bid", disabled: !can("bid") || bidAmount >= limits.maximum, extra: 'data-delta="1" aria-label="出价加一" data-manila-focus="bid-plus"'})}</span></label></div>
+                <div class="manila-action-buttons">${button("Bid", "bid", {key: "bid", className: "manila-primary", disabled: !can("bid") || !validBid(), extra: 'id="manilaBidSubmit"'})}
+                ${button("Pass", "pass-bid", {key: "bid", disabled: !can("pass_bid")})}</div>
+                <p id="manilaBidNotice" class="manila-small">${bidAmount > (own()?.cash || 0) ? "出价超过现金，竞得后需抵押股票。" : `可用现金 💰${own()?.cash || 0}`}</p>`;
+            contents += `<div class="manila-bid-list" data-manila-scroll="auction">${(view.players || []).map(player => {
+                const passed = !(auction.active || []).includes(player.player_id);
+                const leader = auction.leader === player.player_id;
+                return `<div class="manila-bid-row${leader ? " is-leader" : ""}${passed ? " is-passed" : ""}"><span>${escape(playerToken(player.player_id))} · ${escape(player.name || player.player_id)}</span><span>${passed ? "Pass" : `💰${auction.bids?.[player.player_id] || 0}`}</span></div>`;
+            }).join("")}</div>`;
+        } else if (phase === "harbormaster_pay") {
+            const harborPlayer = view.players.find(player => player.player_id === view.harbormaster);
+            const shortfall = Math.max(0, (view.harbormaster_bid || 0) - (harborPlayer?.cash || 0));
+            contents += `<p class="manila-action-note">竞拍款 💰${view.harbormaster_bid || 0} · 尚缺 💰${shortfall}</p><p class="manila-small">${acting ? "展开抵押股票补足现金，系统自动付款。" : `等待 ${escape(playerName(view.harbormaster))} 补款。`}</p>`;
+        } else if (phase === "harbormaster_buy") {
+            contents += `<p class="manila-action-note">${acting ? "点击上方货物购买一张股票。" : `等待 ${escape(playerName(view.harbormaster))} 购买股票。`}</p>`;
+            if (acting) contents += `<div class="manila-action-buttons">${button("Skip Buy", "skip-buy", {key: "market", disabled: !can("skip_buy")})}</div>`;
+        } else if (phase === "harbormaster_cargo") {
+            contents += `<p class="manila-action-note">${acting ? `已选 ${selectedCargo.length} / 3 · 点击上方货物，船只实时预览。` : `等待 ${escape(playerName(view.harbormaster))} 选择出航货物。`}</p>`;
+            if (acting) contents += `<div class="manila-action-buttons">${button("Confirm", "cargo-confirm", {key: "cargo", className: "manila-primary", disabled: !can("select_cargo") || selectedCargo.length !== 3})}</div>`;
+        } else if (phase === "harbormaster_position") {
+            contents += `<p class="manila-action-note">${acting ? "在船旁调整起点，合计 9 格后确认。" : `等待 ${escape(playerName(view.harbormaster))} 安排三船起点。`}</p>`;
+        } else if (phase === "placement") {
+            const note = !acting ? `等待 ${escape(playerName(view.current_player))} 派遣。` : own().workers_available <= 0 ? "没有剩余工人，请 Pass。" : "点选船位或港湾职位，在原处确认。";
+            contents = `<div class="manila-placement-line"><p class="manila-action-note">${note}</p>${acting ? button("Pass", "pass", {key: "pass", disabled: !can("pass")}) : ""}</div>`;
+        } else if (phase === "pilot") {
+            contents += `<p class="manila-action-note">${activePilot() === "big" ? "大领航" : "小领航"} · ${escape(playerName(view.board?.pilots?.[activePilot()]))}</p>
+                <p class="manila-small">${acting ? "用船旁 + / − 预览，确认后才移动。" : "等待领航调整，随后进行最后一次掷骰。"}</p>`;
+        } else if (phase === "pirate") {
+            contents += `<p class="manila-action-note">第 ${view.pirate_day} 次移动 · ${view.pirate_day === 2 ? "选择船只登船" : "选择船只劫掠并决定去向"}</p>`;
+            if (acting && view.pirate_day === 2) contents += `<div class="manila-action-buttons">${button("Skip", "pirate-skip", {key: "pirate", disabled: !can("pirate_action")})}</div>`;
+            if (!acting) contents += `<p class="manila-small">等待 ${escape(playerName(view.current_player))}。</p>`;
+        } else {
+            contents += `<p class="manila-action-note">${view.game_over ? "棋盘与账本保留，重新开局请使用 Room Controls。" : "查看航次结算，所有玩家准备后继续。"}</p>`;
+        }
+        byId("ActionBody").innerHTML = contents;
+        renderFinance();
+    }
+
+    function renderFinance() {
+        const mine = own();
+        const show = !!mine && !view.game_over && view.phase !== "round_end";
+        visible(byId("Finance"), show);
+        if (!show) return;
+        const loan = loanConfig("loan_amount", 12);
+        const repayment = loanConfig("loan_repay", 15);
+        byId("Debt").textContent = `· 已抵押 ${total(mine.pledged)}`;
+        byId("FinanceBody").innerHTML = `<p class="manila-small">每股 +💰${loan} · 终局债务 💰${repayment}</p>` + cargoOrder.map(cargo => button(`${cargoLabel(cargo)} ×${mine.stocks?.[cargo] || 0}`, "pledge", {
+            key: "pledge", disabled: !can("pledge_stock") || !isOurTurn() || !(mine.stocks?.[cargo] > 0),
+            extra: `data-cargo="${cargo}" data-manila-focus="pledge-${cargo}"`,
+        })).join("") + confirmation("finance");
+    }
+
+    function ledgerLabel(label) {
+        const fixed = {Bid: "港务长竞拍", "Harbormaster Bid": "港务长竞拍", "Pledge Loan": "抵押贷款", "Insurance Bonus": "保险收入", "Insurance Payout": "保险赔付", "Pirate Plunder": "海盗劫掠", Pirates: "海盗入场"};
+        if (fixed[label]) return fixed[label];
+        let translated = label.replace(/^Port /, "码头 ").replace(/^Shipyard /, "修船厂 ").replace(/^Pilot Big$/, "大领航").replace(/^Pilot Small$/, "小领航");
+        cargoOrder.forEach(cargo => { translated = translated.replace(cargoData[cargo].english, cargoData[cargo].name); });
+        return translated.replace(/^Buy /, "购买 ").replace(/^Seat /, "船位 ").replace(/^Ship /, "货船 ");
+    }
+
+    function renderReview() {
+        const reviewing = view.phase === "round_end" || view.game_over;
+        visible(byId("Review"), reviewing);
+        if (!reviewing) return;
+        const players = [...view.players].sort((first, second) => Number(second.player_id === view.you) - Number(first.player_id === view.you));
+        const ready = players.filter(player => player.round_ready).length;
+        const winners = (view.winner || []).map(playerName).join(" · ");
+        const title = view.game_over ? `🏆 ${winners || "Game over"}` : `第 ${view.round} 航次 · 结算`;
+        let subtitle = view.game_over ? "最终胜者 · 航次账本保留" : `${ready} / ${players.length} Ready · 所有人确认后继续`;
+        if (view.game_over && own()) {
+            const stockValue = cargoOrder.reduce((sum, cargo) => sum + (own().stocks?.[cargo] || 0) * (view.price_track?.[cargo] || 0), 0);
+            const debt = total(own().pledged) * loanConfig("loan_repay", 15);
+            subtitle = `你的资产：现金 ${own().cash} + 股票 ${stockValue} − 债务 ${debt} = ${own().cash + stockValue - debt}`;
+        }
+        byId("Review").innerHTML = `<div class="manila-review-heading"><div><h3>${escape(title)}</h3><span class="manila-small">${escape(subtitle)}</span></div>
+            ${!view.game_over && own() ? button(own().round_ready ? "Ready ✓" : pending ? "Sending…" : "Next Round", "next-round", {key: "next", className: "manila-primary", disabled: !can("next_round")}) : ""}</div>
+            <div class="manila-results" data-manila-scroll="results">${players.map(player => {
+                const ledger = view.round_ledger?.[player.player_id] || {};
+                const earned = total(ledger.earn);
+                const spent = total(ledger.spend);
+                const net = earned - spent;
+                const lines = ["earn", "spend"].flatMap(kind => Object.entries(ledger[kind] || {}).map(([label, amount]) => `<div class="manila-ledger-line"><span>${escape(ledgerLabel(label))}</span><span class="${kind === "earn" ? "manila-gain" : "manila-loss"}">${kind === "earn" ? "+" : "−"}${amount}</span></div>`)).join("");
+                return `<article class="manila-result-card${player.player_id === view.you ? " is-you" : ""}"><div class="manila-result-name">${escape(playerToken(player.player_id))} · ${escape(player.name || player.player_id)}</div>
+                    <div class="manila-result-total" ${tip(`本航次收入 💰${earned}，支出 💰${spent}，净额 ${net >= 0 ? "+" : ""}${net}。`, "result")}><span>净额</span><strong class="${net >= 0 ? "manila-gain" : "manila-loss"}">${net >= 0 ? "+" : "−"}💰${Math.abs(net)}</strong></div>
+                    <div class="manila-result-total"><span ${tip(`当前现金 💰${player.cash}`, "cash")}>💰 ${player.cash}</span><span>${view.game_over ? view.winner?.includes(player.player_id) ? "🏆 Winner" : "Finished" : player.round_ready ? "Ready ✓" : "Waiting"}</span></div>
+                    <details data-manila-detail-id="ledger-${escape(player.player_id)}"><summary>Details · +${earned} / −${spent}</summary>${lines || '<p class="manila-small">No transactions</p>'}</details></article>`;
+            }).join("")}</div>`;
+    }
+
+    function renderPlayers() {
+        byId("PlayerCount").textContent = `· ${view.players.length}`;
+        byId("Players").innerHTML = view.players.map(player => {
+            const mine = player.player_id === view.you;
+            const stocks = mine ? total(player.stocks) : player.stock_count || 0;
+            const pledged = mine ? total(player.pledged) : player.pledged_count || 0;
+            return `<article class="manila-player${mine ? " is-you" : ""}"><strong>${escape(playerToken(player.player_id))} · ${escape(player.name || player.player_id)}${player.player_id === view.harbormaster ? " · 港务长" : ""}</strong>
+                <div class="manila-player-resources"><span ${tip(`现金 💰${player.cash}`, "cash")}>💰${player.cash}</span><span ${tip(`工人剩余 ${player.workers_available} / ${player.workers_total}`, "workers")}>👤${player.workers_available}/${player.workers_total}</span><span ${tip(`股票 ${stocks} 张；${mine ? "自己的各类持股见上方市场。" : "种类保密。"}`, "market")}>📜${stocks}${mine ? "" : " 🔒"}</span><span ${tip(`已抵押 ${pledged} 张股票`, "pledge")}>🏦${pledged}</span></div></article>`;
+        }).join("");
+    }
+
+    function renderStatus() {
+        const stage = view.phase === "auction" ? 0 : view.phase?.startsWith("harbormaster_") ? 1 : view.phase === "round_end" || view.game_over ? 3 : 2;
+        byId("RoundLabel").textContent = `第 ${view.round} 航次`;
+        byId("Stages").innerHTML = ["拍卖", "备航", "出航", "结算"].map((label, index) => `<li class="${index === stage ? "is-current" : index < stage ? "is-done" : ""}"${index === stage ? ' aria-current="step"' : ""}>${label}</li>`).join("");
+        const phase = phaseNames[view.phase] || "Waiting";
+        byId("Turn").textContent = !connected() ? "Disconnected · Reconnect to continue" : pending ? "Sending…" : view.game_over ? "航程结束" : view.phase === "round_end" ? "结算时间 · 不急，先看账本" : isOurTurn() ? `轮到你 · ${phase}` : `${own() ? "等待" : "Spectating ·"} ${playerName(view.current_player || view.harbormaster)} · ${phase}`;
+        byId("Activity").textContent = lastActivity || (view.harbormaster ? `港务长 ${playerName(view.harbormaster)} · 竞拍 💰${view.harbormaster_bid || 0}` : "竞选港务长，决定这一航次的航线");
+        byId("Wallet").innerHTML = own() ? `<span ${tip(`你的可用现金 💰${own().cash}`, "cash")}>💰 ${own().cash}</span><span ${tip(`你的工人：剩余 ${own().workers_available} / 共 ${own().workers_total}`, "workers")}>👤 ${own().workers_available}/${own().workers_total}</span>` : `<span ${tip("旁观者只能查看公开信息，不能行动。")}>Spectator</span>`;
+        byId("FacilitiesResources").textContent = own() ? `💰 ${own().cash} · 👤 ${own().workers_available}` : "入场费 / 收益";
+        byId("FacilitiesResources").dataset.manilaTip = own() ? `可用现金 💰${own().cash} · 剩余工人 ${own().workers_available}；确认投资前可以在这里查看。` : "入场费在上方，收益和条件在下方。";
+        document.body.classList.toggle("manila-turn-active", isOurTurn() && connected());
+    }
+
+    function render() {
+        if (!view) return;
+        hideTip();
+        const focused = document.activeElement?.dataset.manilaFocus;
+        const openDetails = new Set([...panel.querySelectorAll("details[open][data-manila-detail-id]")].map(node => node.dataset.manilaDetailId));
+        const scrollPositions = [...panel.querySelectorAll("[data-manila-scroll]")].map(node => [node.dataset.manilaScroll, node.scrollTop]);
+        renderStatus();
+        renderMarket();
+        renderBoats();
+        renderBoard();
+        renderActions();
+        renderReview();
+        renderPlayers();
+        panel.querySelectorAll("details[data-manila-detail-id]").forEach(node => { node.open = openDetails.has(node.dataset.manilaDetailId); });
+        scrollPositions.forEach(([key, top]) => {
+            const node = panel.querySelector(`[data-manila-scroll="${CSS.escape(key)}"]`);
+            if (node) node.scrollTop = top;
         });
-      }
-      spendBlock.appendChild(spendList);
+        if (focused) panel.querySelector(`[data-manila-focus="${CSS.escape(focused)}"]`)?.focus({preventScroll: true});
+    }
+    function clearSelection() {
+        const origin = selection?.origin;
+        const changed = selection || selectedCargo.length || Object.values(pilotMoves).some(Boolean);
+        selection = null;
+        selectedCargo = [];
+        pilotMoves = {};
+        if (changed) render();
+        if (origin) panel.querySelector(`[data-manila-focus="${CSS.escape(origin)}"]`)?.focus({preventScroll: true});
+    }
 
-      breakdown.appendChild(earnBlock);
-      breakdown.appendChild(spendBlock);
-      card.appendChild(breakdown);
-      manilaRoundEndPlayers.appendChild(card);
+    function select(next, source) {
+        selection = selection?.key === next.key ? null : {...next, origin: source.dataset.manilaFocus};
+        hideTip();
+        setError();
+        render();
+    }
+
+    function handleOperation(target) {
+        const operation = target.dataset.manilaOp;
+        const cargo = target.dataset.cargo;
+        if (target.disabled || explaining) return;
+        if (operation === "cancel") { clearSelection(); return; }
+        if (pending) return;
+        if (operation === "confirm" && selection) { dispatch(selection.action); return; }
+        if (operation === "destination" && selection?.kind === "plunder") {
+            selection.action.result = target.dataset.result;
+            render();
+        } else if (operation === "bid-step" && can("bid")) {
+            const limits = bidLimits();
+            bidAmount = Math.max(limits.minimum, Math.min(limits.maximum, (Number.isInteger(bidAmount) ? bidAmount : limits.minimum) + Number(target.dataset.delta)));
+            render();
+        } else if (operation === "bid" && can("bid") && validBid()) {
+            dispatch({type: "bid", amount: bidAmount});
+        } else if (operation === "pass-bid") {
+            dispatch({type: "pass_bid"});
+        } else if (operation === "skip-buy") {
+            dispatch({type: "skip_buy"});
+        } else if (operation === "buy" && can("buy_stock") && cargoData[cargo]) {
+            const price = Math.max(5, view.price_track?.[cargo] || 0);
+            if (own().cash < price) return;
+            select({key: `buy-${cargo}`, host: "market", title: `购买 ${cargoLabel(cargo)}`, note: `支付 💰${price} · 买入 1 张股票 · 余额 💰${own().cash - price}`, action: {type: "buy_stock", cargo}}, target);
+        } else if (operation === "cargo" && can("select_cargo") && cargoData[cargo]) {
+            if (selectedCargo.includes(cargo)) selectedCargo = selectedCargo.filter(item => item !== cargo);
+            else if (selectedCargo.length < 3) selectedCargo.push(cargo);
+            render();
+        } else if (operation === "cargo-confirm" && selectedCargo.length === 3) {
+            dispatch({type: "select_cargo", cargo: [...selectedCargo]});
+        } else if (operation === "position" && can("set_positions")) {
+            positions[cargo] = Math.max(0, Math.min(13, positions[cargo] + Number(target.dataset.delta)));
+            render();
+        } else if (operation === "positions-confirm") {
+            const draft = view.cargo_slots.map(item => positions[item]);
+            if (draft.every(Number.isInteger) && total(draft) === 9) dispatch({type: "set_positions", positions: draft});
+        } else if (operation === "seat" && cargoData[cargo]) {
+            const seat = Number(target.dataset.seat);
+            const boat = view.boats[cargo];
+            const cost = boat.seat_costs[seat];
+            if (!canPlace(cost) || boat.seats[seat] || boat.plundered) return;
+            select({key: `seat-${cargo}-${seat}`, host: `ship-${cargo}`, title: `${cargoLabel(cargo)} · 座位 ${seat + 1}`,
+                note: `支付 💰${cost} + 1 名工人 · 成功后分享 💰${boat.total_value}`, action: {type: "place_worker", location: {type: "ship", cargo, seat}}}, target);
+        } else if (operation === "investment") {
+            const type = target.dataset.location;
+            const slot = target.dataset.slot;
+            const info = locationInfo(type, slot);
+            if (!canPlace(info.cost) || info.occupant || (type === "pirate" && slot === "pirate" && !view.board.pirates.captain)) return;
+            select({key: `${type}-${slot}`, host: ["port", "shipyard"].includes(type) ? type : "special", title: info.title,
+                note: `支付 💰${info.cost} + 1 名工人 · ${info.reward}`, action: {type: "place_worker", location: info.location}}, target);
+        } else if (operation === "pass") {
+            dispatch({type: "pass"});
+        } else if (operation === "pledge" && can("pledge_stock") && isOurTurn() && own().stocks?.[cargo] > 0) {
+            select({key: `pledge-${cargo}`, host: "finance", title: `抵押 ${cargoLabel(cargo)} ×1`,
+                note: `即得 💰${loanConfig("loan_amount", 12)} · 终局扣 💰${loanConfig("loan_repay", 15)} · 不可赎回`, action: {type: "pledge_stock", cargo}}, target);
+        } else if (operation === "pilot") {
+            const next = (pilotMoves[cargo] || 0) + Number(target.dataset.delta);
+            if (pilotAllowed(cargo, next)) { pilotMoves[cargo] = next; render(); }
+        } else if (operation === "pilot-confirm" && canPilot()) {
+            const moves = Object.entries(pilotMoves).filter(([, delta]) => delta !== 0);
+            const size = activePilot();
+            if (moves.length === 2 && size === "big") {
+                dispatch({type: "pilot_split", size, cargo_a: moves[0][0], delta_a: moves[0][1], cargo_b: moves[1][0], delta_b: moves[1][1]});
+            } else {
+                const chosen = moves[0] || [view.cargo_slots.find(item => !view.boats[item].arrived), 0];
+                if (chosen[0]) dispatch({type: "pilot_move", size, cargo: chosen[0], delta: chosen[1]});
+            }
+        } else if (operation === "pirate" && can("pirate_action") && view.current_player === view.you && view.pirate_targets.includes(cargo)) {
+            const boarding = view.pirate_day === 2;
+            if (boarding && !view.boats[cargo].seats.includes(null)) return;
+            select({key: `pirate-${cargo}`, host: `ship-${cargo}`, kind: boarding ? "board" : "plunder", title: `${boarding ? "登船" : "劫掠"} · ${cargoLabel(cargo)}`,
+                note: boarding ? "海盗离开原职位，占据船上一个空位。" : `分享货物 💰${view.boats[cargo].total_value}，选择该船的结算去向。`,
+                action: boarding ? {type: "pirate_action", mode: "board", cargo} : {type: "pirate_action", mode: "plunder", cargo, result: "port"}}, target);
+        } else if (operation === "pirate-skip") {
+            dispatch({type: "pirate_action", mode: "skip"});
+        } else if (operation === "next-round") {
+            dispatch({type: "next_round"});
+        }
+    }
+
+    function captureActivity(previous, next) {
+        if (!previous || previous.round !== next.round) { lastActivity = ""; return; }
+        const moves = [];
+        Object.entries(next.boats || {}).forEach(([cargo, boat]) => {
+            const before = previous.boats?.[cargo];
+            if (before && before.position !== boat.position) moves.push(`${cargoLabel(cargo)} ${before.position} → ${boat.position}`);
+        });
+        if (moves.length) { lastActivity = moves.join(" · "); return; }
+        for (const [cargo, boat] of Object.entries(next.boats || {})) {
+            const before = previous.boats?.[cargo];
+            const seat = boat.seats.findIndex((occupant, index) => occupant && occupant !== before?.seats[index]);
+            if (seat !== -1) { lastActivity = `${playerName(boat.seats[seat])} → ${cargoLabel(cargo)} · 座位 ${seat + 1}`; return; }
+        }
+        for (const [type, title] of [["port", "⚓ 码头"], ["shipyard", "🛠️ 修船厂"], ["pirates", "🏴‍☠️ 海盗"], ["pilots", "🧭 领航"]]) {
+            for (const [slot, occupant] of Object.entries(next.board?.[type] || {})) {
+                if (occupant && occupant !== previous.board?.[type]?.[slot]) { lastActivity = `${playerName(occupant)} → ${title}${["A", "B", "C"].includes(slot) ? ` ${slot}` : ""}`; return; }
+            }
+        }
+        if (next.board?.insurance && next.board.insurance !== previous.board?.insurance) { lastActivity = `${playerName(next.board.insurance)} → 🛡️ 保险`; return; }
+        if ((next.auction?.highest_bid || 0) > (previous.auction?.highest_bid || 0)) { lastActivity = `${playerName(next.auction.leader)} 出价 💰${next.auction.highest_bid}`; return; }
+        if (next.current_player !== previous.current_player && previous.phase === "placement" && next.phase === "placement") lastActivity = `${playerName(previous.current_player)} · Pass`;
+    }
+
+    function clearState() {
+        view = null;
+        roomKey = null;
+        stateSignature = "";
+        contextKey = "";
+        selection = null;
+        selectedCargo = [];
+        positions = {};
+        pilotMoves = {};
+        bidAmount = null;
+        pending = false;
+        pointer = null;
+        lastActivity = "";
+        setExplain(false);
+        hideTip();
+        setError();
+        [helpDialog, explainDialog].forEach(dialog => { if (dialog.open) dialog.close(); });
+        document.body.classList.remove("manila-turn-active");
+        ["Market", "Stages", "Wallet", "ActionBody", "Board", "Players", "Review", "FinanceBody"].forEach(id => byId(id).replaceChildren());
+        byId("Boats").innerHTML = '<div class="manila-empty">Waiting for game</div>';
+        byId("RoundLabel").textContent = "等待启航";
+        byId("Turn").textContent = "Waiting for game";
+        byId("Activity").textContent = "";
+        byId("PlayerCount").textContent = "";
+        byId("Finance").open = false;
+        byId("PlayersDetails").open = false;
+        visible(byId("Finance"), false);
+        visible(byId("Review"), false);
+    }
+
+    window.renderManilaGameState = data => {
+        if (!data?.view) return;
+        if (typeof currentGameType !== "undefined" && currentGameType !== "manila") {
+            currentGameType = "manila";
+            setGamePanelVisibility("manila");
+        }
+        const next = data.view;
+        const nextSignature = JSON.stringify(next);
+        const nextContext = JSON.stringify([data.room_id, next.you, next.round, next.phase, next.current_player, next.pending_pilots, next.pirate_targets, next.cargo_slots]);
+        if (roomKey !== data.room_id || view?.you !== next.you) clearState();
+        const changed = nextSignature !== stateSignature;
+        if (changed) {
+            captureActivity(view, next);
+            pending = false;
+            selection = null;
+            hideTip();
+            setError();
+        }
+        view = next;
+        roomKey = data.room_id;
+        if (nextContext !== contextKey) {
+            selectedCargo = [];
+            pilotMoves = {};
+            positions = Object.fromEntries((view.cargo_slots || []).map(cargo => [cargo, 3]));
+            bidAmount = (view.auction?.highest_bid || 0) + 1;
+            byId("Finance").open = view.phase === "harbormaster_pay" && view.harbormaster === view.you;
+            contextKey = nextContext;
+        }
+        stateSignature = nextSignature;
+        render();
+    };
+    window.clearManilaState = clearState;
+    window.showManilaHeaderActions = show => {
+        header.style.display = show ? "flex" : "none";
+        if (!show) clearState();
+    };
+
+    panel.addEventListener("click", event => {
+        if (explaining || event.defaultPrevented) return;
+        const target = event.target.closest("[data-manila-op]");
+        if (target) { hideTip(); handleOperation(target); return; }
+        if (event.target.closest("button, input, select, summary, a, .manila-confirm, [data-manila-tip]")) return;
+        clearSelection();
     });
-  }
-  const readyCount = players.filter((player) => readyMap.get(player.player_id)).length;
-  if (manilaRoundEndStatus) {
-    manilaRoundEndStatus.textContent = `${readyCount}/${players.length} Ready`;
-  }
-  const canReady = Array.isArray(view.legal_actions) && view.legal_actions.includes("next_round");
-  const alreadyReady = !!readyMap.get(view.you);
-  if (manilaNextRoundBtn) {
-    manilaNextRoundBtn.textContent = alreadyReady ? "Waiting..." : "Next Round";
-    setDisabled(manilaNextRoundBtn, !canReady || alreadyReady);
-  }
-}
+    panel.addEventListener("input", event => {
+        if (event.target.id !== "manilaBidInput") return;
+        bidAmount = event.target.value === "" ? null : Number(event.target.value);
+        byId("BidSubmit").disabled = !can("bid") || !validBid();
+        byId("BidNotice").textContent = !validBid() ? "请输入高于当前出价、且现金与可抵押股票足以支付的整数。" : bidAmount > own().cash ? "出价超过现金，竞得后需抵押股票。" : `可用现金 💰${own().cash}`;
+    });
+    byId("HelpBody").innerHTML = help;
+    byId("HelpBtn").addEventListener("click", () => { setExplain(false); openDialog(helpDialog); });
+    byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
+    byId("HelpClose").addEventListener("click", () => helpDialog.close());
+    byId("ExplainClose").addEventListener("click", () => explainDialog.close());
+    [helpDialog, explainDialog].forEach(dialog => {
+        dialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus({preventScroll: true}); });
+        dialog.addEventListener("click", event => {
+            const bounds = dialog.getBoundingClientRect();
+            if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) dialog.close();
+        });
+    });
 
-function updateActions(view) {
-  updateAuctionActions(view);
-  updatePayBidActions(view);
-  updatePledgeActions(view);
-  updateBuyStockActions(view);
-  updateSelectCargoActions(view);
-  updatePositionsActions(view);
-  updatePlacementActions(view);
-  updatePilotActions(view);
-  updatePirateActions(view);
-  updateRoundEnd(view);
-}
+    const active = () => typeof currentGameType !== "undefined" && currentGameType === "manila" && !panel.classList.contains("hidden");
+    const exempt = target => !!target.closest("#manilaHelpBtn, #manilaExplainBtn, .manila-dialog, #roomControlsToggleBtn, #roomControlsCollapseBtn");
+    document.addEventListener("pointerdown", event => {
+        if (!active() || exempt(event.target) || helpDialog.open || explainDialog.open) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-manila-explain]");
+        pointer = {id: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, explaining,
+            explainTarget: target && panel.contains(target) ? target : null, target: event.target, type: event.pointerType};
+    }, true);
+    document.addEventListener("pointermove", event => {
+        if (!pointer || event.pointerId !== pointer.id) return;
+        if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > 8) {
+            pointer.moved = true;
+            hideTip();
+        }
+    }, true);
+    document.addEventListener("pointerup", event => {
+        if (!pointer || event.pointerId !== pointer.id) return;
+        const gesture = pointer;
+        pointer = null;
+        if (gesture.moved) { suppressClickUntil = performance.now() + 650; return; }
+        if (gesture.explaining) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            suppressClickUntil = performance.now() + 650;
+            if (gesture.explainTarget) showExplanation(gesture.explainTarget);
+        } else if (gesture.type !== "mouse" && panel.contains(gesture.target)) {
+            const target = gesture.target.closest("[data-manila-tip]");
+            if (target) showTip(target, true);
+        }
+    }, true);
+    document.addEventListener("pointercancel", event => {
+        if (pointer?.id === event.pointerId) { pointer = null; suppressClickUntil = performance.now() + 650; hideTip(); }
+    }, true);
+    document.addEventListener("click", event => {
+        if (!active() || exempt(event.target)) return;
+        if (explaining || performance.now() < suppressClickUntil) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (explaining && event.detail === 0) showExplanation(event.target.closest("[data-manila-explain]"));
+        }
+    }, true);
+    panel.addEventListener("pointerover", event => {
+        if (event.pointerType === "mouse") showTip(event.target.closest("[data-manila-tip]"));
+    });
+    panel.addEventListener("pointerout", event => {
+        if (event.pointerType === "mouse" && tipTarget && !tipTarget.contains(event.relatedTarget)) hideTip();
+    });
+    panel.addEventListener("focusin", event => showTip(event.target.closest("[data-manila-tip]"), true));
+    panel.addEventListener("focusout", hideTip);
+    document.addEventListener("scroll", () => {
+        hideTip();
+        if (pointer) pointer.moved = true;
+    }, true);
+    window.addEventListener("resize", hideTip);
+    document.addEventListener("keydown", event => {
+        if (!active()) return;
+        if (event.key === "Escape") {
+            setExplain(false);
+            hideTip();
+            if (!helpDialog.open && !explainDialog.open) clearSelection();
+        } else if (explaining && ["Enter", " "].includes(event.key) && !exempt(event.target)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            showExplanation(event.target.closest("[data-manila-explain]"));
+        }
+    }, true);
 
-function renderManilaGameState(data) {
-  const view = data.view;
-  currentManilaView = view;
-  if (currentGameType !== "manila") {
-    currentGameType = "manila";
-    setGamePanelVisibility("manila");
-  }
-  if (!view) {
-    return;
-  }
-  if (manilaPhaseLabel) {
-    manilaPhaseLabel.textContent = view.phase || "-";
-  }
-  if (manilaRoundLabel) {
-    manilaRoundLabel.textContent = view.round ?? "-";
-  }
-  if (manilaCurrentLabel) {
-    manilaCurrentLabel.textContent = formatManilaPlayerName(view, view.current_player);
-  }
-  if (manilaHarborLabel) {
-    manilaHarborLabel.textContent = formatManilaPlayerName(view, view.harbormaster);
-  }
-  if (manilaHarborBidLabel) {
-    manilaHarborBidLabel.textContent = view.harbormaster_bid ?? 0;
-  }
-  if (manilaPricesLabel) {
-    const track = view.price_track || {};
-    const parts = Object.entries(track).map(([cargo, value]) => `${cargo}:${value}`);
-    manilaPricesLabel.textContent = parts.join(" · ") || "-";
-  }
-  if (manilaLegalActions) {
-    const actions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
-    manilaLegalActions.textContent = actions.length ? actions.join(", ") : "-";
-  }
-  syncManilaPilotDraft(view);
-  updateManilaCyclePanel(view);
-  renderManilaBoats(view);
-  renderManilaBoard(view);
-  renderManilaPlayers(view);
-  updateActions(view);
-}
-
-function clearManilaState() {
-  currentManilaView = null;
-  manilaSelectedCargo = [];
-  manilaCycleOpen = false;
-  manilaCycleUserOverride = null;
-  manilaLastPhase = null;
-  manilaPilotDraft = null;
-  if (manilaPhaseLabel) manilaPhaseLabel.textContent = "-";
-  if (manilaRoundLabel) manilaRoundLabel.textContent = "-";
-  if (manilaCurrentLabel) manilaCurrentLabel.textContent = "-";
-  if (manilaHarborLabel) manilaHarborLabel.textContent = "-";
-  if (manilaHarborBidLabel) manilaHarborBidLabel.textContent = "-";
-  if (manilaPricesLabel) manilaPricesLabel.textContent = "-";
-  if (manilaBoats) manilaBoats.innerHTML = "";
-  if (manilaDiceBar) {
-    manilaDiceBar.innerHTML = "";
-    setVisible(manilaDiceBar, false);
-  }
-  if (manilaBoard) manilaBoard.innerHTML = "";
-  if (manilaPlayers) manilaPlayers.innerHTML = "";
-  if (manilaLegalActions) manilaLegalActions.textContent = "-";
-  if (manilaAuctionInfo) manilaAuctionInfo.textContent = "";
-  if (manilaCycleStatus) manilaCycleStatus.textContent = "Cycle: -";
-  if (manilaCyclePhase) manilaCyclePhase.textContent = "Phase: -";
-  if (manilaCycleRecap) manilaCycleRecap.textContent = "No cycle data yet.";
-  setManilaCycleOpen(false);
-  exitManilaExplainMode();
-  if (manilaPassFacility) setVisible(manilaPassFacility, false);
-  if (manilaRoundEndPanel) setVisible(manilaRoundEndPanel, false);
-  if (manilaRoundEndPlayers) manilaRoundEndPlayers.innerHTML = "";
-  if (manilaRoundEndStatus) manilaRoundEndStatus.textContent = "0/0 Ready";
-  if (manilaTooltip) setVisible(manilaTooltip, false);
-  if (manilaTooltipTimer) {
-    clearTimeout(manilaTooltipTimer);
-    manilaTooltipTimer = null;
-  }
-}
-
-if (manilaBidBtn && manilaBidInput) {
-  manilaBidBtn.addEventListener("click", () => {
-    const amount = Number.parseInt(manilaBidInput.value, 10);
-    if (!Number.isInteger(amount) || amount <= 0) {
-      log("Enter a valid bid.");
-      return;
+    function syncRoom(state) {
+        if (!state || state.game_type !== "manila" || state.status === "lobby") {
+            if (view) clearState();
+            return;
+        }
+        if (view && roomKey !== state.room_id) clearState();
     }
-    sendAction({ type: "bid", amount });
-  });
-}
-if (manilaPassBidBtn) {
-  manilaPassBidBtn.addEventListener("click", () => sendAction({ type: "pass_bid" }));
-}
-if (manilaPledgeBtn && manilaPledgeSelect) {
-  manilaPledgeBtn.addEventListener("click", () =>
-    sendAction({ type: "pledge_stock", cargo: manilaPledgeSelect.value })
-  );
-}
-if (manilaSkipBuyBtn) {
-  manilaSkipBuyBtn.addEventListener("click", () => sendAction({ type: "skip_buy" }));
-}
-if (manilaConfirmCargoBtn) {
-  manilaConfirmCargoBtn.addEventListener("click", () =>
-    sendAction({ type: "select_cargo", cargo: manilaSelectedCargo })
-  );
-}
-if (manilaResetCargoBtn) {
-  manilaResetCargoBtn.addEventListener("click", () => {
-    manilaSelectedCargo = [];
-    updateSelectCargoActions(currentManilaView);
-  });
-}
-if (manilaConfirmPositionsBtn) {
-  manilaConfirmPositionsBtn.addEventListener("click", () => {
-    if (!manilaPositionsWrap) {
-      return;
+
+    function initialize() {
+        byId("HelpBtn").setAttribute("aria-label", "Help");
+        byId("ExplainBtn").setAttribute("aria-label", "Explain");
+        setExplain(false);
+        socket.on("room:state", syncRoom);
+        socket.on("system:error", data => {
+            if (!active() || !view) return;
+            pending = false;
+            selection = null;
+            render();
+            setError(typeof data === "string" ? data : data?.message || "Action failed. Please try again.");
+        });
+        socket.on("disconnect", () => {
+            if (!view) return;
+            pending = false;
+            selection = null;
+            selectedCargo = [];
+            pilotMoves = {};
+            render();
+        });
+        socket.on("connect", () => { if (view && active()) render(); });
+        socket.on("system:info", data => {
+            if (view && active() && data?.room_id === roomKey && data?.player_id === view.you) render();
+        });
+        socket.on("room:session_replaced", () => {
+            if (view && active()) { pending = false; selection = null; render(); }
+        });
+        if (typeof currentRoomState !== "undefined") syncRoom(currentRoomState);
+        if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "manila" &&
+            (!currentRoomState || currentRoomState.room_id === lastGameStatePayload.room_id)) window.renderManilaGameState(lastGameStatePayload);
     }
-    const inputs = Array.from(manilaPositionsWrap.querySelectorAll("input"));
-    const positions = inputs.map((input) => Number.parseInt(input.value, 10) || 0);
-    sendAction({ type: "set_positions", positions });
-  });
-}
-if (manilaPassBtn) {
-  manilaPassBtn.addEventListener("click", () => sendAction({ type: "pass" }));
-}
-if (manilaPirateBoardBtn && manilaPirateTargetSelect) {
-  manilaPirateBoardBtn.addEventListener("click", () =>
-    sendAction({ type: "pirate_action", mode: "board", cargo: manilaPirateTargetSelect.value })
-  );
-}
-if (manilaPiratePlunderBtn && manilaPirateTargetSelect) {
-  manilaPiratePlunderBtn.addEventListener("click", () =>
-    sendAction({
-      type: "pirate_action",
-      mode: "plunder",
-      cargo: manilaPirateTargetSelect.value,
-      result: manilaPirateResultSelect ? manilaPirateResultSelect.value : "port",
-    })
-  );
-}
-if (manilaPirateSkipBtn) {
-  manilaPirateSkipBtn.addEventListener("click", () => sendAction({ type: "pirate_action", mode: "skip" }));
-}
-if (manilaNextRoundBtn) {
-  manilaNextRoundBtn.addEventListener("click", () => sendAction({ type: "next_round" }));
-}
-
-if (manilaCycleToggleBtn) {
-  manilaCycleToggleBtn.addEventListener("click", () => {
-    const nextOpen = !manilaCycleOpen;
-    manilaCycleUserOverride = nextOpen ? "open" : "closed";
-    setManilaCycleOpen(nextOpen);
-  });
-}
-
-if (manilaCycleCloseBtn) {
-  manilaCycleCloseBtn.addEventListener("click", () => {
-    manilaCycleUserOverride = "closed";
-    setManilaCycleOpen(false);
-  });
-}
-
-if (manilaHelpBtn) {
-  manilaHelpBtn.addEventListener("click", showManilaHelpModal);
-}
-
-if (manilaHelpModalCloseBtn) {
-  manilaHelpModalCloseBtn.addEventListener("click", closeManilaHelpModal);
-}
-
-if (manilaExplainBtn) {
-  manilaExplainBtn.addEventListener("click", () => {
-    toggleManilaExplainMode();
-  });
-}
-
-if (manilaCycleExplainBtn) {
-  manilaCycleExplainBtn.addEventListener("click", () => {
-    toggleManilaExplainMode();
-  });
-}
-
-if (manilaExplainModalCloseBtn) {
-  manilaExplainModalCloseBtn.addEventListener("click", closeManilaExplainModal);
-}
-
-document.addEventListener("pointerdown", (event) => {
-  if (!manilaExplainMode) {
-    return;
-  }
-  const target = findManilaExplainTargetAtPoint(event.clientX, event.clientY);
-  if (target) {
-    event.preventDefault();
-    event.stopPropagation();
-    showManilaButtonExplanation(target);
-    exitManilaExplainMode();
-    return;
-  }
-
-  const button = event.target.closest("button");
-  if (!button) {
-    return;
-  }
-  if (button === manilaExplainBtn || button === manilaHelpBtn) return;
-  if (button === manilaCycleExplainBtn) return;
-  if (button === manilaHelpModalCloseBtn || button === manilaExplainModalCloseBtn) return;
-  if (button === manilaCycleCloseBtn) return;
-
-  event.preventDefault();
-  event.stopPropagation();
-}, true);
-
-document.addEventListener("click", (event) => {
-  if (!manilaExplainMode) {
-    return;
-  }
-  const button = event.target.closest("button");
-  if (!button) {
-    return;
-  }
-  if (button === manilaExplainBtn || button === manilaHelpBtn) return;
-  if (button === manilaCycleExplainBtn) return;
-  if (button === manilaHelpModalCloseBtn || button === manilaExplainModalCloseBtn) return;
-  if (button === manilaCycleCloseBtn) return;
-
-  event.preventDefault();
-  event.stopPropagation();
-}, true);
-
-document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") {
-    return;
-  }
-  if (manilaCycleOpen) {
-    manilaCycleUserOverride = "closed";
-    setManilaCycleOpen(false);
-  }
-  if (manilaHelpModal && !manilaHelpModal.classList.contains("hidden")) {
-    closeManilaHelpModal();
-  }
-  if (manilaExplainModal && !manilaExplainModal.classList.contains("hidden")) {
-    closeManilaExplainModal();
-  }
-  if (manilaExplainMode) {
-    exitManilaExplainMode();
-  }
-});
-
-window.renderManilaGameState = renderManilaGameState;
-window.clearManilaState = clearManilaState;
-window.showManilaHeaderActions = showManilaHeaderActions;
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, {once: true});
+    else initialize();
+})();

@@ -9,7 +9,7 @@
       {
         "player_id": "id",
         "name": "display name",
-        "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|null",
+        "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|gunslinger|samurai|vampire_lord|seraph|null",
         "health": "integer",
         "combat_points": "integer",
         "max_health": 50,
@@ -67,7 +67,8 @@
       "defender": "id",
       "damage": "integer",
       "damage_type": "normal|undefendable|ultimate",
-      "ability_id": "string"
+      "ability_id": "string",
+      "lifesteal": "optional boolean; Blood Power heals the attacker by resolved attack damage, after return damage and before ability effects"
     },
     "discard_count": "integer",
     "legal_actions": [
@@ -78,7 +79,7 @@
     ],
     "game_over": "boolean",
     "round_review": "public event list",
-    "hero_catalog": "object keyed by hero id; public name/name_zh/icon/subtitle/dice_faces/symbol_icons/symbol_names/abilities/defense",
+    "hero_catalog": "object keyed by hero id; public name/name_zh/icon/subtitle/dice_faces/symbol_icons/symbol_names/abilities/defense/season (1 or 2)",
     "status_catalog": "object keyed by status id; public name/name_zh/icon/limit/description/positive/companion",
     "edition_note": "explicit simplified digital rules scope",
     "turn_player": "player whose turn is in progress, including during a defensive response",
@@ -103,7 +104,7 @@
   },
   "actions": {
     "choose_hero": {
-      "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja",
+      "hero": "barbarian|moon_elf|monk|paladin|pyromancer|shadow_thief|treant|ninja|gunslinger|samurai|vampire_lord|seraph",
       "revision": "integer"
     },
     "roll": {
@@ -154,5 +155,5 @@
     }
   },
   "privacy": "Per-player hidden deck/discard orders, opponent hand identities, seed and RNG state are omitted from public_view. Catalogs and public logs contain no private cards.",
-  "rules_scope": "Eight playable Season One Rerolled hero identities in a simplified digital adaptation. Ability numbers, abbreviated decks/upgrades and automatic status/companion spending are local rules, not printed card-for-card parity."
+  "rules_scope": "Twelve playable hero identities: all eight Season One Rerolled heroes plus Season Two Gunslinger, Samurai, Vampire Lord and Seraph. This is a simplified digital adaptation: dice distributions, abilities, abbreviated decks/upgrades and automatic status/companion spending are local rules, not printed card-for-card parity. Blood Power automatically chooses damage or lifesteal, Mesmerize checks at opponent roll confirmation, and Flight is defensive only. Other printed token options and passive abilities are not included."
 }

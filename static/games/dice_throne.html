@@ -16,8 +16,13 @@
     <div id="diceThroneExplainNotice" class="dt-explain-notice hidden" role="status">Explain is on. Select an outlined item, or press Esc to leave.</div>
 
     <section id="diceThroneHeroPicker" class="dt-picker hidden" aria-label="Choose your hero">
-      <div class="dt-section-head"><h3>Choose your champion</h3><span>One arena. Two heroes.</span></div>
-      <div id="diceThroneHeroChoices" class="dt-hero-choices"></div>
+      <div class="dt-section-head"><h3>Choose your champion</h3><span id="diceThroneHeroCount"></span></div>
+      <div class="dt-hero-filters" role="group" aria-label="Hero season">
+        <button type="button" data-dt-season="all" aria-pressed="true">All</button>
+        <button type="button" data-dt-season="1" aria-pressed="false">Season 1</button>
+        <button type="button" data-dt-season="2" aria-pressed="false">Season 2</button>
+      </div>
+      <div id="diceThroneHeroChoices" class="dt-hero-choices" tabindex="0" role="region" aria-label="Available heroes"></div>
     </section>
 
     <div id="diceThroneArena" class="dt-arena hidden">
