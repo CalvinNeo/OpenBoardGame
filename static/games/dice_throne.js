@@ -7,7 +7,7 @@
   let previousGameTitle = null;
   const $ = id => document.getElementById(`diceThrone${id}`);
   let view = null;
-  let pending = false;
+  let pendingAction = null;
   let selected = null;
   let explainMode = false;
   let tipTimer = null;
@@ -82,7 +82,7 @@
   const heroName = id => heroes[id] ? `${heroes[id].name} (${heroes[id].icon})` : "Hero not chosen";
   const labelPlayer = id => view?.players?.find(player => player.player_id === id)?.name || id || "Player";
   const ownPlayer = () => view?.players?.find(player => player.player_id === view.you);
-  const legal = type => Boolean(view && !pending && view.legal_actions?.includes(type));
+  const legal = type => Boolean(view && !pendingAction && view.legal_actions?.includes(type));
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -124,9 +124,10 @@
   }
   function send(action) {
     if (!legal(action.type)) return;
+    if (action.type === "roll" && view.dice.length && view.dice.every(die => die.kept)) return;
     hideTip();
     action.revision = view.revision;
-    pending = true;
+    pendingAction = action.type;
     selected = null;
     render();
     if (typeof sendAction === "function") sendAction(action);
@@ -213,7 +214,7 @@
     section("The duel", `Choose two different heroes from the eight Season One Rerolled champions: ${Object.keys(heroes).map(heroName).join(", ")}. Start at 50 ${named("health")}, 2 ${named("cp")} and 4 ${named("card")}. Reduce your opponent to 0 Health (❤️) to win. Final results remain visible.`);
     section("This digital edition", nextEditionText());
     section("1 · Main I", "Play or sell Cards (🃏), then Start rolling. Select a card to reveal its in-place Play / Sell / Cancel overlay. Selling gains 1 Combat Point (⚡). Main (🧭) cards are used in a main phase; Roll (🎲) cards modify rolled dice; Instant (✨) cards can be used when their listed timing permits. Hover an unavailable card or its Play button to see the reason. On a phone, tap the card or muted Play button for a three-second tooltip; each new tap replaces the previous tip. If a target, die, value or status is still required, Play explains the missing choice. Hero decks and discards are separate, and only your own hand is visible.");
-    section("2 · Roll → attack", "Roll five Dice (🎲), up to three attempts. Tap a die to Keep (🔒) or release it. Each die shows its number and symbol. Confirm the roll, choose a matching ability, then confirm on its overlay. Abilities have no Combat Points (⚡) cost. Skip attack advances without attacking. Abilities and Hand share one panel; switch tabs to consult either without scrolling the page.");
+    section("2 · Roll → attack", "Roll five Dice (🎲), up to three attempts. Tap a die to Keep (🔒) or release it; Roll again shows how many unlocked dice will reroll. All kept? Release a die or confirm, without spending another attempt. Each die independently rolls one of six equally likely numbers, so a reroll can repeat its previous number or symbol. Several numbered faces share a symbol; check the numbers or open a hero's dice reference. Rerolled dice animate even when the result repeats; kept dice stay still. Confirm the roll, choose a matching ability, then confirm on its overlay. Abilities have no Combat Points (⚡) cost. Skip attack advances without attacking. Abilities and Hand share one panel; switch tabs to consult either without scrolling the page.");
     section("3 · Defense", "Normal Damage (🗡️) allows the defender to use the hero's Defense (🛡️), or Pass. After Defend, the dice tray shows the actual defense Dice (🎲), final Damage (🗡️) taken, damage blocked by the roll, and any Healing (💚), Combat Points (⚡), status gains or total return damage. This result stays through Main II and round review until the next turn, including after reconnect. Pass does not roll defense dice. Each hero's defensive dice and effects are listed below. Undefendable damage skips the defensive roll; Ultimate (👑) damage also ignores prevention. The defender acknowledges these attacks with Pass. Roll (🎲) and Instant (✨) cards follow the available action window, with no cards allowed after an Ultimate is confirmed. Status tokens resolve as described in the glossary. The attack and defensive roll remain in the public battle log.");
     section("4 · Main II → review", "Play or sell cards, then Finish turn. Both players confirm Next Round after reviewing the turn; Bots confirm automatically. The other hero then takes the next turn, receiving 1 Combat Point (⚡) and drawing 1 Card (🃏), except for the opening turn. Health (❤️) is capped at 50 and CP at 15. This digital edition limits the hand to 6 cards on draw, and reshuffles only that hero's own discard pile when its deck runs out.");
     const legend = section("Symbols & colors", "The same symbols, names and colors are used on the board, in tooltips and in Explain.");
@@ -368,7 +369,6 @@
       if (player.is_bot) badges.append(el("span", "dt-badge", "Bot"));
       if (player.player_id === view.current_player) badges.append(el("span", "dt-badge dt-acting-badge", "Acting"));
       caption.append(playerName, badges);
-      identity.append(caption);
       describe(head, heroName(player.hero), `${player.name}${player.player_id === view.you ? " · You" : ""}${player.player_id === view.current_player ? " · Acting" : ""}`, true);
       const health = describe(el("div", "dt-health"), named("health"), terms.health[2], true);
       const number = el("div", "dt-health-value");
@@ -378,6 +378,7 @@
       fill.style.width = `${Math.max(0, Math.min(100, player.health / (player.max_health || 50) * 100))}%`;
       bar.append(fill);
       health.append(number, bar);
+      head.append(health);
       const meta = el("div", "dt-player-meta");
       meta.append(token("cp", `⚡ ${player.combat_points}`), token("card", `🃏 ${player.hand_count ?? 0}`));
       if (player.upgrades?.length) meta.append(token("upgrade", `⬆️ ${player.upgrades.length}`));
@@ -391,7 +392,7 @@
         }
       });
       const stats = el("div", "dt-player-stats");
-      stats.append(health, meta);
+      stats.append(caption, meta);
       card.append(head, stats, statuses);
       list.append(card);
     });
@@ -433,7 +434,8 @@
       const die = view.dice[index];
       const key = die?.face;
       const term = terms[key];
-      const node = button("", `dt-die dt-face-${key || "empty"}${die?.kept ? " kept" : ""}${!die ? " empty" : ""}`, () => send({type: "toggle_keep", index}));
+      const rolling = pendingAction === "roll" && !die?.kept;
+      const node = button("", `dt-die dt-face-${key || "empty"}${die?.kept ? " kept" : ""}${!die ? " empty" : ""}${rolling ? " dt-rolling" : ""}`, () => send({type: "toggle_keep", index}));
       node.dataset.index = index;
       node.setAttribute("aria-pressed", String(Boolean(die?.kept)));
       node.setAttribute("aria-label", `Die ${index + 1}: ${die?.value ? `${die.value} · ` : ""}${term ? named(key) : "not rolled"}${die?.kept ? ", Kept (🔒)" : ""}`);
@@ -446,8 +448,10 @@
     const actor = view.pending_attack?.attacker || view.current_player;
     $("DiceHint").textContent = view.phase === "offensive_roll" ? actor === view.you ? "Tap dice to keep them between rolls." : `${labelPlayer(actor)} is rolling…` : "";
     $("DiceHint").classList.toggle("hidden", !$("DiceHint").textContent);
-    $("RollBtn").disabled = !legal("roll");
-    $("RollBtn").textContent = view.roll_count ? "🎲 Roll again" : "🎲 Roll dice";
+    const rerollCount = view.dice.length ? view.dice.filter(die => !die.kept).length : 5;
+    $("RollBtn").disabled = !legal("roll") || !rerollCount;
+    $("RollBtn").textContent = pendingAction === "roll" ? "🎲 Rolling…" : !rerollCount ? "🔒 All kept" : view.roll_count ? `🎲 Roll again · ${rerollCount}` : "🎲 Roll dice";
+    area.setAttribute("aria-busy", String(pendingAction === "roll"));
     $("ConfirmBtn").disabled = !legal("confirm_roll") || !view.dice.length;
     $("EndBtn").disabled = !legal("end_phase");
     $("EndBtn").textContent = view.phase === "main_2" ? "Finish turn →" : "Start rolling →";
@@ -459,6 +463,18 @@
     $("ConfirmBtn").classList.toggle("hidden", view.phase !== "offensive_roll");
     $("PassBtn").classList.toggle("hidden", view.phase !== "targeting");
     $("PassBtn").disabled = !legal("pass");
+  }
+  function showRollResult(previous, next) {
+    if (!previous || next.revision <= previous.revision || next.round !== previous.round || next.turn_player !== previous.turn_player || next.roll_count <= previous.roll_count || next.defense_result) return;
+    const rerolled = [...$("Dice").querySelectorAll(".dt-die:not(.kept)")];
+    rerolled.forEach(node => {
+      node.classList.add("dt-rerolled");
+      window.setTimeout(() => node.classList.remove("dt-rerolled"), 700);
+    });
+    if (!rerolled.length) return;
+    const actor = next.current_player === next.you ? "You" : labelPlayer(next.current_player);
+    $("Status").textContent = `${actor} rolled ${rerolled.length} ${rerolled.length === 1 ? "die" : "dice"} · ${next.dice.length - rerolled.length} kept.`;
+    describe($("Status"), phases[next.phase], $("Status").textContent, true);
   }
   function chooseSelection(value, node) {
     selected = value;
@@ -559,7 +575,7 @@
     return action;
   }
   function cardUnavailableReason(card) {
-    if (pending) return "上一项操作正在提交，请稍候。";
+    if (pendingAction) return "上一项操作正在提交，请稍候。";
     if (view.game_over) return "对局已经结束。";
     const reason = card.unavailable_reason || "";
     if (reason === "CP 不足" || (!reason && (ownPlayer()?.combat_points || 0) < card.cost)) {
@@ -766,7 +782,7 @@
     $("Phase").textContent = phases[view.phase] || "Waiting";
     const prompts = {choose_hero: "Choose your hero to enter the duel.", main_1: "Play cards or start rolling.", offensive_roll: "Roll, keep your best dice, then confirm.", targeting: "Choose a ready ability or skip the attack.", defensive_roll: "An attack is incoming. Choose your response.", main_2: "Play cards or finish your turn.", round_review: "Review the turn, then ready up.", game_over: "The duel is complete."};
     const hasAction = !view.game_over && Boolean(view.legal_actions?.length);
-    $("Status").textContent = pending ? "Sending your action…" : hasAction ? prompts[view.phase] : view.phase === "round_review" ? "Ready · waiting for the other player." : view.game_over ? prompts.game_over : `Waiting for ${labelPlayer(view.current_player)}…`;
+    $("Status").textContent = pendingAction ? "Sending your action…" : hasAction ? prompts[view.phase] : view.phase === "round_review" ? "Ready · waiting for the other player." : view.game_over ? prompts.game_over : `Waiting for ${labelPlayer(view.current_player)}…`;
     describe($("Status"), phases[view.phase] || "Waiting", $("Status").textContent, true);
     root.classList.toggle("dt-has-action", hasAction);
     document.body.classList.toggle("dt-needs-action", hasAction);
@@ -902,7 +918,7 @@
   $("Tooltip").setAttribute("aria-live", "polite");
   $("Tooltip").setAttribute("aria-atomic", "true");
   const actionHelp = {
-    RollBtn: ["Roll Dice (🎲)", "Roll again up to the limit shown on the tray; statuses and cards can change it. Kept (🔒) dice remain unchanged."],
+    RollBtn: ["Roll Dice (🎲)", "Reroll only unlocked dice, up to the limit shown on the tray. The button shows how many dice will reroll. Kept (🔒) dice remain unchanged; release a die if all are kept. Each roll is independent: repeating a number or symbol is a valid result, and several numbered faces share a symbol."],
     ConfirmBtn: ["Confirm roll", "Keep the current Dice (🎲) result and move to ability selection. Roll at least once first."],
     EndBtn: ["Continue the turn", "Main I continues to rolling Dice (🎲). Main II ends the turn and opens the shared review."],
     PassBtn: ["Skip attack", "Continue to Main II without using an ability or spending Combat Points (⚡)."],
@@ -933,10 +949,12 @@
     if (view?.revision !== data.view.revision) selected = null;
     syncCatalog(data.view);
     const phaseChanged = view?.phase !== data.view.phase;
+    const previous = view;
     recordChanges(view, data.view);
     view = data.view;
-    pending = false;
+    pendingAction = null;
     render();
+    showRollResult(previous, view);
     if (phaseChanged) {
       const main = ["main_1", "main_2"].includes(view.phase);
       setDecisionTab(main ? "hand" : ["offensive_roll", "targeting"].includes(view.phase) ? "abilities" : activeTab);
@@ -957,7 +975,7 @@
     if (!show) {
       view = null;
       selected = null;
-      pending = false;
+      pendingAction = null;
       activity.length = 0;
       setExplain(false);
       document.body.classList.remove("dt-needs-action");
@@ -966,8 +984,8 @@
   };
   function sync() {
     if (typeof socket !== "undefined") {
-      socket.on("system:error", () => { pending = false; render(); });
-      socket.on("disconnect", () => { pending = false; render(); });
+      socket.on("system:error", () => { pendingAction = null; render(); });
+      socket.on("disconnect", () => { pendingAction = null; render(); });
     }
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "dice_throne") window.renderDiceThroneGameState(lastGameStatePayload);
   }

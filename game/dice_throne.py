@@ -564,7 +564,7 @@ class DiceThroneGame:
             return ["play_card", "buy_upgrade", "sell_card", "end_phase", "pass"]
         if phase == "offensive_roll":
             actions = ["play_card", "pass"]
-            if state.get("rolls", 0) < state.get("roll_limit", 3):
+            if state.get("rolls", 0) < state.get("roll_limit", 3) and not all(state["kept"]):
                 actions.insert(0, "roll")
             if state.get("dice"):
                 actions.extend(["toggle_keep", "confirm_roll"])

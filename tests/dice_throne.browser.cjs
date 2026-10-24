@@ -31,6 +31,11 @@ state["dice"] = [{"value": value, "face": HEROES["barbarian"]["dice_faces"][valu
 views["rolled"] = Game.get_public_view(state, "p0")
 views["opponent"] = Game.get_public_view(state, "p1")
 views["spectator"] = Game.get_public_view(state, "visitor")
+kept_state = copy.deepcopy(state)
+kept_state["kept"] = [True] * 5
+views["all_kept"] = Game.get_public_view(kept_state, "p0")
+kept_state["kept"][2] = False
+views["one_unkept"] = Game.get_public_view(kept_state, "p0")
 act("p0", "confirm_roll")
 views["targeting"] = Game.get_public_view(state, "p0")
 act("p0", "use_ability", ability_id="smack", target="p1")
@@ -110,10 +115,11 @@ async function geometry(page) {
     return page.evaluate(() => {
         const panel = document.querySelector('.game-panel').getBoundingClientRect();
         const players = document.getElementById('diceThronePlayers').getBoundingClientRect();
+        const header = document.querySelector('.dt-game-panel > .panel-header').getBoundingClientRect();
         const tray = document.getElementById('diceThroneRollZone').getBoundingClientRect();
         const decisions = document.getElementById('diceThroneDecisions').getBoundingClientRect();
         return {
-            panelHeight: Math.round(panel.height), playersHeight: Math.round(players.height),
+            panelHeight: Math.round(panel.height), headerHeight: Math.round(header.height), playersHeight: Math.round(players.height),
             trayHeight: Math.round(tray.height), decisionsTop: Math.round(decisions.top - panel.top),
             decisionsHeight: Math.round(decisions.height), panelBottom: Math.round(panel.bottom),
             viewportHeight: innerHeight, sideBySide: Math.abs(tray.top - decisions.top) < 1,
@@ -123,6 +129,82 @@ async function geometry(page) {
 
 async function actions(page, expected) {
     assert.deepEqual(await page.evaluate(() => diceThroneTestActions), expected);
+}
+
+async function rerollFeedback(page) {
+    await render(page, 'all_kept');
+    assert.equal(await page.locator('#diceThroneRollBtn').isDisabled(), true);
+    assert.match(await page.locator('#diceThroneRollBtn').innerText(), /All kept/);
+    assert.equal(await page.locator('#diceThroneConfirmBtn').isEnabled(), true);
+    await page.locator('#diceThroneRollBtn').evaluate(node => node.click());
+    await actions(page, []);
+    await page.locator('.dt-die').nth(2).tap();
+    await actions(page, [{ type: 'toggle_keep', index: 2, revision: fixtures.all_kept.revision }]);
+
+    await render(page, 'one_unkept');
+    assert.match(await page.locator('#diceThroneRollBtn').innerText(), /Roll again · 1/);
+    await page.locator('#diceThroneRollBtn').tap();
+    await actions(page, [{ type: 'roll', revision: fixtures.one_unkept.revision }]);
+    assert.equal(await page.locator('.dt-die.dt-rolling').count(), 1);
+    assert.equal(await page.locator('.dt-die.kept.dt-rolling').count(), 0);
+    assert.equal(await page.locator('#diceThroneDice').getAttribute('aria-busy'), 'true');
+    assert.equal(await page.locator('#diceThroneRollBtn').isDisabled(), true);
+    await page.locator('#diceThroneRollBtn').evaluate(node => node.click());
+    await actions(page, [{ type: 'roll', revision: fixtures.one_unkept.revision }]);
+    const repeated = structuredClone(fixtures.one_unkept);
+    repeated.revision += 1;
+    repeated.roll_count += 1;
+    const result = await page.evaluate(view => {
+        renderDiceThroneGameState({ view });
+        return {
+            animated: [...document.querySelectorAll('.dt-rerolled')].map(node => Number(node.dataset.index)),
+            values: [...document.querySelectorAll('.dt-die .dt-die-value')].map(node => Number(node.textContent)),
+            message: document.getElementById('diceThroneStatus').textContent,
+        };
+    }, repeated);
+    assert.deepEqual(result.animated, [2], 'Even identical results animate only the rerolled die.');
+    assert.deepEqual(result.values, repeated.dice.map(die => die.value));
+    assert.match(result.message, /You rolled 1 die · 4 kept/);
+    assert.equal(await page.locator('#diceThroneRollCount').innerText(), '2 / 3 rolls');
+    assert.equal(await page.locator('#diceThroneDice').getAttribute('aria-busy'), 'false');
+    assert.equal(await page.locator('.dt-rolling').count(), 0);
+    await bounds(page, 'Identical reroll feedback');
+    await page.waitForFunction(() => !document.querySelector('.dt-rerolled'));
+    await page.evaluate(view => renderDiceThroneGameState({ view }), repeated);
+    assert.equal(await page.locator('.dt-rerolled').count(), 0, 'Duplicate updates do not replay a roll.');
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await render(page, 'unrolled');
+    await page.locator('#diceThroneRollBtn').tap();
+    assert.equal(await page.locator('.dt-rolling').count(), 5);
+    assert.equal(await page.locator('.dt-rolling .dt-die-symbol').first().evaluate(node => getComputedStyle(node).animationName), 'none');
+    await page.evaluate(() => socket.emitReserved('system:error', { message: 'Test rejection' }));
+    assert.equal(await page.locator('.dt-rolling').count(), 0);
+    assert.equal(await page.locator('#diceThroneRollBtn').isEnabled(), true);
+    const reducedResult = await page.evaluate(view => {
+        renderDiceThroneGameState({ view });
+        return {
+            animation: getComputedStyle(document.querySelector('.dt-rerolled')).animationName,
+            message: document.getElementById('diceThroneStatus').textContent,
+        };
+    }, fixtures.rolled);
+    assert.equal(reducedResult.animation, 'none');
+    assert.match(reducedResult.message, /You rolled 5 dice · 0 kept/);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+    for (const role of ['opponent', 'spectator']) {
+        await render(page, role);
+        const next = structuredClone(fixtures[role]);
+        next.revision += 1;
+        next.roll_count += 1;
+        const animated = await page.evaluate(view => {
+            renderDiceThroneGameState({ view });
+            return document.querySelectorAll('.dt-rerolled').length;
+        }, next);
+        assert.equal(animated, 5, `${role} sees the reroll too.`);
+        assert.equal(await page.locator('#diceThroneRollBtn').isDisabled(), true);
+        await actions(page, []);
+    }
 }
 
 async function touchScroll(page, selector) {
@@ -366,6 +448,89 @@ async function desktop(browser) {
     }
 }
 
+async function liveRerolls(browser) {
+    const contexts = [];
+    const pages = [];
+    const errors = [];
+    try {
+        for (let index = 0; index < 2; index++) {
+            const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+            contexts.push(context);
+            const page = await context.newPage();
+            pages.push(page);
+            page.on('pageerror', error => errors.push(error.message));
+            await page.route('https://fonts.googleapis.com/**', route => route.abort());
+            await page.goto(base);
+            await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+            await page.evaluate(() => {
+                window.diceThroneLiveErrors = [];
+                window.diceThroneLiveRolls = [];
+                socket.on('system:error', error => window.diceThroneLiveErrors.push(error));
+                socket.on('game:state', data => {
+                    if (!data.view?.roll_count) return;
+                    window.diceThroneLiveRolls.push({
+                        rollCount: data.view.roll_count,
+                        message: document.getElementById('diceThroneStatus').textContent,
+                        animated: [...document.querySelectorAll('.dt-rerolled')].map(node => Number(node.dataset.index)),
+                        dice: data.view.dice,
+                    });
+                });
+            });
+        }
+        const [host, guest] = pages;
+        await host.evaluate(() => socket.emit('room:create', { name: 'Reroll Alice', game_type: 'dice_throne', config: { seed: 163 } }));
+        await host.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('dice_throne'));
+        const room = await host.evaluate(() => roomId);
+        await guest.evaluate(room_id => socket.emit('room:join', { room_id, name: 'Reroll Bob' }), room);
+        await guest.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('dice_throne'));
+        for (const page of pages) await page.evaluate(() => socket.emit('room:ready', { room_id: roomId, ready: true }));
+        await host.waitForFunction(() => !document.getElementById('startBtn').disabled);
+        await host.evaluate(() => socket.emit('room:start', { room_id: roomId }));
+        for (const [index, page] of pages.entries()) {
+            await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'choose_hero');
+            await page.evaluate(hero => sendAction({ type: 'choose_hero', hero, revision: lastGameStatePayload.view.revision }), index ? 'moon_elf' : 'barbarian');
+            await page.waitForFunction(hero => lastGameStatePayload.view.players.some(player => player.hero === hero), index ? 'moon_elf' : 'barbarian');
+        }
+        for (const page of pages) {
+            await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'main_1');
+            await page.evaluate(() => setRoomControlsCollapsed(true));
+        }
+        const active = await host.evaluate(() => lastGameStatePayload.view.current_player === playerId) ? host : guest;
+        await active.locator('#diceThroneEndBtn').tap();
+        await active.waitForFunction(() => lastGameStatePayload.view.phase === 'offensive_roll');
+        await active.locator('#diceThroneRollBtn').tap();
+        for (const page of pages) await page.waitForFunction(() => lastGameStatePayload.view.roll_count === 1);
+        const firstDice = await active.evaluate(() => lastGameStatePayload.view.dice);
+        for (let index = 0; index < 5; index++) {
+            await active.locator('.dt-die').nth(index).tap();
+            await active.waitForFunction(index => lastGameStatePayload.view.dice[index].kept, index);
+        }
+        assert.equal(await active.locator('#diceThroneRollBtn').isDisabled(), true);
+        assert.equal(await active.evaluate(() => lastGameStatePayload.view.roll_count), 1);
+        assert.equal(await active.evaluate(() => lastGameStatePayload.view.legal_actions.includes('roll')), false);
+        await active.locator('.dt-die').nth(2).tap();
+        await active.waitForFunction(() => !lastGameStatePayload.view.dice[2].kept);
+        assert.match(await active.locator('#diceThroneRollBtn').innerText(), /Roll again · 1/);
+        await active.locator('#diceThroneRollBtn').tap();
+        for (const page of pages) {
+            await page.waitForFunction(() => lastGameStatePayload.view.roll_count === 2);
+            const roll = await page.evaluate(() => window.diceThroneLiveRolls.find(item => item.rollCount === 2));
+            assert.deepEqual(roll.animated, [2], 'Live updates animate the one rerolled die for both players.');
+            assert.match(roll.message, /rolled 1 die · 4 kept/);
+            for (const index of [0, 1, 3, 4]) assert.equal(roll.dice[index].value, firstDice[index].value);
+            assert.deepEqual(await page.evaluate(() => window.diceThroneLiveErrors), []);
+            await bounds(page, 'Live reroll');
+        }
+        assert.deepEqual(errors, []);
+        console.log('Live two-player room: roll, keep all, release one, reroll and synchronized feedback passed.');
+    } finally {
+        for (const page of pages) {
+            await page.evaluate(() => { if (roomId) socket.emit('room:leave', { room_id: roomId }); }).catch(() => {});
+        }
+        for (const context of contexts) await context.close();
+    }
+}
+
 (async () => {
     const browser = await chromium.launch({ channel: 'chrome', headless: true });
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -387,6 +552,9 @@ async function desktop(browser) {
             }
             await render(page, 'rolled');
             measurements[viewport.width] = await geometry(page);
+            assert(measurements[viewport.width].headerHeight <= 30, 'The title stays a compact single row.');
+            assert(measurements[viewport.width].playersHeight <= 65, 'Normal hero summaries stay compact.');
+            await page.mouse.move(0, 0);
             await page.screenshot({ path: `${output}/${viewport.width}-combat.png`, fullPage: true });
             assert.equal(await page.locator('.game-panel-title h2').innerText(), 'Dice Throne');
             assert.equal(await page.locator('#diceThronePanel > .dice-throne-shell, .dice-throne-titlebar').count(), 0);
@@ -400,11 +568,15 @@ async function desktop(browser) {
         fs.writeFileSync(`${output}/measurements.json`, JSON.stringify(measurements, null, 2));
         console.log(JSON.stringify(measurements, null, 2));
         await interactions(page);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await rerollFeedback(page);
         await desktop(browser);
+        await liveRerolls(browser);
         assert.deepEqual(errors, [], 'Browser console errors');
         console.log(`${Object.keys(fixtures).length} states fit at 320, 390, 768, 1024 and 1440px.`);
         console.log('Touch scrolling, selection, card inputs, dice controls, Help/Explain, Esc, tooltips, round review and game switching passed.');
         console.log('All eight hero references, six dice faces, every ability, opponent upgrades, spectators, modal tooltips and compact layouts passed.');
+        console.log('Reroll counts, all-kept guard, repeated-result feedback, spectators, reduced motion and error recovery passed.');
     } catch (error) {
         await page.screenshot({ path: `${output}/failure.png`, fullPage: true });
         throw error;
