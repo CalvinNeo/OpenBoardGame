@@ -38,6 +38,9 @@ const games = [
     {id: 'love_letter', prefix: 'loveLetter', target: '.ll-card:visible', surface: '.ll-surface', modal: '#loveLetterDialog', reopen: true},
     {id: 'spirit_island', playerCount: 4, prefix: 'spiritIsland', target: '.si-spirit-choice:visible', surface: '.si-shell', modal: '.spirit-island-dialog', reopen: true},
     {id: 'cryptid', prefix: 'cryptid', target: '[data-cryptid-action="in"]', surface: '.cryptid-shell', modal: '#cryptidDialog', reopen: true},
+    {id: 'bomb_busters', prefix: 'bombBusters', target: '#bombBustersDetonator', reopen: true},
+    {id: 'orloj', prefix: 'orloj', target: '.or-status [data-or-explain]', surface: '.or-root', modal: '#orlojDialog', reopen: true},
+    {id: 'grand_austria_hotel', prefix: 'grandAustria', target: '.gah-die:visible', surface: '.gah-root', modal: '#grandAustriaDialog', reopen: true},
 ];
 const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
 
@@ -181,6 +184,64 @@ const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
         await activate(fit);
     }
 
+    async function bombBustersInteraction(playing, mobilePage) {
+        for (let clue = 0; clue < playing.length; clue += 1) {
+            const actorId = await playing[0].evaluate(() => lastGameStatePayload.view.initial_info_player_id);
+            let actor;
+            for (const page of playing) {
+                if (await page.evaluate(() => playerId) === actorId) actor = page;
+            }
+            assert(actor, 'Initial clue belongs to a connected player');
+            await actor.waitForFunction(() => lastGameStatePayload.view.initial_info_player_id === playerId);
+            const mobile = actor === mobilePage;
+            const activate = async locator => mobile ? locator.tap() : locator.click();
+            const wire = actor.locator('.bomb-busters-wire-button:enabled').first();
+            const selected = actor.locator('.bomb-busters-wire-button.is-selected-own');
+            const before = await actor.evaluate(() => lastGameStatePayload.state_version);
+            if (mobile) {
+                await wire.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+                const bounds = await wire.boundingBox();
+                const session = await actor.context().newCDPSession(actor);
+                const horizontal = bounds.x + bounds.width / 2;
+                const vertical = bounds.y + bounds.height / 2;
+                await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: horizontal, y: vertical, id: 1}]});
+                for (let step = 1; step <= 5; step += 1) {
+                    await session.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: horizontal, y: vertical - step * 18, id: 1}]});
+                }
+                await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+                await session.detach();
+                assert.equal(await selected.count(), 0, 'Scrolling over a wire does not select it');
+                for (const width of [320, 390]) {
+                    await actor.setViewportSize({width, height: 1000});
+                    await activate(wire);
+                    const popover = actor.locator('#bombBustersWirePopover');
+                    await popover.waitFor({state: 'visible'});
+                    const box = await popover.boundingBox();
+                    assert(box.x >= 0 && box.x + box.width <= width && box.y >= 0 && box.y + box.height <= 1000, 'Wire confirmation stays in the viewport');
+                    await actor.screenshot({path: `${output}/bomb_busters-selection-${width}.png`});
+                    await activate(actor.locator('#bombBustersWirePopoverCancelBtn'));
+                    assert.equal(await selected.count(), 0, 'Cancel clears the selected wire');
+                }
+            }
+            await activate(wire);
+            assert.equal(await selected.count(), 1);
+            await activate(actor.locator('#bombBustersStatus'));
+            assert.equal(await selected.count(), 0, 'Blank space cancels wire selection');
+            await activate(wire);
+            await actor.keyboard.press('Escape');
+            assert.equal(await selected.count(), 0, 'Escape cancels wire selection');
+            assert.equal(await actor.evaluate(() => lastGameStatePayload.state_version), before, 'Selection and cancellation do not send actions');
+            await activate(wire);
+            await activate(actor.locator(mobile ? '#bombBustersWirePopoverConfirmBtn' : '#bombBustersShareClueBtn'));
+            for (const page of playing) {
+                await page.waitForFunction(version => lastGameStatePayload.state_version > version, before);
+            }
+        }
+        for (const page of playing) {
+            await page.waitForFunction(() => lastGameStatePayload.view.phase === 'playing');
+        }
+    }
+
     async function interact(page, game, mobile) {
         const activate = async locator => mobile ? locator.tap() : locator.click();
         const help = page.locator(game.help || `#${game.prefix}HelpBtn`);
@@ -298,6 +359,12 @@ const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
                 await desktop.setViewportSize({width: 1440, height: 1000});
                 await interact(desktop, game, false);
                 await interact(mobile, game, true);
+                if (game.id === 'bomb_busters') {
+                    await bombBustersInteraction(playing, mobile);
+                    const playingGame = {...game, caseName: 'bomb_busters-playing'};
+                    for (const [page, width] of [[desktop, 1440], [desktop, 1024], [mobile, 390], [mobile, 320]]) await layout(page, playingGame, width);
+                    console.log('PASS bomb_busters-playing: initial clues, scrolling, wire selection, Cancel/Escape, mobile confirmation, four widths');
+                }
                 if (game.id === 'spirit_island') {
                     for (const page of playing) {
                         await page.evaluate(() => setRoomControlsCollapsed(true));
@@ -326,9 +393,9 @@ const selectedGames = process.env.GAME_PANEL_GAMES?.split(',');
             }
         }
         await desktop.evaluate(async () => {
-            for (const id of ['cabo', 'dice_throne', 'emerald_skulls', 'poison', 'guandan', 'for_sale']) await ensureGameAssets(id);
+            for (const id of ['cabo', 'dice_throne', 'emerald_skulls', 'poison', 'guandan', 'for_sale', 'bomb_busters', 'orloj', 'grand_austria_hotel']) await ensureGameAssets(id);
         });
-        const transitions = ['poison', 'cabo', 'emerald_skulls', 'dice_throne', 'guandan', 'emerald_skulls', 'for_sale', 'dice_throne', 'cabo', null];
+        const transitions = ['poison', 'cabo', 'emerald_skulls', 'dice_throne', 'guandan', 'emerald_skulls', 'for_sale', 'orloj', 'bomb_busters', 'grand_austria_hotel', 'dice_throne', 'cabo', null];
         for (const id of transitions) {
             const actual = await desktop.evaluate(id => {
                 setGamePanelVisibility(id);

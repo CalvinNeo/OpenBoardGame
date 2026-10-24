@@ -1,5 +1,9 @@
 .gah-root, .gah-root *, .gah-dialog, .gah-dialog * { box-sizing: border-box; min-width: 0; }
-.gah-root { --gah-ink:#382b29; --gah-wine:#703b42; --gah-gold:#a88242; --gah-paper:#fcf8ef; color:var(--gah-ink); font:14px/1.4 Georgia,"Microsoft YaHei",serif; background:#ede5d7; border-radius:16px; padding:16px; max-width:100%; }
+.game-panel[data-game-theme="grand_austria_hotel"] { --gah-ink:#382b29; --gah-wine:#703b42; --gah-gold:#a88242; --gah-paper:#fcf8ef; color:var(--gah-ink); background:#ede5d7; border:1px solid #cdbb9d; border-radius:16px; padding:16px; overflow-wrap:anywhere; }
+.game-panel[data-game-theme="grand_austria_hotel"] .game-panel-title h2 { color:var(--gah-wine); font-family:Georgia,"Microsoft YaHei",serif; }
+.game-panel[data-game-theme="grand_austria_hotel"] > .panel-header button { color:var(--gah-wine); background:#fffaf0; border-color:#cdbb9d; }
+.game-panel[data-game-theme="grand_austria_hotel"] > .panel-header button[aria-pressed="true"] { color:#fff; background:#376d95; border-color:#376d95; }
+.gah-root { font:14px/1.4 Georgia,"Microsoft YaHei",serif; max-width:100%; }
 .gah-root button, .gah-root input, .gah-root select, .gah-dialog button { font:inherit; }
 .gah-root button { color:var(--gah-ink); background:#fffaf0; border:1px solid #cdbb9d; border-radius:8px; padding:7px 10px; white-space:normal; overflow-wrap:anywhere; cursor:pointer; box-shadow:0 2px 0 #382b2908; }
 .gah-root button:hover:not(:disabled) { border-color:var(--gah-gold); background:#fff; }
@@ -14,10 +18,7 @@
 #grandAustriaHelpBtn:hover, #grandAustriaExplainBtn:hover { background:#f3e5cd; border-color:#a88242; }
 #grandAustriaExplainBtn[aria-pressed="true"] { color:#fff; background:#376d95; border-color:#376d95; box-shadow:0 0 0 3px #376d9526; }
 #grandAustriaHelpBtn:focus-visible, #grandAustriaExplainBtn:focus-visible { outline:3px solid #956b31; outline-offset:2px; }
-.gah-brand { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:2px 2px 12px; border-bottom:1px solid #cdbb9d; }
-.gah-brand h2 { font-size:24px; color:var(--gah-wine); letter-spacing:.02em; }
-.gah-kicker { text-transform:uppercase; font:10px/1.5 sans-serif; letter-spacing:.22em; color:#806343; }
-.gah-round { text-align:right; font:13px/1.7 sans-serif; }
+.gah-round { display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; font:13px/1.7 sans-serif; }
 .gah-round strong { color:var(--gah-wine); font-size:18px; }
 .gah-players { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:7px; margin:12px 0; }
 .gah-player { display:flex; flex-direction:column; text-align:left; gap:4px; }
@@ -164,10 +165,8 @@
   .gah-market .gah-card { min-height:95px; }
 }
 @media(max-width:650px) {
-  .gah-root { padding:10px; border-radius:10px; font-size:13px; }
-  .gah-brand h2 { font-size:20px; }
-  .gah-brand { align-items:flex-start; gap:5px; }
-  .gah-kicker { font-size:9px; letter-spacing:.12em; }
+  .game-panel[data-game-theme="grand_austria_hotel"] { padding:10px; border-radius:10px; }
+  .gah-root { font-size:13px; }
   .gah-round { font-size:11px; }
   .gah-round strong { font-size:16px; }
   .gah-players { grid-template-columns:repeat(2,minmax(0,1fr)); }

@@ -276,7 +276,7 @@
     const p=view.players.find(item=>item.player_id===inspected) || own() || view.players[0];
     const actor=view.pending?.owner || view.current_turn;
     const selectedOwn=p.player_id===view.you;
-    const html=`<div class="gah-brand"><div><div class="gah-kicker">Vienna · A table for every story</div><h2>奥地利大饭店</h2></div><div class="gah-round"><strong>ROUND ${view.round} / 7</strong><br>${esc(phases[view.phase])}</div></div>
+    const html=`<div class="gah-round"><strong>ROUND ${view.round} / 7</strong><span>${esc(phases[view.phase])}</span></div>
       <div class="gah-players">${view.players.map(pl=>btn(`<span class="gah-player-name"><strong>${esc(pl.name)}</strong><span>${pl.player_id===view.you?"You ":""}${pl.is_bot?"🤖":""}${pl.player_id===actor?" ⏳":""}</span></span>${statsHTML(pl)}`,"inspect","inspect",false,`class="gah-player ${pl.player_id===actor?"gah-active":""} ${p.player_id===pl.player_id?"gah-selected":""}" data-player="${esc(pl.player_id)}"`)).join("")}</div>
       ${reviewHTML()}
       ${emperorHTML()}

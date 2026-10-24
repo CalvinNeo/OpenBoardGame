@@ -10,6 +10,10 @@ const ACTION_LOG_MAX = 500;
 const ACTION_LOG_TRUNCATE_AT = 500;
 let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
+let roomControlsPopoverOpen = false;
+let roomControlsDockSide = "left";
+let roomControlsDragState = null;
+let roomControlsExplainDockDeferred = false;
 let roomControlsExplainButton = null;
 let roomControlsExplainAnchor = null;
 let createRoomPending = false;
@@ -42,6 +46,7 @@ let logReturnFocus = null;
 const roomEntryReturnFocus = new WeakMap();
 const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
+const ROOM_CONTROLS_DOCK_KEY = "openboardgame:room_controls_dock";
 
 const nameInput = document.getElementById("nameInput");
 const playerNameModal = document.getElementById("playerNameModal");
@@ -59,6 +64,7 @@ const settingsBtn = document.getElementById("settingsBtn");
 const settingsModal = document.getElementById("settingsModal");
 const settingsCloseBtn = document.getElementById("settingsCloseBtn");
 const disableDoubleTapZoomToggle = document.getElementById("disableDoubleTapZoomToggle");
+const turnSoundToggle = document.getElementById("turnSoundToggle");
 const roomActionStatus = document.getElementById("roomActionStatus");
 const roomFeedbackTooltip = document.getElementById("roomFeedbackTooltip");
 const createRoomStatus = document.getElementById("createRoomStatus");
@@ -135,6 +141,7 @@ const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 const roomControlsCollapseBtn = document.getElementById("roomControlsCollapseBtn");
 const roomControlsBackdrop = document.getElementById("roomControlsBackdrop");
+const roomControlsDragHandle = document.getElementById("roomControlsDragHandle");
 const roomControlsMain = document.querySelector(".layout > .main");
 const mobileExplainSlot = document.getElementById("mobileExplainSlot");
 const gameReconnectBtn = document.getElementById("gameReconnectBtn");
@@ -145,6 +152,7 @@ const LAST_ROOM_ID_KEY = "openboardgame:last_room_id";
 const GAME_SORT_KEY = "openboardgame:game_sort";
 const RECENT_GAMES_KEY = "openboardgame:recent_games";
 const DISABLE_DOUBLE_TAP_ZOOM_KEY = "openboardgame:disable_double_tap_zoom";
+const TURN_SOUND_KEY = "openboardgame:turn_sound";
 const RECENT_GAMES_LIMIT = 50;
 const PLAYER_ACCESS_KEY_MAX_LENGTH = 1048576;
 const GAME_SORT_KEYS = new Set(["alpha", "recent", "dev_order", "difficulty_asc", "difficulty_desc"]);
@@ -182,6 +190,197 @@ disableDoubleTapZoomToggle.addEventListener("change", () => {
   applyDoubleTapZoomPreference(disabled);
   writeRoomStorage(DISABLE_DOUBLE_TAP_ZOOM_KEY, String(disabled));
 });
+
+let roomTurnSoundEnabled = readRoomStorage(TURN_SOUND_KEY) === "true";
+let roomTurnSoundContext = null;
+let roomTurnSoundState = null;
+let roomTurnSoundRequest = 0;
+turnSoundToggle.checked = roomTurnSoundEnabled;
+
+function resetRoomTurnSound() {
+  roomTurnSoundState = null;
+  roomTurnSoundRequest += 1;
+}
+
+// Create/resume audio during a user gesture, including after a saved preference is restored.
+function unlockRoomTurnSound() {
+  if (!roomTurnSoundEnabled) return;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!roomTurnSoundContext || roomTurnSoundContext.state === "closed") {
+      roomTurnSoundContext = new AudioContextClass();
+    }
+    if (roomTurnSoundContext.state !== "running") {
+      roomTurnSoundContext.resume().catch(() => {});
+    }
+  } catch {
+    // Audio support or autoplay restrictions must never interrupt play.
+  }
+}
+
+turnSoundToggle.addEventListener("change", () => {
+  roomTurnSoundEnabled = turnSoundToggle.checked;
+  writeRoomStorage(TURN_SOUND_KEY, String(roomTurnSoundEnabled));
+  roomTurnSoundRequest += 1;
+  if (roomTurnSoundEnabled) unlockRoomTurnSound();
+});
+document.addEventListener("pointerdown", unlockRoomTurnSound, { capture: true, passive: true });
+document.addEventListener("keydown", unlockRoomTurnSound, { capture: true });
+
+async function playRoomTurnSound(request) {
+  const context = roomTurnSoundContext;
+  if (!context || !roomTurnSoundEnabled) return;
+  try {
+    if (context.state !== "running") await context.resume();
+    // A delayed resume must not play an old turn after leaving, muting, or acting.
+    if (context.state !== "running" || request !== roomTurnSoundRequest
+        || !roomTurnSoundEnabled || !roomTurnSoundState?.canAct || !roomSessionReady || !socket.connected) return;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const now = context.currentTime;
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, now);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.012);
+    gain.gain.linearRampToValueAtTime(0, now + 0.16);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+    oscillator.start(now);
+    oscillator.stop(now + 0.17);
+  } catch {
+    // A missing device or a browser audio suspension is non-fatal.
+  }
+}
+
+function getRoomTurnSoundActor(view) {
+  // Acquire temporarily hands control to shareholders during a merger.
+  const actor = view.pending?.current_player ?? view.pending_action?.player_id
+    ?? view.current_turn ?? view.current_player ?? view.active_player_id;
+  return actor && typeof actor === "object" ? (actor.player_id ?? actor.playerId ?? actor.id) : actor;
+}
+
+function canActForRoomTurnSound(view, gameType, viewer) {
+  const actions = view.legal_actions ?? view.actions ?? view.options;
+  if (Array.isArray(actions)) {
+    // Optional communication and undo controls can remain available while waiting.
+    return actions.some((action) => {
+      const type = typeof action === "string" ? action : action?.action?.type ?? action?.type;
+      return type && !["communicate", "unready", "undo_plan", "play_again"].includes(type);
+    });
+  }
+  if (gameType === "aidixit") {
+    const storyteller = view.storyteller_id === viewer;
+    return (view.phase === "story" && storyteller && !view.submitted)
+      || (view.phase === "submit" && !storyteller && !view.submitted)
+      || (view.phase === "vote" && !storyteller && !view.voted);
+  }
+  if (gameType === "cyber_pictures") {
+    return (view.phase === "crafting" && !view.submitted)
+      || (view.phase === "guessing" && !view.guessed);
+  }
+  return getRoomTurnSoundActor(view) === viewer;
+}
+
+function updateRoomTurnSound(data) {
+  if (!data || !roomSessionReady || !socket.connected || !roomId || data.room_id !== roomId
+      || data.game_type !== currentGameType) return;
+  const view = data.view;
+  const viewer = view && (Object.hasOwn(view, "you") ? view.you : playerId);
+  if (!viewer || viewer !== playerId || (data.room_status && data.room_status !== "in_game") || view.game_over) {
+    resetRoomTurnSound();
+    return;
+  }
+  const scope = `${roomId}:${currentGameType}:${viewer}`;
+  const canAct = canActForRoomTurnSound(view, currentGameType, viewer);
+  const ownsTurn = getRoomTurnSoundActor(view) === viewer;
+  const previous = roomTurnSoundState;
+  const newTurn = canAct && (previous?.scope !== scope || !previous.canAct || (ownsTurn && !previous.ownsTurn));
+  roomTurnSoundState = { scope, canAct, ownsTurn };
+  if (!canAct) roomTurnSoundRequest += 1;
+  if (newTurn && roomTurnSoundEnabled) void playRoomTurnSound(++roomTurnSoundRequest);
+}
+
+const ROOM_CONTROLS_DOCK_SIDES = new Set(["left", "right", "top", "bottom"]);
+
+function normalizeRoomControlsDockSide(side) {
+  return ROOM_CONTROLS_DOCK_SIDES.has(side) ? side : "left";
+}
+
+function readRoomControlsDockSide() {
+  return normalizeRoomControlsDockSide(readRoomStorage(ROOM_CONTROLS_DOCK_KEY));
+}
+
+function isDesktopRoomControlsDock() {
+  return !roomControlsDockQuery.matches;
+}
+
+function applyRoomControlsDockSide(side, persist = false) {
+  roomControlsDockSide = normalizeRoomControlsDockSide(side);
+  if (roomControlsPanel) roomControlsPanel.dataset.dockSide = roomControlsDockSide;
+  document.body.classList.remove(
+    "room-controls-dock-left",
+    "room-controls-dock-right",
+    "room-controls-dock-top",
+    "room-controls-dock-bottom",
+  );
+  document.body.classList.add(`room-controls-dock-${roomControlsDockSide}`);
+  if (persist) writeRoomStorage(ROOM_CONTROLS_DOCK_KEY, roomControlsDockSide);
+}
+
+function roomControlsDockSideAtPoint(clientX, clientY) {
+  const distances = {
+    left: clientX,
+    right: Math.max(0, window.innerWidth - clientX),
+    top: clientY,
+    bottom: Math.max(0, window.innerHeight - clientY),
+  };
+  return Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0];
+}
+
+function finishRoomControlsDrag(event, persist = true) {
+  const drag = roomControlsDragState;
+  if (!drag) return;
+  roomControlsDragState = null;
+  document.body.classList.remove("room-controls-dragging");
+  roomControlsPanel?.classList.remove("is-dragging");
+  if (roomControlsDragHandle?.hasPointerCapture?.(drag.pointerId)) {
+    roomControlsDragHandle.releasePointerCapture(drag.pointerId);
+  }
+  if (persist) applyRoomControlsDockSide(drag.side, true);
+  if (event) event.preventDefault();
+}
+
+function startRoomControlsDrag(event) {
+  if (!isDesktopRoomControlsDock() || event.button !== 0 || !roomControlsDragHandle) return;
+  roomControlsDragState = {
+    pointerId: event.pointerId,
+    side: roomControlsDockSide,
+    moved: false,
+  };
+  roomControlsDragHandle.setPointerCapture?.(event.pointerId);
+  roomControlsPanel?.classList.add("is-dragging");
+  document.body.classList.add("room-controls-dragging");
+  event.preventDefault();
+}
+
+function moveRoomControlsDrag(event) {
+  const drag = roomControlsDragState;
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  const nextSide = roomControlsDockSideAtPoint(event.clientX, event.clientY);
+  drag.moved = drag.moved || nextSide !== drag.side;
+  if (nextSide !== drag.side) {
+    drag.side = nextSide;
+    applyRoomControlsDockSide(nextSide);
+  }
+  event.preventDefault();
+}
+
+if (roomControlsPanel) {
+  roomControlsDockSide = readRoomControlsDockSide();
+  applyRoomControlsDockSide(roomControlsDockSide);
+}
 
 function openSettingsModal() {
   setModalVisible(settingsModal, true);
@@ -2116,20 +2315,22 @@ function updateRoomControlsDock() {
     return;
   }
   const isCollapsed = roomControlsPanel.classList.contains("collapsed");
-  const shouldDock = roomControlsDockQuery.matches;
-  const drawerOpen = shouldDock && !isCollapsed;
-  const shouldCloseDesktopDrawer = !roomControlsDockQuery.matches && isCollapsed;
-  document.body.classList.toggle("room-controls-docked", shouldDock);
+  const desktopDock = isDesktopRoomControlsDock();
+  const drawerOpen = roomControlsDockQuery.matches && !isCollapsed;
+  const desktopPopover = desktopDock && roomControlsPopoverOpen && !isCollapsed;
+  const shouldCloseDesktopDrawer = desktopDock && isCollapsed;
+  document.body.classList.add("room-controls-docked");
   document.body.classList.toggle("room-controls-drawer-open", drawerOpen);
   document.body.classList.toggle("room-controls-drawer-closed", shouldCloseDesktopDrawer);
+  document.body.classList.toggle("room-controls-desktop-popover", desktopPopover);
   roomControlsToggleBtn.setAttribute("aria-expanded", (!isCollapsed).toString());
   roomControlsToggleBtn.setAttribute("aria-label", isCollapsed ? "Open Room Controls" : "Hide Room Controls");
   roomControlsToggleBtn.title = isCollapsed ? "Open Room Controls" : "Hide Room Controls";
   roomControlsMain.inert = drawerOpen;
-  if (drawerOpen) {
+  if (drawerOpen || desktopPopover) {
     roomControlsPanel.setAttribute("role", "dialog");
     roomControlsPanel.setAttribute("aria-modal", "true");
-    if (roomControlsMain.contains(document.activeElement) || document.activeElement === roomControlsToggleBtn) {
+    if (drawerOpen && (roomControlsMain.contains(document.activeElement) || document.activeElement === roomControlsToggleBtn)) {
       roomControlsCollapseBtn.focus({ preventScroll: true });
     }
   } else {
@@ -2139,7 +2340,7 @@ function updateRoomControlsDock() {
       roomControlsToggleBtn.focus({ preventScroll: true });
     }
   }
-  if (shouldDock) {
+  if (roomControlsDockQuery.matches) {
     // Reserve only the top bar, so opening the drawer never shifts the game.
     const header = roomControlsPanel.querySelector(":scope > .panel-header");
     const style = getComputedStyle(roomControlsPanel);
@@ -2181,7 +2382,12 @@ function roomControlsExplainSourceIsVisible() {
 }
 
 function syncRoomControlsExplainButton() {
-  if (!mobileExplainSlot || !roomControlsDockQuery.matches) {
+  const shouldDockExplain = roomControlsDockQuery.matches ||
+    (!roomControlsExplainDockDeferred && (
+    roomControlsPanel?.classList.contains("collapsed") ||
+    document.body.classList.contains("room-controls-desktop-popover")
+    ));
+  if (!mobileExplainSlot || !shouldDockExplain) {
     restoreRoomControlsExplainButton();
     updateRoomControlsDock();
     return;
@@ -2209,18 +2415,27 @@ function syncRoomControlsExplainButton() {
   updateRoomControlsDock();
 }
 
-function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
+function setRoomControlsCollapsed(collapsed, { auto = false, user = false } = {}) {
   if (!roomControlsPanel) {
     return;
   }
   const restoreFocus = collapsed && roomControlsPanel.contains(document.activeElement);
   roomControlsPanel.classList.toggle("collapsed", collapsed);
+  if (collapsed) {
+    roomControlsPopoverOpen = false;
+  } else if (user && isDesktopRoomControlsDock()) {
+    roomControlsExplainDockDeferred = false;
+    roomControlsPopoverOpen = true;
+  } else if (auto) {
+    roomControlsPopoverOpen = false;
+  }
   if (roomControlsToggleBtn) {
     roomControlsToggleBtn.textContent = collapsed ? "Show RC" : "Hide";
     roomControlsToggleBtn.setAttribute("aria-expanded", (!collapsed).toString());
   }
   roomControlsAutoCollapsed = auto && collapsed;
   updateRoomControlsDock();
+  syncRoomControlsExplainButton();
   if (restoreFocus) roomControlsToggleBtn.focus({ preventScroll: true });
 }
 
@@ -2500,6 +2715,7 @@ function renderRoomList(rooms) {
 }
 
 function resetRoomState() {
+  resetRoomTurnSound();
   hideRoomFeedbackTooltip();
   roomSessionReady = false;
   closeReopenConfirmModal(false);
@@ -2844,6 +3060,9 @@ socket.on("system:info", (data) => {
     setRoomFeedback();
     // The room snapshot arrives before identity, so refresh the player's controls.
     if (currentRoomState) renderRoomState(currentRoomState);
+    // Reconnect sends game:state before this identity event. Replay it now so an
+    // enabled turn alert can announce the current turn after a mobile wake-up.
+    if (lastGameStatePayload) updateRoomTurnSound(lastGameStatePayload);
   }
   if (data.message && data.message !== "connected") {
     setConnectionInfo(data.message);
@@ -2896,12 +3115,16 @@ socket.on("system:error", (data) => {
 });
 
 socket.on("room:session_replaced", () => {
+  resetRoomTurnSound();
   roomSessionReady = false;
   finishRoomRequest();
   setRoomFeedback("This room is open in another connection. Use Reconnect to return here.", true);
 });
 
 socket.on("room:state", (state) => {
+  if (state.room_id !== roomId || state.game_type !== currentGameType || state.status !== "in_game") {
+    resetRoomTurnSound();
+  }
   renderRoomState(state);
   if (state && state.room_id) {
     recordRecentGame(state.game_type);
@@ -3000,6 +3223,7 @@ socket.on("room:cleanup_empty_result", (data) => {
 
 socket.on("game:state", (data) => {
   lastGameStatePayload = data;
+  updateRoomTurnSound(data);
   renderGameState(data);
 });
 
@@ -3024,7 +3248,12 @@ socket.on("game:bot_progress", (data) => {
 playerName = loadStoredName().trim();
 updateRoomControlsName();
 updateGameReconnectButton();
+if (isDesktopRoomControlsDock() && roomControlsPanel && !roomControlsPanel.classList.contains("collapsed")) {
+  roomControlsPanel.classList.add("collapsed");
+  roomControlsToggleBtn.textContent = "Show RC";
+}
 updateRoomControlsDock();
+syncRoomControlsExplainButton();
 
 playerNameForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -3122,6 +3351,7 @@ cleanupEmptyRoomsBtn.addEventListener("click", () => {
 });
 
 socket.on("disconnect", (reason) => {
+  resetRoomTurnSound();
   if (pendingRoomRequest?.accessKeyEntry && !playerNameModal.classList.contains("hidden")) {
     showRoomEntryError(accessKeyInput, playerNameError, "Connection lost. Try reconnecting when the server is available.");
   }
@@ -3405,7 +3635,7 @@ document.addEventListener("click", (event) => {
   const panel = btn?.closest(".panel");
   if (!panel) return;
   if (panel === roomControlsPanel) {
-    setRoomControlsCollapsed(!panel.classList.contains("collapsed"));
+    setRoomControlsCollapsed(!panel.classList.contains("collapsed"), { user: true });
     return;
   }
   const collapsed = panel.classList.toggle("collapsed");
@@ -3423,7 +3653,9 @@ roomControlsCollapseBtn.addEventListener("click", () => {
 
 // Explain needs access to the game immediately, even when used from the drawer.
 mobileExplainSlot.addEventListener("click", (event) => {
-  if (event.target.closest("button")) setRoomControlsCollapsed(true);
+  if (roomControlsDockQuery.matches && event.target.closest("button")) {
+    setRoomControlsCollapsed(true);
+  }
 });
 
 document.addEventListener("keydown", (event) => {
@@ -3453,6 +3685,37 @@ gameListRetryBtn.addEventListener("click", applyGameFilters);
 updateRoomActionButtons();
 // Start once at page load; filtering and opening the picker share this request.
 fetchGameList().catch(() => {});
+
+if (roomControlsDragHandle) {
+  roomControlsDragHandle.addEventListener("pointerdown", startRoomControlsDrag);
+  roomControlsDragHandle.addEventListener("pointermove", moveRoomControlsDrag);
+  roomControlsDragHandle.addEventListener("pointerup", (event) => finishRoomControlsDrag(event));
+  roomControlsDragHandle.addEventListener("pointercancel", (event) => finishRoomControlsDrag(event, false));
+  roomControlsDragHandle.addEventListener("click", () => {
+    if (!isDesktopRoomControlsDock()) {
+      setRoomControlsCollapsed(!roomControlsPanel.classList.contains("collapsed"), { user: true });
+    }
+  });
+  roomControlsDragHandle.addEventListener("keydown", (event) => {
+    const sideByKey = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "top", ArrowDown: "bottom" };
+    const side = sideByKey[event.key];
+    if (!side) return;
+    event.preventDefault();
+    applyRoomControlsDockSide(side, true);
+    updateRoomControlsDock();
+  });
+}
+
+roomControlsDockQuery.addEventListener?.("change", () => {
+  if (!isDesktopRoomControlsDock()) {
+    roomControlsPopoverOpen = false;
+    roomControlsExplainDockDeferred = false;
+  } else {
+    roomControlsExplainDockDeferred = true;
+  }
+  updateRoomControlsDock();
+  syncRoomControlsExplainButton();
+});
 
 window.addEventListener("resize", syncRoomControlsExplainButton);
 new ResizeObserver(updateRoomControlsDock).observe(roomControlsPanel.querySelector(":scope > .panel-header"));

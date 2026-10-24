@@ -309,8 +309,69 @@
       return `<button type="button" class="gaia-tech" ${option >= 0 ? `data-gaia-option="${option}"` : 'disabled'} ${info('technology')}><small>${i < 6 ? esc(Object.values(defs().tracks)[i]) : '任意研究'} · ${view.tech_stock[id]} left</small><strong>${esc(defs().techs[id].name)}</strong><span>${specText(defs().techs[id])}</span></button>`;
     }).join('')}</div><h3>高级科技</h3><div class="gaia-tech-grid">${Object.entries(view.advanced_market).map(([track, id]) => `<div class="gaia-tech advanced"><small>${esc(defs().tracks[track])} 4+ · 绿色联邦</small><strong>${id ? esc(defs().advanced[id].name) : 'Taken'}</strong><span>${id ? specText(defs().advanced[id]) : '—'}</span></div>`).join('')}</div><p class="gaia-muted">获取高级科技时，在右侧选择要覆盖的基础科技。</p>`;
   }
+  const gaiaPlayerBuildingGroups = [
+    {level: 'I', title: '一级建筑', kinds: ['mine', 'lost_mine']},
+    {level: 'II', title: '二级建筑', kinds: ['trading_station', 'lab']},
+    {level: 'III', title: '三级建筑', kinds: ['institute', 'academy_knowledge', 'academy_qic']},
+    {level: 'SAT', title: '空间站', kinds: ['station']},
+  ];
+  const gaiaBuildingAbility = (p, kind) => {
+    const supplied = p.building_abilities?.[kind]?.description;
+    if (supplied) return esc(supplied);
+    if (kind === 'institute') {
+      return p.faction && defs().factions[p.faction]?.institute
+        ? esc(defs().factions[p.faction].institute)
+        : '选择种族后显示行星学院能力';
+    }
+    if (kind === 'academy_knowledge') {
+      return `每轮收入 ${resources({knowledge: p.faction === 'itars' ? 3 : 2})}`;
+    }
+    if (kind === 'academy_qic') {
+      return p.faction === 'bal_taks'
+        ? `每轮一次特殊行动：获得 ${resources({credits: 4})}`
+        : `每轮一次特殊行动：获得 ${resources({qic: 1})}`;
+    }
+    return '';
+  };
+  const gaiaIncomeTotal = sources => (sources || []).reduce((total, source) => {
+    Object.entries(source.gain || {}).forEach(([key, amount]) => {
+      if (typeof amount === 'number') total[key] = (total[key] || 0) + amount;
+    });
+    return total;
+  }, {});
+  function renderGaiaPlayerBoard(p) {
+    const counts = p.counts || {};
+    const supply = p.building_supply || {};
+    const playerColor = color(p.player_id);
+    return `<section class="gaia-player-board" aria-label="个人建筑版图">
+      <div class="gaia-player-section-heading"><strong>个人版图 · 建筑</strong><span>已建 / 上限</span></div>
+      <div class="gaia-building-groups">${gaiaPlayerBuildingGroups.map(group => `<section class="gaia-building-group gaia-building-group-${group.level.toLowerCase()}" aria-label="${esc(group.title)}">
+        <h4><span>${group.level}</span>${esc(group.title)}</h4>
+        <div class="gaia-building-list">${group.kinds.map(kind => {
+          const definition = defs().buildings[kind];
+          const summary = supply[kind] || {};
+          const built = Number(summary.built ?? counts[kind] ?? 0);
+          const limit = Number(summary.limit ?? definition?.limit ?? 0);
+          const ability = group.level === 'III' ? gaiaBuildingAbility(p, kind) : '';
+          return `<div class="gaia-building-row ${group.level === 'III' ? 'gaia-building-row-third' : ''} ${built ? 'built' : 'unbuilt'}">
+            <div class="gaia-building-name">${building(kind, playerColor, 'inline')}<span>${esc(definition?.name || kind)}</span></div>
+            <strong class="gaia-building-count">${built} / ${limit}</strong>
+            ${ability ? `<div class="gaia-building-ability">${ability}</div>` : ''}
+          </div>`;
+        }).join('')}</div>
+      </section>`).join('')}</div>
+    </section>`;
+  }
+  function renderGaiaIncome(p) {
+    const sources = p.income || [];
+    const total = p.income_total || gaiaIncomeTotal(sources);
+    return `<section class="gaia-income-panel" aria-label="本轮收入预览">
+      <div class="gaia-income-total"><strong>本轮可获得</strong><div class="gaia-resources gaia-income-total-value">${resources(total) || '<span class="gaia-muted">—</span>'}</div></div>
+      <details class="gaia-income-sources"><summary>收入来源 <span>${sources.length}</span></summary><div class="gaia-income-source-list">${sources.map(source => `<div class="gaia-income-source"><span>${esc(source.source)}</span><span class="gaia-resources">${resources(source.gain) || '<span class="gaia-muted">—</span>'}</span></div>`).join('')}</div></details>
+    </section>`;
+  }
   function renderPlayers() {
-    return `<div class="gaia-player-grid">${view.players.map(p => `<article class="gaia-player-card" style="--player-color:${color(p.player_id)}"><h3>${seat(p.player_id)} · ${esc(p.name)} ${p.player_id === view.you ? '(You)' : ''} ${hint('vp', token('vp', p.vp), `胜利点 ${p.vp}`, 'gaia-tk-wrap')}</h3><p>${p.faction ? esc(defs().factions[p.faction].name) : 'Choosing faction…'}</p><div class="gaia-resources">${resources(p)}</div>${renderPowerBowls(p)}<div class="gaia-badges">${Object.entries(p.counts).map(([k,n]) => `<span>${building(k, color(p.player_id), 'inline')} ${esc(defs().buildings[k].name)} ${n}</span>`).join('')}</div><details><summary>Income preview</summary>${p.income.map(s => `<p>${esc(s.source)} ${resources(s.gain)}</p>`).join('')}</details><p>推进器：${p.booster ? `${esc(defs().boosters[p.booster].name)} · ${specText(defs().boosters[p.booster])}` : '—'}</p><div class="gaia-owned-tech">${p.techs.map(t => `<span class="${p.covered.includes(t) ? 'covered' : ''}">${esc(defs().techs[t].name)} · ${specText(defs().techs[t])}</span>`).join('')}${p.advanced.map(t => `<span>${esc(defs().advanced[t].name)} · ${specText(defs().advanced[t])}</span>`).join('')}</div><p>联邦：${p.federations.map(f => `${hint(f.green ? 'green_federation' : 'gray_federation', token(f.green ? 'green_federation' : 'gray_federation'), '', 'gaia-tk-wrap')} ${resources(defs().federations[f.token])}`).join(' / ') || '—'}</p>${p.faction ? `<details><summary>Faction ability</summary><p>${esc(defs().factions[p.faction].ability)}</p><p>学院：${esc(defs().factions[p.faction].institute)}</p></details>` : ''}</article>`).join('')}</div>`;
+    return `<div class="gaia-player-grid">${view.players.map(p => `<article class="gaia-player-card" style="--player-color:${color(p.player_id)}"><h3>${seat(p.player_id)} · ${esc(p.name)} ${p.player_id === view.you ? '(You)' : ''} ${hint('vp', token('vp', p.vp), `胜利点 ${p.vp}`, 'gaia-tk-wrap')}</h3><p class="gaia-player-faction">${p.faction ? esc(defs().factions[p.faction].name) : 'Choosing faction…'}</p><div class="gaia-current-resources"><span>当前资源</span><div class="gaia-resources">${resources({credits: p.credits, ore: p.ore, knowledge: p.knowledge, qic: p.qic}) || '—'}</div></div>${renderPowerBowls(p)}${renderGaiaPlayerBoard(p)}${renderGaiaIncome(p)}<p class="gaia-booster-line">推进器：${p.booster ? `${esc(defs().boosters[p.booster].name)} · ${specText(defs().boosters[p.booster])}` : '—'}</p><div class="gaia-owned-tech">${(p.techs || []).map(t => `<span class="${(p.covered || []).includes(t) ? 'covered' : ''}">${esc(defs().techs[t].name)} · ${specText(defs().techs[t])}</span>`).join('')}${(p.advanced || []).map(t => `<span>${esc(defs().advanced[t].name)} · ${specText(defs().advanced[t])}</span>`).join('')}</div><p>联邦：${(p.federations || []).map(f => `${hint(f.green ? 'green_federation' : 'gray_federation', token(f.green ? 'green_federation' : 'gray_federation'), '', 'gaia-tk-wrap')} ${resources(defs().federations[f.token])}`).join(' / ') || '—'}</p>${p.faction ? `<details class="gaia-faction-ability"><summary>Faction ability</summary><p>${esc(defs().factions[p.faction].ability)}</p></details>` : ''}</article>`).join('')}</div>`;
   }
   function renderResults() {
     if (!view.scores) return '';

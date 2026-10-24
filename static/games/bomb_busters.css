@@ -1,7 +1,7 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-bomb_busters-1 {
 
-.bomb-busters-panel {
+.game-panel[data-game-theme="bomb_busters"] {
   --bomb-ink: #eef6ff;
   --bomb-muted: #a9bad0;
   --bomb-line: rgba(148, 180, 216, 0.22);
@@ -13,10 +13,8 @@
   --bomb-mint: #5eead4;
   position: relative;
   isolation: isolate;
-  display: grid;
   max-width: 100%;
   min-width: 0;
-  gap: 14px;
   padding: clamp(12px, 2vw, 20px);
   overflow-x: clip;
   color: var(--bomb-ink);
@@ -29,11 +27,33 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 42px rgba(3, 12, 24, 0.22);
 }
 
+.game-panel[data-game-theme="bomb_busters"] .game-panel-title h2 {
+  color: var(--bomb-ink);
+}
+
+.game-panel[data-game-theme="bomb_busters"] > .panel-header button {
+  color: var(--bomb-ink);
+  background: var(--bomb-raised);
+  border-color: var(--bomb-line);
+}
+
+.game-panel[data-game-theme="bomb_busters"] > .panel-header button[aria-pressed="true"] {
+  color: #06111f;
+  background: var(--bomb-yellow);
+}
+
+.bomb-busters-panel {
+  display: grid;
+  max-width: 100%;
+  min-width: 0;
+  gap: 14px;
+}
+
 .bomb-busters-panel.hidden {
   display: none;
 }
 
-.bomb-busters-panel::before {
+.game-panel[data-game-theme="bomb_busters"]::before {
   position: absolute;
   z-index: -1;
   inset: 0;
@@ -62,15 +82,9 @@
 
 .bomb-busters-topbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-}
-
-.bomb-busters-title-block h2 {
-  font-size: clamp(25px, 4vw, 36px);
-  letter-spacing: -0.045em;
-  line-height: 1.05;
 }
 
 .bomb-busters-eyebrow {
@@ -776,10 +790,13 @@ body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
     display: grid;
   }
 
-  .bomb-busters-panel {
-    gap: 10px;
+  .game-panel[data-game-theme="bomb_busters"] {
     padding: 10px;
     border-radius: 14px;
+  }
+
+  .bomb-busters-panel {
+    gap: 10px;
   }
 
   .bomb-busters-topbar {

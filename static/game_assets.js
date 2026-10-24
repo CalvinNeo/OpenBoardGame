@@ -141,10 +141,11 @@ const GAME_ASSETS = {
     "header": "showNoThanksHeaderActions"
   },
   "orloj": {
-    "scripts": ["/static/games/orloj.js?v=3"],
-    "styles": ["/static/games/orloj.css?v=3"],
+    "scripts": ["/static/games/orloj.js?v=4"],
+    "styles": ["/static/games/orloj.css?v=4"],
     "markup": "/static/games/orloj.html?v=1",
     "panel": "orlojPanel",
+    "panelTitle": "🕰️ 布拉格天文钟",
     "header": "showOrlojHeaderActions"
   },
   "challengers": {
@@ -904,9 +905,10 @@ const GAME_ASSETS = {
     "markup": "/static/games/eternal_decks.html?v=2"
   },
   "grand_austria_hotel": {
-    "scripts": ["/static/games/grand_austria_hotel.js?v=4"],
-    "styles": ["/static/games/grand_austria_hotel.css?v=4"],
+    "scripts": ["/static/games/grand_austria_hotel.js?v=5"],
+    "styles": ["/static/games/grand_austria_hotel.css?v=5"],
     "panel": "grandAustriaPanel",
+    "panelTitle": "🏨 奥地利大饭店",
     "header": "showGrandAustriaHeaderActions",
     "markup": "/static/games/grand_austria_hotel.html?v=2"
   },
@@ -987,9 +989,10 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "bombBustersPanel",
+    "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=2",
-    "styleFragments": "/static/games/bomb_busters.css?v=2"
+    "markup": "/static/games/bomb_busters.html?v=3",
+    "styleFragments": "/static/games/bomb_busters.css?v=3"
   },
   "felix": {
     "scripts": [
@@ -1075,10 +1078,10 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v7"
+      "/static/games/gaia_project.js?v=gaia_v8"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v6"
+      "/static/gaia_project.css?v=gaia_v7"
     ],
     "panel": "gaiaProjectPanel",
     "panelTitle": "🌌 盖亚计划",

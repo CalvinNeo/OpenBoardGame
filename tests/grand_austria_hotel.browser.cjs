@@ -232,7 +232,7 @@ print(json.dumps(views))
     await a.locator('#grandAustriaHand button[data-staff="38"]').click();
     await overlay(a,'hand','Hire');
     await a.screenshot({path:path.join(out,'staff-overlay-1280.png'),fullPage:true});
-    await a.locator('.gah-brand').click();
+    await a.locator('.gah-round').click();
     assert.equal(await a.locator('.gah-selection-overlay').count(),0,'blank space cancels');
     await fixture(a,'reward');
     await bounds(a,'staff choice');
@@ -290,10 +290,14 @@ print(json.dumps(views))
     const mobile=await touchContext.newPage();
     mobile.on('pageerror',e=>errors.push(e.message));
     await mobile.goto(base);
-    await mobile.waitForFunction(()=>typeof ensureGameAssets==='function');
-    await mobile.evaluate(async()=>{await ensureGameAssets('grand_austria_hotel');document.getElementById('grandAustriaPanel').classList.remove('hidden');document.querySelectorAll('#grandAustriaPanel.hidden').forEach(e=>e.classList.remove('hidden'));});
-    // The lobby parent may be hidden; use the existing panel inside a visible test container.
-    await mobile.evaluate(()=>{document.body.append(document.getElementById('grandAustriaPanel'));document.body.append(document.getElementById('grandAustriaHeaderActions'));});
+    await mobile.waitForFunction(()=>typeof socket!=='undefined'&&socket.connected);
+    await mobile.evaluate(async view=>{
+      await ensureGameAssets('grand_austria_hotel');
+      playerId=view.you;roomSessionReady=true;
+      renderRoomState({room_id:'preview',game_type:'grand_austria_hotel',status:'in_game',host_id:view.you,players:view.players,game_config:{}});
+      setGamePanelVisibility('grand_austria_hotel');
+      setRoomControlsCollapsed(true);
+    },fixtures.turn);
     await fixture(mobile,'turn');
     const track=mobile.locator('.gah-emperor-cell[data-position="6"]');
     await track.tap();

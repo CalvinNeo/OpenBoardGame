@@ -307,6 +307,74 @@ def income_sources(state: Dict, pid: str) -> List[Dict]:
     return sources
 
 
+def income_total(state: Dict, pid: str) -> Dict[str, int]:
+    """Return the current round's recurring income as one resource mapping.
+
+    ``income_sources`` is intentionally kept as a list for the income-choice
+    UI, but a player summary also needs a quick total.  Keep charge and token
+    income in this mapping: they are resources the player can receive during
+    the income phase even though they are resolved as separate choices.
+    """
+    total: Counter = Counter()
+    for source in income_sources(state, pid):
+        total.update({key: int(value) for key, value in source.get('gain', {}).items()})
+    return {key: value for key, value in total.items() if value}
+
+
+def building_supply(state: Dict, pid: str) -> Dict[str, Dict[str, int]]:
+    """Expose every building's built count and remaining personal supply."""
+    counts = _counts(state, pid)
+    return {
+        kind: {
+            'built': int(counts.get(kind, 0)),
+            'remaining': max(0, int(spec['limit']) - int(counts.get(kind, 0))),
+            'limit': int(spec['limit']),
+            'level': int(spec.get('level', 0)),
+        }
+        for kind, spec in BUILDINGS.items()
+    }
+
+
+def building_abilities(state: Dict, pid: str) -> Dict[str, Dict]:
+    """Describe the level-three building abilities for a player's board.
+
+    The institute text depends on the faction.  Academy effects are kept here
+    next to the active count so clients can render the ability beside the
+    corresponding building without duplicating faction rules.
+    """
+    player = state['players'][pid]
+    counts = _counts(state, pid)
+    faction_id = player.get('faction')
+    faction = FACTIONS.get(faction_id) if faction_id else None
+    knowledge_income = 3 if faction_id == 'itars' else 2
+    qic_action = {'credits': 4} if faction_id == 'bal_taks' else {'qic': 1}
+    return {
+        'institute': {
+            'name': BUILDINGS['institute']['name'],
+            'level': 3,
+            'built': int(counts.get('institute', 0)),
+            'active': bool(counts.get('institute', 0)),
+            'description': faction['institute'] if faction else '选择种族后显示行星学院能力。',
+        },
+        'academy_knowledge': {
+            'name': BUILDINGS['academy_knowledge']['name'],
+            'level': 3,
+            'built': int(counts.get('academy_knowledge', 0)),
+            'active': bool(counts.get('academy_knowledge', 0)),
+            'description': f'每轮收入 {knowledge_income} 知识。',
+            'income': {'knowledge': knowledge_income},
+        },
+        'academy_qic': {
+            'name': BUILDINGS['academy_qic']['name'],
+            'level': 3,
+            'built': int(counts.get('academy_qic', 0)),
+            'active': bool(counts.get('academy_qic', 0)),
+            'description': '每轮一次特殊行动：' + ('获得 4 信用点。' if faction_id == 'bal_taks' else '获得 1 QIC。'),
+            'special_action': {'id': 'academy', 'gain': qic_action},
+        },
+    }
+
+
 def _start_round(state: Dict) -> None:
     state['round'] += 1
     state['used_power'] = []
@@ -1335,7 +1403,10 @@ class GaiaProjectGame:
             p = copy.deepcopy(state['players'][pid])
             p.update(player_id=pid, name=state['player_meta'][pid].get('name', pid),
                      is_bot=bool(state['player_meta'][pid].get('is_bot')), income=income_sources(state, pid),
-                     counts=dict(_counts(state, pid)), objectives={t: _metric(state, pid, t) for t in FINALS})
+                     income_total=income_total(state, pid),
+                     counts=dict(_counts(state, pid)), building_supply=building_supply(state, pid),
+                     building_abilities=building_abilities(state, pid),
+                     objectives={t: _metric(state, pid, t) for t in FINALS})
             view['players'].append(p)
         view['income_pending'] = copy.deepcopy(state['income_pending'].get(viewer_id, []))
         view['can_federate'] = (state['phase'] == 'action' and _actor(state) == viewer_id and not state['pending'] and not state['main_done'])

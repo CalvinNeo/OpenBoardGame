@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v132" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v133" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -480,6 +480,11 @@
           <span>Disable double-tap zoom</span>
         </label>
         <p id="doubleTapZoomHint" class="settings-hint">Keep scrolling and pinch zoom available. Your preference is saved in this browser.</p>
+        <label class="settings-option" for="turnSoundToggle">
+          <input id="turnSoundToggle" type="checkbox" aria-describedby="turnSoundHint" />
+          <span>Play a sound on my turn</span>
+        </label>
+        <p id="turnSoundHint" class="settings-hint">A short chime when it is your turn to act. Off by default; saved in this browser.</p>
         <div class="settings-actions">
           <button id="logOpenBtn" type="button"><span aria-hidden="true">📋</span> Log</button>
           <button id="logoutBtn" type="button"><span aria-hidden="true">🚪</span> Logout</button>
@@ -510,13 +515,20 @@
   <div id="roomControlsBackdrop" class="room-controls-backdrop" aria-hidden="true"></div>
 
   <div class="container">
-    <h1 class="app-title">OpenBoardGame</h1>
-
     <div class="layout">
       <aside class="sidebar">
         <section class="panel collapsible room-controls" id="roomControlsPanel" aria-label="Room Controls">
           <div class="panel-header">
-            <h2 class="room-controls-heading">
+            <span
+              id="roomControlsDragHandle"
+              class="room-controls-drag-handle"
+              role="button"
+              tabindex="0"
+              aria-label="Drag Room Controls to dock"
+              title="Drag to dock Room Controls"
+              data-room-controls-drag-handle
+            >⠿</span>
+            <h2 class="room-controls-heading" title="Drag to dock Room Controls">
               <span class="room-controls-title-full">Room Controls</span>
               <span class="room-controls-title-short">RC</span>
             </h2>
@@ -1692,7 +1704,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=143" defer></script>
+  <script src="/static/game_assets.js?v=145" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1728,6 +1740,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v58" defer></script>
-  <script src="/static/room.js?v=app_v86" defer></script>
+  <script src="/static/room.js?v=app_v88" defer></script>
 </body>
 </html>

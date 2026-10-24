@@ -109,6 +109,25 @@ class GaiaProjectTests(unittest.TestCase):
         self.assertEqual(s['players']['a']['ore'],15)
         self.reject(s,{'type':'pass','booster':s['booster_market'][0]},'spectator')
 
+    def test_public_player_view_exposes_supply_income_and_level_three_abilities(self):
+        s = position(('itars', 'xenos'))
+        s['board']['0:0']['buildings']['a'] = 'institute'
+        s['board']['1:0']['buildings']['a'] = 'academy_knowledge'
+        s['board']['2:0']['buildings']['a'] = 'academy_qic'
+        s['players']['a']['booster'] = None
+
+        view = Game.get_public_view(s, 'a')
+        player = next(item for item in view['players'] if item['player_id'] == 'a')
+
+        self.assertEqual(player['building_supply']['institute'],
+                         {'built': 1, 'remaining': 0, 'limit': 1, 'level': 3})
+        self.assertEqual(player['building_supply']['academy_knowledge']['level'], 3)
+        self.assertEqual(player['building_supply']['academy_qic']['built'], 1)
+        self.assertEqual(player['income_total']['knowledge'], 4)  # Itars base 1 + academy 3.
+        self.assertEqual(player['building_abilities']['academy_knowledge']['income'], {'knowledge': 3})
+        self.assertTrue(player['building_abilities']['academy_qic']['active'])
+        self.assertEqual(player['building_abilities']['academy_qic']['special_action']['gain'], {'qic': 1})
+
     def test_malformed_actions_and_out_of_turn_cannot_mutate(self):
         s=position()
         for action in [None,{}, {'type':'convert','conversion':'power_ore','count':-3},

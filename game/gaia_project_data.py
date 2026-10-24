@@ -21,14 +21,14 @@ PLANETS = {
 # The clockwise terraforming wheel, not the faction-board order.
 WHEEL = ['terra', 'swamp', 'titanium', 'ice', 'oxide', 'volcanic', 'desert']
 BUILDINGS = {
-    'mine': {'name': '矿场', 'icon': '⛏', 'limit': 8, 'power': 1},
-    'trading_station': {'name': '交易站', 'icon': '◆', 'limit': 4, 'power': 2},
-    'lab': {'name': '研究所', 'icon': '⚗', 'limit': 3, 'power': 2},
-    'institute': {'name': '行星学院', 'icon': '♜', 'limit': 1, 'power': 3},
-    'academy_knowledge': {'name': '知识大学', 'icon': '♛', 'limit': 1, 'power': 3},
-    'academy_qic': {'name': 'QIC 大学', 'icon': '♛', 'limit': 1, 'power': 3},
-    'lost_mine': {'name': '失落矿场', 'icon': '☆', 'limit': 1, 'power': 1},
-    'station': {'name': '空间站', 'icon': '⬡', 'limit': 6, 'power': 1},
+    'mine': {'name': '矿场', 'icon': '⛏', 'limit': 8, 'power': 1, 'level': 1},
+    'trading_station': {'name': '交易站', 'icon': '◆', 'limit': 4, 'power': 2, 'level': 2},
+    'lab': {'name': '研究所', 'icon': '⚗', 'limit': 3, 'power': 2, 'level': 2},
+    'institute': {'name': '行星学院', 'icon': '♜', 'limit': 1, 'power': 3, 'level': 3},
+    'academy_knowledge': {'name': '知识大学', 'icon': '♛', 'limit': 1, 'power': 3, 'level': 3},
+    'academy_qic': {'name': 'QIC 大学', 'icon': '♛', 'limit': 1, 'power': 3, 'level': 3},
+    'lost_mine': {'name': '失落矿场', 'icon': '☆', 'limit': 1, 'power': 1, 'level': 1},
+    'station': {'name': '空间站', 'icon': '⬡', 'limit': 6, 'power': 1, 'level': 1},
 }
 
 

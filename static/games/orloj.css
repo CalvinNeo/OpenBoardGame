@@ -1,4 +1,8 @@
-.or-root { --or-ink:#ebf2f4; --or-muted:#aac1cd; --or-gold:#e8bb6d; --or-line:#46616b; --or-bg:#112833; color:var(--or-ink); background:var(--or-bg); padding:18px; border-radius:16px; font-size:14px; line-height:1.45; overflow-wrap:anywhere; color-scheme:dark; }
+.game-panel[data-game-theme="orloj"] { --or-ink:#ebf2f4; --or-muted:#aac1cd; --or-gold:#e8bb6d; --or-line:#46616b; --or-bg:#112833; color:var(--or-ink); background:var(--or-bg); padding:18px; border:1px solid var(--or-line); border-radius:16px; overflow-wrap:anywhere; color-scheme:dark; }
+.game-panel[data-game-theme="orloj"] .game-panel-title h2 { color:var(--or-gold); font-family:Georgia,serif; }
+.game-panel[data-game-theme="orloj"] > .panel-header button { color:var(--or-ink); background:#203d49; border-color:#58727c; }
+.game-panel[data-game-theme="orloj"] > .panel-header button[aria-pressed="true"] { color:#132b34; background:var(--or-gold); border-color:var(--or-gold); }
+.or-root { min-width:0; max-width:100%; font-size:14px; line-height:1.45; }
 .or-root *, .or-dialog * { box-sizing:border-box; min-width:0; }
 .or-root button, .or-root select { font:inherit; color:var(--or-ink); background:#203d49; border:1px solid #58727c; border-radius:8px; padding:8px 10px; white-space:normal; overflow-wrap:anywhere; min-height:38px; max-width:100%; cursor:pointer; margin:0; }
 .or-root button:hover:not(:disabled), .or-root button:focus-visible { background:#335460; border-color:var(--or-gold); }
@@ -7,10 +11,7 @@
 .or-root .or-primary { background:#dcaf64; border-color:#dcaf64; color:#132b34; font-weight:700; }
 .or-root h2, .or-root h3, .or-root p { margin:0; color:inherit; }
 .or-root h3 { font-size:15px; font-weight:650; }
-.or-hero { display:flex; justify-content:space-between; align-items:center; gap:15px; padding:0 2px 14px; border-bottom:1px solid var(--or-line); }
-.or-wordmark { font-family:Georgia,serif; font-size:29px; letter-spacing:.14em; color:var(--or-gold); line-height:1.1; }
-.or-subtitle { color:var(--or-muted); font-size:12px; margin-top:4px; }
-.or-status { text-align:right; display:grid; gap:5px; font-size:12px; }
+.or-status { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; font-size:12px; }
 .or-live { color:#ffd894; }
 .or-players { display:grid; grid-template-columns:repeat(var(--players,2),minmax(0,1fr)); gap:8px; margin:12px 0; }
 .or-root .or-player { border-left:4px solid var(--player-color); text-align:left; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:3px 8px; padding:9px; background:#1a3541; }
@@ -116,9 +117,8 @@
 .or-dialog a { color:#addcef; }
 @media (max-width:1000px) { .or-layout { grid-template-columns:minmax(0,1fr); } .or-console { grid-row:1; } .or-clock-wrap { width:min(100%,315px); } .or-players { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:480px) {
-  .or-root { padding:10px; border-radius:10px; font-size:13px; }
-  .or-hero { gap:7px; padding-bottom:10px; } .or-wordmark { font-size:24px; }
-  .or-subtitle { font-size:10px; } .or-status { font-size:10px; }
+  .game-panel[data-game-theme="orloj"] { padding:10px; border-radius:10px; }
+  .or-root { font-size:13px; }
   .or-players { gap:5px; margin:9px 0; } .or-root .or-player { padding:7px; gap:2px 5px; }
   .or-player small { font-size:10px; } .or-score { font-size:14px; }
   .or-resource { font-size:11px; padding:4px 5px; } .or-resources { gap:4px; }

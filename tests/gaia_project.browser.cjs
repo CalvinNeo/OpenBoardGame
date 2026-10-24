@@ -83,6 +83,13 @@ async function render(page, key, tab) {
       for (const [key, tab] of [['action', 'galaxy'], ['action', 'research'], ['action', 'technology'], ['action', 'players'], ['late', 'galaxy'], ['over', 'players']]) {
         await render(page, key, tab);
         await bounds(page, `${width} ${key} ${tab}`);
+        if (tab === 'players') {
+          const players = views[key].players.length;
+          assert.equal(await page.locator('.gaia-player-board').count(), players);
+          assert.equal(await page.locator('.gaia-building-group-iii').count(), players);
+          assert.equal(await page.locator('.gaia-income-total').count(), players);
+          assert.equal(await page.locator('.gaia-building-ability').count(), players * 3);
+        }
         await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-${key}-${tab}.png`});
       }
       // Confirm card with cost tokens: pick the first legal planet option.

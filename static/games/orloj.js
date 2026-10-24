@@ -304,7 +304,7 @@
     inspected=current.player_id;
     const scrolls=[...root.querySelectorAll('.or-option-list,.or-owned-workshops,.or-scrolls,.or-log')].map(el=>[el.className,el.scrollTop]);
     const focus=document.activeElement?.dataset.orAction;
-    root.innerHTML=`<div class="or-hero"><div><div class="or-wordmark">ORLOJ</div><div class="or-subtitle">布拉格天文钟 · PRAGUE 1865</div></div><div class="or-status">${passive(`🐓 ${view.calls}/4 次报晓 · 余 ${view.rooster}`,"rooster")}${view.finishing?`<span class="or-live">${view.finishing==='calendar'?"日历完成":"第四次报晓"} · 最后等量回合</span>`:'<span>THE ASTRONOMICAL CLOCK</span>'}</div></div>
+    root.innerHTML=`<div class="or-status">${passive(`🐓 ${view.calls}/4 次报晓 · 余 ${view.rooster}`,"rooster")}${view.finishing?`<span class="or-live">${view.finishing==='calendar'?"日历完成":"第四次报晓"} · 最后等量回合</span>`:''}</div>
       <div class="or-players" style="--players:${view.players.length}">${view.players.map(p=>button(`<span class="or-player-name">${p.player_id===view.current_turn?'▸ ':''}${p.is_bot?'🤖 ':''}${esc(p.name)}</span><span class="or-score">${p.score}⭐</span><small>👷 ${p.workers} · ⚙️ ${p.deviation}/5 · 🐓 ${p.rooster} · ${p.turns} 回合</small>`,`inspect:${p.player_id}`,"inspect",false,`class="or-player" style="--player-color:${color(p.player_id)}" aria-pressed="${inspected===p.player_id}"`)).join("")}</div>
       <div class="or-resources">${Object.entries(current.resources).map(([key,n])=>passive(`${icons[key]} ${n}`,`${esc(name(inspected))} · ${resourceNames[key]}(${icons[key]})。${descriptions.payment}`,"or-token or-resource")).join("")}${passive(`👷 ${current.workers}`,"可用工人(👷)：激活钟盘、建造或认领目标各需一名。工坊、生产与使徒可解锁新工人。","or-token or-resource")}</div>
       ${reviewHtml()}${resultsHtml()}<div class="or-layout"><div class="or-board"><nav class="or-tabs" aria-label="Game board">${[['clock','🕰️ 钟盘'],['calendar','🔨 日历'],['workshop','🏛️ 工坊'],['mastery','📚 学识'],['apostles','👤 使徒']].map(([key,label])=>button(label,`tab:${key}`,`查看${label}区域。`,false,`aria-pressed="${tab===key}"`)).join("")}</nav><div class="or-board-body">${{clock:clockBoard,calendar:calendarBoard,workshop:workshopBoard,mastery:masteryBoard,apostles:apostlesBoard}[tab]()}</div></div><aside class="or-console" aria-label="Actions">${consoleHtml()}</aside></div>${objectives()}
@@ -412,16 +412,18 @@
   const activePanel=()=>view&&!panel.classList.contains('hidden');
   const exempt=target=>help.contains(target)||explain.contains(target)||dialog.contains(target);
   function explainTarget(target){if(target?.dataset.orExplain){setExplain(false);openDialog('Explain',target.dataset.orExplain);}}
-  document.addEventListener('pointerdown',e=>{
-    if(!explaining||!activePanel()||exempt(e.target))return;
-    e.preventDefault();e.stopImmediatePropagation();suppressedUntil=Date.now()+650;
-    const target=document.elementsFromPoint(e.clientX,e.clientY).map(el=>el.closest('[data-or-explain]')).find(el=>el&&root.contains(el));
+  document.addEventListener('pointerdown',event=>{
+    suppressedUntil=0;
+    if(!explaining||!activePanel()||exempt(event.target))return;
+    event.preventDefault();event.stopImmediatePropagation();suppressedUntil=Date.now()+650;
+    const target=document.elementsFromPoint(event.clientX,event.clientY).map(element=>element.closest('[data-or-explain]')).find(element=>element&&root.contains(element));
     explainTarget(target);
   },true);
-  document.addEventListener('click',e=>{
-    if(!activePanel()||exempt(e.target))return;
-    if(Date.now()<suppressedUntil){e.preventDefault();e.stopImmediatePropagation();return;}
-    if(explaining){e.preventDefault();e.stopImmediatePropagation();explainTarget(e.target.closest('[data-or-explain]'));}
+  document.addEventListener('click',event=>{
+    if(!activePanel())return;
+    if(event.detail!==0&&Date.now()<suppressedUntil){suppressedUntil=0;event.preventDefault();event.stopImmediatePropagation();return;}
+    if(exempt(event.target))return;
+    if(explaining){event.preventDefault();event.stopImmediatePropagation();explainTarget(event.target.closest('[data-or-explain]'));}
   },true);
   document.addEventListener('keydown',e=>{
     if(!activePanel())return;

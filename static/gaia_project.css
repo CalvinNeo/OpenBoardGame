@@ -137,6 +137,38 @@
 .gaia-player-card { min-width:0; border:1px solid var(--gaia-line); border-top:3px solid var(--player-color); border-radius:8px; background:#17283d; padding:12px; }
 .gaia-player-card h3 { font-size:12px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:5px; }
 .gaia-player-card .gaia-resources { font-size:12px; gap:7px; }
+.gaia-player-faction { color:#b9cbe1; margin-top:4px !important; }
+.gaia-current-resources { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:10px 0 8px; padding:8px 9px; border:1px solid #35516a; border-radius:7px; background:#122338; }
+.gaia-current-resources>span { color:#a9bed5; font-size:10px; font-weight:700; letter-spacing:.2px; }
+.gaia-current-resources .gaia-resources { flex:1 1 180px; min-width:0; }
+.gaia-player-board { min-width:0; margin-top:10px; padding-top:10px; border-top:1px solid #2f4862; }
+.gaia-player-section-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:7px; color:#d9e7f5; font-size:11px; }
+.gaia-player-section-heading span { color:#8fa8c1; font-size:9px; font-weight:400; }
+.gaia-building-groups { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.gaia-building-group { min-width:0; border:1px solid #304962; border-radius:7px; background:#14263b; overflow:hidden; }
+.gaia-building-group h4 { display:flex; align-items:center; gap:5px; margin:0; padding:6px 7px; color:#a9bed5; background:#1a3048; font-size:9px; letter-spacing:.3px; }
+.gaia-building-group h4>span { color:#8ee2c3; font-size:10px; font-weight:800; }
+.gaia-building-list { min-width:0; padding:2px 5px 4px; }
+.gaia-building-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:3px 5px; align-items:center; min-width:0; padding:5px 2px; border-bottom:1px solid #263d56; }
+.gaia-building-row:last-child { border-bottom:0; }
+.gaia-building-row.unbuilt { opacity:.58; }
+.gaia-building-name { display:flex; align-items:center; gap:3px; min-width:0; color:#d9e6f4; font-size:10px; }
+.gaia-building-name>span { min-width:0; overflow-wrap:anywhere; }
+.gaia-building-count { color:#9eb6ce; font-size:9px; white-space:nowrap; }
+.gaia-building-ability { grid-column:1 / -1; min-width:0; color:#a6daca; font-size:9px; line-height:1.45; overflow-wrap:anywhere; }
+.gaia-building-row-third .gaia-building-ability { padding:2px 1px 1px; }
+.gaia-income-panel { min-width:0; margin-top:10px; padding:9px; border:1px solid #35516a; border-radius:7px; background:#122338; }
+.gaia-income-total { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 10px; }
+.gaia-income-total>strong { color:#d9e7f5; font-size:11px; }
+.gaia-income-total-value { flex:1 1 180px; min-width:0; justify-content:flex-end; }
+.gaia-income-sources { margin-top:7px; border-top:1px solid #2d4761; }
+.gaia-income-sources summary { padding:7px 0 2px; color:#aac0d6; font-size:10px; }
+.gaia-income-source-list { display:flex; flex-direction:column; gap:4px; margin-top:4px; }
+.gaia-income-source { display:grid; grid-template-columns:minmax(62px,auto) minmax(0,1fr); align-items:center; gap:6px; min-width:0; font-size:9px; }
+.gaia-income-source>span:first-child { min-width:0; color:#91abc4; overflow-wrap:anywhere; }
+.gaia-income-source>span:last-child { min-width:0; justify-content:flex-end; }
+.gaia-income-source .gaia-resources { gap:4px 6px; }
+.gaia-booster-line { margin-top:10px !important; }
 .gaia-badges { display:flex; flex-wrap:wrap; gap:6px 10px; font-size:10px; color:#b4c8df; }
 .gaia-badges span { display:inline-flex; align-items:center; gap:3px; }
 .gaia-owned-tech { display:flex; flex-direction:column; gap:7px; font-size:10px; color:#a4d7d1; }
@@ -164,4 +196,4 @@
 .gaia-dialog-body a { color:#9adcff; }
 .gaia-dialog-body summary { cursor:pointer; padding:6px 0; }
 @media(max-width:1050px) { .gaia-layout { grid-template-columns:minmax(0,1fr) 240px; } .game-panel[data-game-theme="gaia_project"] { padding:12px; } .gaia-research { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-player-grid { grid-template-columns:1fr; } }
-@media(max-width:760px) { .gaia-layout { grid-template-columns:minmax(0,1fr); } .gaia-controls { max-height:none; } .gaia-controls>.gaia-options { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-options.gaia-faction-options { max-height:340px; overflow:auto; } .gaia-title h2 { font-size:21px; } .gaia-title h2 span { display:block; margin:5px 0 0; font-size:9px; } .gaia-rounds { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-round-tile { padding:7px 8px; } .gaia-round-tile strong { font-size:10px; margin-top:3px; } .gaia-dashboard { gap:8px; } .gaia-dashboard>strong { width:100%; } .gaia-tech-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-tab-content { padding:8px; } #gaiaGalaxy { min-height:250px; max-height:55vh; } .game-panel[data-game-theme="gaia_project"] { padding:10px; } .gaia-goals { font-size:10px; gap:6px; } .gaia-map-tools span { font-size:9px; } .gaia-tabs button { padding:7px 5px; font-size:11px; } .gaia-confirm { scroll-margin-top:10px; } .gaia-resources { gap:6px 8px; font-size:13px; } .gaia-dashboard-resources .gaia-tk { width:27px; height:27px; } .gaia-tk { width:24px; height:24px; } }
+@media(max-width:760px) { .gaia-layout { grid-template-columns:minmax(0,1fr); } .gaia-controls { max-height:none; } .gaia-controls>.gaia-options { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-options.gaia-faction-options { max-height:340px; overflow:auto; } .gaia-title h2 { font-size:21px; } .gaia-title h2 span { display:block; margin:5px 0 0; font-size:9px; } .gaia-rounds { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-round-tile { padding:7px 8px; } .gaia-round-tile strong { font-size:10px; margin-top:3px; } .gaia-dashboard { gap:8px; } .gaia-dashboard>strong { width:100%; } .gaia-tech-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-tab-content { padding:8px; } #gaiaGalaxy { min-height:250px; max-height:55vh; } .game-panel[data-game-theme="gaia_project"] { padding:10px; } .gaia-goals { font-size:10px; gap:6px; } .gaia-map-tools span { font-size:9px; } .gaia-tabs button { padding:7px 5px; font-size:11px; } .gaia-confirm { scroll-margin-top:10px; } .gaia-resources { gap:6px 8px; font-size:13px; } .gaia-dashboard-resources .gaia-tk { width:27px; height:27px; } .gaia-tk { width:24px; height:24px; } .gaia-building-groups { gap:5px; } .gaia-building-group h4 { padding-left:6px; padding-right:6px; } .gaia-income-panel { padding:8px; } }

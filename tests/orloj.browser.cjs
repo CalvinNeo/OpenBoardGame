@@ -58,7 +58,7 @@ async function render(page,key) {
     setGamePanelVisibility('orloj');renderGameState({room_id:'orloj-test',game_type:'orloj',view});
     window.scrollTo(0,0);
   },fixtures[key]);
-  await page.locator('.or-wordmark').waitFor({state:'visible'});
+  await page.locator('.or-status').waitFor({state:'visible'});
 }
 (async()=>{
   const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'chrome',headless:true});
@@ -82,7 +82,7 @@ async function render(page,key) {
     await live.waitForFunction(()=>currentRoomState.players.every(p=>p.ready));
     await live.evaluate(()=>emitRoomStart());
     await live.waitForFunction(()=>lastGameStatePayload?.view?.game_id==='orloj');
-    await live.locator('.or-wordmark').waitFor({state:'visible'});
+    await live.locator('.or-status').waitFor({state:'visible'});
     // Real Socket.IO actions through rendered controls, followed by bot turns.
     for(let i=0;i<70;i++) {
       const s=await live.evaluate(()=>({revision:lastGameStatePayload.view.revision,phase:lastGameStatePayload.view.phase,
@@ -149,7 +149,26 @@ async function render(page,key) {
     await resources.nth(0).tap();assert.equal(await mobile.locator('#orlojTip').isVisible(),true);
     await resources.nth(1).tap();assert.match(await mobile.locator('#orlojTip').textContent(),/木材/);
     await mobile.waitForTimeout(3150);assert.equal(await mobile.locator('#orlojTip').isVisible(),false);
+    await mobile.evaluate(()=>setRoomControlsCollapsed(true));
+    for(const targetSelector of ['.or-status [data-or-explain]', '.or-apostle:disabled']) {
+      if(targetSelector.includes('apostle'))await mobile.locator('[data-or-action="tab:apostles"]').tap();
+      for(let attempt=0;attempt<2;attempt+=1) {
+        await mobile.locator('#orlojExplainBtn').tap();
+        const target=mobile.locator(targetSelector).first();
+        await target.scrollIntoViewIfNeeded();
+        const bounds=await target.boundingBox();
+        await mobile.touchscreen.tap(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+        assert.equal(await mobile.locator('#orlojDialog').evaluate(element=>element.open),true,'touch Explain stays open after the trailing click');
+        await mobile.locator('#orlojClose').tap();
+        assert.equal(await mobile.locator('#orlojDialog').evaluate(element=>element.open),false,'a fresh tap closes Explain');
+      }
+    }
+    await mobile.locator('#orlojExplainBtn').tap();
+    await mobile.locator('.or-status [data-or-explain]').focus();
+    await mobile.keyboard.press('Enter');
+    assert.equal(await mobile.locator('#orlojDialog').evaluate(element=>element.open),true,'keyboard Explain remains available');
+    await mobile.keyboard.press('Escape');
     assert.deepEqual(errors,[]);
-    console.log(`${checks} responsive checks; Help/Escape, disabled Explain, mobile tooltips passed`);
+    console.log(`${checks} responsive checks; Help/Escape, repeated touch and disabled Explain, keyboard Explain, mobile tooltips passed`);
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1);});
