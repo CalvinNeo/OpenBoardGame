@@ -18,6 +18,9 @@ v={'faction':G.get_public_view(s,'a')}
 steps=0
 while not s['game_over'] and steps<600:
     pid=_actor(s)
+    if s['phase']=='booster' and 'booster' not in v:
+        v['booster']=G.get_public_view(s,pid)
+        v['booster_waiting']=G.get_public_view(s,'a')
     if s['phase']=='round_end':
         for p in s['seat_order']:
             if p not in s['ready']:
@@ -80,6 +83,60 @@ async function render(page, key, tab) {
       await page.setViewportSize({width, height: width > 600 ? 1000 : 844});
       await page.evaluate(() => { if (typeof setRoomControlsCollapsed === 'function') setRoomControlsCollapsed(true); });
       await page.waitForFunction(() => !document.body.classList.contains('room-controls-drawer-open'));
+      if (width === 1440) {
+        await render(page, 'booster', '');
+        await bounds(page, `${width} booster floating`);
+        await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-booster-floating.png`});
+        assert.equal(await page.locator('.gaia-booster-layer-floating').count(), 1);
+        assert.equal(await page.locator('.gaia-booster-card').count(), views.booster.options.filter(o => o.action.type === 'choose_booster').length);
+        assert.equal(await page.locator('.gaia-controls').count(), 0);
+        await page.locator('[data-gaia-command="booster-help"]').click();
+        assert.equal(await page.locator('.gaia-modal').count(), 1);
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('.gaia-modal').count(), 0);
+        assert.equal(await page.locator('.gaia-booster-layer-floating').count(), 1);
+        await page.locator('[data-gaia-command="booster-explain"]').click();
+        assert.equal(await page.locator('#gaiaProjectPanel.gaia-explaining').count(), 1);
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#gaiaProjectPanel.gaia-explaining').count(), 0);
+        const firstBooster = page.locator('.gaia-booster-card').first();
+        const firstBoosterId = await firstBooster.getAttribute('data-gaia-booster');
+        await firstBooster.click();
+        assert.equal(await page.locator('.gaia-booster-card.selected').getAttribute('data-gaia-booster'), firstBoosterId);
+        assert.equal(await page.locator('[data-gaia-command="confirm-booster"]').count(), 1);
+        await page.locator('[data-gaia-command="toggle-booster-dock"]').click();
+        await bounds(page, `${width} booster docked`);
+        await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-booster-docked.png`});
+        assert.equal(await page.locator('.gaia-booster-layer-docked').count(), 1);
+        assert.equal(await page.locator('.gaia-booster-grid').count(), 0);
+        await page.locator('[data-gaia-tab="research"]').click();
+        assert.equal(await page.locator('.gaia-tabs [data-gaia-tab="research"].active').count(), 1);
+        await page.locator('[data-gaia-command="toggle-booster-dock"]').click();
+        assert.equal(await page.locator('.gaia-booster-layer-floating').count(), 1);
+        assert.equal(await page.locator('.gaia-booster-card.selected').getAttribute('data-gaia-booster'), firstBoosterId);
+        await page.locator('[data-gaia-command="confirm-booster"]').click();
+        assert.deepEqual(await page.evaluate(() => gaiaTestActions.pop()), {type: 'choose_booster', booster: firstBoosterId});
+        await render(page, 'booster_waiting', '');
+        assert.equal(await page.locator('.gaia-booster-layer').count(), 0);
+        await page.keyboard.press('Escape');
+      } else {
+        await render(page, 'booster', '');
+        await bounds(page, `${width} booster floating`);
+        await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-booster.png`});
+        if (width === 390) {
+          await page.locator('.gaia-booster-card').first().evaluate(card => {
+            const init = {bubbles: true, isPrimary: true, button: 0, pointerId: 91, pointerType: 'touch', clientX: 20, clientY: 20};
+            card.dispatchEvent(new PointerEvent('pointerdown', init));
+            card.dispatchEvent(new PointerEvent('pointermove', {...init, clientX: 20, clientY: 60}));
+            card.dispatchEvent(new PointerEvent('pointerup', {...init, clientX: 20, clientY: 60}));
+            card.dispatchEvent(new MouseEvent('click', {bubbles: true, detail: 1}));
+          });
+          assert.equal(await page.locator('.gaia-booster-card.selected').count(), 0);
+        }
+        await page.keyboard.press('Escape');
+        await bounds(page, `${width} booster docked by escape`);
+        assert.equal(await page.locator('.gaia-booster-layer-docked').count(), 1);
+      }
       for (const [key, tab] of [['action', 'galaxy'], ['action', 'research'], ['action', 'technology'], ['action', 'players'], ['late', 'galaxy'], ['over', 'players']]) {
         await render(page, key, tab);
         await bounds(page, `${width} ${key} ${tab}`);

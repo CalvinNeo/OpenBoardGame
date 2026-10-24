@@ -12,6 +12,8 @@
   let boosterSelected = null;
   let boosterScrollTop = 0;
   let boosterFocusPending = false;
+  let boosterSwipe = null;
+  let suppressBoosterClickUntil = 0;
   let legendOpen = false;
   let explainMode = false;
   let suppressClickUntil = 0;
@@ -175,7 +177,7 @@
   function renderBoosterCard(o, index) {
     const booster = defs().boosters[o.action.booster];
     const boosterId = o.action.booster;
-    return `<button type="button" class="gaia-booster-card${boosterSelected === boosterId ? ' selected' : ''}" data-gaia-booster="${esc(boosterId)}" ${info('booster')}>
+    return `<button type="button" class="gaia-booster-card${boosterSelected === boosterId ? ' selected' : ''}" data-gaia-booster="${esc(boosterId)}" aria-pressed="${boosterSelected === boosterId}" ${info('booster')}>
       <span class="gaia-booster-card-heading"><strong>${esc(booster?.name || o.label)}</strong><small>推进器</small></span>
       <span class="gaia-booster-card-effect">${boosterEffectRows(booster)}</span>
     </button>`;
@@ -620,6 +622,20 @@
     consumedHintTap = {target:gesture.target, until:Date.now() + 700};
     event.preventDefault(); event.stopPropagation();
   }, true);
+  panel?.addEventListener('pointerdown', event => {
+    const card = event.target.closest('[data-gaia-booster]');
+    boosterSwipe = card && event.isPrimary && event.button === 0 && event.pointerType !== 'mouse'
+      ? {id:event.pointerId, x:event.clientX, y:event.clientY, moved:false} : null;
+  }, true);
+  panel?.addEventListener('pointermove', event => {
+    if (boosterSwipe && boosterSwipe.id === event.pointerId && Math.hypot(event.clientX - boosterSwipe.x, event.clientY - boosterSwipe.y) > 10) boosterSwipe.moved = true;
+  }, true);
+  panel?.addEventListener('pointercancel', () => { boosterSwipe = null; }, true);
+  panel?.addEventListener('pointerup', event => {
+    if (!boosterSwipe || boosterSwipe.id !== event.pointerId) return;
+    if (boosterSwipe.moved) suppressBoosterClickUntil = Date.now() + 300;
+    boosterSwipe = null;
+  }, true);
   panel?.addEventListener('click', event => {
     const target = event.target.closest('[data-gaia-hint]');
     if (!target || !canShowHint()) return;
@@ -648,6 +664,16 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) hideHint(); });
   panel?.addEventListener('click', event => {
     if (drag?.moved) return;
+    const boosterCard = event.target.closest('[data-gaia-booster]');
+    if (boosterCard) {
+      if (Date.now() < suppressBoosterClickUntil) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+      const grid = panel.querySelector('.gaia-booster-grid');
+      if (grid) boosterScrollTop = grid.scrollTop;
+      boosterSelected = boosterCard.dataset.gaiaBooster || null;
+      render();
+      [...panel.querySelectorAll('[data-gaia-booster]')].find(el => el.dataset.gaiaBooster === boosterSelected)?.focus({preventScroll:true});
+      return;
+    }
     const optionEl = event.target.closest('[data-gaia-option]');
     if (optionEl) {
       selectedOption = Number(optionEl.dataset.gaiaOption); render();
@@ -665,7 +691,27 @@
     const commandEl = event.target.closest('[data-gaia-command]');
     if (commandEl) {
       const command = commandEl.dataset.gaiaCommand;
-      if (command === 'confirm' && selectedOption !== null) {
+      if (command === 'toggle-booster-dock') {
+        const grid = panel.querySelector('.gaia-booster-grid');
+        if (grid) boosterScrollTop = grid.scrollTop;
+        boosterDocked = !boosterDocked;
+        render();
+        if (!boosterDocked) {
+          const selectedCard = boosterSelected && [...panel.querySelectorAll('[data-gaia-booster]')].find(el => el.dataset.gaiaBooster === boosterSelected);
+          (selectedCard || panel.querySelector('[data-gaia-booster]'))?.focus({preventScroll:true});
+        }
+      } else if (command === 'booster-help') showHelp();
+      else if (command === 'booster-explain') { setExplain(!explainMode); commandEl.textContent = explainMode ? 'Explaining…' : 'Explain'; commandEl.setAttribute('aria-pressed', String(explainMode)); }
+      else if (command === 'confirm-booster' && boosterSelected) {
+        const option = activeOptions().find(o => o.action.type === 'choose_booster' && o.action.booster === boosterSelected);
+        if (!option) return;
+        boosterSelected = null;
+        boosterDocked = false;
+        dispatch({...option.action});
+      } else if (command === 'cancel-booster') {
+        boosterSelected = null;
+        render();
+      } else if (command === 'confirm' && selectedOption !== null) {
         const o = activeOptions()[selectedOption];
         if (!o) return;
         const action = {...o.action};
@@ -688,7 +734,7 @@
       else if (command === 'fit') { mapZoom = 1; mapCenter = null; render(); }
       return;
     }
-    if (event.target.closest('input,select,label,summary,details,a')) return;
+    if (event.target.closest('[data-gaia-booster-layer],input,select,label,summary,details,a')) return;
     if (selectedHex || selectedOption !== null || federationMode) cancelSelection();
   });
   panel?.addEventListener('keydown', event => {
@@ -750,13 +796,30 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
       if (hintPopup) { hideHint(); return; }
-      closeModal(); setExplain(false); if (view && !panel.classList.contains('hidden')) cancelSelection();
+      if (modal) { closeModal(); return; }
+      if (explainMode) { setExplain(false); return; }
+      if (panel && !panel.classList.contains('hidden') && panel.querySelector('.gaia-booster-layer-floating')) {
+        boosterDocked = true;
+        render();
+        return;
+      }
+      if (view && !panel.classList.contains('hidden')) cancelSelection();
     }
     if (event.key === 'Tab' && modal) {
       const focusable=[...modal.querySelectorAll('button,a,summary,input,select')];
       const first=focusable[0], last=focusable[focusable.length-1];
       if (event.shiftKey && document.activeElement===first) { event.preventDefault(); last.focus(); }
       if (!event.shiftKey && document.activeElement===last) { event.preventDefault(); first.focus(); }
+    } else if (event.key === 'Tab' && panel && !panel.classList.contains('hidden')) {
+      const boosterDialog = panel.querySelector('.gaia-booster-layer-floating .gaia-booster-dialog');
+      if (boosterDialog) {
+        const focusable = [...boosterDialog.querySelectorAll('button,[href],input,select,summary')].filter(el => !el.disabled && el.offsetParent !== null);
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (first && last && ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last))) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus();
+        }
+      }
     }
   });
   help?.addEventListener('click', showHelp);
@@ -768,12 +831,16 @@
   window.clearGaiaProjectState = () => {
     finishMapDrag(); hideHint(); hintGesture = null; consumedHintTap = null;
     legendOpen = false;
-    view=null; selectedHex=null; selectedOption=null; viewKey=''; federationMode=false; federationHexes.clear(); activeTab='galaxy'; mapZoom=1; mapCenter=null; setExplain(false); closeModal(); if (panel) panel.innerHTML='';
+    view=null; selectedHex=null; selectedOption=null; boosterSelected=null; boosterDocked=false; boosterScrollTop=0; boosterFocusPending=false; boosterSwipe=null; suppressBoosterClickUntil=0; viewKey=''; federationMode=false; federationHexes.clear(); activeTab='galaxy'; mapZoom=1; mapCenter=null; setExplain(false); closeModal(); if (panel) panel.innerHTML='';
   };
   window.renderGaiaProjectGameState = data => {
     const next = data.view;
     const key = `${data.room_id}|${data.state_version ?? ''}|${next.round}|${next.phase}|${next.current_turn}|${JSON.stringify(next.pending)}|${next.log.length}|${next.main_done}`;
     if (key !== viewKey) { selectedOption=null; federationMode=false; federationHexes.clear(); }
+    const sameBoosterTurn = view && view.you === next.you && view.phase === 'booster' && next.phase === 'booster' && view.current_turn === next.current_turn && next.current_turn === next.you && viewKey.split('|')[0] === String(data.room_id);
+    if (!sameBoosterTurn) { boosterSelected=null; boosterDocked=false; boosterScrollTop=0; }
+    if (next.phase === 'booster' && next.current_turn === next.you && (!view || view.phase !== 'booster' || view.current_turn !== next.current_turn || view.you !== next.you)) boosterFocusPending = true;
+    if (next.phase === 'booster' && next.current_turn === next.you && boosterSelected && !next.options.some(o => o.action.type === 'choose_booster' && o.action.booster === boosterSelected)) boosterSelected = null;
     if (viewKey && viewKey.split('|')[0] !== String(data.room_id)) { hideHint(); selectedHex=null; activeTab='galaxy'; legendOpen=false; mapZoom=1; mapCenter=null; }
     viewKey=key; view=next;
     if (currentGameType !== 'gaia_project') { currentGameType='gaia_project'; setGamePanelVisibility('gaia_project'); }

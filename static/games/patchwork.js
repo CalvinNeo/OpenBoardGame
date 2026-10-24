@@ -3,7 +3,11 @@ let patchworkSelectedPatchId = null;
 let patchworkRotation = 0;
 let patchworkFlip = false;
 let patchworkAnchor = null;
+let patchworkPivot = null;
 let patchworkExplainMode = false;
+let patchworkMarketWasDragged = false;
+let patchworkTooltipTimer = null;
+let patchworkTooltipTarget = null;
 const PATCHWORK_PREVIEW_JEWELS = [
   { fillTop: "#fb7185", fillBottom: "#be123c", border: "#881337", glow: "rgba(244, 63, 94, 0.28)" },
   { fillTop: "#60a5fa", fillBottom: "#1d4ed8", border: "#1e3a8a", glow: "rgba(37, 99, 235, 0.28)" },
@@ -34,6 +38,8 @@ const patchworkHelpContent = document.getElementById("patchworkHelpContent");
 const patchworkExplainContent = document.getElementById("patchworkExplainContent");
 
 const patchworkTurnLabel = document.getElementById("patchworkTurn");
+const patchworkTurnStatus = document.getElementById("patchworkTurnStatus");
+const patchworkYourButtonsLabel = document.getElementById("patchworkYourButtons");
 const patchworkSelectedPatchLabel = document.getElementById("patchworkSelectedPatch");
 const patchworkRotationLabel = document.getElementById("patchworkRotation");
 const patchworkFlipLabel = document.getElementById("patchworkFlip");
@@ -52,6 +58,8 @@ const patchworkMarketRight = document.getElementById("patchworkMarketRight");
 const patchworkMarketBottom = document.getElementById("patchworkMarketBottom");
 const patchworkMarketLeft = document.getElementById("patchworkMarketLeft");
 const patchworkMarketMobile = document.getElementById("patchworkMarketMobile");
+const patchworkUpcomingMarket = document.getElementById("patchworkUpcomingMarket");
+const patchworkUpcomingCount = document.getElementById("patchworkUpcomingCount");
 const patchworkPlayers = document.getElementById("patchworkPlayers");
 const patchworkPreview = document.getElementById("patchworkPreview");
 const patchworkYourBoard = document.getElementById("patchworkYourBoard");
@@ -64,6 +72,7 @@ const patchworkRotateBtn = document.getElementById("patchworkRotateBtn");
 const patchworkFlipBtn = document.getElementById("patchworkFlipBtn");
 const patchworkAdvanceBtn = document.getElementById("patchworkAdvanceBtn");
 const patchworkAdvanceGain = document.getElementById("patchworkAdvanceGain");
+const patchworkTooltip = document.getElementById("patchworkTooltip");
 const PATCHWORK_BOARD_WIDTH = 1000;
 const PATCHWORK_BOARD_HEIGHT = 999;
 
@@ -78,6 +87,7 @@ const PATCHWORK_HELP_TEXT = `
   <ul>
     <li><strong>Advance</strong>: move to one step in front of the opponent and gain buttons equal to spaces moved.</li>
     <li><strong>Buy Patch</strong>: choose one of the first three patches after the neutral marker, pay its cost, place it on your 9x9 quilt, then move on the time track.</li>
+    <li>Market icons show Button cost 🔘, Time cost ⏳, Button income ↗️, and Covered squares 🧩.</li>
   </ul>
 
   <h3>Track Rewards</h3>
@@ -89,11 +99,12 @@ const PATCHWORK_HELP_TEXT = `
   <h3>Interface</h3>
   <ul>
     <li>Select one of the first three market patches.</li>
-    <li>Use the compact rotate / flip controls beside your quilt to set its orientation.</li>
+    <li>Click a quilt square to set the patch pivot. Rotate and flip keep the patch centered on that pivot.</li>
     <li>Click any quilt square to preview the patch there, even when it overlaps or extends past the board.</li>
     <li>Use <strong>Confirm Purchase</strong> below the quilt once the complete patch is on empty squares and you can afford it.</li>
     <li>Press Esc or click open space to clear your selection.</li>
     <li>When a leather patch is pending, click any empty square on your quilt to place it.</li>
+    <li>Expand <strong>Upcoming patches</strong> to inspect the remaining market order without pushing the main choices aside.</li>
   </ul>
 `;
 
@@ -104,11 +115,11 @@ const PATCHWORK_EXPLANATIONS = {
   },
   marketCard: {
     name: "Patch Market",
-    description: "The first three cards are selectable. Cost, time, income, and exact square footprint are shown on every patch; the rest show the upcoming circle order.",
+    description: "The first three cards are selectable. 🔘 is Button cost, ⏳ is Time cost, ↗️ is Button income, and 🧩 is the covered square count. Expand Upcoming patches to inspect the remaining circle order.",
   },
   yourBoard: {
     name: "Your Quilt Board",
-    description: "Click to choose the top-left anchor for the selected patch preview. Invalid previews stay visible in red but cannot be confirmed. During a leather bonus, click any empty square to place the 1x1 tile.",
+    description: "Click to choose a stable pivot for the selected patch preview. Rotate and flip keep that pivot in place. Invalid previews stay visible in red but cannot be confirmed. During a leather bonus, click any empty square to place the 1x1 tile.",
   },
   preview: {
     name: "Preview",
@@ -157,17 +168,43 @@ function patchworkOthers(view) {
   return (view.players || []).filter((player) => player.player_id !== view.you);
 }
 
+function patchworkConnected() {
+  return typeof socket !== "undefined" && socket.connected && (
+    typeof roomSessionReady === "undefined" || roomSessionReady
+  );
+}
+
+function patchworkShapePivot(cells) {
+  const { width, height } = patchworkCellDimensions(cells);
+  return {
+    x: Math.floor((width - 1) / 2),
+    y: Math.floor((height - 1) / 2),
+  };
+}
+
+function patchworkAnchorForPivot(cells, pivot) {
+  const center = patchworkShapePivot(cells);
+  return {
+    x: pivot.x - center.x,
+    y: pivot.y - center.y,
+  };
+}
+
 function patchworkClearSelection() {
   patchworkSelectedPatchId = null;
   patchworkRotation = 0;
   patchworkFlip = false;
   patchworkAnchor = null;
+  patchworkPivot = null;
 }
 
 function clearPatchworkState() {
   currentPatchworkView = null;
   patchworkClearSelection();
+  document.body.classList.remove("patchwork-turn-active");
+  patchworkHideTooltip();
   if (patchworkTurnLabel) patchworkTurnLabel.textContent = "-";
+  if (patchworkYourButtonsLabel) patchworkYourButtonsLabel.textContent = "-";
   if (patchworkSelectedPatchLabel) patchworkSelectedPatchLabel.textContent = "-";
   if (patchworkRotationLabel) patchworkRotationLabel.textContent = "0°";
   if (patchworkFlipLabel) patchworkFlipLabel.textContent = "No";
@@ -177,7 +214,7 @@ function clearPatchworkState() {
   if (patchworkWinnerLabel) patchworkWinnerLabel.textContent = "-";
   if (patchworkTrack) patchworkTrack.innerHTML = "";
   if (patchworkMarketLegend) patchworkMarketLegend.innerHTML = "";
-  [patchworkMarketTop, patchworkMarketRight, patchworkMarketBottom, patchworkMarketLeft, patchworkMarketMobile].forEach((node) => {
+  [patchworkMarketTop, patchworkMarketRight, patchworkMarketBottom, patchworkMarketLeft, patchworkMarketMobile, patchworkUpcomingMarket].forEach((node) => {
     if (node) {
       node.innerHTML = "";
     }
@@ -188,7 +225,7 @@ function clearPatchworkState() {
   if (patchworkQuiltModalBoard) patchworkQuiltModalBoard.innerHTML = "";
   if (patchworkQuiltModalMeta) patchworkQuiltModalMeta.textContent = "-";
   if (patchworkSelectionHint) {
-    patchworkSelectionHint.textContent = "Select one of the first three patches, then click your board.";
+    patchworkSelectionHint.textContent = "Select an available patch, then choose its pivot square.";
   }
   if (patchworkPlacementActions) patchworkPlacementActions.hidden = true;
   if (patchworkPlacementStatus) patchworkPlacementStatus.textContent = "";

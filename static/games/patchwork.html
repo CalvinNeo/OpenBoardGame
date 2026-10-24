@@ -1,7 +1,7 @@
 <template data-game-target="patchworkHelpModal" data-game-mode="replace"><section id="patchworkHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content patchwork-help-modal">
       <div class="modal-header">
-        <h2>Patchwork - Game Rules</h2>
+        <h2>Patchwork · Help</h2>
         <button id="patchworkHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body patchwork-help-content" id="patchworkHelpContent"></div>
@@ -10,7 +10,7 @@
 <template data-game-target="patchworkExplainModal" data-game-mode="replace"><section id="patchworkExplainModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content patchwork-explain-modal">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2>Patchwork · Explain</h2>
         <button id="patchworkExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
@@ -33,89 +33,120 @@
     </div>
   </section></template>
 <template data-game-target="patchworkPanel" data-game-mode="contents">
-              <div class="row patchwork-status-row">
-                <div class="patchwork-status-primary">Current Turn: <span id="patchworkTurn">-</span></div>
-                <div class="patchwork-status-detail">Selected Patch: <span id="patchworkSelectedPatch">-</span></div>
-                <div class="patchwork-status-detail">Rotation: <span id="patchworkRotation">0°</span></div>
-                <div class="patchwork-status-detail">Flip: <span id="patchworkFlip">No</span></div>
-                <div class="patchwork-status-detail">Anchor: <span id="patchworkAnchor">-</span></div>
-              </div>
-              <div class="row patchwork-end-status-row">
-                <div>Special 7x7: <span id="patchworkSpecialTile">-</span></div>
-                <div>First to Finish: <span id="patchworkFirstFinish">-</span></div>
-                <div>Winner: <span id="patchworkWinner">-</span></div>
-              </div>
-              <div id="patchworkNotice" class="round-notice hidden" aria-hidden="true">
-                <div id="patchworkNoticeTitle" class="round-notice-title">-</div>
-                <div id="patchworkNoticeBody" class="round-notice-body">-</div>
-              </div>
-              <div class="patchwork-ring-shell">
-                <div class="patchwork-ring-legend-row">
-                  <div class="patchwork-market-heading">
-                    <strong>Patch Market ▦</strong>
-                    <span>First 3 are available</span>
-                  </div>
-                  <div id="patchworkMarketLegend" class="patchwork-market-legend"></div>
-                  <button id="patchworkAdvanceBtn" class="patchwork-advance-btn" type="button" data-patchwork-explain="patchworkAdvanceBtn">
-                    <span>⏩ Advance</span>
-                    <span id="patchworkAdvanceGain" class="patchwork-advance-gain"></span>
-                  </button>
-                  <div class="patchwork-market-loop-note">Clockwise market flow around the center</div>
-                </div>
-                <div id="patchworkMarketMobile" class="patchwork-market-mobile" aria-label="Patch market"></div>
-                <div class="patchwork-ring-top">
-                  <div id="patchworkMarketTop" class="patchwork-market-side top"></div>
-                </div>
-                <div class="patchwork-ring-middle">
-                  <div class="patchwork-ring-left">
-                    <div id="patchworkMarketLeft" class="patchwork-market-side left"></div>
-                  </div>
-                  <div class="patchwork-ring-core">
-                    <div class="patchwork-layout">
-                      <div class="patchwork-column patchwork-info-column">
-                        <h3>Time Board ⏳</h3>
-                        <div class="patchwork-track-card" data-patchwork-explain="track">
-                          <div class="patchwork-board-stage">
-                            <img id="patchworkBoardArt" class="patchwork-board-art" alt="Patchwork board art" />
-                            <div id="patchworkTrack" class="patchwork-track"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="patchwork-column patchwork-center-column">
-                        <div class="patchwork-board-heading">
-                          <h3>Your Quilt ▦</h3>
-                          <div id="patchworkTransformActions" class="patchwork-transform-actions" aria-label="Patch orientation" hidden>
-                            <button id="patchworkRotateBtn" type="button" data-patchwork-explain="patchworkRotateBtn" aria-label="Rotate patch clockwise">↻ <span>Rotate</span></button>
-                            <button id="patchworkFlipBtn" type="button" data-patchwork-explain="patchworkFlipBtn" aria-label="Flip patch horizontally">⇆ <span>Flip</span></button>
-                          </div>
-                        </div>
-                        <div class="patchwork-board-shell">
-                          <div id="patchworkYourBoard" class="patchwork-board"></div>
-                        </div>
-                        <div id="patchworkSelectionHint" class="hint">Select one of the first three patches, then click your board.</div>
-                        <div id="patchworkPlacementActions" class="patchwork-placement-actions" hidden>
-                          <div id="patchworkPlacementStatus" class="patchwork-placement-status" role="status"></div>
-                          <button id="patchworkConfirmBuyBtn" class="patchwork-confirm-buy" type="button" data-patchwork-explain="patchworkConfirmBuyBtn">Confirm Purchase</button>
-                        </div>
-                        <div class="patchwork-support-row">
-                          <div class="patchwork-column patchwork-preview-column">
-                            <h3>Preview ✂</h3>
-                            <div id="patchworkPreview" class="patchwork-preview"></div>
-                          </div>
-                          <div class="patchwork-column patchwork-players-column">
-                            <h3>Players 👥</h3>
-                            <div id="patchworkPlayers" class="patchwork-players" data-patchwork-explain="players"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="patchwork-ring-right">
-                    <div id="patchworkMarketRight" class="patchwork-market-side right"></div>
-                  </div>
-                </div>
-                <div class="patchwork-ring-bottom">
-                  <div id="patchworkMarketBottom" class="patchwork-market-side bottom"></div>
-                </div>
-              </div>
-            </template>
+  <div id="patchworkGame" class="patchwork-game">
+    <section class="patchwork-status-bar" aria-label="Patchwork status">
+      <div id="patchworkTurnStatus" class="patchwork-turn-status" data-patchwork-tip="The player who is farthest behind on the time track acts next.">
+        <span class="patchwork-status-icon" aria-hidden="true">⏳</span>
+        <span class="patchwork-status-label">Turn</span>
+        <strong id="patchworkTurn">-</strong>
+      </div>
+      <div class="patchwork-resource-status" data-patchwork-tip="Buttons 🔘 are your currency and count as positive points at the end.">
+        <span class="patchwork-status-icon" aria-hidden="true">🔘</span>
+        <span class="patchwork-status-label">Your buttons</span>
+        <strong id="patchworkYourButtons">-</strong>
+      </div>
+      <div class="patchwork-status-details">
+        <span data-patchwork-tip="The patch currently selected from the first three market spaces.">Patch <strong id="patchworkSelectedPatch">-</strong></span>
+        <span data-patchwork-tip="The selected patch rotates in 90 degree steps around the chosen quilt square.">Rotation <strong id="patchworkRotation">0°</strong></span>
+        <span data-patchwork-tip="Whether the selected patch is mirrored horizontally.">Flip <strong id="patchworkFlip">No</strong></span>
+        <span data-patchwork-tip="The quilt square used as the stable placement pivot.">Pivot <strong id="patchworkAnchor">-</strong></span>
+      </div>
+    </section>
+
+    <div class="patchwork-end-status" aria-label="End game status">
+      <span data-patchwork-tip="The first player to complete a filled 7 by 7 area receives the special tile.">7×7 tile <strong id="patchworkSpecialTile">-</strong></span>
+      <span data-patchwork-tip="The first player whose time token reaches the final space.">First finish <strong id="patchworkFirstFinish">-</strong></span>
+      <span data-patchwork-tip="Final winner after buttons, the special tile, and empty-space penalties are scored.">Winner <strong id="patchworkWinner">-</strong></span>
+    </div>
+
+    <div id="patchworkNotice" class="round-notice hidden" aria-hidden="true" aria-live="polite">
+      <div id="patchworkNoticeTitle" class="round-notice-title">-</div>
+      <div id="patchworkNoticeBody" class="round-notice-body">-</div>
+    </div>
+
+    <section class="patchwork-market-panel" aria-labelledby="patchworkMarketTitle">
+      <div class="patchwork-section-heading patchwork-market-heading">
+        <div>
+          <div class="patchwork-eyebrow">Market</div>
+          <h2 id="patchworkMarketTitle">Patch Market <span aria-hidden="true">🧩</span></h2>
+          <p>Choose one of the first three patches after the neutral marker.</p>
+        </div>
+        <div class="patchwork-market-actions">
+          <div id="patchworkMarketLegend" class="patchwork-market-legend" aria-label="Player order"></div>
+          <button id="patchworkAdvanceBtn" class="patchwork-advance-btn" type="button" data-patchwork-explain="patchworkAdvanceBtn">
+            <span>⏩ Advance</span>
+            <span id="patchworkAdvanceGain" class="patchwork-advance-gain"></span>
+          </button>
+        </div>
+      </div>
+      <div id="patchworkMarketMobile" class="patchwork-market-available" aria-label="Available patch market"></div>
+      <details id="patchworkUpcomingDetails" class="patchwork-upcoming-panel">
+        <summary>Upcoming patches <span id="patchworkUpcomingCount" class="patchwork-upcoming-count">0</span></summary>
+        <div id="patchworkUpcomingMarket" class="patchwork-upcoming-market"></div>
+      </details>
+    </section>
+
+    <div class="patchwork-main-grid">
+      <section class="patchwork-main-column patchwork-quilt-panel" aria-labelledby="patchworkQuiltTitle">
+        <div class="patchwork-section-heading patchwork-board-heading">
+          <div>
+            <div class="patchwork-eyebrow">Your board</div>
+            <h2 id="patchworkQuiltTitle">Your Quilt <span aria-hidden="true">🧵</span></h2>
+          </div>
+          <div id="patchworkTransformActions" class="patchwork-transform-actions" aria-label="Patch orientation" hidden>
+            <button id="patchworkRotateBtn" type="button" data-patchwork-explain="patchworkRotateBtn" aria-label="Rotate patch clockwise">↻ <span>Rotate</span></button>
+            <button id="patchworkFlipBtn" type="button" data-patchwork-explain="patchworkFlipBtn" aria-label="Flip patch horizontally">⇆ <span>Flip</span></button>
+          </div>
+        </div>
+        <div class="patchwork-board-shell">
+          <div id="patchworkYourBoard" class="patchwork-board"></div>
+        </div>
+        <div id="patchworkSelectionHint" class="hint" role="status">Select an available patch, then choose its pivot square.</div>
+        <div id="patchworkPlacementActions" class="patchwork-placement-actions" hidden>
+          <div id="patchworkPlacementStatus" class="patchwork-placement-status" role="status"></div>
+          <button id="patchworkConfirmBuyBtn" class="patchwork-confirm-buy" type="button" data-patchwork-explain="patchworkConfirmBuyBtn">Confirm Purchase</button>
+        </div>
+      </section>
+
+      <aside class="patchwork-side-column">
+        <section class="patchwork-side-card patchwork-time-card" aria-labelledby="patchworkTimeTitle">
+          <div class="patchwork-section-heading compact">
+            <div>
+              <div class="patchwork-eyebrow">Race</div>
+              <h2 id="patchworkTimeTitle">Time Board <span aria-hidden="true">⏳</span></h2>
+            </div>
+            <span class="patchwork-side-note">First to 53 finishes</span>
+          </div>
+          <div class="patchwork-track-card" data-patchwork-explain="track" data-patchwork-tip="Move along the time track. Button markers pay your current income; leather markers require a 1×1 bonus patch.">
+            <div class="patchwork-board-stage">
+              <img id="patchworkBoardArt" class="patchwork-board-art" alt="Patchwork time board" />
+              <div id="patchworkTrack" class="patchwork-track"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="patchwork-side-card patchwork-preview-card" aria-labelledby="patchworkPreviewTitle">
+          <div class="patchwork-section-heading compact">
+            <div>
+              <div class="patchwork-eyebrow">Planning</div>
+              <h2 id="patchworkPreviewTitle">Patch Preview <span aria-hidden="true">✂</span></h2>
+            </div>
+          </div>
+          <div id="patchworkPreview" class="patchwork-preview"></div>
+        </section>
+
+        <section class="patchwork-side-card patchwork-players-card" aria-labelledby="patchworkPlayersTitle">
+          <div class="patchwork-section-heading compact">
+            <div>
+              <div class="patchwork-eyebrow">Table</div>
+              <h2 id="patchworkPlayersTitle">Players <span aria-hidden="true">👥</span></h2>
+            </div>
+            <span class="patchwork-side-note">Click a card to inspect</span>
+          </div>
+          <div id="patchworkPlayers" class="patchwork-players" data-patchwork-explain="players"></div>
+        </section>
+      </aside>
+    </div>
+    <div id="patchworkTooltip" class="patchwork-tooltip" role="tooltip" hidden></div>
+  </div>
+</template>
