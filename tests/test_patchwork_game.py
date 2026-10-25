@@ -1,4 +1,6 @@
 import unittest
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from game.patchwork import (
     BUTTON_MARKERS,
@@ -9,6 +11,65 @@ from game.patchwork import (
     _board_empty_count,
     _maybe_finalize_game,
 )
+
+
+EXPECTED_PATCH_SHAPE_SIGNATURES = {
+    "patch_01": "1,0;0,1;1,1;2,1;1,2;1,3",
+    "patch_02": "0,0;0,1;0,2;0,3;1,3",
+    "patch_03": "0,0;0,1;1,1;0,2;1,2;1,3",
+    "patch_04": "1,0;0,1;1,1;2,1;0,2;1,2;2,2;1,3",
+    "patch_05": "0,0;0,1;0,2;1,2;0,3;1,3",
+    "patch_06": "0,0;0,1;1,1;2,1;1,2;2,2",
+    "patch_07": "0,0;0,1;1,1;0,2;1,2;0,3",
+    "patch_08": "0,0;0,1;0,2",
+    "patch_09": "0,0;1,0;0,1;0,2;0,3;1,3",
+    "patch_10": "0,0;0,1;1,1;0,2",
+    "patch_11": "0,0;0,1;0,2;1,2",
+    "patch_12": "0,0;0,1",
+    "patch_13": "0,0;1,0;1,1;2,1;0,2;1,2",
+    "patch_14": "0,0;0,1;0,2;1,2;0,3",
+    "patch_15": "0,0;0,1;1,1;1,2",
+    "patch_16": "1,0;0,1;1,1;1,2;2,2;1,3",
+    "patch_17": "0,0;0,1;1,1;0,2;1,2",
+    "patch_18": "1,0;0,1;1,1;2,1;1,2",
+    "patch_19": "1,0;1,1;0,2;1,2;2,2;1,3;1,4",
+    "patch_20": "0,0;0,1;1,1",
+    "patch_21": "0,0;0,1;0,2;1,2",
+    "patch_22": "0,0;0,1;0,2;0,3;1,3",
+    "patch_23": "0,0;0,1;1,1",
+    "patch_24": "0,0;0,1;0,2;0,3",
+    "patch_25": "0,0;0,1;1,1;2,1;0,2",
+    "patch_26": "0,0;0,1;1,1;2,1;3,1;3,2",
+    "patch_27": "0,0;0,1;0,2;0,3;0,4",
+    "patch_28": "0,0;1,0;2,0;1,1;0,2;1,2;2,2",
+    "patch_29": "0,0;0,1;1,1;1,2;2,2",
+    "patch_30": "0,0;0,1;1,1;2,1;3,1;0,2",
+    "patch_31": "0,0;0,1;1,1;1,2",
+    "patch_32": "0,0;1,0;0,1;1,1",
+    "patch_33": "0,0;1,0;0,1;0,2;1,2",
+}
+
+
+def _normalize_shape(cells):
+    min_x = min(x for x, _ in cells)
+    min_y = min(y for _, y in cells)
+    return tuple(
+        sorted(
+            ((x - min_x, y - min_y) for x, y in cells),
+            key=lambda cell: (cell[1], cell[0]),
+        )
+    )
+
+
+def _shape_signature(cells):
+    orientations = []
+    for flip in (False, True):
+        transformed = [(-x, y) if flip else (x, y) for x, y in cells]
+        for _ in range(4):
+            normalized = _normalize_shape(transformed)
+            orientations.append(";".join(f"{x},{y}" for x, y in normalized))
+            transformed = [(y, -x) for x, y in transformed]
+    return min(orientations)
 
 
 class PatchworkGameTests(unittest.TestCase):
@@ -106,6 +167,31 @@ class PatchworkGameTests(unittest.TestCase):
                 self.assertEqual(patch["cell_count"], len(set(cells)))
                 self.assertEqual(patch["width"], max(x for x, _ in cells) + 1)
                 self.assertEqual(patch["height"], max(y for _, y in cells) + 1)
+
+    def test_patch_shapes_match_independent_audit_and_svg_assets(self):
+        asset_root = Path(__file__).resolve().parents[1] / "game" / "assets" / "patchwork"
+        self.assertEqual(set(PATCHES_BY_ID), set(EXPECTED_PATCH_SHAPE_SIGNATURES))
+
+        for patch_id, patch in PATCHES_BY_ID.items():
+            with self.subTest(patch_id=patch_id):
+                cells = [tuple(cell) for cell in patch["cells"]]
+                self.assertEqual(_shape_signature(cells), EXPECTED_PATCH_SHAPE_SIGNATURES[patch_id])
+
+                svg_root = ET.parse(asset_root / patch["svg"]).getroot()
+                svg_cells = []
+                for element in svg_root:
+                    if element.tag.rsplit("}", 1)[-1] != "rect":
+                        continue
+                    if element.get("fill") != "#4b4b4b":
+                        continue
+                    svg_cells.append(
+                        (
+                            round(float(element.get("x", "0")) / 80),
+                            round(float(element.get("y", "0")) / 80),
+                        )
+                    )
+                self.assertEqual(_shape_signature(svg_cells), EXPECTED_PATCH_SHAPE_SIGNATURES[patch_id])
+                self.assertEqual(len(svg_cells), patch["cell_count"])
 
     def test_advance_grants_buttons_and_turn_passes(self):
         state = PatchworkGame.init_game({"seed": 7}, self._players())
