@@ -227,8 +227,9 @@ function renderInAGroveSuspects(view) {
             inAGroveElement("span", "", "Suspect " + (suspect.index + 1)),
             inAGroveElement("span", "in-a-grove-selection-mark", selected ? "✓" : "·"),
         );
-        const face = inAGroveElement("span", "in-a-grove-suspect-face", suspect.label || "?");
+        const face = inAGroveElement("span", "in-a-grove-suspect-face");
         face.classList.toggle("is-hidden", !suspect.label);
+        face.append(inAGroveElement("span", "in-a-grove-suspect-value", suspect.label || "?"));
         const caption = inAGroveElement("span", "in-a-grove-face-caption",
             revealed ? "Revealed" : suspect.label ? "Only you can see" : "Identity hidden");
         let status = "Await your turn";
@@ -237,9 +238,9 @@ function renderInAGroveSuspects(view) {
         else if (view.phase === "bet") status = "🎯 Can accuse";
         const unseen = inAGroveElement("span", "in-a-grove-unseen", suspect.unseen ? "👁 First skipped" : "");
         if (!revealed && view.current_turn !== view.you && !suspect.blocked) status = "Await your turn";
-        card.append(label, face, caption, unseen, inAGroveElement("span", "in-a-grove-suspect-status", status));
         const peekers = buildInAGrovePeekers(view, suspect);
-        if (peekers) card.append(peekers);
+        if (peekers) face.prepend(peekers);
+        card.append(label, face, caption, unseen, inAGroveElement("span", "in-a-grove-suspect-status", status));
         const peekedByNames = (suspect.peeked_by || []).map((id) => inAGrovePlayerName(view, id));
         card.setAttribute("aria-label", "Suspect " + (suspect.index + 1) + ", " +
             (suspect.label ? "value " + suspect.label : "hidden") + ", " + status +

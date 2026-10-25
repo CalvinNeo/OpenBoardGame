@@ -215,8 +215,8 @@
     const title = initial ? '选择首轮推进器' : '放弃本轮并选择推进器';
     const intro = initial ? '按座次逆序选择一张。推进器收入在本轮收入阶段生效，特殊行动和放弃奖励在对应时机使用。' : '先结算本轮放弃奖励，再选择市场中的一张推进器。新推进器从下一轮收入开始生效。';
     return `<div class="gaia-booster-layer ${dockClass} ${initial ? '' : 'gaia-pass-layer'}" data-gaia-booster-layer data-gaia-booster-mode="${mode}">
-      ${boosterDocked ? '' : '<div class="gaia-booster-scrim" aria-hidden="true"></div>'}
-      <section class="gaia-booster-dialog" role="dialog" ${boosterDocked ? '' : 'aria-modal="true"'} aria-labelledby="gaiaBoosterTitle">
+      ${docked ? '' : '<div class="gaia-booster-scrim" aria-hidden="true"></div>'}
+      <section class="gaia-booster-dialog" role="dialog" ${docked ? '' : 'aria-modal="true"'} aria-labelledby="gaiaBoosterTitle">
         <header class="gaia-booster-header"><div><small>${initial ? 'ROUND 1' : 'PASS'}</small><h2 id="gaiaBoosterTitle">${title}</h2></div><div class="gaia-booster-header-actions">${utility}<button type="button" class="gaia-booster-dock-button" data-gaia-command="toggle-booster-dock" aria-label="${docked ? '重新打开推进器选择窗口' : '暂时收起并查看主板'}">${docked ? 'Resume' : 'View board'}</button></div></header>
         ${docked ? dockedBody : `<p class="gaia-booster-intro">${intro}</p><div class="gaia-booster-grid" tabindex="0">${choices.map(({o, index}) => renderBoosterCard(o, index, selectedId, mode)).join('')}</div>${renderBoosterSelection(selected, mode)}`}
       </section>
@@ -534,6 +534,10 @@
     } else {
       html += `<h3>${view.main_done && view.phase === 'action' ? '主行动完成' : phaseNames[view.phase]}</h3>`;
     }
+    const passOptions = options.filter(o => o.category === 'pass');
+    if (isActing && view.phase === 'action' && !pending && passOptions.length) {
+      html += `<div class="gaia-pass-action">${button(view.round < 6 ? 'Pass & choose booster' : 'Pass', 'open-pass-booster', 'class="gaia-pass-button"', 'pass')}</div>`;
+    }
     if (selectedHex) {
       const hex = view.board[selectedHex];
       const terraforming = gaiaTerraformingSteps(hex.planet);
@@ -552,7 +556,7 @@
         if (category === 'research' && (o.action.type === 'research' || activeTab === 'research')) return false;
         return true;
       });
-      if (!group.length) continue;
+      if (!group.length || category === 'pass') continue;
       const items = group.map(([o,i]) => optionButton(o,i)).join('');
       if (['free','pass','power','research'].includes(category)) {
         const titles = {free:'Free Actions', pass:'Pass & choose booster', power:'Power / QIC', research:'Research'};
@@ -577,11 +581,15 @@
     const tabs = [['galaxy','Galaxy'],['research','Research'],['technology','Technology'],['players','Players']];
     const main = activeTab === 'galaxy' ? renderMap() : activeTab === 'research' ? renderResearch() : activeTab === 'technology' ? renderTechnology() : renderPlayers();
     const controls = renderControls();
-    panel.innerHTML = `${tokenSprite()}<div class="gaia-title"><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div><div class="gaia-goals">${goals}</div>${p ? renderGaiaDashboard(p) : ''}${renderBoosterPrompt()}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}${controls ? `<section class="gaia-controls gaia-inline-controls" aria-label="Actions">${controls}</section>` : ''}</div></section></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
+    panel.innerHTML = `${tokenSprite()}<div class="gaia-title"><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div><div class="gaia-goals">${goals}</div>${p ? renderGaiaDashboard(p) : ''}${renderBoosterPrompt()}${renderBoosterPrompt('pass')}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}${controls ? `<section class="gaia-controls gaia-inline-controls" aria-label="Actions">${controls}</section>` : ''}</div></section></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
     panel.classList.toggle('gaia-explaining', explainMode);
     prepareHints();
     const boosterGrid = panel.querySelector('.gaia-booster-grid');
-    if (boosterGrid) boosterGrid.scrollTop = Math.min(boosterScrollTop, Math.max(0, boosterGrid.scrollHeight - boosterGrid.clientHeight));
+    if (boosterGrid) {
+      const mode = boosterGrid.closest('[data-gaia-booster-layer]')?.dataset.gaiaBoosterMode;
+      const scrollTop = mode === 'pass' ? passScrollTop : boosterScrollTop;
+      boosterGrid.scrollTop = Math.min(scrollTop, Math.max(0, boosterGrid.scrollHeight - boosterGrid.clientHeight));
+    }
     if (boosterFocusPending) {
       boosterFocusPending = false;
       panel.querySelector('.gaia-booster-dock-button')?.focus({preventScroll:true});
@@ -683,11 +691,19 @@
     const boosterCard = event.target.closest('[data-gaia-booster]');
     if (boosterCard) {
       if (Date.now() < suppressBoosterClickUntil) { event.preventDefault(); event.stopImmediatePropagation(); return; }
-      const grid = panel.querySelector('.gaia-booster-grid');
-      if (grid) boosterScrollTop = grid.scrollTop;
-      boosterSelected = boosterCard.dataset.gaiaBooster || null;
+      const layer = boosterCard.closest('[data-gaia-booster-layer]');
+      const mode = layer?.dataset.gaiaBoosterMode || 'initial';
+      const grid = layer?.querySelector('.gaia-booster-grid');
+      if (mode === 'pass') {
+        if (grid) passScrollTop = grid.scrollTop;
+        passSelected = boosterCard.dataset.gaiaBooster || null;
+      } else {
+        if (grid) boosterScrollTop = grid.scrollTop;
+        boosterSelected = boosterCard.dataset.gaiaBooster || null;
+      }
       render();
-      [...panel.querySelectorAll('[data-gaia-booster]')].find(el => el.dataset.gaiaBooster === boosterSelected)?.focus({preventScroll:true});
+      const selectedId = mode === 'pass' ? passSelected : boosterSelected;
+      [...panel.querySelectorAll(`[data-gaia-booster-layer][data-gaia-booster-mode="${mode}"] [data-gaia-booster]`)].find(el => el.dataset.gaiaBooster === selectedId)?.focus({preventScroll:true});
       return;
     }
     const optionEl = event.target.closest('[data-gaia-option]');
@@ -708,16 +724,33 @@
     if (commandEl) {
       const command = commandEl.dataset.gaiaCommand;
       if (command === 'toggle-booster-dock') {
-        const grid = panel.querySelector('.gaia-booster-grid');
-        if (grid) boosterScrollTop = grid.scrollTop;
-        boosterDocked = !boosterDocked;
+        const layer = commandEl.closest('[data-gaia-booster-layer]');
+        const mode = layer?.dataset.gaiaBoosterMode || 'initial';
+        const grid = layer?.querySelector('.gaia-booster-grid');
+        if (mode === 'pass') {
+          if (grid) passScrollTop = grid.scrollTop;
+          passDocked = !passDocked;
+        } else {
+          if (grid) boosterScrollTop = grid.scrollTop;
+          boosterDocked = !boosterDocked;
+        }
         render();
-        if (!boosterDocked) {
-          const selectedCard = boosterSelected && [...panel.querySelectorAll('[data-gaia-booster]')].find(el => el.dataset.gaiaBooster === boosterSelected);
+        const docked = mode === 'pass' ? passDocked : boosterDocked;
+        if (!docked) {
+          const selectedId = mode === 'pass' ? passSelected : boosterSelected;
+          const selectedCard = selectedId && [...panel.querySelectorAll(`[data-gaia-booster-layer][data-gaia-booster-mode="${mode}"] [data-gaia-booster]`)].find(el => el.dataset.gaiaBooster === selectedId);
           (selectedCard || panel.querySelector('[data-gaia-booster]'))?.focus({preventScroll:true});
         }
       } else if (command === 'booster-help') showHelp();
       else if (command === 'booster-explain') { setExplain(!explainMode); commandEl.textContent = explainMode ? 'Explaining…' : 'Explain'; commandEl.setAttribute('aria-pressed', String(explainMode)); }
+      else if (command === 'open-pass-booster') {
+        passDialogOpen = true;
+        passDocked = false;
+        passSelected = null;
+        passScrollTop = 0;
+        boosterFocusPending = true;
+        render();
+      }
       else if (command === 'confirm-booster' && boosterSelected) {
         const option = activeOptions().find(o => o.action.type === 'choose_booster' && o.action.booster === boosterSelected);
         if (!option) return;
@@ -725,8 +758,18 @@
         boosterDocked = false;
         dispatch({...option.action});
       } else if (command === 'cancel-booster') {
-        boosterSelected = null;
+        const layer = commandEl.closest('[data-gaia-booster-layer]');
+        if (layer?.dataset.gaiaBoosterMode === 'pass') passSelected = null;
+        else boosterSelected = null;
         render();
+      } else if (command === 'confirm-pass' && passSelected) {
+        const option = activeOptions().find(o => o.action.type === 'pass' && (o.action.booster || '__pass__') === passSelected);
+        if (!option) return;
+        passDialogOpen = false;
+        passDocked = false;
+        passSelected = null;
+        passScrollTop = 0;
+        dispatch({...option.action});
       } else if (command === 'confirm' && selectedOption !== null) {
         const o = activeOptions()[selectedOption];
         if (!o) return;
@@ -814,8 +857,19 @@
       if (hintPopup) { hideHint(); return; }
       if (modal) { closeModal(); return; }
       if (explainMode) { setExplain(false); return; }
-      if (panel && !panel.classList.contains('hidden') && panel.querySelector('.gaia-booster-layer-floating')) {
-        boosterDocked = true;
+      const floatingBoosterLayer = panel && !panel.classList.contains('hidden') && panel.querySelector('.gaia-booster-layer-floating');
+      if (floatingBoosterLayer) {
+        if (floatingBoosterLayer.dataset.gaiaBoosterMode === 'pass') passDocked = true;
+        else boosterDocked = true;
+        render();
+        return;
+      }
+      const passLayer = panel && !panel.classList.contains('hidden') && panel.querySelector('.gaia-pass-layer');
+      if (passLayer) {
+        passDialogOpen = false;
+        passDocked = false;
+        passSelected = null;
+        passScrollTop = 0;
         render();
         return;
       }
@@ -847,7 +901,7 @@
   window.clearGaiaProjectState = () => {
     finishMapDrag(); hideHint(); hintGesture = null; consumedHintTap = null;
     legendOpen = false;
-    view=null; selectedHex=null; selectedOption=null; boosterSelected=null; boosterDocked=false; boosterScrollTop=0; boosterFocusPending=false; boosterSwipe=null; suppressBoosterClickUntil=0; viewKey=''; federationMode=false; federationHexes.clear(); activeTab='galaxy'; mapZoom=1; mapCenter=null; setExplain(false); closeModal(); if (panel) panel.innerHTML='';
+    view=null; selectedHex=null; selectedOption=null; boosterSelected=null; boosterDocked=false; boosterScrollTop=0; passDialogOpen=false; passDocked=false; passSelected=null; passScrollTop=0; boosterFocusPending=false; boosterSwipe=null; suppressBoosterClickUntil=0; viewKey=''; federationMode=false; federationHexes.clear(); activeTab='galaxy'; mapZoom=1; mapCenter=null; setExplain(false); closeModal(); if (panel) panel.innerHTML='';
   };
   window.renderGaiaProjectGameState = data => {
     const next = data.view;
@@ -855,8 +909,11 @@
     if (key !== viewKey) { selectedOption=null; federationMode=false; federationHexes.clear(); }
     const sameBoosterTurn = view && view.you === next.you && view.phase === 'booster' && next.phase === 'booster' && view.current_turn === next.current_turn && next.current_turn === next.you && viewKey.split('|')[0] === String(data.room_id);
     if (!sameBoosterTurn) { boosterSelected=null; boosterDocked=false; boosterScrollTop=0; }
+    const samePassTurn = view && view.you === next.you && view.phase === 'action' && next.phase === 'action' && view.current_turn === next.current_turn && next.current_turn === next.you && viewKey.split('|')[0] === String(data.room_id);
+    if (!samePassTurn) { passDialogOpen=false; passDocked=false; passSelected=null; passScrollTop=0; }
     if (next.phase === 'booster' && next.current_turn === next.you && (!view || view.phase !== 'booster' || view.current_turn !== next.current_turn || view.you !== next.you)) boosterFocusPending = true;
     if (next.phase === 'booster' && next.current_turn === next.you && boosterSelected && !next.options.some(o => o.action.type === 'choose_booster' && o.action.booster === boosterSelected)) boosterSelected = null;
+    if (next.phase === 'action' && next.current_turn === next.you && passSelected && !next.options.some(o => o.action.type === 'pass' && (o.action.booster || '__pass__') === passSelected)) passSelected = null;
     if (viewKey && viewKey.split('|')[0] !== String(data.room_id)) { hideHint(); selectedHex=null; activeTab='galaxy'; legendOpen=false; mapZoom=1; mapCenter=null; }
     viewKey=key; view=next;
     if (currentGameType !== 'gaia_project') { currentGameType='gaia_project'; setGamePanelVisibility('gaia_project'); }

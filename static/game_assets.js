@@ -473,13 +473,14 @@ const GAME_ASSETS = {
   },
   "patchwork": {
     "scripts": [
-      "/static/games/patchwork.js?v=app_v7"
+      "/static/games/patchwork.js?v=app_v8"
     ],
     "styles": [],
     "panel": "patchworkPanel",
+    "panelTitle": "Patchwork · 拼布艺术",
     "header": "showPatchworkHeaderActions",
-    "markup": "/static/games/patchwork.html?v=1",
-    "styleFragments": "/static/games/patchwork.css?v=1"
+    "markup": "/static/games/patchwork.html?v=2",
+    "styleFragments": "/static/games/patchwork.css?v=2"
   },
   "isle_of_skye": {
     "scripts": [
@@ -620,14 +621,14 @@ const GAME_ASSETS = {
   },
   "in_a_grove": {
     "scripts": [
-      "/static/games/in_a_grove.js?v=app_v6"
+      "/static/games/in_a_grove.js?v=app_v9"
     ],
     "styles": [],
     "panel": "inAGrovePanel",
     "panelTitle": "🎋 竹林之中",
     "header": "showInAGroveHeaderActions",
-    "markup": "/static/games/in_a_grove.html?v=3",
-    "styleFragments": "/static/games/in_a_grove.css?v=3"
+    "markup": "/static/games/in_a_grove.html?v=4",
+    "styleFragments": "/static/games/in_a_grove.css?v=7"
   },
   "citadels": {
     "scripts": [
@@ -651,13 +652,14 @@ const GAME_ASSETS = {
   },
   "davinci_code": {
     "scripts": [
-      "/static/games/davinci_code.js?v=app_v4"
+      "/static/games/davinci_code.js?v=app_v5"
     ],
     "styles": [],
     "panel": "davinciCodePanel",
+    "panelTitle": "🔐 Da Vinci Code",
     "header": "showDaVinciCodeHeaderActions",
-    "markup": "/static/games/davinci_code.html?v=1",
-    "styleFragments": "/static/games/davinci_code.css?v=1"
+    "markup": "/static/games/davinci_code.html?v=2",
+    "styleFragments": "/static/games/davinci_code.css?v=2"
   },
   "lost_code": {
     "scripts": [
@@ -1078,10 +1080,10 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v11"
+      "/static/games/gaia_project.js?v=gaia_v12"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v11"
+      "/static/gaia_project.css?v=gaia_v12"
     ],
     "panel": "gaiaProjectPanel",
     "panelTitle": "🌌 盖亚计划",

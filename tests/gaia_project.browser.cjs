@@ -144,8 +144,40 @@ async function render(page, key, tab) {
           assert.equal(await page.locator('.gaia-dashboard').count(), 1);
           assert.equal(await page.locator('.gaia-dashboard-power-block').count(), 1);
           assert.equal(await page.locator('.gaia-dashboard>.gaia-income-panel').count(), 1);
+          assert.equal(await page.locator('.gaia-pass-button').count(), 1);
+          assert.equal(await page.locator('.gaia-action-group').filter({hasText: 'Pass & choose booster'}).count(), 0);
           const dashboardHeight = await page.locator('.gaia-dashboard').evaluate(el => el.getBoundingClientRect().height);
           assert(dashboardHeight < (width <= 390 ? 340 : 220), `${width}: dashboard is too tall (${dashboardHeight})`);
+          if (width === 1440) {
+            const passCount = views.action.options.filter(o => o.action.type === 'pass').length;
+            await page.locator('.gaia-pass-button').click();
+            assert.equal(await page.locator('.gaia-pass-layer.gaia-booster-layer-floating').count(), 1);
+            assert.equal(await page.locator('.gaia-pass-layer .gaia-booster-card').count(), passCount);
+            await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-pass-floating.png`});
+            await page.keyboard.press('Escape');
+            assert.equal(await page.locator('.gaia-pass-layer.gaia-booster-layer-docked').count(), 1);
+            await page.locator('.gaia-pass-layer [data-gaia-command="toggle-booster-dock"]').click();
+            assert.equal(await page.locator('.gaia-pass-layer.gaia-booster-layer-floating').count(), 1);
+            const passBooster = page.locator('.gaia-pass-layer .gaia-booster-card').first();
+            const passBoosterId = await passBooster.getAttribute('data-gaia-booster');
+            await passBooster.click();
+            assert.equal(await page.locator('.gaia-pass-layer .gaia-booster-card.selected').getAttribute('data-gaia-booster'), passBoosterId);
+            await page.locator('.gaia-pass-layer [data-gaia-command="toggle-booster-dock"]').click();
+            await bounds(page, `${width} pass docked`);
+            assert.equal(await page.locator('.gaia-pass-layer.gaia-booster-layer-docked').count(), 1);
+            assert.equal(await page.locator('.gaia-pass-layer .gaia-booster-grid').count(), 0);
+            await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-pass-docked.png`});
+            await page.locator('[data-gaia-tab="research"]').click();
+            assert.equal(await page.locator('.gaia-tabs [data-gaia-tab="research"].active').count(), 1);
+            await page.locator('.gaia-pass-layer [data-gaia-command="toggle-booster-dock"]').click();
+            assert.equal(await page.locator('.gaia-pass-layer.gaia-booster-layer-floating').count(), 1);
+            assert.equal(await page.locator('.gaia-pass-layer .gaia-booster-card.selected').getAttribute('data-gaia-booster'), passBoosterId);
+            await page.locator('.gaia-pass-layer [data-gaia-command="confirm-pass"]').click();
+            const passAction = await page.evaluate(() => gaiaTestActions.pop());
+            const expectedPass = views.action.options.find(o => (o.action.booster || '__pass__') === passBoosterId).action;
+            assert.deepEqual(passAction, expectedPass);
+            assert.equal(await page.locator('.gaia-pass-layer').count(), 0);
+          }
         }
         if (tab === 'players') {
           const players = views[key].players.length;

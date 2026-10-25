@@ -1,16 +1,32 @@
 <template data-game-target="davinciCodePanel" data-game-mode="contents">
-              <div class="row davinci-status-row">
-                <div>Phase: <span id="davinciCodePhase">-</span></div>
-                <div>Mode: <span id="davinciCodeMode">-</span></div>
-                <div>Current Turn: <span id="davinciCodeTurn">-</span></div>
-                <div>Draw Pile: <span id="davinciCodeDeck">-</span></div>
+              <div class="davinci-status-row" aria-label="Da Vinci Code status">
+                <div class="davinci-status-item" data-davinci-tip="The current stage of the game. Guess means the active player must choose a hidden opponent tile." tabindex="0">
+                  <span class="davinci-status-icon" aria-hidden="true">🎯</span>
+                  <span class="davinci-status-label">Phase</span>
+                  <strong id="davinciCodePhase">-</strong>
+                </div>
+                <div class="davinci-status-item" data-davinci-tip="Standard uses numbered tiles. Advanced adds one Dark (⚫) and one Light (⚪) Dash (━) tile." tabindex="0">
+                  <span class="davinci-status-icon" aria-hidden="true">🔐</span>
+                  <span class="davinci-status-label">Mode</span>
+                  <strong id="davinciCodeMode">-</strong>
+                </div>
+                <div class="davinci-status-item" data-davinci-tip="The player who must act now. A highlighted action panel means it is your turn." tabindex="0">
+                  <span class="davinci-status-icon" aria-hidden="true">👤</span>
+                  <span class="davinci-status-label">Turn</span>
+                  <strong id="davinciCodeTurn">-</strong>
+                </div>
+                <div class="davinci-status-item" data-davinci-tip="Tiles remaining in the draw pile. When it reaches zero, a miss reveals one of your own hidden tiles." tabindex="0">
+                  <span class="davinci-status-icon" aria-hidden="true">🃏</span>
+                  <span class="davinci-status-label">Draw pile</span>
+                  <strong id="davinciCodeDeck">-</strong>
+                </div>
+                <div class="davinci-status-item davinci-status-item-wide" data-davinci-tip="The player or players who have won. The row is revealed after the game ends." tabindex="0">
+                  <span class="davinci-status-icon" aria-hidden="true">🏆</span>
+                  <span class="davinci-status-label">Winner</span>
+                  <strong id="davinciCodeWinners">-</strong>
+                </div>
               </div>
-              <div class="row">
-                <div>Detail: <span id="davinciCodeDetail">-</span></div>
-              </div>
-              <div class="row">
-                <div>Winners: <span id="davinciCodeWinners">-</span></div>
-              </div>
+              <div id="davinciCodeDetail" class="davinci-turn-detail" aria-live="polite">-</div>
 
               <section id="davinciCodeSetup" class="davinci-section hidden" aria-hidden="true">
                 <div class="davinci-section-title">Setup</div>
@@ -18,23 +34,23 @@
               </section>
 
               <div class="davinci-layout">
-                <section class="davinci-section davinci-table-section">
-                  <div class="davinci-section-title">Table</div>
+                <section class="davinci-section davinci-table-section" aria-labelledby="davinciCodeTableTitle">
+                  <div id="davinciCodeTableTitle" class="davinci-section-title">Code Table</div>
                   <div id="davinciCodeTable" class="davinci-player-grid"></div>
                 </section>
 
-                <section class="davinci-section">
-                  <div class="davinci-section-title">Guess a Tile</div>
+                <section id="davinciCodeActionSection" class="davinci-section davinci-action-section" aria-labelledby="davinciCodeActionTitle">
+                  <div id="davinciCodeActionTitle" class="davinci-section-title">Your Action</div>
                   <div id="davinciCodeGuessTarget" class="davinci-target-line" aria-live="polite">Select a hidden opponent tile.</div>
                   <div id="davinciCodeGuessPalette" class="davinci-guess-palette" role="group" aria-label="Tile guesses" aria-describedby="davinciCodeGuessTarget"></div>
                   <div id="davinciCodePending" class="davinci-pending">-</div>
                   <div id="davinciCodeControls" class="davinci-option-list"></div>
                 </section>
 
-                <section class="davinci-section">
-                  <div class="davinci-section-title">Public Log</div>
+                <details class="davinci-section davinci-log-section" open>
+                  <summary class="davinci-section-title">📜 Public Log <span class="davinci-log-summary-hint">(tap to collapse)</span></summary>
                   <div id="davinciCodeLog" class="davinci-log"></div>
-                </section>
+                </details>
               </div>
             </template>
 <template data-game-target="davinciCodeHelpModal" data-game-mode="replace"><div id="davinciCodeHelpModal" class="modal davinci-help-modal hidden" aria-hidden="true">

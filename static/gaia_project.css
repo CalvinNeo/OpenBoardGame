@@ -146,6 +146,8 @@
 .gaia-token-payment label { display:flex; align-items:center; gap:4px; font-size:10px; }
 .gaia-token-payment input[type=number] { width:48px; }
 .gaia-federation-button { width:100%; margin-top:12px; }
+.gaia-pass-action { display:flex; justify-content:flex-end; margin:8px 0 10px; }
+.gaia-pass-button { min-width:190px; border-color:#c49b56; background:#263c53; font-weight:700; }
 .gaia-research { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; }
 .gaia-track h3 { font-size:11px; text-align:center; }
 .gaia-level { display:block; width:100%; min-height:88px; margin:5px 0; text-align:left; padding:7px !important; }
@@ -292,6 +294,8 @@
   .gaia-dashboard-status .gaia-status-tech .gaia-owned-tech { gap:3px; }
   .gaia-income-total { gap:4px 6px; }
   .gaia-income-total-value { justify-content:flex-start; }
+  .gaia-pass-action { justify-content:stretch; margin:8px 0; }
+  .gaia-pass-button { width:100%; min-height:42px; }
 }
 @media(max-width:340px) {
   .gaia-dashboard { gap:5px; padding:6px; }

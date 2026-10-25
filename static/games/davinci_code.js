@@ -4,6 +4,7 @@ let daVinciExplainMode = false;
 let daVinciExplainBlockClick = false;
 let daVinciTipTimer = null;
 let daVinciTipTarget = null;
+let daVinciCodeInitialized = false;
 
 const davinciCodeConfigBox = document.getElementById("davinciCodeConfigBox");
 const davinciCodeModeSelect = document.getElementById("davinciCodeModeSelect");
@@ -33,6 +34,7 @@ const davinciCodeGuessPalette = document.getElementById("davinciCodeGuessPalette
 const davinciCodePending = document.getElementById("davinciCodePending");
 const davinciCodeControls = document.getElementById("davinciCodeControls");
 const davinciCodeLog = document.getElementById("davinciCodeLog");
+const davinciCodeActionSection = document.getElementById("davinciCodeActionSection");
 
 const DAVINCI_HELP_HTML = `
   <h3>Goal</h3>
@@ -68,6 +70,23 @@ function daVinciCan(view, action) {
   return Array.isArray(view && view.legal_actions) && view.legal_actions.includes(action);
 }
 
+function syncDaVinciRoomAttention(view) {
+  const needsAction = Boolean(
+    view
+      && !view.game_over
+      && Array.isArray(view.legal_actions)
+      && view.legal_actions.length,
+  );
+  const needsSetup = needsAction && daVinciCan(view, "arrange_initial_tiles");
+  document.body.classList.toggle("davinci-needs-action", needsAction);
+  if (davinciCodeActionSection) {
+    davinciCodeActionSection.classList.toggle("is-your-turn", needsAction && !needsSetup);
+  }
+  if (davinciCodeSetupSection) {
+    davinciCodeSetupSection.classList.toggle("is-your-turn", needsSetup);
+  }
+}
+
 function daVinciFindSelf(view) {
   if (!view || !Array.isArray(view.players)) return null;
   return view.players.find((player) => player.you) || null;
@@ -76,6 +95,7 @@ function daVinciFindSelf(view) {
 function clearDaVinciCodeState() {
   currentDaVinciCodeView = null;
   daVinciSelectedTarget = null;
+  syncDaVinciRoomAttention(null);
   setDaVinciExplainMode(false);
   hideDaVinciTip();
   if (davinciCodePhaseLabel) davinciCodePhaseLabel.textContent = "-";
@@ -100,6 +120,7 @@ function clearDaVinciCodeState() {
 }
 
 function updateDavinciCodeConfigRow() {
+  initDaVinciCode();
   const showRow = currentRoomState && currentGameType === "davinci_code" && currentRoomState.status === "lobby";
   if (davinciCodeConfigBox) {
     davinciCodeConfigBox.classList.toggle("hidden", !showRow);
@@ -117,11 +138,13 @@ function daVinciModeSummary(mode) {
 }
 
 function renderDaVinciCodeRoomState(state) {
+  initDaVinciCode();
   if (!state || currentGameType !== "davinci_code" || state.status !== "lobby") {
     return;
   }
   currentDaVinciCodeView = null;
   daVinciSelectedTarget = null;
+  syncDaVinciRoomAttention(null);
   const players = Array.isArray(state.players)
     ? [...state.players].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0))
     : [];
@@ -237,6 +260,7 @@ function renderDaVinciCodeRoomState(state) {
 }
 
 function showDaVinciCodeHeaderActions(show) {
+  initDaVinciCode();
   if (!davinciCodeHeaderActions) return;
   davinciCodeHeaderActions.style.display = show ? "flex" : "none";
   if (!show) {
@@ -597,6 +621,7 @@ function renderDaVinciCodeLog(view) {
 }
 
 function renderDaVinciCodeGameState(data) {
+  initDaVinciCode();
   if (!daVinciTipTimer) hideDaVinciTip();
   const view = data && data.view ? data.view : null;
   currentDaVinciCodeView = view;
@@ -604,6 +629,7 @@ function renderDaVinciCodeGameState(data) {
     clearDaVinciCodeState();
     return;
   }
+  syncDaVinciRoomAttention(view);
   if (!daVinciCan(view, "guess_tile")) {
     daVinciSelectedTarget = null;
   } else if (daVinciSelectedTarget) {
@@ -636,91 +662,99 @@ function renderDaVinciCodeGameState(data) {
   renderDaVinciCodeLog(view);
 }
 
-if (davinciCodeModeSelect) {
-  davinciCodeModeSelect.addEventListener("change", updateDavinciCodeConfigRow);
-}
-
-if (davinciCodeHelpBtn) {
-  davinciCodeHelpBtn.addEventListener("click", openDaVinciCodeHelpModal);
-}
-
-if (davinciCodeExplainBtn) {
-  davinciCodeExplainBtn.setAttribute("aria-pressed", "false");
-  davinciCodeExplainBtn.addEventListener("click", () => setDaVinciExplainMode(!daVinciExplainMode));
-}
-
-if (davinciCodeHelpModalCloseBtn) {
-  davinciCodeHelpModalCloseBtn.addEventListener("click", () => {
-    if (davinciCodeHelpModal) setModalVisible(davinciCodeHelpModal, false);
-  });
-}
-
-if (davinciCodeExplainModalCloseBtn) {
-  davinciCodeExplainModalCloseBtn.addEventListener("click", () => {
-    if (davinciCodeExplainModal) setModalVisible(davinciCodeExplainModal, false);
-  });
-}
-
-if (davinciCodeHelpModal) {
-  davinciCodeHelpModal.addEventListener("click", (event) => {
-    if (event.target === davinciCodeHelpModal) {
-      setModalVisible(davinciCodeHelpModal, false);
-    }
-  });
-}
-
-if (davinciCodeExplainModal) {
-  davinciCodeExplainModal.addEventListener("click", (event) => {
-    if (event.target === davinciCodeExplainModal) {
-      setModalVisible(davinciCodeExplainModal, false);
-    }
-  });
-}
-
 function daVinciExplainExempt(button) {
   return [davinciCodeExplainBtn, davinciCodeHelpBtn, davinciCodeHelpModalCloseBtn, davinciCodeExplainModalCloseBtn].includes(button);
 }
 
-document.addEventListener("pointerdown", (event) => {
-  daVinciExplainBlockClick = false;
-  if (!daVinciExplainMode) return;
-  // Hit testing also reaches native disabled buttons in Explain mode.
-  const button = event.target.closest("button") || Array.from(davinciCodePanelEl.querySelectorAll("button[data-davinci-tip]")).find((candidate) => {
-    const rect = candidate.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && event.clientX >= rect.left && event.clientX <= rect.right
-      && event.clientY >= rect.top && event.clientY <= rect.bottom;
-  });
-  if (!button || daVinciExplainExempt(button)) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  daVinciExplainBlockClick = true;
-  if (button.dataset.davinciTip) openDaVinciCodeExplainModal(button);
-}, true);
+function initDaVinciCode() {
+  if (daVinciCodeInitialized || !davinciCodePanelEl) return;
+  daVinciCodeInitialized = true;
 
-document.addEventListener("click", (event) => {
-  if (daVinciExplainBlockClick && event.detail > 0) {
+  if (davinciCodeModeSelect) {
+    davinciCodeModeSelect.addEventListener("change", updateDavinciCodeConfigRow);
+  }
+
+  if (davinciCodeHelpBtn) {
+    davinciCodeHelpBtn.addEventListener("click", openDaVinciCodeHelpModal);
+  }
+
+  if (davinciCodeExplainBtn) {
+    davinciCodeExplainBtn.setAttribute("aria-pressed", "false");
+    davinciCodeExplainBtn.addEventListener("click", () => setDaVinciExplainMode(!daVinciExplainMode));
+  }
+
+  if (davinciCodeHelpModalCloseBtn) {
+    davinciCodeHelpModalCloseBtn.addEventListener("click", () => {
+      if (davinciCodeHelpModal) setModalVisible(davinciCodeHelpModal, false);
+    });
+  }
+
+  if (davinciCodeExplainModalCloseBtn) {
+    davinciCodeExplainModalCloseBtn.addEventListener("click", () => {
+      if (davinciCodeExplainModal) setModalVisible(davinciCodeExplainModal, false);
+    });
+  }
+
+  if (davinciCodeHelpModal) {
+    davinciCodeHelpModal.addEventListener("click", (event) => {
+      if (event.target === davinciCodeHelpModal) {
+        setModalVisible(davinciCodeHelpModal, false);
+      }
+    });
+  }
+
+  if (davinciCodeExplainModal) {
+    davinciCodeExplainModal.addEventListener("click", (event) => {
+      if (event.target === davinciCodeExplainModal) {
+        setModalVisible(davinciCodeExplainModal, false);
+      }
+    });
+  }
+
+  document.addEventListener("pointerdown", (event) => {
     daVinciExplainBlockClick = false;
+    if (!daVinciExplainMode || !davinciCodePanelEl) return;
+    // Hit testing also reaches native disabled buttons in Explain mode.
+    const eventElement = event.target instanceof Element ? event.target : null;
+    const button = eventElement?.closest("button") || Array.from(davinciCodePanelEl.querySelectorAll("button[data-davinci-tip]"))
+      .find((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && event.clientX >= rect.left && event.clientX <= rect.right
+          && event.clientY >= rect.top && event.clientY <= rect.bottom;
+      });
+    if (!button || daVinciExplainExempt(button)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    return;
-  }
-  if (!daVinciExplainMode) return;
-  const button = event.target.closest("button");
-  if (!button || daVinciExplainExempt(button)) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  if (button.dataset.davinciTip) openDaVinciCodeExplainModal(button);
-}, true);
+    daVinciExplainBlockClick = true;
+    if (button.dataset.davinciTip) openDaVinciCodeExplainModal(button);
+  }, true);
 
-if (davinciCodePanelEl) {
+  document.addEventListener("click", (event) => {
+    if (daVinciExplainBlockClick && event.detail > 0) {
+      daVinciExplainBlockClick = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (!daVinciExplainMode) return;
+    const eventElement = event.target instanceof Element ? event.target : null;
+    const button = eventElement?.closest("button");
+    if (!button || daVinciExplainExempt(button)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (button.dataset.davinciTip) openDaVinciCodeExplainModal(button);
+  }, true);
+
   davinciCodePanelEl.addEventListener("click", (event) => {
-    if (daVinciExplainMode || event.target.closest("button, input, select, a, [data-davinci-tip]")) return;
+    const eventElement = event.target instanceof Element ? event.target : null;
+    if (daVinciExplainMode || eventElement?.closest("button, input, select, a, [data-davinci-tip]")) return;
     if (daVinciSelectedTarget) clearDaVinciTarget();
     hideDaVinciTip();
   });
   davinciCodePanelEl.addEventListener("pointerover", (event) => {
     if (event.pointerType !== "mouse") return;
-    const target = event.target.closest("[data-davinci-tip]");
+    const eventElement = event.target instanceof Element ? event.target : null;
+    const target = eventElement?.closest("[data-davinci-tip]");
     if (target) showDaVinciTip(target);
   });
   davinciCodePanelEl.addEventListener("pointerout", (event) => {
@@ -728,29 +762,37 @@ if (davinciCodePanelEl) {
   });
   davinciCodePanelEl.addEventListener("pointerup", (event) => {
     if (event.pointerType === "mouse") return;
-    const target = event.target.closest("[data-davinci-tip]");
+    const eventElement = event.target instanceof Element ? event.target : null;
+    const target = eventElement?.closest("[data-davinci-tip]");
     if (target) showDaVinciTip(target, true);
   });
   davinciCodePanelEl.addEventListener("focusin", (event) => {
-    if (event.target.matches("[data-davinci-tip]:focus-visible")) showDaVinciTip(event.target);
+    const eventElement = event.target instanceof Element ? event.target : null;
+    if (eventElement?.matches("[data-davinci-tip]:focus-visible")) showDaVinciTip(eventElement);
   });
   davinciCodePanelEl.addEventListener("focusout", () => {
     if (!daVinciTipTimer) hideDaVinciTip();
   });
+
+  window.addEventListener("resize", hideDaVinciTip);
+  document.addEventListener("scroll", hideDaVinciTip, true);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    setDaVinciExplainMode(false);
+    hideDaVinciTip();
+    if (daVinciSelectedTarget) clearDaVinciTarget();
+    if (davinciCodeHelpModal && !davinciCodeHelpModal.classList.contains("hidden")) {
+      setModalVisible(davinciCodeHelpModal, false);
+    }
+    if (davinciCodeExplainModal && !davinciCodeExplainModal.classList.contains("hidden")) {
+      setModalVisible(davinciCodeExplainModal, false);
+    }
+  });
 }
 
-window.addEventListener("resize", hideDaVinciTip);
-document.addEventListener("scroll", hideDaVinciTip, true);
-
-document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") return;
-  setDaVinciExplainMode(false);
-  hideDaVinciTip();
-  if (daVinciSelectedTarget) clearDaVinciTarget();
-  if (davinciCodeHelpModal && !davinciCodeHelpModal.classList.contains("hidden")) {
-    setModalVisible(davinciCodeHelpModal, false);
-  }
-  if (davinciCodeExplainModal && !davinciCodeExplainModal.classList.contains("hidden")) {
-    setModalVisible(davinciCodeExplainModal, false);
-  }
-});
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initDaVinciCode, { once: true });
+} else {
+  initDaVinciCode();
+}

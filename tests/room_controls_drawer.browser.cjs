@@ -186,12 +186,14 @@ const output = 'build/room-controls-drawer';
 
         for (const width of [901, 1280]) {
             await page.setViewportSize({ width, height: 900 });
-            await page.waitForFunction(() => document.querySelector('#mobileExplainSlot').childElementCount === 0);
+            await page.waitForFunction(() => document.querySelector('.room-controls-layer')?.matches(':popover-open'));
             await page.evaluate(() => setRoomControlsCollapsed(false));
             assert.equal(await page.locator('.main').evaluate(element => element.inert), false);
             assert.equal(await page.locator('#roomControlsBackdrop').isVisible(), false);
-            assert.equal(await page.locator('#roomControlsPanel').evaluate(element => getComputedStyle(element).position), 'static');
-            assert.equal(await page.locator('#mobileExplainSlot > button').count(), 0);
+            assert.equal(await page.locator('#roomControlsPanel').evaluate(element => getComputedStyle(element).position), 'fixed');
+            assert.equal(await page.locator('#roomControlsPanel').evaluate(element => element.parentElement.classList.contains('room-controls-layer')), true);
+            assert.equal(await page.locator('#mobileExplainSlot > button').count(), 1, 'Explain stays in RC when resizing to desktop');
+            assert.equal(await page.locator('#roomControlsExplainPlaceholder').isVisible(), false, 'Only one Explain control is visible');
             assert.equal(await collapse.isVisible(), false);
             if (width === 1280) await page.screenshot({ path: `${output}/desktop-expanded.png` });
             await toggle.click();
@@ -199,6 +201,7 @@ const output = 'build/room-controls-drawer';
             assert.equal(await toggle.textContent(), 'Show RC');
             assert.equal(await toggle.getAttribute('aria-label'), 'Open Room Controls');
             assert.equal(await expandHint.isVisible(), false, 'Desktop uses the labeled Show RC tab');
+            assert.equal(await explain.isVisible(), true, 'The collapsed desktop dock keeps Explain');
             assert.equal((await geometry()).overflow, false);
         }
         await page.setViewportSize({ width: 390, height: 844 });

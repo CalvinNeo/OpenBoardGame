@@ -671,6 +671,7 @@ class DaVinciCodeGame:
             "phase": phase,
             "mode": (state.get("config") or {}).get("mode"),
             "you": viewer_id,
+            "game_over": bool(state.get("game_over")),
             "current_turn": state.get("current_turn"),
             "current_turn_name": _player_name(state, state.get("current_turn")) if state.get("current_turn") else None,
             "turn_number": int(state.get("turn_number", 1)),

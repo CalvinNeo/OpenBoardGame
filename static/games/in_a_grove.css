@@ -333,6 +333,7 @@
 }
 
 .in-a-grove-suspect-face {
+  position: relative;
   display: grid;
   place-items: center;
   width: 64px;
@@ -345,6 +346,19 @@
   font-size: 46px;
   font-weight: 600;
   line-height: 1;
+}
+
+.in-a-grove-suspect-value {
+  font: inherit;
+}
+
+.in-a-grove-suspect-face:has(.in-a-grove-peekers) .in-a-grove-suspect-value {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 100%;
+  font-size: 28px;
+  text-align: center;
 }
 
 .in-a-grove-suspect-face.is-hidden {
@@ -373,22 +387,29 @@
 
 .in-a-grove-peekers {
   position: absolute;
-  top: 28px;
-  left: 3px;
-  right: 3px;
+  bottom: 2px;
+  left: 50%;
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 2px;
-  max-height: 30px;
+  width: calc(100% + 36px);
+  margin-left: 0;
+  padding: 1px 0;
+  transform: translateX(-50%);
+  max-height: 34px;
   overflow: hidden;
+  border-radius: 4px;
+  background: #dce4c6e8;
   pointer-events: none;
 }
 
 .in-a-grove-peeker {
-  max-width: 100%;
-  padding: 1px 4px;
+  flex: 0 1 calc(50% - 1px);
+  min-width: 0;
+  max-width: calc(50% - 1px);
+  padding: 0 3px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--peeker-color, #64748b) 55%, white);
   border-radius: 999px;
@@ -654,8 +675,9 @@ body.in-a-grove-explain-mode #inAGrovePanel button.has-explanation {
   .in-a-grove-suspects { gap: 7px; }
   .in-a-grove-suspect { min-height: 157px; padding: 8px 4px; gap: 6px; border-radius: 9px; }
   .in-a-grove-suspect-face { width: 49px; height: 62px; font-size: 38px; }
-  .in-a-grove-peekers { top: 25px; max-height: 27px; }
-  .in-a-grove-peeker { padding: 1px 3px; font-size: 8px; }
+  .in-a-grove-suspect-face:has(.in-a-grove-peekers) .in-a-grove-suspect-value { font-size: 22px; }
+  .in-a-grove-peekers { max-height: 32px; }
+  .in-a-grove-peeker { padding: 0 2px; font-size: 7px; }
   .in-a-grove-suspect-label,
   .in-a-grove-suspect-status { font-size: 10px; }
   .in-a-grove-chip { padding: 5px 4px; gap: 3px; font-size: 10px; }

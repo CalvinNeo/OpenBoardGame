@@ -2498,6 +2498,34 @@ button.splendor-card {
 
 
 @media (min-width: 901px) {
+  /* A manual popover keeps desktop controls above game dialogs without
+     blocking input to the board outside the controls. */
+  .room-controls-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 30001;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+    background: transparent;
+    color: #222;
+    font: 16px Arial, sans-serif;
+    pointer-events: none;
+  }
+
+  .room-controls-layer::backdrop {
+    display: none;
+  }
+
+  .room-controls-layer > * {
+    pointer-events: auto;
+  }
+
   /* The compact desktop dock gives the placeholder its own display rule. Keep
      the semantic hidden state authoritative so it cannot sit beside a real
      game Explain button. */
@@ -2515,7 +2543,6 @@ button.splendor-card {
     position: relative;
     width: 0;
     min-width: 0;
-    z-index: 30;
   }
 
   body.room-controls-drawer-closed .main,
@@ -2525,8 +2552,9 @@ button.splendor-card {
 
   body.room-controls-drawer-closed #roomControlsPanel,
   body.room-controls-desktop-popover #roomControlsPanel {
-    position: fixed !important;
-    z-index: 220;
+    position: fixed;
+    inset: auto;
+    z-index: 30002;
     margin: 0;
     border: 1px solid rgba(148, 163, 184, 0.48);
     background: rgba(248, 250, 252, 0.46);
@@ -2695,17 +2723,19 @@ button.splendor-card {
 
   body.room-controls-dock-left.room-controls-drawer-closed #roomControlsPanel,
   body.room-controls-dock-right.room-controls-drawer-closed #roomControlsPanel {
-    top: 50%;
-    transform: translateY(-50%);
+    top: var(--room-controls-dock-edge-offset, 50%);
+    transform: none;
   }
 
   body.room-controls-dock-left.room-controls-drawer-closed #roomControlsPanel {
     left: 0;
+    right: auto;
     border-radius: 0 10px 10px 0;
   }
 
   body.room-controls-dock-right.room-controls-drawer-closed #roomControlsPanel {
     right: 0;
+    left: auto;
     border-radius: 10px 0 0 10px;
   }
 
@@ -2749,26 +2779,20 @@ button.splendor-card {
 
   body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel,
   body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel {
-    left: 50%;
-    transform: translateX(-50%);
+    left: var(--room-controls-dock-edge-offset, 50%);
+    transform: none;
   }
 
   body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel {
     top: 0;
+    bottom: auto;
     border-radius: 0 0 10px 10px;
   }
 
   body.room-controls-dock-bottom.room-controls-drawer-closed #roomControlsPanel {
     bottom: 0;
+    top: auto;
     border-radius: 10px 10px 0 0;
-  }
-
-  body.room-controls-drawer-closed #roomControlsPanel.is-dragging {
-    z-index: 230;
-    /* The inline viewport coordinates set by room.js are the source of truth
-       while dragging; this rule keeps the preview independent of the panel
-       that originally contained the dock. */
-    position: fixed !important;
   }
 
   body.room-controls-dock-top.room-controls-drawer-closed #roomControlsPanel > .panel-header,
@@ -2837,40 +2861,42 @@ button.splendor-card {
   }
 
   body.room-controls-dock-left.room-controls-desktop-popover #roomControlsPanel {
-    top: 50%;
+    top: var(--room-controls-dock-edge-offset, 50%);
     left: 0;
     right: auto;
     bottom: auto;
-    transform: translateY(-50%);
+    transform: none;
     border-radius: 0 16px 16px 0;
   }
 
   body.room-controls-dock-right.room-controls-desktop-popover #roomControlsPanel {
-    top: 50%;
+    top: var(--room-controls-dock-edge-offset, 50%);
     right: 0;
     left: auto;
     bottom: auto;
-    transform: translateY(-50%);
+    transform: none;
     border-radius: 16px 0 0 16px;
   }
 
   body.room-controls-dock-top.room-controls-desktop-popover #roomControlsPanel {
     top: 0;
+    bottom: auto;
     right: auto;
-    left: 50%;
+    left: var(--room-controls-dock-edge-offset, 50%);
     width: min(520px, calc(100vw - 24px));
     max-height: min(680px, calc(100vh - 24px));
-    transform: translateX(-50%);
+    transform: none;
     border-radius: 0 0 16px 16px;
   }
 
   body.room-controls-dock-bottom.room-controls-desktop-popover #roomControlsPanel {
+    top: auto;
     bottom: 0;
     right: auto;
-    left: 50%;
+    left: var(--room-controls-dock-edge-offset, 50%);
     width: min(520px, calc(100vw - 24px));
     max-height: min(680px, calc(100vh - 24px));
-    transform: translateX(-50%);
+    transform: none;
     border-radius: 16px 16px 0 0;
   }
 }
