@@ -228,13 +228,13 @@ const GAME_ASSETS = {
   },
   "azul": {
     "scripts": [
-      "/static/games/azul.js?v=app_v6"
+      "/static/games/azul.js?v=app_v7"
     ],
     "styles": [],
     "panel": "azulPanel",
     "header": "showAzulHeaderActions",
-    "markup": "/static/games/azul.html?v=2",
-    "styleFragments": "/static/games/azul.css?v=3"
+    "markup": "/static/games/azul.html?v=3",
+    "styleFragments": "/static/games/azul.css?v=4"
   },
   "sagrada": {
     "scripts": ["/static/games/sagrada.js?v=3"],
@@ -352,14 +352,14 @@ const GAME_ASSETS = {
   },
   "decrypto": {
     "scripts": [
-      "/static/games/decrypto.js?v=app_v8"
+      "/static/games/decrypto.js?v=app_v9"
     ],
     "styles": [],
     "panel": "decryptoPanel",
     "panelTitle": "Decrypto",
     "header": "showDecryptoHeaderActions",
-    "markup": "/static/games/decrypto.html?v=4",
-    "styleFragments": "/static/games/decrypto.css?v=5"
+    "markup": "/static/games/decrypto.html?v=5",
+    "styleFragments": "/static/games/decrypto.css?v=6"
   },
   "wavelength": {
     "scripts": [

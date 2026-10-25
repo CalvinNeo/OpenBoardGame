@@ -40,6 +40,10 @@ const decryptoStatusBody = document.getElementById("decryptoStatusBody");
 const decryptoTeams = document.getElementById("decryptoTeams");
 const decryptoCurrentClues = document.getElementById("decryptoCurrentClues");
 const decryptoHistory = document.getElementById("decryptoHistory");
+const decryptoHistoryDock = document.getElementById("decryptoHistoryDock");
+const decryptoHistoryBtn = document.getElementById("decryptoHistoryBtn");
+const decryptoHistorySection = document.getElementById("decryptoHistorySection");
+let decryptoHistoryScrollTop = 0;
 const decryptoSummary = document.getElementById("decryptoSummary");
 const decryptoSummaryBody = document.getElementById("decryptoSummaryBody");
 const decryptoEncryptionArea = document.getElementById("decryptoEncryptionArea");
@@ -131,7 +135,7 @@ const DECRYPTO_HELP_TEXT = `
   <ul>
     <li>History groups revealed clues under keyword numbers 1–4. Hover over a colored clue, or tap it on a phone, to see its author and round.</li>
     <li>Intercept choices show a number and a short preview of that number's latest public clues, limited to 10 characters. Opponent keywords stay secret.</li>
-    <li>History stays on the game board while writing clues or guessing, including on phones. Long histories scroll inside their own panel.</li>
+    <li>The bottom History tab opens a scrollable reference panel while writing clues or guessing. Click the tab again or press Esc to collapse it. Your inputs and history scroll position are preserved, and the board stays interactive.</li>
     <li>Last Round is grouped by the team making the guess: Decrypt targets its own clues; Intercept targets the opposing team's clues.</li>
     <li>Correct order and Submitted order show the same three positions. Only your team's keywords can appear. Opponent keywords are never shown, including in the final review; only their public clues and numbers appear.</li>
     <li>Close or Esc dismisses the review without confirming. Use the right-edge Review tab to reopen Last Round Review. The round stays paused until all players confirm.</li>
@@ -159,6 +163,10 @@ const DECRYPTO_BUTTON_EXPLANATIONS = {
   decryptoReviewBtn: {
     name: "Last Round Review",
     description: "The right-edge Review tab reopens the latest round's results. Each team's own decrypt and its intercept of the opponent are listed separately. Opponent keywords are never displayed. Closing the dialog does not confirm readiness.",
+  },
+  decryptoHistoryBtn: {
+    name: "Clue History",
+    description: "Expand or collapse the bottom history dock. Browse both teams' revealed clues without leaving your current inputs. Colors identify clue authors. The board stays interactive, and Esc collapses the dock without clearing inputs or its scroll position.",
   },
 };
 
@@ -482,6 +490,9 @@ function resetDecryptoInputs() {
 
 function clearDecryptoState() {
   currentDecryptoView = null;
+  setDecryptoHistoryOpen(false);
+  decryptoHistoryScrollTop = 0;
+  decryptoHistoryDock.classList.add("hidden");
   setDecryptoReviewOpen(false);
   hideDecryptoTooltip();
   decryptoReviewBtn.classList.add("hidden");
@@ -1046,7 +1057,8 @@ function renderDecryptoHistory(view) {
   if (!decryptoHistory) {
     return;
   }
-  const scrollTop = decryptoHistory.scrollTop;
+  const historyOpen = !decryptoHistorySection.classList.contains("hidden");
+  if (historyOpen) decryptoHistoryScrollTop = decryptoHistory.scrollTop;
   decryptoHistory.innerHTML = "";
   ["white", "black"].forEach((teamId) => {
     const team = view.teams ? view.teams[teamId] : null;
@@ -1109,7 +1121,7 @@ function renderDecryptoHistory(view) {
     section.appendChild(table);
     decryptoHistory.appendChild(section);
   });
-  decryptoHistory.scrollTop = scrollTop;
+  if (historyOpen) decryptoHistory.scrollTop = decryptoHistoryScrollTop;
 }
 
 function createDecryptoSequence(view, targetId, info, sequence, submitted = false) {
@@ -1277,6 +1289,7 @@ function renderDecryptoGameState(data) {
     ? previousView.game_over || previousView.phase === "game_over"
     : false;
   currentDecryptoView = view;
+  decryptoHistoryDock.classList.remove("hidden");
   const roundChanged = previousView && previousView.round !== view.round;
   const newGameStarted = previousView && previousGameOver && !view.game_over && view.phase !== "game_over";
   if (roundChanged || newGameStarted) {
@@ -1450,6 +1463,25 @@ let decryptoTooltipTimer = null;
 let decryptoTooltipTarget = null;
 let decryptoTipPress = null;
 const decryptoModalFocus = new Map();
+const decryptoHistoryDockObserver = new ResizeObserver(() => {
+  decryptoPanel.style.setProperty("--decrypto-history-dock-height", `${decryptoHistoryDock.offsetHeight}px`);
+});
+decryptoHistoryDockObserver.observe(decryptoHistoryDock);
+
+function setDecryptoHistoryOpen(open) {
+  if (open && !currentDecryptoView) return;
+  if (decryptoHistorySection.classList.contains("hidden") === !open) return;
+  hideDecryptoTooltip();
+  if (!open) decryptoHistoryScrollTop = decryptoHistory.scrollTop;
+  const focusInside = decryptoHistorySection.contains(document.activeElement);
+  decryptoHistorySection.classList.toggle("hidden", !open);
+  decryptoHistoryBtn.setAttribute("aria-expanded", String(open));
+  if (open) {
+    decryptoHistory.scrollTop = decryptoHistoryScrollTop;
+  } else if (focusInside && decryptoHistoryBtn.getClientRects().length) {
+    decryptoHistoryBtn.focus({ preventScroll: true });
+  }
+}
 
 function setDecryptoModalVisible(modal, visible) {
   if (!modal || modal.classList.contains("hidden") === !visible) return;
@@ -1507,6 +1539,7 @@ function showDecryptoHeaderActions(show) {
     closeDecryptoHelpModal();
     closeDecryptoExplainModal();
     setDecryptoReviewOpen(false);
+    setDecryptoHistoryOpen(false);
     hideDecryptoTooltip();
   }
 }
@@ -1690,11 +1723,16 @@ document.addEventListener("keydown", (event) => {
   if (currentGameType !== "decrypto") return;
   const modal = [decryptoExplainModal, decryptoHelpModal, decryptoSummary].find((item) => !item.classList.contains("hidden"));
   if (event.key === "Escape") {
+    const wasExplaining = decryptoExplainMode;
     exitDecryptoExplainMode();
     hideDecryptoTooltip();
     if (modal === decryptoSummary) setDecryptoReviewOpen(false);
     else if (modal) setDecryptoModalVisible(modal, false);
-    if (modal) event.preventDefault();
+    else if (!wasExplaining && !decryptoHistorySection.classList.contains("hidden")) {
+      setDecryptoHistoryOpen(false);
+      event.preventDefault();
+    }
+    if (modal || wasExplaining) event.preventDefault();
   } else if (event.key === "Tab" && modal) {
     const elements = [...modal.querySelectorAll("button:not(:disabled), summary, [tabindex='0']")].filter((element) => element.getClientRects().length);
     const first = elements[0];
@@ -1709,6 +1747,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+decryptoHistoryBtn.addEventListener("click", () => setDecryptoHistoryOpen(decryptoHistorySection.classList.contains("hidden")));
 decryptoReviewBtn.addEventListener("click", () => setDecryptoReviewOpen(true));
 decryptoReviewCloseBtn.addEventListener("click", () => setDecryptoReviewOpen(false));
 decryptoReviewExplainBtn.addEventListener("click", toggleDecryptoExplainMode);

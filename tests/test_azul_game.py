@@ -142,6 +142,7 @@ class AzulGameTests(unittest.TestCase):
             pdata["score_breakdown"],
             {
                 "wall_points": 11,
+                "wall_points_by_round": [{"round": 1, "points": 1}],
                 "floor_penalty": -1,
                 "floor_clamp": 0,
                 "row_bonus": 0,
@@ -164,6 +165,7 @@ class AzulGameTests(unittest.TestCase):
             state["players"]["p1"]["score_breakdown"],
             {
                 "wall_points": 0,
+                "wall_points_by_round": [],
                 "floor_penalty": 0,
                 "floor_clamp": 0,
                 "row_bonus": 10,
@@ -171,6 +173,43 @@ class AzulGameTests(unittest.TestCase):
                 "color_bonus": 50,
             },
         )
+
+    def test_score_breakdown_lists_wall_points_for_each_round(self):
+        state = AzulGame.init_game({}, self._players())
+        pdata = state["players"]["p1"]
+        pdata["pattern_lines"][0] = {"color": "blue", "tiles": ["blue"]}
+        _resolve_round(state)
+
+        state["round"] = 2
+        pdata["pattern_lines"][1] = {"color": "yellow", "tiles": ["yellow", "yellow"]}
+        _resolve_round(state)
+
+        self.assertEqual(
+            pdata["score_breakdown"]["wall_points_by_round"],
+            [{"round": 1, "points": 1}, {"round": 2, "points": 1}],
+        )
+        public_player = AzulGame.get_public_view(state, "p1")["players"][0]
+        self.assertEqual(
+            public_player["score_breakdown"]["wall_points_by_round"],
+            [{"round": 1, "points": 1}, {"round": 2, "points": 1}],
+        )
+
+    def test_legacy_score_breakdown_keeps_wall_total_and_marks_missing_rounds(self):
+        state = AzulGame.init_game({}, self._players())
+        pdata = state["players"]["p1"]
+        pdata["score"] = 8
+        pdata["score_breakdown"] = {
+            "wall_points": 8,
+            "floor_penalty": 0,
+            "floor_clamp": 0,
+            "row_bonus": 0,
+            "column_bonus": 0,
+            "color_bonus": 0,
+        }
+
+        public_player = AzulGame.get_public_view(state, "p1")["players"][0]
+        self.assertEqual(public_player["score_breakdown"]["wall_points_by_round"], [])
+        self.assertTrue(public_player["score_breakdown"]["legacy"])
 
 
 if __name__ == "__main__":

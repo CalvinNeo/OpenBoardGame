@@ -147,6 +147,7 @@ def _new_score_breakdown() -> Dict:
     """Return the running score components kept for the public score summary."""
     return {
         "wall_points": 0,
+        "wall_points_by_round": [],
         "floor_penalty": 0,
         "floor_clamp": 0,
         "row_bonus": 0,
@@ -167,8 +168,16 @@ def _ensure_score_breakdown(pdata: Dict) -> Dict:
         breakdown["legacy"] = True
         pdata["score_breakdown"] = breakdown
     else:
+        if "wall_points_by_round" not in breakdown:
+            breakdown["wall_points_by_round"] = []
+            breakdown["legacy"] = True
         for key, default in _new_score_breakdown().items():
             value = breakdown.get(key)
+            if key == "wall_points_by_round":
+                if not isinstance(value, list):
+                    breakdown[key] = list(default)
+                    breakdown["legacy"] = True
+                continue
             if not isinstance(value, (int, float)) or isinstance(value, bool):
                 breakdown[key] = default
     return breakdown
@@ -193,10 +202,14 @@ def _advance_turn(state: Dict) -> None:
 
 
 def _resolve_round(state: Dict) -> None:
+    round_number = state.get("round", 1)
+    if not isinstance(round_number, int) or isinstance(round_number, bool):
+        round_number = 1
     for pid in state["turn_order"]:
         pdata = state["players"][pid]
         breakdown = _ensure_score_breakdown(pdata)
         wall = pdata["wall"]
+        round_wall_points = 0
         for row in range(5):
             line = pdata["pattern_lines"][row]
             capacity = row + 1
@@ -208,11 +221,16 @@ def _resolve_round(state: Dict) -> None:
                     placement_points = _score_placement(wall, row, col)
                     pdata["score"] += placement_points
                     breakdown["wall_points"] += placement_points
+                    round_wall_points += placement_points
                 leftovers = line["tiles"][:-1]
                 if leftovers:
                     state["discard"].extend(leftovers)
                 line["tiles"] = []
                 line["color"] = None
+
+        breakdown["wall_points_by_round"].append(
+            {"round": round_number, "points": round_wall_points}
+        )
 
         penalty = 0
         for idx in range(min(len(pdata["floor"]), len(FLOOR_PENALTIES))):
@@ -664,6 +682,11 @@ class AzulGame:
                         "capacity": idx + 1,
                     }
                 )
+            score_breakdown = copy.deepcopy(_ensure_score_breakdown(pdata))
+            score_breakdown["pending_floor_penalty"] = sum(
+                FLOOR_PENALTIES[:min(len(pdata.get("floor", [])), len(FLOOR_PENALTIES))]
+            )
+            score_breakdown["total"] = pdata["score"]
             players_view.append(
                 {
                     "player_id": pid,
@@ -671,13 +694,7 @@ class AzulGame:
                     "seat": meta.get("seat"),
                     "is_bot": meta.get("is_bot"),
                     "score": pdata["score"],
-                    "score_breakdown": {
-                        **_ensure_score_breakdown(pdata),
-                        "pending_floor_penalty": sum(
-                            FLOOR_PENALTIES[:min(len(pdata.get("floor", [])), len(FLOOR_PENALTIES))]
-                        ),
-                        "total": pdata["score"],
-                    },
+                    "score_breakdown": score_breakdown,
                     "pattern_lines": pattern_lines,
                     "wall": pdata["wall"],
                     "floor": list(pdata["floor"]),

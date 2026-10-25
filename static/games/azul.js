@@ -130,6 +130,27 @@ function formatAzulScoreComponent(value) {
   return amount > 0 ? `+${amount}` : `−${Math.abs(amount)}`;
 }
 
+function formatAzulWallRoundDetails(breakdown) {
+  const rounds = Array.isArray(breakdown && breakdown.wall_points_by_round)
+    ? breakdown.wall_points_by_round.filter(
+        (entry) =>
+          entry &&
+          Number.isFinite(Number(entry.round)) &&
+          Number.isFinite(Number(entry.points)),
+      )
+    : [];
+  if (rounds.length) {
+    return `Wall: ${rounds
+      .map((entry) => `Round ${Number(entry.round)} ${formatAzulScoreComponent(entry.points)}`)
+      .join(" · ")}`;
+  }
+  const total = Number(breakdown && breakdown.wall_points);
+  if (Number.isFinite(total)) {
+    return `Wall tiles ${formatAzulScoreComponent(total)}`;
+  }
+  return "Wall: no completed rounds yet";
+}
+
 function hideAzulScoreBanner() {
   if (!azulScoreBanner) {
     return;
@@ -158,8 +179,12 @@ function showAzulScoreBanner(player) {
 
   const breakdown = player.score_breakdown;
   if (breakdown && typeof breakdown === "object") {
+    const wallDetails = document.createElement("div");
+    wallDetails.className = "azul-score-banner-wall";
+    wallDetails.textContent = formatAzulWallRoundDetails(breakdown);
+    azulScoreBanner.appendChild(wallDetails);
+
     const parts = [
-      ["Wall tiles", breakdown.wall_points],
       ["Floor penalties", breakdown.floor_penalty],
       ["Zero-score protection", breakdown.floor_clamp],
       ["Rows", breakdown.row_bonus],

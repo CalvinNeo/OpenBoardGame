@@ -606,8 +606,15 @@
 }
 
 .azul-score-banner-details,
+.azul-score-banner-wall,
 .azul-score-banner-pending {
   color: #f8fafc;
+}
+
+.azul-score-banner-wall {
+  margin-bottom: 3px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .azul-score-banner-pending {
@@ -628,6 +635,10 @@
 
 @media (max-width: 720px) {
   /* Keep the round summary scannable without making the game board taller. */
+  #azulPanel {
+    padding-bottom: 48px;
+  }
+
   .azul-status {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -646,16 +657,31 @@
     overflow-wrap: anywhere;
   }
 
+  .azul-layout {
+    gap: 8px;
+  }
+
   .azul-table {
     padding: 8px;
-    gap: 12px;
+    gap: 9px;
+  }
+
+  .azul-table h3 {
+    font-size: 13px;
+  }
+
+  .azul-market,
+  .azul-factories-block,
+  .azul-center-block,
+  .azul-board-block {
+    gap: 5px;
   }
 
   /* Factories and the center are related choices. Keeping them beside each
      other saves a full vertical section on narrow phones. */
   .azul-market {
-    grid-template-columns: minmax(0, 1.35fr) minmax(84px, 0.65fr);
-    gap: 8px;
+    grid-template-columns: minmax(0, 1.35fr) minmax(82px, 0.65fr);
+    gap: 6px;
     align-items: start;
   }
 
@@ -668,7 +694,11 @@
 
   .azul-factories {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
+    gap: 4px;
+  }
+
+  #azulFactories[data-factory-count="5"] {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   #azulFactories[data-factory-count="7"] {
@@ -680,12 +710,13 @@
   }
 
   .azul-factory {
-    padding: 5px;
+    padding: 4px;
   }
 
   .azul-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    min-height: 60px;
+    gap: 3px;
+    min-height: 54px;
   }
 
   .azul-center-choice {
@@ -694,10 +725,111 @@
 
   .azul-center-actions button {
     min-height: 44px;
+    padding: 6px;
+  }
+
+  .azul-selection {
+    gap: 3px 8px;
+    padding: 5px 0;
+  }
+
+  .azul-board-grid {
+    gap: 6px;
+  }
+
+  .azul-board-headings,
+  .azul-board-main {
+    gap: 6px;
+  }
+
+  .azul-pattern-column {
+    grid-template-rows: repeat(5, 32px);
+    gap: 3px;
+  }
+
+  .azul-wall-grid {
+    gap: 3px;
+  }
+
+  .azul-floor-slots {
+    gap: 3px;
   }
 
   .azul-pattern-summary {
     gap: 3px;
+  }
+
+  /* Keep Players available while the board is scrolled, with the summary
+     acting as the compact mobile dock handle. */
+  #azulPlayersDetails {
+    position: fixed;
+    right: max(6px, env(safe-area-inset-right));
+    bottom: max(4px, env(safe-area-inset-bottom));
+    left: max(6px, env(safe-area-inset-left));
+    z-index: 80;
+    width: auto;
+    box-sizing: border-box;
+    max-height: min(42vh, 300px);
+    overflow: hidden;
+    border-color: #94a3b8;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+  }
+
+  #azulPlayersDetails > summary {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    list-style: none;
+  }
+
+  #azulPlayersDetails > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  #azulPlayersDetails[open] > summary {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  #azulPlayers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: min(34vh, 246px);
+    gap: 5px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 7px 7px;
+  }
+
+  #azulPlayers .azul-player-card {
+    padding: 6px;
+  }
+
+  .azul-player-name {
+    min-height: 28px;
+    margin-bottom: 3px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .azul-pattern-summary {
+    gap: 2px;
+    margin-bottom: 3px;
+  }
+
+  .azul-pattern-chip {
+    padding: 1px 4px;
+    font-size: 10px;
+  }
+
+  .azul-player-card .azul-wall-grid {
+    margin-top: 3px;
+  }
+
+  .azul-floor-info {
+    margin-top: 3px;
+    font-size: 11px;
   }
 }
 
@@ -713,8 +845,8 @@
   }
 
   .azul-market {
-    grid-template-columns: minmax(0, 1.3fr) minmax(78px, 0.7fr);
-    gap: 6px;
+    grid-template-columns: minmax(0, 1.3fr) minmax(76px, 0.7fr);
+    gap: 5px;
   }
 
   .azul-market[data-factory-count="7"],
@@ -727,7 +859,7 @@
   }
 
   .azul-factory {
-    padding: 4px 2px;
+    padding: 3px 2px;
   }
 
   .azul-factory-title {
@@ -735,8 +867,8 @@
   }
 
   .azul-tiles {
-    gap: 3px;
-    min-height: 56px;
+    gap: 2px;
+    min-height: 50px;
   }
 
   #azulFactories[data-factory-count="7"],
@@ -757,6 +889,15 @@
   .azul-center-choice .azul-tile {
     width: 20px;
     height: 20px;
+  }
+
+  #azulPlayersDetails {
+    max-height: min(40vh, 244px);
+  }
+
+  #azulPlayers {
+    max-height: min(32vh, 196px);
+    padding-inline: 5px;
   }
 }
 

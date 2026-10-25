@@ -150,16 +150,18 @@
               </div>
               </div>
               <aside id="decryptoReference">
-                  <section id="decryptoHistorySection" class="decrypto-reference-section" data-decrypto-explain="history">
-                    <h3>History <span class="decrypto-section-note">Colors identify clue authors</span></h3>
-                    <div id="decryptoHistory"></div>
-                  </section>
                   <details class="decrypto-reference-section" id="decryptoCurrentCluesDetails">
                     <summary>Current Clues</summary>
                     <div id="decryptoCurrentClues"></div>
                   </details>
               </aside>
               </div>
+              <aside id="decryptoHistoryDock" class="hidden" aria-label="Clue history dock">
+                <button id="decryptoHistoryBtn" type="button" aria-controls="decryptoHistorySection" aria-expanded="false">History <span class="decrypto-history-chevron" aria-hidden="true">▴</span></button>
+                <section id="decryptoHistorySection" class="hidden" data-decrypto-explain="history" aria-label="Clue history">
+                  <div id="decryptoHistory" tabindex="0" role="region" aria-label="Revealed clues by team and keyword number"></div>
+                </section>
+              </aside>
               <section id="decryptoSummary" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="decryptoSummaryTitle" aria-hidden="true">
                 <div class="modal-content decrypto-review-modal">
                   <div class="modal-header">

@@ -119,6 +119,21 @@ async function bounds(page, label) {
         return outsideViewport || contentOverflow;
       }).map((element) => `${element.id || element.className || element.tagName}: ${element.textContent.slice(0, 45)}`);
     const dock = document.getElementById("decryptoReviewBtn");
+    const historyDock = document.getElementById("decryptoHistoryDock");
+    const historyButton = document.getElementById("decryptoHistoryBtn");
+    const history = document.getElementById("decryptoHistory");
+    if (historyDock.checkVisibility()) {
+      const box = historyDock.getBoundingClientRect();
+      const bottomOffset = Number.parseFloat(getComputedStyle(historyDock).bottom);
+      if (getComputedStyle(historyDock).position !== "fixed" || Math.abs(box.bottom - (innerHeight - bottomOffset)) > 1 || box.top < 0) issues.push("History must dock inside the bottom viewport edge");
+      const expanded = historyButton.getAttribute("aria-expanded") === "true";
+      if (expanded !== history.checkVisibility()) issues.push("History visibility must match aria-expanded");
+      if (!expanded && box.height > 52) issues.push("Collapsed History must remain a narrow tab");
+      if (expanded && box.height > Math.min(innerHeight * 0.48, 460) + 1) issues.push("History must stay within its height limit");
+      const main = document.querySelector(".decrypto-main").getBoundingClientRect();
+      const workspace = document.querySelector(".decrypto-workspace").getBoundingClientRect();
+      if (Math.abs(main.width - workspace.width) > 1) issues.push("History must not reserve an empty board column");
+    }
     if (dock.checkVisibility() && !document.body.classList.contains("decrypto-dialog-open")) {
       const tab = dock.getBoundingClientRect();
       if (getComputedStyle(dock).position !== "fixed" || Math.abs(tab.right - innerWidth) > 1 || tab.top < 0 || tab.bottom > innerHeight) issues.push("Review must dock inside the right viewport edge");
@@ -182,6 +197,10 @@ async function bounds(page, label) {
       for (const name of Object.keys(fixtures)) {
         await render(page, name);
         await bounds(page, `${width}px / ${name}`);
+        const hasReview = await page.locator("#decryptoSummary").isVisible();
+        if (hasReview) await page.locator("#decryptoReviewCloseBtn").click();
+        await page.locator("#decryptoHistoryBtn").click();
+        await bounds(page, `${width}px / ${name} / open history`);
         if (width <= 720 && ["encryption", "guessing", "black_guessing"].includes(name)) {
           const compact = await page.evaluate(() => {
             const inlineLegends = [...document.querySelectorAll(".decrypto-history-heading")].every((heading) => {
@@ -197,6 +216,11 @@ async function bounds(page, label) {
           assert(compact.inlineLegends, `${width}px / ${name}: history title and player colors must share a row`);
           assert(compact.teamHeight <= 120, `${width}px / ${name}: team summaries and keywords should stay compact (${compact.teamHeight}px)`);
         }
+        if (name === "guessing") {
+          await page.screenshot({ path: `${output}/history-${width}.png`, fullPage: true });
+        }
+        await page.locator("#decryptoHistoryBtn").click();
+        if (hasReview) await page.locator("#decryptoReviewBtn").click();
         if (["guessing", "round_end"].includes(name)) {
           await page.screenshot({ path: `${output}/${name}-${width}.png`, fullPage: true });
         }
@@ -255,15 +279,18 @@ async function bounds(page, label) {
     await page.locator("#decryptoInterceptSelect1").selectOption("4");
     await page.locator("#decryptoInterceptSelect2").selectOption("2");
     assert.equal(await page.locator('#decryptoInterceptSelect3 option[value="4"]').isDisabled(), true);
-    assert.equal(await page.locator("#decryptoHistoryBtn").count(), 0);
-    assert.equal(await page.locator("#decryptoHistory").isVisible(), true);
-    assert.equal(await page.locator("#decryptoReference #decryptoHistory").count(), 1);
+    assert.equal(await page.locator("#decryptoHistoryBtn").getAttribute("aria-expanded"), "false");
+    assert.equal(await page.locator("#decryptoHistory").isVisible(), false);
+    assert.equal(await page.locator("#decryptoReference #decryptoHistory").count(), 0);
+    assert.equal(await page.locator("#decryptoHistoryDock #decryptoHistory").count(), 1);
     const encryptor = page.locator("#decryptoTeams .decrypto-encryptor").first();
     await encryptor.tap();
     assert.match(await page.locator("#decryptoTooltip").innerText(), /Bob.*Encryptor/);
     assert.equal(await encryptor.locator(".decrypto-player-role").isVisible(), false);
     await page.keyboard.press("Escape");
-    await bounds(page, "390px permanent history");
+    await page.locator("#decryptoHistoryBtn").tap();
+    assert.equal(await page.evaluate(() => document.body.classList.contains("decrypto-dialog-open")), false);
+    await bounds(page, "390px bottom history dock");
     const clues = page.locator("#decryptoHistory .decrypto-history-clue");
     await clues.first().tap();
     assert.match(await page.locator("#decryptoTooltip").innerText(), /Alice.*Round 1/);
@@ -273,7 +300,8 @@ async function bounds(page, label) {
     assert.equal(await page.locator("#decryptoTooltip").isVisible(), false);
     await page.screenshot({ path: `${output}/history-390.png`, fullPage: true });
     await page.keyboard.press("Escape");
-    assert.equal(await page.locator("#decryptoHistory").isVisible(), true);
+    assert.equal(await page.locator("#decryptoHistory").isVisible(), false);
+    assert.equal(await page.locator("#decryptoHistoryBtn").getAttribute("aria-expanded"), "false");
     assert.equal(await page.locator("#decryptoInterceptSelect1").inputValue(), "4");
     assert.equal(await page.locator("#decryptoInterceptSelect2").inputValue(), "2");
     await page.locator("#decryptoInterceptSelect3").selectOption("1");
@@ -295,7 +323,7 @@ async function bounds(page, label) {
     assert.equal(await page.locator("#decryptoPanel img").count(), 0);
     assert.equal(await page.evaluate(() => trimDecryptoPreview("  a  b   ")), "a b");
     assert.equal(await page.evaluate(() => Array.from(trimDecryptoPreview("🌊".repeat(12))).length), 10);
-    await page.locator("#decryptoHistory").scrollIntoViewIfNeeded();
+    await page.locator("#decryptoHistoryBtn").tap();
     const historyCell = page.locator("#decryptoHistory .decrypto-history-clue").first();
     const touchPoint = await historyCell.boundingBox();
     const session = await context.newCDPSession(page);
@@ -309,8 +337,53 @@ async function bounds(page, label) {
     await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     assert.equal(await page.locator("#decryptoTooltip").isVisible(), false);
     await session.detach();
+    const historyScroll = await page.locator("#decryptoHistory").evaluate((element) => {
+      element.scrollTop = 120;
+      return element.scrollTop;
+    });
+    assert(historyScroll > 0, "Long history must scroll inside the dock");
+    await page.evaluate(() => renderDecryptoGameState({ view: currentDecryptoView }));
+    assert.equal(await page.locator("#decryptoHistory").evaluate((element) => element.scrollTop), historyScroll);
     await page.keyboard.press("Escape");
-    console.log("History remains on the board; intercept previews stay within 10 characters and browsing history preserves distinct selections.");
+    await page.evaluate(() => renderDecryptoGameState({ view: currentDecryptoView }));
+    await page.locator("#decryptoHistoryBtn").focus();
+    await page.keyboard.press("Enter");
+    assert.equal(await page.locator("#decryptoHistory").evaluate((element) => element.scrollTop), historyScroll);
+    await page.keyboard.press("Tab");
+    assert.equal(await page.evaluate(() => document.activeElement.id), "decryptoHistory");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.evaluate(() => document.activeElement.id), "decryptoHistoryBtn");
+    console.log("Bottom History supports keyboard toggling, Esc and touch scrolling; updates preserve its scroll position and intercept selections.");
+
+    await render(page, "next_encryption");
+    await page.locator("#decryptoClue1").fill("保留草稿");
+    await page.locator("#decryptoHistoryBtn").tap();
+    await page.evaluate(() => renderDecryptoGameState({ view: currentDecryptoView }));
+    assert.equal(await page.locator("#decryptoClue1").inputValue(), "保留草稿");
+    await page.locator("#decryptoHelpBtn").click();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#decryptoHistory").isVisible(), true, "Esc closes Help before History");
+    await page.locator("#decryptoExplainBtn").click();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#decryptoHistory").isVisible(), true, "Esc exits Explain before History");
+    await page.locator("#decryptoReviewBtn").click();
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#decryptoHistory").isVisible(), true, "Esc closes Review before History");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#decryptoClue1").inputValue(), "保留草稿");
+    await page.locator("#decryptoExplainBtn").click();
+    await page.locator("#decryptoHistoryBtn").tap();
+    assert.match(await page.locator("#decryptoExplainContent").innerText(), /bottom history dock/);
+    assert.equal(await page.locator("#decryptoHistory").isVisible(), false, "Explain must not toggle the dock");
+    await page.keyboard.press("Escape");
+    await page.locator("#decryptoHistoryBtn").tap();
+    await page.evaluate(() => setGamePanelVisibility(null));
+    assert.equal(await page.locator("#decryptoHistoryDock").isVisible(), false);
+    await page.evaluate(() => setGamePanelVisibility("decrypto"));
+    assert.equal(await page.locator("#decryptoHistoryBtn").isVisible(), true);
+    assert.equal(await page.locator("#decryptoHistory").isVisible(), false);
+    await page.evaluate(() => clearDecryptoState());
+    assert.equal(await page.locator("#decryptoHistoryDock").isVisible(), false);
 
     await render(page, "guessing");
     await page.locator("#decryptoExplainBtn").click();
@@ -372,7 +445,8 @@ async function bounds(page, label) {
       await page.locator("#decryptoReviewCloseBtn").click();
       assert.equal(await page.locator("#decryptoReviewBtn").getAttribute("aria-expanded"), "false");
       assert.equal(await page.locator("#decryptoReviewBtn").getAttribute("aria-label"), "Last Round Review · 2");
-      assert.equal(await page.locator("#decryptoHistory").isVisible(), true);
+      assert.equal(await page.locator("#decryptoHistory").isVisible(), false);
+      assert.equal(await page.locator("#decryptoHistoryBtn").isVisible(), true);
     }
     await render(page, "game_over");
     assert.equal(await page.locator("#decryptoNextRoundBtn").isVisible(), false);
@@ -390,10 +464,26 @@ async function bounds(page, label) {
     await desktop.evaluate(() => ensureGameAssets("decrypto"));
     await render(desktop, "round_end");
     await desktop.locator("#decryptoReviewCloseBtn").click();
+    await desktop.locator("#decryptoHistoryBtn").click();
     await desktop.locator("#decryptoHistory .decrypto-history-clue").first().hover();
     assert.match(await desktop.locator("#decryptoTooltip").innerText(), /Alice.*Round 1/);
     await desktop.mouse.move(1, 1);
     assert.equal(await desktop.locator("#decryptoTooltip").isVisible(), false);
+    for (const side of ["left", "right", "top", "bottom"]) {
+      await desktop.evaluate((side) => applyRoomControlsDockSide(side), side);
+      await bounds(desktop, `1440px History with ${side} room controls`);
+      const roomControlsAccessible = await desktop.locator("#roomControlsToggleBtn").evaluate((button) => {
+        const box = button.getBoundingClientRect();
+        return button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+      });
+      assert(roomControlsAccessible, "Room controls must stay above History");
+      if (side === "bottom") {
+        const historyBox = await desktop.locator("#decryptoHistoryDock").boundingBox();
+        const controlsBox = await desktop.locator("#roomControlsPanel").boundingBox();
+        assert(historyBox.y + historyBox.height <= controlsBox.y, "Bottom room controls need their own space");
+        await desktop.screenshot({ path: `${output}/history-room-controls-1440.png`, fullPage: true });
+      }
+    }
     await desktopContext.close();
 
     const liveContexts = [];

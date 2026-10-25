@@ -1,5 +1,7 @@
 @media all, obg-game-decrypto-1 {
   #decryptoPanel {
+    --decrypto-history-bottom-offset: 0px;
+    padding-bottom: calc(var(--decrypto-history-dock-height, 40px) + var(--decrypto-history-bottom-offset) + 12px);
     color: #1e293b;
     line-height: 1.4;
     overflow-wrap: anywhere;
@@ -127,7 +129,7 @@
 
   .decrypto-workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     align-items: start;
   }
@@ -147,22 +149,80 @@
     margin-left: 4px;
   }
 
-  #decryptoHistorySection h3 {
+  #decryptoHistoryDock {
+    position: fixed;
+    z-index: 185;
+    right: max(8px, env(safe-area-inset-right));
+    bottom: var(--decrypto-history-bottom-offset);
+    left: max(8px, env(safe-area-inset-left));
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 8px;
+    flex-direction: column;
+    align-items: center;
+    max-width: 1040px;
+    max-height: min(48dvh, 460px);
+    margin-inline: auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #decryptoPanel:has(#decryptoReviewBtn:not(.hidden)) #decryptoHistoryDock {
+    right: max(38px, env(safe-area-inset-right));
+  }
+
+  #decryptoPanel #decryptoHistoryBtn {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 132px;
+    padding: 7px 18px;
+    border: 1px solid #b4c9e5;
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    background: #e8f0fc;
+    color: #1e3a8a;
+    box-shadow: 0 -2px 10px #0f172a18;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #decryptoPanel #decryptoHistoryBtn:hover {
+    background: #dbeafe;
+  }
+
+  #decryptoHistoryBtn[aria-expanded="true"] .decrypto-history-chevron {
+    transform: rotate(180deg);
+  }
+
+  #decryptoHistorySection {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    padding: 10px;
+    border: 1px solid #c5d4e9;
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    background: #fff;
+    box-shadow: 0 -4px 18px #0f172a18;
   }
 
   #decryptoHistory {
-    max-height: 62vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
   }
 
-  .decrypto-history-team + .decrypto-history-team {
-    margin-top: 14px;
+  #decryptoHistory:focus-visible,
+  #decryptoHistoryBtn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
   }
 
   .decrypto-history-heading {
@@ -598,26 +658,28 @@
   }
 
   @media (min-width: 900px) {
+    #decryptoHistory {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .decrypto-summary-body {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (min-width: 1200px) {
-    .decrypto-workspace {
-      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  @media (min-width: 901px) {
+    body.room-controls-dock-bottom.room-controls-drawer-closed #decryptoPanel {
+      --decrypto-history-bottom-offset: 52px;
     }
+  }
 
+  @media (min-width: 1200px) {
     #decryptoGuessArea {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 720px) {
-    #decryptoPanel {
-      padding-bottom: 10px;
-    }
-
     #decryptoPanel:has(#decryptoReviewBtn:not(.hidden)) {
       padding-right: 24px;
     }
@@ -673,16 +735,12 @@
       gap: 14px;
     }
 
-    #decryptoReference {
-      grid-row: 1;
+    #decryptoHistorySection {
+      padding: 8px;
     }
 
     #decryptoHistory {
-      max-height: min(34dvh, 300px);
-    }
-
-    .decrypto-history-team + .decrypto-history-team {
-      margin-top: 8px;
+      gap: 8px;
     }
 
     .decrypto-history-heading {
