@@ -208,60 +208,78 @@
     .gizmos-decision-buttons { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 620px) {
-    .gizmos-workshop { padding: 8px 0 0; border-radius: 0; font-size: 13px; }
-    .gizmos-masthead { flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .gizmos-workshop { padding: 4px 0 0; border-radius: 0; font-size: 13px; }
+    .gizmos-masthead { flex-wrap: wrap; gap: 5px 8px; margin-bottom: 6px; }
     .gizmos-eyebrow { font-size: 8px; }
-    .gizmos-standing { max-width: none; width: 100%; justify-content: flex-start; gap: 5px; }
-    .gizmos-standing-player { flex: 1; min-width: 90px; padding: 5px 8px; gap: 6px; font-size: 11px; }
-    .gizmos-standing-player strong { font-size: 18px; }
-    .gizmos-resources { gap: 6px; padding: 7px 0; }
+    .gizmos-masthead-note { display: none; }
+    .gizmos-standing { max-width: none; width: 100%; justify-content: flex-start; gap: 4px; }
+    .gizmos-standing-player { flex: 1 1 0; min-width: 0; max-width: none; padding: 3px 5px; gap: 4px; font-size: 10px; }
+    .gizmos-standing-player > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gizmos-standing-player strong { font-size: 15px; }
+    .gizmos-standing-player small { font-size: 8px; }
+    .gizmos-resources { gap: 4px; padding: 5px 0; margin-bottom: 7px; }
     .gizmos-resource-colors { flex-basis: 100%; justify-content: space-between; gap: 3px; }
     .gizmos-resource { padding: 2px 3px; gap: 3px; }
     .gizmos-resource small { font-size: 9px; }
-    .gizmos-resource strong { font-size: 15px; }
-    .gizmos-capacities { border: 0; padding: 0; width: 100%; justify-content: space-between; }
-    .gizmos-capacities .gizmos-info { padding: 2px 4px; font-size: 11px; }
-    .gizmos-guide { flex-direction: column; align-items: stretch; padding: 11px; gap: 9px; }
-    #gizmosPrompt strong { font-size: 14px; }
-    #gizmosPrompt p { font-size: 12px; }
-    .gizmos-steps { justify-content: space-between; }
-    .gizmos-steps > span { flex-direction: row; font-size: 10px; gap: 5px; }
-    .gizmos-steps b { width: 18px; height: 18px; font-size: 10px; }
-    .gizmos-action-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
-    .gizmos-action-choice { padding: 8px; }
-    .gizmos-action-choice strong { font-size: 12px; }
-    .gizmos-action-choice small { font-size: 10px; }
+    .gizmos-resource strong { font-size: 14px; }
+    .gizmos-capacities { border: 0; padding: 0; width: 100%; justify-content: space-between; gap: 2px; }
+    .gizmos-capacities .gizmos-info { padding: 1px 3px; font-size: 10px; }
+    .gizmos-guide { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 7px 8px; gap: 5px; }
+    #gizmosPrompt strong { font-size: 13px; line-height: 1.25; }
+    #gizmosPrompt p { display: none; }
+    .gizmos-steps { justify-content: flex-end; gap: 4px; }
+    .gizmos-steps > span { flex-direction: row; font-size: 9px; gap: 3px; white-space: nowrap; }
+    .gizmos-steps b { width: 17px; height: 17px; font-size: 9px; }
+    .gizmos-action-choices { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 6px 0 8px; }
+    .gizmos-action-choice { align-items: center; text-align: center; padding: 5px 3px; min-height: 38px; }
+    .gizmos-action-choice strong { font-size: 11px; line-height: 1.25; }
+    .gizmos-action-choice small { display: none; }
     .gizmos-section-heading h3 { font-size: 14px; }
     .gizmos-section-heading h3 span { display: none; }
-    .gizmos-energy-tray { gap: 5px; }
-    .gizmos-energy-option { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 2px; padding: 7px 3px; }
-    .gizmos-energy-option.is-selected { padding: 6px 2px; }
-    .gizmos-marble { width: 28px; height: 28px; }
-    .gizmos-energy-name { font-size: 10px; text-align: center; }
-    .gizmos-energy-count { font-size: 11px; }
-    .gizmos-pick-preview { flex-direction: column; align-items: stretch; }
-    .gizmos-pick-preview > .gizmos-control { max-width: none; }
+    .gizmos-energy-tray { gap: 4px; }
+    .gizmos-energy-option { grid-template-columns: auto minmax(0, 1fr) auto; justify-items: stretch; gap: 3px; min-height: 34px; padding: 4px 3px; }
+    .gizmos-energy-option.is-selected { padding: 3px 2px; }
+    .gizmos-marble { width: 22px; height: 22px; font-size: 16px; }
+    .gizmos-energy-name { min-width: 0; font-size: 9px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gizmos-energy-count { font-size: 10px; }
+    .gizmos-pick-preview { flex-direction: row; align-items: center; gap: 6px; padding: 6px; margin-top: 5px; }
+    .gizmos-pick-preview > .gizmos-control { max-width: 46%; padding: 5px 6px; }
     .gizmos-tile-grid, .gizmos-research-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .gizmos-market-nav { gap: 8px; }
-    .gizmos-source-tabs { width: 100%; }
-    .gizmos-level-tabs { width: 100%; }
-    .gizmos-level-tabs .gizmos-control { flex: 1; }
-    .gizmos-source-tabs .gizmos-control { font-size: 14px; padding: 3px 6px; }
-    .gizmos-tile-select { gap: 7px; padding: 8px; }
-    .gizmos-benefit { font-size: 13px; }
-    .gizmos-trigger { font-size: 11px; }
-    .gizmos-tile-meta { gap: 0; padding: 5px 3px 0; }
-    .gizmos-tile-meta .gizmos-info { padding: 3px; font-size: 11px; }
-    .gizmos-tile-category { font-size: 10px; flex-wrap: wrap; }
-    .gizmos-context { padding: 9px; }
+    .gizmos-market-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; }
+    .gizmos-source-tabs, .gizmos-level-tabs { width: auto; min-width: 0; }
+    .gizmos-level-tabs { justify-content: flex-end; }
+    .gizmos-level-tabs .gizmos-control { flex: none; }
+    .gizmos-source-tabs .gizmos-control { font-size: 12px; padding: 3px 4px; }
+    .gizmos-level-tabs .gizmos-control { font-size: 10px; padding: 3px 4px; min-height: 26px; }
+    .gizmos-market-hint { margin: 3px 0 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gizmos-tile-select { gap: 1px; padding: 4px; }
+    .gizmos-benefit { font-size: 12px; line-height: 1.25; min-height: 27px; }
+    .gizmos-trigger { font-size: 10px; line-height: 1.2; min-height: 18px; }
+    .gizmos-tile-meta { gap: 0; padding: 1px 2px 0; }
+    .gizmos-tile-meta .gizmos-info { padding: 1px 3px; font-size: 10px; }
+    .gizmos-tile-category { font-size: 9px; flex-wrap: wrap; min-height: 12px; }
+    .gizmos-tile-category small { font-size: 9px; }
+    .gizmos-tile-state { padding-top: 3px; font-size: 9px; }
+    .gizmos-tile-state > span { font-size: 12px; }
+    .gizmos-context { padding: 7px; margin-bottom: 8px; }
     .gizmos-context h3 { font-size: 14px; }
     .gizmos-research-levels { gap: 5px; }
     .gizmos-research-levels .gizmos-control { font-size: 11px; padding: 7px 3px; }
     .gizmos-effect-row { grid-template-columns: 20px minmax(0, 1fr); gap: 7px; }
     .gizmos-effect-row > .gizmos-control { grid-column: 2; justify-self: start; }
     .gizmos-effect-row strong { font-size: 12px; }
-    .gizmos-lab-area { grid-template-columns: minmax(0, 1fr); }
-    .gizmos-fold, .gizmos-opponents-section { padding: 10px; }
+    .gizmos-lab-area { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .gizmos-fold, .gizmos-opponents-section { padding: 7px; }
+    .gizmos-fold > summary { font-size: 12px; }
+    .gizmos-opponents-section h3 { font-size: 13px; margin-bottom: 6px; }
+    .gizmos-player-summary { padding-top: 4px; margin-top: 4px; }
+    .gizmos-player-summary > summary { font-size: 11px; gap: 4px; }
+    .gizmos-player-summary > summary strong { font-size: 15px; }
+    .gizmos-machine-list { max-height: 260px; }
+}
+@media (max-width: 340px) {
+    .gizmos-steps > span { font-size: 0; gap: 0; }
+    .gizmos-steps b { font-size: 9px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .gizmos-workshop *, .gizmos-tooltip { scroll-behavior: auto; animation: none; transition: none; }

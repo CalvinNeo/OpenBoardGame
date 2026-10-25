@@ -14,19 +14,25 @@ s=G.init_game({'seed': 7}, players)
 s['player_meta']['b']['is_bot']=True
 for pid,f in zip(s['seat_order'],['terrans','taklons','xenos','ivits']):
     assert G.apply_action(s,pid,{'type':'choose_faction','faction':f})[1] is None
-v={'faction':G.get_public_view(s,'a')}
+v={'faction':G.get_public_view(s,'a'), 'placement':G.get_public_view(s,_actor(s))}
 steps=0
 while not s['game_over'] and steps<600:
     pid=_actor(s)
+    if s['pending'] and s['pending'][0]['kind']=='leech' and 'leech' not in v:
+        v['leech']=G.get_public_view(s,pid)
     if s['phase']=='booster' and 'booster' not in v:
         v['booster']=G.get_public_view(s,pid)
         v['booster_waiting']=G.get_public_view(s,'a')
     if s['phase']=='round_end':
+        if 'round_end' not in v:
+            v['round_end']=G.get_public_view(s,'a')
         for p in s['seat_order']:
             if p not in s['ready']:
                 G.apply_action(s,p,{'type':'next_round'})
         steps+=1
         continue
+    if s['phase']=='action' and s['main_done'] and 'end_turn' not in v:
+        v['end_turn']=G.get_public_view(s,pid)
     a=G.bot_move(s,pid)
     if a is None: break
     err=G.apply_action(s,pid,a)[1]
@@ -137,6 +143,40 @@ async function render(page, key, tab) {
         await bounds(page, `${width} booster docked by escape`);
         assert.equal(await page.locator('.gaia-booster-layer-docked').count(), 1);
       }
+      if (width === 1440) {
+        // Routine state transitions and initial placement execute immediately.
+        await page.evaluate(() => { gaiaTestActions.length = 0; });
+        await render(page, 'placement', 'galaxy');
+        const placementHex = page.locator('.gaia-hex.available').first();
+        assert.equal(await placementHex.count(), 1);
+        await placementHex.click();
+        assert.equal(await page.locator('.gaia-map-action-dialog').count(), 1);
+        await page.locator('.gaia-map-action-dialog [data-gaia-option]').first().click();
+        assert.equal(await page.locator('.gaia-modal').count(), 0);
+        assert.equal(await page.locator('.gaia-confirm').count(), 0);
+        assert.equal((await page.evaluate(() => gaiaTestActions.pop())).type, 'place_initial');
+
+        await page.evaluate(() => { gaiaTestActions.length = 0; });
+        await render(page, 'end_turn', 'actions');
+        await page.locator('.gaia-actions-page [data-gaia-option]').filter({hasText: 'End Turn'}).click();
+        assert.equal(await page.locator('.gaia-confirm').count(), 0);
+        assert.deepEqual(await page.evaluate(() => gaiaTestActions.pop()), {type: 'end_turn'});
+
+        await page.evaluate(() => { gaiaTestActions.length = 0; });
+        await render(page, 'round_end', 'actions');
+        await page.locator('.gaia-actions-page [data-gaia-option]').filter({hasText: 'Next Round'}).click();
+        assert.equal(await page.locator('.gaia-confirm').count(), 0);
+        assert.deepEqual(await page.evaluate(() => gaiaTestActions.pop()), {type: 'next_round'});
+
+        await page.evaluate(() => { gaiaTestActions.length = 0; });
+        await render(page, 'leech', 'actions');
+        const leechOption = page.locator('.gaia-actions-page [data-gaia-option]').first();
+        assert.equal(await leechOption.count(), 1);
+        const leechAction = views.leech.options[0].action;
+        await leechOption.click();
+        assert.equal(await page.locator('.gaia-confirm').count(), 0);
+        assert.deepEqual(await page.evaluate(() => gaiaTestActions.pop()), leechAction);
+      }
       for (const [key, tab] of [['action', 'galaxy'], ['action', 'actions'], ['action', 'research'], ['action', 'technology'], ['action', 'players'], ['late', 'galaxy'], ['over', 'players']]) {
         await render(page, key, tab);
         await bounds(page, `${width} ${key} ${tab}`);
@@ -202,6 +242,47 @@ async function render(page, key, tab) {
           assert.equal(await page.locator('.gaia-research').count(), 1);
           assert((await page.locator('.gaia-track').count()) > 0);
           assert.equal(await page.locator('.gaia-actions-page').count(), 0);
+          if (width === 1440) {
+            const levels = page.locator('.gaia-level');
+            assert.equal(await levels.count(), 36);
+            const levelExplains = await levels.evaluateAll(elements => elements.map(el => el.getAttribute('data-gaia-explain')));
+            assert(levelExplains.every(text => text && /轨道第 \d 级：/.test(text)));
+            assert.equal(new Set(levelExplains).size, levelExplains.length);
+            await page.locator('#gaiaProjectExplainBtn').click();
+            await levels.nth(0).click({force: true});
+            assert.match(await page.locator('.gaia-dialog-body').textContent(), /轨道第 5 级/);
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(600);
+            await page.locator('#gaiaProjectExplainBtn').click();
+            await levels.nth(1).click({force: true});
+            assert.match(await page.locator('.gaia-dialog-body').textContent(), /轨道第 4 级/);
+            assert.doesNotMatch(await page.locator('.gaia-dialog-body').textContent(), /；/);
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(600);
+          }
+        }
+        if (key === 'action' && tab === 'technology' && width === 1440) {
+          const basic = page.locator('.gaia-tech:not(.advanced)');
+          assert((await basic.count()) >= 2);
+          const basicExplains = await basic.evaluateAll(elements => elements.map(el => el.getAttribute('data-gaia-explain')));
+          assert(basicExplains.every(text => text && text.startsWith('基础科技「')));
+          assert.equal(new Set(basicExplains).size, basicExplains.length);
+          const firstExplain = basicExplains[0];
+          assert.doesNotMatch(firstExplain, /；/);
+          await page.locator('#gaiaProjectExplainBtn').click();
+          await basic.nth(0).click({force: true});
+          assert.match(await page.locator('.gaia-dialog-body').textContent(), /基础科技/);
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(600);
+          await page.locator('#gaiaProjectExplainBtn').click();
+          await basic.nth(1).click({force: true});
+          assert.match(await page.locator('.gaia-dialog-body').textContent(), /基础科技/);
+          assert.notEqual(await page.locator('.gaia-dialog-body').textContent(), firstExplain);
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(600);
+          const advanced = page.locator('.gaia-tech.advanced').first();
+          assert.equal(await advanced.count(), 1);
+          assert.doesNotMatch(await advanced.getAttribute('data-gaia-explain'), /；/);
         }
         if (tab === 'players') {
           const players = views[key].players.length;

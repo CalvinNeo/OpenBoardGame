@@ -104,8 +104,8 @@
   const mainLabels = {academy: '大学行动', bescods: '最低轨道研究', ambas: '交换行星学院', firaks: '降级研究所', ivits: '放置空间站', knowledge_3: '获得 3 知识', knowledge_2: '获得 2 知识', ore_2: '获得 2 矿石', credits_7: '获得 7 信用点', tokens_2: '获得 2 能量', tech: '获取科技', rescore: '重算联邦', diversity: '星球种类计分'};
   const explainText = {
     map: '点击星球查看它的类型、建筑与当前可执行行动。高亮边框表示有合法行动。建筑按玩家颜色显示剪影，下方数字是玩家席位：小屋矿场、尖顶交易站、圆顶研究所、宽楼行星学院、高塔学院、六边形空间站；雪花六边形是盖亚改造器。拖动平移星图，使用 Zoom 按钮缩放。手机在地图内滑动只平移星图，在地图外滑动可滚动页面。',
-    research: '研究通常花费 4 知识。2→3 级额外充能 3。5 级需翻一枚绿色联邦标记，每条轨道仅一人可到达。经济／科学 5 级为一次奖励，不再提供 4 级收入。',
-    technology: '研究所和大学升级、4 QIC 公共行动、伊塔盖亚能力可获得科技。高级科技需对应轨道 4 级、绿色联邦标记和未覆盖基础科技；获得高级科技与推进到 5 级分别消耗一枚绿色标记。',
+    research: '研究通常花费 4 点知识。研究轨道从 2 级推进到 3 级时，还会自动充能 3 次。推进到 5 级需要翻开一枚绿色联邦标记，而且每条轨道只能有一名玩家到达 5 级。经济和科学轨道到达 5 级时会给一次性奖励，之后不再提供 4 级的每轮收入。',
+    technology: '升级研究所、大学或行星学院可以获得科技，也可以用 4 QIC 的公共行动获得科技，伊塔星人的学院能力也能获得科技。高级科技要求对应轨道至少 4 级，并且你要有一枚绿色联邦标记和一张尚未被覆盖的基础科技。拿到高级科技和推进到 5 级时，各自都会翻开一枚绿色联邦标记。',
     federation: '选择自己的建筑及连接它们的空白太空格。通常力量需达到 7（异星学院为 6），用尽量少的卫星连接；不能与已有联邦接触。每颗卫星弃一枚能量，蜂人改花 1 QIC 并扩张同一联邦。相邻建筑自动纳入。',
     free: '自由行动可在自己的主行动前后进行。转换不会结束回合；燃烧需要 II 碗两枚能量，弃一枚、另一枚升至 III。选择数量可把一次能量消费的收益合并，适用于脑石或双倍能量。',
     pass: '按当前推进器和高级科技获得放弃分，然后选择市场中的另一张推进器。新推进器在下一轮生效。最先放弃者成为下轮起始玩家；第六轮不再领取新推进器。',
@@ -137,6 +137,8 @@
   const info = kind => `data-gaia-explain="${esc(explainText[kind] || kind)}"`;
   const button = (label, command, extra = '', explanation = '') => `<button type="button" data-gaia-command="${command}" ${extra} ${explanation ? info(explanation) : ''}>${label}</button>`;
   const activeOptions = () => view?.options || [];
+  const gaiaImmediateActionTypes = new Set(['place_initial', 'end_turn', 'next_round', 'leech']);
+  const gaiaNeedsConfirmation = option => option && !gaiaImmediateActionTypes.has(option.action.type);
   const specText = spec => {
     if (!spec) return '';
     const parts = [];
@@ -148,6 +150,94 @@
     if (spec.event) parts.push(`每次${({mine: '建矿', gaia: '盖亚建矿', research: '科研', trading: '升级交易站'})[spec.event[0]]} +${resources({vp:spec.event[1]})}`);
     if (spec.effect) parts.push(esc(spec.effect));
     return parts.join(' · ');
+  };
+  // The compact text above is useful on cards, but Explain needs to answer
+  // the player's actual question: what changes when this level or tile is
+  // reached, and when does that change take effect?
+  const researchLevelExplanations = {
+    terraforming: [
+      '你还没有推进地形改造。普通星球每一步改造需要 3 矿石。',
+      '达到 1 级后，普通星球每一步仍需要 3 矿石。推进到这一级时会立即获得 2 矿石。',
+      '达到 2 级后，普通星球每一步改造只需要 2 矿石。',
+      '达到 3 级后，普通星球每一步改造只需要 1 矿石。推进到这一级时还会立即充能 3 次。',
+      '达到 4 级后，普通星球每一步改造仍只需要 1 矿石。推进到这一级时会立即获得 2 矿石。',
+      '达到 5 级后，普通星球每一步改造只需要 1 矿石。推进到这一级时会获得预留的地形改造联邦标记。',
+    ],
+    navigation: [
+      '航程是 1。你可以把新矿场建在距离自己建筑不超过 1 的位置。',
+      '航程仍是 1。推进到这一级时会立即获得 1 QIC。',
+      '航程提升到 2。你可以把新矿场建到距离自己建筑 2 格的位置。',
+      '航程仍是 2。推进到这一级时会立即获得 1 QIC。',
+      '航程提升到 3。你可以把新矿场建到距离自己建筑 3 格的位置。',
+      '航程提升到 4。推进到这一级时会立即获得失落星球的殖民机会。',
+    ],
+    ai: [
+      '人工智能轨道还没有提供额外 QIC。',
+      '推进到这一级时会立即获得 1 QIC。',
+      '推进到这一级时会立即获得 1 QIC。',
+      '推进到这一级时会立即获得 2 QIC。',
+      '推进到这一级时会立即获得 2 QIC。',
+      '推进到这一级时会立即获得 4 QIC。',
+    ],
+    gaia: [
+      '盖亚计划还没有解锁。你需要先推进盖亚计划轨道。',
+      '达到 1 级后，每次盖亚计划需要把 6 枚能量送入盖亚区。推进到这一级时会立即获得 1 个盖亚改造器。',
+      '达到 2 级后，每次盖亚计划仍需要 6 枚能量。推进到这一级时会立即获得 3 枚能量。',
+      '达到 3 级后，每次盖亚计划只需要 4 枚能量。推进到这一级时会再获得 1 个盖亚改造器。',
+      '达到 4 级后，每次盖亚计划只需要 3 枚能量。推进到这一级时会再获得 1 个盖亚改造器。',
+      '达到 5 级后，每次盖亚计划需要 3 枚能量。推进到这一级时会立即获得 4 VP，并按你已经殖民的盖亚星数量再获得同样多的 VP。',
+    ],
+    economy: [
+      '经济轨道还没有提供额外收入。',
+      '从下一次收入阶段开始，每轮获得 2 个信用点和 1 次充能。',
+      '从下一次收入阶段开始，每轮获得 2 个信用点、1 个矿石和 2 次充能。',
+      '从下一次收入阶段开始，每轮获得 3 个信用点、1 个矿石和 3 次充能。',
+      '从下一次收入阶段开始，每轮获得 4 个信用点、2 个矿石和 4 次充能。',
+      '推进到这一级时立即获得 6 个信用点、3 个矿石和 6 次充能。达到 5 级后不再领取经济轨道的每轮收入。',
+    ],
+    science: [
+      '科学轨道还没有提供额外知识收入。',
+      '从下一次收入阶段开始，每轮获得 1 点知识。',
+      '从下一次收入阶段开始，每轮获得 2 点知识。',
+      '从下一次收入阶段开始，每轮获得 3 点知识。',
+      '从下一次收入阶段开始，每轮获得 4 点知识。',
+      '推进到这一级时立即获得 9 点知识。达到 5 级后不再领取科学轨道的每轮收入。',
+    ],
+  };
+  const researchLevelExplain = (track, level) => {
+    const trackName = defs().tracks[track] || track;
+    const text = researchLevelExplanations[track]?.[level] || '这个研究等级目前没有可用说明。';
+    return `${trackName}轨道第 ${level} 级：${text}`;
+  };
+  const technologyExplanations = {
+    power_action: '每轮一次特殊行动。执行后立即把 4 次充能加入你的能量碗。',
+    ore_qic: '拿到这张科技时，立即获得 1 个矿石和 1 个 QIC。',
+    diversity: '拿到这张科技时，数一数你已经殖民的星球种类。每种星球立即获得 1 点知识。',
+    points: '拿到这张科技时，立即获得 7 VP。',
+    ore_power: '从下一次收入阶段开始，每轮获得 1 个矿石和 1 次充能。',
+    knowledge_credit: '从下一次收入阶段开始，每轮获得 1 点知识和 1 个信用点。',
+    credits: '从下一次收入阶段开始，每轮获得 4 个信用点。',
+    structure_power: '你所有力量为 3 的三级建筑，力量都提升为 4。这个力量会用于联邦和给邻居充能。',
+    gaia_points: '每当你完成一次盖亚建矿，额外获得 3 VP。',
+    qic_credits: '每轮一次特殊行动。执行后获得 1 个 QIC 和 5 个信用点。',
+    ore_action: '每轮一次特殊行动。执行后获得 3 个矿石。',
+    knowledge_action: '每轮一次特殊行动。执行后获得 3 点知识。',
+    mine_points: '拿到这张高级科技时，你每拥有一座矿场就立即获得 2 VP。失落矿场也算一座矿场。',
+    trading_points: '拿到这张高级科技时，你每拥有一座交易站就立即获得 4 VP。',
+    federation_points: '拿到这张高级科技时，你每拥有一个联邦标记就立即获得 5 VP。',
+    sector_points: '拿到这张高级科技时，你每殖民一个星区就立即获得 2 VP。',
+    gaia_points_advanced: '拿到这张高级科技时，你每拥有一颗盖亚星就立即获得 2 VP。',
+    sector_ore: '拿到这张高级科技时，你每殖民一个星区就立即获得 1 个矿石。',
+    pass_federations: '放弃本轮时，按你当时拥有的联邦标记数量获得 VP。每个联邦标记带来 3 VP。',
+    pass_labs: '放弃本轮时，按你当时拥有的研究所数量获得 VP。每个研究所带来 3 VP。',
+    pass_types: '放弃本轮时，按你当时已经殖民的星球种类获得 VP。每种星球带来 1 VP。',
+    research_vp: '每当你把任意研究轨道推进 1 级，立即获得 2 VP。',
+    mine_vp: '每当你建造一座矿场，立即获得 3 VP。',
+    trading_vp: '每当你把建筑升级为交易站，立即获得 3 VP。',
+  };
+  const technologyExplain = (id, advanced = false) => {
+    const kind = advanced ? '高级科技' : '基础科技';
+    return `${kind}「${defs()[advanced ? 'advanced' : 'techs'][id]?.name || id}」：${technologyExplanations[id] || '这张科技的具体效果目前没有可用说明。'}`;
   };
   const optionLabel = o => {
     const a = o.action;
@@ -325,7 +415,7 @@
       <p>2–4 人 · 基础版 · 六轮竞争。通过殖民、研究、科技、联邦和每轮目标获得最多 VP${token('vp')}；并列共同获胜。</p>
       <h3>标记图例</h3><div class="gaia-legend-grid">${legend}</div><div class="gaia-legend-grid">${structures}</div>
       <h3>开局与六轮</h3><p>选种族 → 蛇形放置两座矿场 → 逆序选推进器。异星人额外放第三矿，蜂人最后放一座学院。每轮依次领取收入、完成上轮盖亚计划、轮流行动，直到所有人放弃。轮末全员点击 <b>Next Round</b> 后才继续。</p>
-      <h3>每回合一个主行动</h3><p>点击地图上的星球建矿、升级或启动盖亚计划；切换 Research 科研，或使用公共／特殊行动。主行动后仍能转换资源，然后 <b>End Turn</b>。选择后点击 <b>Confirm</b> 执行；点击空白或 Esc 取消。</p>
+      <h3>每回合一个主行动</h3><p>点击地图上的星球建矿、升级或启动盖亚计划；切换 Research 科研，或使用公共／特殊行动。主行动后仍能转换资源，然后 <b>End Turn</b>（直接执行）。需要确认的选择会显示 <b>Confirm</b>；起始放置和 <b>Next Round</b> 也会直接执行；点击空白或 Esc 取消当前选择。</p>
       <p>矿场：1 矿石${token('ore')} + 2 信用点${token('credits')}，另付改造与航程费用。普通星球按母星轮计算改造步数；每步初始 3 矿石，研究后降至 2／1。每花 1 QIC${token('qic')}，单次航程增加 2。绿星另付 1 QIC；自己改造器处免适居费且自动可达。</p>
       <p>矿场→交易站：2 矿石 + 6 信用点，有对手建筑两格内则只需 3 信用点。交易站→研究所：3 矿石 + 5 信用点；交易站→学院：4 矿石 + 6 信用点；研究所→大学：6 矿石 + 6 信用点。研究所／大学获得一块科技。</p>
       <h3>盖亚与能量</h3><p>超维星必须先派改造器${token('gaiaformers')}；从能量碗转移 6／4／3 枚能量${token('power')}到盖亚区，下轮收入之后完成改造。能量归还，改造器保留在星球上，直到建矿才收回。第六轮启动的计划不会完成。</p><p>${explainText.free}</p><p>邻居两格内建造／升级时，可按自己最高建筑力量充能${token('charge')}，花费充能数减 1 VP。必须全充或拒绝，仅在能量容量／VP 不足时减量。已经放弃也可接受充能。</p>
@@ -381,14 +471,17 @@
     return `<div class="gaia-research">${Object.entries(defs().tracks).map(([id, name]) => `<section class="gaia-track"><h3>${esc(name)}</h3>${[5,4,3,2,1,0].map(level => {
       const option = activeOptions().findIndex(o => ['research','choose_track'].includes(o.action.type) && o.action.track === id && me()?.research[id] + 1 === level);
       const markers = view.players.filter(p => p.research[id] === level).map(p => `<b class="gaia-hint-target" style="background:${color(p.player_id)}" ${hintAttributes('seat', `${p.name}，第 ${seat(p.player_id)} 位玩家，${name} ${level} 级`)}>${seat(p.player_id)}</b>`).join('');
-      return `<button type="button" class="gaia-level ${level === 5 ? 'gaia-top-level' : ''}" ${option >= 0 ? `data-gaia-option="${option}"` : 'disabled'} ${info('research')}><strong>${level}${level === 5 ? ' ' + hint('green_federation', token('green_federation', '', 'small'), '', 'gaia-tk-wrap') : ''}</strong><span>${describeLevel(id, level)}</span><div class="gaia-markers">${markers}</div></button>`;
+      return `<button type="button" class="gaia-level ${level === 5 ? 'gaia-top-level' : ''}" ${option >= 0 ? `data-gaia-option="${option}"` : 'disabled'} ${info(researchLevelExplain(id, level))}><strong>${level}${level === 5 ? ' ' + hint('green_federation', token('green_federation', '', 'small'), '', 'gaia-tk-wrap') : ''}</strong><span>${describeLevel(id, level)}</span><div class="gaia-markers">${markers}</div></button>`;
     }).join('')}</section>`).join('')}</div><p class="gaia-muted">2 → 3：额外充能 3 ${token('charge', 3, 'small')}。第 5 级：翻绿色联邦标记 ${token('green_federation', '', 'small')}，每轨仅一人。</p>`;
   }
   function renderTechnology() {
     return `<h3>基础科技</h3><div class="gaia-tech-grid">${view.tech_market.map((id, i) => {
       const option = activeOptions().findIndex(o => o.action.type === 'choose_tech' && o.action.tile === id);
-      return `<button type="button" class="gaia-tech" ${option >= 0 ? `data-gaia-option="${option}"` : 'disabled'} ${info('technology')}><small>${i < 6 ? esc(Object.values(defs().tracks)[i]) : '任意研究'} · ${view.tech_stock[id]} left</small><strong>${esc(defs().techs[id].name)}</strong><span>${specText(defs().techs[id])}</span></button>`;
-    }).join('')}</div><h3>高级科技</h3><div class="gaia-tech-grid">${Object.entries(view.advanced_market).map(([track, id]) => `<div class="gaia-tech advanced"><small>${esc(defs().tracks[track])} 4+ · 绿色联邦</small><strong>${id ? esc(defs().advanced[id].name) : 'Taken'}</strong><span>${id ? specText(defs().advanced[id]) : '—'}</span></div>`).join('')}</div><p class="gaia-muted">获取高级科技时，在右侧选择要覆盖的基础科技。</p>`;
+      return `<button type="button" class="gaia-tech" ${option >= 0 ? `data-gaia-option="${option}"` : 'disabled'} ${info(technologyExplain(id))}><small>${i < 6 ? esc(Object.values(defs().tracks)[i]) : '任意研究'} · ${view.tech_stock[id]} left</small><strong>${esc(defs().techs[id].name)}</strong><span>${specText(defs().techs[id])}</span></button>`;
+    }).join('')}</div><h3>高级科技</h3><div class="gaia-tech-grid">${Object.entries(view.advanced_market).map(([track, id]) => {
+      const explanation = id ? technologyExplain(id, true) : `${defs().tracks[track]}轨道的高级科技已经被其他玩家拿走，目前不能选择。`;
+      return `<div class="gaia-tech advanced" ${info(explanation)}><small>${esc(defs().tracks[track])} 4+ · 绿色联邦</small><strong>${id ? esc(defs().advanced[id].name) : 'Taken'}</strong><span>${id ? specText(defs().advanced[id]) : '—'}</span></div>`;
+    }).join('')}</div><p class="gaia-muted">获取高级科技时，在右侧选择要覆盖的基础科技。</p>`;
   }
   const gaiaPlayerBuildingGroups = [
     {level: 'I', title: '一级建筑', kinds: ['mine', 'lost_mine']},
@@ -465,10 +558,10 @@
   }
   function renderGaiaTech(p) {
     const techs = [
-      ...(p.techs || []).map(t => ({definition: defs().techs[t], covered: (p.covered || []).includes(t)})),
-      ...(p.advanced || []).map(t => ({definition: defs().advanced[t], covered: false})),
+      ...(p.techs || []).map(t => ({id: t, advanced: false, definition: defs().techs[t], covered: (p.covered || []).includes(t)})),
+      ...(p.advanced || []).map(t => ({id: t, advanced: true, definition: defs().advanced[t], covered: false})),
     ].filter(item => item.definition);
-    return `<div class="gaia-status-item gaia-status-tech"><strong>科技</strong><div class="gaia-owned-tech">${techs.length ? techs.map(({definition, covered}) => `<span class="${covered ? 'covered' : ''}">${esc(definition.name)} · ${specText(definition)}</span>`).join('') : '<span class="gaia-muted">—</span>'}</div></div>`;
+    return `<div class="gaia-status-item gaia-status-tech"><strong>科技</strong><div class="gaia-owned-tech">${techs.length ? techs.map(({id, advanced, definition, covered}) => `<span class="${covered ? 'covered' : ''}" ${info(technologyExplain(id, advanced))}>${esc(definition.name)} · ${specText(definition)}</span>`).join('') : '<span class="gaia-muted">—</span>'}</div></div>`;
   }
   function renderGaiaGoals() {
     const goals = view.final_tiles.map(id => hint('objective', `🏁 ${esc(defs().finals[id].name)}${view.players.length === 2 ? ` · 中立 ${defs().finals[id].neutral}` : ''}`)).join('');
@@ -594,9 +687,16 @@
     modal.addEventListener('click', event => {
       const optionEl = event.target.closest('[data-gaia-option]');
       if (!optionEl) return;
-      selectedOption = Number(optionEl.dataset.gaiaOption);
-      activeTab = 'actions';
+      const option = activeOptions()[Number(optionEl.dataset.gaiaOption)];
+      if (!option) return;
       closeModal();
+      if (!gaiaNeedsConfirmation(option)) {
+        if (option.action.type === 'place_initial') activeTab = 'galaxy';
+        dispatch({...option.action});
+        return;
+      }
+      activeTab = 'actions';
+      selectedOption = Number(optionEl.dataset.gaiaOption);
       render();
       panel.querySelector('.gaia-confirm')?.scrollIntoView({block:'nearest', behavior:'smooth'});
     });
@@ -777,6 +877,12 @@
     }
     const optionEl = event.target.closest('[data-gaia-option]');
     if (optionEl) {
+      const option = activeOptions()[Number(optionEl.dataset.gaiaOption)];
+      if (!option) return;
+      if (!gaiaNeedsConfirmation(option)) {
+        dispatch({...option.action});
+        return;
+      }
       selectedOption = Number(optionEl.dataset.gaiaOption);
       if (activeTab !== 'actions' && activeTab !== 'galaxy') activeTab = 'actions';
       render();
