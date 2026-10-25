@@ -135,6 +135,15 @@ async function swipe(page, locator) {
             await page.locator('#patchworkYourBoard [data-row="4"][data-column="4"]').click();
             await bounds(page, `${width} selected`);
             assert.equal(await page.locator('#patchworkConfirmBuyBtn').isEnabled(), true);
+            const centered = await preview(page);
+            assert.equal(await page.locator('#patchworkMoveUpBtn').isEnabled(), true);
+            await page.locator('#patchworkMoveRightBtn').click();
+            assert.deepEqual(ordered(await preview(page)), ordered(centered.map(([column, row]) => [column + 1, row])), 'right nudge moves the preview one cell');
+            await page.locator('#patchworkMoveLeftBtn').click();
+            await page.locator('#patchworkMoveUpBtn').click();
+            assert.deepEqual(ordered(await preview(page)), ordered(centered.map(([column, row]) => [column, row - 1])), 'up nudge moves the preview one cell');
+            await page.locator('#patchworkMoveDownBtn').click();
+            assert.deepEqual(ordered(await preview(page)), ordered(centered), 'down nudge restores the preview');
             await page.evaluate(() => window.scrollTo(0, 0));
             await page.screenshot({path: path.join(output, `${width}-placement.png`), fullPage: true});
             await page.locator('#patchworkUpcomingDetails summary').click();

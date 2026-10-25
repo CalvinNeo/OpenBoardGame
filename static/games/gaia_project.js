@@ -333,7 +333,7 @@
       <h3>本实现</h3><p>使用基础版标准七／十扇区地图与自由选族、普通起始放置；默认固定座次、首个放弃者下轮先手。支持 14 种族、全部基础科技／高级科技池与六轮结算。机器人为普通玩家规则下的练习对手；不包含单人 Automa、扩展和种族竞价。</p>
       <p><a href="https://www.feuerland-spiele.de/fileadmin/game/Gaia_Project/GAIA_PROJECT_EN_rules_Web.pdf" target="_blank" rel="noopener">Official rulebook</a></p><h3>种族能力</h3>${factions}`);
   }
-  function renderMap() {
+  function renderMap(actionControls = '') {
     const board = Object.values(view.board);
     const positions = board.map(h => ({h, x: h.q * 36, y: (h.r + h.q / 2) * 41.57}));
     const minX = Math.min(...positions.map(p => p.x)) - 27;
@@ -361,7 +361,7 @@
       const center = positions.find(p => p.h.id === `${sector}-9`);
       return `<text x="${center.x}" y="${center.y + 4}" class="gaia-sector">${esc(sector.replace('outlined', ''))}</text>`;
     }).join('');
-    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}${button(`Legend ${legendOpen ? '▾' : '▸'}`, 'toggle-legend', `aria-expanded="${legendOpen}" aria-controls="gaiaMapLegend"`)}<span>${federationMode ? '选择建筑与卫星连接格' : '点击星球 · 拖动平移'}</span></div><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div><div class="gaia-terraform-note"><strong>改造强度</strong><span>T0–T3 表示按你的母星建矿前需要的改造步数；盖亚星使用盖亚计划。</span></div><div id="gaiaMapLegend"${legendOpen ? '' : ' hidden'}><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div><div class="gaia-legend">${['mine', 'trading_station', 'lab', 'institute', 'academy_knowledge', 'station'].map(kind => hint('structure', `${building(kind, '#9ecbff', 'legend')}${esc(defs().buildings[kind].name)}`, defs().buildings[kind].name, 'gaia-legend-structure')).join('')}</div></div>`;
+    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}${button(`Legend ${legendOpen ? '▾' : '▸'}`, 'toggle-legend', `aria-expanded="${legendOpen}" aria-controls="gaiaMapLegend"`)}<span>${federationMode ? '选择建筑与卫星连接格' : '点击星球 · 拖动平移'}</span></div><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div><div class="gaia-terraform-note"><strong>改造强度</strong><span>T0–T3 表示按你的母星建矿前需要的改造步数；盖亚星使用盖亚计划。</span></div><div id="gaiaMapLegend"${legendOpen ? '' : ' hidden'}><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div><div class="gaia-legend">${['mine', 'trading_station', 'lab', 'institute', 'academy_knowledge', 'station'].map(kind => hint('structure', `${building(kind, '#9ecbff', 'legend')}${esc(defs().buildings[kind].name)}`, defs().buildings[kind].name, 'gaia-legend-structure')).join('')}</div></div>${actionControls ? `<section class="gaia-controls gaia-map-actions" aria-label="Actions">${actionControls}</section>` : ''}`;
   }
   function renderResearch() {
     const descriptions = {
@@ -468,12 +468,16 @@
     ].filter(item => item.definition);
     return `<div class="gaia-status-item gaia-status-tech"><strong>科技</strong><div class="gaia-owned-tech">${techs.length ? techs.map(({definition, covered}) => `<span class="${covered ? 'covered' : ''}">${esc(definition.name)} · ${specText(definition)}</span>`).join('') : '<span class="gaia-muted">—</span>'}</div></div>`;
   }
+  function renderGaiaGoals() {
+    const goals = view.final_tiles.map(id => hint('objective', `🏁 ${esc(defs().finals[id].name)}${view.players.length === 2 ? ` · 中立 ${defs().finals[id].neutral}` : ''}`)).join('');
+    return `<div class="gaia-status-item gaia-status-goals"><strong>本局终局目标</strong><div>${goals || '<span class="gaia-muted">—</span>'}</div></div>`;
+  }
   function renderGaiaDashboard(p) {
     return `<section class="gaia-dashboard" ${info('player')} aria-label="我的盖亚计划状态">
       <div class="gaia-dashboard-heading"><strong style="color:${color(view.you)}">${p.faction ? esc(defs().factions[p.faction].name) : esc(p.name)}</strong><span class="gaia-dashboard-vp">${hint('vp', token('vp', p.vp), `胜利点 ${p.vp}`, 'gaia-tk-wrap')} <small>VP</small></span></div>
       <div class="gaia-dashboard-resource-block"><strong>当前资源</strong><div class="gaia-resources gaia-dashboard-resources">${resources({credits:p.credits,ore:p.ore,knowledge:p.knowledge,qic:p.qic})}</div></div>
       <div class="gaia-dashboard-power-block"><strong>能量与改造器</strong>${renderPowerBowls(p)}</div>
-      <div class="gaia-dashboard-status">${renderGaiaBooster(p)}${renderGaiaFederations(p)}${renderGaiaTech(p)}</div>
+      <div class="gaia-dashboard-status">${renderGaiaBooster(p)}${renderGaiaFederations(p)}${renderGaiaTech(p)}${renderGaiaGoals()}</div>
       ${renderGaiaIncome(p)}
     </section>`;
   }
@@ -577,11 +581,11 @@
     const p = me();
     const acting = view.current_turn === view.you;
     const roundTiles = view.round_tiles.map((id,i) => `<div class="gaia-round-tile ${view.round === i+1 ? 'current' : view.round > i+1 ? 'past' : ''}"><small>ROUND ${i+1}</small><strong>${esc(defs().rounds[id].name)}</strong></div>`).join('');
-    const goals = view.final_tiles.map(id => `${hint('objective', `🏁 ${esc(defs().finals[id].name)}${view.players.length === 2 ? ` · 中立 ${defs().finals[id].neutral}` : ''}`)}`).join('');
     const tabs = [['galaxy','Galaxy'],['research','Research'],['technology','Technology'],['players','Players']];
-    const main = activeTab === 'galaxy' ? renderMap() : activeTab === 'research' ? renderResearch() : activeTab === 'technology' ? renderTechnology() : renderPlayers();
     const controls = renderControls();
-    panel.innerHTML = `${tokenSprite()}<div class="gaia-title"><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div><div class="gaia-goals">${goals}</div>${p ? renderGaiaDashboard(p) : ''}${renderBoosterPrompt()}${renderBoosterPrompt('pass')}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}${controls ? `<section class="gaia-controls gaia-inline-controls" aria-label="Actions">${controls}</section>` : ''}</div></section></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
+    const main = activeTab === 'galaxy' ? renderMap(controls) : activeTab === 'research' ? renderResearch() : activeTab === 'technology' ? renderTechnology() : renderPlayers();
+    const tabControls = activeTab === 'galaxy' ? '' : (controls ? `<section class="gaia-controls gaia-inline-controls" aria-label="Actions">${controls}</section>` : '');
+    panel.innerHTML = `${tokenSprite()}<div class="gaia-title"><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div>${p ? renderGaiaDashboard(p) : ''}${renderBoosterPrompt()}${renderBoosterPrompt('pass')}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}${tabControls}</div></section></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
     panel.classList.toggle('gaia-explaining', explainMode);
     prepareHints();
     const boosterGrid = panel.querySelector('.gaia-booster-grid');

@@ -46,6 +46,30 @@ const output = 'build/room-controls-dock';
         }, selector);
     }
 
+    async function assertRoomControlPopupAbove(selector) {
+        const result = await page.locator(selector).evaluate((popup) => {
+            const panel = document.querySelector('#roomControlsPanel');
+            const panelRect = panel.getBoundingClientRect();
+            const popupRect = popup.getBoundingClientRect();
+            const overlapLeft = Math.max(panelRect.left, popupRect.left);
+            const overlapRight = Math.min(panelRect.right, popupRect.right);
+            const overlapTop = Math.max(panelRect.top, popupRect.top);
+            const overlapBottom = Math.min(panelRect.bottom, popupRect.bottom);
+            const x = (overlapLeft + overlapRight) / 2;
+            const y = (overlapTop + overlapBottom) / 2;
+            const hit = x < overlapRight && y < overlapBottom ? document.elementFromPoint(x, y) : null;
+            return {
+                popupParent: popup.parentElement?.className,
+                popupZ: getComputedStyle(popup).zIndex,
+                panelZ: getComputedStyle(panel).zIndex,
+                hitPopup: Boolean(hit && popup.contains(hit)),
+            };
+        });
+        assert.equal(result.popupParent, 'room-controls-layer', `${selector} stays in the RC top layer`);
+        assert(Number(result.popupZ) > Number(result.panelZ), `${selector} must be above the RC panel`);
+        assert.equal(result.hitPopup, true, `${selector} must receive hit testing above the RC panel`);
+    }
+
     async function dragTo(side, fraction) {
         const start = await bounds();
         const vertical = side === 'left' || side === 'right';
@@ -156,6 +180,15 @@ const output = 'build/room-controls-dock';
         await page.evaluate(() => setRoomControlsCollapsed(true));
         await page.locator('#nameInput').fill('Desktop dock regression');
         await page.locator('#playerNameForm button[type=submit]').click();
+        await page.waitForFunction(() => !document.querySelector('#createRoomModal').classList.contains('hidden'));
+        await assertRoomControlPopupAbove('#createRoomModal');
+        await page.locator('#createRoomModalCloseBtn').click();
+        await page.locator('#settingsBtn').click();
+        await page.locator('#logOpenBtn').click();
+        await assertRoomControlPopupAbove('#logPanel');
+        await page.locator('#logCloseBtn').click();
+        await toggle.click();
+        await page.locator('#createBtn').click();
         await page.locator('#gameSearchInput').fill('No Thanks');
         await page.locator('[data-game-id="no_thanks"]').click();
         await page.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('no_thanks') && !pendingRoomRequest);
@@ -176,7 +209,7 @@ const output = 'build/room-controls-dock';
         await toggle.click();
         await page.locator('#settingsBtn').click();
         await topmost('#settingsCloseBtn');
-        await topmost();
+        await assertRoomControlPopupAbove('#settingsModal');
         await page.locator('#settingsCloseBtn').click();
         await page.keyboard.press('Escape');
         await page.waitForFunction(() => !document.getElementById('noThanksDialog').open);

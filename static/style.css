@@ -2526,6 +2526,14 @@ button.splendor-card {
     pointer-events: auto;
   }
 
+  /* Room Controls opens these overlays itself. Keep the RC surface available
+     above the page, while the active Select Game, Log, Settings, or entry
+     modal sits above the RC panel that launched it. */
+  .room-controls-layer > .modal:not(.hidden),
+  .room-controls-layer > .log-panel:not(.hidden) {
+    z-index: 30003;
+  }
+
   /* The compact desktop dock gives the placeholder its own display rule. Keep
      the semantic hidden state authoritative so it cannot sit beside a real
      game Explain button. */

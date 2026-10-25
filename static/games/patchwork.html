@@ -44,6 +44,12 @@
             <div id="patchworkSelectionHint" class="patchwork-hint" role="status"></div>
             <div id="patchworkPlacementActions" class="patchwork-placement-actions" hidden>
                 <div id="patchworkPreview" class="patchwork-preview" data-patchwork-explain="quilt"></div>
+                <div id="patchworkNudgeActions" class="patchwork-nudge-actions" role="group" aria-label="Move patch preview">
+                    <button id="patchworkMoveUpBtn" type="button" data-dx="0" data-dy="-1" data-patchwork-explain="move" aria-label="Move patch up">↑</button>
+                    <button id="patchworkMoveLeftBtn" type="button" data-dx="-1" data-dy="0" data-patchwork-explain="move" aria-label="Move patch left">←</button>
+                    <button id="patchworkMoveDownBtn" type="button" data-dx="0" data-dy="1" data-patchwork-explain="move" aria-label="Move patch down">↓</button>
+                    <button id="patchworkMoveRightBtn" type="button" data-dx="1" data-dy="0" data-patchwork-explain="move" aria-label="Move patch right">→</button>
+                </div>
                 <div id="patchworkPlacementStatus" class="patchwork-placement-status" role="status"></div>
                 <button id="patchworkConfirmBuyBtn" class="patchwork-primary" type="button" data-patchwork-explain="confirm">Confirm</button>
             </div>

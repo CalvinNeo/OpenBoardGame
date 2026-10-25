@@ -473,14 +473,14 @@ const GAME_ASSETS = {
   },
   "patchwork": {
     "scripts": [
-      "/static/games/patchwork.js?v=app_v8"
+      "/static/games/patchwork.js?v=app_v9"
     ],
     "styles": [],
     "panel": "patchworkPanel",
     "panelTitle": "Patchwork · 拼布艺术",
     "header": "showPatchworkHeaderActions",
-    "markup": "/static/games/patchwork.html?v=2",
-    "styleFragments": "/static/games/patchwork.css?v=2"
+    "markup": "/static/games/patchwork.html?v=3",
+    "styleFragments": "/static/games/patchwork.css?v=3"
   },
   "isle_of_skye": {
     "scripts": [
@@ -1080,10 +1080,10 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v12"
+      "/static/games/gaia_project.js?v=gaia_v13"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v12"
+      "/static/gaia_project.css?v=gaia_v13"
     ],
     "panel": "gaiaProjectPanel",
     "panelTitle": "🌌 盖亚计划",

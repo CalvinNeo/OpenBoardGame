@@ -68,9 +68,16 @@
     #patchworkPanel .patchwork-board-cell.bonus-target:not(.preview) { border: 1px dashed #aa7844; background: #f5ead4; }
     .patchwork-hint { min-height: 19px; margin-top: 5px; color: #657570; font-size: 12px; overflow-wrap: anywhere; }
     .patchwork-transform-actions { display: flex; gap: 5px; }
-    .patchwork-placement-actions { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 7px 0; border-top: 1px solid #c4cbbd; }
-    .patchwork-preview { display: flex; justify-content: center; align-items: center; height: 54px; }
-    .patchwork-placement-status { font-size: 12px; overflow-wrap: anywhere; }
+    .patchwork-placement-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "preview nudge" "status confirm"; align-items: center; gap: 5px 7px; padding: 7px 0; border-top: 1px solid #c4cbbd; }
+    .patchwork-preview { grid-area: preview; display: flex; justify-content: flex-start; align-items: center; min-height: 54px; }
+    .patchwork-nudge-actions { grid-area: nudge; display: grid; grid-template-columns: repeat(3, 28px); grid-template-areas: ". up ." "left down right"; gap: 3px; align-self: center; }
+    .patchwork-nudge-actions button { min-height: 28px !important; padding: 2px !important; }
+    #patchworkMoveUpBtn { grid-area: up; }
+    #patchworkMoveLeftBtn { grid-area: left; }
+    #patchworkMoveDownBtn { grid-area: down; }
+    #patchworkMoveRightBtn { grid-area: right; }
+    .patchwork-placement-status { grid-area: status; font-size: 12px; overflow-wrap: anywhere; }
+    #patchworkConfirmBuyBtn { grid-area: confirm; }
     .patchwork-placement-actions.invalid { color: #9c3d2d; }
     #patchworkPanel .patchwork-primary { background: #2d7771; border-color: #2d7771; color: #fff; }
     #patchworkPanel .patchwork-primary:hover:not(:disabled) { background: #23655f; color: #fff; }
@@ -146,7 +153,7 @@
         .patchwork-transform-actions { gap: 4px; }
         .patchwork-player-heading { flex-wrap: wrap; }
         #patchworkPanel .patchwork-view-quilt { margin-left: auto; min-height: 27px; }
-        .patchwork-placement-actions { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 5px; }
+        .patchwork-placement-actions { gap: 4px 5px; }
         .patchwork-preview { height: 48px; }
         .patchwork-placement-status { font-size: 11px; }
         .patchwork-board { padding: 3px; }

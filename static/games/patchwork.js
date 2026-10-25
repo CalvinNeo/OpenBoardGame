@@ -13,6 +13,7 @@
         quilt: ["拼布与旋转中心", "点击格子，把布块靠近重心的一格（✚）放到该位置；旋转和翻转保持这格固定。绿色预览可放置，红色表示重叠或越界。预览旁仍显示完整形状。点击空白处或按 Esc 取消。皮革补丁（🟫）也先预览再 Confirm。"],
         rotate: ["Rotate · 顺时针旋转", "每次顺时针旋转 90°，围绕标有 ✚ 的实格旋转。四次旋转回到原位。可以先旋转，再在拼布上选择位置。"],
         flip: ["Flip · 水平翻转", "把屏幕上的布块左右镜像，保持 ✚ 中心格固定。两次翻转回到原位。"],
+        move: ["Move · 移动预览", "点击 ↑ ↓ ← → 让已选布块或皮革补丁沿棋盘移动一格；固定中心格和当前旋转、翻转保持不变。移动到越界或重叠的位置时，Confirm 会保持禁用。"],
         confirm: ["Confirm · 确认摆放", "布块必须完全在棋盘内且不能覆盖已有布块，纽扣（🔘）也须足够。确认才提交购买或皮革补丁（🟫）摆放。等待服务器响应时不能重复操作。"],
         advance: ["⏩ 前进", "不买布块，前进到对手前方一格，最多到终点。每前进一格得到一枚纽扣（🔘）；经过收入标记时还会获得当前收入。遇到未领取的皮革补丁（🟫）会先暂停，摆放补丁后再完成剩余移动。"],
         track: ["⏳ 时间轨道", "按数字沿蛇形轨道从 0 前进到 53。落后者行动，同格时后到者先行动。经过纽扣（🔘）标记获得收入，首个经过未领取皮革（🟫）的人获得一格补丁。灰色皮革格表示已领取。两人均到终点后结算。"],
@@ -23,7 +24,7 @@
         <h3>谁行动</h3><p>时间（⏳）落后者行动；同格时后到者先行动，因此一人可能连续行动。本游戏没有独立轮次结算，终局结果保留在界面供双方查看。</p>
         <h3>两种行动</h3><ul><li>⏩ 前进：移动到对手前一格，最多到 53；每步获得 🔘1，经过收入点还会收取收入。</li><li>购买：选市场前三块之一，支付上方价格（🔘），把整块放入空白处，再支付时间（⏳）。下方 ↑🔘 是新增收入，⬜ 是覆盖面积；所购布块之后成为新的市场起点。</li></ul>
         <h3>轨道奖励</h3><ul><li>纽扣标记（🔘）：每次到达或经过，收取当前纽扣收入（↑🔘），包含刚买布块的收入。</li><li>皮革补丁（🟫）：首个经过者免费放置一个 1×1 补丁，再继续移动。没有空格时不领取。</li><li>7×7 奖励（⭐）：首个填满任意 7×7 方形的人获得 +7 分。</li></ul>
-        <h3>摆放与查看</h3><p>选布块 → 点击棋盘 → Rotate / Flip → Confirm。✚ 是靠近布块重心的固定实格。绿色表示可以摆放，红色表示重叠或越界；皮革补丁也要 Confirm。点击空白处或按 Esc 取消预览。</p><p>Quilt 查看对方棋盘；展开后续布块可以看完整形状和顺序。Help 显示规则；Explain 后点击区域或按钮查看解释。静态图标悬停或轻点显示说明，手机说明 3 秒消失。Esc 关闭对话框。</p>`;
+        <h3>摆放与查看</h3><p>选布块 → 点击棋盘 → 用 ↑ ↓ ← → 微调位置 → Rotate / Flip → Confirm。✚ 是靠近布块重心的固定实格。绿色表示可以摆放，红色表示重叠或越界；皮革补丁也要 Confirm。点击空白处或按 Esc 取消预览。</p><p>Quilt 查看对方棋盘；展开后续布块可以看完整形状和顺序。Help 显示规则；Explain 后点击区域或按钮查看解释。静态图标悬停或轻点显示说明，手机说明 3 秒消失。Esc 关闭对话框。</p>`;
 
     let view = null;
     let roomKey = null;
@@ -219,6 +220,9 @@
         byId("RotateBtn").disabled = !selected || !canSelect();
         byId("FlipBtn").disabled = !selected || !canSelect();
         byId("FlipBtn").setAttribute("aria-pressed", String(flipped));
+        panel.querySelectorAll("#patchworkNudgeActions button[data-dx]").forEach(button => {
+            button.disabled = !(selected || bonus()) || !pivot || !isTurn() || !connected() || pending;
+        });
         byId("AdvanceBtn").disabled = !can("advance");
         const opponent = view.players.find(player => player.player_id !== view.you);
         const gain = you && opponent ? Math.max(0, Math.min(view.track_end, opponent.time_position + 1) - you.time_position) : 0;
@@ -230,7 +234,7 @@
         let hint = "选一块布，再点击拼布预览。";
         if (view.game_over) hint = "最终得分见双方进度。";
         else if (!isTurn()) hint = you ? "对手完成行动后，进度会自动更新。" : "Spectating";
-        else if (def) hint = draft ? draft.valid ? "✓ 可以摆放 · Confirm 后提交" : "× 重叠或越界 · 请调整位置或方向" : "点击格子确定 ✚ 中心，旋转和翻转保持它固定。";
+        else if (def) hint = draft ? draft.valid ? "✓ 可以摆放 · 可用箭头微调 · Confirm 后提交" : "× 重叠或越界 · 请用箭头、旋转或翻转调整" : "点击格子确定 ✚ 中心，再用箭头微调位置。";
         byId("SelectionHint").textContent = hint;
         if (def) {
             const shape = transformed(def);
@@ -421,6 +425,15 @@
         if (!selected || !canSelect()) return;
         flipped = !flipped;
         rotation = (360 - rotation) % 360;
+        renderDraft();
+    });
+    byId("NudgeActions").addEventListener("click", event => {
+        const button = event.target.closest("button[data-dx]");
+        if (explaining || !button || !(selected || bonus()) || !pivot || !isTurn() || !connected() || pending) return;
+        pivot = [
+            Math.max(0, Math.min(view.board_size - 1, pivot[0] + Number(button.dataset.dx))),
+            Math.max(0, Math.min(view.board_size - 1, pivot[1] + Number(button.dataset.dy))),
+        ];
         renderDraft();
     });
     byId("ConfirmBuyBtn").addEventListener("click", confirm);
