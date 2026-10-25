@@ -230,9 +230,9 @@ async function render(page, key, tab) {
         if (key === 'action' && tab === 'actions') {
           const researchOptionCount = views.action.options.filter(o => ['research', 'choose_track'].includes(o.action.type)).length;
           assert.equal(await page.locator('.gaia-actions-page .gaia-action-group summary').filter({hasText: 'Research'}).count(), 0);
-          assert.equal(await page.locator('.gaia-actions-tab-link').count(), researchOptionCount ? 1 : 0);
+          assert.equal(await page.locator('.gaia-actions-tab-link').count(), 0);
           if (researchOptionCount) {
-            await page.locator('.gaia-actions-tab-link [data-gaia-tab="research"]').click();
+            await page.locator('[data-gaia-tab="research"]').click();
             assert.equal(await page.locator('.gaia-tabs [data-gaia-tab="research"].active').count(), 1);
             assert.equal(await page.locator('.gaia-research').count(), 1);
             await page.locator('[data-gaia-tab="actions"]').click();

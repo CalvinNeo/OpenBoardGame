@@ -1079,7 +1079,7 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v23"
+      "/static/games/gaia_project.js?v=gaia_v24"
     ],
     "styles": [
       "/static/gaia_project.css?v=gaia_v20"

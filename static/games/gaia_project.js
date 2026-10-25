@@ -633,10 +633,6 @@
     } else {
       html += `<h3>${view.main_done && view.phase === 'action' ? '主行动完成' : phaseNames[view.phase]}</h3>`;
     }
-    const researchChoices = options.filter(o => ['research', 'choose_track'].includes(o.action.type));
-    if (researchChoices.length || pending?.kind === 'track') {
-      html += `<div class="gaia-actions-tab-link"><span><strong>Research</strong> ${pending?.kind === 'track' ? '请在 Research 页签选择研究轨道。' : '研究行动集中在 Research 页签。'}</span>${button('打开 Research', 'tab', 'data-gaia-tab="research"', 'research')}</div>`;
-    }
     if (selectedHex) {
       const hex = view.board[selectedHex];
       const terraforming = gaiaTerraformingSteps(hex.planet);
