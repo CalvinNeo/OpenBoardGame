@@ -303,13 +303,12 @@ const GAME_ASSETS = {
     "scripts": [
       "/static/games/gizmos.js?v=app_v6"
     ],
-    "styles": [
-      "/static/gizmos.css?v=2"
-    ],
+    "styles": [],
     "panel": "gizmosPanel",
+    "panelTitle": "⚙️ Gizmos",
     "header": "showGizmosHeaderActions",
-    "markup": "/static/games/gizmos.html?v=1",
-    "styleFragments": "/static/games/gizmos.css?v=1"
+    "markup": "/static/games/gizmos.html?v=2",
+    "styleFragments": "/static/games/gizmos.css?v=2"
   },
   "century_spice_road": {
     "scripts": [
@@ -1080,10 +1079,10 @@ const GAME_ASSETS = {
   },
   "gaia_project": {
     "scripts": [
-      "/static/games/gaia_project.js?v=gaia_v16"
+      "/static/games/gaia_project.js?v=gaia_v19"
     ],
     "styles": [
-      "/static/gaia_project.css?v=gaia_v16"
+      "/static/gaia_project.css?v=gaia_v19"
     ],
     "panel": "gaiaProjectPanel",
     "panelTitle": "🌌 盖亚计划",

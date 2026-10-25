@@ -137,7 +137,7 @@ async function render(page, key, tab) {
         await bounds(page, `${width} booster docked by escape`);
         assert.equal(await page.locator('.gaia-booster-layer-docked').count(), 1);
       }
-      for (const [key, tab] of [['action', 'galaxy'], ['action', 'research'], ['action', 'technology'], ['action', 'players'], ['late', 'galaxy'], ['over', 'players']]) {
+      for (const [key, tab] of [['action', 'galaxy'], ['action', 'actions'], ['action', 'research'], ['action', 'technology'], ['action', 'players'], ['late', 'galaxy'], ['over', 'players']]) {
         await render(page, key, tab);
         await bounds(page, `${width} ${key} ${tab}`);
         if (key === 'action' && tab === 'galaxy') {
@@ -146,16 +146,18 @@ async function render(page, key, tab) {
           assert.equal(await page.locator('.gaia-dashboard>.gaia-income-panel').count(), 1);
           assert.equal(await page.locator('.gaia-dashboard .gaia-status-goals').count(), 1);
           assert.equal(await page.locator('.gaia-goals').count(), 0);
-          assert.equal(await page.locator('.gaia-map-action-hud').count(), 1);
-          assert.equal(await page.locator('.gaia-map-board > .gaia-map-action-hud').count(), 1);
+          assert.equal(await page.locator('.gaia-map-action-hud').count(), 0);
           assert.equal(await page.locator('.gaia-map-actions').count(), 0);
           assert.equal(await page.locator('.gaia-tab-content > .gaia-controls').count(), 0);
-          assert.equal(await page.locator('.gaia-pass-button').count(), 1);
-          assert.equal(await page.locator('.gaia-action-group').filter({hasText: 'Pass & choose booster'}).count(), 0);
+          assert.equal(await page.locator('.gaia-pass-button').count(), 0);
+          assert.equal(await page.locator('.gaia-action-group').count(), 0);
           const dashboardHeight = await page.locator('.gaia-dashboard').evaluate(el => el.getBoundingClientRect().height);
           assert(dashboardHeight < (width <= 390 ? 340 : 220), `${width}: dashboard is too tall (${dashboardHeight})`);
           if (width === 1440) {
             const passCount = views.action.options.filter(o => o.action.type === 'pass').length;
+            await page.locator('[data-gaia-tab="actions"]').click();
+            assert.equal(await page.locator('.gaia-tabs [data-gaia-tab="actions"].active').count(), 1);
+            assert.equal(await page.locator('.gaia-actions-page').count(), 1);
             await page.locator('.gaia-pass-button').click();
             assert.equal(await page.locator('.gaia-pass-layer.gaia-booster-layer-floating').count(), 1);
             assert.equal(await page.locator('.gaia-pass-layer .gaia-booster-card').count(), passCount);
@@ -199,26 +201,29 @@ async function render(page, key, tab) {
         }
         await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-${key}-${tab}.png`});
       }
-      // Confirm card with cost tokens: pick the first legal planet option.
+      // Map interaction opens a focused main-action dialog; confirmation then moves to Actions.
       await render(page, 'action', 'galaxy');
       const legal = await page.locator('.gaia-hex.available').first();
       if (await legal.count()) {
         await legal.evaluate(el => el.dispatchEvent(new MouseEvent('click', {bubbles: true})));
-        const option = page.locator('.gaia-map-action-hud [data-gaia-option]').first();
+        assert.equal(await page.locator('.gaia-map-action-dialog').count(), 1);
+        const option = page.locator('.gaia-map-action-dialog [data-gaia-option]').first();
         if (await option.count()) {
           await option.click();
           await bounds(page, `${width} confirm`);
-          await page.locator('.gaia-map-action-hud').screenshot({path: `${output}/${width}-confirm.png`});
+          assert.equal(await page.locator('.gaia-tabs [data-gaia-tab="actions"].active').count(), 1);
+          await page.locator('.gaia-actions-page').screenshot({path: `${output}/${width}-confirm.png`});
         }
       }
       await page.keyboard.press('Escape');
       // Federation builder: shows token radios.
-      await render(page, 'late', 'galaxy');
+      await render(page, 'late', 'actions');
       const fed = page.locator('.gaia-federation-button');
       if (await fed.count()) {
         await fed.click();
         await bounds(page, `${width} federation`);
-        await page.locator('.gaia-map-action-hud').screenshot({path: `${output}/${width}-federation.png`});
+        assert.equal(await page.locator('.gaia-tabs [data-gaia-tab="galaxy"].active').count(), 1);
+        await page.locator('#gaiaProjectPanel').screenshot({path: `${output}/${width}-federation.png`});
         await page.keyboard.press('Escape');
       }
       await page.locator('#gaiaProjectHelpBtn').click();
@@ -227,9 +232,9 @@ async function render(page, key, tab) {
       assert.equal(await page.locator('.gaia-modal').count(), 0);
     }
     // Free-action conversions render as token → token rows.
-    await render(page, 'action', 'galaxy');
+    await render(page, 'action', 'actions');
     await page.locator('.gaia-action-group summary', {hasText: 'Free Actions'}).click();
-    await page.locator('.gaia-map-action-hud').screenshot({path: `${output}/1440-free-actions.png`});
+    await page.locator('.gaia-actions-page').screenshot({path: `${output}/1440-free-actions.png`});
     assert((await page.locator('.gaia-action-group .gaia-option .gaia-tk').count()) > 0);
     // Hover hint shows the token name with the physical description.
     await page.setViewportSize({width: 1440, height: 1000});
@@ -237,6 +242,10 @@ async function render(page, key, tab) {
     await page.locator('.gaia-dashboard-resources [data-gaia-hint-key="credits"]').first().hover();
     await page.waitForSelector('#gaiaInlineHint');
     assert.match(await page.locator('#gaiaInlineHint').textContent(), /信用点 · 黄色圆片/);
+    await page.locator('#gaiaProjectHintBtn').click();
+    assert.equal(await page.locator('.gaia-modal').count(), 1);
+    assert.match(await page.locator('.gaia-dialog-body').textContent(), /主行动|Free Actions|Pass/);
+    await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => gaiaTestActions.length), 0);
     assert.deepEqual(errors, []);
     console.log('gaia_project browser checks passed');

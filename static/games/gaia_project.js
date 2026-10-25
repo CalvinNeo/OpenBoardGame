@@ -3,6 +3,7 @@
   const panel = document.getElementById('gaiaProjectPanel');
   const header = document.getElementById('gaiaProjectHeaderActions');
   const help = document.getElementById('gaiaProjectHelpBtn');
+  const hintButton = document.getElementById('gaiaProjectHintBtn');
   const explainButton = document.getElementById('gaiaProjectExplainBtn');
   let view = null;
   let selectedHex = null;
@@ -333,7 +334,7 @@
       <h3>本实现</h3><p>使用基础版标准七／十扇区地图与自由选族、普通起始放置；默认固定座次、首个放弃者下轮先手。支持 14 种族、全部基础科技／高级科技池与六轮结算。机器人为普通玩家规则下的练习对手；不包含单人 Automa、扩展和种族竞价。</p>
       <p><a href="https://www.feuerland-spiele.de/fileadmin/game/Gaia_Project/GAIA_PROJECT_EN_rules_Web.pdf" target="_blank" rel="noopener">Official rulebook</a></p><h3>种族能力</h3>${factions}`);
   }
-  function renderMap(actionControls = '') {
+  function renderMap() {
     const board = Object.values(view.board);
     const positions = board.map(h => ({h, x: h.q * 36, y: (h.r + h.q / 2) * 41.57}));
     const minX = Math.min(...positions.map(p => p.x)) - 27;
@@ -361,7 +362,8 @@
       const center = positions.find(p => p.h.id === `${sector}-9`);
       return `<text x="${center.x}" y="${center.y + 4}" class="gaia-sector">${esc(sector.replace('outlined', ''))}</text>`;
     }).join('');
-    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}${button(`Legend ${legendOpen ? '▾' : '▸'}`, 'toggle-legend', `aria-expanded="${legendOpen}" aria-controls="gaiaMapLegend"`)}<span>${federationMode ? '选择建筑与卫星连接格' : '点击星球 · 拖动平移'}</span></div><div class="gaia-map-board"><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div>${actionControls ? `<div class="gaia-map-action-hud" aria-label="主板行动区">${actionControls}</div>` : ''}</div><div class="gaia-terraform-note"><strong>改造强度</strong><span>T0–T3 表示按你的母星建矿前需要的改造步数；盖亚星使用盖亚计划。</span></div><div id="gaiaMapLegend"${legendOpen ? '' : ' hidden'}><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div><div class="gaia-legend">${['mine', 'trading_station', 'lab', 'institute', 'academy_knowledge', 'station'].map(kind => hint('structure', `${building(kind, '#9ecbff', 'legend')}${esc(defs().buildings[kind].name)}`, defs().buildings[kind].name, 'gaia-legend-structure')).join('')}</div></div>`;
+    const mapModeLink = federationMode ? button('Actions', 'tab', 'data-gaia-tab="actions"') : '';
+    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}${button(`Legend ${legendOpen ? '▾' : '▸'}`, 'toggle-legend', `aria-expanded="${legendOpen}" aria-controls="gaiaMapLegend"`)}${mapModeLink}<span>${federationMode ? '选择建筑与卫星连接格 · 完成后打开 Actions' : '点击星球查看主行动 · 拖动平移'}</span></div><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div><div class="gaia-terraform-note"><strong>改造强度</strong><span>T0–T3 表示按你的母星建矿前需要的改造步数；盖亚星使用盖亚计划。</span></div><div id="gaiaMapLegend"${legendOpen ? '' : ' hidden'}><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div><div class="gaia-legend">${['mine', 'trading_station', 'lab', 'institute', 'academy_knowledge', 'station'].map(kind => hint('structure', `${building(kind, '#9ecbff', 'legend')}${esc(defs().buildings[kind].name)}`, defs().buildings[kind].name, 'gaia-legend-structure')).join('')}</div></div>`;
   }
   function renderResearch() {
     const descriptions = {
@@ -518,19 +520,19 @@
     const tokenCost = o.action.type === 'gaiaform' ? o.cost.tokens : 0;
     return `<div class="gaia-confirm"><small>CONFIRM ACTION</small><h3>${optionLabel(o)}</h3><div class="gaia-resources">${resources(o.cost)}</div>${o.max_count > 1 ? `<label class="gaia-field">Quantity <input id="gaiaActionCount" type="number" min="1" max="${o.max_count}" value="1"></label>` : ''}${tokenCost ? renderTokenPayment(tokenCost) : ''}<div class="gaia-confirm-buttons">${button('Confirm', 'confirm', '', o.category)}${button('Cancel', 'cancel')}</div></div>`;
   }
-  function renderControls() {
+  function renderActionsTab() {
     const p = me();
     const options = activeOptions();
     const pending = view.pending[0];
     if (!p) return '<h3>Spectating</h3><p class="gaia-muted">观察星图、研究与公开玩家信息。</p>';
     const isActing = view.current_turn === view.you || view.phase === 'round_end';
     if (view.phase === 'booster' && view.current_turn === view.you) return '';
-    let html = renderSelection();
-    if (federationMode) return html + renderFederation();
+    let html = '<section class="gaia-actions-page"><header class="gaia-actions-heading"><div><small>ACTIONS</small><h3>辅助行动</h3></div><button type="button" data-gaia-command="tab" data-gaia-tab="galaxy">查看 Galaxy</button></header>';
+    if (federationMode) return html + renderFederation() + '</section>';
     if (view.phase === 'round_end') {
       html += `<h3>第 ${view.round} 轮结束</h3>${view.players.map(p => `<p>${esc(p.name)} <strong>${view.round_summary[p.player_id]?.delta >= 0 ? '+' : ''}${view.round_summary[p.player_id]?.delta} ${token('vp', '', 'small')}</strong> ${view.ready.includes(p.player_id) ? '✓' : ''}</p>`).join('')}<p>${view.ready.length} / ${view.players.length} ready</p>`;
     } else if (view.game_over) {
-      return '<h3>Game complete</h3><p>最终分项见星图上方。房主可通过房间 Start Game 开始新局。</p>';
+      return `${html}<h3>Game complete</h3><p>最终分项见星图上方。房主可通过房间 Start Game 开始新局。</p></section>`;
     } else if (!isActing) {
       html += `<h3>Waiting for ${esc(player(view.current_turn)?.name || 'players')}</h3><p class="gaia-muted">${phaseNames[view.phase] || ''}</p>`;
     } else if (pending) {
@@ -538,29 +540,25 @@
     } else {
       html += `<h3>${view.main_done && view.phase === 'action' ? '主行动完成' : phaseNames[view.phase]}</h3>`;
     }
-    const passOptions = options.filter(o => o.category === 'pass');
-    if (isActing && view.phase === 'action' && !pending && passOptions.length) {
-      html += `<div class="gaia-pass-action">${button(view.round < 6 ? 'Pass & choose booster' : 'Pass', 'open-pass-booster', 'class="gaia-pass-button"', 'pass')}</div>`;
-    }
     if (selectedHex) {
       const hex = view.board[selectedHex];
       const terraforming = gaiaTerraformingSteps(hex.planet);
       const terraformingText = terraforming === null ? '' : `<span class="gaia-terraform-value">改造强度 T${terraforming}</span>`;
       html += `<div class="gaia-planet-info"><strong>${defs().planets[hex.planet]?.emoji || '✨'} ${esc(defs().planets[hex.planet]?.name || '太空')} · ${esc(hex.id)} ${terraformingText}</strong><p>${Object.entries(hex.buildings).map(([id, kind]) => `${esc(player(id)?.name)} · ${esc(defs().buildings[kind].name)}`).join('<br>') || (hex.gaiaformer ? '🌱 ' + esc(player(hex.gaiaformer)?.name) + ' 的改造器' : '尚未殖民')}</p></div>`;
     }
-    const selectedMap = options.map((o,i) => [o,i]).filter(([o]) => o.category === 'map' && o.action.hex === selectedHex);
-    html += selectedMap.map(([o,i]) => optionButton(o,i)).join('');
-    if (isActing && options.some(o => o.category === 'map') && !selectedHex) html += '<p class="gaia-map-hint">↖ 点击高亮星球，查看建造或升级费用。</p>';
-    const categories = ['decision','income','faction','booster','technology','next','research','special','power','free','pass'];
+    html += renderSelection();
+    const passOptions = options.filter(o => o.category === 'pass');
+    if (isActing && view.phase === 'action' && !pending && passOptions.length) {
+      html += `<div class="gaia-pass-action">${button(view.round < 6 ? 'Pass & choose booster' : 'Pass', 'open-pass-booster', 'class="gaia-pass-button"', 'pass')}</div>`;
+    }
+    const categories = ['decision','income','faction','booster','technology','next','research','special','power','free'];
     for (const category of categories) {
       const group = options.map((o,i) => [o,i]).filter(([o]) => {
         if (o.category !== category) return false;
-        // Normal research is presented by the Research board. Only keep a
-        // pending track choice here when another tab is currently visible.
-        if (category === 'research' && (o.action.type === 'research' || activeTab === 'research')) return false;
+        if (o.category === 'map') return false;
         return true;
       });
-      if (!group.length || category === 'pass') continue;
+      if (!group.length) continue;
       const items = group.map(([o,i]) => optionButton(o,i)).join('');
       if (['free','pass','power','research'].includes(category)) {
         const titles = {free:'Free Actions', pass:'Pass & choose booster', power:'Power / QIC', research:'Research'};
@@ -572,7 +570,66 @@
       const selected = defs().factions[options[selectedOption]?.action.faction];
       if (selected) html += `<p>${esc(selected.ability)}</p><p>学院：${esc(selected.institute)}</p>`;
     }
-    return html;
+    return html + '</section>';
+  }
+  function mapPlanetSummary(id) {
+    const hex = view.board[id];
+    if (!hex) return '';
+    const planet = defs().planets[hex.planet];
+    const terraforming = gaiaTerraformingSteps(hex.planet);
+    const terraformingText = terraforming === null ? '' : ` · 改造强度 T${terraforming}`;
+    const buildings = Object.entries(hex.buildings).map(([pid, kind]) => `${esc(player(pid)?.name || pid)} · ${esc(defs().buildings[kind]?.name || kind)}`).join('<br>');
+    return `<div class="gaia-map-dialog-context"><strong>${planet?.emoji || '✨'} ${esc(planet?.name || '太空')} · ${esc(id)}${terraformingText}</strong><p>${buildings || (hex.gaiaformer ? `🌱 ${esc(player(hex.gaiaformer)?.name || '')} 的改造器` : '尚未殖民')}</p></div>`;
+  }
+  function openMapActionDialog(id) {
+    const choices = activeOptions().map((o, index) => ({o, index})).filter(({o}) => o.category === 'map' && o.action.hex === id);
+    const body = `${mapPlanetSummary(id)}${choices.length ? `<p class="gaia-muted">选择这颗星球上的主行动：</p><div class="gaia-map-dialog-options">${choices.map(({o, index}) => optionButton(o, index, true)).join('')}</div>` : '<p class="gaia-muted">当前局面没有可执行的主行动。你可以查看星球信息，或在 Actions 页签处理辅助行动。</p>'}`;
+    openModal('主行动', body);
+    if (!modal) return;
+    modal.classList.add('gaia-map-action-dialog');
+    modal.addEventListener('click', event => {
+      const optionEl = event.target.closest('[data-gaia-option]');
+      if (!optionEl) return;
+      selectedOption = Number(optionEl.dataset.gaiaOption);
+      activeTab = 'actions';
+      closeModal();
+      render();
+      panel.querySelector('.gaia-confirm')?.scrollIntoView({block:'nearest', behavior:'smooth'});
+    });
+  }
+  function renderGaiaHint() {
+    if (!view) return '<p>当前还没有可以提示的 Gaia Project 局面。</p>';
+    const p = me();
+    if (!p) return '<p>你正在旁观这局游戏。可以查看 Galaxy、Research、Technology 和 Players。</p>';
+    if (view.game_over) return '<p>本局已经结束。请查看上方的最终分数和两个终局目标。</p>';
+    if (view.phase === 'round_end') {
+      return `<p>第 ${view.round} 轮已经结束。等待所有玩家点击 <b>Next Round</b>，当前进度为 ${view.ready.length} / ${view.players.length}。</p>`;
+    }
+    if (view.phase === 'booster') {
+      const count = activeOptions().filter(o => o.action.type === 'choose_booster').length;
+      return `<p>现在是首轮推进器选择。按座次逆序从市场中选择一张推进器；当前可选 ${count} 张。点击推进器卡片即可查看收入和特殊行动。</p>`;
+    }
+    if (view.current_turn !== view.you) {
+      return `<p>现在轮到 <b>${esc(player(view.current_turn)?.name || '另一位玩家')}</b>。你可以先查看 Galaxy、Research、Technology 或 Players，等对方完成 ${esc(phaseNames[view.phase] || '当前阶段')}。</p>`;
+    }
+    const options = activeOptions();
+    const pending = view.pending[0];
+    if (pending) {
+      const pendingText = {leech:'决定是否接受邻居充能', tech:'选择一块科技', track:'选择一条研究轨道', lost:'放置失落星球'}[pending.kind] || '完成当前待处理选择';
+      return `<p>请先${pendingText}。完成后才能继续当前回合。</p>`;
+    }
+    const groups = [];
+    const mapCount = options.filter(o => o.category === 'map').length;
+    if (mapCount) groups.push(`<li><b>主行动：</b>点击 Galaxy 中带高亮边框的星球，选择建造矿场、升级建筑或盖亚行动。</li>`);
+    const names = {power:'Power / QIC', free:'Free Actions', special:'特殊行动', technology:'Technology', research:'Research', decision:'待处理决定', income:'领取收入', faction:'选择种族', next:'进入下一阶段'};
+    [...new Set(options.map(o => o.category).filter(category => category !== 'map' && category !== 'pass'))].forEach(category => {
+      const count = options.filter(o => o.category === category).length;
+      groups.push(`<li><b>${names[category] || category}：</b>当前有 ${count} 个可选项，可在 Actions 页签处理${category === 'research' || category === 'technology' ? '，也可以直接打开对应页签查看详情' : ''}。</li>`);
+    });
+    if (options.some(o => o.category === 'pass')) groups.push(`<li><b>Pass：</b>完成本轮后可以放弃，并选择下一轮推进器。</li>`);
+    if (view.can_federate) groups.push('<li><b>联邦：</b>可以在 Actions 页签点击 Form Federation，然后回到 Galaxy 选择建筑和连接格。</li>');
+    if (!groups.length) groups.push('<li>当前没有可执行的选项，请等待房间状态更新。</li>');
+    return `<p>你现在可以做这些事：</p><ul class="gaia-hint-actions">${groups.join('')}</ul>${view.main_done ? '<p class="gaia-muted">主行动已经完成；仍可进行 Free Actions，或选择 Pass。</p>' : ''}`;
   }
   function render() {
     if (!view || !panel) return;
@@ -581,10 +638,9 @@
     const p = me();
     const acting = view.current_turn === view.you;
     const roundTiles = view.round_tiles.map((id,i) => `<div class="gaia-round-tile ${view.round === i+1 ? 'current' : view.round > i+1 ? 'past' : ''}"><small>ROUND ${i+1}</small><strong>${esc(defs().rounds[id].name)}</strong></div>`).join('');
-    const tabs = [['galaxy','Galaxy'],['research','Research'],['technology','Technology'],['players','Players']];
-    const controls = renderControls();
-    const main = activeTab === 'galaxy' ? renderMap(controls) : activeTab === 'research' ? renderResearch() : activeTab === 'technology' ? renderTechnology() : renderPlayers();
-    const tabControls = activeTab === 'galaxy' ? '' : (controls ? `<section class="gaia-controls gaia-inline-controls" aria-label="Actions">${controls}</section>` : '');
+    const tabs = [['galaxy','Galaxy'],['actions','Actions'],['research','Research'],['technology','Technology'],['players','Players']];
+    const main = activeTab === 'galaxy' ? renderMap() : activeTab === 'actions' ? renderActionsTab() : activeTab === 'research' ? renderResearch() : activeTab === 'technology' ? renderTechnology() : renderPlayers();
+    const tabControls = '';
     panel.innerHTML = `${tokenSprite()}<div class="gaia-title"><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div>${p ? renderGaiaDashboard(p) : ''}${renderBoosterPrompt()}${renderBoosterPrompt('pass')}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}${tabControls}</div></section></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
     panel.classList.toggle('gaia-explaining', explainMode);
     prepareHints();
@@ -712,7 +768,9 @@
     }
     const optionEl = event.target.closest('[data-gaia-option]');
     if (optionEl) {
-      selectedOption = Number(optionEl.dataset.gaiaOption); render();
+      selectedOption = Number(optionEl.dataset.gaiaOption);
+      if (activeTab !== 'actions' && activeTab !== 'galaxy') activeTab = 'actions';
+      render();
       panel.querySelector('.gaia-confirm')?.scrollIntoView({block:'nearest', behavior:'smooth'});
       return;
     }
@@ -721,8 +779,13 @@
       const id = hexEl.dataset.gaiaHex;
       selectedOption = null;
       if (federationMode) { federationHexes.has(id) ? federationHexes.delete(id) : federationHexes.add(id); }
-      else selectedHex = selectedHex === id ? null : id;
-      render(); return;
+      else {
+        selectedHex = selectedHex === id ? null : id;
+        render();
+        if (selectedHex) openMapActionDialog(id);
+      }
+      if (federationMode) render();
+      return;
     }
     const commandEl = event.target.closest('[data-gaia-command]');
     if (commandEl) {
@@ -897,6 +960,7 @@
     }
   });
   help?.addEventListener('click', showHelp);
+  hintButton?.addEventListener('click', () => openModal('Hint · 当前可做什么', renderGaiaHint()));
   explainButton?.addEventListener('click', () => { closeModal(); setExplain(!explainMode); });
   window.showGaiaProjectHeaderActions = show => {
     if (header) header.style.display = show ? 'flex' : 'none';
@@ -921,7 +985,7 @@
     if (viewKey && viewKey.split('|')[0] !== String(data.room_id)) { hideHint(); selectedHex=null; activeTab='galaxy'; legendOpen=false; mapZoom=1; mapCenter=null; }
     viewKey=key; view=next;
     if (currentGameType !== 'gaia_project') { currentGameType='gaia_project'; setGamePanelVisibility('gaia_project'); }
-    if (view.phase==='faction' && activeTab==='galaxy') activeTab='players';
+    if (view.phase==='faction' && activeTab==='galaxy') activeTab='actions';
     if (view.phase==='placement' && !selectedHex) activeTab='galaxy';
     render();
     if (typeof logGameEvents === 'function') logGameEvents(data);

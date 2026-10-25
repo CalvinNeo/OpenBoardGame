@@ -1190,7 +1190,8 @@
               <button id="projectLExplainBtn" class="project-l-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="gaiaProjectHeaderActions" style="display: none;">
-              <button id="gaiaProjectHelpBtn" type="button">Help</button>
+              <button id="gaiaProjectHelpBtn" type="button" aria-label="Open Help">? Help</button>
+              <button id="gaiaProjectHintBtn" type="button" aria-label="Show available actions">Hint</button>
               <button id="gaiaProjectExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="blokusHeaderActions" style="display: none;">
@@ -1716,7 +1717,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=155" defer></script>
+  <script src="/static/game_assets.js?v=158" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
