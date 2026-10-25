@@ -122,6 +122,10 @@
 .gaia-actions-heading button { padding:6px 9px; font-size:10px; }
 .gaia-actions-page > .gaia-options { margin-top:10px; }
 .gaia-actions-page > .gaia-action-group { margin-top:12px; }
+.gaia-actions-tab-link { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:10px 0; padding:8px 10px; border:1px solid #3c6470; border-radius:8px; background:#142f3b; color:#d8f2ea; font-size:11px; }
+.gaia-actions-tab-link span { min-width:0; overflow-wrap:anywhere; }
+.gaia-actions-tab-link strong { color:#a5efce; }
+.gaia-actions-tab-link button { flex:0 0 auto; padding:6px 9px; font-size:10px; }
 .gaia-map-dialog-context { padding:10px 11px; border:1px solid #38566d; border-radius:8px; background:#12263b; }
 .gaia-map-dialog-context strong { display:block; color:#dff8ee; font-size:13px; }
 .gaia-map-dialog-context p { margin:5px 0 0; color:var(--gaia-muted); font-size:11px; line-height:1.5; }

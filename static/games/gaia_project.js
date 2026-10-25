@@ -540,6 +540,10 @@
     } else {
       html += `<h3>${view.main_done && view.phase === 'action' ? '主行动完成' : phaseNames[view.phase]}</h3>`;
     }
+    const researchChoices = options.filter(o => ['research', 'choose_track'].includes(o.action.type));
+    if (researchChoices.length || pending?.kind === 'track') {
+      html += `<div class="gaia-actions-tab-link"><span><strong>Research</strong> ${pending?.kind === 'track' ? '请在 Research 页签选择研究轨道。' : '研究行动集中在 Research 页签。'}</span>${button('打开 Research', 'tab', 'data-gaia-tab="research"', 'research')}</div>`;
+    }
     if (selectedHex) {
       const hex = view.board[selectedHex];
       const terraforming = gaiaTerraformingSteps(hex.planet);
@@ -551,7 +555,7 @@
     if (isActing && view.phase === 'action' && !pending && passOptions.length) {
       html += `<div class="gaia-pass-action">${button(view.round < 6 ? 'Pass & choose booster' : 'Pass', 'open-pass-booster', 'class="gaia-pass-button"', 'pass')}</div>`;
     }
-    const categories = ['decision','income','faction','booster','technology','next','research','special','power','free'];
+    const categories = ['decision','income','faction','booster','technology','next','special','power','free'];
     for (const category of categories) {
       const group = options.map((o,i) => [o,i]).filter(([o]) => {
         if (o.category !== category) return false;
@@ -560,8 +564,8 @@
       });
       if (!group.length) continue;
       const items = group.map(([o,i]) => optionButton(o,i)).join('');
-      if (['free','pass','power','research'].includes(category)) {
-        const titles = {free:'Free Actions', pass:'Pass & choose booster', power:'Power / QIC', research:'Research'};
+      if (['free','pass','power'].includes(category)) {
+        const titles = {free:'Free Actions', pass:'Pass & choose booster', power:'Power / QIC'};
         html += `<details class="gaia-action-group" ${category === 'free' && view.main_done ? 'open' : ''}><summary>${titles[category]} <span>${group.length}</span></summary><div class="gaia-options">${items}</div></details>`;
       } else html += `<div class="gaia-options ${category === 'faction' ? 'gaia-faction-options' : ''}">${items}</div>`;
     }
@@ -624,7 +628,12 @@
     const names = {power:'Power / QIC', free:'Free Actions', special:'特殊行动', technology:'Technology', research:'Research', decision:'待处理决定', income:'领取收入', faction:'选择种族', next:'进入下一阶段'};
     [...new Set(options.map(o => o.category).filter(category => category !== 'map' && category !== 'pass'))].forEach(category => {
       const count = options.filter(o => o.category === category).length;
-      groups.push(`<li><b>${names[category] || category}：</b>当前有 ${count} 个可选项，可在 Actions 页签处理${category === 'research' || category === 'technology' ? '，也可以直接打开对应页签查看详情' : ''}。</li>`);
+      const location = category === 'research'
+        ? '请打开 Research 页签处理'
+        : category === 'technology'
+          ? '可在 Actions 页签处理，也可以打开 Technology 页签查看详情'
+          : '可在 Actions 页签处理';
+      groups.push(`<li><b>${names[category] || category}：</b>当前有 ${count} 个可选项，${location}。</li>`);
     });
     if (options.some(o => o.category === 'pass')) groups.push(`<li><b>Pass：</b>完成本轮后可以放弃，并选择下一轮推进器。</li>`);
     if (view.can_federate) groups.push('<li><b>联邦：</b>可以在 Actions 页签点击 Form Federation，然后回到 Galaxy 选择建筑和连接格。</li>');
