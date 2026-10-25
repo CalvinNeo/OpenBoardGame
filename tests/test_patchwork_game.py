@@ -1,6 +1,14 @@
 import unittest
 
-from game.patchwork import END_POSITION, PATCHES_BY_ID, PatchworkGame, _board_empty_count, _maybe_finalize_game
+from game.patchwork import (
+    BUTTON_MARKERS,
+    END_POSITION,
+    LEATHER_MARKERS,
+    PATCHES_BY_ID,
+    PatchworkGame,
+    _board_empty_count,
+    _maybe_finalize_game,
+)
 
 
 class PatchworkGameTests(unittest.TestCase):
@@ -16,6 +24,34 @@ class PatchworkGameTests(unittest.TestCase):
         self.assertEqual(state["current_turn"], "p1")
         self.assertEqual(len(state["patch_circle"]), 33)
         self.assertTrue(state["special_tile_available"])
+
+    def test_time_track_markers_match_base_game(self):
+        self.assertEqual(sorted(BUTTON_MARKERS), [5, 11, 17, 23, 29, 35, 41, 47, 53])
+        self.assertEqual(sorted(LEATHER_MARKERS), [20, 26, 32, 44, 50])
+
+        state = PatchworkGame.init_game({"seed": 7}, self._players())
+        view = PatchworkGame.get_public_view(state, "p1")
+        self.assertEqual(view["button_markers"], [5, 11, 17, 23, 29, 35, 41, 47, 53])
+        self.assertEqual(view["leather_markers"], [20, 26, 32, 44, 50])
+
+        state["players"]["p1"]["time_position"] = 4
+        state["players"]["p1"]["button_income"] = 2
+        state["players"]["p2"]["time_position"] = 6
+        state["current_turn"] = "p1"
+
+        events, error = PatchworkGame.apply_action(state, "p1", {"type": "advance"})
+
+        self.assertIsNone(error)
+        self.assertEqual(state["players"]["p1"]["time_position"], 7)
+        self.assertEqual(state["players"]["p1"]["buttons"], 10)
+        self.assertTrue(
+            any(
+                event["type"] == "patchwork:button_income"
+                and event["payload"]["position"] == 5
+                and event["payload"]["amount"] == 2
+                for event in events
+            )
+        )
 
     def test_patch_catalog_matches_audited_size_cost_time_and_income(self):
         expected = {
@@ -129,8 +165,8 @@ class PatchworkGameTests(unittest.TestCase):
 
     def test_claimed_leather_requires_bonus_patch_placement(self):
         state = PatchworkGame.init_game({"seed": 9}, self._players())
-        state["players"]["p1"]["time_position"] = 0
-        state["players"]["p2"]["time_position"] = 4
+        state["players"]["p1"]["time_position"] = 19
+        state["players"]["p2"]["time_position"] = 20
         state["players"]["p1"]["arrival_order"] = 2
         state["players"]["p2"]["arrival_order"] = 1
         state["current_turn"] = "p1"
@@ -145,7 +181,7 @@ class PatchworkGameTests(unittest.TestCase):
         events, error = PatchworkGame.apply_action(state, "p1", {"type": "place_bonus_patch", "x": 0, "y": 0})
         self.assertIsNone(error)
         self.assertIsNone(state["pending_special_patch"])
-        self.assertEqual(state["players"]["p1"]["quilt_board"][0][0], "leather_5")
+        self.assertEqual(state["players"]["p1"]["quilt_board"][0][0], "leather_20")
         self.assertEqual(state["current_turn"], "p2")
         self.assertTrue(any(evt["type"] == "patchwork:place_leather" for evt in events))
 

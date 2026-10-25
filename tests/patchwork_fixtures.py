@@ -35,7 +35,7 @@ def build_views() -> dict:
     state["players"]["p0"]["buttons"] = 0
     save("no_cash")
     state["players"]["p0"]["buttons"] = 20
-    state["players"]["p0"]["quilt_board"][4][4] = "leather_5"
+    state["players"]["p0"]["quilt_board"][4][4] = "leather_20"
     save("occupied")
     state["player_meta"]["p0"]["name"] = '<img src=x onerror="window.patchworkInjected=true">'
     state["player_meta"]["p1"]["name"] = "VeryLongUnbrokenPlayerNameToCheckEveryLayoutAndDialog"
@@ -45,8 +45,8 @@ def build_views() -> dict:
 
     state["pending_special_patch"] = {
         "player_id": "p0",
-        "position": 17,
-        "remaining_target": 17,
+        "position": 20,
+        "remaining_target": 20,
     }
     state["current_turn"] = "p0"
     save("bonus_patch")
@@ -65,7 +65,7 @@ def build_views() -> dict:
     state["players"]["p0"]["time_position"] = 32
     state["players"]["p1"]["time_position"] = 34
     state["current_turn"] = "p0"
-    state["claimed_leathers"] = [5, 17, 24]
+    state["claimed_leathers"] = [20, 26, 32]
     save("midgame")
     state["patch_circle"] = ["patch_16"]
     state["neutral_index"] = 0

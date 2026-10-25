@@ -15,10 +15,11 @@ OUT_DIR = ROOT / "game" / "assets" / "patchwork"
 OUT_SVG_DIR = OUT_DIR / "svg"
 OUT_JSON = OUT_DIR / "patchwork.json"
 
-# These trigger positions are derived from the extracted board art order and
-# normalized onto the official 53-step track. The final income happens on 53.
-BUTTON_MARKERS = [1, 7, 11, 13, 19, 21, 28, 31, 53]
-LEATHER_MARKERS = [5, 17, 24, 43, 49]
+# Base-game Patchwork time-track positions. Button income is printed every six
+# spaces from 5 through 53; the five 1x1 leather patches use the marked spaces
+# between those income points.
+BUTTON_MARKERS = [5, 11, 17, 23, 29, 35, 41, 47, 53]
+LEATHER_MARKERS = [20, 26, 32, 44, 50]
 
 
 def _load_patch_rows() -> list[dict]:
@@ -155,8 +156,8 @@ def build_assets() -> dict:
             "canonical_patch_count": len(patches),
             "excluded_duplicates": duplicates,
             "track_marker_note": (
-                "Marker positions are normalized from the extracted board art order onto the official 53-step track. "
-                "The final income resolves on step 53."
+                "Official Patchwork time track: button income at 5, 11, 17, 23, 29, 35, 41, 47, and 53; "
+                "1x1 leather patches at 20, 26, 32, 44, and 50."
             ),
         },
         "board": {

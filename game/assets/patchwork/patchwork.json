@@ -9,7 +9,7 @@
         "duplicate_of": "patch_12"
       }
     ],
-    "track_marker_note": "Marker positions are normalized from the extracted board art order onto the official 53-step track. The final income resolves on step 53."
+    "track_marker_note": "Official Patchwork time track: button income at 5, 11, 17, 23, 29, 35, 41, 47, and 53; 1x1 leather patches at 20, 26, 32, 44, and 50."
   },
   "board": {
     "size": 9,
@@ -17,22 +17,22 @@
     "starting_buttons": 5,
     "special_tile_bonus": 7,
     "button_markers": [
-      1,
-      7,
+      5,
       11,
-      13,
-      19,
-      21,
-      28,
-      31,
+      17,
+      23,
+      29,
+      35,
+      41,
+      47,
       53
     ],
     "leather_markers": [
-      5,
-      17,
-      24,
-      43,
-      49
+      20,
+      26,
+      32,
+      44,
+      50
     ],
     "board_svg": "board.svg",
     "visual_layout": {

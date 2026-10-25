@@ -147,7 +147,7 @@ async function render(page, key, tab) {
           assert.equal(await page.locator('.gaia-dashboard .gaia-status-goals').count(), 1);
           assert.equal(await page.locator('.gaia-goals').count(), 0);
           assert.equal(await page.locator('.gaia-map-actions').count(), 1);
-          assert.equal(await page.locator('.gaia-tab-content > .gaia-controls').count(), 0);
+          assert.equal(await page.locator('.gaia-tab-content > .gaia-controls:not(.gaia-map-actions)').count(), 0);
           assert.equal(await page.locator('.gaia-pass-button').count(), 1);
           assert.equal(await page.locator('.gaia-action-group').filter({hasText: 'Pass & choose booster'}).count(), 0);
           const dashboardHeight = await page.locator('.gaia-dashboard').evaluate(el => el.getBoundingClientRect().height);
