@@ -24,9 +24,11 @@ repository's existing behavior instead of changing the game rules.
 In a Yahtzee room, **Bot AI** offers:
 
 - **Classic (original)** (`classic`): the unchanged random reroll / immediate
-  highest-score bot. This remains the default, including for old saves with no
-  strategy setting.
+  highest-score bot. It remains available as an explicit compatibility option.
 - **Strategic (DP)** (`dynamic_programming`): the new full-game planner.
+
+Strategic (DP) is the default for new rooms and for saved states that do not
+contain a strategy setting.
 
 The choice applies to all bots and is submitted with Start Game. During a game
 the active choice is displayed but disabled. The config is serialized in game
