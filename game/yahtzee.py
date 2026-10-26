@@ -46,7 +46,7 @@ UPPER_VALUE_TO_CATEGORY = {
     6: "sixes",
 }
 
-DEFAULT_CONFIG: Dict = {"bot_strategy": "classic"}
+DEFAULT_CONFIG: Dict = {"bot_strategy": "dynamic_programming"}
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -502,7 +502,7 @@ class YahtzeeGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("config", {}).get("bot_strategy", "classic") == "dynamic_programming":
+        if state.get("config", {}).get("bot_strategy", DEFAULT_CONFIG["bot_strategy"]) == "dynamic_programming":
             from game.yahtzee_ai import choose_action
 
             return choose_action(state, bot_id)

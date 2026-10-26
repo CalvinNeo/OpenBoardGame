@@ -43,23 +43,27 @@ def finish_locks(state):
 
 
 class YahtzeeAITests(unittest.TestCase):
-    def test_config_accepts_both_strategies_and_defaults_to_original(self):
+    def test_config_accepts_both_strategies_and_defaults_to_dynamic_programming(self):
         for config in ({}, {"bot_strategy": "classic"}, {"bot_strategy": "dynamic_programming"}):
             validate(config, YAHTZEE_CONFIG_SCHEMA)
-        self.assertEqual(YahtzeeGame.init_game({}, [])["config"]["bot_strategy"], "classic")
+        self.assertEqual(YahtzeeGame.init_game({}, [])["config"]["bot_strategy"], "dynamic_programming")
         with self.assertRaises(ValidationError):
             validate({"bot_strategy": "unknown"}, YAHTZEE_CONFIG_SCHEMA)
         with self.assertRaises(ValueError):
             YahtzeeGame.init_game({"bot_strategy": "unknown"}, [])
 
-    def test_old_save_and_classic_keep_original_random_greedy_behavior(self):
-        for config in ({}, {"bot_strategy": "classic"}):
-            state = make_state((6, 6, 6, 6, 1))
-            state["config"] = config
-            with patch("game.yahtzee.random.random", return_value=0.1):
-                self.assertEqual(YahtzeeGame.bot_move(state, "bot"), {"type": "roll"})
-            with patch("game.yahtzee.random.random", return_value=0.9):
-                self.assertEqual(YahtzeeGame.bot_move(state, "bot"), {"type": "score", "category": "three_kind"})
+    def test_classic_keeps_original_random_greedy_behavior(self):
+        state = make_state((6, 6, 6, 6, 1), strategy="classic")
+        with patch("game.yahtzee.random.random", return_value=0.1):
+            self.assertEqual(YahtzeeGame.bot_move(state, "bot"), {"type": "roll"})
+        with patch("game.yahtzee.random.random", return_value=0.9):
+            self.assertEqual(YahtzeeGame.bot_move(state, "bot"), {"type": "score", "category": "three_kind"})
+
+    def test_missing_strategy_uses_dynamic_programming_default(self):
+        state = make_state((6, 6, 6, 6, 1))
+        expected = YahtzeeGame.bot_move(state, "bot")
+        state.pop("config")
+        self.assertEqual(YahtzeeGame.bot_move(state, "bot"), expected)
 
     def test_configuration_survives_save_and_public_view(self):
         state = make_state()
@@ -67,7 +71,7 @@ class YahtzeeAITests(unittest.TestCase):
         self.assertEqual(YahtzeeGame.get_public_view(restored, "bot")["config"]["bot_strategy"], "dynamic_programming")
         self.assertEqual(YahtzeeGame.bot_move(restored, "bot"), YahtzeeGame.bot_move(state, "bot"))
         restored.pop("config")
-        self.assertEqual(YahtzeeGame.get_public_view(restored, "bot")["config"]["bot_strategy"], "classic")
+        self.assertEqual(YahtzeeGame.get_public_view(restored, "bot")["config"]["bot_strategy"], "dynamic_programming")
 
     def test_first_roll_and_inactive_players(self):
         state = make_state(roll_count=0)

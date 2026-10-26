@@ -41,10 +41,10 @@ class YahtzeeRoomTests(unittest.IsolatedAsyncioTestCase):
         await app.on_room_start("sid", {"config": {"bot_strategy": "classic"}})
         self.assertEqual(room.game_state["config"]["bot_strategy"], "classic")
 
-    async def test_missing_choice_remains_classic(self):
+    async def test_missing_choice_uses_dynamic_programming(self):
         room = await self.make_room()
         await app.on_room_start("sid", {})
-        self.assertEqual(room.game_state["config"]["bot_strategy"], "classic")
+        self.assertEqual(room.game_state["config"]["bot_strategy"], "dynamic_programming")
 
     async def test_invalid_choice_does_not_start_game(self):
         room = await self.make_room()

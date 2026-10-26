@@ -1,5 +1,6 @@
 let currentYahtzeeView = null;
 let yahtzeeConfigSignature = null;
+const DEFAULT_YAHTZEE_BOT_STRATEGY = "dynamic_programming";
 
 const yahtzeeConfigBox = document.getElementById("yahtzeeConfigBox");
 const yahtzeeBotStrategySelect = document.getElementById("yahtzeeBotStrategySelect");
@@ -34,15 +35,20 @@ function updateYahtzeeConfigRow() {
   yahtzeeConfigBox.setAttribute("aria-hidden", String(!visible));
   if (!visible) {
     yahtzeeConfigSignature = null;
-    yahtzeeBotStrategySelect.value = "classic";
+    yahtzeeBotStrategySelect.value = DEFAULT_YAHTZEE_BOT_STRATEGY;
     return;
   }
   const config = currentRoomState.status !== "lobby" && currentYahtzeeView
     ? currentYahtzeeView.config || {}
     : currentRoomState.game_config || {};
-  const signature = JSON.stringify([currentRoomState.room_id, config.bot_strategy || "classic"]);
+  const signature = JSON.stringify([
+    currentRoomState.room_id,
+    config.bot_strategy || DEFAULT_YAHTZEE_BOT_STRATEGY,
+  ]);
   if (signature !== yahtzeeConfigSignature) {
-    yahtzeeBotStrategySelect.value = config.bot_strategy === "dynamic_programming" ? "dynamic_programming" : "classic";
+    yahtzeeBotStrategySelect.value = config.bot_strategy === "classic"
+      ? "classic"
+      : DEFAULT_YAHTZEE_BOT_STRATEGY;
     yahtzeeConfigSignature = signature;
   }
   yahtzeeBotStrategySelect.disabled = !["lobby", "game_over"].includes(currentRoomState.status);
