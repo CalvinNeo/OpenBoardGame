@@ -672,15 +672,15 @@ const GAME_ASSETS = {
   },
   "criminal_dance": {
     "scripts": [
-      "/static/games/criminal_dance.js?v=app_v5"
+      "/static/games/criminal_dance.js?v=app_v6"
     ],
     "styles": [
-      "/static/criminal_dance.css?v=2"
+      "/static/criminal_dance.css?v=3"
     ],
     "panel": "criminalDancePanel",
     "panelTitle": "🕵️ 犯人在跳舞",
     "header": "showCriminalDanceHeaderActions",
-    "markup": "/static/games/criminal_dance.html?v=3",
+    "markup": "/static/games/criminal_dance.html?v=4",
     "styleFragments": "/static/games/criminal_dance.css?v=1"
   },
   "turing_machine": {

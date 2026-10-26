@@ -12,6 +12,7 @@
       <h3 id="criminalDanceResultsTitle" data-criminal-dance-tip="Round Results (🏆): review the outcome before everyone confirms the next deal." tabindex="0">🏆 Round Results</h3>
       <div id="criminalDanceResultSummary"></div>
       <div id="criminalDanceReady" class="criminal-dance-ready" aria-live="polite"></div>
+      <div id="criminalDanceResultControls" class="criminal-dance-controls"></div>
     </section>
     <div class="criminal-dance-layout">
       <section id="criminalDanceHandSection" class="criminal-dance-section criminal-dance-hand-section" data-criminal-dance-explain-key="hand" aria-labelledby="criminalDanceHandTitle">
@@ -30,20 +31,21 @@
       </section>
     </div>
     <div class="criminal-dance-records">
-      <section class="criminal-dance-section" data-criminal-dance-explain-key="played" aria-labelledby="criminalDancePlayedTitle">
-        <div class="criminal-dance-section-heading">
-          <h3 id="criminalDancePlayedTitle" data-criminal-dance-tip="Played Cards (🗂️): card plays and action results visible to everyone." tabindex="0">🗂️ Played Cards</h3>
-          <span id="criminalDancePlayedCount" class="criminal-dance-count" data-criminal-dance-tip="The number of public entries this round." tabindex="0">0</span>
-        </div>
+      <details id="criminalDancePlayedDetails" class="criminal-dance-section criminal-dance-record" aria-labelledby="criminalDancePlayedTitle">
+        <summary class="criminal-dance-section-heading" data-criminal-dance-explain-key="played">
+          <span id="criminalDancePlayedTitle">🗂️ Played Cards</span>
+          <span id="criminalDancePlayedCount" class="criminal-dance-count">0</span>
+        </summary>
         <div id="criminalDancePlayed" class="criminal-dance-public-list" role="log" aria-label="Played cards"></div>
-      </section>
-      <section class="criminal-dance-section criminal-dance-notes-section" data-criminal-dance-explain-key="private" aria-labelledby="criminalDancePrivateTitle">
-        <div class="criminal-dance-section-heading">
-          <h3 id="criminalDancePrivateTitle" data-criminal-dance-tip="Private Notes (🔒): action results and secret information visible only to you." tabindex="0">🔒 Private Notes</h3>
-          <span id="criminalDancePrivateCount" class="criminal-dance-count" data-criminal-dance-tip="The number of entries in your private notes." tabindex="0">0</span>
-        </div>
+      </details>
+      <details id="criminalDancePrivateDetails" class="criminal-dance-section criminal-dance-record criminal-dance-notes-section" aria-labelledby="criminalDancePrivateTitle">
+        <summary class="criminal-dance-section-heading" data-criminal-dance-explain-key="private">
+          <span id="criminalDancePrivateTitle">🔒 Private Notes</span>
+          <span id="criminalDancePrivateNew" class="criminal-dance-new hidden" aria-live="polite"></span>
+          <span id="criminalDancePrivateCount" class="criminal-dance-count">0</span>
+        </summary>
         <div id="criminalDancePrivate" class="criminal-dance-private-list" role="log" aria-label="Private notes"></div>
-      </section>
+      </details>
     </div>
   </div>
   <div id="criminalDanceTooltip" class="criminal-dance-tooltip hidden" role="tooltip"></div>

@@ -52,8 +52,9 @@
 #criminalDancePanel .criminal-dance-player.is-current { border-color: #a29acb; background: #eeeaf8; box-shadow: inset 3px 0 #8174b4; }
 #criminalDancePanel .criminal-dance-player.is-you .criminal-dance-player-name { color: #65549b; }
 #criminalDancePanel .criminal-dance-player.is-winner { border-color: #d8bc75; background: #fff5d7; }
-#criminalDancePanel .criminal-dance-player-name { min-width: 0; font-size: 12px; font-weight: 650; }
-#criminalDancePanel .criminal-dance-player-name .criminal-dance-badge { margin-left: 5px; }
+#criminalDancePanel .criminal-dance-player-name { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px; font-weight: 650; }
+#criminalDancePanel .criminal-dance-player-name-text { min-width: 0; }
+#criminalDancePanel .criminal-dance-player-name .criminal-dance-badge { flex: 0 0 auto; }
 #criminalDancePanel .criminal-dance-player-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; margin-top: 6px; color: #7a7184; font-size: 12px; }
 #criminalDancePanel .criminal-dance-badge { display: inline-block; max-width: 100%; padding: 2px 5px; border: 1px solid #ddd5e8; border-radius: 5px; color: #665483; background: #f0eaf8; font-size: 12px; font-weight: 500; vertical-align: middle; }
 
@@ -117,6 +118,18 @@
 #criminalDancePanel #criminalDanceResultSummary { font-size: 13px; line-height: 1.65; }
 #criminalDancePanel .criminal-dance-ready { margin-top: 8px; color: #897343; font-size: 12px; line-height: 1.6; }
 
+#criminalDancePanel .criminal-dance-record { padding: 0; overflow: hidden; }
+#criminalDancePanel .criminal-dance-record > summary { justify-content: flex-start; gap: 7px; min-height: 44px; margin: 0; padding: 9px 11px; color: #574b66; font-size: 12px; font-weight: 600; list-style: none; cursor: pointer; }
+#criminalDancePanel .criminal-dance-record > summary::-webkit-details-marker { display: none; }
+#criminalDancePanel .criminal-dance-record > summary:focus-visible { outline-offset: -3px; }
+#criminalDancePanel .criminal-dance-record > summary::after { content: "›"; flex: 0 0 auto; margin-left: 2px; font-size: 18px; line-height: 1; }
+#criminalDancePanel .criminal-dance-record[open] > summary::after { transform: rotate(90deg); }
+#criminalDancePanel .criminal-dance-record > summary > :first-child { flex: 1; min-width: 0; }
+#criminalDancePanel .criminal-dance-record .criminal-dance-count { max-width: none; min-width: 20px; padding: 2px 5px; }
+#criminalDancePanel .criminal-dance-record > [role="log"] { margin: 0 9px 9px; }
+#criminalDancePanel .criminal-dance-new { flex: 0 0 auto; padding: 2px 5px; border-radius: 5px; background: #6c599c; color: #fff; font-size: 11px; }
+#criminalDancePanel .criminal-dance-record:has(.criminal-dance-new:not(.hidden)) { border-color: #9b83bd; }
+
 #criminalDancePanel [data-criminal-dance-tip] { cursor: help; }
 #criminalDancePanel :focus-visible,
 .criminal-dance-modal :focus-visible { outline: 2px solid #8272b3; outline-offset: 3px; }
@@ -151,17 +164,43 @@ body.criminal-dance-explain-mode #criminalDancePanel [data-criminal-dance-explai
     #criminalDancePanel .criminal-dance-public-list,
     #criminalDancePanel .criminal-dance-private-list { max-height: 150px; }
     #criminalDancePanel .criminal-dance-card { min-height: 150px; }
+    #criminalDancePanel .criminal-dance-record { padding: 0; }
 }
 
 @container criminal-dance (max-width: 460px) {
-    #criminalDancePanel .criminal-dance-hand { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    #criminalDancePanel .criminal-dance-card { min-height: 146px; padding: 9px 7px; }
-    #criminalDancePanel .criminal-dance-card-icon { font-size: 29px; }
-    #criminalDancePanel .criminal-dance-card-name { font-size: 15px; }
+    #criminalDancePanel .criminal-dance-status { margin-bottom: 8px; padding: 7px 9px; }
+    #criminalDancePanel .criminal-dance-round-meta { gap: 4px 10px; }
+    /* Keep turn announcements available to screen readers without a duplicate row. */
+    #criminalDancePanel .criminal-dance-summary { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #criminalDancePanel .criminal-dance-status-chip { padding: 4px 8px; font-size: 12px; }
-    #criminalDancePanel .criminal-dance-player { padding: 8px; }
-    #criminalDancePanel .criminal-dance-field { flex-basis: 100%; }
-    #criminalDancePanel .criminal-dance-action-row { gap: 7px; }
+    #criminalDancePanel .criminal-dance-round-meta > span:last-child { flex: 1 1 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #criminalDancePanel .criminal-dance-layout { gap: 10px; }
+    #criminalDancePanel .criminal-dance-section { padding: 0; border: 0; border-radius: 0; background: transparent; }
+    #criminalDancePanel .criminal-dance-section-heading { margin-bottom: 5px; }
+    #criminalDancePanel .criminal-dance-hand { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    #criminalDancePanel .criminal-dance-card { display: grid; grid-template-columns: 25px minmax(0, 1fr); grid-template-rows: 1fr auto; align-items: center; gap: 1px 5px; min-height: 66px; padding: 6px; border-top-width: 3px; text-align: left; }
+    #criminalDancePanel .criminal-dance-card-icon { grid-row: 1 / 3; font-size: 24px; }
+    #criminalDancePanel .criminal-dance-card-name { font-size: 13px; }
+    #criminalDancePanel .criminal-dance-card-tag { display: none; }
+    #criminalDancePanel .criminal-dance-card-state { grid-column: 2; margin: 0; padding: 0; font-size: 11px; }
+    #criminalDancePanel .criminal-dance-card:not(.selected):not([aria-disabled="true"]) .criminal-dance-card-state { display: none; }
+    #criminalDancePanel .criminal-dance-controls { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; margin-top: 7px; padding-top: 7px; }
+    #criminalDancePanel .criminal-dance-action-title { grid-column: 1; grid-row: 1; }
+    #criminalDancePanel .criminal-dance-action-fields { grid-column: 1 / -1; grid-row: 2; gap: 6px; }
+    #criminalDancePanel .criminal-dance-field { flex-basis: 115px; gap: 5px; }
+    #criminalDancePanel .criminal-dance-action-row { grid-column: 2; grid-row: 1; gap: 5px; max-width: 158px; }
+    #criminalDancePanel #criminalDanceResultControls { display: block; }
+    #criminalDancePanel #criminalDanceResultControls .criminal-dance-action-row { max-width: none; }
+    #criminalDancePanel .criminal-dance-player-list { gap: 5px; }
+    #criminalDancePanel .criminal-dance-player { padding: 5px 7px; }
+    #criminalDancePanel .criminal-dance-player-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #criminalDancePanel .criminal-dance-player-name .criminal-dance-badge { margin-left: 0; font-size: 10px; }
+    #criminalDancePanel .criminal-dance-player-meta { gap: 3px 8px; margin-top: 2px; }
+    #criminalDancePanel .criminal-dance-badge { padding: 0; border: 0; background: transparent; }
+    #criminalDancePanel .criminal-dance-records { gap: 6px; margin-top: 9px; }
+    #criminalDancePanel .criminal-dance-record { border: 1px solid var(--criminal-dance-line); border-radius: 8px; background: #fffdf9; }
+    #criminalDancePanel .criminal-dance-record > summary { margin: 0; padding: 6px 9px; }
+    #criminalDancePanel .criminal-dance-results { margin-bottom: 9px; padding: 9px; }
 }
 
 @media (max-width: 460px) {

@@ -35,6 +35,10 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
     let tooltipAnchor = null;
     let tooltipTimer = null;
     let dialogOrigin = null;
+    let notesContext = "";
+    let readNoteCount = 0;
+    let touchStart = null;
+    let touchMoved = false;
     const name = (id) => view?.players?.find(p => p.player_id === id)?.name || "Player";
     const me = () => view?.players?.find(p => p.you);
     const hand = () => me()?.hand || [];
@@ -131,14 +135,15 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
             row.classList.toggle("is-current", current);
             row.classList.toggle("is-you", p.you);
             row.classList.toggle("is-winner", (view.winner_ids || []).includes(p.player_id));
-            const title = node("div", "criminal-dance-player-name", p.name);
+            const title = node("div", "criminal-dance-player-name");
+            title.append(tip(node("span", "criminal-dance-player-name-text", p.name), p.name));
             if (p.you) title.append(node("span", "criminal-dance-badge", "You"));
             const meta = node("div", "criminal-dance-player-meta");
             meta.append(badge(`🃏 ${p.hand_count}`, `Hand (🃏): ${p.hand_count} cards remaining.`));
             if (view.config?.scoring_enabled !== false) meta.append(badge(`⭐ ${p.score}`, `Score (⭐): ${p.score} total points.`));
-            if (current) meta.append(badge("▶ Turn", "Current turn (▶): this player acts next."));
+            if (current) meta.append(badge("▶", "Current turn (▶): this player acts next."));
             if (p.is_accomplice) meta.append(badge("😈", "Accomplice (😈): this player joined the criminal team."));
-            if (view.game_over && p.round_ready) meta.append(badge("✓ Ready", "Ready (✓): confirmed to continue."));
+            if (view.game_over && p.round_ready) meta.append(badge("✓", "Ready (✓): confirmed to continue."));
             row.append(title, meta);
             list.append(row);
         }
@@ -195,6 +200,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
     function renderControls() {
         const controls = get("Controls");
         controls.replaceChildren();
+        get("ResultControls").replaceChildren();
         if (!view) return;
         if (view.game_over) {
             const row = node("div", "criminal-dance-action-row");
@@ -206,13 +212,10 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
                 row.append(btn);
             }
             row.append(node("span", "hint", me() ? "Continue when everyone is ready." : "Waiting for the players."));
-            controls.append(row);
+            get("ResultControls").append(row);
             return;
         }
-        if (!legal("play_card")) {
-            controls.append(node("div", "hint", me() ? `Waiting for ${name(view.current_player_id)}…` : "Spectating this round."));
-            return;
-        }
+        if (!legal("play_card")) return;
         const card = hand().find(c => c.id === selectedId);
         controls.append(node("div", "criminal-dance-action-title", card ? cardLabel(card.type) : "Select a card to play"));
         const needsTarget = card && ["detective", "dog", "witness", "trade", "chief"].includes(card.type);
@@ -270,6 +273,10 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         list.replaceChildren();
         const notes = me()?.private_log || [];
         text("PrivateCount", String(notes.length));
+        if (get("PrivateDetails").open) readNoteCount = notes.length;
+        const unread = Math.max(0, notes.length - readNoteCount);
+        text("PrivateNew", unread ? `${unread} new` : "");
+        visible("PrivateNew", unread > 0);
         if (!notes.length) list.append(node("p", "hint", me() ? "No private clues yet." : "Private clues are visible only to their owner."));
         for (const message of [...notes].reverse()) list.append(node("div", "criminal-dance-private", formatNote(message)));
         list.scrollTop = scroll;
@@ -335,8 +342,8 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
             status: ["Round & turn", "Round identifies the current deal. Current Turn (▶) shows who plays next; empty hands are skipped."],
             players: ["Players (👥)", "Hand (🃏) counts are public; card identities stay private. Score (⭐) is the running total. Accomplice (😈) marks a player on the criminal team. Ready (✓) means they have confirmed the next deal."],
             hand: ["Your Hand (🃏)", "Select a card, choose a target if needed, then press Play Card. Click the selected card or a blank area to cancel. Unavailable cards explain why they cannot be played."],
-            played: ["Played Cards (🗂️)", "Public cards and their outcomes, newest first. Scroll to review earlier turns; use Explain on a card to read its effect."],
-            private: ["Private Notes (🔒)", "Only you can see these clues, including Boy (🧒) information and hands seen by Witness (👀). They describe what was known then; cards may have moved since."],
+            played: ["Played Cards (🗂️)", "Expand this section to review public cards and their outcomes, newest first. Scroll inside the list for earlier turns; use Explain on a card to read its effect."],
+            private: ["Private Notes (🔒)", "Expand this section to see your private clues. The new badge marks unread clues, including Boy (🧒) information and hands seen by Witness (👀). They describe what was known then; cards may have moved since."],
             results: ["Results (🏆)", "The completed result remains visible until every human player confirms. Bots are ready automatically. Scores (⭐) carry into the next round and reset for a new match."],
             play_card: ["Play Card", "Play the selected card and resolve its effect. Choose any required target and exchange card first. This button is unavailable until a playable card is selected."],
             pick_target: ["Target", "Choose another player. Dog (🐶), Witness (👀), and an active Trade (🤝) need a player with cards. Only eligible targets appear."],
@@ -360,6 +367,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         section("Goal", "Catch Criminal (🕵️) with Detective (🔍) or Dog (🐶), or escape by playing Criminal (🕵️) as your last card. Anyone who has played Accomplice (😈) wins with an escape.");
         section("Your turn", "Each player starts with 4 cards. First Finder (🥇) opens the round. Play one card on your turn; players with empty hands are skipped. Cards moving between players also move the criminal identity.");
         section("Controls", "Select a hand card, choose a target or exchange card when prompted, then press Play Card. Click the card again or a blank area to cancel. Explain lets you inspect any highlighted item without taking an action; press Esc to leave it. Hover over status symbols or tap them for a 3-second hint.");
+        section("Records", "Expand Played Cards (🗂️) or Private Notes (🔒) to review information without clearing your selected card. Scroll inside a list for earlier entries. The new badge on Private Notes (🔒) marks unread clues.");
         section("Current settings", `${detectiveRule()} Dog (🐶) on a miss: ${settings().dog_fail_behavior === "give_to_target" ? "give to target" : "discard"}. Boy (🧒): ${settings().enable_boy === false ? "off" : "on"}. Chief (👮): ${settings().enable_chief ? "on" : "off"}.`);
         const scoring = settings().scoring_enabled !== false;
         const count = view?.players?.length || 3;
@@ -377,7 +385,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         return Boolean(target.closest("#criminalDanceHelpBtn, #criminalDanceExplainBtn, #criminalDanceHelpModal, #criminalDanceExplainModal"));
     }
     function explainAt(event) {
-        const control = event.target.closest("button, input, select, a, label");
+        const control = event.target.closest("button, input, select, a, label, summary");
         if (control) return control.dataset.criminalDanceExplainKey ? control : null;
         const disabled = [...panel.querySelectorAll("button:disabled[data-criminal-dance-explain-key]")].find(el => {
             const r = el.getBoundingClientRect();
@@ -396,13 +404,32 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
     document.addEventListener("pointerdown", event => {
         if (!active()) return;
         suppressClick = false;
+        touchMoved = false;
+        touchStart = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
         if (!explaining || exempt(event.target)) return;
+        // A touch must finish as a tap before Explain opens a dialog.
+        if (touchStart) return;
         stop(event);
         const el = explainAt(event);
         if (el) { suppressClick = true; showExplanation(el); }
     }, true);
+    document.addEventListener("pointermove", event => {
+        if (touchStart && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 10) touchMoved = true;
+    }, true);
+    document.addEventListener("pointercancel", () => {
+        if (touchStart) touchMoved = true;
+        touchStart = null;
+    }, true);
+    document.addEventListener("pointerup", event => {
+        if (!active() || !touchStart) return;
+        touchStart = null;
+        if (touchMoved || !explaining || exempt(event.target)) return;
+        const el = explainAt(event);
+        if (el) { stop(event); suppressClick = true; showExplanation(el); }
+    }, true);
     document.addEventListener("click", event => {
         if (!active()) return;
+        if (touchMoved && event.detail !== 0) { touchMoved = false; stop(event); return; }
         if (suppressClick) { suppressClick = false; stop(event); return; }
         if (explaining && !exempt(event.target)) {
             stop(event);
@@ -413,7 +440,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         if (!panel.contains(event.target)) return;
         const anchor = event.target.closest("[data-criminal-dance-tip]");
         if (anchor && !anchor.matches("button:not([aria-disabled='true'])")) showTip(anchor);
-        if (selectedId && !event.target.closest("button, select, input, label, [data-criminal-dance-tip], .criminal-dance-public, .criminal-dance-private")) {
+        if (selectedId && !event.target.closest("button, select, input, label, summary, [data-criminal-dance-tip], .criminal-dance-public, .criminal-dance-private")) {
             resetSelection(); renderHand(); renderControls();
         }
     }, true);
@@ -455,8 +482,14 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         suppressClick = false;
         resetSelection();
         selectionContext = "";
+        notesContext = "";
+        readNoteCount = 0;
+        touchStart = null;
+        touchMoved = false;
         view = null;
-        for (const id of ["Players", "Hand", "Controls", "Played", "Private"]) get(id).replaceChildren();
+        for (const id of ["Players", "Hand", "Controls", "ResultControls", "Played", "Private"]) get(id).replaceChildren();
+        for (const id of ["PlayedDetails", "PrivateDetails"]) get(id).open = false;
+        visible("PrivateNew", false);
         for (const id of ["Round", "Turn", "Summary", "HandCount", "PlayedCount", "PrivateCount", "Ready"]) text(id, "—");
         text("Status", "Lobby");
         visible("Results", false);
@@ -487,10 +520,15 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         const context = JSON.stringify([data.room_id, next.round_number, next.current_player_id, next.game_over, next.players?.find(p => p.you)?.hand, next.played?.length]);
         if (context !== selectionContext) { resetSelection(); hideTip(); }
         selectionContext = context;
+        const newDeal = view?.game_over && !next.game_over;
         view = next;
+        const nextNotesContext = JSON.stringify([data.room_id, next.round_number, next.you]);
+        if (nextNotesContext !== notesContext || newDeal) readNoteCount = 0;
+        notesContext = nextNotesContext;
         if (!hand().some(c => c.id === selectedId && !blockedReason(c))) resetSelection();
         text("Round", String(view.round_number || "—"));
         text("Turn", view.game_over ? "Complete" : view.current_player_name || "—");
+        tip(get("Turn"), view.game_over ? "Round complete." : `Current turn (▶): ${view.current_player_name || "—"}.`);
         text("Status", view.game_over ? (view.match_over ? "Match complete" : "Round complete") : legal("play_card") ? "Your turn" : "In progress");
         text("Summary", view.game_over ? "Review the result and confirm when ready." : legal("play_card") ? "Choose your next move." : `Waiting for ${name(view.current_player_id)}…`);
         renderPlayers(); renderHand(); renderControls(); renderPlayed(); renderPrivate(); renderResults();
@@ -500,6 +538,12 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         get("HelpBtn")?.addEventListener("click", openHelp);
         get("ExplainBtn")?.addEventListener("click", () => setExplain(!explaining));
         get("ExplainBtn")?.setAttribute("aria-pressed", "false");
+        get("PrivateDetails").addEventListener("toggle", () => {
+            if (get("PrivateDetails").open) {
+                readNoteCount = me()?.private_log?.length || 0;
+                visible("PrivateNew", false);
+            }
+        });
         for (const prefix of ["Help", "Explain"]) {
             const modal = get(`${prefix}Modal`);
             get(`${prefix}ModalCloseBtn`)?.addEventListener("click", () => closeDialog(modal));
