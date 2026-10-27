@@ -207,13 +207,13 @@ const GAME_ASSETS = {
   },
   "blokus": {
     "scripts": [
-      "/static/games/blokus.js?v=app_v6"
+      "/static/games/blokus.js?v=app_v7"
     ],
     "styles": [],
     "panel": "blokusPanel",
     "header": "showBlokusHeaderActions",
-    "markup": "/static/games/blokus.html?v=1",
-    "styleFragments": "/static/games/blokus.css?v=1"
+    "markup": "/static/games/blokus.html?v=2",
+    "styleFragments": "/static/games/blokus.css?v=2"
   },
   "carcassonne": {
     "scripts": [

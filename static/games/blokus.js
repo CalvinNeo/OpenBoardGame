@@ -1,6 +1,7 @@
 const blokusStatusLabel = document.getElementById("blokusStatus");
 const blokusTurnLabel = document.getElementById("blokusTurn");
 const blokusWinnerLabel = document.getElementById("blokusWinner");
+const blokusWinnerInfo = document.getElementById("blokusWinnerInfo");
 const blokusSelectedPieceLabel = document.getElementById("blokusSelectedPiece");
 const blokusOriginLabel = document.getElementById("blokusOrigin");
 const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
@@ -128,6 +129,7 @@ function clearBlokusState() {
   if (blokusWinnerLabel) {
     blokusWinnerLabel.textContent = "-";
   }
+  blokusWinnerInfo?.classList.add("hidden");
   if (blokusSelectedPieceLabel) {
     blokusSelectedPieceLabel.textContent = "-";
   }
@@ -714,7 +716,7 @@ function handleBlokusBackgroundPointerDown(event) {
     const target = event.target;
     if (
         !(target instanceof Element)
-        || target.closest("#blokusBoard, button, a, input, select, textarea, label, summary, [contenteditable], .modal, dialog")
+        || target.closest("#blokusBoard, #blokusPieces, #blokusBoardControls, button, a, input, select, textarea, label, summary, [contenteditable], .modal, dialog")
     ) {
         return;
     }
@@ -827,6 +829,7 @@ function renderBlokusPieces(view) {
   if (!blokusPieces) {
     return;
   }
+  const scrollTop = blokusPieces.scrollTop;
   blokusPieces.innerHTML = "";
   const remaining = Array.isArray(view.remaining_pieces) ? view.remaining_pieces : [];
   let selectionChanged = false;
@@ -839,6 +842,7 @@ function renderBlokusPieces(view) {
   }
   if (!remaining.length) {
     const empty = document.createElement("div");
+    empty.className = "blokus-pieces-empty";
     empty.textContent = "No pieces remaining.";
     blokusPieces.appendChild(empty);
     updateBlokusActionButton();
@@ -853,6 +857,8 @@ function renderBlokusPieces(view) {
     const piece = document.createElement("button");
     piece.type = "button";
     piece.className = "blokus-piece";
+    piece.setAttribute("aria-label", `Piece ${pieceId}, ${cells.length} squares`);
+    piece.setAttribute("aria-pressed", String(pieceId === blokusSelectedPieceId));
     if (pieceId === blokusSelectedPieceId) {
       piece.classList.add("selected");
     }
@@ -885,8 +891,8 @@ function renderBlokusPieces(view) {
       const height = Math.max(...cells.map(([, y]) => y)) + 1;
       const grid = document.createElement("div");
       grid.className = "blokus-piece-grid";
-      grid.style.gridTemplateColumns = `repeat(${width}, 10px)`;
-      grid.style.gridTemplateRows = `repeat(${height}, 10px)`;
+      grid.style.gridTemplateColumns = `repeat(${width}, var(--blokus-piece-cell))`;
+      grid.style.gridTemplateRows = `repeat(${height}, var(--blokus-piece-cell))`;
       cells.forEach(([x, y]) => {
         const cell = document.createElement("div");
         cell.className = "blokus-piece-cell";
@@ -903,6 +909,7 @@ function renderBlokusPieces(view) {
     piece.appendChild(label);
     blokusPieces.appendChild(piece);
   });
+  blokusPieces.scrollTop = scrollTop;
   updateBlokusActionButton();
   if (selectionChanged) {
     renderBlokusBoard(view);
@@ -1183,6 +1190,7 @@ function renderBlokusGameState(data) {
       blokusWinnerLabel.textContent = "-";
     }
   }
+  blokusWinnerInfo?.classList.toggle("hidden", !view.winner?.length);
   if (!blokusSelectedOrigin && blokusOriginLabel) {
     blokusOriginLabel.textContent = "-";
   }
@@ -1241,6 +1249,18 @@ if (blokusBoard) {
   blokusBoard.addEventListener("pointermove", handleBlokusPointerMove);
   blokusBoard.addEventListener("pointerup", handleBlokusPointerUp);
   blokusBoard.addEventListener("pointercancel", handleBlokusPointerUp);
+  new ResizeObserver(() => {
+    if (!blokusSelectedOrigin || !blokusPivot || blokusPivot.classList.contains("hidden")) {
+      return;
+    }
+    const placement = getBlokusSelectedPiecePlacement(currentBlokusView);
+    if (placement) {
+      positionBlokusPivot({
+        x: blokusSelectedOrigin.x + placement.anchorX,
+        y: blokusSelectedOrigin.y + placement.anchorY,
+      });
+    }
+  }).observe(blokusBoard);
 }
 
 document.addEventListener("pointerdown", handleBlokusBackgroundPointerDown);

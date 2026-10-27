@@ -19,31 +19,25 @@
     </div>
   </section></template>
 <template data-game-target="blokusPanel" data-game-mode="contents">
-              <div class="row">
+              <div class="blokus-summary">
                 <div>Status: <span id="blokusStatus">-</span></div>
-                <div>Current Turn: <span id="blokusTurn">-</span></div>
-                <div>Winner: <span id="blokusWinner">-</span></div>
-              </div>
-              <div class="row">
-                <div>Selected Piece: <span id="blokusSelectedPiece">-</span></div>
-                <div>Position: <span id="blokusOrigin">-</span></div>
-              </div>
-              <div class="row">
-                <button id="blokusGiveUpBtn">Give Up</button>
-              </div>
-              <div class="row">
-                <div class="hint">Select a piece, then tap or drag it on the board. Transform controls stay outside the board.</div>
+                <div class="blokus-turn">Turn: <span id="blokusTurn">-</span></div>
+                <div id="blokusWinnerInfo" class="hidden">Winner: <span id="blokusWinner">-</span></div>
+                <button id="blokusGiveUpBtn" type="button">Give Up</button>
               </div>
 
               <div class="blokus-layout">
-                <div>
-                  <h3>Board</h3>
+                <div class="blokus-board-column">
                   <div class="blokus-board-wrapper">
                     <div class="blokus-board-stage">
                       <div id="blokusBoard" class="blokus-board"></div>
                       <div id="blokusPivot" class="blokus-piece-pivot hidden" aria-hidden="true"></div>
                     </div>
                     <div id="blokusBoardControls" class="blokus-board-controls hidden">
+                      <div class="blokus-selection-info">
+                        <span>Piece <strong id="blokusSelectedPiece">-</strong></span>
+                        <span>Position <span id="blokusOrigin">-</span></span>
+                      </div>
                       <div class="blokus-transform-controls" role="group" aria-label="Rotate and flip piece">
                         <button id="blokusRotateLeftBtn" type="button" class="blokus-control-btn" title="Rotate 90° left (Q)" aria-label="Rotate 90 degrees left" aria-keyshortcuts="Q">
                           <span class="blokus-control-icon" aria-hidden="true">↺</span>
@@ -87,9 +81,9 @@
                   <div class="blokus-pieces-header">
                     <h3>Pieces</h3>
                   </div>
-                  <div id="blokusPieces" class="blokus-pieces"></div>
+                  <div id="blokusPieces" class="blokus-pieces" role="group" aria-label="Available pieces"></div>
                 </div>
-                <div>
+                <div class="blokus-players-column">
                   <h3>Players</h3>
                   <div id="blokusPlayers"></div>
                 </div>
