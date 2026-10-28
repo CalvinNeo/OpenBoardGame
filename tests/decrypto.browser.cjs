@@ -155,7 +155,7 @@ async function bounds(page, label) {
     }
     if (innerWidth <= 720) {
       const teams = document.getElementById("decryptoTeams");
-      const keywordRow = teams.querySelector(":scope > .decrypto-keywords");
+      const keywordRow = teams.querySelector(":scope > .decrypto-keywords-group .decrypto-keywords");
       if (keywordRow) {
         const box = keywordRow.getBoundingClientRect();
         const teamBox = teams.getBoundingClientRect();
@@ -265,13 +265,26 @@ async function bounds(page, label) {
       await render(page, name);
       const content = await page.locator("#decryptoPanel").textContent();
       const attributes = await page.locator("#decryptoPanel [data-decrypto-tip]").evaluateAll((elements) => elements.map((element) => element.dataset.decryptoTip).join(" "));
-      const secrets = name === "legacy_spectator" ? ["海洋", "水果", "时钟", "星球", "高山", "森林", "草原", "火焰"] : ["高山", "森林", "草原", "火焰"];
-      for (const secret of secrets) {
-        assert(!content.includes(secret), `${name}: secret visible in markup: ${secret}`);
-        assert(!attributes.includes(secret), `${name}: secret visible in a tooltip: ${secret}`);
+      const whiteSecrets = ["海洋", "水果", "时钟", "星球"];
+      const blackSecrets = ["高山", "森林", "草原", "火焰"];
+      const visibleSecrets = ["game_over", "legacy_final"].includes(name)
+        ? [...whiteSecrets, ...blackSecrets]
+        : ["round_end", "legacy_review"].includes(name)
+          ? whiteSecrets
+          : [];
+      for (const secret of [...whiteSecrets, ...blackSecrets]) {
+        if (visibleSecrets.includes(secret)) {
+          assert(content.includes(secret), `${name}: revealed word missing from markup: ${secret}`);
+        } else {
+          assert(!content.includes(secret), `${name}: secret visible in markup: ${secret}`);
+          assert(!attributes.includes(secret), `${name}: secret visible in a tooltip: ${secret}`);
+        }
+      }
+      if (["game_over", "legacy_final"].includes(name)) {
+        assert.equal(await page.locator("#decryptoTeams .decrypto-keywords-group").count(), 2);
       }
     }
-    console.log("Four player colors and all four actor/target result rows are correct; hidden words remain private.");
+    console.log("Four player colors and all four actor/target result rows are correct; hidden words stay private until the final reveal.");
 
     await page.setViewportSize({ width: 390, height: 900 });
     await render(page, "guessing");

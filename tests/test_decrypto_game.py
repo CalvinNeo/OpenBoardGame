@@ -350,7 +350,7 @@ class DecryptoGameTests(unittest.TestCase):
         self.assertIsNone(black_view["teams"]["white"]["keywords"])
         self.assertIsNotNone(black_view["teams"]["black"]["keywords"])
 
-    def test_round_and_final_reviews_never_reveal_opponent_keywords(self):
+    def test_public_view_reveals_both_keywords_after_game_over(self):
         state = self.make_round_end_state()
         state["teams"]["white"]["keywords"] = ["white_secret_1", "white_secret_2", "white_secret_3", "white_secret_4"]
         state["teams"]["black"]["keywords"] = ["black_secret_1", "black_secret_2", "black_secret_3", "black_secret_4"]
@@ -361,8 +361,10 @@ class DecryptoGameTests(unittest.TestCase):
                 with self.subTest(game_over=game_over, viewer_id=viewer_id):
                     view = decrypto.DecryptoGame.get_public_view(state, viewer_id)
                     for team_id, team in state["teams"].items():
-                        if team_id == own_team:
+                        if game_over or team_id == own_team:
                             self.assertEqual(view["teams"][team_id]["keywords"], team["keywords"])
+                            for keyword in team["keywords"]:
+                                self.assertIn(keyword, str(view))
                         else:
                             self.assertIsNone(view["teams"][team_id]["keywords"])
                             for keyword in team["keywords"]:

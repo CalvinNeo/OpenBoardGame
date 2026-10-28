@@ -113,9 +113,20 @@
 
   .decrypto-keywords {
     display: grid;
-    grid-column: 1 / -1;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
+  }
+
+  .decrypto-keywords-group {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 4px;
+  }
+
+  .decrypto-keywords-label {
+    color: #526176;
+    font-size: 12px;
+    font-weight: 700;
   }
 
   .decrypto-keyword {
@@ -215,6 +226,7 @@
     gap: 12px;
     min-height: 0;
     overflow-y: auto;
+    overflow-anchor: none;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
   }

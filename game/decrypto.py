@@ -761,7 +761,10 @@ class DecryptoGame:
             team = state["teams"][team_id]
             history = _public_history(state, team_id)
             keywords = None
-            if viewer_team == team_id:
+            # Once the game has ended, reveal both teams' keyword cards so
+            # players can review the complete solution. During play each
+            # team must continue to see only its own keywords.
+            if state.get("game_over") or viewer_team == team_id:
                 keywords = list(team["keywords"])
             data = state["round_data"].get(team_id, {})
             show_clues = state.get("phase") != "encryption"

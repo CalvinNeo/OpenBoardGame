@@ -134,10 +134,10 @@ const DECRYPTO_HELP_TEXT = `
   <h3>History &amp; Results</h3>
   <ul>
     <li>History groups revealed clues under keyword numbers 1–4. Hover over a colored clue, or tap it on a phone, to see its author and round.</li>
-    <li>Intercept choices show a number and a short preview of that number's latest public clues, limited to 10 characters. Opponent keywords stay secret.</li>
+    <li>Intercept choices show a number and a short preview of that number's latest public clues, limited to 10 characters. Opponent keywords stay secret during the game.</li>
     <li>The bottom History tab opens a scrollable reference panel while writing clues or guessing. Click the tab again or press Esc to collapse it. Your inputs and history scroll position are preserved, and the board stays interactive.</li>
     <li>Last Round is grouped by the team making the guess: Decrypt targets its own clues; Intercept targets the opposing team's clues.</li>
-    <li>Correct order and Submitted order show the same three positions. Only your team's keywords can appear. Opponent keywords are never shown, including in the final review; only their public clues and numbers appear.</li>
+    <li>Correct order and Submitted order show the same three positions. During the game, only your team's keywords can appear. Once the game ends, both teams' keyword lists are revealed.</li>
     <li>Close or Esc dismisses the review without confirming. Use the right-edge Review tab to reopen Last Round Review. The round stays paused until all players confirm.</li>
     <li>Correct (✓, green) and Wrong (✗, red) mark each submitted position and the overall result. Intercepts (🎯) reach 2 to win; Miscommunications (⚠) reach 2 to lose.</li>
   </ul>
@@ -162,7 +162,7 @@ const DECRYPTO_BUTTON_EXPLANATIONS = {
   },
   decryptoReviewBtn: {
     name: "Last Round Review",
-    description: "The right-edge Review tab reopens the latest round's results. Each team's own decrypt and its intercept of the opponent are listed separately. Opponent keywords are never displayed. Closing the dialog does not confirm readiness.",
+    description: "The right-edge Review tab reopens the latest round's results. Each team's own decrypt and its intercept of the opponent are listed separately. Opponent keywords stay hidden during play and are revealed when the game ends. Closing the dialog does not confirm readiness.",
   },
   decryptoHistoryBtn: {
     name: "Clue History",
@@ -173,7 +173,7 @@ const DECRYPTO_BUTTON_EXPLANATIONS = {
 const DECRYPTO_AREA_EXPLANATIONS = {
   teams: {
     name: "Teams & Player Colors",
-    description: "Each player keeps a distinct seat color; their clues use the same background. The pencil (✎) identifies the Encryptor on phones. Intercepts (🎯): 2 wins. Miscommunications (⚠): 2 loses. The full-width keyword strip belongs to your team; opponent keywords remain hidden.",
+    description: "Each player keeps a distinct seat color; their clues use the same background. The pencil (✎) identifies the Encryptor on phones. Intercepts (🎯): 2 wins. Miscommunications (⚠): 2 loses. During play, the full-width keyword strip belongs to your team; when the game ends, both teams' words are shown.",
   },
   history: {
     name: "Clue History",
@@ -185,11 +185,11 @@ const DECRYPTO_AREA_EXPLANATIONS = {
   },
   intercept: {
     name: "Intercept the Opponent",
-    description: "Match the opponent's three clues to their keyword numbers. The dropdowns show shortened public history for each number. A correct full sequence earns your team one intercept (🎯).",
+    description: "Match the opponent's three clues to their keyword numbers. The dropdowns show shortened public history for each number. A correct full sequence earns your team one intercept (🎯). The opponent's keywords are revealed after the game ends.",
   },
   results: {
     name: "Round Results",
-    description: "Each team has its own table. Decrypt is that team's guess of its own clues; Intercept is its guess of the opposing team's clues. Compare Correct order with Submitted order position by position: green ✓ matches, red ✗ differs. Hidden keywords are never disclosed; public clues stand in for them.",
+    description: "Each team has its own table. Decrypt is that team's guess of its own clues; Intercept is its guess of the opposing team's clues. Compare Correct order with Submitted order position by position: green ✓ matches, red ✗ differs. Hidden keywords stay concealed during play; both teams' words are revealed after the game ends.",
   },
 };
 
@@ -266,7 +266,15 @@ function trimDecryptoPreview(text) {
 }
 
 function getDecryptoTeamKeywords(view, teamId) {
-  return teamId && teamId === view.team_id ? view.teams?.[teamId]?.keywords : null;
+  if (!view || !teamId) {
+    return null;
+  }
+  const gameOver = view.game_over || view.phase === "game_over";
+  if (teamId !== view.team_id && !gameOver) {
+    return null;
+  }
+  const keywords = view.teams?.[teamId]?.keywords;
+  return Array.isArray(keywords) ? keywords : null;
 }
 
 function updateDecryptoPackRow() {
@@ -1004,20 +1012,34 @@ function renderDecryptoTeams(view) {
 
     decryptoTeams.appendChild(wrapper);
   });
-  const keywords = getDecryptoTeamKeywords(view, view.team_id);
-  if (keywords?.length) {
+  const gameOver = view.game_over || view.phase === "game_over";
+  const keywordTeamIds = gameOver ? ["white", "black"] : [view.team_id];
+  keywordTeamIds.forEach((teamId) => {
+    const keywords = getDecryptoTeamKeywords(view, teamId);
+    if (!keywords?.length) {
+      return;
+    }
+    const keywordGroup = document.createElement("div");
+    keywordGroup.className = "decrypto-keywords-group";
+    if (gameOver) {
+      const keywordLabel = document.createElement("div");
+      keywordLabel.className = "decrypto-keywords-label";
+      keywordLabel.textContent = `${formatDecryptoTeamLabel(teamId)} Team Keywords${teamId === view.team_id ? " · Your team" : ""}`;
+      keywordGroup.appendChild(keywordLabel);
+    }
     const keywordRow = document.createElement("div");
     keywordRow.className = "decrypto-keywords";
     keywordRow.setAttribute("role", "group");
-    keywordRow.setAttribute("aria-label", `Your ${formatDecryptoTeamLabel(view.team_id)} team keywords`);
+    keywordRow.setAttribute("aria-label", `${formatDecryptoTeamLabel(teamId)} team keywords`);
     keywords.forEach((word, index) => {
       const item = document.createElement("div");
       item.className = "decrypto-keyword";
       item.textContent = `${index + 1}. ${word}`;
       keywordRow.appendChild(item);
     });
-    decryptoTeams.appendChild(keywordRow);
-  }
+    keywordGroup.appendChild(keywordRow);
+    decryptoTeams.appendChild(keywordGroup);
+  });
 }
 
 function renderDecryptoCurrentClues(view) {

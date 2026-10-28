@@ -26,9 +26,6 @@ const azulMarket = document.querySelector("#azulPanel .azul-market");
 let azulPlayersDetailsInitialized = false;
 let azulScoreBannerTimer = null;
 
-const azulFloorBtn = document.getElementById("azulFloorBtn");
-const azulTakeBtn = document.getElementById("azulTakeBtn");
-
 const azulHeaderActions = document.getElementById("azulHeaderActions");
 const azulHelpBtn = document.getElementById("azulHelpBtn");
 const azulExplainBtn = document.getElementById("azulExplainBtn");
@@ -65,11 +62,11 @@ const AZUL_HELP_TEXT = `
   <ol>
     <li>Take all tiles of one color from a factory or the Center (🏛️). Center counts (×N) show how many tiles you take.</li>
     <li>If you are the first to take from the center, you also take the First Player token (1st). It occupies a floor space and makes you start the next round. A star (★) marks its holder.</li>
-    <li>Place the tiles into one pattern line (same color) or send all to the floor line. Extra tiles overflow to the floor.</li>
+    <li>Tap a legal numbered pattern line or Floor. Confirm the inline message, which spells out how many tiles go to each destination. Extra tiles overflow to the floor.</li>
   </ol>
 
   <h3>Controls &amp; tiles</h3>
-  <p>Select a color, choose a numbered pattern line, then press Take Tiles. Send to Floor takes your selected tiles directly to the floor. Tap empty space or press Esc to cancel your selection.</p>
+  <p>Select a color, then tap a legal numbered pattern line or Floor. An inline confirmation tells you how many tiles will be placed and where; confirm or cancel there. Tap empty space or press Esc to cancel your selection.</p>
   <p>Tile colors: Blue (🟦), Yellow (🟨), Red (🟥), Black (⬛), and White (🔹, a turquoise diamond on white). Faded wall spaces are empty; solid spaces are filled. Player summaries show each line as row: filled/capacity; pts means points.</p>
 
   <h3>Scoring</h3>
@@ -84,16 +81,7 @@ const AZUL_HELP_TEXT = `
   <p>Game ends after any player completes a horizontal row. Bonuses: +2 per full row, +7 per full column, +10 per full color.</p>
 `;
 
-const AZUL_BUTTON_EXPLANATIONS = {
-  azulFloorBtn: {
-    name: "Send to Floor",
-    description: "Take all tiles of the selected color from the chosen factory or Center (🏛️) directly to your floor line. This submits your turn immediately; floor spaces cost the points shown above them.",
-  },
-  azulTakeBtn: {
-    name: "Take Tiles",
-    description: "Take all tiles of the selected color from the chosen factory or Center (🏛️) and place them into your selected pattern line or floor. Extra tiles overflow to the floor.",
-  },
-};
+let azulConfirmTargetRow = null;
 
 function azulColorLabel(color) {
   return AZUL_COLOR_LABELS[color] || color || "-";
@@ -240,8 +228,8 @@ function clearAzulSelection() {
   azulSelectedSource = null;
   azulSelectedColor = null;
   azulSelectedRow = null;
+  azulConfirmTargetRow = null;
   updateAzulSelectionLabels();
-  updateAzulActionButtons();
   if (currentAzulView) {
     renderAzulFactories(currentAzulView);
     renderAzulCenter(currentAzulView);
@@ -284,17 +272,118 @@ function isAzulRowPlaceable(view, rowIndex, color) {
   return true;
 }
 
-function canSubmitAzulSelection(view) {
-  if (!isAzulActionAvailable("take_tiles")) {
-    return false;
+function getAzulSelectedTileCount(view) {
+  if (!view || !azulSelectedSource || !azulSelectedColor) {
+    return 0;
   }
-  if (!azulSelectedSource || !azulSelectedColor || typeof azulSelectedRow !== "number") {
-    return false;
+  const tiles = azulSelectedSource.type === "center"
+    ? (Array.isArray(view.center) ? view.center : [])
+    : (Array.isArray(view.factories?.[azulSelectedSource.index]) ? view.factories[azulSelectedSource.index] : []);
+  return tiles.filter((tile) => tile === azulSelectedColor).length;
+}
+
+function getAzulTargetLabel(rowIndex) {
+  return rowIndex < 0 ? "Floor" : `Row ${rowIndex + 1}`;
+}
+
+function getAzulPlacementSummary(view, rowIndex) {
+  const count = getAzulSelectedTileCount(view);
+  const targetLabel = getAzulTargetLabel(rowIndex);
+  if (rowIndex < 0) {
+    return { count, placed: 0, overflow: count, targetLabel };
   }
-  if (azulSelectedRow < 0) {
-    return true;
+  const you = getAzulSelfPlayer(view);
+  const line = you && Array.isArray(you.pattern_lines) ? you.pattern_lines[rowIndex] : null;
+  const filled = line && Number.isFinite(Number(line.count)) ? Number(line.count) : 0;
+  const free = Math.max(0, rowIndex + 1 - filled);
+  const placed = Math.min(free, count);
+  return { count, placed, overflow: Math.max(0, count - placed), targetLabel };
+}
+
+function getAzulConfirmationLabel(view, rowIndex) {
+  const summary = getAzulPlacementSummary(view, rowIndex);
+  const color = azulSelectedColor ? azulColorLabel(azulSelectedColor) : "tile";
+  const tileWord = (value) => `tile${value === 1 ? "" : "s"}`;
+  const firstPlayerSuffix = azulSelectedSource?.type === "center" && view?.center_token
+    ? " · + First Player token → Floor"
+    : "";
+  if (rowIndex < 0) {
+    return `Send ${summary.count} ${color} ${tileWord(summary.count)} → Floor${firstPlayerSuffix}`;
   }
-  return isAzulRowPlaceable(view, azulSelectedRow, azulSelectedColor);
+  const placedText = `Place ${summary.placed} ${color} ${tileWord(summary.placed)} → ${summary.targetLabel}`;
+  if (summary.overflow > 0) {
+    return `${placedText} · ${summary.overflow} overflow → Floor${firstPlayerSuffix}`;
+  }
+  return `${placedText}${firstPlayerSuffix}`;
+}
+
+function submitAzulTarget(rowIndex) {
+  if (!isAzulActionAvailable("take_tiles") || !azulSelectedSource || !azulSelectedColor) {
+    return;
+  }
+  if (rowIndex >= 0 && !isAzulRowPlaceable(currentAzulView, rowIndex, azulSelectedColor)) {
+    clearAzulSelection();
+    return;
+  }
+  const action = {
+    type: "take_tiles",
+    source: azulSelectedSource.type,
+    color: azulSelectedColor,
+    target_row: rowIndex,
+  };
+  if (azulSelectedSource.type === "factory") {
+    action.source_index = azulSelectedSource.index;
+  }
+  sendAction(action);
+  clearAzulSelection();
+}
+
+function requestAzulTargetConfirmation(rowIndex) {
+  if (!isAzulActionAvailable("take_tiles") || !azulSelectedSource || !azulSelectedColor) {
+    return;
+  }
+  if (rowIndex >= 0 && !isAzulRowPlaceable(currentAzulView, rowIndex, azulSelectedColor)) {
+    return;
+  }
+  azulSelectedRow = rowIndex;
+  azulConfirmTargetRow = rowIndex;
+  updateAzulSelectionLabels();
+  renderAzulYourBoard(currentAzulView);
+}
+
+function buildAzulInlineConfirmation(rowIndex) {
+  const confirmationLabel = getAzulConfirmationLabel(currentAzulView, rowIndex);
+  const confirmWrap = document.createElement("div");
+  confirmWrap.className = "azul-inline-confirm";
+  confirmWrap.setAttribute("role", "group");
+  confirmWrap.setAttribute("aria-label", confirmationLabel);
+  confirmWrap.hidden = azulConfirmTargetRow !== rowIndex;
+
+  const confirmButton = document.createElement("button");
+  confirmButton.type = "button";
+  confirmButton.className = "azul-confirm-button";
+  confirmButton.textContent = confirmationLabel;
+  setAzulTip(confirmButton, `Confirm: ${confirmationLabel}. This takes the selected tiles from the source.`);
+  confirmButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    submitAzulTarget(rowIndex);
+  });
+
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.className = "azul-cancel-button";
+  cancelButton.textContent = "Cancel";
+  setAzulTip(cancelButton, "Cancel this destination and keep the selected tiles ready for another target.");
+  cancelButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    azulSelectedRow = null;
+    azulConfirmTargetRow = null;
+    updateAzulSelectionLabels();
+    renderAzulYourBoard(currentAzulView);
+  });
+
+  confirmWrap.append(confirmButton, cancelButton);
+  return confirmWrap;
 }
 
 function syncAzulSelection(view) {
@@ -306,6 +395,7 @@ function syncAzulSelection(view) {
     azulSelectedSource = null;
     azulSelectedColor = null;
     azulSelectedRow = null;
+    azulConfirmTargetRow = null;
   }
   if (azulSelectedSource) {
     if (azulSelectedSource.type === "factory") {
@@ -314,8 +404,12 @@ function syncAzulSelection(view) {
       if (!factory || !factory.length) {
         azulSelectedSource = null;
         azulSelectedColor = null;
+        azulSelectedRow = null;
+        azulConfirmTargetRow = null;
       } else if (azulSelectedColor && !factory.includes(azulSelectedColor)) {
         azulSelectedColor = null;
+        azulSelectedRow = null;
+        azulConfirmTargetRow = null;
       }
     }
     if (azulSelectedSource && azulSelectedSource.type === "center") {
@@ -323,14 +417,19 @@ function syncAzulSelection(view) {
       if (!center.length) {
         azulSelectedSource = null;
         azulSelectedColor = null;
+        azulSelectedRow = null;
+        azulConfirmTargetRow = null;
       } else if (azulSelectedColor && !center.includes(azulSelectedColor)) {
         azulSelectedColor = null;
+        azulSelectedRow = null;
+        azulConfirmTargetRow = null;
       }
     }
   }
   if (azulSelectedRow !== null && azulSelectedRow !== undefined) {
     if (!Number.isInteger(azulSelectedRow) || azulSelectedRow < -1 || azulSelectedRow > 4) {
       azulSelectedRow = null;
+      azulConfirmTargetRow = null;
     }
   }
   if (
@@ -340,6 +439,7 @@ function syncAzulSelection(view) {
     !isAzulRowPlaceable(view, azulSelectedRow, azulSelectedColor)
   ) {
     azulSelectedRow = null;
+    azulConfirmTargetRow = null;
   }
   updateAzulSelectionLabels();
 }
@@ -351,17 +451,6 @@ function isAzulActionAvailable(actionType) {
   return currentAzulView.legal_actions.includes(actionType);
 }
 
-function updateAzulActionButtons() {
-  if (!azulTakeBtn) {
-    return;
-  }
-  const canTake = canSubmitAzulSelection(currentAzulView);
-  azulTakeBtn.disabled = !canTake;
-  if (azulFloorBtn) {
-    azulFloorBtn.disabled = !isAzulActionAvailable("take_tiles") || !azulSelectedSource || !azulSelectedColor;
-  }
-}
-
 function setAzulTip(element, message) {
   element.dataset.azulTip = message;
   element.setAttribute("aria-label", message);
@@ -371,8 +460,9 @@ function selectAzulTiles(source, color) {
   if (!isAzulActionAvailable("take_tiles")) return;
   azulSelectedSource = source;
   azulSelectedColor = color;
+  azulSelectedRow = null;
+  azulConfirmTargetRow = null;
   syncAzulSelection(currentAzulView);
-  updateAzulActionButtons();
   renderAzulFactories(currentAzulView);
   renderAzulCenter(currentAzulView);
   renderAzulYourBoard(currentAzulView);
@@ -556,16 +646,19 @@ function buildAzulPatternLine(line, rowIndex, interactive, canSelect = true) {
     lineWrap.classList.add("selectable");
     if (canSelect) {
       lineWrap.addEventListener("click", () => {
-        azulSelectedRow = rowIndex;
-        updateAzulSelectionLabels();
-        updateAzulActionButtons();
-        renderAzulYourBoard(currentAzulView);
+        requestAzulTargetConfirmation(rowIndex);
       });
     } else {
       lineWrap.classList.add("disabled");
     }
   }
-  return lineWrap;
+  const targetWrap = document.createElement("div");
+  targetWrap.className = "azul-target-wrap";
+  targetWrap.append(lineWrap);
+  if (canSelect && azulSelectedSource && azulSelectedColor) {
+    targetWrap.appendChild(buildAzulInlineConfirmation(rowIndex));
+  }
+  return targetWrap;
 }
 
 function renderAzulYourBoard(view) {
@@ -591,10 +684,10 @@ function renderAzulYourBoard(view) {
   const patternCol = document.createElement("div");
   patternCol.className = "azul-pattern-column";
   you.pattern_lines.forEach((line, idx) => {
-    const canSelectRow = isAzulActionAvailable("take_tiles") && (!azulSelectedColor || isAzulRowPlaceable(view, idx, azulSelectedColor));
+    const canSelectRow = isAzulActionAvailable("take_tiles") && !!azulSelectedSource && !!azulSelectedColor && isAzulRowPlaceable(view, idx, azulSelectedColor);
     const lineWrap = buildAzulPatternLine(line, idx, true, canSelectRow);
     if (azulSelectedRow === idx) {
-      lineWrap.classList.add("selected");
+      lineWrap.querySelector(".azul-pattern-line")?.classList.add("selected");
     }
     patternCol.appendChild(lineWrap);
   });
@@ -602,21 +695,24 @@ function renderAzulYourBoard(view) {
   const wallGrid = buildAzulWallGrid(you.wall, false);
   main.appendChild(wallGrid);
   board.appendChild(main);
+  const floorTargetWrap = document.createElement("div");
+  floorTargetWrap.className = "azul-target-wrap azul-floor-target-wrap";
   const floorWrap = document.createElement("button");
+  const canSelectFloor = isAzulActionAvailable("take_tiles") && !!azulSelectedSource && !!azulSelectedColor;
   floorWrap.type = "button";
   floorWrap.className = "azul-floor";
-  setAzulTip(floorWrap, "Floor: choose this destination, then Take Tiles. Each occupied space loses the points shown above it at round end.");
+  if (!canSelectFloor) {
+    floorWrap.classList.add("disabled");
+  }
+  setAzulTip(floorWrap, "Floor: choose this destination, then confirm. Each occupied space loses the points shown above it at round end.");
   floorWrap.setAttribute("aria-pressed", String(azulSelectedRow === -1));
-  floorWrap.setAttribute("aria-disabled", String(!isAzulActionAvailable("take_tiles")));
+  floorWrap.setAttribute("aria-disabled", String(!canSelectFloor));
   if (azulSelectedRow === -1) {
     floorWrap.classList.add("selected");
   }
   floorWrap.addEventListener("click", () => {
-    if (!isAzulActionAvailable("take_tiles")) return;
-    azulSelectedRow = -1;
-    updateAzulSelectionLabels();
-    updateAzulActionButtons();
-    renderAzulYourBoard(view);
+    if (!canSelectFloor) return;
+    requestAzulTargetConfirmation(-1);
   });
   const floorLabel = document.createElement("div");
   floorLabel.className = "azul-floor-label";
@@ -651,7 +747,11 @@ function renderAzulYourBoard(view) {
     slots.appendChild(slot);
   }
   floorWrap.appendChild(slots);
-  board.appendChild(floorWrap);
+  floorTargetWrap.appendChild(floorWrap);
+  if (azulSelectedSource && azulSelectedColor) {
+    floorTargetWrap.appendChild(buildAzulInlineConfirmation(-1));
+  }
+  board.appendChild(floorTargetWrap);
   azulYourBoard.appendChild(board);
 }
 
@@ -753,7 +853,6 @@ function renderAzulGameState(data) {
   renderAzulCenter(currentAzulView);
   renderAzulYourBoard(currentAzulView);
   renderAzulPlayers(currentAzulView);
-  updateAzulActionButtons();
 }
 
 function clearAzulState() {
@@ -773,56 +872,6 @@ function clearAzulState() {
   if (azulCenter) azulCenter.innerHTML = "";
   if (azulYourBoard) azulYourBoard.innerHTML = "";
   if (azulPlayers) azulPlayers.innerHTML = "";
-  updateAzulActionButtons();
-}
-
-if (azulFloorBtn) {
-  azulFloorBtn.addEventListener("click", () => {
-    if (isAzulActionAvailable("take_tiles") && azulSelectedSource && azulSelectedColor) {
-      const action = {
-        type: "take_tiles",
-        source: azulSelectedSource.type,
-        color: azulSelectedColor,
-        target_row: -1,
-      };
-      if (azulSelectedSource.type === "factory") {
-        action.source_index = azulSelectedSource.index;
-      }
-      sendAction(action);
-      clearAzulSelection();
-      return;
-    }
-    azulSelectedRow = -1;
-    updateAzulSelectionLabels();
-    updateAzulActionButtons();
-    renderAzulYourBoard(currentAzulView);
-    log("Select a source and color first, then click Send to Floor to submit.");
-  });
-}
-
-if (azulTakeBtn) {
-  azulTakeBtn.addEventListener("click", () => {
-    if (!isAzulActionAvailable("take_tiles")) return;
-    if (!azulSelectedSource || !azulSelectedColor || typeof azulSelectedRow !== "number") {
-      log("Select a source, color, and target row first");
-      return;
-    }
-    if (azulSelectedRow >= 0 && !isAzulRowPlaceable(currentAzulView, azulSelectedRow, azulSelectedColor)) {
-      log("That row cannot accept this color. Choose another row or send tiles to floor.");
-      return;
-    }
-    const action = {
-      type: "take_tiles",
-      source: azulSelectedSource.type,
-      color: azulSelectedColor,
-      target_row: azulSelectedRow,
-    };
-    if (azulSelectedSource.type === "factory") {
-      action.source_index = azulSelectedSource.index;
-    }
-    sendAction(action);
-    clearAzulSelection();
-  });
 }
 
 let azulExplainMode = false;
@@ -883,7 +932,10 @@ if (azulGamePanelElement) {
   azulGamePanelElement.addEventListener("click", (event) => {
     if (azulExplainMode) return;
     const target = event.target.closest("[data-azul-tip]");
-    if (target && (event.pointerType === "touch" || window.matchMedia("(hover: none)").matches)) showAzulTip(target, true);
+    const isInteractive = target && event.target.closest("button, a, summary, input, select, textarea");
+    if (target && !isInteractive && (event.pointerType === "touch" || window.matchMedia("(hover: none)").matches)) {
+      showAzulTip(target, true);
+    }
     if (!event.target.closest("button, [data-azul-tip], summary, a, input, select, textarea")) {
       hideAzulTip();
       clearAzulSelection();
@@ -924,29 +976,11 @@ function closeAzulHelpModal() {
 }
 
 function updateAzulExplainModeClasses(enabled) {
-  Object.keys(AZUL_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const btn = document.getElementById(buttonId);
-    if (btn) {
-      btn.classList.toggle("has-explanation", enabled);
-    }
-  });
   if (azulGamePanelElement) {
     azulGamePanelElement.querySelectorAll("[data-azul-tip]").forEach((element) => {
       element.classList.toggle("has-explanation", enabled);
     });
   }
-}
-
-function findAzulButtonAtPoint(x, y) {
-  for (const buttonId of Object.keys(AZUL_BUTTON_EXPLANATIONS)) {
-    const btn = document.getElementById(buttonId);
-    if (!btn || !btn.getClientRects().length) continue;
-    const rect = btn.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return buttonId;
-    }
-  }
-  return null;
 }
 
 function toggleAzulExplainMode() {
@@ -969,11 +1003,6 @@ function exitAzulExplainMode() {
   if (azulExplainBtn) {
     azulExplainBtn.classList.remove("active");
   }
-}
-
-function showAzulButtonExplanation(buttonId) {
-  const explanation = AZUL_BUTTON_EXPLANATIONS[buttonId];
-  if (explanation) showAzulExplanation(explanation.name, explanation.description);
 }
 
 function showAzulExplanation(name, description) {
@@ -1017,16 +1046,6 @@ document.addEventListener("pointerdown", (e) => {
   azulExplainPointerHandled = false;
   if (!azulExplainMode) return;
 
-  const buttonId = findAzulButtonAtPoint(e.clientX, e.clientY);
-  if (buttonId) {
-    azulExplainPointerHandled = true;
-    e.preventDefault();
-    e.stopPropagation();
-    showAzulButtonExplanation(buttonId);
-    exitAzulExplainMode();
-    return;
-  }
-
   const button = e.target.closest("button");
   if (button === azulExplainBtn || button === azulHelpBtn) return;
   if (button === azulHelpModalCloseBtn || button === azulExplainModalCloseBtn) return;
@@ -1065,10 +1084,7 @@ document.addEventListener("click", (e) => {
   if (button || target || e.target.closest("summary")) {
     e.preventDefault();
     e.stopPropagation();
-    if (button && AZUL_BUTTON_EXPLANATIONS[button.id]) {
-      showAzulButtonExplanation(button.id);
-      exitAzulExplainMode();
-    } else if (target) {
+    if (target) {
       showAzulExplanation("Tiles & Board", target.dataset.azulTip);
       exitAzulExplainMode();
     }
