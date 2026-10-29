@@ -242,6 +242,9 @@ function emitRoomStart() {
       ? getLasVegasConfig()
       : { neutral_dice: Boolean(neutralDice && neutralDice.checked) };
   }
+  if (currentGameType === "semantic_guess" && typeof getSemanticGuessConfig === "function") {
+    payload.config = getSemanticGuessConfig();
+  }
   sendRoomRequest("room:start", payload, "Starting game...");
 }
 

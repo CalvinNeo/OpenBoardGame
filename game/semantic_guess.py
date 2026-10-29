@@ -3,19 +3,23 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import random
 import secrets
 import sqlite3
 import time
 import unicodedata
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from game.decrypto_ai import _load_vocabulary
-from game.semantic_vectors import get_store
+from game.semantic_vectors import get_store, startup_checkpoint, startup_work
 
 
 MAX_WORD_LENGTH = 80
-DEFAULT_CONFIG: Dict = {}
+STARTING_HINT_SAMPLE_SIZE = 300
+STARTING_HINT_COUNT = 2
+STARTING_HINT_TARGET = 0.5
+DEFAULT_CONFIG: Dict = {"starting_hints": False}
 
 ACTION_SCHEMA = {
     "type": "object",
@@ -40,6 +44,7 @@ ACTION_SCHEMA = {
 }
 
 CONFIG_SCHEMA = {"type": "object", "properties": {
+    "starting_hints": {"type": "boolean", "default": False},
     "seed": {"oneOf": [{"type": "integer"}, {"type": "string", "minLength": 1, "maxLength": 80}]},
 }, "additionalProperties": False}
 
@@ -55,7 +60,10 @@ def _normalize_word(value: object) -> str:
 def _load_word_pool() -> List[str]:
     result: List[str] = []
     seen = set()
-    for word in _load_vocabulary():
+    vocabulary = _load_vocabulary()
+    startup_checkpoint("vocabulary", 0.75)
+    for position, word in enumerate(vocabulary, 1):
+        startup_checkpoint("vocabulary", 0.75 + 0.02 * position / len(vocabulary))
         cleaned = " ".join(word.strip().split()) if isinstance(word, str) else ""
         key = _normalize_word(cleaned)
         if not key or key in seen or len(cleaned) > MAX_WORD_LENGTH:
@@ -67,12 +75,33 @@ def _load_word_pool() -> List[str]:
 
 def prepare_game(config: Optional[Dict] = None) -> None:
     global _AVAILABLE_WORDS
+    startup_checkpoint("index", 0.0)
     store = get_store()
-    store.ensure_ready()
-    available = store.filter_words(_load_word_pool())
+    try:
+        store.ensure_ready()
+        startup_checkpoint("vocabulary", 0.75)
+        available = store.filter_words(_load_word_pool())
+    except sqlite3.Error as exc:
+        raise ValueError("语义词库暂不可用，请稍后重试") from exc
     if not available:
         raise ValueError("semantic word vectors are unavailable")
     _AVAILABLE_WORDS = list(available)
+    startup_checkpoint("vocabulary", 0.85)
+
+
+def initialize_game_with_progress(config: Optional[Dict], players: List[Dict],
+                                  progress_callback: Callable[[str, float], None]) -> Dict:
+    """Prepare this room with its own bounded CPU slices and public progress.
+
+    Run this synchronous helper in the app's worker executor.  Its callback
+    receives only a stage name and total fraction, and may raise to cancel.
+    """
+    with startup_work(progress_callback):
+        startup_checkpoint("index", 0.0, force=True)
+        prepare_game(config)
+        state = init_game(config, players)
+        startup_checkpoint("ready", 1.0, force=True)
+        return state
 
 
 def _word_pool() -> List[str]:
@@ -82,7 +111,50 @@ def _word_pool() -> List[str]:
 
 
 def _merged_config(config: Optional[Dict]) -> Dict:
-    return dict(DEFAULT_CONFIG)
+    merged = dict(DEFAULT_CONFIG)
+    if config is not None:
+        if not isinstance(config, dict) or set(config) - set(CONFIG_SCHEMA["properties"]):
+            raise ValueError("invalid semantic guess configuration")
+        merged.update(config)
+    if type(merged["starting_hints"]) is not bool:
+        raise ValueError("starting_hints must be boolean")
+    seed = merged.get("seed")
+    if "seed" in merged and type(seed) is not int and not (isinstance(seed, str) and 1 <= len(seed) <= 80):
+        raise ValueError("invalid seed")
+    return merged
+
+
+def _select_starting_hints(secret: str, pool: List[str]) -> List[Dict]:
+    startup_checkpoint("hints", 0.85)
+    candidates = []
+    seen = {_normalize_word(secret)}
+    for word in pool:
+        startup_checkpoint()
+        key = _normalize_word(word)
+        if key and key not in seen:
+            seen.add(key)
+            candidates.append(word)
+    sample = random.SystemRandom().sample(candidates, min(STARTING_HINT_SAMPLE_SIZE, len(candidates)))
+    store = get_store()
+    hints = []
+    # Only compare the secret with this bounded sample, using the existing
+    # disk-backed vector cache. Never load all embeddings or compare all pairs.
+    for position, word in enumerate(sample, 1):
+        try:
+            score = store.similarity(word, secret)
+        except sqlite3.Error as exc:
+            raise ValueError("语义词库暂不可用，请稍后重试") from exc
+        except (LookupError, ValueError):
+            continue
+        finally:
+            startup_checkpoint("hints", 0.85 + 0.14 * position / len(sample))
+        if score is None or not math.isfinite(score):
+            continue
+        hints.append({"word": word, "similarity": float(score)})
+        hints.sort(key=lambda hint: abs(hint["similarity"] - STARTING_HINT_TARGET))
+        del hints[STARTING_HINT_COUNT:]
+    startup_checkpoint("hints", 0.99)
+    return hints
 
 
 def _turn_order(players: List[Dict]) -> List[str]:
@@ -159,6 +231,7 @@ def _validate_guess(state: Dict, player_id: str, action: Dict) -> Tuple[Optional
 
 
 def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
+    merged_config = _merged_config(config)
     order = _turn_order(players)
     if not 1 <= len(order) <= 10 or len(set(order)) != len(order):
         raise ValueError("1–10 unique players are required")
@@ -166,6 +239,8 @@ def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
     if not pool:
         raise ValueError("semantic word vectors are unavailable")
     secret = random.SystemRandom().choice(pool)
+    # Persist the once-per-game result; views and reconnects must not resample.
+    starting_hints = _select_starting_hints(secret, pool) if merged_config["starting_hints"] else []
     return {
         "game_id": "semantic_guess",
         "players": {pid: {"score": 0, "riichi": False} for pid in order},
@@ -180,12 +255,13 @@ def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         "round_passed_players": [],
         "guesses": [],
         "guessed_word_keys": [],
+        "starting_hints": starting_hints,
         "secret_word": secret,
         "game_token": secrets.token_urlsafe(24),
         "winner_id": None,
         "end_reason": None,
         "game_over": False,
-        "config": _merged_config(config),
+        "config": merged_config,
         "similarity_mode": getattr(get_store(), "mode", "indexed"),
         "game_start_time": time.time(),
     }
@@ -323,6 +399,8 @@ def get_public_view(state: Dict, viewer_id: str) -> Dict:
             "players": players, "current_turn_player_id": current, "turn_number": state.get("turn_number"),
             "round_number": state.get("round_number", 1), "game_token": state.get("game_token"),
             "guesses": guesses, "legal_actions": get_legal_actions(state, viewer_id),
+            "starting_hints": [dict(hint) for hint in state.get("starting_hints", [])],
+            "config": {"starting_hints": bool(state.get("config", {}).get("starting_hints", False))},
             "similarity_mode": state.get("similarity_mode", "unknown"), "game_over": bool(state.get("game_over"))}
     if state.get("game_over"):
         winner = state.get("winner_id")
@@ -361,6 +439,7 @@ class SemanticGuessGame:
     apply_action = staticmethod(apply_action)
     run_in_worker = True
     prepare_game = staticmethod(prepare_game)
+    initialize_game_with_progress = staticmethod(initialize_game_with_progress)
     apply_action_async = staticmethod(apply_action_async)
     get_public_view = staticmethod(get_public_view)
     bot_move = staticmethod(bot_move)

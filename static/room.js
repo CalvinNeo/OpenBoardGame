@@ -2263,10 +2263,15 @@ function setRoomFeedback(message = "", isError = false) {
   }
 }
 
+function isSemanticRoomInitializing() {
+  return currentRoomState?.game_type === "semantic_guess" && Boolean(currentRoomState.initialization);
+}
+
 function getRoomStartReason() {
   if (!currentRoomState) return "Create or join a room first.";
   if (!socket.connected) return "Connection lost. Reconnecting...";
   if (!roomSessionReady) return "Reconnect to the room before playing.";
+  if (isSemanticRoomInitializing()) return "Preparing game. Progress is shown on the game board.";
   if (currentRoomState.status !== "lobby") return "Game already started.";
   if (currentRoomState.game_type === "the_crew" && currentRoomState.host_player_id !== playerId) {
     return "Waiting for the host to choose a mission.";
@@ -2296,7 +2301,8 @@ function updateRoomCreateButtonLabel() {
 }
 
 function updateRoomActionButtons() {
-  const busy = Boolean(pendingRoomRequest);
+  const initializing = isSemanticRoomInitializing();
+  const busy = Boolean(pendingRoomRequest) || initializing;
   const importingAccessKey = Boolean(pendingRoomRequest?.accessKeyEntry);
   playerNameModeBtn.disabled = importingAccessKey;
   playerAccessKeyModeBtn.disabled = importingAccessKey;
@@ -2310,7 +2316,7 @@ function updateRoomActionButtons() {
   const maxPlayers = currentRoomState?.max_players ?? gameMeta?.max_players;
   const reason = getRoomStartReason();
   const startBtn = document.getElementById("startBtn");
-  const starting = pendingRoomRequest?.event === "room:start";
+  const starting = pendingRoomRequest?.event === "room:start" || initializing;
   startBtn.disabled = !available || Boolean(reason);
   startBtn.textContent = starting ? "⏳" : "▶️";
   const startLabel = starting ? "Starting..." : reason || "Start Game";
@@ -2343,6 +2349,29 @@ function updateRoomActionButtons() {
   createRoomStatus.classList.toggle("room-feedback-error", roomFeedbackIsError);
   updateGameReconnectButton();
   if (typeof syncTheCrewRoomControls === "function") syncTheCrewRoomControls();
+  // Configuration controls are room mutations too. Preserve their normal
+  // disabled state and restore it after this room's preparation completes.
+  document.querySelectorAll("#gameConfigSection input, #gameConfigSection select, #gameConfigSection button").forEach((control) => {
+    if (initializing && control.dataset.semanticStartupDisabled == null) {
+      control.dataset.semanticStartupDisabled = String(control.disabled);
+      control.disabled = true;
+    } else if (!initializing && control.dataset.semanticStartupDisabled != null) {
+      control.disabled = control.dataset.semanticStartupDisabled === "true";
+      delete control.dataset.semanticStartupDisabled;
+    }
+  });
+  // Seat controls are rebuilt by room:state; retain their boundary-disabled
+  // state while temporarily locking preparation for every connected player.
+  playersList.querySelectorAll(".player-controls button").forEach((button) => {
+    if (initializing && button.dataset.semanticStartupDisabled == null) {
+      button.dataset.semanticStartupDisabled = String(button.disabled);
+      button.disabled = true;
+    } else if (!initializing && button.dataset.semanticStartupDisabled != null) {
+      button.disabled = button.dataset.semanticStartupDisabled === "true";
+      delete button.dataset.semanticStartupDisabled;
+    }
+  });
+  if (typeof syncSemanticGuessInitialization === "function") syncSemanticGuessInitialization();
 }
 
 function ensureRoomConnection(requiresRoom = true) {
@@ -2365,12 +2394,21 @@ function finishRoomRequest() {
 
 function sendRoomRequest(event, payload, message, requiresRoom = true) {
   if (!ensureRoomConnection(requiresRoom)) return false;
+  if (isSemanticRoomInitializing() && ["room:start", "room:reopen", "room:ready", "room:add_bot", "room:remove_bot", "room:move_seat"].includes(event)) return false;
   const request = { event, roomId: payload.room_id };
   pendingRoomRequest = request;
   setRoomFeedback(message);
   // Do not buffer room mutations while offline or replay them after reconnect.
   socket.timeout(ROOM_REQUEST_TIMEOUT).emit(event, payload, (error) => {
     if (pendingRoomRequest !== request) return;
+    // Once the server has acknowledged preparation through progress, the
+    // ordinary room request deadline must not interrupt a deliberately slow
+    // start. Completion, error, or disconnect clears the request instead.
+    if (error && ["room:start", "room:reopen"].includes(request.event) &&
+        request.roomId === currentRoomState?.room_id && isSemanticRoomInitializing()) {
+      setRoomFeedback("Preparing game. Progress is shown on the game board.");
+      return;
+    }
     finishRoomRequest();
     if (error) {
       roomSessionReady = false;
@@ -3306,13 +3344,36 @@ socket.on("room:state", (state) => {
   if (state.room_id !== roomId || state.game_type !== currentGameType || state.status !== "in_game") {
     resetRoomTurnSound();
   }
+  const wasInitializing = state.room_id === currentRoomState?.room_id && isSemanticRoomInitializing();
   renderRoomState(state);
+  if (!wasInitializing && isSemanticRoomInitializing()) {
+    setRoomControlsCollapsed(true, { auto: true });
+  }
   if (state && state.room_id) {
     recordRecentGame(state.game_type);
   }
-  if (pendingRoomRequest?.event === "room:start" && state.status === "in_game") {
+  if (pendingRoomRequest?.roomId === state.room_id &&
+      ["room:start", "room:reopen"].includes(pendingRoomRequest.event) &&
+      (state.status === "in_game" && !state.initialization || wasInitializing && !state.initialization)) {
     finishRoomRequest();
     setRoomFeedback();
+  }
+});
+
+socket.on("game:initialization", (data) => {
+  if (!currentRoomState || data?.game_type !== "semantic_guess" || data.room_id !== currentRoomState.room_id ||
+      currentRoomState.game_type !== "semantic_guess") return;
+  // Keep the same snapshot object: the game asset loader can still replay it
+  // after loading, including the most recent progress received in the meantime.
+  const wasInitializing = isSemanticRoomInitializing();
+  currentRoomState.initialization = data.initialization || null;
+  if (!wasInitializing && data.initialization) setRoomControlsCollapsed(true, { auto: true });
+  if (!data.initialization && pendingRoomRequest?.roomId === data.room_id &&
+      ["room:start", "room:reopen"].includes(pendingRoomRequest.event)) {
+    finishRoomRequest();
+    setRoomFeedback();
+  } else {
+    updateRoomActionButtons();
   }
 });
 

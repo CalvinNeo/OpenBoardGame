@@ -5,10 +5,12 @@ import functools
 import inspect
 import json
 import logging
+import math
 import os
 import re
 import signal
 import sys
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -270,6 +272,7 @@ class Room:
     source_room_ids: List[str] = field(default_factory=list)
     host_player_id: Optional[str] = None
     game_initializing: bool = False
+    initialization: Optional[Dict] = None
 
 
 ROOMS: Dict[str, Room] = {}
@@ -606,6 +609,7 @@ async def _emit_room_state(room: Room) -> None:
         "game_config": {key: value for key, value in room.game_config.items()
                         if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
         "auto_save": room.auto_save,
+        "initialization": dict(room.initialization) if room.initialization else None,
         "source_room_id": room.source_room_id,
         "players": [
             {
@@ -1315,24 +1319,97 @@ async def _run_bot_search(function, *args, **kwargs):
 
 async def _initialize_prepared_game(room: Room, game_def: GameDefinition,
                                     config: Dict, players: List[Dict]) -> Dict:
-    """Run optional cold-start preparation outside the Socket.IO loop."""
+    """Keep preparation and disk-backed initialization off the Socket.IO loop."""
     prepare = getattr(game_def.module, "prepare_game", None)
-    if not callable(prepare):
+    initialize_with_progress = getattr(game_def.module, "initialize_game_with_progress", None)
+    if not callable(prepare) and not callable(initialize_with_progress):
         return game_def.module.init_game(config, players)
     if room.game_initializing:
         raise ValueError("Game is being prepared. Please wait.")
     room.game_initializing = True
     original, version, status = room.game_state, room.state_version, room.status
-    roster = [(p.player_id, p.seat, p.ready, p.connected) for p in room.players]
-    try:
-        await _run_bot_search(prepare, config)
+    def roster_snapshot():
+        # A reconnect must be able to recover a long-running progress bar.
+        # Membership/readiness still invalidate the prepared game.
+        return [(p.player_id, p.seat, p.ready,
+                 None if callable(initialize_with_progress) else p.connected) for p in room.players]
+
+    roster = roster_snapshot()
+
+    def check_room() -> None:
         if (ROOMS.get(room.room_id) is not room or room.game_state is not original
                 or room.state_version != version or room.status != status
-                or roster != [(p.player_id, p.seat, p.ready, p.connected) for p in room.players]):
+                or roster != roster_snapshot()):
             raise ValueError("Room changed while preparing the game. Please try again.")
-        return game_def.module.init_game(config, players)
+
+    try:
+        if callable(initialize_with_progress):
+            state = await _initialize_game_with_progress(room, initialize_with_progress, config, players, check_room)
+            check_room()
+            return state
+        await _run_bot_search(prepare, config)
+        check_room()
+        state = await _run_bot_search(game_def.module.init_game, config, players)
+        check_room()
+        return state
     finally:
         room.game_initializing = False
+
+
+async def _initialize_game_with_progress(room: Room, initialize, config: Dict,
+                                         players: List[Dict], check_room) -> Dict:
+    """Publish bounded startup updates while a cooperative worker prepares a game."""
+    startup_id = uuid.uuid4().hex
+    room.initialization = {"id": startup_id, "stage": "index", "progress": 0.0}
+    cancelled = threading.Event()
+    progress_lock = threading.Lock()
+    latest = dict(room.initialization)
+    stages = {"queued", "index", "vocabulary", "hints", "ready"}
+    worker = None
+
+    def progress_callback(stage: str, progress: float) -> None:
+        if cancelled.is_set():
+            raise ValueError("Game preparation cancelled. Please try again.")
+        if stage not in stages or not isinstance(progress, (int, float)) or not math.isfinite(progress):
+            return
+        with progress_lock:
+            latest.update(stage=stage, progress=max(latest["progress"], min(1.0, max(0.0, progress))))
+
+    async def emit_progress() -> None:
+        await sio.emit("game:initialization", {
+            "room_id": room.room_id, "game_type": room.game_type,
+            "initialization": dict(room.initialization) if room.initialization else None,
+        }, to=room.room_id)
+
+    try:
+        await _emit_room_state(room)
+        await emit_progress()
+        check_room()
+        worker = asyncio.create_task(_run_bot_search(
+            initialize, config, players, progress_callback=progress_callback))
+        last_emit = time.monotonic()
+        while True:
+            await asyncio.wait({worker}, timeout=0.15)
+            check_room()
+            with progress_lock:
+                update = dict(latest)
+            if update != room.initialization or time.monotonic() - last_emit >= 2.0:
+                room.initialization = update
+                await emit_progress()
+                last_emit = time.monotonic()
+            if worker.done():
+                state = worker.result()
+                check_room()
+                return state
+    finally:
+        cancelled.set()
+        if worker is not None:
+            # A cancelled asyncio wrapper does not stop a thread. Let its next
+            # bounded checkpoint release startup/index locks before unlocking.
+            await asyncio.shield(asyncio.gather(worker, return_exceptions=True))
+        room.initialization = None
+        if ROOMS.get(room.room_id) is room:
+            await emit_progress()
 
 
 async def _apply_game_action(room: Room, game_module: object, player_id: str, action: Dict):

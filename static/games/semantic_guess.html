@@ -2,7 +2,19 @@
   <button id="semanticGuessHelpBtn" type="button">Help</button>
   <button id="semanticGuessExplainBtn" type="button" aria-pressed="false">Explain</button>
 </template>
+<template data-game-target="semanticGuessConfigBox" data-game-mode="contents">
+  <div class="game-config-title">词语雷达</div>
+  <div class="row toggle-row semantic-guess-config-option">
+    <label for="semanticGuessStartingHintsToggle"><input id="semanticGuessStartingHintsToggle" type="checkbox" aria-describedby="semanticGuessStartingHintsHint"> 开局提示词</label>
+  </div>
+  <div id="semanticGuessStartingHintsHint" class="hint">开局公开两个接近 50% 相似度的提示词，以实际显示数值为准。</div>
+</template>
 <template data-game-target="semanticGuessPanel" data-game-mode="contents">
+  <section id="semanticGuessLoading" class="semantic-guess-loading" aria-labelledby="semanticGuessLoadingTitle" data-sg-explain="loading" data-sg-tip="Progress comes from the server. The game starts automatically when preparation finishes." tabindex="0" hidden>
+    <div class="semantic-guess-loading-heading"><h3 id="semanticGuessLoadingTitle">Preparing game</h3><span id="semanticGuessLoadingPercent" class="semantic-guess-loading-percent"></span></div>
+    <p id="semanticGuessLoadingStage" role="status" aria-live="polite">Preparing game…</p>
+    <div id="semanticGuessLoadingProgress" class="semantic-guess-loading-track" role="progressbar" aria-label="Game preparation" aria-describedby="semanticGuessLoadingStage" aria-valuemin="0" aria-valuemax="100"><span id="semanticGuessLoadingFill"></span></div>
+  </section>
   <div class="semantic-guess-status" role="status" aria-live="polite" data-sg-explain="turn">
     <span id="semanticGuessStatus">等待开始</span><span id="semanticGuessTurn" class="semantic-guess-turn">1–10 人</span>
   </div>
@@ -16,6 +28,10 @@
       <section class="semantic-guess-readout semantic-guess-best" data-sg-explain="best" data-sg-tip="目前相似度最高的猜测。" tabindex="0"><div class="semantic-guess-readout-heading"><span>🎯 最佳线索</span><span id="semanticGuessBestPlayer" class="semantic-guess-muted">—</span></div><div class="semantic-guess-word-score"><strong id="semanticGuessBestWord">尚无猜测</strong><span id="semanticGuessBestScore" class="semantic-guess-score">—</span></div><div class="semantic-guess-scale" aria-hidden="true"><span id="semanticGuessBestMarker"></span></div></section>
     </div>
   </div>
+  <section id="semanticGuessStartingHints" class="semantic-guess-starting-hints" aria-label="开局提示词" data-sg-explain="startingHints" data-sg-tip="开局公开的提示词及实际相似度，立直期间也可查看。" tabindex="0" hidden>
+    <span class="semantic-guess-hints-label">💡 开局提示</span>
+    <div id="semanticGuessStartingHintsList" class="semantic-guess-hints-list"></div>
+  </section>
   <form id="semanticGuessForm" class="semantic-guess-form" autocomplete="off">
     <div class="semantic-guess-input-heading"><label for="semanticGuessInput">你的猜词</label><span id="semanticGuessInputHint">等待开始</span></div>
     <div class="semantic-guess-input-row"><input id="semanticGuessInput" type="text" maxlength="80" placeholder="输入一个词语…" autocomplete="off" spellcheck="false" enterkeyhint="send" data-sg-explain="guess" aria-describedby="semanticGuessInputHint semanticGuessFeedback" disabled><button id="semanticGuessSubmitBtn" class="semantic-guess-primary" type="submit" data-sg-explain="guess" disabled>Guess</button><button id="semanticGuessPassBtn" type="button" data-sg-explain="pass" disabled>Pass</button></div>
