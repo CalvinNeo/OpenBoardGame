@@ -211,6 +211,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "semantic_guess") {
+    if (typeof renderSemanticGuessGameState === "function") renderSemanticGuessGameState(data);
+    return;
+  }
   if (gameType === "colt_express") {
     if (typeof renderColtExpressGameState === "function") renderColtExpressGameState(data);
     return;

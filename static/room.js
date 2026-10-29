@@ -1379,6 +1379,7 @@ const GAME_WEIGHT = {
   cyber_pictures: 1.0340909090909092,
   decrypto: 1.82,
   draw_guess: 1.0698602794411178,
+  semantic_guess: null, // Original word game; no BGG entry.
   dumb_questions: 1.00,
   nine_upper: 1.33,
   fang_niao: 1.3142857142857143,

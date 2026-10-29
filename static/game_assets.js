@@ -1109,6 +1109,14 @@ const GAME_ASSETS = {
     "panel": "loveLetterPanel",
     "panelTitle": "💌 情书",
     "header": "showLoveLetterHeaderActions"
+  },
+  "semantic_guess": {
+    "scripts": ["/static/games/semantic_guess.js?v=1"],
+    "styles": ["/static/games/semantic_guess.css?v=1"],
+    "markup": "/static/games/semantic_guess.html?v=1",
+    "panel": "semanticGuessPanel",
+    "panelTitle": "🧭 词语雷达",
+    "header": "showSemanticGuessHeaderActions"
   }
 };
 

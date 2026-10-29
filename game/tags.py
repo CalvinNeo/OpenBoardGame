@@ -144,6 +144,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "turing_machine": ("puzzle",),
     "wandering_towers": ("filler", "euro", "ameritrash"),
     "wavelength": ("filler", "cooperative", "creative"),
+    "semantic_guess": ("puzzle", "creative"),
     "witchs_brew": ("euro", "bluffing"),
     "wriggle_roulette": ("filler", "push_your_luck", "bluffing"),
     "word_decode": ("filler", "puzzle", "creative"),

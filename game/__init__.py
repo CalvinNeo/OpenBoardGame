@@ -102,6 +102,7 @@ from game.wriggle_roulette import WriggleRouletteGame
 from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
 from game.wandering_towers import WanderingTowersGame
+from game.semantic_guess import SemanticGuessGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -207,6 +208,7 @@ __all__ = [
     "WordDecodeGame",
     "YahtzeeGame",
     "WanderingTowersGame",
+    "SemanticGuessGame",
     "GameDefinition",
     "get_game",
     "list_games",

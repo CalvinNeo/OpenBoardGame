@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import contextvars
 import functools
 import inspect
@@ -186,6 +187,8 @@ async def download_room_save(source_room_id: str):
         raise HTTPException(status_code=403, detail="This Sagrada game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "dice_throne"):
         raise HTTPException(status_code=403, detail="This Dice Throne game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "semantic_guess"):
+        raise HTTPException(status_code=403, detail="This Semantic Guess game is still active. Reconnect to the existing room.")
     if _has_unfinished_skull_king_save(source_room_id):
         raise HTTPException(status_code=403, detail="This Skull King game is still active. Reconnect to the existing room.")
     if _has_unfinished_deception_save(source_room_id):
@@ -266,6 +269,7 @@ class Room:
     bot_progress_last_emit_ms: int = 0
     source_room_ids: List[str] = field(default_factory=list)
     host_player_id: Optional[str] = None
+    game_initializing: bool = False
 
 
 ROOMS: Dict[str, Room] = {}
@@ -723,6 +727,8 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
     if game_type == "compress":
         return {"type": action.get("type")}
     if game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind"):
+        return {"type": action.get("type")}
+    if game_type == "semantic_guess":
         return {"type": action.get("type")}
     if game_type == "night_of_the_ninja":
         return {"type": action.get("type")}
@@ -1307,6 +1313,45 @@ async def _run_bot_search(function, *args, **kwargs):
     return await asyncio.get_running_loop().run_in_executor(None, call)
 
 
+async def _initialize_prepared_game(room: Room, game_def: GameDefinition,
+                                    config: Dict, players: List[Dict]) -> Dict:
+    """Run optional cold-start preparation outside the Socket.IO loop."""
+    prepare = getattr(game_def.module, "prepare_game", None)
+    if not callable(prepare):
+        return game_def.module.init_game(config, players)
+    if room.game_initializing:
+        raise ValueError("Game is being prepared. Please wait.")
+    room.game_initializing = True
+    original, version, status = room.game_state, room.state_version, room.status
+    roster = [(p.player_id, p.seat, p.ready, p.connected) for p in room.players]
+    try:
+        await _run_bot_search(prepare, config)
+        if (ROOMS.get(room.room_id) is not room or room.game_state is not original
+                or room.state_version != version or room.status != status
+                or roster != [(p.player_id, p.seat, p.ready, p.connected) for p in room.players]):
+            raise ValueError("Room changed while preparing the game. Please try again.")
+        return game_def.module.init_game(config, players)
+    finally:
+        room.game_initializing = False
+
+
+async def _apply_game_action(room: Room, game_module: object, player_id: str, action: Dict):
+    """Run a potentially slow action on an isolated state copy."""
+    async_apply = getattr(game_module, "apply_action_async", None)
+    if not callable(async_apply):
+        return game_module.apply_action(room.game_state, player_id, action)
+    original, version, status = room.game_state, room.state_version, room.status
+    candidate = copy.deepcopy(original)
+    events, error = await async_apply(candidate, player_id, action)
+    if error:
+        return events, error
+    if (ROOMS.get(room.room_id) is not room or room.game_state is not original
+            or room.state_version != version or room.status != status):
+        return [], "Game state changed. Please try again."
+    room.game_state = candidate
+    return events, None
+
+
 async def _maybe_run_bots(room: Room) -> None:
     if room.bot_running or room.status != "in_game" or not room.game_state:
         return
@@ -1431,7 +1476,10 @@ async def _maybe_run_bots(room: Room) -> None:
                 if room.state_version != bot_action_state_version and not independent_drawing:
                     continue
                 try:
-                    events, error = game_module.apply_action(state, bot_player.player_id, action_payload)
+                    events, error = await _apply_game_action(
+                        room, game_module, bot_player.player_id, action_payload
+                    )
+                    state = room.game_state
                 except Exception:
                     logger.exception(
                         "bot apply_action failed room=%s game=%s player=%s action=%s",
@@ -1691,6 +1739,8 @@ async def on_room_reconnect(sid, data):
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "gloomhaven")
     if room is None:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "the_crew")
+    if room is None:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "semantic_guess")
     if not room:
         await _send_error(sid, "room not found")
         return
@@ -1731,7 +1781,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven"):
+    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven", "semantic_guess"):
         await _maybe_run_bots(room)
 
 
@@ -1969,8 +2019,8 @@ async def on_room_start(sid, data):
             await _send_error(sid, config_error)
             return
     try:
-        room.game_state = game_def.module.init_game(config, players_meta)
-    except ValueError as exc:
+        room.game_state = await _initialize_prepared_game(room, game_def, config, players_meta)
+    except (ValueError, OSError) as exc:
         await _send_error(sid, str(exc))
         return
     room.status = "in_game"
@@ -2064,8 +2114,8 @@ async def on_room_reopen(sid, data=None):
         for p in ordered_players
     ]
     try:
-        game_state = game_def.module.init_game(config, players_meta)
-    except ValueError as exc:
+        game_state = await _initialize_prepared_game(room, game_def, config, players_meta)
+    except (ValueError, OSError) as exc:
         await _send_error(sid, str(exc))
         return
 
@@ -2164,6 +2214,7 @@ async def on_room_load(sid, data):
         or _has_unfinished_private_save(source_room_id, "startups")
         or _has_unfinished_private_save(source_room_id, "sagrada")
         or _has_unfinished_private_save(source_room_id, "dice_throne")
+        or _has_unfinished_private_save(source_room_id, "semantic_guess")
         or _has_unfinished_private_save(source_room_id, "natsumemo")
         or _has_unfinished_skull_king_save(source_room_id)
         or _has_unfinished_deception_save(source_room_id)
@@ -2428,7 +2479,7 @@ async def on_game_action(sid, data):
             await _send_error(sid, action_error)
             return
     player_id = session.get("player_id")
-    events, error = game_def.module.apply_action(room.game_state, player_id, action)
+    events, error = await _apply_game_action(room, game_def.module, player_id, action)
     if error:
         await _send_error(sid, error)
         return

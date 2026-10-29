@@ -627,6 +627,7 @@
                     <option value="for_sale">For Sale · 地产达人</option>
                     <option value="cheaty_mages">Cheaty Mages! · 诈赌巫师</option>
                     <option value="draw_guess">Draw & Guess</option>
+                    <option value="semantic_guess">词语雷达 · Semantic Guess</option>
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
@@ -1446,6 +1447,7 @@
               <button id="hotStreakHelpBtn" class="hot-streak-header-btn" type="button">Help</button>
               <button id="hotStreakExplainBtn" class="hot-streak-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="semanticGuessHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="coltExpressHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="dndStarterSetHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="moshimoYushaHeaderActions" style="display: none;"></div>
@@ -1538,6 +1540,7 @@
             <div id="diceThronePanel" class="hidden"></div>
             <div id="hivePanel" class="hidden hive-panel"></div>
 
+            <div id="semanticGuessPanel" class="hidden semantic-guess-panel"></div>
             <div id="coltExpressPanel" class="hidden"></div>
             <div id="dndStarterSetPanel" class="hidden dnd-panel"></div>
             <div id="moshimoYushaPanel" class="hidden moshimo-yusha-panel"></div>
@@ -1717,7 +1720,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=166" defer></script>
+  <script src="/static/game_assets.js?v=168" defer></script>
   <script src="/static/games/shared.js?v=app_v39" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1733,6 +1736,7 @@
   <div id="mindTheLinesDialog"></div>
   <div id="compressDialog"></div>
   <template id="powerGridDialog"></template>
+  <template id="semanticGuessDialog"></template>
   <template id="coltExpressDialog"></template>
   <template id="dndStarterSetDialog"></template>
   <template id="moshimoYushaDialog"></template>
@@ -1752,7 +1756,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v58" defer></script>
-  <script src="/static/room.js?v=app_v92" defer></script>
+  <script src="/static/app.js?v=app_v59" defer></script>
+  <script src="/static/room.js?v=app_v93" defer></script>
 </body>
 </html>

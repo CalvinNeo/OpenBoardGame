@@ -129,6 +129,11 @@ from game.texas_holdem import TexasHoldemGame
 from game.wavelength import WavelengthGame
 from game.word_decode import WordDecodeGame
 from game.wandering_towers import WanderingTowersGame
+from game.semantic_guess import (
+    ACTION_SCHEMA as SEMANTIC_GUESS_ACTION_SCHEMA,
+    CONFIG_SCHEMA as SEMANTIC_GUESS_CONFIG_SCHEMA,
+    SemanticGuessGame,
+)
 from game.tagiron import TagironGame
 from game.tacta import TactaGame
 from game.turing_machine import TuringMachineGame
@@ -6207,5 +6212,21 @@ register_game(
         module=ColtExpressGame,
         serialize=ColtExpressGame.serialize,
         deserialize=ColtExpressGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=SemanticGuessGame.game_id,
+        name="Semantic Guess",
+        name_zh="词语雷达",
+        min_players=SemanticGuessGame.min_players,
+        max_players=SemanticGuessGame.max_players,
+        turn_mode="turn",
+        action_schema=SEMANTIC_GUESS_ACTION_SCHEMA,
+        config_schema=SEMANTIC_GUESS_CONFIG_SCHEMA,
+        module=SemanticGuessGame,
+        serialize=SemanticGuessGame.serialize,
+        deserialize=SemanticGuessGame.deserialize,
     )
 )

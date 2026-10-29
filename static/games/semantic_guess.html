@@ -1,0 +1,29 @@
+<template data-game-target="semanticGuessHeaderActions" data-game-mode="contents">
+  <button id="semanticGuessHelpBtn" type="button">Help</button>
+  <button id="semanticGuessExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="semanticGuessPanel" data-game-mode="contents">
+  <div class="semantic-guess-status" role="status" aria-live="polite" data-sg-explain="turn">
+    <span id="semanticGuessStatus">等待开始</span><span id="semanticGuessTurn" class="semantic-guess-turn">1–10 人</span>
+  </div>
+  <div class="semantic-guess-overview">
+    <section class="semantic-guess-target" data-sg-explain="target" data-sg-tip="暗词会在猜中或所有人 Pass 后揭晓。" tabindex="0">
+      <div class="semantic-guess-radar" aria-hidden="true"><span id="semanticGuessTargetIcon">?</span></div>
+      <div class="semantic-guess-target-copy"><span id="semanticGuessTargetLabel" class="semantic-guess-eyebrow">暗词已隐藏</span><h3 id="semanticGuessAnswer">找到共同的答案</h3><p id="semanticGuessOutcome">从一个词开始，跟随语义线索。</p></div>
+    </section>
+    <div class="semantic-guess-readouts">
+      <section class="semantic-guess-readout" data-sg-explain="latest" data-sg-tip="最近猜测及相似度。" tabindex="0"><div class="semantic-guess-readout-heading"><span>💬 最近猜测</span><span id="semanticGuessLatestPlayer" class="semantic-guess-muted">—</span></div><div class="semantic-guess-word-score"><strong id="semanticGuessLatestWord">等待第一条线索</strong><span id="semanticGuessLatestScore" class="semantic-guess-score">—</span></div><div class="semantic-guess-scale" aria-hidden="true"><span id="semanticGuessLatestMarker"></span></div></section>
+      <section class="semantic-guess-readout semantic-guess-best" data-sg-explain="best" data-sg-tip="目前相似度最高的猜测。" tabindex="0"><div class="semantic-guess-readout-heading"><span>🎯 最佳线索</span><span id="semanticGuessBestPlayer" class="semantic-guess-muted">—</span></div><div class="semantic-guess-word-score"><strong id="semanticGuessBestWord">尚无猜测</strong><span id="semanticGuessBestScore" class="semantic-guess-score">—</span></div><div class="semantic-guess-scale" aria-hidden="true"><span id="semanticGuessBestMarker"></span></div></section>
+    </div>
+  </div>
+  <form id="semanticGuessForm" class="semantic-guess-form" autocomplete="off">
+    <div class="semantic-guess-input-heading"><label for="semanticGuessInput">你的猜词</label><span id="semanticGuessInputHint">等待开始</span></div>
+    <div class="semantic-guess-input-row"><input id="semanticGuessInput" type="text" maxlength="80" placeholder="输入一个词语…" autocomplete="off" spellcheck="false" enterkeyhint="send" data-sg-explain="guess" aria-describedby="semanticGuessInputHint semanticGuessFeedback" disabled><button id="semanticGuessSubmitBtn" class="semantic-guess-primary" type="submit" data-sg-explain="guess" disabled>Guess</button><button id="semanticGuessPassBtn" type="button" data-sg-explain="pass" disabled>Pass</button></div>
+    <div id="semanticGuessModeRow" class="semantic-guess-mode-row" hidden><button id="semanticGuessRiichiBtn" type="button" data-sg-explain="riichi" disabled>Riichi</button><span id="semanticGuessRiichiState" class="semantic-guess-mode-state" aria-live="polite"></span></div>
+    <div id="semanticGuessFeedback" class="semantic-guess-feedback" role="status" aria-live="polite"></div>
+  </form>
+  <div id="semanticGuessPlayers" class="semantic-guess-players" aria-label="玩家回合顺序" data-sg-explain="players"></div>
+  <details id="semanticGuessHistoryDetails" class="semantic-guess-history" open><summary><span>🕘 猜词记录 <span id="semanticGuessCount">0</span></span><span class="semantic-guess-history-toggle" aria-hidden="true">⌄</span></summary><div class="semantic-guess-history-controls"><span class="semantic-guess-scale-note" data-sg-tip="相似度范围 −100% ～ 100%，不是猜中概率。" data-sg-explain="similarity" tabindex="0">相似度 −100% ～ 100%</span><div class="semantic-guess-sort" role="group" aria-label="Sort guesses"><button id="semanticGuessNewestBtn" type="button" aria-pressed="true" data-sg-explain="sort">Newest</button><button id="semanticGuessSimilarityBtn" type="button" aria-pressed="false" data-sg-explain="sort">Similarity</button></div></div><div id="semanticGuessHistory" class="semantic-guess-history-list" tabindex="0" role="region" aria-label="猜词记录"></div></details>
+  <div id="semanticGuessTooltip" class="semantic-guess-tooltip" role="tooltip" hidden></div>
+</template>
+<template data-game-target="semanticGuessDialog" data-game-mode="replace"><dialog id="semanticGuessDialog" class="semantic-guess-dialog" aria-labelledby="semanticGuessDialogTitle"><div class="semantic-guess-dialog-header"><h2 id="semanticGuessDialogTitle">Help</h2><button id="semanticGuessDialogCloseBtn" type="button">Close</button></div><div id="semanticGuessDialogContent" class="semantic-guess-dialog-content"></div></dialog></template>
