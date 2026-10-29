@@ -60,7 +60,7 @@ class SemanticGuessHintsTests(unittest.TestCase):
                 self.assertEqual(semantic_guess.get_public_view(state, "p0")["starting_hints"], [])
         self.assertEqual(self.store.calls, [])
 
-    def test_hints_choose_two_scores_nearest_positive_fifty_percent(self):
+    def test_hints_choose_two_highest_actual_positive_scores(self):
         self.pool = ["secret", "negative", "high", "above", "below", "distant"]
         self.store.scores = {
             "negative": -0.499,
@@ -71,8 +71,8 @@ class SemanticGuessHintsTests(unittest.TestCase):
         }
         state = semantic_guess.init_game({"starting_hints": True}, _players())
         self.assertEqual(state["starting_hints"], [
+            {"word": "high", "similarity": 0.95},
             {"word": "above", "similarity": 0.5137},
-            {"word": "below", "similarity": 0.4761},
         ])
         self.assertTrue(state["config"]["starting_hints"])
         self.assertEqual(state["secret_word"], "secret")
@@ -82,7 +82,7 @@ class SemanticGuessHintsTests(unittest.TestCase):
         self.assertEqual(state["current_turn_player_id"], "p0")
         self.assertFalse(state["game_over"])
 
-    def test_sampling_caps_reads_and_excludes_secret_and_normalized_duplicates(self):
+    def test_full_pool_scan_excludes_secret_and_normalized_duplicates(self):
         candidates = [f"candidate-{i:04d}" for i in range(600)]
         self.pool = ["secret", " ＳＥＣＲＥＴ "]
         for word in candidates:
@@ -92,16 +92,45 @@ class SemanticGuessHintsTests(unittest.TestCase):
         self.store.scores[candidates[299]] = 0.51
         self.store.scores[candidates[300]] = 0.5
         state = semantic_guess.init_game({"starting_hints": True}, _players())
-        self.assertEqual(len(self.store.calls), 300)
+        self.assertEqual(len(self.store.calls), 600)
         compared = [semantic_guess._normalize_word(word) for word, _ in self.store.calls]
-        self.assertEqual(len(set(compared)), 300)
+        self.assertEqual(len(set(compared)), 600)
         self.assertNotIn("secret", compared)
         self.assertTrue(all(secret == "secret" for _, secret in self.store.calls))
         self.assertEqual(state["starting_hints"], [
             {"word": candidates[299], "similarity": 0.51},
-            {"word": candidates[298], "similarity": 0.48},
+            {"word": candidates[300], "similarity": 0.5},
         ])
-        self.assertNotIn(candidates[300], compared)
+
+    def test_large_custom_pool_keeps_a_bounded_scan(self):
+        candidates = [f"candidate-{i:04d}" for i in range(1300)]
+        self.pool = ["secret", *candidates]
+        self.store.scores = {word: 0.1 for word in candidates}
+        self.store.scores[candidates[998]] = 0.7
+        self.store.scores[candidates[999]] = 0.65
+        self.store.scores[candidates[1000]] = 0.9
+        state = semantic_guess.init_game({"starting_hints": True}, _players())
+        self.assertEqual(len(self.store.calls), 1000)
+        self.assertEqual(state["starting_hints"], [
+            {"word": candidates[998], "similarity": 0.7},
+            {"word": candidates[999], "similarity": 0.65},
+        ])
+        self.assertNotIn(candidates[1000], [word for word, _ in self.store.calls])
+
+    def test_all_negative_scores_fall_back_to_least_negative(self):
+        self.pool = ["secret", "far", "near", "less-near"]
+        self.store.scores = {"far": -0.9, "near": -0.1, "less-near": -0.3}
+        state = semantic_guess.init_game({"starting_hints": True}, _players(1))
+        self.assertEqual(state["starting_hints"], [
+            {"word": "near", "similarity": -0.1},
+            {"word": "less-near", "similarity": -0.3},
+        ])
+
+    def test_a_single_positive_clue_is_not_padded_with_negative_score(self):
+        self.pool = ["secret", "positive", "negative"]
+        self.store.scores = {"positive": 0.08, "negative": -0.01}
+        state = semantic_guess.init_game({"starting_hints": True}, _players(1))
+        self.assertEqual(state["starting_hints"], [{"word": "positive", "similarity": 0.08}])
 
     def test_tiny_pool_and_missing_vectors_return_only_available_hints(self):
         state = semantic_guess.init_game({"starting_hints": True}, _players(1))

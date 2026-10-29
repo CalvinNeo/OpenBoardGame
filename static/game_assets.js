@@ -1111,9 +1111,9 @@ const GAME_ASSETS = {
     "header": "showLoveLetterHeaderActions"
   },
   "semantic_guess": {
-    "scripts": ["/static/games/semantic_guess.js?v=5"],
+    "scripts": ["/static/games/semantic_guess.js?v=6"],
     "styles": ["/static/games/semantic_guess.css?v=3"],
-    "markup": "/static/games/semantic_guess.html?v=3",
+    "markup": "/static/games/semantic_guess.html?v=4",
     "panel": "semanticGuessPanel",
     "panelTitle": "🧭 词语雷达",
     "header": "showSemanticGuessHeaderActions"

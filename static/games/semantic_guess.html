@@ -7,7 +7,7 @@
   <div class="row toggle-row semantic-guess-config-option">
     <label for="semanticGuessStartingHintsToggle"><input id="semanticGuessStartingHintsToggle" type="checkbox" aria-describedby="semanticGuessStartingHintsHint"> 开局提示词</label>
   </div>
-  <div id="semanticGuessStartingHintsHint" class="hint">开局公开两个接近 50% 相似度的提示词，以实际显示数值为准。</div>
+  <div id="semanticGuessStartingHintsHint" class="hint">开局扫描可用词并优先公开两个相似度最高的提示词，以实际显示数值为准。</div>
 </template>
 <template data-game-target="semanticGuessPanel" data-game-mode="contents">
   <section id="semanticGuessLoading" class="semantic-guess-loading" aria-labelledby="semanticGuessLoadingTitle" data-sg-explain="loading" data-sg-tip="Progress comes from the server. The game starts automatically when preparation finishes." tabindex="0" hidden>

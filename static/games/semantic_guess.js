@@ -34,15 +34,15 @@
     target: ["暗词", "暗词会在有人准确猜中或所有玩家都 Pass 后揭晓。"],
     latest: ["最近猜测", "显示最近线索和相似度。立直期间，其他玩家的词只显示为隐藏标记。"],
     best: ["最佳线索", "目前相似度最高的猜词；高分不代表已经猜中。"],
-    similarity: ["语义相似度", "余弦相似度范围为 −100% 到 100%，不是猜中概率。"],
-    startingHints: ["💡 开局提示", "开启开局提示词后，系统从随机抽取的候选词中选出与暗词相似度最接近 50% 的两个词，并显示实际数值，不保证恰好为 50%。这些提示始终公开，立直期间也可查看，不计入猜词记录。"],
+    similarity: ["语义相似度", "余弦相似度范围为 −100% 到 100%，不是猜中概率。20%–30% 在这个词库中很常见，沿着更高分的关联词继续猜。"],
+    startingHints: ["💡 开局提示", "开启开局提示词后，系统会扫描可用词（最多 1000 个），优先选出与暗词相似度最高的两个词，并显示真实数值。这些提示始终公开，立直期间也可查看，不计入猜词记录。"],
     guess: ["Guess · 提交猜词", "输入词语后提交。错误输入不会消耗回合。"],
     pass: ["Pass · 跳过回合", "放弃本次机会并轮到下一位。"],
     riichi: ["Riichi · 立直", "立直后锁定到本轮结束，不能取消。你看不到别人猜的词，别人也看不到你的词，但相似度仍可见。"],
     players: ["玩家顺序", "按座位顺序轮流猜词。▶ 表示当前玩家。"],
     sort: ["记录排序", "Newest 按回合倒序；Similarity 按相似度排序。"],
   };
-  const help = `<h3>找到同一个暗词</h3><p>1–10 人轮流猜词，单人也可以开始。准确猜中者获胜；如果所有玩家都 Pass，会显示暗词。</p><h3>💡 开局提示词</h3><p>可在开始游戏前，在 Room Controls 中开启，默认关闭。开启后，从随机抽取的候选词中选出与暗词相似度最接近 50% 的两个提示词，显示实际相似度，不保证恰好为 50%；可用词不足时显示已有提示。提示词始终公开，立直期间也可查看，不计入猜词记录。</p><h3>Preparing game</h3><p>Preparation progress appears on the game board. The game starts automatically when ready. You can reconnect while waiting; the latest progress will return.</p><h3>每次轮到你</h3><ol><li>输入词语，点击 <strong>Guess</strong> 或按 Enter。</li><li>根据相似度继续推理，也可以点击 <strong>Pass</strong>。</li><li>选择 <strong>Riichi</strong> 后立直持续到本轮结束，不能取消。立直期间只显示相似度，词语对相关玩家隐藏。</li></ol><h3>结束</h3><p>有人猜中或所有人 Pass 后，暗词会对所有玩家揭晓。使用 Room Controls 的 Restart 开始新局，会保留开局提示词选项。</p>`;
+  const help = `<h3>找到同一个暗词</h3><p>1–10 人轮流猜词，单人也可以开始。准确猜中者获胜；如果所有玩家都 Pass，会显示暗词。</p><h3>💡 开局提示词</h3><p>可在开始游戏前，在 Room Controls 中开启，默认关闭。开启后会扫描可用词（最多 1000 个），优先公开两个相似度最高的提示词，显示真实相似度；可用词不足时显示已有提示。提示词始终公开，立直期间也可查看，不计入猜词记录。</p><h3>理解分数</h3><p>余弦相似度是语义距离，不是完成度或猜中概率。20%–30% 是这个词库中常见的背景分数，优先沿着当前最高分的词继续联想；分数为 100% 且词语完全相同才算猜中。</p><h3>Preparing game</h3><p>Preparation progress appears on the game board. The game starts automatically when ready. You can reconnect while waiting; the latest progress will return.</p><h3>每次轮到你</h3><ol><li>输入词语，点击 <strong>Guess</strong> 或按 Enter。</li><li>根据相似度继续推理，也可以点击 <strong>Pass</strong>。</li><li>选择 <strong>Riichi</strong> 后立直持续到本轮结束，不能取消。立直期间只显示相似度，词语对相关玩家隐藏。</li></ol><h3>结束</h3><p>有人猜中或所有人 Pass 后，暗词会对所有玩家揭晓。使用 Room Controls 的 Restart 开始新局，会保留开局提示词选项。</p>`;
 
   function updateConfig(state) {
     const box = id("ConfigBox");

@@ -16,9 +16,12 @@ from game.semantic_vectors import get_store, startup_checkpoint, startup_work
 
 
 MAX_WORD_LENGTH = 80
-STARTING_HINT_SAMPLE_SIZE = 300
+# Scan the full playable pack in the usual deployment (currently 949 words).
+# Keeping a hard cap prevents a custom vocabulary from making room start-up
+# unbounded; the existing cooperative startup budget still limits CPU duty
+# cycle while the candidates are scored.
+STARTING_HINT_SAMPLE_SIZE = 1000
 STARTING_HINT_COUNT = 2
-STARTING_HINT_TARGET = 0.5
 DEFAULT_CONFIG: Dict = {"starting_hints": False}
 
 ACTION_SCHEMA = {
@@ -137,8 +140,9 @@ def _select_starting_hints(secret: str, pool: List[str]) -> List[Dict]:
     sample = random.SystemRandom().sample(candidates, min(STARTING_HINT_SAMPLE_SIZE, len(candidates)))
     store = get_store()
     hints = []
-    # Only compare the secret with this bounded sample, using the existing
-    # disk-backed vector cache. Never load all embeddings or compare all pairs.
+    # Compare the secret with this bounded candidate set, using the existing
+    # disk-backed vector cache. Never load all embeddings or compare pairs of
+    # candidates.
     for position, word in enumerate(sample, 1):
         try:
             score = store.similarity(word, secret)
@@ -151,10 +155,18 @@ def _select_starting_hints(secret: str, pool: List[str]) -> List[Dict]:
         if score is None or not math.isfinite(score):
             continue
         hints.append({"word": word, "similarity": float(score)})
-        hints.sort(key=lambda hint: abs(hint["similarity"] - STARTING_HINT_TARGET))
+        # Prefer genuinely close words.  If a secret has no positive
+        # neighbours, the least-negative scores are still more informative
+        # than dropping all hints, so the same descending ordering handles
+        # that fallback without manufacturing a score.
+        hints.sort(key=lambda hint: hint["similarity"], reverse=True)
         del hints[STARTING_HINT_COUNT:]
     startup_checkpoint("hints", 0.99)
-    return hints
+    # Keep only positive clues whenever at least one exists.  A negative
+    # fallback can still be useful for an unusual/custom vocabulary with no
+    # positive neighbour, but should never displace the sole positive clue.
+    positive = [hint for hint in hints if hint["similarity"] > 0.0]
+    return positive[:STARTING_HINT_COUNT] if positive else hints[:STARTING_HINT_COUNT]
 
 
 def _turn_order(players: List[Dict]) -> List[str]:
