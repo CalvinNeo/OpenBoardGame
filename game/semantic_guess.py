@@ -13,6 +13,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from game.decrypto_ai import _load_vocabulary
 from game.semantic_vectors import get_store, startup_checkpoint, startup_work
+from game.semantic_guess_scores import build_score_reference, relative_closeness
 
 
 MAX_WORD_LENGTH = 80
@@ -22,7 +23,9 @@ MAX_WORD_LENGTH = 80
 # cycle while the candidates are scored.
 STARTING_HINT_SAMPLE_SIZE = 1000
 STARTING_HINT_COUNT = 2
-DEFAULT_CONFIG: Dict = {"starting_hints": False}
+STARTING_HINT_MIN_SIMILARITY = 0.50
+STARTING_HINT_MAX_SIMILARITY = 0.65
+DEFAULT_CONFIG: Dict = {"starting_hints": False, "balanced_scores": False}
 
 ACTION_SCHEMA = {
     "type": "object",
@@ -48,6 +51,7 @@ ACTION_SCHEMA = {
 
 CONFIG_SCHEMA = {"type": "object", "properties": {
     "starting_hints": {"type": "boolean", "default": False},
+    "balanced_scores": {"type": "boolean", "default": False},
     "seed": {"oneOf": [{"type": "integer"}, {"type": "string", "minLength": 1, "maxLength": 80}]},
 }, "additionalProperties": False}
 
@@ -121,13 +125,28 @@ def _merged_config(config: Optional[Dict]) -> Dict:
         merged.update(config)
     if type(merged["starting_hints"]) is not bool:
         raise ValueError("starting_hints must be boolean")
+    if type(merged["balanced_scores"]) is not bool:
+        raise ValueError("balanced_scores must be boolean")
     seed = merged.get("seed")
     if "seed" in merged and type(seed) is not int and not (isinstance(seed, str) and 1 <= len(seed) <= 80):
         raise ValueError("invalid seed")
     return merged
 
 
-def _select_starting_hints(secret: str, pool: List[str]) -> List[Dict]:
+def _starting_hint_priority(hint: Dict) -> Tuple[int, float]:
+    score = hint["similarity"]
+    if STARTING_HINT_MIN_SIMILARITY <= score <= STARTING_HINT_MAX_SIMILARITY:
+        return (0, -score)
+    if score > STARTING_HINT_MAX_SIMILARITY:
+        # A close over-cap clue is preferable to a weak clue when the target
+        # band does not provide enough options.
+        return (1, score)
+    if score > 0.0:
+        return (2, -score)
+    return (3, -score)
+
+
+def _score_secret_candidates(secret: str, pool: List[str]) -> List[Dict]:
     startup_checkpoint("hints", 0.85)
     candidates = []
     seen = {_normalize_word(secret)}
@@ -139,7 +158,7 @@ def _select_starting_hints(secret: str, pool: List[str]) -> List[Dict]:
             candidates.append(word)
     sample = random.SystemRandom().sample(candidates, min(STARTING_HINT_SAMPLE_SIZE, len(candidates)))
     store = get_store()
-    hints = []
+    scored = []
     # Compare the secret with this bounded candidate set, using the existing
     # disk-backed vector cache. Never load all embeddings or compare pairs of
     # candidates.
@@ -154,19 +173,22 @@ def _select_starting_hints(secret: str, pool: List[str]) -> List[Dict]:
             startup_checkpoint("hints", 0.85 + 0.14 * position / len(sample))
         if score is None or not math.isfinite(score):
             continue
-        hints.append({"word": word, "similarity": float(score)})
-        # Prefer genuinely close words.  If a secret has no positive
-        # neighbours, the least-negative scores are still more informative
-        # than dropping all hints, so the same descending ordering handles
-        # that fallback without manufacturing a score.
-        hints.sort(key=lambda hint: hint["similarity"], reverse=True)
-        del hints[STARTING_HINT_COUNT:]
+        scored.append({"word": word, "similarity": float(score)})
     startup_checkpoint("hints", 0.99)
-    # Keep only positive clues whenever at least one exists.  A negative
-    # fallback can still be useful for an unusual/custom vocabulary with no
-    # positive neighbour, but should never displace the sole positive clue.
-    positive = [hint for hint in hints if hint["similarity"] > 0.0]
-    return positive[:STARTING_HINT_COUNT] if positive else hints[:STARTING_HINT_COUNT]
+    return scored
+
+
+def _select_starting_hints(secret: str, pool: List[str], scored: Optional[List[Dict]] = None) -> List[Dict]:
+    if scored is None:
+        scored = _score_secret_candidates(secret, pool)
+    # Prefer the target band. When it has fewer than two entries, a clue above
+    # 65% is more useful than a weak positive clue below 50%; only use the
+    # latter when no target/over-cap positive clue is available. Do not pad a
+    # single positive clue with a negative one.
+    positive = [hint for hint in scored if hint["similarity"] > 0.0]
+    if positive:
+        return sorted(positive, key=_starting_hint_priority)[:STARTING_HINT_COUNT]
+    return sorted(scored, key=_starting_hint_priority)[:STARTING_HINT_COUNT]
 
 
 def _turn_order(players: List[Dict]) -> List[str]:
@@ -252,8 +274,14 @@ def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         raise ValueError("semantic word vectors are unavailable")
     secret = random.SystemRandom().choice(pool)
     # Persist the once-per-game result; views and reconnects must not resample.
-    starting_hints = _select_starting_hints(secret, pool) if merged_config["starting_hints"] else []
-    return {
+    scored_candidates = None
+    if merged_config["starting_hints"] or merged_config["balanced_scores"]:
+        scored_candidates = _score_secret_candidates(secret, pool)
+    starting_hints = (_select_starting_hints(secret, pool, scored_candidates)
+                      if merged_config["starting_hints"] else [])
+    score_reference = (build_score_reference(hint["similarity"] for hint in scored_candidates or [])
+                       if merged_config["balanced_scores"] else [])
+    state = {
         "game_id": "semantic_guess",
         "players": {pid: {"score": 0, "riichi": False} for pid in order},
         "player_meta": {p["player_id"]: dict(p) for p in players},
@@ -268,6 +296,7 @@ def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         "guesses": [],
         "guessed_word_keys": [],
         "starting_hints": starting_hints,
+        "score_reference": score_reference,
         "secret_word": secret,
         "game_token": secrets.token_urlsafe(24),
         "winner_id": None,
@@ -277,6 +306,7 @@ def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         "similarity_mode": getattr(get_store(), "mode", "indexed"),
         "game_start_time": time.time(),
     }
+    return state
 
 
 def get_legal_actions(state: Dict, player_id: str) -> List[str]:
@@ -388,6 +418,17 @@ async def apply_action_async(state: Dict, player_id: str, action: Dict) -> Tuple
 def get_public_view(state: Dict, viewer_id: str) -> Dict:
     meta = state.get("player_meta", {})
     current = state.get("current_turn_player_id")
+    configured_balanced_scores = bool(state.get("config", {}).get("balanced_scores", False))
+    reference = state.get("score_reference", []) if configured_balanced_scores else []
+    balanced_scores = configured_balanced_scores and len(reference) >= 2
+
+    def attach_display_score(row: Dict) -> None:
+        if balanced_scores and row.get("similarity") is not None:
+            closeness = relative_closeness(
+                float(row["similarity"]), reference, correct=bool(row.get("correct")))
+            if closeness is not None:
+                row["closeness"] = closeness
+
     players = []
     for pid in state.get("turn_order", []):
         pdata = state.get("players", {}).get(pid, {})
@@ -406,13 +447,25 @@ def get_public_view(state: Dict, viewer_id: str) -> Dict:
         row["word_hidden"] = hidden
         row["player_name"] = meta.get(pid, {}).get("name", pid)
         row["is_you"] = pid == viewer_id
+        attach_display_score(row)
         guesses.append(row)
+    public_hints = []
+    for hint in state.get("starting_hints", []):
+        row = dict(hint)
+        attach_display_score(row)
+        public_hints.append(row)
+    public_config = {"starting_hints": bool(state.get("config", {}).get("starting_hints", False))}
+    if configured_balanced_scores:
+        # Keep the default public shape backwards compatible while making the
+        # opt-in display mode explicit to clients.
+        public_config["balanced_scores"] = True
     view = {"game_id": "semantic_guess", "you": viewer_id, "phase": state.get("phase"),
             "players": players, "current_turn_player_id": current, "turn_number": state.get("turn_number"),
             "round_number": state.get("round_number", 1), "game_token": state.get("game_token"),
             "guesses": guesses, "legal_actions": get_legal_actions(state, viewer_id),
-            "starting_hints": [dict(hint) for hint in state.get("starting_hints", [])],
-            "config": {"starting_hints": bool(state.get("config", {}).get("starting_hints", False))},
+            "starting_hints": public_hints,
+            "config": public_config,
+            "score_mode": "balanced" if balanced_scores else "cosine",
             "similarity_mode": state.get("similarity_mode", "unknown"), "game_over": bool(state.get("game_over"))}
     if state.get("game_over"):
         winner = state.get("winner_id")

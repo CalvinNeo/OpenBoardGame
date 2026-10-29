@@ -60,18 +60,20 @@ class SemanticGuessHintsTests(unittest.TestCase):
                 self.assertEqual(semantic_guess.get_public_view(state, "p0")["starting_hints"], [])
         self.assertEqual(self.store.calls, [])
 
-    def test_hints_choose_two_highest_actual_positive_scores(self):
-        self.pool = ["secret", "negative", "high", "above", "below", "distant"]
+    def test_hints_prefer_the_50_to_65_percent_target_band(self):
+        self.pool = ["secret", "negative", "high", "above", "below", "distant", "cap", "over-cap"]
         self.store.scores = {
             "negative": -0.499,
             "high": 0.95,
             "above": 0.5137,
             "below": 0.4761,
             "distant": 0.3,
+            "cap": 0.65,
+            "over-cap": 0.6501,
         }
         state = semantic_guess.init_game({"starting_hints": True}, _players())
         self.assertEqual(state["starting_hints"], [
-            {"word": "high", "similarity": 0.95},
+            {"word": "cap", "similarity": 0.65},
             {"word": "above", "similarity": 0.5137},
         ])
         self.assertTrue(state["config"]["starting_hints"])
@@ -81,6 +83,39 @@ class SemanticGuessHintsTests(unittest.TestCase):
         self.assertEqual(state["turn_number"], 1)
         self.assertEqual(state["current_turn_player_id"], "p0")
         self.assertFalse(state["game_over"])
+
+    def test_missing_target_band_prefers_over_cap_clues_to_weak_positive_clues(self):
+        self.pool = ["secret", "near-answer", "capped", "slight-overshoot", "overshoot", "negative"]
+        self.store.scores = {
+            "near-answer": 0.95,
+            "capped": 0.49,
+            "slight-overshoot": 0.66,
+            "overshoot": 0.7,
+            "negative": -0.1,
+        }
+        state = semantic_guess.init_game({"starting_hints": True}, _players())
+        self.assertEqual(state["starting_hints"], [
+            {"word": "slight-overshoot", "similarity": 0.66},
+            {"word": "overshoot", "similarity": 0.7},
+        ])
+
+    def test_one_target_band_clue_is_filled_by_over_cap_before_weak_positive(self):
+        self.pool = ["secret", "target", "over-cap", "weak"]
+        self.store.scores = {"target": 0.55, "over-cap": 0.66, "weak": 0.49}
+        state = semantic_guess.init_game({"starting_hints": True}, _players())
+        self.assertEqual(state["starting_hints"], [
+            {"word": "target", "similarity": 0.55},
+            {"word": "over-cap", "similarity": 0.66},
+        ])
+
+    def test_all_positive_clues_over_cap_use_smallest_overshoots(self):
+        self.pool = ["secret", "near-answer", "smallest", "next"]
+        self.store.scores = {"near-answer": 0.95, "smallest": 0.66, "next": 0.7}
+        state = semantic_guess.init_game({"starting_hints": True}, _players())
+        self.assertEqual(state["starting_hints"], [
+            {"word": "smallest", "similarity": 0.66},
+            {"word": "next", "similarity": 0.7},
+        ])
 
     def test_full_pool_scan_excludes_secret_and_normalized_duplicates(self):
         candidates = [f"candidate-{i:04d}" for i in range(600)]
@@ -112,8 +147,8 @@ class SemanticGuessHintsTests(unittest.TestCase):
         state = semantic_guess.init_game({"starting_hints": True}, _players())
         self.assertEqual(len(self.store.calls), 1000)
         self.assertEqual(state["starting_hints"], [
-            {"word": candidates[998], "similarity": 0.7},
             {"word": candidates[999], "similarity": 0.65},
+            {"word": candidates[998], "similarity": 0.7},
         ])
         self.assertNotIn(candidates[1000], [word for word, _ in self.store.calls])
 
@@ -160,6 +195,28 @@ class SemanticGuessHintsTests(unittest.TestCase):
         self.assertEqual(state["starting_hints"], [{"word": "valid", "similarity": 0.42}])
         json.dumps(state, allow_nan=False)
 
+    def test_balanced_scores_keep_raw_cosine_and_add_private_reference_percentile(self):
+        self.pool = ["secret", "low", "middle", "high", "highest"]
+        self.store.scores = {"low": 0.2, "middle": 0.3, "high": 0.4, "highest": 0.5}
+        state = semantic_guess.init_game({"balanced_scores": True}, _players(1))
+        self.assertEqual(state["score_reference"], [0.2, 0.3, 0.4, 0.5])
+        state["guesses"] = [{"player_id": "p0", "word": "middle", "similarity": 0.3,
+                              "correct": False, "skipped": False, "turn_number": 1}]
+        view = semantic_guess.get_public_view(state, "p0")
+        self.assertEqual(view["score_mode"], "balanced")
+        self.assertEqual(view["config"], {"starting_hints": False, "balanced_scores": True})
+        self.assertEqual(view["guesses"][0]["similarity"], 0.3)
+        self.assertEqual(view["guesses"][0]["closeness"], 0.375)
+        self.assertNotIn("score_reference", view)
+
+    def test_balanced_scores_reuse_the_same_candidate_scan_as_hints(self):
+        self.pool = ["secret", "first", "second", "third"]
+        self.store.scores = {"first": 0.61, "second": 0.52, "third": 0.2}
+        state = semantic_guess.init_game({"starting_hints": True, "balanced_scores": True}, _players())
+        self.assertEqual(len(self.store.calls), 3)
+        self.assertEqual([hint["word"] for hint in state["starting_hints"]], ["first", "second"])
+        self.assertEqual(state["score_reference"], [0.2, 0.52, 0.61])
+
     def test_database_failure_is_reported_instead_of_silently_skipping_hints(self):
         self.pool = ["secret", "first"]
         self.store.scores = {"first": sqlite3.OperationalError("disk I/O error")}
@@ -204,13 +261,17 @@ class SemanticGuessHintsTests(unittest.TestCase):
 
     def test_starting_hints_config_requires_a_boolean(self):
         validator = Draft7Validator(semantic_guess.CONFIG_SCHEMA)
-        for value in (True, False):
-            self.assertTrue(validator.is_valid({"starting_hints": value}))
+        for field in ("starting_hints", "balanced_scores"):
+            for value in (True, False):
+                self.assertTrue(validator.is_valid({field: value}))
         for value in ("false", "true", 0, 1, None, [], {}):
             with self.subTest(value=value):
                 self.assertFalse(validator.is_valid({"starting_hints": value}))
                 with self.assertRaises(ValueError):
                     semantic_guess.init_game({"starting_hints": value}, _players())
+                self.assertFalse(validator.is_valid({"balanced_scores": value}))
+                with self.assertRaises(ValueError):
+                    semantic_guess.init_game({"balanced_scores": value}, _players())
 
 
 if __name__ == "__main__":

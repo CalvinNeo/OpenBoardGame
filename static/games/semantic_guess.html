@@ -7,7 +7,11 @@
   <div class="row toggle-row semantic-guess-config-option">
     <label for="semanticGuessStartingHintsToggle"><input id="semanticGuessStartingHintsToggle" type="checkbox" aria-describedby="semanticGuessStartingHintsHint"> 开局提示词</label>
   </div>
-  <div id="semanticGuessStartingHintsHint" class="hint">开局扫描可用词并优先公开两个相似度最高的提示词，以实际显示数值为准。</div>
+  <div id="semanticGuessStartingHintsHint" class="hint">优先公开 50%–65% 的提示词；不足两个时优先使用 65% 以上的词。</div>
+  <div class="row toggle-row semantic-guess-config-option">
+    <label for="semanticGuessBalancedScoresToggle"><input id="semanticGuessBalancedScoresToggle" type="checkbox" aria-describedby="semanticGuessBalancedScoresHint"> 均衡接近度</label>
+  </div>
+  <div id="semanticGuessBalancedScoresHint" class="hint">把猜词分数映射为本局参考词百分位，展开 20%–30% 的集中区间；开局提示仍显示真实余弦，会增加准备时间。</div>
 </template>
 <template data-game-target="semanticGuessPanel" data-game-mode="contents">
   <section id="semanticGuessLoading" class="semantic-guess-loading" aria-labelledby="semanticGuessLoadingTitle" data-sg-explain="loading" data-sg-tip="Progress comes from the server. The game starts automatically when preparation finishes." tabindex="0" hidden>
@@ -39,7 +43,7 @@
     <div id="semanticGuessFeedback" class="semantic-guess-feedback" role="status" aria-live="polite"></div>
   </form>
   <div id="semanticGuessPlayers" class="semantic-guess-players" aria-label="玩家回合顺序" data-sg-explain="players"></div>
-  <details id="semanticGuessHistoryDetails" class="semantic-guess-history" open><summary><span>🕘 猜词记录 <span id="semanticGuessCount">0</span></span><span class="semantic-guess-history-toggle" aria-hidden="true">⌄</span></summary><div class="semantic-guess-history-controls"><span class="semantic-guess-scale-note" data-sg-tip="相似度范围 −100% ～ 100%，不是猜中概率。" data-sg-explain="similarity" tabindex="0">相似度 −100% ～ 100%</span><div class="semantic-guess-sort" role="group" aria-label="Sort guesses"><button id="semanticGuessNewestBtn" type="button" aria-pressed="true" data-sg-explain="sort">Newest</button><button id="semanticGuessSimilarityBtn" type="button" aria-pressed="false" data-sg-explain="sort">Similarity</button></div></div><div id="semanticGuessHistory" class="semantic-guess-history-list" tabindex="0" role="region" aria-label="猜词记录"></div></details>
+    <details id="semanticGuessHistoryDetails" class="semantic-guess-history" open><summary><span>🕘 猜词记录 <span id="semanticGuessCount">0</span></span><span class="semantic-guess-history-toggle" aria-hidden="true">⌄</span></summary><div class="semantic-guess-history-controls"><span id="semanticGuessScaleNote" class="semantic-guess-scale-note" data-sg-tip="相似度范围 −100% ～ 100%，不是猜中概率。" data-sg-explain="similarity" tabindex="0">相似度 −100% ～ 100%</span><div class="semantic-guess-sort" role="group" aria-label="Sort guesses"><button id="semanticGuessNewestBtn" type="button" aria-pressed="true" data-sg-explain="sort">Newest</button><button id="semanticGuessSimilarityBtn" type="button" aria-pressed="false" data-sg-explain="sort">Similarity</button></div></div><div id="semanticGuessHistory" class="semantic-guess-history-list" tabindex="0" role="region" aria-label="猜词记录"></div></details>
   <div id="semanticGuessTooltip" class="semantic-guess-tooltip" role="tooltip" hidden></div>
 </template>
 <template data-game-target="semanticGuessDialog" data-game-mode="replace"><dialog id="semanticGuessDialog" class="semantic-guess-dialog" aria-labelledby="semanticGuessDialogTitle"><div class="semantic-guess-dialog-header"><h2 id="semanticGuessDialogTitle">Help</h2><button id="semanticGuessDialogCloseBtn" type="button">Close</button></div><div id="semanticGuessDialogContent" class="semantic-guess-dialog-content"></div></dialog></template>
