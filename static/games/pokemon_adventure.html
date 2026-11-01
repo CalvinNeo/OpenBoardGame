@@ -1,0 +1,30 @@
+<template data-game-target="pokemonAdventurePanel" data-game-mode="contents">
+  <div class="pa-heading">
+    <span class="pa-eyebrow">Pokémon Paper Safari</span>
+    <div id="pokemonAdventureHeaderActions" class="pa-tools"><button id="pokemonAdventureHelpBtn" type="button">Help</button><button id="pokemonAdventureExplainBtn" type="button" aria-pressed="false">Explain</button></div>
+  </div>
+  <div id="pokemonAdventureStatus" class="pa-status" aria-live="polite"><strong id="pokemonAdventureTurn">Waiting to start</strong><span id="pokemonAdventureRound"></span><span id="pokemonAdventurePhase"></span></div>
+  <p id="pokemonAdventureExplainHint" class="pa-explain-hint hidden" role="status">Select a highlighted item to learn more. Press Esc to exit.</p>
+  <p id="pokemonAdventureFeedback" class="pa-feedback hidden" role="status"></p>
+  <div id="pokemonAdventureResult" class="pa-result hidden" aria-live="polite"></div>
+  <div id="pokemonAdventureReview" class="pa-review hidden"><button id="pokemonAdventureNextRoundBtn" type="button" class="pa-primary" data-pa-explain="next_round">Next Round</button></div>
+  <div class="pa-table">
+    <main class="pa-main">
+      <div class="pa-hand-heading"><h3 id="pokemonAdventureYouName">Your six cards</h3><span id="pokemonAdventureTokens" class="pa-tokens"></span></div>
+      <div id="pokemonAdventureHand" class="pa-hand" aria-label="Your six cards, top and bottom rows"></div>
+      <div id="pokemonAdventureColumns" class="pa-column-scores"></div>
+      <div class="pa-action-line"><strong id="pokemonAdventurePrompt">Waiting for the game state.</strong><span id="pokemonAdventureActionNote"></span></div>
+      <div id="pokemonAdventurePiles" class="pa-piles">
+        <div class="pa-pile"><span class="pa-pile-label">牌库 <span id="pokemonAdventureDeckCount"></span></span><button id="pokemonAdventureDrawDeckBtn" type="button" class="pa-card pa-back" data-pa-explain="deck"><span class="pa-back-ball" aria-hidden="true"></span><span class="pa-back-label">抽一张</span></button></div>
+        <div class="pa-pile"><span class="pa-pile-label">弃牌堆</span><button id="pokemonAdventureDrawDiscardBtn" type="button" class="pa-card pa-empty" data-pa-explain="discard">—</button></div>
+        <div class="pa-pile"><span class="pa-pile-label">你的抽牌</span><div id="pokemonAdventureDrawn" class="pa-card pa-empty" tabindex="0" data-pa-explain="drawn">—</div></div>
+      </div>
+      <div class="pa-action-buttons"><button id="pokemonAdventureDiscardBtn" type="button" data-pa-explain="discard_drawn">弃掉抽牌</button><button id="pokemonAdventureSkipBtn" type="button" data-pa-explain="skip">跳过能力</button></div>
+      <div id="pokemonAdventureChoice" class="pa-choice hidden" aria-live="polite"></div>
+    </main>
+    <aside class="pa-opponents-area" aria-label="Other trainers"><div class="pa-opponents-heading"><h3>训练家</h3><span id="pokemonAdventurePlayerCount"></span></div><div id="pokemonAdventurePlayers" class="pa-opponents"></div></aside>
+  </div>
+  <details id="pokemonAdventureLogDetails" class="pa-log-details"><summary>Log <span id="pokemonAdventureLogCount"></span></summary><ol id="pokemonAdventureLog" class="pa-log"></ol></details>
+  <div id="pokemonAdventureTooltip" class="pa-tooltip hidden" role="tooltip"></div>
+  <dialog id="pokemonAdventureDialog" class="pa-dialog" aria-labelledby="pokemonAdventureDialogTitle"><div class="pa-dialog-heading"><h2 id="pokemonAdventureDialogTitle">Help</h2><button id="pokemonAdventureDialogClose" type="button">Close</button></div><div id="pokemonAdventureDialogBody" class="pa-dialog-body"></div></dialog>
+</template>

@@ -112,8 +112,14 @@ from game.take_time_data import ACTION_SCHEMA as TAKE_TIME_ACTION_SCHEMA, CONFIG
 from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
+from game.chromino import ChrominoGame, ACTION_SCHEMA as CHROMINO_ACTION_SCHEMA, CONFIG_SCHEMA as CHROMINO_CONFIG_SCHEMA
 from game.splendor import SplendorGame
 from game.splendor_pokemon import PokemonSplendorGame
+from game.pokemon_adventure import (
+    PokemonAdventureGame,
+    ACTION_SCHEMA as POKEMON_ADVENTURE_ACTION_SCHEMA,
+    CONFIG_SCHEMA as POKEMON_ADVENTURE_CONFIG_SCHEMA,
+)
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
@@ -140,6 +146,22 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=ChrominoGame.game_id,
+        name="Chromino",
+        name_zh="缤纷多米诺",
+        min_players=ChrominoGame.min_players,
+        max_players=ChrominoGame.max_players,
+        turn_mode="turn",
+        action_schema=CHROMINO_ACTION_SCHEMA,
+        config_schema=CHROMINO_CONFIG_SCHEMA,
+        module=ChrominoGame,
+        serialize=ChrominoGame.serialize,
+        deserialize=ChrominoGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(
@@ -5147,6 +5169,22 @@ register_game(
         module=PokemonSplendorGame,
         serialize=PokemonSplendorGame.serialize,
         deserialize=PokemonSplendorGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=PokemonAdventureGame.game_id,
+        name="Pokémon Paper Safari",
+        name_zh="宝可梦奇遇",
+        min_players=PokemonAdventureGame.min_players,
+        max_players=PokemonAdventureGame.max_players,
+        turn_mode="turn",
+        action_schema=POKEMON_ADVENTURE_ACTION_SCHEMA,
+        config_schema=POKEMON_ADVENTURE_CONFIG_SCHEMA,
+        module=PokemonAdventureGame,
+        serialize=PokemonAdventureGame.serialize,
+        deserialize=PokemonAdventureGame.deserialize,
     )
 )
 

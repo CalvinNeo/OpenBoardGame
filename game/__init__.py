@@ -33,6 +33,7 @@ from game.boomerang_australia import BoomerangAustraliaGame
 from game.carcassonne import CarcassonneGame
 from game.catan_starfarers import CatanStarfarersGame
 from game.cabo import CaboGame
+from game.chromino import ChrominoGame
 from game.cryptid import CryptidGame
 from game.celestia import CelestiaGame
 from game.cat_in_box import CatInBoxGame
@@ -84,6 +85,7 @@ from game.registry import GameDefinition, get_game, list_games
 from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
 from game.splendor_pokemon import PokemonSplendorGame
+from game.pokemon_adventure import PokemonAdventureGame
 from game.skull import SkullGame
 from game.spirit_island import SpiritIslandGame
 from game.terra_nova import TerraNovaGame
@@ -106,6 +108,7 @@ from game.semantic_guess import SemanticGuessGame
 from game import definitions as _definitions
 
 __all__ = [
+    "ChrominoGame",
     "ColtExpressGame",
     "DndStarterSetGame",
     "TheMindGame",
@@ -190,6 +193,7 @@ __all__ = [
     "SixNimmtGame",
     "SplendorGame",
     "PokemonSplendorGame",
+    "PokemonAdventureGame",
     "SkullGame",
     "SpiritIslandGame",
     "TerraNovaGame",

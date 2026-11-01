@@ -211,6 +211,14 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "pokemon_adventure") {
+    if (typeof renderPokemonAdventureGameState === "function") renderPokemonAdventureGameState(data);
+    return;
+  }
+  if (gameType === "chromino") {
+    if (typeof renderChrominoGameState === "function") renderChrominoGameState(data);
+    return;
+  }
   if (gameType === "semantic_guess") {
     if (typeof renderSemanticGuessGameState === "function") renderSemanticGuessGameState(data);
     return;

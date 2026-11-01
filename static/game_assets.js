@@ -1,5 +1,21 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "pokemon_adventure": {
+    "scripts": ["/static/games/pokemon_adventure.js?v=2"],
+    "styles": ["/static/games/pokemon_adventure.css?v=2"],
+    "markup": "/static/games/pokemon_adventure.html?v=2",
+    "panel": "pokemonAdventurePanel",
+    "panelTitle": "🔴 宝可梦奇遇",
+    "header": "showPokemonAdventureHeaderActions"
+  },
+  "chromino": {
+    "scripts": ["/static/games/chromino.js?v=1"],
+    "styles": ["/static/games/chromino.css?v=1"],
+    "markup": "/static/games/chromino.html?v=1",
+    "panel": "chrominoPanel",
+    "panelTitle": "🟥 Chromino · 缤纷多米诺",
+    "header": "showChrominoHeaderActions"
+  },
   "colt_express": {
     "scripts": ["/static/games/colt_express.js?v=2"],
     "styles": ["/static/games/colt_express.css?v=2"],

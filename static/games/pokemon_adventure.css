@@ -1,0 +1,124 @@
+.game-panel[data-game-theme="pokemon_adventure"] { background: radial-gradient(ellipse at 90% 0, #e4f1dc, transparent 55%), #f6f7ef; color: #25392f; }
+.pokemon-adventure-panel { --pa-muted: #65776c; min-width: 0; }
+.pokemon-adventure-panel *, .pa-dialog * { box-sizing: border-box; }
+.pa-heading, .pa-hand-heading, .pa-opponents-heading, .pa-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-width: 0; }
+.pa-heading { margin-bottom: 12px; }
+.pa-heading h2 { margin: 2px 0 0; font-size: 22px; line-height: 1.25; }
+.pa-eyebrow { color: var(--pa-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.pa-tools { display: flex; justify-content: end; gap: 5px; flex-shrink: 0; }
+.pokemon-adventure-panel button, .pa-dialog button { min-width: 0; padding: 7px 10px; border: 1px solid #b9c9b6; border-radius: 8px; background: #fffef7; color: #304c39; font-size: 12px; line-height: 1.35; cursor: pointer; }
+.pokemon-adventure-panel button:disabled { cursor: default; opacity: .48; }
+.pokemon-adventure-panel button:not(:disabled):hover, .pokemon-adventure-panel button:focus-visible { border-color: #47845d; box-shadow: 0 0 0 2px #6d9d6b33; }
+.pokemon-adventure-panel button.pa-primary { background: #397457; border-color: #397457; color: white; }
+.pa-status { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px; padding: 9px 11px; margin-bottom: 12px; border: 1px solid #d3dfd0; border-radius: 9px; background: #ffffffa6; font-size: 12px; }
+.pa-status strong { margin-right: auto; overflow-wrap: anywhere; }
+.pa-status > span { color: var(--pa-muted); font-size: 11px; }
+.pa-status.your-turn { border-color: #6b9b69; box-shadow: inset 3px 0 #6b9b69; }
+.pa-explain-hint, .pa-feedback { margin: 0 0 10px; padding: 7px 9px; border-radius: 7px; background: #f9edcc; color: #765b2d; font-size: 12px; overflow-wrap: anywhere; }
+.pa-feedback { background: #fff0e9; color: #9b4939; }
+.pa-table { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(190px, 1fr); gap: 22px; align-items: start; }
+.pa-main, .pa-opponents-area, .pa-pile { min-width: 0; }
+.pa-hand-heading, .pa-opponents-heading { margin-bottom: 8px; }
+.pa-hand-heading h3, .pa-opponents-heading h3 { min-width: 0; margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.pa-tokens, .pa-opponents-heading > span { color: var(--pa-muted); font-size: 11px; white-space: nowrap; }
+.pa-hand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pa-slot { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; border-radius: 10px; }
+.pokemon-adventure-panel .pa-card { position: relative; display: grid; grid-template-rows: auto 1fr auto; align-items: center; justify-items: center; width: 100%; min-width: 0; height: 132px; padding: 7px 6px; overflow: hidden; border: 1px solid #d2d7bc; border-radius: 10px; background: linear-gradient(135deg, #fffdf4, var(--pa-card-color, #edf1e3)); color: #293d31; text-align: center; opacity: 1; }
+.pa-card-head { display: flex; align-items: center; justify-content: space-between; gap: 3px; width: 100%; min-width: 0; }
+.pa-card-value { font-size: 22px; font-weight: 900; line-height: 1.1; letter-spacing: -.04em; }
+.pa-card-position { color: #66705e; font-size: 9px; white-space: nowrap; }
+.pa-card-emoji { display: grid; place-items: center; min-height: 28px; font-size: 32px; line-height: 1.2; }
+.pa-card-footer { display: grid; gap: 3px; align-content: end; width: 100%; min-width: 0; }
+.pa-card-name { display: block; font-size: 12px; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
+.pa-card-ability { display: block; min-height: 12px; color: #63684e; font-size: 9px; line-height: 1.25; overflow-wrap: anywhere; }
+.pokemon-adventure-panel .pa-card.pa-back { grid-template-rows: 1fr auto; background: repeating-linear-gradient(45deg, #356e57, #356e57 12px, #3a745b 12px, #3a745b 24px); border-color: #23513e; color: #fffbdf; }
+.pa-back-ball { display: block; width: 38px; height: 38px; border: 3px solid #f6e9bb; border-radius: 50%; background: linear-gradient(#f6e9bb 0 44%, #356b53 44% 57%, transparent 57%); }
+.pa-back-label { font-size: 11px; }
+.pokemon-adventure-panel .pa-card.pa-empty { display: grid; place-items: center; color: #81917a; border: 1px dashed #c7d3bd; background: #edf1e5; font-size: 12px; }
+.pokemon-adventure-panel .pa-card.selectable { border-color: #4c9363; box-shadow: inset 0 0 0 1px #4c9363; cursor: pointer; }
+.pokemon-adventure-panel .pa-card.selected { border-color: #cc9c31; box-shadow: inset 0 0 0 2px #d1a340; }
+.pokemon-adventure-panel .pa-card.private { border-style: dashed; }
+.pa-private-mark { color: #6b5589; font-size: 9px; }
+.pa-slot-confirm { width: 100%; min-height: 30px; font-weight: 700; overflow-wrap: anywhere; }
+.pa-column-scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; text-align: center; font-size: 11px; color: var(--pa-muted); }
+.pa-action-line { display: grid; gap: 3px; min-height: 52px; margin: 10px 0 8px; font-size: 13px; overflow-wrap: anywhere; }
+.pa-action-line span { color: var(--pa-muted); font-size: 11px; line-height: 1.5; }
+.pa-piles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pa-pile-label { display: block; min-height: 20px; color: var(--pa-muted); font-size: 11px; }
+.pa-piles .pa-card { height: 115px; }
+.pa-action-buttons { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+.pa-choice { margin-top: 8px; padding: 8px; border-radius: 8px; background: #e8eddd; font-size: 12px; overflow-wrap: anywhere; }
+.pa-choice-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.pa-opponents { display: grid; gap: 12px; }
+.pa-opponent { min-width: 0; padding-bottom: 11px; border-bottom: 1px solid #d3dfd0; }
+.pa-opponent:last-child { border-bottom: 0; }
+.pa-opponent-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; min-width: 0; }
+.pa-opponent-head strong { font-size: 12px; overflow-wrap: anywhere; }
+.pa-opponent-head span { flex-shrink: 0; color: var(--pa-muted); font-size: 10px; }
+.pa-opponent.acting .pa-opponent-head strong { color: #327349; }
+.pa-opponent .pa-hand { gap: 5px; }
+.pa-opponent .pa-card { height: 79px; padding: 4px; border-radius: 7px; }
+.pa-opponent .pa-card-value { font-size: 17px; }
+.pa-opponent .pa-card-emoji { min-height: 15px; font-size: 20px; }
+.pa-opponent .pa-card-name { font-size: 9px; }
+.pa-opponent .pa-card-ability { display: none; }
+.pa-opponent .pa-card-position { font-size: 8px; }
+.pa-opponent .pa-back-ball { width: 25px; height: 25px; border-width: 2px; }
+.pa-opponent .pa-back-label { font-size: 9px; }
+.pa-opponent-meta { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 5px; color: var(--pa-muted); font-size: 10px; }
+.pa-result { margin-bottom: 14px; padding: 12px; border: 1px solid #d4c797; border-radius: 9px; background: #fff9e7; }
+.pa-review { display: flex; justify-content: flex-end; margin: -5px 0 14px; }
+.pa-result h3 { margin: 0 0 8px; font-size: 15px; overflow-wrap: anywhere; }
+.pa-result p { margin: 5px 0; font-size: 11px; color: #786546; overflow-wrap: anywhere; }
+.pa-result-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: 6px 0; border-top: 1px solid #e6ddc1; font-size: 12px; }
+.pa-result-row.own { padding: 7px 6px; border-radius: 6px; background: #f1e9be; font-weight: 700; }
+.pa-result-row > :first-child { overflow-wrap: anywhere; }
+.pa-log-details { margin-top: 14px; padding-top: 10px; border-top: 1px solid #d3dfd0; color: var(--pa-muted); font-size: 11px; }
+.pa-log-details summary { cursor: pointer; }
+.pa-log { max-height: 150px; overflow-y: auto; margin: 8px 0 0; padding-left: 23px; line-height: 1.7; overflow-wrap: anywhere; }
+.pa-dialog { width: min(640px, calc(100vw - 24px)); max-height: min(82vh, 800px); padding: 18px; overflow-y: auto; border: 1px solid #bdcdb7; border-radius: 13px; background: #fffdf4; color: #2d4232; }
+.pa-dialog::backdrop { background: #16251bb0; }
+.pa-dialog-heading { position: sticky; top: -18px; margin: -1px 0 12px; padding: 8px 0; background: #fffdf4; }
+.pa-dialog-heading h2 { margin: 0; font-size: 18px; }
+.pa-dialog-body { font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.pa-dialog-body h3 { margin: 17px 0 5px; font-size: 14px; }
+.pa-dialog-body p { margin: 7px 0; }
+.pa-dialog-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.pa-dialog-body td, .pa-dialog-body th { padding: 7px 5px; text-align: left; border-bottom: 1px solid #e3e7d6; }
+.pa-tooltip { position: fixed; z-index: 40000; max-width: min(270px, calc(100vw - 24px)); width: max-content; padding: 8px 10px; border-radius: 7px; background: #293e2e; color: #fffdf2; font-size: 11px; line-height: 1.5; pointer-events: none; overflow-wrap: anywhere; box-shadow: 0 3px 15px #20362533; }
+body.pa-explaining [data-pa-explain] { outline: 2px dashed #b78630; outline-offset: 2px; cursor: help; }
+body.pa-your-turn.room-controls-drawer-closed #roomControlsPanel { outline: 2px solid #c15c51; outline-offset: -2px; }
+@media (min-width: 1150px) { .pa-main { max-width: 650px; } .pa-opponents { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pa-table { grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr); } }
+@media (max-width: 760px) {
+  .game-panel[data-game-theme="pokemon_adventure"] { padding: 10px; }
+  .pa-table { grid-template-columns: minmax(0, 1fr); gap: 17px; }
+  .pa-heading { gap: 6px; margin-bottom: 9px; }
+  .pa-heading h2 { font-size: 19px; }
+  .pa-eyebrow { font-size: 8px; letter-spacing: .04em; }
+  .pa-tools { gap: 4px; }
+  .pa-tools button { padding: 6px 7px; font-size: 11px; }
+  .pa-status { gap: 5px 10px; padding: 7px 9px; margin-bottom: 10px; }
+  .pa-hand, .pa-piles { gap: 6px; }
+  .pokemon-adventure-panel .pa-card { height: 115px; padding: 6px 5px; }
+  .pa-card-emoji { font-size: 28px; }
+  .pa-card-value { font-size: 21px; }
+  .pa-card-name { font-size: 11px; }
+  .pa-piles .pa-card { height: 103px; }
+  .pa-opponents { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 9px; }
+  .pa-opponent .pa-card { height: 72px; padding: 4px 3px; }
+  .pa-opponent .pa-card-position { display: none; }
+  .pa-opponent .pa-card-name { font-size: 8px; }
+  .pa-opponent .pa-card-emoji { min-height: 12px; font-size: 17px; }
+  .pa-opponent .pa-card-value { font-size: 15px; }
+}
+@media (max-width: 350px) {
+  .pa-hand, .pa-piles { gap: 5px; }
+  .pokemon-adventure-panel .pa-card { height: 108px; padding: 5px 4px; }
+  .pa-card-emoji { font-size: 25px; }
+  .pa-card-ability { font-size: 8px; }
+  .pa-card-position { font-size: 8px; }
+  .pa-opponent .pa-hand { gap: 3px; }
+  .pa-opponent .pa-card { height: 72px; padding: 4px 2px; }
+  .pa-opponent .pa-card-name { font-size: 8px; }
+  .pa-opponent .pa-back-ball { width: 22px; height: 22px; }
+}
