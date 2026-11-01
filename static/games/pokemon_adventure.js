@@ -150,6 +150,33 @@
     return wrapper;
   }
 
+  function mewReceiver() {
+    const box = element("div", "pa-mew-receive");
+    box.append(element("strong", "", `夺取${slotLabel(selection.target.slot)}：放入你的哪个位置？`));
+    const slots = element("div", "pa-mew-receive-slots");
+    (ownPlayer()?.hand || []).forEach((item, slot) => {
+      const button = element("button", "", `${slotLabel(slot)} · ${item.known ? item.card.value : "?"}`);
+      button.type = "button";
+      button.dataset.paReceive = slot;
+      button.dataset.paExplain = "drawn";
+      button.setAttribute("aria-pressed", String(selection.slot === slot));
+      button.addEventListener("click", event => { event.stopPropagation(); selectSlot(view.you, slot); });
+      slots.append(button);
+    });
+    box.append(slots);
+    if (Number.isInteger(selection.slot)) {
+      const button = element("button", "pa-primary pa-mew-confirm", `确认夺取 → 你的${slotLabel(selection.slot)}`);
+      button.type = "button";
+      button.dataset.paExplain = "confirm";
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        dispatch({type: "steal_card", target_player_id: selection.target.playerId, target_slot: selection.target.slot, slot: selection.slot});
+      });
+      box.append(button);
+    }
+    return box;
+  }
+
   function renderTable() {
     const own = ownPlayer();
     text("YouName", own ? `${own.name} · 你的六牌` : "Spectating");
@@ -187,6 +214,7 @@
       if (view.phase === "initial_reveal") meta.append(element("span", "", player.initial_reveal_done ? "已翻牌 ✓" : "选择首张"));
       if (view.phase === "round_end") meta.append(element("span", "", `${player.round_score ?? "—"} 分${player.round_ready ? " · Ready ✓" : ""}`));
       article.append(heading, otherHand, meta);
+      if (can("steal_card") && selection.target?.playerId === player.player_id) article.append(mewReceiver());
       opponents.append(article);
     });
   }

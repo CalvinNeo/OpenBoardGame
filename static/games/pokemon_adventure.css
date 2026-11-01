@@ -66,6 +66,11 @@
 .pa-opponent .pa-back-ball { width: 25px; height: 25px; border-width: 2px; }
 .pa-opponent .pa-back-label { font-size: 9px; }
 .pa-opponent-meta { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 5px; color: var(--pa-muted); font-size: 10px; }
+.pa-mew-receive { display: grid; gap: 6px; margin-top: 7px; padding: 7px; border-radius: 7px; background: #f5edda; font-size: 10px; overflow-wrap: anywhere; }
+.pa-mew-receive-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.pa-mew-receive-slots button { padding: 5px 2px; font-size: 10px; }
+.pa-mew-receive-slots button[aria-pressed="true"] { background: #e8d390; border-color: #ae893c; }
+.pa-mew-confirm { width: 100%; overflow-wrap: anywhere; }
 .pa-result { margin-bottom: 14px; padding: 12px; border: 1px solid #d4c797; border-radius: 9px; background: #fff9e7; }
 .pa-review { display: flex; justify-content: flex-end; margin: -5px 0 14px; }
 .pa-result h3 { margin: 0 0 8px; font-size: 15px; overflow-wrap: anywhere; }

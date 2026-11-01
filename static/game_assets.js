@@ -1,8 +1,8 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "pokemon_adventure": {
-    "scripts": ["/static/games/pokemon_adventure.js?v=2"],
-    "styles": ["/static/games/pokemon_adventure.css?v=2"],
+    "scripts": ["/static/games/pokemon_adventure.js?v=3"],
+    "styles": ["/static/games/pokemon_adventure.css?v=3"],
     "markup": "/static/games/pokemon_adventure.html?v=2",
     "panel": "pokemonAdventurePanel",
     "panelTitle": "🔴 宝可梦奇遇",

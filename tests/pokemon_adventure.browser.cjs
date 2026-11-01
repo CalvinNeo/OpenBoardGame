@@ -115,6 +115,12 @@ async function confirm(page) {
       await page.screenshot({path:`${output}/playing-${width}.png`,fullPage:true});
       await render(page,'summary');
       await page.screenshot({path:`${output}/summary-${width}.png`,fullPage:true});
+      await render(page,'mew');
+      await choose(page,'p5',0);
+      await page.locator('.pa-mew-receive [data-pa-receive="2"]').click();
+      await bounds(page,`${width}/local Mew confirmation`);
+      await page.locator('.pa-mew-confirm').click();
+      assert.deepEqual(await page.evaluate(()=>safariCaptured.at(-1)),{type:'steal_card',target_player_id:'p5',target_slot:0,slot:2});
     }
 
     await page.setViewportSize({width:390,height:844});
@@ -175,7 +181,8 @@ async function confirm(page) {
     assert.equal(await page.evaluate(()=>document.body.classList.contains('pa-explaining')),false);
 
     await render(page,'mew');
-    await choose(page,'p2',0);
+    await page.waitForTimeout(600);
+    await (await slot(page,'p2',4)).click({force:true});
     assert.equal(await page.locator('#pokemonAdventurePlayers .selected').count(),0,'Mew cannot select hidden cards');
 
     await render(page,'turn');
