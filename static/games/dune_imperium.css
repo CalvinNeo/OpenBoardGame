@@ -1,4 +1,14 @@
 .di-root { --di-ink:#352b20; --di-gold:#a87529; --di-line:#dbcbaa; color:var(--di-ink); background:#f4eddd; border:1px solid #e6d9bd; border-radius:18px; padding:16px; min-width:0; font-size:14px; }
+/* Keep a hidden Room Control discoverable when this player has an action. */
+body.dune-needs-action #roomControlsPanel.collapsed,
+body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn,
+body.dune-needs-action #roomControlsPanel .collapse-btn,
+body.dune-needs-action #roomControlsPanel .room-controls-toggle {
+  border-color:#b63b34!important;
+  box-shadow:0 0 0 2px #b63b3470;
+}
+body.dune-needs-action #roomControlsPanel.collapsed .room-controls-heading,
+body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn { color:#a12f36; }
 .di-root *, .di-dialog * { box-sizing:border-box; }
 .di-root button,.di-root select { font:inherit; max-width:100%; white-space:normal; overflow-wrap:anywhere; }
 .di-root button { background:#fffaf0; border:1px solid var(--di-line); border-radius:9px; color:var(--di-ink); padding:8px 10px; cursor:pointer; box-shadow:none; }

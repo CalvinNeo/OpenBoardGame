@@ -172,8 +172,8 @@ const GAME_ASSETS = {
     "header": "showChallengersHeaderActions"
   },
   "dune_imperium": {
-    "scripts": ["/static/games/dune_imperium.js?v=3"],
-    "styles": ["/static/games/dune_imperium.css?v=3"],
+    "scripts": ["/static/games/dune_imperium.js?v=4"],
+    "styles": ["/static/games/dune_imperium.css?v=4"],
     "markup": "/static/games/dune_imperium.html?v=1",
     "panel": "duneImperiumPanel",
     "header": "showDuneImperiumHeaderActions"

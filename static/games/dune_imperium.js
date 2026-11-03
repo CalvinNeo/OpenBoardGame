@@ -238,6 +238,15 @@
     root.innerHTML=`<div class="di-hero"><div><h2 class="di-title">DUNE: IMPERIUM</h2><div class="di-subtitle">沙丘：帝国 · BASE GAME</div></div><div class="di-round"><strong>${view.round?`ROUND ${view.round} / 10`:"SETUP"}</strong>${esc(phases[view.phase])}</div></div>
       <div class="di-players">${renderPlayers()}</div>${renderReport()}${table}`;
     root.classList.toggle("di-explaining",explaining);
+    updateActionAttention();
+  }
+
+  function updateActionAttention() {
+    // Room Control is docked automatically during a game. Keep its collapsed
+    // affordance visibly actionable when this player's view has a legal move.
+    const needsAction = Boolean(view && !view.game_over && view.moves?.length && !panel.classList.contains("hidden"));
+    document.body.classList.toggle("dune-needs-action", needsAction);
+    panel.classList.toggle("di-needs-action", needsAction);
   }
   function submit() {
     if(!selected||pending||!view.moves.some(m=>JSON.stringify(m)===JSON.stringify(selected)))return;
@@ -344,7 +353,7 @@
       event.preventDefault();event.stopImmediatePropagation();if(event.key==="Enter"||event.key===" ")explainTarget(event.target.closest("[data-di-explain]"));
     }
   },true);
-  function clear() { view=null;pending=false;clearTimeout(pendingTimer);resetSelection();setExplain(false);root.replaceChildren();if(dialog.open)dialog.close(); }
+  function clear() { view=null;pending=false;clearTimeout(pendingTimer);resetSelection();setExplain(false);document.body.classList.remove("dune-needs-action");panel.classList.remove("di-needs-action");root.replaceChildren();if(dialog.open)dialog.close(); }
   window.renderDuneImperiumGameState=data=>{
     if(!data?.view||data.view.game_id!=="dune_imperium")return;
     if(typeof currentRoomState!=="undefined"&&data.room_id&&currentRoomState?.room_id!==data.room_id)return;

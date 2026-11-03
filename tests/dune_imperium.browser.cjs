@@ -100,6 +100,11 @@ print(json.dumps(v))
       assert.equal(await p.locator('.di-side,.di-hand-section,.di-tabs,#duneImperiumActions').count(),0,'setup has no duplicate actions or empty hand');
       const legal=await p.evaluate(()=>lastGameStatePayload.view.moves.filter(m=>m.type==='leader').length);
       assert.equal(await p.locator('[data-di-action="leader"]:not(:disabled)').count(),legal,'only the current player can pick');
+      assert.equal(
+        await p.evaluate(() => document.body.classList.contains('dune-needs-action')),
+        legal > 0,
+        'Room Control action attention follows the current player'
+      );
     }
     for(const width of [1280,768,393,320]) {
       await a.setViewportSize({width,height:980});
@@ -196,6 +201,11 @@ print(json.dumps(v))
     await a.screenshot({path:path.join(out,'result.png'),fullPage:true});
     await fixture(a,'spectator');
     assert.equal(await a.locator('[data-di-action="move"]').count(),0);
+    assert.equal(
+      await a.evaluate(() => document.body.classList.contains('dune-needs-action')),
+      false,
+      'spectator views do not mark Room Control as actionable'
+    );
     const mobile=await page({viewport:{width:393,height:852},isMobile:true,hasTouch:true});
     await mobile.evaluate(async()=>{await ensureGameAssets('dune_imperium');document.body.append(document.getElementById('duneImperiumPanel'));document.body.append(document.getElementById('duneImperiumHeaderActions'));document.getElementById('duneImperiumPanel').classList.remove('hidden');});
     await fixture(mobile,'turn');
