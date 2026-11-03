@@ -225,6 +225,117 @@ class PoisonRuleTests(unittest.TestCase):
         self.assertEqual(state["current_turn"], "p2")
 
 
+class PoisonBotTests(unittest.TestCase):
+    def test_bot_move_only_acts_for_current_player(self):
+        state = PoisonGame.init_game({"seed": 41}, make_players(3))
+
+        non_current = next(pid for pid in state["turn_order"] if pid != state["current_turn"])
+        self.assertIsNone(PoisonGame.bot_move(state, non_current))
+        self.assertIsNone(PoisonGame.bot_move(state, "missing"))
+
+        state["phase"] = "round_summary"
+        state["next_round_ready"] = []
+        self.assertEqual(
+            PoisonGame.bot_move(state, "p0"),
+            {"type": "next_round", "delay_ms": 250},
+        )
+
+    def test_bot_prefers_a_safe_play_when_an_overflow_is_also_available(self):
+        state = PoisonGame.init_game({"seed": 43}, make_players(3))
+        rig_state(
+            state,
+            hands={
+                "p0": ["poison-red-5-01", "poison-blue-1-01"],
+            },
+            cauldrons=[
+                ["poison-red-7-01", "poison-red-4-01"],
+                [],
+                [],
+            ],
+        )
+
+        before = copy.deepcopy(state)
+        action = PoisonGame.bot_move(state, "p0")
+
+        self.assertIsNotNone(action)
+        self.assertEqual(action["type"], "play_card")
+        self.assertEqual(action["card_id"], "poison-blue-1-01")
+        self.assertIn(action["cauldron_index"], (1, 2))
+        self.assertEqual(state, before)
+        events, error = PoisonGame.apply_action(
+            state,
+            "p0",
+            {key: value for key, value in action.items() if key != "delay_ms"},
+        )
+        self.assertIsNone(error)
+        self.assertEqual(events[0]["type"], "poison:play")
+        self.assertFalse(events[0]["payload"]["overflow"])
+
+    def test_bot_can_choose_an_overflow_when_every_legal_play_overflows(self):
+        state = PoisonGame.init_game({"seed": 47}, make_players(3))
+        rig_state(
+            state,
+            hands={"p0": ["poison-toxic-4-01"]},
+            cauldrons=[
+                ["poison-red-7-01", "poison-red-4-01", "poison-red-2-01"],
+                ["poison-blue-7-01", "poison-blue-4-01", "poison-blue-2-01"],
+                ["poison-purple-7-01", "poison-purple-4-01", "poison-purple-2-01"],
+            ],
+        )
+
+        action = PoisonGame.bot_move(state, "p0")
+        self.assertIsNotNone(action)
+        self.assertEqual(action["card_id"], "poison-toxic-4-01")
+        self.assertIn(action["cauldron_index"], (0, 1, 2))
+        _, error = PoisonGame.apply_action(
+            state,
+            "p0",
+            {key: value for key, value in action.items() if key != "delay_ms"},
+        )
+        self.assertIsNone(error)
+        self.assertTrue(state["last_action"]["overflow"])
+
+    def test_bot_move_is_deterministic_and_does_not_mutate_state(self):
+        state = PoisonGame.init_game({"seed": 53}, make_players(4))
+        before = copy.deepcopy(state)
+
+        first = PoisonGame.bot_move(state, state["current_turn"])
+        second = PoisonGame.bot_move(state, state["current_turn"])
+
+        self.assertEqual(first, second)
+        self.assertEqual(state, before)
+
+    def test_bot_move_does_not_depend_on_opponent_hidden_hand(self):
+        state = PoisonGame.init_game({"seed": 57}, make_players(3))
+        bot_id = state["current_turn"]
+        altered = copy.deepcopy(state)
+
+        opponent_id = next(pid for pid in state["turn_order"] if pid != bot_id)
+        self.assertTrue(altered["players"][opponent_id]["hand"])
+        self.assertTrue(altered["removed_hand"])
+        altered["players"][opponent_id]["hand"][0], altered["removed_hand"][0] = (
+            altered["removed_hand"][0],
+            altered["players"][opponent_id]["hand"][0],
+        )
+
+        self.assertEqual(PoisonGame.bot_move(state, bot_id), PoisonGame.bot_move(altered, bot_id))
+
+    def test_bot_is_ready_for_next_round_and_rematch_actions(self):
+        state = PoisonGame.init_game({"seed": 59}, make_players(3))
+        state["phase"] = "round_summary"
+        state["next_round_ready"] = ["p1"]
+        self.assertEqual(PoisonGame.bot_move(state, "p0")["type"], "next_round")
+        state["next_round_ready"] = ["p0", "p1", "p2"]
+        self.assertIsNone(PoisonGame.bot_move(state, "p0"))
+
+        state["phase"] = "game_over"
+        state["game_over"] = True
+        state["rematch_ready"] = ["p1"]
+        self.assertEqual(PoisonGame.bot_move(state, "p0")["type"], "play_again")
+        state["rematch_ready"] = ["p0", "p1", "p2"]
+        self.assertIsNone(PoisonGame.bot_move(state, "p0"))
+
+
 class PoisonScoringAndPrivacyTests(unittest.TestCase):
     def test_unique_majority_is_immune_and_ties_are_not(self):
         state = PoisonGame.init_game({"seed": 17}, make_players(3))

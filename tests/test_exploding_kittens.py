@@ -205,6 +205,28 @@ class ExplodingKittensTests(unittest.TestCase):
         self.assertEqual(s["players"]["p0"]["hand"], [])
         self.assertEqual(len(s["players"]["p1"]["hand"]), 1)
 
+    def test_restored_effect_handles_target_spending_their_last_nope(self):
+        for effect in ("favor", "pair", "triple"):
+            with self.subTest(effect=effect):
+                s = make_state()
+                offered = ["favor"] if effect == "favor" else ["tacocat"] * (2 if effect == "pair" else 3)
+                s["players"]["p0"]["hand"] = cards(*offered, "nope")
+                s["players"]["p1"]["hand"] = cards("nope")
+                fields = {"target_id": "p1"}
+                if effect == "triple":
+                    fields["requested_kind"] = "defuse"
+                play(s, "p0", offered[0], len(offered), **fields)
+                apply(s, "p1", "nope")
+                apply(s, "p0", "nope")
+                settle(s)
+                self.assertEqual(s["phase"], "playing")
+                self.assertEqual(s["current_turn"], "p0")
+                self.assertIsNone(s["pending"])
+                self.assertIsNone(s["favor"])
+                self.assertEqual(s["players"]["p1"]["hand"], [])
+                self.assertEqual(s["history"][-1]["type"], "empty_target")
+                self.assertIn("draw", Game.get_legal_actions(s, "p0"))
+
     def test_defuse_secret_insertion_preserves_order_and_attack_debt(self):
         for position in range(4):
             s = make_state()

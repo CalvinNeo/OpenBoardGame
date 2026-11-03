@@ -154,6 +154,38 @@ class ExplodingKittensIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(human.player_id, s["pending"]["passed"])
         self.assertIn("pass", Game.get_legal_actions(s, human.player_id))
 
+    async def test_real_bot_runner_finishes_game_and_keeps_actions_private(self):
+        room = await self.make_room(bots=True)
+        room.auto_save = False
+        for player in room.players:
+            player.is_bot = True
+            room.game_state["player_meta"][player.player_id]["is_bot"] = True
+        real_sleep = asyncio.sleep
+
+        async def fast_sleep(delay):
+            await real_sleep(min(delay, 0.001))
+
+        app.sio.emits.clear()
+        with patch.object(app.asyncio, "sleep", new=fast_sleep):
+            await app._maybe_run_bots(room)
+            for _ in range(2000):
+                await real_sleep(0.002)
+                if not room.bot_running:
+                    break
+        self.assertFalse(room.bot_running)
+        self.assertEqual(room.status, "game_over")
+        self.assertTrue(room.game_state["game_over"])
+        self.assertEqual(len(room.game_state["winner_ids"]), 1)
+        # Bot progress and broadcasts use the real room path, including secret
+        # insertion positions and card transfers, rather than a simulated loop.
+        progress = [item for item in app.sio.emits if item["event"] == "game:bot_progress"]
+        self.assertTrue(any(item["payload"]["bot_status"]["running"] for item in progress))
+        moves = [event["payload"]["action"]
+                 for item in app.sio.emits if item["event"] == "game:state"
+                 for event in item["payload"]["events"] if event["type"] == "bot:action"]
+        self.assertTrue(moves)
+        self.assertTrue(all(set(move) == {"type"} for move in moves))
+
 
 if __name__ == "__main__":
     unittest.main()

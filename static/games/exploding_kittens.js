@@ -7,8 +7,9 @@
   const helpButton = document.getElementById("explodingKittensHelpBtn");
   const explainButton = document.getElementById("explodingKittensExplainBtn");
   const tooltip = $("Tooltip");
-  let view = null, selected = [], busy = false, explaining = false, signature = null;
+  let view = null, selected = [], busy = false, explaining = false, signature = null, botStatus = null;
   let tipTimer, busyTimer, suppressTimer, suppressClick = false, focusBeforeDialog;
+  let handGesture = null, suppressHandClickUntil = 0;
   const singles = ["attack", "skip", "favor", "shuffle", "see_future"];
   const effects = {
     exploding_kitten: "立即展示。没有 Defuse（🧯，拆弹）就淘汰；使用拆弹后秘密放回牌堆。",
@@ -28,7 +29,8 @@
     discard: ["Discard pile · 弃牌堆", "这里的牌全部公开。点击可以查看完整弃牌；即使被 Nope（🙅，否决），已经打出的牌也留在弃牌堆。"],
     kittens: ["Exploding Kittens（💥）", "仍在游戏中的爆炸猫数量，也包含当前被抽出、等待拆弹的一张。每淘汰一人移除一张爆炸猫；最后存活者获胜。"],
     turns: ["Turns（⚡）", "显示当前玩家仍需完成的回合数。抽牌或 Skip（⏭️，跳过）消耗一个；Attack（⚡，攻击）将未完成的攻击回合再加 2 交给下一位。"],
-    player: ["Players · 玩家", "显示玩家名字、公开手牌数量（🃏）与存活情况。Turn 表示当前行动者；Out 表示已淘汰；Ready 表示已确认；You / Bot 标识本人或机器人。"],
+    player: ["Players · 玩家", "显示玩家名字、公开手牌数量（🃏）与存活情况。Turn 表示当前行动者；Out 表示已淘汰；Ready 表示已确认；You / AI（🤖）标识本人或机器人。"],
+    ai: ["AI opponent（🤖）", "可以在 Room Control 中用 Add Bot 加入机器人。机器人自动出牌、否决、交牌、拆弹及确认淘汰结果，只根据自己的手牌和公开信息决策，不读取其他玩家的隐藏手牌、牌库顺序或秘密插入位置。Thinking 表示服务端正在处理它的行动。"],
     hand: ["Hand（🔒）· 私人手牌", "只有你能看到自己的牌。点选 1 张功能牌或 2／3 张同名牌，再点击 Play Selected。点击空白或 Esc 取消选择。牌数没有上限；其他人只看到数量。"],
     play: ["Play Selected", "打出选中的牌。单张可用攻击、跳过、索取、洗牌、预知未来；两张／三张任意同名牌（包括拆弹与否决）可作为组合使用。组合只执行组合效果。"],
     reaction: ["Reaction · 否决响应", "尚未执行的效果等待所有存活玩家确认 Pass。出牌者默认确认。任何存活玩家均可打 Nope（🙅），即使已经 Pass；每次 Nope 重新开放响应，否决者默认确认。全员确认后执行偶数层效果、取消奇数层效果。"],
@@ -120,7 +122,10 @@
     show("TargetRow", !!s.count && s.targeted);
     show("RequestRow", s.count === 3);
     const same = s.cards?.every(card => card.kind === s.kind);
-    text("SelectionLabel", !s.count ? "Select cards below, or draw." : !same ? "Choose matching cards for a combo." : s.count === 1 ? label(s.kind) : `${s.count === 2 ? "Pair · steal a random card" : "Triple · request a card"} · ${label(s.kind)}`);
+    const singleHint = s.kind === "nope" ? "Use Nope in a reaction, or match 2 / 3 for a combo."
+      : s.kind === "defuse" ? "Keep Defuse for a kitten, or match 2 / 3 for a combo."
+      : !singles.includes(s.kind) ? "Select a second matching card for a combo." : label(s.kind);
+    text("SelectionLabel", !s.count ? "Select cards below, or draw." : !same ? "Choose matching cards for a combo." : s.count === 1 ? singleHint : `${s.count === 2 ? "Pair · steal a random card" : "Triple · request a card"} · ${label(s.kind)}`);
     text("Play", s.count === 2 ? "Play Pair" : s.count === 3 ? "Play Triple" : "Play Selected");
     text("Next", view?.ready.includes(view.you) ? "Ready ✓" : "Next Round");
     for (const button of $("Hand").querySelectorAll("button")) {
@@ -159,16 +164,24 @@
   function renderPlayers() {
     const container = $("Players"); container.replaceChildren();
     for (const player of view.players) {
-      const item = annotate(el("article", "ek-player"), "player", "Players：🃏 是公开手牌数量；Out 已淘汰，Turn 当前行动，Ready 已确认。");
+      const item = annotate(el("article", "ek-player"), "player", `${player.name} · ${player.is_bot ? "AI opponent（🤖）" : "Player"} · ${player.hand_count} cards（🃏）${!player.alive ? " · Out" : ""}`);
+      item.dataset.playerId = player.player_id;
       item.classList.toggle("is-current", player.player_id === view.current_turn);
       item.classList.toggle("is-out", !player.alive);
       item.classList.toggle("is-winner", view.winner_ids.includes(player.player_id));
       item.append(el("strong", "ek-player-name", player.name));
       const meta = el("div", "ek-player-meta");
-      const badges = [`🃏 ${player.hand_count}`, player.player_id === view.you ? "You" : player.is_bot ? "Bot" : "", !player.alive ? "Out" : player.player_id === view.current_turn ? "Turn" : "", view.winner_ids.includes(player.player_id) ? "🏆 Winner" : "", (view.pending?.passed || view.ready).includes(player.player_id) ? "Ready" : ""];
+      const badges = [`🃏 ${player.hand_count}`, player.player_id === view.you ? "You" : player.is_bot ? "🤖 AI" : "", !player.alive ? "Out" : player.player_id === view.current_turn ? "Turn" : "", view.winner_ids.includes(player.player_id) ? "🏆 Winner" : "", (view.pending?.passed || view.ready).includes(player.player_id) ? "Ready" : ""];
       for (const badge of badges.filter(Boolean)) meta.append(el("span", "", badge));
       item.append(meta); container.append(item);
     }
+    renderBotStatus();
+  }
+  function renderBotStatus() {
+    const bot = botStatus?.running && view?.players.find(player => player.player_id === botStatus.player_id && player.is_bot);
+    show("BotStatus", !!bot && socket.connected && !view.game_over);
+    if (bot) text("BotStatus", `🤖 ${bot.name} · Thinking…`);
+    for (const node of $("Players").children) node.classList.toggle("is-thinking", !!bot && node.dataset.playerId === bot.player_id);
   }
   function renderOptions() {
     const previousTarget = $("Target").value;
@@ -187,7 +200,7 @@
     }
   }
   function logText(row) {
-    const who = name(row.player_id);
+    const who = `${view.players.find(player => player.player_id === row.player_id)?.is_bot ? "🤖 " : ""}${name(row.player_id)}`;
     switch (row.type) {
       case "draw": return `${who} drew a card.`;
       case "play": return `${who} played ${row.count} × ${label(row.card_kind)}${row.target_id ? ` → ${name(row.target_id)}` : ""}${row.requested_kind ? ` · requests ${label(row.requested_kind)}` : ""}.`;
@@ -197,6 +210,7 @@
       case "given": return `${who} gave a card to ${name(row.target_id)}.`;
       case "stolen": return `${who} took ${row.requested_kind ? label(row.requested_kind) : "a private card"} from ${name(row.target_id)}.`;
       case "missed": return `${name(row.target_id)} had no ${label(row.requested_kind)}. No card taken.`;
+      case "empty_target": return `${name(row.target_id)} has no cards left. ${who}'s ${row.effect === "pair" ? "Pair" : row.effect === "triple" ? "Triple" : "Favor"} takes no card.`;
       case "kitten": return `${who} drew an Exploding Kitten 💥.`;
       case "defused": return `${who} used Defuse 🧯.`;
       case "reinserted": return `${who} secretly returned the kitten.`;
@@ -257,6 +271,7 @@
     $("Log").replaceChildren(...[...view.history].reverse().map(row => el("li", "", logText(row))));
     if (!view.history.length) $("Log").append(el("li", "", "No moves yet."));
     $("Log").scrollTop = scroll;
+    panel.dataset.phase = view.phase;
     renderOptions(); renderPlayers(); renderHand(); renderActions();
   }
 
@@ -279,7 +294,7 @@
       ["cat", "Tacocat（🌮，墨西哥卷猫）、Cattermelon（🍉，西瓜猫）、Hairy Potato Cat（🥔，毛毛土豆猫）、Beard Cat（🧔，胡子猫）、Rainbow-Ralphing Cat（🌈，彩虹猫），各 4 张"],
     ];
     for (const [kind, title] of rules) body.append(el("p", "", `${title}：${effects[kind]}`));
-    body.append(el("h3", "", "保密、回顾与操作"), el("p", "", "Hand（🔒）只有本人可见，Players 的 Cards（🃏）只公开数量；弃牌全部公开。Future（🔮）只给本人查看，Continue 才继续。秘密交牌、偷牌结果和插入位置不公开。非最终淘汰后暂停，全员（包括淘汰者）点击 Next Round 继续，机器人自动确认。最终结果保留，通过房间控制重新开局。"), el("p", "", "选牌后点空白或 Esc 可取消，滚动手牌不影响选中状态。Help 查看规则；Explain 后点目标查看解释，禁用按钮也可解释，Esc 退出。电脑悬停显示图标说明，手机点击后浮层 3 秒自动消失。机器人只根据自己的手牌和可见信息决策。"));
+    body.append(el("h3", "", "保密、回顾与操作"), el("p", "", "Hand（🔒）只有本人可见，Players 的 Cards（🃏）只公开数量；弃牌全部公开。Future（🔮）只给本人查看，Continue 才继续。秘密交牌、偷牌结果和插入位置不公开。非最终淘汰后暂停，全员（包括淘汰者）点击 Next Round 继续，机器人自动确认。最终结果保留，通过房间控制重新开局。"), el("p", "", "选牌后点空白或 Esc 可取消，滚动手牌不影响选中状态。Help 查看规则；Explain 后点目标查看解释，禁用按钮也可解释，Esc 退出。电脑悬停显示图标说明，手机点击后浮层 3 秒自动消失。"), el("h3", "", "AI opponent（🤖）"), el("p", "", "在 Room Control 中点击 Add Bot 即可与 AI 对局。机器人会自动处理出牌、否决、交牌、拆弹、秘密放回及 Next Round；它会等待真人完成自己的行动与回顾。AI 只根据自己的手牌、私人窥视和公开信息决策，不知道其他人的隐藏手牌、牌库顺序或秘密插入位置。Thinking 表示该机器人正在行动；Recent moves 保留其已经公开的操作。"));
     const source = el("a", "", "Official Original Edition rules · 2022");
     source.href = "https://dumekj556jp75.cloudfront.net/exploding-kittens/English.pdf";
     source.target = "_blank"; source.rel = "noopener noreferrer";
@@ -340,6 +355,26 @@
   panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
   panel.addEventListener("focusin", event => tip(event.target.closest("[data-ek-tip]")));
   panel.addEventListener("focusout", hideTip);
+  // Browsers can synthesize a click after a touch scroll. Only a deliberate tap selects a card.
+  $("Hand").addEventListener("pointerdown", event => {
+    if (event.pointerType === "mouse" || !event.isPrimary) return;
+    handGesture = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
+    suppressHandClickUntil = 0;
+  });
+  document.addEventListener("pointermove", event => {
+    if (handGesture?.id === event.pointerId && Math.hypot(event.clientX - handGesture.x, event.clientY - handGesture.y) > 8) handGesture.moved = true;
+  }, {passive: true});
+  for (const kind of ["pointerup", "pointercancel"]) document.addEventListener(kind, event => {
+    if (handGesture?.id !== event.pointerId) return;
+    if (handGesture.moved || kind === "pointercancel") suppressHandClickUntil = performance.now() + 500;
+    handGesture = null;
+  }, {passive: true});
+  $("Hand").addEventListener("scroll", () => { if (handGesture) handGesture.moved = true; }, {passive: true});
+  $("Hand").addEventListener("click", event => {
+    if (performance.now() >= suppressHandClickUntil) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    suppressHandClickUntil = 0;
+  }, true);
   panel.addEventListener("click", event => {
     const target = event.target.closest("[data-ek-tip]");
     if (target) tip(target, true); else hideTip();
@@ -350,11 +385,12 @@
   window.addEventListener("blur", hideTip);
 
   function clearState() {
-    view = null; selected = []; busy = false; signature = null;
+    view = null; selected = []; busy = false; signature = null; botStatus = null;
+    handGesture = null; suppressHandClickUntil = 0; delete panel.dataset.phase;
     clearTimeout(busyTimer); setExplain(false); hideTip();
     if (dialog.open) dialog.close();
     for (const id of ["Players", "Hand", "Log", "FutureCards", "Pending", "Position", "Target"]) $(id).replaceChildren();
-    for (const id of ["Composer", "ReactionActions", "GiveArea", "Continue", "Defuse", "InsertArea", "Review", "Result", "Future", "Pending"]) show(id, false);
+    for (const id of ["Composer", "ReactionActions", "GiveArea", "Continue", "Defuse", "InsertArea", "Review", "Result", "Future", "Pending", "BotStatus"]) show(id, false);
     text("Status", "Waiting to start"); text("Prompt", "Waiting for the table.");
     text("DeckCount", "—"); text("DiscardName", "No cards yet"); text("DiscardEmoji", "—");
     text("DiscardCount", "View discard pile"); text("Debt", "⚡ —"); text("KittenCount", "💥 —");
@@ -366,7 +402,7 @@
     const next = `${data.room_id}:${data.view.game_token}:${data.view.window_id}:${data.view.you}`;
     if (next !== signature) { selected = []; hideTip(); }
     if (next !== signature || view?.revision !== data.view.revision) { busy = false; clearTimeout(busyTimer); }
-    signature = next; view = data.view;
+    signature = next; view = data.view; botStatus = data.bot_status || null;
     selected = selected.filter(id => view.hand.some(card => card.id === id)); render();
   };
   window.showExplodingKittensHeaderActions = visible => {
@@ -378,8 +414,12 @@
   }
   function sync() {
     socket.on("room:state", syncRoom);
+    socket.on("game:bot_progress", data => {
+      if (!view || currentGameType !== "exploding_kittens" || data?.game_type !== "exploding_kittens" || data.room_id !== currentRoomState?.room_id) return;
+      botStatus = data.bot_status || null; renderBotStatus();
+    });
     socket.on("system:error", () => { busy = false; clearTimeout(busyTimer); renderActions(); });
-    socket.on("disconnect", () => { busy = false; clearTimeout(busyTimer); hideTip(); renderActions(); });
+    socket.on("disconnect", () => { busy = false; botStatus = null; clearTimeout(busyTimer); hideTip(); renderBotStatus(); renderActions(); });
     socket.on("connect", renderActions);
     if (typeof currentRoomState !== "undefined") syncRoom(currentRoomState);
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "exploding_kittens") window.renderExplodingKittensGameState(lastGameStatePayload);

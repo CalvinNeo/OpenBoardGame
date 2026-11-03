@@ -9,8 +9,12 @@
   border-color: #cbd2c4;
   border-radius: 18px;
 }
-.game-panel[data-game-theme="chromino"] > .panel-header { margin-bottom: 4px; }
+.game-panel[data-game-theme="chromino"] > .panel-header { flex-wrap: nowrap; gap: 6px; margin-bottom: 4px; }
 .game-panel[data-game-theme="chromino"] > .panel-header h2 { color: #263d38; }
+.game-panel[data-game-theme="chromino"] .game-panel-title { flex: 1 1 auto; flex-wrap: nowrap; gap: 5px; }
+.game-panel[data-game-theme="chromino"] .game-panel-title h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-panel[data-game-theme="chromino"] #gameReconnectBtn { flex: 0 0 auto; white-space: nowrap; }
+.game-panel[data-game-theme="chromino"] > .panel-header > .panel-header-actions { flex: 0 0 auto; flex-wrap: nowrap; }
 .game-panel[data-game-theme="chromino"] > .panel-header button,
 .chromino-panel button, .chromino-dialog button {
   margin: 0;
@@ -23,8 +27,8 @@
   font: inherit;
   font-size: 13px;
   line-height: 1.25;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-wrap: normal;
   cursor: pointer;
 }
 .chromino-panel, .chromino-panel *, .chromino-dialog, .chromino-dialog * { box-sizing: border-box; min-width: 0; }
@@ -34,8 +38,9 @@
 .chromino-panel button:focus-visible, .chromino-panel [tabindex]:focus-visible, .chromino-dialog button:focus-visible { outline: 3px solid #cc9131; outline-offset: 3px; }
 .chromino-topline, .chromino-tools, .chromino-board-toolbar, .chromino-rack-heading, .chromino-confirm-bar, .chromino-dialog-heading { display: flex; align-items: center; gap: 7px; }
 .chromino-topline, .chromino-board-toolbar, .chromino-rack-heading, .chromino-confirm-bar, .chromino-dialog-heading { justify-content: space-between; }
-.chromino-topline { margin-bottom: 12px; flex-wrap: wrap; }
-.chromino-edition { font-size: 10px; letter-spacing: .15em; color: #64736b; }
+.chromino-topline { margin-bottom: 12px; flex-wrap: nowrap; }
+.chromino-topline .chromino-tools { flex-wrap: nowrap; }
+.chromino-edition { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; letter-spacing: .15em; color: #64736b; }
 .chromino-tools { flex-shrink: 0; flex-wrap: wrap; }
 .chromino-tools button { flex-shrink: 0; }
 .chromino-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); gap: 7px; margin-bottom: 12px; }
@@ -47,8 +52,10 @@
 .chromino-player .chromino-tile { --chromino-cell: 15px; border-width: 2px; border-radius: 4px; flex-shrink: 0; }
 .chromino-player .chromino-square { font-size: 10px; border-radius: 2px; }
 .chromino-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 285px); gap: 16px; align-items: start; }
-.chromino-board-toolbar { min-height: 42px; margin-bottom: 7px; flex-wrap: wrap; }
-.chromino-turn { flex: 1 1 120px; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.chromino-board-toolbar { min-height: 38px; margin-bottom: 7px; flex-wrap: nowrap; }
+.chromino-turn { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.chromino-placement-tools { flex-wrap: nowrap; }
+.chromino-placement-tools button { padding: 6px 9px; }
 .chromino-board { display: block; width: 100%; height: clamp(320px, 51vh, 570px); overflow: hidden; background: #e9ebdf; border: 1px solid #d2d8c8; border-radius: 12px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
 .chromino-board.chromino-panning { cursor: grabbing; }
 .chromino-board [data-chromino-center] { cursor: pointer; }
@@ -59,8 +66,10 @@
 .chromino-last-outline { stroke: #216e60; stroke-width: 3; }
 .chromino-preview-outline { stroke: #b87917; stroke-width: 3; fill: #fff4d5; }
 .chromino-board-symbol { fill: #fff; font: bold 21px sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-.chromino-confirm-bar { min-height: 50px; padding: 8px 0 0; flex-wrap: wrap; }
-#chrominoSelection { flex: 1 1 150px; font-size: 12px; color: #64736b; overflow-wrap: anywhere; }
+.chromino-confirm-bar { min-height: 38px; padding: 6px 0 0; flex-wrap: nowrap; }
+#chrominoSelection { min-width: 0; flex: 1 1 auto; font-size: 12px; color: #64736b; overflow-wrap: anywhere; }
+.chromino-zoom-tools { flex-wrap: nowrap; }
+.chromino-zoom-tools button { min-width: 34px; padding: 5px 8px; }
 .chromino-panel .chromino-primary { color: #fff; background: #216e60; border-color: #216e60; }
 .chromino-panel .chromino-primary:hover:not(:disabled) { background: #155448; }
 .chromino-rack-heading { min-height: 42px; margin-bottom: 7px; }
@@ -79,8 +88,8 @@
 .chromino-color-blue { background: #3379bd; }
 .chromino-color-purple { background: #805bb2; }
 .chromino-color-wild { background: #faf4df; color: #665239; }
-.chromino-draw-bar { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 10px 0; }
-#chrominoHint { flex: 1 1 120px; font-size: 12px; color: #64736b; overflow-wrap: anywhere; }
+.chromino-draw-bar { display: flex; align-items: center; gap: 7px; flex-wrap: nowrap; margin-top: 5px; padding: 7px 3px 0; border-top: 1px solid #d4dacd; }
+.chromino-draw-bar button { flex: 1 1 0; }
 .chromino-legend { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid #d4dacd; }
 .chromino-legend-item { display: inline-flex; gap: 4px; align-items: center; font-size: 10px; color: #64736b; cursor: help; }
 .chromino-legend .chromino-square { --chromino-cell: 18px; font-size: 12px; }
@@ -114,19 +123,19 @@
   .chromino-player { padding: 6px 8px; }
   .chromino-player-name { font-size: 12px; }
   .chromino-player-meta { margin-top: 3px; }
-  .chromino-board { height: clamp(235px, 36dvh, 390px); }
-  .chromino-board-toolbar { margin-bottom: 4px; }
+  .chromino-board { height: clamp(300px, 46dvh, 520px); }
+  .chromino-board-toolbar { gap: 5px; margin-bottom: 4px; }
   .chromino-board-toolbar .chromino-tools { gap: 4px; }
-  .chromino-board-toolbar button { min-height: 32px; padding: 5px 9px; }
-  .chromino-turn { flex-basis: 95px; font-size: 12px; }
-  .chromino-confirm-bar { gap: 5px; padding-top: 6px; }
-  #chrominoSelection { flex-basis: 90px; font-size: 11px; }
-  .chromino-confirm-bar button { padding: 6px 8px; font-size: 12px; }
+  .chromino-board-toolbar button { min-height: 32px; padding: 5px 7px; font-size: 11px; }
+  .chromino-turn { font-size: 11px; }
+  .chromino-confirm-bar { gap: 5px; padding-top: 5px; }
+  #chrominoSelection { flex-basis: 70px; font-size: 10px; }
+  .chromino-confirm-bar button { min-height: 30px; padding: 4px 7px; font-size: 11px; }
   .chromino-rack-heading { min-height: 32px; margin: 0 0 3px; }
   .chromino-hand { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); max-height: 168px; gap: 6px; }
   .chromino-panel .chromino-hand-tile { padding: 6px 3px 5px; gap: 4px; }
   .chromino-tile { --chromino-cell: 25px; }
-  .chromino-draw-bar { padding: 7px 0; }
+  .chromino-draw-bar { margin-top: 4px; padding: 6px 2px 0; }
   .chromino-legend { padding-top: 7px; gap: 7px; }
   .chromino-history { margin-top: 5px; }
 }

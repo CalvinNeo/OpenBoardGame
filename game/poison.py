@@ -3,6 +3,8 @@ import secrets
 from collections import Counter
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from game.poison_ai import choose_action
+
 
 POTION_COLORS = ("red", "blue", "purple")
 POTION_VALUE_COUNTS = {1: 3, 2: 3, 4: 2, 5: 3, 7: 3}
@@ -628,47 +630,14 @@ class PoisonGame:
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         if bot_id not in state.get("players", {}):
             return None
-        phase = state.get("phase")
-        if phase == "round_summary":
-            if bot_id not in state.get("next_round_ready", []):
-                return {"type": "next_round", "delay_ms": 250}
+        action = choose_action(PoisonGame.get_public_view(state, bot_id))
+        if not action:
             return None
-        if phase != "playing" or bot_id != state.get("current_turn"):
-            return None
-
-        options: List[Tuple[Tuple[int, int, int, int], Dict]] = []
-        for card in state["players"][bot_id].get("hand", []):
-            for cauldron_index in _legal_cauldron_indices(state, card):
-                cauldron_cards = state["cauldrons"][cauldron_index].get("cards", [])
-                new_total = _cauldron_total(cauldron_cards) + int(card.get("value", 0))
-                overflow = new_total > CAULDRON_LIMIT
-                poison_cards = sum(1 for item in cauldron_cards if item.get("kind") == "poison")
-                if overflow:
-                    score = (0, -len(cauldron_cards), -poison_cards, -new_total)
-                elif card.get("kind") == "poison":
-                    score = (1, CAULDRON_LIMIT - new_total, 0, -cauldron_index)
-                else:
-                    score = (1, new_total, 0, -cauldron_index)
-                options.append(
-                    (
-                        score,
-                        {
-                            "type": "play_card",
-                            "card_id": card["id"],
-                            "cauldron_index": cauldron_index,
-                            "delay_ms": 350,
-                        },
-                    )
-                )
-        if not options:
-            return None
-        best_score = max(score for score, _ in options)
-        best_actions = [action for score, action in options if score == best_score]
-        rng = random.Random(
-            f"{state.get('base_seed')}:{state.get('game_index')}:{state.get('round_number')}:"
-            f"{state.get('turn_number')}:{bot_id}"
-        )
-        return rng.choice(best_actions)
+        # Keep the existing room pacing and action shape.  The policy itself
+        # intentionally returns no timing metadata so it can be used directly
+        # in deterministic unit tests and tools.
+        delay_ms = 250 if action.get("type") in {"next_round", "play_again"} else 350
+        return {**action, "delay_ms": delay_ms}
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

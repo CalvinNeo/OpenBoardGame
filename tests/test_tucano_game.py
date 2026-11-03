@@ -16,6 +16,46 @@ def _players(count):
 
 
 class TucanoGameTests(unittest.TestCase):
+    def test_bot_draft_prefers_best_visible_score(self):
+        state = TucanoGame.init_game({}, _players(2))
+        state["current_turn"] = "p0"
+        state["columns"] = [
+            [{"id": "a", "type": "fruit", "fruit": "lime"}],
+            [{"id": "b", "type": "fruit", "fruit": "papaya"}],
+            [{"id": "c", "type": "fruit", "fruit": "fig"}],
+        ]
+
+        self.assertEqual(TucanoGame.bot_move(state, "p0"), {"type": "draft_column", "column": 2})
+
+    def test_bot_give_is_deterministic_and_dumps_bad_fruit(self):
+        state = TucanoGame.init_game({}, _players(3))
+        state.update(current_turn="p0", phase="toucan", pending_toucans=["give"])
+        state["players"]["p0"]["face_up"] = {"lime": 1, "fig": 1}
+        state["players"]["p1"]["face_up"] = {"fig": 1}
+        state["players"]["p2"]["face_up"] = {"lime": 1}
+
+        expected = {"type": "resolve_toucan", "fruit": "lime", "target_player": "p2"}
+        self.assertEqual(TucanoGame.bot_move(state, "p0"), expected)
+        self.assertEqual(TucanoGame.bot_move(state, "p0"), expected)
+
+    def test_bot_steal_targets_the_largest_visible_swing(self):
+        state = TucanoGame.init_game({}, _players(3))
+        state.update(current_turn="p0", phase="toucan", pending_toucans=["steal"])
+        state["players"]["p0"]["face_up"] = {"fig": 1}
+        state["players"]["p1"]["face_up"] = {"fig": 2}
+        state["players"]["p2"]["face_up"] = {"lime": 2}
+
+        self.assertEqual(
+            TucanoGame.bot_move(state, "p0"),
+            {"type": "resolve_toucan", "fruit": "fig", "target_player": "p1"},
+        )
+
+    def test_bot_skips_unresolvable_toucan(self):
+        state = TucanoGame.init_game({}, _players(2))
+        state.update(current_turn="p0", phase="toucan", pending_toucans=["steal"])
+
+        self.assertEqual(TucanoGame.bot_move(state, "p0"), {"type": "skip_toucan"})
+
     def test_setup_uses_delayed_toucans(self):
         state = TucanoGame.init_game({}, _players(3))
 

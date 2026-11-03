@@ -186,7 +186,6 @@
     document.getElementById("chrominoPass").classList.toggle("hidden", !view.legal_actions.includes("pass"));
     document.getElementById("chrominoPass").disabled = !available("pass");
     document.getElementById("chrominoSelection").textContent = pending ? "Sending move…" : preview ? `${rotation}° · Preview (${preview.x}, ${preview.y})` : selected ? `${rotation}° · ${candidates().length} destinations` : view.game_over ? "Final board" : "Choose a tile, then a centre.";
-    document.getElementById("chrominoHint").textContent = view.game_over ? "The final board stays here." : !ownTurn ? "Watch the board while you wait." : view.phase === "drawn" ? "Place the new tile, or keep it." : available("draw") ? "No fit · draw one tile." : available("pass") ? "No fit · the bag is empty." : view.finishing_round ? "Last chance to share the win." : "Match at least two edges.";
   }
 
   function renderResult() {
@@ -422,7 +421,6 @@
     document.getElementById("chrominoTurn").textContent = "Waiting to start";
     document.getElementById("chrominoSelection").textContent = "Choose a tile.";
     document.getElementById("chrominoBag").textContent = "";
-    document.getElementById("chrominoHint").textContent = "";
   }
 
   window.renderChrominoGameState = data => {

@@ -9,11 +9,11 @@ const GAME_ASSETS = {
     "header": "showPokemonAdventureHeaderActions"
   },
   "chromino": {
-    "scripts": ["/static/games/chromino.js?v=1"],
-    "styles": ["/static/games/chromino.css?v=1"],
-    "markup": "/static/games/chromino.html?v=1",
+    "scripts": ["/static/games/chromino.js?v=2"],
+    "styles": ["/static/games/chromino.css?v=2"],
+    "markup": "/static/games/chromino.html?v=2",
     "panel": "chrominoPanel",
-    "panelTitle": "🟥 Chromino · 缤纷多米诺",
+    "panelTitle": "🟥 Chromino",
     "header": "showChrominoHeaderActions"
   },
   "colt_express": {
@@ -69,10 +69,11 @@ const GAME_ASSETS = {
     "header": "showNatsumemoHeaderActions"
   },
   "exploding_kittens": {
-    "scripts": ["/static/games/exploding_kittens.js?v=2"],
-    "styles": ["/static/games/exploding_kittens.css?v=2"],
-    "markup": "/static/games/exploding_kittens.html?v=1",
+    "scripts": ["/static/games/exploding_kittens.js?v=3"],
+    "styles": ["/static/games/exploding_kittens.css?v=3"],
+    "markup": "/static/games/exploding_kittens.html?v=2",
     "panel": "explodingKittensPanel",
+    "panelTitle": "💥 爆炸猫",
     "header": "showExplodingKittensHeaderActions"
   },
   "mall_of_horror": {

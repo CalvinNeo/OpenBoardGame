@@ -140,11 +140,20 @@ def _resolve(state: Dict) -> None:
         state["future"][actor] = copy.deepcopy(state["deck"][:3])
         _phase(state, "future")
     elif effect == "favor":
+        # The target may have spent their final card on a Nope which was then
+        # countered. An already-open effect must not leave them owing a card
+        # they cannot give.
+        if not state["players"][pending["target_id"]]["hand"]:
+            _log(state, "empty_target", actor, effect=effect, target_id=pending["target_id"])
+            return
         state["favor"] = {"actor": actor, "target_id": pending["target_id"]}
         _phase(state, "favor")
     elif effect in ("pair", "triple"):
         target = pending["target_id"]
         hand = state["players"][target]["hand"]
+        if not hand:
+            _log(state, "empty_target", actor, effect=effect, target_id=target)
+            return
         card = _rng(state).choice(hand) if effect == "pair" else next(
             (card for card in hand if card["kind"] == pending["requested_kind"]), None)
         if card:
@@ -386,56 +395,141 @@ class ExplodingKittensGame:
 
     @staticmethod
     def bot_move_from_view(view: Dict) -> Optional[Dict]:
+        """Choose a deterministic move using only this player's visible cards.
+
+        A known safe draw is better than spending an escape card. Unknown draws
+        are evaluated from the public kitten count; opponents' hands, deck order
+        and the server RNG never take part in the decision.
+        """
         legal, hand, me = view["legal_actions"], view["hand"], view["you"]
         if not legal:
             return None
+
         def action(kind: str, **fields) -> Dict:
             return {"type": kind, "game_token": view["game_token"], "window_id": view["window_id"], **fields}
+
         kinds = Counter(card["kind"] for card in hand)
+        future = view["future"]
+        dangerous = bool(future and future[0]["kind"] == "exploding_kitten")
+        risk = view["kitten_count"] / max(1, view["deck_count"])
+
+        def card_value(kind: str) -> float:
+            # Use marginal values so a Favor gives away a lone cat before
+            # breaking a useful matching set, and never wastes our last Defuse.
+            if kind in CAT_CARDS:
+                return 4 if kinds[kind] == 1 else 16 if kinds[kind] == 2 else 20
+            return {
+                "defuse": 100 if kinds[kind] == 1 else 80,
+                "nope": 65 if kinds[kind] == 1 else 48,
+                "attack": 62 if view["under_attack"] else 54,
+                "skip": 50,
+                "shuffle": 38 if dangerous else 18,
+                "see_future": 10 if future else 28,
+                "favor": 22,
+            }.get(kind, 100)
+
         for kind in ("next_round", "continue", "defuse"):
             if kind in legal:
                 return action(kind)
         if "reinsert" in legal:
-            # During an Attack, protect our remaining draw; otherwise threaten the next seat.
+            # A defused draw pays only one Attack turn. Keep the kitten at the
+            # bottom while we still owe draws; otherwise threaten the next seat.
             return action("reinsert", position=view["deck_count"] if view["turns_left"] > 1 else 0)
         if "give" in legal:
-            priority = {kind: 0 for kind in CAT_CARDS}
-            priority.update(shuffle=2, see_future=3, favor=4, skip=5, attack=6, nope=7, defuse=20)
-            card = min(hand, key=lambda card: priority.get(card["kind"], 10))
+            card = min(hand, key=lambda card: card_value(card["kind"]))
             return action("give", card_id=card["id"])
         if view["phase"] == "reaction":
             pending = view["pending"]
-            cancelled = pending["nope_count"] % 2
+            effect = pending["effect"]
+            cancelled = bool(pending["nope_count"] % 2)
             alive = [p["player_id"] for p in view["players"] if p["alive"]]
             attack_target = alive[(alive.index(pending["actor"]) + 1) % len(alive)]
-            threatened = pending["target_id"] == me or pending["effect"] == "attack" and attack_target == me
-            defend = threatened and not cancelled
-            restore = pending["actor"] == me and cancelled
+            defend = effect == "attack" and attack_target == me
+            if pending["target_id"] == me:
+                if effect == "favor":
+                    # The target chooses: giving a spare cat is cheaper than
+                    # spending a Nope to keep it.
+                    defend = min((card_value(card["kind"]) for card in hand), default=0) >= 45
+                elif effect == "triple":
+                    requested = pending["requested_kind"]
+                    defend = bool(kinds[requested] and card_value(requested) >= 45)
+                elif effect == "pair":
+                    expected_loss = sum(card_value(card["kind"]) for card in hand) / max(1, len(hand))
+                    defend = expected_loss >= 45
+            restore = pending["actor"] == me and (
+                effect in ("attack", "skip")
+                or effect == "shuffle" and dangerous
+                or effect == "triple" and pending["requested_kind"] == "defuse" and not kinds["defuse"]
+            )
+            defend = defend and not cancelled
+            restore = restore and cancelled
             if "nope" in legal and (defend or restore):
                 return action("nope")
             return action("pass") if "pass" in legal else None
+
+        if "play" not in legal:
+            return action("draw") if "draw" in legal else None
+
         targets = [p for p in view["players"] if p["player_id"] != me and p["alive"] and p["hand_count"]]
-        target = max(targets, key=lambda p: p["hand_count"])["player_id"] if targets else None
+
+        # A public failed Defuse request proves absence only until that player
+        # next gains a hidden card. Do not keep asking a known-empty target.
+        missing_defuse, used_defuse = set(), Counter()
+        for row in view["history"]:
+            if row["type"] == "missed" and row.get("requested_kind") == "defuse":
+                missing_defuse.add(row["target_id"])
+            elif row["type"] == "draw":
+                missing_defuse.discard(row["player_id"])
+            elif row["type"] == "given":
+                missing_defuse.discard(row["target_id"])
+            elif row["type"] == "stolen":
+                missing_defuse.discard(row["player_id"])
+            elif row["type"] == "defused":
+                used_defuse[row["player_id"]] += 1
+
+        target = min(targets, key=lambda player: (
+            player["player_id"] in missing_defuse,
+            used_defuse[player["player_id"]], player["hand_count"],
+        )) if targets else None
+        favor_target = min(targets, key=lambda player: player["hand_count"]) if targets else None
+
         def play(kind: str, count: int = 1, **fields) -> Dict:
             return action("play", card_ids=[c["id"] for c in hand if c["kind"] == kind][:count], **fields)
-        if target:
-            for kind in CAT_CARDS:
-                if kinds[kind] >= 3:
-                    return play(kind, 3, target_id=target, requested_kind="defuse")
-                if kinds[kind] >= 2:
-                    return play(kind, 2, target_id=target)
-            if kinds["favor"] and not kinds["defuse"]:
-                return play("favor", target_id=target)
-        dangerous = bool(view["future"] and view["future"][0]["kind"] == "exploding_kitten")
-        risk = view["kitten_count"] / max(1, view["deck_count"])
-        if dangerous or view["under_attack"] or risk >= 0.3:
+
+        # Keep defense for uncertain draws, including a safe draw while still
+        # paying an Attack debt. The peek is never refreshed from hidden state.
+        if future and not dangerous:
+            return action("draw")
+        if dangerous:
+            escapes = ("attack", "skip") if view["turns_left"] > 1 else ("skip", "attack")
+            for kind in escapes:
+                if kinds[kind]:
+                    return play(kind)
+            if kinds["shuffle"] and view["deck_count"] > view["kitten_count"]:
+                return play("shuffle")
+        elif view["under_attack"] and kinds["attack"]:
+            return play("attack")
+        elif kinds["see_future"] and risk >= 0.12:
+            return play("see_future")
+        elif risk >= (0.5 if kinds["defuse"] else 0.25):
             for kind in ("attack", "skip"):
                 if kinds[kind]:
                     return play(kind)
-            if dangerous and kinds["shuffle"] and view["deck_count"] > view["kitten_count"]:
-                return play("shuffle")
-        if not view["future"] and risk >= 0.12 and kinds["see_future"]:
-            return play("see_future")
+
+        if target:
+            cheap_kinds = sorted((kind for kind in kinds if kinds[kind] >= 2), key=card_value)
+            for kind in cheap_kinds:
+                value = card_value(kind)
+                if kind not in CAT_CARDS and kinds[kind] < 3:
+                    continue
+                if (kinds[kind] >= (3 if kind in CAT_CARDS else 4) and value <= 22 and not kinds["defuse"]
+                        and target["player_id"] not in missing_defuse):
+                    return play(kind, 3, target_id=target["player_id"], requested_kind="defuse")
+                if value <= 22:
+                    return play(kind, 2, target_id=target["player_id"])
+        if (favor_target and kinds["favor"]
+                and (not kinds["defuse"] or favor_target["hand_count"] == 1)):
+            return play("favor", target_id=favor_target["player_id"])
         return action("draw")
 
     @staticmethod

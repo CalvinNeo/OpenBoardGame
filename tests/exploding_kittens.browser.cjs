@@ -46,16 +46,20 @@ for p in s['turn_order']:apply(s,p,'next_round')
 s['players']['p1']['hand']=[]
 apply(s,'p1','draw')
 v['finished']=G.get_public_view(s,'p2')
+for view in v.values():
+    for player in view['players']:
+        if player['player_id']=='p1':player['is_bot']=True
 print(json.dumps(v))
 `], {encoding: 'utf8', env: {...process.env, PYTHONDONTWRITEBYTECODE: '1'}}));
 
 async function bounds(page, label) {
   const result = await page.evaluate(() => {
-    const bad = [...document.querySelectorAll('#explodingKittensPanel *, #explodingKittensDialog *')].filter(el => {
+    const bad = [...document.querySelectorAll('#explodingKittensPanel *, #explodingKittensDialog *, .game-panel > .panel-header .game-panel-title, #gameReconnectBtn, #explodingKittensHelpBtn, #explodingKittensExplainBtn')].filter(el => {
+      if (el.closest('.room-controls-layer')) return false; // RC is intentionally portaled above native modal dialogs.
       const r = el.getBoundingClientRect(), style = getComputedStyle(el);
       return r.width && r.height && (r.left < -1 || r.right > innerWidth + 1 ||
         (el.clientWidth && el.scrollWidth > el.clientWidth + 1 && !['hidden', 'auto', 'scroll'].includes(style.overflowX)));
-    }).map(el => `${el.id || el.className}: ${el.textContent.slice(0, 60)} (${el.clientWidth}/${el.scrollWidth})`);
+    }).map(el => `${el.id || el.className}: ${el.textContent.slice(0, 60)} (${el.clientWidth}/${el.scrollWidth}) ${el.outerHTML.slice(0, 120)}`);
     return {width: innerWidth, scroll: document.documentElement.scrollWidth, bad};
   });
   assert(result.scroll <= result.width, `${label}: page overflow ${JSON.stringify(result)}`);
@@ -96,6 +100,7 @@ async function render(page, key) {
     }
     for (const p of pages) await p.evaluate(() => socket.emit('room:ready', {ready: true}));
     await page.waitForFunction(() => currentRoomState.players.length === 3 && currentRoomState.players.every(p => p.ready));
+    if (!await page.locator('#startBtn').isVisible()) await page.locator('#roomControlsToggleBtn').click();
     await page.locator('#startBtn').click();
     for (const p of pages) await p.waitForFunction(() => lastGameStatePayload?.view.game_id === 'exploding_kittens');
     const ids = await Promise.all(pages.map(p => p.evaluate(() => playerId)));
@@ -157,12 +162,24 @@ async function render(page, key) {
     await render(page, 'waiting');
     await render(page, 'playing');
     await page.locator('#ekHand [data-kind="skip"]').click();
-    await page.locator('.ek-heading h2').click();
+    await page.locator('.ek-status').click();
     assert.equal(await page.locator('#ekHand .is-selected').count(), 0);
     await page.locator('#ekHand [data-kind="skip"]').click();
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#ekHand .is-selected').count(), 0);
-    for (const width of [1440, 390, 320]) {
+    await render(page, 'reaction_nope');
+    await page.evaluate(() => {
+      const data = {room_id: roomId, game_type: 'exploding_kittens', bot_status: {running: true, player_id: 'p1'}};
+      socket.listeners('game:bot_progress').forEach(listener => listener(data));
+    });
+    assert.match(await page.locator('#ekBotStatus').innerText(), /Thinking/);
+    assert.equal(await page.locator('.ek-player.is-thinking').getAttribute('data-player-id'), 'p1', 'reaction bot is highlighted');
+    await page.evaluate(() => {
+      const data = {room_id: roomId, game_type: 'exploding_kittens', bot_status: {running: false}};
+      socket.listeners('game:bot_progress').forEach(listener => listener(data));
+    });
+    assert.equal(await page.locator('#ekBotStatus').isVisible(), false);
+    for (const width of [1440, 1024, 390, 320]) {
       await page.setViewportSize({width, height: width === 1440 ? 1100 : 900});
       for (const key of ['playing','reaction','future','favor','defuse','reinsert','review','finished','spectator']) {
         await render(page, key);
@@ -176,8 +193,17 @@ async function render(page, key) {
       assert.equal(await page.locator('#ekHand').evaluate(el => el.scrollTop), scroll, 'selection keeps hand scroll');
       await page.keyboard.press('Escape');
       await page.locator('#ekHand').evaluate(el => {el.scrollTop = 0;});
-      await page.locator('#explodingKittensPanel').screenshot({path: `${output}/${width}.png`});
+      await page.locator('.game-panel').screenshot({path: `${output}/${width}.png`});
+      await page.locator('#explodingKittensHelpBtn').click();
+      await bounds(page, `${width} help`);
+      await page.keyboard.press('Escape');
       if (width < 600) {
+        const headerRows = await page.evaluate(() => {
+          const reconnect = document.getElementById('gameReconnectBtn').getBoundingClientRect();
+          const help = document.getElementById('explodingKittensHelpBtn').getBoundingClientRect();
+          return Math.abs((reconnect.top + reconnect.bottom) / 2 - (help.top + help.bottom) / 2);
+        });
+        assert(headerRows < 2, 'Help and Reconnect stay on the same row');
         await pointClick(page, page.locator('#ekDebt'), true);
         assert.equal(await page.locator('#ekTooltip').isVisible(), true);
         await page.waitForTimeout(3150);
@@ -187,8 +213,19 @@ async function render(page, key) {
         assert.equal(await page.locator('#explodingKittensExplainBtn').getAttribute('aria-pressed'), 'false');
       }
     }
+    await render(page, 'playing');
+    await page.locator('#ekHand').scrollIntoViewIfNeeded();
+    const handBounds = await page.locator('#ekHand').boundingBox();
+    const touch = await page.context().newCDPSession(page);
+    const x = Math.round(handBounds.x + handBounds.width / 2), y = Math.round(handBounds.y + handBounds.height - 20);
+    await touch.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x, y}]});
+    for (let offset = 10; offset <= 110; offset += 10) await touch.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x, y: y - offset}]});
+    await touch.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    assert.equal(await page.locator('#ekHand .is-selected').count(), 0, 'touch scrolling does not select cards');
+    assert(await page.locator('#ekHand').evaluate(el => el.scrollTop > 0), 'hand accepts touch scrolling');
+    await touch.detach();
     assert.deepEqual(errors, []);
-    console.log('PASS: Help, disabled Explain, selection/combos, Esc, touch tips, 1440/390/320px layout');
+    console.log('PASS: Help, disabled Explain, selection/combos, Esc, AI progress, touch scroll/tips, 1440/1024/390/320px layout and header');
     console.log(`Screenshots: ${output}`);
   } finally {
     for (const context of contexts) await context.close();
