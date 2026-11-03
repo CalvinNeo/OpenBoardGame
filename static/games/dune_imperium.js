@@ -5,6 +5,7 @@
   const header = document.getElementById("duneImperiumHeaderActions");
   const dialog = document.getElementById("duneImperiumDialog");
   const tip = document.getElementById("duneImperiumTip");
+  const explainButton = document.getElementById("duneImperiumExplainBtn");
   const icons = {emperor:"👑",guild:"🚀",bene:"🔮",fremen:"🏜️",landsraad:"🏛️",city:"🏙️",spice:"🟠",water:"💧",solari:"💰",troops:"🛡️",garrison:"🛡️",swords:"⚔️",persuasion:"🗣️",vp:"⭐",draw:"🃏",intrigue:"🕵️"};
   const names = {emperor:"皇帝",guild:"宇航公会",bene:"贝尼·杰瑟里特",fremen:"弗雷曼",landsraad:"议会",city:"城市",spice:"香料",water:"水",solari:"索拉里",troops:"部队",garrison:"驻军",swords:"剑",persuasion:"说服力",vp:"胜利点",draw:"抽牌",intrigue:"阴谋牌"};
   const colors = {emperor:"#b65b3c",guild:"#bf8221",bene:"#5d71a9",fremen:"#3e8786"};
@@ -28,6 +29,7 @@
   };
   let view = null, selected = null, selectedCard = null, tab = "board", boardGroup = "factions", pending = false, explaining = false;
   let pendingTimer = null, tipTimer = null, suppressedUntil = 0, focusBack = null;
+  let gesture = null;
   const esc = v => String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const own = () => view?.players.find(p=>p.player_id===view.you);
   const player = id => view?.players.find(p=>p.player_id===id);
@@ -57,7 +59,7 @@
   }
   function cardText(uid) {
     const c=card(uid);
-    return `${c.name_zh} · ${c.name}。访问：${c.icons.map(k=>`${names[k]}(${icons[k]})`).join("、")||"无"}。特工：${c.agent.map(e=>effectText(e,true)).join("；")||"无额外效果"}。揭示：${c.reveal.map(e=>effectText(e,true)).join("；")||"无"}。${c.acquire.length?`获得时：${c.acquire.map(e=>effectText(e,true)).join("；")}。`:""}${view.cards[uid]==="kwisatz_haderach"?"可派遣任何位置的己方特工，进入已占用格；仍需支付费用并满足条件。":""}${view.cards[uid]==="assassination_mission"?"被其他效果移除时获得四索拉里（💰）。":""}`;
+    return `${c.name_zh} · ${c.name}。购买费用：说服力（🗣️）${c.cost}。访问：${c.icons.map(k=>`${names[k]}(${icons[k]})`).join("、")||"无"}。特工：${c.agent.map(e=>effectText(e,true)).join("；")||"无额外效果"}。揭示：${c.reveal.map(e=>effectText(e,true)).join("；")||"无"}。${c.acquire.length?`获得时：${c.acquire.map(e=>effectText(e,true)).join("；")}。`:""}${view.cards[uid]==="kwisatz_haderach"?"可派遣任何位置的己方特工，进入已占用格；仍需支付费用并满足条件。":""}${view.cards[uid]==="assassination_mission"?"被其他效果移除时获得四索拉里（💰）。":""}`;
   }
   function spaceText(id) {
     const s=view.catalog.spaces[id];
@@ -65,7 +67,7 @@
   }
   function hideTip() { clearTimeout(tipTimer);tip.hidden=true; }
   function showTip(target) {
-    hideTip();if(!target?.dataset.diTip||dialog.open)return;
+    hideTip();if(!target?.dataset.diTip||target.closest("button,select,input,summary,a")||dialog.open)return;
     tip.textContent=target.dataset.diTip;tip.hidden=false;
     const r=target.getBoundingClientRect(), b=tip.getBoundingClientRect();
     tip.style.left=`${Math.max(12,Math.min(innerWidth-b.width-12,r.left))}px`;
@@ -82,12 +84,12 @@
   }
   function setExplain(value) {
     explaining=value;hideTip();root.classList.toggle("di-explaining",value);
-    document.getElementById("duneImperiumExplain").setAttribute("aria-pressed",String(value));
+    explainButton.setAttribute("aria-pressed",String(value));
   }
   function resetSelection() { selected=null;selectedCard=null;hideTip(); }
   function moveButton(m,label,explanation="effect",extra="") {
     const i=view.moves.indexOf(m);
-    return `<button type="button" data-di-action="move" data-index="${i}" ${explainAttr(explanations[explanation]||explanation)} ${pending?"disabled":""} class="${extra}">${esc(label)}</button>`;
+    return `<button type="button" data-di-action="move" data-index="${i}" ${explainAttr(explanations[explanation]||explanation)} ${pending?"disabled":""} class="${extra} ${selected===m?"di-selected":""}" aria-pressed="${selected===m}">${esc(label)}</button>`;
   }
   function choiceLabel(value) {
     const c=view.choice, mode=c.mode, e=c.effect;
@@ -119,23 +121,25 @@
   }
   function renderCard(uid,location="hand") {
     const c=card(uid), actionable=location==="hand"?moves("agent").some(m=>m.card===uid):moves("buy").some(m=>m.card===uid);
-    return `<button type="button" class="di-card ${selectedCard===uid||selected?.card===uid?"di-selected":""}" style="--di-faction:${colors[c.factions[0]]||"#b59a6c"}" data-di-action="card" data-card="${esc(uid)}" data-location="${location}" ${explainAttr(cardText(uid))} ${pending?"disabled":""}>
-      <div class="di-card-icons"><span>${c.icons.map(k=>icons[k]).join(" ")||"—"}</span><span>${c.cost?`🗣️ ${c.cost}`:""}</span></div>
+    const buying=location==="market"&&selected?.type==="buy"&&selected.card===uid;
+    return `<div class="di-card-slot ${location==="market"?"di-purchasable":""}"><button type="button" class="di-card ${selectedCard===uid||selected?.card===uid?"di-selected":""}" style="--di-faction:${colors[c.factions[0]]||"#b59a6c"}" data-di-action="card" data-card="${esc(uid)}" data-location="${location}" ${explainAttr(cardText(uid))} ${pending?"disabled":""}>
+      <div class="di-card-icons"><span>${c.icons.map(k=>icons[k]).join(" ")||"—"}</span><span class="di-card-cost">${c.cost?`🗣️ ${c.cost}`:""}</span></div>
       <strong>${esc(c.name_zh)}</strong><small>${esc(c.name)}</small>
-      <div class="di-card-effect">${esc(c.agent.map(e=>effectText(e)).join("；")||"—")}</div>
-      <div class="di-card-reveal">${esc(c.reveal.map(e=>effectText(e)).join("；")||"—")}</div>
-      ${actionable?`<small>${location==="hand"?"Select → board":"Available to buy"}</small>`:""}</button>`;
+      <div class="di-card-effect"><span class="di-card-label">👤</span> ${esc(c.agent.map(e=>effectText(e)).join("；")||"—")}</div>
+      <div class="di-card-reveal"><span class="di-card-label">Reveal</span> ${esc(c.reveal.map(e=>effectText(e)).join("；")||"—")}</div>
+      ${actionable?`<small>${location==="hand"?"Select → board":"Available to buy"}</small>`:""}</button>${buying?preview():""}</div>`;
   }
   function renderSpace(id) {
     const s=view.catalog.spaces[id], available=selectedCard&&moves("agent").some(m=>m.card===selectedCard&&m.space===id);
     const occupants=view.occupied[id];
     const disabled=pending||(selectedCard&&!available);
-    return `<button type="button" class="di-space ${available?"di-available":""} ${occupants.length?"di-unavailable":""} ${selected?.space===id?"di-selected":""}" data-di-action="space" data-space="${id}" ${explainAttr(spaceText(id))} ${disabled?"disabled":""}>
+    const choosing=selected?.type==="agent"&&selected.space===id;
+    return `<div class="di-space-slot ${choosing?"di-space-choosing":""}"><button type="button" class="di-space ${available?"di-available":""} ${occupants.length?"di-unavailable":""} ${selected?.space===id?"di-selected":""}" data-di-action="space" data-space="${id}" ${explainAttr(spaceText(id))} ${disabled?"disabled":""}>
       <strong>${esc(s.name)} ${s.combat?"⚔️":""}</strong>
       <span class="di-space-icons">${amounts(s.cost)||"Free"}${s.requirement?" · 🏜️ ≥2":""}${s.maker?` · 🟠 +${view.spice_bonus[id]}`:""}${view.control[id]?" · 🚩":""}</span>
       <span class="di-space-icons">${esc(s.effects.filter(e=>e.kind==="gain").map(e=>effectText(e)).join(" · "))}</span>
       <span class="di-occupants">${occupants.map(a=>`<span style="color:${color(a.owner)}">● ${esc(pname(a.owner))}</span>`).join("")}${view.blocked.some(b=>b.space===id)?"🔒":""}</span>
-    </button>`;
+    </button>${choosing?preview():""}</div>`;
   }
   function renderBoard() {
     const factions=Object.keys(view.catalog.factions).map(f=>`<section class="di-faction" style="--di-faction:${colors[f]}">
@@ -163,6 +167,7 @@
       <div class="di-combat">${view.players.map(p=>`<span ${tooltipAttr(`${p.name}：${p.troops} 部队（🛡️） ×2 + ${p.swords} 剑（⚔️）；无部队时战力为零`)}>${esc(p.name)} <b>${p.strength}</b></span>`).join("")}</div></section>`;
   }
   function preview() {
+    if(["next_round","pass","end_turn","endgame_done"].includes(selected?.type))return "";
     if(!selected)return selectedCard?`<p class="di-small">${esc(sourceName(selectedCard))} · Select a highlighted board space.</p>`:"";
     let options="", desc="";
     if(selected.type==="agent"){
@@ -174,7 +179,7 @@
       desc=amounts(view.catalog.spaces[selected.space].cost);
     }
     if(selected.type==="buy"&&moves("buy").some(m=>m.card===selected.card&&m.top))options+=`<label class="di-field">Destination<select id="duneImperiumDestination"><option value="discard" ${!selected.top?"selected":""}>Discard</option><option value="top" ${selected.top?"selected":""}>Top of deck</option></select></label>`;
-    return `<div class="di-confirm"><p>${esc(actionLabel(selected))}${desc?`<br>${esc(desc)}`:""}</p>${options}<div class="di-confirm-buttons"><button type="button" class="di-primary" data-di-action="confirm" ${pending?"disabled":""} ${explainAttr("Confirm：提交当前选定的合法行动。")}>${pending?"Sending…":"Confirm"}</button><button type="button" data-di-action="cancel">Cancel</button></div></div>`;
+    return `<div class="di-confirm" data-di-scroll="confirm-${esc(selected.card||selected.type)}" aria-label="Selected action"><p>${esc(actionLabel(selected))}${desc?`<br>${esc(desc)}`:""}</p>${options}<div class="di-confirm-buttons"><button type="button" class="di-primary" data-di-action="confirm" ${pending?"disabled":""} ${explainAttr("Confirm：提交当前选定的合法行动。")}>${pending?"Sending…":selected.type==="buy"?"Buy":"Confirm"}</button><button type="button" data-di-action="cancel">Cancel</button></div></div>`;
   }
   function renderActions() {
     let status="", content="";
@@ -183,16 +188,16 @@
     else if(view.phase==="round_end")status=view.ready.includes(view.you)?"Waiting for everyone":"Round complete";
     else status=view.current_turn===view.you?"Your turn":`${pname(view.current_turn)} · ${phases[view.phase]}`;
     if(view.choice?.owner===view.you){
-      content=`<p class="di-small">${esc(effectText(view.choice.effect))}${view.choice.peek?` · ${esc(sourceName(view.choice.peek))}`:""}</p><div class="di-actions">${moves("choose").map(m=>moveButton(m,choiceLabel(m.choice),"effect")).join("")}</div>`;
+      content=`<p class="di-small">${esc(effectText(view.choice.effect))}${view.choice.peek?` · ${esc(sourceName(view.choice.peek))}`:""}</p><div class="di-actions" data-di-scroll="choices">${moves("choose").map(m=>moveButton(m,choiceLabel(m.choice),"effect")).join("")}</div>`;
     }else if(view.phase==="baron"){
-      content=`<div class="di-actions">${moves("baron").map(m=>moveButton(m,actionLabel(m),"仅自己可见的两个妙计派系，发动后各增加一影响力。")).join("")}</div>`;
+      content=`<div class="di-actions" data-di-scroll="baron">${moves("baron").map(m=>moveButton(m,actionLabel(m),"仅自己可见的两个妙计派系，发动后各增加一影响力。")).join("")}</div>`;
     }else{
-      content=`<div class="di-actions">${moves("resolve").map(m=>moveButton(m,actionLabel(m),effectText(view.effects[m.index],true))).join("")}
-      ${["reveal","end_turn","pass","next_round","endgame_done"].flatMap(type=>moves(type).map(m=>moveButton(m,actionLabel(m),{reveal:"reveal",end_turn:"finish",pass:"pass",next_round:"next",endgame_done:"完成终局阴谋牌结算，比较分数及资源。"}[type],type==="next_round"?"di-wide":""))).join("")}</div>`;
+      content=`<div class="di-actions" data-di-scroll="actions">${moves("resolve").map(m=>moveButton(m,actionLabel(m),effectText(view.effects[m.index],true))).join("")}
+      ${["reveal","end_turn","pass","endgame_done"].flatMap(type=>moves(type).map(m=>moveButton(m,actionLabel(m),{reveal:"reveal",end_turn:"finish",pass:"pass",endgame_done:"完成终局阴谋牌结算，比较分数及资源。"}[type]))).join("")}</div>`;
       if(!view.moves.length&&!view.game_over)content+=`<p class="di-small">${view.phase==="round_end"?`${view.ready.length} / ${view.order.length} ready`:"Waiting for another player…"}</p>`;
     }
     if(own()&&view.current_turn===view.you&&view.phase==="agent"&&!view.turn&&!view.choice)content=`<p class="di-small">Select a hand card, then a board space, or Reveal.</p>`+content;
-    return `<section class="di-box" id="duneImperiumActions"><div class="di-status" aria-live="polite">${esc(status)}</div>${own()?`<div class="di-tokens">${token("persuasion",own().persuasion)}${token("swords",own().swords)}<span class="di-token" ${tooltipAttr("本轮可用特工 Agent（👤）")}>👤 ${own().agents.length}</span></div>`:""}${preview()}${content}</section>`;
+    return `<section class="di-box" id="duneImperiumActions"><div class="di-status" aria-live="polite">${esc(status)}</div>${own()?`<div class="di-tokens">${token("persuasion",own().persuasion)}${token("swords",own().swords)}<span class="di-token" ${tooltipAttr("本轮可用特工 Agent（👤）")}>👤 ${own().agents.length}</span></div>`:""}${!["agent","buy"].includes(selected?.type)?preview():""}${content}</section>`;
   }
   function renderHand() {
     const p=own();if(!p)return `<div class="di-box"><p class="di-small">Spectator view</p></div>`;
@@ -201,13 +206,13 @@
       const text=`${d.name} · ${d.timing}。${amountWords(d.cost)}${Object.keys(d.cost).length?" → ":""}${d.effects.map(e=>effectText(e,true)).join("；")}${i.kind==="tiebreaker"?"战斗 +2 剑（⚔️），或终局 +10 香料（🟠）。":""}${d.requirement?` 条件：${{alliance:"有任一联盟",council:"有议会席位",mentat:"门塔特仍在原格",enemy_troop:"对手有冲突部队",three_troops:"至少三冲突部队",agent:"至少一特工在棋盘上"}[d.requirement]}`:""}`;
       return move?moveButton(move,`🕵️ ${d.name}`,text):`<button type="button" data-di-action="info" ${explainAttr(text)}>${esc(d.name)} · ${esc(d.timing)}</button>`;
     }).join("");
-    return `<section class="di-box"><details class="di-hand-section" ${!selectedCard||innerWidth>700?"open":""}><summary>Hand <span class="di-small" ${tooltipAttr(explanations.deck)}>🃏 ${p.deck_count} · Discard ${p.discard.length}</span></summary>
+    return `<section class="di-box"><details class="di-hand-section" data-di-detail="hand" open><summary ${explainAttr(explanations.deck)}>Hand <span class="di-small">🃏 ${p.deck_count} · Discard ${p.discard.length}</span></summary>
       ${p.peek?`<p class="di-small" ${tooltipAttr("保罗的预知：此信息仅你可见")}>👁️ ${esc(sourceName(p.peek))}</p>`:""}
-      <div class="di-cards di-hand">${p.hand.map(uid=>renderCard(uid)).join("")||`<p class="di-small">${view.phase==="leader"?"Cards arrive after setup.":"No cards in hand."}</p>`}</div>
-      ${p.intrigues.length?`<details class="di-intrigues" open><summary ${explainAttr(explanations.intrigue)}>Intrigue · 🕵️ ${p.intrigues.length}</summary><div class="di-actions">${intrigues}</div></details>`:""}
+      <div class="di-cards di-hand" data-di-scroll="hand">${p.hand.map(uid=>renderCard(uid)).join("")||`<p class="di-small">${view.phase==="leader"?"Cards arrive after setup.":"No cards in hand."}</p>`}</div>
+      ${p.intrigues.length?`<details class="di-intrigues" data-di-detail="intrigues" open><summary ${explainAttr(explanations.intrigue)}>Intrigue · 🕵️ ${p.intrigues.length}</summary><div class="di-actions" data-di-scroll="intrigues">${intrigues}</div></details>`:""}
       ${p.baron_factions.length?`<p class="di-small" ${tooltipAttr("秘密妙计目标，仅你可见")}>${p.baron_used?"✓":"🔒"} ${p.baron_factions.map(f=>`${icons[f]} ${names[f]}`).join(" · ")}</p>`:""}
-      ${p.played.length+p.revealed.length?`<details><summary>In play · ${p.played.length+p.revealed.length}</summary><div class="di-cards">${p.played.concat(p.revealed).map(uid=>renderCard(uid,"info")).join("")}</div></details>`:""}
-      ${p.discard.length?`<details><summary>Discard · ${p.discard.length}</summary><div class="di-cards di-hand">${p.discard.map(uid=>renderCard(uid,"info")).join("")}</div></details>`:""}</details></section>`;
+      ${p.played.length+p.revealed.length?`<details data-di-detail="played"><summary>In play · ${p.played.length+p.revealed.length}</summary><div class="di-cards">${p.played.concat(p.revealed).map(uid=>renderCard(uid,"info")).join("")}</div></details>`:""}
+      ${p.discard.length?`<details data-di-detail="discard"><summary>Discard · ${p.discard.length}</summary><div class="di-cards di-hand" data-di-scroll="discard">${p.discard.map(uid=>renderCard(uid,"info")).join("")}</div></details>`:""}</details></section>`;
   }
   function renderMarket() {
     return `<section class="di-box"><h3>Imperium Row</h3><div class="di-cards di-market">${view.market.map(c=>renderCard(c,"market")).join("")}</div></section>
@@ -218,8 +223,8 @@
     if(!view.round_report||!["round_end","endgame","game_over"].includes(view.phase))return "";
     const r=view.round_report;
     return `<section class="di-result"><h3>${view.game_over?`🏆 ${view.winner.map(pname).map(esc).join(" · ")}`:`Round ${r.round} · ${esc(view.catalog.conflicts[r.conflict].name)}`}</h3>
-      <div class="di-result-grid">${view.players.map(p=>`<div class="di-result-row"><b style="color:${color(p.player_id)}">${esc(p.name)}</b><br>⚔️ ${r.strength[p.player_id]||0} · ⭐ ${p.vp}<br>${p.player_id==="hagal"?"No rewards":r.awards[p.player_id]!==undefined?esc(view.catalog.conflicts[r.conflict].rewards[r.awards[p.player_id]].map(e=>effectText(e)).join("；")):"—"}</div>`).join("")}</div>
-      ${view.phase==="round_end"?`<p class="di-small">${view.ready.length} / ${view.order.length} ready${view.final_round?" · Final round":""}</p>`:""}</section>`;
+      <div class="di-result-grid">${view.players.map(p=>`<div class="di-result-row ${p.player_id===view.you?"di-result-you":""}"><b style="color:${color(p.player_id)}">${esc(p.name)}${p.player_id===view.you?" · You":""}</b><br>⚔️ ${r.strength[p.player_id]||0} · ⭐ ${p.vp}<br>${p.player_id==="hagal"?"No rewards":r.awards[p.player_id]!==undefined?esc(view.catalog.conflicts[r.conflict].rewards[r.awards[p.player_id]].map(e=>effectText(e)).join("；")):"—"}</div>`).join("")}</div>
+      ${view.phase==="round_end"?`<div class="di-review-next"><span class="di-small">${view.ready.length} / ${view.order.length} ready${view.final_round?" · Final round":""}</span>${moves("next_round").map(m=>moveButton(m,actionLabel(m),"next","di-primary")).join("")}</div>`:""}</section>`;
   }
   function renderLeaders() {
     const status=pending?"Selecting…":view.current_turn===view.you?"Your turn · Click a leader to select":`${pname(view.current_turn)} · Choosing a leader`;
@@ -231,12 +236,26 @@
         <span class="di-leader-status">${owner?`Selected by ${esc(owner.name)}`:pending&&selected?.leader===id?"Selecting…":move?"Select →":"Available"}</span></button>`;
     }).join("")}</div></section>`;
   }
-  function render() {
+  function render({compactHand=false}={}) {
     if(!view)return;
-    const main=view.phase==="leader"?renderLeaders():tab==="market"?renderMarket():tab==="history"?`<section class="di-box"><h3>Activity</h3><ol class="di-log">${view.log.slice().reverse().map(l=>`<li><b>R${l.round}</b> ${esc(l.text)}</li>`).join("")}</ol></section>`:renderBoard();
+    const scrolls=new Map([...root.querySelectorAll("[data-di-scroll]")].map(el=>[el.dataset.diScroll,el.scrollTop]));
+    const details=new Map([...root.querySelectorAll("[data-di-detail]")].map(el=>[el.dataset.diDetail,el.open]));
+    const pageY=scrollY;
+    const focused=document.activeElement;
+    const focusId=root.contains(focused)?focused.id:null;
+    const focusIndex=root.contains(focused)?focused.dataset.index:null;
+    const main=view.phase==="leader"?renderLeaders():tab==="market"?renderMarket():tab==="history"?`<details class="di-activity" data-di-detail="activity" open><summary>Activity</summary><ol class="di-log" data-di-scroll="log">${view.log.slice().reverse().map(l=>`<li><b>R${l.round}</b> ${esc(l.text)}</li>`).join("")}</ol></details>`:renderBoard();
     const table=view.phase==="leader"?main:`<div class="di-layout"><div class="di-main"><nav class="di-tabs" aria-label="Game view">${[["board","Board"],["market","Market"],["history","Activity"]].map(([id,label])=>`<button type="button" data-di-action="tab" data-tab="${id}" aria-pressed="${tab===id}" ${explainAttr(`View ${label}`)}>${label}</button>`).join("")}</nav>${renderConflict()}${main}</div><aside class="di-side">${renderActions()}${renderHand()}</aside></div>`;
-    root.innerHTML=`<div class="di-hero"><div><h2 class="di-title">DUNE: IMPERIUM</h2><div class="di-subtitle">沙丘：帝国 · BASE GAME</div></div><div class="di-round"><strong>${view.round?`ROUND ${view.round} / 10`:"SETUP"}</strong>${esc(phases[view.phase])}</div></div>
+    root.innerHTML=`<div class="di-round"><strong>${view.round?`ROUND ${view.round} / 10`:"SETUP"}</strong><span>${esc(phases[view.phase])}</span></div>
       <div class="di-players">${renderPlayers()}</div>${renderReport()}${table}`;
+    for(const el of root.querySelectorAll("[data-di-detail]")){
+      if(details.has(el.dataset.diDetail))el.open=details.get(el.dataset.diDetail);
+      if(compactHand&&innerWidth<=700&&el.dataset.diDetail==="hand")el.open=!selectedCard;
+    }
+    for(const el of root.querySelectorAll("[data-di-scroll]"))if(scrolls.has(el.dataset.diScroll))el.scrollTop=scrolls.get(el.dataset.diScroll);
+    const nextFocus=focusId?document.getElementById(focusId):focusIndex!=null?root.querySelector(`[data-index="${focusIndex}"]`):null;
+    if(nextFocus&&!nextFocus.disabled)nextFocus.focus({preventScroll:true});
+    if(scrollY!==pageY)window.scrollTo({top:pageY,behavior:"instant"});
     root.classList.toggle("di-explaining",explaining);
     updateActionAttention();
   }
@@ -270,7 +289,12 @@
       const contents=sections.map(([label,cards])=>`<h3>${label} · ${cards.length}</h3>${cards.map(uid=>`<details><summary>${esc(sourceName(uid))}</summary><p>${esc(cardText(uid))}</p></details>`).join("")}`).join("");
       openDialog(p.name,`${leader?`<p>${esc(leader.name_zh)} · ${esc(leader.passive)} 💍 ${esc(leader.ring)}</p>`:""}${contents}`,true);return;
     }
-    if(action==="move"){selected=view.moves[Number(target.dataset.index)];if(selected?.type==="agent")selectedCard=selected.card;render();return;}
+    if(action==="move"){
+      selected=view.moves[Number(target.dataset.index)];
+      if(["next_round","pass","end_turn","endgame_done"].includes(selected?.type)){submit();return;}
+      if(selected?.type==="agent")selectedCard=selected.card;
+      render();return;
+    }
     if(action==="card"){
       const uid=target.dataset.card, location=target.dataset.location;
       if(location==="hand"&&moves("agent").some(m=>m.card===uid)){
@@ -282,8 +306,7 @@
       }else if(location==="market"&&moves("buy").some(m=>m.card===uid)){
         selected=moves("buy").find(m=>m.card===uid);selectedCard=null;
       }else{openDialog(card(uid).name_zh,cardText(uid));return;}
-      render();
-      if(selected?.type==="buy"&&innerWidth<=700)document.getElementById("duneImperiumActions").scrollIntoView({block:"nearest",behavior:"smooth"});
+      render({compactHand:location==="hand"});
       return;
     }
     if(action==="space"){
@@ -291,7 +314,6 @@
       selected=moves("agent").find(m=>m.card===selectedCard&&m.space===id)||null;
       if(!selected){openDialog(view.catalog.spaces[id].name,spaceText(id));return;}
       render();
-      if(innerWidth<=700)document.getElementById("duneImperiumActions").scrollIntoView({block:"nearest",behavior:"smooth"});
     }
   });
   root.addEventListener("change",event=>{
@@ -301,10 +323,6 @@
     if(!selected||selected.type!=="agent")return;
     const key=event.target.id==="duneImperiumAmount"?"amount":event.target.id==="duneImperiumAgent"?"agent":null;
     if(key){const value=key==="amount"?Number(event.target.value):event.target.value;selected=moves("agent").find(m=>m.card===selected.card&&m.space===selected.space&&m[key]===value&&(key==="agent"?m.amount===selected.amount:m.agent===selected.agent));render();}
-  });
-  root.addEventListener("pointerdown",event=>{
-    if(explaining||event.target.closest("button,select,input,summary,a,[data-di-tip]"))return;
-    resetSelection();render();
   });
   root.addEventListener("pointerover",event=>{if(event.pointerType!=="touch"&&!explaining)showTip(event.target.closest("[data-di-tip]"));});
   root.addEventListener("pointerout",hideTip);
@@ -322,38 +340,63 @@
       ["阴谋牌与卡牌联动",explanations.intrigue+" 弗雷曼羁绊要求另一张弗雷曼牌在场；贝尼·杰瑟里特联动同理。特工牌与揭示牌在揭示结束前均算在场。移除储备牌回到储备，其他牌退出本局。移除暗杀任务得四索拉里（💰）；帝国间谍只有用自己的能力移除才抽阴谋牌。"],
       ["轮末与终局",explanations.next+" 达到 10 分（⭐）或第十轮结束时，在本轮冲突完整结算后触发终局。先打终局阴谋牌，再比胜利点、香料、索拉里、水、驻军，仍相同则最后揭示者胜。"],
       ["双人局 House Hagal","自动加入第三方干扰者，无分数、手牌及资源。每轮先手玩家每次特工回合后，Hagal 根据卡牌派特工，至多三次；卡牌格被占或封锁则重抽。它可占格、招兵、争联盟并参与冲突，但不领取奖励；若赢得城市冲突，移除原控制权。"],
-      ["图标与操作",Object.entries(names).map(([k,n])=>`${n}(${icons[k]})`).join("、")+"；特工 Agent（👤）、戒指 Signet（💍）、联盟 Alliance（🤝）、控制 Control（🚩）、移除 Trash（✖）。点击手牌→棋盘→Confirm。可在选项框挑特工或出售数量；购牌在 Market。空白或 Esc 取消选择，Esc 关闭对话框。Explain 点选后自动退出，禁用按钮也可解释；悬停或手机点击图标显示三秒提示。"],
+      ["图标与操作",Object.entries(names).map(([k,n])=>`${n}(${icons[k]})`).join("、")+"；特工 Agent（👤）、戒指 Signet（💍）、联盟 Alliance（🤝）、控制 Control（🚩）、移除 Trash（✖）。卡牌右上角为购买价格，中间为特工效果，底部为 Reveal 揭示效果。点击手牌→棋盘→原地 Confirm；可选择特工或出售数量。Market 点选卡牌后原地 Buy / Cancel，可选择新牌目的地。Next Round、Pass、End Turn 点击即提交。空白轻点或 Esc 取消选择，Esc 关闭对话框；滑动只滚动页面或列表。Explain 点选后自动退出，禁用按钮也可解释；悬停或手机点击非交互图标显示三秒提示。"],
       ["版本","原版基础盒；不含伊克斯、不朽、起义、促销牌或纸面单人挑战。AI 使用公开信息及自己的手牌在本地计算，不需要额外模型。"]
     ];
     openDialog("Help · 沙丘：帝国",sections.map(([title,text])=>`<h3>${esc(title)}</h3><p>${esc(text)}</p>`).join("")+`<p><a href="https://www.direwolfdigital.com/dune-imperium/resources/" target="_blank" rel="noopener noreferrer">Official rules and FAQ</a></p>`,true);
   }
   document.getElementById("duneImperiumHelp").addEventListener("click",help);
-  document.getElementById("duneImperiumExplain").addEventListener("click",()=>setExplain(!explaining));
+  explainButton.addEventListener("click",()=>setExplain(!explaining));
   document.getElementById("duneImperiumClose").addEventListener("click",()=>dialog.close());
   dialog.addEventListener("click",event=>{const r=dialog.getBoundingClientRect();if(event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom))dialog.close();});
   dialog.addEventListener("close",()=>{suppressedUntil=0;if(focusBack?.isConnected)focusBack.focus();});
   const active=()=>!!view&&!panel.classList.contains("hidden");
   function explainTarget(target) { if(target?.dataset.diExplain){setExplain(false);openDialog("Explain",target.dataset.diExplain);} }
-  document.addEventListener("pointerdown",event=>{
-    if(!explaining||!active()||header.contains(event.target)||dialog.contains(event.target))return;
-    event.preventDefault();event.stopImmediatePropagation();
+  const controlTarget=target=>header.contains(target)||explainButton.contains(target)||dialog.contains(target)||target.closest("#roomControlsPanel");
+  function explainAtPoint(event) {
     const direct=event.target.closest("[data-di-explain]");
-    const target=(direct&&root.contains(direct)?direct:null)||[...root.querySelectorAll("[data-di-explain]")].reverse().find(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom;});
-    suppressedUntil=Date.now()+650;explainTarget(target);
+    return (direct&&root.contains(direct)?direct:null)||[...root.querySelectorAll("[data-di-explain]")].reverse().find(el=>{
+      const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom;
+    });
+  }
+  document.addEventListener("pointerdown",event=>{
+    if(!active()||controlTarget(event.target)||!root.contains(event.target))return;
+    suppressedUntil=0;
+    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,moved:false,explaining};
+    // Keep native touch scrolling available, including over disabled controls.
+    if(explaining)event.stopImmediatePropagation();
+  },true);
+  document.addEventListener("pointermove",event=>{
+    if(gesture?.id===event.pointerId&&Math.hypot(event.clientX-gesture.x,event.clientY-gesture.y)>8)gesture.moved=true;
+  },true);
+  document.addEventListener("pointercancel",event=>{
+    if(gesture?.id!==event.pointerId)return;
+    gesture=null;suppressedUntil=Date.now()+650;hideTip();
+  },true);
+  document.addEventListener("pointerup",event=>{
+    if(gesture?.id!==event.pointerId)return;
+    const tap=gesture;gesture=null;
+    if(tap.moved||Math.hypot(event.clientX-tap.x,event.clientY-tap.y)>8){suppressedUntil=Date.now()+650;return;}
+    if(tap.explaining){
+      event.preventDefault();event.stopImmediatePropagation();suppressedUntil=Date.now()+650;explainTarget(explainAtPoint(event));return;
+    }
+    if(root.contains(event.target)&&!event.target.closest("button,select,input,summary,a,[data-di-tip],.di-confirm")&&(selected||selectedCard)){
+      resetSelection();render();
+    }
   },true);
   document.addEventListener("click",event=>{
-    if(!active()||header.contains(event.target)||dialog.contains(event.target))return;
+    if(!active()||controlTarget(event.target))return;
     if(Date.now()<suppressedUntil){event.preventDefault();event.stopImmediatePropagation();return;}
     if(explaining){event.preventDefault();event.stopImmediatePropagation();explainTarget(event.target.closest("[data-di-explain]"));}
   },true);
   document.addEventListener("keydown",event=>{
     if(!active())return;
     if(event.key==="Escape"){hideTip();setExplain(false);if(!dialog.open){resetSelection();render();}return;}
-    if(explaining&&!header.contains(event.target)&&!dialog.contains(event.target)&&[" ","Enter","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(event.key)){
+    if(explaining&&!controlTarget(event.target)&&[" ","Enter","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(event.key)){
       event.preventDefault();event.stopImmediatePropagation();if(event.key==="Enter"||event.key===" ")explainTarget(event.target.closest("[data-di-explain]"));
     }
   },true);
-  function clear() { view=null;pending=false;clearTimeout(pendingTimer);resetSelection();setExplain(false);document.body.classList.remove("dune-needs-action");panel.classList.remove("di-needs-action");root.replaceChildren();if(dialog.open)dialog.close(); }
+  function clear() { view=null;pending=false;gesture=null;tab="board";boardGroup="factions";clearTimeout(pendingTimer);resetSelection();setExplain(false);document.body.classList.remove("dune-needs-action");panel.classList.remove("di-needs-action");root.replaceChildren();if(dialog.open)dialog.close(); }
   window.renderDuneImperiumGameState=data=>{
     if(!data?.view||data.view.game_id!=="dune_imperium")return;
     if(typeof currentRoomState!=="undefined"&&data.room_id&&currentRoomState?.room_id!==data.room_id)return;

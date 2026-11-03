@@ -1,14 +1,18 @@
-.di-root { --di-ink:#352b20; --di-gold:#a87529; --di-line:#dbcbaa; color:var(--di-ink); background:#f4eddd; border:1px solid #e6d9bd; border-radius:18px; padding:16px; min-width:0; font-size:14px; }
+.game-panel[data-game-theme="dune_imperium"] { background:radial-gradient(ellipse at 90% 0,#efdcaf,transparent 55%),#f4eddd; color:#352b20; }
+.game-panel[data-game-theme="dune_imperium"] > .panel-header h2 { color:#714e25; }
+.game-panel[data-game-theme="dune_imperium"] > .panel-header { flex-wrap:nowrap; }
+.game-panel[data-game-theme="dune_imperium"] .game-panel-title { min-width:0; flex:1 1 auto; flex-wrap:nowrap; }
+.game-panel[data-game-theme="dune_imperium"] .game-panel-title h2 { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.game-panel[data-game-theme="dune_imperium"] > .panel-header button { flex-shrink:0; white-space:nowrap; }
+.di-root { --di-ink:#352b20; --di-gold:#a87529; --di-line:#dbcbaa; color:var(--di-ink); min-width:0; font-size:14px; }
 /* Keep a hidden Room Control discoverable when this player has an action. */
 body.dune-needs-action #roomControlsPanel.collapsed,
-body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn,
-body.dune-needs-action #roomControlsPanel .collapse-btn,
-body.dune-needs-action #roomControlsPanel .room-controls-toggle {
+body.dune-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn {
   border-color:#b63b34!important;
   box-shadow:0 0 0 2px #b63b3470;
 }
 body.dune-needs-action #roomControlsPanel.collapsed .room-controls-heading,
-body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn { color:#a12f36; }
+body.dune-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn { color:#a12f36; }
 .di-root *, .di-dialog * { box-sizing:border-box; }
 .di-root button,.di-root select { font:inherit; max-width:100%; white-space:normal; overflow-wrap:anywhere; }
 .di-root button { background:#fffaf0; border:1px solid var(--di-line); border-radius:9px; color:var(--di-ink); padding:8px 10px; cursor:pointer; box-shadow:none; }
@@ -18,17 +22,14 @@ body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn { color:#a12f36
 .di-root .di-primary { background:#765024; color:white; border-color:#765024; }
 .di-root .di-primary:hover:not(:disabled) { background:#573916; color:white; }
 .di-root .di-selected { border:2px solid #247f8d!important; box-shadow:0 0 0 2px #247f8d22!important; background:#eef7f3!important; }
-.di-hero { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:4px 2px 14px; }
-.di-title { font:600 28px Georgia,serif; letter-spacing:4px; margin:0; color:#714e25; line-height:1.1; }
-.di-subtitle { font-size:11px; letter-spacing:2px; margin-top:5px; color:#84704d; }
-.di-round { text-align:right; font-size:12px; line-height:1.7; }
-.di-round strong { display:block; color:#765024; font-size:16px; }
+.di-round { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; line-height:1.5; margin-bottom:10px; }
+.di-round strong { color:#765024; font-size:13px; }
 .di-players { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:8px; margin-bottom:12px; }
 .di-player { min-width:0; background:#fffcf5; border:1px solid var(--di-line); border-top:4px solid var(--di-player); border-radius:9px; padding:9px; }
 .di-player.di-current { outline:2px solid var(--di-player); outline-offset:1px; }
 .di-player-name { display:flex; gap:5px; align-items:center; font-weight:700; }
 .di-player-name span:first-child { overflow-wrap:anywhere; min-width:0; flex:1; }
-.di-root .di-player-open { padding:0; border:0; background:transparent; text-align:left; flex:1; min-width:0; font-weight:700; font-size:13px; }
+.di-root .di-player-open { padding:0; border:0; background:transparent; text-align:left; flex:1; min-width:0; font-weight:700; font-size:13px; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .di-root .di-player-open:hover:not(:disabled) { background:transparent; color:#237f92; }
 .di-player small { display:block; overflow-wrap:anywhere; margin:4px 0; font-size:11px; color:#7d705c; }
 .di-tokens { display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; }
@@ -52,6 +53,9 @@ body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn { color:#a12f36
 .di-dot { width:8px; height:8px; border-radius:50%; background:var(--di-player); display:inline-block; border:1px solid #fff; flex-shrink:0; }
 .di-space-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
 .di-root .di-space { display:flex; flex-direction:column; align-items:flex-start; text-align:left; padding:7px; gap:4px; min-height:72px; min-width:0; }
+.di-space-slot { display:grid; min-width:0; align-content:start; }
+.di-space-choosing { grid-column:1/-1; }
+.di-space-slot .di-confirm { margin:5px 0 0; }
 .di-space strong { font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
 .di-space .di-space-icons { display:flex; flex-wrap:wrap; gap:4px; font-size:11px; color:#776340; }
 .di-space .di-occupants { display:flex; flex-wrap:wrap; gap:3px; font-size:10px; }
@@ -78,15 +82,24 @@ body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn { color:#a12f36
 .di-field { display:flex; flex-wrap:wrap; align-items:center; gap:7px; font-size:12px; margin:8px 0; }
 .di-field select { min-width:0; flex:1; padding:5px; border:1px solid #c7c2a5; border-radius:5px; }
 .di-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:7px; }
+.di-card-slot { position:relative; min-width:0; display:grid; }
+.di-card-slot > .di-confirm { position:absolute; inset:0; margin:0; display:flex; flex-direction:column; justify-content:center; background:#fffaf0f5; overflow:auto; z-index:1; }
+.di-card-slot > .di-confirm .di-confirm-buttons { margin-top:auto; gap:4px; }
+.di-root .di-card-slot > .di-confirm button { padding:8px 4px; }
+.di-card-slot > .di-confirm .di-field { display:grid; gap:4px; }
+.di-card-slot > .di-confirm select { width:100%; }
 .di-hand { max-height:430px; overflow:auto; padding:2px; }
 .di-root .di-card { display:flex; flex-direction:column; text-align:left; min-width:0; min-height:137px; background:#fffdf8; border-top:4px solid var(--di-faction,#b19b77); padding:8px; gap:6px; }
 .di-card strong { font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
 .di-card small { font-size:10px; color:#7e6c50; overflow-wrap:anywhere; line-height:1.3; }
 .di-card-icons { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; font-size:12px; }
+.di-card-cost { margin-left:auto; font-weight:700; padding:2px 4px; border-radius:4px; background:#eee1c6; }
+.di-card-cost:empty { display:none; }
+.di-card-label { font-size:10px; color:#8a7658; }
 .di-card-effect { font-size:11px; line-height:1.45; color:#6a5e4e; overflow-wrap:anywhere; }
 .di-card-reveal { font-size:11px; border-top:1px solid #e8ddc8; padding-top:5px; margin-top:auto; line-height:1.5; overflow-wrap:anywhere; }
 .di-market { grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); }
-.di-market .di-card { min-height:190px; }
+.di-root .di-purchasable > .di-card { min-height:215px; }
 .di-intrigues { margin-top:9px; padding-top:8px; border-top:1px solid var(--di-line); }
 .di-intrigues summary,.di-root details summary { cursor:pointer; font-size:12px; margin-bottom:7px; }
 .di-leader-selection { margin-bottom:0; }
@@ -106,6 +119,10 @@ body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn { color:#a12f36
 .di-result h3 { margin:0 0 8px; }
 .di-result-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:7px; }
 .di-result-row { border-radius:6px; padding:7px; font-size:12px; background:#fff8e8; line-height:1.6; }
+.di-result-you { border:2px solid #247f8d; background:#edf5ef; }
+.di-review-next { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
+.di-root .di-review-next button { min-height:42px; min-width:120px; }
+.di-activity { padding:8px 0; }
 .di-explaining [data-di-explain] { outline:2px dashed #23838e!important; outline-offset:1px; cursor:help!important; opacity:1!important; }
 .di-tip { position:fixed; z-index:10020; max-width:min(330px,calc(100vw - 24px)); padding:10px 12px; background:#342b21; color:#fff9ed; border-radius:8px; font-size:12px; line-height:1.6; pointer-events:none; overflow-wrap:anywhere; box-shadow:0 4px 20px #0003; }
 .di-dialog { width:min(720px,calc(100vw - 24px)); max-height:85vh; padding:20px; border:1px solid #b99a69; border-radius:15px; background:#fffcf5; color:#352b20; overflow:auto; }
@@ -116,9 +133,10 @@ body.dune-needs-action #roomControlsPanel #roomControlsToggleBtn { color:#a12f36
 .di-dialog p,.di-dialog li { font-size:14px; line-height:1.7; overflow-wrap:anywhere; }
 .di-dialog h3 { font-size:15px; margin:18px 0 6px; }
 @media(max-width:980px) { .di-layout { grid-template-columns:minmax(0,1.3fr) minmax(260px,1fr); } .di-factions { grid-template-columns:1fr; } .di-regions { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:700px) { .di-root { padding:10px; border-radius:12px; } .di-title { font-size:23px; } .di-layout { grid-template-columns:1fr; } .di-side { grid-row:1; } .di-players { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; } .di-player { padding:7px; } .di-factions { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-regions { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-hand { grid-template-columns:repeat(3,minmax(0,1fr)); max-height:290px; } .di-root .di-hand .di-card { padding:6px; min-height:126px; } .di-market { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-rewards { gap:4px; } .di-hero { gap:8px; } .di-box { padding:9px; } }
-@media(max-width:380px) { .di-factions { grid-template-columns:1fr; } .di-hand { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-title { font-size:21px; letter-spacing:2px; } .di-token { font-size:11px; } }
+@media(max-width:700px) { .game-panel[data-game-theme="dune_imperium"] { padding:10px; } .game-panel[data-game-theme="dune_imperium"] > .panel-header { gap:6px; margin-bottom:8px; } .game-panel[data-game-theme="dune_imperium"] > .panel-header h2 { font-size:18px; } .di-layout { grid-template-columns:1fr; gap:8px; } .di-side { grid-row:1; } .di-players { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-bottom:8px; } .di-player { padding:6px; } .di-player small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .di-tokens { gap:3px 6px; } .di-factions { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-regions { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-hand { grid-template-columns:repeat(3,minmax(0,1fr)); max-height:245px; } .di-root .di-hand .di-card { padding:6px; min-height:126px; } .di-market { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-rewards { gap:4px; } .di-box { padding:8px; margin-bottom:8px; } }
+@media(max-width:380px) { .di-factions { grid-template-columns:1fr; } .di-hand { grid-template-columns:repeat(2,minmax(0,1fr)); } .di-token { font-size:11px; } }
 @media(max-width:700px) {
+  .di-player small { white-space:normal; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
   .di-region-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; margin:8px 0; }
   .di-region-tabs button { padding:7px 3px; font-size:11px; min-width:0; }
   .di-region-tabs button[aria-pressed="true"] { background:#e4cfaa; border-color:#ac8547; }

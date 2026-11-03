@@ -6,12 +6,13 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const base = process.env.ROOM_TEST_URL || 'http://127.0.0.1:8875';
 const out = path.resolve('build/dune-imperium');
+const viewports = [320, 390, 1024, 1440];
 fs.mkdirSync(out, {recursive:true});
 const fixtures = JSON.parse(execFileSync(process.env.PYTHON || 'python', ['-c', `
 import copy,json
 from tests.test_dune_imperium import playing,give,intrigue,act,settle
 from game.dune_imperium import DuneImperiumGame as G,_resolve_combat,_queue
-from game.dune_imperium_data import effect
+from game.dune_imperium_data import CARDS,effect
 s=playing(4,leaders=['baron','paul','leto','helena'])
 s['players']['0'].update(solari=10,spice=6,water=3)
 s['players']['3']['name']='VeryLongPlayerNameForResponsiveLayoutTesting'
@@ -22,6 +23,10 @@ v={'turn':G.get_public_view(s,'0'),'spectator':G.get_public_view(s,'watcher')}
 choice=copy.deepcopy(s)
 _queue(choice,'0',[effect('trash')]);act(choice,'0',{'type':'resolve','index':0})
 choice['revision']=101;v['choice']=G.get_public_view(choice,'0')
+long_choice=copy.deepcopy(s)
+for kind in CARDS: give(long_choice,'0',kind)
+_queue(long_choice,'0',[effect('trash')]);act(long_choice,'0',{'type':'resolve','index':0})
+long_choice['revision']=105;v['long_choice']=G.get_public_view(long_choice,'0')
 reveal=copy.deepcopy(s);act(reveal,'0',{'type':'reveal'});settle(reveal)
 reveal['players']['0'].update(persuasion=20,recruitment=True)
 reveal['revision']=102;v['reveal']=G.get_public_view(reveal,'0')
@@ -37,7 +42,7 @@ print(json.dumps(v))
   const browser=await chromium.launch({channel:'chrome',headless:true});
   const pages=[], errors=[];
   async function page(options={}) {
-    const context=await browser.newContext({viewport:{width:1280,height:980},...options});
+    const context=await browser.newContext({viewport:{width:1440,height:980},...options});
     const p=await context.newPage(); pages.push(p);
     p.on('pageerror',e=>errors.push(e.message));
     await p.route('https://fonts.googleapis.com/**',r=>r.abort());
@@ -63,7 +68,13 @@ print(json.dumps(v))
       await p.locator(`[data-di-action="space"][data-space="${m.space}"]`).click();
     } else {
       const index=await p.evaluate(m=>lastGameStatePayload.view.moves.findIndex(x=>JSON.stringify(x)===JSON.stringify(m)),m);
+      const rev=await p.evaluate(()=>lastGameStatePayload.view.revision);
       await p.locator(`#duneImperiumRoot [data-di-action="move"][data-index="${index}"]`).first().click();
+      if(['next_round','pass','end_turn','endgame_done'].includes(m.type)) {
+        await p.waitForFunction(r=>lastGameStatePayload.view.revision>r,rev);
+        assert.equal(await p.locator('#duneImperiumRoot [data-di-action="confirm"]').count(),0,`${m.type} submits without an extra confirmation`);
+        return;
+      }
     }
     await confirm(p);
   }
@@ -75,6 +86,17 @@ print(json.dumps(v))
       }).map(e=>({tag:e.tagName,cls:e.className,w:e.clientWidth,scroll:e.scrollWidth,text:e.textContent.slice(0,55)})).slice(0,15)}));
     assert(result.body<=result.width,`${label}: page overflow ${JSON.stringify(result)}`);
     assert.deepEqual(result.overflow,[],`${label}: component overflow ${JSON.stringify(result)}`);
+  }
+  async function headerRow(p,width) {
+    const layout=await p.evaluate(()=>{
+      const rect=selector=>{
+        const r=document.querySelector(selector).getBoundingClientRect();
+        return {top:r.top,bottom:r.bottom,center:r.top+r.height/2};
+      };
+      return {title:rect('.game-panel-title h2'),reconnect:rect('#gameReconnectBtn'),help:rect('#duneImperiumHelp')};
+    });
+    assert(Math.abs(layout.title.center-layout.reconnect.center)<=2,`${width}px title and Reconnect stay on one row`);
+    assert(Math.abs(layout.title.center-layout.help.center)<=2,`${width}px title and Help stay on one row`);
   }
   async function fixture(p,key) {
     await p.evaluate(v=>{window.showDuneImperiumHeaderActions(true);window.renderDuneImperiumGameState({view:v});},fixtures[key]);
@@ -106,12 +128,13 @@ print(json.dumps(v))
         'Room Control action attention follows the current player'
       );
     }
-    for(const width of [1280,768,393,320]) {
+    for(const width of viewports) {
       await a.setViewportSize({width,height:980});
+      await headerRow(a,width);
       await bounds(a,`${width}px leaders`);
       await a.screenshot({path:path.join(out,`leaders-${width}.png`),fullPage:true});
     }
-    await a.setViewportSize({width:1280,height:980});
+    await a.setViewportSize({width:1440,height:980});
     for(let i=0;i<2;i++){
       const pid=await a.evaluate(()=>lastGameStatePayload.view.current_turn);
       const p=seatPages[pid];
@@ -122,7 +145,7 @@ print(json.dumps(v))
         assert(await taken.isDisabled(),'claimed leaders cannot be chosen again');
         assert((await taken.innerText()).includes('Selected by'));
         const rev=await p.evaluate(()=>lastGameStatePayload.view.revision);
-        await p.locator('#duneImperiumExplain').click();
+        await p.locator('#duneImperiumExplainBtn').click();
         await taken.scrollIntoViewIfNeeded();
         const r=await taken.boundingBox();await p.mouse.click(r.x+r.width/2,r.y+r.height/2);
         assert(await p.locator('#duneImperiumDialog').evaluate(e=>e.open),'claimed leaders support Explain');
@@ -153,19 +176,21 @@ print(json.dumps(v))
     await move(b,{type:'next_round'});
     await a.waitForFunction(()=>lastGameStatePayload.view.round===2);
     await fixture(a,'turn');
-    for(const width of [1280,768,393,320]) {
+    for(const width of viewports) {
       await a.setViewportSize({width,height:980});
+      await headerRow(a,width);
       await bounds(a,`${width}px board`);
       await a.screenshot({path:path.join(out,`${width}.png`),fullPage:true});
       await a.locator('[data-di-action="tab"][data-tab="market"]').click();
       await bounds(a,`${width}px market`);
+      await a.screenshot({path:path.join(out,`market-${width}.png`),fullPage:true});
       await a.locator('[data-di-action="tab"][data-tab="board"]').click();
       if(width<=700)for(const region of ['factions','landsraad','city','spice']) {
         await a.locator(`[data-di-action="region"][data-region="${region}"]`).click();
         await bounds(a,`${width}px ${region}`);
       }
     }
-    await a.setViewportSize({width:1280,height:980});
+    await a.setViewportSize({width:1440,height:980});
     await a.locator('#duneImperiumHelp').click();await bounds(a,'Help');
     assert(await a.locator('#duneImperiumDialog').evaluate(e=>e.open));
     await a.keyboard.press('Escape');
@@ -174,11 +199,11 @@ print(json.dumps(v))
     await a.locator(`[data-di-action="card"][data-card="${card}"]`).first().click();
     const disabled=a.locator('[data-di-action="space"]:disabled').first();
     await disabled.scrollIntoViewIfNeeded();
-    await a.locator('#duneImperiumExplain').click();
+    await a.locator('#duneImperiumExplainBtn').click();
     await disabled.scrollIntoViewIfNeeded();
     const r=await disabled.boundingBox();await a.mouse.click(r.x+r.width/2,r.y+r.height/2);
     assert(await a.locator('#duneImperiumDialog').evaluate(e=>e.open),'disabled Explain');
-    assert.equal(await a.locator('#duneImperiumExplain').getAttribute('aria-pressed'),'false');
+    assert.equal(await a.locator('#duneImperiumExplainBtn').getAttribute('aria-pressed'),'false');
     await a.keyboard.press('Escape');
     await a.locator('[data-di-action="space"]:not(:disabled)').first().click();
     assert(await a.locator('[data-di-action="confirm"]').count());
@@ -189,12 +214,53 @@ print(json.dumps(v))
     assert((await a.locator('#duneImperiumDialogBody').innerText()).includes('Discard'));
     assert.equal(await a.locator('#duneImperiumDialogBody [data-location="hand"]').count(),0);
     await a.keyboard.press('Escape');
-    await fixture(a,'reveal');
-    await a.locator('[data-di-action="tab"][data-tab="market"]').click();
     const buy=fixtures.reveal.moves.find(m=>m.type==='buy'&&m.top);
-    await a.locator(`[data-di-action="card"][data-card="${buy.card}"]`).first().click();
-    await a.locator('#duneImperiumDestination').selectOption('top');
-    assert((await a.locator('.di-confirm').innerText()).includes('Top of deck'));
+    const reserveBuy=fixtures.reveal.moves.find(m=>m.type==='buy'&&m.top&&fixtures.reveal.cards[m.card]==='spice_must_flow');
+    assert(reserveBuy,'the reserve fixture can buy The Spice Must Flow on top of the deck');
+    for(const width of viewports) {
+      await a.setViewportSize({width,height:980});
+      await fixture(a,'reveal');
+      await a.locator('[data-di-action="tab"][data-tab="market"]').click();
+      const buyCard=a.locator(`[data-di-action="card"][data-card="${buy.card}"]`).first();
+      await buyCard.scrollIntoViewIfNeeded();
+      const beforeBuyScroll=await a.evaluate(()=>scrollY);
+      await buyCard.click();
+      const buySlot=a.locator('.di-card-slot').filter({has:a.locator(`[data-di-action="card"][data-card="${buy.card}"]`)}).first();
+      assert.equal(await buySlot.locator('[data-di-action="confirm"]').count(),1,`${width}px purchase confirmation stays on the selected card`);
+      assert.equal(await buySlot.locator('[data-di-action="cancel"]').count(),1,`${width}px purchase cancellation stays on the selected card`);
+      assert.equal(await buySlot.locator('[data-di-action="confirm"]').innerText(),'Buy');
+      assert(Math.abs(await a.evaluate(()=>scrollY)-beforeBuyScroll)<=2,`${width}px selecting a purchase does not move the page`);
+      await a.locator('#duneImperiumDestination').selectOption('top');
+      assert((await buySlot.locator('.di-confirm').innerText()).includes('Top of deck'));
+      await bounds(a,`${width}px inline purchase`);
+      await a.screenshot({path:path.join(out,`purchase-${width}.png`),fullPage:true});
+      await buySlot.locator('[data-di-action="cancel"]').click();
+      assert.equal(await a.locator('[data-di-action="confirm"]').count(),0,'Cancel clears the purchase');
+      const reserveCard=a.locator(`[data-di-action="card"][data-card="${reserveBuy.card}"]`).first();
+      await reserveCard.click();
+      const reserveSlot=a.locator('.di-card-slot').filter({has:a.locator(`[data-di-action="card"][data-card="${reserveBuy.card}"]`)}).first();
+      await reserveSlot.locator('#duneImperiumDestination').selectOption('top');
+      const reserveConfirmation=reserveSlot.locator('.di-confirm');
+      assert((await reserveConfirmation.innerText()).includes('Top of deck'));
+      const confirmationSize=await reserveConfirmation.evaluate(e=>({height:e.clientHeight,scroll:e.scrollHeight}));
+      assert(confirmationSize.scroll<=confirmationSize.height+2,`${width}px reserve purchase shows Buy and Cancel without internal scrolling: ${JSON.stringify(confirmationSize)}`);
+      assert.equal(await reserveSlot.locator('[data-di-action="confirm"]').innerText(),'Buy');
+      assert.equal(await reserveSlot.locator('[data-di-action="cancel"]').innerText(),'Cancel');
+      await bounds(a,`${width}px reserve purchase`);
+      await a.screenshot({path:path.join(out,`reserve-purchase-${width}.png`),fullPage:true});
+      await reserveSlot.locator('[data-di-action="cancel"]').click();
+    }
+    await a.setViewportSize({width:1440,height:980});
+    await fixture(a,'long_choice');
+    const choiceList=a.locator('#duneImperiumActions .di-actions').first();
+    const lastChoice=choiceList.locator('[data-di-action="move"]').last();
+    await lastChoice.scrollIntoViewIfNeeded();
+    const choiceScroll=await choiceList.evaluate(e=>e.scrollTop);
+    assert(choiceScroll>0,'the long choice list is scrolled before selection');
+    await lastChoice.click();
+    assert(Math.abs(await choiceList.evaluate(e=>e.scrollTop)-choiceScroll)<=2,'selecting an option preserves the choice list scroll position');
+    assert.equal(await a.locator('[data-di-action="confirm"]').count(),1);
+    await a.keyboard.press('Escape');
     await fixture(a,'review');await bounds(a,'round review');
     assert.equal(await a.locator('.di-result-row').count(),4);
     await fixture(a,'over');await bounds(a,'final result');
@@ -206,9 +272,10 @@ print(json.dumps(v))
       false,
       'spectator views do not mark Room Control as actionable'
     );
-    const mobile=await page({viewport:{width:393,height:852},isMobile:true,hasTouch:true});
-    await mobile.evaluate(async()=>{await ensureGameAssets('dune_imperium');document.body.append(document.getElementById('duneImperiumPanel'));document.body.append(document.getElementById('duneImperiumHeaderActions'));document.getElementById('duneImperiumPanel').classList.remove('hidden');});
+    const mobile=await page({viewport:{width:390,height:852},isMobile:true,hasTouch:true});
+    await mobile.evaluate(async()=>{await ensureGameAssets('dune_imperium');setGamePanelVisibility('dune_imperium');setRoomControlsCollapsed(true);});
     await fixture(mobile,'turn');
+    assert.equal(await mobile.locator('#mobileExplainSlot #duneImperiumExplainBtn').count(),1,'Explain stays available in the hidden Room Control');
     await mobile.locator('.di-token[data-di-tip]').first().tap();
     assert(await mobile.locator('#duneImperiumTip').isVisible());
     await mobile.waitForTimeout(3200);
@@ -219,8 +286,31 @@ print(json.dumps(v))
     assert.equal(await mobile.locator('.di-hand-section').evaluate(e=>e.open),false,'mobile selection compacts the hand');
     assert(await mobile.locator('.di-space.di-available:visible').count(),'legal destinations stay visible');
     await bounds(mobile,'mobile selected card');
+    await fixture(mobile,'long_choice');
+    const touchChoices=mobile.locator('#duneImperiumActions .di-actions').first();
+    await touchChoices.scrollIntoViewIfNeeded();
+    const touchBox=await touchChoices.boundingBox();
+    const cdp=await mobile.context().newCDPSession(mobile);
+    const point={x:touchBox.x+touchBox.width/2,y:touchBox.y+Math.min(touchBox.height-18,260)};
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point,id:1}]});
+    for(let step=1;step<=6;step++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x,y:point.y-step*22,id:1}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await mobile.waitForTimeout(200);
+    assert(await touchChoices.evaluate(e=>e.scrollTop)>0,'touch movement scrolls the choice list');
+    assert.equal(await mobile.locator('[data-di-action="confirm"]').count(),0,'scrolling a choice list does not select an option');
+    await mobile.locator('#duneImperiumExplainBtn').tap();
+    await touchChoices.evaluate(e=>{e.scrollTop=0;});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point,id:1}]});
+    for(let step=1;step<=6;step++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x,y:point.y-step*22,id:1}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await mobile.waitForTimeout(200);
+    assert.equal(await mobile.locator('#duneImperiumDialog').evaluate(e=>e.open),false,'Explain does not treat touch scrolling as a click');
+    assert.equal(await mobile.locator('#duneImperiumExplainBtn').getAttribute('aria-pressed'),'true','touch scrolling keeps Explain mode active');
+    assert.equal(await mobile.locator('[data-di-action="confirm"]').count(),0);
+    await mobile.keyboard.press('Escape');
+    await cdp.detach();
     assert.deepEqual(errors,[]);
-    console.log('Dune: Imperium browser checks passed: real room, leader draft, agent placement, effects, reveal, combat, all-player round barrier, four viewports, Help, disabled Explain, Esc, card choice, topdeck, review, results, spectator and touch tips.');
+    console.log('Dune: Imperium browser checks passed: real room, leader draft, agent placement, effects, reveal, combat, direct round confirmation, 320/390/1024/1440px, header row, Help, disabled Explain, Esc, inline market/reserve purchase confirmation, choice scroll retention, touch scrolling, review, results, spectator and touch tips.');
   } finally {
     for(const p of pages)await p.evaluate(()=>{if(typeof socket!=='undefined')socket.emit('room:leave',{});}).catch(()=>{});
     await browser.close();
