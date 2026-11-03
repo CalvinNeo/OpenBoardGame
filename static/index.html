@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v142" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v143" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -1187,6 +1187,10 @@
               <h2>Game</h2>
               <button id="gameReconnectBtn" class="game-reconnect-btn" type="button">Reconnect</button>
             </div>
+            <div class="panel-header-actions" id="chrominoHeaderActions" style="display: none;">
+              <button id="chrominoHelpBtn" type="button" aria-label="Help">Help</button>
+              <button id="chrominoExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="projectLHeaderActions" style="display: none;">
               <button id="projectLHelpBtn" class="project-l-header-btn" type="button">Help</button>
               <button id="projectLExplainBtn" class="project-l-header-btn" type="button">Explain</button>
@@ -1723,7 +1727,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=181" defer></script>
+  <script src="/static/game_assets.js?v=182" defer></script>
   <script src="/static/games/shared.js?v=app_v40" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1760,6 +1764,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v61" defer></script>
-  <script src="/static/room.js?v=app_v96" defer></script>
+  <script src="/static/room.js?v=app_v97" defer></script>
 </body>
 </html>

@@ -27,6 +27,7 @@ from jsonschema import Draft7Validator, ValidationError
 from game import GameDefinition, get_game, list_games
 from game.ai_dixit import list_decks as list_aidixit_decks
 from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
+from game.ai_metadata import STRATEGIC_AI_GAME_IDS
 from game.ark_nova_events import filter_ark_nova_events
 from game.carcassonne import get_carcassonne_template_payload
 from game.decrypto import get_decrypto_word_packs
@@ -96,6 +97,7 @@ async def api_list_games():
             "game_id": g.game_id,
             "name": g.name,
             "name_zh": g.name_zh,
+            "has_strategic_ai": g.game_id in STRATEGIC_AI_GAME_IDS,
             "min_players": g.min_players,
             "max_players": g.max_players,
             **({"player_counts": list(g.module.supported_player_counts)}

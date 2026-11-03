@@ -9,9 +9,9 @@ const GAME_ASSETS = {
     "header": "showPokemonAdventureHeaderActions"
   },
   "chromino": {
-    "scripts": ["/static/games/chromino.js?v=2"],
-    "styles": ["/static/games/chromino.css?v=2"],
-    "markup": "/static/games/chromino.html?v=2",
+    "scripts": ["/static/games/chromino.js?v=3"],
+    "styles": ["/static/games/chromino.css?v=3"],
+    "markup": "/static/games/chromino.html?v=3",
     "panel": "chrominoPanel",
     "panelTitle": "🟥 Chromino",
     "header": "showChrominoHeaderActions"

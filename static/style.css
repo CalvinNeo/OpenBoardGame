@@ -1727,12 +1727,24 @@ body.settings-open {
 }
 
 .game-item-name-en {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.game-item-name-text {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+}
+
+.game-item-ai {
+  flex: 0 0 auto;
+  font-size: 1em;
+  line-height: 1;
 }
 
 .game-item-name-zh {

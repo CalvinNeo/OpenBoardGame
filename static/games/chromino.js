@@ -325,7 +325,7 @@
   document.getElementById("chrominoZoomOut").addEventListener("click", () => zoom(1.25));
   document.getElementById("chrominoFit").addEventListener("click", () => { if (!explaining) fit(); });
   document.getElementById("chrominoExplainBtn").addEventListener("click", () => setExplain(!explaining));
-  document.getElementById("chrominoHelp").addEventListener("click", () => {
+  document.getElementById("chrominoHelpBtn").addEventListener("click", () => {
     setExplain(false);
     openDialog("Chromino · Classic Help", `
       <h3>目标与准备</h3><p>本游戏采用 BGA 经典规则版，不使用新版规则书的变体。先出完手中的三格牌。标准套装共 80 枚：75 种普通牌和 5 枚 Chameleon 变色龙牌（★）。随机选 1 枚变色龙放在中央，每人获得 8 枚隐藏手牌，随机先手后按座次轮流行动。1 人可按相同规则练习。</p>
@@ -340,7 +340,7 @@
   document.getElementById("chrominoDialogClose").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { if (returnFocus?.isConnected && active()) returnFocus.focus({preventScroll: true}); });
 
-  const isExplainControl = target => !!target.closest("#chrominoHelp, #chrominoExplainBtn, #chrominoDialog");
+  const isExplainControl = target => !!target.closest("#chrominoHelpBtn, #chrominoExplainBtn, #chrominoDialog");
   function explanationAt(event) {
     const direct = event.target.closest("[data-chromino-explain]");
     if (direct && panel.contains(direct)) return direct;
@@ -439,7 +439,10 @@
     clearTimeout(pendingTimer);
     render();
   };
-  window.showChrominoHeaderActions = visible => { if (!visible) clear(); };
+  window.showChrominoHeaderActions = visible => {
+    document.getElementById("chrominoHeaderActions").style.display = visible ? "flex" : "none";
+    if (!visible) clear();
+  };
   window.clearChrominoState = clear;
   document.getElementById("chrominoLegend").innerHTML = Object.entries(colors).map(([color, info]) => `<span class="chromino-legend-item" tabindex="0" data-chromino-tip="${escape(`${info.name} (${info.symbol})${color === "wild" ? ": matches each neighbouring colour independently; cannot be the last tile played." : ": must touch the same colour or a Chameleon (★)."}`)}"><span class="chromino-square chromino-color-${color}">${info.symbol}</span>${info.name.split(" ")[0]}</span>`).join("");
   if (typeof socket !== "undefined") {

@@ -1572,12 +1572,23 @@ function renderGameList(games) {
     const chineseName = typeof g.name_zh === "string" ? g.name_zh.trim() : "";
     const displayName = chineseName && chineseName !== g.name ? `${g.name} · ${chineseName}` : g.name;
     item.title = `${displayName} · BGG Weight: ${weightLabel} · ${playerLabel}`;
+    if (g.has_strategic_ai) item.title += " · Strategic AI available";
     item.setAttribute("aria-label", item.title);
     const nameEl = document.createElement("span");
     nameEl.className = "game-item-name";
     const englishNameEl = document.createElement("span");
     englishNameEl.className = "game-item-name-en";
-    englishNameEl.textContent = g.name;
+    const nameTextEl = document.createElement("span");
+    nameTextEl.className = "game-item-name-text";
+    nameTextEl.textContent = g.name;
+    englishNameEl.appendChild(nameTextEl);
+    if (g.has_strategic_ai) {
+      const aiEl = document.createElement("span");
+      aiEl.className = "game-item-ai";
+      aiEl.textContent = "🤖";
+      aiEl.setAttribute("aria-hidden", "true");
+      englishNameEl.appendChild(aiEl);
+    }
     nameEl.appendChild(englishNameEl);
     if (chineseName && chineseName !== g.name) {
       const chineseNameEl = document.createElement("span");
