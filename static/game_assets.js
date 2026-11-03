@@ -173,8 +173,8 @@ const GAME_ASSETS = {
     "header": "showChallengersHeaderActions"
   },
   "dune_imperium": {
-    "scripts": ["/static/games/dune_imperium.js?v=5"],
-    "styles": ["/static/games/dune_imperium.css?v=5"],
+    "scripts": ["/static/games/dune_imperium.js?v=6"],
+    "styles": ["/static/games/dune_imperium.css?v=6"],
     "markup": "/static/games/dune_imperium.html?v=2",
     "panel": "duneImperiumPanel",
     "panelTitle": "🏜️ 沙丘：帝国",

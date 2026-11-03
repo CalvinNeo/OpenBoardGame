@@ -59,7 +59,14 @@ body.dune-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn { col
 .di-space strong { font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
 .di-space .di-space-icons { display:flex; flex-wrap:wrap; gap:4px; font-size:11px; color:#776340; }
 .di-space .di-occupants { display:flex; flex-wrap:wrap; gap:3px; font-size:10px; }
-.di-root .di-space.di-available { border-color:#278390; background:#eef7f3; }
+.di-root .di-space.di-available { border:2px solid #247f8d; background:#e5f4ec; }
+.di-destination { color:#166878; font-size:11px; font-weight:700; }
+#duneImperiumBoard,.di-hand-section { scroll-margin-top:calc(var(--room-controls-bar-height,0px) + 12px); }
+.di-placement-guide { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 9px; padding:9px; background:#e5f4ec; border-left:4px solid #247f8d; border-radius:5px; }
+.di-placement-guide > div { min-width:0; }
+.di-placement-guide strong { display:block; font-size:13px; overflow-wrap:anywhere; }
+.di-placement-guide span { display:block; font-size:11px; line-height:1.5; }
+.di-root .di-placement-guide button { flex-shrink:0; padding:7px; font-size:11px; }
 .di-root .di-space.di-unavailable { background:#ede7dc; }
 .di-regions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .di-region { min-width:0; }
@@ -75,6 +82,9 @@ body.dune-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn { col
 .di-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; max-height:330px; overflow:auto; padding:2px; }
 .di-actions button { min-width:0; text-align:left; font-size:12px; line-height:1.45; }
 .di-actions .di-wide { grid-column:1/-1; }
+.di-decision,.di-effect-order { margin-top:10px; min-width:0; }
+.di-choice-source { margin:0 0 5px; font-size:12px; font-weight:600; color:#765024; overflow-wrap:anywhere; }
+.di-effect-order .di-actions { grid-template-columns:1fr; margin-bottom:8px; }
 .di-confirm { border:1px solid #247f8d; background:#edf5ef; border-radius:9px; padding:9px; margin:8px 0; }
 .di-confirm p { margin:0 0 8px; font-size:13px; overflow-wrap:anywhere; line-height:1.5; }
 .di-confirm-buttons { display:flex; gap:7px; }

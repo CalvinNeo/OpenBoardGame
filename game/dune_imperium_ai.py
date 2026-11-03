@@ -225,6 +225,8 @@ def choose_move(view: Dict) -> Optional[Dict]:
             return choose_score(m["choice"])
         if kind == "resolve":
             e = view["effects"][m["index"]]
+            if "choice" in m:
+                e = e["options"][m["choice"]]
             priority = {"gain": 100, "influence": 95, "harvest": 95, "conditional": 93,
                         "liet": 93, "ring": 90, "trash_self": 10, "trash": 20, "deployment": 0}.get(e["kind"], 60)
             return 200 + priority + effect_value(e) * .1

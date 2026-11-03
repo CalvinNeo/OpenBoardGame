@@ -30,9 +30,14 @@ def _card(state: Dict, uid: str) -> Dict:
     return CARDS[_kind(state, uid)]
 
 
-def _queue(state: Dict, pid: str, effects: List[Dict], source: Optional[str] = None) -> None:
+def _queue(state: Dict, pid: str, effects: List[Dict], source: Optional[str] = None,
+           origin: Optional[Dict] = None) -> None:
+    origin = origin or ({"kind": "card", "id": source} if source else None)
     for item in effects:
-        state["effects"].append(dict(copy.deepcopy(item), owner=pid, source=source))
+        queued = dict(copy.deepcopy(item), owner=pid, source=source)
+        if origin:
+            queued["origin"] = copy.deepcopy(origin)
+        state["effects"].append(queued)
 
 
 def _afford(player: Dict, cost: Dict) -> bool:
@@ -215,7 +220,7 @@ def _resolve_effect(state: Dict, e: Dict) -> None:
                 _prompt(state, e, options)
     elif kind == "conditional":
         if _condition(state, pid, e):
-            _queue(state, pid, e["effects"], source)
+            _queue(state, pid, e["effects"], source, e.get("origin"))
     elif kind == "pay":
         _prompt(state, e, [False, True] if _afford(p, e["cost"]) else [False])
     elif kind == "choice":
@@ -253,14 +258,14 @@ def _resolve_effect(state: Dict, e: Dict) -> None:
     elif kind == "council":
         p["council"] = True
         if p["leader"] == "memnon":
-            _queue(state, pid, [influence()])
+            _queue(state, pid, [influence()], origin={"kind": "leader", "id": p["leader"]})
     elif kind == "ring":
         rings = {"paul": [gain(draw=1)], "leto": [pay({"spice": 1}, influence(behind=True))],
                  "baron": [pay({"solari": 1}, gain(intrigue=1))],
                  "rabban": [gain(troops=2 if pid in state["alliances"].values() else 1)],
                  "helena": [effect("reserve_card")], "ilban": [gain(solari=1)],
                  "ariana": [gain(water=1)], "memnon": [gain(spice=1)]}
-        _queue(state, pid, rings[p["leader"]], source)
+        _queue(state, pid, rings[p["leader"]], source, {"kind": "leader", "id": p["leader"]})
     elif kind == "steal":
         for other, q in state["players"].items():
             if other != pid and len(q["intrigues"]) >= 4:
@@ -378,9 +383,9 @@ def _choose(state: Dict, value) -> None:
         _influence(state, pid, value, e["amount"])
     elif kind == "pay" and value:
         _pay(p, e["cost"])
-        _queue(state, pid, e["effects"], source)
+        _queue(state, pid, e["effects"], source, e.get("origin"))
     elif kind == "choice":
-        _queue(state, pid, [e["options"][value]], source)
+        _queue(state, pid, [e["options"][value]], source, e.get("origin"))
     elif kind in ("trash", "breeding") and value:
         _trash(state, pid, value)
         if kind == "breeding":
@@ -452,9 +457,89 @@ def _choose(state: Dict, value) -> None:
         p["agents"].append(value["agent"])
 
 
+def _automatic_effect(state: Dict) -> Optional[int]:
+    """Find a forced effect whose timing cannot remove a player's choice.
+
+    Uncapped resource gains commute with all base-game effects. Draws, capped
+    troop gains, conditions and card removal deliberately stay out of that
+    category: their order can change the cards or rewards available afterward.
+    """
+    effects = state["effects"]
+    resources = {"persuasion", "swords", "solari", "spice", "water", "vp"}
+    for index, e in enumerate(effects):
+        if e["kind"] == "gain" and set(e["values"]) <= resources:
+            return index
+        # These rings have a fixed result; expose the actual gain/draw before
+        # considering timing. Rabban's alliance-dependent recruitment waits.
+        if e["kind"] == "ring" and state["players"][e["owner"]]["leader"] in ("paul", "ilban", "ariana", "memnon"):
+            return index
+    if any(_effect_action_window(state, e["owner"]) for e in effects):
+        return None
+    if len(effects) == 1:
+        return 0
+    if state["phase"] == "agent" and state["turn"] and state["turn"]["mode"] == "agent" and effects and all(
+        e["kind"] == "gain" and "intrigue" not in e["values"] for e in effects
+    ):
+        # Agent draws only add cards to hand, so two mandatory draws/recruits
+        # commute. Reveal draws can trigger more card effects and stay ordered.
+        return 0
+    # These effects cannot create new reveal effects or inspect other effects'
+    # results. Their resource/positive-influence totals are order independent.
+    if effects and all(
+        (e["kind"] == "gain" and not {"draw", "intrigue"}.intersection(e["values"]))
+        or (e["kind"] == "influence" and e["faction"] in FACTIONS and e["amount"] > 0
+            and not (state["players"][e["owner"]]["influence"][e["faction"]] < 4
+                     <= state["players"][e["owner"]]["influence"][e["faction"]] + e["amount"]))
+        for e in effects
+    ):
+        return 0
+    # Carryall adds only the printed harvest amount, independently of when the
+    # location's accumulated spice is collected (including Ariana's reduction).
+    if effects and all(e["kind"] in ("harvest", "carryall") for e in effects):
+        return 0
+    return None
+
+
+def _direct_gain_choice(e: Dict) -> bool:
+    resources = {"persuasion", "swords", "solari", "spice", "water", "vp"}
+    return e["kind"] == "choice" and all(
+        option["kind"] == "gain" and set(option["values"]) <= resources for option in e["options"]
+    )
+
+
+def _effect_action_window(state: Dict, pid: str) -> bool:
+    """Keep purchases and plots that may change a pending effect's result."""
+    if pid != state["current_turn"]:
+        return False
+    p, turn = state["players"][pid], state["turn"]
+    if state["phase"] == "agent" and turn and turn["mode"] == "reveal" and any(
+        p["persuasion"] >= _buy_cost(state, pid, uid) for uid in _purchasable(state, pid)
+    ):
+        return True
+    return any(
+        _intrigue_available(state, pid, state["intrigue_cards"][uid])
+        for uid in p["intrigues"]
+    )
+
+
 def _settle(state: Dict) -> None:
-    while not state["choice"] and state["interrupts"]:
-        _resolve_effect(state, state["interrupts"].pop(0))
+    while True:
+        choice = state["choice"]
+        if choice:
+            if not choice["options"]:
+                state["choice"] = None
+                continue
+            if len(choice["options"]) == 1 and choice["mode"] != "defense":
+                _choose(state, choice["options"][0])
+                continue
+            break
+        if state["interrupts"]:
+            _resolve_effect(state, state["interrupts"].pop(0))
+            continue
+        index = _automatic_effect(state)
+        if index is None:
+            break
+        _resolve_effect(state, state["effects"].pop(index))
     if state["choice"] or state["effects"]:
         return
     for item in state["intrigue_resolving"]:
@@ -472,14 +557,19 @@ def _settle(state: Dict) -> None:
             turn["deployment_offered"] = turn["recruited"]
             if SPACES[turn["space"]]["combat"]:
                 allowance = max(0, turn["recruited"] + 2 - turn["normal_deployed"])
-                _resolve_effect(state, dict(effect("deployment", amount=allowance), owner=state["current_turn"], source=None))
+                e = dict(effect("deployment", amount=allowance), owner=state["current_turn"], source=None,
+                         origin={"kind": "space", "id": turn["space"]})
+                p = state["players"][state["current_turn"]]
+                if min(p["garrison"], allowance):
+                    _resolve_effect(state, e)
     if state["phase"] == "agent" and not state["choice"]:
         turn = state["turn"] or state["pre_turn"]
         p = state["players"][state["current_turn"]]
         if not turn["baron_checked"] and turn["deployed"] >= 4:
             turn["baron_checked"] = True
             if p["leader"] == "baron" and not p["baron_used"]:
-                _resolve_effect(state, dict(effect("baron_power"), owner=state["current_turn"], source=None))
+                _resolve_effect(state, dict(effect("baron_power"), owner=state["current_turn"], source=None,
+                                            origin={"kind": "leader", "id": "baron"}))
 
 
 def _cost(state: Dict, pid: str, space_id: str, amount: int = 0) -> Dict:
@@ -566,7 +656,19 @@ def _intrigue_available(state: Dict, pid: str, key: str) -> bool:
     return True
 
 
+def _settled_view_state(state: Dict) -> Dict:
+    """Normalize legacy pending rewards without changing state in a read API."""
+    if state["effects"] or state["interrupts"] or (state["choice"] and len(state["choice"]["options"]) <= 1):
+        state = copy.deepcopy(state)
+        _settle(state)
+    return state
+
+
 def legal_moves(state: Dict, pid: str) -> List[Dict]:
+    return _legal_moves(_settled_view_state(state), pid)
+
+
+def _legal_moves(state: Dict, pid: str) -> List[Dict]:
     if pid not in state["order"] or state["game_over"]:
         return []
     phase, p = state["phase"], state["players"][pid]
@@ -581,7 +683,14 @@ def legal_moves(state: Dict, pid: str) -> List[Dict]:
         return [{"type": "leader", "leader": k} for k in LEADERS if k not in [q["leader"] for q in state["players"].values()]]
     if phase == "baron":
         return [{"type": "baron", "factions": list(pair)} for pair in itertools.combinations(FACTIONS, 2)]
-    moves = [{"type": "resolve", "index": i} for i, e in enumerate(state["effects"]) if e["owner"] == pid]
+    moves = []
+    for index, e in enumerate(state["effects"]):
+        if e["owner"] != pid:
+            continue
+        if _direct_gain_choice(e):
+            moves += [{"type": "resolve", "index": index, "choice": value} for value in range(len(e["options"]))]
+        else:
+            moves.append({"type": "resolve", "index": index})
     moves += [{"type": "intrigue", "card": uid} for uid in p["intrigues"] if _intrigue_available(state, pid, state["intrigue_cards"][uid])]
     turn = state["turn"]
     if phase == "agent":
@@ -639,14 +748,15 @@ def _agent(state: Dict, pid: str, action: Dict) -> None:
     state["started"] = True
     p["envoy"] = p["infiltrate"] = False
     icon = SPACES[space_id]["icon"]
+    origin = {"kind": "space", "id": space_id}
     if icon in FACTIONS:
-        _queue(state, pid, [influence(icon, 2 if _kind(state, uid) == "power_play" else 1)], uid)
-    _queue(state, pid, SPACES[space_id]["effects"], uid)
+        _queue(state, pid, [influence(icon, 2 if _kind(state, uid) == "power_play" else 1)], uid, origin)
+    _queue(state, pid, SPACES[space_id]["effects"], uid, origin)
     _queue(state, pid, _card(state, uid)["agent"], uid)
     if space_id == "sell_melange":
-        _queue(state, pid, [gain(solari={2: 6, 3: 8, 4: 10, 5: 12}[action["amount"]])])
+        _queue(state, pid, [gain(solari={2: 6, 3: 8, 4: 10, 5: 12}[action["amount"]])], origin=origin)
     if p["leader"] == "ilban" and cost.get("solari", 0) > 0:
-        _queue(state, pid, [gain(draw=1)])
+        _queue(state, pid, [gain(draw=1)], origin={"kind": "leader", "id": p["leader"]})
     controller = state["control"].get(space_id)
     if controller:
         _gain(state, controller, {"spice" if space_id == "imperial_basin" else "solari": 1})
@@ -789,7 +899,8 @@ def _next_reward(state: Dict) -> None:
         state["turn"] = {"mode": "reward"}
         rank = state["round_report"]["awards"].get(pid)
         if rank is not None:
-            _queue(state, pid, CONFLICTS[state["conflict"]]["rewards"][rank])
+            _queue(state, pid, CONFLICTS[state["conflict"]]["rewards"][rank],
+                   origin={"kind": "conflict", "id": state["conflict"]})
     else:
         for s in state["spice_bonus"]:
             if not state["occupied"][s]:
@@ -833,7 +944,8 @@ def _start_round(state: Dict) -> None:
         p = state["players"][pid]
         if p["garrison"] + p["troops"] < 12:
             # Optional defensive deployment is offered to the controller before turns.
-            _prompt(state, dict(effect("defense"), owner=pid, source=None), [False, True])
+            _prompt(state, dict(effect("defense"), owner=pid, source=None,
+                                origin={"kind": "conflict", "id": state["conflict"]}), [False, True])
     _log(state, f"第 {state['round']} 轮：{CONFLICTS[state['conflict']]['name']}")
 
 
@@ -944,9 +1056,10 @@ class DuneImperiumGame:
             encoded = json.dumps(action, sort_keys=True, allow_nan=False)
         except (TypeError, ValueError):
             return [], "Invalid action"
-        if not any(encoded == json.dumps(m, sort_keys=True, allow_nan=False) for m in legal_moves(state, player_id)):
-            return [], "Illegal or stale Dune: Imperium action"
         work = copy.deepcopy(state)
+        _settle(work)
+        if not any(encoded == json.dumps(m, sort_keys=True, allow_nan=False) for m in _legal_moves(work, player_id)):
+            return [], "Illegal or stale Dune: Imperium action"
         DuneImperiumGame._apply(work, player_id, action)
         _settle(work)
         # Deployment with zero troops still needs to reach the post-deployment check.
@@ -979,6 +1092,8 @@ class DuneImperiumGame:
             _reveal(state, pid)
         elif kind == "resolve":
             _resolve_effect(state, state["effects"].pop(action["index"]))
+            if "choice" in action:
+                _choose(state, action["choice"])
         elif kind == "choose":
             if state["choice"]["mode"] == "defense":
                 if action["choice"]:
@@ -1001,7 +1116,7 @@ class DuneImperiumGame:
             if key == "tiebreaker":
                 _gain(state, pid, {"spice": 10} if state["phase"] == "endgame" else {"swords": 2})
             else:
-                _queue(state, pid, data["effects"])
+                _queue(state, pid, data["effects"], origin={"kind": "intrigue", "id": key})
             if state["phase"] == "combat":
                 state["passes"] = []
             state["started"] = True
@@ -1049,6 +1164,7 @@ class DuneImperiumGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
+        state = _settled_view_state(state)
         visible = set(state["market"] + state["trashed"])
         for stack in state["reserve"].values():
             if stack:
@@ -1099,4 +1215,6 @@ class DuneImperiumGame:
 
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
-        return copy.deepcopy(payload)
+        state = copy.deepcopy(payload)
+        _settle(state)
+        return state

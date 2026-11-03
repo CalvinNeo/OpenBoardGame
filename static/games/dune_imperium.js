@@ -20,7 +20,7 @@
     buy:"Buy：在自己的 Reveal 回合花说服力（🗣️）购牌；帝国行立即补新牌，可继续购买。新牌默认进弃牌堆。香料必须流动 The Spice Must Flow 费用 9，获得时加一分（⭐）。",
     intrigue:"阴谋牌 Intrigue（🕵️）与主牌库分开。Plot 仅在自己的特工或揭示回合；Combat 仅在战斗阶段且有部队；胜后牌必须独赢冲突；Endgame 仅在终局。出牌前须满足条件并支付费用。",
     next:"Next Round：确认看完本轮结算。所有玩家确认后才收回部队和特工，开始下一轮。AI 自动确认；最后一轮后进入终局阴谋牌结算。",
-    effect:"Resolve：选择一个尚未结算的效果。可以自行安排效果顺序。可选费用用 Yes／Skip 选择；派系、移除牌、部署等选择由服务器限定合法范围。",
+    effect:"普通收益自动结算。只有能力的先后次序会影响结果时才选择先结算哪项能力。部署、支付、移除卡牌等选择点一次即生效。",
     pass:"Pass：本次不再出战斗阴谋牌。若有人继续出牌，你仍可再次响应；全部参战玩家连续 Pass 才结算冲突。",
     finish:"End Turn：结束当前回合。所有待结算效果必须先完成；揭示回合中未花掉的说服力（🗣️）会失去。",
     maker:"产地 Maker（🟠）：大平原、哈加盆地、帝国盆地在轮末没有特工时累积一香料。下一次访问者获得基础产量和累积值。",
@@ -46,7 +46,7 @@
   function token(key,n,label) { return `<span class="di-token" ${tooltipAttr(label||`${names[key]}(${icons[key]})`)}>${icons[key]} ${esc(n)}</span>`; }
   function effectText(e, words=false) {
     const kind=e.kind, values=words?amountWords:amounts;
-    if(kind==="gain")return values(e.values);
+    if(kind==="gain")return `${words?"获得 ":""}${values(e.values)}`;
     if(kind==="influence")return `${e.faction==="any"?"任一派系":names[e.faction]} +${e.amount}${e.exclude?`（除${names[e.exclude]}）`:""}${e.behind?"（须落后于对手）":""}`;
     if(kind==="pay")return `${values(e.cost)} → ${e.effects.map(x=>effectText(x,words)).join("；")}`;
     if(kind==="choice")return e.options.map(x=>effectText(x,words)).join(" / ");
@@ -89,16 +89,38 @@
   function resetSelection() { selected=null;selectedCard=null;hideTip(); }
   function moveButton(m,label,explanation="effect",extra="") {
     const i=view.moves.indexOf(m);
-    return `<button type="button" data-di-action="move" data-index="${i}" ${explainAttr(explanations[explanation]||explanation)} ${pending?"disabled":""} class="${extra} ${selected===m?"di-selected":""}" aria-pressed="${selected===m}">${esc(label)}</button>`;
+    return `<button type="button" data-di-action="move" data-index="${i}" ${explainAttr(explanations[explanation]||explanation)} ${pending?"disabled":""} class="${extra}">${esc(label)}</button>`;
+  }
+  function effectSource(e) {
+    if(e.origin){
+      const {kind,id}=e.origin;
+      if(kind==="space")return view.catalog.spaces[id]?.name||"";
+      if(kind==="card")return view.catalog.cards[id]?.name_zh||sourceName(id);
+      if(kind==="intrigue")return view.catalog.intrigues[id]?.name||"";
+      if(kind==="leader")return view.catalog.leaders[id]?.name_zh||"";
+      if(kind==="conflict")return view.catalog.conflicts[id]?.name||"";
+    }
+    if(e.source)return sourceName(e.source);
+    if(["deployment","defense"].includes(e.kind)&&view.turn?.space)return view.catalog.spaces[view.turn.space].name;
+    if(view.phase==="rewards")return view.catalog.conflicts[view.conflict]?.name||"";
+    return "";
+  }
+  function choiceTitle() {
+    const mode=view.choice.mode;
+    return {pay:"支付费用",choice:"选择卡牌效果",trash:"选择移除的卡牌",breeding:"选择移除的卡牌",spy:"帝国间谍",discard:"选择弃掉的手牌",deploy:"部署部队",deployment:"部署部队",retreat:"撤回部队",influence:"选择提升影响力的派系",memory:"先祖记忆",shift:"改换门庭",voice:"选择封锁的行动格",reserve_card:"选择保留的帝国行卡牌",two_factions:"选择两个派系",alliance_choice:"选择联盟持有者",baron_power:"是否发动妙计",bindu:"是否跳过回合",bypass:"选择获得的卡牌",double_cross:"选择失去部队的对手",snooper:"抽取或移除牌顶",recall:"选择召回的特工",defense:"部署防御部队"}[mode]||"Choose an option";
   }
   function choiceLabel(value) {
     const c=view.choice, mode=c.mode, e=c.effect;
     if(value===null)return "Skip";
-    if(typeof value==="boolean")return value?(mode==="defense"?"Deploy 1 🛡️":"Yes"):"Skip";
-    if(mode==="choice")return effectText(e.options[value]);
+    if(typeof value==="boolean"){
+      if(!value)return "Skip";
+      if(mode==="pay")return `支付 ${amountWords(e.cost)} → ${e.effects.map(x=>effectText(x,true)).join("；")}`;
+      return {defense:"Deploy 1 🛡️",spy:"移除此牌 → 抽 1 阴谋牌 🕵️",baron_power:"发动妙计",bindu:"跳过本次回合"}[mode]||"Use ability";
+    }
+    if(mode==="choice")return effectText(e.options[value],true);
     if(["deploy","deployment"].includes(mode))return `Deploy ${value} 🛡️`;
     if(mode==="retreat")return `Retreat ${value} 🛡️`;
-    if(mode==="influence")return `${icons[value]} ${names[value]} +${e.amount}`;
+    if(mode==="influence")return `${icons[value]} ${names[value]}影响力 +${e.amount}`;
     if(mode==="voice")return `${icons[view.catalog.spaces[value].icon]} ${view.catalog.spaces[value].name}`;
     if(mode==="alliance_choice"||mode==="double_cross")return pname(value);
     if(mode==="shift"||mode==="two_factions")return value.map((f,i)=>`${icons[f]} ${names[f]} ${mode==="shift"?(i?"+2":"−1"):"+1"}`).join(" · ");
@@ -114,10 +136,25 @@
     if(m.type==="buy")return `Buy ${sourceName(m.card)}${m.top?" · Top of deck":""}`;
     if(m.type==="leader")return view.catalog.leaders[m.leader].name_zh;
     if(m.type==="baron")return m.factions.map(f=>`${icons[f]} ${names[f]}`).join(" + ");
-    if(m.type==="resolve")return effectText(view.effects[m.index]);
+    if(m.type==="resolve"){
+      const e=view.effects[m.index], source=effectSource(e);
+      if("choice" in m)return `${source?source+"：":""}${effectText(e.options[m.choice],true)}`;
+      return `先结算 · ${source?source+"：":""}${effectText(e,true)}`;
+    }
     if(m.type==="choose")return choiceLabel(m.choice);
     if(m.type==="intrigue")return view.catalog.intrigues[own().intrigues.find(i=>i.id===m.card).kind].name;
     return {reveal:"Reveal",end_turn:"End Turn",pass:"Pass",next_round:view.final_round?"Continue to Endgame":"Next Round",endgame_done:"Finish Endgame"}[m.type]||m.type;
+  }
+  function handUnavailableReason(uid) {
+    if(view.choice)return view.choice.owner===view.you?`先完成“${choiceTitle()}”，再继续行动。`:`等待 ${pname(view.choice.owner)} 完成选择。`;
+    if(view.current_turn!==view.you)return `现在轮到 ${pname(view.current_turn)}，轮到你时可以继续打手牌。`;
+    if(view.phase!=="agent")return "当前不是派遣特工阶段。";
+    if(view.turn?.mode==="reveal")return "本轮已经揭示，接下来使用说服力购牌；下一轮重新派遣特工。";
+    if(moves("resolve").length)return "先选择需要先结算的能力，完成当前行动。";
+    if(view.turn?.mode==="agent")return "本次特工已派出，点击 End Turn 结束行动；再次轮到你时可以打下一张手牌。";
+    if(!own().agents.length)return "本轮没有可用特工了，点击 Reveal 揭示剩余手牌。";
+    if(uid&&!card(uid).icons.length)return "此牌没有访问图标，留在手中于 Reveal 时获得揭示收益。";
+    return "此牌目前没有可进入的行动格；请检查访问图标、费用、占用和影响力要求，或选择其他手牌。";
   }
   function renderCard(uid,location="hand") {
     const c=card(uid), actionable=location==="hand"?moves("agent").some(m=>m.card===uid):moves("buy").some(m=>m.card===uid);
@@ -127,7 +164,7 @@
       <strong>${esc(c.name_zh)}</strong><small>${esc(c.name)}</small>
       <div class="di-card-effect"><span class="di-card-label">👤</span> ${esc(c.agent.map(e=>effectText(e)).join("；")||"—")}</div>
       <div class="di-card-reveal"><span class="di-card-label">Reveal</span> ${esc(c.reveal.map(e=>effectText(e)).join("；")||"—")}</div>
-      ${actionable?`<small>${location==="hand"?"Select → board":"Available to buy"}</small>`:""}</button>${buying?preview():""}</div>`;
+      ${actionable?`<small>${location==="hand"?"Play → board":"Available to buy"}</small>`:location==="hand"?`<small>${c.icons.length?"View details":"Reveal only"}</small>`:""}</button>${buying?preview():""}</div>`;
   }
   function renderSpace(id) {
     const s=view.catalog.spaces[id], available=selectedCard&&moves("agent").some(m=>m.card===selectedCard&&m.space===id);
@@ -138,11 +175,19 @@
       <strong>${esc(s.name)} ${s.combat?"⚔️":""}</strong>
       <span class="di-space-icons">${amounts(s.cost)||"Free"}${s.requirement?" · 🏜️ ≥2":""}${s.maker?` · 🟠 +${view.spice_bonus[id]}`:""}${view.control[id]?" · 🚩":""}</span>
       <span class="di-space-icons">${esc(s.effects.filter(e=>e.kind==="gain").map(e=>effectText(e)).join(" · "))}</span>
+      ${available?`<span class="di-destination">Place agent →</span>`:""}
       <span class="di-occupants">${occupants.map(a=>`<span style="color:${color(a.owner)}">● ${esc(pname(a.owner))}</span>`).join("")}${view.blocked.some(b=>b.space===id)?"🔒":""}</span>
     </button>${choosing?preview():""}</div>`;
   }
   function renderBoard() {
-    const factions=Object.keys(view.catalog.factions).map(f=>`<section class="di-faction" style="--di-faction:${colors[f]}">
+    const destinations=new Set(moves("agent").filter(m=>m.card===selectedCard).map(m=>m.space)).size;
+    const placement=selectedCard?`<div class="di-placement-guide" role="status"><div><strong>${esc(sourceName(selectedCard))}</strong><span>${destinations} available spaces · Select a highlighted space</span></div><button type="button" data-di-action="change-card">Change card</button></div>`:"";
+    const factionOrder=Object.keys(view.catalog.factions);
+    if(selectedCard&&innerWidth<=700){
+      const reachable=new Set(moves("agent").filter(m=>m.card===selectedCard).map(m=>view.catalog.spaces[m.space].icon));
+      factionOrder.sort((a,b)=>Number(reachable.has(b))-Number(reachable.has(a)));
+    }
+    const factions=factionOrder.map(f=>`<section class="di-faction" style="--di-faction:${colors[f]}">
       <h3 ${tooltipAttr(`${names[f]}(${icons[f]})；${view.alliances[f]?`联盟：${pname(view.alliances[f])}`:"联盟未领取"}`)}>${icons[f]} ${names[f]} ${view.alliances[f]?"🤝":""}</h3>
       <div class="di-track" ${explainAttr(explanations.influence)}>${Array.from({length:7},(_,n)=>`<div class="di-step" ${tooltipAttr(`影响力 ${n}${n===2?" · ⭐ 1":n===4?" · 联盟门槛与派系奖励":""}`)}>${n}${n===2?"⭐":n===4?"🤝":""}<div class="di-step-markers">${view.players.filter(p=>p.influence[f]===n).map(p=>`<span class="di-dot" style="--di-player:${color(p.player_id)}"></span>`).join("")}</div></div>`).join("")}</div>
       <div class="di-space-list">${Object.keys(view.catalog.spaces).filter(s=>view.catalog.spaces[s].icon===f).map(renderSpace).join("")}</div></section>`).join("");
@@ -151,7 +196,7 @@
       const legal=moves("agent").some(m=>m.card===selectedCard&&(id==="factions"?view.catalog.spaces[m.space].icon in view.catalog.factions:view.catalog.spaces[m.space].icon===id));
       return `<button type="button" data-di-action="region" data-region="${id}" aria-pressed="${boardGroup===id}" ${explainAttr(`View ${label}`)}>${label}${legal?" •":""}</button>`;
     }).join("");
-    return `<nav class="di-region-tabs" aria-label="Board region">${navigation}</nav><div class="di-factions ${boardGroup==="factions"?"di-mobile-active":""}">${factions}</div><div class="di-regions">${regions}</div>`;
+    return `<div id="duneImperiumBoard">${placement}<nav class="di-region-tabs" aria-label="Board region">${navigation}</nav><div class="di-factions ${boardGroup==="factions"?"di-mobile-active":""}">${factions}</div><div class="di-regions">${regions}</div></div>`;
   }
   function renderPlayers() {
     return view.players.map(p=>`<section class="di-player ${view.current_turn===p.player_id||view.choice?.owner===p.player_id?"di-current":""}" style="--di-player:${color(p.player_id)}">
@@ -167,7 +212,7 @@
       <div class="di-combat">${view.players.map(p=>`<span ${tooltipAttr(`${p.name}：${p.troops} 部队（🛡️） ×2 + ${p.swords} 剑（⚔️）；无部队时战力为零`)}>${esc(p.name)} <b>${p.strength}</b></span>`).join("")}</div></section>`;
   }
   function preview() {
-    if(["next_round","pass","end_turn","endgame_done"].includes(selected?.type))return "";
+    if(selected&&!["agent","buy"].includes(selected.type))return "";
     if(!selected)return selectedCard?`<p class="di-small">${esc(sourceName(selectedCard))} · Select a highlighted board space.</p>`:"";
     let options="", desc="";
     if(selected.type==="agent"){
@@ -186,18 +231,32 @@
     if(view.game_over)status="Game Over";
     else if(view.choice)status=view.choice.owner===view.you?"Choose an option":`${pname(view.choice.owner)} · Choosing`;
     else if(view.phase==="round_end")status=view.ready.includes(view.you)?"Waiting for everyone":"Round complete";
+    else if(pending)status="Sending…";
+    else if(selectedCard)status="Choose a board space";
+    else if(view.current_turn===view.you&&view.turn?.mode==="agent"&&!view.effects.length)status="Agent action complete";
+    else if(view.current_turn===view.you&&view.turn?.mode==="reveal"&&!view.effects.length)status="Reveal · Buy cards";
     else status=view.current_turn===view.you?"Your turn":`${pname(view.current_turn)} · ${phases[view.phase]}`;
     if(view.choice?.owner===view.you){
-      content=`<p class="di-small">${esc(effectText(view.choice.effect))}${view.choice.peek?` · ${esc(sourceName(view.choice.peek))}`:""}</p><div class="di-actions" data-di-scroll="choices">${moves("choose").map(m=>moveButton(m,choiceLabel(m.choice),"effect")).join("")}</div>`;
+      const e=view.choice.effect, source=effectSource(e);
+      content=`<div class="di-decision"><h3>${esc(choiceTitle())}</h3>${source?`<p class="di-choice-source">${esc(source)}</p>`:""}<p class="di-small">${esc(effectText(e,true))}${view.choice.peek?` · ${esc(sourceName(view.choice.peek))}`:""}</p><div class="di-actions" data-di-scroll="choices">${moves("choose").map(m=>moveButton(m,choiceLabel(m.choice),"effect")).join("")}</div></div>`;
     }else if(view.phase==="baron"){
       content=`<div class="di-actions" data-di-scroll="baron">${moves("baron").map(m=>moveButton(m,actionLabel(m),"仅自己可见的两个妙计派系，发动后各增加一影响力。")).join("")}</div>`;
     }else{
-      content=`<div class="di-actions" data-di-scroll="actions">${moves("resolve").map(m=>moveButton(m,actionLabel(m),effectText(view.effects[m.index],true))).join("")}
+      const branches=moves("resolve").filter(m=>"choice" in m), ordered=moves("resolve").filter(m=>!("choice" in m));
+      content=`${branches.length?`<div class="di-decision"><h3>选择卡牌效果</h3><div class="di-actions" data-di-scroll="branches">${branches.map(m=>moveButton(m,actionLabel(m),effectText(view.effects[m.index].options[m.choice],true))).join("")}</div></div>`:""}${ordered.length?`<div class="di-effect-order"><h3>Choose effect order</h3>${moves("buy").length||moves("intrigue").length?`<p class="di-small">可先${[moves("intrigue").length?"使用阴谋牌":"",moves("buy").length?"在 Market 购牌":""].filter(Boolean).join("或")}，再结算以下能力。</p>`:""}<div class="di-actions" data-di-scroll="effect-order">${ordered.map(m=>moveButton(m,actionLabel(m),effectText(view.effects[m.index],true))).join("")}</div></div>`:""}<div class="di-actions" data-di-scroll="actions">
       ${["reveal","end_turn","pass","endgame_done"].flatMap(type=>moves(type).map(m=>moveButton(m,actionLabel(m),{reveal:"reveal",end_turn:"finish",pass:"pass",endgame_done:"完成终局阴谋牌结算，比较分数及资源。"}[type]))).join("")}</div>`;
       if(!view.moves.length&&!view.game_over)content+=`<p class="di-small">${view.phase==="round_end"?`${view.ready.length} / ${view.order.length} ready`:"Waiting for another player…"}</p>`;
     }
-    if(own()&&view.current_turn===view.you&&view.phase==="agent"&&!view.turn&&!view.choice)content=`<p class="di-small">Select a hand card, then a board space, or Reveal.</p>`+content;
-    return `<section class="di-box" id="duneImperiumActions"><div class="di-status" aria-live="polite">${esc(status)}</div>${own()?`<div class="di-tokens">${token("persuasion",own().persuasion)}${token("swords",own().swords)}<span class="di-token" ${tooltipAttr("本轮可用特工 Agent（👤）")}>👤 ${own().agents.length}</span></div>`:""}${!["agent","buy"].includes(selected?.type)?preview():""}${content}</section>`;
+    if(own()&&view.current_turn===view.you&&view.phase==="agent"&&!view.choice){
+      let hint="";
+      if(!view.turn)hint=moves("agent").length?"Select a hand card, then a board space, or Reveal.":handUnavailableReason();
+      else if(view.turn.mode==="reveal")hint=view.effects.length
+        ?"普通收益已计入资源栏，请选择下面的卡牌能力；也可先在 Market 购牌。"
+        :"揭示收益已计入资源栏。前往 Market 购牌，或 End Turn 结束。";
+      else if(!view.effects.length)hint="本次特工行动已完成。End Turn 后轮到下一名玩家。";
+      if(hint)content=`<p class="di-small di-turn-hint">${esc(hint)}</p>`+content;
+    }
+    return `<section class="di-box" id="duneImperiumActions"><div class="di-status" aria-live="polite">${esc(status)}</div>${own()?`<div class="di-tokens"><span class="di-token" ${tooltipAttr("说服力（🗣️）：揭示回合用于购买卡牌")}>说服力 ${icons.persuasion} ${own().persuasion}</span><span class="di-token" ${tooltipAttr("剑（⚔️）：有冲突部队时计入战力")}>剑 ${icons.swords} ${own().swords}</span><span class="di-token" ${tooltipAttr("本轮可用特工 Agent（👤）")}>👤 ${own().agents.length}</span></div>`:""}${!selected?preview():""}${content}</section>`;
   }
   function renderHand() {
     const p=own();if(!p)return `<div class="di-box"><p class="di-small">Spectator view</p></div>`;
@@ -209,10 +268,11 @@
     return `<section class="di-box"><details class="di-hand-section" data-di-detail="hand" open><summary ${explainAttr(explanations.deck)}>Hand <span class="di-small">🃏 ${p.deck_count} · Discard ${p.discard.length}</span></summary>
       ${p.peek?`<p class="di-small" ${tooltipAttr("保罗的预知：此信息仅你可见")}>👁️ ${esc(sourceName(p.peek))}</p>`:""}
       <div class="di-cards di-hand" data-di-scroll="hand">${p.hand.map(uid=>renderCard(uid)).join("")||`<p class="di-small">${view.phase==="leader"?"Cards arrive after setup.":"No cards in hand."}</p>`}</div>
+      </details>
       ${p.intrigues.length?`<details class="di-intrigues" data-di-detail="intrigues" open><summary ${explainAttr(explanations.intrigue)}>Intrigue · 🕵️ ${p.intrigues.length}</summary><div class="di-actions" data-di-scroll="intrigues">${intrigues}</div></details>`:""}
       ${p.baron_factions.length?`<p class="di-small" ${tooltipAttr("秘密妙计目标，仅你可见")}>${p.baron_used?"✓":"🔒"} ${p.baron_factions.map(f=>`${icons[f]} ${names[f]}`).join(" · ")}</p>`:""}
       ${p.played.length+p.revealed.length?`<details data-di-detail="played"><summary>In play · ${p.played.length+p.revealed.length}</summary><div class="di-cards">${p.played.concat(p.revealed).map(uid=>renderCard(uid,"info")).join("")}</div></details>`:""}
-      ${p.discard.length?`<details data-di-detail="discard"><summary>Discard · ${p.discard.length}</summary><div class="di-cards di-hand" data-di-scroll="discard">${p.discard.map(uid=>renderCard(uid,"info")).join("")}</div></details>`:""}</details></section>`;
+      ${p.discard.length?`<details data-di-detail="discard"><summary>Discard · ${p.discard.length}</summary><div class="di-cards di-hand" data-di-scroll="discard">${p.discard.map(uid=>renderCard(uid,"info")).join("")}</div></details>`:""}</section>`;
   }
   function renderMarket() {
     return `<section class="di-box"><h3>Imperium Row</h3><div class="di-cards di-market">${view.market.map(c=>renderCard(c,"market")).join("")}</div></section>
@@ -236,7 +296,7 @@
         <span class="di-leader-status">${owner?`Selected by ${esc(owner.name)}`:pending&&selected?.leader===id?"Selecting…":move?"Select →":"Available"}</span></button>`;
     }).join("")}</div></section>`;
   }
-  function render({compactHand=false}={}) {
+  function render({compactHand=false,reopenHand=false}={}) {
     if(!view)return;
     const scrolls=new Map([...root.querySelectorAll("[data-di-scroll]")].map(el=>[el.dataset.diScroll,el.scrollTop]));
     const details=new Map([...root.querySelectorAll("[data-di-detail]")].map(el=>[el.dataset.diDetail,el.open]));
@@ -251,6 +311,7 @@
     for(const el of root.querySelectorAll("[data-di-detail]")){
       if(details.has(el.dataset.diDetail))el.open=details.get(el.dataset.diDetail);
       if(compactHand&&innerWidth<=700&&el.dataset.diDetail==="hand")el.open=!selectedCard;
+      if(reopenHand&&el.dataset.diDetail==="hand")el.open=true;
     }
     for(const el of root.querySelectorAll("[data-di-scroll]"))if(scrolls.has(el.dataset.diScroll))el.scrollTop=scrolls.get(el.dataset.diScroll);
     const nextFocus=focusId?document.getElementById(focusId):focusIndex!=null?root.querySelector(`[data-index="${focusIndex}"]`):null;
@@ -279,7 +340,8 @@
     const action=target.dataset.diAction;
     if(action==="confirm"){submit();return;}
     if(action==="leader"){selected=moves("leader").find(m=>m.leader===target.dataset.leader);submit();return;}
-    if(action==="cancel"){resetSelection();render();return;}
+    if(action==="cancel"){const reopenHand=!!selectedCard;resetSelection();render({reopenHand});return;}
+    if(action==="change-card"){resetSelection();render({reopenHand:true});root.querySelector(".di-hand-section").scrollIntoView({block:"nearest",behavior:"smooth"});return;}
     if(action==="tab"){tab=target.dataset.tab;hideTip();render();return;}
     if(action==="region"){boardGroup=target.dataset.region;hideTip();render();return;}
     if(action==="info"){openDialog("Details",target.dataset.diExplain);return;}
@@ -291,7 +353,7 @@
     }
     if(action==="move"){
       selected=view.moves[Number(target.dataset.index)];
-      if(["next_round","pass","end_turn","endgame_done"].includes(selected?.type)){submit();return;}
+      if(selected&&!["agent","buy"].includes(selected.type)){submit();return;}
       if(selected?.type==="agent")selectedCard=selected.card;
       render();return;
     }
@@ -305,8 +367,12 @@
         }
       }else if(location==="market"&&moves("buy").some(m=>m.card===uid)){
         selected=moves("buy").find(m=>m.card===uid);selectedCard=null;
-      }else{openDialog(card(uid).name_zh,cardText(uid));return;}
+      }else{openDialog(card(uid).name_zh,`${location==="hand"?handUnavailableReason(uid)+"\n\n":""}${cardText(uid)}`);return;}
       render({compactHand:location==="hand"});
+      if(location==="hand"&&selectedCard){
+        const board=document.getElementById("duneImperiumBoard"), rect=board.getBoundingClientRect();
+        if(innerWidth<=700||rect.top<0||rect.top>innerHeight-100)board.scrollIntoView({block:"start",behavior:"smooth"});
+      }
       return;
     }
     if(action==="space"){
@@ -333,14 +399,14 @@
     const sections=[
       ["目标与开局","2–4 个玩家席位，八位原版领袖，67 张帝国牌、40 张阴谋牌。每人相同 10 张起始牌、两特工（👤）、一水（💧）、三驻军（🛡️），总兵力 12。四人局 1 分开局，双人及三人局 0 分开局。一个人可在房间里 Add Bot。冲突牌顺序是 1 张 I、5 张 II、4 张 III，最多十轮。"],
       ["特工回合",explanations.agent+" 剑师永久增加一名特工，包括本轮；门塔特是临时特工。高议会永久在揭示时加二说服力（🗣️）。"],
-      ["揭示与购牌",explanations.reveal+" "+explanations.buy+" 抽牌堆用完才洗弃牌；揭示期间抽到的牌立即揭示并结算。"],
+      ["揭示与购牌",explanations.reveal+" "+explanations.buy+" 普通卡牌收益自动汇总到说服力、剑和资源。部署数量、支付费用、选择派系或移除卡牌时，点选项一次就生效。只有效果顺序会影响结果时才选择先结算哪项，并显示对应卡牌或行动格。抽牌堆用完才洗弃牌；揭示期间抽到的牌立即揭示并结算。"],
       ["四派系与联盟",explanations.influence+" 皇帝（👑）、宇航公会（🚀）、贝尼·杰瑟里特（🔮）、弗雷曼（🏜️）。塔布穴地需要弗雷曼影响力至少 2。"],
       ["部署与战斗",explanations.deploy+" "+explanations.conflict+" "+explanations.pass+" 独赢者结算后还可使用胜后阴谋牌。"],
       ["香料与控制",explanations.maker+" "+explanations.control],
       ["阴谋牌与卡牌联动",explanations.intrigue+" 弗雷曼羁绊要求另一张弗雷曼牌在场；贝尼·杰瑟里特联动同理。特工牌与揭示牌在揭示结束前均算在场。移除储备牌回到储备，其他牌退出本局。移除暗杀任务得四索拉里（💰）；帝国间谍只有用自己的能力移除才抽阴谋牌。"],
       ["轮末与终局",explanations.next+" 达到 10 分（⭐）或第十轮结束时，在本轮冲突完整结算后触发终局。先打终局阴谋牌，再比胜利点、香料、索拉里、水、驻军，仍相同则最后揭示者胜。"],
       ["双人局 House Hagal","自动加入第三方干扰者，无分数、手牌及资源。每轮先手玩家每次特工回合后，Hagal 根据卡牌派特工，至多三次；卡牌格被占或封锁则重抽。它可占格、招兵、争联盟并参与冲突，但不领取奖励；若赢得城市冲突，移除原控制权。"],
-      ["图标与操作",Object.entries(names).map(([k,n])=>`${n}(${icons[k]})`).join("、")+"；特工 Agent（👤）、戒指 Signet（💍）、联盟 Alliance（🤝）、控制 Control（🚩）、移除 Trash（✖）。卡牌右上角为购买价格，中间为特工效果，底部为 Reveal 揭示效果。点击手牌→棋盘→原地 Confirm；可选择特工或出售数量。Market 点选卡牌后原地 Buy / Cancel，可选择新牌目的地。Next Round、Pass、End Turn 点击即提交。空白轻点或 Esc 取消选择，Esc 关闭对话框；滑动只滚动页面或列表。Explain 点选后自动退出，禁用按钮也可解释；悬停或手机点击非交互图标显示三秒提示。"],
+      ["图标与操作",Object.entries(names).map(([k,n])=>`${n}(${icons[k]})`).join("、")+"；特工 Agent（👤）、戒指 Signet（💍）、联盟 Alliance（🤝）、控制 Control（🚩）、移除 Trash（✖）。卡牌右上角为购买价格，中间为特工效果，底部为 Reveal 揭示效果。仅派遣特工与购牌保留原地确认：点击手牌→棋盘→Confirm，Market 点卡牌→Buy / Cancel。Reveal、阴谋牌、部署数量、支付选项、效果顺序、Next Round、Pass、End Turn 均点一次提交。空白轻点或 Esc 取消选择，Esc 关闭对话框；滑动只滚动页面或列表。Explain 点选后自动退出，禁用按钮也可解释；悬停或手机点击非交互图标显示三秒提示。"],
       ["版本","原版基础盒；不含伊克斯、不朽、起义、促销牌或纸面单人挑战。AI 使用公开信息及自己的手牌在本地计算，不需要额外模型。"]
     ];
     openDialog("Help · 沙丘：帝国",sections.map(([title,text])=>`<h3>${esc(title)}</h3><p>${esc(text)}</p>`).join("")+`<p><a href="https://www.direwolfdigital.com/dune-imperium/resources/" target="_blank" rel="noopener noreferrer">Official rules and FAQ</a></p>`,true);
@@ -381,7 +447,7 @@
       event.preventDefault();event.stopImmediatePropagation();suppressedUntil=Date.now()+650;explainTarget(explainAtPoint(event));return;
     }
     if(root.contains(event.target)&&!event.target.closest("button,select,input,summary,a,[data-di-tip],.di-confirm")&&(selected||selectedCard)){
-      resetSelection();render();
+      const reopenHand=!!selectedCard;resetSelection();render({reopenHand});
     }
   },true);
   document.addEventListener("click",event=>{
@@ -391,7 +457,7 @@
   },true);
   document.addEventListener("keydown",event=>{
     if(!active())return;
-    if(event.key==="Escape"){hideTip();setExplain(false);if(!dialog.open){resetSelection();render();}return;}
+    if(event.key==="Escape"){hideTip();setExplain(false);if(!dialog.open){const reopenHand=!!selectedCard;resetSelection();render({reopenHand});}return;}
     if(explaining&&!controlTarget(event.target)&&[" ","Enter","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(event.key)){
       event.preventDefault();event.stopImmediatePropagation();if(event.key==="Enter"||event.key===" ")explainTarget(event.target.closest("[data-di-explain]"));
     }
@@ -401,7 +467,8 @@
     if(!data?.view||data.view.game_id!=="dune_imperium")return;
     if(typeof currentRoomState!=="undefined"&&data.room_id&&currentRoomState?.room_id!==data.room_id)return;
     if(!view||view.revision!==data.view.revision){resetSelection();pending=false;clearTimeout(pendingTimer);}
-    view=data.view;render();
+    const reopenHand=data.view.moves.some(m=>m.type==="agent")&&!view?.moves.some(m=>m.type==="agent");
+    view=data.view;render({reopenHand});
   };
   window.showDuneImperiumHeaderActions=visible=>{header.style.display=visible?"flex":"none";if(!visible)clear();};
   window.clearDuneImperiumState=clear;

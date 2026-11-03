@@ -52,17 +52,302 @@ def intrigue(state, pid, kind):
 
 def settle(state):
     for _ in range(150):
+        rules._settle(state)
         if state["choice"]:
             c = state["choice"]
             act(state, c["owner"], {"type": "choose", "choice": c["options"][0]})
         elif state["effects"]:
-            act(state, state["effects"][0]["owner"], {"type": "resolve", "index": 0})
+            pid = state["effects"][0]["owner"]
+            act(state, pid, next(m for m in legal_moves(state, pid) if m["type"] == "resolve"))
         else:
             return
     raise AssertionError("Unbounded effect chain")
 
 
 class DuneImperiumTests(unittest.TestCase):
+    def test_starter_reveal_gains_are_automatic(self):
+        s = playing()
+        p = s["players"]["0"]
+        p["deck"] += p["hand"]
+        p["hand"] = []
+        for kind in ("convincing_argument", "dagger", "dune", "reconnaissance"):
+            give(s, "0", kind)
+        act(s, "0", {"type": "reveal"})
+        self.assertEqual(s["players"]["0"]["persuasion"], 4)
+        self.assertEqual(s["players"]["0"]["swords"], 1)
+        self.assertEqual(s["effects"], [])
+        self.assertIsNone(s["choice"])
+        self.assertNotIn("resolve", Game.get_legal_actions(s, "0"))
+        self.assertIn("buy", Game.get_legal_actions(s, "0"))
+
+    def test_plain_agent_draw_and_deployment_need_no_resolve(self):
+        s = playing()
+        uid = give(s, "0", "reconnaissance")
+        hand = len(s["players"]["0"]["hand"])
+        act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == uid and m.get("space") == "arrakeen"))
+        self.assertEqual(len(s["players"]["0"]["hand"]), hand)
+        self.assertEqual(s["effects"], [])
+        self.assertEqual(s["choice"]["mode"], "deployment")
+        self.assertEqual(s["choice"]["effect"]["origin"], {"kind": "space", "id": "arrakeen"})
+        act(s, "0", {"type": "choose", "choice": 0})
+        self.assertIn("end_turn", Game.get_legal_actions(s, "0"))
+
+    def test_multiple_plain_agent_draws_are_automatic(self):
+        for kind in ("dr_yueh", "bene_initiate"):
+            with self.subTest(card=kind):
+                s = playing()
+                s["players"]["0"]["water"] = 2
+                uid = give(s, "0", kind)
+                before = len(s["players"]["0"]["hand"])
+                act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == uid and m.get("space") == "research_station"))
+                self.assertEqual(s["effects"], [])
+                self.assertEqual(len(s["players"]["0"]["hand"]), before + 3)
+                self.assertEqual(s["choice"]["mode"], "deployment")
+
+    def test_fixed_scalar_rings_do_not_add_effect_order_buttons(self):
+        for leader, resource in (("ilban", "solari"), ("ariana", "water"), ("memnon", "spice")):
+            with self.subTest(leader=leader):
+                s = playing(leaders=[leader, "leto", "rabban"])
+                uid = give(s, "0", "signet_ring")
+                before = s["players"]["0"][resource]
+                act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == uid and m.get("space") == "arrakeen"))
+                self.assertEqual(s["effects"], [])
+                self.assertEqual(s["players"]["0"][resource], before + 1)
+                self.assertEqual(s["choice"]["mode"], "deployment")
+
+    def test_pending_scalar_branch_is_a_single_atomic_selection(self):
+        s = playing()
+        p = s["players"]["0"]
+        p["deck"] += p["hand"]
+        p["hand"] = []
+        give(s, "0", "bene_sister")
+        p["persuasion"] = 20
+        act(s, "0", {"type": "reveal"})
+        options = [m for m in legal_moves(s, "0") if m["type"] == "resolve"]
+        self.assertEqual(options, [{"type": "resolve", "index": 0, "choice": 0},
+                                   {"type": "resolve", "index": 0, "choice": 1}])
+        self.assertIsNone(s["choice"])
+        self.assertEqual(choose_move(Game.get_public_view(s, "0")), options[0])
+        for invalid in ({"type": "resolve", "index": 0},
+                        {"type": "resolve", "index": 0, "choice": False},
+                        {"type": "resolve", "index": 0, "choice": 2},
+                        {"type": "resolve", "index": 0, "choice": "0"}):
+            before = copy.deepcopy(s)
+            self.assertTrue(Game.apply_action(s, "0", invalid)[1])
+            self.assertEqual(s, before)
+        # The player can inspect the refilled market before choosing the bonus.
+        buy = next(m for m in legal_moves(s, "0") if m["type"] == "buy" and s["cards"][m["card"]] == "arrakis_liaison")
+        act(s, "0", buy)
+        act(s, "0", {"type": "resolve", "index": 0, "choice": 0})
+        self.assertEqual(s["players"]["0"]["persuasion"], 20)
+        self.assertEqual(s["effects"], [])
+        self.assertIsNone(s["choice"])
+
+    def test_legacy_pending_rewards_have_read_only_normalized_views(self):
+        s = playing()
+        rules._reveal(s, "0")  # Saved by the previous engine before clicking each gain.
+        before = copy.deepcopy(s)
+        view = Game.get_public_view(s, "0")
+        moves = legal_moves(s, "0")
+        self.assertEqual(s, before)
+        self.assertEqual(view["effects"], [])
+        self.assertFalse(any(m["type"] == "resolve" for m in moves))
+        self.assertEqual(view["moves"], moves)
+        self.assertTrue(Game.apply_action(s, "0", {"type": "resolve", "index": 100})[1])
+        self.assertEqual(s, before)
+        restored = Game.deserialize(json.loads(json.dumps(before)))
+        self.assertEqual(Game.get_public_view(restored, "0"), view)
+        move = next(m for m in moves if m["type"] == "buy")
+        act(s, "0", move)
+        act(restored, "0", move)
+        self.assertEqual(s, restored)
+
+    def test_payment_can_wait_for_windfall(self):
+        s = playing()
+        p = s["players"]["0"]
+        p["solari"] = 0
+        windfall = intrigue(s, "0", "windfall")
+        rules._queue(s, "0", [rules.pay({"solari": 2}, gain(vp=1))], origin={"kind": "card", "id": "opulence"})
+        rules._settle(s)
+        self.assertIsNone(s["choice"])
+        self.assertIn({"type": "resolve", "index": 0}, legal_moves(s, "0"))
+        act(s, "0", {"type": "intrigue", "card": windfall})
+        self.assertEqual(s["choice"]["mode"], "pay")
+        self.assertEqual(s["choice"]["options"], [False, True])
+        self.assertEqual(s["choice"]["effect"]["origin"], {"kind": "card", "id": "opulence"})
+        act(s, "0", {"type": "choose", "choice": True})
+        self.assertEqual(s["players"]["0"]["solari"], 0)
+        self.assertEqual(s["players"]["0"]["vp"], 1)
+
+    def test_draw_can_wait_for_refocus(self):
+        s = playing()
+        uid = intrigue(s, "0", "refocus")
+        rules._queue(s, "0", [gain(draw=1)])
+        rules._settle(s)
+        self.assertEqual(s["effects"][0]["values"], {"draw": 1})
+        self.assertIn({"type": "intrigue", "card": uid}, legal_moves(s, "0"))
+        act(s, "0", {"type": "intrigue", "card": uid})
+        self.assertEqual([e["kind"] for e in s["effects"]], ["gain", "refocus"])
+        act(s, "0", {"type": "resolve", "index": 1})
+        self.assertEqual(s["effects"], [])
+
+    def test_capped_recruitment_can_wait_for_double_cross(self):
+        s = playing()
+        s["players"]["0"].update(garrison=11, troops=0, solari=1)
+        s["players"]["1"]["troops"] = 1
+        uid = intrigue(s, "0", "double_cross")
+        rules._queue(s, "0", [gain(troops=1)])
+        rules._settle(s)
+        self.assertEqual(s["players"]["0"]["garrison"], 11)
+        self.assertIn({"type": "intrigue", "card": uid}, legal_moves(s, "0"))
+        act(s, "0", {"type": "intrigue", "card": uid})
+        act(s, "0", {"type": "resolve", "index": 1})
+        self.assertEqual(s["players"]["0"]["troops"], 1)
+        self.assertEqual(s["players"]["0"]["garrison"], 11)
+
+    def test_recruitment_can_wait_for_an_intrigue_not_yet_drawn(self):
+        for reward in (gain(intrigue=1), influence("bene")):
+            with self.subTest(reward=reward):
+                s = playing()
+                s["phase"] = "combat"
+                p = s["players"]["0"]
+                p.update(garrison=9, troops=3)
+                p["influence"]["bene"] = 3
+                uid = intrigue(s, "0", "staged_incident")
+                p["intrigues"].remove(uid)
+                s["intrigue_deck"].append(uid)
+                rules._queue(s, "0", [gain(troops=2), reward])
+                rules._settle(s)
+                self.assertEqual(len(s["effects"]), 2)
+                act(s, "0", {"type": "resolve", "index": 1})
+                self.assertIn({"type": "intrigue", "card": uid}, legal_moves(s, "0"))
+                act(s, "0", {"type": "intrigue", "card": uid})
+                act(s, "0", {"type": "resolve", "index": 1})
+                self.assertEqual(s["players"]["0"]["garrison"], 11)
+                self.assertEqual(s["players"]["0"]["troops"], 0)
+
+    def test_piter_can_draw_double_cross_before_carthag_recruits(self):
+        s = playing()
+        s["players"]["0"].update(garrison=11, troops=0, solari=1)
+        s["players"]["1"]["troops"] = 1
+        uid = intrigue(s, "0", "double_cross")
+        s["players"]["0"]["intrigues"].remove(uid)
+        s["intrigue_deck"].append(uid)
+        piter = give(s, "0", "piter")
+        act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == piter and m.get("space") == "carthag"))
+        self.assertEqual(len(s["effects"]), 2)
+        act(s, "0", {"type": "resolve", "index": 1})
+        self.assertIn({"type": "intrigue", "card": uid}, legal_moves(s, "0"))
+        act(s, "0", {"type": "intrigue", "card": uid})
+        act(s, "0", {"type": "resolve", "index": 1})
+        self.assertEqual(s["players"]["0"]["garrison"], 11)
+        self.assertEqual(s["players"]["0"]["troops"], 1)
+
+    def test_reveal_draw_can_wait_for_a_purchase_into_discard(self):
+        s = playing()
+        uid = intrigue(s, "0", "water_of_life")
+        act(s, "0", {"type": "reveal"})
+        s["players"]["0"].update(water=1, spice=1, persuasion=20, deck=[], discard=[])
+        act(s, "0", {"type": "intrigue", "card": uid})
+        self.assertEqual(s["effects"][0]["values"], {"draw": 3})
+        buy = next(m for m in legal_moves(s, "0") if m["type"] == "buy" and s["cards"][m["card"]] == "arrakis_liaison")
+        act(s, "0", buy)
+        self.assertIn(buy["card"], s["players"]["0"]["discard"])
+        act(s, "0", {"type": "resolve", "index": 0})
+        self.assertIn(buy["card"], s["players"]["0"]["revealed"])
+        self.assertEqual(s["players"]["0"]["persuasion"], 20)
+
+    def test_reveal_condition_can_wait_for_purchase_influence(self):
+        s = playing()
+        p = s["players"]["0"]
+        p["deck"] += p["hand"]
+        p["hand"] = []
+        give(s, "0", "firm_grip")
+        choam = give(s, "0", "choam_directorship", "reserved")
+        p["persuasion"] = 20
+        p["influence"]["emperor"] = 3
+        act(s, "0", {"type": "reveal"})
+        self.assertEqual(s["effects"][0]["condition"], "alliance")
+        act(s, "0", {"type": "buy", "card": choam, "top": False})
+        # Resolve the purchased card's Emperor influence before Firm Grip.
+        index = next(i for i, e in enumerate(s["effects"]) if e["kind"] == "influence" and e["faction"] == "emperor")
+        act(s, "0", {"type": "resolve", "index": index})
+        self.assertEqual(s["alliances"]["emperor"], "0")
+        index = next(i for i, e in enumerate(s["effects"]) if e["kind"] == "conditional")
+        act(s, "0", {"type": "resolve", "index": index})
+        self.assertEqual(s["players"]["0"]["persuasion"], 17)  # 20 - (8 - reserve discount) + 4.
+
+    def test_draw_and_trash_order_preserves_different_card_pools(self):
+        s = playing()
+        s["players"]["0"]["water"] = 2
+        gene = give(s, "0", "gene_manipulation")
+        target = give(s, "0", "dagger", "discard")
+        s["players"]["0"]["deck"] = []
+        s["players"]["0"]["discard"] = [target]
+        act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == gene and m.get("space") == "research_station"))
+        self.assertIsNone(s["choice"])
+        self.assertEqual([e["kind"] for e in s["effects"]], ["gain", "trash", "conditional"])
+        draw_first = copy.deepcopy(s)
+        act(draw_first, "0", {"type": "resolve", "index": 0})
+        self.assertIn(target, draw_first["players"]["0"]["hand"])
+        act(draw_first, "0", {"type": "resolve", "index": 0})
+        self.assertIn(target, draw_first["choice"]["options"])
+        act(s, "0", {"type": "resolve", "index": 1})
+        act(s, "0", {"type": "choose", "choice": target})
+        settle(s)
+        self.assertIn(target, s["trashed"])
+        self.assertNotIn(target, s["players"]["0"]["hand"])
+
+    def test_conditional_bond_and_influence_order_stays_selectable(self):
+        s = playing()
+        p = s["players"]["0"]
+        p["deck"] += p["hand"]
+        p["hand"] = []
+        give(s, "0", "crysknife")
+        give(s, "0", "worm_riders")
+        p["influence"]["fremen"] = 1
+        act(s, "0", {"type": "reveal"})
+        early_check = copy.deepcopy(s)
+        act(early_check, "0", {"type": "resolve", "index": 1})
+        settle(early_check)
+        self.assertEqual(early_check["players"]["0"]["swords"], 1)
+        act(s, "0", {"type": "resolve", "index": 0})
+        infl = next(i for i, e in enumerate(s["effects"]) if e["kind"] == "influence")
+        act(s, "0", {"type": "resolve", "index": infl})
+        settle(s)
+        self.assertEqual(s["players"]["0"]["swords"], 5)
+
+    def test_liet_can_wait_until_reveal_draws_more_fremen(self):
+        s = playing()
+        p = s["players"]["0"]
+        p["deck"] += p["hand"]
+        p["hand"] = []
+        give(s, "0", "liet_kynes")
+        drawn = give(s, "0", "fremen_camp", "deck")
+        s["players"]["0"]["deck"] = [drawn]
+        uid = intrigue(s, "0", "water_of_life")
+        p.update(water=1, spice=1)
+        act(s, "0", {"type": "reveal"})
+        self.assertEqual([e["kind"] for e in s["effects"]], ["liet"])
+        act(s, "0", {"type": "intrigue", "card": uid})
+        act(s, "0", {"type": "resolve", "index": 1})
+        act(s, "0", {"type": "resolve", "index": 0})
+        self.assertEqual(s["players"]["0"]["persuasion"], 6)  # Camp's two plus two per Fremen.
+        self.assertEqual(s["players"]["0"]["swords"], 1)
+
+    def test_sister_condition_can_be_resolved_before_or_after_trash(self):
+        s = playing()
+        gene = give(s, "0", "gene_manipulation", "played")
+        sister = give(s, "0", "bene_initiate", "played")
+        rules._queue(s, "0", CARDS["gene_manipulation"]["agent"], gene)
+        rules._settle(s)
+        early_check = copy.deepcopy(s)
+        act(early_check, "0", {"type": "resolve", "index": 1})
+        self.assertEqual(early_check["players"]["0"]["spice"], 2)
+        act(s, "0", {"type": "resolve", "index": 0})
+        act(s, "0", {"type": "choose", "choice": sister})
+        self.assertEqual(s["players"]["0"]["spice"], 0)
+
     def test_base_set_and_setup(self):
         self.assertEqual(sum(CARDS[k]["count"] for k in MARKET), 67)
         self.assertEqual(sum(CARDS[k]["count"] for k in RESERVE), 24)
@@ -108,9 +393,8 @@ class DuneImperiumTests(unittest.TestCase):
         move = next(m for m in legal_moves(s, "0") if m.get("card") == uid and m.get("space") == "great_flat")
         act(s, "0", move)
         self.assertEqual(s["players"]["0"]["water"], 0)
-        self.assertEqual(s["players"]["0"]["spice"], 0)
-        settle(s)
         self.assertEqual(s["players"]["0"]["spice"], 3)
+        self.assertEqual(s["effects"], [])
 
     def test_alliance_tie_and_loss(self):
         s = playing(4)
@@ -119,7 +403,7 @@ class DuneImperiumTests(unittest.TestCase):
         self.assertEqual(s["alliances"]["emperor"], "0")
         self.assertEqual(s["players"]["0"]["vp"], 3)
         rules._influence(s, "0", "emperor", -1)
-        act(s, "0", {"type": "resolve", "index": 0})
+        rules._settle(s)
         self.assertEqual(s["choice"]["options"], ["1", "2"])
         act(s, "0", {"type": "choose", "choice": "2"})
         self.assertEqual(s["alliances"]["emperor"], "2")
@@ -132,7 +416,7 @@ class DuneImperiumTests(unittest.TestCase):
         p = s["players"]["0"]
         p["spice"], p["influence"]["fremen"] = 2, 1
         rules._queue(s, "0", [effect("shift")])
-        act(s, "0", {"type": "resolve", "index": 0})
+        rules._settle(s)
         act(s, "0", {"type": "choose", "choice": ["fremen", "fremen"]})
         self.assertEqual((p["spice"], p["influence"]["fremen"]), (2, 1))  # atomic copies replace old references
         self.assertEqual(s["players"]["0"]["influence"]["fremen"], 2)
@@ -167,7 +451,6 @@ class DuneImperiumTests(unittest.TestCase):
         act(s, "0", {"type": "choose", "choice": 4})
         intr = intrigue(s, "0", "reinforcements")
         act(s, "0", {"type": "intrigue", "card": intr})
-        act(s, "0", {"type": "resolve", "index": 0})
         self.assertEqual(s["choice"]["options"], list(range(4)))
         act(s, "0", {"type": "choose", "choice": 3})
         self.assertEqual(s["players"]["0"]["troops"], 7)
@@ -181,7 +464,6 @@ class DuneImperiumTests(unittest.TestCase):
         settle(s)
         card = give(s, "0", "dune")
         act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == card and m.get("space") == "imperial_basin"))
-        act(s, "0", {"type": "resolve", "index": 0})
         self.assertEqual(s["choice"]["options"][-1], 5)
 
     def test_baron_can_trigger_on_reveal_deployment(self):
@@ -202,12 +484,11 @@ class DuneImperiumTests(unittest.TestCase):
         s = playing(leaders=["ariana", "ilban", "leto"])
         uid = give(s, "0", "carryall")
         s["spice_bonus"]["hagga_basin"] = 3
-        act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == uid and m.get("space") == "hagga_basin"))
         before = len(s["players"]["0"]["hand"])
-        act(s, "0", {"type": "resolve", "index": 1})
+        act(s, "0", next(m for m in legal_moves(s, "0") if m.get("card") == uid and m.get("space") == "hagga_basin"))
         settle(s)
         self.assertEqual(s["players"]["0"]["spice"], 6)  # 2 base x2 +3 bonus -1
-        self.assertEqual(len(s["players"]["0"]["hand"]), before + 1)
+        self.assertEqual(len(s["players"]["0"]["hand"]), before)
         act(s, "0", {"type": "end_turn"})
         s["players"]["1"]["solari"] = 8
         uid = give(s, "1", "dagger")
@@ -255,19 +536,18 @@ class DuneImperiumTests(unittest.TestCase):
         s = playing()
         uid = intrigue(s, "0", "sisterhood_secret")
         s["players"]["0"]["influence"]["bene"] = 3
-        s["intrigue_discard"] += s["intrigue_deck"]
-        s["intrigue_deck"] = []
+        s["players"]["1"]["intrigues"] += s["intrigue_discard"] + s["intrigue_deck"]
+        s["intrigue_discard"], s["intrigue_deck"] = [], []
         act(s, "0", {"type": "intrigue", "card": uid})
-        self.assertNotIn(uid, s["intrigue_discard"])
-        settle(s)
         self.assertIn(uid, s["intrigue_discard"])
         self.assertNotIn(uid, s["players"]["0"]["intrigues"])
+        self.assertEqual(s["players"]["0"]["intrigues"], [])
 
     def test_discard_interrupt_clockwise_and_private(self):
         s = playing(4)
         s["current_turn"] = "2"
         rules._queue(s, "2", [effect("enemy_discard", amount=2)])
-        act(s, "2", {"type": "resolve", "index": 0})
+        rules._settle(s)
         self.assertEqual(s["choice"]["owner"], "3")
         self.assertEqual(legal_moves(s, "2"), [])
         for _ in range(2):
