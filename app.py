@@ -2104,7 +2104,7 @@ async def on_room_start(sid, data):
         return
     room.status = "in_game"
     room.state_version = room.state_version + 1 if room.game_type == "the_crew" else 1
-    if room.game_type == "the_crew":
+    if room.game_type in ("the_crew", "blokus"):
         room.game_config = dict(room.game_state["config"])
     _save_room_state(room)
     await _emit_room_state(room)

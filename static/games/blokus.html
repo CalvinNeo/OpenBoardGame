@@ -1,3 +1,13 @@
+<template data-game-target="blokusConfigBox" data-game-mode="contents">
+  <div class="game-config-title">Blokus · AI Strategy</div>
+  <div class="row">
+    <label for="blokusBotStrategy">Bot strategy</label>
+    <select id="blokusBotStrategy">
+      <option value="heuristic">启发式 (Heuristic)</option>
+      <option value="territory" selected>Territory Control</option>
+    </select>
+  </div>
+</template>
 <template data-game-target="blokusHelpModal" data-game-mode="replace"><section id="blokusHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="blokusHelpModalTitle">
     <div class="modal-content blokus-help-modal">
       <div class="modal-header">

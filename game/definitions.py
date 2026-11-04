@@ -3162,7 +3162,9 @@ BLOKUS_ACTION_SCHEMA = {
 
 BLOKUS_CONFIG_SCHEMA = {
     "type": "object",
-    "properties": {},
+    "properties": {
+        "bot_strategy": {"type": "string", "enum": ["heuristic", "territory"]},
+    },
     "additionalProperties": False,
 }
 

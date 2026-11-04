@@ -35,7 +35,9 @@ function emitRoomStart() {
   if (currentGameType === "ark_nova" && typeof getArkNovaConfig === "function") {
     payload.config = getArkNovaConfig();
   }
-  if (currentGameType === "draw_guess") {
+  if (currentGameType === "blokus" && typeof getBlokusRoomConfig === "function") {
+    payload.config = getBlokusRoomConfig();
+  } else if (currentGameType === "draw_guess") {
     const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";
     const showAnswerLength = drawGuessAnswerLengthToggle ? drawGuessAnswerLengthToggle.checked : false;

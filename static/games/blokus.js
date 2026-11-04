@@ -26,8 +26,11 @@ const blokusHelpModalCloseBtn = document.getElementById("blokusHelpModalCloseBtn
 const blokusExplainModal = document.getElementById("blokusExplainModal");
 const blokusExplainModalCloseBtn = document.getElementById("blokusExplainModalCloseBtn");
 const blokusExplainContent = document.getElementById("blokusExplainContent");
+const blokusConfigBox = document.getElementById("blokusConfigBox");
+const blokusBotStrategySelect = document.getElementById("blokusBotStrategy");
 
 let currentBlokusView = null;
+let blokusConfigSignature = null;
 
 let blokusSelectedPieceId = null;
 let blokusSelectedOrigin = null;
@@ -1423,3 +1426,35 @@ document.addEventListener("keydown", (event) => {
   closeBlokusHelpModal();
   closeBlokusExplainModal();
 });
+
+function syncBlokusRoomConfig(state) {
+  const visible = state?.game_type === "blokus" && state.status === "lobby";
+  if (blokusConfigBox) {
+    blokusConfigBox.classList.toggle("hidden", !visible);
+    blokusConfigBox.setAttribute("aria-hidden", (!visible).toString());
+  }
+  if (!visible || !blokusBotStrategySelect) {
+    return;
+  }
+
+  const configuredStrategy = state.game_config?.bot_strategy;
+  const signature = JSON.stringify([state.room_id, configuredStrategy || null]);
+  if (signature === blokusConfigSignature) {
+    return;
+  }
+  blokusConfigSignature = signature;
+  blokusBotStrategySelect.value = ["heuristic", "territory"].includes(configuredStrategy)
+    ? configuredStrategy
+    : "territory";
+}
+
+window.getBlokusRoomConfig = () => ({
+  bot_strategy: blokusBotStrategySelect?.value === "heuristic" ? "heuristic" : "territory",
+});
+
+if (typeof socket !== "undefined") {
+  socket.on("room:state", syncBlokusRoomConfig);
+}
+if (typeof currentRoomState !== "undefined") {
+  syncBlokusRoomConfig(currentRoomState);
+}

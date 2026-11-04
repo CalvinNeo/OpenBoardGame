@@ -185,6 +185,34 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(room.game_state["config"], room.game_config)
         self.assertEqual(room.status, "in_game")
 
+    async def test_blokus_start_persists_selected_bot_strategy(self):
+        room_id = "blokus-strategy"
+        players = [
+            app.Player(
+                player_id=f"p{seat}",
+                name=f"Player {seat}",
+                seat=seat,
+                socket_id=f"sid-{seat}",
+                ready=True,
+                seat_claimed=True,
+            )
+            for seat in range(4)
+        ]
+        app.ROOMS[room_id] = app.Room(
+            room_id=room_id,
+            game_type="blokus",
+            players=players,
+            host_player_id="p0",
+        )
+        app.SESSIONS["sid-0"] = {"room_id": room_id, "player_id": "p0"}
+
+        await app.on_room_start("sid-0", {"config": {"bot_strategy": "territory"}})
+
+        room = app.ROOMS[room_id]
+        self.assertEqual(room.status, "in_game")
+        self.assertEqual(room.game_config, {"bot_strategy": "territory"})
+        self.assertEqual(room.game_state["config"], room.game_config)
+
     async def test_catan_starfarers_creation_rejects_unknown_language(self):
         sid = "sid-1"
 

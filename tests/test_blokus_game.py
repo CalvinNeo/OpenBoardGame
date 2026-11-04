@@ -1,5 +1,6 @@
 import copy
 import unittest
+from unittest.mock import patch
 
 import game.blokus as blokus
 from game.blokus import BlokusGame
@@ -69,6 +70,157 @@ class BlokusGameTests(unittest.TestCase):
         action = BlokusGame.bot_move(state, "p1")
 
         self.assertEqual(action, {"type": "give_up"})
+
+    def test_blokus_strategy_defaults_to_heuristic_and_accepts_territory(self):
+        heuristic_state = BlokusGame.init_game({}, self._players())
+        territory_state = BlokusGame.init_game(
+            {"bot_strategy": "territory"}, self._players()
+        )
+
+        self.assertEqual(
+            heuristic_state["config"]["bot_strategy"], blokus.BOT_STRATEGY_HEURISTIC
+        )
+        self.assertEqual(
+            territory_state["config"]["bot_strategy"], blokus.BOT_STRATEGY_TERRITORY
+        )
+
+    def test_heuristic_keeps_global_top_candidates_and_territory_keeps_piece_variety(self):
+        candidates = [
+            (
+                1000 - index,
+                {
+                    "piece_id": "p5_1",
+                    "rotation": 0,
+                    "flip": False,
+                    "x": index,
+                    "y": 0,
+                },
+                ((0, 0),),
+            )
+            for index in range(25)
+        ]
+        candidates.extend(
+            (
+                100 - index,
+                {
+                    "piece_id": piece_id,
+                    "rotation": 0,
+                    "flip": False,
+                    "x": 0,
+                    "y": index + 1,
+                },
+                ((0, 0),),
+            )
+            for index, piece_id in enumerate(blokus.PIECE_IDS)
+            if piece_id != "p5_1"
+        )
+
+        heuristic_shortlist = blokus._bot_candidate_shortlist(
+            candidates, 24, blokus.BOT_STRATEGY_HEURISTIC
+        )
+        territory_shortlist = blokus._bot_candidate_shortlist(
+            candidates, 24, blokus.BOT_STRATEGY_TERRITORY
+        )
+
+        self.assertEqual(len(heuristic_shortlist), 24)
+        self.assertEqual(
+            {candidate[1]["piece_id"] for candidate in heuristic_shortlist}, {"p5_1"}
+        )
+        self.assertEqual(
+            {candidate[1]["piece_id"] for candidate in territory_shortlist},
+            set(blokus.PIECE_IDS),
+        )
+
+    def test_next_opponent_mobility_counts_per_piece_and_skips_passed_players(self):
+        state = BlokusGame.init_game({"bot_strategy": "territory"}, self._players())
+        board = [
+            ["blocked" for _x in range(blokus.BOARD_SIZE)]
+            for _y in range(blokus.BOARD_SIZE)
+        ]
+        p2_corner = blokus.CORNER_BY_COLOR["yellow"]
+        board[p2_corner[1]][p2_corner[0]] = None
+
+        counts = blokus._next_opponent_mobility_counts(state, "p1", board)
+        self.assertEqual(counts[blokus.PIECE_IDS[0]], 1)
+        self.assertEqual(sum(counts.values()), 1)
+
+        board[p2_corner[1]][p2_corner[0]] = "blue"
+        self.assertTrue(
+            all(count == 0 for count in blokus._next_opponent_mobility_counts(state, "p1", board).values())
+        )
+
+        state["players"]["p2"]["passed"] = True
+        p3_corner = blokus.CORNER_BY_COLOR["red"]
+        board[p3_corner[1]][p3_corner[0]] = None
+        counts = blokus._next_opponent_mobility_counts(state, "p1", board)
+        self.assertEqual(counts[blokus.PIECE_IDS[0]], 1)
+        self.assertEqual(sum(counts.values()), 1)
+
+    def test_territory_pressure_weights_each_piece_and_is_capped(self):
+        state = BlokusGame.init_game({"bot_strategy": "territory"}, self._players())
+        all_blocked = {
+            piece_id: 0 for piece_id in state["players"]["p2"]["pieces"]
+        }
+        all_available = {
+            piece_id: blokus.BOT_OPPONENT_PIECE_MOVE_CAP
+            for piece_id in state["players"]["p2"]["pieces"]
+        }
+
+        with patch(
+            "game.blokus._next_opponent_mobility_counts", return_value=all_blocked
+        ):
+            blocked_pressure = blokus._next_opponent_pressure(
+                state, "p1", state["board"]
+            )
+        with patch(
+            "game.blokus._next_opponent_mobility_counts", return_value=all_available
+        ):
+            open_pressure = blokus._next_opponent_pressure(
+                state, "p1", state["board"]
+            )
+
+        self.assertEqual(blocked_pressure, blokus.BOT_OPPONENT_MOBILITY_MAX_SCORE)
+        self.assertEqual(open_pressure, 0.0)
+
+    def test_territory_scores_opponent_pressure_without_changing_heuristic(self):
+        state = BlokusGame.init_game({}, self._players())
+        action = self._first_legal_action(state, "p1")
+        shape = blokus._transform_piece(
+            blokus.PIECE_DEFS[action["piece_id"]], action["rotation"], action["flip"]
+        )
+        cells = tuple((action["x"] + x, action["y"] + y) for x, y in shape)
+
+        all_blocked = {
+            piece_id: 0 for piece_id in state["players"]["p2"]["pieces"]
+        }
+        all_available = {
+            piece_id: blokus.BOT_OPPONENT_PIECE_MOVE_CAP
+            for piece_id in state["players"]["p2"]["pieces"]
+        }
+        with patch(
+            "game.blokus._next_opponent_mobility_counts", return_value=all_blocked
+        ):
+            territory_blocked = blokus._deep_candidate_score(
+                state, "p1", action["piece_id"], cells, strategy="territory"
+            )
+            heuristic_blocked = blokus._deep_candidate_score(
+                state, "p1", action["piece_id"], cells, strategy="heuristic"
+            )
+        with patch(
+            "game.blokus._next_opponent_mobility_counts", return_value=all_available
+        ):
+            territory_open = blokus._deep_candidate_score(
+                state, "p1", action["piece_id"], cells, strategy="territory"
+            )
+            heuristic_open = blokus._deep_candidate_score(
+                state, "p1", action["piece_id"], cells, strategy="heuristic"
+            )
+
+        self.assertAlmostEqual(
+            territory_blocked - territory_open,
+            blokus.BOT_OPPONENT_MOBILITY_MAX_SCORE,
+        )
+        self.assertEqual(heuristic_blocked, heuristic_open)
 
     def test_territory_distances_route_around_occupied_cells(self):
         board = [

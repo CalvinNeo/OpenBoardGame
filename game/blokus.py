@@ -105,6 +105,11 @@ MONOMINO_ID = next((pid for pid in PIECE_IDS if PIECE_SIZES[pid] == 1), None)
 # territory evaluation. The cap keeps bot turns comfortably below the UI budget.
 BOT_CANDIDATE_WIDTH = 24
 BOT_MOBILITY_MOVE_CAP = 10
+BOT_OPPONENT_PIECE_MOVE_CAP = 2
+BOT_OPPONENT_MOBILITY_WEIGHT = 0.5
+BOT_OPPONENT_MOBILITY_MAX_SCORE = 6.0
+BOT_STRATEGY_HEURISTIC = "heuristic"
+BOT_STRATEGY_TERRITORY = "territory"
 
 
 def _transform_piece(base: List[Coord], rotation: int, flip: bool) -> List[Coord]:
@@ -570,6 +575,38 @@ def _territory_control_score(
     return controlled
 
 
+def _heuristic_territory_score(
+    state: Dict,
+    player_id: str,
+    board: List[List[Optional[str]]],
+    own_frontier: Set[Coord],
+) -> float:
+    if not own_frontier:
+        return -float(BOARD_SIZE * BOARD_SIZE)
+    opponent_points = [
+        point
+        for frontier, _weight in _opponent_frontiers(state, player_id, board)
+        for point in frontier
+    ]
+    if not opponent_points:
+        return float(BOARD_SIZE * BOARD_SIZE)
+
+    controlled = 0.0
+    for y, row in enumerate(board):
+        for x, value in enumerate(row):
+            if value is not None:
+                continue
+            own_distance = min(abs(x - fx) + abs(y - fy) for fx, fy in own_frontier)
+            opponent_distance = min(
+                abs(x - fx) + abs(y - fy) for fx, fy in opponent_points
+            )
+            if own_distance < opponent_distance:
+                controlled += 1.0
+            elif own_distance == opponent_distance:
+                controlled += 0.3
+    return controlled
+
+
 def _shortlist_candidates(
     candidates: List[Tuple[float, Dict, Shape]], width: int
 ) -> List[Tuple[float, Dict, Shape]]:
@@ -621,8 +658,88 @@ def _shortlist_candidates(
     return sorted(shortlist, key=lambda candidate: candidate[0], reverse=True)
 
 
+def _bot_candidate_shortlist(
+    candidates: List[Tuple[float, Dict, Shape]], width: int, strategy: str
+) -> List[Tuple[float, Dict, Shape]]:
+    if strategy == BOT_STRATEGY_TERRITORY:
+        return _shortlist_candidates(candidates, width)
+    return sorted(candidates, key=lambda candidate: candidate[0], reverse=True)[
+        : max(0, width)
+    ]
+
+
+def _next_opponent_mobility_counts(
+    state: Dict,
+    player_id: str,
+    board: List[List[Optional[str]]],
+) -> Optional[Dict[str, int]]:
+    order = state.get("turn_order", [])
+    if player_id not in order:
+        return None
+
+    player_index = order.index(player_id)
+    opponent_id = next(
+        (
+            order[(player_index + offset) % len(order)]
+            for offset in range(1, len(order))
+            if not state["players"][order[(player_index + offset) % len(order)]].get(
+                "passed"
+            )
+        ),
+        None,
+    )
+    if opponent_id is None:
+        return None
+
+    opponent = state["players"][opponent_id]
+    first_move = not opponent["has_placed"]
+    anchors = None if first_move else _frontier_cells(board, opponent["color"])
+    move_counts: Dict[str, int] = {}
+    for piece_id in opponent["pieces"]:
+        move_count = 0
+        for _action, _cells in _iter_piece_moves(
+            state,
+            opponent_id,
+            piece_id,
+            first_move,
+            board=board,
+            anchors=anchors,
+        ):
+            move_count += 1
+            if move_count >= BOT_OPPONENT_PIECE_MOVE_CAP:
+                break
+        move_counts[piece_id] = move_count
+    return move_counts
+
+
+def _next_opponent_pressure(
+    state: Dict,
+    player_id: str,
+    board: List[List[Optional[str]]],
+) -> Optional[float]:
+    move_counts = _next_opponent_mobility_counts(state, player_id, board)
+    if move_counts is None:
+        return None
+
+    blocked_cell_options = sum(
+        PIECE_SIZES[piece_id]
+        * (BOT_OPPONENT_PIECE_MOVE_CAP - move_count)
+        / BOT_OPPONENT_PIECE_MOVE_CAP
+        for piece_id, move_count in move_counts.items()
+    )
+    return min(
+        BOT_OPPONENT_MOBILITY_MAX_SCORE,
+        blocked_cell_options * BOT_OPPONENT_MOBILITY_WEIGHT,
+    )
+
+
 def _deep_candidate_score(
-    state: Dict, player_id: str, piece_id: str, cells: Shape
+    state: Dict,
+    player_id: str,
+    piece_id: str,
+    cells: Shape,
+    *,
+    strategy: str = BOT_STRATEGY_TERRITORY,
 ) -> float:
     color = state["players"][player_id]["color"]
     board = _board_with_cells(state["board"], color, cells)
@@ -630,7 +747,12 @@ def _deep_candidate_score(
     pieces_played = len(PIECE_IDS) - len(state["players"][player_id]["pieces"])
     phase = min(1.0, max(0.0, pieces_played / max(1, len(PIECE_IDS) - 1)))
     mobility = _future_mobility_score(state, player_id, piece_id, board, frontier)
-    territory = _territory_control_score(state, player_id, board, frontier)
+    if strategy == BOT_STRATEGY_TERRITORY:
+        territory = _territory_control_score(state, player_id, board, frontier)
+        pressure = _next_opponent_pressure(state, player_id, board) or 0.0
+        return mobility + territory * (0.34 - 0.12 * phase) + pressure
+
+    territory = _heuristic_territory_score(state, player_id, board, frontier)
     return mobility + territory * (0.34 - 0.12 * phase)
 
 
@@ -701,6 +823,12 @@ class BlokusGame:
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         if len(players) != 4:
             raise ValueError("Blokus requires exactly 4 players")
+        normalized_config = dict(config or {})
+        if normalized_config.get("bot_strategy") not in (
+            BOT_STRATEGY_HEURISTIC,
+            BOT_STRATEGY_TERRITORY,
+        ):
+            normalized_config["bot_strategy"] = BOT_STRATEGY_HEURISTIC
         ordered_players = sorted(players, key=lambda p: p.get("seat", 0))
         player_ids = [p["player_id"] for p in ordered_players]
         player_meta = {p["player_id"]: p for p in ordered_players}
@@ -723,7 +851,7 @@ class BlokusGame:
             "turn_order": player_ids,
             "current_turn": player_ids[0],
             "player_meta": player_meta,
-            "config": config or {},
+            "config": normalized_config,
             "game_over": False,
             "winner": [],
             "scores": {},
@@ -853,6 +981,9 @@ class BlokusGame:
             "game_over": state.get("game_over", False),
             "winner": list(state.get("winner", [])),
             "scores": state.get("scores", {}),
+            "bot_strategy": state.get("config", {}).get(
+                "bot_strategy", BOT_STRATEGY_HEURISTIC
+            ),
             "total_cells": TOTAL_CELLS,
         }
 
@@ -870,6 +1001,12 @@ class BlokusGame:
         pdata = state["players"].get(bot_id)
         if not pdata or pdata.get("passed"):
             return None
+
+        strategy = state.get("config", {}).get(
+            "bot_strategy", BOT_STRATEGY_HEURISTIC
+        )
+        if strategy not in (BOT_STRATEGY_HEURISTIC, BOT_STRATEGY_TERRITORY):
+            strategy = BOT_STRATEGY_HEURISTIC
 
         first_move = not pdata["has_placed"]
         own_frontier = (
@@ -918,7 +1055,9 @@ class BlokusGame:
             )
             return {"type": "give_up"}
 
-        shortlist = _shortlist_candidates(candidates, BOT_CANDIDATE_WIDTH)
+        shortlist = _bot_candidate_shortlist(
+            candidates, BOT_CANDIDATE_WIDTH, strategy
+        )
         best_score = -float("inf")
         best_action: Optional[Dict] = None
         report_every = max(1, len(shortlist) // 8)
@@ -928,6 +1067,7 @@ class BlokusGame:
                 bot_id,
                 action["piece_id"],
                 cells,
+                strategy=strategy,
             )
             if score > best_score:
                 best_score = score
