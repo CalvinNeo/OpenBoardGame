@@ -22,6 +22,7 @@ const tucanoFlipBtn = document.getElementById("tucanoFlipBtn");
 const tucanoSkipBtn = document.getElementById("tucanoSkipBtn");
 const tucanoHelpBtn = document.getElementById("tucanoHelpBtn");
 const tucanoExplainBtn = document.getElementById("tucanoExplainBtn");
+const tucanoInnerHeaderActions = document.querySelector("#tucanoPanel .tucano-header-actions");
 const tucanoHelpModal = document.getElementById("tucanoHelpModal");
 const tucanoHelpModalCloseBtn = document.getElementById("tucanoHelpModalCloseBtn");
 const tucanoHelpContent = document.getElementById("tucanoHelpContent");
@@ -235,6 +236,33 @@ function clearTucanoState() {
 }
 
 function showTucanoHeaderActions(show) {
+  const gameShell = tucanoRoot ? tucanoRoot.closest(".game-panel") : null;
+  if (show && gameShell) {
+    gameShell.classList.add("tucano-game-shell");
+    let outerActions = gameShell.querySelector(":scope > .panel-header > .tucano-outer-actions");
+    if (!outerActions) {
+      const panelHeader = gameShell.querySelector(":scope > .panel-header");
+      if (panelHeader) {
+        outerActions = document.createElement("div");
+        outerActions.className = "panel-header-actions tucano-outer-actions";
+        outerActions.setAttribute("role", "group");
+        outerActions.setAttribute("aria-label", "Tucano controls");
+        panelHeader.appendChild(outerActions);
+      }
+    }
+    if (outerActions) {
+      outerActions.append(tucanoHelpBtn, tucanoExplainBtn);
+    }
+  } else if (!show && gameShell) {
+    gameShell.classList.remove("tucano-game-shell");
+    if (tucanoInnerHeaderActions) {
+      tucanoInnerHeaderActions.append(tucanoHelpBtn, tucanoExplainBtn);
+    }
+    const outerActions = gameShell.querySelector(":scope > .panel-header > .tucano-outer-actions");
+    if (outerActions) {
+      outerActions.remove();
+    }
+  }
   if (!show) {
     exitTucanoExplainMode();
     closeTucanoModal(tucanoHelpModal);

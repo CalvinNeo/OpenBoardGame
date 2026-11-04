@@ -1,18 +1,20 @@
 """Information-fair policy for Poison.
 
 The Poison bot only needs the same private information a player has: its own
-hand plus the public cauldrons.  Keeping the policy on the public view makes it
-safe to call from room automation and prevents future changes to the full game
-state from accidentally exposing opponents' hands to the bot.
+hand and captured pile plus the public cauldrons.  Keeping the policy on a
+server-built view makes it safe to call from room automation and prevents
+future changes to the full game state from exposing opponents' hands.
 """
 
 from collections import Counter
+from math import comb
 from typing import Dict, List, Optional, Tuple
 
 
 CAULDRON_LIMIT = 13
 POTION_COLORS = ("red", "blue", "purple")
-POTION_COPIES_PER_COLOR = 14
+POTION_VALUE_COUNTS = {1: 3, 2: 3, 4: 2, 5: 3, 7: 3}
+POISON_COUNT = 8
 
 
 def _card_penalty(card: Dict) -> int:
@@ -77,12 +79,12 @@ def _immunity_confidence(count: int, player_count: int) -> float:
     if count <= 1:
         return 0.0
     if count == 2:
-        return 0.18 if player_count <= 4 else 0.10
+        return 0.10 if player_count <= 4 else 0.05
     if count == 3:
-        return 0.48 if player_count <= 4 else 0.32
+        return 0.32 if player_count <= 4 else 0.20
     if count == 4:
-        return 0.78 if player_count <= 4 else 0.58
-    return 0.90 if player_count <= 4 else 0.76
+        return 0.58 if player_count <= 4 else 0.42
+    return 0.74 if player_count <= 4 else 0.60
 
 
 def _estimated_round_score(counts: Counter, player_count: int) -> float:
@@ -110,8 +112,100 @@ def _captured_delta(cauldron_cards: List[Dict], view: Dict) -> float:
     )
 
 
+def _card_key(card: Dict) -> Tuple[str, str, int]:
+    return (
+        str(card.get("kind", "")),
+        str(card.get("color", "")),
+        int(card.get("value", 0)),
+    )
+
+
+def _card_catalog() -> Counter:
+    catalog: Counter = Counter()
+    for color in POTION_COLORS:
+        for value, count in POTION_VALUE_COUNTS.items():
+            catalog[("potion", color, value)] = count
+    catalog[("poison", "poison", 4)] = POISON_COUNT
+    return catalog
+
+
+def _next_player_hand_count(view: Dict) -> int:
+    """Return the next public hand size, skipping players with no cards."""
+
+    players = view.get("players", [])
+    if not isinstance(players, list) or not players:
+        return 0
+    current_id = view.get("current_turn")
+    current_index = next(
+        (index for index, player in enumerate(players)
+         if isinstance(player, dict) and player.get("player_id") == current_id),
+        -1,
+    )
+    for offset in range(1, len(players) + 1):
+        player = players[(current_index + offset) % len(players)]
+        if not isinstance(player, dict):
+            continue
+        hand_count = int(player.get("hand_count", 0) or 0)
+        if hand_count > 0:
+            return hand_count
+    return 0
+
+
+def _known_card_counts(view: Dict) -> Counter:
+    known: Counter = Counter()
+    cards: List[Dict] = []
+    cards.extend(view.get("your_hand", []))
+    cards.extend(view.get("_your_captured", []))
+    for cauldron in view.get("cauldrons", []):
+        if isinstance(cauldron, dict):
+            cards.extend(cauldron.get("cards", []))
+    for card in cards:
+        if isinstance(card, dict):
+            known[_card_key(card)] += 1
+    return known
+
+
+def _card_can_play_safely(card: Tuple[str, str, int], cauldrons: List[Dict]) -> bool:
+    kind, color, value = card
+    for cauldron in cauldrons:
+        total = int(cauldron.get("total", 0) or 0)
+        derived_color = cauldron.get("derived_color")
+        if kind == "poison" or derived_color in (None, color):
+            if total + value <= CAULDRON_LIMIT:
+                return True
+    return False
+
+
+def _next_player_forced_probability(view: Dict, cauldrons: List[Dict]) -> float:
+    """Estimate the chance the next hand has no safe card.
+
+    Opponent cards stay hidden.  Treating the unknown catalog as a random pool
+    gives the bot a useful one-ply pressure signal without reading private
+    state.  Known own cards, captured cards, and cards in the public cauldrons
+    are removed from that pool.
+    """
+
+    hand_count = _next_player_hand_count(view)
+    if hand_count <= 0:
+        return 0.0
+    remaining = _card_catalog()
+    for key, count in _known_card_counts(view).items():
+        remaining[key] = max(0, int(remaining.get(key, 0)) - count)
+    total = sum(remaining.values())
+    if total <= 0:
+        return 0.0
+    unsafe = sum(
+        count for key, count in remaining.items()
+        if not _card_can_play_safely(key, cauldrons)
+    )
+    hand_count = min(hand_count, total)
+    if unsafe < hand_count:
+        return 0.0
+    return comb(unsafe, hand_count) / comb(total, hand_count)
+
+
 def _candidate_score(card: Dict, cauldron: Dict, outcome: Dict,
-                     hand: Dict[str, Dict], view: Dict) -> Tuple:
+                     hand: Dict[str, Dict], view: Optional[Dict] = None) -> Tuple:
     """Rank one legal placement from the bot's point of view.
 
     Capturing cards is always worse than leaving a cauldron intact.  Among
@@ -121,6 +215,7 @@ def _candidate_score(card: Dict, cauldron: Dict, outcome: Dict,
     action without touching global randomness.
     """
 
+    view = view or {}
     cauldron_cards = [card for card in cauldron.get("cards", []) if isinstance(card, dict)]
     new_total = int(outcome.get("new_total", cauldron.get("total", 0)))
     overflow = bool(outcome.get("will_overflow", new_total > CAULDRON_LIMIT))
@@ -156,17 +251,32 @@ def _candidate_score(card: Dict, cauldron: Dict, outcome: Dict,
             if remaining.get("kind") == "potion" and remaining.get("color") == derived_color:
                 pressure += max(0, new_total + int(remaining.get("value", 0)) - CAULDRON_LIMIT)
 
+    candidate_cauldrons = [
+        {
+            "total": int(item.get("total", 0) or 0),
+            "derived_color": item.get("derived_color"),
+        }
+        for item in view.get("cauldrons", [])
+        if isinstance(item, dict)
+    ]
+    if 0 <= int(cauldron.get("index", -1)) < len(candidate_cauldrons):
+        candidate_index = int(cauldron["index"])
+        candidate_cauldrons[candidate_index] = {
+            "total": new_total,
+            "derived_color": derived_color,
+        }
+    next_player_pressure = _next_player_forced_probability(view, candidate_cauldrons)
+
     # Push a safe cauldron toward 13.  This puts the next player under
     # pressure and is especially valuable for a poison card: a poison at 13
     # leaves no legal non-overflowing move for the next player.  The pressure
     # check still comes first so a color with several large cards in hand is
     # not locked into an unavoidable self-overflow.
     slack = max(0, CAULDRON_LIMIT - new_total)
-    poison_pressure = 0 if card.get("kind") == "poison" else 0
     return (
         0,
         pressure,
-        poison_pressure,
+        -next_player_pressure,
         slack,
         -int(card.get("value", 0)),
         str(card.get("id", "")),

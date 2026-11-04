@@ -795,3 +795,283 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
     transition: none;
   }
 }
+
+/* The shared Game frame owns the title row. Tucano's controls move there at
+   runtime so Help, Explain and Reconnect stay together on narrow screens. */
+.game-panel.tucano-game-shell > .panel-header {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions button {
+  flex: 0 0 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.game-panel.tucano-game-shell .tucano-header {
+  display: none;
+}
+
+/* The outer Game panel is the frame. The board itself stays open so the
+   market and collections read as one continuous play surface. */
+.tucano-market {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tucano-collections {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .game-panel.tucano-game-shell > .panel-header {
+    gap: 4px;
+  }
+
+  .game-panel.tucano-game-shell > .panel-header > .game-panel-title {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    gap: 5px;
+  }
+
+  .game-panel.tucano-game-shell > .panel-header > .game-panel-title h2 {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 17px;
+    white-space: nowrap;
+  }
+
+  .game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions {
+    gap: 3px;
+  }
+
+  .game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions button {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 28px !important;
+    height: 28px;
+    padding: 3px 7px !important;
+    border-radius: 7px;
+    font-size: 11px !important;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .game-panel.tucano-game-shell > .panel-header > .game-panel-title #gameReconnectBtn {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 28px;
+    height: 28px;
+    padding: 3px 7px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .tucano-panel {
+    gap: 11px;
+  }
+
+  .tucano-market {
+    overflow: visible;
+  }
+
+  .tucano-market .tucano-section-heading {
+    margin-bottom: 6px;
+  }
+
+  .tucano-columns {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    max-width: 100%;
+    padding: 2px 2px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-color: #9ab49a transparent;
+    scrollbar-width: thin;
+    touch-action: pan-x;
+  }
+
+  .tucano-column {
+    flex: 0 0 142px;
+    width: 142px;
+    min-height: 0;
+    gap: 5px;
+    padding: 6px;
+    scroll-snap-align: start;
+  }
+
+  .tucano-column-title {
+    min-height: 28px;
+    align-items: flex-start;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .tucano-column-count {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  /* Market cards form a compact two-row lane. A third card column extends
+     horizontally instead of making the whole game page taller. */
+  .tucano-card-list {
+    display: grid;
+    grid-template-rows: repeat(2, 68px);
+    grid-auto-flow: column;
+    grid-auto-columns: 66px;
+    align-content: start;
+    justify-content: start;
+    gap: 4px;
+    min-height: 145px;
+    max-height: 145px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 1px 4px;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+  }
+
+  .tucano-card {
+    width: 66px;
+    min-width: 66px;
+    min-height: 68px;
+    height: 68px;
+    gap: 2px;
+    padding: 4px 2px 3px;
+    border-radius: 8px;
+  }
+
+  .tucano-card-icon {
+    font-size: 21px;
+    line-height: 1;
+  }
+
+  .tucano-card-name {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  .tucano-card-effect {
+    font-size: 8px;
+    line-height: 1.15;
+  }
+
+  .tucano-score-scale {
+    gap: 2px;
+    margin-top: 1px;
+  }
+
+  .tucano-score-scale span {
+    min-width: 13px;
+    padding: 1px;
+    font-size: 8px;
+  }
+
+  .tucano-panel .tucano-column-select {
+    min-height: 32px;
+    padding: 5px 3px;
+    border-radius: 7px;
+    font-size: 11px;
+  }
+
+  .tucano-collections .tucano-section-heading {
+    margin-bottom: 5px;
+  }
+
+  .tucano-players {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .tucano-player-card {
+    padding: 8px 7px;
+    border-radius: 9px;
+  }
+
+  .tucano-player-name {
+    font-size: 13px;
+  }
+
+  .tucano-player-meta {
+    margin-top: 3px;
+    font-size: 10px;
+  }
+
+  /* Fruit stacks use the same compact two-row lane as the market cards. */
+  .tucano-fruit-grid {
+    display: grid;
+    grid-template-rows: repeat(2, 38px);
+    grid-auto-flow: column;
+    grid-auto-columns: 44px;
+    align-content: start;
+    justify-content: start;
+    gap: 4px;
+    max-width: 100%;
+    max-height: 86px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-top: 7px;
+    padding: 1px 1px 4px;
+    overscroll-behavior-x: contain;
+    scrollbar-color: #9ab49a transparent;
+    scrollbar-width: thin;
+    touch-action: pan-x;
+  }
+
+  .tucano-panel .tucano-fruit-chip {
+    width: 44px;
+    min-width: 44px;
+    min-height: 38px;
+    height: 38px;
+    gap: 0;
+    padding: 2px;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+
+  .tucano-fruit-icon {
+    font-size: 17px;
+  }
+
+  .tucano-score-details {
+    margin-top: 7px;
+  }
+
+  .tucano-score-details > summary {
+    padding-top: 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .game-panel.tucano-game-shell > .panel-header > .game-panel-title h2 {
+    font-size: 16px;
+  }
+
+  .game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions button,
+  .game-panel.tucano-game-shell > .panel-header > .game-panel-title #gameReconnectBtn {
+    padding-right: 5px !important;
+    padding-left: 5px !important;
+    font-size: 10px !important;
+  }
+
+  .tucano-column {
+    flex-basis: 136px;
+    width: 136px;
+  }
+}

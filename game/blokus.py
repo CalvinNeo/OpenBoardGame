@@ -1,4 +1,5 @@
 import math
+from collections import deque
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 
@@ -351,6 +352,39 @@ def _frontier_openness(board: List[List[Optional[str]]], frontier: Set[Coord]) -
     return openness
 
 
+def _empty_cell_distances(
+    board: List[List[Optional[str]]], sources: Set[Coord]
+) -> Dict[Coord, int]:
+    distances: Dict[Coord, int] = {}
+    queue = deque()
+    for x, y in sources:
+        if (
+            0 <= x < BOARD_SIZE
+            and 0 <= y < BOARD_SIZE
+            and board[y][x] is None
+            and (x, y) not in distances
+        ):
+            distances[(x, y)] = 0
+            queue.append((x, y))
+
+    offsets = ADJACENT_OFFSETS + DIAGONAL_OFFSETS
+    while queue:
+        x, y = queue.popleft()
+        next_distance = distances[(x, y)] + 1
+        for dx, dy in offsets:
+            neighbor = (x + dx, y + dy)
+            nx, ny = neighbor
+            if (
+                not (0 <= nx < BOARD_SIZE and 0 <= ny < BOARD_SIZE)
+                or board[ny][nx] is not None
+                or neighbor in distances
+            ):
+                continue
+            distances[neighbor] = next_distance
+            queue.append(neighbor)
+    return distances
+
+
 def _opponent_frontiers(
     state: Dict, player_id: str, board: List[List[Optional[str]]]
 ) -> List[Tuple[Set[Coord], float]]:
@@ -505,28 +539,86 @@ def _territory_control_score(
 ) -> float:
     if not own_frontier:
         return -float(BOARD_SIZE * BOARD_SIZE)
-    opponent_points = [
-        point
-        for frontier, _weight in _opponent_frontiers(state, player_id, board)
-        for point in frontier
+    opponent_frontiers = [
+        (frontier, weight)
+        for frontier, weight in _opponent_frontiers(state, player_id, board)
+        if frontier
     ]
-    if not opponent_points:
+    if not opponent_frontiers:
         return float(BOARD_SIZE * BOARD_SIZE)
 
+    own_distances = _empty_cell_distances(board, own_frontier)
+    opponent_distances = [
+        (_empty_cell_distances(board, frontier), weight)
+        for frontier, weight in opponent_frontiers
+    ]
     controlled = 0.0
     for y, row in enumerate(board):
         for x, value in enumerate(row):
             if value is not None:
                 continue
-            own_distance = min(abs(x - fx) + abs(y - fy) for fx, fy in own_frontier)
+            cell = (x, y)
+            own_distance = own_distances.get(cell, float("inf"))
             opponent_distance = min(
-                abs(x - fx) + abs(y - fy) for fx, fy in opponent_points
+                distances.get(cell, float("inf")) / weight
+                for distances, weight in opponent_distances
             )
             if own_distance < opponent_distance:
                 controlled += 1.0
-            elif own_distance == opponent_distance:
+            elif math.isfinite(own_distance) and own_distance == opponent_distance:
                 controlled += 0.3
     return controlled
+
+
+def _shortlist_candidates(
+    candidates: List[Tuple[float, Dict, Shape]], width: int
+) -> List[Tuple[float, Dict, Shape]]:
+    ranked = sorted(candidates, key=lambda candidate: candidate[0], reverse=True)
+    if width <= 0 or len(ranked) <= width:
+        return ranked[: max(0, width)]
+
+    # Keep each piece's best move eligible for deep evaluation.
+    representatives: List[Tuple[float, Dict, Shape]] = []
+
+    def get_action_key(
+        candidate: Tuple[float, Dict, Shape]
+    ) -> Tuple[str, int, bool, int, int]:
+        action = candidate[1]
+        return (
+            action["piece_id"],
+            action["rotation"],
+            action["flip"],
+            action["x"],
+            action["y"],
+        )
+
+    for piece_id in PIECE_IDS:
+        representative = next(
+            (
+                candidate
+                for candidate in ranked
+                if candidate[1]["piece_id"] == piece_id
+            ),
+            None,
+        )
+        if representative is not None:
+            representatives.append(representative)
+
+    shortlist = sorted(
+        representatives, key=lambda candidate: candidate[0], reverse=True
+    )[:width]
+    selected_actions = {get_action_key(candidate) for candidate in shortlist}
+
+    for candidate in ranked:
+        if len(shortlist) >= width:
+            break
+        key = get_action_key(candidate)
+        if key in selected_actions:
+            continue
+        shortlist.append(candidate)
+        selected_actions.add(key)
+
+    return sorted(shortlist, key=lambda candidate: candidate[0], reverse=True)
 
 
 def _deep_candidate_score(
@@ -826,8 +918,7 @@ class BlokusGame:
             )
             return {"type": "give_up"}
 
-        candidates.sort(key=lambda candidate: candidate[0], reverse=True)
-        shortlist = candidates[:BOT_CANDIDATE_WIDTH]
+        shortlist = _shortlist_candidates(candidates, BOT_CANDIDATE_WIDTH)
         best_score = -float("inf")
         best_action: Optional[Dict] = None
         report_every = max(1, len(shortlist) // 8)
