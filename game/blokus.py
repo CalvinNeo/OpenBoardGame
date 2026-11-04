@@ -104,7 +104,7 @@ MONOMINO_ID = next((pid for pid in PIECE_IDS if PIECE_SIZES[pid] == 1), None)
 # territory evaluation. The cap keeps bot turns comfortably below the UI budget.
 BOT_CANDIDATE_WIDTH = 24
 BOT_MOBILITY_MOVE_CAP = 10
-BOT_TERRITORY_WEIGHT_MULTIPLIER = 3.0
+BOT_TERRITORY_WEIGHT_MULTIPLIER = 2.0
 BOT_OPPONENT_BLOCK_SCORE_PER_CELL = 100.0
 BOT_STRATEGY_HEURISTIC = "heuristic"
 BOT_STRATEGY_TERRITORY = "territory"
@@ -587,8 +587,9 @@ def _shortlist_candidates(
 def _bot_candidate_shortlist(
     candidates: List[Tuple[float, Dict, Shape]], width: int, strategy: str
 ) -> List[Tuple[float, Dict, Shape]]:
-    if strategy == BOT_STRATEGY_TERRITORY:
-        return _shortlist_candidates(candidates, width)
+    # Deep-evaluate the strongest quick-scored moves. Earlier Territory
+    # versions reserved one slot for every piece, which displaced better
+    # moves and weakened the middle game.
     return sorted(candidates, key=lambda candidate: candidate[0], reverse=True)[
         : max(0, width)
     ]

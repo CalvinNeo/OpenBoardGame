@@ -153,6 +153,53 @@ class TucanoGameTests(unittest.TestCase):
         self.assertEqual(state["players"]["p0"]["face_up"], {})
         self.assertEqual(state["players"]["p0"]["protected"], {"banana": 2, "lime": 1})
 
+    def test_multiple_toucans_can_be_resolved_in_player_selected_order(self):
+        state = TucanoGame.init_game({}, _players(2))
+        state["phase"] = "toucan"
+        state["current_turn"] = "p0"
+        state["pending_toucans"] = ["flip", "give"]
+        state["players"]["p0"]["face_up"] = {"fig": 1}
+        state["deck"] = []
+        state["columns"] = [
+            [{"id": "c1", "type": "fruit", "fruit": "lime"}],
+            [{"id": "c2", "type": "fruit", "fruit": "papaya"}],
+            [],
+        ]
+
+        # Select Give (the second card) before Flip (the first card).
+        _, error = TucanoGame.apply_action(
+            state,
+            "p0",
+            {"type": "resolve_toucan", "toucan_index": 1, "fruit": "fig", "target_player": "p1"},
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["pending_toucans"], ["flip"])
+        self.assertEqual(state["players"]["p1"]["face_up"], {"fig": 1})
+
+        _, error = TucanoGame.apply_action(state, "p0", {"type": "resolve_toucan", "toucan_index": 0})
+        self.assertIsNone(error)
+        self.assertEqual(state["pending_toucans"], [])
+        self.assertEqual(state["players"]["p0"]["protected"], {})
+        self.assertEqual(state["phase"], "draft")
+
+    def test_toucan_index_must_reference_a_pending_card(self):
+        state = TucanoGame.init_game({}, _players(2))
+        state["phase"] = "toucan"
+        state["current_turn"] = "p0"
+        state["pending_toucans"] = ["flip"]
+
+        _, error = TucanoGame.apply_action(state, "p0", {"type": "resolve_toucan", "toucan_index": 1})
+
+        self.assertEqual(error, "invalid toucan index")
+        self.assertEqual(state["pending_toucans"], ["flip"])
+
+    def test_legal_actions_include_resolve_and_skip_for_mixed_pending_toucans(self):
+        state = TucanoGame.init_game({}, _players(2))
+        state["phase"] = "toucan"
+        state["current_turn"] = "p0"
+        state["pending_toucans"] = ["steal", "flip"]
+        self.assertEqual(TucanoGame.get_legal_actions(state, "p0"), ["resolve_toucan", "skip_toucan"])
+
     def test_game_ends_when_deck_empty_and_one_column_left(self):
         state = TucanoGame.init_game({}, _players(2))
         state["current_turn"] = "p0"

@@ -213,6 +213,34 @@
   margin-top: 9px;
 }
 
+.tucano-toucan-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.tucano-toucan-choices.hidden {
+  display: none;
+}
+
+.tucano-panel .tucano-toucan-choice {
+  flex: 1 1 130px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border-color: #d8b757;
+  background: #fff8dc;
+  color: #715313;
+  font-size: 12px;
+}
+
+.tucano-panel .tucano-toucan-choice.selected,
+.tucano-panel .tucano-toucan-choice:hover {
+  border-color: #bd8d1b;
+  background: #f5e2a3;
+  color: #5e430b;
+}
+
 .tucano-actions button {
   flex: 1 1 135px;
 }

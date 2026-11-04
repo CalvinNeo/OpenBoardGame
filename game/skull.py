@@ -447,54 +447,15 @@ class SkullGame:
         if not pdata or pdata["eliminated"]:
             return None
 
-        phase = state["phase"]
-        if phase == "playing":
-            if bot_id != state["current_turn"]:
-                return None
-            can_bid = _total_pile_count(state) > 0 and (
-                _all_have_played(state) or not pdata["hand"]
-            )
-            if can_bid and not pdata["hand"]:
-                total = _total_pile_count(state)
-                bid = random.randint(1, total)
-                return {"type": "start_bid", "bid": bid}
-            if can_bid and random.random() < 0.2:
-                total = _total_pile_count(state)
-                bid = random.randint(1, total)
-                return {"type": "start_bid", "bid": bid}
-            if pdata["hand"]:
-                card = random.choice(pdata["hand"])
-                return {"type": "play_card", "card_type": card}
-            return None
+        # Build the same filtered view a human player receives.  The single
+        # private adapter field is the bot's own pile: it has already played
+        # those cards and therefore may use that knowledge without exposing it
+        # through Socket.IO or the public game state.
+        from game.skull_ai import choose_action
 
-        if phase == "bidding":
-            if bot_id != state["current_turn"]:
-                return None
-            total = _total_pile_count(state)
-            if total <= int(state["current_bid"]):
-                return {"type": "pass_bid"}
-            if random.random() < 0.4:
-                return {"type": "pass_bid"}
-            bid = random.randint(int(state["current_bid"]) + 1, total)
-            return {"type": "raise_bid", "bid": bid}
-
-        if phase == "reveal":
-            if bot_id != state.get("bidder"):
-                return None
-            own_pile = state["players"][bot_id]["pile"]
-            if own_pile:
-                return {"type": "reveal_card", "target_player_id": bot_id}
-            candidates = [
-                pid
-                for pid, pdata in state["players"].items()
-                if not pdata["eliminated"] and pdata["pile"]
-            ]
-            if not candidates:
-                return None
-            target = random.choice(candidates)
-            return {"type": "reveal_card", "target_player_id": target}
-
-        return None
+        view = SkullGame.get_public_view(state, bot_id)
+        view["_your_pile"] = list(pdata["pile"])
+        return choose_action(view)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

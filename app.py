@@ -750,6 +750,11 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type == "skull_king":
         return {"type": action.get("type")}
+    if game_type == "skull":
+        # Card choices and reveal targets are private bot decisions.  The
+        # state update already gives each recipient the appropriate filtered
+        # view, so the activity event only needs to identify the action kind.
+        return {"type": action.get("type")}
     if game_type == "deception":
         return {"type": action.get("type")}
     if game_type == "mind_the_lines":

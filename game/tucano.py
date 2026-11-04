@@ -435,10 +435,16 @@ def _can_resolve_toucan(state: Dict, player_id: str, toucan: str) -> bool:
     return False
 
 
-def _finish_one_toucan(state: Dict) -> None:
+def _finish_one_toucan(state: Dict, index: int = 0) -> None:
+    """Remove one resolved toucan and advance when the queue is empty.
+
+    The printed rules let the active player choose which toucan to resolve
+    next. ``pending_toucans`` acts as a set-like queue during a turn; the
+    index identifies the selected card while preserving duplicate effects.
+    """
     pending = state.get("pending_toucans", [])
-    if pending:
-        pending.pop(0)
+    if 0 <= index < len(pending):
+        pending.pop(index)
     if not pending:
         state["pending_toucans"] = []
         _complete_turn(state)
@@ -489,10 +495,15 @@ class TucanoGame:
             pending = state.get("pending_toucans", [])
             if not pending:
                 return []
-            toucan = pending[0]
-            if _can_resolve_toucan(state, player_id, toucan):
-                return ["resolve_toucan"]
-            return ["skip_toucan"]
+            resolvable = [_can_resolve_toucan(state, player_id, toucan) for toucan in pending]
+            can_resolve = any(resolvable)
+            can_skip = any(not allowed for allowed in resolvable)
+            actions = []
+            if can_resolve:
+                actions.append("resolve_toucan")
+            if can_skip:
+                actions.append("skip_toucan")
+            return actions
         return []
 
     @staticmethod
@@ -540,12 +551,17 @@ class TucanoGame:
             if not pending:
                 _complete_turn(state)
                 return events, None
-            toucan = pending[0]
+            toucan_index = action.get("toucan_index", 0)
+            if isinstance(toucan_index, bool) or not isinstance(toucan_index, int):
+                return [], "invalid toucan index"
+            if toucan_index < 0 or toucan_index >= len(pending):
+                return [], "invalid toucan index"
+            toucan = pending[toucan_index]
             if action_type == "skip_toucan":
                 if _can_resolve_toucan(state, player_id, toucan):
                     return [], "toucan can be resolved"
                 events.append({"type": "tucano:toucan_skip", "payload": {"player_id": player_id, "toucan": toucan}})
-                _finish_one_toucan(state)
+                _finish_one_toucan(state, toucan_index)
                 return events, None
             if action_type != "resolve_toucan":
                 return [], "invalid action"
@@ -556,7 +572,7 @@ class TucanoGame:
                     _add_count(pdata["protected"], fruit, int(count))
                 pdata["face_up"] = {}
                 events.append({"type": "tucano:toucan", "payload": {"player_id": player_id, "toucan": "flip"}})
-                _finish_one_toucan(state)
+                _finish_one_toucan(state, toucan_index)
                 return events, None
 
             target_id = action.get("target_player")
@@ -586,7 +602,7 @@ class TucanoGame:
                     "payload": {"player_id": player_id, "toucan": toucan, "target_player": target_id, "fruit": fruit},
                 }
             )
-            _finish_one_toucan(state)
+            _finish_one_toucan(state, toucan_index)
             return events, None
 
         return [], "invalid phase"
@@ -631,6 +647,14 @@ class TucanoGame:
             "players": players,
             "pending_toucans": list(state.get("pending_toucans", [])),
             "active_toucan": (state.get("pending_toucans") or [None])[0],
+            "toucan_choices": [
+                {
+                    "index": index,
+                    "toucan": toucan,
+                    "can_resolve": _can_resolve_toucan(state, viewer_id, toucan),
+                }
+                for index, toucan in enumerate(state.get("pending_toucans", []))
+            ],
             "last_taken": state.get("last_taken"),
             "legal_actions": TucanoGame.get_legal_actions(state, viewer_id),
             "winner": state.get("winner"),

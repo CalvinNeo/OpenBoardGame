@@ -1,6 +1,7 @@
 let currentTucanoView = null;
 let tucanoExplainMode = false;
 let tucanoSelection = null;
+let tucanoToucanSelection = null;
 let tucanoExplainClickPending = false;
 let tucanoModalTrigger = null;
 const tucanoOpenScores = new Set();
@@ -13,6 +14,7 @@ const tucanoWinnerLabel = document.getElementById("tucanoWinner");
 const tucanoNotice = document.getElementById("tucanoNotice");
 const tucanoNoticeTitle = document.getElementById("tucanoNoticeTitle");
 const tucanoNoticeBody = document.getElementById("tucanoNoticeBody");
+const tucanoToucanChoices = document.getElementById("tucanoToucanChoices");
 const tucanoColumns = document.getElementById("tucanoColumns");
 const tucanoMarket = document.querySelector("#tucanoPanel .tucano-market");
 const tucanoPlayers = document.getElementById("tucanoPlayers");
@@ -42,12 +44,13 @@ const TUCANO_EXPLAIN = {
   tucanoScores: "Expand Scores to inspect each fruit set. During play, only face-up fruit is scored here; protected fruit and jokers are included in the final score. Majority fruit is settled at the end.",
   tucanoFlipBtn: "Resolve a Flip toucan by moving all of your face-up fruit into protected face-down storage.",
   tucanoSkipBtn: "Skip is available only when the active Give or Steal toucan has no legal target.",
+  tucanoToucanChoices: "When you take multiple toucans, choose which one to resolve next. You may change the order after each effect.",
 };
 
 const TUCANO_HELP_HTML = `
   <div class="tucano-help">
     <p><strong>Goal.</strong> Collect fruit for the best final score. Bad sets can be handed to opponents with toucans.</p>
-    <p><strong>Turn.</strong> Take one full column, immediately resolve any toucan cards you took, then each column receives one new card while the deck has cards.</p>
+    <p><strong>Turn.</strong> Take one full column, immediately resolve any toucan cards you took, then each column receives one new card while the deck has cards. If you take multiple toucans, choose their resolution order.</p>
     <p><strong>Toucans.</strong> 🎁 Give one of your face-up fruit to another player. 🪶 Steal one face-up fruit from another player. 🛡️ Flip protects all your face-up fruit face down.</p>
     <p><strong>End.</strong> When the deck is empty and only one column remains, the game ends and the final column is discarded. Jokers are assigned automatically to the highest scoring fruit for their owner.</p>
     <p><strong>Reading cards.</strong> The numbers below each fruit are the total points for collecting 1, 2, 3… cards of that fruit. Orange numbers are negative. Use Explain to inspect a card or fruit stack, including unavailable actions.</p>
@@ -176,6 +179,32 @@ function isTucanoActionAvailable(actionType) {
   );
 }
 
+function getTucanoToucanChoices(view) {
+  if (!view) {
+    return [];
+  }
+  if (Array.isArray(view.toucan_choices)) {
+    return view.toucan_choices;
+  }
+  return (view.pending_toucans || []).map((toucan, index) => ({
+    index,
+    toucan,
+    can_resolve: true,
+  }));
+}
+
+function getTucanoSelectedToucan(view) {
+  const choices = getTucanoToucanChoices(view);
+  if (!choices.length) {
+    return null;
+  }
+  const selected = choices.find((choice) => choice.index === tucanoToucanSelection);
+  if (selected) {
+    return selected;
+  }
+  return choices.length === 1 ? choices[0] : null;
+}
+
 function clearTucanoSelection() {
   tucanoSelection = null;
   updateTucanoSelectionLabel();
@@ -197,6 +226,7 @@ function updateTucanoSelectionLabel() {
 
 function clearTucanoState() {
   currentTucanoView = null;
+  tucanoToucanSelection = null;
   tucanoExplainMode = false;
   tucanoExplainClickPending = false;
   tucanoOpenScores.clear();
@@ -260,20 +290,61 @@ function showTucanoHeaderActions(show) {
 }
 
 function updateTucanoActionButtons() {
-  const activeToucan = currentTucanoView ? currentTucanoView.active_toucan : null;
+  const activeChoice = getTucanoSelectedToucan(currentTucanoView);
+  const activeToucan = activeChoice ? activeChoice.toucan : null;
+  const toucanIndex = activeChoice ? activeChoice.index : null;
+  const yourTurn = currentTucanoView && currentTucanoView.current_turn === currentTucanoView.you && !currentTucanoView.game_over;
   if (tucanoFlipBtn) {
-    tucanoFlipBtn.disabled = !(currentGameType === "tucano" && activeToucan === "flip" && isTucanoActionAvailable("resolve_toucan"));
+    tucanoFlipBtn.disabled = !(currentGameType === "tucano" && yourTurn && activeToucan === "flip" && toucanIndex !== null && isTucanoActionAvailable("resolve_toucan"));
     tucanoFlipBtn.classList.toggle("action-allowed", !tucanoFlipBtn.disabled);
     tucanoFlipBtn.classList.toggle("hidden", activeToucan !== "flip");
   }
   if (tucanoSkipBtn) {
-    tucanoSkipBtn.disabled = !(currentGameType === "tucano" && isTucanoActionAvailable("skip_toucan"));
+    const selectedCannotResolve = activeChoice && activeChoice.can_resolve === false;
+    tucanoSkipBtn.disabled = !(currentGameType === "tucano" && yourTurn && toucanIndex !== null && selectedCannotResolve && (isTucanoActionAvailable("skip_toucan") || isTucanoActionAvailable("resolve_toucan")));
     tucanoSkipBtn.classList.toggle("action-allowed", !tucanoSkipBtn.disabled);
     tucanoSkipBtn.classList.toggle("hidden", tucanoSkipBtn.disabled);
   }
   if (tucanoActions) {
-    tucanoActions.classList.toggle("hidden", activeToucan !== "flip" && !isTucanoActionAvailable("skip_toucan"));
+    tucanoActions.classList.toggle("hidden", !(tucanoFlipBtn && !tucanoFlipBtn.disabled) && !(tucanoSkipBtn && !tucanoSkipBtn.disabled));
   }
+}
+
+function renderTucanoToucanChoices(view) {
+  if (!tucanoToucanChoices) {
+    return;
+  }
+  tucanoToucanChoices.replaceChildren();
+  const choices = getTucanoToucanChoices(view);
+  const yourTurn = view.current_turn === view.you && !view.game_over;
+  if (view.phase !== "toucan" || !choices.length || !yourTurn) {
+    tucanoToucanChoices.classList.add("hidden");
+    return;
+  }
+  if (choices.length < 2) {
+    tucanoToucanChoices.classList.add("hidden");
+    return;
+  }
+  tucanoToucanChoices.classList.remove("hidden");
+  choices.forEach((choice) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tucano-toucan-choice has-explanation";
+    button.dataset.explainId = "tucanoToucanChoices";
+    const selected = tucanoToucanSelection === choice.index;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+    button.textContent = `${TUCANO_TOUCAN_LABELS[choice.toucan] || choice.toucan}${choice.can_resolve === false ? " · no target" : ""}`;
+    button.disabled = false;
+    button.addEventListener("click", () => {
+      tucanoToucanSelection = choice.index;
+      clearTucanoSelection();
+      renderTucanoNotice(view);
+      renderTucanoPlayers(view);
+      updateTucanoActionButtons();
+    });
+    tucanoToucanChoices.appendChild(button);
+  });
 }
 
 function renderTucanoNotice(view) {
@@ -286,21 +357,40 @@ function renderTucanoNotice(view) {
   tucanoNotice.classList.toggle("is-your-turn", yourTurn);
   tucanoNotice.classList.toggle("is-toucan", view.phase === "toucan");
   if (view.game_over) {
+    if (tucanoToucanChoices) {
+      tucanoToucanChoices.classList.add("hidden");
+      tucanoToucanChoices.replaceChildren();
+    }
     tucanoNoticeTitle.textContent = "Game Over";
     tucanoNoticeBody.textContent = "Final scores are shown on each player board.";
     return;
   }
   if (view.phase !== "toucan" || !view.active_toucan) {
+    if (tucanoToucanChoices) {
+      tucanoToucanChoices.classList.add("hidden");
+      tucanoToucanChoices.replaceChildren();
+    }
     tucanoNoticeTitle.textContent = yourTurn ? "Your turn" : "Waiting for the next pick";
     tucanoNoticeBody.textContent = yourTurn ? "Choose a column and tap Take all." : `${findPlayerName(view, view.current_turn)} is choosing a column.`;
     return;
   }
-  const active = view.active_toucan;
+  renderTucanoToucanChoices(view);
+  const selectedChoice = getTucanoSelectedToucan(view);
+  const active = selectedChoice ? selectedChoice.toucan : view.active_toucan;
   tucanoNotice.classList.remove("hidden");
   tucanoNotice.setAttribute("aria-hidden", "false");
   tucanoNoticeTitle.textContent = TUCANO_TOUCAN_LABELS[active] || "Toucan";
   if (!yourTurn) {
     tucanoNoticeBody.textContent = `${findPlayerName(view, view.current_turn)} is resolving this toucan.`;
+    return;
+  }
+  if (yourTurn && !selectedChoice && getTucanoToucanChoices(view).length > 1) {
+    tucanoNoticeTitle.textContent = "Choose Toucan";
+    tucanoNoticeBody.textContent = "Choose which toucan to resolve next.";
+    return;
+  }
+  if (selectedChoice && selectedChoice.can_resolve === false) {
+    tucanoNoticeBody.textContent = "This toucan has no legal target. Choose another toucan or skip it.";
     return;
   }
   if (active === "give") {
@@ -367,7 +457,8 @@ function renderTucanoColumns(view) {
 }
 
 function renderTucanoFruitStack(view, player, fruit, count) {
-  const activeToucan = view.active_toucan;
+  const activeChoice = getTucanoSelectedToucan(view);
+  const activeToucan = activeChoice ? activeChoice.toucan : null;
   const button = document.createElement("button");
   button.type = "button";
   button.className = "tucano-fruit-card tucano-fruit-chip has-explanation";
@@ -398,10 +489,10 @@ function renderTucanoFruitStack(view, player, fruit, count) {
   button.dataset.explainText = `${info.title} ×${count}: ${info.effect || "Wild at end"}. Face-up fruit can be given or stolen; protected fruit cannot.`;
   const isSelf = player.player_id === view.you;
   let selectable = false;
-  if (view.phase === "toucan" && activeToucan === "give" && isSelf && isTucanoActionAvailable("resolve_toucan")) {
+  if (view.phase === "toucan" && activeChoice && activeChoice.can_resolve !== false && activeToucan === "give" && isSelf && isTucanoActionAvailable("resolve_toucan")) {
     selectable = true;
   }
-  if (view.phase === "toucan" && activeToucan === "steal" && !isSelf && isTucanoActionAvailable("resolve_toucan")) {
+  if (view.phase === "toucan" && activeChoice && activeChoice.can_resolve !== false && activeToucan === "steal" && !isSelf && isTucanoActionAvailable("resolve_toucan")) {
     selectable = true;
   }
   button.disabled = !selectable;
@@ -423,7 +514,7 @@ function renderTucanoFruitStack(view, player, fruit, count) {
       renderTucanoPlayers(view);
       return;
     }
-    sendAction({ type: "resolve_toucan", fruit, target_player: player.player_id });
+    sendAction({ type: "resolve_toucan", toucan_index: activeChoice.index, fruit, target_player: player.player_id });
   });
   return button;
 }
@@ -576,14 +667,15 @@ function renderTucanoPlayers(view) {
       });
     }
 
-    if (view.phase === "toucan" && view.active_toucan === "give" && isTucanoActionAvailable("resolve_toucan") && player.player_id !== view.you && tucanoSelection && tucanoSelection.fruit) {
+    const activeChoice = getTucanoSelectedToucan(view);
+    if (view.phase === "toucan" && activeChoice && activeChoice.toucan === "give" && isTucanoActionAvailable("resolve_toucan") && player.player_id !== view.you && tucanoSelection && tucanoSelection.fruit) {
       const giveTarget = document.createElement("button");
       giveTarget.type = "button";
       giveTarget.className = "tucano-target-btn action-allowed has-explanation";
       giveTarget.dataset.explainText = "Give one card of your selected fruit to this player.";
       giveTarget.textContent = `🎁 Give ${tucanoFruitLabel(view, tucanoSelection.fruit)} to ${player.name || player.player_id}`;
       giveTarget.addEventListener("click", () => {
-        sendAction({ type: "resolve_toucan", fruit: tucanoSelection.fruit, target_player: player.player_id });
+        sendAction({ type: "resolve_toucan", toucan_index: activeChoice.index, fruit: tucanoSelection.fruit, target_player: player.player_id });
       });
       card.append(header, fruits, giveTarget);
     } else {
@@ -608,6 +700,10 @@ function renderTucanoGameState(data) {
   const view = data.view;
   clearTucanoSelection();
   currentTucanoView = view;
+  // A server update follows every resolved effect, so the next effect must be
+  // selected afresh. A single remaining toucan is selected implicitly.
+  const choices = getTucanoToucanChoices(view);
+  tucanoToucanSelection = choices.length === 1 ? choices[0].index : null;
   if (tucanoRoot) {
     tucanoRoot.dataset.phase = view.phase || "draft";
   }
@@ -708,8 +804,9 @@ if (tucanoFlipBtn) {
   tucanoFlipBtn.classList.add("has-explanation");
   tucanoFlipBtn.dataset.explainId = "tucanoFlipBtn";
   tucanoFlipBtn.addEventListener("click", () => {
-    if (isTucanoActionAvailable("resolve_toucan") && currentTucanoView.active_toucan === "flip") {
-      sendAction({ type: "resolve_toucan" });
+    const choice = getTucanoSelectedToucan(currentTucanoView);
+    if (choice && isTucanoActionAvailable("resolve_toucan") && choice.toucan === "flip") {
+      sendAction({ type: "resolve_toucan", toucan_index: choice.index });
     }
   });
 }
@@ -718,8 +815,9 @@ if (tucanoSkipBtn) {
   tucanoSkipBtn.classList.add("has-explanation");
   tucanoSkipBtn.dataset.explainId = "tucanoSkipBtn";
   tucanoSkipBtn.addEventListener("click", () => {
-    if (isTucanoActionAvailable("skip_toucan")) {
-      sendAction({ type: "skip_toucan" });
+    const choice = getTucanoSelectedToucan(currentTucanoView);
+    if (choice && (isTucanoActionAvailable("skip_toucan") || isTucanoActionAvailable("resolve_toucan")) && choice.can_resolve === false) {
+      sendAction({ type: "skip_toucan", toucan_index: choice.index });
     }
   });
 }

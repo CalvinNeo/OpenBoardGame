@@ -2031,13 +2031,22 @@ TUCANO_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "resolve_toucan"},
+                "toucan_index": {"type": "integer", "minimum": 0},
                 "fruit": {"type": "string", "minLength": 1, "maxLength": 40},
                 "target_player": {"type": "string", "minLength": 1, "maxLength": 80},
             },
             "required": ["type"],
             "additionalProperties": False,
         },
-        {"type": "object", "properties": {"type": {"const": "skip_toucan"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "skip_toucan"},
+                "toucan_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
     ],
 }
 

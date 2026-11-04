@@ -60,6 +60,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "red_doors",
     "sagrada",
     "scout",
+    "skull",
     "skull_king",
     "splendor",
     "splendor_pokemon",

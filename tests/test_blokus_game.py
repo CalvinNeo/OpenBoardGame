@@ -84,7 +84,7 @@ class BlokusGameTests(unittest.TestCase):
             territory_state["config"]["bot_strategy"], blokus.BOT_STRATEGY_TERRITORY
         )
 
-    def test_heuristic_keeps_global_top_candidates_and_territory_keeps_piece_variety(self):
+    def test_both_strategies_deep_evaluate_global_top_candidates(self):
         candidates = [
             (
                 1000 - index,
@@ -128,7 +128,7 @@ class BlokusGameTests(unittest.TestCase):
         )
         self.assertEqual(
             {candidate[1]["piece_id"] for candidate in territory_shortlist},
-            set(blokus.PIECE_IDS),
+            {"p5_1"},
         )
 
     def test_next_opponent_largest_move_size_uses_real_legal_moves(self):
