@@ -146,6 +146,18 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(public_action, {"type": "grab"})
         self.assertNotIn("count", public_action)
 
+    async def test_skull_bot_card_and_target_choices_are_sanitized(self):
+        self.assertEqual(
+            app._public_bot_action("skull", {"type": "play_card", "card_type": "skull"}),
+            {"type": "play_card"},
+        )
+        self.assertEqual(
+            app._public_bot_action(
+                "skull", {"type": "reveal_card", "target_player_id": "private-player"}
+            ),
+            {"type": "reveal_card"},
+        )
+
     async def test_catan_starfarers_private_bot_actions_are_sanitized(self):
         discard = {
             "type": "discard_resources",
