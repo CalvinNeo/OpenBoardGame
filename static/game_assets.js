@@ -1046,14 +1046,14 @@ const GAME_ASSETS = {
   "tucano": {
     "panelTitle": "🌴 Tucano",
     "scripts": [
-      "/static/games/tucano.js?v=app_v4"
+      "/static/games/tucano.js?v=app_v7"
     ],
     "styles": [
-      "/static/tucano.css?v=app_v4"
+      "/static/tucano.css?v=app_v7"
     ],
     "panel": "tucanoPanel",
     "header": "showTucanoHeaderActions",
-    "markup": "/static/games/tucano.html?v=3"
+    "markup": "/static/games/tucano.html?v=6"
   },
   "witchs_brew": {
     "scripts": [

@@ -1,5 +1,4 @@
 import math
-from collections import deque
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 
@@ -105,9 +104,8 @@ MONOMINO_ID = next((pid for pid in PIECE_IDS if PIECE_SIZES[pid] == 1), None)
 # territory evaluation. The cap keeps bot turns comfortably below the UI budget.
 BOT_CANDIDATE_WIDTH = 24
 BOT_MOBILITY_MOVE_CAP = 10
-BOT_OPPONENT_PIECE_MOVE_CAP = 2
-BOT_OPPONENT_MOBILITY_WEIGHT = 0.5
-BOT_OPPONENT_MOBILITY_MAX_SCORE = 6.0
+BOT_TERRITORY_WEIGHT_MULTIPLIER = 3.0
+BOT_OPPONENT_BLOCK_SCORE_PER_CELL = 100.0
 BOT_STRATEGY_HEURISTIC = "heuristic"
 BOT_STRATEGY_TERRITORY = "territory"
 
@@ -357,39 +355,6 @@ def _frontier_openness(board: List[List[Optional[str]]], frontier: Set[Coord]) -
     return openness
 
 
-def _empty_cell_distances(
-    board: List[List[Optional[str]]], sources: Set[Coord]
-) -> Dict[Coord, int]:
-    distances: Dict[Coord, int] = {}
-    queue = deque()
-    for x, y in sources:
-        if (
-            0 <= x < BOARD_SIZE
-            and 0 <= y < BOARD_SIZE
-            and board[y][x] is None
-            and (x, y) not in distances
-        ):
-            distances[(x, y)] = 0
-            queue.append((x, y))
-
-    offsets = ADJACENT_OFFSETS + DIAGONAL_OFFSETS
-    while queue:
-        x, y = queue.popleft()
-        next_distance = distances[(x, y)] + 1
-        for dx, dy in offsets:
-            neighbor = (x + dx, y + dy)
-            nx, ny = neighbor
-            if (
-                not (0 <= nx < BOARD_SIZE and 0 <= ny < BOARD_SIZE)
-                or board[ny][nx] is not None
-                or neighbor in distances
-            ):
-                continue
-            distances[neighbor] = next_distance
-            queue.append(neighbor)
-    return distances
-
-
 def _opponent_frontiers(
     state: Dict, player_id: str, board: List[List[Optional[str]]]
 ) -> List[Tuple[Set[Coord], float]]:
@@ -536,46 +501,7 @@ def _future_mobility_score(
     return score
 
 
-def _territory_control_score(
-    state: Dict,
-    player_id: str,
-    board: List[List[Optional[str]]],
-    own_frontier: Set[Coord],
-) -> float:
-    if not own_frontier:
-        return -float(BOARD_SIZE * BOARD_SIZE)
-    opponent_frontiers = [
-        (frontier, weight)
-        for frontier, weight in _opponent_frontiers(state, player_id, board)
-        if frontier
-    ]
-    if not opponent_frontiers:
-        return float(BOARD_SIZE * BOARD_SIZE)
-
-    own_distances = _empty_cell_distances(board, own_frontier)
-    opponent_distances = [
-        (_empty_cell_distances(board, frontier), weight)
-        for frontier, weight in opponent_frontiers
-    ]
-    controlled = 0.0
-    for y, row in enumerate(board):
-        for x, value in enumerate(row):
-            if value is not None:
-                continue
-            cell = (x, y)
-            own_distance = own_distances.get(cell, float("inf"))
-            opponent_distance = min(
-                distances.get(cell, float("inf")) / weight
-                for distances, weight in opponent_distances
-            )
-            if own_distance < opponent_distance:
-                controlled += 1.0
-            elif math.isfinite(own_distance) and own_distance == opponent_distance:
-                controlled += 0.3
-    return controlled
-
-
-def _heuristic_territory_score(
+def _territory_area_score(
     state: Dict,
     player_id: str,
     board: List[List[Optional[str]]],
@@ -668,11 +594,11 @@ def _bot_candidate_shortlist(
     ]
 
 
-def _next_opponent_mobility_counts(
+def _next_opponent_largest_move_size(
     state: Dict,
     player_id: str,
     board: List[List[Optional[str]]],
-) -> Optional[Dict[str, int]]:
+) -> Optional[int]:
     order = state.get("turn_order", [])
     if player_id not in order:
         return None
@@ -694,10 +620,10 @@ def _next_opponent_mobility_counts(
     opponent = state["players"][opponent_id]
     first_move = not opponent["has_placed"]
     anchors = None if first_move else _frontier_cells(board, opponent["color"])
-    move_counts: Dict[str, int] = {}
-    for piece_id in opponent["pieces"]:
-        move_count = 0
-        for _action, _cells in _iter_piece_moves(
+    for piece_id in sorted(
+        opponent["pieces"], key=lambda candidate: PIECE_SIZES[candidate], reverse=True
+    ):
+        if _piece_has_move(
             state,
             opponent_id,
             piece_id,
@@ -705,32 +631,25 @@ def _next_opponent_mobility_counts(
             board=board,
             anchors=anchors,
         ):
-            move_count += 1
-            if move_count >= BOT_OPPONENT_PIECE_MOVE_CAP:
-                break
-        move_counts[piece_id] = move_count
-    return move_counts
+            return PIECE_SIZES[piece_id]
+    return 0
 
 
 def _next_opponent_pressure(
     state: Dict,
     player_id: str,
     board: List[List[Optional[str]]],
-) -> Optional[float]:
-    move_counts = _next_opponent_mobility_counts(state, player_id, board)
-    if move_counts is None:
-        return None
-
-    blocked_cell_options = sum(
-        PIECE_SIZES[piece_id]
-        * (BOT_OPPONENT_PIECE_MOVE_CAP - move_count)
-        / BOT_OPPONENT_PIECE_MOVE_CAP
-        for piece_id, move_count in move_counts.items()
-    )
-    return min(
-        BOT_OPPONENT_MOBILITY_MAX_SCORE,
-        blocked_cell_options * BOT_OPPONENT_MOBILITY_WEIGHT,
-    )
+    baseline_largest_piece: Optional[int] = None,
+) -> float:
+    before = baseline_largest_piece
+    if before is None:
+        before = _next_opponent_largest_move_size(
+            state, player_id, state["board"]
+        )
+    after = _next_opponent_largest_move_size(state, player_id, board)
+    if before is None or after is None:
+        return 0.0
+    return (before - after) * BOT_OPPONENT_BLOCK_SCORE_PER_CELL
 
 
 def _deep_candidate_score(
@@ -740,6 +659,7 @@ def _deep_candidate_score(
     cells: Shape,
     *,
     strategy: str = BOT_STRATEGY_TERRITORY,
+    baseline_largest_opponent_piece: Optional[int] = None,
 ) -> float:
     color = state["players"][player_id]["color"]
     board = _board_with_cells(state["board"], color, cells)
@@ -747,12 +667,17 @@ def _deep_candidate_score(
     pieces_played = len(PIECE_IDS) - len(state["players"][player_id]["pieces"])
     phase = min(1.0, max(0.0, pieces_played / max(1, len(PIECE_IDS) - 1)))
     mobility = _future_mobility_score(state, player_id, piece_id, board, frontier)
+    territory = _territory_area_score(state, player_id, board, frontier)
     if strategy == BOT_STRATEGY_TERRITORY:
-        territory = _territory_control_score(state, player_id, board, frontier)
-        pressure = _next_opponent_pressure(state, player_id, board) or 0.0
-        return mobility + territory * (0.34 - 0.12 * phase) + pressure
+        pressure = _next_opponent_pressure(
+            state,
+            player_id,
+            board,
+            baseline_largest_piece=baseline_largest_opponent_piece,
+        )
+        territory_weight = (0.34 - 0.12 * phase) * BOT_TERRITORY_WEIGHT_MULTIPLIER
+        return mobility + territory * territory_weight + pressure
 
-    territory = _heuristic_territory_score(state, player_id, board, frontier)
     return mobility + territory * (0.34 - 0.12 * phase)
 
 
@@ -1012,6 +937,11 @@ class BlokusGame:
         own_frontier = (
             set() if first_move else _frontier_cells(state["board"], pdata["color"])
         )
+        baseline_largest_opponent_piece = (
+            _next_opponent_largest_move_size(state, bot_id, state["board"])
+            if strategy == BOT_STRATEGY_TERRITORY
+            else None
+        )
         opponents = _opponent_frontiers(state, bot_id, state["board"])
         candidates: List[Tuple[float, Dict, Shape]] = []
         piece_count = len(pdata["pieces"])
@@ -1068,6 +998,7 @@ class BlokusGame:
                 action["piece_id"],
                 cells,
                 strategy=strategy,
+                baseline_largest_opponent_piece=baseline_largest_opponent_piece,
             )
             if score > best_score:
                 best_score = score

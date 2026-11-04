@@ -803,7 +803,7 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
   gap: 6px;
 }
 
-.game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions {
+.game-panel.tucano-game-shell > .panel-header > #tucanoHeaderActions {
   display: flex;
   flex: 0 0 auto;
   flex-wrap: nowrap;
@@ -811,7 +811,7 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
   margin-left: auto;
 }
 
-.game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions button {
+.game-panel.tucano-game-shell > .panel-header > #tucanoHeaderActions button {
   flex: 0 0 auto;
   min-width: 0;
   white-space: nowrap;
@@ -852,11 +852,11 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
     white-space: nowrap;
   }
 
-  .game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions {
+  .game-panel.tucano-game-shell > .panel-header > #tucanoHeaderActions {
     gap: 3px;
   }
 
-  .game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions button {
+  .game-panel.tucano-game-shell > .panel-header > #tucanoHeaderActions button {
     width: auto !important;
     min-width: 0 !important;
     min-height: 28px !important;
@@ -1063,7 +1063,7 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
     font-size: 16px;
   }
 
-  .game-panel.tucano-game-shell > .panel-header > .tucano-outer-actions button,
+  .game-panel.tucano-game-shell > .panel-header > #tucanoHeaderActions button,
   .game-panel.tucano-game-shell > .panel-header > .game-panel-title #gameReconnectBtn {
     padding-right: 5px !important;
     padding-left: 5px !important;
@@ -1073,5 +1073,215 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
   .tucano-column {
     flex-basis: 136px;
     width: 136px;
+  }
+}
+
+/* On phones, each market pile and each player collection gets its own row.
+   Only the cards inside a row scroll sideways when there are many cards. */
+@media (max-width: 600px) {
+  .tucano-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 8px;
+    max-width: none;
+    padding: 2px 0 8px;
+    overflow-x: visible;
+    overflow-y: visible;
+    scroll-snap-type: none;
+    touch-action: auto;
+  }
+
+  .tucano-column {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+    scroll-snap-align: none;
+  }
+
+  .tucano-players {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .tucano-player-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .tucano-column .tucano-card-list,
+  .tucano-player-card .tucano-fruit-grid {
+    max-width: 100%;
+  }
+
+  /* Collections read as a single left-to-right hand. Keep the row compact
+     and let only this row scroll when a player owns many fruit types. */
+  .tucano-player-card .tucano-fruit-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 4px;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 1px 4px;
+    touch-action: pan-x;
+  }
+
+  .tucano-player-card .tucano-fruit-chip {
+    flex: 0 0 44px;
+  }
+
+  /* Keep every market card self-contained: long fruit names and score scales
+     wrap or shrink inside the card instead of touching neighboring cards. */
+  .tucano-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .tucano-card-icon,
+  .tucano-card-name,
+  .tucano-card-effect {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .tucano-card-icon {
+    line-height: 1;
+  }
+
+  .tucano-card-name {
+    overflow-wrap: anywhere;
+  }
+
+  .tucano-card-effect {
+    overflow-wrap: anywhere;
+  }
+
+  .tucano-score-scale {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 1px;
+  }
+
+  .tucano-score-scale span {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .tucano-panel .tucano-fruit-chip {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+}
+
+/* Mobile collections use the same information density as market cards. */
+.tucano-fruit-card {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-areas:
+    "icon name"
+    "icon count"
+    "effect effect";
+  align-items: center;
+  justify-content: stretch !important;
+  min-width: 92px !important;
+  width: 92px !important;
+  min-height: 78px !important;
+  height: auto !important;
+  padding: 5px !important;
+  text-align: left;
+  white-space: normal !important;
+}
+
+.tucano-fruit-card .tucano-fruit-icon {
+  grid-area: icon;
+  align-self: center;
+  font-size: 21px;
+}
+
+.tucano-fruit-card-name {
+  grid-area: name;
+  min-width: 0;
+  color: #225744;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.tucano-fruit-card-count {
+  grid-area: count;
+  color: var(--tucano-deep);
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.tucano-fruit-card-effect {
+  grid-area: effect;
+  min-width: 0;
+  margin-top: 3px;
+  color: var(--tucano-muted);
+  font-size: 8px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  /* Each pile is one horizontal row. Only that pile's cards may scroll. */
+  .tucano-column .tucano-card-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: stretch;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 4px;
+    min-height: 0;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 1px 1px 4px;
+    overscroll-behavior-x: contain;
+    scrollbar-color: #9ab49a transparent;
+    scrollbar-width: thin;
+    touch-action: pan-x;
+  }
+
+  .tucano-column .tucano-card {
+    flex: 0 0 68px;
+    width: 68px;
+    min-width: 68px;
+    min-height: 68px;
+    height: 68px;
+  }
+
+  /* A player's complete fruit cards read left-to-right in one row. */
+  .tucano-player-card .tucano-fruit-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 6px;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 1px 1px 4px;
+    overscroll-behavior-x: contain;
+    scrollbar-color: #9ab49a transparent;
+    scrollbar-width: thin;
+    touch-action: pan-x;
+  }
+
+  .tucano-player-card .tucano-fruit-card {
+    flex: 0 0 92px;
   }
 }

@@ -131,7 +131,27 @@ class BlokusGameTests(unittest.TestCase):
             set(blokus.PIECE_IDS),
         )
 
-    def test_next_opponent_mobility_counts_per_piece_and_skips_passed_players(self):
+    def test_next_opponent_largest_move_size_uses_real_legal_moves(self):
+        state = BlokusGame.init_game({"bot_strategy": "territory"}, self._players())
+        self.assertEqual(
+            blokus._next_opponent_largest_move_size(state, "p1", state["board"]), 5
+        )
+
+        board = [
+            ["blocked" for _x in range(blokus.BOARD_SIZE)]
+            for _y in range(blokus.BOARD_SIZE)
+        ]
+        p2_corner = blokus.CORNER_BY_COLOR["yellow"]
+        board[p2_corner[1]][p2_corner[0]] = None
+        self.assertEqual(blokus._next_opponent_largest_move_size(state, "p1", board), 1)
+
+        state["players"]["p2"]["passed"] = True
+        board[p2_corner[1]][p2_corner[0]] = "blue"
+        p3_corner = blokus.CORNER_BY_COLOR["red"]
+        board[p3_corner[1]][p3_corner[0]] = None
+        self.assertEqual(blokus._next_opponent_largest_move_size(state, "p1", board), 1)
+
+    def test_territory_pressure_scores_reduction_in_largest_opponent_piece(self):
         state = BlokusGame.init_game({"bot_strategy": "territory"}, self._players())
         board = [
             ["blocked" for _x in range(blokus.BOARD_SIZE)]
@@ -140,47 +160,59 @@ class BlokusGameTests(unittest.TestCase):
         p2_corner = blokus.CORNER_BY_COLOR["yellow"]
         board[p2_corner[1]][p2_corner[0]] = None
 
-        counts = blokus._next_opponent_mobility_counts(state, "p1", board)
-        self.assertEqual(counts[blokus.PIECE_IDS[0]], 1)
-        self.assertEqual(sum(counts.values()), 1)
-
-        board[p2_corner[1]][p2_corner[0]] = "blue"
-        self.assertTrue(
-            all(count == 0 for count in blokus._next_opponent_mobility_counts(state, "p1", board).values())
+        blocked_pressure = blokus._next_opponent_pressure(
+            state, "p1", board, baseline_largest_piece=5
         )
-
-        state["players"]["p2"]["passed"] = True
-        p3_corner = blokus.CORNER_BY_COLOR["red"]
-        board[p3_corner[1]][p3_corner[0]] = None
-        counts = blokus._next_opponent_mobility_counts(state, "p1", board)
-        self.assertEqual(counts[blokus.PIECE_IDS[0]], 1)
-        self.assertEqual(sum(counts.values()), 1)
-
-    def test_territory_pressure_weights_each_piece_and_is_capped(self):
-        state = BlokusGame.init_game({"bot_strategy": "territory"}, self._players())
-        all_blocked = {
-            piece_id: 0 for piece_id in state["players"]["p2"]["pieces"]
-        }
-        all_available = {
-            piece_id: blokus.BOT_OPPONENT_PIECE_MOVE_CAP
-            for piece_id in state["players"]["p2"]["pieces"]
-        }
-
         with patch(
-            "game.blokus._next_opponent_mobility_counts", return_value=all_blocked
-        ):
-            blocked_pressure = blokus._next_opponent_pressure(
-                state, "p1", state["board"]
-            )
-        with patch(
-            "game.blokus._next_opponent_mobility_counts", return_value=all_available
+            "game.blokus._next_opponent_largest_move_size", return_value=5
         ):
             open_pressure = blokus._next_opponent_pressure(
-                state, "p1", state["board"]
+                state, "p1", state["board"], baseline_largest_piece=5
             )
 
-        self.assertEqual(blocked_pressure, blokus.BOT_OPPONENT_MOBILITY_MAX_SCORE)
+        self.assertEqual(
+            blocked_pressure,
+            4 * blokus.BOT_OPPONENT_BLOCK_SCORE_PER_CELL,
+        )
         self.assertEqual(open_pressure, 0.0)
+        with patch(
+            "game.blokus._next_opponent_largest_move_size", return_value=5
+        ):
+            opened_larger_piece = blokus._next_opponent_pressure(
+                state, "p1", state["board"], baseline_largest_piece=4
+            )
+        self.assertEqual(
+            opened_larger_piece, -blokus.BOT_OPPONENT_BLOCK_SCORE_PER_CELL
+        )
+
+    def test_territory_strategy_uses_a_calibrated_territory_weight(self):
+        state = BlokusGame.init_game({}, self._players())
+        action = self._first_legal_action(state, "p1")
+        shape = blokus._transform_piece(
+            blokus.PIECE_DEFS[action["piece_id"]], action["rotation"], action["flip"]
+        )
+        cells = tuple((action["x"] + x, action["y"] + y) for x, y in shape)
+        with patch("game.blokus._territory_area_score", return_value=10.0), patch(
+            "game.blokus._next_opponent_largest_move_size", return_value=5
+        ):
+            territory_score = blokus._deep_candidate_score(
+                state,
+                "p1",
+                action["piece_id"],
+                cells,
+                strategy="territory",
+                baseline_largest_opponent_piece=5,
+            )
+            heuristic_score = blokus._deep_candidate_score(
+                state, "p1", action["piece_id"], cells, strategy="heuristic"
+            )
+
+        self.assertAlmostEqual(
+            territory_score - heuristic_score,
+            10.0
+            * 0.34
+            * (blokus.BOT_TERRITORY_WEIGHT_MULTIPLIER - 1.0),
+        )
 
     def test_territory_scores_opponent_pressure_without_changing_heuristic(self):
         state = BlokusGame.init_game({}, self._players())
@@ -190,27 +222,30 @@ class BlokusGameTests(unittest.TestCase):
         )
         cells = tuple((action["x"] + x, action["y"] + y) for x, y in shape)
 
-        all_blocked = {
-            piece_id: 0 for piece_id in state["players"]["p2"]["pieces"]
-        }
-        all_available = {
-            piece_id: blokus.BOT_OPPONENT_PIECE_MOVE_CAP
-            for piece_id in state["players"]["p2"]["pieces"]
-        }
         with patch(
-            "game.blokus._next_opponent_mobility_counts", return_value=all_blocked
+            "game.blokus._next_opponent_largest_move_size", return_value=1
         ):
             territory_blocked = blokus._deep_candidate_score(
-                state, "p1", action["piece_id"], cells, strategy="territory"
+                state,
+                "p1",
+                action["piece_id"],
+                cells,
+                strategy="territory",
+                baseline_largest_opponent_piece=5,
             )
             heuristic_blocked = blokus._deep_candidate_score(
                 state, "p1", action["piece_id"], cells, strategy="heuristic"
             )
         with patch(
-            "game.blokus._next_opponent_mobility_counts", return_value=all_available
+            "game.blokus._next_opponent_largest_move_size", return_value=5
         ):
             territory_open = blokus._deep_candidate_score(
-                state, "p1", action["piece_id"], cells, strategy="territory"
+                state,
+                "p1",
+                action["piece_id"],
+                cells,
+                strategy="territory",
+                baseline_largest_opponent_piece=5,
             )
             heuristic_open = blokus._deep_candidate_score(
                 state, "p1", action["piece_id"], cells, strategy="heuristic"
@@ -218,55 +253,9 @@ class BlokusGameTests(unittest.TestCase):
 
         self.assertAlmostEqual(
             territory_blocked - territory_open,
-            blokus.BOT_OPPONENT_MOBILITY_MAX_SCORE,
+            4 * blokus.BOT_OPPONENT_BLOCK_SCORE_PER_CELL,
         )
         self.assertEqual(heuristic_blocked, heuristic_open)
-
-    def test_territory_distances_route_around_occupied_cells(self):
-        board = [
-            ["occupied" for _x in range(blokus.BOARD_SIZE)]
-            for _y in range(blokus.BOARD_SIZE)
-        ]
-        open_path = [
-            (0, 0),
-            (0, 1),
-            (0, 2),
-            (1, 3),
-            (2, 3),
-            (3, 3),
-            (4, 2),
-            (4, 1),
-            (4, 0),
-        ]
-        for x, y in open_path:
-            board[y][x] = None
-
-        distances = blokus._empty_cell_distances(board, {(0, 0)})
-
-        self.assertEqual(distances[(4, 0)], 8)
-
-    def test_territory_score_ignores_unreachable_empty_islands(self):
-        state = BlokusGame.init_game({}, self._players())
-        board = [
-            ["occupied" for _x in range(blokus.BOARD_SIZE)]
-            for _y in range(blokus.BOARD_SIZE)
-        ]
-        board[0][0] = "blue"
-        board[1][1] = None
-        board[19][19] = "yellow"
-        board[18][18] = None
-        board[10][10] = None
-        state["board"] = board
-        state["players"]["p1"]["has_placed"] = True
-        state["players"]["p2"]["has_placed"] = True
-        state["players"]["p3"]["passed"] = True
-        state["players"]["p4"]["passed"] = True
-
-        score = blokus._territory_control_score(
-            state, "p1", board, {(1, 1)}
-        )
-
-        self.assertEqual(score, 1.0)
 
     def test_candidate_shortlist_keeps_each_piece_represented(self):
         candidates = []

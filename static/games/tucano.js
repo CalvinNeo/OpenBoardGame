@@ -22,7 +22,7 @@ const tucanoFlipBtn = document.getElementById("tucanoFlipBtn");
 const tucanoSkipBtn = document.getElementById("tucanoSkipBtn");
 const tucanoHelpBtn = document.getElementById("tucanoHelpBtn");
 const tucanoExplainBtn = document.getElementById("tucanoExplainBtn");
-const tucanoInnerHeaderActions = document.querySelector("#tucanoPanel .tucano-header-actions");
+const tucanoHeaderActions = document.getElementById("tucanoHeaderActions");
 const tucanoHelpModal = document.getElementById("tucanoHelpModal");
 const tucanoHelpModalCloseBtn = document.getElementById("tucanoHelpModalCloseBtn");
 const tucanoHelpContent = document.getElementById("tucanoHelpContent");
@@ -239,29 +239,12 @@ function showTucanoHeaderActions(show) {
   const gameShell = tucanoRoot ? tucanoRoot.closest(".game-panel") : null;
   if (show && gameShell) {
     gameShell.classList.add("tucano-game-shell");
-    let outerActions = gameShell.querySelector(":scope > .panel-header > .tucano-outer-actions");
-    if (!outerActions) {
-      const panelHeader = gameShell.querySelector(":scope > .panel-header");
-      if (panelHeader) {
-        outerActions = document.createElement("div");
-        outerActions.className = "panel-header-actions tucano-outer-actions";
-        outerActions.setAttribute("role", "group");
-        outerActions.setAttribute("aria-label", "Tucano controls");
-        panelHeader.appendChild(outerActions);
-      }
-    }
-    if (outerActions) {
-      outerActions.append(tucanoHelpBtn, tucanoExplainBtn);
-    }
   } else if (!show && gameShell) {
     gameShell.classList.remove("tucano-game-shell");
-    if (tucanoInnerHeaderActions) {
-      tucanoInnerHeaderActions.append(tucanoHelpBtn, tucanoExplainBtn);
-    }
-    const outerActions = gameShell.querySelector(":scope > .panel-header > .tucano-outer-actions");
-    if (outerActions) {
-      outerActions.remove();
-    }
+  }
+  if (tucanoHeaderActions) {
+    tucanoHeaderActions.style.display = show ? "flex" : "none";
+    tucanoHeaderActions.setAttribute("aria-hidden", String(!show));
   }
   if (!show) {
     exitTucanoExplainMode();
@@ -387,19 +370,32 @@ function renderTucanoFruitStack(view, player, fruit, count) {
   const activeToucan = view.active_toucan;
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "tucano-fruit-chip has-explanation";
+  button.className = "tucano-fruit-card tucano-fruit-chip has-explanation";
   const info = tucanoCardInfo(view, { type: "fruit", fruit });
   const icon = document.createElement("span");
   icon.className = "tucano-fruit-icon";
   icon.textContent = info.icon;
   icon.setAttribute("aria-hidden", "true");
+  const name = document.createElement("span");
+  name.className = "tucano-fruit-card-name";
+  name.textContent = info.title;
   const quantity = document.createElement("strong");
+  quantity.className = "tucano-fruit-card-count";
   quantity.textContent = `×${count}`;
-  button.append(icon, quantity);
-  button.title = `${info.title} ×${count}`;
+  const effect = document.createElement("span");
+  effect.className = "tucano-fruit-card-effect";
+  const spec = view && view.fruit_defs ? view.fruit_defs[fruit] : null;
+  if (spec && spec.score) {
+    const entries = Object.entries(spec.score).sort(([a], [b]) => Number(a) - Number(b));
+    effect.textContent = `${entries[0][0]}–${entries[entries.length - 1][0]} cards · ${entries.map(([, points]) => points).join("/")}`;
+  } else {
+    effect.textContent = info.effect || "Wild at end";
+  }
+  button.append(icon, name, quantity, effect);
+  button.title = `${info.title} ×${count}: ${info.effect || "Wild at end"}`;
   button.setAttribute("aria-label", button.title);
   button.dataset.explainTitle = button.title;
-  button.dataset.explainText = `${info.title}: ${info.effect}. Face-up fruit can be given or stolen; protected fruit cannot.`;
+  button.dataset.explainText = `${info.title} ×${count}: ${info.effect || "Wild at end"}. Face-up fruit can be given or stolen; protected fruit cannot.`;
   const isSelf = player.player_id === view.you;
   let selectable = false;
   if (view.phase === "toucan" && activeToucan === "give" && isSelf && isTucanoActionAvailable("resolve_toucan")) {
