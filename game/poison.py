@@ -630,7 +630,16 @@ class PoisonGame:
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         if bot_id not in state.get("players", {}):
             return None
-        action = choose_action(PoisonGame.get_public_view(state, bot_id))
+        # Captured cards are intentionally omitted from the public view, but
+        # the bot can remember its own pile just as a human player can.  Keep
+        # this field on the server-only policy input so it cannot leak through
+        # Socket.IO or affect another player's view.
+        bot_view = PoisonGame.get_public_view(state, bot_id)
+        bot_view["_your_captured"] = [
+            _copy_card(card)
+            for card in state["players"][bot_id].get("captured", [])
+        ]
+        action = choose_action(bot_view)
         if not action:
             return None
         # Keep the existing room pacing and action shape.  The policy itself

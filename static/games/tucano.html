@@ -1,19 +1,19 @@
 <template data-game-target="tucanoPanel" data-game-mode="contents">
               <div class="tucano-header">
                 <div>
-                  <h2>🌴 Tucano</h2>
+                  <h2><span aria-hidden="true">🌴</span> Tucano</h2>
                   <div class="tucano-subtitle">A little fruit. A little mischief.</div>
                 </div>
                 <div class="tucano-header-actions">
-                  <button id="tucanoHelpBtn" type="button">Help</button>
-                  <button id="tucanoExplainBtn" type="button" aria-pressed="false">Explain</button>
+                  <button id="tucanoHelpBtn" type="button" aria-controls="tucanoHelpModal">Help</button>
+                  <button id="tucanoExplainBtn" type="button" aria-controls="tucanoExplainModal" aria-pressed="false">Explain</button>
                 </div>
               </div>
 
               <div class="tucano-status-grid">
                 <div><span class="tucano-status-label">Phase</span><strong id="tucanoPhase">-</strong></div>
                 <div><span class="tucano-status-label">Current turn</span><strong id="tucanoTurn">-</strong></div>
-                <div><span class="tucano-status-label">🎴 Deck</span><strong id="tucanoDeck">-</strong></div>
+                <div><span class="tucano-status-label"><span aria-hidden="true">🎴</span> Deck</span><strong id="tucanoDeck">-</strong></div>
               </div>
               <div id="tucanoWinner" class="tucano-winner hidden" role="status"></div>
 
@@ -29,21 +29,21 @@
 
               <section class="tucano-market" aria-labelledby="tucanoMarketTitle">
                 <div class="tucano-section-heading">
-                  <h3 id="tucanoMarketTitle">🍃 Fruit market</h3>
+                  <h3 id="tucanoMarketTitle"><span aria-hidden="true">🍃</span> Fruit market</h3>
                   <span>Take one full column</span>
                 </div>
                 <div id="tucanoColumns" class="tucano-columns"></div>
               </section>
 
-              <section aria-labelledby="tucanoPlayersTitle">
+              <section class="tucano-collections" aria-labelledby="tucanoPlayersTitle">
                 <div class="tucano-section-heading">
-                  <h3 id="tucanoPlayersTitle">🧺 Collections</h3>
+                  <h3 id="tucanoPlayersTitle"><span aria-hidden="true">🧺</span> Collections</h3>
                   <span>Tap Scores for details</span>
                 </div>
                 <div id="tucanoPlayers" class="tucano-players"></div>
               </section>
 
-              <section id="tucanoHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tucanoHelpTitle">
+              <section id="tucanoHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tucanoHelpTitle" aria-describedby="tucanoHelpContent">
                 <div class="modal-content tucano-modal">
                   <div class="modal-header">
                     <h2 id="tucanoHelpTitle">Tucano Help</h2>
@@ -53,7 +53,7 @@
                 </div>
               </section>
 
-              <section id="tucanoExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tucanoExplainTitle">
+              <section id="tucanoExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tucanoExplainTitle" aria-describedby="tucanoExplainContent">
                 <div class="modal-content tucano-modal">
                   <div class="modal-header">
                     <h2 id="tucanoExplainTitle">Tucano Explain</h2>

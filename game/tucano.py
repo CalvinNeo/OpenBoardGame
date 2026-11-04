@@ -1,3 +1,4 @@
+import copy
 import itertools
 import random
 from collections import Counter
@@ -190,28 +191,66 @@ def _score_delta(state: Dict, player_id: str, fruit: str, amount: int, observer_
     )
 
 
+def _bot_estimated_score(state: Dict, player_id: str, observer_id: str) -> int:
+    """Estimate a player's final score from the information visible to the bot.
+
+    Protected fruit on opponents is intentionally omitted.  Joker assignments are
+    searched because they are public in count but only resolved at game end.
+    """
+    all_counts = {
+        pid: _visible_counts_for_bot(pdata, observer_id, pid)
+        for pid, pdata in state.get("players", {}).items()
+    }
+    if player_id not in all_counts:
+        return 0
+    joker_count = int(state.get("players", {}).get(player_id, {}).get("jokers", 0))
+    if joker_count <= 0:
+        return int(_score_counts(all_counts).get(player_id, {}).get("total", 0))
+
+    best = None
+    for choice in itertools.product(FRUITS, repeat=joker_count):
+        trial = {pid: dict(counts) for pid, counts in all_counts.items()}
+        for fruit in choice:
+            _add_count(trial[player_id], fruit)
+        score = int(_score_counts(trial).get(player_id, {}).get("total", 0))
+        if best is None or score > best:
+            best = score
+    return int(best or 0)
+
+
 def _bot_give_choice(state: Dict, bot_id: str) -> Optional[Tuple[str, str]]:
-    """Choose the fruit that costs the bot least and the recipient it helps least."""
+    """Give the fruit with the largest visible score swing.
+
+    Evaluate fruit and recipient together.  A fruit that is cheap to discard can
+    still be a bad play when a particular opponent is close to a scoring step.
+    """
     pdata = state["players"][bot_id]
     fruits = [fruit for fruit, count in pdata.get("face_up", {}).items() if int(count) > 0]
     targets = [pid for pid in state.get("turn_order", []) if pid != bot_id]
     if not fruits or not targets:
         return None
 
-    def fruit_key(fruit: str) -> Tuple[int, int, str]:
-        # A positive removal delta means giving the fruit improves our score.
-        delta = _score_delta(state, bot_id, fruit, -1, bot_id)
-        return (delta, -int(pdata.get("face_up", {}).get(fruit, 0)), fruit)
-
-    fruit = max(fruits, key=fruit_key)
-    target = min(
-        targets,
-        key=lambda pid: (
-            _score_delta(state, pid, fruit, 1, bot_id),
-            state.get("player_meta", {}).get(pid, {}).get("seat", 0),
-            pid,
-        ),
-    )
+    candidates = []
+    for fruit in fruits:
+        own_delta = _score_delta(state, bot_id, fruit, -1, bot_id)
+        for target in targets:
+            target_delta = _score_delta(state, target, fruit, 1, bot_id)
+            seat = int(state.get("player_meta", {}).get(target, {}).get("seat", 0))
+            count = int(pdata.get("face_up", {}).get(fruit, 0))
+            candidates.append(
+                (
+                    own_delta - target_delta,
+                    own_delta,
+                    -target_delta,
+                    -count,
+                    -seat,
+                    fruit,
+                    target,
+                )
+            )
+    if not candidates:
+        return None
+    *_, fruit, target = max(candidates)
     return fruit, target
 
 
@@ -236,33 +275,100 @@ def _bot_steal_choice(state: Dict, bot_id: str) -> Optional[Tuple[str, str]]:
     return target_id, fruit
 
 
-def _bot_column_value(state: Dict, bot_id: str, column: List[Dict]) -> int:
-    """Estimate a column's immediate value from visible cards only."""
-    value = 0
-    for card in column:
-        card_type = card.get("type")
-        if card_type == "fruit":
-            value += _score_delta(state, bot_id, card.get("fruit"), 1, bot_id)
-        elif card_type == "joker":
-            # A joker can be assigned to whichever fruit gives the best marginal score.
-            value += max((_score_delta(state, bot_id, fruit, 1, bot_id) for fruit in FRUITS), default=0)
-        elif card_type == "toucan":
-            toucan = card.get("toucan")
-            if toucan == "steal":
-                choice = _bot_steal_choice(state, bot_id)
-                if choice:
-                    target_id, fruit = choice
-                    value += _score_delta(state, bot_id, fruit, 1, bot_id)
-                    value -= _score_delta(state, target_id, fruit, -1, bot_id)
-            elif toucan == "give":
-                choice = _bot_give_choice(state, bot_id)
-                if choice:
-                    fruit, target_id = choice
-                    value += _score_delta(state, bot_id, fruit, -1, bot_id)
-                    value -= _score_delta(state, target_id, fruit, 1, bot_id)
-            elif toucan == "flip":
-                # Protection does not change score, but it prevents future steals.
-                value += sum(int(count) for count in state["players"][bot_id].get("face_up", {}).values())
+def _bot_toucan_action(state: Dict, bot_id: str) -> Optional[Dict]:
+    """Return the deterministic action for the active toucan effect."""
+    pending = state.get("pending_toucans", [])
+    if not pending or state.get("current_turn") != bot_id:
+        return None
+    toucan = pending[0]
+    if not _can_resolve_toucan(state, bot_id, toucan):
+        return {"type": "skip_toucan"}
+    if toucan == "flip":
+        return {"type": "resolve_toucan"}
+    if toucan == "give":
+        choice = _bot_give_choice(state, bot_id)
+        if choice:
+            fruit, target_id = choice
+            return {"type": "resolve_toucan", "fruit": fruit, "target_player": target_id}
+    if toucan == "steal":
+        choice = _bot_steal_choice(state, bot_id)
+        if choice:
+            target_id, fruit = choice
+            return {"type": "resolve_toucan", "fruit": fruit, "target_player": target_id}
+    return {"type": "skip_toucan"}
+
+
+def _simulate_bot_column(state: Dict, bot_id: str, column_index: int) -> Optional[Dict]:
+    """Apply a draft and all of its toucans on a private copy of the state."""
+    simulated = copy.deepcopy(state)
+    _, error = TucanoGame.apply_action(simulated, bot_id, {"type": "draft_column", "column": column_index})
+    if error:
+        return None
+    # A column can contain several toucans.  Resolve each one in the same order
+    # the engine presents it so the give/steal decisions see newly taken fruit.
+    for _ in range(12):
+        if simulated.get("phase") != "toucan" or simulated.get("current_turn") != bot_id:
+            break
+        action = _bot_toucan_action(simulated, bot_id)
+        if not action:
+            break
+        _, error = TucanoGame.apply_action(simulated, bot_id, action)
+        if error:
+            return None
+    return simulated
+
+
+def _bot_column_denial(state: Dict, bot_id: str, column: List[Dict]) -> int:
+    """Estimate the best visible score gain an opponent loses by this pick."""
+    fruits = [card.get("fruit") for card in column if card.get("type") == "fruit"]
+    joker_count = sum(1 for card in column if card.get("type") == "joker")
+    if not fruits and not joker_count:
+        return 0
+    opponents = [pid for pid in state.get("turn_order", []) if pid != bot_id]
+    best = 0
+    for pid in opponents:
+        before = _bot_estimated_score(state, pid, bot_id)
+        trial = copy.deepcopy(state)
+        pdata = trial["players"][pid]
+        for fruit in fruits:
+            _add_count(pdata["face_up"], fruit)
+        pdata["jokers"] = int(pdata.get("jokers", 0)) + joker_count
+        gain = _bot_estimated_score(trial, pid, bot_id) - before
+        best = max(best, gain)
+    return best
+
+
+def _bot_column_value(state: Dict, bot_id: str, column_index: int) -> float:
+    """Evaluate a whole column, including nonlinear sets and toucan effects."""
+    column = state.get("columns", [])[column_index]
+    simulated = _simulate_bot_column(state, bot_id, column_index)
+    if simulated is None:
+        return float("-inf")
+
+    own_before = _bot_estimated_score(state, bot_id, bot_id)
+    own_after = _bot_estimated_score(simulated, bot_id, bot_id)
+    value = float(own_after - own_before)
+
+    # A steal/give can change public opponents' score estimates.  Reward a
+    # confirmed swing, but keep it below our own score so the bot does not make
+    # gratuitous attacks that leave its collection worse.
+    for pid in state.get("turn_order", []):
+        if pid == bot_id:
+            continue
+        before = _bot_estimated_score(state, pid, bot_id)
+        after = _bot_estimated_score(simulated, pid, bot_id)
+        value += 0.45 * (before - after)
+
+    # Taking a high-value column also denies the next player a visible scoring
+    # step.  This matters when two columns are similarly good for us.
+    value += 0.30 * _bot_column_denial(state, bot_id, column)
+
+    # Protecting a larger exposed collection is tactically useful even when the
+    # immediate score is unchanged.  The simulation already handles the flip;
+    # this small bonus breaks otherwise arbitrary ties in favour of safety.
+    if any(card.get("type") == "toucan" and card.get("toucan") == "flip" for card in column):
+        exposed = sum(int(count) for count in state["players"][bot_id].get("face_up", {}).values())
+        value += min(exposed, 6) * 0.08
     return value
 
 
@@ -539,7 +645,7 @@ class TucanoGame:
             return None
         if state.get("phase") == "draft":
             choices = [
-                (_bot_column_value(state, bot_id, column), len(column), -index, index)
+                (_bot_column_value(state, bot_id, index), len(column), -index, index)
                 for index, column in enumerate(state.get("columns", []))
                 if column
             ]
@@ -548,25 +654,7 @@ class TucanoGame:
             _, _, _, index = max(choices)
             return {"type": "draft_column", "column": index}
         if state.get("phase") == "toucan":
-            pending = state.get("pending_toucans", [])
-            if not pending:
-                return None
-            toucan = pending[0]
-            if not _can_resolve_toucan(state, bot_id, toucan):
-                return {"type": "skip_toucan"}
-            if toucan == "flip":
-                return {"type": "resolve_toucan"}
-            if toucan == "give":
-                choice = _bot_give_choice(state, bot_id)
-                if choice:
-                    fruit, target_id = choice
-                    return {"type": "resolve_toucan", "fruit": fruit, "target_player": target_id}
-            if toucan == "steal":
-                choice = _bot_steal_choice(state, bot_id)
-                if choice:
-                    target_id, fruit = choice
-                    return {"type": "resolve_toucan", "fruit": fruit, "target_player": target_id}
-            return {"type": "skip_toucan"}
+            return _bot_toucan_action(state, bot_id)
         return None
 
     @staticmethod

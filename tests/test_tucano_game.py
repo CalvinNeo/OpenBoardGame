@@ -1,3 +1,4 @@
+import copy
 import unittest
 
 from game.tucano import TucanoGame
@@ -55,6 +56,38 @@ class TucanoGameTests(unittest.TestCase):
         state.update(current_turn="p0", phase="toucan", pending_toucans=["steal"])
 
         self.assertEqual(TucanoGame.bot_move(state, "p0"), {"type": "skip_toucan"})
+
+    def test_bot_draft_evaluation_is_read_only(self):
+        state = TucanoGame.init_game({}, _players(3))
+        state.update(current_turn="p0", phase="draft")
+        state["players"]["p0"]["face_up"] = {"fig": 2, "lime": 1}
+        state["columns"] = [
+            [{"id": "a", "type": "fruit", "fruit": "fig"}],
+            [{"id": "b", "type": "toucan", "toucan": "flip"}],
+            [{"id": "c", "type": "fruit", "fruit": "pineapple"}],
+        ]
+        before = copy.deepcopy(state)
+
+        action = TucanoGame.bot_move(state, "p0")
+
+        self.assertEqual(state, before)
+        self.assertEqual(action, {"type": "draft_column", "column": 0})
+
+    def test_bot_draft_does_not_use_opponent_protected_fruit(self):
+        state = TucanoGame.init_game({}, _players(3))
+        state.update(current_turn="p0", phase="draft")
+        state["players"]["p0"]["face_up"] = {"fig": 1}
+        state["players"]["p1"]["face_up"] = {"lime": 1}
+        state["players"]["p1"]["protected"] = {"fig": 4}
+        state["columns"] = [
+            [{"id": "a", "type": "fruit", "fruit": "fig"}],
+            [{"id": "b", "type": "fruit", "fruit": "coconut"}],
+            [{"id": "c", "type": "fruit", "fruit": "pineapple"}],
+        ]
+        expected = TucanoGame.bot_move(state, "p0")
+        state["players"]["p1"]["protected"] = {"lime": 4}
+
+        self.assertEqual(TucanoGame.bot_move(state, "p0"), expected)
 
     def test_setup_uses_delayed_toucans(self):
         state = TucanoGame.init_game({}, _players(3))

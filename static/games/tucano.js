@@ -126,12 +126,15 @@ function renderTucanoCardFace(view, card) {
   const info = tucanoCardInfo(view, card);
   const cardEl = document.createElement("div");
   cardEl.className = `tucano-card tucano-card-${card.type} has-explanation`;
+  cardEl.setAttribute("role", "img");
+  cardEl.setAttribute("aria-label", `${info.title}: ${info.effect || "Resolve this card"}`);
   cardEl.dataset.explainTitle = info.title;
   cardEl.dataset.explainText = `${info.title}: ${info.effect}. ${card.type === "fruit" ? "Scores are totals for the number of cards in your set." : "Resolve toucans immediately; jokers score at the end."}`;
 
   const icon = document.createElement("div");
   icon.className = "tucano-card-icon";
   icon.textContent = info.icon;
+  icon.setAttribute("aria-hidden", "true");
 
   const title = document.createElement("div");
   title.className = "tucano-card-name";
@@ -150,6 +153,7 @@ function renderTucanoCardFace(view, card) {
       const value = document.createElement("span");
       value.textContent = points;
       value.title = `${count} cards: ${points} points`;
+      value.setAttribute("aria-label", `${count} cards: ${points} points`);
       value.classList.toggle("is-negative", points < 0);
       scale.appendChild(value);
     });

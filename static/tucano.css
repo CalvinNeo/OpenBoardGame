@@ -1,12 +1,19 @@
+/* Tucano's board is intentionally light on chrome: the market and collections
+   are the game surface, while the turn banner is the only persistent control. */
 .tucano-panel {
-  --tucano-ink: #234336;
-  --tucano-muted: #5c7265;
-  --tucano-line: #d6e3d6;
+  --tucano-ink: #143d32;
+  --tucano-deep: #0b6048;
+  --tucano-leaf: #16805b;
+  --tucano-lime: #d9efb5;
+  --tucano-muted: #5f766d;
+  --tucano-line: #cfe0cf;
+  --tucano-paper: #fbfdf7;
+  --tucano-shadow: 0 12px 26px rgba(23, 72, 45, 0.08);
   display: grid;
-  gap: 16px;
+  gap: 18px;
   min-width: 0;
   color: var(--tucano-ink);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .tucano-panel.hidden,
@@ -19,24 +26,26 @@
 }
 
 .tucano-panel button {
-  min-height: 44px;
+  min-height: 42px;
   margin: 0;
   border: 1px solid var(--tucano-line);
-  border-radius: 10px;
-  padding: 8px 12px;
-  background: #fff;
+  border-radius: 11px;
+  padding: 8px 13px;
+  background: var(--tucano-paper);
   color: var(--tucano-ink);
   font: inherit;
   font-size: 13px;
+  font-weight: 650;
   line-height: 1.25;
   overflow-wrap: anywhere;
   touch-action: manipulation;
   cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 .tucano-panel button:disabled {
-  background: #edf2ed;
-  color: #657568;
+  background: #eef3ed;
+  color: #718078;
   opacity: 1;
   cursor: default;
 }
@@ -44,7 +53,7 @@
 .tucano-panel button:focus-visible,
 .tucano-panel summary:focus-visible,
 .tucano-card-list:focus-visible {
-  outline: 3px solid #319265;
+  outline: 3px solid rgba(22, 128, 91, 0.42);
   outline-offset: 2px;
 }
 
@@ -54,20 +63,39 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+}
+
+.tucano-header {
+  position: relative;
+  padding: 4px 2px 14px;
+  border-bottom: 1px solid var(--tucano-line);
+}
+
+.tucano-header::after {
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #e5bd56 0 17%, #41a765 17% 68%, #d6654e 68%);
+  content: "";
 }
 
 .tucano-header h2 {
   margin: 0;
-  color: #225b40;
-  font-size: 26px;
-  letter-spacing: -0.7px;
+  color: var(--tucano-deep);
+  font-size: clamp(25px, 3vw, 33px);
+  letter-spacing: -0.9px;
+  line-height: 1.1;
 }
 
 .tucano-subtitle {
-  margin-top: 4px;
+  margin-top: 5px;
   color: var(--tucano-muted);
   font-size: 12px;
+  letter-spacing: 0.01em;
   line-height: 1.4;
 }
 
@@ -75,90 +103,149 @@
 .tucano-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 7px;
 }
 
 .tucano-header-actions {
   flex-shrink: 0;
 }
 
+.tucano-header-actions button {
+  min-height: 36px;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: #f3f8ef;
+  color: var(--tucano-deep);
+  font-size: 12px;
+}
+
 .tucano-header-actions button.active {
-  background: #e3f2e6;
   border-color: #318457;
+  background: var(--tucano-lime);
+  box-shadow: 0 0 0 3px rgba(49, 132, 87, 0.12);
 }
 
 .tucano-status-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(56px, 0.6fr);
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .tucano-status-grid > div {
   display: grid;
   align-content: start;
-  gap: 5px;
+  gap: 4px;
+  min-height: 62px;
   padding: 10px 12px;
   border: 1px solid var(--tucano-line);
-  border-radius: 10px;
-  background: #f5f8f1;
-  font-size: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f6fbf1, #edf5e9);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+}
+
+.tucano-status-grid > div:first-child {
+  border-color: #b9d99e;
+  background: linear-gradient(135deg, #f0f8dc, #e3f2cb);
 }
 
 .tucano-status-label {
   color: var(--tucano-muted);
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
   text-transform: uppercase;
+}
+
+.tucano-status-grid strong {
+  font-variant-numeric: tabular-nums;
 }
 
 .tucano-notice,
 .tucano-winner {
-  padding: 10px 12px;
+  position: relative;
+  padding: 12px 14px 12px 17px;
   border: 1px solid var(--tucano-line);
-  border-radius: 10px;
-  background: #f4f7f3;
+  border-radius: 12px;
+  background: #f3f8f1;
+  box-shadow: var(--tucano-shadow);
   font-size: 13px;
   line-height: 1.5;
 }
 
+.tucano-notice::before,
+.tucano-winner::before {
+  position: absolute;
+  inset: 10px auto 10px 7px;
+  width: 3px;
+  border-radius: 4px;
+  background: #76ad63;
+  content: "";
+}
+
 .tucano-notice.is-your-turn {
-  background: #eaf5e8;
-  border-color: #9ac294;
+  border-color: #93c47c;
+  background: linear-gradient(110deg, #eff9de, #e2f4df);
+}
+
+.tucano-notice.is-your-turn::before {
+  background: var(--tucano-leaf);
 }
 
 .tucano-notice.is-toucan,
 .tucano-winner {
-  background: #fff6dc;
-  border-color: #e6cf89;
+  border-color: #e1c578;
+  background: linear-gradient(110deg, #fff8df, #fff1cf);
+}
+
+.tucano-notice.is-toucan::before,
+.tucano-winner::before {
+  background: #d49527;
 }
 
 .tucano-notice > strong {
   display: block;
   margin-bottom: 2px;
+  font-size: 14px;
 }
 
 .tucano-actions {
-  margin-top: 8px;
+  margin-top: 9px;
 }
 
 .tucano-actions button {
-  flex: 1 1 110px;
+  flex: 1 1 135px;
 }
 
 .tucano-selection {
   padding-top: 8px;
-  font-weight: 700;
+  color: var(--tucano-deep);
+  font-weight: 750;
+}
+
+.tucano-market,
+.tucano-panel > section[aria-labelledby="tucanoPlayersTitle"] {
+  min-width: 0;
+}
+
+.tucano-market {
+  padding: 14px;
+  border: 1px solid #d2e2cc;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #f8fcf3, #eef6e8);
+  box-shadow: var(--tucano-shadow);
 }
 
 .tucano-section-heading {
   flex-wrap: wrap;
-  margin-bottom: 9px;
+  margin-bottom: 11px;
 }
 
 .tucano-section-heading h3 {
   margin: 0;
-  font-size: 15px;
+  color: var(--tucano-deep);
+  font-size: 16px;
+  line-height: 1.25;
 }
 
 .tucano-section-heading > span {
@@ -177,74 +264,83 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px;
-  border: 1px solid #cbdcc7;
-  border-radius: 12px;
-  background: #f0f5e9;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #c8d9bf;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.64);
 }
 
 .tucano-column.is-available {
-  border-color: #a2c697;
+  border-color: #8eba72;
+  box-shadow: inset 0 0 0 1px rgba(96, 163, 78, 0.2);
 }
 
 .tucano-column-title {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 4px;
   margin: 0;
+  color: var(--tucano-deep);
   font-size: 13px;
 }
 
 .tucano-column-count {
   color: var(--tucano-muted);
   font-size: 11px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .tucano-card-list {
   display: flex;
-  flex-direction: column;
   flex: 1 1 auto;
+  flex-direction: column;
   gap: 7px;
-  min-height: 112px;
-  max-height: 350px;
+  min-height: 118px;
+  max-height: 340px;
   overflow-y: auto;
-  scrollbar-width: thin;
+  padding: 2px;
   scrollbar-color: #9ab49a transparent;
-  border-radius: 8px;
+  scrollbar-width: thin;
+  border-radius: 9px;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .tucano-card {
   display: grid;
+  flex: 0 0 auto;
   justify-items: center;
   align-content: start;
-  flex: 0 0 auto;
   gap: 5px;
-  padding: 9px 6px;
-  border: 1px solid #d7dfc6;
-  border-radius: 8px;
-  background: #fffef7;
+  min-height: 105px;
+  padding: 9px 6px 8px;
+  border: 1px solid #d4dfc9;
+  border-radius: 10px;
+  background: var(--tucano-paper);
+  box-shadow: 0 3px 7px rgba(24, 72, 44, 0.06);
   text-align: center;
 }
 
 .tucano-card-icon {
-  font-size: 29px;
-  line-height: 1.2;
+  font-size: 30px;
+  line-height: 1.1;
 }
 
 .tucano-card-name {
   max-width: 100%;
+  color: #225744;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.25;
 }
 
 .tucano-card-effect {
   width: 100%;
   color: var(--tucano-muted);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.35;
 }
 
@@ -258,39 +354,50 @@
 
 .tucano-score-scale span {
   min-width: 18px;
-  padding: 2px;
-  border-radius: 3px;
-  background: #edf2e4;
+  padding: 2px 3px;
+  border-radius: 4px;
+  background: #e9f2df;
   font-variant-numeric: tabular-nums;
 }
 
 .tucano-score-scale .is-negative {
-  background: #fbe9df;
-  color: #974430;
+  background: #fbe8dd;
+  color: #994735;
 }
 
 .tucano-card-toucan {
-  background: #fff4d5;
-  border-color: #e5c779;
+  border-color: #e1bd5e;
+  background: linear-gradient(145deg, #fff8dd, #fff0bd);
 }
 
 .tucano-card-joker {
-  background: #f2edfc;
-  border-color: #d4c4ec;
+  border-color: #cbb9df;
+  background: linear-gradient(145deg, #f6f1ff, #ebe1fb);
 }
 
 .tucano-panel .tucano-column-select {
   width: 100%;
-  padding: 8px 3px;
-  font-weight: 700;
+  min-height: 38px;
+  padding: 7px 4px;
+  border-radius: 9px;
+  font-size: 12px;
 }
 
 .tucano-panel .tucano-column-select.action-allowed,
 .tucano-panel .tucano-actions .action-allowed,
 .tucano-panel .tucano-target-btn {
-  background: #2d714e;
+  border-color: var(--tucano-leaf);
+  background: var(--tucano-leaf);
   color: #fff;
-  border-color: #2d714e;
+  box-shadow: 0 4px 10px rgba(22, 128, 91, 0.2);
+}
+
+.tucano-panel .tucano-column-select.action-allowed:hover,
+.tucano-panel .tucano-actions .action-allowed:hover,
+.tucano-panel .tucano-target-btn:hover {
+  background: var(--tucano-deep);
+  border-color: var(--tucano-deep);
+  transform: translateY(-1px);
 }
 
 .tucano-players {
@@ -301,18 +408,34 @@
 }
 
 .tucano-player-card {
-  padding: 10px;
+  position: relative;
+  min-width: 0;
+  padding: 12px;
   border: 1px solid var(--tucano-line);
-  border-radius: 12px;
+  border-radius: 13px;
   background: #fff;
+  box-shadow: 0 4px 12px rgba(23, 72, 45, 0.05);
 }
 
 .tucano-player-card.self {
-  background: #f5faf2;
+  border-color: #a8cf93;
+  background: #f5faef;
 }
 
 .tucano-player-card.current {
-  border-color: #599363;
+  border-color: #5eaa75;
+  box-shadow: 0 0 0 2px rgba(94, 170, 117, 0.14), 0 5px 14px rgba(23, 72, 45, 0.08);
+}
+
+.tucano-player-card.current::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 5px;
+  width: 3px;
+  border-radius: 3px;
+  background: #5eaa75;
+  content: "";
 }
 
 .tucano-player-heading {
@@ -321,103 +444,108 @@
 
 .tucano-player-name {
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .tucano-player-badges {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 4px;
-  flex-shrink: 0;
 }
 
 .tucano-player-badges span {
-  padding: 3px 5px;
-  border-radius: 4px;
-  background: #e6efe1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #e4f0dd;
   color: #35603c;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .tucano-player-meta {
-  margin-top: 4px;
+  margin-top: 5px;
   color: var(--tucano-muted);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.4;
 }
 
 .tucano-fruit-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 9px;
+  gap: 6px;
+  margin-top: 11px;
 }
 
 .tucano-panel .tucano-fruit-chip {
   display: flex;
+  width: 48px;
+  min-width: 48px;
+  min-height: 46px;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   padding: 4px 2px;
-  width: 44px;
-  min-width: 44px;
+  border-radius: 9px;
   font-size: 11px;
 }
 
 .tucano-fruit-icon {
-  font-size: 19px;
-  line-height: 1.2;
+  font-size: 20px;
+  line-height: 1.15;
 }
 
 .tucano-panel .tucano-fruit-chip:disabled {
-  background: #f7f9f4;
+  background: #f5f8f2;
   color: var(--tucano-ink);
 }
 
 .tucano-panel .tucano-fruit-chip.action-allowed {
+  border-color: #88b878;
   background: #eaf5de;
-  border-color: #77a669;
 }
 
 .tucano-panel .tucano-fruit-chip.selected {
-  border-color: #2d714e;
-  background: #d7ebcc;
-  box-shadow: inset 0 0 0 1px #2d714e;
+  border-color: var(--tucano-deep);
+  background: #d3ebc6;
+  box-shadow: inset 0 0 0 2px var(--tucano-deep);
 }
 
 .tucano-panel .tucano-target-btn {
   width: 100%;
-  margin-top: 9px;
+  margin-top: 10px;
 }
 
 .tucano-score-details {
-  margin-top: 9px;
+  margin-top: 10px;
   border-top: 1px solid var(--tucano-line);
   color: var(--tucano-muted);
   font-size: 12px;
 }
 
 .tucano-score-details > summary {
-  padding: 10px 0 2px;
+  padding: 9px 0 2px;
+  color: var(--tucano-deep);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .tucano-score-breakdown {
   display: grid;
   gap: 5px;
-  max-height: 240px;
+  max-height: 220px;
   overflow-y: auto;
-  margin-top: 8px;
+  margin-top: 7px;
   padding-right: 3px;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .tucano-score-row {
   padding: 6px 8px;
-  border-radius: 6px;
-  background: #f0f4eb;
+  border-radius: 7px;
+  background: #f0f5eb;
   line-height: 1.4;
 }
 
@@ -430,15 +558,20 @@
 
 .tucano-modal {
   max-width: 620px;
-  max-height: 85dvh;
+  max-height: min(85dvh, calc(100svh - 32px));
+  padding-bottom: env(safe-area-inset-bottom);
   overflow-wrap: anywhere;
+  border-color: #cfe0cf;
+  box-shadow: 0 22px 60px rgba(16, 66, 45, 0.25);
 }
 
 .tucano-modal .modal-header {
   gap: 10px;
+  background: #f4f9ef;
 }
 
 .tucano-modal .modal-header h2 {
+  color: var(--tucano-deep);
   font-size: 19px;
 }
 
@@ -461,15 +594,16 @@
 
 .tucano-help-fruits p {
   margin: 0;
-  padding: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid #9ac581;
+  border-radius: 0 7px 7px 0;
   background: #f2f6ed;
-  border-radius: 6px;
   font-size: 13px;
 }
 
 @media (min-width: 1100px) {
   .tucano-panel {
-    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
+    grid-template-columns: minmax(0, 1.45fr) minmax(270px, 0.9fr);
     align-items: start;
   }
 
@@ -501,7 +635,7 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
 
 @media (hover: hover) {
   .tucano-panel button:not(:disabled):hover {
-    filter: brightness(0.94);
+    filter: brightness(0.97);
   }
 }
 
@@ -513,67 +647,115 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
 
 @media (max-width: 600px) {
   .tucano-panel {
-    gap: 12px;
+    gap: 13px;
+  }
+
+  .tucano-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .tucano-header h2 {
-    font-size: 23px;
+    font-size: 24px;
   }
 
   .tucano-subtitle {
-    max-width: 175px;
+    max-width: 180px;
     font-size: 11px;
   }
 
+  .tucano-header-actions {
+    gap: 5px;
+  }
+
   .tucano-header-actions button {
-    padding: 8px;
-    font-size: 12px;
+    min-height: 34px;
+    padding: 7px 9px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .tucano-status-grid {
+    gap: 6px;
   }
 
   .tucano-status-grid > div {
+    min-height: 58px;
     padding: 8px;
     font-size: 13px;
   }
 
+  .tucano-status-grid {
+    grid-template-areas: "phase deck" "turn turn";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tucano-status-grid > div:nth-child(1) {
+    grid-area: phase;
+  }
+
+  .tucano-status-grid > div:nth-child(2) {
+    grid-area: turn;
+  }
+
+  .tucano-status-grid > div:nth-child(3) {
+    grid-area: deck;
+  }
+
+  .tucano-market {
+    padding: 10px;
+    border-radius: 13px;
+  }
+
   .tucano-columns {
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .tucano-column {
     gap: 6px;
-    padding: 5px;
-    border-radius: 9px;
+    padding: 6px;
+    border-radius: 10px;
   }
 
   .tucano-column-title {
-    font-size: 12px;
-  }
-
-  .tucano-card-list {
-    max-height: 286px;
-    max-height: min(286px, 42svh);
-    gap: 6px;
-  }
-
-  .tucano-card {
-    padding: 7px 4px;
-  }
-
-  .tucano-players {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+    font-size: 11px;
   }
 
   .tucano-column-count {
     font-size: 10px;
   }
 
-  .tucano-section-heading {
+  .tucano-card-list {
+    max-height: min(270px, 40svh);
+    min-height: 102px;
     gap: 5px;
   }
 
-  .tucano-section-heading h3 {
-    font-size: 14px;
+  .tucano-card {
+    min-height: 96px;
+    padding: 7px 3px;
+  }
+
+  .tucano-card-icon {
+    font-size: 25px;
+  }
+
+  .tucano-card-name {
+    font-size: 11px;
+  }
+
+  .tucano-card-effect {
+    font-size: 9px;
+  }
+
+  .tucano-player-card {
+    padding: 10px;
+  }
+
+  .tucano-players {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
   }
 }
 
@@ -595,7 +777,21 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
   }
 
   .tucano-column-title {
-    flex-direction: column;
-    align-items: flex-start;
+    display: block;
+  }
+
+  .tucano-column:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .tucano-column-count {
+    display: block;
+    margin-top: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tucano-panel button {
+    transition: none;
   }
 }

@@ -1045,14 +1045,14 @@ const GAME_ASSETS = {
   },
   "tucano": {
     "scripts": [
-      "/static/games/tucano.js?v=app_v2"
+      "/static/games/tucano.js?v=app_v3"
     ],
     "styles": [
-      "/static/tucano.css?v=app_v2"
+      "/static/tucano.css?v=app_v3"
     ],
     "panel": "tucanoPanel",
     "header": "showTucanoHeaderActions",
-    "markup": "/static/games/tucano.html?v=1"
+    "markup": "/static/games/tucano.html?v=2"
   },
   "witchs_brew": {
     "scripts": [
