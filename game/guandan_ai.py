@@ -8,6 +8,8 @@ import time
 from contextlib import contextmanager
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
+from game.guandan_hand import partition_hand
+
 BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
 STRUCTURED_RUNOUT_TYPES = ("full_house", "straight", "three_pairs", "steel_plate")
 
@@ -185,6 +187,9 @@ _CORE = _CoreProxy()
 
 def call(core, name: str, *args, **kwargs):
     prev = _get_core()
+    previous_legacy = getattr(_CORE_LOCAL, "legacy_heuristics", False)
+    if args and isinstance(args[0], dict) and "config" in args[0]:
+        _CORE_LOCAL.legacy_heuristics = str(args[0]["config"].get("bot_mode", "auto")).lower() == "nn"
     previous_candidates = getattr(_CORE_LOCAL, "decomposition_candidates", None)
     previous_fast_summaries = getattr(_CORE_LOCAL, "fast_decomposition_summaries", None)
     previous_bounded_metrics = getattr(_CORE_LOCAL, "bounded_hand_values", None)
@@ -207,6 +212,7 @@ def call(core, name: str, *args, **kwargs):
         return globals()[name](*args, **kwargs)
     finally:
         _CORE_LOCAL.value = prev
+        _CORE_LOCAL.legacy_heuristics = previous_legacy
         if prev is not core:
             if previous_candidates is None:
                 delattr(_CORE_LOCAL, "decomposition_candidates")
@@ -472,6 +478,132 @@ def _teammate_single_response_probability(
     return _hypergeom_hit_probability(len(unknown_cards), len(target_hits), free_slots)
 
 
+def _teammate_hand_reply_willingness(
+    hand: List[Dict], level_rank: int, combo: Dict, config: Dict, urgent: bool,
+) -> float:
+    """Cheap material-aware intent, without calling a player's decision policy."""
+    if not hand:
+        return 0.0
+    if _can_play_all(hand, level_rank, config, combo):
+        return 1.0
+    combo_type = combo.get("type")
+    info = _hand_info(hand, level_rank)
+    threshold = _combo_numeric_value(combo)
+    if combo_type == "single":
+        options = [[card["id"]] for card in hand if _single_order_value(card, level_rank) > threshold]
+    elif combo_type in ("pair", "three"):
+        options = _list_rank_group_options(hand, level_rank, threshold,
+                                           2 if combo_type == "pair" else 3, 1, info=info)
+    else:
+        generators = {
+            "full_house": _list_full_house_options,
+            "straight": _list_straight_options,
+            "three_pairs": _list_three_pairs_options,
+            "steel_plate": _list_steel_plate_options,
+        }
+        generator = generators.get(combo_type)
+        if generator is None:
+            return 0.0
+        options = generator(hand, level_rank, threshold, 1, info=info)
+    by_id = _map_hand_by_id(hand)
+    counts = _rank_count_map(hand, level_rank)
+    jokers = {kind: sum(card.get("joker") == kind for card in hand) for kind in ("small", "big")}
+    best = 0.0
+    for card_ids in options:
+        selected = [by_id[card_id] for card_id in card_ids]
+        response = _CORE._evaluate_combo_for_type(selected, level_rank, config, combo_type)
+        if (not response or response.get("type") != combo_type
+                or not _compare_combos(combo, response, level_rank, config)):
+            continue
+        willingness = 1.0 if urgent or len(hand) <= 6 else 0.9
+        spent = _rank_count_map(selected, level_rank)
+        for rank, quantity in spent.items():
+            if quantity < counts[rank]:
+                willingness *= 0.15 if counts[rank] >= 4 else 0.45 if combo_type == "single" else 0.7
+        for kind, quantity in jokers.items():
+            used = sum(card.get("joker") == kind for card in selected)
+            if 0 < used < quantity:
+                willingness *= 0.35
+            if used and min(jokers.values()) >= 2:
+                willingness *= 0.2
+        if any(_is_wild(card, level_rank) for card in selected):
+            willingness *= 0.3
+        if urgent:
+            willingness = max(0.85, willingness)
+        best = max(best, willingness)
+    return best
+
+
+def _teammate_response_intent_probability(
+    state: Dict, player_id: str, combo: Optional[Dict] = None,
+) -> float:
+    """Public-pool response support discounted by a bounded willingness model."""
+    current = state.get("current_trick") or {}
+    teammate = _teammate_of(state, player_id)
+    leader = current.get("player_id")
+    if (not teammate or not leader or not _teammate_response_window_open(state, player_id)
+            or _team_of(state, leader) == _team_of(state, player_id)):
+        return 0.0
+    combo = combo or current.get("combo") or {}
+    hand_count = len(state["players"][teammate].get("hand", []))
+    if hand_count < int(combo.get("size") or 1):
+        return 0.0
+    available, locked = _teammate_public_response_pool(state, player_id, teammate)
+    draws = hand_count - len(locked)
+    if not 0 <= draws <= len(available):
+        return 0.0
+    key = (_heuristic_position_cache_key(state, player_id, 0),
+           combo.get("type"), combo.get("size"), _combo_numeric_value(combo))
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("teammate_response_intent", {})
+    if key in cache:
+        return cache[key]
+    if _deadline_expired():
+        return 0.0
+    urgent = any(
+        _team_of(state, opponent) != _team_of(state, player_id)
+        and not state["players"][opponent].get("finished")
+        and len(state["players"][opponent].get("hand", [])) <= 2
+        for opponent in state.get("turn_order", [])
+    )
+    ways = math.comb(len(available), draws)
+    if ways <= 16:
+        samples = itertools.combinations(available, draws)
+        sample_count = ways
+    else:
+        seed = hashlib.blake2b(repr((key, "teammate_intent_v1")).encode(), digest_size=8).digest()
+        rng = random.Random(int.from_bytes(seed, "big"))
+        samples = (rng.sample(available, draws) for _ in range(16))
+        sample_count = 16
+    total = 0.0
+    for sampled in samples:
+        if _deadline_expired():
+            return 0.0
+        total += _teammate_hand_reply_willingness(
+            locked + list(sampled), state["level_rank"], combo, state.get("config", {}), urgent,
+        )
+    probability = total / sample_count if sample_count else 0.0
+    if combo.get("type") == "single":
+        probability = min(probability, _teammate_single_response_probability(
+            state, player_id, _combo_numeric_value(combo),
+        ))
+        observation = _latest_public_single_pass_observation(state, teammate)
+        if (not urgent and observation and observation.get("hand_count") == hand_count
+                and observation.get("value", 0) <= _combo_numeric_value(combo)
+                and observation.get("leader_id") in state.get("player_teams", {})
+                and _team_of(state, observation["leader_id"]) != _team_of(state, player_id)):
+            probability *= 0.5
+    if not _deadline_expired():
+        cache[key] = probability
+    return probability
+
+
+def _teammate_future_response_probability(state: Dict, player_id: str) -> float:
+    available = _teammate_future_control_probability(state, player_id)
+    if available <= 0.0 or getattr(_CORE_LOCAL, "legacy_heuristics", False):
+        return available
+    return min(available, _teammate_response_intent_probability(state, player_id))
+
+
 def _safe_teammate_control_wait_probability(state: Dict, player_id: str) -> float:
     """Value preserving a bomb while a teammate can answer a high single.
 
@@ -501,7 +633,7 @@ def _safe_teammate_control_wait_probability(state: Dict, player_id: str) -> floa
         for pid in state.get("turn_order", [])
     ):
         return 0.0
-    return _teammate_future_control_probability(state, player_id)
+    return _teammate_future_response_probability(state, player_id)
 
 
 def _teammate_lead_context(state: Dict, player_id: str) -> Optional[str]:
@@ -628,6 +760,9 @@ def _teammate_backstop_confidence(
     teammate_left = len(state["players"][teammate]["hand"])
     if combo_type not in BOMB_TYPES and combo_size > 0 and teammate_left < combo_size:
         return 0.0
+
+    if combo_type == "single" and not getattr(_CORE_LOCAL, "legacy_heuristics", False):
+        return min(0.72, _teammate_response_intent_probability(state, player_id, trick_combo))
 
     teammate_history = _teammate_public_history_profile(state, player_id)
     if combo_type in ("pair", "three"):
@@ -4636,12 +4771,12 @@ def _immediate_teammate_backstop_confidence(
     threshold = float(trick_combo.get("rank_value", 0))
     if threshold < CONTROL_SINGLE_VALUE_MIN:
         return confidence
-    response_probability = _teammate_single_response_probability(
-        state,
-        player_id,
-        threshold,
-    )
+    legacy = getattr(_CORE_LOCAL, "legacy_heuristics", False)
+    response_probability = (_teammate_single_response_probability(state, player_id, threshold)
+                            if legacy else _teammate_response_intent_probability(state, player_id, trick_combo))
     public_single_confidence = min(0.78, 0.08 + response_probability * 0.7)
+    if not legacy:
+        public_single_confidence = min(public_single_confidence, response_probability)
     return max(confidence, public_single_confidence)
 
 
@@ -10334,7 +10469,7 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
             low_bomb_anchor = _point_order_value(3, state["level_rank"])
             rank_pressure = max(0.0, combo.get("rank_value", 0) - low_bomb_anchor)
             score += max(0.0, 7.5 - rank_pressure * 1.3)
-        teammate_control = _teammate_future_control_probability(state, player_id)
+        teammate_control = _teammate_future_response_probability(state, player_id)
         if current_combo.get("type") == "single" and current_combo.get("rank_value", 0) >= 70 and teammate_control > 0:
             score -= teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
 
@@ -10473,6 +10608,8 @@ def _teammate_can_retake_current_lane(
     teammate_hand = state["players"].get(teammate, {}).get("hand", [])
     if not teammate_hand:
         return False
+    if not getattr(_CORE_LOCAL, "legacy_heuristics", False):
+        return _teammate_response_intent_probability(state, player_id, current_combo) >= 0.8
     if not state.get("_ai_sampled_world"):
         if not _teammate_response_window_open(state, player_id):
             return False
@@ -11734,28 +11871,38 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         return 0.0
     bounded = _bounded_finalist_scoring()
     bounded_cache = getattr(_CORE_LOCAL, "bounded_hand_values", None) if bounded else None
-    bounded_key = _bounded_hand_value_cache_key(hand, level_rank, "turns") if bounded_cache is not None else None
+    legacy = bool(getattr(_CORE_LOCAL, "legacy_heuristics", False))
+    bounded_key = _bounded_hand_value_cache_key(
+        hand, level_rank, "legacy_turns" if legacy else "turns",
+    ) if bounded_cache is not None else None
     if bounded_cache is not None and bounded_key in bounded_cache:
         return bounded_cache[bounded_key]
-    cache_key = _hand_decomposition_cache_key(hand, level_rank)
+    cache_key = (legacy, _hand_decomposition_cache_key(hand, level_rank))
     if not bounded:
         cached = _HAND_TURNS_CACHE.get(cache_key)
         if cached is not None:
             return cached
-    metrics = _hand_structure_metrics(hand, level_rank)
-    turns = float(len(hand))
-    turns -= metrics["turn_savings"]
-    turns -= metrics["shape_synergy"]
-    turns -= min(1.0, metrics["wild_count"] * 0.22 + metrics["joker_small"] * 0.18 + metrics["joker_big"] * 0.28)
-    turns += min(2.4, metrics["low_single_burden"] * 0.12)
-    turns -= min(1.2, metrics["grouped_control"] * 0.08)
-    decomp_turns = metrics["decomp_turns"]
-    if decomp_turns > 0:
-        decomp_turns += metrics["decomp_low_singles"] * 0.18
-        decomp_turns += metrics["decomp_special_turns"] * 0.08
-        turns = min(turns, decomp_turns)
-    result = max(1.0, turns)
-    if not bounded and not _deadline_expired():
+    complete = True
+    if legacy:
+        metrics = _hand_structure_metrics(hand, level_rank)
+        turns = float(len(hand))
+        turns -= metrics["turn_savings"]
+        turns -= metrics["shape_synergy"]
+        turns -= min(1.0, metrics["wild_count"] * 0.22 + metrics["joker_small"] * 0.18 + metrics["joker_big"] * 0.28)
+        turns += min(2.4, metrics["low_single_burden"] * 0.12)
+        turns -= min(1.2, metrics["grouped_control"] * 0.08)
+        decomp_turns = metrics["decomp_turns"]
+        if decomp_turns > 0:
+            decomp_turns += metrics["decomp_low_singles"] * 0.18
+            decomp_turns += metrics["decomp_special_turns"] * 0.08
+            turns = min(turns, decomp_turns)
+        result = max(1.0, turns)
+    else:
+        partition = partition_hand(hand, level_rank, node_limit=96 if bounded else 512,
+                                   expired=_deadline_expired)
+        result = float(partition.turns)
+        complete = partition.complete
+    if complete and not bounded and not _deadline_expired():
         if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
             _HAND_TURNS_CACHE.clear()
         _HAND_TURNS_CACHE[cache_key] = result
@@ -14254,9 +14401,9 @@ def _short_enemy_single_pressure(state: Dict, player_id: str) -> float:
     pressure = 8.0 + (7 - left) * 2.0
     if left <= 5 and combo.get("rank_value", 0) >= TOP_SINGLE_VALUE_MIN:
         pressure += 10.0
-    backstop = _teammate_single_response_probability(
-        state, player_id, combo.get("rank_value", 0)
-    )
+    backstop = (_teammate_single_response_probability(state, player_id, combo.get("rank_value", 0))
+                if getattr(_CORE_LOCAL, "legacy_heuristics", False)
+                else _teammate_response_intent_probability(state, player_id, combo))
     # Having a possible higher single is weaker than a demonstrated handoff:
     # the partner may need to break a group or may themselves defer. Never let
     # a speculative partner response erase our own responsibility to contest.

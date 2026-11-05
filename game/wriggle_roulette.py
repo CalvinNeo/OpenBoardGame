@@ -4,6 +4,8 @@ import random
 import secrets
 from typing import Dict, List, Optional, Tuple
 
+from game.wriggle_roulette_ai import choose_action
+
 
 EEL_COUNT = 51
 SNAKE_COUNT = 17
@@ -706,26 +708,7 @@ class WriggleRouletteGame:
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         if "grab" not in WriggleRouletteGame.get_legal_actions(state, bot_id):
             return None
-        player = state["players"][bot_id]
-        saved = len(player.get("round_eels", []))
-        center = len(state.get("center_snakes", []))
-        threshold = int(state.get("outbreak_threshold", 1))
-        remaining_danger = threshold - center
-        maximum = 6 if len(state["turn_order"]) == 2 else 4
-        public_bag = state.get("cycle_public_bag", {})
-        total = max(1, int(public_bag.get("total", 0)))
-        snake_ratio = int(public_bag.get("snakes", 0)) / total
-        if saved >= 5 or (saved >= 3 and remaining_danger <= 2):
-            count = 0
-        elif remaining_danger <= 1:
-            count = 1
-        elif snake_ratio >= 0.34:
-            count = min(2, maximum)
-        elif saved == 0:
-            count = min(4, maximum)
-        else:
-            count = min(3, maximum)
-        return {"type": "grab", "count": count, "cycle_no": state["cycle_no"], "delay_ms": 450}
+        return choose_action(WriggleRouletteGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

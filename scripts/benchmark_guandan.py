@@ -31,7 +31,7 @@ from typing import Dict, List, Optional, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_FILES = ("game/guandan.py", "game/guandan_ai.py", "game/memories.py")
 POLICIES = ("auto", "heuristic", "greedy", "random")
-OPTIONAL_RUNTIME_FILES = ("game/guandan_trick.py", "game/guandan_endgame.py")
+OPTIONAL_RUNTIME_FILES = ("game/guandan_trick.py", "game/guandan_endgame.py", "game/guandan_hand.py")
 SCHEMA_VERSION = 2
 
 

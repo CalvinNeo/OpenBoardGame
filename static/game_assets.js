@@ -1018,13 +1018,14 @@ const GAME_ASSETS = {
   },
   "felix": {
     "scripts": [
-      "/static/games/felix.js?v=app_v1"
+      "/static/games/felix.js?v=app_v2"
     ],
     "styles": [],
     "panel": "felixPanel",
+    "panelTitle": "🐱 Felix: The Cat in the Sack",
     "header": "showFelixHeaderActions",
-    "markup": "/static/games/felix.html?v=1",
-    "styleFragments": "/static/games/felix.css?v=1"
+    "markup": "/static/games/felix.html?v=2",
+    "styleFragments": "/static/games/felix.css?v=2"
   },
   "tacta": {
     "scripts": [

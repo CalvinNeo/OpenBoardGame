@@ -37,6 +37,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "gold_rush",
     "grand_austria_hotel",
     "guandan",
+    "high_society",
     "hive",
     "hot_streak",
     "incan_gold",
@@ -73,5 +74,6 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "the_gang",
     "trekking_history",
     "tucano",
+    "wriggle_roulette",
     "yahtzee",
 })

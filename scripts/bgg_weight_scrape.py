@@ -64,6 +64,7 @@ GAME_URLS = {
     "wriggle_roulette": "https://boardgamegeek.com/boardgame/443829/wriggle-roulette",
     "catan_starfarers": "https://boardgamegeek.com/boardgame/282853/catan-starfarers",
     "bomb_busters": "https://boardgamegeek.com/boardgame/413246/bomb-busters",
+    "felix": "https://boardgamegeek.com/boardgame/32125/felix-the-cat-in-the-sack",
     "perfect_mismatch": "https://boardgamegeek.com/boardgame/424482/perfect-mismatch",
     "age_of_war": "https://boardgamegeek.com/boardgame/28086/age-of-war",
     "wandering_towers": "https://boardgamegeek.com/boardgame/355483/wandering-towers",

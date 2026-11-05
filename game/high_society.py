@@ -1,6 +1,8 @@
 import random
 from typing import Dict, List, Optional, Tuple
 
+from .high_society_ai import choose_action
+
 
 MONEY_VALUES = [1000, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 15000, 20000, 25000]
 
@@ -187,7 +189,7 @@ def _finalize_game(state: Dict, unauctioned_card: Optional[Dict]) -> None:
 def _player_can_bid(pdata: Dict, current_high_bid: int) -> bool:
     table_total = _money_total(pdata.get("table_money", []))
     hand = list(pdata.get("hand_money", []))
-    return any(table_total + value > current_high_bid for value in hand)
+    return bool(hand) and table_total + _money_total(hand) > current_high_bid
 
 
 def _validate_bid(state: Dict, player_id: str, money_values: List[int]) -> Tuple[Optional[int], Optional[str]]:
@@ -514,33 +516,7 @@ class HighSocietyGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over") or bot_id not in state.get("players", {}):
-            return None
-        phase = state.get("phase")
-        pdata = state["players"][bot_id]
-        if phase == "round_summary":
-            if bot_id not in state.get("next_ready", []):
-                return {"type": "next_round"}
-            return None
-        if phase == "choose_faux_pas" and bot_id == state.get("current_turn"):
-            luxuries = [c for c in pdata.get("status_cards", []) if c.get("type") == "luxury"]
-            if not luxuries:
-                return None
-            chosen = min(luxuries, key=lambda c: int(c.get("value", 0)))
-            return {"type": "choose_faux_pas_discard", "card_id": chosen.get("id")}
-        if phase not in ("normal_auction", "disgrace_auction") or bot_id != state.get("current_turn"):
-            return None
-        hand = sorted(pdata.get("hand_money", []))
-        current_high = int(state.get("current_high_bid", 0))
-        table_total = _money_total(pdata.get("table_money", []))
-        card = state.get("current_status") or {}
-        max_budget = max(0, _money_total(hand) // 4)
-        if card.get("type") == "disgrace":
-            max_budget = max(0, _money_total(hand) // 5)
-        for value in hand:
-            if table_total + value > current_high and table_total + value <= max_budget:
-                return {"type": "bid", "money_values": [value]}
-        return {"type": "pass"}
+        return choose_action(HighSocietyGame.get_public_view(state, bot_id), MONEY_VALUES)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

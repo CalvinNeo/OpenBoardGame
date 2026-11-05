@@ -1,235 +1,157 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-felix-1 {
-
-.felix-panel {
-  display: grid;
-  gap: 14px;
-}
-
-.felix-topbar,
-.felix-table {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.5fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.felix-topbar {
-  align-items: center;
-}
-
-.felix-subtitle,
-.felix-auction-meta,
-.felix-player-meta,
-.felix-slot-status {
-  color: #555;
-  font-size: 13px;
-}
-
-.felix-header-actions,
-.felix-bid-controls,
-.felix-mouse-row,
-.felix-slot-row,
-.felix-hand,
-.felix-won-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.felix-sack,
-.felix-auction,
-.felix-hand-section {
-  border: 1px solid #d7dde7;
-  border-radius: 8px;
-  padding: 12px;
-  background: #ffffff;
-}
-
-.felix-sack h3,
-.felix-auction h3,
-.felix-hand-section h3 {
-  margin-top: 0;
-}
-
-.felix-auction-meta {
-  display: grid;
-  gap: 5px;
-  margin-bottom: 12px;
-}
-
-.felix-bid-controls label {
-  font-weight: 700;
-}
-
-.felix-bid-controls input {
-  width: 86px;
-}
-
-.felix-mouse-card {
-  min-width: 74px;
-  min-height: 58px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #f8fafc;
-  display: grid;
-  place-items: center;
-  padding: 6px;
-  text-align: center;
-}
-
-.felix-mouse-card span {
-  font-size: 22px;
-  line-height: 1;
-}
-
-.felix-mouse-card small {
-  color: #64748b;
-}
-
-.felix-mouse-card.bag {
-  background: #fff7ed;
-  border-color: #fdba74;
-}
-
-.felix-slot {
-  width: 116px;
-  min-height: 154px;
-  border: 1px solid #d7dde7;
-  border-radius: 8px;
-  padding: 8px;
-  background: #f8fafc;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 6px;
-}
-
-.felix-slot-owner {
-  font-weight: 700;
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.felix-slot.resolution-awarded {
-  border-color: #22c55e;
-  background: #f0fdf4;
-}
-
-.felix-slot.resolution-removed {
-  border-color: #ef4444;
-  background: #fff1f2;
-}
-
-.felix-card {
-  width: 88px;
-  min-height: 92px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #172033;
-  display: grid;
-  place-items: center;
-  gap: 4px;
-  padding: 8px 6px;
-  text-align: center;
-  cursor: pointer;
-}
-
-.felix-card:disabled {
-  cursor: default;
-  opacity: 1;
-}
-
-.felix-card.selected,
-.felix-card:not(:disabled):hover {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
-}
-
-.felix-card.face-down {
-  background: #1f2937;
-  color: #ffffff;
-  border-color: #111827;
-}
-
-.felix-card.kind-cat {
-  background: #eff6ff;
-  border-color: #93c5fd;
-}
-
-.felix-card.kind-rabbit {
-  background: #f0fdf4;
-  border-color: #86efac;
-}
-
-.felix-card.kind-big_dog,
-.felix-card.kind-small_dog {
-  background: #fff7ed;
-  border-color: #fdba74;
-}
-
-.felix-card-emoji {
-  font-size: 32px;
-  line-height: 1;
-}
-
-.felix-card-label {
-  font-weight: 800;
-  overflow-wrap: anywhere;
-}
-
-.felix-players {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.felix-player-card {
-  display: grid;
-  gap: 8px;
-}
-
-.felix-player-card.passed {
-  opacity: 0.72;
-}
-
-.felix-won-row {
-  min-height: 38px;
-  max-height: 184px;
-  overflow: auto;
-}
-
-.felix-won-row .felix-card {
-  width: 58px;
-  min-height: 62px;
-  padding: 5px;
-}
-
-.felix-won-row .felix-card-emoji {
-  font-size: 21px;
-}
-
-.felix-won-row .felix-card-label {
-  font-size: 12px;
-}
-
-.felix-final-results,
-.felix-help-content {
-  max-height: 320px;
-  overflow: auto;
-}
-
-.felix-result-row {
-  padding: 4px 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.felix-panel button.has-explanation {
-  cursor: help;
-  outline: 2px dashed #2563eb;
-  outline-offset: 2px;
-}
+  .game-panel[data-game-theme="felix"] { background: #fffdf7; border-color: #ded3bc; color: #263f36; }
+  .game-panel[data-game-theme="felix"] > .panel-header,
+  .game-panel[data-game-theme="felix"] .game-panel-title,
+  #felixHeaderActions { flex-wrap: nowrap; min-width: 0; }
+  .game-panel[data-game-theme="felix"] .game-panel-title { flex: 1; }
+  .game-panel[data-game-theme="felix"] .game-panel-title h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: Georgia, serif; }
+  .game-panel[data-game-theme="felix"] .panel-header button { flex-shrink: 0; white-space: nowrap; }
+  .felix-panel { display: grid; gap: 16px; min-width: 0; }
+  .felix-panel * { min-width: 0; }
+  .felix-panel h3 { margin: 0; font-size: 15px; }
+  .felix-panel button { touch-action: manipulation; }
+  .felix-panel button:focus-visible,
+  .felix-panel [tabindex]:focus-visible { outline: 3px solid #287863; outline-offset: 2px; }
+  .felix-panel button:disabled { cursor: not-allowed; opacity: .5; }
+  .felix-topbar, .felix-round, .felix-section-heading, .felix-player-heading,
+  .felix-player-meta, .felix-ready { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .felix-topbar, .felix-section-heading, .felix-player-heading { justify-content: space-between; }
+  .felix-topbar { font-size: 13px; }
+  .felix-round { gap: 5px; }
+  #felixPhase { margin-left: 5px; padding-left: 10px; border-left: 1px solid #ddd0b4; color: #76644d; }
+  .felix-balance { background: #f7eac7; border-radius: 20px; padding: 6px 12px; white-space: nowrap; }
+  .felix-action-hint { border-left: 3px solid #b9c9bb; padding: 7px 10px; background: #f0f3eb; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+  .felix-action-hint.your-turn { border-color: #bc7027; background: #fff0d1; font-weight: 700; }
+  .felix-play-area { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 26px; align-items: start; }
+  .felix-sack, .felix-hand-section, .felix-player-section { display: grid; gap: 10px; }
+  .felix-section-heading > span, .felix-hand-hint, .felix-table-footer { font-size: 12px; color: #726650; }
+  .felix-slots { display: grid; grid-template-columns: repeat(var(--felix-slots, 5), minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+  .felix-slot { display: grid; grid-template-rows: auto auto 1fr auto; gap: 6px; text-align: center; }
+  .felix-slot-position { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 30px; border-radius: 7px; background: #f2ead7; font-size: 13px; font-weight: 700; }
+  .felix-slot-position.next-reward { background: #f8e4ad; box-shadow: inset 0 0 0 1px #cba956; }
+  .felix-slot-position.empty-reward { color: #877e6a; background: #edece5; }
+  .felix-slot-owner { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; font-weight: 600; line-height: 1.5; }
+  .felix-slot-status { font-size: 11px; line-height: 1.4; color: #6a735e; overflow-wrap: anywhere; }
+  .felix-card { position: relative; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; align-items: center; gap: 5px; width: 100%; min-height: 126px; border: 1px solid #bcd4c4; border-radius: 10px; padding: 8px 6px; background: #edf6e9; color: #234e35; text-align: center; box-shadow: 0 2px 0 #263f3610; }
+  button.felix-card { cursor: pointer; }
+  button.felix-card:disabled { opacity: .72; cursor: default; }
+  .felix-card-value { justify-self: start; font-size: 20px; font-weight: 800; line-height: 1.15; }
+  .felix-card-emoji { font-size: 36px; line-height: 1.1; }
+  .felix-card-label { font-size: 12px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+  .felix-card.negative { background: #fff0e9; border-color: #e6b3a2; color: #923e35; }
+  .felix-card.kind-rabbit { background: #f5f1fb; border-color: #cdc0dc; color: #6b5084; }
+  .felix-card.kind-big_dog, .felix-card.kind-small_dog { background: #fcf0cf; border-color: #dfc682; color: #78572b; }
+  .felix-card.face-down { color: #f7eccf; border-color: #325e4b; background: repeating-linear-gradient(135deg, #2d5143, #2d5143 8px, #345b4b 8px, #345b4b 10px); }
+  .felix-card.waiting { color: #8a8f80; border: 1px dashed #bfc7b7; background: #f5f4ec; box-shadow: none; }
+  .felix-slot.resolution-awarded .felix-card { border: 2px solid #39815a; }
+  .felix-slot.resolution-awarded .felix-slot-status { color: #246445; font-weight: 700; }
+  .felix-slot.resolution-removed .felix-card { opacity: .6; border: 2px dashed #b65c4d; }
+  .felix-slot.resolution-removed .felix-slot-status { color: #9c483d; }
+  .felix-hand { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .felix-hand .felix-card.selected { outline: 3px solid #287863; outline-offset: -3px; }
+  .felix-hand-stage { position: relative; }
+  .felix-hand-empty { grid-column: 1 / -1; padding: 20px 0; font-size: 13px; color: #726650; }
+  .felix-selection { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 10px; background: #fffdf7eb; backdrop-filter: blur(2px); border-radius: 10px; text-align: center; }
+  .felix-selection > strong { font-size: 18px; overflow-wrap: anywhere; }
+  .felix-selection .felix-action-buttons { width: min(100%, 270px); }
+  .felix-auction { display: grid; gap: 12px; padding-top: 4px; }
+  .felix-auction-meta { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1fr); gap: 12px; border-top: 1px solid #e0d8c6; padding-top: 10px; }
+  .felix-auction-meta > div { display: grid; gap: 3px; }
+  .felix-auction-meta span { font-size: 11px; color: #726650; }
+  #felixBid { font-size: 23px; color: #2f6348; }
+  #felixBidder { font-size: 14px; overflow-wrap: anywhere; }
+  .felix-bid-entry { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; align-items: center; }
+  .felix-bid-entry label { font-size: 13px; font-weight: 700; }
+  .felix-stepper { display: grid; grid-template-columns: 42px minmax(0, 1fr) 42px; gap: 5px; }
+  .felix-stepper button, .felix-stepper input { width: 100%; min-height: 42px; padding: 6px; font-size: 18px; text-align: center; border: 1px solid #cfc7b3; border-radius: 7px; }
+  .felix-stepper input { appearance: textfield; -moz-appearance: textfield; background: white; color: #263f36; }
+  .felix-stepper input::-webkit-inner-spin-button, .felix-stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .felix-bid-hint { grid-column: 1 / -1; color: #726650; font-size: 12px; }
+  .felix-bid-hint.invalid { color: #a33e34; }
+  .felix-action-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .felix-action-buttons button, #felixNextBtn { min-height: 42px; padding: 8px 10px; border: 1px solid #b2beaa; border-radius: 7px; font-size: 14px; font-weight: 700; background: #f3f2e9; color: #34503e; }
+  .felix-action-buttons .felix-primary, #felixNextBtn:not(:disabled) { color: #fffdf3; background: #2d6046; border-color: #2d6046; }
+  .felix-table-footer { display: flex; justify-content: space-between; gap: 8px; }
+  .felix-table-footer > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .felix-table-footer > span:last-child { flex-shrink: 0; }
+  .felix-notice { display: grid; gap: 10px; border-left: 3px solid #4f8760; padding: 12px; background: #eef4e5; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+  .felix-notice.self { border-color: #b87823; background: #fff1cf; }
+  #felixNoticeBody { display: grid; gap: 4px; }
+  #felixNextBtn { white-space: nowrap; flex-shrink: 0; }
+  .felix-ready { gap: 5px; font-size: 11px; }
+  .felix-ready-chip { padding: 3px 7px; border-radius: 12px; background: #fff9; overflow-wrap: anywhere; }
+  .felix-ready-chip.ready { color: #28613c; background: #dcecd6; }
+  .felix-ready-chip.self { font-weight: 700; }
+  .felix-final-results { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .felix-result-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 6px 0; border-bottom: 1px solid #ccdac6; }
+  .felix-result-row small { grid-column: 1 / -1; }
+  .felix-result-row.self { font-weight: 700; }
+  .felix-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .felix-player { border-top: 2px solid var(--felix-player-color, #a4b8a6); background: #f5f3e9; border-radius: 5px; padding: 9px 10px; display: grid; gap: 7px; align-content: start; }
+  .felix-player.self { background: #edf4e7; }
+  .felix-player.current { box-shadow: inset 0 0 0 1px #bf8b38; }
+  .felix-player.passed { background: #efeee9; }
+  .felix-player-name { flex: 1; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; font-size: 13px; }
+  .felix-player-badge { font-size: 10px; font-weight: 700; padding: 3px 5px; border-radius: 5px; background: #e8e1cb; }
+  .felix-player.current .felix-player-badge { background: #f7e0a2; }
+  .felix-player-meta { gap: 6px 10px; font-size: 12px; color: #5a6755; }
+  .felix-player-meta > span { white-space: nowrap; }
+  .felix-collection { font-size: 12px; }
+  .felix-collection summary { cursor: pointer; padding: 4px 0; }
+  .felix-won-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; max-height: 180px; overflow-y: auto; padding: 4px 1px; }
+  .felix-won-row .felix-card { min-height: 85px; padding: 5px 3px; }
+  .felix-won-row .felix-card-value { font-size: 16px; }
+  .felix-won-row .felix-card-emoji { font-size: 23px; }
+  .felix-won-row .felix-card-label { font-size: 10px; }
+  .felix-dialog { width: min(560px, calc(100vw - 24px)); max-height: min(80dvh, 700px); padding: 0; border: 1px solid #d6c9ac; border-radius: 12px; background: #fffdf7; color: #263f36; overflow: hidden; }
+  .felix-dialog[open] { display: flex; flex-direction: column; }
+  .felix-dialog::backdrop { background: #152c2670; }
+  .felix-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #e2d8c2; }
+  .felix-dialog-heading h2 { font: 700 20px/1.25 Georgia, serif; margin: 0; min-width: 0; }
+  .felix-dialog-heading button { flex-shrink: 0; min-height: 40px; }
+  .felix-dialog-body { padding: 14px 16px; overflow-y: auto; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .felix-dialog-body h3 { font-size: 15px; margin: 12px 0 4px; }
+  .felix-dialog-body h3:first-child { margin-top: 0; }
+  .felix-dialog-body p { margin: 0 0 10px; }
+  .felix-tooltip { position: fixed; inset: auto; margin: 0; max-width: min(280px, calc(100vw - 24px)); padding: 9px 12px; border: 1px solid #657b65; border-radius: 7px; background: #284536; color: #fffef2; font: 12px/1.5 Arial, sans-serif; overflow-wrap: anywhere; pointer-events: none; z-index: 990; }
+  .felix-panel .has-explanation { cursor: help; outline: 2px dashed #357e96; outline-offset: -2px; }
+  body.felix-needs-action #roomControlsPanel.collapsed,
+  body.felix-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn { border-color: #b44b3d; box-shadow: inset 0 0 0 1px #b44b3d; }
+  @media (hover: hover) {
+    .felix-hand button.felix-card:not(:disabled):hover { border-color: #327852; box-shadow: 0 0 0 2px #32785225; }
+    .felix-action-buttons button:not(:disabled):hover { filter: brightness(.94); }
+  }
+  @media (max-width: 720px) {
+    .felix-panel { gap: 12px; }
+    .felix-play-area { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .felix-card { min-height: 100px; padding: 6px 4px; gap: 4px; border-radius: 7px; }
+    .felix-card-emoji { font-size: 28px; }
+    .felix-card-value { font-size: 18px; }
+    .felix-card-label { font-size: 11px; }
+    .felix-slots, .felix-hand { gap: 5px; }
+    .felix-slot { gap: 4px; }
+    .felix-slot-position { font-size: 12px; min-height: 27px; }
+    .felix-slot-owner { font-size: 11px; }
+    .felix-slot-status { font-size: 10px; }
+    .felix-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .felix-player { padding: 8px; }
+    .felix-player-heading { gap: 4px; }
+    .felix-table-footer { font-size: 11px; }
+    .game-panel[data-game-theme="felix"] > .panel-header { gap: 8px; }
+    .game-panel[data-game-theme="felix"] .game-panel-title { gap: 6px; }
+    .game-panel[data-game-theme="felix"] .game-panel-title h2 { font-size: 17px; line-height: 1.2; }
+  }
+  @media (max-width: 360px) {
+    .felix-topbar { gap: 6px; font-size: 12px; }
+    .felix-balance { padding: 5px 8px; }
+    #felixPhase { margin-left: 2px; padding-left: 6px; }
+    .felix-card { min-height: 94px; }
+    .felix-card-emoji { font-size: 25px; }
+    .felix-card-value { font-size: 16px; }
+    .felix-card-label { font-size: 10px; }
+    .felix-action-buttons button { padding: 8px 5px; font-size: 13px; }
+    .felix-player-name { flex-basis: 100%; }
+    .felix-notice { padding: 9px; }
+    .game-panel[data-game-theme="felix"] .panel-header button { padding-inline: 7px; font-size: 12px; }
+  }
 }

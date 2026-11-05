@@ -203,6 +203,7 @@ def _deal_round(state: Dict) -> None:
         state["players"][pid]["hand"] = hand
         state["players"][pid]["selected_card"] = None
     state["rows"] = [[deck.pop()] for _ in range(ROW_COUNT)]
+    state["seen_cards"] = sorted(card["value"] for row in state["rows"] for card in row)
     state["deck"] = deck
     state["turn"] = 1
     state["phase"] = "selection"
@@ -245,6 +246,10 @@ def _assign_reveal_order(state: Dict) -> None:
     state["last_reveal_order"] = [
         {"player_id": entry["player_id"], "card": dict(entry["card"])} for entry in plays
     ]
+    seen = set(state.get("seen_cards", []))
+    seen.update(card["value"] for row in state["rows"] for card in row)
+    seen.update(entry["card"]["value"] for entry in plays)
+    state["seen_cards"] = sorted(seen)
     _clear_selections(state)
 
 
@@ -428,7 +433,7 @@ def _auto_select_missing(state: Dict, events: List[Dict]) -> None:
         card = random.choice(hand)
         hand.remove(card)
         pdata["selected_card"] = card
-        events.append({"type": "six_nimmt:auto_select", "payload": {"player_id": pid, "card": card}})
+        events.append({"type": "six_nimmt:auto_select", "payload": {"player_id": pid}})
 
 
 def _auto_pick_row(state: Dict, player_id: str, card: Dict, events: List[Dict]) -> None:
@@ -500,7 +505,7 @@ class SixNimmtGame:
             if isinstance(waiting, dict) and waiting.get("player_id") == player_id:
                 return ["choose_row"]
         if phase == "turn_summary":
-            return ["ack_turn_summary"]
+            return [] if _summary_ack_map(state).get(player_id) else ["ack_turn_summary"]
         return []
 
     @staticmethod
@@ -529,7 +534,7 @@ class SixNimmtGame:
                 return [], "card not in hand"
             hand.remove(card)
             pdata["selected_card"] = card
-            events.append({"type": "six_nimmt:select", "payload": {"player_id": player_id, "card": card}})
+            events.append({"type": "six_nimmt:select", "payload": {"player_id": player_id}})
             if _all_selected(state):
                 state["pending_timeout"] = None
                 _assign_reveal_order(state)
@@ -724,6 +729,7 @@ class SixNimmtGame:
             "round": state.get("round"),
             "turn": state.get("turn"),
             "rows": rows_view,
+            "seen_cards": list(state.get("seen_cards", [])),
             "hand": your_hand,
             "selected_card": dict(selected_card) if isinstance(selected_card, dict) else None,
             "players": players_view,
@@ -745,38 +751,9 @@ class SixNimmtGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
-            return None
-        if bot_id not in state.get("players", {}):
-            return None
-        phase = state.get("phase")
-        pdata = state["players"][bot_id]
-        if phase == "selection":
-            if pdata.get("selected_card") is not None:
-                return None
-            hand = pdata.get("hand", [])
-            if not hand:
-                return None
-            card = random.choice(hand)
-            return {"type": "select_card", "value": card.get("value")}
-        if phase == "row_choice":
-            waiting = state.get("waiting_for")
-            if isinstance(waiting, dict) and waiting.get("player_id") == bot_id:
-                best_index = None
-                best_penalty = None
-                for idx, row in enumerate(state.get("rows", [])):
-                    penalty = _row_bullheads(row)
-                    if best_penalty is None or penalty < best_penalty:
-                        best_penalty = penalty
-                        best_index = idx
-                if best_index is not None:
-                    return {"type": "choose_row", "row_index": best_index}
-        if phase == "turn_summary":
-            ack = state.get("summary_ack")
-            if isinstance(ack, dict) and ack.get(bot_id):
-                return None
-            return {"type": "ack_turn_summary"}
-        return None
+        from game.six_nimmt_ai import choose_action
+
+        return choose_action(SixNimmtGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
