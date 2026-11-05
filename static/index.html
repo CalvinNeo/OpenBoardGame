@@ -1188,6 +1188,7 @@
               <h2>Game</h2>
               <button id="gameReconnectBtn" class="game-reconnect-btn" type="button">Reconnect</button>
             </div>
+            <div class="panel-header-actions" id="incanGoldHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="chrominoHeaderActions" style="display: none;">
               <button id="chrominoHelpBtn" type="button" aria-label="Help">Help</button>
               <button id="chrominoExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
@@ -1732,7 +1733,8 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=193" defer></script>
+  <script src="/static/game_assets.js?v=195" defer></script>
+  <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v41" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>

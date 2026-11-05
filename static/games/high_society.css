@@ -1,164 +1,131 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-high_society-1 {
-
-.high-society-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.high-society-topbar,
-.high-society-table {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
-  gap: 12px;
-  align-items: start;
-}
-
-.high-society-topbar {
-  align-items: center;
-}
-
-.high-society-subtitle,
-.high-society-deck,
-.high-society-player-meta,
-.high-society-selection {
-  color: #555;
-  font-size: 13px;
-}
-
-.high-society-current,
-.high-society-actions {
-  display: grid;
-  gap: 8px;
-}
-
-.high-society-auction-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 12px;
-  font-size: 13px;
-}
-
-.high-society-money-row,
-.high-society-table-money,
-.high-society-card-list,
-.high-society-action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.high-society-money-card,
-.high-society-money-chip {
-  min-width: 72px;
-  min-height: 32px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  color: #111827;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.high-society-money-card.selected {
-  background: #dcfce7;
-  border-color: #22c55e;
-}
-
-.high-society-money-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  min-height: 24px;
-}
-
-.high-society-status-card {
-  min-height: 96px;
-}
-
-.high-society-card-face {
-  display: grid;
-  align-content: center;
-  gap: 4px;
-  width: 118px;
-  min-height: 82px;
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #111827;
-}
-
-.high-society-card-face.type-luxury {
-  border-color: #93c5fd;
-  background: #eff6ff;
-}
-
-.high-society-card-face.type-prestige {
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.high-society-card-face.type-disgrace {
-  border-color: #fca5a5;
-  background: #fef2f2;
-}
-
-.high-society-card-title {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.high-society-card-detail {
-  color: #555;
-  font-size: 12px;
-}
-
-.high-society-players {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.high-society-player-card {
-  display: grid;
-  gap: 8px;
-}
-
-.high-society-player-card.eliminated {
-  opacity: 0.72;
-}
-
-.high-society-faux-pas {
-  display: grid;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  background: #fff7f7;
-}
-
-.high-society-faux-choice {
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.high-society-result-row {
-  padding: 3px 0;
-  font-size: 13px;
-}
-
-.high-society-help-content {
-  display: grid;
-  gap: 8px;
-}
-
-.high-society-panel button.has-explanation {
-  cursor: help;
-  outline: 2px dashed #2563eb;
-  outline-offset: 2px;
-}
+  .game-panel[data-game-theme="high_society"] { background: #fffdf8; border-color: #d9cbaa; color: #273b40; }
+  .game-panel[data-game-theme="high_society"] > .panel-header,
+  .game-panel[data-game-theme="high_society"] .game-panel-title,
+  .game-panel[data-game-theme="high_society"] #highSocietyHeaderActions { flex-wrap: nowrap; min-width: 0; }
+  .game-panel[data-game-theme="high_society"] .game-panel-title { flex: 1; }
+  .game-panel[data-game-theme="high_society"] .game-panel-title h2 { font-family: Georgia, serif; min-width: 0; }
+  .game-panel[data-game-theme="high_society"] button { white-space: nowrap; }
+  .high-society-panel { display: grid; gap: 16px; min-width: 0; }
+  .high-society-panel * { min-width: 0; }
+  .high-society-panel h3 { margin: 0; font-size: 15px; }
+  .high-society-panel button { touch-action: manipulation; }
+  .high-society-panel button:focus-visible,
+  .high-society-panel [tabindex]:focus-visible { outline: 3px solid #2d7681; outline-offset: 2px; }
+  .high-society-panel button:disabled { opacity: .5; cursor: not-allowed; }
+  .high-society-topbar, .high-society-round, .high-society-deck,
+  .high-society-section-heading, .high-society-notice-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .high-society-topbar { font-size: 12px; }
+  .high-society-round { justify-content: flex-start; }
+  #highSocietyPhase { color: #735e39; padding-left: 8px; border-left: 1px solid #d9cbaa; }
+  .high-society-deck { color: #665d4c; gap: 12px; }
+  #highSocietyTimerTrack { display: inline-flex; align-items: center; gap: 3px; }
+  #highSocietyTimerDots { display: inline-flex; gap: 3px; margin-left: 4px; }
+  #highSocietyTimerDots span { width: 7px; height: 7px; border: 1px solid #9b8660; border-radius: 50%; }
+  #highSocietyTimerDots .revealed { background: #95753c; }
+  #highSocietyTimerTrack.urgent { color: #9d3349; font-weight: 700; }
+  #highSocietyTimerTrack.urgent .revealed { background: #9d3349; border-color: #9d3349; }
+  .high-society-table { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 24px; align-items: start; }
+  .high-society-table.is-review { grid-template-columns: minmax(0, 1fr); }
+  .high-society-table.is-review .high-society-actions { max-width: 600px; }
+  .high-society-current, .high-society-actions { display: grid; gap: 12px; }
+  .high-society-section-heading > span { font-size: 11px; color: #6c6a61; }
+  #highSocietyAuctionKind { color: #8e354b; }
+  .high-society-auction-stage { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 16px; align-items: center; }
+  .high-society-auction-meta { display: grid; gap: 10px; overflow-wrap: anywhere; }
+  .high-society-high-bid { display: grid; gap: 3px; font-size: 12px; }
+  #highSocietyHighBid { font-size: clamp(22px, 2.5vw, 32px); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  #highSocietyHighBidder { color: #6c6a61; }
+  .high-society-turn { display: grid; gap: 2px; font-size: 13px; }
+  .high-society-turn > span, .high-society-start { font-size: 11px; color: #6c6a61; }
+  .high-society-card-face { display: grid; gap: 6px; align-content: space-between; padding: 10px; min-height: 158px; border: 1px solid #c6ad7a; border-radius: 10px; background: linear-gradient(145deg, #fff8e2, #f4e5bd); color: #684d20; overflow-wrap: anywhere; }
+  .high-society-card-face.type-prestige { background: linear-gradient(145deg, #eff7f1, #d4e7d9); border-color: #81a58d; color: #244e38; }
+  .high-society-card-face.type-disgrace { background: linear-gradient(145deg, #fff1f0, #f3d7d8); border-color: #cc9095; color: #862c43; }
+  .high-society-card-corner { display: flex; justify-content: space-between; gap: 4px; font-size: 11px; }
+  .high-society-card-value { font: 700 38px/1.1 Georgia, serif; text-align: center; }
+  .high-society-card-title { font-size: 12px; font-weight: 700; text-align: center; }
+  .high-society-card-detail { font-size: 11px; text-align: center; }
+  .high-society-action-hint { padding: 8px 10px; background: #f1eee5; border-radius: 6px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+  .high-society-action-hint.is-active { background: #e6f1e9; color: #245338; box-shadow: inset 3px 0 #3c7952; }
+  #highSocietyCash { font-size: 14px; color: #36634b; }
+  .high-society-money-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  .high-society-money-card { border: 1px solid #c7d1c7; border-radius: 6px; min-height: 46px; padding: 4px 2px; background: #f9fcf7; color: #355c42; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 2px 0 #dce4d8; }
+  .high-society-money-card.selected { background: #2d6247; color: #fff; border-color: #214632; box-shadow: inset 0 0 0 2px #abc6a9; }
+  .high-society-money-row > .high-society-empty { grid-column: 1 / -1; }
+  .high-society-selection { display: grid; gap: 3px; margin: 8px 0; min-height: 33px; font-size: 12px; }
+  #highSocietyRemaining { font-size: 11px; color: #70664f; }
+  .high-society-action-row, .high-society-discard-confirm { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; }
+  .high-society-action-row button, .high-society-discard-confirm button, #highSocietyNextBtn { min-height: 44px; padding: 8px; font-size: 13px; border-radius: 6px; }
+  #highSocietyBidBtn, #highSocietyNextBtn { background: #2d514b; color: #fff; border: 1px solid #2d514b; }
+  #highSocietyPassBtn { background: #fffdf8; color: #6e3540; border: 1px solid #cab5b4; }
+  #highSocietyPassBtn.is-disgrace, #highSocietyDiscardBtn { background: #8e354b; color: white; border: 1px solid #8e354b; }
+  .high-society-faux-pas { display: grid; gap: 10px; padding: 10px; background: #fbeded; border-radius: 8px; font-size: 13px; }
+  .high-society-faux-choice { padding: 0; background: transparent; border: 2px solid transparent; border-radius: 8px; }
+  .high-society-faux-choice.selected { border-color: #8e354b; }
+  .high-society-faux-choice .high-society-card-face { min-height: 88px; width: 76px; padding: 6px; }
+  .high-society-faux-choice .high-society-card-value { font-size: 24px; }
+  .high-society-faux-choice .high-society-card-detail { display: none; }
+  .high-society-notice { display: grid; gap: 8px; padding: 12px; background: #eef3e9; border-left: 3px solid #5c7950; border-radius: 6px; font-size: 13px; overflow-wrap: anywhere; }
+  .high-society-notice-heading h3 { flex: 1; }
+  .high-society-notice.is-self { border-color: #9c7634; background: #faf1d9; }
+  .high-society-ready { display: flex; flex-wrap: wrap; gap: 5px; }
+  .high-society-ready span { padding: 3px 6px; background: #ffffff9c; border-radius: 4px; font-size: 11px; overflow-wrap: anywhere; max-width: 100%; }
+  .high-society-ready .is-ready { color: #2d6247; font-weight: 700; }
+  .high-society-players-heading { border-top: 1px solid #e4dbc8; padding-top: 12px; }
+  .high-society-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: start; }
+  .high-society-player-card { display: grid; align-content: start; gap: 8px; border-top: 3px solid #ddd5c3; padding: 10px; border-radius: 6px; background: #f4f1e9; overflow-wrap: anywhere; }
+  .high-society-player-card.self { background: #eef3ed; }
+  .high-society-player-card.current { border-color: #a7803c; background: #fcf2dc; }
+  .high-society-player-card.eliminated { background: #f2e8e8; }
+  .high-society-player-heading { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+  .high-society-player-name { font-size: 13px; font-weight: 700; }
+  .high-society-player-badge { flex-shrink: 0; font-size: 10px; border: 1px solid #c6b58e; border-radius: 4px; padding: 2px 4px; }
+  .high-society-player-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; font-size: 11px; }
+  .high-society-table-money, .high-society-card-list { display: flex; flex-wrap: wrap; align-items: start; gap: 5px; }
+  .high-society-money-chip { font-size: 10px; border: 1px solid #c9d2c6; background: #fffdf8; padding: 2px 5px; border-radius: 3px; }
+  .high-society-player-card .high-society-card-face { min-height: 52px; width: 62px; padding: 5px; gap: 3px; }
+  .high-society-player-card .high-society-card-corner { font-size: 10px; }
+  .high-society-player-card .high-society-card-value { font-size: 21px; }
+  .high-society-player-card .high-society-card-title { font-size: 10px; }
+  .high-society-player-card .high-society-card-detail { display: none; }
+  .high-society-player-card .high-society-card-list { max-height: 224px; overflow-y: auto; overscroll-behavior-y: contain; padding: 3px; }
+  .high-society-empty { color: #777367; font-size: 11px; }
+  .high-society-result-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid #d6dccd; font-size: 12px; }
+  .high-society-result-row.self { font-weight: 700; }
+  .high-society-result-row.eliminated { color: #91384b; }
+  .high-society-modal { width: min(560px, 100%); }
+  .high-society-modal .modal-header { gap: 12px; }
+  .high-society-modal h2 { font: 700 19px/1.3 Georgia, serif; overflow-wrap: anywhere; }
+  .high-society-modal .modal-header button { flex-shrink: 0; }
+  .high-society-help-content { line-height: 1.55; font-size: 14px; }
+  .high-society-help-content h3 { font-size: 15px; margin: 14px 0 4px; }
+  .high-society-help-content p { margin: 0 0 8px; }
+  .high-society-tooltip { position: fixed; inset: auto; margin: 0; max-width: min(280px, calc(100vw - 24px)); border: 1px solid #4e6861; border-radius: 7px; padding: 9px 12px; background: #243d38; color: white; font: 12px/1.5 Arial, sans-serif; overflow-wrap: anywhere; pointer-events: none; z-index: 990; box-shadow: 0 4px 15px #0002; }
+  .high-society-panel .has-explanation { cursor: help; outline: 2px dashed #287daa; outline-offset: 2px; }
+  body.high-society-needs-action #roomControlsPanel.collapsed,
+  body.high-society-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn { border-color: #b23e51; box-shadow: inset 0 0 0 1px #b23e51; }
+  @media (max-width: 720px) {
+    .high-society-panel { gap: 12px; }
+    .high-society-table { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .high-society-auction-stage { grid-template-columns: 100px minmax(0, 1fr); gap: 14px; }
+    .high-society-current, .high-society-actions { gap: 8px; }
+    .high-society-status-card > .high-society-card-face { min-height: 125px; padding: 8px; }
+    .high-society-auction-meta { gap: 6px; }
+    .high-society-status-card .high-society-card-value { font-size: 32px; }
+    .high-society-start { display: none; }
+    .high-society-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .high-society-player-card { padding: 8px; gap: 6px; }
+    .high-society-player-heading { flex-wrap: wrap; gap: 4px; }
+    .high-society-player-card .high-society-card-face { width: 55px; }
+    .high-society-section-heading > span { font-size: 10px; }
+    .game-panel[data-game-theme="high_society"] .game-panel-title h2 { font-size: 16px; line-height: 1.1; }
+    .high-society-notice { padding: 8px; }
+  }
+  @media (max-width: 360px) {
+    .high-society-money-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .high-society-money-card { min-height: 40px; }
+    .high-society-player-card .high-society-card-face { width: 48px; padding: 4px; }
+    .high-society-deck { gap: 8px; }
+    .high-society-topbar { gap: 6px; }
+  }
 }

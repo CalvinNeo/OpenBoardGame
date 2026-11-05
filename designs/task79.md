@@ -712,3 +712,38 @@ STATUS_CARDS = [
    - Help / Explain
    - AI
    - 动画、音效、自制牌面美术
+
+## 2026-11-05 前端优化与验收
+
+### 布局与信息层级
+
+- 游戏内容直接放在 Game 主面板，标题通过按需资源清单替换为 `High Society`，不再嵌套重复标题或外框；Help 与 Reconnect 保持同排。
+- 使用自绘 CSS 卡面、金色 Luxury（💎）、绿色 Prestige（👑）、红色 Disgrace（⚠️），数值、名称与 Timer（⏳）分区显示，无商用素材。
+- 桌面并列展示拍卖与手牌，手机上下紧凑排列。320px 的金钱牌每行四张，390px 每行六张；正常名字下，拍卖、全部手牌和操作按钮可在同一屏内使用。
+- 显示最高出价、当前行动者、自有现金、公开桌面钱和地位分；玩家的 Turn / Leading / Passed / Ready / Cast out 状态独立展示。其他玩家现金仍遵守后端隐私边界，终局才公开。
+- 玩家收藏区限制高度并独立纵向滚动，长名字换行，密集收藏不会拉长所有玩家卡片。日志沿用 RC 的可收起面板。
+
+### 操作与状态同步
+
+- 金钱选择原地更新，不重建列表或丢失焦点；展示「桌面钱 + 本次选择 → 新出价」和支付后剩余现金，出价不足时禁用 Bid。
+- 点击周围空白取消选择，无 Clear Selection 按钮；切换回合、阶段、行动者、观看身份时清除过期选择。
+- Disgrace 的按钮明确显示 `Pass · take card`。Faux Pas 使用原地选牌及 Discard / Cancel 确认，并隐藏该阶段无关的手牌和过期最高出价。
+- 提交中禁用重复操作，错误或连接恢复时恢复可用状态；断线禁用行动。结果面板只在本轮结算与终局展示，Next Round 与逐人 Ready 状态放在一起，沿用所有人确认后才继续的规则。
+- 终局显示现金、地位分和最低现金淘汰；第四张 Timer 展示为未拍卖，不误认为已获得。RC 收起且需要本人行动时显示红色边框。
+
+### Help / Explain 与生命周期
+
+- Help 包含钱、牌型、图标、计分、最低现金淘汰、平局与结束规则；主界面只保留简短行动提示。
+- Explain 可解释金钱牌、弃牌选择、动作与静态信息，含 disabled 按钮；解释模式阻止原动作，指针抬起确认并拦截随后 click，滑动不触发解释或选牌。
+- 静态信息支持鼠标悬停、键盘焦点、手机轻点提示，连续轻点替换内容并在 3 秒后消失；交互按钮正常操作不弹提示。弹窗支持 Esc、背景关闭、焦点返回和 Tab 约束。
+- 游戏实现封装在 IIFE，只公开原有的 `renderHighSocietyGameState` / `showHighSocietyHeaderActions` 接口。处理延迟加载、首个状态回放、房间切换、大厅重置、断线重连与刷新恢复。
+- 更新本游戏 JS / HTML / CSS 资源版本与首页加载器版本；保留原 CSS media 占位组。已有 BGG weight 为 `1.48`，本次不改规则，不重复抓取权重。
+
+### 验证记录
+
+- 新增 `tests/high_society.browser.cjs`：320 / 390 / 1024 / 1440px × 13 种状态，检查横向溢出、主要板块重叠、Help / Reconnect 同排，覆盖长名字、五人、满收藏、空手牌、观战、等待、弃牌、结算及终局；另检查 RC 展开、Help 与截图。
+- 浏览器交互覆盖：追加出价与不足出价、选择焦点、空白清空、提交锁、错误恢复、回合重置、Explain 的 disabled 与正常按钮、Esc、Faux Pas 选择/取消/确认、Ready、旧结算清理、终局淘汰、收藏滚动及提示。
+- 390px 触摸模拟覆盖滑动不选牌、不弹提示、不触发 Explain；轻点、提示更新/3 秒关闭、disabled 按钮解释、游戏切换清理。
+- 三个独立浏览器会话实测建房、加入、准备、开局、公开出价同步、Pass、全员 Next Round 门槛、第二轮、断线重连和整页刷新恢复。
+- 通过：`node --check static/games/high_society.js`、`node --check tests/high_society.browser.cjs`、`python3 -m unittest tests.test_frontend_style_assets`（2 项）、`tests/high_society.browser.cjs`、`tests/game_assets.browser.cjs`、相关文件 `git diff --check`。浏览器脚本使用本地 uvicorn 与 Chrome/Playwright，可由 `ROOM_TEST_URL` / `PLAYWRIGHT_MODULE` 指定运行环境。
+- 截图保存在 `tmp/high-society-ui/`。只调整前端，按 DEV_GUIDE 未运行游戏逻辑测试；未验证真实 iOS Safari、Windows 字体/Emoji、Firefox。RC dock 按公共规范允许悬浮覆盖，其余本游戏主要板块无重叠例外。

@@ -744,7 +744,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type == "mall_of_horror":
         return {"type": action.get("type")}
-    if game_type in ("gloomhaven", "the_crew"):
+    if game_type in ("gloomhaven", "the_crew", "incan_gold"):
         return {"type": action.get("type")}
     if game_type in ("startups", "sagrada", "dice_throne"):
         return {"type": action.get("type")}

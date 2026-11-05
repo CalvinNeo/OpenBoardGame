@@ -797,12 +797,14 @@ const GAME_ASSETS = {
   },
   "incan_gold": {
     "scripts": [
-      "/static/games/incan_gold.js?v=app_v4"
+      "/static/games/incan_gold.js?v=app_v5"
     ],
     "styles": [],
     "panel": "incanGoldPanel",
-    "markup": "/static/games/incan_gold.html?v=1",
-    "styleFragments": "/static/games/incan_gold.css?v=1"
+    "panelTitle": "🏺 印加宝藏",
+    "header": "showIncanGoldHeaderActions",
+    "markup": "/static/games/incan_gold.html?v=2",
+    "styleFragments": "/static/games/incan_gold.css?v=2"
   },
   "celestia": {
     "scripts": [
@@ -836,13 +838,14 @@ const GAME_ASSETS = {
   },
   "high_society": {
     "scripts": [
-      "/static/games/high_society.js?v=app_v1"
+      "/static/games/high_society.js?v=2"
     ],
     "styles": [],
     "panel": "highSocietyPanel",
+    "panelTitle": "High Society",
     "header": "showHighSocietyHeaderActions",
-    "markup": "/static/games/high_society.html?v=1",
-    "styleFragments": "/static/games/high_society.css?v=1"
+    "markup": "/static/games/high_society.html?v=2",
+    "styleFragments": "/static/games/high_society.css?v=2"
   },
   "poison": {
     "scripts": [

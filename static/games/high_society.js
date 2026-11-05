@@ -1,568 +1,494 @@
-let currentHighSocietyView = null;
-let highSocietySelectedMoney = [];
-let highSocietyExplainMode = false;
+(() => {
+  const root = document.getElementById("highSocietyPanel");
+  const byId = (suffix) => document.getElementById(`highSociety${suffix}`);
+  const text = (suffix, value) => { byId(suffix).textContent = value; };
+  let view = null;
+  let selectedMoney = [];
+  let selectedLuxury = null;
+  let explaining = false;
+  let pending = false;
+  let pendingTimer = null;
+  let tooltipTimer = null;
+  let gesture = null;
+  let suppressClickUntil = 0;
+  let focusBeforeModal = null;
+  let roomId = null;
+  let selectedRoom = false;
 
-const highSocietyRoundLabel = document.getElementById("highSocietyRound");
-const highSocietyPhaseLabel = document.getElementById("highSocietyPhase");
-const highSocietyDeckCountLabel = document.getElementById("highSocietyDeckCount");
-const highSocietyTimerLabel = document.getElementById("highSocietyTimer");
-const highSocietyNotice = document.getElementById("highSocietyNotice");
-const highSocietyNoticeTitle = document.getElementById("highSocietyNoticeTitle");
-const highSocietyNoticeBody = document.getElementById("highSocietyNoticeBody");
-const highSocietyFinalResults = document.getElementById("highSocietyFinalResults");
-const highSocietyCurrentCard = document.getElementById("highSocietyCurrentCard");
-const highSocietyTurnLabel = document.getElementById("highSocietyTurn");
-const highSocietyStartLabel = document.getElementById("highSocietyStart");
-const highSocietyHighBidLabel = document.getElementById("highSocietyHighBid");
-const highSocietyHighBidderLabel = document.getElementById("highSocietyHighBidder");
-const highSocietyHand = document.getElementById("highSocietyHand");
-const highSocietySelectedTotalLabel = document.getElementById("highSocietySelectedTotal");
-const highSocietyBidBtn = document.getElementById("highSocietyBidBtn");
-const highSocietyPassBtn = document.getElementById("highSocietyPassBtn");
-const highSocietyNextBtn = document.getElementById("highSocietyNextBtn");
-const highSocietyFauxPasBox = document.getElementById("highSocietyFauxPasBox");
-const highSocietyFauxPasChoices = document.getElementById("highSocietyFauxPasChoices");
-const highSocietyPlayers = document.getElementById("highSocietyPlayers");
-const highSocietyHeaderActions = document.getElementById("highSocietyHeaderActions");
-const highSocietyHelpBtn = document.getElementById("highSocietyHelpBtn");
-const highSocietyExplainBtn = document.getElementById("highSocietyExplainBtn");
-const highSocietyHelpModal = document.getElementById("highSocietyHelpModal");
-const highSocietyHelpCloseBtn = document.getElementById("highSocietyHelpCloseBtn");
-const highSocietyHelpContent = document.querySelector(".high-society-help-content");
-const highSocietyExplainModal = document.getElementById("highSocietyExplainModal");
-const highSocietyExplainCloseBtn = document.getElementById("highSocietyExplainCloseBtn");
-const highSocietyExplainContent = document.getElementById("highSocietyExplainContent");
+  const money = (value) => `$${Number(value || 0).toLocaleString("en-US")}`;
+  const sum = (values) => values.reduce((total, value) => total + Number(value), 0);
+  const self = () => view?.players?.find((player) => player.player_id === view.you);
+  const active = () => currentGameType === "high_society" && !root.classList.contains("hidden");
+  const connected = () => typeof socket === "undefined" || socket.connected;
+  const can = (action) => active() && !pending && connected() && !!view?.legal_actions?.includes(action);
+  const name = (playerId) => view?.players?.find((player) => player.player_id === playerId)?.name || playerId || "—";
+  const cardName = (card) => card?.type === "luxury" ? `Luxury ${card.value}` : card?.type === "prestige" ? "Prestige" : ({ faux_pas: "Faux Pas", passe: "Passé", scandale: "Scandale" }[card?.id] || "—");
+  const explanations = {
+    BidBtn: "Bid with selected Money (💰). Add these cards to your committed table money; the new total must exceed the high bid. Money already on the table cannot be exchanged or withdrawn while bidding.",
+    PassBtn: "In a normal auction, Pass returns your table money and removes you from this auction. In a Disgrace (⚠️) auction, Pass immediately takes the bad card and returns your money; everyone else pays their table money.",
+    NextBtn: "Confirm you have reviewed the result. The next auction begins only after every player is ready. No additional confirmation is needed.",
+    DiscardBtn: "Permanently discard the selected Luxury (💎) to satisfy Faux Pas (⚠️). Prestige and other Disgrace cards cannot be discarded.",
+    CancelBtn: "Cancel this discard selection without changing your collection.",
+  };
+  const help = `
+    <h3>Win with status, not an empty wallet</h3>
+    <p>Collect Luxury (💎) and Prestige (👑) while avoiding Disgrace (⚠️). At the end, everyone tied for the least remaining Money (💰) is cast out before scoring.</p>
+    <h3>💰 Money &amp; bidding</h3>
+    <p>Choose money cards, then Bid. Your new table total must exceed the high bid. Add cards to raise; never exchange cards already committed. There is no change, and spent cards are gone for the game. Click unused space to deselect. Only your own remaining cash is visible during play.</p>
+    <h3>💎 Normal auction</h3>
+    <p>Raise or Pass. Passing returns your table money and removes you from this auction. The last remaining player gains the card and pays their table money, possibly zero.</p>
+    <h3>⚠️ Disgrace auction</h3>
+    <p>Bid to avoid the card. The first player to Pass takes it and gets their table money back. Everyone else pays their table money.</p>
+    <p><strong>Faux Pas:</strong> discard one Luxury, or lose your next Luxury if you have none. Choose a card and confirm Discard; Cancel changes your selection. <strong>Passé (−5):</strong> subtract five status. <strong>Scandale (÷2):</strong> halve your score.</p>
+    <h3>👑 Prestige &amp; ⏳ Timer</h3>
+    <p>Each Prestige doubles status. The three Prestige cards and Scandale are timer cards. Revealing the fourth ends the game immediately; that fourth card is not auctioned.</p>
+    <h3>Review &amp; scoring</h3>
+    <p>Every auction pauses for review. All players choose Next Round before play continues. After casting out the poorest players, add Luxury values, subtract Passé, double for each Prestige, then halve for Scandale. Highest score wins; ties use remaining cash, then highest single Luxury.</p>
+    <h3>Reading the table</h3>
+    <p>💰 is a public table bid, Cards is the count of unspent money cards in hand, and Status is the collection's current score before the final cash check. Turn, Leading, Passed, Ready and Cast out badges show each player's state. Hover or tap non-interactive symbols for a short tip. Explain lets you inspect controls, including disabled ones, without taking an action. Esc closes a dialog or exits Explain.</p>`;
 
-const HIGH_SOCIETY_BUTTON_EXPLANATIONS = {
-  highSocietyBidBtn:
-    "Bid with the selected money cards. Your new table total must be higher than the current high bid; selected money is added to money already on your table.",
-  highSocietyPassBtn:
-    "Pass for this auction. In normal auctions you take your table money back and leave the auction; in disgrace auctions you immediately take the bad card.",
-  highSocietyNextBtn:
-    "Confirm that you have reviewed the round summary. The next round starts only after every player confirms.",
-};
-
-const HIGH_SOCIETY_HELP_HTML = `
-  <p>Bid for Luxury and Prestige cards, and bid to avoid Disgrace cards. Money cards are fixed denominations and spent money is gone for the rest of the game.</p>
-  <p><strong>Normal auction:</strong> players raise the bid or pass. Passing returns your table money. The last remaining player takes the card and discards their table money.</p>
-  <p><strong>Disgrace auction:</strong> the first player to pass takes the Disgrace card and gets their table money back. Everyone else discards their table money.</p>
-  <p>The fourth timer card ends the game immediately. Timer cards are the three Prestige cards and Scandale.</p>
-  <p>At game end, the player or players with the least remaining money are cast out before scoring. Remaining players score Luxury values, apply Passe, multiply by Prestige cards, then apply Scandale.</p>
-`;
-
-function formatHighSocietyMoney(value) {
-  if (value === null || value === undefined) {
-    return "-";
-  }
-  return `$${Number(value).toLocaleString()}`;
-}
-
-function formatHighSocietyScore(score) {
-  if (score === null || score === undefined) {
-    return "-";
-  }
-  if (Number.isInteger(Number(score))) {
-    return String(Number(score));
-  }
-  return Number(score).toFixed(1);
-}
-
-function getHighSocietyCardLabel(view, card) {
-  if (!card) {
-    return "-";
-  }
-  if (view && view.card_labels && view.card_labels[card.id]) {
-    return view.card_labels[card.id];
-  }
-  if (card.type === "luxury") {
-    return `Luxury ${card.value}`;
-  }
-  if (card.type === "prestige") {
-    return "Prestige x2";
-  }
-  return card.id || "-";
-}
-
-function highSocietyPlayerName(view, playerId) {
-  if (!playerId) {
-    return "-";
-  }
-  const player = (view.players || []).find((item) => item.player_id === playerId);
-  return player ? player.name || player.player_id : playerId;
-}
-
-function isHighSocietyActionAvailable(actionType) {
-  if (!currentHighSocietyView || !Array.isArray(currentHighSocietyView.legal_actions)) {
-    return false;
-  }
-  return currentHighSocietyView.legal_actions.includes(actionType);
-}
-
-function updateHighSocietyButtons() {
-  const canBid = isHighSocietyActionAvailable("bid");
-  const canPass = isHighSocietyActionAvailable("pass");
-  const canNext = isHighSocietyActionAvailable("next_round");
-  const selectedTotal = highSocietySelectedMoney.reduce((sum, value) => sum + Number(value), 0);
-  const self = currentHighSocietyView
-    ? (currentHighSocietyView.players || []).find((player) => player.player_id === currentHighSocietyView.you)
-    : null;
-  const tableTotal = self ? Number(self.table_total || 0) : 0;
-  const highBid = currentHighSocietyView ? Number(currentHighSocietyView.current_high_bid || 0) : 0;
-  if (highSocietySelectedTotalLabel) {
-    const newTotal = tableTotal + selectedTotal;
-    highSocietySelectedTotalLabel.textContent = `${formatHighSocietyMoney(selectedTotal)} · New total ${formatHighSocietyMoney(newTotal)}`;
-  }
-  if (highSocietyBidBtn) {
-    highSocietyBidBtn.disabled = !canBid || !highSocietySelectedMoney.length || tableTotal + selectedTotal <= highBid;
-    highSocietyBidBtn.classList.toggle("action-allowed", !highSocietyBidBtn.disabled);
-  }
-  if (highSocietyPassBtn) {
-    highSocietyPassBtn.disabled = !canPass;
-    highSocietyPassBtn.classList.toggle("action-allowed", canPass);
-  }
-  if (highSocietyNextBtn) {
-    highSocietyNextBtn.disabled = !canNext;
-    highSocietyNextBtn.classList.toggle("action-allowed", canNext);
-  }
-}
-
-function showHighSocietyHeaderActions(show) {
-  if (highSocietyHeaderActions) {
-    highSocietyHeaderActions.style.display = show ? "flex" : "none";
-  }
-  if (!show) {
-    exitHighSocietyExplainMode();
-  }
-}
-
-function openHighSocietyModal(modal) {
-  if (!modal) {
-    return;
-  }
-  modal.classList.remove("hidden");
-  modal.setAttribute("aria-hidden", "false");
-}
-
-function closeHighSocietyModal(modal) {
-  if (!modal) {
-    return;
-  }
-  modal.classList.add("hidden");
-  modal.setAttribute("aria-hidden", "true");
-}
-
-function enterHighSocietyExplainMode() {
-  highSocietyExplainMode = true;
-  Object.keys(HIGH_SOCIETY_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.classList.add("has-explanation");
-    }
-  });
-  if (highSocietyFauxPasChoices) {
-    highSocietyFauxPasChoices.querySelectorAll("button").forEach((button) => {
-      button.classList.add("has-explanation");
-    });
-  }
-}
-
-function exitHighSocietyExplainMode() {
-  highSocietyExplainMode = false;
-  Object.keys(HIGH_SOCIETY_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.classList.remove("has-explanation");
-    }
-  });
-  if (highSocietyFauxPasChoices) {
-    highSocietyFauxPasChoices.querySelectorAll("button").forEach((button) => {
-      button.classList.remove("has-explanation");
-    });
-  }
-}
-
-function showHighSocietyExplanation(text) {
-  if (highSocietyExplainContent) {
-    highSocietyExplainContent.textContent = text;
-  }
-  openHighSocietyModal(highSocietyExplainModal);
-}
-
-function highSocietyExplanationForButton(button) {
-  if (!button) {
-    return null;
-  }
-  if (button.id && HIGH_SOCIETY_BUTTON_EXPLANATIONS[button.id]) {
-    return HIGH_SOCIETY_BUTTON_EXPLANATIONS[button.id];
-  }
-  if (button.classList.contains("high-society-faux-choice")) {
-    return "Discard this Luxury card to satisfy Faux Pas. Faux Pas cannot discard Prestige or other Disgrace cards.";
-  }
-  return null;
-}
-
-function findHighSocietyExplainButtonAtPoint(x, y) {
-  const candidates = [
-    ...Object.keys(HIGH_SOCIETY_BUTTON_EXPLANATIONS).map((buttonId) => document.getElementById(buttonId)),
-    ...(highSocietyFauxPasChoices ? Array.from(highSocietyFauxPasChoices.querySelectorAll("button")) : []),
-  ].filter(Boolean);
-  return candidates.find((button) => {
-    const rect = button.getBoundingClientRect();
-    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-  });
-}
-
-function renderHighSocietyStatusCard(view, card) {
-  const node = document.createElement("div");
-  node.className = "high-society-card-face";
-  if (!card) {
-    node.textContent = "-";
+  function element(tag, className, content) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (content !== undefined) node.textContent = content;
     return node;
   }
-  node.classList.add(`type-${card.type}`);
-  const title = document.createElement("div");
-  title.className = "high-society-card-title";
-  title.textContent = getHighSocietyCardLabel(view, card);
-  const detail = document.createElement("div");
-  detail.className = "high-society-card-detail";
-  if (card.type === "luxury") {
-    detail.textContent = `Status ${card.value}`;
-  } else if (card.type === "prestige") {
-    detail.textContent = "Doubles status · timer";
-  } else if (card.id === "faux_pas") {
-    detail.textContent = "Discard a luxury";
-  } else if (card.id === "passe") {
-    detail.textContent = "-5 status";
-  } else if (card.id === "scandale") {
-    detail.textContent = "Halve status · timer";
-  } else {
-    detail.textContent = card.type || "";
-  }
-  node.append(title, detail);
-  return node;
-}
 
-function renderHighSocietyHand(view) {
-  if (!highSocietyHand) {
-    return;
+  function tip(node, content) {
+    node.dataset.highSocietyTip = content;
+    node.tabIndex = 0;
+    return node;
   }
-  highSocietyHand.innerHTML = "";
-  const hand = Array.isArray(view.your_hand_money) ? view.your_hand_money : [];
-  if (!hand.length) {
-    const empty = document.createElement("div");
-    empty.className = "hint";
-    empty.textContent = "No money cards left.";
-    highSocietyHand.appendChild(empty);
-    return;
+
+  function cardDescription(card) {
+    if (card.type === "luxury") return `Luxury (💎): adds ${card.value} status before modifiers.`;
+    if (card.type === "prestige") return "Prestige (👑): doubles your status. Also a Timer (⏳) card.";
+    if (card.id === "passe") return "Passé (⚠️): subtract five status before Prestige and Scandale.";
+    if (card.id === "scandale") return "Scandale (⚠️): halves your status. Also a Timer (⏳) card.";
+    return "Faux Pas (⚠️): discard one Luxury, or lose your next Luxury if you have none.";
   }
-  hand.forEach((value) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "high-society-money-card";
-    button.textContent = formatHighSocietyMoney(value);
-    if (highSocietySelectedMoney.includes(value)) {
-      button.classList.add("selected");
-    }
-    button.addEventListener("click", () => {
-      const idx = highSocietySelectedMoney.indexOf(value);
-      if (idx >= 0) {
-        highSocietySelectedMoney.splice(idx, 1);
-      } else {
-        highSocietySelectedMoney.push(value);
-      }
-      renderHighSocietyHand(view);
-      updateHighSocietyButtons();
+
+  function statusCard(card, interactive = false) {
+    const node = element("div", `high-society-card-face type-${card.type}`);
+    const icon = card.type === "luxury" ? "💎" : card.type === "prestige" ? "👑" : "⚠️";
+    const value = card.type === "luxury" ? `+${card.value}` : card.type === "prestige" ? "×2" : card.id === "passe" ? "−5" : card.id === "scandale" ? "÷2" : "−💎";
+    const corner = element("div", "high-society-card-corner");
+    corner.append(element("span", "", icon), element("span", "", card.is_end_marker ? "⏳" : ""));
+    const detail = card.type === "luxury" ? "Status" : card.type === "prestige" ? "Double status" : card.id === "faux_pas" ? "Discard a Luxury" : card.id === "passe" ? "Lose status" : "Halve status";
+    node.append(corner, element("div", "high-society-card-value", value), element("div", "high-society-card-title", cardName(card)), element("div", "high-society-card-detail", detail));
+    node.setAttribute("aria-label", `${cardName(card)}. ${cardDescription(card)}`);
+    if (!interactive) tip(node, cardDescription(card));
+    return node;
+  }
+
+  function score(cards) {
+    let total = sum(cards.filter((card) => card.type === "luxury").map((card) => card.value));
+    if (cards.some((card) => card.id === "passe")) total -= 5;
+    total *= 2 ** cards.filter((card) => card.type === "prestige").length;
+    if (cards.some((card) => card.id === "scandale")) total /= 2;
+    return total;
+  }
+
+  function updateControls() {
+    const selected = sum(selectedMoney);
+    const table = self()?.table_total || 0;
+    const total = table + selected;
+    const cash = sum(view?.your_hand_money || []);
+    const auction = ["normal_auction", "disgrace_auction"].includes(view?.phase);
+    const disgrace = view?.phase === "disgrace_auction";
+    const validBid = can("bid") && selectedMoney.length > 0 && total > (view?.current_high_bid || 0);
+    text("Cash", self() ? money(cash + table) : "Spectating");
+    text("SelectedTotal", selected ? `${money(table)} + ${money(selected)} → ${money(total)}` : `On table ${money(table)} · Select money to add`);
+    text("Remaining", selected ? `If paid: ${money(cash - selected)} left` : `Beat ${money(view?.current_high_bid || 0)} · No change`);
+    text("BidBtn", selected ? `Bid ${money(total)}` : "Bid");
+    byId("BidBtn").disabled = !validBid;
+    byId("PassBtn").disabled = !can("pass");
+    text("PassBtn", disgrace ? "Pass · take card" : "Pass");
+    byId("PassBtn").classList.toggle("is-disgrace", disgrace);
+    byId("BidControls").classList.toggle("hidden", !auction);
+    byId("NextBtn").classList.toggle("hidden", view?.phase !== "round_summary");
+    byId("NextBtn").disabled = !can("next_round");
+    text("NextBtn", view?.next_ready?.includes(view.you) ? "Ready ✓" : "Next Round");
+    byId("DiscardConfirm").classList.toggle("hidden", !selectedLuxury);
+    byId("DiscardBtn").disabled = !can("choose_faux_pas_discard") || !selectedLuxury;
+    byId("CancelBtn").disabled = pending;
+    const luxury = self()?.status_cards?.find((card) => card.id === selectedLuxury);
+    text("DiscardBtn", luxury ? `Discard Luxury ${luxury.value}` : "Discard");
+    root.querySelectorAll(".high-society-money-card").forEach((button) => {
+      const chosen = selectedMoney.includes(Number(button.dataset.value));
+      button.classList.toggle("selected", chosen);
+      button.setAttribute("aria-pressed", String(chosen));
+      button.disabled = !can("bid");
     });
-    highSocietyHand.appendChild(button);
-  });
-}
-
-function renderHighSocietyPlayers(view) {
-  if (!highSocietyPlayers) {
-    return;
+    root.querySelectorAll(".high-society-faux-choice").forEach((button) => {
+      button.classList.toggle("selected", button.dataset.cardId === selectedLuxury);
+      button.setAttribute("aria-pressed", String(button.dataset.cardId === selectedLuxury));
+      button.disabled = !can("choose_faux_pas_discard");
+    });
+    let hint = "Waiting to start";
+    if (view) {
+      if (!connected()) hint = "Disconnected · use Reconnect to rejoin.";
+      else if (pending) hint = "Sending action…";
+      else if (view.game_over) hint = "Final cash revealed · the poorest are cast out.";
+      else if (!self()) hint = "Spectating · other players' cash is hidden.";
+      else if (view.phase === "round_summary") hint = view.next_ready?.includes(view.you) ? "You are ready · waiting for the others." : "Review the result, then choose Next Round.";
+      else if (view.phase === "choose_faux_pas") hint = can("choose_faux_pas_discard") ? "Faux Pas · choose a Luxury, then confirm below." : `${name(view.current_turn)} is choosing a Luxury to discard.`;
+      else if (can("bid")) hint = selected ? (validBid ? "Your bid is ready to submit." : `Add more money to beat ${money(view.current_high_bid)}.`) : disgrace ? "Your turn · bid to avoid this card, or Pass to take it." : "Your turn · select money to raise, or Pass.";
+      else if (can("pass")) hint = "You cannot outbid · Pass to continue.";
+      else if (!view.active_players?.includes(view.you)) hint = "You passed · waiting for the auction to settle.";
+      else hint = `${name(view.current_turn)} is deciding…`;
+    }
+    text("ActionHint", hint);
+    const needsAction = active() && connected() && !pending && !!view?.legal_actions?.length;
+    byId("ActionHint").classList.toggle("is-active", needsAction);
+    document.body.classList.toggle("high-society-needs-action", needsAction);
+    root.querySelectorAll("[data-high-society-tip], [data-high-society-explain]").forEach((node) => node.classList.toggle("has-explanation", explaining));
   }
-  highSocietyPlayers.innerHTML = "";
-  (view.players || []).forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "player-card high-society-player-card";
-    if (player.player_id === view.you) {
-      card.classList.add("self");
-    }
-    if (player.player_id === view.current_turn) {
-      card.classList.add("current");
-    }
-    if (player.eliminated) {
-      card.classList.add("eliminated");
-    }
 
-    const name = document.createElement("div");
-    name.className = "player-name";
-    name.textContent = player.name || player.player_id || "-";
+  function renderHand() {
+    const hand = byId("Hand");
+    hand.replaceChildren();
+    (view?.your_hand_money || []).forEach((value) => {
+      const button = element("button", "high-society-money-card", money(value));
+      button.type = "button";
+      button.dataset.value = value;
+      button.dataset.highSocietyExplain = `Money (💰) ${money(value)}: select or deselect this card to add it to your bid. Your committed table cards cannot be exchanged.`;
+      button.setAttribute("aria-label", `Select ${money(value)} money card`);
+      button.addEventListener("click", () => {
+        if (!can("bid")) return;
+        selectedMoney = selectedMoney.includes(value) ? selectedMoney.filter((chosen) => chosen !== value) : [...selectedMoney, value];
+        updateControls();
+      });
+      hand.append(button);
+    });
+    if (!hand.children.length) hand.append(element("div", "high-society-empty", view ? "No money cards in hand." : "Your money appears when the game starts."));
+  }
 
-    const meta = document.createElement("div");
-    meta.className = "high-society-player-meta";
-    const tableMoney = Array.isArray(player.table_money) ? player.table_money : [];
-    meta.textContent = `Hand ${player.hand_count ?? 0} · Table ${formatHighSocietyMoney(player.table_total || 0)}`;
+  function renderPlayers() {
+    byId("Players").replaceChildren();
+    (view?.players || []).forEach((player) => {
+      const card = element("article", "high-society-player-card");
+      card.classList.toggle("self", player.player_id === view.you);
+      card.classList.toggle("current", player.player_id === view.current_turn);
+      card.classList.toggle("eliminated", !!player.eliminated);
+      const heading = element("div", "high-society-player-heading");
+      heading.append(element("div", "high-society-player-name", `${name(player.player_id)}${player.player_id === view.you ? " · You" : ""}`));
+      const auction = ["normal_auction", "disgrace_auction"].includes(view.phase);
+      let badge = player.player_id === view.current_turn ? "Turn" : auction && player.player_id === view.current_high_bidder ? "Leading" : "";
+      if (view.phase === "normal_auction" && !view.active_players.includes(player.player_id)) badge = "Passed";
+      if (view.phase === "round_summary") badge = view.next_ready.includes(player.player_id) ? "Ready ✓" : "Reviewing";
+      if (view.game_over) badge = player.eliminated ? "Cast out" : view.winner.includes(player.player_id) ? "Winner" : "";
+      if (badge) heading.append(tip(element("span", "high-society-player-badge", badge), `${name(player.player_id)}: ${badge}.`));
+      const meta = element("div", "high-society-player-meta");
+      meta.append(tip(element("span", "", `Cards ${player.hand_count}`), "Number of money cards still in hand. Denominations and total cash remain private until game end."));
+      meta.append(tip(element("strong", "", `💰 ${money(player.table_total)}`), "Public bid: total money this player has committed to the current auction."));
+      meta.append(tip(element("span", "", `Status ${view.game_over ? player.final_status_score : score(player.status_cards || [])}`), "Status after Luxury, Passé, Prestige and Scandale. The lowest remaining cash still eliminates you at game end."));
+      const table = element("div", "high-society-table-money");
+      (player.table_money || []).forEach((value) => table.append(tip(element("span", "high-society-money-chip", money(value)), "Committed money: cannot be exchanged while raising.")));
+      const collection = element("div", "high-society-card-list");
+      collection.tabIndex = 0;
+      collection.setAttribute("role", "group");
+      collection.setAttribute("aria-label", `${name(player.player_id)}: status collection, scroll for more cards`);
+      (player.status_cards || []).forEach((status) => collection.append(statusCard(status)));
+      if (!collection.children.length) collection.append(element("span", "high-society-empty", "No status cards yet"));
+      card.append(heading, meta);
+      if (table.children.length) card.append(table);
+      if ((player.status_cards || []).length > 6) card.append(tip(element("span", "high-society-player-meta", `Collection · ${player.status_cards.length} cards ↕`), "Scroll within this collection to inspect additional status cards. Tap or hover a card for its effect."));
+      card.append(collection);
+      if (player.pending_faux_pas) card.append(tip(element("span", "high-society-player-meta", "⚠️ Next Luxury lost"), "Pending Faux Pas: this player's next Luxury will be discarded. Prestige is unaffected."));
+      byId("Players").append(card);
+    });
+  }
+
+  function renderNotice() {
+    const reviewing = view?.phase === "round_summary";
+    const summary = view?.last_round_summary;
+    byId("Notice").classList.toggle("hidden", !reviewing && !view?.game_over);
+    byId("Ready").replaceChildren();
+    byId("FinalResults").replaceChildren();
+    byId("Notice").classList.toggle("is-self", reviewing && (summary?.winner === view.you || summary?.taker === view.you));
+    if (!view) return;
     if (view.game_over) {
-      meta.textContent += ` · Cash ${formatHighSocietyMoney(player.final_money_total || 0)} · Score ${formatHighSocietyScore(player.final_status_score)}`;
-      if (player.eliminated) {
-        meta.textContent += " · Cast out";
-      }
-    }
-
-    const table = document.createElement("div");
-    table.className = "high-society-table-money";
-    if (tableMoney.length) {
-      tableMoney.forEach((value) => {
-        const chip = document.createElement("span");
-        chip.className = "high-society-money-chip";
-        chip.textContent = formatHighSocietyMoney(value);
-        table.appendChild(chip);
-      });
-    } else {
-      table.textContent = "No table money.";
-      table.classList.add("hint");
-    }
-
-    const statuses = document.createElement("div");
-    statuses.className = "high-society-card-list";
-    const statusCards = Array.isArray(player.status_cards) ? player.status_cards : [];
-    if (statusCards.length) {
-      statusCards.forEach((statusCard) => {
-        statuses.appendChild(renderHighSocietyStatusCard(view, statusCard));
-      });
-    } else {
-      const empty = document.createElement("div");
-      empty.className = "hint";
-      empty.textContent = "No status cards.";
-      statuses.appendChild(empty);
-    }
-
-    card.append(name, meta, table, statuses);
-    highSocietyPlayers.appendChild(card);
-  });
-}
-
-function renderHighSocietyNotice(view) {
-  if (!highSocietyNotice || !highSocietyNoticeBody || !highSocietyNoticeTitle) {
-    return;
-  }
-  const summary = view.last_round_summary;
-  const finalResults = view.final_results;
-  if (!summary && !view.game_over) {
-    highSocietyNotice.classList.add("hidden");
-    if (highSocietyFinalResults) {
-      highSocietyFinalResults.innerHTML = "";
-    }
-    return;
-  }
-  highSocietyNotice.classList.remove("hidden");
-  highSocietyNoticeTitle.textContent = view.game_over ? "Game Over" : "Round Summary";
-  if (view.game_over) {
-    const winners = Array.isArray(view.winner) ? view.winner : [];
-    if (winners.length) {
-      highSocietyNoticeBody.textContent = `Winner: ${winners.map((pid) => highSocietyPlayerName(view, pid)).join(", ")}`;
-    } else {
-      highSocietyNoticeBody.textContent = "No winner: all players were cast out.";
-    }
-  } else if (summary.result === "normal_win") {
-    const winner = highSocietyPlayerName(view, summary.winner);
-    const label = getHighSocietyCardLabel(view, summary.card);
-    highSocietyNoticeBody.textContent = `${winner} gained ${label} for ${formatHighSocietyMoney(summary.paid_total || 0)}.`;
-  } else if (summary.result === "disgrace_taken") {
-    const taker = highSocietyPlayerName(view, summary.taker);
-    const label = getHighSocietyCardLabel(view, summary.card);
-    highSocietyNoticeBody.textContent = `${taker} took ${label}. Other table money discarded: ${formatHighSocietyMoney(summary.discarded_total || 0)}.`;
-  } else {
-    highSocietyNoticeBody.textContent = summary.result || "-";
-  }
-  if (highSocietyFinalResults) {
-    highSocietyFinalResults.innerHTML = "";
-    if (view.game_over && finalResults) {
+      text("NoticeTitle", "Final standings");
+      const endingCard = view.final_results?.unauctioned_card;
+      const result = view.winner?.length ? `Winner: ${view.winner.map(name).join(", ")}.` : "No winner · all players were cast out.";
+      text("NoticeBody", result + (endingCard ? ` Fourth timer: ${cardName(endingCard)} · not auctioned.` : ""));
       (view.players || []).forEach((player) => {
-        const row = document.createElement("div");
-        row.className = "high-society-result-row";
-        row.textContent = `${player.name || player.player_id}: cash ${formatHighSocietyMoney(player.final_money_total || 0)}, score ${formatHighSocietyScore(player.final_status_score)}${player.eliminated ? " · cast out" : ""}`;
-        highSocietyFinalResults.appendChild(row);
+        const row = element("div", "high-society-result-row");
+        row.classList.toggle("self", player.player_id === view.you);
+        row.classList.toggle("eliminated", !!player.eliminated);
+        row.append(element("span", "", `${name(player.player_id)}${player.player_id === view.you ? " · You" : ""}${player.eliminated ? " · Cast out" : ""}`), element("span", "", money(player.final_money_total)), element("strong", "", `Status ${player.final_status_score ?? "—"}`));
+        byId("FinalResults").append(row);
+      });
+    } else if (reviewing && summary) {
+      text("NoticeTitle", `Round ${view.round} · Auction settled`);
+      let result = summary.result === "normal_win" ? `${name(summary.winner)} gained ${cardName(summary.card)} for ${money(summary.paid_total)}.` : `${name(summary.taker)} took ${cardName(summary.card)}; ${money(summary.returned_total)} returned. Others paid ${money(summary.discarded_total)}.`;
+      if (summary.discarded_luxury) result += ` ${cardName(summary.discarded_luxury)} was discarded for Faux Pas.`;
+      text("NoticeBody", result);
+      view.players.forEach((player) => {
+        const ready = view.next_ready.includes(player.player_id);
+        byId("Ready").append(element("span", ready ? "is-ready" : "", `${ready ? "✓" : "…"} ${name(player.player_id)}${player.player_id === view.you ? " (You)" : ""}`));
       });
     }
   }
-}
 
-function renderHighSocietyFauxPas(view) {
-  if (!highSocietyFauxPasBox || !highSocietyFauxPasChoices) {
-    return;
-  }
-  highSocietyFauxPasChoices.innerHTML = "";
-  const canChoose = isHighSocietyActionAvailable("choose_faux_pas_discard");
-  highSocietyFauxPasBox.classList.toggle("hidden", !canChoose);
-  if (!canChoose) {
-    return;
-  }
-  const self = (view.players || []).find((player) => player.player_id === view.you);
-  const luxuries = self ? (self.status_cards || []).filter((card) => card.type === "luxury") : [];
-  luxuries.forEach((card) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "high-society-faux-choice";
-    button.appendChild(renderHighSocietyStatusCard(view, card));
-    button.addEventListener("click", () => {
-      if (highSocietyExplainMode) {
-        return;
-      }
-      sendAction({ type: "choose_faux_pas_discard", card_id: card.id });
+  function renderFauxPas() {
+    const choosing = view?.phase === "choose_faux_pas" && view?.legal_actions.includes("choose_faux_pas_discard");
+    byId("FauxPasBox").classList.toggle("hidden", !choosing);
+    byId("FauxPasChoices").replaceChildren();
+    if (!choosing) { selectedLuxury = null; return; }
+    (self()?.status_cards || []).filter((card) => card.type === "luxury").forEach((card) => {
+      const button = element("button", "high-society-faux-choice");
+      button.type = "button";
+      button.dataset.cardId = card.id;
+      button.dataset.highSocietyExplain = `Choose ${cardName(card)} for Faux Pas (⚠️), then confirm Discard. This selection alone does not discard the card.`;
+      button.setAttribute("aria-label", `Choose ${cardName(card)} to discard`);
+      button.append(statusCard(card, true));
+      button.addEventListener("click", () => {
+        if (!can("choose_faux_pas_discard")) return;
+        selectedLuxury = selectedLuxury === card.id ? null : card.id;
+        updateControls();
+      });
+      byId("FauxPasChoices").append(button);
     });
-    highSocietyFauxPasChoices.appendChild(button);
+  }
+
+  function render() {
+    const reviewing = view?.phase === "round_summary" || view?.game_over;
+    const phases = { normal_auction: "Status auction", disgrace_auction: "Disgrace auction", choose_faux_pas: "Faux Pas", round_summary: "Review", game_over: "Finished" };
+    text("Round", view?.round ?? "—");
+    text("Phase", phases[view?.phase] || "Waiting to start");
+    text("MoneyTitle", view?.phase === "choose_faux_pas" ? "⚠️ Faux Pas" : "💰 Your money");
+    byId("Hand").classList.toggle("hidden", view?.phase === "choose_faux_pas");
+    text("DeckCount", view?.status_deck_count ?? "—");
+    const timer = view?.end_marker_revealed_count || 0;
+    text("Timer", timer);
+    byId("TimerTrack").classList.toggle("urgent", timer >= 3);
+    byId("TimerDots").replaceChildren(...Array.from({ length: 4 }, (_, index) => element("span", index < timer ? "revealed" : "")));
+    root.querySelector(".high-society-current").classList.toggle("hidden", !!reviewing);
+    root.querySelector(".high-society-table").classList.toggle("is-review", !!reviewing);
+    text("AuctionKind", view?.phase === "disgrace_auction" ? "Bid to avoid" : "");
+    text("AuctionTitle", view?.phase === "choose_faux_pas" ? "Resolve Faux Pas" : "On the auction block");
+    root.querySelector(".high-society-high-bid").classList.toggle("hidden", view?.phase === "choose_faux_pas");
+    text("HighBid", money(view?.current_high_bid));
+    text("HighBidder", view?.current_high_bidder ? name(view.current_high_bidder) : "No bids yet");
+    text("Turn", view?.current_turn === view?.you && view ? "Your turn" : name(view?.current_turn));
+    text("Start", name(view?.start_player));
+    byId("CurrentCard").replaceChildren(view?.current_status ? statusCard(view.current_status) : element("div", "high-society-empty", "Waiting for the first auction"));
+    renderNotice();
+    renderHand();
+    renderFauxPas();
+    renderPlayers();
+    updateControls();
+  }
+
+  function submit(action) {
+    if (!can(action.type) || explaining) return;
+    if (action.type === "bid" && byId("BidBtn").disabled) return;
+    pending = true;
+    hideTip();
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(() => { pending = false; updateControls(); }, 6000);
+    updateControls();
+    sendAction(action);
+  }
+
+  function hideTip() {
+    clearTimeout(tooltipTimer);
+    const tooltip = byId("Tooltip");
+    if (tooltip.matches(":popover-open")) tooltip.hidePopover();
+    tooltip.classList.add("hidden");
+  }
+
+  function showTip(target) {
+    if (!target || explaining || target.closest("button") || !active()) return;
+    hideTip();
+    const tooltip = byId("Tooltip");
+    tooltip.textContent = target.dataset.highSocietyTip;
+    tooltip.classList.remove("hidden");
+    if (tooltip.showPopover) tooltip.showPopover();
+    const anchor = target.getBoundingClientRect();
+    const bounds = tooltip.getBoundingClientRect();
+    tooltip.style.left = `${Math.max(12, Math.min(anchor.left, innerWidth - bounds.width - 12))}px`;
+    tooltip.style.top = `${Math.max(12, Math.min(anchor.top > bounds.height + 18 ? anchor.top - bounds.height - 6 : anchor.bottom + 6, innerHeight - bounds.height - 12))}px`;
+    tooltipTimer = setTimeout(hideTip, 3000);
+  }
+
+  function setExplain(value) {
+    explaining = value;
+    hideTip();
+    byId("ExplainBtn").setAttribute("aria-pressed", String(value));
+    updateControls();
+  }
+
+  function closeModal(modal) {
+    if (modal.classList.contains("hidden")) return;
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    if (focusBeforeModal?.isConnected && active()) focusBeforeModal.focus({ preventScroll: true });
+  }
+
+  function openModal(modal) {
+    hideTip();
+    focusBeforeModal = document.activeElement;
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    modal.querySelector("button").focus({ preventScroll: true });
+  }
+
+  function explain(target) {
+    const explanation = target?.dataset.highSocietyExplain || target?.dataset.highSocietyTip;
+    if (!explanation) return;
+    text("ExplainContent", explanation);
+    setExplain(false);
+    openModal(byId("ExplainModal"));
+  }
+
+  function clearSelection() {
+    if (pending) return;
+    selectedMoney = [];
+    selectedLuxury = null;
+    updateControls();
+  }
+
+  function reset() {
+    view = null;
+    pending = false;
+    selectedMoney = [];
+    selectedLuxury = null;
+    gesture = null;
+    clearTimeout(pendingTimer);
+    setExplain(false);
+    closeModal(byId("HelpModal"));
+    closeModal(byId("ExplainModal"));
+    render();
+  }
+
+  window.renderHighSocietyGameState = (data) => {
+    if (!data?.view || currentGameType !== "high_society") return;
+    if (data.room_id && currentRoomState?.room_id !== data.room_id) return;
+    const incoming = data.view;
+    if (!view || view.round !== incoming.round || view.phase !== incoming.phase || view.current_turn !== incoming.current_turn || view.you !== incoming.you) {
+      selectedMoney = [];
+      selectedLuxury = null;
+    }
+    view = incoming;
+    pending = false;
+    clearTimeout(pendingTimer);
+    selectedMoney = selectedMoney.filter((value) => view.your_hand_money.includes(value));
+    if (!self()?.status_cards.some((card) => card.id === selectedLuxury)) selectedLuxury = null;
+    hideTip();
+    render();
+    logGameEvents(data);
+  };
+
+  window.showHighSocietyHeaderActions = (show) => {
+    byId("HeaderActions").style.display = show ? "flex" : "none";
+    if (!show) reset();
+    else updateControls();
+  };
+
+  Object.entries(explanations).forEach(([suffix, content]) => { byId(suffix).dataset.highSocietyExplain = content; });
+  byId("BidBtn").addEventListener("click", () => submit({ type: "bid", money_values: [...selectedMoney] }));
+  byId("PassBtn").addEventListener("click", () => submit({ type: "pass" }));
+  byId("NextBtn").addEventListener("click", () => submit({ type: "next_round" }));
+  byId("DiscardBtn").addEventListener("click", () => { if (selectedLuxury) submit({ type: "choose_faux_pas_discard", card_id: selectedLuxury }); });
+  byId("CancelBtn").addEventListener("click", clearSelection);
+  byId("HelpBtn").setAttribute("aria-label", "Help");
+  byId("ExplainBtn").setAttribute("aria-label", "Explain");
+  byId("HelpBtn").addEventListener("click", () => {
+    setExplain(false);
+    root.ownerDocument.querySelector(".high-society-help-content").innerHTML = help;
+    openModal(byId("HelpModal"));
   });
-}
+  byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
+  ["Help", "Explain"].forEach((kind) => {
+    byId(`${kind}CloseBtn`).addEventListener("click", () => closeModal(byId(`${kind}Modal`)));
+    byId(`${kind}Modal`).addEventListener("click", (event) => { if (event.target === byId(`${kind}Modal`)) closeModal(byId(`${kind}Modal`)); });
+  });
 
-function renderHighSocietyGameState(data) {
-  const view = data.view;
-  currentHighSocietyView = view;
-  highSocietySelectedMoney = highSocietySelectedMoney.filter((value) =>
-    Array.isArray(view.your_hand_money) && view.your_hand_money.includes(value)
-  );
-  if (currentGameType !== "high_society") {
-    currentGameType = "high_society";
-    setGamePanelVisibility("high_society");
-  }
-  if (highSocietyRoundLabel) {
-    highSocietyRoundLabel.textContent = view.round ?? "-";
-  }
-  if (highSocietyPhaseLabel) {
-    highSocietyPhaseLabel.textContent = view.phase || "-";
-  }
-  if (highSocietyDeckCountLabel) {
-    highSocietyDeckCountLabel.textContent = view.status_deck_count ?? "-";
-  }
-  if (highSocietyTimerLabel) {
-    highSocietyTimerLabel.textContent = view.end_marker_revealed_count ?? 0;
-  }
-  if (highSocietyCurrentCard) {
-    highSocietyCurrentCard.innerHTML = "";
-    highSocietyCurrentCard.appendChild(renderHighSocietyStatusCard(view, view.current_status));
-  }
-  if (highSocietyTurnLabel) {
-    highSocietyTurnLabel.textContent = highSocietyPlayerName(view, view.current_turn);
-  }
-  if (highSocietyStartLabel) {
-    highSocietyStartLabel.textContent = highSocietyPlayerName(view, view.start_player);
-  }
-  if (highSocietyHighBidLabel) {
-    highSocietyHighBidLabel.textContent = formatHighSocietyMoney(view.current_high_bid || 0);
-  }
-  if (highSocietyHighBidderLabel) {
-    highSocietyHighBidderLabel.textContent = highSocietyPlayerName(view, view.current_high_bidder);
-  }
-  renderHighSocietyNotice(view);
-  renderHighSocietyHand(view);
-  renderHighSocietyFauxPas(view);
-  renderHighSocietyPlayers(view);
-  logGameEvents(data);
-  updateHighSocietyButtons();
-}
-
-if (highSocietyBidBtn) {
-  highSocietyBidBtn.addEventListener("click", () => {
-    if (!highSocietySelectedMoney.length) {
+  document.addEventListener("pointerdown", (event) => {
+    if (!active()) return;
+    suppressClickUntil = 0;
+    gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, down: true, target: event.target.closest("[data-high-society-explain], [data-high-society-tip]") };
+    hideTip();
+  }, true);
+  document.addEventListener("pointermove", (event) => {
+    if (gesture?.down && gesture.pointerId === event.pointerId && Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > 8) gesture.moved = true;
+  }, { passive: true });
+  document.addEventListener("pointercancel", () => {
+    if (gesture) { gesture.moved = true; gesture.down = false; suppressClickUntil = Date.now() + 500; }
+  }, { passive: true });
+  document.addEventListener("pointerup", (event) => {
+    if (!active() || !gesture || gesture.pointerId !== event.pointerId) return;
+    gesture.down = false;
+    if (gesture.moved) { suppressClickUntil = Date.now() + 500; return; }
+    const target = event.target.closest("[data-high-society-explain], [data-high-society-tip]");
+    if (explaining && target && target === gesture.target && root.contains(target)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      suppressClickUntil = Date.now() + 500;
+      explain(target);
+    }
+  }, true);
+  document.addEventListener("click", (event) => {
+    if (!active()) return;
+    if (Date.now() < suppressClickUntil && root.contains(event.target)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       return;
     }
-    sendAction({ type: "bid", money_values: highSocietySelectedMoney.slice() });
-    highSocietySelectedMoney = [];
-  });
-}
-
-if (highSocietyPassBtn) {
-  highSocietyPassBtn.addEventListener("click", () => {
-    highSocietySelectedMoney = [];
-    sendAction({ type: "pass" });
-  });
-}
-
-if (highSocietyNextBtn) {
-  highSocietyNextBtn.addEventListener("click", () => {
-    highSocietySelectedMoney = [];
-    sendAction({ type: "next_round" });
-  });
-}
-
-if (highSocietyHelpBtn) {
-  highSocietyHelpBtn.addEventListener("click", () => {
-    if (highSocietyHelpContent) {
-      highSocietyHelpContent.innerHTML = HIGH_SOCIETY_HELP_HTML;
+    if (!explaining || event.target.closest("#highSocietyHelpBtn, #highSocietyExplainBtn, #highSocietyHelpModal, #highSocietyExplainModal")) return;
+    if (event.target.closest("button, summary, a, input, select, [data-high-society-tip]")) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      explain(event.target.closest("#highSocietyPanel [data-high-society-explain], #highSocietyPanel [data-high-society-tip]"));
     }
-    openHighSocietyModal(highSocietyHelpModal);
+  }, true);
+  root.addEventListener("click", (event) => {
+    if (explaining) return;
+    const target = event.target.closest("[data-high-society-tip]");
+    if (target) showTip(target);
+    else if (!event.target.closest("button, a, input, summary") && !event.target.closest(".high-society-player-card, #highSocietyNotice")) clearSelection();
   });
-}
-
-if (highSocietyHelpCloseBtn) {
-  highSocietyHelpCloseBtn.addEventListener("click", () => closeHighSocietyModal(highSocietyHelpModal));
-}
-
-if (highSocietyExplainBtn) {
-  highSocietyExplainBtn.addEventListener("click", () => {
-    if (highSocietyExplainMode) {
-      exitHighSocietyExplainMode();
-    } else {
-      enterHighSocietyExplainMode();
+  root.addEventListener("pointerover", (event) => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-high-society-tip]")); });
+  root.addEventListener("pointerout", (event) => { if (event.pointerType === "mouse") hideTip(); });
+  root.addEventListener("focusin", (event) => showTip(event.target.closest("[data-high-society-tip]")));
+  root.addEventListener("focusout", hideTip);
+  document.addEventListener("scroll", () => { if (gesture?.down) gesture.moved = true; hideTip(); }, { capture: true, passive: true });
+  window.addEventListener("resize", hideTip);
+  document.addEventListener("keydown", (event) => {
+    if (!active()) return;
+    if (event.key === "Escape") {
+      setExplain(false);
+      closeModal(byId("HelpModal"));
+      closeModal(byId("ExplainModal"));
+      clearSelection();
+    }
+    const modal = [byId("HelpModal"), byId("ExplainModal")].find((node) => !node.classList.contains("hidden"));
+    if (event.key === "Tab" && modal) {
+      event.preventDefault();
+      modal.querySelector("button").focus();
     }
   });
-}
 
-if (highSocietyExplainCloseBtn) {
-  highSocietyExplainCloseBtn.addEventListener("click", () => closeHighSocietyModal(highSocietyExplainModal));
-}
-
-document.addEventListener(
-  "pointerdown",
-  (event) => {
-    if (!highSocietyExplainMode) {
-      return;
-    }
-    const button = findHighSocietyExplainButtonAtPoint(event.clientX, event.clientY);
-    if (!button) {
-      return;
-    }
-    const explanation = highSocietyExplanationForButton(button);
-    if (!explanation) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    showHighSocietyExplanation(explanation);
-    exitHighSocietyExplainMode();
-  },
-  true
-);
-
-document.addEventListener(
-  "click",
-  (event) => {
-    if (!highSocietyExplainMode) {
-      return;
-    }
-    const button = event.target.closest("button");
-    if (!button || button === highSocietyHelpBtn || button === highSocietyExplainBtn || button === highSocietyHelpCloseBtn || button === highSocietyExplainCloseBtn) {
-      return;
-    }
-    if (!button.closest("#highSocietyPanel")) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const explanation = highSocietyExplanationForButton(button);
-    if (explanation) {
-      showHighSocietyExplanation(explanation);
-      exitHighSocietyExplainMode();
-    }
-  },
-  true
-);
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    exitHighSocietyExplainMode();
-    closeHighSocietyModal(highSocietyHelpModal);
-    closeHighSocietyModal(highSocietyExplainModal);
+  function syncRoom(state) {
+    const changedRoom = roomId !== state?.room_id;
+    roomId = state?.room_id || null;
+    const wasSelected = selectedRoom;
+    selectedRoom = state?.game_type === "high_society";
+    if (selectedRoom ? changedRoom || state?.status === "lobby" : wasSelected) reset();
   }
-});
+
+  function initialize() {
+    socket.on("room:state", syncRoom);
+    socket.on("system:error", () => { pending = false; clearTimeout(pendingTimer); updateControls(); });
+    socket.on("disconnect", () => { pending = false; clearTimeout(pendingTimer); hideTip(); updateControls(); });
+    socket.on("connect", updateControls);
+    syncRoom(currentRoomState);
+    if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "high_society") window.renderHighSocietyGameState(lastGameStatePayload);
+  }
+  render();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
+  else initialize();
+})();
