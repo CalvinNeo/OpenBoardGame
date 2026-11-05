@@ -1,6 +1,8 @@
 import random
 from typing import Dict, List, Optional, Tuple
 
+from game.incan_gold_ai import choose_decision
+
 TREASURE_VALUES = [1, 2, 3, 4, 5, 5, 7, 7, 9, 11, 11, 13, 14, 15, 17]
 HAZARD_TYPES = ["snake", "spider", "fire", "rockfall", "mummy"]
 ARTIFACT_VALUES = [5, 5, 5, 10, 10]
@@ -123,6 +125,7 @@ def _end_round_bust(state: Dict, hazard_type: str, events: List[Dict]) -> None:
 
 
 def _maybe_finish_game(state: Dict) -> None:
+    state["next_round_ready"] = []
     if state.get("current_round", 1) < state.get("max_rounds", len(ARTIFACT_VALUES)):
         state["phase"] = "round_end"
         return
@@ -196,6 +199,8 @@ def _resolve_decisions(state: Dict, events: List[Dict]) -> None:
     decisions = state.get("decisions", {})
     active_players = _players_in_cave(state)
     leaving_players = [pid for pid in active_players if decisions.get(pid) == "leave"]
+    state["last_decisions"] = dict(decisions)
+    events.append({"type": "incan_gold:decisions", "payload": {"choices": dict(decisions)}})
 
     if leaving_players:
         _distribute_remainders(state, leaving_players)
@@ -225,6 +230,8 @@ def _start_round(state: Dict, events: Optional[List[Dict]] = None) -> None:
     state["path_cards"] = []
     state["decisions"] = {}
     state["hazard_counts"] = {}
+    state["last_decisions"] = {}
+    state["next_round_ready"] = []
     state["round_end_reason"] = None
     state["round_end_hazard"] = None
     state["round_end_artifacts_removed"] = 0
@@ -324,7 +331,7 @@ class IncanGoldGame:
             return ["play_again"]
         phase = state.get("phase")
         if phase == "round_end":
-            return ["next_round"]
+            return [] if player_id in state.get("next_round_ready", []) else ["next_round"]
         if phase != "decision":
             return []
         pdata = state["players"][player_id]
@@ -359,6 +366,13 @@ class IncanGoldGame:
                 return [], "invalid phase"
             if state.get("current_round", 1) >= state.get("max_rounds", len(ARTIFACT_VALUES)):
                 return [], "game complete"
+            ready = state.setdefault("next_round_ready", [])
+            if player_id in ready:
+                return [], "already ready"
+            ready.append(player_id)
+            events.append({"type": "incan_gold:ready", "payload": {"player_id": player_id}})
+            if not all(pid in ready for pid in state["turn_order"]):
+                return events, None
             state["current_round"] += 1
             _start_round(state, events)
             events.append({"type": "incan_gold:next_round", "payload": {"player_id": player_id}})
@@ -376,7 +390,7 @@ class IncanGoldGame:
             if choice not in ("continue", "leave"):
                 return [], "invalid choice"
             state["decisions"][player_id] = choice
-            events.append({"type": "incan_gold:decide", "payload": {"player_id": player_id, "choice": choice}})
+            events.append({"type": "incan_gold:decide", "payload": {"player_id": player_id}})
 
             active_players = _players_in_cave(state)
             if active_players and all(pid in state["decisions"] for pid in active_players):
@@ -419,6 +433,8 @@ class IncanGoldGame:
             "in_cave_count": len(active_players),
             "decided_count": len(decided_players),
             "your_decision": decisions.get(viewer_id),
+            "last_decisions": dict(state.get("last_decisions", {})),
+            "next_round_ready": list(state.get("next_round_ready", [])),
             "round_end": {
                 "reason": state.get("round_end_reason"),
                 "hazard": state.get("round_end_hazard"),
@@ -440,7 +456,7 @@ class IncanGoldGame:
             return None
         phase = state.get("phase")
         if phase == "round_end":
-            return {"type": "next_round"}
+            return {"type": "next_round"} if "next_round" in IncanGoldGame.get_legal_actions(state, bot_id) else None
         if phase != "decision":
             return None
         pdata = state["players"][bot_id]
@@ -449,29 +465,8 @@ class IncanGoldGame:
         if bot_id in state.get("decisions", {}):
             return None
 
-        hand_gems = int(pdata.get("hand_gems", 0))
-        hazard_counts = state.get("hazard_counts", {})
-        hazards_seen = len([h for h in hazard_counts.values() if h])
-        remaining_cards = len(state.get("deck", []))
-        danger_types = [hazard for hazard, count in hazard_counts.items() if count >= 1]
-        danger_cards = sum(
-            1
-            for card in state.get("deck", [])
-            if card.get("type") == "hazard" and card.get("hazard") in danger_types
-        )
-        bust_prob = (danger_cards / remaining_cards) if remaining_cards > 0 else 1.0
-
-        should_leave = False
-        if hand_gems >= 20 or hazards_seen >= 3:
-            should_leave = True
-        elif hand_gems >= 12 and hazards_seen >= 2:
-            should_leave = True
-        elif hand_gems >= 8 and bust_prob >= 0.25:
-            should_leave = True
-        elif bust_prob >= 0.4:
-            should_leave = True
-
-        return {"type": "decide", "choice": "leave" if should_leave else "continue"}
+        choice = choose_decision(IncanGoldGame.get_public_view(state, bot_id), TREASURE_VALUES, HAZARD_TYPES)
+        return {"type": "decide", "choice": choice}
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

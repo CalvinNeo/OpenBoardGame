@@ -39,6 +39,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "guandan",
     "hive",
     "hot_streak",
+    "incan_gold",
     "istanbul",
     "kronologic",
     "las_vegas",
