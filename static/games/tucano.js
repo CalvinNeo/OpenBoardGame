@@ -2,6 +2,7 @@ let currentTucanoView = null;
 let tucanoExplainMode = false;
 let tucanoSelection = null;
 let tucanoToucanSelection = null;
+let tucanoDraftSelection = null;
 let tucanoExplainClickPending = false;
 let tucanoModalTrigger = null;
 const tucanoOpenScores = new Set();
@@ -39,7 +40,7 @@ const TUCANO_TOUCAN_LABELS = {
 };
 
 const TUCANO_EXPLAIN = {
-  tucanoColumns: "Choose one non-empty column on your draft turn. You take every card in that column.",
+  tucanoColumns: "Choose one non-empty pile on your draft turn. Tap it to open the Take/Cancel confirmation, then use the arrows beside it to inspect more cards.",
   tucanoPlayers: "Face-up fruit can be given or stolen. Protected face-down cards are counted but cannot be targeted.",
   tucanoScores: "Expand Scores to inspect each fruit set. During play, only face-up fruit is scored here; protected fruit and jokers are included in the final score. Majority fruit is settled at the end.",
   tucanoFlipBtn: "Resolve a Flip toucan by moving all of your face-up fruit into protected face-down storage.",
@@ -54,7 +55,7 @@ const TUCANO_HELP_HTML = `
     <p><strong>Toucans.</strong> 🎁 Give one of your face-up fruit to another player. 🪶 Steal one face-up fruit from another player. 🛡️ Flip protects all your face-up fruit face down.</p>
     <p><strong>End.</strong> When the deck is empty and only one column remains, the game ends and the final column is discarded. Jokers are assigned automatically to the highest scoring fruit for their owner.</p>
     <p><strong>Reading cards.</strong> The numbers below each fruit are the total points for collecting 1, 2, 3… cards of that fruit. Orange numbers are negative. Use Explain to inspect a card or fruit stack, including unavailable actions.</p>
-    <p><strong>Controls.</strong> Scroll inside a tall column to see every card, then use Take all. For Give, tap your fruit and then a recipient. Tap the selected fruit again or empty space to cancel. Press Esc or tap outside a dialog to close it.</p>
+    <p><strong>Controls.</strong> Tap a pile and confirm to take it. Use the arrows at the sides of a pile to inspect more cards. For Give, tap your fruit and then a recipient. Tap the selected fruit again or empty space to cancel. Press Esc or tap outside a dialog to close it.</p>
     <p><strong>Scoring variant.</strong> This game uses a simplified fruit distribution and scoring table. The values shown on the cards are the rules used for this game.</p>
   </div>
 `;
@@ -227,6 +228,7 @@ function updateTucanoSelectionLabel() {
 function clearTucanoState() {
   currentTucanoView = null;
   tucanoToucanSelection = null;
+  tucanoDraftSelection = null;
   tucanoExplainMode = false;
   tucanoExplainClickPending = false;
   tucanoOpenScores.clear();
@@ -371,7 +373,7 @@ function renderTucanoNotice(view) {
       tucanoToucanChoices.replaceChildren();
     }
     tucanoNoticeTitle.textContent = yourTurn ? "Your turn" : "Waiting for the next pick";
-    tucanoNoticeBody.textContent = yourTurn ? "Choose a column and tap Take all." : `${findPlayerName(view, view.current_turn)} is choosing a column.`;
+    tucanoNoticeBody.textContent = yourTurn ? "Tap a pile to inspect it, then confirm to take it." : `${findPlayerName(view, view.current_turn)} is choosing a pile.`;
     return;
   }
   renderTucanoToucanChoices(view);
@@ -412,17 +414,18 @@ function renderTucanoColumns(view) {
   (view.columns || []).forEach((column, index) => {
     const columnEl = document.createElement("div");
     columnEl.className = "tucano-column";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "tucano-column-select has-explanation";
-    button.dataset.explainId = "tucanoColumns";
-    button.disabled = !(view.phase === "draft" && isTucanoActionAvailable("draft_column") && column.length);
-    if (!button.disabled) {
-      button.classList.add("action-allowed");
-      columnEl.classList.add("is-available");
+    const available = view.phase === "draft" && isTucanoActionAvailable("draft_column") && column.length;
+    const selected = available && tucanoDraftSelection === index;
+    columnEl.classList.toggle("is-available", available);
+    columnEl.classList.toggle("is-selected", selected);
+    columnEl.classList.add("has-explanation");
+    columnEl.dataset.explainId = "tucanoColumns";
+    columnEl.dataset.explainText = available ? `Choose pile ${index + 1}, then confirm to take its cards.` : "This pile cannot be taken right now.";
+    columnEl.setAttribute("aria-label", `Pile ${index + 1}, ${column.length} ${column.length === 1 ? "card" : "cards"}`);
+    if (available) {
+      columnEl.setAttribute("role", "group");
+      columnEl.tabIndex = 0;
     }
-    button.textContent = column.length ? "Take all" : "Empty";
-    button.setAttribute("aria-label", `Take column ${index + 1}, ${column.length} cards`);
     const title = document.createElement("h4");
     title.className = "tucano-column-title";
     const number = document.createElement("span");
@@ -446,13 +449,96 @@ function renderTucanoColumns(view) {
         cards.appendChild(renderTucanoCardFace(view, card));
       });
     }
-    columnEl.append(title, cards, button);
-    button.addEventListener("click", () => {
-      if (!button.disabled) {
+
+    const cardScroller = document.createElement("div");
+    cardScroller.className = "tucano-pile-card-scroller";
+    const leftArrow = document.createElement("button");
+    leftArrow.type = "button";
+    leftArrow.className = "tucano-pile-scroll tucano-pile-scroll-left";
+    leftArrow.dataset.tucanoControl = "scroll";
+    leftArrow.textContent = "‹";
+    leftArrow.setAttribute("aria-label", `Scroll pile ${index + 1} left`);
+    const rightArrow = document.createElement("button");
+    rightArrow.type = "button";
+    rightArrow.className = "tucano-pile-scroll tucano-pile-scroll-right";
+    rightArrow.dataset.tucanoControl = "scroll";
+    rightArrow.textContent = "›";
+    rightArrow.setAttribute("aria-label", `Scroll pile ${index + 1} right`);
+    const syncScrollButtons = () => {
+      const overflow = cards.scrollWidth > cards.clientWidth + 1;
+      cardScroller.classList.toggle("is-scrollable", overflow);
+      leftArrow.disabled = !overflow || cards.scrollLeft <= 1;
+      rightArrow.disabled = !overflow || cards.scrollLeft + cards.clientWidth >= cards.scrollWidth - 1;
+    };
+    const scrollPile = (direction) => {
+      cards.scrollBy({ left: direction * Math.max(120, Math.floor(cards.clientWidth * 0.8)), behavior: "smooth" });
+    };
+    leftArrow.addEventListener("click", (event) => {
+      event.stopPropagation();
+      scrollPile(-1);
+    });
+    rightArrow.addEventListener("click", (event) => {
+      event.stopPropagation();
+      scrollPile(1);
+    });
+    cards.addEventListener("scroll", syncScrollButtons, { passive: true });
+    cardScroller.append(leftArrow, cards, rightArrow);
+
+    columnEl.append(title, cardScroller);
+    if (selected) {
+      const confirmation = document.createElement("div");
+      confirmation.className = "tucano-column-confirm";
+      confirmation.dataset.tucanoControl = "confirm";
+      const prompt = document.createElement("span");
+      prompt.textContent = "Take this pile?";
+      const confirm = document.createElement("button");
+      confirm.type = "button";
+      confirm.className = "tucano-column-confirm-btn action-allowed";
+      confirm.textContent = "Take";
+      confirm.setAttribute("aria-label", `Confirm taking pile ${index + 1}`);
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "tucano-column-cancel-btn";
+      cancel.textContent = "Cancel";
+      cancel.setAttribute("aria-label", `Cancel taking pile ${index + 1}`);
+      confirm.addEventListener("click", (event) => {
+        event.stopPropagation();
+        confirm.disabled = true;
+        cancel.disabled = true;
         sendAction({ type: "draft_column", column: index });
+      });
+      cancel.addEventListener("click", (event) => {
+        event.stopPropagation();
+        tucanoDraftSelection = null;
+        renderTucanoColumns(view);
+      });
+      confirmation.append(prompt, confirm, cancel);
+      columnEl.appendChild(confirmation);
+    }
+    const chooseColumn = () => {
+      if (!available || tucanoDraftSelection === index) {
+        return;
+      }
+      tucanoDraftSelection = index;
+      renderTucanoColumns(view);
+    };
+    columnEl.addEventListener("click", (event) => {
+      if (event.target.closest("button, a, input, select, summary")) {
+        return;
+      }
+      chooseColumn();
+    });
+    columnEl.addEventListener("keydown", (event) => {
+      if ((event.key === "Enter" || event.key === " ") && !event.target.closest("button, a, input, select, summary")) {
+        event.preventDefault();
+        chooseColumn();
       }
     });
     tucanoColumns.appendChild(columnEl);
+    syncScrollButtons();
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(syncScrollButtons);
+    }
   });
 }
 
@@ -700,6 +786,7 @@ function renderTucanoGameState(data) {
   const view = data.view;
   clearTucanoSelection();
   currentTucanoView = view;
+  tucanoDraftSelection = null;
   // A server update follows every resolved effect, so the next effect must be
   // selected afresh. A single remaining toucan is selected implicitly.
   const choices = getTucanoToucanChoices(view);

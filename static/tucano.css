@@ -1313,3 +1313,134 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
     flex: 0 0 92px;
   }
 }
+
+/* Piles are selected as a whole. The confirmation stays inside the pile so
+   it never covers a neighboring pile or pushes the page sideways. */
+.tucano-column.is-available {
+  cursor: pointer;
+}
+
+.tucano-column.is-selected {
+  border-color: var(--tucano-deep);
+  box-shadow: 0 0 0 2px rgba(11, 96, 72, 0.18), 0 5px 14px rgba(23, 72, 45, 0.1);
+}
+
+.tucano-pile-card-scroller {
+  display: block;
+  min-width: 0;
+}
+
+.tucano-pile-scroll {
+  display: none;
+}
+
+.tucano-column-confirm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid #d8b757;
+  border-radius: 9px;
+  background: #fff8dc;
+  color: #715313;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.tucano-column-confirm button {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+
+.tucano-column-confirm-btn {
+  border-color: var(--tucano-leaf) !important;
+  background: var(--tucano-leaf) !important;
+  color: #fff !important;
+}
+
+.tucano-column-cancel-btn {
+  background: #fff !important;
+}
+
+@media (max-width: 600px) {
+  .tucano-pile-card-scroller {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .tucano-pile-scroll {
+    display: inline-flex;
+    width: 28px;
+    min-width: 28px;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-color: #b9d99e;
+    border-radius: 8px;
+    background: #f0f8dc;
+    color: var(--tucano-deep);
+    font-size: 27px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .tucano-pile-scroll:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .tucano-pile-card-scroller:not(.is-scrollable) .tucano-pile-scroll {
+    display: none;
+  }
+
+  .tucano-pile-card-scroller:not(.is-scrollable) .tucano-card-list {
+    grid-column: 1 / -1;
+  }
+
+  .tucano-column .tucano-card-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+    padding: 1px 1px 4px;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+    scrollbar-width: none;
+  }
+
+  .tucano-column .tucano-card-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tucano-column .tucano-card {
+    flex: 0 0 68px;
+    width: 68px;
+    min-width: 68px;
+    min-height: 68px;
+    height: 68px;
+  }
+
+  .tucano-column-confirm {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .tucano-column-confirm > span {
+    grid-column: 1 / -1;
+  }
+
+  .tucano-column-confirm button {
+    width: 100%;
+  }
+}
