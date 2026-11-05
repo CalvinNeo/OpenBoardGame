@@ -5,6 +5,8 @@ let tucanoToucanSelection = null;
 let tucanoDraftSelection = null;
 let tucanoExplainClickPending = false;
 let tucanoModalTrigger = null;
+let tucanoPointerStart = null;
+let tucanoTooltipTimer = null;
 const tucanoOpenScores = new Set();
 
 const tucanoPhaseLabel = document.getElementById("tucanoPhase");
@@ -32,6 +34,7 @@ const tucanoHelpContent = document.getElementById("tucanoHelpContent");
 const tucanoExplainModal = document.getElementById("tucanoExplainModal");
 const tucanoExplainModalCloseBtn = document.getElementById("tucanoExplainModalCloseBtn");
 const tucanoExplainContent = document.getElementById("tucanoExplainContent");
+const tucanoTooltip = document.getElementById("tucanoTooltip");
 
 const TUCANO_TOUCAN_LABELS = {
   give: "🎁 Give",
@@ -92,7 +95,7 @@ function tucanoScoreEffect(spec) {
     const keys = Object.keys(spec.score)
       .map((key) => Number.parseInt(key, 10))
       .filter((key) => Number.isInteger(key))
-      .sort((a, b) => a - b);
+      .sort((first, second) => first - second);
     const values = keys.map((key) => spec.score[key]);
     const range = keys.length ? `${keys[0]}-${keys[keys.length - 1]}` : "Score";
     return `${range}: ${values.join("/")}`;
@@ -133,8 +136,9 @@ function renderTucanoCardFace(view, card) {
   cardEl.className = `tucano-card tucano-card-${card.type} has-explanation`;
   cardEl.setAttribute("role", "img");
   cardEl.setAttribute("aria-label", `${info.title}: ${info.effect || "Resolve this card"}`);
-  cardEl.dataset.explainTitle = info.title;
-  cardEl.dataset.explainText = `${info.title}: ${info.effect}. ${card.type === "fruit" ? "Scores are totals for the number of cards in your set." : "Resolve toucans immediately; jokers score at the end."}`;
+  cardEl.dataset.explainTitle = `${info.icon} ${info.title}`;
+  cardEl.dataset.explainText = `${info.icon} ${info.title}: ${info.effect}. ${card.type === "fruit" ? "Scores are totals for the number of cards in your set." : "Resolve toucans immediately; jokers score at the end."}`;
+  cardEl.dataset.tucanoTip = cardEl.dataset.explainText;
 
   const icon = document.createElement("div");
   icon.className = "tucano-card-icon";
@@ -149,11 +153,12 @@ function renderTucanoCardFace(view, card) {
   effect.className = "tucano-card-effect";
   const spec = view.fruit_defs && view.fruit_defs[card.fruit];
   if (spec && spec.score) {
-    const entries = Object.entries(spec.score).sort(([a], [b]) => Number(a) - Number(b));
+    const entries = Object.entries(spec.score).sort(([first], [second]) => Number(first) - Number(second));
     const range = document.createElement("div");
     range.textContent = `${entries[0][0]}–${entries[entries.length - 1][0]} cards`;
     const scale = document.createElement("div");
     scale.className = "tucano-score-scale";
+    scale.style.setProperty("--tucano-score-count", entries.length);
     entries.forEach(([count, points]) => {
       const value = document.createElement("span");
       value.textContent = points;
@@ -167,7 +172,6 @@ function renderTucanoCardFace(view, card) {
     effect.textContent = info.effect;
   }
 
-  cardEl.title = `${info.title}: ${info.effect}`;
   cardEl.append(icon, title, effect);
   return cardEl;
 }
@@ -232,6 +236,7 @@ function clearTucanoState() {
   tucanoExplainMode = false;
   tucanoExplainClickPending = false;
   tucanoOpenScores.clear();
+  hideTucanoTooltip();
   if (tucanoRoot) {
     delete tucanoRoot.dataset.phase;
   }
@@ -279,6 +284,7 @@ function showTucanoHeaderActions(show) {
     tucanoHeaderActions.setAttribute("aria-hidden", String(!show));
   }
   if (!show) {
+    hideTucanoTooltip();
     exitTucanoExplainMode();
     closeTucanoModal(tucanoHelpModal);
     closeTucanoModal(tucanoExplainModal);
@@ -372,8 +378,8 @@ function renderTucanoNotice(view) {
       tucanoToucanChoices.classList.add("hidden");
       tucanoToucanChoices.replaceChildren();
     }
-    tucanoNoticeTitle.textContent = yourTurn ? "Your turn" : "Waiting for the next pick";
-    tucanoNoticeBody.textContent = yourTurn ? "Tap a pile to inspect it, then confirm to take it." : `${findPlayerName(view, view.current_turn)} is choosing a pile.`;
+    tucanoNoticeTitle.textContent = yourTurn ? "Your turn" : "Waiting";
+    tucanoNoticeBody.textContent = yourTurn ? "Choose a pile, then Take." : `${findPlayerName(view, view.current_turn)} is choosing a pile.`;
     return;
   }
   renderTucanoToucanChoices(view);
@@ -404,10 +410,21 @@ function renderTucanoNotice(view) {
   }
 }
 
+function syncTucanoPileScrollButtons(cardScroller) {
+  const cards = cardScroller.querySelector(".tucano-card-list");
+  const leftArrow = cardScroller.querySelector(".tucano-pile-scroll-left");
+  const rightArrow = cardScroller.querySelector(".tucano-pile-scroll-right");
+  const overflow = window.matchMedia("(max-width: 600px)").matches && cards.scrollWidth > cardScroller.clientWidth + 1;
+  cardScroller.classList.toggle("is-scrollable", overflow);
+  leftArrow.disabled = !overflow || cards.scrollLeft <= 1;
+  rightArrow.disabled = !overflow || cards.scrollLeft + cards.clientWidth >= cards.scrollWidth - 1;
+}
+
 function renderTucanoColumns(view) {
   if (!tucanoColumns) {
     return;
   }
+  const scrollPositions = Array.from(tucanoColumns.querySelectorAll(".tucano-card-list"), (cards) => ({ left: cards.scrollLeft, top: cards.scrollTop }));
   tucanoColumns.innerHTML = "";
   tucanoColumns.classList.add("has-explanation");
   tucanoColumns.dataset.explainId = "tucanoColumns";
@@ -464,12 +481,7 @@ function renderTucanoColumns(view) {
     rightArrow.dataset.tucanoControl = "scroll";
     rightArrow.textContent = "›";
     rightArrow.setAttribute("aria-label", `Scroll pile ${index + 1} right`);
-    const syncScrollButtons = () => {
-      const overflow = cards.scrollWidth > cards.clientWidth + 1;
-      cardScroller.classList.toggle("is-scrollable", overflow);
-      leftArrow.disabled = !overflow || cards.scrollLeft <= 1;
-      rightArrow.disabled = !overflow || cards.scrollLeft + cards.clientWidth >= cards.scrollWidth - 1;
-    };
+    const syncScrollButtons = () => syncTucanoPileScrollButtons(cardScroller);
     const scrollPile = (direction) => {
       cards.scrollBy({ left: direction * Math.max(120, Math.floor(cards.clientWidth * 0.8)), behavior: "smooth" });
     };
@@ -536,6 +548,12 @@ function renderTucanoColumns(view) {
     });
     tucanoColumns.appendChild(columnEl);
     syncScrollButtons();
+    const scrollPosition = scrollPositions[index];
+    if (scrollPosition) {
+      cards.scrollLeft = scrollPosition.left;
+      cards.scrollTop = scrollPosition.top;
+      syncScrollButtons();
+    }
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(syncScrollButtons);
     }
@@ -559,20 +577,12 @@ function renderTucanoFruitStack(view, player, fruit, count) {
   const quantity = document.createElement("strong");
   quantity.className = "tucano-fruit-card-count";
   quantity.textContent = `×${count}`;
-  const effect = document.createElement("span");
-  effect.className = "tucano-fruit-card-effect";
-  const spec = view && view.fruit_defs ? view.fruit_defs[fruit] : null;
-  if (spec && spec.score) {
-    const entries = Object.entries(spec.score).sort(([a], [b]) => Number(a) - Number(b));
-    effect.textContent = `${entries[0][0]}–${entries[entries.length - 1][0]} cards · ${entries.map(([, points]) => points).join("/")}`;
-  } else {
-    effect.textContent = info.effect || "Wild at end";
-  }
-  button.append(icon, name, quantity, effect);
-  button.title = `${info.title} ×${count}: ${info.effect || "Wild at end"}`;
-  button.setAttribute("aria-label", button.title);
-  button.dataset.explainTitle = button.title;
-  button.dataset.explainText = `${info.title} ×${count}: ${info.effect || "Wild at end"}. Face-up fruit can be given or stolen; protected fruit cannot.`;
+  button.append(icon, name, quantity);
+  const description = `${info.icon} ${info.title} ×${count}: ${info.effect || "Wild at end"}`;
+  button.setAttribute("aria-label", description);
+  button.dataset.explainTitle = description;
+  button.dataset.explainText = `${description}. Face-up fruit can be given or stolen; protected fruit cannot.`;
+  button.dataset.tucanoTip = button.dataset.explainText;
   const isSelf = player.player_id === view.you;
   let selectable = false;
   if (view.phase === "toucan" && activeChoice && activeChoice.can_resolve !== false && activeToucan === "give" && isSelf && isTucanoActionAvailable("resolve_toucan")) {
@@ -644,7 +654,7 @@ function renderTucanoScoreBreakdown(view, player) {
   const title = document.createElement("summary");
   title.className = "has-explanation";
   title.dataset.explainId = "tucanoScores";
-  title.textContent = player.score == null ? "Scores · face-up fruit" : `Scores · ${player.score} pts`;
+  title.textContent = player.score == null ? "Scores" : `Scores · ${player.score} pts`;
   details.append(title, breakdown);
 
   const rows = player.score_breakdown || null;
@@ -699,13 +709,15 @@ function renderTucanoPlayers(view) {
   if (!tucanoPlayers) {
     return;
   }
+  const scrollPositions = new Map(Array.from(tucanoPlayers.children, (card) => [card.dataset.playerId, card.querySelector(".tucano-fruit-grid").scrollLeft]));
   tucanoPlayers.innerHTML = "";
   tucanoPlayers.classList.add("has-explanation");
   tucanoPlayers.dataset.explainId = "tucanoPlayers";
-  const players = [...(view.players || [])].sort((a, b) => Number(b.player_id === view.you) - Number(a.player_id === view.you));
+  const players = [...(view.players || [])].sort((first, second) => Number(second.player_id === view.you) - Number(first.player_id === view.you));
   players.forEach((player) => {
     const card = document.createElement("div");
     card.className = "tucano-player-card";
+    card.dataset.playerId = player.player_id;
     if (player.player_id === view.you) {
       card.classList.add("self");
     }
@@ -725,18 +737,33 @@ function renderTucanoPlayers(view) {
     if (player.player_id === view.you) {
       const badge = document.createElement("span");
       badge.textContent = "You";
+      badge.className = "has-explanation";
+      badge.dataset.tucanoTip = "You: this is your fruit collection.";
+      badge.dataset.explainText = badge.dataset.tucanoTip;
       badges.appendChild(badge);
     }
     if (player.player_id === view.current_turn && !view.game_over) {
       const badge = document.createElement("span");
       badge.textContent = "Turn";
+      badge.className = "has-explanation";
+      badge.dataset.tucanoTip = "Turn: this player is acting now.";
+      badge.dataset.explainText = badge.dataset.tucanoTip;
       badges.appendChild(badge);
     }
     name.append(nameText, badges);
     const meta = document.createElement("div");
     meta.className = "tucano-player-meta";
-    const score = player.score == null ? "" : ` · ${player.score} pts`;
-    meta.textContent = `🌈 ${player.jokers || 0} wild · 🛡️ ${player.protected_count || 0} protected${score}`;
+    [
+      [`🌈 ${player.jokers || 0} wild`, "Jokers (🌈) become the highest-scoring fruit at the end."],
+      [`🛡️ ${player.protected_count || 0} protected`, "Protected fruit (🛡️) scores at the end and cannot be given or stolen."],
+    ].forEach(([label, description]) => {
+      const stat = document.createElement("span");
+      stat.className = "has-explanation";
+      stat.textContent = label;
+      stat.dataset.tucanoTip = description;
+      stat.dataset.explainText = description;
+      meta.appendChild(stat);
+    });
     header.append(name, meta);
 
     const fruits = document.createElement("div");
@@ -771,6 +798,7 @@ function renderTucanoPlayers(view) {
     card.appendChild(renderTucanoScoreBreakdown(view, player));
 
     tucanoPlayers.appendChild(card);
+    fruits.scrollLeft = scrollPositions.get(player.player_id) || 0;
   });
 }
 
@@ -784,6 +812,7 @@ function formatTucanoWinner(view) {
 
 function renderTucanoGameState(data) {
   const view = data.view;
+  hideTucanoTooltip();
   clearTucanoSelection();
   currentTucanoView = view;
   tucanoDraftSelection = null;
@@ -803,6 +832,7 @@ function renderTucanoGameState(data) {
   }
   if (tucanoTurnLabel) {
     tucanoTurnLabel.textContent = view.game_over ? "—" : view.current_turn === view.you ? "You" : findPlayerName(view, view.current_turn) || "-";
+    tucanoTurnLabel.parentElement.dataset.tucanoTip = `Turn: ${tucanoTurnLabel.textContent}`;
   }
   if (tucanoDeckLabel) {
     tucanoDeckLabel.textContent = view.deck_count ?? "-";
@@ -820,6 +850,43 @@ function renderTucanoGameState(data) {
   logGameEvents(data);
   updateTucanoSelectionLabel();
   updateTucanoActionButtons();
+}
+
+function hideTucanoTooltip() {
+  window.clearTimeout(tucanoTooltipTimer);
+  if (!tucanoTooltip) {
+    return;
+  }
+  if (typeof tucanoTooltip.hidePopover === "function" && tucanoTooltip.matches(":popover-open")) {
+    tucanoTooltip.hidePopover();
+  }
+  tucanoTooltip.classList.add("hidden");
+}
+
+function showTucanoTooltip(element) {
+  if (!tucanoTooltip || !element.dataset.tucanoTip) {
+    return;
+  }
+  hideTucanoTooltip();
+  tucanoTooltip.textContent = element.dataset.tucanoTip;
+  tucanoTooltip.classList.remove("hidden");
+  if (typeof tucanoTooltip.showPopover === "function") {
+    tucanoTooltip.showPopover();
+  }
+  const anchor = element.getBoundingClientRect();
+  const tooltip = tucanoTooltip.getBoundingClientRect();
+  const left = Math.max(12, Math.min(anchor.left, window.innerWidth - tooltip.width - 12));
+  const top = anchor.top - tooltip.height - 6;
+  tucanoTooltip.style.left = `${left}px`;
+  tucanoTooltip.style.top = `${Math.max(12, Math.min(top >= 12 ? top : anchor.bottom + 6, window.innerHeight - tooltip.height - 12))}px`;
+  tucanoTooltipTimer = window.setTimeout(hideTucanoTooltip, 3000);
+}
+
+function getTucanoTooltipTarget(target) {
+  if (tucanoExplainMode || target.closest(".modal, summary, button:not(:disabled), .tucano-column.is-available")) {
+    return null;
+  }
+  return target.closest("#tucanoPanel [data-tucano-tip]");
 }
 
 function showTucanoHelp() {
@@ -844,6 +911,7 @@ function showTucanoHelp() {
 }
 
 function openTucanoModal(modal) {
+  hideTucanoTooltip();
   tucanoModalTrigger = document.activeElement;
   setModalVisible(modal, true);
   const closeButton = modal.querySelector("button");
@@ -948,13 +1016,24 @@ function isTucanoExplainControl(target) {
 // click is swallowed even after opening the explanation exits Explain mode.
 document.addEventListener("pointerdown", (event) => {
   tucanoExplainClickPending = false;
-  if (currentGameType !== "tucano" || !tucanoExplainMode || isTucanoExplainControl(event.target)) {
+  if (currentGameType !== "tucano") {
+    return;
+  }
+  tucanoPointerStart = event.target.closest("#tucanoPanel") ? { pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false, explainTarget: null } : null;
+  hideTucanoTooltip();
+  if (!tucanoExplainMode || isTucanoExplainControl(event.target)) {
     return;
   }
   const explainable = document.elementsFromPoint(event.clientX, event.clientY)
     .map((element) => element.closest("#tucanoPanel .has-explanation"))
     .find(Boolean);
   if (!explainable && !event.target.closest("button, summary, a, input, select")) {
+    return;
+  }
+  if (event.pointerType !== "mouse") {
+    if (tucanoPointerStart) {
+      tucanoPointerStart.explainTarget = explainable;
+    }
     return;
   }
   event.preventDefault();
@@ -968,6 +1047,12 @@ document.addEventListener("pointerdown", (event) => {
 
 document.addEventListener("click", (event) => {
   if (currentGameType !== "tucano") {
+    return;
+  }
+  if (tucanoPointerStart && tucanoPointerStart.moved && event.detail !== 0 && event.target.closest("#tucanoPanel")) {
+    tucanoPointerStart = null;
+    event.preventDefault();
+    event.stopImmediatePropagation();
     return;
   }
   if (tucanoExplainClickPending) {
@@ -992,12 +1077,13 @@ document.addEventListener("click", (event) => {
   if (currentGameType !== "tucano" || tucanoExplainMode) {
     return;
   }
-  if (!tucanoSelection) {
-    return;
-  }
   const insideTucano = event.target.closest("#tucanoPanel");
   const onSelectable = event.target.closest("button, summary, .modal");
-  if (insideTucano && !onSelectable) {
+  if (insideTucano && !onSelectable && !event.target.closest(".tucano-column") && tucanoDraftSelection !== null) {
+    tucanoDraftSelection = null;
+    renderTucanoColumns(currentTucanoView);
+  }
+  if (insideTucano && !onSelectable && tucanoSelection) {
     clearTucanoSelection();
     if (currentTucanoView) {
       renderTucanoPlayers(currentTucanoView);
@@ -1039,4 +1125,67 @@ document.addEventListener("keydown", (event) => {
       renderTucanoPlayers(currentTucanoView);
     }
   }
+  if (tucanoDraftSelection !== null) {
+    tucanoDraftSelection = null;
+    renderTucanoColumns(currentTucanoView);
+  }
+  hideTucanoTooltip();
 });
+
+if (tucanoRoot) {
+  document.addEventListener("pointermove", (event) => {
+    if (tucanoPointerStart && tucanoPointerStart.pointerId === event.pointerId && Math.hypot(event.clientX - tucanoPointerStart.x, event.clientY - tucanoPointerStart.y) > 8) {
+      tucanoPointerStart.moved = true;
+    }
+  }, { passive: true });
+  document.addEventListener("pointercancel", (event) => {
+    if (tucanoPointerStart && tucanoPointerStart.pointerId === event.pointerId) {
+      tucanoPointerStart.moved = true;
+    }
+  }, { passive: true });
+  tucanoRoot.addEventListener("click", (event) => {
+    tucanoPointerStart = null;
+    const target = getTucanoTooltipTarget(event.target);
+    if (target) {
+      showTucanoTooltip(target);
+    }
+  }, true);
+  tucanoRoot.addEventListener("pointerover", (event) => {
+    if (event.pointerType === "mouse") {
+      const target = getTucanoTooltipTarget(event.target);
+      if (target) {
+        showTucanoTooltip(target);
+      }
+    }
+  });
+  tucanoRoot.addEventListener("pointerout", (event) => {
+    const target = event.target.closest("[data-tucano-tip]");
+    if (event.pointerType === "mouse" && target && !target.contains(event.relatedTarget)) {
+      hideTucanoTooltip();
+    }
+  });
+  document.addEventListener("pointerup", (event) => {
+    if (currentGameType !== "tucano" || event.pointerType === "mouse" || (tucanoPointerStart && tucanoPointerStart.moved)) {
+      return;
+    }
+    if (tucanoExplainMode) {
+      if (tucanoPointerStart && tucanoPointerStart.pointerId === event.pointerId && tucanoPointerStart.explainTarget) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        tucanoExplainClickPending = true;
+        showTucanoExplanation(tucanoPointerStart.explainTarget);
+        exitTucanoExplainMode();
+      }
+      return;
+    }
+    const target = getTucanoTooltipTarget(event.target);
+    if (target && target.closest("button:disabled")) {
+      showTucanoTooltip(target);
+    }
+  }, true);
+  document.addEventListener("scroll", hideTucanoTooltip, { capture: true, passive: true });
+  window.addEventListener("resize", () => {
+    hideTucanoTooltip();
+    tucanoRoot.querySelectorAll(".tucano-pile-card-scroller").forEach(syncTucanoPileScrollButtons);
+  });
+}

@@ -1,8 +1,8 @@
 <template data-game-target="tucanoPanel" data-game-mode="contents">
               <div class="tucano-status-grid">
-                <div><span class="tucano-status-label">Phase</span><strong id="tucanoPhase">-</strong></div>
-                <div><span class="tucano-status-label">Current turn</span><strong id="tucanoTurn">-</strong></div>
-                <div><span class="tucano-status-label"><span aria-hidden="true">🎴</span> Deck</span><strong id="tucanoDeck">-</strong></div>
+                <div class="has-explanation" data-tucano-tip="Phase: draft a pile or resolve the toucans you took." data-explain-text="Phase: draft a pile or resolve the toucans you took."><span class="tucano-status-label">Phase</span><strong id="tucanoPhase">-</strong></div>
+                <div class="has-explanation" data-explain-text="Turn: the player who must choose a pile or resolve a toucan."><span class="tucano-status-label">Turn</span><strong id="tucanoTurn">-</strong></div>
+                <div class="has-explanation" data-tucano-tip="Deck (🎴): cards left to refill the market." data-explain-text="Deck (🎴): cards left to refill the market."><span class="tucano-status-label"><span aria-hidden="true">🎴</span> Deck</span><strong id="tucanoDeck">-</strong></div>
               </div>
               <div id="tucanoWinner" class="tucano-winner hidden" role="status"></div>
 
@@ -20,7 +20,7 @@
               <section class="tucano-market" aria-labelledby="tucanoMarketTitle">
                 <div class="tucano-section-heading">
                   <h3 id="tucanoMarketTitle"><span aria-hidden="true">🍃</span> Fruit market</h3>
-                  <span>Tap a pile to choose it</span>
+                  <span>Tap a pile</span>
                 </div>
                 <div id="tucanoColumns" class="tucano-columns"></div>
               </section>
@@ -28,10 +28,12 @@
               <section class="tucano-collections" aria-labelledby="tucanoPlayersTitle">
                 <div class="tucano-section-heading">
                   <h3 id="tucanoPlayersTitle"><span aria-hidden="true">🧺</span> Collections</h3>
-                  <span>Tap Scores for details</span>
+                  <span>Scores for details</span>
                 </div>
                 <div id="tucanoPlayers" class="tucano-players"></div>
               </section>
+
+              <div id="tucanoTooltip" class="tucano-tooltip hidden" role="tooltip" popover="manual"></div>
 
               <section id="tucanoHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tucanoHelpTitle" aria-describedby="tucanoHelpContent">
                 <div class="modal-content tucano-modal">
