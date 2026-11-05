@@ -106,6 +106,11 @@ BOT_CANDIDATE_WIDTH = 24
 BOT_MOBILITY_MOVE_CAP = 10
 BOT_TERRITORY_WEIGHT_MULTIPLIER = 2.0
 BOT_OPPONENT_BLOCK_SCORE_PER_CELL = 100.0
+# In the late game, a move that keeps an opponent frontier closed
+# can be preferable to a slightly higher material score. The narrow margin
+# avoids changing the bot's normal opening and middle-game priorities.
+BOT_ENDGAME_BLOCK_TIE_MARGIN = 50.0
+BOT_ENDGAME_MAX_REMAINING_PIECES = 8
 BOT_STRATEGY_HEURISTIC = "heuristic"
 BOT_STRATEGY_TERRITORY = "territory"
 
@@ -380,6 +385,17 @@ def _opponent_frontiers(
     return opponents
 
 
+def _opponent_frontier_overlap(
+    cells: Shape, opponent_frontiers: List[Tuple[Set[Coord], float]]
+) -> float:
+    """Return the weighted opponent frontier cells covered by a move."""
+    cell_set = set(cells)
+    return sum(
+        len(cell_set & frontier) * weight
+        for frontier, weight in opponent_frontiers
+    )
+
+
 def _quick_candidate_score(
     state: Dict,
     player_id: str,
@@ -403,10 +419,7 @@ def _quick_candidate_score(
     max_y_reach = max((dy for _, dy in progress), default=0)
     directional_balance = -abs(max_x_reach - max_y_reach)
 
-    blocked_frontier = 0.0
-    cell_set = set(cells)
-    for opponent_frontier, weight in opponent_frontiers:
-        blocked_frontier += len(cell_set & opponent_frontier) * weight
+    blocked_frontier = _opponent_frontier_overlap(cells, opponent_frontiers)
 
     opponent_contacts = 0
     for x, y in cells:
@@ -989,6 +1002,7 @@ class BlokusGame:
         shortlist = _bot_candidate_shortlist(
             candidates, BOT_CANDIDATE_WIDTH, strategy
         )
+        evaluated: List[Tuple[float, float, Dict]] = []
         best_score = -float("inf")
         best_action: Optional[Dict] = None
         report_every = max(1, len(shortlist) // 8)
@@ -1001,6 +1015,9 @@ class BlokusGame:
                 strategy=strategy,
                 baseline_largest_opponent_piece=baseline_largest_opponent_piece,
             )
+            evaluated.append(
+                (score, _opponent_frontier_overlap(cells, opponents), action)
+            )
             if score > best_score:
                 best_score = score
                 best_action = action
@@ -1011,6 +1028,23 @@ class BlokusGame:
                     0.35 + 0.6 * ((index + 1) / len(shortlist)),
                     f"Comparing the best {len(shortlist)} placements",
                 )
+
+        if (
+            strategy == BOT_STRATEGY_TERRITORY
+            and len(pdata["pieces"]) <= BOT_ENDGAME_MAX_REMAINING_PIECES
+            and evaluated
+        ):
+            # Once the score is close, preserve a frontier that the next
+            # player could otherwise use to cut off the bot's remaining
+            # pieces. This only affects late-game near ties.
+            score_floor = best_score - BOT_ENDGAME_BLOCK_TIE_MARGIN
+            near_best = [item for item in evaluated if item[0] >= score_floor]
+            if near_best:
+                selected_score, _block_pressure, selected_action = max(
+                    near_best, key=lambda item: (item[1], item[0])
+                )
+                best_score = selected_score
+                best_action = selected_action
 
         _report_bot_progress(
             progress_callback,
