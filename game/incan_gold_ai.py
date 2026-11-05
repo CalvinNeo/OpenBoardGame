@@ -164,6 +164,14 @@ def _rollout(position: Position, deck: List[int], choices: List[List[float]], pr
 
 def choose_decision(view: Dict, treasure_values: List[int], hazard_types: List[str]) -> str:
     position = _position(view, treasure_values, hazard_types)
+    if position.rounds_left == 0 and len(position.active) == 1:
+        hero = position.hero
+        guaranteed = (position.scores[hero] + position.hands[hero] + sum(position.remainders) + position.artifacts,
+                      position.artifact_counts[hero] + int(position.artifacts > 0))
+        opponents = [(score, count) for index, (score, count) in
+                     enumerate(zip(position.scores, position.artifact_counts)) if index != hero]
+        if guaranteed > max(opponents):
+            return "leave"
     seed_data = (position.deck, position.seen, position.remainders, position.artifacts,
                  position.hands, position.scores, position.artifact_counts, position.active,
                  view["round"], view["you"])
