@@ -295,6 +295,23 @@ body.room-controls-dragging * {
   color: #b42318;
 }
 
+.game-assets-status { width: 100%; max-width: 640px; margin: 0 auto; padding: 22px 0 30px; color: #294c40; box-sizing: border-box; }
+.game-assets-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.game-assets-heading h3 { min-width: 0; margin: 0; font-size: clamp(19px, 2.5vw, 24px); font-weight: 600; line-height: 1.35; }
+#gameAssetsPercent { flex-shrink: 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: #347b61; }
+.game-assets-status p { margin: 10px 0 16px; color: #617568; font-size: 13px; line-height: 1.5; }
+.game-assets-track { height: 12px; overflow: hidden; border: 1px solid #d2e0d2; border-radius: 20px; background: #e2ece1; }
+.game-assets-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: #347b61; }
+.game-assets-status.room-feedback-error p { color: #b42318; }
+.game-assets-status.room-feedback-error .game-assets-track span { background: #b46b41; }
+#gameAssetsRetryBtn { margin-top: 14px; max-width: 100%; white-space: normal; }
+@media (max-width: 620px) {
+  .game-assets-status { padding: 15px 0 22px; }
+  .game-assets-heading { gap: 10px; }
+  #gameAssetsPercent { font-size: 13px; }
+  .game-assets-status p { font-size: 12px; }
+}
+
 .room-feedback-tooltip {
   position: fixed;
   z-index: 30000;
@@ -667,9 +684,6 @@ input, select {
 .hidden {
   display: none !important;
 }
-
-@media all, obg-game-rebel_princess-1 {}
-
 
 .hint {
   font-size: 12px;

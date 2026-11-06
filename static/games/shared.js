@@ -22,7 +22,7 @@ function emitSeatMove(direction) {
 
 function emitRoomStart() {
   if (!ensureRoomConnection()) return;
-  if (typeof isGameAssetsLoaded === "function" && !isGameAssetsLoaded(currentGameType)) {
+  if (typeof isGameAssetsLoaded === "function" && shouldLoadGameAssets(currentRoomState) && !isGameAssetsLoaded(currentGameType)) {
     setRoomFeedback("Game files are still loading. Please wait or use Retry if loading failed.");
     return;
   }
@@ -512,7 +512,7 @@ function renderRoomState(state) {
   updateGameReconnectButton();
   updateRoomActionButtons();
   const gameType = currentGameType;
-  if (gameType && typeof ensureGameAssets === "function" && !isGameAssetsLoaded(gameType)) {
+  if (gameType && typeof ensureGameAssets === "function" && shouldLoadGameAssets(state) && !isGameAssetsLoaded(gameType)) {
     ensureGameAssets(gameType).then(() => {
       if (currentRoomState !== state || currentGameType !== gameType) return;
       renderRoomState(state);

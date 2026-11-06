@@ -79,23 +79,12 @@
     background: var(--rebel-plum);
 }
 
-.rebel-header,
-.rebel-header-actions,
 .rebel-section-heading,
 .rebel-dialog-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    min-width: 0;
-}
-
-.rebel-header {
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-}
-
-.rebel-header > div:first-child {
     min-width: 0;
 }
 
@@ -109,39 +98,65 @@
     text-transform: uppercase;
 }
 
-.rebel-header-actions {
-    gap: 6px;
-}
-
-.rebel-header-actions button {
-    padding: 8px 13px;
-    background: #ffffffa8;
-    font-size: 0.8rem;
-}
-
-.rebel-header-actions button[aria-pressed="true"] {
+/* Help and Explain live in the shared Game header, which draws them as icons.
+   Keep the active Explain state obvious now that no text label is shown. */
+#rebelPrincessHeaderActions button[aria-pressed="true"] {
     color: #fff;
     border-color: var(--rebel-plum);
     background: var(--rebel-plum);
 }
 
-/* Keep these beginner-facing labels visible despite shared icon-only styles. */
-#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn) {
-    width: auto;
-    height: auto;
-    min-height: 44px;
-    padding: 8px 12px;
-    font-size: 0.8rem !important;
+/* One compact strip carries the round, its rule and the scoring reminders. */
+.rebel-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px 9px;
+    min-width: 0;
+    margin-bottom: 9px;
+    padding: 8px 11px;
+    border: 1px solid #e2d3dc;
+    border-radius: 11px;
+    background: #f4eaf0;
+}
+
+.rebel-round-badge {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 7px;
+    color: #78537e;
+    background: #fffc;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.rebel-round-name {
+    flex: 1 1 110px;
+    min-width: 0;
+    font-size: 0.9rem;
     line-height: 1.3;
-    white-space: normal;
 }
 
-#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn)::before,
-#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn)::after {
-    content: none;
+.rebel-status-chips {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    min-width: 0;
 }
 
-.rebel-goal-strip,
+.rebel-chip {
+    padding: 2px 7px;
+    border-radius: 999px;
+    color: #7a567f;
+    background: #fffc;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
 .rebel-rule-strip {
     display: flex;
     flex-wrap: wrap;
@@ -151,57 +166,16 @@
     font-size: 0.78rem;
 }
 
-.rebel-goal-strip {
-    padding-bottom: 11px;
-    color: #765169;
-}
-
-.rebel-goal-strip > span:first-child {
-    font-weight: 700;
-}
-
-.rebel-goal-strip > span,
 .rebel-rule-strip > span {
     min-width: 0;
     max-width: 100%;
 }
 
-.rebel-round-banner {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 11px 13px;
-    border: 1px solid #e2d3dc;
-    border-radius: 11px;
-    background: #f4eaf0;
-}
-
-.rebel-round-banner > div {
-    min-width: 0;
-}
-
-.rebel-round-badge {
-    flex: 0 0 auto;
-    max-width: 35%;
-    padding: 5px 9px;
-    border-radius: 7px;
-    color: #78537e;
-    background: #fffc;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-align: center;
-}
-
-.rebel-round-banner strong {
-    display: block;
-    font-size: 0.9rem;
-}
-
 .rebel-guide {
     display: grid;
-    gap: 3px;
-    margin: 10px 0 12px;
-    padding: 12px 14px;
+    gap: 2px;
+    margin: 0 0 9px;
+    padding: 10px 13px;
     border: 1px solid #d5c2de;
     border-left: 4px solid #9465a2;
     border-radius: 10px;
@@ -319,20 +293,31 @@
 }
 
 .rebel-hand {
+    --rebel-card-min: 61px;
+    --rebel-card-gap: 6px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(61px, 1fr));
-    gap: 8px 6px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--rebel-card-min), 1fr));
+    gap: 8px var(--rebel-card-gap);
     min-width: 0;
+    max-width: calc(var(--rebel-hand-cards, 12) * (var(--rebel-card-min) + var(--rebel-card-gap)));
     padding: 8px 0 4px;
+}
+
+.rebel-hand.is-empty {
+    max-width: none;
+}
+
+@media (min-width: 1200px) {
+    .rebel-hand {
+        --rebel-card-min: 92px;
+    }
 }
 
 .rebel-card-wrap {
     --rebel-suit: #ab8319;
     --rebel-suit-soft: #fff8df;
     --rebel-suit-edge: #dfc875;
-    display: grid;
-    grid-template-rows: 1fr auto;
-    gap: 3px;
+    position: relative;
     min-width: 0;
     border-radius: 8px;
 }
@@ -382,7 +367,8 @@
 .rebel-card-order:not(:empty) {
     position: absolute;
     top: -7px;
-    right: 2px;
+    left: 2px;
+    z-index: 2;
     display: grid;
     place-items: center;
     min-width: 16px;
@@ -406,17 +392,23 @@
     line-height: 1.2;
 }
 
-.rebel-princess-panel .rebel-card-info {
-    width: 100%;
-    min-height: 26px;
-    padding: 3px 1px;
-    border: 0;
-    border-radius: 5px;
-    color: #746471;
-    background: #f5eff4;
-    font-size: 0.66rem;
-    font-weight: 500;
-    line-height: 1.35;
+/* The proposal value is part of the card face, in its own corner, and it
+   carries the hover/tap explanation. No info marker sits under every card. */
+.rebel-card-points {
+    position: absolute;
+    top: -7px;
+    right: 0;
+    z-index: 2;
+    padding: 1px 5px;
+    border: 1px solid #d9c3e0;
+    border-radius: 999px;
+    color: #6b4a72;
+    background: #f6ecf8;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+    cursor: help;
 }
 
 .rebel-princess-panel .rebel-card.selected {
@@ -427,8 +419,9 @@
     box-shadow: 0 2px 5px #68467422;
 }
 
-.rebel-card-wrap[data-selected="true"] .rebel-card-info {
+.rebel-card-wrap[data-selected="true"] .rebel-card-points {
     color: #fff;
+    border-color: #825192;
     background: #825192;
 }
 
@@ -502,10 +495,11 @@
     white-space: normal;
 }
 
+/* The label is the tap target; the box itself stays visually small. */
 .rebel-toggle input {
     flex: 0 0 auto;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     margin: 0;
     accent-color: var(--rebel-plum);
 }
@@ -561,21 +555,26 @@
     background: #faf1fc;
 }
 
-.rebel-princess-card {
-    display: grid;
-    gap: 6px;
-    padding: 11px;
+.rebel-princess-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 9px;
+    min-width: 0;
+    margin-bottom: 10px;
+    padding: 7px 11px;
     border: 1px solid #e3d4c2;
-    border-radius: 9px;
+    border-radius: 10px;
     color: #735543;
     background: linear-gradient(125deg, #fff5de, #fcf4eb);
-    font-size: 0.79rem;
 }
 
 .rebel-princess-name {
+    flex: 1 1 auto;
+    min-width: 0;
     color: #694773;
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 1.08rem;
+    font-size: 0.98rem;
     line-height: 1.35;
 }
 
@@ -626,10 +625,14 @@
 .rebel-player-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 8px;
+    gap: 3px 8px;
     margin-top: 4px;
     color: #7a6b7e;
     font-size: 0.73rem;
+}
+
+.rebel-stat {
+    white-space: nowrap;
 }
 
 .rebel-revealed {
@@ -639,7 +642,9 @@
 }
 
 .rebel-section > summary {
-    min-height: 24px;
+    display: flex;
+    align-items: center;
+    min-height: 32px;
     color: #73527d;
     font-size: 0.8rem;
     font-weight: 700;
@@ -679,12 +684,12 @@
     grid-template-columns: minmax(0, 1fr);
 }
 
-.rebel-show-results :is(.rebel-princess-section, .rebel-players-section, .rebel-goal-strip) {
+.rebel-show-results :is(.rebel-princess-bar, .rebel-players-section, .rebel-status-chips) {
     display: none;
 }
 
-.rebel-show-results .rebel-round-banner {
-    margin-bottom: 12px;
+.rebel-show-results .rebel-status {
+    margin-bottom: 10px;
 }
 
 .rebel-results {
@@ -1007,48 +1012,38 @@
         font-size: 13px;
     }
 
-    .rebel-header {
-        gap: 9px;
-        margin-bottom: 10px;
-    }
-
-    .rebel-header .rebel-eyebrow {
-        font-size: 0.6rem;
-        letter-spacing: 0.04em;
-    }
-
-    .rebel-header h2 {
-        font-size: 1.55rem;
-    }
-
-    .rebel-header-actions button {
-        padding: 7px 11px;
-    }
-
-    .rebel-goal-strip {
-        gap: 5px 10px;
-        padding-bottom: 9px;
-        font-size: 0.72rem;
-    }
-
-    .rebel-round-banner {
-        align-items: flex-start;
-        gap: 8px;
-        padding: 9px;
+    .rebel-status {
+        gap: 4px 7px;
+        margin-bottom: 8px;
+        padding: 7px 9px;
     }
 
     .rebel-round-badge {
-        padding: 4px 6px;
+        padding: 3px 6px;
         font-size: 0.68rem;
     }
 
-    .rebel-round-banner strong {
+    .rebel-round-name {
         font-size: 0.82rem;
     }
 
+    .rebel-chip {
+        padding: 1px 6px;
+        font-size: 0.66rem;
+    }
+
+    .rebel-princess-bar {
+        margin-bottom: 8px;
+        padding: 6px 9px;
+    }
+
+    .rebel-princess-name {
+        font-size: 0.92rem;
+    }
+
     .rebel-guide {
-        margin: 9px 0 10px;
-        padding: 10px;
+        margin-bottom: 8px;
+        padding: 9px 10px;
     }
 
     .rebel-guide > strong {
@@ -1103,8 +1098,9 @@
     }
 
     .rebel-hand {
-        grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
-        gap: 7px 5px;
+        --rebel-card-min: 46px;
+        --rebel-card-gap: 5px;
+        gap: 7px var(--rebel-card-gap);
     }
 
     .rebel-princess-panel .rebel-card {
@@ -1121,8 +1117,8 @@
         font-size: 0.63rem;
     }
 
-    .rebel-princess-panel .rebel-card-info {
-        font-size: 0.62rem;
+    .rebel-card-points {
+        font-size: 0.58rem;
     }
 
     .rebel-action-buttons {
@@ -1148,70 +1144,90 @@
     }
 }
 
-@media (min-width: 360px) and (max-width: 600px) {
-    .rebel-players {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .rebel-player-main {
-        align-items: flex-start;
-        gap: 3px 5px;
-        font-size: 0.77rem;
-    }
-
-    .rebel-player-princess {
-        font-size: 0.67rem;
-    }
-}
-
-@media (max-width: 359px) {
+/* One row per player keeps the roster scannable and short on a phone. */
+@media (max-width: 600px) {
     .rebel-player-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
-        column-gap: 7px;
-        align-items: start;
+        align-items: center;
+        gap: 1px 8px;
+        padding: 6px 8px;
     }
 
     .rebel-player-main {
-        font-size: 0.77rem;
+        grid-column: 1;
+        grid-row: 1;
+        justify-content: flex-start;
+        gap: 5px;
+        font-size: 0.78rem;
     }
 
     .rebel-player-stats {
+        grid-column: 2;
+        grid-row: 1;
+        justify-content: flex-end;
+        gap: 2px 7px;
         margin-top: 0;
+        font-size: 0.71rem;
     }
 
     .rebel-player-princess,
     .rebel-revealed {
         grid-column: 1 / -1;
     }
+
+    .rebel-player-princess {
+        margin-top: 1px;
+        font-size: 0.66rem;
+    }
 }
 
-@media (max-width: 600px) {
-    .rebel-header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 8px;
+@media (max-width: 359px) {
+    .rebel-player-main {
+        font-size: 0.75rem;
     }
 
-    .rebel-header .rebel-eyebrow {
-        display: none;
-    }
-
-    .rebel-header h2 {
-        font-size: clamp(1.1rem, 4.5vw, 1.4rem);
-    }
-
-    .rebel-header-actions button {
-        padding: 7px 9px;
-    }
-
-    .rebel-princess-panel .rebel-card-info {
-        font-size: 0.7rem;
+    .rebel-player-stats {
+        gap: 2px 5px;
+        font-size: 0.68rem;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .rebel-princess-panel button {
         transition: none;
+    }
+}
+
+/* DEV_GUIDE: Help and Reconnect stay on one row. When the phone is narrow the
+   game name compresses instead of pushing the buttons onto a second line. */
+@media (max-width: 900px) {
+    .game-panel[data-game-theme="rebel_princess"] > .panel-header {
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .game-panel[data-game-theme="rebel_princess"] .game-panel-title {
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    .game-panel[data-game-theme="rebel_princess"] .game-panel-title h2 {
+        min-width: 0;
+        overflow: hidden;
+        font-size: clamp(13px, 4.3vw, 18px);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .game-panel[data-game-theme="rebel_princess"] #gameReconnectBtn,
+    .game-panel[data-game-theme="rebel_princess"] > .panel-header > .panel-header-actions {
+        flex: 0 0 auto;
+    }
+
+    .game-panel[data-game-theme="rebel_princess"] > .panel-header > .panel-header-actions {
+        flex-wrap: nowrap;
     }
 }

@@ -44,6 +44,13 @@
     let dialogOrigin = null;
     let pendingResultsFocus = false;
     const hints = window.createRebelHints({ panel, isExplaining: () => explaining, onExplain: showExplanation });
+    // The shared Game header owns the title, Help and Explain. Keep the rebel
+    // prefix on every global so other game scripts cannot collide with it.
+    window.showRebelPrincessHeaderActions = visible => {
+        const actions = document.getElementById("rebelPrincessHeaderActions");
+        if (actions) actions.style.display = visible ? "flex" : "none";
+        if (!visible) clear();
+    };
 
     const text = (id, value) => { get(id).textContent = value; };
     const visible = (id, show) => get(id).classList.toggle("hidden", !show);
@@ -141,7 +148,12 @@
     function renderHand() {
         const hand = get("Hand");
         hand.replaceChildren();
-        text("HandCount", `${view.hand.length} cards`);
+        // Cap the grid at exactly one row of comfortable cards. Without this the
+        // hand either leaves a wide gap on a desktop or stretches two leftover
+        // cards across the whole row in the last trick.
+        hand.classList.toggle("is-empty", !view.hand.length);
+        hand.style.setProperty("--rebel-hand-cards", String(Math.max(view.hand.length, 1)));
+        text("HandCount", `${view.hand.length} card${view.hand.length === 1 ? "" : "s"}`);
         tip(get("HandCount"), `Hand: you currently hold ${view.hand.length} cards. Cards set aside for later are not included.`);
         for (const card of view.hand) {
             const wrap = element("div", "rebel-card-wrap");
@@ -155,9 +167,10 @@
             explain(button, cardExplanation(card));
             button.append(element("span", "rebel-card-order"), element("span", "rebel-card-rank", `${card.is_frog ? "🐸" : suits[card.suit][0]} ${card.rank}`), element("span", "rebel-card-name", card.is_frog ? "Frog" : suits[card.suit][1]));
             button.addEventListener("click", () => toggleCard(card.id));
-            const info = tip(element("button", "rebel-card-info", `${cardPoints(card)} 💍 ⓘ`), cardExplanation(card));
-            info.type = "button";
-            wrap.append(button, info);
+            // The proposal value sits in its own corner of the card and carries
+            // the explanation, so no info marker is stacked under every card.
+            const value = tip(element("span", "rebel-card-points", `${cardPoints(card)}💍`), cardExplanation(card));
+            wrap.append(button, value);
             hand.append(wrap);
         }
         if (!view.hand.length) hand.append(element("p", "rebel-empty", view.your_princess ? "No cards remaining" : "Spectating"));
@@ -275,7 +288,8 @@
         }
         if (view.gift_count) table.append(tip(element("div", "rebel-trick-card", `🎁 ${view.gift_count} gifts`), `Gifts (🎁): ${view.gift_count} hidden cards go to the trick winner, including any proposals (💍).`));
         if (!table.children.length) table.append(element("p", "rebel-empty", view.phase === "pass" ? "No cards played" : `${name(view.leader)} leads the next trick.`));
-        text("Tricks", `${view.tricks_played || 0} tricks played`);
+        const tricks = view.tricks_played || 0;
+        text("Tricks", `${tricks} trick${tricks === 1 ? "" : "s"}`);
         tip(get("Tricks"), `Tricks: ${view.tricks_played || 0} completed this round. A trick is a set of cards played around the table; its winner captures those cards.`);
         text("RequiredSuit", view.current_required_suit ? `Follow ${suitName(view.current_required_suit)}` : "Lead any allowed suit");
         tip(get("RequiredSuit"), `Required suit: ${suitName(view.current_required_suit)}. Follow it if possible. The led suit is ${suitName(view.lead_suit)}; the round rule may change what wins.`);
@@ -303,14 +317,17 @@
     function renderPrincess() {
         const princess = view.your_princess;
         const used = me()?.princess_used;
-        const power = get("Princess");
-        power.replaceChildren();
-        if (!princess) { power.textContent = "No princess · Spectator"; text("PowerStatus", "Watching"); return; }
+        const bar = get("Princess");
+        bar.replaceChildren();
+        if (!princess) {
+            bar.append(tip(element("strong", "rebel-princess-name", "✨ Spectating"), "You are watching this game, so no princess ability is assigned to you."));
+            bar.append(badge("Watching", "Spectators see the table and the scores. Private hands stay hidden."));
+            return;
+        }
         const timing = princessTiming();
         const status = used ? "Used" : (powerAvailable() && view.phase !== "haggle") ? "Available now" : princess.id === "alice" ? "Automatic" : "Unused";
-        text("PowerStatus", status);
-        tip(get("PowerStatus"), `${princess.name}: ${timing}`);
-        power.append(tip(element("strong", "rebel-princess-name", `✨ ${princess.name}`), `${princess.name} (✨): ${princess.summary} Once per round. ${timing}`));
+        bar.append(tip(element("strong", "rebel-princess-name", `✨ ${princess.name}`), `${princess.name} (✨): ${princess.summary} Once per round. ${timing}`));
+        bar.append(tip(element("span", "rebel-badge", status), `${princess.name}: ${timing}`));
     }
     function renderPlayers() {
         get("Players").replaceChildren();
@@ -323,7 +340,8 @@
             if (player.ready_next) status = "Ready";
             if (status) heading.append(badge(status, `${player.name}: ${status === "Ready" ? "has confirmed the next round." : status === "Submitted" ? "has locked in a choice for this phase." : "is choosing the next action."}`));
             const stats = element("div", "rebel-player-stats");
-            stats.append(badge(`💍 ${player.score}`, `Total proposals (💍): ${player.score} from completed rounds. Lower is better.`), badge(`🃏 ${player.hand_count}`, `Hand (🃏): ${player.hand_count} cards currently held by ${player.name}.`), badge(`📥 ${player.won_count}`, `Captured cards (📥): ${player.won_count} cards taken this round. This is a card count, not a proposal score.`));
+            const stat = (icon, value, message) => tip(element("span", "rebel-stat", `${icon} ${value}`), message);
+            stats.append(stat("💍", player.score, `Total proposals (💍): ${player.score} from completed rounds. Lower is better.`), stat("🃏", player.hand_count, `Hand (🃏): ${player.hand_count} cards currently held by ${player.name}.`), stat("📥", player.won_count, `Captured cards (📥): ${player.won_count} cards taken this round. This is a card count, not a proposal score.`));
             const identity = tip(element("span", "rebel-player-princess", `${player.princess?.name || "Princess"} · ${player.princess_used ? "used" : "unused"}`), `${player.princess?.name || "Princess"}: ${player.princess?.summary || ""} ${player.princess_used ? "Ability used this round." : "Ability has not been used this round."}`);
             row.append(heading, stats, identity);
             if (player.revealed_cards?.length) row.append(tip(element("div", "rebel-revealed", `Revealed: ${player.revealed_cards.map(cardName).join(" · ")}`), `Revealed ${suitName(player.revealed_suit)} cards are visible to everyone because of this round’s rule.`));
@@ -435,7 +453,9 @@
         explain(get("SubmitBtn"), `${labels[phase] || "Confirm"}: ${phaseGuidance().detail} ${!ready ? `First select ${phase === "reveal_suit" ? "a suit" : `${maxCards()} card${maxCards() === 1 ? "" : "s"}`}.` : "Confirm your selection to submit this action."}`);
         const princess = view.your_princess?.id;
         let powerReady = powerAvailable();
-        let powerLabel = `Use ${view.your_princess?.name || "Princess"}`;
+        // The princess bar above already names the ability, so the trick-phase
+        // button stays short enough to sit beside Play Card on a 320px screen.
+        let powerLabel = "Use Ability";
         if (phase === "trick" && princess === "little_mermaid") powerReady = powerReady && Boolean(selectedSuit) && (selectedSuit !== "prince" || view.princes_sneaked_in);
         if (phase === "pocahontas" || (phase === "trick" && princess === "scheherazade")) powerReady = powerReady && Boolean(get("TargetSelect").value);
         if (["mulan", "haggle", "scheherazade_decide"].includes(phase)) powerReady = powerReady && oneCard;
@@ -516,7 +536,7 @@
         tip(get("RoundTitle"), `Round rule: ${view.round_card?.name}. ${roundDescription()}`);
         text("PrinceValue", `🤴 ${cardPoints({ suit: "prince" })} 💍`);
         tip(get("PrinceValue"), `Prince (🤴): ${cardPoints({ suit: "prince" })} proposals (💍) when captured.${view.round_card?.id === "bathroom_break" ? " Worth 1 for players who had the lowest total at the round start, and 2 for the others." : view.round_card?.id === "dancing_queens" ? " A Prince paired with a Queen is worth 3 when ranks match, or 2 otherwise." : " Try to avoid taking these cards."}`);
-        text("FrogValue", `🐸 8 = ${cardPoints({ is_frog: true })} 💍`);
+        text("FrogValue", `🐸 ${cardPoints({ is_frog: true })} 💍`);
         tip(get("FrogValue"), `Frog (🐸 8): the rank-8 Pet (🐾), worth ${cardPoints({ is_frog: true })} proposals (💍) when captured. Other Pets normally score zero, except in Pets’ Revenge.`);
         renderGuide(); renderTable(); renderChoices(); renderHand(); renderPrincess(); renderPlayers(); renderSummary();
         refreshSelection();
@@ -552,7 +572,7 @@
             <p>Princes (🤴) cannot lead while you have other suits until they have entered play. They enter when someone cannot follow suit and plays a Prince. An all-Prince hand may lead Princes.</p>
             <h3>4 · Read the round rule and your princess</h3><p>Each round’s rule can change scoring, passing or what wins a trick. Each princess has one ability per round. Your current rule and ability timing are listed below. Alice activates automatically. Enabled cards and controls show what you can do now.</p>
             <h3>5 · Review together</h3><p>When the hands are empty, the results show your round proposals (💍), your total before and after scoring, and your overall rank. Positive round scores add proposals; negative scores remove them. <strong>Round best</strong> marks the fewest proposals in that round. Standings are sorted by the lowest total, then the most zero-proposal rounds; an equals sign (=) marks a shared rank. Every player must press <strong>Next Round</strong> to continue. Ready players have a check mark (✓). After round 5, the winner is marked with a trophy (🏆).</p>
-            <h3>Using this screen</h3><p>Select cards, then use the action below your hand to confirm. Tap a selected card again or empty space around your hand to deselect. Dimmed cards cannot be selected now; their ⓘ explains why. The separate ⓘ controls explain cards without playing them. Hover or focus badges on desktop; tap them on a touch screen for a 3-second explanation. Use <strong>Explain</strong> to inspect actions, including disabled buttons. Close dialogs with Close or Esc.</p>`;
+            <h3>Using this screen</h3><p>Select cards, then use the action below your hand to confirm. Tap a selected card again or empty space around your hand to deselect. Dimmed cards cannot be selected now. Every card shows its proposal value (💍) in the top-right corner: hover it on a desktop or tap it on a touch screen to read why the card scores that and whether you may play it. The same explanation is available from <strong>Explain</strong>, which also covers disabled controls. Close dialogs with Close or Esc.</p>`;
         if (view) {
             content.append(element("h3", "", "Current phase"), element("p", "", phaseGuidance().detail));
             content.append(element("h3", "", "Your current round"), element("p", "", `${view.round_card?.name}: ${roundDescription()}`));

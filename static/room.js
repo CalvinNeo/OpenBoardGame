@@ -2290,7 +2290,7 @@ function getRoomStartReason() {
   if (currentRoomState.game_type === "the_crew" && currentRoomState.host_player_id !== playerId) {
     return "Waiting for the host to choose a mission.";
   }
-  if (typeof isGameAssetsLoaded === "function" && !isGameAssetsLoaded(currentGameType)) {
+  if (typeof isGameAssetsLoaded === "function" && shouldLoadGameAssets(currentRoomState) && !isGameAssetsLoaded(currentGameType)) {
     return "Loading game files...";
   }
   const players = currentRoomState.players || [];

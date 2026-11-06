@@ -1,20 +1,18 @@
 <template data-game-target="rebelPrincessPanel" data-game-mode="contents">
-              <header class="rebel-header">
-                <div><h2>Rebel Princess</h2></div>
-                <div class="rebel-header-actions"><button id="rebelHelpBtn" type="button">Help</button><button id="rebelExplainBtn" type="button" aria-pressed="false">Explain</button></div>
-              </header>
-              <div class="rebel-goal-strip">
-                <span data-rebel-tip="Proposals (💍) are penalty points. After 5 rounds, the lowest total wins; ties favor more zero-proposal rounds.">💍 Proposals</span>
-                <span id="rebelPrinceValue"></span><span id="rebelFrogValue"></span>
-              </div>
-              <div class="rebel-round-banner">
+              <div class="rebel-status">
                 <span id="rebelRound" class="rebel-round-badge"></span>
-                <div><strong id="rebelRoundTitle"></strong></div>
+                <strong id="rebelRoundTitle" class="rebel-round-name"></strong>
+                <span class="rebel-status-chips">
+                  <span class="rebel-chip" data-rebel-tip="Goal: proposals (💍) are penalty points. After 5 rounds the lowest total wins; ties favour more zero-proposal rounds.">💍 Lowest wins</span>
+                  <span id="rebelPrinceValue" class="rebel-chip"></span>
+                  <span id="rebelFrogValue" class="rebel-chip"></span>
+                </span>
               </div>
               <div id="rebelGuide" class="rebel-guide" role="status" aria-live="polite" aria-atomic="true">
                 <span id="rebelPhase" class="rebel-eyebrow"></span><strong id="rebelGuideTitle"></strong>
               </div>
-              <p id="rebelExplainNotice" class="rebel-explain-notice hidden">Explain mode</p>
+              <div id="rebelPrincess" class="rebel-princess-bar"></div>
+              <p id="rebelExplainNotice" class="rebel-explain-notice hidden">Explain mode · tap any highlighted control</p>
               <div class="rebel-layout">
                 <div class="rebel-play-area">
                   <section id="rebelTableSection" class="rebel-section">
@@ -46,7 +44,6 @@
                   </section>
                 </div>
                 <aside class="rebel-sidebar">
-                  <section class="rebel-section rebel-princess-section"><div class="rebel-section-heading"><h3>Your princess</h3><span id="rebelPowerStatus" class="rebel-badge"></span></div><div id="rebelPrincess" class="rebel-princess-card"></div></section>
                   <section class="rebel-section rebel-players-section"><div class="rebel-section-heading"><h3>Players</h3><span class="rebel-badge" data-rebel-tip="Total proposals (💍) from completed rounds. Points from the current round are added at the round results.">💍 Total score</span></div><div id="rebelPlayers" class="rebel-players"></div></section>
                   <details class="rebel-section"><summary>Game log</summary><div id="rebelLog" class="rebel-log"></div></details>
                 </aside>

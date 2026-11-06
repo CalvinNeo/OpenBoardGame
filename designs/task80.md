@@ -874,6 +874,55 @@ static/games/rebel_princess.js
   show round pause and Next Round
 ```
 
+## UI 实现记录
+
+### 2026-11-06 按 DEV_GUIDE.md 的 UI 优化
+
+改动目标：去掉嵌套框与重复标题、压缩手机端高度、去掉"每张牌下面一个 ⓘ"的禁止写法。
+
+界面结构（static/games/rebel_princess.html）：
+
+- 标题、Help、Explain 移入公共 Game 面板头部。static/index.html 新增
+  `#rebelPrincessHeaderActions`，static/game_assets.js 为 rebel_princess 登记
+  `panelTitle: "👑 Rebel Princess"` 与 `header: "showRebelPrincessHeaderActions"`，
+  脚本里导出同名全局函数切换显隐。面板内不再自带 h2 与按钮，符合"游戏主体直接实现在
+  Game 内，禁止再嵌套一层框"。Explain 按钮在 RC 被 Hide 时会被公共逻辑搬进 RC Dock，
+  这是 designs/room_control.md 规定的行为。
+- 顶部三块（目标条 + 回合条 + 引导条）合并为一条 `.rebel-status`：回合徽章、回合牌名、
+  💍 Lowest wins / 🤴 +1 💍 / 🐸 +5 💍 三个 chip，规则说明仍走 Help 与 tip。
+- 侧栏 "Your princess" 整块改为引导条下方的细条 `.rebel-princess-bar`（✨ 公主名 + 状态徽章），
+  手机端不再需要滚到侧栏才能看到自己的能力。
+
+手牌（static/games/rebel_princess.js）：
+
+- 删除每张牌下方的 `rebel-card-info` 按钮，改为卡面右上角的 `.rebel-card-points`
+  数值角标（如 `+1💍`），角标本身是 tip 目标：桌面悬停、手机点按显示解释，
+  且禁用牌也能解释（禁用按钮不派发指针事件，所以 tip 挂在角标而不是整张牌）。
+  选中序号移到左上角，与数值角标分列两侧。
+- 公主能力按钮在 trick 阶段改名为 `Use Ability`（公主名已在其上方的细条里），
+  避免 320px 下换行。
+- `tricks played` 改为单复数正确（`1 trick`）。
+
+玩家列表：
+
+- 统计由三个 badge 改为紧凑文本 `.rebel-stat`（💍/🃏/📥），手机端每名玩家一行：
+  姓名 + 状态在左、统计右对齐、公主名在下一行。
+
+样式与资源：
+
+- static/rebel_princess.css 重写顶部状态区、公主细条、卡牌角标、玩家行；
+  新增 `@media (max-width: 900px)` 规则，让 `data-game-theme="rebel_princess"` 的
+  面板头部 `flex-wrap: nowrap` 并压缩游戏名，保证 Help / Reconnect 不换行。
+- 删除已失效的 static/games/rebel_princess.css 样式片段（其中的 class 均已不存在），
+  同时移除 style.css 里的 `@media all, obg-game-rebel_princess-1 {}` 占位组与清单里的
+  `styleFragments`；本游戏的规则一直由 `styles` 里的独立 CSS 承载。
+- 版本号：style.css → app_v146、game_assets.js → 205、
+  rebel_princess.js → app_v5、rebel_princess.css → 5、rebel_princess.html → 2。
+
+验收：新增 tests/rebel_princess_fixtures.py（`python3 -m tests.rebel_princess_fixtures`
+输出 23 个场景的真实 view），配合本地静态预览页在 320 / 390 / 1024 / 1440 四种宽度下逐场景检查
+横向溢出、板块重叠、页面横向滚动与标题栏换行，92 组全部通过。
+
 ## 无法完整获取或需要补齐的游戏资源
 
 以下内容我没有从可公开文本中完整获取，若要做完全贴合实体版的电子版，需要补齐：

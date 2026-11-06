@@ -210,6 +210,24 @@ const base = process.env.ROOM_TEST_URL || 'http://127.0.0.1:8766';
     assert.equal(await delayed.locator('#caboPanel').isVisible(), false);
     assert.equal(await delayed.locator('#gameAssetsStatus').isVisible(), false);
     console.log('Leaving while assets load does not restore a stale room.');
+
+    const semantic = await newPage();
+    await create(semantic, 'semantic_guess');
+    await ready(semantic, 'semantic_guess');
+    assert.equal(await semantic.locator('#semanticGuessConfigBox').isVisible(), true);
+    assert.equal(await semantic.locator('#semanticGuessLoading').isVisible(), false);
+    await semantic.evaluate(() => socket.listeners('game:initialization').forEach(handler => handler({
+      room_id: roomId, game_type: 'semantic_guess', initialization: {id: 'startup-regression', stage: 'hints', progress: 0.42},
+    })));
+    assert.equal(await semantic.locator('#semanticGuessLoading').isVisible(), true);
+    assert.equal(await semantic.locator('#semanticGuessLoadingPercent').innerText(), '42%');
+    assert.equal(await semantic.locator('#semanticGuessLoadingProgress').getAttribute('aria-valuenow'), '42');
+    assert.equal(await semantic.locator('#gameAssetsStatus').isVisible(), false);
+    await semantic.evaluate(() => socket.listeners('game:initialization').forEach(handler => handler({
+      room_id: roomId, game_type: 'semantic_guess', initialization: null,
+    })));
+    assert.equal(await semantic.locator('#semanticGuessLoading').isVisible(), false);
+    console.log('Semantic Guess lobby options and server preparation progress remain unchanged.');
     assert.deepEqual(errors, []);
     console.log('All asset loading browser regressions passed.');
   } finally {

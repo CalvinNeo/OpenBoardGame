@@ -260,16 +260,19 @@ async function testLive(browser, errors) {
   }
   const host = pages[0];
   await host.evaluate(() => socket.emit('room:create', {name: 'Alex', game_type: 'word_sync'}));
-  await host.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('word_sync'));
+  await host.waitForFunction(() => roomSessionReady && currentGameType === 'word_sync');
+  assert.equal(await host.evaluate(() => isGameAssetsLoaded('word_sync')), false);
+  assert.equal(await host.locator('#gameAssetsStatus').isVisible(), false);
   const room = await host.evaluate(() => roomId);
   for (let index = 1; index < 4; index += 1) {
     await pages[index].evaluate(({room, index}) => socket.emit('room:join', {room_id: room, name: ['Alex', 'Morgan', 'Jamie', 'Riley'][index]}), {room, index});
-    await pages[index].waitForFunction(() => roomSessionReady && isGameAssetsLoaded('word_sync'));
+    await pages[index].waitForFunction(() => roomSessionReady && currentGameType === 'word_sync');
+    assert.equal(await pages[index].evaluate(() => isGameAssetsLoaded('word_sync')), false);
   }
   for (const page of pages) await page.evaluate(() => socket.emit('room:ready', {ready: true}));
   await host.waitForFunction(() => !document.getElementById('startBtn').disabled);
   await host.locator('#startBtn').click();
-  for (const page of pages) await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'guess');
+  for (const page of pages) await page.waitForFunction(() => isGameAssetsLoaded('word_sync') && lastGameStatePayload?.view?.phase === 'guess');
   assert.equal(await host.locator('#roomControlsPanel').evaluate(node => node.classList.contains('collapsed')), true);
   assert.equal(await host.evaluate(() => document.body.classList.contains('ws-needs-action')), true);
   await host.locator('#wordSyncWord').fill('月亮');
@@ -332,15 +335,143 @@ async function testLive(browser, errors) {
   for (const context of contexts) await context.close();
 }
 
+async function startLoadingRoom(page) {
+  await page.evaluate(() => socket.emit('room:create', {name: 'Loading QA', game_type: 'word_sync'}));
+  await page.waitForFunction(() => roomSessionReady && currentGameType === 'word_sync');
+  assert.equal(await page.evaluate(() => isGameAssetsLoaded('word_sync')), false);
+  assert.equal(await page.locator('#gameAssetsStatus').isVisible(), false);
+  await page.evaluate(() => socket.emit('room:add_bot', {}));
+  await page.waitForFunction(() => currentRoomState.players.length === 2);
+  await page.evaluate(() => socket.emit('room:ready', {ready: true}));
+  await page.waitForFunction(() => !document.getElementById('startBtn').disabled);
+  assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter(entry => entry.name.includes('/games/word_sync.')).length), 0);
+  await page.locator('#startBtn').click();
+  await page.waitForFunction(() => currentRoomState.status === 'in_game');
+}
+
+async function testStartupLoading(browser, errors) {
+  const context = await browser.newContext({viewport: {width: 390, height: 844}});
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push(error.message));
+  const waiting = new Map();
+  const requests = [];
+  await page.route('**/static/games/word_sync.*', async route => {
+    const extension = new URL(route.request().url()).pathname.split('.').pop();
+    requests.push(extension);
+    await new Promise(resolve => waiting.set(extension, resolve));
+    if (extension === 'js') {
+      const response = await route.fetch();
+      await route.fulfill({response, body: 'window.wordSyncStartupExecutions = (window.wordSyncStartupExecutions || 0) + 1;\n' + await response.text()});
+    } else await route.continue();
+  });
+  try {
+    await page.goto(base);
+    await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+    await startLoadingRoom(page);
+    await page.waitForFunction(() => gameAssetProgress.get('word_sync')?.total === 3);
+    assert.deepEqual(requests.sort(), ['css', 'html']);
+    assert.equal(await page.locator('#gameAssetsPercent').innerText(), '0%');
+    for (const width of [320, 390, 1024, 1440]) {
+      await page.setViewportSize({width, height: width < 600 ? 844 : 1000});
+      const bounds = await page.locator('#gameAssetsStatus').evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        return {overflow: document.documentElement.scrollWidth > innerWidth,
+          inside: rect.left >= 0 && rect.right <= innerWidth,
+          textFits: [...node.querySelectorAll('*')].every(child => !child.clientWidth || child.scrollWidth <= child.clientWidth + 1)};
+      });
+      assert.deepEqual(bounds, {overflow: false, inside: true, textFits: true});
+      await page.screenshot({path: `${output}/startup-${width}.png`, fullPage: true});
+    }
+    waiting.get('html')();
+    await page.waitForFunction(() => document.getElementById('gameAssetsProgress').getAttribute('aria-valuenow') === '33');
+    assert.match(await page.locator('#gameAssetsMessage').innerText(), /1 \/ 3 files ready/);
+    waiting.get('css')();
+    await page.waitForFunction(() => document.getElementById('gameAssetsProgress').getAttribute('aria-valuenow') === '66');
+    assert.match(await page.locator('#gameAssetsMessage').innerText(), /Loading game logic/);
+    await page.clock.install();
+    await page.clock.runFor(15100);
+    await page.locator('#gameAssetsRetryBtn').waitFor({state: 'visible'});
+    assert.match(await page.locator('#gameAssetsMessage').innerText(), /timed out/);
+    assert.equal(await page.locator('#gameAssetsStatus').getAttribute('aria-busy'), 'false');
+    await page.locator('#gameAssetsRetryBtn').click();
+    await page.waitForFunction(() => !gameAssetErrors.has('word_sync') && gameAssetProgress.get('word_sync')?.completed === 2);
+    assert.equal(requests.filter(extension => extension === 'js').length, 1);
+    waiting.get('js')();
+    await page.waitForFunction(() => isGameAssetsLoaded('word_sync'));
+    assert.equal(await page.evaluate(() => window.wordSyncStartupExecutions), 1);
+    assert.equal(await page.locator('#gameAssetsStatus').isVisible(), false);
+    assert.equal(await page.locator('#wordSyncWord').isVisible(), true);
+    assert.equal(await page.evaluate(() => gameAssetProgress.get('word_sync').completed), 3);
+    assert.equal(await page.locator('script[src*="/word_sync.js"]').count(), 1);
+  } finally {
+    for (const release of waiting.values()) release();
+    await context.close();
+  }
+
+  const retryContext = await browser.newContext({viewport: {width: 390, height: 844}});
+  const retryPage = await retryContext.newPage();
+  retryPage.on('pageerror', error => errors.push(error.message));
+  let attempts = 0;
+  await retryPage.route('**/static/games/word_sync.html?*', route => {
+    attempts += 1;
+    return attempts === 1 ? route.fulfill({status: 503, body: 'Unavailable'}) : route.continue();
+  });
+  try {
+    await retryPage.goto(base);
+    await retryPage.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+    await startLoadingRoom(retryPage);
+    await retryPage.locator('#gameAssetsRetryBtn').waitFor({state: 'visible'});
+    await retryPage.locator('#gameAssetsRetryBtn').click();
+    await retryPage.waitForFunction(() => isGameAssetsLoaded('word_sync'));
+    assert.equal(attempts, 2);
+    assert.equal(await retryPage.locator('#wordSyncWord').isVisible(), true);
+    assert.equal(await retryPage.locator('#wordSyncWord').count(), 1);
+    const currentRoom = await retryPage.evaluate(() => roomId);
+    await retryPage.reload();
+    await retryPage.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('word_sync') && lastGameStatePayload?.view?.game_id === 'word_sync');
+    assert.equal(await retryPage.evaluate(() => roomId), currentRoom);
+  } finally {
+    await retryContext.close();
+  }
+
+  const leavingContext = await browser.newContext({viewport: {width: 390, height: 844}});
+  const leaving = await leavingContext.newPage();
+  leaving.on('pageerror', error => errors.push(error.message));
+  let releaseScript;
+  const heldScript = new Promise(resolve => {releaseScript = resolve;});
+  await leaving.route('**/static/games/word_sync.js?*', async route => {
+    await heldScript;
+    await route.continue();
+  });
+  try {
+    await leaving.goto(base);
+    await leaving.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+    await startLoadingRoom(leaving);
+    await leaving.waitForFunction(() => gameAssetProgress.get('word_sync')?.completed === 2);
+    await leaving.locator('#roomControlsToggleBtn').click();
+    await leaving.locator('#leaveBtn').click();
+    await leaving.waitForFunction(() => !roomId);
+    releaseScript();
+    await leaving.waitForFunction(() => isGameAssetsLoaded('word_sync'));
+    assert.equal(await leaving.evaluate(() => currentRoomState), null);
+    assert.equal(await leaving.locator('#wordSyncPanel').isVisible(), false);
+    assert.equal(await leaving.locator('#gameAssetsStatus').isVisible(), false);
+  } finally {
+    releaseScript();
+    await leavingContext.close();
+  }
+}
+
 (async () => {
   const browser = await chromium.launch({channel: 'chrome', headless: true});
   const errors = [];
   try {
+    await testStartupLoading(browser, errors);
     await testFixtures(browser, errors);
     await testTouch(browser, errors);
     await testLive(browser, errors);
     assert.deepEqual(errors, []);
-    console.log('Word Sync: 320/390/1024/1440px, hidden words, input/IME, reveal/ready/results, Help/Explain/Esc, touch/scroll, history, lazy loading, room switch, reconnect and live bots passed.');
+    console.log('Word Sync: deferred startup, real file progress, timeout/retry without duplicate scripts, 320/390/1024/1440px, hidden words, input/IME, reveal/ready/results, Help/Explain/Esc, touch/scroll, history, room switch, reconnect and live bots passed.');
   } finally {
     await browser.close();
   }

@@ -1,6 +1,7 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "word_sync": {
+    "loadOnStart": true,
     "scripts": ["/static/games/word_sync.js?v=2"],
     "styles": ["/static/games/word_sync.css?v=3"],
     "markup": "/static/games/word_sync.html?v=1",
@@ -540,14 +541,15 @@ const GAME_ASSETS = {
   "rebel_princess": {
     "scripts": [
       "/static/games/rebel_princess_hints.js?v=2",
-      "/static/games/rebel_princess.js?v=app_v4"
+      "/static/games/rebel_princess.js?v=app_v6"
     ],
     "styles": [
-      "/static/rebel_princess.css?v=4"
+      "/static/rebel_princess.css?v=6"
     ],
     "panel": "rebelPrincessPanel",
-    "markup": "/static/games/rebel_princess.html?v=1",
-    "styleFragments": "/static/games/rebel_princess.css?v=1"
+    "panelTitle": "👑 Rebel Princess",
+    "header": "showRebelPrincessHeaderActions",
+    "markup": "/static/games/rebel_princess.html?v=2"
   },
   "guandan": {
     "scripts": [
@@ -1158,6 +1160,8 @@ const gameAssetLoads = new Map();
 const loadedGameAssets = new Set();
 const gameAssetErrors = new Map();
 const gameResourceLoads = new Map();
+const gameAssetProgress = new Map();
+const GAME_ASSET_TIMEOUT_MS = 15000;
 let gameStyleSlots = null;
 
 function getGameStyleSlots() {
@@ -1233,7 +1237,7 @@ function loadGameStyleFragments(gameType, url) {
   if (gameResourceLoads.has(url)) return gameResourceLoads.get(url);
   const request = (async () => {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    const timeout = window.setTimeout(() => controller.abort(), GAME_ASSET_TIMEOUT_MS);
     const parser = document.createElement("style");
     parser.media = "not all";
     const inserted = [];
@@ -1286,20 +1290,52 @@ function isGameAssetsLoaded(gameType) {
   return loadedGameAssets.has(gameType);
 }
 
+function shouldLoadGameAssets(state) {
+  return Boolean(state?.game_type) && (GAME_ASSETS[state.game_type]?.loadOnStart !== true || state.status !== "lobby");
+}
+
 function syncGameAssetsStatus(gameType) {
   const status = document.getElementById("gameAssetsStatus");
   const message = document.getElementById("gameAssetsMessage");
   const retry = document.getElementById("gameAssetsRetryBtn");
-  const pending = Boolean(gameType) && !isGameAssetsLoaded(gameType);
+  const room = typeof currentRoomState === "undefined" ? null : currentRoomState;
+  const pending = Boolean(gameType) && room?.game_type === gameType && shouldLoadGameAssets(room) && !isGameAssetsLoaded(gameType);
   const failed = gameAssetErrors.has(gameType);
+  const progress = gameAssetProgress.get(gameType);
+  const completed = progress?.completed || 0;
+  const total = progress?.total || 0;
+  const percent = total ? Math.floor(completed / total * 100) : 0;
+  const stage = progress?.stage || "Preparing game files…";
+  const progressBar = document.getElementById("gameAssetsProgress");
   status.classList.toggle("hidden", !pending);
   status.classList.toggle("room-feedback-error", failed);
-  message.textContent = failed ? "Could not load this game. Check your connection and retry." : "Loading game...";
+  status.setAttribute("aria-busy", String(pending && !failed));
+  document.getElementById("gameAssetsTitle").textContent = failed ? "Loading interrupted" : "Preparing game";
+  document.getElementById("gameAssetsPercent").textContent = `${percent}%`;
+  document.getElementById("gameAssetsFill").style.width = `${percent}%`;
+  progressBar.setAttribute("aria-valuenow", String(percent));
+  progressBar.setAttribute("aria-valuetext", `${percent}% · ${completed} of ${total} files ready`);
+  message.textContent = failed
+    ? `${gameAssetErrors.get(gameType)?.message || "Could not load this game."} Retry to continue, or reload the page to restart the request.`
+    : `${stage} ${completed} / ${total} files ready.`;
   retry.classList.toggle("hidden", !failed);
 }
 
+function waitForGameResource(request, url) {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error(`Loading timed out: ${url}.`)), GAME_ASSET_TIMEOUT_MS);
+    request.then(() => {
+      window.clearTimeout(timeout);
+      resolve();
+    }, error => {
+      window.clearTimeout(timeout);
+      reject(error);
+    });
+  });
+}
+
 function loadGameResource(url, type) {
-  if (gameResourceLoads.has(url)) return gameResourceLoads.get(url);
+  if (gameResourceLoads.has(url)) return waitForGameResource(gameResourceLoads.get(url), url);
   const request = new Promise((resolve, reject) => {
     const element = document.createElement(type === "style" ? "link" : "script");
     if (type === "style") {
@@ -1320,14 +1356,14 @@ function loadGameResource(url, type) {
     throw error;
   });
   gameResourceLoads.set(url, request);
-  return request;
+  return waitForGameResource(request, url);
 }
 
 function loadGameMarkup(url) {
   if (gameResourceLoads.has(url)) return gameResourceLoads.get(url);
   const request = (async () => {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    const timeout = window.setTimeout(() => controller.abort(), GAME_ASSET_TIMEOUT_MS);
     try {
       const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) throw new Error(`Could not load ${url}: ${response.status}`);
@@ -1360,17 +1396,27 @@ function ensureGameAssets(gameType) {
   if (isGameAssetsLoaded(gameType)) return Promise.resolve();
   if (gameAssetLoads.has(gameType)) return gameAssetLoads.get(gameType);
   gameAssetErrors.delete(gameType);
+  const progress = {completed: 0, total: 0, stage: "Loading interface and styles…"};
+  gameAssetProgress.set(gameType, progress);
+  const track = request => request.then(() => {
+    if (gameAssetProgress.get(gameType) !== progress || gameAssetErrors.has(gameType)) return;
+    progress.completed += 1;
+    if (typeof currentGameType !== "undefined") syncGameAssetsStatus(currentGameType);
+  });
   const request = (async () => {
     const assets = GAME_ASSETS[gameType];
     if (!assets) throw new Error(`Unknown game: ${gameType}`);
+    progress.total = assets.scripts.length + assets.styles.length + Number(Boolean(assets.markup)) + Number(Boolean(assets.styleFragments));
     // DOM and styles must exist before legacy game scripts bind their controls.
     await Promise.all([
-      ...(assets.markup ? [loadGameMarkup(assets.markup)] : []),
-      ...(assets.styleFragments ? [loadGameStyleFragments(gameType, assets.styleFragments)] : []),
-      ...assets.styles.map((url) => loadGameResource(url, "style")),
+      ...(assets.markup ? [track(loadGameMarkup(assets.markup))] : []),
+      ...(assets.styleFragments ? [track(loadGameStyleFragments(gameType, assets.styleFragments))] : []),
+      ...assets.styles.map((url) => track(loadGameResource(url, "style"))),
     ]);
+    progress.stage = "Loading game logic…";
+    if (typeof currentGameType !== "undefined") syncGameAssetsStatus(currentGameType);
     // Keep each game's helpers ahead of its entry point, including on retries.
-    for (const url of assets.scripts) await loadGameResource(url, "script");
+    for (const url of assets.scripts) await track(loadGameResource(url, "script"));
     loadedGameAssets.add(gameType);
   })().catch((error) => {
     gameAssetLoads.delete(gameType);

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v144" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v146" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -1188,6 +1188,10 @@
               <h2>Game</h2>
               <button id="gameReconnectBtn" class="game-reconnect-btn" type="button">Reconnect</button>
             </div>
+            <div class="panel-header-actions" id="rebelPrincessHeaderActions" style="display: none;">
+              <button id="rebelHelpBtn" type="button" aria-label="Help">Help</button>
+              <button id="rebelExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="incanGoldHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="sixNimmtHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="felixHeaderActions" style="display: none;"></div>
@@ -1467,8 +1471,10 @@
             </div>
           </div>
           <div class="panel-body">
-            <div id="gameAssetsStatus" class="room-feedback hidden" role="status" aria-live="polite">
-              <span id="gameAssetsMessage"></span>
+            <div id="gameAssetsStatus" class="game-assets-status room-feedback hidden" role="status" aria-live="polite" aria-busy="false">
+              <div class="game-assets-heading"><h3 id="gameAssetsTitle">Preparing game</h3><span id="gameAssetsPercent">0%</span></div>
+              <p id="gameAssetsMessage"></p>
+              <div id="gameAssetsProgress" class="game-assets-track" role="progressbar" aria-label="Game files" aria-describedby="gameAssetsMessage" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="gameAssetsFill"></span></div>
               <button id="gameAssetsRetryBtn" type="button" class="hidden">Retry loading game</button>
             </div>
             <div id="caboPanel" class="hidden"></div>
@@ -1737,9 +1743,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=203" defer></script>
+  <script src="/static/game_assets.js?v=205" defer></script>
   <template id="incanGoldGuide"></template>
-  <script src="/static/games/shared.js?v=app_v41" defer></script>
+  <script src="/static/games/shared.js?v=app_v42" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
   <template id="natsumemoDialog"></template>
@@ -1776,6 +1782,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v62" defer></script>
-  <script src="/static/room.js?v=app_v98" defer></script>
+  <script src="/static/room.js?v=app_v99" defer></script>
 </body>
 </html>
