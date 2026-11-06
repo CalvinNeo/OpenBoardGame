@@ -120,3 +120,21 @@
 2.  **碰撞检测算法**：在拖拽或点击放置时，需要将拼块的矩阵与拼图卡当前的空隙矩阵进行位操作（AND 操作），如果重叠部分全为 0 且拼块完全包含在拼图边界内，则视为合法放置。
 3.  **回滚机制 (Undo)**：由于每回合有 3 个 AP，玩家经常会尝试放置又反悔。强烈建议实现回合内的 Undo 栈，只有当玩家点击“结束回合 (End Turn)”时，才将状态真正提交并同步给其他玩家/AI。
 4.  **UI 提示**：大师行动 (Master Action) 经常被玩家遗忘，UI 层面应在玩家选中拼块拖拽时，高亮显示所有可合法放置的拼图槽位，并在使用大师行动时，对已放置过拼块的拼图加上“不可再放”的锁定蒙版。
+
+## UI 修复与验收（2026-11-06）
+
+- 按 `DEV_GUIDE.md` 将主体直接放在 Game 面板，并将标题改为 Project L；桌面使用工作台／市场双栏，手机采用工作台优先、拼图两列、市场四列的紧凑排版。库存、方向预览与拼图相邻，比分置于卡片顶部，奖励置于底部；长昵称自动换行，Help／Reconnect 保持同一行。
+- 市场卡牌改为就地 Take／Cancel 确认，双击不直接购买；拼块落点旁显示 Place／Master plan／Cancel。点击空白或 Escape 取消选择，不提供 Clear Selection 按钮。拼图由数据网格绘制，不依赖图片尺寸。
+- 支持绕拼块重心旋转／翻转、合法落点提示、红色非法预览，以及左上角为空的不规则拼块落点；落点旁也提供旋转／翻转按钮，不必返回库存区调整方向。大师计划显示占位和库存预留，锁定已规划拼图；可逐项移除，玩家行动状态改变后清理过期计划。
+- Help 校正初始库存、1–4 级拼块、可重复拿取一级拼块、同级换形和修饰阶段不发奖励的说明。Explain 使用独立作用域，支持禁用控件和动态棋盘内容，不执行原动作；弹窗支持 Escape、焦点返回和 Tab 循环。非交互信息支持悬停／点击提示，3 秒关闭。
+- 触屏滚动不产生选中或行动，抬起／取消在文档范围内处理。选择后保留页面和明细滚动位置。对手的公共拼图及已放拼块可见，玩家／已完成列表可折叠并限高滚动；自己的可行动状态会提示隐藏 RC。
+- 修改文件：`static/games/project_l.html`、`static/games/project_l.css`、`static/games/project_l.js`、`static/game_assets.js`、`static/index.html`；新增 `tests/project_l_fixtures.py`、`tests/project_l.browser.cjs`、`tests/project_l_live.browser.cjs`。保留原 CSS media 组及延迟加载方式，更新对应资源版本，没有修改游戏规则或后端。
+
+### 验收与复现
+
+- `PLAYWRIGHT_MODULE=/path/to/playwright node tests/project_l.browser.cjs`：检查 320、390、1024、1440px 的 12 种状态，包括初始、落子、旁观、等待、已占用、空角落点、满库存／四拼图、长昵称、最终轮、修饰、修饰等待、最终结果；另检查 768px 和 RC 展开／隐藏。截图输出至 `build/project-l-ui/`。
+- 浏览器回归覆盖无页面横向溢出／板块重叠／图形越界、就地确认与取消、双击保护、非法落子、旋转／镜像回环、空角落点、计划预留／移除／状态刷新、Help／Explain／Escape、禁用控件说明、触摸滑动、提示替换／超时、滚动位置保持和最终扣分。
+- `python3 -m uvicorn app:app --host 127.0.0.1 --port 8817` 后运行 `PLAYWRIGHT_MODULE=/path/to/playwright ROOM_TEST_URL=http://127.0.0.1:8817 node tests/project_l_live.browser.cjs`：双客户端实际拿牌、升级、旋转／镜像落子、双拼图大师行动、回合交接、对手进度、刷新恢复和重连。
+- 补充检查：`python3 -m unittest tests.test_frontend_style_assets`、`node --check static/games/project_l.js`、`node --check static/game_assets.js`、`git diff --check`。本次为 UI 修改，不运行后端逻辑测试。
+- 保留的游戏特性：无同时揭示／独立轮末结算，因此保留原规则的 3 AP 自动交接，不新增 Next Round；棋盘使用点选而非拖拽，页面仍可正常纵向滚动。满库存、四张拼图和市场无法同时放进手机一屏，采用紧凑分区和就地确认减少往返。
+- 未覆盖：iOS Safari／Windows 真机、跨网络重连、真实完整对局到终局；终局与修饰阶段通过确定性公共状态验收，真实服务器回归覆盖主阶段的关键动作。

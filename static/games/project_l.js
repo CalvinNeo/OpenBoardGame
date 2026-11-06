@@ -1,1852 +1,812 @@
-const projectLUpgradeModal = document.getElementById("projectLUpgradeModal");
-const projectLUpgradeModalCloseBtn = document.getElementById("projectLUpgradeModalCloseBtn");
-const projectLUpgradeFromLabel = document.getElementById("projectLUpgradeFromLabel");
-const projectLUpgradeOptions = document.getElementById("projectLUpgradeOptions");
-
-const projectLHeaderActions = document.getElementById("projectLHeaderActions");
-const projectLHelpBtn = document.getElementById("projectLHelpBtn");
-const projectLExplainBtn = document.getElementById("projectLExplainBtn");
-const projectLHelpModal = document.getElementById("projectLHelpModal");
-const projectLHelpModalCloseBtn = document.getElementById("projectLHelpModalCloseBtn");
-const projectLExplainModal = document.getElementById("projectLExplainModal");
-const projectLExplainModalCloseBtn = document.getElementById("projectLExplainModalCloseBtn");
-const projectLExplainContent = document.getElementById("projectLExplainContent");
-
-const projectLPanel = document.getElementById("projectLPanel");
-const projectLPhaseLabel = document.getElementById("projectLPhase");
-const projectLApLabel = document.getElementById("projectLAp");
-const projectLTurnLabel = document.getElementById("projectLTurn");
-const projectLMasterUsedLabel = document.getElementById("projectLMasterUsed");
-const projectLWhiteRemainingLabel = document.getElementById("projectLWhiteRemaining");
-const projectLBlackRemainingLabel = document.getElementById("projectLBlackRemaining");
-const projectLEndTriggeredLabel = document.getElementById("projectLEndTriggered");
-const projectLWinnerLabel = document.getElementById("projectLWinner");
-const projectLSelectedMarketLabel = document.getElementById("projectLSelectedMarket");
-const projectLSelectedPuzzleLabel = document.getElementById("projectLSelectedPuzzle");
-const projectLSelectedPieceLabel = document.getElementById("projectLSelectedPiece");
-const projectLSelectedOriginLabel = document.getElementById("projectLSelectedOrigin");
-const projectLSelectedRotationLabel = document.getElementById("projectLSelectedRotation");
-const projectLSelectedFlipLabel = document.getElementById("projectLSelectedFlip");
-const projectLRotateLeftBtn = document.getElementById("projectLRotateLeftBtn");
-const projectLRotateRightBtn = document.getElementById("projectLRotateRightBtn");
-const projectLFlipBtn = document.getElementById("projectLFlipBtn");
-const projectLMarketWhite = document.getElementById("projectLMarketWhite");
-const projectLMarketBlack = document.getElementById("projectLMarketBlack");
-const projectLTakeMarketBtn = document.getElementById("projectLTakeMarketBtn");
-const projectLDrawWhiteBtn = document.getElementById("projectLDrawWhiteBtn");
-const projectLDrawBlackBtn = document.getElementById("projectLDrawBlackBtn");
-const projectLTakeLevel1Btn = document.getElementById("projectLTakeLevel1Btn");
-const projectLActivePuzzles = document.getElementById("projectLActivePuzzles");
-const projectLCompletedPuzzles = document.getElementById("projectLCompletedPuzzles");
-const projectLInventory = document.getElementById("projectLInventory");
-const projectLUpgradeFromSelect = document.getElementById("projectLUpgradeFrom");
-const projectLUpgradeBtn = document.getElementById("projectLUpgradeBtn");
-const projectLPlaceBtn = document.getElementById("projectLPlaceBtn");
-const projectLQueueMasterBtn = document.getElementById("projectLQueueMasterBtn");
-const projectLClearMasterBtn = document.getElementById("projectLClearMasterBtn");
-const projectLUseMasterBtn = document.getElementById("projectLUseMasterBtn");
-const projectLMasterQueue = document.getElementById("projectLMasterQueue");
-const projectLFinishingPlaceBtn = document.getElementById("projectLFinishingPlaceBtn");
-const projectLFinishingDoneBtn = document.getElementById("projectLFinishingDoneBtn");
-const projectLPlayers = document.getElementById("projectLPlayers");
-
-let currentProjectLView = null;
-
-let projectLSelectedMarket = null;
-let projectLSelectedPuzzleIndex = null;
-let projectLSelectedPieceId = null;
-let projectLSelectedOrigin = null;
-let projectLRotation = 0;
-let projectLFlip = false;
-let projectLMasterQueueItems = [];
-let projectLLastMarketTap = null;
-let projectLLastMarketTakeAt = 0;
-
-function closeProjectLUpgradeModal() {
-  setModalVisible(projectLUpgradeModal, false);
-}
-
-function renderProjectLUpgradeModal(view) {
-  if (!projectLUpgradeOptions || !projectLUpgradeFromLabel) {
-    return;
-  }
-  projectLUpgradeOptions.innerHTML = "";
-  const fromPiece = getProjectLUpgradeFrom(view);
-  if (!fromPiece) {
-    projectLUpgradeFromLabel.textContent = "Select a piece from Inventory first.";
-    return;
-  }
-  projectLUpgradeFromLabel.textContent = `From: ${fromPiece}`;
-  const pieceDefs = view && view.piece_defs ? view.piece_defs : {};
-  const allPieces = Object.keys(pieceDefs).sort((a, b) => {
-    const la = pieceDefs[a].level;
-    const lb = pieceDefs[b].level;
-    if (la !== lb) {
-      return la - lb;
-    }
-    return a.localeCompare(b);
-  });
-  allPieces.forEach((pieceId) => {
-    const pieceDef = pieceDefs[pieceId];
-    const canUpgrade = projectLCanUpgrade(pieceDefs, fromPiece, pieceId);
-    const option = document.createElement("button");
-    option.type = "button";
-    option.className = "project-l-upgrade-piece";
-    if (!canUpgrade) {
-      option.classList.add("disabled");
-      option.disabled = true;
-    }
-    const grid = document.createElement("div");
-    grid.className = "project-l-upgrade-piece-grid";
-    grid.style.gridTemplateColumns = `repeat(${pieceDef.shape[0].length}, 14px)`;
-    grid.style.gridAutoRows = "14px";
-    pieceDef.shape.forEach((row) => {
-      row.forEach((value) => {
-        if (!value) {
-          const spacer = document.createElement("div");
-          spacer.style.width = "14px";
-          spacer.style.height = "14px";
-          grid.appendChild(spacer);
-          return;
-        }
-        const cell = document.createElement("div");
-        cell.className = "project-l-upgrade-piece-cell";
-        if (pieceDef.color) {
-          cell.style.background = pieceDef.color;
-        }
-        grid.appendChild(cell);
-      });
-    });
-    option.appendChild(grid);
-    const label = document.createElement("div");
-    label.className = "project-l-piece-label";
-    label.textContent = pieceId;
-    option.appendChild(label);
-    if (canUpgrade) {
-      option.addEventListener("click", () => {
-        sendAction({ type: "upgrade_piece", from_piece_id: fromPiece, to_piece_id: pieceId });
-        closeProjectLUpgradeModal();
-      });
-    }
-    projectLUpgradeOptions.appendChild(option);
-  });
-}
-
-function openProjectLUpgradeModal(view) {
-  if (!projectLUpgradeModal || !view) {
-    return;
-  }
-  renderProjectLUpgradeModal(view);
-  setModalVisible(projectLUpgradeModal, true);
-}
-
-function clearProjectLState() {
-  currentProjectLView = null;
-  projectLSelectedMarket = null;
-  projectLSelectedPuzzleIndex = null;
-  projectLSelectedPieceId = null;
-  projectLSelectedOrigin = null;
-  projectLRotation = 0;
-  projectLFlip = false;
-  projectLMasterQueueItems = [];
-  if (projectLPhaseLabel) {
-    projectLPhaseLabel.textContent = "-";
-  }
-  if (projectLApLabel) {
-    projectLApLabel.textContent = "-";
-  }
-  if (projectLTurnLabel) {
-    projectLTurnLabel.textContent = "-";
-  }
-  if (projectLMasterUsedLabel) {
-    projectLMasterUsedLabel.textContent = "-";
-  }
-  if (projectLWhiteRemainingLabel) {
-    projectLWhiteRemainingLabel.textContent = "-";
-  }
-  if (projectLBlackRemainingLabel) {
-    projectLBlackRemainingLabel.textContent = "-";
-  }
-  if (projectLEndTriggeredLabel) {
-    projectLEndTriggeredLabel.textContent = "-";
-  }
-  if (projectLWinnerLabel) {
-    projectLWinnerLabel.textContent = "-";
-  }
-  if (projectLSelectedMarketLabel) {
-    projectLSelectedMarketLabel.textContent = "-";
-  }
-  if (projectLSelectedPuzzleLabel) {
-    projectLSelectedPuzzleLabel.textContent = "-";
-  }
-  if (projectLSelectedPieceLabel) {
-    projectLSelectedPieceLabel.textContent = "-";
-  }
-  if (projectLSelectedOriginLabel) {
-    projectLSelectedOriginLabel.textContent = "-";
-  }
-  if (projectLSelectedRotationLabel) {
-    projectLSelectedRotationLabel.textContent = "0";
-  }
-  if (projectLSelectedFlipLabel) {
-    projectLSelectedFlipLabel.textContent = "No";
-  }
-  if (projectLMarketWhite) {
-    projectLMarketWhite.innerHTML = "";
-  }
-  if (projectLMarketBlack) {
-    projectLMarketBlack.innerHTML = "";
-  }
-  if (projectLActivePuzzles) {
-    projectLActivePuzzles.innerHTML = "";
-  }
-  if (projectLCompletedPuzzles) {
-    projectLCompletedPuzzles.innerHTML = "";
-  }
-  if (projectLInventory) {
-    projectLInventory.innerHTML = "";
-  }
-  if (projectLUpgradeFromSelect) {
-    projectLUpgradeFromSelect.innerHTML = "";
-  }
-  if (projectLMasterQueue) {
-    projectLMasterQueue.innerHTML = "";
-  }
-  if (projectLPlayers) {
-    projectLPlayers.innerHTML = "";
-  }
-  updateProjectLActionButtons();
-}
-
-function getProjectLYou(view) {
-  if (!view) {
-    return null;
-  }
-  return (view.players || []).find((player) => player.player_id === view.you) || null;
-}
-
-function projectLRotateMatrix(matrix) {
-  if (!Array.isArray(matrix) || !matrix.length) {
-    return [];
-  }
-  const height = matrix.length;
-  const width = matrix[0].length;
-  const rotated = Array.from({ length: width }, () => Array.from({ length: height }, () => 0));
-  for (let r = 0; r < height; r += 1) {
-    for (let c = 0; c < width; c += 1) {
-      rotated[c][height - 1 - r] = matrix[r][c];
-    }
-  }
-  return rotated;
-}
-
-function projectLFlipMatrix(matrix) {
-  return matrix.map((row) => row.slice().reverse());
-}
-
-function projectLTransformMatrix(matrix, rotation, flip) {
-  let transformed = matrix;
-  if (flip) {
-    transformed = projectLFlipMatrix(transformed);
-  }
-  const turns = ((rotation % 360) + 360) % 360 / 90;
-  for (let i = 0; i < turns; i += 1) {
-    transformed = projectLRotateMatrix(transformed);
-  }
-  return transformed;
-}
-
-function projectLMatrixCells(matrix) {
-  const cells = [];
-  if (!Array.isArray(matrix)) {
-    return cells;
-  }
-  matrix.forEach((row, r) => {
-    row.forEach((value, c) => {
-      if (value) {
-        cells.push([r, c]);
-      }
-    });
-  });
-  return cells;
-}
-
-function projectLPlacementCells(pieceDef, rotation, flip, row, col) {
-  if (!pieceDef || !Array.isArray(pieceDef.shape)) {
-    return [];
-  }
-  const transformed = projectLTransformMatrix(pieceDef.shape, rotation, flip);
-  return projectLMatrixCells(transformed).map(([r, c]) => [row + r, col + c]);
-}
-
-function projectLOccupiedCells(puzzleState, pieceDefs) {
-  const occupied = new Map();
-  if (!puzzleState || !Array.isArray(puzzleState.placed)) {
-    return occupied;
-  }
-  puzzleState.placed.forEach((placement) => {
-    const def = pieceDefs ? pieceDefs[placement.piece_id] : null;
-    if (!def) {
-      return;
-    }
-    const cells = projectLPlacementCells(
-      def,
-      placement.rotation,
-      placement.flip,
-      placement.row,
-      placement.col,
-    );
-    cells.forEach(([r, c]) => {
-      occupied.set(`${r},${c}`, placement.piece_id);
-    });
-  });
-  return occupied;
-}
-
-function projectLValidatePlacement(view, puzzleIndex, pieceId, rotation, flip, row, col) {
-  const you = getProjectLYou(view);
-  if (!you) {
-    return { ok: false, reason: "no player" };
-  }
-  if (!Number.isInteger(puzzleIndex) || puzzleIndex < 0 || puzzleIndex >= you.active_puzzles.length) {
-    return { ok: false, reason: "invalid puzzle" };
-  }
-  const puzzleState = you.active_puzzles[puzzleIndex];
-  const puzzleDef = view.puzzle_defs ? view.puzzle_defs[puzzleState.card_id] : null;
-  const pieceDef = view.piece_defs ? view.piece_defs[pieceId] : null;
-  if (!puzzleDef || !pieceDef) {
-    return { ok: false, reason: "missing data" };
-  }
-  if (![0, 90, 180, 270].includes(rotation)) {
-    return { ok: false, reason: "invalid rotation" };
-  }
-  if (!Number.isInteger(row) || !Number.isInteger(col)) {
-    return { ok: false, reason: "invalid origin" };
-  }
-  const transformed = projectLTransformMatrix(pieceDef.shape, rotation, flip);
-  const height = transformed.length;
-  const width = height ? transformed[0].length : 0;
-  if (row < 0 || col < 0 || row + height > puzzleDef.height || col + width > puzzleDef.width) {
-    return { ok: false, reason: "out of bounds", cells: projectLMatrixCells(transformed).map(([r, c]) => [row + r, col + c]) };
-  }
-  const occupied = projectLOccupiedCells(puzzleState, view.piece_defs);
-  for (let r = 0; r < height; r += 1) {
-    for (let c = 0; c < width; c += 1) {
-      if (!transformed[r][c]) {
-        continue;
-      }
-      const gr = row + r;
-      const gc = col + c;
-      if (!puzzleDef.grid[gr] || puzzleDef.grid[gr][gc] !== 1) {
-        return { ok: false, reason: "invalid cell" };
-      }
-      if (occupied.has(`${gr},${gc}`)) {
-        return { ok: false, reason: "occupied" };
-      }
-    }
-  }
-  return { ok: true, puzzleState, puzzleDef };
-}
-
-function projectLGetSelectedPlacement(view) {
-  if (!view || !Number.isInteger(projectLSelectedPuzzleIndex)) {
-    return null;
-  }
-  if (!projectLSelectedPieceId || !projectLSelectedOrigin) {
-    return null;
-  }
-  const you = getProjectLYou(view);
-  if (!you || !you.inventory.includes(projectLSelectedPieceId)) {
-    return { ok: false, reason: "missing piece" };
-  }
-  const rotation = ((projectLRotation % 360) + 360) % 360;
-  const flip = !!projectLFlip;
-  const row = projectLSelectedOrigin.row;
-  const col = projectLSelectedOrigin.col;
-  const result = projectLValidatePlacement(view, projectLSelectedPuzzleIndex, projectLSelectedPieceId, rotation, flip, row, col);
-  return {
-    ok: result.ok,
-    reason: result.reason,
-    puzzle_index: projectLSelectedPuzzleIndex,
-    piece_id: projectLSelectedPieceId,
-    rotation,
-    flip,
-    row,
-    col,
-  };
-}
-
-function projectLInventoryCounts(inventory) {
-  const counts = {};
-  (inventory || []).forEach((pieceId) => {
-    counts[pieceId] = (counts[pieceId] || 0) + 1;
-  });
-  return counts;
-}
-
-function projectLCanUpgrade(pieceDefs, fromPiece, toPiece) {
-  if (!pieceDefs || !pieceDefs[fromPiece] || !pieceDefs[toPiece]) {
-    return false;
-  }
-  if (fromPiece === toPiece) {
-    return false;
-  }
-  const fromLevel = pieceDefs[fromPiece].level;
-  const toLevel = pieceDefs[toPiece].level;
-  if (fromLevel === 4) {
-    return toLevel === 4;
-  }
-  if (toLevel === fromLevel + 1) {
-    return true;
-  }
-  if (toLevel === fromLevel && fromLevel >= 3) {
-    return true;
-  }
-  return false;
-}
-
-function updateProjectLSelectionLabels(view) {
-  const activeView = view || currentProjectLView;
-  const you = getProjectLYou(activeView);
-  if (projectLSelectedMarketLabel) {
-    if (projectLSelectedMarket) {
-      let suffix = "";
-      if (activeView && activeView.market && activeView.market[projectLSelectedMarket.deck]) {
-        const cardId = activeView.market[projectLSelectedMarket.deck][projectLSelectedMarket.index];
-        if (cardId) {
-          suffix = ` (#${cardId})`;
-        }
-      }
-      projectLSelectedMarketLabel.textContent = `${projectLSelectedMarket.deck} ${projectLSelectedMarket.index + 1}${suffix}`;
-    } else {
-      projectLSelectedMarketLabel.textContent = "-";
-    }
-  }
-  if (projectLSelectedPuzzleLabel) {
-    if (you && Number.isInteger(projectLSelectedPuzzleIndex) && you.active_puzzles[projectLSelectedPuzzleIndex]) {
-      const cardId = you.active_puzzles[projectLSelectedPuzzleIndex].card_id;
-      projectLSelectedPuzzleLabel.textContent = `#${cardId}`;
-    } else {
-      projectLSelectedPuzzleLabel.textContent = "-";
-    }
-  }
-  if (projectLSelectedPieceLabel) {
-    projectLSelectedPieceLabel.textContent = projectLSelectedPieceId || "-";
-  }
-  if (projectLSelectedOriginLabel) {
-    if (projectLSelectedOrigin) {
-      projectLSelectedOriginLabel.textContent = `${projectLSelectedOrigin.row}, ${projectLSelectedOrigin.col}`;
-    } else {
-      projectLSelectedOriginLabel.textContent = "-";
-    }
-  }
-  if (projectLSelectedRotationLabel) {
-    projectLSelectedRotationLabel.textContent = `${((projectLRotation % 360) + 360) % 360}`;
-  }
-  if (projectLSelectedFlipLabel) {
-    projectLSelectedFlipLabel.textContent = projectLFlip ? "Yes" : "No";
-  }
-}
-
-function syncProjectLSelections(view) {
-  if (!view) {
-    projectLSelectedMarket = null;
-    projectLSelectedPuzzleIndex = null;
-    projectLSelectedPieceId = null;
-    projectLSelectedOrigin = null;
-    projectLMasterQueueItems = [];
-    return;
-  }
-  const you = getProjectLYou(view);
-  if (!you) {
-    return;
-  }
-  if (Number.isInteger(projectLSelectedPuzzleIndex)) {
-    if (!you.active_puzzles[projectLSelectedPuzzleIndex]) {
-      projectLSelectedPuzzleIndex = null;
-      projectLSelectedOrigin = null;
-    }
-  }
-  if (projectLSelectedPieceId && !you.inventory.includes(projectLSelectedPieceId)) {
-    projectLSelectedPieceId = null;
-    projectLSelectedOrigin = null;
-  }
-  if (projectLSelectedOrigin && Number.isInteger(projectLSelectedPuzzleIndex)) {
-    const puzzleState = you.active_puzzles[projectLSelectedPuzzleIndex];
-    const puzzleDef = puzzleState && view.puzzle_defs ? view.puzzle_defs[puzzleState.card_id] : null;
-    if (
-      !puzzleDef
-      || projectLSelectedOrigin.row < 0
-      || projectLSelectedOrigin.col < 0
-      || projectLSelectedOrigin.row >= puzzleDef.height
-      || projectLSelectedOrigin.col >= puzzleDef.width
-    ) {
-      projectLSelectedOrigin = null;
-    }
-  }
-  if (projectLSelectedMarket) {
-    const deck = view.market ? view.market[projectLSelectedMarket.deck] : null;
-    if (!deck || deck[projectLSelectedMarket.index] == null) {
-      projectLSelectedMarket = null;
-    }
-  }
-  projectLMasterQueueItems = projectLMasterQueueItems.filter((placement) => {
-    if (!Number.isInteger(placement.puzzle_index)) {
-      return false;
-    }
-    if (!you.active_puzzles[placement.puzzle_index]) {
-      return false;
-    }
-    return you.inventory.includes(placement.piece_id);
-  });
-}
-
-function getProjectLUpgradeFrom(view) {
-  if (projectLUpgradeFromSelect) {
-    return projectLUpgradeFromSelect.value || null;
-  }
-  const you = getProjectLYou(view);
-  if (!you) {
-    return null;
-  }
-  if (projectLSelectedPieceId && you.inventory.includes(projectLSelectedPieceId)) {
-    return projectLSelectedPieceId;
-  }
-  return null;
-}
-
-function projectLTakeMarketCard(deckName, index) {
-  if (!currentProjectLView) {
-    return;
-  }
-  if (!isProjectLActionAvailable("take_puzzle")) {
-    log("Not your turn");
-    return;
-  }
-  const now = Date.now();
-  if (now - projectLLastMarketTakeAt < 350) {
-    return;
-  }
-  projectLLastMarketTakeAt = now;
-  sendAction({ type: "take_puzzle", source: "market", deck: deckName, index });
-  projectLSelectedMarket = null;
-  projectLLastMarketTap = null;
-  updateProjectLSelectionLabels();
-  if (currentProjectLView) {
-    renderProjectLMarket(currentProjectLView);
-  }
-  updateProjectLActionButtons();
-}
-
-
-function setProjectLSelectedMarket(deck, index) {
-  projectLSelectedMarket = { deck, index };
-  updateProjectLSelectionLabels();
-  if (currentProjectLView) {
-    renderProjectLMarket(currentProjectLView);
-  }
-  updateProjectLActionButtons();
-}
-
-function setProjectLSelectedPuzzle(index) {
-  projectLSelectedPuzzleIndex = index;
-  projectLSelectedOrigin = null;
-  updateProjectLSelectionLabels();
-  if (currentProjectLView) {
-    renderProjectLActivePuzzles(currentProjectLView);
-  }
-  updateProjectLActionButtons();
-}
-
-function setProjectLSelectedPiece(pieceId) {
-  projectLSelectedPieceId = pieceId;
-  projectLSelectedOrigin = null;
-  updateProjectLSelectionLabels();
-  if (currentProjectLView) {
-    renderProjectLInventory(currentProjectLView);
-    renderProjectLActivePuzzles(currentProjectLView);
-  }
-  updateProjectLActionButtons();
-}
-
-function setProjectLSelectedOrigin(row, col) {
-  projectLSelectedOrigin = { row, col };
-  updateProjectLSelectionLabels();
-  if (currentProjectLView) {
-    renderProjectLActivePuzzles(currentProjectLView);
-  }
-  updateProjectLActionButtons();
-}
-
-function setProjectLSelectedPuzzleAndOrigin(index, row, col) {
-  projectLSelectedPuzzleIndex = index;
-  projectLSelectedOrigin = { row, col };
-  updateProjectLSelectionLabels();
-  if (currentProjectLView) {
-    renderProjectLActivePuzzles(currentProjectLView);
-  }
-  updateProjectLActionButtons();
-}
-
-function clearProjectLSelection() {
-  projectLSelectedMarket = null;
-  projectLSelectedPuzzleIndex = null;
-  projectLSelectedPieceId = null;
-  projectLSelectedOrigin = null;
-  projectLRotation = 0;
-  projectLFlip = false;
-  projectLLastMarketTap = null;
-  updateProjectLSelectionLabels();
-  if (currentProjectLView) {
-    renderProjectLMarket(currentProjectLView);
-    renderProjectLInventory(currentProjectLView);
-    renderProjectLActivePuzzles(currentProjectLView);
-  }
-  updateProjectLActionButtons();
-}
-
-function buildProjectLReward(pieceId, pieceDefs, cellSize, labelPrefix) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "project-l-reward-row";
-  const label = document.createElement("div");
-  label.className = "project-l-reward-label";
-  label.textContent = labelPrefix ? `${labelPrefix} ${pieceId}` : pieceId;
-  wrapper.appendChild(label);
-
-  const pieceDef = pieceDefs ? pieceDefs[pieceId] : null;
-  if (!pieceDef) {
-    return wrapper;
-  }
-  const grid = document.createElement("div");
-  grid.className = "project-l-reward-piece";
-  grid.style.gridTemplateColumns = `repeat(${pieceDef.shape[0].length}, ${cellSize}px)`;
-  grid.style.gridAutoRows = `${cellSize}px`;
-  pieceDef.shape.forEach((row) => {
-    row.forEach((value) => {
-      if (!value) {
-        const spacer = document.createElement("div");
-        spacer.style.width = `${cellSize}px`;
-        spacer.style.height = `${cellSize}px`;
-        grid.appendChild(spacer);
-        return;
-      }
-      const cell = document.createElement("div");
-      cell.className = "project-l-reward-cell";
-      if (pieceDef.color) {
-        cell.style.background = pieceDef.color;
-      }
-      grid.appendChild(cell);
-    });
-  });
-  wrapper.appendChild(grid);
-  return wrapper;
-}
-
-function buildProjectLCard(cardDef, pieceDefs) {
-  const card = document.createElement("button");
-  card.type = "button";
-  card.className = "project-l-card";
-  if (!cardDef) {
-    card.classList.add("disabled");
-    card.disabled = true;
-    card.textContent = "Empty";
-    return card;
-  }
-  const header = document.createElement("div");
-  header.className = "project-l-card-header";
-  const idLabel = document.createElement("div");
-  idLabel.textContent = `#${cardDef.id}`;
-  const points = document.createElement("div");
-  points.textContent = `${cardDef.points} pts`;
-  header.appendChild(idLabel);
-  header.appendChild(points);
-  card.appendChild(header);
-
-  const reward = buildProjectLReward(cardDef.reward_piece_id, pieceDefs, 8, "Reward:");
-  reward.classList.add("project-l-card-meta");
-  card.appendChild(reward);
-
-  const imageWrap = document.createElement("div");
-  imageWrap.className = "project-l-card-image-wrap";
-  const image = document.createElement("img");
-  image.className = "project-l-card-image";
-  const cardId = String(cardDef.id).padStart(2, "0");
-  image.src = `/static/project_l/project_l_puzzles_svg/card_${cardId}.svg`;
-  image.alt = `Puzzle ${cardDef.id}`;
-  const cellSize = 12;
-  const imageWidth = cardDef.width * cellSize;
-  const imageHeight = cardDef.height * cellSize;
-  imageWrap.style.width = `${imageWidth}px`;
-  imageWrap.style.height = `${imageHeight}px`;
-  imageWrap.style.setProperty("--project-l-card-cell", `${cellSize}px`);
-  image.style.width = "100%";
-  image.style.height = "100%";
-  imageWrap.appendChild(image);
-  card.appendChild(imageWrap);
-  return card;
-}
-
-function renderProjectLMarket(view) {
-  const renderDeck = (container, deckName) => {
-    if (!container) {
-      return;
-    }
-    container.innerHTML = "";
-    const cards = (view.market && view.market[deckName]) || [];
-    cards.forEach((cardId, index) => {
-      const def = view.puzzle_defs ? view.puzzle_defs[cardId] : null;
-      const card = buildProjectLCard(def, view.piece_defs);
-      if (projectLSelectedMarket && projectLSelectedMarket.deck === deckName && projectLSelectedMarket.index === index) {
-        card.classList.add("selected");
-      }
-      if (!card.disabled) {
-        card.addEventListener("click", () => {
-          const now = Date.now();
-          const alreadySelected = projectLSelectedMarket
-            && projectLSelectedMarket.deck === deckName
-            && projectLSelectedMarket.index === index;
-          const isDoubleTap = projectLLastMarketTap
-            && projectLLastMarketTap.deck === deckName
-            && projectLLastMarketTap.index === index
-            && now - projectLLastMarketTap.time < 350;
-          if (alreadySelected || isDoubleTap) {
-            projectLLastMarketTap = null;
-            projectLTakeMarketCard(deckName, index);
-            return;
-          }
-          projectLLastMarketTap = { deck: deckName, index, time: now };
-          setProjectLSelectedMarket(deckName, index);
-        });
-        card.addEventListener("dblclick", () => {
-          projectLTakeMarketCard(deckName, index);
-        });
-      }
-      container.appendChild(card);
-    });
-    if (!cards.length) {
-      const empty = document.createElement("div");
-      empty.className = "project-l-card disabled";
-      empty.textContent = "Empty";
-      container.appendChild(empty);
-    }
-  };
-
-  renderDeck(projectLMarketWhite, "white");
-  renderDeck(projectLMarketBlack, "black");
-}
-
-function renderProjectLPuzzleGrid(puzzleDef, puzzleState, puzzleIndex, options) {
-  const grid = document.createElement("div");
-  grid.className = "project-l-puzzle-grid";
-  const cellSize = 20;
-  grid.style.setProperty("--project-l-cell", `${cellSize}px`);
-  grid.style.width = `${puzzleDef.width * cellSize}px`;
-  grid.style.height = `${puzzleDef.height * cellSize}px`;
-  const cardId = String(puzzleDef.id).padStart(2, "0");
-  const image = document.createElement("img");
-  image.className = "project-l-puzzle-image";
-  image.src = `/static/project_l/project_l_puzzles_svg/card_${cardId}.svg`;
-  image.alt = `Puzzle ${puzzleDef.id}`;
-  grid.appendChild(image);
-
-  const overlay = document.createElement("div");
-  overlay.className = "project-l-puzzle-overlay";
-  grid.appendChild(overlay);
-
-  const occupied = projectLOccupiedCells(puzzleState, currentProjectLView ? currentProjectLView.piece_defs : null);
-  const ghostCells = options && options.ghostCells ? options.ghostCells : null;
-  const ghostInvalid = options && options.ghostInvalid;
-
-  for (let r = 0; r < puzzleDef.height; r += 1) {
-    for (let c = 0; c < puzzleDef.width; c += 1) {
-      const cell = document.createElement("div");
-      cell.className = "project-l-cell";
-      cell.style.setProperty("--row", r);
-      cell.style.setProperty("--col", c);
-      if (puzzleDef.grid[r][c] === 1) {
-        cell.classList.add("slot");
-      } else {
-        cell.classList.add("off");
-      }
-      const key = `${r},${c}`;
-      if (occupied.has(key)) {
-        const pieceId = occupied.get(key);
-        const def = currentProjectLView && currentProjectLView.piece_defs
-          ? currentProjectLView.piece_defs[pieceId]
-          : null;
-        if (def && def.color) {
-          cell.style.background = def.color;
-        } else {
-          cell.style.background = "#111827";
-        }
-      }
-      if (ghostCells && ghostCells.has(key)) {
-        cell.classList.add("ghost");
-        if (ghostInvalid) {
-          cell.classList.add("invalid");
-        }
-      }
-      if (puzzleDef.grid[r][c] === 1) {
-        cell.addEventListener("click", (event) => {
-          event.stopPropagation();
-          setProjectLSelectedPuzzleAndOrigin(puzzleIndex, r, c);
-        });
-      }
-      overlay.appendChild(cell);
-    }
-  }
-  return grid;
-}
-
-function renderProjectLActivePuzzles(view) {
-  if (!projectLActivePuzzles) {
-    return;
-  }
-  const you = getProjectLYou(view);
-  projectLActivePuzzles.innerHTML = "";
-  if (!you || !Array.isArray(you.active_puzzles) || !you.active_puzzles.length) {
-    const empty = document.createElement("div");
-    empty.textContent = "No active puzzles.";
-    projectLActivePuzzles.appendChild(empty);
-    return;
-  }
-  you.active_puzzles.forEach((puzzleState, index) => {
-    const puzzleDef = view.puzzle_defs ? view.puzzle_defs[puzzleState.card_id] : null;
-    if (!puzzleDef) {
-      return;
-    }
-    const card = document.createElement("div");
-    card.className = "project-l-puzzle-card";
-    if (projectLSelectedPuzzleIndex === index) {
-      card.classList.add("selected");
-    }
-    card.addEventListener("click", () => {
-      setProjectLSelectedPuzzle(index);
-    });
-
-    const header = document.createElement("div");
-    header.className = "project-l-card-header";
-    header.textContent = `#${puzzleDef.id} - ${puzzleDef.points} pts`;
-    card.appendChild(header);
-
-    const reward = buildProjectLReward(puzzleDef.reward_piece_id, view.piece_defs, 10, "Reward:");
-    reward.classList.add("project-l-card-meta");
-    card.appendChild(reward);
-
-    let ghostCells = null;
-    let ghostInvalid = false;
-    if (
-      Number.isInteger(projectLSelectedPuzzleIndex)
-      && projectLSelectedPuzzleIndex === index
-      && projectLSelectedPieceId
-      && projectLSelectedOrigin
-    ) {
-      const pieceDef = view.piece_defs ? view.piece_defs[projectLSelectedPieceId] : null;
-      if (pieceDef) {
-        const transformed = projectLTransformMatrix(pieceDef.shape, projectLRotation, projectLFlip);
-        const cells = projectLMatrixCells(transformed).map(([r, c]) => [
-          projectLSelectedOrigin.row + r,
-          projectLSelectedOrigin.col + c,
-        ]);
-        ghostCells = new Set();
-        cells.forEach(([r, c]) => {
-          if (r >= 0 && c >= 0 && r < puzzleDef.height && c < puzzleDef.width) {
-            ghostCells.add(`${r},${c}`);
-          }
-        });
-        const validation = projectLValidatePlacement(
-          view,
-          projectLSelectedPuzzleIndex,
-          projectLSelectedPieceId,
-          projectLRotation,
-          projectLFlip,
-          projectLSelectedOrigin.row,
-          projectLSelectedOrigin.col,
-        );
-        ghostInvalid = !validation.ok;
-      }
-    }
-
-    const grid = renderProjectLPuzzleGrid(puzzleDef, puzzleState, index, { ghostCells, ghostInvalid });
-    card.appendChild(grid);
-    projectLActivePuzzles.appendChild(card);
-  });
-}
-
-function renderProjectLCompleted(view) {
-  if (!projectLCompletedPuzzles) {
-    return;
-  }
-  projectLCompletedPuzzles.innerHTML = "";
-  const you = getProjectLYou(view);
-  const completed = you ? you.completed_puzzles : [];
-  if (!completed || !completed.length) {
-    projectLCompletedPuzzles.textContent = "-";
-    return;
-  }
-  completed.forEach((cardId) => {
-    const chip = document.createElement("div");
-    chip.className = "project-l-completed-chip";
-    chip.textContent = `#${cardId}`;
-    projectLCompletedPuzzles.appendChild(chip);
-  });
-}
-
-function renderProjectLInventory(view) {
-  if (!projectLInventory) {
-    return;
-  }
-  projectLInventory.innerHTML = "";
-  const you = getProjectLYou(view);
-  if (!you || !Array.isArray(you.inventory) || !you.inventory.length) {
-    const empty = document.createElement("div");
-    empty.textContent = "No pieces.";
-    projectLInventory.appendChild(empty);
-    return;
-  }
-  const counts = projectLInventoryCounts(you.inventory);
-  const queueCounts = projectLInventoryCounts(projectLMasterQueueItems.map((entry) => entry.piece_id));
-  const pieceIds = Object.keys(counts).sort((a, b) => {
-    const la = view.piece_defs[a].level;
-    const lb = view.piece_defs[b].level;
-    if (la !== lb) {
-      return la - lb;
-    }
-    return a.localeCompare(b);
-  });
-  pieceIds.forEach((pieceId) => {
-    const pieceDef = view.piece_defs[pieceId];
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "project-l-piece";
-    if (projectLSelectedPieceId === pieceId) {
-      button.classList.add("selected");
-    }
-    button.addEventListener("click", () => {
-      setProjectLSelectedPiece(pieceId);
-    });
-
-    const grid = document.createElement("div");
-    grid.className = "project-l-piece-grid";
-    grid.style.gridTemplateColumns = `repeat(${pieceDef.shape[0].length}, 10px)`;
-    grid.style.gridAutoRows = "10px";
-    pieceDef.shape.forEach((row, r) => {
-      row.forEach((value, c) => {
-        if (!value) {
-          const spacer = document.createElement("div");
-          spacer.style.width = "10px";
-          spacer.style.height = "10px";
-          grid.appendChild(spacer);
-          return;
-        }
-        const cell = document.createElement("div");
-        cell.className = "project-l-piece-cell";
-        if (pieceDef.color) {
-          cell.style.background = pieceDef.color;
-        }
-        grid.appendChild(cell);
-      });
-    });
-    button.appendChild(grid);
-
-    const label = document.createElement("div");
-    label.className = "project-l-piece-label";
-    label.textContent = pieceId;
-    button.appendChild(label);
-
-    const count = document.createElement("div");
-    count.className = "project-l-piece-count";
-    count.textContent = `x${counts[pieceId]}`;
-    button.appendChild(count);
-
-    const remaining = Math.max(0, counts[pieceId] - (queueCounts[pieceId] || 0));
-    const remainingLine = document.createElement("div");
-    remainingLine.className = "project-l-piece-remaining";
-    remainingLine.textContent = `left ${remaining}`;
-    button.appendChild(remainingLine);
-
-    projectLInventory.appendChild(button);
-  });
-}
-
-function renderProjectLMasterQueue(view) {
-  if (!projectLMasterQueue) {
-    return;
-  }
-  projectLMasterQueue.innerHTML = "";
-  if (!projectLMasterQueueItems.length) {
-    projectLMasterQueue.textContent = "-";
-    return;
-  }
-  const you = getProjectLYou(view);
-  projectLMasterQueueItems.forEach((placement, index) => {
-    const item = document.createElement("div");
-    item.className = "project-l-queue-item";
-    const label = document.createElement("div");
-    let cardLabel = "";
-    if (you && you.active_puzzles && you.active_puzzles[placement.puzzle_index]) {
-      cardLabel = ` (#${you.active_puzzles[placement.puzzle_index].card_id})`;
-    }
-    label.textContent = `P${placement.puzzle_index + 1}${cardLabel} ${placement.piece_id} @ ${placement.row},${placement.col} r${placement.rotation} ${placement.flip ? "flip" : ""}`;
-    item.appendChild(label);
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "project-l-queue-remove";
-    remove.textContent = "x";
-    remove.addEventListener("click", () => {
-      projectLMasterQueueItems.splice(index, 1);
-      renderProjectLMasterQueue(view);
-      renderProjectLInventory(view);
-      updateProjectLActionButtons();
-    });
-    item.appendChild(remove);
-    projectLMasterQueue.appendChild(item);
-  });
-}
-
-function renderProjectLPlayers(view) {
-  if (!projectLPlayers) {
-    return;
-  }
-  projectLPlayers.innerHTML = "";
-  (view.players || []).forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "player-card";
-    if (player.player_id === view.current_turn) {
-      card.classList.add("current");
-    }
-    if (player.player_id === view.you) {
-      card.classList.add("self");
-    }
-    const header = document.createElement("div");
-    header.className = "player-header";
-    const name = document.createElement("div");
-    name.className = "player-name";
-    name.textContent = player.name || player.player_id;
-    header.appendChild(name);
-    const badges = document.createElement("div");
-    badges.className = "player-badges";
-    const score = document.createElement("span");
-    score.className = "badge";
-    score.textContent = `score ${player.score ?? 0}`;
-    badges.appendChild(score);
-    const completed = document.createElement("span");
-    completed.className = "badge";
-    completed.textContent = `completed ${player.completed_puzzles ? player.completed_puzzles.length : 0}`;
-    badges.appendChild(completed);
-    const inventory = document.createElement("span");
-    inventory.className = "badge";
-    inventory.textContent = `pieces ${player.inventory ? player.inventory.length : 0}`;
-    badges.appendChild(inventory);
-    if (Number.isInteger(player.finishing_placed)) {
-      const penalty = document.createElement("span");
-      penalty.className = "badge";
-      penalty.textContent = `penalty ${player.finishing_placed}`;
-      badges.appendChild(penalty);
-    }
-    if (player.finishing_done) {
-      const done = document.createElement("span");
-      done.className = "badge";
-      done.textContent = "done";
-      badges.appendChild(done);
-    }
-    if (player.is_bot) {
-      const bot = document.createElement("span");
-      bot.className = "badge";
-      bot.textContent = "bot";
-      badges.appendChild(bot);
-    }
-    if (player.player_id === view.you) {
-      const youBadge = document.createElement("span");
-      youBadge.className = "badge highlight";
-      youBadge.textContent = "you";
-      badges.appendChild(youBadge);
-    }
-    header.appendChild(badges);
-    card.appendChild(header);
-    projectLPlayers.appendChild(card);
-  });
-}
-
-function isProjectLActionAvailable(actionType) {
-  if (!currentProjectLView || !Array.isArray(currentProjectLView.legal_actions)) {
-    return false;
-  }
-  return currentProjectLView.legal_actions.includes(actionType);
-}
-
-function updateProjectLActionButtons() {
-  const view = currentProjectLView;
-  if (!view) {
-    return;
-  }
-  const selection = projectLGetSelectedPlacement(view);
-  const canPlace = selection && selection.ok;
-
-  if (projectLTakeLevel1Btn) {
-    const allowed = isProjectLActionAvailable("take_level1");
-    projectLTakeLevel1Btn.disabled = !allowed;
-    projectLTakeLevel1Btn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLTakeMarketBtn) {
-    const allowed = isProjectLActionAvailable("take_puzzle") && !!projectLSelectedMarket;
-    projectLTakeMarketBtn.disabled = !allowed;
-    projectLTakeMarketBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLDrawWhiteBtn) {
-    const allowed = isProjectLActionAvailable("take_puzzle") && view.white_remaining > 0;
-    projectLDrawWhiteBtn.disabled = !allowed;
-    projectLDrawWhiteBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLDrawBlackBtn) {
-    const allowed = isProjectLActionAvailable("take_puzzle") && view.black_remaining > 0;
-    projectLDrawBlackBtn.disabled = !allowed;
-    projectLDrawBlackBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLUpgradeBtn) {
-    const fromPiece = getProjectLUpgradeFrom(view);
-    const hasPiece = !!fromPiece;
-    const canUpgradeNow = isProjectLActionAvailable("upgrade_piece") && hasPiece;
-    projectLUpgradeBtn.disabled = !hasPiece;
-    projectLUpgradeBtn.classList.toggle("action-allowed", canUpgradeNow);
-  }
-  if (projectLPlaceBtn) {
-    const allowed = isProjectLActionAvailable("place_piece") && canPlace;
-    projectLPlaceBtn.disabled = !allowed;
-    projectLPlaceBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLQueueMasterBtn) {
-    const allowed = isProjectLActionAvailable("master_action") && canPlace;
-    projectLQueueMasterBtn.disabled = !allowed;
-    projectLQueueMasterBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLClearMasterBtn) {
-    const allowed = projectLMasterQueueItems.length > 0;
-    projectLClearMasterBtn.disabled = !allowed;
-    projectLClearMasterBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLUseMasterBtn) {
-    let allowed = isProjectLActionAvailable("master_action") && projectLMasterQueueItems.length > 0;
-    if (allowed) {
-      const you = getProjectLYou(view);
-      const counts = projectLInventoryCounts(you ? you.inventory : []);
-      const queueCounts = projectLInventoryCounts(projectLMasterQueueItems.map((entry) => entry.piece_id));
-      Object.keys(queueCounts).forEach((pieceId) => {
-        if ((counts[pieceId] || 0) < queueCounts[pieceId]) {
-          allowed = false;
-        }
-      });
-      projectLMasterQueueItems.forEach((entry) => {
-        const validation = projectLValidatePlacement(
-          view,
-          entry.puzzle_index,
-          entry.piece_id,
-          entry.rotation,
-          entry.flip,
-          entry.row,
-          entry.col,
-        );
-        if (!validation.ok) {
-          allowed = false;
-        }
-      });
-    }
-    projectLUseMasterBtn.disabled = !allowed;
-    projectLUseMasterBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLFinishingPlaceBtn) {
-    const allowed = isProjectLActionAvailable("finishing_place") && canPlace;
-    projectLFinishingPlaceBtn.disabled = !allowed;
-    projectLFinishingPlaceBtn.classList.toggle("action-allowed", allowed);
-  }
-  if (projectLFinishingDoneBtn) {
-    const allowed = isProjectLActionAvailable("finishing_done");
-    projectLFinishingDoneBtn.disabled = !allowed;
-    projectLFinishingDoneBtn.classList.toggle("action-allowed", allowed);
-  }
-}
-
-function renderProjectLGameState(data) {
-  const view = data.view;
-  currentProjectLView = view;
-  if (currentGameType !== "project_l") {
-    currentGameType = "project_l";
-    setGamePanelVisibility("project_l");
-  }
-  syncProjectLSelections(view);
-  if (projectLUpgradeModal && !projectLUpgradeModal.classList.contains("hidden")) {
-    renderProjectLUpgradeModal(view);
-  }
-
-  if (projectLPhaseLabel) {
-    projectLPhaseLabel.textContent = view.phase || "-";
-  }
-  if (projectLApLabel) {
-    if (view.phase === "main" && Number.isInteger(view.ap_remaining)) {
-      projectLApLabel.textContent = view.ap_remaining;
-    } else {
-      projectLApLabel.textContent = "-";
-    }
-  }
-  if (projectLTurnLabel) {
-    const currentPlayer = (view.players || []).find((p) => p.player_id === view.current_turn);
-    projectLTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
-  }
-  if (projectLMasterUsedLabel) {
-    projectLMasterUsedLabel.textContent = view.master_used ? "Yes" : "No";
-  }
-  if (projectLWhiteRemainingLabel) {
-    projectLWhiteRemainingLabel.textContent = view.white_remaining ?? "-";
-  }
-  if (projectLBlackRemainingLabel) {
-    projectLBlackRemainingLabel.textContent = view.black_remaining ?? "-";
-  }
-  if (projectLEndTriggeredLabel) {
-    projectLEndTriggeredLabel.textContent = view.end_triggered ? "Yes" : "No";
-  }
-  if (projectLWinnerLabel) {
-    if (view.winner && view.winner.length) {
-      projectLWinnerLabel.textContent = view.winner.map((pid) => findPlayerName(view, pid)).join(", ");
-    } else {
-      projectLWinnerLabel.textContent = "-";
-    }
-  }
-
-  updateProjectLSelectionLabels(view);
-  renderProjectLMarket(view);
-  renderProjectLActivePuzzles(view);
-  renderProjectLCompleted(view);
-  renderProjectLInventory(view);
-  renderProjectLMasterQueue(view);
-  renderProjectLPlayers(view);
-  logGameEvents(data);
-  updateProjectLActionButtons();
-}
-
-if (projectLUpgradeModalCloseBtn) {
-  projectLUpgradeModalCloseBtn.addEventListener("click", () => {
-    closeProjectLUpgradeModal();
-  });
-}
-
-if (projectLUpgradeModal) {
-  projectLUpgradeModal.addEventListener("click", (event) => {
-    if (event.target === projectLUpgradeModal) {
-      closeProjectLUpgradeModal();
-    }
-  });
-}
-
-if (projectLRotateLeftBtn) {
-  projectLRotateLeftBtn.addEventListener("click", () => {
-    projectLRotation = ((projectLRotation - 90) % 360 + 360) % 360;
-    updateProjectLSelectionLabels();
-    if (currentProjectLView) {
-      renderProjectLActivePuzzles(currentProjectLView);
-    }
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLRotateRightBtn) {
-  projectLRotateRightBtn.addEventListener("click", () => {
-    projectLRotation = (projectLRotation + 90) % 360;
-    updateProjectLSelectionLabels();
-    if (currentProjectLView) {
-      renderProjectLActivePuzzles(currentProjectLView);
-    }
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLFlipBtn) {
-  projectLFlipBtn.addEventListener("click", () => {
-    projectLFlip = !projectLFlip;
-    updateProjectLSelectionLabels();
-    if (currentProjectLView) {
-      renderProjectLActivePuzzles(currentProjectLView);
-    }
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLPanel) {
-  projectLPanel.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
-    if (target.closest(
-      "button, select, input, textarea, label, " +
-      ".project-l-card, .project-l-puzzle-card, .project-l-piece, " +
-      ".project-l-cell, .project-l-upgrade-piece, .project-l-queue-remove",
-    )) {
-      return;
-    }
-    clearProjectLSelection();
-  });
-}
-
-if (projectLTakeMarketBtn) {
-  projectLTakeMarketBtn.addEventListener("click", () => {
-    if (!currentProjectLView || !projectLSelectedMarket) {
-      return;
-    }
-    if (!isProjectLActionAvailable("take_puzzle")) {
-      log("Not your turn");
-      return;
-    }
-    sendAction({
-      type: "take_puzzle",
-      source: "market",
-      deck: projectLSelectedMarket.deck,
-      index: projectLSelectedMarket.index,
-    });
-    projectLSelectedMarket = null;
-    updateProjectLSelectionLabels();
-    if (currentProjectLView) {
-      renderProjectLMarket(currentProjectLView);
-    }
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLDrawWhiteBtn) {
-  projectLDrawWhiteBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("take_puzzle")) {
-      log("Not your turn");
-      return;
-    }
-    sendAction({ type: "take_puzzle", source: "deck", deck: "white" });
-  });
-}
-
-if (projectLDrawBlackBtn) {
-  projectLDrawBlackBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("take_puzzle")) {
-      log("Not your turn");
-      return;
-    }
-    sendAction({ type: "take_puzzle", source: "deck", deck: "black" });
-  });
-}
-
-if (projectLTakeLevel1Btn) {
-  projectLTakeLevel1Btn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("take_level1")) {
-      log("Not your turn");
-      return;
-    }
-    sendAction({ type: "take_level1" });
-  });
-}
-
-if (projectLUpgradeBtn) {
-  projectLUpgradeBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("upgrade_piece")) {
-      log("Not your turn");
-      return;
-    }
-    const fromPiece = getProjectLUpgradeFrom(currentProjectLView);
-    if (!fromPiece) {
-      log("Select a piece from Inventory first");
-      return;
-    }
-    openProjectLUpgradeModal(currentProjectLView);
-  });
-}
-
-if (projectLPlaceBtn) {
-  projectLPlaceBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("place_piece")) {
-      log("Not your turn");
-      return;
-    }
-    const placement = projectLGetSelectedPlacement(currentProjectLView);
-    if (!placement || !placement.ok) {
-      log("Select a valid placement");
-      return;
-    }
-    sendAction({
-      type: "place_piece",
-      puzzle_index: placement.puzzle_index,
-      piece_id: placement.piece_id,
-      rotation: placement.rotation,
-      flip: placement.flip,
-      row: placement.row,
-      col: placement.col,
-    });
-    projectLSelectedOrigin = null;
-    updateProjectLSelectionLabels();
-    if (currentProjectLView) {
-      renderProjectLActivePuzzles(currentProjectLView);
-    }
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLQueueMasterBtn) {
-  projectLQueueMasterBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("master_action")) {
-      log("Not your turn");
-      return;
-    }
-    const placement = projectLGetSelectedPlacement(currentProjectLView);
-    if (!placement || !placement.ok) {
-      log("Select a valid placement");
-      return;
-    }
-    const payload = {
-      puzzle_index: placement.puzzle_index,
-      piece_id: placement.piece_id,
-      rotation: placement.rotation,
-      flip: placement.flip,
-      row: placement.row,
-      col: placement.col,
+(() => {
+    const byId = (suffix) => document.getElementById(`projectL${suffix}`);
+    const panel = byId("Panel");
+    const selectionHome = byId("SelectionHome");
+    const marketConfirmation = byId("MarketConfirmation");
+    const placementConfirmation = byId("PlacementConfirmation");
+    const tooltip = byId("Tooltip");
+    const modalNames = ["Upgrade", "Help", "Explain"];
+    const state = {
+        view: null, market: null, pieceId: null, puzzleId: null, origin: null,
+        anchor: null, rotation: 0, flip: false, queue: [], explain: false,
     };
-    const you = getProjectLYou(currentProjectLView);
-    const counts = projectLInventoryCounts(you ? you.inventory : []);
-    const queueCounts = projectLInventoryCounts(projectLMasterQueueItems.map((entry) => entry.piece_id));
-    const existingIndex = projectLMasterQueueItems.findIndex(
-      (entry) => entry.puzzle_index === payload.puzzle_index,
-    );
-    if (existingIndex >= 0) {
-      const existingPiece = projectLMasterQueueItems[existingIndex].piece_id;
-      queueCounts[existingPiece] = Math.max(0, (queueCounts[existingPiece] || 0) - 1);
-    }
-    if (existingIndex < 0 && you && projectLMasterQueueItems.length >= you.active_puzzles.length) {
-      log("Master queue already full");
-      return;
-    }
-    if ((queueCounts[payload.piece_id] || 0) >= (counts[payload.piece_id] || 0)) {
-      log("Not enough pieces for this queue");
-      return;
-    }
-    if (existingIndex >= 0) {
-      projectLMasterQueueItems[existingIndex] = payload;
-    } else {
-      projectLMasterQueueItems.push(payload);
-    }
-    renderProjectLMasterQueue(currentProjectLView);
-    renderProjectLInventory(currentProjectLView);
-    updateProjectLActionButtons();
-  });
-}
+    let gesture = null;
+    let suppressClick = false;
+    let tooltipTimer = null;
+    let tooltipTarget = null;
+    let modalReturnFocus = null;
+    let marketSelectedAt = 0;
 
-if (projectLClearMasterBtn) {
-  projectLClearMasterBtn.addEventListener("click", () => {
-    projectLMasterQueueItems = [];
-    renderProjectLMasterQueue(currentProjectLView);
-    renderProjectLInventory(currentProjectLView);
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLUseMasterBtn) {
-  projectLUseMasterBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("master_action")) {
-      log("Not your turn");
-      return;
-    }
-    if (!projectLMasterQueueItems.length) {
-      log("Queue at least one placement");
-      return;
-    }
-    sendAction({ type: "master_action", placements: projectLMasterQueueItems });
-    projectLMasterQueueItems = [];
-    renderProjectLMasterQueue(currentProjectLView);
-    renderProjectLInventory(currentProjectLView);
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLFinishingPlaceBtn) {
-  projectLFinishingPlaceBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
-    }
-    if (!isProjectLActionAvailable("finishing_place")) {
-      log("Not available");
-      return;
-    }
-    const placement = projectLGetSelectedPlacement(currentProjectLView);
-    if (!placement || !placement.ok) {
-      log("Select a valid placement");
-      return;
-    }
-    sendAction({
-      type: "finishing_place",
-      puzzle_index: placement.puzzle_index,
-      piece_id: placement.piece_id,
-      rotation: placement.rotation,
-      flip: placement.flip,
-      row: placement.row,
-      col: placement.col,
+    const explanations = {
+        TakeMarketBtn: ["Take a puzzle", "Take this face-up puzzle into your workbench. You can hold at most 4 active puzzles.", "1 AP"],
+        DrawWhiteBtn: ["Draw a white puzzle (⚪)", "Take an unknown puzzle from the white deck. White puzzles usually help build your inventory.", "1 AP"],
+        DrawBlackBtn: ["Draw a black puzzle (⚫)", "Take an unknown puzzle from the black deck. Emptying this deck triggers the final round.", "1 AP"],
+        TakeLevel1Btn: ["Take a level-1 piece", "Add one yellow square to your inventory. This action may be repeated while you have action points.", "1 AP"],
+        UpgradeBtn: ["Upgrade a piece (↑)", "Select a piece, then choose a shape one level higher. Level-3 and level-4 pieces can also change to a different shape at the same level.", "1 AP"],
+        RotateLeftBtn: ["Rotate left (↶)", "Turn the selected piece 90° counter-clockwise around its center. The preview shows whether it fits.", "Free"],
+        RotateRightBtn: ["Rotate right (↷)", "Turn the selected piece 90° clockwise around its center. The preview shows whether it fits.", "Free"],
+        FlipBtn: ["Flip (↔)", "Mirror the piece horizontally before applying rotation. Its center stays anchored to the selected position.", "Free"],
+        PlaceBtn: ["Place a piece", "Confirm the preview on this puzzle. Green is valid; red means the piece overlaps, lies outside the puzzle, or covers an unavailable cell.", "1 AP"],
+        QueueMasterBtn: ["Add to Master plan (✦)", "Reserve this piece and position. A Master plan may contain one placement per puzzle. Remove a planned placement before changing it.", "Free to plan"],
+        UseMasterBtn: ["Master Action (✦)", "Execute the planned placements together, using one piece per chosen puzzle. You may use Master Action only once per turn.", "1 AP"],
+        FinishingPlaceBtn: ["Finishing placement", "Place a piece during finishing touches. Completed puzzles return used pieces but do not grant a reward piece. Every finishing placement deducts one point.", "−1 point"],
+        FinishingDoneBtn: ["Finish", "Finish your placements. Final results appear when every player is done. Unfinished puzzles score no points.", "End finishing touches"],
+        CancelMarketBtn: ["Cancel", "Close this preview without taking the puzzle.", "Free"],
+        CancelPlacementBtn: ["Cancel", "Cancel this position without spending a piece. You can also click blank space to deselect.", "Free"],
+    };
+    ["RotateLeftBtn", "RotateRightBtn", "FlipBtn"].forEach((suffix) => {
+        explanations[`Placement${suffix}`] = explanations[suffix];
     });
-    projectLSelectedOrigin = null;
-    updateProjectLSelectionLabels();
-    renderProjectLActivePuzzles(currentProjectLView);
-    updateProjectLActionButtons();
-  });
-}
 
-if (projectLFinishingDoneBtn) {
-  projectLFinishingDoneBtn.addEventListener("click", () => {
-    if (!currentProjectLView) {
-      return;
+    const helpText = `
+        <h3>Build, complete, repeat</h3>
+        <p>Fill puzzle spaces to earn their points (★) and reward pieces (+). All pieces used on a completed puzzle return to your inventory, together with its reward.</p>
+        <h3>Your turn</h3>
+        <p>Start with one level-1 square and one level-2 bar. Each turn gives you 3 action points (⚡ AP). Each action below costs 1 AP; actions may be repeated except Master Action.</p>
+        <ul>
+            <li><strong>Take a puzzle:</strong> select a market card and confirm Take, or draw an unknown card from a deck. Hold up to 4 active puzzles.</li>
+            <li><strong>+ Lv 1:</strong> take one yellow square.</li>
+            <li><strong>Upgrade (↑):</strong> select an inventory piece and choose a shape one level higher. Level-3 and level-4 pieces can also change shape within the same level.</li>
+            <li><strong>Place:</strong> select a piece, tap a puzzle cell, then confirm next to that puzzle.</li>
+            <li><strong>Master Action (✦):</strong> place one piece on each of any number of your puzzles for 1 AP, once per turn.</li>
+        </ul>
+        <h3>Pieces and previews</h3>
+        <p>Lv means level: 1–4 squares. Shape letters identify the outline: I is a bar, V is a corner, O is a square, and T, L and Z match their letters. Color and the drawn shape identify every piece.</p>
+        <p>Rotate left (↶), rotate right (↷), or mirror (↔) for free. Rotation keeps the selected piece centered. Light dots mark valid origins; green previews fit, red previews do not. An origin is the top-left of the piece's bounding rectangle, including any empty corner. Tapping blank space or pressing Escape cancels a selection. Scrolling never selects or places a piece.</p>
+        <h3>Master plan</h3>
+        <p>Choose a valid placement and press + Master plan. Its piece is reserved and its puzzle locked until you remove that entry. Repeat on other puzzles, then press Use Master. The inventory shows available pieces after reservations. Planning costs nothing and is cleared when your turn or your pieces change.</p>
+        <h3>Markets and finishing touches</h3>
+        <p>White (⚪) puzzles are usually easier; black (⚫) puzzles are harder and worth more points. Emptying the black deck triggers the final round, which continues through the player before the starting player.</p>
+        <p>Then everyone may place remaining pieces, losing 1 point per placement. Completed puzzles return used pieces but no longer grant a reward piece. Press Finish when done. Final score is completed puzzle points minus finishing penalties. Ties favor more completed puzzles, then more pieces in inventory.</p>
+        <h3>Reading the board</h3>
+        <p>Points (★) appear above each puzzle; its reward (+) appears below. The Players section shows public progress and placed pieces. Completed puzzles and player details can be collapsed. Hover or tap non-interactive symbols for a short explanation. Explain highlights controls and lets you inspect them without acting, including disabled controls. Escape closes dialogs or leaves Explain.</p>`;
+
+    function element(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
     }
-    if (!isProjectLActionAvailable("finishing_done")) {
-      return;
+
+    function setTip(node, text) {
+        node.dataset.projectLTip = text;
+        node.tabIndex = 0;
+        node.classList.toggle("project-l-has-explanation", state.explain);
+        return node;
     }
-    sendAction({ type: "finishing_done" });
-  });
-}
 
-// Help/Explain functionality
-const PROJECT_L_HELP_TEXT = `
-<h3>Game Overview</h3>
-<p>Project L is a puzzle-building game where players collect and place tetromino-like pieces onto puzzle cards to complete them and earn points. The game combines strategic piece management with spatial puzzle solving.</p>
-
-<h3>Game Setup</h3>
-<ul>
-  <li>Each player starts with 4 Level-1 pieces (O-shaped monomino)</li>
-  <li>Black deck contains harder puzzles (more points), White deck contains easier puzzles</li>
-  <li>A market of 4 puzzle cards is revealed from the decks</li>
-</ul>
-
-<h3>Turn Structure</h3>
-<p>On your turn, you have <strong>3 Action Points (AP)</strong> to spend. You can perform actions in any order, and you may do the same action multiple times.</p>
-
-<h4>Actions (1 AP each):</h4>
-<ul>
-  <li><strong>Take Puzzle</strong> - Take a puzzle from the market or draw from a deck. You can have up to 4 active puzzles.</li>
-  <li><strong>Take Level-1 Piece</strong> - Add a basic O-piece to your inventory (max 1 per turn).</li>
-  <li><strong>Place Piece</strong> - Place one piece from your inventory onto one of your active puzzles.</li>
-  <li><strong>Upgrade Piece</strong> - Return a piece to upgrade it to a higher level piece (difference of 1 level).</li>
-  <li><strong>Master Action</strong> - Place one piece on EACH of your active puzzles simultaneously (powerful!).</li>
-</ul>
-
-<h3>Completing Puzzles</h3>
-<ul>
-  <li>When all spaces on a puzzle are filled, it's complete</li>
-  <li>You earn the points shown on the puzzle card</li>
-  <li>You receive the reward piece shown on the card</li>
-  <li>The puzzle goes to your completed pile</li>
-</ul>
-
-<h3>Pieces & Upgrades</h3>
-<p>Pieces come in 5 levels (1-5). Higher level pieces cover more spaces:</p>
-<ul>
-  <li>Level 1: O (1 space)</li>
-  <li>Level 2: I2 (2 spaces)</li>
-  <li>Level 3: I3, L3, V3 (3 spaces)</li>
-  <li>Level 4: I4, L4, S4, T4, O4 (4 spaces)</li>
-  <li>Level 5: Various 5-space pieces</li>
-</ul>
-<p>You can upgrade a piece by 1 level. For example, L3 can upgrade to any Level 4 piece.</p>
-
-<h3>Piece Manipulation</h3>
-<ul>
-  <li><strong>Rotate</strong> - Rotate the selected piece 90° (free action)</li>
-  <li><strong>Flip</strong> - Mirror the piece horizontally (free action)</li>
-</ul>
-
-<h3>Master Action</h3>
-<p>The Master Action lets you place one piece on each of your active puzzles for just 1 AP - but only once per turn. Use the Queue system to set up placements:</p>
-<ul>
-  <li>Select a puzzle, piece, and position</li>
-  <li>Click "Queue Master" to add to the queue</li>
-  <li>Repeat for each puzzle</li>
-  <li>Click "Use Master" to execute all placements</li>
-</ul>
-
-<h3>Game End</h3>
-<p>The game end is triggered when the puzzle supply cannot be refilled. Each player gets one more turn, then enters the Finishing Phase:</p>
-<ul>
-  <li>You can place remaining pieces on puzzles</li>
-  <li>Each piece placed costs 1 point (penalty)</li>
-  <li>Click "Finish" when done</li>
-</ul>
-
-<h3>Scoring</h3>
-<p>Final score = Sum of completed puzzle points - Finishing phase penalties</p>
-<p>The player with the highest score wins!</p>
-
-<h3>Tips</h3>
-<ul>
-  <li>Try to complete puzzles that give useful reward pieces</li>
-  <li>Master Action is most efficient when you have 4 active puzzles</li>
-  <li>Higher level pieces are more flexible but harder to place precisely</li>
-  <li>Plan your upgrades - sometimes a Level 3 piece is better than Level 4</li>
-</ul>
-`;
-
-const PROJECT_L_BUTTON_EXPLANATIONS = {
-  projectLTakeMarketBtn: {
-    name: "Take Selected Market",
-    description: "Take the currently selected puzzle card from the market and add it to your active puzzles. You must first click on a market card to select it.",
-    cost: "1 AP",
-    costType: "ap"
-  },
-  projectLDrawWhiteBtn: {
-    name: "Draw White Deck",
-    description: "Draw a puzzle card from the White deck (easier puzzles, fewer points) and add it to your active puzzles.",
-    cost: "1 AP",
-    costType: "ap"
-  },
-  projectLDrawBlackBtn: {
-    name: "Draw Black Deck",
-    description: "Draw a puzzle card from the Black deck (harder puzzles, more points) and add it to your active puzzles.",
-    cost: "1 AP",
-    costType: "ap"
-  },
-  projectLRotateLeftBtn: {
-    name: "Rotate Left",
-    description: "Rotate the selected piece 90 degrees counter-clockwise. Use this to fit pieces into puzzle spaces.",
-    cost: "Free",
-    costType: "free"
-  },
-  projectLRotateRightBtn: {
-    name: "Rotate Right",
-    description: "Rotate the selected piece 90 degrees clockwise. Use this to fit pieces into puzzle spaces.",
-    cost: "Free",
-    costType: "free"
-  },
-  projectLFlipBtn: {
-    name: "Flip",
-    description: "Mirror the selected piece horizontally. Combined with rotation, this lets you orient pieces in any configuration.",
-    cost: "Free",
-    costType: "free"
-  },
-  projectLUpgradeBtn: {
-    name: "Upgrade",
-    description: "Upgrade the selected piece from your inventory to a higher level piece. You can only upgrade by 1 level (e.g., Level 3 → Level 4). Select a piece from inventory first, then click this button to choose the upgrade target.",
-    cost: "1 AP",
-    costType: "ap"
-  },
-  projectLTakeLevel1Btn: {
-    name: "Take Level 1",
-    description: "Add a basic Level-1 piece (O-shaped monomino) to your inventory. You can only do this once per turn.",
-    cost: "1 AP",
-    costType: "ap"
-  },
-  projectLPlaceBtn: {
-    name: "Place Piece",
-    description: "Place the selected piece onto the selected puzzle at the chosen position. Select a puzzle, select a piece from inventory, then click on the puzzle grid to choose the placement position.",
-    cost: "1 AP",
-    costType: "ap"
-  },
-  projectLQueueMasterBtn: {
-    name: "Queue Master",
-    description: "Add the current placement to the Master Action queue. The Master Action allows you to place one piece on each of your active puzzles for just 1 AP. Queue up placements for each puzzle, then use 'Use Master' to execute them all.",
-    cost: "Free (queue only)",
-    costType: "free"
-  },
-  projectLClearMasterBtn: {
-    name: "Clear Queue",
-    description: "Clear all placements from the Master Action queue. Use this to start over if you change your mind.",
-    cost: "Free",
-    costType: "free"
-  },
-  projectLUseMasterBtn: {
-    name: "Use Master",
-    description: "Execute all queued placements as a single Master Action. This places one piece on each of your active puzzles for just 1 AP. Can only be used once per turn.",
-    cost: "1 AP",
-    costType: "ap"
-  },
-  projectLFinishingPlaceBtn: {
-    name: "Finishing Place",
-    description: "During the Finishing Phase, place a piece on a puzzle. Each piece placed in this phase costs 1 point as a penalty, but helps complete puzzles for their full point value.",
-    cost: "-1 Point",
-    costType: "penalty"
-  },
-  projectLFinishingDoneBtn: {
-    name: "Finish",
-    description: "End your Finishing Phase and finalize your score. Any incomplete puzzles will not score points. Make sure you've placed all the pieces you want before clicking this!",
-    cost: "End Turn",
-    costType: "end"
-  }
-};
-
-let projectLExplainMode = false;
-
-function showProjectLHeaderActions(show) {
-  if (projectLHeaderActions) {
-    projectLHeaderActions.style.display = show ? "flex" : "none";
-  }
-}
-
-function showProjectLHelpModal() {
-  if (projectLHelpModal) {
-    const content = projectLHelpModal.querySelector(".project-l-help-content");
-    if (content) {
-      content.innerHTML = PROJECT_L_HELP_TEXT;
+    function setExplanation(node, title, description, cost = "Free") {
+        node.dataset.projectLExplain = JSON.stringify([title, description, cost]);
+        node.classList.toggle("project-l-has-explanation", state.explain);
+        return node;
     }
-    setModalVisible(projectLHelpModal, true);
-  }
-}
 
-function closeProjectLHelpModal() {
-  if (projectLHelpModal) {
-    setModalVisible(projectLHelpModal, false);
-  }
-}
-
-function updateExplainModeClasses(enabled) {
-  Object.keys(PROJECT_L_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const btn = document.getElementById(buttonId);
-    if (btn) {
-      btn.classList.toggle("has-explanation", enabled);
+    function you(view = state.view) {
+        return view?.players?.find((player) => player.player_id === view.you);
     }
-  });
-}
 
-function findButtonAtPoint(x, y) {
-  // Check all buttons with explanations to see if click is within their bounds
-  for (const buttonId of Object.keys(PROJECT_L_BUTTON_EXPLANATIONS)) {
-    const btn = document.getElementById(buttonId);
-    if (!btn) continue;
-    const rect = btn.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return buttonId;
+    function available(action) {
+        return !!state.view?.legal_actions?.includes(action);
     }
-  }
-  return null;
-}
 
-function toggleProjectLExplainMode() {
-  projectLExplainMode = !projectLExplainMode;
-  document.body.classList.toggle("project-l-explain-mode", projectLExplainMode);
-  updateExplainModeClasses(projectLExplainMode);
-  if (projectLExplainBtn) {
-    projectLExplainBtn.classList.toggle("active", projectLExplainMode);
-  }
-}
-
-function exitProjectLExplainMode() {
-  if (projectLExplainMode) {
-    projectLExplainMode = false;
-    document.body.classList.remove("project-l-explain-mode");
-    updateExplainModeClasses(false);
-    if (projectLExplainBtn) {
-      projectLExplainBtn.classList.remove("active");
+    function pieceName(pieceId) {
+        const definition = state.view?.piece_defs?.[pieceId];
+        return definition ? `Lv ${definition.level} · ${pieceId.split("_")[1]}` : pieceId;
     }
-  }
-}
 
-function showButtonExplanation(buttonId) {
-  const explanation = PROJECT_L_BUTTON_EXPLANATIONS[buttonId];
-  if (!explanation || !projectLExplainContent || !projectLExplainModal) {
-    return;
-  }
-  let costClass = "free";
-  if (explanation.costType === "ap") costClass = "ap";
-  else if (explanation.costType === "penalty") costClass = "penalty";
-  else if (explanation.costType === "end") costClass = "end";
+    function counts(pieceIds) {
+        const result = {};
+        (pieceIds || []).forEach((pieceId) => { result[pieceId] = (result[pieceId] || 0) + 1; });
+        return result;
+    }
 
-  projectLExplainContent.innerHTML = `
-    <h4>${explanation.name}</h4>
-    <p>${explanation.description}</p>
-    <span class="explain-cost ${costClass}">${explanation.cost}</span>
-  `;
-  setModalVisible(projectLExplainModal, true);
-}
+    function remaining(pieceId) {
+        return (counts(you()?.inventory)[pieceId] || 0) - state.queue.filter((entry) => entry.piece_id === pieceId).length;
+    }
 
-function closeProjectLExplainModal() {
-  if (projectLExplainModal) {
-    setModalVisible(projectLExplainModal, false);
-  }
-}
+    function transform(matrix, rotation = state.rotation, flip = state.flip) {
+        let result = matrix.map((row) => flip ? row.slice().reverse() : row.slice());
+        for (let turn = 0; turn < rotation / 90; turn += 1) {
+            const previous = result;
+            result = previous[0].map((unused, column) => previous.map((row) => row[column]).reverse());
+        }
+        return result;
+    }
 
-// Help button
-if (projectLHelpBtn) {
-  projectLHelpBtn.addEventListener("click", () => {
-    showProjectLHelpModal();
-  });
-}
+    function cells(matrix) {
+        return matrix.flatMap((row, rowIndex) => row.flatMap((value, column) => value ? [[rowIndex, column]] : []));
+    }
 
-if (projectLHelpModalCloseBtn) {
-  projectLHelpModalCloseBtn.addEventListener("click", closeProjectLHelpModal);
-}
+    function placedCells(puzzle) {
+        const result = new Map();
+        (puzzle.placed || []).forEach((placement) => {
+            const piece = state.view.piece_defs[placement.piece_id];
+            if (!piece) return;
+            cells(transform(piece.shape, placement.rotation, placement.flip)).forEach(([row, column]) => {
+                result.set(`${row + placement.row},${column + placement.col}`, piece.color);
+            });
+        });
+        return result;
+    }
 
-// Explain button
-if (projectLExplainBtn) {
-  projectLExplainBtn.addEventListener("click", () => {
-    toggleProjectLExplainMode();
-  });
-}
+    function validate(puzzleId, pieceId, origin, rotation = state.rotation, flip = state.flip) {
+        const puzzle = you()?.active_puzzles?.find((entry) => entry.card_id === puzzleId);
+        const definition = state.view?.puzzle_defs?.[puzzleId];
+        const piece = state.view?.piece_defs?.[pieceId];
+        if (!puzzle || !definition || !piece || !origin) return "Choose a piece and position.";
+        const shape = transform(piece.shape, rotation, flip);
+        if (origin.row < 0 || origin.col < 0 || origin.row + shape.length > definition.height || origin.col + shape[0].length > definition.width) return "Outside the puzzle. Choose another position.";
+        const occupied = placedCells(puzzle);
+        for (const [row, column] of cells(shape)) {
+            const targetRow = row + origin.row;
+            const targetColumn = column + origin.col;
+            if (!definition.grid[targetRow]?.[targetColumn]) return "The piece must fit inside the puzzle spaces.";
+            if (occupied.has(`${targetRow},${targetColumn}`)) return "This position overlaps a placed piece.";
+        }
+        return "";
+    }
 
-if (projectLExplainModalCloseBtn) {
-  projectLExplainModalCloseBtn.addEventListener("click", closeProjectLExplainModal);
-}
+    function selection() {
+        if (!state.pieceId || !state.origin || state.puzzleId === null) return null;
+        const puzzleIndex = you()?.active_puzzles?.findIndex((entry) => entry.card_id === state.puzzleId);
+        if (!(puzzleIndex >= 0)) return null;
+        return {
+            puzzle_index: puzzleIndex, piece_id: state.pieceId, row: state.origin.row,
+            col: state.origin.col, rotation: state.rotation, flip: state.flip,
+        };
+    }
 
-// Capture pointer events in explain mode (works on disabled buttons too)
-document.addEventListener("pointerdown", (e) => {
-  if (!projectLExplainMode) return;
+    function validSelection() {
+        return !!selection() && remaining(state.pieceId) > 0
+            && !state.queue.some((entry) => entry.cardId === state.puzzleId)
+            && !validate(state.puzzleId, state.pieceId, state.origin);
+    }
 
-  // Check if clicked on a button with explanation (including disabled ones)
-  const buttonId = findButtonAtPoint(e.clientX, e.clientY);
-  if (buttonId) {
-    e.preventDefault();
-    e.stopPropagation();
-    showButtonExplanation(buttonId);
-    exitProjectLExplainMode();
-    return;
-  }
+    function clearPosition() {
+        state.puzzleId = null;
+        state.origin = null;
+        state.anchor = null;
+    }
 
-  const button = e.target.closest("button");
+    function clearSelection() {
+        state.market = null;
+        state.pieceId = null;
+        state.rotation = 0;
+        state.flip = false;
+        clearPosition();
+        render();
+    }
 
-  // Don't intercept the Help/Explain buttons themselves
-  if (button === projectLExplainBtn || button === projectLHelpBtn) return;
+    function centroid(shape) {
+        const occupied = cells(shape);
+        return {
+            row: occupied.reduce((total, [row]) => total + row, 0) / occupied.length,
+            col: occupied.reduce((total, [, column]) => total + column, 0) / occupied.length,
+        };
+    }
 
-  // Don't intercept modal close buttons
-  if (button === projectLHelpModalCloseBtn || button === projectLExplainModalCloseBtn) return;
+    function selectOrigin(puzzleId, row, column) {
+        state.market = null;
+        state.puzzleId = puzzleId;
+        state.origin = { row, col: column };
+        const piece = state.view.piece_defs[state.pieceId];
+        const center = piece ? centroid(transform(piece.shape)) : { row: 0, col: 0 };
+        state.anchor = { row: row + center.row, col: column + center.col };
+        render();
+    }
 
-  // Block other button clicks
-  if (button) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-}, true);
+    function changeOrientation(rotation, flip) {
+        if (!state.pieceId) return;
+        state.rotation = (rotation + 360) % 360;
+        state.flip = flip;
+        if (state.anchor) {
+            const center = centroid(transform(state.view.piece_defs[state.pieceId].shape));
+            state.origin = { row: Math.round(state.anchor.row - center.row), col: Math.round(state.anchor.col - center.col) };
+        }
+        render();
+    }
 
-// Also block click to prevent action after pointerdown
-document.addEventListener("click", (e) => {
-  if (!projectLExplainMode) return;
+    function shapeGrid(shape, color, size, className = "project-l-piece-grid") {
+        const grid = element("span", className);
+        grid.style.gridTemplateColumns = `repeat(${shape[0].length}, ${size}px)`;
+        grid.style.gridAutoRows = `${size}px`;
+        grid.style.setProperty("--piece-color", color);
+        grid.setAttribute("aria-hidden", "true");
+        shape.forEach((row) => row.forEach((value) => grid.appendChild(element("span", value ? "project-l-piece-cell" : ""))));
+        return grid;
+    }
 
-  const button = e.target.closest("button");
-  if (!button) return;
+    function reward(definition, interactive = false) {
+        const piece = state.view.piece_defs[definition.reward_piece_id];
+        const row = element("div", "project-l-reward-row");
+        if (!interactive && state.view.phase === "finishing") {
+            row.textContent = "No reward";
+            return setTip(row, "Finishing touches: completed puzzles return their used pieces, but do not grant a reward piece.");
+        }
+        row.append(element("span", "", "+"), shapeGrid(piece.shape, piece.color, 7));
+        if (!interactive) setTip(row, `Reward (+): ${pieceName(definition.reward_piece_id)}. You also recover all pieces used on this puzzle.`);
+        return row;
+    }
 
-  if (button === projectLExplainBtn || button === projectLHelpBtn) return;
-  if (button === projectLHelpModalCloseBtn || button === projectLExplainModalCloseBtn) return;
+    function miniGrid(definition, occupied = new Map(), size = 8) {
+        const grid = element("div", "project-l-mini-grid");
+        grid.style.gridTemplateColumns = `repeat(${definition.width}, ${size}px)`;
+        grid.style.gridAutoRows = `${size}px`;
+        grid.setAttribute("aria-hidden", "true");
+        definition.grid.forEach((row, rowIndex) => row.forEach((value, column) => {
+            const square = element("span", `project-l-mini-cell${value ? "" : " off"}`);
+            if (occupied.has(`${rowIndex},${column}`)) square.style.background = occupied.get(`${rowIndex},${column}`);
+            grid.appendChild(square);
+        }));
+        return grid;
+    }
 
-  e.preventDefault();
-  e.stopPropagation();
-}, true);
+    function renderMarket() {
+        selectionHome.appendChild(marketConfirmation);
+        ["white", "black"].forEach((deck) => {
+            const container = byId(deck === "white" ? "MarketWhite" : "MarketBlack");
+            container.replaceChildren();
+            (state.view.market?.[deck] || []).forEach((cardId, index) => {
+                const definition = state.view.puzzle_defs[cardId];
+                const card = element("div", "project-l-card");
+                const face = element("button", "project-l-card-face");
+                face.type = "button";
+                face.dataset.projectLKey = `market-${deck}-${index}`;
+                if (!definition) {
+                    face.disabled = true;
+                    face.textContent = "Empty";
+                } else {
+                    const header = element("span", "project-l-card-header");
+                    header.append(element("span", "", `#${cardId}`), element("span", "", `★ ${definition.points}`));
+                    const diagram = element("span", "project-l-mini-wrap");
+                    diagram.appendChild(miniGrid(definition));
+                    face.append(header, diagram, reward(definition, true));
+                    face.disabled = !available("take_puzzle");
+                    face.setAttribute("aria-label", `${deck} puzzle #${cardId}, ${definition.points} points, reward ${pieceName(definition.reward_piece_id)}`);
+                    face.setAttribute("aria-pressed", String(state.market?.deck === deck && state.market.index === index));
+                    setExplanation(face, `Puzzle #${cardId}`, `${definition.points} points (★). Reward (+): ${pieceName(definition.reward_piece_id)}. Select this card, then confirm Take.`, "1 AP to take");
+                    face.addEventListener("click", () => {
+                        if (!available("take_puzzle")) return;
+                        clearPosition();
+                        state.market = { deck, index, cardId };
+                        marketSelectedAt = performance.now();
+                        render();
+                    });
+                }
+                card.appendChild(face);
+                container.appendChild(card);
+                if (state.market?.deck === deck && state.market.index === index) {
+                    byId("SelectedMarket").textContent = `Puzzle #${cardId}`;
+                    card.appendChild(marketConfirmation);
+                }
+            });
+        });
+    }
 
-// ESC to exit explain mode
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && projectLExplainMode) {
-    exitProjectLExplainMode();
-  }
-});
+    function renderInventory() {
+        const container = byId("Inventory");
+        container.replaceChildren();
+        const inventory = counts(you()?.inventory);
+        const pieceIds = Object.keys(inventory).sort((first, second) => state.view.piece_defs[first].level - state.view.piece_defs[second].level || first.localeCompare(second));
+        pieceIds.forEach((pieceId) => {
+            const definition = state.view.piece_defs[pieceId];
+            const button = element("button", `project-l-piece${state.pieceId === pieceId ? " selected" : ""}`);
+            button.type = "button";
+            button.dataset.projectLKey = `piece-${pieceId}`;
+            button.dataset.pieceId = pieceId;
+            button.disabled = remaining(pieceId) <= 0 || state.view.game_over;
+            button.setAttribute("aria-pressed", String(state.pieceId === pieceId));
+            button.setAttribute("aria-label", `${pieceName(pieceId)}, ${remaining(pieceId)} available, ${inventory[pieceId] - remaining(pieceId)} planned`);
+            button.append(shapeGrid(definition.shape, definition.color, 10), element("span", "project-l-piece-count", `×${remaining(pieceId)}`), element("span", "project-l-piece-label", pieceName(pieceId)));
+            setExplanation(button, pieceName(pieceId), `${definition.level} squares. ${remaining(pieceId)} available; ${inventory[pieceId] - remaining(pieceId)} reserved for Master Action. Select it to place or upgrade.`, "Free to select");
+            button.addEventListener("click", () => {
+                state.pieceId = state.pieceId === pieceId ? null : pieceId;
+                state.market = null;
+                state.rotation = 0;
+                state.flip = false;
+                clearPosition();
+                render();
+            });
+            container.appendChild(button);
+        });
+        if (!pieceIds.length) container.appendChild(element("div", "project-l-empty", you() ? "No available pieces. Take a level-1 piece." : "Spectating · follow the players below."));
+        const preview = byId("SelectedPiecePreview");
+        preview.replaceChildren();
+        if (state.pieceId) {
+            const definition = state.view.piece_defs[state.pieceId];
+            preview.appendChild(shapeGrid(transform(definition.shape), definition.color, 9));
+        }
+        byId("SelectedPiece").textContent = state.pieceId ? `${pieceName(state.pieceId)} · ${state.rotation}°${state.flip ? " · mirrored" : ""}` : "Choose a piece";
+        setTip(byId("SelectedPiece"), state.pieceId ? `Selected ${pieceName(state.pieceId)}: ${state.view.piece_defs[state.pieceId].level} squares, rotated ${state.rotation} degrees${state.flip ? " and mirrored" : ""}. The preview shows its current orientation.` : "Select an inventory piece to preview, rotate, flip, place or upgrade it.");
+    }
+
+    function renderPuzzleGrid(puzzle, definition, queued) {
+        const grid = element("div", "project-l-puzzle-grid");
+        grid.style.setProperty("--project-l-columns", definition.width);
+        grid.style.setProperty("--project-l-rows", definition.height);
+        grid.setAttribute("role", "group");
+        grid.setAttribute("aria-label", `Puzzle #${definition.id}`);
+        const occupied = placedCells(puzzle);
+        const selected = state.puzzleId === puzzle.card_id && state.origin && state.pieceId;
+        const draft = queued || (selected ? selection() : null);
+        const ghost = new Set();
+        const invalid = selected && !!validate(puzzle.card_id, state.pieceId, state.origin);
+        if (draft) {
+            const definition = state.view.piece_defs[draft.piece_id];
+            grid.style.setProperty("--project-l-preview-color", definition.color);
+            cells(transform(definition.shape, draft.rotation, draft.flip)).forEach(([row, column]) => ghost.add(`${row + draft.row},${column + draft.col}`));
+        }
+        definition.grid.forEach((row, rowIndex) => row.forEach((value, column) => {
+            const key = `${rowIndex},${column}`;
+            const validOrigin = state.pieceId && !queued && remaining(state.pieceId) > 0
+                && !validate(puzzle.card_id, state.pieceId, { row: rowIndex, col: column });
+            if (!value && !ghost.has(key) && !validOrigin) return;
+            const selectable = value || validOrigin;
+            const square = element(selectable ? "button" : "span", "project-l-cell");
+            if (!value && validOrigin) square.classList.add("off-origin");
+            square.style.setProperty("--row", rowIndex);
+            square.style.setProperty("--col", column);
+            if (occupied.has(key)) square.style.backgroundColor = occupied.get(key);
+            if (ghost.has(key)) square.classList.add("ghost");
+            if (ghost.has(key) && invalid) square.classList.add("invalid");
+            if (selectable) {
+                square.type = "button";
+                square.disabled = !!queued || state.view.game_over;
+                square.dataset.projectLKey = `cell-${definition.id}-${rowIndex}-${column}`;
+                square.dataset.row = rowIndex;
+                square.dataset.column = column;
+                square.setAttribute("aria-label", `Puzzle #${definition.id}, row ${rowIndex + 1}, column ${column + 1}${occupied.has(key) ? ", occupied" : ""}`);
+                square.setAttribute("aria-pressed", String(selected && state.origin.row === rowIndex && state.origin.col === column));
+                if (validOrigin) square.classList.add("valid-origin");
+                setExplanation(square, `Puzzle #${definition.id}`, queued ? "This puzzle already has a Master placement planned. Remove that entry to edit it." : "Choose the top-left origin of a piece here. Light dots indicate valid positions. Confirm a green preview to place it; red previews cannot be placed.");
+                square.addEventListener("click", () => selectOrigin(puzzle.card_id, rowIndex, column));
+            }
+            grid.appendChild(square);
+        }));
+        return grid;
+    }
+
+    function renderPuzzles() {
+        selectionHome.appendChild(placementConfirmation);
+        const container = byId("ActivePuzzles");
+        container.replaceChildren();
+        const puzzles = you()?.active_puzzles || [];
+        byId("PuzzleCount").textContent = `${puzzles.length} / 4`;
+        puzzles.forEach((puzzle) => {
+            const definition = state.view.puzzle_defs[puzzle.card_id];
+            const queued = state.queue.find((entry) => entry.cardId === puzzle.card_id);
+            const card = element("div", `project-l-puzzle-card${state.puzzleId === puzzle.card_id ? " selected" : ""}${queued ? " queued" : ""}`);
+            card.dataset.cardId = puzzle.card_id;
+            const header = element("div", "project-l-card-header");
+            header.append(element("span", "", `#${definition.id}`), setTip(element("span", "", `★ ${definition.points}`), `Points (★): earn ${definition.points} when this puzzle is complete.`));
+            card.append(header, renderPuzzleGrid(puzzle, definition, queued), reward(definition));
+            if (queued) card.appendChild(setTip(element("span", "project-l-muted", "✦ Planned · remove to edit"), "This puzzle has a Master placement reserved. Remove its entry in Master plan to edit it."));
+            container.appendChild(card);
+            if (state.puzzleId === puzzle.card_id && state.origin && !queued) card.appendChild(placementConfirmation);
+        });
+        if (!puzzles.length) container.appendChild(element("div", "project-l-empty", you() ? "Take a puzzle from the market to get started." : "Player boards are shown below."));
+    }
+
+    function renderQueue() {
+        byId("MasterSection").classList.toggle("hidden", !state.queue.length);
+        const container = byId("MasterQueue");
+        const scrollTop = container.scrollTop;
+        container.replaceChildren();
+        state.queue.forEach((entry) => {
+            const row = element("div", "project-l-queue-item");
+            row.appendChild(element("span", "", `#${entry.cardId} · ${pieceName(entry.piece_id)} · ${entry.rotation}°${entry.flip ? " mirrored" : ""}`));
+            const remove = element("button", "project-l-queue-remove", "Remove");
+            remove.type = "button";
+            remove.dataset.projectLKey = `remove-${entry.cardId}`;
+            remove.setAttribute("aria-label", `Remove planned placement on puzzle #${entry.cardId}`);
+            setExplanation(remove, "Remove planned placement", "Release this piece and unlock its puzzle without spending an action point.");
+            remove.addEventListener("click", () => {
+                state.queue = state.queue.filter((placement) => placement !== entry);
+                render();
+            });
+            row.appendChild(remove);
+            container.appendChild(row);
+        });
+        container.scrollTop = scrollTop;
+    }
+
+    function renderPlayers() {
+        const container = byId("Players");
+        const scrollTop = container.scrollTop;
+        container.replaceChildren();
+        byId("PlayerCount").textContent = `(${state.view.players.length})`;
+        state.view.players.forEach((player) => {
+            const card = element("div", `project-l-player${player.player_id === state.view.current_turn ? " current" : ""}`);
+            const header = element("div", "project-l-player-heading");
+            const score = state.view.game_over ? state.view.scores?.[player.player_id] ?? player.score - player.finishing_placed : player.score;
+            header.append(element("strong", "", `${player.name || player.player_id}${player.player_id === state.view.you ? " · You" : ""}${player.is_bot ? " · Bot" : ""}`), setTip(element("span", "", `★ ${score}`), state.view.game_over ? "Final score after finishing penalties." : "Points earned from completed puzzles, before finishing penalties."));
+            const stats = element("div", "project-l-muted", `${player.completed_puzzles.length} completed · ${player.inventory.length} pieces${state.view.phase !== "main" ? ` · −${player.finishing_placed} penalty${player.finishing_done ? " · Finished" : ""}` : ""}`);
+            card.append(header, stats);
+            if (player.player_id !== state.view.you) {
+                const puzzles = element("div", "project-l-opponent-puzzles");
+                player.active_puzzles.forEach((puzzle) => {
+                    const definition = state.view.puzzle_defs[puzzle.card_id];
+                    const occupied = placedCells(puzzle);
+                    const preview = element("div", "project-l-opponent-puzzle");
+                    preview.append(miniGrid(definition, occupied, 8), element("span", "", `#${puzzle.card_id} · ${occupied.size}/${cells(definition.grid).length}`));
+                    setTip(preview, `Puzzle #${puzzle.card_id}: ${definition.points} points; ${occupied.size} of ${cells(definition.grid).length} spaces filled. Reward: ${pieceName(definition.reward_piece_id)}.`);
+                    puzzles.appendChild(preview);
+                });
+                card.appendChild(puzzles);
+            }
+            container.appendChild(card);
+        });
+        container.scrollTop = scrollTop;
+        const completed = you()?.completed_puzzles || [];
+        byId("CompletedCount").textContent = completed.length;
+        const completedContainer = byId("CompletedPuzzles");
+        const completedScroll = completedContainer.scrollTop;
+        completedContainer.replaceChildren();
+        completed.forEach((cardId) => {
+            const definition = state.view.puzzle_defs[cardId];
+            completedContainer.appendChild(setTip(element("span", "project-l-completed-chip", `#${cardId} · ★ ${definition.points}`), `Completed puzzle #${cardId}, worth ${definition.points} points.`));
+        });
+        if (!completed.length) completedContainer.textContent = "No completed puzzles yet.";
+        completedContainer.scrollTop = completedScroll;
+    }
+
+    function enable(suffix, enabled) {
+        const button = byId(suffix);
+        button.disabled = !enabled;
+        button.classList.toggle("action-allowed", !!enabled);
+    }
+
+    function updateControls() {
+        const valid = validSelection();
+        enable("CancelMarketBtn", true);
+        enable("CancelPlacementBtn", true);
+        enable("TakeMarketBtn", available("take_puzzle") && !!state.market);
+        enable("DrawWhiteBtn", available("take_puzzle") && state.view.white_remaining > 0);
+        enable("DrawBlackBtn", available("take_puzzle") && state.view.black_remaining > 0);
+        enable("TakeLevel1Btn", available("take_level1"));
+        enable("UpgradeBtn", available("upgrade_piece") && !!state.pieceId && remaining(state.pieceId) > 0);
+        ["RotateLeftBtn", "RotateRightBtn", "FlipBtn", "PlacementRotateLeftBtn", "PlacementRotateRightBtn", "PlacementFlipBtn"].forEach((suffix) => enable(suffix, !!state.pieceId && !state.view.game_over));
+        byId("FlipBtn").setAttribute("aria-pressed", String(state.flip));
+        byId("PlacementFlipBtn").setAttribute("aria-pressed", String(state.flip));
+        enable("PlaceBtn", available("place_piece") && valid);
+        enable("QueueMasterBtn", available("master_action") && valid);
+        enable("FinishingPlaceBtn", available("finishing_place") && valid);
+        enable("FinishingDoneBtn", available("finishing_done"));
+        const validQueue = state.queue.length > 0 && state.queue.every((entry) => remaining(entry.piece_id) >= 0 && !validate(entry.cardId, entry.piece_id, { row: entry.row, col: entry.col }, entry.rotation, entry.flip));
+        enable("UseMasterBtn", available("master_action") && validQueue);
+        const finishing = state.view.phase === "finishing";
+        byId("PlaceBtn").classList.toggle("hidden", finishing);
+        byId("QueueMasterBtn").classList.toggle("hidden", finishing);
+        byId("FinishingPlaceBtn").classList.toggle("hidden", !finishing);
+        byId("FinishingActions").classList.toggle("hidden", !finishing || !you());
+        const message = !state.pieceId ? "Choose an inventory piece." : remaining(state.pieceId) <= 0 ? "This piece is reserved for Master Action." : validate(state.puzzleId, state.pieceId, state.origin);
+        byId("PlacementHint").textContent = message || "Fits · confirm this placement";
+        byId("PlacementHint").classList.toggle("invalid", !!state.pieceId && !!message);
+        document.body.classList.toggle("project-l-turn-active", currentGameType === "project_l" && !!you() && !!state.view.legal_actions?.length);
+    }
+
+    function render() {
+        if (!state.view) return;
+        const active = document.activeElement;
+        const focusKey = active?.dataset?.projectLKey;
+        const scrollPosition = { left: scrollX, top: scrollY };
+        hideTooltip();
+        const currentPlayer = state.view.players.find((player) => player.player_id === state.view.current_turn);
+        const finishing = state.view.phase === "finishing";
+        byId("Turn").textContent = state.view.game_over ? "Game complete" : finishing ? (you()?.finishing_done ? "Finished · waiting for other players" : you() ? "Your finishing touches" : "Players are finishing") : state.view.current_turn === state.view.you ? "Your turn · build something great" : `${currentPlayer?.name || "Another player"}'s turn`;
+        byId("Phase").textContent = state.view.game_over ? "Results" : finishing ? "Finishing" : "Main";
+        byId("Ap").textContent = state.view.phase === "main" ? state.view.ap_remaining : "–";
+        byId("MasterUsed").textContent = state.view.master_used ? "Used" : "Ready";
+        byId("WhiteRemaining").textContent = state.view.white_remaining;
+        byId("BlackRemaining").textContent = state.view.black_remaining;
+        byId("EndTriggered").classList.toggle("hidden", !state.view.end_triggered || state.view.phase !== "main");
+        byId("Winner").classList.toggle("hidden", !state.view.game_over);
+        byId("Winner").textContent = state.view.game_over ? `Winner: ${(state.view.winner || []).map((playerId) => state.view.players.find((player) => player.player_id === playerId)?.name || playerId).join(", ") || "No winner"}` : "";
+        renderInventory();
+        renderPuzzles();
+        renderMarket();
+        renderQueue();
+        renderPlayers();
+        updateControls();
+        if (state.explain) setExplain(true);
+        if (focusKey) panel.querySelector(`[data-project-l-key="${CSS.escape(focusKey)}"]`)?.focus({ preventScroll: true });
+        else if (active?.isConnected && !active.closest(".hidden")) active.focus({ preventScroll: true });
+        window.scrollTo(scrollPosition);
+    }
+
+    function renderState(data) {
+        if (!data?.view) return;
+        const before = state.view;
+        const previousPlayer = you(before);
+        const next = data.view;
+        const nextPlayer = you(next);
+        const draftKey = (view, player) => JSON.stringify([view?.you, view?.phase, view?.current_turn, view?.ap_remaining, view?.master_used, player?.inventory, player?.active_puzzles, player?.finishing_done]);
+        if (draftKey(before, previousPlayer) !== draftKey(next, nextPlayer)) {
+            state.queue = [];
+            clearPosition();
+            closeModal("Upgrade");
+        }
+        state.view = next;
+        if (!nextPlayer?.inventory.includes(state.pieceId)) state.pieceId = null;
+        if (state.market && (next.market?.[state.market.deck]?.[state.market.index] !== state.market.cardId || !available("take_puzzle"))) state.market = null;
+        if (currentGameType !== "project_l") {
+            currentGameType = "project_l";
+            setGamePanelVisibility("project_l");
+        }
+        render();
+        logGameEvents(data);
+    }
+
+    function clearState() {
+        modalNames.forEach((name) => closeModal(name));
+        setExplain(false);
+        hideTooltip();
+        state.view = null;
+        state.market = null;
+        state.pieceId = null;
+        state.rotation = 0;
+        state.flip = false;
+        state.queue = [];
+        clearPosition();
+        selectionHome.append(marketConfirmation, placementConfirmation);
+        ["Inventory", "ActivePuzzles", "MarketWhite", "MarketBlack", "MasterQueue", "Players", "CompletedPuzzles", "SelectedPiecePreview"].forEach((suffix) => byId(suffix).replaceChildren());
+        ["MasterSection", "FinishingActions", "Winner", "EndTriggered"].forEach((suffix) => byId(suffix).classList.add("hidden"));
+        panel.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+        byId("Turn").textContent = "Waiting for players";
+        document.body.classList.remove("project-l-turn-active");
+    }
+
+    function send(type, payload = {}) {
+        if (!available(type)) return false;
+        hideTooltip();
+        sendAction({ type, ...payload });
+        return true;
+    }
+
+    byId("TakeMarketBtn").addEventListener("click", (event) => {
+        if (!state.market || event.detail > 1 || performance.now() - marketSelectedAt < 300) return;
+        const { deck, index } = state.market;
+        if (send("take_puzzle", { source: "market", deck, index })) {
+            state.market = null;
+            render();
+        }
+    });
+    byId("CancelMarketBtn").addEventListener("click", () => { state.market = null; render(); });
+    byId("CancelPlacementBtn").addEventListener("click", () => { clearPosition(); render(); });
+    byId("DrawWhiteBtn").addEventListener("click", () => { if (state.view?.white_remaining) send("take_puzzle", { source: "deck", deck: "white" }); });
+    byId("DrawBlackBtn").addEventListener("click", () => { if (state.view?.black_remaining) send("take_puzzle", { source: "deck", deck: "black" }); });
+    byId("TakeLevel1Btn").addEventListener("click", () => send("take_level1"));
+    ["", "Placement"].forEach((prefix) => {
+        byId(`${prefix}RotateLeftBtn`).addEventListener("click", () => changeOrientation(state.rotation - 90, state.flip));
+        byId(`${prefix}RotateRightBtn`).addEventListener("click", () => changeOrientation(state.rotation + 90, state.flip));
+        byId(`${prefix}FlipBtn`).addEventListener("click", () => changeOrientation(state.rotation, !state.flip));
+    });
+    ["PlaceBtn", "FinishingPlaceBtn"].forEach((suffix) => byId(suffix).addEventListener("click", () => {
+        if (!validSelection()) return;
+        if (send(suffix === "PlaceBtn" ? "place_piece" : "finishing_place", selection())) {
+            clearPosition();
+            render();
+        }
+    }));
+    byId("QueueMasterBtn").addEventListener("click", () => {
+        if (!available("master_action") || !validSelection()) return;
+        state.queue.push({ ...selection(), cardId: state.puzzleId });
+        clearPosition();
+        if (remaining(state.pieceId) <= 0) state.pieceId = null;
+        render();
+    });
+    byId("UseMasterBtn").addEventListener("click", () => {
+        updateControls();
+        if (byId("UseMasterBtn").disabled) return;
+        const placements = state.queue.map(({ cardId, ...entry }) => ({ ...entry, puzzle_index: you().active_puzzles.findIndex((puzzle) => puzzle.card_id === cardId) }));
+        if (send("master_action", { placements })) {
+            state.queue = [];
+            clearPosition();
+            render();
+        }
+    });
+    byId("FinishingDoneBtn").addEventListener("click", () => send("finishing_done"));
+
+    function openModal(name, returnFocus = document.activeElement) {
+        hideTooltip();
+        modalNames.forEach((other) => setModalVisible(byId(`${other}Modal`), false));
+        modalReturnFocus = returnFocus;
+        setModalVisible(byId(`${name}Modal`), true);
+        byId(`${name}ModalCloseBtn`).focus({ preventScroll: true });
+    }
+
+    function closeModal(name) {
+        const modal = byId(`${name}Modal`);
+        if (modal.classList.contains("hidden")) return;
+        setModalVisible(modal, false);
+        if (modalReturnFocus?.isConnected && !modalReturnFocus.disabled) modalReturnFocus.focus({ preventScroll: true });
+        modalReturnFocus = null;
+    }
+
+    modalNames.forEach((name) => {
+        byId(`${name}ModalCloseBtn`).addEventListener("click", () => closeModal(name));
+        byId(`${name}Modal`).addEventListener("click", (event) => { if (event.target === byId(`${name}Modal`)) closeModal(name); });
+    });
+    byId("UpgradeBtn").addEventListener("click", () => {
+        if (!available("upgrade_piece") || !state.pieceId || remaining(state.pieceId) <= 0) return;
+        const fromPiece = state.pieceId;
+        const fromLevel = state.view.piece_defs[fromPiece].level;
+        byId("UpgradeFromLabel").textContent = `From ${pieceName(fromPiece)} · choose a new shape`;
+        const container = byId("UpgradeOptions");
+        container.replaceChildren();
+        Object.entries(state.view.piece_defs).forEach(([pieceId, definition]) => {
+            if (pieceId === fromPiece || !(definition.level === fromLevel + 1 || fromLevel >= 3 && definition.level === fromLevel)) return;
+            const button = element("button", "project-l-upgrade-piece");
+            button.type = "button";
+            button.dataset.pieceId = pieceId;
+            button.append(shapeGrid(definition.shape, definition.color, 14), element("span", "", pieceName(pieceId)));
+            setExplanation(button, `Upgrade to ${pieceName(pieceId)}`, `Return ${pieceName(fromPiece)} and take this piece.`, "1 AP");
+            button.addEventListener("click", () => {
+                if (remaining(fromPiece) > 0 && send("upgrade_piece", { from_piece_id: fromPiece, to_piece_id: pieceId })) {
+                    closeModal("Upgrade");
+                    state.pieceId = null;
+                    clearPosition();
+                    render();
+                }
+            });
+            container.appendChild(button);
+        });
+        openModal("Upgrade");
+    });
+    byId("HelpBtn").addEventListener("click", () => {
+        setExplain(false);
+        byId("HelpModal").querySelector(".project-l-help-content").innerHTML = helpText;
+        openModal("Help", byId("HelpBtn"));
+    });
+
+    function setExplain(enabled) {
+        state.explain = enabled;
+        hideTooltip();
+        document.body.classList.toggle("project-l-explain-mode", enabled);
+        byId("ExplainBtn").classList.toggle("active", enabled);
+        byId("ExplainBtn").setAttribute("aria-pressed", String(enabled));
+        document.querySelectorAll("[data-project-l-explain], #projectLPanel [data-project-l-tip]").forEach((node) => node.classList.toggle("project-l-has-explanation", enabled));
+    }
+
+    Object.entries(explanations).forEach(([suffix, explanation]) => setExplanation(byId(suffix), ...explanation));
+    byId("ExplainBtn").addEventListener("click", () => setExplain(!state.explain));
+
+    function explainTarget(target) {
+        return target?.closest?.("[data-project-l-explain], #projectLPanel [data-project-l-tip]");
+    }
+
+    function explainExempt(target) {
+        const button = target?.closest?.("button");
+        return [byId("HelpBtn"), byId("ExplainBtn"), ...modalNames.map((name) => byId(`${name}ModalCloseBtn`))].includes(button);
+    }
+
+    function showExplanation(target) {
+        const explanation = target.dataset.projectLExplain ? JSON.parse(target.dataset.projectLExplain) : ["Board information", target.dataset.projectLTip, ""];
+        const content = byId("ExplainContent");
+        content.replaceChildren(element("h4", "", explanation[0]), element("p", "", explanation[1]));
+        if (explanation[2]) content.appendChild(element("span", "explain-cost", explanation[2]));
+        setExplain(false);
+        openModal("Explain", byId("ExplainBtn"));
+    }
+
+    function inScope(target) {
+        return target instanceof Element && !!target.closest("#projectLPanel, .project-l-modal");
+    }
+
+    document.addEventListener("pointerdown", (event) => {
+        suppressClick = false;
+        if (!inScope(event.target) && !state.explain) { gesture = null; return; }
+        gesture = { pointerId: event.pointerId, target: event.target, left: event.clientX, top: event.clientY, moved: false };
+    }, true);
+    document.addEventListener("pointermove", (event) => {
+        if (gesture?.pointerId === event.pointerId && Math.hypot(event.clientX - gesture.left, event.clientY - gesture.top) > 10) gesture.moved = true;
+    }, true);
+    document.addEventListener("pointercancel", () => {
+        if (gesture) suppressClick = true;
+        gesture = null;
+    }, true);
+    document.addEventListener("pointerup", (event) => {
+        if (!gesture || gesture.pointerId !== event.pointerId) return;
+        const previous = gesture;
+        gesture = null;
+        if (previous.moved) { suppressClick = true; return; }
+        if (!state.explain || explainExempt(event.target)) return;
+        const target = explainTarget(document.elementFromPoint(event.clientX, event.clientY));
+        if (target && target === explainTarget(previous.target)) {
+            suppressClick = true;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            showExplanation(target);
+        }
+    }, true);
+    document.addEventListener("click", (event) => {
+        if (suppressClick && event.detail !== 0 && (inScope(event.target) || state.explain)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return;
+        }
+        if (!state.explain || explainExempt(event.target)) return;
+        const target = explainTarget(event.target);
+        if (target || event.target.closest("button, input, select, textarea, summary")) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (target) showExplanation(target);
+        }
+    }, true);
+
+    function hideTooltip() {
+        clearTimeout(tooltipTimer);
+        tooltip.classList.add("hidden");
+        tooltipTarget?.removeAttribute("aria-describedby");
+        tooltipTarget = null;
+    }
+
+    function showTooltip(target) {
+        if (state.explain || target.closest("button, a, input, select, summary")) return;
+        hideTooltip();
+        tooltipTarget = target;
+        tooltip.textContent = target.dataset.projectLTip;
+        tooltip.classList.remove("hidden");
+        target.setAttribute("aria-describedby", tooltip.id);
+        const anchor = target.getBoundingClientRect();
+        const box = tooltip.getBoundingClientRect();
+        tooltip.style.left = `${Math.max(12, Math.min(anchor.left, innerWidth - box.width - 12))}px`;
+        tooltip.style.top = `${anchor.bottom + box.height + 8 < innerHeight ? anchor.bottom + 5 : Math.max(12, anchor.top - box.height - 5)}px`;
+        tooltipTimer = setTimeout(hideTooltip, 3000);
+    }
+
+    panel.addEventListener("pointerover", (event) => {
+        const target = event.target.closest("[data-project-l-tip]");
+        if (target && event.pointerType === "mouse") showTooltip(target);
+    });
+    panel.addEventListener("pointerout", (event) => {
+        if (tooltipTarget && !tooltipTarget.contains(event.relatedTarget)) hideTooltip();
+    });
+    panel.addEventListener("focusin", (event) => {
+        if (event.target.matches("[data-project-l-tip]")) showTooltip(event.target);
+    });
+    panel.addEventListener("focusout", hideTooltip);
+    panel.addEventListener("click", (event) => {
+        if (state.explain) return;
+        const target = event.target.closest("[data-project-l-tip]");
+        if (target && !target.closest("button")) { showTooltip(target); return; }
+        hideTooltip();
+        if (event.target.closest("button, summary, input, select, .project-l-puzzle-card, .project-l-card, .project-l-placement-confirmation")) return;
+        clearSelection();
+    });
+    window.addEventListener("scroll", hideTooltip, true);
+    window.addEventListener("resize", hideTooltip);
+    window.addEventListener("blur", () => { gesture = null; suppressClick = true; hideTooltip(); });
+    document.addEventListener("keydown", (event) => {
+        if (currentGameType !== "project_l") return;
+        const openName = modalNames.find((name) => !byId(`${name}Modal`).classList.contains("hidden"));
+        if (event.key === "Escape") {
+            if (openName) closeModal(openName);
+            else if (state.explain) setExplain(false);
+            else clearSelection();
+            hideTooltip();
+            event.preventDefault();
+        }
+        if (event.key === "Tab" && openName) {
+            const focusable = [...byId(`${openName}Modal`).querySelectorAll("button:not(:disabled), [tabindex='0']")].filter((node) => node.getClientRects().length);
+            const first = focusable[0];
+            const last = focusable.at(-1);
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+    });
+
+    window.renderProjectLGameState = renderState;
+    window.clearProjectLState = clearState;
+    window.showProjectLHeaderActions = (show) => {
+        byId("HeaderActions").style.display = show ? "flex" : "none";
+        if (!show) {
+            setExplain(false);
+            modalNames.forEach(closeModal);
+            document.body.classList.remove("project-l-turn-active");
+        } else if (state.view) updateControls();
+    };
+    if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "project_l"
+            && typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "project_l"
+            && lastGameStatePayload.room_id === currentRoomState.room_id) renderState(lastGameStatePayload);
+})();

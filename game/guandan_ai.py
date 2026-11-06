@@ -3374,11 +3374,8 @@ _LEAD_REFINEMENTS = {
     "lead_closeout_reply": ("_lead_closeout_reply_penalty", -1, False),
     "preserve_high_same_type": ("_lead_same_type_value_conservation_penalty", -1, False),
     "lead_special_material": ("_lead_special_material_penalty", -1, False),
-    "lead_probe_deferral": ("_lead_probe_deferral_penalty", -1, False),
-    "lead_support_tension": ("_lead_composite_support_tension_penalty", -1, False),
     "preserve_lighter_shape": ("_lead_lighter_shape_preservation_penalty", -1, False),
     "lead_low_pair_probe": ("_lead_low_pair_probe_penalty", -1, False),
-    "lead_low_pair_carry": ("_lead_low_pair_full_house_carry_penalty", -1, False),
     "lead_control_probe": ("_lead_control_probe_bonus", 1, False),
     "lead_shape": ("_lead_structure_efficiency_bonus", 1, True),
     "lead_reentry": ("_lead_same_type_reentry_bonus", 1, False),
@@ -3388,6 +3385,13 @@ _LEAD_REFINEMENTS = {
     "lead_retake_stock": ("_lead_retake_control_bonus", 1, False),
     "lead_followup_risk": ("_lead_speculative_followup_penalty", -1, False),
     "lead_opening_commitment": ("_lead_opening_commitment_penalty", -1, True),
+}
+
+
+_NN_LEGACY_LEAD_REFINEMENTS = {
+    "lead_probe_deferral": ("_lead_probe_deferral_penalty", -1, False),
+    "lead_support_tension": ("_lead_composite_support_tension_penalty", -1, False),
+    "lead_low_pair_carry": ("_lead_low_pair_full_house_carry_penalty", -1, False),
 }
 
 
@@ -3430,7 +3434,10 @@ def _lead_refinement_components(
         route_status = state.get("_ai_eval_cache", {}).get("hand_route_status") or {}
         route = _current_hand_routes(state, player_id).get(_cards_key(cards))
         route_only_reentry = bool(route_status.get("complete") and route and route.get("exact"))
-    for name, (source, sign, signed) in _LEAD_REFINEMENTS.items():
+    refinements = _LEAD_REFINEMENTS
+    if getattr(_CORE_LOCAL, "legacy_heuristics", False):
+        refinements = {**refinements, **_NN_LEGACY_LEAD_REFINEMENTS}
+    for name, (source, sign, signed) in refinements.items():
         if name == "lead_reentry" and route_only_reentry:
             # A larger group left in hand is not a second source of recovery:
             # the complete route has already priced replies and spent controls.
@@ -3460,7 +3467,7 @@ def _merge_lead_score_components(
     lead_plan. Keep the old shape/lead_plan cutoffs during this migration,
     including rank-only tiny terms and the direct-finish shortcut.
     """
-    allowed = set(_LEAD_REFINEMENTS) | {"lead_opening_patience"}
+    allowed = set(_LEAD_REFINEMENTS) | set(_NN_LEGACY_LEAD_REFINEMENTS) | {"lead_opening_patience"}
     unknown = (ranked.keys() | direct.keys()) - allowed
     if unknown:
         raise ValueError(f"Unregistered lead refinements: {sorted(unknown)}")
@@ -9197,6 +9204,7 @@ def _lead_overlap_run_low_single_bonus(
     cards: List[int],
     level_rank: int,
 ) -> float:
+    """Preserve the old overlapping-turn correction for NN checkpoint features only."""
     if len(cards) != 1 or len(hand) < 12:
         return 0.0
 
@@ -9313,6 +9321,7 @@ def _lead_probe_deferral_penalty(
     cards: List[int],
     combo: Dict,
 ) -> float:
+    """Frozen NN feature; ordinary heuristics compare the actual hand routes."""
     if state.get("current_trick"):
         return 0.0
 
@@ -9417,6 +9426,7 @@ def _lead_composite_support_tension_penalty(
     cards: List[int],
     combo: Dict,
 ) -> float:
+    """Frozen NN feature; ordinary heuristics price control cargo directly."""
     if state.get("current_trick"):
         return 0.0
     if (combo.get("type") or "") != "full_house":
@@ -9710,6 +9720,7 @@ def _lead_low_pair_full_house_carry_penalty(
     cards: List[int],
     combo: Dict,
 ) -> float:
+    """Frozen NN feature; ordinary heuristics use residual turns and structure."""
     if state.get("current_trick"):
         return 0.0
     if (combo.get("type") or "") != "three" or combo.get("uses_wild"):
@@ -11426,7 +11437,7 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
 
 
 def _global_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
-    """Bounded diversified search used only while scoring finalist actions."""
+    """Legacy NN feature search, not part of non-NN finalist scoring."""
     if not hand:
         return _empty_hand_decomposition_summary()
     if _bounded_finalist_scoring():
@@ -17480,7 +17491,8 @@ def _compute_bot_score_components(
         components["anytime_partial"] = 1.0
         components["total"] = sum(components.values())
         return components
-    if remaining and (remaining_budget is None or remaining_budget > 0.08):
+    if (getattr(_CORE_LOCAL, "legacy_heuristics", False)
+            and remaining and (remaining_budget is None or remaining_budget > 0.08)):
         baseline_plan = _hand_decomposition_summary(remaining, level_rank)
         global_plan = _global_hand_decomposition_summary(remaining, level_rank)
         turn_gain = max(
@@ -17814,9 +17826,10 @@ def _compute_bot_score_components(
         initiative_penalty = _lead_single_initiative_penalty(state, bot_id, cards, combo)
         if initiative_penalty > 0.001:
             components["keep_initiative_shape"] = -initiative_penalty
-        overlap_low_single_bonus = _lead_overlap_run_low_single_bonus(state, bot_id, hand, cards, level_rank)
-        if abs(overlap_low_single_bonus) > 0.001:
-            components["overlap_run_low_single"] = overlap_low_single_bonus
+        if getattr(_CORE_LOCAL, "legacy_heuristics", False):
+            overlap_low_single_bonus = _lead_overlap_run_low_single_bonus(state, bot_id, hand, cards, level_rank)
+            if abs(overlap_low_single_bonus) > 0.001:
+                components["overlap_run_low_single"] = overlap_low_single_bonus
 
     if depth >= 2 and remaining:
         # The old implementation ranked every possible lead only to learn whether

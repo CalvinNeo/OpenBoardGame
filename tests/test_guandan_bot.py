@@ -3854,7 +3854,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             ids_for(["♣️6", "♦️6", "♠️6"]),
             depth=2,
         )
-        self.assertLess(three_components.get("lead_low_pair_carry", 0.0), 0.0)
+        self.assertNotIn("lead_low_pair_carry", three_components)
 
         natural_full_house = ids_for(["♣️6", "♦️6", "♠️6", "♠️3", "♣️3"])
         wild_three_pairs = ids_for(["♠️3", "♣️3", "♣️4", "♥️4", "♠️5", "♥️2"])
@@ -5910,8 +5910,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         hand_map = guandan._map_hand_by_id(bot_hand)
         chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
-        # Both loose medium singles avoid spending the level card or wild.
-        self.assertIn(chosen_labels, (["♠️8"], ["♠️10"]))
+        self.assertIn(chosen_labels, (["♠️8"], ["♠️10"], ["♠️J"]))
+        self.assertEqual(sum(card.get("rank") == chosen_cards[0]["rank"] for card in bot_hand), 1)
+        self.assertFalse(any(guandan._is_wild(card, 2) or guandan._is_joker(card) for card in chosen_cards))
 
         explain = state.get("bot_explain", {}).get("bot3", {})
         top_cards = [entry.get("cards") for entry in explain.get("top", [])]

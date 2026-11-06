@@ -78,11 +78,23 @@ class GuandanHandRouteTests(unittest.TestCase):
         self.assertNotIn(5, [len(group) for group in groups])
         self.assertLess(low["entry_risk"], high["entry_risk"])
         action = guandan.GuandanGame.bot_move(state, "bot")
-        self.assertEqual(sorted(hand[cid]["rank"] for cid in action["card_ids"]),
-                         [5, 5, 6, 6, 7, 7])
+        self.assertIn(sorted(hand[cid]["rank"] for cid in action["card_ids"]),
+                      ([3, 3], [5, 5, 6, 6, 7, 7]))
+        chosen_route = panel[guandan._cards_key(action["card_ids"])]
+        self.assertTrue(chosen_route["exact"])
+        self.assertEqual(sorted(map(guandan._cards_key, chosen_route["groups"])),
+                         sorted(map(guandan._cards_key, low["groups"])))
+        self.assertEqual(chosen_route["control_commitment"], 0.0)
+        self.assertLessEqual(chosen_route["cost"], low["cost"] + 0.05)
         route = state["bot_explain"]["bot"]["method_details"]["hand_route"]
         self.assertEqual(route["turns"], 7)
         explanation = state["bot_explain"]["bot"]
+        scores = {tuple(sorted(entry["cards"])): entry["score"] for entry in explanation["top"]}
+        low_labels = tuple(sorted(guandan._card_label(hand[card_id])
+                                  for card_id in self.cards(state, [5, 5, 6, 6, 7, 7])))
+        high_labels = tuple(sorted(guandan._card_label(hand[card_id])
+                                   for card_id in self.cards(state, [8, 8, 9, 9, 10, 10])))
+        self.assertGreater(scores[low_labels], scores[high_labels])
         self.assertAlmostEqual(explanation["chosen"]["score"],
                                sum(explanation["chosen"]["components"].values()))
 

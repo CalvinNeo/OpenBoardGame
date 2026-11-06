@@ -1,106 +1,132 @@
-<template data-game-target="projectLUpgradeModal" data-game-mode="replace"><section id="projectLUpgradeModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Select Upgrade Target</h2>
-        <button id="projectLUpgradeModalCloseBtn" type="button">Close</button>
-      </div>
-      <div class="modal-body">
-        <div id="projectLUpgradeFromLabel" class="hint"></div>
-        <div id="projectLUpgradeOptions" class="project-l-upgrade-options"></div>
-      </div>
-    </div>
-  </section></template>
-<template data-game-target="projectLHelpModal" data-game-mode="replace"><section id="projectLHelpModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content project-l-help-modal">
-      <div class="modal-header">
-        <h2>Project L - Game Rules</h2>
-        <button id="projectLHelpModalCloseBtn" type="button">Close</button>
-      </div>
-      <div class="modal-body project-l-help-content"></div>
-    </div>
-  </section></template>
-<template data-game-target="projectLExplainModal" data-game-mode="replace"><section id="projectLExplainModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content project-l-explain-modal">
-      <div class="modal-header">
-        <h2>Button Explanation</h2>
-        <button id="projectLExplainModalCloseBtn" type="button">Close</button>
-      </div>
-      <div class="modal-body">
-        <div id="projectLExplainContent"></div>
-      </div>
-    </div>
-  </section></template>
+<template data-game-target="projectLUpgradeModal" data-game-mode="replace">
+    <section id="projectLUpgradeModal" class="modal hidden project-l-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="projectLUpgradeTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="projectLUpgradeTitle">Upgrade a piece · 1 AP</h2>
+                <button id="projectLUpgradeModalCloseBtn" type="button">Close</button>
+            </div>
+            <div class="modal-body">
+                <div id="projectLUpgradeFromLabel"></div>
+                <div id="projectLUpgradeOptions" class="project-l-upgrade-options"></div>
+            </div>
+        </div>
+    </section>
+</template>
+<template data-game-target="projectLHelpModal" data-game-mode="replace">
+    <section id="projectLHelpModal" class="modal hidden project-l-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="projectLHelpTitle">
+        <div class="modal-content project-l-help-modal">
+            <div class="modal-header">
+                <h2 id="projectLHelpTitle">Project L · Help</h2>
+                <button id="projectLHelpModalCloseBtn" type="button">Close</button>
+            </div>
+            <div class="modal-body project-l-help-content"></div>
+        </div>
+    </section>
+</template>
+<template data-game-target="projectLExplainModal" data-game-mode="replace">
+    <section id="projectLExplainModal" class="modal hidden project-l-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="projectLExplainTitle">
+        <div class="modal-content project-l-explain-modal">
+            <div class="modal-header">
+                <h2 id="projectLExplainTitle">Explain</h2>
+                <button id="projectLExplainModalCloseBtn" type="button">Close</button>
+            </div>
+            <div class="modal-body" id="projectLExplainContent"></div>
+        </div>
+    </section>
+</template>
 <template data-game-target="projectLPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="projectLPhase">-</span></div>
-                <div>AP: <span id="projectLAp">-</span></div>
-                <div>Current Turn: <span id="projectLTurn">-</span></div>
-                <div>Master Used: <span id="projectLMasterUsed">-</span></div>
-              </div>
-              <div class="row">
-                <div>White Deck: <span id="projectLWhiteRemaining">-</span></div>
-                <div>Black Deck: <span id="projectLBlackRemaining">-</span></div>
-                <div>End Triggered: <span id="projectLEndTriggered">-</span></div>
-                <div>Winner: <span id="projectLWinner">-</span></div>
-              </div>
-              <div class="row">
-                <div>Selected Market: <span id="projectLSelectedMarket">-</span></div>
-                <div>Selected Puzzle: <span id="projectLSelectedPuzzle">-</span></div>
-                <div>Selected Piece: <span id="projectLSelectedPiece">-</span></div>
-                <div>Origin: <span id="projectLSelectedOrigin">-</span></div>
-                <div>Rotation: <span id="projectLSelectedRotation">0</span></div>
-                <div>Flip: <span id="projectLSelectedFlip">No</span></div>
-              </div>
-              <div class="project-l-layout">
-                <div>
-                  <h3>Market 🧩</h3>
-                  <div class="project-l-market-section">
-                    <div class="project-l-market-title">White Market ⚪</div>
-                    <div id="projectLMarketWhite" class="project-l-market-grid"></div>
-                  </div>
-                  <div class="project-l-market-section">
-                    <div class="project-l-market-title">Black Market ⚫</div>
-                    <div id="projectLMarketBlack" class="project-l-market-grid"></div>
-                  </div>
-                  <div class="row actions">
-                    <button id="projectLTakeMarketBtn">Take Selected Market</button>
-                    <button id="projectLDrawWhiteBtn">Draw White Deck</button>
-                    <button id="projectLDrawBlackBtn">Draw Black Deck</button>
-                  </div>
+    <div class="project-l-status" aria-live="polite">
+        <strong id="projectLTurn">Waiting for players</strong>
+        <span id="projectLPhase" class="project-l-pill">Main</span>
+        <span class="project-l-pill" data-project-l-tip="Action points (AP): spend up to 3 on your turn." tabindex="0">⚡ <span id="projectLAp">–</span> AP</span>
+        <span class="project-l-pill" data-project-l-tip="Master Action (✦): one piece per puzzle for 1 AP, once per turn." tabindex="0">✦ <span id="projectLMasterUsed">Ready</span></span>
+    </div>
+    <div id="projectLEndTriggered" class="project-l-notice hidden">Final round · the black deck is empty.</div>
+    <div id="projectLWinner" class="project-l-result hidden" role="status"></div>
+    <div class="project-l-layout">
+        <section class="project-l-workspace" aria-label="Your workbench">
+            <div class="project-l-section-heading">
+                <h3>Your pieces</h3>
+                <div class="project-l-actions">
+                    <button id="projectLUpgradeBtn" type="button">Upgrade ↑</button>
+                    <button id="projectLTakeLevel1Btn" type="button">+ Lv 1</button>
                 </div>
-                <div>
-                  <div class="row actions project-l-rotate-actions">
-                    <button id="projectLRotateLeftBtn">Rotate Left</button>
-                    <button id="projectLRotateRightBtn">Rotate Right</button>
-                    <button id="projectLFlipBtn">Flip</button>
-                  </div>
-                  <h3>Active Puzzles 🧩</h3>
-                  <div id="projectLActivePuzzles" class="project-l-puzzle-list"></div>
-                  <h3>Completed ✅</h3>
-                  <div id="projectLCompletedPuzzles" class="project-l-completed"></div>
+            </div>
+            <div id="projectLInventory" class="project-l-inventory" aria-label="Piece inventory"></div>
+            <div class="project-l-section-heading project-l-tools">
+                <div class="project-l-piece-preview">
+                    <div id="projectLSelectedPiecePreview" aria-hidden="true"></div>
+                    <span id="projectLSelectedPiece">Choose a piece</span>
                 </div>
-                <div>
-                  <h3>Inventory 🎒</h3>
-                  <div id="projectLInventory" class="project-l-inventory"></div>
-                  <div class="row actions project-l-inventory-actions">
-                    <button id="projectLUpgradeBtn">Upgrade</button>
-                    <button id="projectLTakeLevel1Btn">Take Level 1</button>
-                  </div>
-                  <h3>Placement 🧱</h3>
-                  <div class="row actions">
-                    <button id="projectLPlaceBtn">Place Piece</button>
-                    <button id="projectLQueueMasterBtn">Queue Master</button>
-                    <button id="projectLClearMasterBtn">Clear Queue</button>
-                    <button id="projectLUseMasterBtn">Use Master</button>
-                  </div>
-                  <div id="projectLMasterQueue" class="project-l-master-queue"></div>
-                  <h3>Finishing 🏁</h3>
-                  <div class="row actions">
-                    <button id="projectLFinishingPlaceBtn">Finishing Place</button>
-                    <button id="projectLFinishingDoneBtn">Finish</button>
-                  </div>
-                  <h3>Players 👥</h3>
-                  <div id="projectLPlayers"></div>
+                <div class="project-l-actions">
+                    <button id="projectLRotateLeftBtn" type="button" aria-label="Rotate left 90 degrees">↶</button>
+                    <button id="projectLRotateRightBtn" type="button" aria-label="Rotate right 90 degrees">↷</button>
+                    <button id="projectLFlipBtn" type="button" aria-label="Flip piece horizontally" aria-pressed="false">↔</button>
                 </div>
-              </div>
-            </template>
+            </div>
+            <div class="project-l-section-heading">
+                <h3>Your puzzles</h3>
+                <span id="projectLPuzzleCount" class="project-l-muted" data-project-l-tip="You can work on up to 4 puzzles at once." tabindex="0">0 / 4</span>
+            </div>
+            <div id="projectLActivePuzzles" class="project-l-puzzle-list"></div>
+            <section id="projectLMasterSection" class="project-l-master-section hidden" aria-label="Master Action plan">
+                <div class="project-l-section-heading">
+                    <h3>✦ Master plan</h3>
+                    <button id="projectLUseMasterBtn" type="button">Use Master · 1 AP</button>
+                </div>
+                <div id="projectLMasterQueue" class="project-l-master-queue"></div>
+            </section>
+            <div id="projectLFinishingActions" class="project-l-finishing hidden">
+                <span>Finishing touches · −1 point per piece</span>
+                <button id="projectLFinishingDoneBtn" type="button">Finish</button>
+            </div>
+        </section>
+        <section class="project-l-market" aria-label="Puzzle market">
+            <h3>Puzzle market</h3>
+            <div class="project-l-market-section">
+                <div class="project-l-section-heading">
+                    <span data-project-l-tip="White puzzles (⚪): easier puzzles to build your inventory." tabindex="0">⚪ White</span>
+                    <button id="projectLDrawWhiteBtn" type="button">Draw · <span id="projectLWhiteRemaining">–</span> left</button>
+                </div>
+                <div id="projectLMarketWhite" class="project-l-market-grid"></div>
+            </div>
+            <div class="project-l-market-section">
+                <div class="project-l-section-heading">
+                    <span data-project-l-tip="Black puzzles (⚫): harder puzzles worth more points. An empty black deck triggers the final round." tabindex="0">⚫ Black</span>
+                    <button id="projectLDrawBlackBtn" type="button">Draw · <span id="projectLBlackRemaining">–</span> left</button>
+                </div>
+                <div id="projectLMarketBlack" class="project-l-market-grid"></div>
+            </div>
+        </section>
+    </div>
+    <div class="project-l-secondary">
+        <details class="project-l-details" open>
+            <summary>Players <span id="projectLPlayerCount"></span></summary>
+            <div id="projectLPlayers" class="project-l-players"></div>
+        </details>
+        <details class="project-l-details">
+            <summary>Completed <span id="projectLCompletedCount">0</span></summary>
+            <div id="projectLCompletedPuzzles" class="project-l-completed"></div>
+        </details>
+    </div>
+    <div id="projectLSelectionHome" class="hidden">
+        <div id="projectLMarketConfirmation" class="project-l-market-confirmation">
+            <strong id="projectLSelectedMarket"></strong>
+            <button id="projectLTakeMarketBtn" type="button">Take · 1 AP</button>
+            <button id="projectLCancelMarketBtn" type="button">Cancel</button>
+        </div>
+        <div id="projectLPlacementConfirmation" class="project-l-placement-confirmation">
+            <span id="projectLPlacementHint" role="status"></span>
+            <div class="project-l-actions project-l-inline-tools">
+                <button id="projectLPlacementRotateLeftBtn" type="button" aria-label="Rotate preview left 90 degrees">↶</button>
+                <button id="projectLPlacementRotateRightBtn" type="button" aria-label="Rotate preview right 90 degrees">↷</button>
+                <button id="projectLPlacementFlipBtn" type="button" aria-label="Flip preview horizontally" aria-pressed="false">↔</button>
+            </div>
+            <button id="projectLPlaceBtn" type="button">Place · 1 AP</button>
+            <button id="projectLQueueMasterBtn" type="button">+ Master plan</button>
+            <button id="projectLFinishingPlaceBtn" type="button">Place · −1 point</button>
+            <button id="projectLCancelPlacementBtn" type="button">Cancel</button>
+        </div>
+    </div>
+    <div id="projectLTooltip" class="project-l-tooltip hidden" role="tooltip"></div>
+</template>

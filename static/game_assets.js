@@ -360,13 +360,14 @@ const GAME_ASSETS = {
   },
   "project_l": {
     "scripts": [
-      "/static/games/project_l.js?v=app_v4"
+      "/static/games/project_l.js?v=app_v5"
     ],
     "styles": [],
     "panel": "projectLPanel",
+    "panelTitle": "Project L",
     "header": "showProjectLHeaderActions",
-    "markup": "/static/games/project_l.html?v=1",
-    "styleFragments": "/static/games/project_l.css?v=1"
+    "markup": "/static/games/project_l.html?v=2",
+    "styleFragments": "/static/games/project_l.css?v=2"
   },
   "decrypto": {
     "scripts": [
