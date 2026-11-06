@@ -25,17 +25,6 @@ class Position:
     rounds_left: int
 
 
-def _leave_distribution(probabilities: List[float]) -> List[float]:
-    distribution = [1.0]
-    for probability in probabilities:
-        updated = [0.0] * (len(distribution) + 1)
-        for count, weight in enumerate(distribution):
-            updated[count] += weight * (1.0 - probability)
-            updated[count + 1] += weight * probability
-        distribution = updated
-    return distribution
-
-
 def _position(view: Dict, treasure_values: List[int], hazard_types: List[str]) -> Position:
     remaining = Counter(treasure_values)
     for card in view["path"]:

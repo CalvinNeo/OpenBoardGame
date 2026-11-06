@@ -747,3 +747,22 @@ STATUS_CARDS = [
 - 三个独立浏览器会话实测建房、加入、准备、开局、公开出价同步、Pass、全员 Next Round 门槛、第二轮、断线重连和整页刷新恢复。
 - 通过：`node --check static/games/high_society.js`、`node --check tests/high_society.browser.cjs`、`python3 -m unittest tests.test_frontend_style_assets`（2 项）、`tests/high_society.browser.cjs`、`tests/game_assets.browser.cjs`、相关文件 `git diff --check`。浏览器脚本使用本地 uvicorn 与 Chrome/Playwright，可由 `ROOM_TEST_URL` / `PLAYWRIGHT_MODULE` 指定运行环境。
 - 截图保存在 `tmp/high-society-ui/`。只调整前端，按 DEV_GUIDE 未运行游戏逻辑测试；未验证真实 iOS Safari、Windows 字体/Emoji、Firefox。RC dock 按公共规范允许悬浮覆盖，其余本游戏主要板块无重叠例外。
+
+## 2026-11-06 策略 AI 支持
+
+- `HighSocietyGame.bot_move` 改为将机器人自己的 `get_public_view` 交给 `game/high_society_ai.py`；不直接读取对手隐藏手牌、牌堆内容/顺序，也不修改状态或全局随机数。继续兼容现有 Add Bot、机器人调度、序列化与回合确认机制。
+- 枚举最多 11 张钱牌的所有非空组合，选择严格超过最高出价的最低总价；同价优先少用牌，再保留小面额，提高以后加价的灵活性。已放在桌面的钱计入总出价，不替换或撤回。
+- 牌值使用当前收藏与预计后续收益的边际地位分：Luxury 增分、Prestige 翻倍、Passé 扣分、Scandale 减半、Faux Pas 弃最小 Luxury 或形成下一张 Luxury 的损失。负分时 Scandale 可能有利，临近结束时不会为即将被 Faux Pas 弃掉且无法产生后续收益的 Luxury 花钱。
+- 用公开剩余牌数及已揭开 Timer 数估计距离结束还有多少次拍卖，不查看下一张牌。未获牌部分采用平均 Luxury 收益估计，因此是确定性启发式策略，不是完整拍卖搜索或最优博弈解。
+- 现金风险仅由对手公开手牌张数及桌面钱推断：枚举初始固定面额中与公开信息相容的手牌组合，以等权分布估计现金；结合剩余拍卖估计可能支出。比较 Bid / Pass 后的存活概率、地位收益及花钱机会成本；Disgrace 下 Pass 会让其他玩家支付桌面钱。终局并列最低现金同样视为淘汰风险，不把“等于别人”当安全。
+- Faux Pas 弃最低点 Luxury；回合结束自动 `next_round`，已确认、非本人行动、观战及终局返回 `None`。混玩时机器人确认不会跳过真人的 Next Round。
+- 修复 `_player_can_bid` 只检查单张面额的问题：只要手牌非空且“全部手牌 + 桌面钱”能超过最高价，就允许进入组合出价；修复同时适用于真人前端的 Bid 可用性。
+- 将 `high_society` 加入 `STRATEGIC_AI_GAME_IDS`，游戏目录使用现有 AI 标记；不新增前端控件或改变游戏注册/权重。
+
+### AI 验证
+
+- `tests/test_high_society_ai.py` 覆盖最低合法组合、零钱保留、只靠多张才能加价、已承诺桌面钱、各牌型、负分 Scandale、待处理 Faux Pas、现金并列淘汰风险、隐藏信息等价、确定性/只读、序列化、观战与确认状态。
+- 完整模拟 3 / 4 / 5 人各 8 个固定随机种子，共 24 局，逐步验证动作合法与钱牌不重复，全部有限步结束。
+- `tests/test_high_society_integration.py` 使用真实房间 handler 和机器人调度、mock Socket.IO：建房加两台机器人、开局竞价让出真人回合、目录 AI 标记、隐藏手牌不公开、机器人确认后等待真人、真人确认进入下一轮。
+- 检查命令：`python3 -m unittest tests.test_high_society tests.test_high_society_ai tests.test_high_society_integration`；另检查 Python 编译和 `git diff --check`。本次只改本游戏逻辑与其目录标记，不修改全局调度逻辑。
+- 本地参考实验：每局 1 台新 AI 对其余旧固定预算机器人，3 / 4 / 5 人各 60 个种子并轮换座位，共 180 局全部结束；获胜局数分别 31 / 21 / 11，淘汰局数 15 / 8 / 3，含 4 局无人获胜。6085 次新 AI 决策平均约 0.48ms、P95 约 1.42ms。这只是固定旧策略下的小样本工程检查，不代表对真人或所有策略的胜率保证，也不是完整配对竞技评测。

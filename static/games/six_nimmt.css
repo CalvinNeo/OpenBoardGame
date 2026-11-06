@@ -1,285 +1,209 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-six_nimmt-1 {
+    .game-panel[data-game-theme="six_nimmt"] {
+        background: #fffdf8;
+        border-color: #e5ded0;
+        color: #273b48;
+    }
 
-.six-nimmt-rows {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-}
+    .game-panel[data-game-theme="six_nimmt"] > .panel-header {
+        flex-wrap: nowrap;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e6e1d7;
+    }
 
-.six-nimmt-row {
-  --six-nimmt-card-height: 64px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 8px;
-  background: #fff;
-}
+    .game-panel[data-game-theme="six_nimmt"] .game-panel-title h2 {
+        color: #24594f;
+        font-weight: 800;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-.six-nimmt-row.selectable {
-  cursor: pointer;
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
-}
+    .game-panel[data-game-theme="six_nimmt"] .game-panel-title { flex: 1; min-width: 0; flex-wrap: nowrap; }
+    .game-panel[data-game-theme="six_nimmt"] #gameReconnectBtn { flex-shrink: 0; white-space: nowrap; }
 
-.six-nimmt-row.selectable:hover {
-  background: #fff7ed;
-}
+    #sixNimmtHeaderActions { flex-wrap: nowrap; flex-shrink: 0; }
+    #sixNimmtHeaderActions button { width: auto; white-space: nowrap; }
+    #sixNimmtPanel { min-width: 0; }
+    #sixNimmtPanel [hidden] { display: none !important; }
+    #sixNimmtPanel button, .sn-dialog button { font: inherit; touch-action: manipulation; }
+    #sixNimmtPanel button:focus-visible, .sn-dialog button:focus-visible { outline: 3px solid #258fbc; outline-offset: 2px; }
+    #sixNimmtPanel button:disabled { cursor: default; }
 
-.six-nimmt-row-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
+    .sn-status-bar, .sn-progress, .sn-notice, .sn-section-heading, .sn-hand-confirm,
+    .sn-summary-dock, .sn-dialog-heading, .sn-summary-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-width: 0;
+    }
 
-.six-nimmt-row-total {
-  color: #92400e;
-}
+    .sn-status-bar { flex-wrap: wrap; margin: 12px 0 8px; font-size: 12px; }
+    .sn-progress { gap: 12px; font-weight: 700; letter-spacing: 0.06em; }
+    .sn-goal { margin-left: auto; color: #7b5f42; white-space: nowrap; }
+    .sn-timer { padding: 4px 8px; border-radius: 6px; background: #e9f0eb; font-variant-numeric: tabular-nums; }
+    .sn-timer.is-urgent { background: #ffded7; color: #a33124; }
+    .sn-notice { padding: 10px 12px; border-left: 3px solid #398173; background: #eaf2ed; font-size: 13px; line-height: 1.45; margin-bottom: 14px; }
+    #sixNimmtReady { flex-shrink: 0; font-size: 12px; color: #526e64; }
+    .sn-layout { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 24px; }
+    .sn-play-area, .sn-sidebar, .sn-layout section { min-width: 0; }
+    .sn-section-heading { margin: 0 0 9px; font-size: 12px; color: #6b7777; }
+    .sn-section-heading h3 { margin: 0; color: #2b4346; font-size: 16px; }
+    .sn-section-heading h3 small { margin-left: 6px; font-size: 10px; letter-spacing: 0.1em; color: #7a8a88; }
+    .sn-danger-text { color: #b54e3c; }
+    .sn-rows { display: grid; gap: 8px; }
+    .sn-row { min-width: 0; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; padding: 7px; border: 1px solid #dedfd6; border-radius: 10px; background: #f1f2e9; }
+    .sn-row.is-full { border-color: #dbad9e; background: #f6eae4; }
+    .sn-row.is-preview { border-color: #277b68; box-shadow: inset 0 0 0 1px #277b68; }
+    .sn-row.is-selected { border-color: #b06634; box-shadow: inset 0 0 0 1px #b06634; }
+    .sn-row.is-selectable { cursor: pointer; }
+    .sn-row.is-selectable:hover { background: #f4e7cf; }
+    .sn-row-label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; font-size: 11px; }
+    .sn-row-label strong { font-size: 17px; font-variant-numeric: tabular-nums; color: #8a4d32; white-space: nowrap; }
+    .sn-row-label small { font-size: 10px; color: #697c73; }
+    .sn-row-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; min-width: 0; }
+    .sn-card { --sn-ink: #235e85; --sn-wash: #e9f3f9; display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 3px; min-width: 0; width: 100%; height: 76px; padding: 6px 2px; border: 1px solid #cad9db; border-top: 3px solid var(--sn-ink); border-radius: 7px; background: var(--sn-wash); color: var(--sn-ink); box-shadow: 0 2px 0 #233c4510; }
+    .sn-card[data-bulls="2"] { --sn-ink: #417447; --sn-wash: #edf5df; }
+    .sn-card[data-bulls="3"] { --sn-ink: #9a5f22; --sn-wash: #fff0d2; }
+    .sn-card[data-bulls="5"] { --sn-ink: #73569b; --sn-wash: #f2eafa; }
+    .sn-card[data-bulls="7"] { --sn-ink: #b0465c; --sn-wash: #fde7ed; }
+    .sn-card-value { font-size: 29px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .sn-card-bulls { font-size: 12px; line-height: 1.2; font-weight: 700; white-space: nowrap; }
+    .sn-card.is-selected { outline: 3px solid #277b68; outline-offset: -2px; background: #e0eee4; }
+    .sn-card:disabled { opacity: 0.65; }
+    .sn-slot { justify-content: center; border: 1px dashed #cbd2c6; background: #ffffff4d; color: #a7b0a3; box-shadow: none; font-size: 12px; }
+    .sn-danger { border: 1px dashed #d99f8f; background: #f7e1d9; color: #ae4d38; justify-content: center; font-size: 22px; font-weight: 800; }
+    .sn-row-confirm { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 12px; }
+    .sn-row-confirm span { margin-right: auto; }
+    .sn-row-confirm button { min-height: 36px; }
+    .sn-hand-area { margin-top: 18px; }
+    .sn-hand { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; min-width: 0; }
+    #sixNimmtPanel .sn-hand button { cursor: pointer; }
+    #sixNimmtPanel .sn-hand button:disabled { cursor: default; }
+    .sn-hand .sn-card { height: 82px; }
+    .sn-hand .sn-card-value { font-size: 25px; }
+    .sn-hand-confirm { min-height: 47px; margin-top: 8px; font-size: 12px; }
+    #sixNimmtSelectionHint { overflow-wrap: anywhere; line-height: 1.5; }
+    #sixNimmtPanel .sn-primary, .sn-dialog .sn-primary { flex-shrink: 0; border: 1px solid #256454; background: #286c5c; color: white; border-radius: 7px; padding: 9px 14px; min-height: 40px; font-weight: 600; }
+    #sixNimmtPanel .sn-primary:disabled, .sn-dialog .sn-primary:disabled { background: #e1e6df; border-color: #d5dcd4; color: #718077; }
+    .sn-players { display: grid; gap: 7px; }
+    .sn-player { min-width: 0; padding: 9px 10px; border-bottom: 1px solid #e6e4d8; border-radius: 6px; }
+    .sn-player.is-you { background: #e8f0e9; border-color: #a9c7b4; }
+    .sn-player-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .sn-player-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+    .sn-player-score { font-size: 18px; font-weight: 800; white-space: nowrap; color: #845534; }
+    .sn-player-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin-top: 4px; font-size: 11px; color: #5c726b; }
+    .sn-player-gain { color: #ac422b; font-weight: 700; }
+    .sn-history { margin-top: 16px; border-top: 1px solid #e6e4d8; padding-top: 10px; font-size: 12px; }
+    .sn-history summary { cursor: pointer; color: #5f706b; }
+    #sixNimmtRevealMeta { color: #7b8780; }
+    .sn-reveal { max-height: 220px; overflow-y: auto; padding-top: 8px; }
+    .sn-reveal-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dotted #d9ded3; }
+    .sn-reveal-entry span { overflow-wrap: anywhere; }
+    .sn-reveal-entry.is-you { color: #286c5c; font-weight: 700; }
+    .sn-pending-reveal { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 10px; }
+    .sn-pending-reveal > small { width: 100%; color: #718176; font-size: 11px; }
+    .sn-reveal-chip { min-width: 0; max-width: 125px; border-radius: 5px; background: #edf0e7; padding: 4px 7px; font-size: 11px; }
+    .sn-reveal-chip > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sn-reveal-chip.is-waiting { background: #f6ddbe; color: #7b4d25; box-shadow: inset 0 0 0 1px #d2ad7e; }
+    .sn-summary-dock { flex-wrap: wrap; padding: 9px 10px; margin-bottom: 12px; background: #f6ecd7; border-radius: 8px; font-size: 12px; }
+    #sixNimmtDockStatus { flex: 1; min-width: 80px; }
+    .sn-summary-dock button { min-height: 36px; }
+    .sn-result { margin-bottom: 14px; padding: 14px; border: 1px solid #d9c589; background: #faf0cd; border-radius: 9px; text-align: center; overflow-wrap: anywhere; }
+    .sn-result strong { display: block; font-size: 19px; margin-bottom: 4px; }
+    .sn-empty { grid-column: 1 / -1; margin: 0; color: #77867d; padding: 12px 0; font-size: 13px; }
 
-.six-nimmt-row-cards {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  align-items: stretch;
-  min-height: var(--six-nimmt-card-height);
-  overflow-x: auto;
-}
+    .sn-dialog { width: min(620px, calc(100vw - 24px)); max-width: 620px; max-height: calc(100dvh - 32px); padding: 20px; border: 1px solid #d8dfd3; border-radius: 14px; background: #fffdf8; color: #273b48; box-shadow: 0 24px 70px #162f3b44; overflow-y: auto; }
+    .sn-dialog::backdrop { background: #182c3c77; }
+    #sixNimmtSummaryModal[open] { display: flex; flex-direction: column; overflow: hidden; }
+    #sixNimmtSummaryModal .sn-dialog-heading, #sixNimmtSummaryModal .sn-summary-footer { flex-shrink: 0; }
+    #sixNimmtSummaryModal .sn-summary-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .sn-dialog-heading { margin-bottom: 15px; }
+    .sn-dialog-heading h2 { margin: 0; font-size: 22px; }
+    .sn-dialog-heading > div { min-width: 0; }
+    .sn-dialog-heading button { flex-shrink: 0; white-space: nowrap; min-height: 34px; }
+    .sn-eyebrow { color: #7d8d80; font-size: 11px; letter-spacing: 0.06em; }
+    .sn-summary-list { display: grid; gap: 8px; }
+    .sn-summary-item { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px; border: 1px solid #e3e6da; border-radius: 9px; }
+    .sn-summary-item.is-you { border-color: #86b7a0; background: #e9f2e9; }
+    .sn-summary-item .sn-card { height: 60px; }
+    .sn-summary-item .sn-card-value { font-size: 24px; }
+    .sn-summary-player { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+    .sn-summary-player strong, .sn-summary-player small { display: block; }
+    .sn-summary-player small { margin-top: 4px; line-height: 1.5; font-size: 12px; color: #748071; }
+    .sn-summary-penalty { color: #a74831; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .sn-summary-penalty.is-safe { color: #447b63; }
+    .sn-summary-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e3e6da; font-size: 12px; line-height: 1.5; }
+    .sn-guide-body { line-height: 1.7; font-size: 14px; overflow-wrap: anywhere; }
+    .sn-guide-body h3 { color: #286c5c; margin: 16px 0 4px; font-size: 16px; }
+    .sn-guide-body p { margin: 6px 0; }
+    .sn-guide-body ol { padding-left: 22px; }
+    .sn-guide-legend { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
+    .sn-guide-legend .sn-card { width: 66px; }
+    .sn-tooltip { position: fixed; z-index: 6000; pointer-events: none; max-width: min(300px, calc(100vw - 20px)); padding: 9px 12px; border-radius: 8px; background: #253d37; color: #fff; box-shadow: 0 4px 18px #0002; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+    #sixNimmtPanel.sn-explaining [data-sn-explain], .sn-dialog.sn-explaining [data-sn-explain] { outline: 2px dashed #318bb2; outline-offset: 1px; cursor: help !important; }
+    body.sn-action-needed #roomControlsPanel.collapsed { border-color: #cb5a47; box-shadow: 0 0 0 2px #cb5a4750; }
 
-.six-nimmt-card {
-  width: 84px;
-  min-width: 84px;
-  flex: 0 0 84px;
-  height: var(--six-nimmt-card-height);
-  min-height: var(--six-nimmt-card-height);
-  padding: 6px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #f8fafc;
-  text-align: center;
-  font-weight: 600;
-}
+    @media (max-width: 1100px) {
+        .sn-layout { grid-template-columns: minmax(0, 1fr) 175px; gap: 16px; }
+        .sn-hand { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .sn-hand .sn-card { height: 64px; }
+        .sn-row-cards { gap: 4px; }
+    }
 
-.six-nimmt-card[data-bulls="1"] {
-  background: #e0f2fe;
-}
+    @media (max-width: 760px) {
+        .sn-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+        .sn-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; }
+        .sn-sidebar .sn-section-heading { margin-bottom: 3px; }
+        .sn-player { padding: 7px 8px; }
+        .sn-card { height: 64px; }
+        .sn-hand .sn-card { height: 62px; }
+        .sn-history { margin-top: 10px; }
+    }
 
-.six-nimmt-card[data-bulls="2"] {
-  background: #dcfce7;
-}
+    @media (max-width: 640px) {
+        .game-panel[data-game-theme="six_nimmt"] > .panel-header { padding-bottom: 5px; }
+        #sixNimmtHeaderActions button { width: auto; min-width: 36px; padding: 3px 6px; font-size: 12px; }
+        .sn-status-bar { gap: 5px; margin: 7px 0; font-size: 10px; }
+        .sn-progress { gap: 7px; letter-spacing: 0.02em; }
+        .sn-timer { padding: 3px 5px; }
+        .sn-notice { padding: 7px 8px; gap: 6px; margin-bottom: 10px; font-size: 12px; }
+        #sixNimmtReady { font-size: 10px; }
+        .sn-section-heading { margin-bottom: 6px; font-size: 11px; gap: 5px; }
+        .sn-section-heading h3 { font-size: 14px; }
+        .sn-section-heading h3 small { font-size: 9px; margin-left: 4px; }
+        .sn-rows { gap: 5px; }
+        .sn-row { grid-template-columns: 37px minmax(0, 1fr); gap: 5px; padding: 5px; border-radius: 7px; }
+        .sn-row-cards { gap: 3px; }
+        .sn-row-label { gap: 1px; font-size: 9px; }
+        .sn-row-label strong { font-size: 13px; }
+        .sn-row-label small { font-size: 9px; }
+        .sn-card { height: 51px; padding: 4px 1px; gap: 2px; border-radius: 5px; border-top-width: 2px; }
+        .sn-card-value { font-size: 20px; }
+        .sn-card-bulls { font-size: 10px; }
+        .sn-danger { font-size: 20px; border-width: 1px; }
+        .sn-hand-area { margin-top: 12px; }
+        .sn-hand { gap: 5px; }
+        .sn-hand .sn-card { height: 58px; }
+        .sn-hand .sn-card-value { font-size: 23px; }
+        .sn-hand .sn-card-bulls { font-size: 11px; }
+        .sn-hand-confirm { min-height: 43px; margin-top: 6px; font-size: 11px; gap: 8px; }
+        #sixNimmtPanel .sn-primary { min-height: 37px; padding: 7px 10px; font-size: 12px; }
+        .sn-dialog { padding: 12px; border-radius: 11px; }
+        .sn-dialog-heading { margin-bottom: 10px; }
+        .sn-dialog-heading h2 { font-size: 19px; }
+        .sn-summary-item { gap: 7px; padding: 7px; }
+        .sn-summary-footer { gap: 8px; }
+        .sn-summary-footer .sn-primary { padding: 8px 10px; font-size: 12px; }
+        .sn-summary-dock { padding: 7px; gap: 6px; }
+    }
 
-.six-nimmt-card[data-bulls="3"] {
-  background: #ffedd5;
-}
-
-.six-nimmt-card[data-bulls="5"],
-.six-nimmt-card[data-bulls="7"] {
-  background: #ede9fe;
-}
-
-.six-nimmt-card:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.six-nimmt-card.selected {
-  border-color: #1f6feb;
-  background: #eaf2ff;
-}
-
-.six-nimmt-card-danger {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #b91c1c;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.six-nimmt-card-slot {
-  background: #f8fafc;
-  border-style: dashed;
-  color: #cbd5f5;
-}
-
-.six-nimmt-card-value {
-  font-size: 16px;
-}
-
-.six-nimmt-card-bulls {
-  font-size: 13px;
-  line-height: 1.1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.six-nimmt-card-bulls-line {
-  display: block;
-  white-space: nowrap;
-}
-
-.six-nimmt-hand .six-nimmt-card {
-  cursor: pointer;
-}
-
-.six-nimmt-player-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
-}
-
-.six-nimmt-reveal {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
-}
-
-.six-nimmt-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.six-nimmt-summary-modal {
-  max-width: 600px;
-}
-
-.six-nimmt-summary-status {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.six-nimmt-summary-meta {
-  font-size: 13px;
-  color: #64748b;
-}
-
-.six-nimmt-summary-item {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 8px;
-  background: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.six-nimmt-summary-header {
-  font-weight: 600;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.six-nimmt-summary-take {
-  font-size: 13px;
-  color: #b91c1c;
-}
-
-@media (max-width: 640px) {
-  #sixNimmtPanel > .row {
-    flex-direction: row;
-    align-items: center;
-    gap: 4px 12px;
-    margin-bottom: 4px;
-    font-size: 13px;
-  }
-
-  #sixNimmtPanel > h3 {
-    margin: 10px 0 5px;
-    font-size: 16px;
-  }
-
-  #sixNimmtPanel .six-nimmt-rows {
-    gap: 4px;
-    margin-bottom: 8px;
-  }
-
-  #sixNimmtPanel .six-nimmt-row {
-    --six-nimmt-card-height: 42px;
-    display: grid;
-    grid-template-columns: clamp(38px, 12vw, 46px) minmax(0, 1fr);
-    align-items: stretch;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 8px;
-  }
-
-  #sixNimmtPanel .six-nimmt-row-header {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 1px;
-    min-width: 0;
-    margin-bottom: 0;
-    font-size: 10px;
-    line-height: 1.1;
-  }
-
-  #sixNimmtPanel .six-nimmt-row-total {
-    white-space: nowrap;
-  }
-
-  #sixNimmtPanel .six-nimmt-row-cards {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 3px;
-    min-width: 0;
-    overflow-x: visible;
-  }
-
-  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card {
-    width: 100%;
-    min-width: 0;
-    padding: 2px 1px;
-    border-radius: 5px;
-  }
-
-  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card-value {
-    font-size: 13px;
-    line-height: 1.05;
-  }
-
-  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card-bulls {
-    gap: 0;
-    font-size: 8px;
-    line-height: 1;
-  }
-
-  #sixNimmtPanel .six-nimmt-card-danger {
-    font-size: 14px;
-  }
-
-  #sixNimmtPanel .six-nimmt-hand {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 4px;
-    margin-bottom: 6px;
-  }
-
-  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card {
-    width: 100%;
-    min-width: 0;
-    height: 46px;
-    min-height: 46px;
-    padding: 3px 1px;
-  }
-
-  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card-value {
-    font-size: 14px;
-    line-height: 1.05;
-  }
-
-  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card-bulls {
-    gap: 0;
-    font-size: 10px;
-    line-height: 1;
-  }
-}
+    @media (max-width: 350px) {
+        .sn-card-value { font-size: 18px; }
+        .sn-card-bulls { font-size: 9px; }
+        .sn-row { grid-template-columns: 34px minmax(0, 1fr); gap: 4px; padding: 4px; }
+        .sn-section-heading h3 small { letter-spacing: 0; }
+    }
 }

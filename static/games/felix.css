@@ -23,6 +23,7 @@
   .felix-action-hint { border-left: 3px solid #b9c9bb; padding: 7px 10px; background: #f0f3eb; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
   .felix-action-hint.your-turn { border-color: #bc7027; background: #fff0d1; font-weight: 700; }
   .felix-play-area { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 26px; align-items: start; }
+  .felix-play-area.no-hand { grid-template-columns: minmax(0, 1fr); }
   .felix-sack, .felix-hand-section, .felix-player-section { display: grid; gap: 10px; }
   .felix-section-heading > span, .felix-hand-hint, .felix-table-footer { font-size: 12px; color: #726650; }
   .felix-slots { display: grid; grid-template-columns: repeat(var(--felix-slots, 5), minmax(0, 1fr)); gap: 8px; align-items: stretch; }
@@ -33,7 +34,7 @@
   .felix-slot-owner { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; font-weight: 600; line-height: 1.5; }
   .felix-slot-status { font-size: 11px; line-height: 1.4; color: #6a735e; overflow-wrap: anywhere; }
   .felix-card { position: relative; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; align-items: center; gap: 5px; width: 100%; min-height: 126px; border: 1px solid #bcd4c4; border-radius: 10px; padding: 8px 6px; background: #edf6e9; color: #234e35; text-align: center; box-shadow: 0 2px 0 #263f3610; }
-  button.felix-card { cursor: pointer; }
+  button.felix-card { cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
   button.felix-card:disabled { opacity: .72; cursor: default; }
   .felix-card-value { justify-self: start; font-size: 20px; font-weight: 800; line-height: 1.15; }
   .felix-card-emoji { font-size: 36px; line-height: 1.1; }
@@ -50,6 +51,7 @@
   .felix-hand { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   .felix-hand .felix-card.selected { outline: 3px solid #287863; outline-offset: -3px; }
   .felix-hand-stage { position: relative; }
+  .felix-hand-stage.has-selection { min-height: 116px; }
   .felix-hand-empty { grid-column: 1 / -1; padding: 20px 0; font-size: 13px; color: #726650; }
   .felix-selection { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 10px; background: #fffdf7eb; backdrop-filter: blur(2px); border-radius: 10px; text-align: center; }
   .felix-selection > strong { font-size: 18px; overflow-wrap: anywhere; }
@@ -72,7 +74,8 @@
   .felix-action-buttons button, #felixNextBtn { min-height: 42px; padding: 8px 10px; border: 1px solid #b2beaa; border-radius: 7px; font-size: 14px; font-weight: 700; background: #f3f2e9; color: #34503e; }
   .felix-action-buttons .felix-primary, #felixNextBtn:not(:disabled) { color: #fffdf3; background: #2d6046; border-color: #2d6046; }
   .felix-table-footer { display: flex; justify-content: space-between; gap: 8px; }
-  .felix-table-footer > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .felix-table-footer > span:first-child { display: flex; gap: 4px; overflow: hidden; white-space: nowrap; }
+  #felixStart { overflow: hidden; text-overflow: ellipsis; }
   .felix-table-footer > span:last-child { flex-shrink: 0; }
   .felix-notice { display: grid; gap: 10px; border-left: 3px solid #4f8760; padding: 12px; background: #eef4e5; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
   .felix-notice.self { border-color: #b87823; background: #fff1cf; }

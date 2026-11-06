@@ -1,488 +1,555 @@
-let currentFelixView = null;
-let felixSelectedCardId = null;
-let felixExplainMode = false;
+(() => {
+  const root = document.getElementById("felixPanel");
+  const byId = (suffix) => document.getElementById(`felix${suffix}`);
+  const text = (suffix, value) => { byId(suffix).textContent = value; };
+  const hide = (suffix, value) => byId(suffix).classList.toggle("hidden", value);
+  const colors = { red: "#c76755", blue: "#5785b2", green: "#5d9165", purple: "#9571ad", orange: "#c39244" };
+  let view = null;
+  let selectedCardId = null;
+  let explaining = false;
+  let pending = false;
+  let pendingTimer = null;
+  let tooltipTimer = null;
+  let gesture = null;
+  let suppressClickUntil = 0;
+  let activeRoomId = null;
+  let selectedRoom = false;
+  let handSignature = null;
 
-const felixRoundLabel = document.getElementById("felixRound");
-const felixPhaseLabel = document.getElementById("felixPhase");
-const felixTurnLabel = document.getElementById("felixTurn");
-const felixStartLabel = document.getElementById("felixStart");
-const felixBidLabel = document.getElementById("felixBid");
-const felixBidderLabel = document.getElementById("felixBidder");
-const felixBankLabel = document.getElementById("felixBank");
-const felixMouseCards = document.getElementById("felixMouseCards");
-const felixTableSlots = document.getElementById("felixTableSlots");
-const felixHand = document.getElementById("felixHand");
-const felixPlayers = document.getElementById("felixPlayers");
-const felixBidInput = document.getElementById("felixBidInput");
-const felixBidBtn = document.getElementById("felixBidBtn");
-const felixPassBtn = document.getElementById("felixPassBtn");
-const felixBuyOneBtn = document.getElementById("felixBuyOneBtn");
-const felixNextBtn = document.getElementById("felixNextBtn");
-const felixNotice = document.getElementById("felixNotice");
-const felixNoticeTitle = document.getElementById("felixNoticeTitle");
-const felixNoticeBody = document.getElementById("felixNoticeBody");
-const felixFinalResults = document.getElementById("felixFinalResults");
-const felixHeaderActions = document.getElementById("felixHeaderActions");
-const felixHelpBtn = document.getElementById("felixHelpBtn");
-const felixExplainBtn = document.getElementById("felixExplainBtn");
-const felixHelpModal = document.getElementById("felixHelpModal");
-const felixHelpCloseBtn = document.getElementById("felixHelpCloseBtn");
-const felixHelpContent = document.querySelector(".felix-help-content");
-const felixExplainModal = document.getElementById("felixExplainModal");
-const felixExplainCloseBtn = document.getElementById("felixExplainCloseBtn");
-const felixExplainContent = document.getElementById("felixExplainContent");
+  const active = () => currentGameType === "felix" && !root.classList.contains("hidden");
+  const connected = () => typeof socket === "undefined" || socket.connected;
+  const self = () => view?.players?.find((player) => player.player_id === view.you);
+  const can = (action) => active() && connected() && !pending && !!view?.legal_actions?.includes(action);
+  const playerName = (playerId) => view?.players?.find((player) => player.player_id === playerId)?.name || playerId || "—";
+  const signed = (value) => `${value > 0 ? "+" : ""}${value}`;
+  const emoji = (card) => ({ cat: card?.value < 0 ? "😾" : "🐱", rabbit: "🐰", big_dog: "🐕", small_dog: "🐶" }[card?.kind] || "🎒");
+  const animalName = (card) => ({ cat: "Cat", rabbit: "Rabbit", big_dog: "Big dog", small_dog: "Small dog" }[card?.kind] || "Hidden");
+  const cardLabel = (card) => `${emoji(card)} ${animalName(card)}${card?.value != null ? ` ${signed(card.value)}` : ""}`;
+  const nextReward = () => [...(view?.mouse_cards || [])].sort((first, second) => first.value - second.value).find((card) => card.mice > 0);
+  const explanations = {
+    BidBtn: "Bid with Mice (🐭). Your total must exceed the high bid without exceeding your balance. Only the winner pays, after the auction ends.",
+    PassBtn: "Pass leaves the auction without paying a bid. Take the lowest non-empty mouse reward (🐭), then reveal the next animal. In the last-chance offer, Pass discards the sack and skips the next refill.",
+    BuyOneBtn: "Buy the fully revealed Sack (🎒) for 1 mouse (🐭). Dog effects still apply. This offer appears only when nobody has bid and you are the last player remaining.",
+    NextBtn: "Confirm you have reviewed the result. The next round begins only after every player chooses Next Round. There is no second confirmation.",
+    PlayBtn: "Commit this animal face down to the Sack (🎒). This cannot be undone. The next player then chooses a card.",
+    CancelBtn: "Return to your hand without playing a card. Clicking unused space or pressing Esc also cancels the selection.",
+    BidDownBtn: "Decrease your bid by one mouse (🐭), never below the current high bid plus one.",
+    BidUpBtn: "Increase your bid by one mouse (🐭), never above your own balance.",
+    BidInput: "Enter a whole number of mice (🐭), from the current high bid plus one up to your balance. Editing the number does not submit a bid.",
+  };
+  const help = `
+    <h3>🐱 Nine rounds of bluffing</h3>
+    <p>Each player starts with 15 Mice (🐭) and nine animal cards after one of their ten cards is secretly removed. In turn, everyone places one animal face down into the Sack (🎒). The opener’s card is revealed before bidding. With three players, an extra Dummy card is placed first and revealed instead.</p>
+    <h3>Choose, then confirm</h3>
+    <p>Tap a card, then Play card on the hand overlay. Cancel, Esc or unused space returns to your hand without playing. Face-down animals stay secret until revealed. Other players’ money and everyone’s won collections remain hidden until the game ends.</p>
+    <h3>🐭 Raise or leave</h3>
+    <p>Bid a whole number higher than the current high bid, up to your balance. Bids are not charged immediately: only the last remaining player pays their winning bid. Pass costs nothing, takes the lowest non-empty mouse reward and reveals the next hidden animal. The reward above a slot is the number of mice currently available, not its refill value.</p>
+    <p>If everyone passes without bidding, the last player sees all animals and may Buy for 1 🐭 or Pass. Passing discards the sack, keeps the same opener and skips the refill. After a sale, the winner opens the next round and rewards refill from the Bank (🐭). If the bank cannot refill all rewards, all become zero.</p>
+    <h3>Meet the animals</h3>
+    <p>Good Cat (🐱): +3, +5, +8, +11 or +15 points. Bad Cat (😾): −5 or −8 points. Rabbit (🐰): zero points.</p>
+    <p>One Big dog (🐕) removes the highest positive cat; if there are no positive cats, it removes the most negative cat. One Small dog (🐶) removes the most negative cat; without negative cats, it removes the lowest positive cat. The dog also leaves. Two or more dogs remove only the dogs, leaving all cats. A dog with no cats just leaves by itself.</p>
+    <h3>Review &amp; score</h3>
+    <p>All animals reveal at settlement. Kept cards go to the winner; Removed cards leave play. Every player chooses Next Round before play continues. After round 9, add your cat points and remaining mice. Highest total wins; ties use higher cat points, then share the win.</p>
+    <h3>Reading the table</h3>
+    <p>Cards is your remaining hand size; Won is your face-down collection size; Bid (🐭) is public. A lock (🔒) hides another player’s money. Turn, Placed, Leading, Passed and Ready describe each player’s state. Hover or tap non-interactive symbols for a brief tip. Explain inspects cards and controls, even disabled controls, without taking an action. Esc closes a dialog or exits Explain.</p>`;
 
-const FELIX_BUTTON_EXPLANATIONS = {
-  felixBidBtn: "Bid more mice than the current high bid. You only pay if you win the bag.",
-  felixPassBtn: "Leave this auction. You take the lowest available mouse card and reveal the next hidden animal.",
-  felixBuyOneBtn: "When everyone else passed before any bid, buy the fully revealed bag for 1 mouse.",
-  felixNextBtn: "Confirm that you reviewed the round result. The next round starts after all players confirm.",
-};
-
-const FELIX_HELP_HTML = `
-  <p>Each player has nine animal cards after one random card is secretly removed. Play one card into the bag each round, then bid with mice to take the bag.</p>
-  <p>Passing returns your bid and gives you the lowest available mouse card. Each pass reveals one more hidden animal.</p>
-  <p>Good cats score positive points, bad cats score negative points, rabbits score zero, and mice left at the end are points.</p>
-  <p>One big dog removes the highest positive cat, or the lowest negative cat if no positive cat exists. One small dog removes the lowest negative cat, or the lowest positive cat if no negative cat exists. Two or more dogs remove only the dogs.</p>
-  <p>If nobody bids, the last player sees the full bag and may buy it for 1 mouse or pass. If they pass too, the bag is discarded and mouse cards are not refilled.</p>
-`;
-
-function showFelixHeaderActions(show) {
-  if (felixHeaderActions) {
-    felixHeaderActions.style.display = show ? "flex" : "none";
-  }
-  if (!show) {
-    exitFelixExplainMode();
-  }
-}
-
-function openFelixModal(modal) {
-  if (!modal) {
-    return;
-  }
-  modal.classList.remove("hidden");
-  modal.setAttribute("aria-hidden", "false");
-}
-
-function closeFelixModal(modal) {
-  if (!modal) {
-    return;
-  }
-  modal.classList.add("hidden");
-  modal.setAttribute("aria-hidden", "true");
-}
-
-function enterFelixExplainMode() {
-  felixExplainMode = true;
-  Object.keys(FELIX_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.classList.add("has-explanation");
-    }
-  });
-}
-
-function exitFelixExplainMode() {
-  felixExplainMode = false;
-  Object.keys(FELIX_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.classList.remove("has-explanation");
-    }
-  });
-}
-
-function showFelixExplanation(text) {
-  if (felixExplainContent) {
-    felixExplainContent.textContent = text;
-  }
-  openFelixModal(felixExplainModal);
-}
-
-function felixPlayerName(view, playerId) {
-  if (!playerId) {
-    return "-";
-  }
-  const player = (view.players || []).find((item) => item.player_id === playerId);
-  return player ? player.name || player.player_id : playerId;
-}
-
-function felixActionAvailable(actionType) {
-  return !!currentFelixView && Array.isArray(currentFelixView.legal_actions) && currentFelixView.legal_actions.includes(actionType);
-}
-
-function felixCardEmoji(card) {
-  if (!card) {
-    return "❔";
-  }
-  if (card.kind === "cat") {
-    return Number(card.value || 0) < 0 ? "😾" : "🐱";
-  }
-  if (card.kind === "rabbit") {
-    return "🐰";
-  }
-  if (card.kind === "big_dog") {
-    return "🐕";
-  }
-  if (card.kind === "small_dog") {
-    return "🐶";
-  }
-  return "❔";
-}
-
-function felixCardLabel(card) {
-  if (!card) {
-    return "Hidden";
-  }
-  if (card.kind === "cat") {
-    const value = Number(card.value || 0);
-    return `${felixCardEmoji(card)} ${value > 0 ? "+" : ""}${value}`;
-  }
-  if (card.kind === "rabbit") {
-    return "🐰 0";
-  }
-  if (card.kind === "big_dog") {
-    return "🐕 Big Dog";
-  }
-  if (card.kind === "small_dog") {
-    return "🐶 Small Dog";
-  }
-  return card.label || "-";
-}
-
-function renderFelixAnimalCard(card, options = {}) {
-  const node = document.createElement("button");
-  node.type = "button";
-  node.className = "felix-card";
-  if (options.static) {
-    node.disabled = true;
-  }
-  if (!card) {
-    node.classList.add("face-down");
-    node.innerHTML = `<span class="felix-card-emoji">🎒</span><span>Hidden</span>`;
+  function element(tag, className, content) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (content !== undefined) node.textContent = content;
     return node;
   }
-  node.classList.add(`kind-${card.kind || "unknown"}`);
-  if (card.id === felixSelectedCardId) {
-    node.classList.add("selected");
-  }
-  const emoji = document.createElement("span");
-  emoji.className = "felix-card-emoji";
-  emoji.textContent = felixCardEmoji(card);
-  const label = document.createElement("span");
-  label.className = "felix-card-label";
-  label.textContent = felixCardLabel(card).replace(`${felixCardEmoji(card)} `, "");
-  node.append(emoji, label);
-  return node;
-}
 
-function renderFelixMouseCards(view) {
-  if (!felixMouseCards) {
-    return;
+  function tip(node, content) {
+    node.dataset.felixTip = content;
+    node.tabIndex = 0;
+    return node;
   }
-  felixMouseCards.innerHTML = "";
-  const bag = document.createElement("div");
-  bag.className = "felix-mouse-card bag";
-  bag.innerHTML = `<span>🎒</span><strong>Bag</strong>`;
-  felixMouseCards.appendChild(bag);
-  (view.mouse_cards || []).forEach((card) => {
-    const node = document.createElement("div");
-    node.className = "felix-mouse-card";
-    node.innerHTML = `<span>🐭</span><strong>${card.value}</strong><small>${card.mice || 0} on card</small>`;
-    felixMouseCards.appendChild(node);
-  });
-}
 
-function renderFelixTable(view) {
-  if (!felixTableSlots) {
-    return;
+  function cardDescription(card) {
+    if (!card) return "Hidden animal (🎒): its identity stays secret until it is revealed.";
+    if (card.kind === "cat") return `${cardLabel(card)}: ${signed(card.value)} points if it remains in the winning sack after dog effects.`;
+    if (card.kind === "rabbit") return "Rabbit (🐰): zero points. Dogs do not chase rabbits.";
+    if (card.kind === "big_dog") return "Big dog (🐕): alone, removes the highest positive cat, or the most negative cat if none are positive. The dog leaves too. Two or more dogs remove only the dogs.";
+    return "Small dog (🐶): alone, removes the most negative cat, or the lowest positive cat if none are negative. The dog leaves too. Two or more dogs remove only the dogs.";
   }
-  felixTableSlots.innerHTML = "";
-  (view.table_slots || []).forEach((slot) => {
-    const wrap = document.createElement("div");
-    wrap.className = "felix-slot";
-    if (slot.resolution) {
-      wrap.classList.add(`resolution-${slot.resolution}`);
-    }
-    const owner = document.createElement("div");
-    owner.className = "felix-slot-owner";
-    owner.textContent = slot.source === "dummy" ? "Dummy" : felixPlayerName(view, slot.player_id);
-    const card = renderFelixAnimalCard(slot.face_up ? slot.card : null, { static: true });
-    const status = document.createElement("div");
-    status.className = "felix-slot-status";
-    if (slot.resolution === "removed") {
-      status.textContent = "Removed";
-    } else if (slot.resolution === "awarded") {
-      status.textContent = "Awarded";
+
+  function animalCard(card, interactive = false, waiting = false) {
+    const node = element(interactive ? "button" : "div", "felix-card");
+    if (interactive) {
+      node.type = "button";
+      node.dataset.cardId = card.id;
+      node.dataset.felixExplain = `${cardDescription(card)} Select it, then confirm Play card to put it in the sack.`;
+      node.setAttribute("aria-label", cardLabel(card));
     } else {
-      status.textContent = slot.face_up ? "Revealed" : "Hidden";
+      tip(node, waiting ? "Empty slot: this player has not placed an animal yet." : cardDescription(card));
     }
-    wrap.append(owner, card, status);
-    felixTableSlots.appendChild(wrap);
-  });
-}
+    node.classList.add(card ? `kind-${card.kind}` : waiting ? "waiting" : "face-down");
+    node.classList.toggle("negative", card?.kind === "cat" && card.value < 0);
+    node.append(
+      element("span", "felix-card-value", card?.value != null ? signed(card.value) : ""),
+      element("span", "felix-card-emoji", waiting ? "·" : emoji(card)),
+      element("span", "felix-card-label", waiting ? "Waiting" : animalName(card))
+    );
+    return node;
+  }
 
-function renderFelixHand(view) {
-  if (!felixHand) {
-    return;
+  function renderTable() {
+    const container = byId("TableSlots");
+    container.replaceChildren();
+    const players = view?.players || [];
+    const startIndex = Math.max(0, players.findIndex((player) => player.player_id === view?.start_player));
+    const order = [...players.slice(startIndex), ...players.slice(0, startIndex)];
+    const owners = players.length === 3 ? [null, ...order] : order;
+    const slots = view?.table_slots || [];
+    const count = Math.max(owners.length, slots.length);
+    container.style.setProperty("--felix-slots", String(count || 4));
+    text("Revealed", `${slots.filter((slot) => slot.face_up).length}/${count} revealed`);
+    const reward = nextReward();
+    for (let index = 0; index < count; index += 1) {
+      const slot = slots[index];
+      const wrapper = element("div", "felix-slot");
+      if (slot?.resolution) wrapper.classList.add(`resolution-${slot.resolution}`);
+      const mouseCard = view.mouse_cards[index - 1];
+      const position = tip(element("div", "felix-slot-position", index === 0 ? "🎒" : mouseCard ? `🐭 ${mouseCard.mice}` : "Last"),
+        index === 0 ? "Sack (🎒): this animal reveals first when the auction starts." : mouseCard
+          ? `Mouse reward (🐭): ${mouseCard.mice} currently available; refill value ${mouseCard.value}. Pass takes the lowest non-empty reward.`
+          : "The extra animal slot in a three-player game has no mouse reward above it.");
+      position.classList.toggle("next-reward", !!mouseCard && mouseCard === reward);
+      position.classList.toggle("empty-reward", !!mouseCard && !mouseCard.mice);
+      const ownerId = slot ? slot.player_id : owners[index]?.player_id;
+      const dummy = slot ? slot.source === "dummy" : players.length === 3 && index === 0;
+      const ownerName = dummy ? "Dummy" : playerName(ownerId);
+      const owner = tip(element("div", "felix-slot-owner", !dummy && ownerId === view.you ? "You" : ownerName), dummy ? "Dummy: one extra random animal per round in a three-player game." : ownerName);
+      const status = slot?.resolution === "awarded" ? "Kept" : slot?.resolution === "removed" ? "Removed" : slot?.face_up ? "Revealed" : slot ? "Hidden" : "To place";
+      wrapper.append(position, owner, animalCard(slot?.face_up ? slot.card : null, false, !slot), element("div", "felix-slot-status", status));
+      container.appendChild(wrapper);
+    }
+    text("Start", playerName(view?.start_player));
+    tip(byId("Start"), `Opener: ${playerName(view?.start_player)}. The winner of a sold sack opens the next round.`);
+    text("Bank", view?.bank_mice ?? "—");
+    text("Bid", `${view?.current_bid || 0} 🐭`);
+    text("Bidder", view?.current_bidder ? playerName(view.current_bidder) : "No bids yet");
   }
-  felixHand.innerHTML = "";
-  const hand = Array.isArray(view.your_hand) ? view.your_hand : [];
-  if (!hand.length) {
-    const empty = document.createElement("div");
-    empty.className = "hint";
-    empty.textContent = "No cards left.";
-    felixHand.appendChild(empty);
-    return;
+  function renderHand() {
+    const hand = view?.your_hand || [];
+    const signature = JSON.stringify(hand);
+    const hidden = !!view && (!self() || (view.game_over && !hand.length));
+    hide("HandSection", hidden);
+    root.querySelector(".felix-play-area").classList.toggle("no-hand", hidden);
+    text("HandCount", `${hand.length} ${hand.length === 1 ? "card" : "cards"}`);
+    if (signature === handSignature) return;
+    handSignature = signature;
+    const container = byId("Hand");
+    container.replaceChildren();
+    if (!hand.length) {
+      container.appendChild(element("div", "felix-hand-empty", view ? "No cards left." : "Your cards appear when the game starts."));
+      return;
+    }
+    hand.forEach((card) => container.appendChild(animalCard(card, true)));
   }
-  hand.forEach((card) => {
-    const button = renderFelixAnimalCard(card);
-    button.disabled = !felixActionAvailable("choose_card");
-    button.addEventListener("click", () => {
-      if (felixExplainMode || !felixActionAvailable("choose_card")) {
-        return;
+
+  function playerBadge(player) {
+    if (view.game_over) return view.winner?.includes(player.player_id) ? "Winner" : "Finished";
+    if (view.phase === "round_summary") return view.next_ready?.includes(player.player_id) ? "Ready" : "Reviewing";
+    if (player.player_id === view.current_turn) return "Turn";
+    if (player.passed) return "Passed";
+    if (view.phase === "choose_card") return view.table_slots?.some((slot) => slot.player_id === player.player_id) ? "Placed" : "Waiting";
+    return player.player_id === view.current_bidder ? "Leading" : "In auction";
+  }
+
+  function renderPlayers() {
+    const container = byId("Players");
+    const openCollections = new Set(Array.from(container.querySelectorAll("details[open]"), (node) => node.dataset.playerId));
+    container.replaceChildren();
+    text("PlayerCount", `${view?.players?.length || 0} at the table`);
+    (view?.players || []).forEach((player) => {
+      const card = element("div", "felix-player");
+      card.classList.toggle("self", player.player_id === view.you);
+      card.classList.toggle("current", player.player_id === view.current_turn);
+      card.classList.toggle("passed", player.passed);
+      card.style.setProperty("--felix-player-color", colors[player.color] || "#a4b8a6");
+      const heading = element("div", "felix-player-heading");
+      const name = playerName(player.player_id);
+      heading.append(
+        tip(element("strong", "felix-player-name", `${name}${player.player_id === view.you ? " · You" : ""}`), name),
+        element("span", "felix-player-badge", playerBadge(player))
+      );
+      const meta = element("div", "felix-player-meta");
+      meta.append(
+        tip(element("span", "", player.mice_hidden ? "🐭 🔒" : `🐭 ${player.mice ?? 0}`), player.mice_hidden ? "Mice (🐭): this player’s balance is secret until the game ends." : `Mice (🐭): ${player.mice ?? 0} remaining. Each is worth one point at the end.`),
+        tip(element("span", "", `Cards ${player.hand_count ?? 0}`), "Animal cards remaining in this player’s hand."),
+        tip(element("span", "", `Won ${player.won_count ?? 0}`), "Won animals are kept face down. Only their count is public until the final scoring.")
+      );
+      if (player.round_bid) meta.appendChild(tip(element("span", "", `Bid ${player.round_bid} 🐭`), "This player’s latest public bid. It is charged only if they win the sack."));
+      card.append(heading, meta);
+      if (view.game_over && player.won_cards?.length) {
+        const details = element("details", "felix-collection");
+        details.dataset.playerId = player.player_id;
+        details.open = openCollections.has(player.player_id);
+        details.appendChild(element("summary", "", `View ${player.won_cards.length} won cards`));
+        const collection = element("div", "felix-won-row");
+        player.won_cards.forEach((animal) => collection.appendChild(animalCard(animal)));
+        details.appendChild(collection);
+        card.appendChild(details);
       }
-      felixSelectedCardId = card.id;
-      sendAction({ type: "choose_card", card_id: card.id });
+      container.appendChild(card);
     });
-    felixHand.appendChild(button);
-  });
-}
+  }
 
-function renderFelixPlayers(view) {
-  if (!felixPlayers) {
-    return;
-  }
-  felixPlayers.innerHTML = "";
-  (view.players || []).forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "player-card felix-player-card";
-    if (player.player_id === view.you) {
-      card.classList.add("self");
+  function renderNotice() {
+    const summary = view?.last_round_summary;
+    const reviewing = view?.phase === "round_summary";
+    const over = !!view?.game_over;
+    hide("Notice", !reviewing && !over);
+    hide("NextBtn", !reviewing || !self());
+    byId("Notice").classList.toggle("self", !!self() && (over ? view.winner?.includes(view.you) : summary?.winner === view.you));
+    const body = byId("NoticeBody");
+    const ready = byId("Ready");
+    const results = byId("FinalResults");
+    body.replaceChildren();
+    ready.replaceChildren();
+    results.replaceChildren();
+    if (!reviewing && !over) return;
+    text("NoticeTitle", over ? "Final scores" : `Round ${view.round} settled`);
+    if (over) {
+      const winners = (view.winner || []).map(playerName).join(", ");
+      body.appendChild(element("strong", "", winners ? `Winner: ${winners}` : "Game finished"));
+      [...view.players].sort((first, second) => second.final_score - first.final_score || second.final_cat_score - first.final_cat_score).forEach((player) => {
+        const row = element("div", "felix-result-row");
+        row.classList.toggle("self", player.player_id === view.you);
+        row.append(
+          element("span", "", `${playerName(player.player_id)}${player.player_id === view.you ? " · You" : ""}`),
+          element("strong", "", `${player.final_score ?? 0} pts`),
+          element("small", "", `Cats ${signed(player.final_cat_score ?? 0)} + Mice 🐭 ${player.mice ?? 0}`)
+        );
+        results.appendChild(row);
+      });
     }
-    if (player.player_id === view.current_turn) {
-      card.classList.add("current");
+    if (summary?.result === "won") {
+      const score = (summary.won_cards || []).reduce((total, card) => total + (card.kind === "cat" ? card.value : 0), 0);
+      body.appendChild(element("div", "", `${summary.winner === view.you ? "You" : playerName(summary.winner)} paid ${summary.paid} 🐭 · cats ${signed(score)} pts`));
+      const removed = (summary.removed_cards || []).map(cardLabel).join(", ");
+      if (removed) body.appendChild(element("div", "", `Removed: ${removed}`));
+    } else if (summary?.result === "no_sale") {
+      body.appendChild(element("div", "", "No sale. All animals are discarded; rewards will not refill."));
     }
-    if (player.passed) {
-      card.classList.add("passed");
-    }
-    const name = document.createElement("div");
-    name.className = "player-name";
-    name.textContent = player.name || player.player_id || "-";
-    const meta = document.createElement("div");
-    meta.className = "felix-player-meta";
-    const mice = player.mice_hidden ? "Secret" : `${player.mice ?? 0} 🐭`;
-    meta.textContent = `Hand ${player.hand_count ?? 0} · Mice ${mice} · Bid ${player.round_bid || 0} · Won ${player.won_count || 0}`;
-    if (player.passed) {
-      meta.textContent += " · Passed";
-    }
-    if (view.game_over) {
-      meta.textContent += ` · Cats ${player.final_cat_score || 0} · Score ${player.final_score || 0}`;
-    }
-    const won = document.createElement("div");
-    won.className = "felix-won-row";
-    if (Array.isArray(player.won_cards) && player.won_cards.length) {
-      player.won_cards.forEach((wonCard) => won.appendChild(renderFelixAnimalCard(wonCard, { static: true })));
-    } else {
-      won.textContent = view.game_over ? "No won cards." : "Won cards hidden.";
-      won.classList.add("hint");
-    }
-    card.append(name, meta, won);
-    felixPlayers.appendChild(card);
-  });
-}
-
-function renderFelixNotice(view) {
-  if (!felixNotice || !felixNoticeTitle || !felixNoticeBody) {
-    return;
-  }
-  const summary = view.last_round_summary;
-  felixNotice.classList.toggle("hidden", !summary && !view.game_over);
-  if (!summary && !view.game_over) {
-    if (felixFinalResults) {
-      felixFinalResults.innerHTML = "";
-    }
-    return;
-  }
-  felixNoticeTitle.textContent = view.game_over ? "Game Over" : "Round Summary";
-  if (view.game_over) {
-    const winners = Array.isArray(view.winner) ? view.winner : [];
-    felixNoticeBody.textContent = winners.length ? `Winner: ${winners.map((pid) => felixPlayerName(view, pid)).join(", ")}` : "No winner.";
-  } else if (summary.result === "won") {
-    const winner = felixPlayerName(view, summary.winner);
-    const wonLabels = (summary.won_cards || []).map(felixCardLabel).join(", ") || "nothing";
-    const removedLabels = (summary.removed_cards || []).map(felixCardLabel).join(", ") || "nothing";
-    felixNoticeBody.textContent = `${winner} paid ${summary.paid || 0} 🐭 and won ${wonLabels}. Removed: ${removedLabels}.`;
-  } else if (summary.result === "no_sale") {
-    felixNoticeBody.textContent = "Everyone passed. The bag was discarded and mouse cards will not refill.";
-  } else {
-    felixNoticeBody.textContent = summary.result || "-";
-  }
-  if (felixFinalResults) {
-    felixFinalResults.innerHTML = "";
-    if (view.game_over) {
-      (view.players || []).forEach((player) => {
-        const row = document.createElement("div");
-        row.className = "felix-result-row";
-        row.textContent = `${player.name || player.player_id}: cats ${player.final_cat_score || 0}, mice ${player.mice || 0}, score ${player.final_score || 0}`;
-        felixFinalResults.appendChild(row);
+    if (reviewing) {
+      const confirmed = view.next_ready || [];
+      ready.appendChild(element("span", "", `${confirmed.length}/${view.players.length} ready`));
+      view.players.forEach((player) => {
+        const isReady = confirmed.includes(player.player_id);
+        const chip = element("span", "felix-ready-chip", `${player.player_id === view.you ? "You" : playerName(player.player_id)} · ${isReady ? "Ready" : "Reviewing"}`);
+        chip.classList.toggle("ready", isReady);
+        chip.classList.toggle("self", player.player_id === view.you);
+        ready.appendChild(chip);
       });
     }
   }
-}
 
-function updateFelixButtons() {
-  const canBid = felixActionAvailable("bid");
-  const canPass = felixActionAvailable("pass");
-  const canBuy = felixActionAvailable("buy_for_one");
-  const canNext = felixActionAvailable("next_round");
-  if (felixBidInput && currentFelixView) {
-    const minBid = Number(currentFelixView.current_bid || 0) + 1;
-    felixBidInput.min = String(minBid);
-    if (!felixBidInput.value || Number(felixBidInput.value) < minBid) {
-      felixBidInput.value = String(minBid);
+  function actionHint() {
+    if (!view) return "Ready up in Room Controls to start.";
+    if (!connected()) return "Disconnected. Reconnect to continue.";
+    if (pending) return "Sending your action…";
+    if (view.game_over) return "Final scores are in. Open a player’s collection to review their cards.";
+    if (!self()) return view.current_turn ? `Spectating · ${playerName(view.current_turn)} is playing.` : "Spectating · players are reviewing the result.";
+    if (view.phase === "round_summary") return can("next_round") ? "Review the animals, then choose Next Round." : "You are ready. Waiting for everyone to review.";
+    if (can("choose_card")) return selectedCardId ? "Confirm this animal, or cancel to choose another." : "Your turn · choose an animal for the sack.";
+    if (view.phase === "choose_card") return `${playerName(view.current_turn)} is choosing an animal.`;
+    if (can("buy_for_one")) return "Your choice · buy the revealed sack for 1 🐭 or pass.";
+    if (can("pass")) return can("bid") ? "Your turn · raise the bid or take the pass reward." : view.phase === "last_chance" ? "No mice to buy the sack. Pass to finish the round." : "Not enough mice to raise. Pass to take the reward.";
+    if (self().passed) return `You passed. ${playerName(view.current_turn)} is deciding.`;
+    return `${playerName(view.current_turn)} is deciding.`;
+  }
+
+  function updateControls() {
+    const auction = view?.phase === "auction";
+    const lastChance = view?.phase === "last_chance";
+    const minimum = Number(view?.current_bid || 0) + 1;
+    const maximum = Number(self()?.mice || 0);
+    const input = byId("BidInput");
+    const amount = Number(input.value);
+    const valid = input.value !== "" && Number.isInteger(amount) && amount >= minimum && amount <= maximum;
+    input.min = String(minimum);
+    input.max = String(maximum);
+    input.disabled = !can("bid");
+    input.setAttribute("aria-invalid", String(can("bid") && !valid));
+    hide("Auction", !auction && !lastChance);
+    hide("BidEntry", !auction);
+    hide("BidBtn", !auction);
+    hide("BuyOneBtn", !lastChance);
+    byId("BidBtn").disabled = !can("bid") || !valid;
+    byId("BidDownBtn").disabled = !can("bid") || (valid && amount <= minimum);
+    byId("BidUpBtn").disabled = !can("bid") || (valid && amount >= maximum);
+    byId("PassBtn").disabled = !can("pass");
+    byId("BuyOneBtn").disabled = !can("buy_for_one");
+    byId("NextBtn").disabled = !can("next_round");
+    text("BidBtn", valid ? `Bid ${amount} 🐭` : "Bid");
+    text("PassBtn", lastChance ? "Pass" : `Pass · +${nextReward()?.mice || 0} 🐭`);
+    text("NextBtn", view?.next_ready?.includes(view.you) ? "Ready ✓" : "Next Round");
+    text("BidHint", !self() ? "Spectating" : maximum < minimum ? `Need ${minimum} 🐭 to raise · you have ${maximum}` : can("bid") && !valid ? `Enter a whole number from ${minimum} to ${maximum}.` : `Min ${minimum} · your balance ${maximum} 🐭`);
+    byId("BidHint").classList.toggle("invalid", can("bid") && !valid);
+    const selected = view?.your_hand?.find((card) => card.id === selectedCardId);
+    hide("Selection", !selected);
+    root.querySelector(".felix-hand-stage").classList.toggle("has-selection", !!selected);
+    byId("Hand").inert = !!selected;
+    byId("PlayBtn").disabled = !can("choose_card") || !selected;
+    byId("CancelBtn").disabled = pending;
+    if (selected) text("SelectedLabel", cardLabel(selected));
+    byId("Hand").querySelectorAll("button").forEach((button) => {
+      const isSelected = button.dataset.cardId === selectedCardId;
+      button.disabled = !can("choose_card");
+      button.classList.toggle("selected", isSelected);
+      button.setAttribute("aria-pressed", String(isSelected));
+    });
+    text("HandHint", can("choose_card") ? "Choose a card, then confirm it here." : view?.phase === "choose_card" ? "Waiting for your turn to place an animal." : view?.game_over ? "All nine rounds are complete." : "Your remaining animals for future rounds.");
+    text("ActionHint", actionHint());
+    const needsAction = active() && connected() && !pending && !!view?.legal_actions?.length;
+    byId("ActionHint").classList.toggle("your-turn", needsAction);
+    document.body.classList.toggle("felix-needs-action", needsAction);
+    root.querySelectorAll("[data-felix-explain], [data-felix-tip]").forEach((node) => node.classList.toggle("has-explanation", explaining));
+  }
+
+  function render() {
+    text("Round", view ? `${view.round}/9` : "—");
+    text("Phase", ({ choose_card: "Place animals", auction: "Auction", last_chance: "Last chance", round_summary: "Review", game_over: "Game over" })[view?.phase] || "Waiting to start");
+    text("Balance", self() ? `🐭 ${self().mice}` : view ? "Spectating" : "🐭 —");
+    renderTable();
+    renderHand();
+    renderPlayers();
+    renderNotice();
+    updateControls();
+  }
+  function clearSelection(restoreFocus = false) {
+    if (pending) return;
+    const selected = Array.from(byId("Hand").querySelectorAll("button")).find((button) => button.dataset.cardId === selectedCardId);
+    selectedCardId = null;
+    updateControls();
+    if (restoreFocus && selected && !selected.disabled) selected.focus({ preventScroll: true });
+  }
+
+  function submit(action) {
+    if (!can(action.type) || explaining) return;
+    if (action.type === "bid" && byId("BidBtn").disabled) return;
+    if (action.type === "choose_card" && !view.your_hand.some((card) => card.id === action.card_id)) return;
+    pending = true;
+    hideTip();
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(releasePending, 6000);
+    updateControls();
+    sendAction(action);
+  }
+
+  function releasePending() {
+    pending = false;
+    clearTimeout(pendingTimer);
+    updateControls();
+  }
+
+  function hideTip() {
+    clearTimeout(tooltipTimer);
+    const tooltip = byId("Tooltip");
+    if (tooltip.matches(":popover-open")) tooltip.hidePopover();
+    tooltip.classList.add("hidden");
+  }
+
+  function showTip(target) {
+    if (!target || explaining || !active() || target.closest("button, input, summary") || byId("HelpModal").open || byId("ExplainModal").open) return;
+    hideTip();
+    const tooltip = byId("Tooltip");
+    tooltip.textContent = target.dataset.felixTip;
+    tooltip.classList.remove("hidden");
+    tooltip.showPopover?.();
+    const anchor = target.getBoundingClientRect();
+    const bounds = tooltip.getBoundingClientRect();
+    tooltip.style.left = `${Math.max(12, Math.min(anchor.left, innerWidth - bounds.width - 12))}px`;
+    tooltip.style.top = `${Math.max(12, Math.min(anchor.top > bounds.height + 18 ? anchor.top - bounds.height - 6 : anchor.bottom + 6, innerHeight - bounds.height - 12))}px`;
+    tooltipTimer = setTimeout(hideTip, 3000);
+  }
+
+  function setExplain(value) {
+    explaining = value;
+    hideTip();
+    byId("ExplainBtn").setAttribute("aria-pressed", String(value));
+    updateControls();
+  }
+
+  function openModal(suffix) {
+    hideTip();
+    const modal = byId(suffix);
+    if (!modal.open) modal.showModal();
+    modal.querySelector("button").focus({ preventScroll: true });
+  }
+
+  function showExplanation(target) {
+    if (!target || !root.contains(target)) return;
+    const description = target.dataset.felixExplain || target.dataset.felixTip;
+    if (!description) return;
+    text("ExplainContent", description);
+    setExplain(false);
+    openModal("ExplainModal");
+  }
+
+  function explanationAt(clientX, clientY) {
+    const target = document.elementFromPoint(clientX, clientY)?.closest("[data-felix-explain], [data-felix-tip]");
+    return target && root.contains(target) ? target : null;
+  }
+
+  function reset() {
+    view = null;
+    selectedCardId = null;
+    pending = false;
+    gesture = null;
+    handSignature = null;
+    clearTimeout(pendingTimer);
+    setExplain(false);
+    byId("HelpModal").close();
+    byId("ExplainModal").close();
+    byId("BidInput").value = "";
+    render();
+  }
+
+  window.renderFelixGameState = (data) => {
+    if (!data?.view || currentGameType !== "felix") return;
+    if (data.room_id && currentRoomState?.room_id !== data.room_id) return;
+    const incoming = data.view;
+    const changedTurn = !view || view.round !== incoming.round || view.phase !== incoming.phase || view.current_turn !== incoming.current_turn || view.you !== incoming.you;
+    const changedBid = view?.current_bid !== incoming.current_bid;
+    if (changedTurn) selectedCardId = null;
+    view = incoming;
+    pending = false;
+    clearTimeout(pendingTimer);
+    if (!view.your_hand?.some((card) => card.id === selectedCardId)) selectedCardId = null;
+    if (changedTurn || changedBid) byId("BidInput").value = String(Number(view.current_bid || 0) + 1);
+    hideTip();
+    render();
+    logGameEvents(data);
+  };
+
+  window.showFelixHeaderActions = (show) => {
+    byId("HeaderActions").style.display = show ? "flex" : "none";
+    if (!show) reset();
+    else updateControls();
+  };
+
+  Object.entries(explanations).forEach(([suffix, content]) => { byId(suffix).dataset.felixExplain = content; });
+  byId("HelpContent").innerHTML = help;
+  byId("Hand").addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-card-id]");
+    if (!button || explaining || !can("choose_card")) return;
+    selectedCardId = button.dataset.cardId;
+    hideTip();
+    updateControls();
+    byId("PlayBtn").focus({ preventScroll: true });
+  });
+  byId("PlayBtn").addEventListener("click", () => submit({ type: "choose_card", card_id: selectedCardId }));
+  byId("CancelBtn").addEventListener("click", () => clearSelection(true));
+  byId("BidInput").addEventListener("input", updateControls);
+  byId("BidBtn").addEventListener("click", () => submit({ type: "bid", amount: Number(byId("BidInput").value) }));
+  byId("PassBtn").addEventListener("click", () => submit({ type: "pass" }));
+  byId("BuyOneBtn").addEventListener("click", () => submit({ type: "buy_for_one" }));
+  byId("NextBtn").addEventListener("click", () => submit({ type: "next_round" }));
+  [["BidDownBtn", -1], ["BidUpBtn", 1]].forEach(([suffix, delta]) => {
+    byId(suffix).addEventListener("click", () => {
+      if (!can("bid") || explaining) return;
+      const minimum = Number(view.current_bid) + 1;
+      const amount = Number(byId("BidInput").value);
+      byId("BidInput").value = String(Math.max(minimum, Math.min(Number(self().mice), (Number.isInteger(amount) ? amount : minimum) + delta)));
+      updateControls();
+    });
+  });
+  byId("HelpBtn").addEventListener("click", () => { setExplain(false); openModal("HelpModal"); });
+  byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
+  ["Help", "Explain"].forEach((kind) => {
+    const modal = byId(`${kind}Modal`);
+    byId(`${kind}CloseBtn`).addEventListener("click", () => modal.close());
+    modal.addEventListener("click", (event) => {
+      const bounds = modal.getBoundingClientRect();
+      if (event.target === modal && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) modal.close();
+    });
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!active()) return;
+    suppressClickUntil = 0;
+    gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, down: true, target: explanationAt(event.clientX, event.clientY) };
+    hideTip();
+  }, true);
+  document.addEventListener("pointermove", (event) => {
+    if (gesture?.down && gesture.pointerId === event.pointerId && Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > 8) gesture.moved = true;
+  }, { passive: true });
+  document.addEventListener("pointercancel", () => {
+    if (gesture) { gesture.moved = true; gesture.down = false; suppressClickUntil = Date.now() + 500; }
+  }, { passive: true });
+  document.addEventListener("pointerup", (event) => {
+    if (!active() || !gesture || gesture.pointerId !== event.pointerId) return;
+    gesture.down = false;
+    if (gesture.moved) { suppressClickUntil = Date.now() + 500; return; }
+    const target = explanationAt(event.clientX, event.clientY);
+    if (explaining && target && target === gesture.target) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      suppressClickUntil = Date.now() + 500;
+      showExplanation(target);
     }
-    felixBidInput.disabled = !canBid;
-  }
-  if (felixBidBtn) {
-    felixBidBtn.disabled = !canBid;
-    felixBidBtn.classList.toggle("action-allowed", canBid);
-  }
-  if (felixPassBtn) {
-    felixPassBtn.disabled = !canPass;
-    felixPassBtn.classList.toggle("action-allowed", canPass);
-  }
-  if (felixBuyOneBtn) {
-    felixBuyOneBtn.disabled = !canBuy;
-    felixBuyOneBtn.classList.toggle("action-allowed", canBuy);
-  }
-  if (felixNextBtn) {
-    felixNextBtn.disabled = !canNext;
-    felixNextBtn.classList.toggle("action-allowed", canNext);
-  }
-}
-
-function renderFelixGameState(data) {
-  const view = data.view;
-  currentFelixView = view;
-  if (currentGameType !== "felix") {
-    currentGameType = "felix";
-    setGamePanelVisibility("felix");
-  }
-  if (felixRoundLabel) {
-    felixRoundLabel.textContent = view.round ?? "-";
-  }
-  if (felixPhaseLabel) {
-    felixPhaseLabel.textContent = view.phase || "-";
-  }
-  if (felixTurnLabel) {
-    felixTurnLabel.textContent = felixPlayerName(view, view.current_turn);
-  }
-  if (felixStartLabel) {
-    felixStartLabel.textContent = felixPlayerName(view, view.start_player);
-  }
-  if (felixBidLabel) {
-    felixBidLabel.textContent = view.current_bid ?? 0;
-  }
-  if (felixBidderLabel) {
-    felixBidderLabel.textContent = felixPlayerName(view, view.current_bidder);
-  }
-  if (felixBankLabel) {
-    felixBankLabel.textContent = view.bank_mice ?? 0;
-  }
-  renderFelixNotice(view);
-  renderFelixMouseCards(view);
-  renderFelixTable(view);
-  renderFelixHand(view);
-  renderFelixPlayers(view);
-  updateFelixButtons();
-  logGameEvents(data);
-}
-
-if (felixBidBtn) {
-  felixBidBtn.addEventListener("click", () => {
-    const amount = Number(felixBidInput ? felixBidInput.value : 0);
-    if (!Number.isInteger(amount) || amount < 1) {
+  }, true);
+  document.addEventListener("click", (event) => {
+    if (!active()) return;
+    if (Date.now() < suppressClickUntil && root.contains(event.target)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       return;
     }
-    sendAction({ type: "bid", amount });
-  });
-}
-
-if (felixPassBtn) {
-  felixPassBtn.addEventListener("click", () => {
-    sendAction({ type: "pass" });
-  });
-}
-
-if (felixBuyOneBtn) {
-  felixBuyOneBtn.addEventListener("click", () => {
-    sendAction({ type: "buy_for_one" });
-  });
-}
-
-if (felixNextBtn) {
-  felixNextBtn.addEventListener("click", () => {
-    sendAction({ type: "next_round" });
-  });
-}
-
-if (felixHelpBtn) {
-  felixHelpBtn.addEventListener("click", () => {
-    if (felixHelpContent) {
-      felixHelpContent.innerHTML = FELIX_HELP_HTML;
+    if (!explaining || event.target.closest("#felixHelpBtn, #felixExplainBtn, #felixHelpModal, #felixExplainModal")) return;
+    if (event.target.closest("button, input, select, summary, a, [data-felix-tip]")) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showExplanation(event.target.closest("[data-felix-explain], [data-felix-tip]"));
     }
-    openFelixModal(felixHelpModal);
+  }, true);
+  root.addEventListener("click", (event) => {
+    if (explaining) return;
+    const target = event.target.closest("[data-felix-tip]");
+    if (target) showTip(target);
+    else if (!event.target.closest("button, input, summary, a")) clearSelection();
   });
-}
-
-if (felixHelpCloseBtn) {
-  felixHelpCloseBtn.addEventListener("click", () => closeFelixModal(felixHelpModal));
-}
-
-if (felixExplainBtn) {
-  felixExplainBtn.addEventListener("click", () => {
-    if (felixExplainMode) {
-      exitFelixExplainMode();
-    } else {
-      enterFelixExplainMode();
+  root.addEventListener("pointerover", (event) => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-felix-tip]")); });
+  root.addEventListener("pointerout", (event) => { if (event.pointerType === "mouse") hideTip(); });
+  root.addEventListener("focusin", (event) => showTip(event.target.closest("[data-felix-tip]")));
+  root.addEventListener("focusout", hideTip);
+  document.addEventListener("scroll", () => { if (gesture?.down) gesture.moved = true; hideTip(); }, { capture: true, passive: true });
+  window.addEventListener("resize", hideTip);
+  document.addEventListener("keydown", (event) => {
+    if (!active()) return;
+    if (event.key === "Escape") {
+      setExplain(false);
+      byId("HelpModal").close();
+      byId("ExplainModal").close();
+      clearSelection(true);
+    } else if (explaining && root.contains(event.target) && event.key !== "Tab") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (["Enter", " "].includes(event.key)) showExplanation(event.target.closest("[data-felix-explain], [data-felix-tip]"));
     }
-  });
-}
+  }, true);
 
-if (felixExplainCloseBtn) {
-  felixExplainCloseBtn.addEventListener("click", () => closeFelixModal(felixExplainModal));
-}
-
-document.addEventListener(
-  "click",
-  (event) => {
-    if (!felixExplainMode) {
-      return;
-    }
-    const button = event.target.closest("button");
-    if (!button || !button.closest("#felixPanel")) {
-      return;
-    }
-    if (button === felixHelpBtn || button === felixExplainBtn) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const explanation = FELIX_BUTTON_EXPLANATIONS[button.id];
-    if (explanation) {
-      showFelixExplanation(explanation);
-      exitFelixExplainMode();
-    }
-  },
-  true
-);
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    exitFelixExplainMode();
-    closeFelixModal(felixHelpModal);
-    closeFelixModal(felixExplainModal);
+  function syncRoom(state) {
+    const changedRoom = activeRoomId !== state?.room_id;
+    activeRoomId = state?.room_id || null;
+    const wasSelected = selectedRoom;
+    selectedRoom = state?.game_type === "felix";
+    if (selectedRoom ? changedRoom || state?.status === "lobby" : wasSelected) reset();
   }
-});
 
+  function initialize() {
+    socket.on("room:state", syncRoom);
+    socket.on("system:error", releasePending);
+    socket.on("disconnect", () => { hideTip(); releasePending(); });
+    socket.on("connect", updateControls);
+    syncRoom(currentRoomState);
+    if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "felix") window.renderFelixGameState(lastGameStatePayload);
+  }
+  render();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
+  else initialize();
+})();

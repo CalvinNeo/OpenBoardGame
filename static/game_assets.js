@@ -511,12 +511,14 @@ const GAME_ASSETS = {
   },
   "six_nimmt": {
     "scripts": [
-      "/static/games/six_nimmt.js?v=app_v4"
+      "/static/games/six_nimmt.js?v=app_v5"
     ],
     "styles": [],
     "panel": "sixNimmtPanel",
-    "markup": "/static/games/six_nimmt.html?v=1",
-    "styleFragments": "/static/games/six_nimmt.css?v=1"
+    "panelTitle": "6 nimmt! · 谁是牛头王",
+    "header": "showSixNimmtHeaderActions",
+    "markup": "/static/games/six_nimmt.html?v=2",
+    "styleFragments": "/static/games/six_nimmt.css?v=2"
   },
   "skull": {
     "scripts": [

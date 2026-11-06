@@ -557,8 +557,6 @@ def _teammate_response_intent_probability(
     cache = state.setdefault("_ai_eval_cache", {}).setdefault("teammate_response_intent", {})
     if key in cache:
         return cache[key]
-    if _deadline_expired():
-        return 0.0
     urgent = any(
         _team_of(state, opponent) != _team_of(state, player_id)
         and not state["players"][opponent].get("finished")
@@ -566,34 +564,46 @@ def _teammate_response_intent_probability(
         for opponent in state.get("turn_order", [])
     )
     ways = math.comb(len(available), draws)
+    support = None
+    if combo.get("type") == "single":
+        support = _teammate_single_response_probability(state, player_id, _combo_numeric_value(combo))
+        if support <= 0.0:
+            cache[key] = 0.0
+            return 0.0
     if ways <= 16:
         samples = itertools.combinations(available, draws)
         sample_count = ways
     else:
         seed = hashlib.blake2b(repr((key, "teammate_intent_v1")).encode(), digest_size=8).digest()
         rng = random.Random(int.from_bytes(seed, "big"))
-        samples = (rng.sample(available, draws) for _ in range(16))
+        if support is not None and not any(
+            _single_order_value(card, state["level_rank"]) > _combo_numeric_value(combo) for card in locked
+        ):
+            hits = [card for card in available
+                    if _single_order_value(card, state["level_rank"]) > _combo_numeric_value(combo)]
+            misses = [card for card in available if card not in hits]
+            sizes = list(range(max(1, draws - len(misses)), min(draws, len(hits)) + 1))
+            weights = [math.comb(len(hits), size) * math.comb(len(misses), draws - size) for size in sizes]
+            samples = [rng.sample(hits, size) + rng.sample(misses, draws - size)
+                       for size in rng.choices(sizes, weights, k=16)]
+        else:
+            samples = (rng.sample(available, draws) for _ in range(16))
         sample_count = 16
     total = 0.0
     for sampled in samples:
-        if _deadline_expired():
-            return 0.0
         total += _teammate_hand_reply_willingness(
             locked + list(sampled), state["level_rank"], combo, state.get("config", {}), urgent,
         )
     probability = total / sample_count if sample_count else 0.0
-    if combo.get("type") == "single":
-        probability = min(probability, _teammate_single_response_probability(
-            state, player_id, _combo_numeric_value(combo),
-        ))
+    if support is not None:
+        probability = min(support, probability * support if ways > 16 else probability)
         observation = _latest_public_single_pass_observation(state, teammate)
         if (not urgent and observation and observation.get("hand_count") == hand_count
                 and observation.get("value", 0) <= _combo_numeric_value(combo)
                 and observation.get("leader_id") in state.get("player_teams", {})
                 and _team_of(state, observation["leader_id"]) != _team_of(state, player_id)):
             probability *= 0.5
-    if not _deadline_expired():
-        cache[key] = probability
+    cache[key] = probability
     return probability
 
 
@@ -10609,7 +10619,7 @@ def _teammate_can_retake_current_lane(
     if not teammate_hand:
         return False
     if not getattr(_CORE_LOCAL, "legacy_heuristics", False):
-        return _teammate_response_intent_probability(state, player_id, current_combo) >= 0.8
+        return _teammate_response_intent_probability(state, player_id, current_combo) >= 0.95
     if not state.get("_ai_sampled_world"):
         if not _teammate_response_window_open(state, player_id):
             return False
@@ -10647,7 +10657,19 @@ def _teammate_lane_deference_penalty(
     leader = current_trick.get("player_id")
     if leader is None or _team_of(state, leader) == _team_of(state, player_id):
         return 0.0
-    if not _teammate_can_retake_current_lane(state, player_id):
+    legacy = getattr(_CORE_LOCAL, "legacy_heuristics", False)
+    if legacy:
+        probability = float(_teammate_can_retake_current_lane(state, player_id))
+    else:
+        teammate = _teammate_of(state, player_id)
+        previous = (state.get("trick_plays") or {}).get(teammate)
+        if not isinstance(previous, list) or not previous:
+            return 0.0
+        previous_combo = _evaluate_combo(previous, state["level_rank"], state.get("config", {}))
+        if not previous_combo or previous_combo.get("type") != current_trick.get("combo", {}).get("type"):
+            return 0.0
+        probability = _teammate_response_intent_probability(state, player_id)
+    if probability <= 0.0:
         return 0.0
 
     current_combo = current_trick.get("combo") or {}
@@ -10694,7 +10716,7 @@ def _teammate_lane_deference_penalty(
         penalty -= 2.0
     if teammate_left <= 3:
         penalty -= 2.5
-    return max(0.0, penalty)
+    return max(0.0, penalty) * probability
 
 
 def _bomb_overcall_teammate_lane_penalty(
@@ -10707,7 +10729,19 @@ def _bomb_overcall_teammate_lane_penalty(
     if not current_trick or combo.get("type") not in BOMB_TYPES:
         return 0.0
 
-    if not _teammate_can_retake_current_lane(state, player_id):
+    legacy = getattr(_CORE_LOCAL, "legacy_heuristics", False)
+    if legacy:
+        probability = float(_teammate_can_retake_current_lane(state, player_id))
+    else:
+        teammate = _teammate_of(state, player_id)
+        previous = (state.get("trick_plays") or {}).get(teammate)
+        if not isinstance(previous, list) or not previous:
+            return 0.0
+        previous_combo = _evaluate_combo(previous, state["level_rank"], state.get("config", {}))
+        if not previous_combo or previous_combo.get("type") != current_trick.get("combo", {}).get("type"):
+            return 0.0
+        probability = _teammate_response_intent_probability(state, player_id)
+    if probability <= 0.0:
         return 0.0
 
     current_combo = current_trick.get("combo") or {}
@@ -10741,7 +10775,7 @@ def _bomb_overcall_teammate_lane_penalty(
     penalty += min(5.0, response_cost * 0.22)
     if _find_bomb_candidates(_remove_cards(hand, cards), state["level_rank"]):
         penalty -= 2.0
-    return max(0.0, penalty)
+    return max(0.0, penalty) * probability
 
 
 _HAND_DECOMP_CACHE: Dict[Tuple[int, Tuple[str, ...]], Dict[str, float]] = {}

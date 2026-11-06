@@ -14,6 +14,7 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "six_nimmt": "https://boardgamegeek.com/boardgame/432/6-nimmt",
     "pokemon_adventure": "https://boardgamegeek.com/boardgame/39534/paper-safari",
     "chromino": "https://boardgamegeek.com/boardgame/13328/chromino",
     "patchwork": "https://boardgamegeek.com/boardgame/163412/patchwork",

@@ -3560,34 +3560,6 @@ button.splendor-card {
     min-width: calc(50% - 6px);
   }
 
-  .felix-topbar,
-  .felix-table {
-    grid-template-columns: 1fr;
-  }
-
-  .felix-slot {
-    width: 96px;
-  }
-
-  .felix-card {
-    width: 78px;
-    min-height: 84px;
-  }
-
-  .felix-bid-controls {
-    display: grid;
-    grid-template-columns: auto minmax(70px, 1fr) 1fr 1fr;
-  }
-
-  .felix-bid-controls input {
-    width: 100%;
-  }
-
-  .felix-bid-controls #felixBuyOneBtn,
-  .felix-bid-controls #felixNextBtn {
-    grid-column: span 2;
-  }
-
   .fang-niao-row {
     padding: 6px;
   }

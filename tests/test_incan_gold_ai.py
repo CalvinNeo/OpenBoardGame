@@ -3,8 +3,8 @@ import random
 import unittest
 from unittest.mock import patch
 
-from game.incan_gold import HAZARD_TYPES, IncanGoldGame as Game
-from game.incan_gold_ai import _leave_distribution
+from game.incan_gold import HAZARD_TYPES, TREASURE_VALUES, IncanGoldGame as Game
+from game.incan_gold_ai import _position, _rollout, _utility
 
 
 def make_state(count=3):
@@ -144,8 +144,94 @@ class IncanGoldAiTests(unittest.TestCase):
         state["game_over"] = True
         self.assertIsNone(Game.bot_move(state, "p0"))
 
-    def test_opponent_distribution_covers_all_simultaneous_outcomes(self):
-        self.assertEqual(_leave_distribution([0.25, 0.5]), [0.375, 0.5, 0.125])
+    def test_final_round_banks_a_guaranteed_win_without_more_exploring(self):
+        state = make_state()
+        state["current_round"] = 5
+        for player_id in ["p1", "p2"]:
+            state["players"][player_id].update(status="in_camp", banked_gems=20)
+        state["players"]["p0"]["hand_gems"] = 25
+        self.assertEqual(Game.bot_move(state, "p0")["choice"], "leave")
+
+    def test_final_round_loser_keeps_exploring(self):
+        state = make_state()
+        state["current_round"] = 5
+        state["path_cards"] = [{"type": "hazard", "hazard": "snake"}]
+        state["hazard_counts"] = {"snake": 1}
+        for player_id in ["p1", "p2"]:
+            state["players"][player_id].update(status="in_camp", banked_gems=30)
+        state["players"]["p0"]["hand_gems"] = 20
+        self.assertEqual(Game.bot_move(state, "p0")["choice"], "continue")
+
+    def test_final_round_artifact_tiebreak_can_lock_victory(self):
+        state = make_state()
+        state["current_round"] = 5
+        state["path_cards"] = [{"type": "artifact", "value": 10}]
+        for player_id in ["p1", "p2"]:
+            state["players"][player_id].update(status="in_camp", banked_gems=20)
+        state["players"]["p0"]["hand_gems"] = 10
+        self.assertEqual(Game.bot_move(state, "p0")["choice"], "leave")
+
+    def test_only_returner_claims_artifact_even_when_others_still_explore(self):
+        state = make_state()
+        state["deck"] = [{"type": "hazard", "hazard": "snake"}]
+        state["hazard_counts"] = {"snake": 1}
+        state["path_cards"] = [{"type": "artifact", "value": 5}, {"type": "hazard", "hazard": "snake"}]
+        for player_id in ["p0", "p1", "p2"]:
+            choice = "leave" if player_id == "p0" else "continue"
+            self.assertIsNone(Game.apply_action(state, player_id, {"type": "decide", "choice": choice})[1])
+        self.assertEqual(state["round_end_reason"], "hazard")
+        self.assertEqual(state["players"]["p0"]["artifact_points"], 5)
+        self.assertEqual(state["players"]["p1"]["artifact_points"], 0)
+
+    def test_last_explorer_returns_before_any_new_card_is_drawn(self):
+        state = make_state()
+        state["players"]["p1"]["status"] = "in_camp"
+        state["players"]["p2"]["status"] = "in_camp"
+        remaining = copy.deepcopy(state["deck"])
+        self.assertIsNone(Game.apply_action(state, "p0", {"type": "decide", "choice": "leave"})[1])
+        self.assertEqual(state["deck"], remaining)
+        self.assertEqual(state["players"]["p0"]["artifact_points"], 5)
+        self.assertEqual(state["round_end_reason"], "all_left")
+
+    def test_rollout_matches_real_resolution_for_simultaneous_returns(self):
+        for choices in [("leave", "continue", "continue"), ("leave", "leave", "continue"),
+                        ("continue", "leave", "leave"), ("continue", "continue", "continue")]:
+            for next_card in [{"type": "hazard", "hazard": "snake"}, {"type": "treasure", "value": 9}]:
+                with self.subTest(choices=choices, card=next_card):
+                    state = make_state()
+                    state["players"]["p0"]["hand_gems"] = 7
+                    state["path_cards"].extend([
+                        {"type": "hazard", "hazard": "snake"},
+                        {"type": "treasure", "value": 5, "remainder": 2},
+                        {"type": "treasure", "value": 4, "remainder": 1},
+                    ])
+                    state["hazard_counts"] = {"snake": 1}
+                    state["deck"] = [next_card]
+                    position = _position(Game.get_public_view(state, "p0"), TREASURE_VALUES, HAZARD_TYPES)
+                    deck = [-1 if next_card["type"] == "hazard" else 9]
+                    probabilities = {index: float(choice == "leave") for index, choice in enumerate(choices)}
+                    with patch("game.incan_gold_ai._probabilities", return_value=probabilities):
+                        predicted = _rollout(position, deck, [[0.5] * 3], [1.0] * 3, choices[0] == "leave")
+                    for player_id, choice in zip(state["turn_order"], choices):
+                        self.assertIsNone(Game.apply_action(state, player_id, {"type": "decide", "choice": choice})[1])
+                    scores = [player["banked_gems"] + player["artifact_points"] for player in state["players"].values()]
+                    artifacts = [player["artifact_count"] for player in state["players"].values()]
+                    self.assertAlmostEqual(predicted, _utility(scores, artifacts, 0, 4))
+
+    def test_rollout_recalculates_treasure_share_after_opponents_return(self):
+        state = make_state()
+        state["path_cards"] = []
+        position = _position(Game.get_public_view(state, "p0"), TREASURE_VALUES, HAZARD_TYPES)
+        with patch("game.incan_gold_ai._probabilities", return_value={0: 0.0, 1: 1.0, 2: 1.0}):
+            predicted = _rollout(position, [17], [[0.5] * 3], [1.0] * 3, False)
+        self.assertAlmostEqual(predicted, _utility([17, 0, 0], [0, 0, 0], 0, 4))
+
+    def test_search_is_repeatable_and_does_not_consume_global_random(self):
+        state = make_state()
+        before = random.getstate()
+        expected = Game.bot_move(state, "p0")
+        self.assertEqual(Game.bot_move(state, "p0"), expected)
+        self.assertEqual(random.getstate(), before)
 
     def test_round_waits_for_every_player_and_rejects_duplicate_confirmation(self):
         state = make_state()

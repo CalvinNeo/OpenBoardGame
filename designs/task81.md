@@ -714,3 +714,36 @@ resolve_dogs(table_cards):
 
 说明：这里用 `slot_index` 作为同值目标的稳定决胜。实际数据结构中如果没有 `slot_index`，可以在桌面槽位对象上取位置。
 
+## 2026-11-06：按 DEV_GUIDE 优化界面与交互
+
+本次只调整 Felix 前端及其资源接入，不更改 `game/felix.py` 的规则、出牌顺序、隐藏信息、机器人或结算逻辑。
+
+### 界面与操作
+
+- 主体直接放在 Game 面板内，以游戏名替换公共标题；Help 与 Reconnect 同行，Explain 继续由 Room Control 自动停靠。移动端压缩长标题，不额外嵌套游戏外框。
+- 桌面并排显示袋中动物与手牌，手机改为单列；牌位与对应老鼠补偿上下对齐。3 人局保留 Dummy 与无老鼠奖励的额外牌位，3–5 人布局都使用等宽自适应列。
+- 动物以兼容性较好的 Emoji 和自制 CSS 区分：正负猫、兔子、大小狗、暗牌及空位。分数、动物图案与类型各占不同位置；结算时直接标记 Kept / Removed。
+- 手牌点击只选择，确认区覆盖整个手牌区域，避免小卡片塞不下操作；Play card 才提交，Cancel、Esc 和空白处取消。仅剩一张牌时也保留足够确认空间；状态同步不重建未变化的手牌、不跳回页面顶部。
+- 竞价增加加减按钮、余额上限和整数校验，显示实际可领取的 Pass 补偿；普通竞价、1 鼠购买与 Next Round 按阶段出现。请求等待期间锁定操作，错误或断线时恢复状态，重连后重新同步。
+- 短状态栏显示当前行动者、选牌/拍卖进度与观战状态；玩家卡显示 Placed / Turn / Leading / Passed / Reviewing / Ready。轮到本人时停靠的 RC 使用红边提醒。
+- 每轮结果保留揭牌状态，显示支付、猫分与移除的动物，并列出所有玩家的确认进度；保留服务器的全员 Next Round 门槛，不增加第二次确认。最终排名按总分、猫分排序，收藏牌默认折叠且限定滚动高度。
+- Help 收纳规则和图标释义；Explain 以捕获阶段拦截操作，支持禁用控件与卡牌，未提供解释的按钮不会执行原功能。原生 dialog 支持 Esc、关闭按钮、焦点限制与背景关闭。
+- 非交互图标支持鼠标悬停、键盘焦点及手机轻点提示，3 秒自动消失，连续点选替换内容；功能按钮不弹普通提示。记录移动距离、滚动与 pointercancel，滑动不选牌、不打开 Explain。
+
+### 文件与资源
+
+- `static/games/felix.html`、`static/games/felix.css`、`static/games/felix.js`：界面、响应式样式与交互；脚本采用私有作用域，只导出带 Felix 名称的公共入口。
+- `static/game_assets.js`、`static/index.html`：注册独立标题、空的头部按钮容器，并更新 Felix 资源及加载器版本。
+- `static/style.css`：删除遗留的 Felix 固定宽度手机规则，避免后置公共 CSS 覆盖按需加载的自适应卡片；公共样式版本同步更新。原有 `obg-game-felix-1` 占位组保留，游戏规则集中在独立片段内。
+- `scripts/bgg_weight_scrape.py`：补入 BGG 游戏页 `https://boardgamegeek.com/boardgame/32125/felix-the-cat-in-the-sack`；实际抓取 `averageweight=1.4017`，两位小数为 **1.40**，与 `static/room.js` 现值一致，故不人为改动权重。
+- `tests/felix.browser.cjs`：新增确定性状态截图、交互与真实 Socket.IO 对局回归。本节即本次文档记录，没有新增独立任务文档。
+
+### 验收
+
+- Chromium / Chrome：320、390、1024、1440px，覆盖 3–5 人选牌、竞价、等待、观战、余额不足、1 鼠购买、无人购买、轮末确认、长中英文名字与最终收藏；检查页面横向溢出、卡片容器和主要分区重叠、头部按钮换行，并人工查看截图。
+- 验证原地确认与取消、仅剩一张手牌、重复提交锁定、竞价边界、有效与禁用控件 Explain、无说明按钮拦截、Esc、RC 展开/停靠、3 秒提示、触摸滑动和滑动后的真正轻点。
+- 三个独立浏览器会话完成真实九轮游戏：正常竞价、全员不出价、无人购买与 1 鼠购买；确认两名玩家 Ready 后不提前开局；刷新已确认玩家页面后仍保持 Ready，最终三人计分正确显示。
+- 通过 `node --check static/games/felix.js`、`node --check tests/felix.browser.cjs`、`python3 -m unittest tests.test_frontend_style_assets`、`node tests/felix.browser.cjs`、`node tests/game_assets.browser.cjs` 与修改文件的 `git diff --check`。浏览器测试使用本地服务与 `PLAYWRIGHT_MODULE` 指定已有 Playwright 安装，截图保存在 `tmp/felix-ui/`。
+- 权重核对运行 `python3 scripts/bgg_weight_scrape.py --timeout 5 --out tmp/felix-ui/bgg-weights.json`，Felix 返回 1.4017。UI 改动不运行无关游戏逻辑测试。
+- 尚未检查：iOS Safari / Windows 真机、真实高延迟网络。允许的覆盖仅限 DEV_GUIDE 规定的 RC 停靠层、提示/对话框及手牌原地确认蒙层；其余游戏分区不重叠。
+
