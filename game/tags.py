@@ -38,6 +38,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "colt_express": ("ameritrash", "bluffing"),
     "dnd_starter_set": ("ameritrash", "cooperative", "creative"),
     "the_mind": ("filler", "cooperative"),
+    "word_sync": ("filler", "creative"),
     "moshimo_yusha": ("filler", "bluffing"),
     "night_of_the_ninja": ("filler", "bluffing"),
     "exploding_kittens": ("filler", "push_your_luck", "bluffing"),

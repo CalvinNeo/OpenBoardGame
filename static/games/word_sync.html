@@ -1,0 +1,52 @@
+<template data-game-target="wordSyncHeaderActions" data-game-mode="contents">
+  <button id="wordSyncHelpBtn" type="button">Help</button>
+  <button id="wordSyncExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="wordSyncPanel" data-game-mode="contents">
+  <div id="wordSyncWaiting" class="ws-waiting">
+    <span class="ws-eyebrow">TWO MINDS. ONE WORD.</span>
+    <h3>Find your shared wavelength.</h3>
+    <p>Waiting to start · 2 / 4 / 6 / 8 players</p>
+  </div>
+  <div id="wordSyncContent" hidden>
+    <div class="ws-heading">
+      <div><span class="ws-eyebrow">TWO MINDS. ONE WORD.</span><h3 id="wordSyncTitle">Find your wavelength.</h3></div>
+      <span id="wordSyncRound" class="ws-round" tabindex="0" data-ws-explain="round" data-ws-tip="Round · Count word reveals, not submission speed."></span>
+    </div>
+    <div class="ws-layout">
+      <section class="ws-play" aria-label="Your team">
+        <div class="ws-section-heading"><h4 id="wordSyncTeamTitle">Your team</h4><span id="wordSyncStage" aria-live="polite"></span></div>
+        <div id="wordSyncPair" class="ws-pair"></div>
+        <div id="wordSyncPrevious" class="ws-previous" hidden></div>
+        <form id="wordSyncForm" class="ws-form" autocomplete="off">
+          <div class="ws-input-label"><label for="wordSyncWord">Your word</label><span id="wordSyncCount">0 / 24</span></div>
+          <div class="ws-input-row">
+            <input id="wordSyncWord" name="word" type="text" maxlength="96" placeholder="Think of a word…" aria-describedby="wordSyncError wordSyncCount" data-ws-explain="word" spellcheck="false" enterkeyhint="send" />
+            <button id="wordSyncSubmit" class="ws-primary" type="submit" data-ws-explain="submit">Lock word</button>
+          </div>
+        </form>
+        <div id="wordSyncReview" class="ws-review" hidden>
+          <button id="wordSyncNext" class="ws-primary" type="button" data-ws-explain="next_round">Next Round</button>
+          <span id="wordSyncReady" aria-live="polite"></span>
+        </div>
+        <p id="wordSyncStatus" class="ws-status" aria-live="polite"></p>
+        <p id="wordSyncError" class="ws-error" role="alert" hidden></p>
+      </section>
+      <aside class="ws-scoreboard" aria-label="Teams and standings">
+        <div class="ws-section-heading"><h4>THE TEAMS</h4><span id="wordSyncProgress" tabindex="0" data-ws-explain="ranking" data-ws-tip="Matched teams · Fewer rounds rank higher. Equal rounds tie."></span></div>
+        <div id="wordSyncTeams" class="ws-teams"></div>
+      </aside>
+    </div>
+    <details id="wordSyncHistory" class="ws-history">
+      <summary data-ws-explain="history">History <span id="wordSyncHistoryCount"></span></summary>
+      <ol id="wordSyncHistoryRows" class="ws-history-rows"></ol>
+    </details>
+  </div>
+  <div id="wordSyncTooltip" class="ws-tooltip" role="tooltip" hidden></div>
+</template>
+<template data-game-target="wordSyncDialog" data-game-mode="replace">
+  <dialog id="wordSyncDialog" class="ws-dialog" aria-labelledby="wordSyncDialogTitle">
+    <div class="ws-dialog-heading"><h2 id="wordSyncDialogTitle">Help</h2><button id="wordSyncDialogClose" type="button">Close</button></div>
+    <div id="wordSyncDialogBody"></div>
+  </dialog>
+</template>

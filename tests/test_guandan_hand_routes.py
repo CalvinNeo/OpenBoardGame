@@ -78,8 +78,8 @@ class GuandanHandRouteTests(unittest.TestCase):
         self.assertNotIn(5, [len(group) for group in groups])
         self.assertLess(low["entry_risk"], high["entry_risk"])
         action = guandan.GuandanGame.bot_move(state, "bot")
-        self.assertIn(sorted(hand[cid]["rank"] for cid in action["card_ids"]),
-                      ([3, 3], [5, 5, 6, 6, 7, 7]))
+        self.assertEqual(sorted(hand[cid]["rank"] for cid in action["card_ids"]),
+                         [5, 5, 6, 6, 7, 7])
         chosen_route = panel[guandan._cards_key(action["card_ids"])]
         self.assertTrue(chosen_route["exact"])
         self.assertEqual(sorted(map(guandan._cards_key, chosen_route["groups"])),

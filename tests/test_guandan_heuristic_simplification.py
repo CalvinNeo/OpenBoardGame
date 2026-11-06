@@ -10,7 +10,6 @@ from tests.test_guandan_trick_value import make_opening_61559c
 
 class GuandanHeuristicSimplificationTests(unittest.TestCase):
     RETIRED = {
-        "lead_probe_deferral": "_lead_probe_deferral_penalty",
         "lead_support_tension": "_lead_composite_support_tension_penalty",
         "lead_low_pair_carry": "_lead_low_pair_full_house_carry_penalty",
         "global_plan": "_global_hand_decomposition_summary",
@@ -48,10 +47,10 @@ class GuandanHeuristicSimplificationTests(unittest.TestCase):
 
     def test_live_refinements_exclude_retired_rules_but_keep_tactical_protection(self):
         self.assertTrue(self.RETIRED.keys().isdisjoint(guandan_ai._LEAD_REFINEMENTS))
-        self.assertEqual(len(guandan_ai._LEAD_REFINEMENTS), 17)
+        self.assertEqual(len(guandan_ai._LEAD_REFINEMENTS), 18)
         self.assertTrue({
             "deny_one_card_window", "deny_short_runout_window", "lead_teammate_finish",
-            "lead_closeout_reply", "preserve_lighter_shape", "lead_reentry",
+            "lead_closeout_reply", "preserve_lighter_shape", "lead_reentry", "lead_probe_deferral",
         }.issubset(guandan_ai._LEAD_REFINEMENTS))
 
     def test_nn_feature_rules_do_not_leak_through_mode_sensitive_cache(self):

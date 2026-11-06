@@ -193,6 +193,8 @@ async def download_room_save(source_room_id: str):
         raise HTTPException(status_code=403, detail="This Dice Throne game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "semantic_guess"):
         raise HTTPException(status_code=403, detail="This Semantic Guess game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "word_sync"):
+        raise HTTPException(status_code=403, detail="This Word Sync game is still active. Reconnect to the existing room.")
     if _has_unfinished_skull_king_save(source_room_id):
         raise HTTPException(status_code=403, detail="This Skull King game is still active. Reconnect to the existing room.")
     if _has_unfinished_deception_save(source_room_id):
@@ -734,7 +736,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind"):
         return {"type": action.get("type")}
-    if game_type == "semantic_guess":
+    if game_type in ("semantic_guess", "word_sync"):
         return {"type": action.get("type")}
     if game_type == "night_of_the_ninja":
         return {"type": action.get("type")}
@@ -1826,6 +1828,8 @@ async def on_room_reconnect(sid, data):
     if room is None:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "semantic_guess")
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "word_sync")
+    if not room:
         await _send_error(sid, "room not found")
         return
     player = _find_player(room, player_id)
@@ -1865,7 +1869,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven", "semantic_guess"):
+    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven", "semantic_guess", "word_sync"):
         await _maybe_run_bots(room)
 
 
@@ -2299,6 +2303,7 @@ async def on_room_load(sid, data):
         or _has_unfinished_private_save(source_room_id, "sagrada")
         or _has_unfinished_private_save(source_room_id, "dice_throne")
         or _has_unfinished_private_save(source_room_id, "semantic_guess")
+        or _has_unfinished_private_save(source_room_id, "word_sync")
         or _has_unfinished_private_save(source_room_id, "natsumemo")
         or _has_unfinished_skull_king_save(source_room_id)
         or _has_unfinished_deception_save(source_room_id)

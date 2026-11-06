@@ -2,6 +2,7 @@ from game.dice_throne import DiceThroneGame, ACTION_SCHEMA as DICE_THRONE_ACTION
 from game.colt_express import ColtExpressGame, ACTION_SCHEMA as COLT_EXPRESS_ACTION_SCHEMA, CONFIG_SCHEMA as COLT_EXPRESS_CONFIG_SCHEMA
 from game.dnd_starter_set import DndStarterSetGame, ACTION_SCHEMA as DND_STARTER_ACTION_SCHEMA, CONFIG_SCHEMA as DND_STARTER_CONFIG_SCHEMA
 from game.the_mind import TheMindGame, ACTION_SCHEMA as THE_MIND_ACTION_SCHEMA, CONFIG_SCHEMA as THE_MIND_CONFIG_SCHEMA
+from game.word_sync import WordSyncGame, ACTION_SCHEMA as WORD_SYNC_ACTION_SCHEMA, CONFIG_SCHEMA as WORD_SYNC_CONFIG_SCHEMA
 from game.moshimo_yusha import MoshimoYushaGame, ACTION_SCHEMA as MOSHIMO_YUSHA_ACTION_SCHEMA, CONFIG_SCHEMA as MOSHIMO_YUSHA_CONFIG_SCHEMA
 from game.night_of_the_ninja import NightOfTheNinjaGame, ACTION_SCHEMA as NIGHT_NINJA_ACTION_SCHEMA, CONFIG_SCHEMA as NIGHT_NINJA_CONFIG_SCHEMA
 from game.gloomhaven import GloomhavenGame, ACTION_SCHEMA as GLOOMHAVEN_ACTION_SCHEMA, CONFIG_SCHEMA as GLOOMHAVEN_CONFIG_SCHEMA
@@ -6277,5 +6278,21 @@ register_game(
         module=SemanticGuessGame,
         serialize=SemanticGuessGame.serialize,
         deserialize=SemanticGuessGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=WordSyncGame.game_id,
+        name="Word Sync",
+        name_zh="同频共词",
+        min_players=WordSyncGame.min_players,
+        max_players=WordSyncGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=WORD_SYNC_ACTION_SCHEMA,
+        config_schema=WORD_SYNC_CONFIG_SCHEMA,
+        module=WordSyncGame,
+        serialize=WordSyncGame.serialize,
+        deserialize=WordSyncGame.deserialize,
     )
 )

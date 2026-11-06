@@ -2,6 +2,7 @@ from game.dice_throne import DiceThroneGame
 from game.colt_express import ColtExpressGame
 from game.dnd_starter_set import DndStarterSetGame
 from game.the_mind import TheMindGame
+from game.word_sync import WordSyncGame
 from game.moshimo_yusha import MoshimoYushaGame
 from game.night_of_the_ninja import NightOfTheNinjaGame
 from game.exploding_kittens import ExplodingKittensGame
@@ -213,6 +214,7 @@ __all__ = [
     "YahtzeeGame",
     "WanderingTowersGame",
     "SemanticGuessGame",
+    "WordSyncGame",
     "GameDefinition",
     "get_game",
     "list_games",

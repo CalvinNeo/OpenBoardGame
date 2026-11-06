@@ -211,6 +211,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "word_sync") {
+    if (typeof renderWordSyncGameState === "function") renderWordSyncGameState(data);
+    return;
+  }
   if (gameType === "pokemon_adventure") {
     if (typeof renderPokemonAdventureGameState === "function") renderPokemonAdventureGameState(data);
     return;

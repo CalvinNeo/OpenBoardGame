@@ -3374,6 +3374,7 @@ _LEAD_REFINEMENTS = {
     "lead_closeout_reply": ("_lead_closeout_reply_penalty", -1, False),
     "preserve_high_same_type": ("_lead_same_type_value_conservation_penalty", -1, False),
     "lead_special_material": ("_lead_special_material_penalty", -1, False),
+    "lead_probe_deferral": ("_lead_probe_deferral_penalty", -1, False),
     "preserve_lighter_shape": ("_lead_lighter_shape_preservation_penalty", -1, False),
     "lead_low_pair_probe": ("_lead_low_pair_probe_penalty", -1, False),
     "lead_control_probe": ("_lead_control_probe_bonus", 1, False),
@@ -3389,7 +3390,6 @@ _LEAD_REFINEMENTS = {
 
 
 _NN_LEGACY_LEAD_REFINEMENTS = {
-    "lead_probe_deferral": ("_lead_probe_deferral_penalty", -1, False),
     "lead_support_tension": ("_lead_composite_support_tension_penalty", -1, False),
     "lead_low_pair_carry": ("_lead_low_pair_full_house_carry_penalty", -1, False),
 }
@@ -9321,7 +9321,6 @@ def _lead_probe_deferral_penalty(
     cards: List[int],
     combo: Dict,
 ) -> float:
-    """Frozen NN feature; ordinary heuristics compare the actual hand routes."""
     if state.get("current_trick"):
         return 0.0
 

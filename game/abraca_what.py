@@ -97,6 +97,7 @@ def _advance_turn(state: Dict) -> None:
     state["phase"] = "wait_use"
     state["last_spell"] = None
     state["casts_this_turn"] = 0
+    state["turn_spells"] = []
     state["pending"] = None
 
 
@@ -142,6 +143,7 @@ def _finish_round(state: Dict, result_type: str, actor_id: str, victims: Optiona
     state["pending"] = None
     state["last_spell"] = None
     state["casts_this_turn"] = 0
+    state["turn_spells"] = []
 
     target = int(state["config"]["target_score"])
     candidates = [pid for pid, pdata in players.items() if pdata["score"] >= target]
@@ -179,6 +181,7 @@ def _setup_round(state: Dict, start_player_id: Optional[str], increment_round: b
     state["last_action"] = None
     state["last_spell"] = None
     state["casts_this_turn"] = 0
+    state["turn_spells"] = []
     state["phase"] = "wait_use"
     state["current_turn"] = start_player_id or (state["turn_order"][0] if state["turn_order"] else None)
 
@@ -320,6 +323,7 @@ class AbracaWhatGame:
 
             state["discard"].append(card_id)
             state["last_spell"] = spell_type
+            state.setdefault("turn_spells", []).append(spell_type)
             state["last_action"] = {
                 "player_id": player_id,
                 "spell_type": spell_type,
@@ -526,6 +530,7 @@ class AbracaWhatGame:
             "discard_total": len(state["discard"]),
             "discard_counts": discard_counts,
             "last_action": last_action,
+            "turn_spells": list(state.get("turn_spells", [])),
             "round_result": round_result,
             "legal_actions": AbracaWhatGame._legal_actions(state, viewer_id),
             "allowed_spells": AbracaWhatGame._allowed_spells(state, viewer_id),
@@ -537,27 +542,11 @@ class AbracaWhatGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over") or bot_id != state.get("current_turn"):
+        from game.abraca_what_ai import choose_action
+
+        if state.get("game_over") or bot_id not in state.get("players", {}):
             return None
-        phase = state.get("phase")
-        if phase in ("wait_use", "wait_goon"):
-            min_spell = 0
-            if phase == "wait_goon" and state.get("last_spell") is not None:
-                min_spell = int(state["last_spell"])
-            hand = state["players"][bot_id]["hand"]
-            candidates = [ _spell_type(cid) for cid in hand if _spell_type(cid) >= min_spell ]
-            if candidates:
-                return {"type": "cast_spell", "spell_type": random.choice(candidates)}
-            return {"type": "cast_spell", "spell_type": random.randint(min_spell, len(SPELL_NAMES) - 1)}
-        if phase == "wait_dice":
-            return {"type": "roll_dice"}
-        if phase == "wait_see":
-            return {"type": "take_secret"}
-        if phase == "wait_draw":
-            return {"type": "end_turn"}
-        if phase == "round_end":
-            return {"type": "start_next_round"}
-        return None
+        return choose_action(AbracaWhatGame.get_public_view(state, bot_id), SPELL_COUNTS)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

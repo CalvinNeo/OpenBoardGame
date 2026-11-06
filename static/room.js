@@ -1333,6 +1333,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  word_sync: null,
   pokemon_adventure: 1.17,
   chromino: 1.24,
   skull_king: 1.73,

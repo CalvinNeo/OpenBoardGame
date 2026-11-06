@@ -1,5 +1,13 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "word_sync": {
+    "scripts": ["/static/games/word_sync.js?v=2"],
+    "styles": ["/static/games/word_sync.css?v=3"],
+    "markup": "/static/games/word_sync.html?v=1",
+    "panel": "wordSyncPanel",
+    "panelTitle": "同频共词",
+    "header": "showWordSyncHeaderActions"
+  },
   "pokemon_adventure": {
     "scripts": ["/static/games/pokemon_adventure.js?v=3"],
     "styles": ["/static/games/pokemon_adventure.css?v=3"],
