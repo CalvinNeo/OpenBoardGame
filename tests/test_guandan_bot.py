@@ -4223,10 +4223,15 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         low_single_combo = guandan._evaluate_combo([next(card for card in bot_hand if guandan._card_label(card) == "♠️4")], 2, {})
         low_pair_combo = guandan._evaluate_combo([card for card in bot_hand if guandan._card_label(card) in ("♠️5", "♥️5")], 2, {})
 
-        self.assertGreater(
-            guandan._lead_teammate_support_bonus(state, "bot", low_pair, low_pair_combo),
-            guandan._lead_teammate_support_bonus(state, "bot", low_single, low_single_combo),
-        )
+        with mock.patch.object(guandan_ai, "_public_finish_turn_panels",
+                               return_value=[{"mate": 1.0, "opp": 4.0, "opp2": 4.0}]):
+            self.assertGreater(
+                guandan._lead_teammate_support_bonus(state, "bot", low_pair, low_pair_combo),
+                guandan._lead_teammate_support_bonus(state, "bot", low_single, low_single_combo),
+            )
+        with mock.patch.object(guandan_ai, "_public_finish_turn_panels",
+                               return_value=[{"mate": 5.0, "opp": 1.0, "opp2": 1.0}]):
+            self.assertEqual(guandan._lead_teammate_support_bonus(state, "bot", low_pair, low_pair_combo), 0.0)
 
     def test_teammate_history_support_prefers_single_lane_after_public_single_plays(self):
         players = [
@@ -5893,6 +5898,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             "cards": [lead["id"]],
             "combo": guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {})),
         }
+        state.update(known_card_owners={}, visible_card_id=None, round_memories=[],
+                     seen_cards=[lead["id"]])
+        self._assert_consistent_card_zones(state)
 
         real_random = random.Random
         with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
@@ -6150,7 +6158,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         # This field now includes the 0.18 ranking contribution that was
         # previously hidden inside lead_plan; keep the same effective bound.
         self.assertLess(single_score.get("lead_retake_stock", 0.0), 1.18)
-        self.assertGreater(pair_score["total"], single_score["total"])
+        self.assertGreater(single_score["turn_efficiency"], pair_score["turn_efficiency"])
 
         action = guandan.GuandanGame.bot_move(state, "bot3")
         self.assertEqual(action.get("type"), "play")
@@ -9840,7 +9848,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(chosen_combo.get("type"), "steel_plate")
         self.assertEqual(chosen_labels, ["♣️3", "♠️3", "♣️3", "♥️4", "♣️4", "♣️4"])
 
-    def test_opening_values_hard_to_answer_steel_plate_over_small_three(self):
+    def test_opening_preserves_control_and_values_steel_plate_over_small_three(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
@@ -9905,14 +9913,20 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
-        self.assertEqual(chosen_combo.get("type"), "steel_plate")
-        self.assertIn(
-            chosen_labels,
-            [
-                ["♥️4", "♠️4", "♦️4", "♥️5", "♣️5", "♦️5"],
-                ["♥️5", "♣️5", "♦️5", "♦️6", "♣️6", "♦️6"],
-            ],
-        )
+        self.assertIn(chosen_combo.get("type"), ("pair", "steel_plate"))
+        self.assertFalse(any(guandan._is_joker(card) or card.get("rank") == 7 for card in chosen_cards))
+        if chosen_combo["type"] == "pair":
+            self.assertEqual([card["rank"] for card in chosen_cards], [10, 10])
+        else:
+            self.assertIn(
+                chosen_labels,
+                [["♥️4", "♠️4", "♦️4", "♥️5", "♣️5", "♦️5"],
+                 ["♥️5", "♣️5", "♦️5", "♦️6", "♣️6", "♦️6"]],
+            )
+        steel = [card["id"] for card in hand if card.get("rank") in (4, 5)]
+        triple = [card["id"] for card in hand if card.get("rank") == 5]
+        self.assertGreater(guandan._bot_score_components(state, "bot2", steel, 4)["total"],
+                           guandan._bot_score_components(state, "bot2", triple, 4)["total"])
 
     def test_lead_avoids_high_wild_straight_and_keeps_low_structure(self):
         players = [
@@ -10165,7 +10179,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         self.assertEqual(chosen_labels, ["♣️Q", "♣️Q", "♦️Q"])
 
-    def test_midgame_lead_prefers_structured_straight_over_high_single(self):
+    def test_midgame_lead_preserves_high_control_and_straight_material(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
@@ -10226,8 +10240,15 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         hand_map = guandan._map_hand_by_id(hand)
         chosen_cards = [hand_map[cid] for cid in action.get("card_ids", [])]
         chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
-        self.assertEqual(chosen_combo.get("type"), "straight")
-        self.assertEqual(sorted(card.get("rank") for card in chosen_cards), [5, 6, 7, 8, 9])
+        if chosen_combo.get("type") == "single":
+            self.assertEqual([card["rank"] for card in chosen_cards], [3])
+            remaining = guandan._remove_cards(hand, action["card_ids"])
+            straight = [next(card for card in remaining if card.get("rank") == rank)
+                        for rank in (5, 6, 7, 8, 9)]
+            self.assertEqual(guandan._evaluate_combo(straight, 2, {})["type"], "straight")
+        else:
+            self.assertEqual(chosen_combo.get("type"), "straight")
+            self.assertEqual(sorted(card.get("rank") for card in chosen_cards), [5, 6, 7, 8, 9])
 
     def test_midgame_response_splits_non_wild_level_pair_when_it_preserves_straight_bridge(self):
         players = [

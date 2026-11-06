@@ -18,7 +18,7 @@ state['players']['p1']['score'] = 125
 state['pending_timeout'] = {'type': 'selection', 'at_ms': int(time.time() * 1000) + 30000}
 views = {'selection': Game.get_public_view(state, 'p0'), 'spectator': Game.get_public_view(state, 'spectator')}
 locked = copy.deepcopy(state)
-Game.apply_action(locked, 'p0', {'type': 'select_card', 'value': 55 if any(c['value'] == 55 for c in locked['players']['p0']['hand']) else 56})
+Game.apply_action(locked, 'p0', {'type': 'select_card', 'value': 56})
 views['locked'] = Game.get_public_view(locked, 'p0')
 choice = copy.deepcopy(state)
 choice.update(phase='row_choice', waiting_for={'player_id': 'p0', 'card': card(1)}, pending_timeout=None)
@@ -167,6 +167,34 @@ async function actions(page) { return page.evaluate(() => sixNimmtActions); }
         assert.deepEqual(await actions(page), []);
         await page.keyboard.press('Escape');
 
+        await page.locator('#sixNimmtExplainBtn').click();
+        await page.evaluate(() => {
+            const button = document.createElement('button');
+            button.id = 'sixNimmtUnexplainedProbe';
+            button.textContent = 'Unexplained action';
+            button.addEventListener('click', () => sixNimmtActions.push({type: 'unexpected'}));
+            document.getElementById('sixNimmtPanel').prepend(button);
+        });
+        await page.locator('#sixNimmtUnexplainedProbe').click();
+        assert.equal(await page.locator('#sixNimmtExplainBtn').getAttribute('aria-pressed'), 'true');
+        assert.deepEqual(await actions(page), []);
+        await page.locator('#sixNimmtUnexplainedProbe').evaluate(element => element.remove());
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#sixNimmtExplainBtn').getAttribute('aria-pressed'), 'false');
+        await page.locator('#sixNimmtExplainBtn').click();
+        await page.locator('.sn-goal').focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#sixNimmtGuide').evaluate(element => element.open), true);
+        await page.keyboard.press('Escape');
+
+        await render(page, 'summary');
+        await page.mouse.click(2, 2);
+        assert.equal(await page.locator('#sixNimmtSummaryModal').evaluate(element => element.open), false);
+        assert.deepEqual(await actions(page), []);
+        await page.locator('#sixNimmtShowSummaryBtn').click();
+        await page.locator('#sixNimmtSummaryHideBtn').click();
+        await render(page, 'selection');
+
         const touch = await browser.newPage({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true});
         touch.on('pageerror', error => errors.push(error.message));
         await prepare(touch);
@@ -174,6 +202,8 @@ async function actions(page) { return page.evaluate(() => sixNimmtActions); }
         const bull = touch.locator('.sn-goal');
         await bull.tap();
         assert.equal(await touch.locator('#sixNimmtTooltip').isVisible(), true);
+        await touch.locator('#sixNimmtRows .sn-danger').first().tap();
+        assert.match(await touch.locator('#sixNimmtTooltip').textContent(), /第六张/);
         await touch.waitForTimeout(3200);
         assert.equal(await touch.locator('#sixNimmtTooltip').isVisible(), false);
         await touch.locator('[data-sn-card="56"]').tap();
@@ -186,6 +216,11 @@ async function actions(page) { return page.evaluate(() => sixNimmtActions); }
         await target.dispatchEvent('click', {detail: 1});
         assert.equal(await target.getAttribute('aria-pressed'), 'false');
         assert.deepEqual(await actions(touch), []);
+        await touch.locator('#sixNimmtHelpBtn').tap();
+        await touch.locator('#sixNimmtGuide .sn-card[data-bulls="7"]').tap();
+        assert.equal(await touch.locator('#sixNimmtTooltip').isVisible(), true);
+        assert.equal(await touch.locator('#sixNimmtTooltip').evaluate(element => element.parentNode.id), 'sixNimmtGuide');
+        await touch.keyboard.press('Escape');
         await touch.evaluate(() => setGamePanelVisibility('cabo'));
         assert.equal(await touch.locator('#sixNimmtPanel').isVisible(), false);
         assert.equal(await touch.evaluate(() => document.body.classList.contains('sn-action-needed')), false);

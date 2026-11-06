@@ -141,6 +141,20 @@ def partition_hand(
     nodes = 0
 
     @lru_cache(maxsize=None)
+    def viable_options(remaining: Resources) -> Tuple[int, ...]:
+        allowed = {position for position in range(len(groups)) if valid(position, remaining)}
+        viable = None
+        for index, quantity in enumerate(remaining):
+            if not quantity:
+                continue
+            options = tuple(position for position in by_category[index] if position in allowed)
+            if viable is None or len(options) < len(viable):
+                viable = options
+            if len(viable) == 1:
+                break
+        return viable or ()
+
+    @lru_cache(maxsize=None)
     def search(remaining: Resources, moves_left: int) -> Optional[Cover]:
         nonlocal nodes
         nodes += 1
@@ -155,16 +169,7 @@ def partition_hand(
             return (remaining,)
         if moves_left == 1:
             return None
-        viable = None
-        for index, quantity in enumerate(remaining):
-            if not quantity:
-                continue
-            options = [position for position in by_category[index] if valid(position, remaining)]
-            if viable is None or len(options) < len(viable):
-                viable = options
-            if len(viable) == 1:
-                break
-        for position in viable or ():
+        for position in viable_options(remaining):
             child = search(remove(position, remaining), moves_left - 1)
             if child is not None:
                 return (groups[position],) + child

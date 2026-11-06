@@ -332,6 +332,28 @@ class GuandanGame:
             self.assertEqual(worker.choose(self.state, "p0", 1)["action"]["fixture_version"],
                              "new-ai/new-memory")
 
+    def test_hand_partition_dependency_is_frozen_and_fingerprinted(self):
+        module = self.root / "game/guandan_hand.py"
+        module.write_text('VALUE = "committed-partition"\n')
+        core = self.root / "game/guandan.py"
+        core.write_text(core.read_text().replace(
+            'return {"type": "pass", "fixture_version": _guandan_ai.VALUE + memories.VALUE}',
+            'from game import guandan_hand\n'
+            '        return {"type": "pass", "partition": guandan_hand.VALUE}',
+        ))
+        self.commit()
+        revision = bench.resolve_revision(self.root, "HEAD")
+        expected = bench.source_identity(self.root)
+        module.write_text('VALUE = "edited-partition"\n')
+        self.assertNotIn("game/guandan_hand.py", bench.source_identity(self.root, self.revision)["files"])
+        with bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, revision) as frozen, \
+                bench.PolicyWorker(self.root, "auto", {}, "fixed", 10) as live:
+            self.assertEqual(frozen.choose(self.state, "p0", 1)["action"]["partition"], "committed-partition")
+            self.assertEqual(live.choose(self.state, "p0", 1)["action"]["partition"], "edited-partition")
+            self.assertIn("game/guandan_hand.py", frozen.identity["files"])
+        with self.assertRaisesRegex(RuntimeError, "source changed before loading"):
+            bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, expected_identity=expected)
+
     def test_optional_exact_runtime_is_pinned_fingerprinted_and_uses_worker_clock(self):
         module = self.root / "game/guandan_endgame.py"
         module.write_text('import time\nVALUE = "committed-exact"\n')

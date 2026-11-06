@@ -366,7 +366,13 @@
             }
         });
         panel.addEventListener("keydown", event => {
-            if (explaining || !["Enter", " "].includes(event.key)) return;
+            if (!["Enter", " "].includes(event.key)) return;
+            if (explaining) {
+                const anchor = event.target.closest("[data-sn-explain]");
+                event.preventDefault();
+                if (anchor && explanations[anchor.dataset.snExplain]) openGuide("Explain", `<p>${esc(explanations[anchor.dataset.snExplain])}</p>`);
+                return;
+            }
             const row = event.target.closest("[data-sn-row][role='button']");
             if (row && !event.target.closest("button")) {
                 event.preventDefault();
@@ -386,7 +392,7 @@
         document.addEventListener("pointerdown", event => {
             if (!panel.getClientRects().length || !event.isPrimary) return;
             suppressClickUntil = 0;
-            pointer = {id: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, target: event.target};
+            pointer = {id: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false};
         }, true);
         document.addEventListener("pointermove", event => {
             if (!pointer || pointer.id !== event.pointerId) return;

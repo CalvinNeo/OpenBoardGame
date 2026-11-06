@@ -189,7 +189,7 @@ def call(core, name: str, *args, **kwargs):
     prev = _get_core()
     previous_legacy = getattr(_CORE_LOCAL, "legacy_heuristics", False)
     if args and isinstance(args[0], dict) and "config" in args[0]:
-        _CORE_LOCAL.legacy_heuristics = str(args[0]["config"].get("bot_mode", "auto")).lower() == "nn"
+        _CORE_LOCAL.legacy_heuristics = str(args[0]["config"].get("bot_mode", "auto")).strip().lower() == "nn"
     previous_candidates = getattr(_CORE_LOCAL, "decomposition_candidates", None)
     previous_fast_summaries = getattr(_CORE_LOCAL, "fast_decomposition_summaries", None)
     previous_bounded_metrics = getattr(_CORE_LOCAL, "bounded_hand_values", None)
@@ -515,7 +515,7 @@ def _teammate_hand_reply_willingness(
         if (not response or response.get("type") != combo_type
                 or not _compare_combos(combo, response, level_rank, config)):
             continue
-        willingness = 1.0 if urgent or len(hand) <= 6 else 0.9
+        willingness = 1.0 if urgent or len(hand) - len(selected) <= 5 else 0.9
         spent = _rank_count_map(selected, level_rank)
         for rank, quantity in spent.items():
             if quantity < counts[rank]:
@@ -552,7 +552,8 @@ def _teammate_response_intent_probability(
     draws = hand_count - len(locked)
     if not 0 <= draws <= len(available):
         return 0.0
-    key = (_heuristic_position_cache_key(state, player_id, 0),
+    position_key = _heuristic_position_cache_key(state, player_id, 0)
+    key = (position_key[:2] + (False,) + position_key[3:],
            combo.get("type"), combo.get("size"), _combo_numeric_value(combo))
     cache = state.setdefault("_ai_eval_cache", {}).setdefault("teammate_response_intent", {})
     if key in cache:
@@ -794,6 +795,10 @@ def _teammate_backstop_confidence(
             confidence += 0.05
         # Unrelated plays and repeated passes cannot inflate confidence above
         # the chance that the public pool supplies the required pair/triple.
+        if not getattr(_CORE_LOCAL, "legacy_heuristics", False):
+            reply_probability = min(reply_probability, _teammate_response_intent_probability(
+                state, player_id, trick_combo,
+            ))
         return max(0.0, min(0.72, confidence, reply_probability))
 
     if combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
@@ -828,6 +833,8 @@ def _teammate_backstop_confidence(
     elif combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
         confidence += min(0.1, teammate_history.get("structure_lane", 0.0) * 0.02)
 
+    if combo_type in STRUCTURED_RUNOUT_TYPES and not getattr(_CORE_LOCAL, "legacy_heuristics", False):
+        confidence = min(confidence, _teammate_response_intent_probability(state, player_id, trick_combo))
     return max(0.0, min(0.72, confidence))
 
 
@@ -3387,6 +3394,7 @@ _LEAD_REFINEMENTS = {
 def _lead_option_cache_key(state: Dict, player_id: str, cards: List[int]) -> Tuple:
     return (
         player_id, _bounded_finalist_scoring(), state["level_rank"],
+        bool(getattr(_CORE_LOCAL, "legacy_heuristics", False)),
         state.get("config", {}).get("bot_lead_reentry_mode", "route_only"),
         state.get("round_number"), state.get("current_turn"),
         tuple(state.get("finish_order") or ()),
@@ -10593,6 +10601,8 @@ def _teammate_can_retake_current_lane(
     state: Dict,
     player_id: str,
 ) -> bool:
+    if not getattr(_CORE_LOCAL, "legacy_heuristics", False):
+        return _teammate_retake_current_lane_probability(state, player_id) >= 0.95
     current_trick = state.get("current_trick")
     teammate = _teammate_of(state, player_id)
     if not current_trick or not teammate:
@@ -10618,8 +10628,6 @@ def _teammate_can_retake_current_lane(
     teammate_hand = state["players"].get(teammate, {}).get("hand", [])
     if not teammate_hand:
         return False
-    if not getattr(_CORE_LOCAL, "legacy_heuristics", False):
-        return _teammate_response_intent_probability(state, player_id, current_combo) >= 0.95
     if not state.get("_ai_sampled_world"):
         if not _teammate_response_window_open(state, player_id):
             return False
@@ -10645,6 +10653,21 @@ def _teammate_can_retake_current_lane(
     )
 
 
+def _teammate_retake_current_lane_probability(state: Dict, player_id: str) -> float:
+    if getattr(_CORE_LOCAL, "legacy_heuristics", False):
+        return float(_teammate_can_retake_current_lane(state, player_id))
+    teammate = _teammate_of(state, player_id)
+    previous = (state.get("trick_plays") or {}).get(teammate)
+    if not isinstance(previous, list) or not previous:
+        return 0.0
+    cards = [card for card in previous if isinstance(card, dict)]
+    previous_combo = _evaluate_combo(cards, state["level_rank"], state.get("config", {}))
+    current_combo = (state.get("current_trick") or {}).get("combo") or {}
+    if not previous_combo or previous_combo.get("type") != current_combo.get("type"):
+        return 0.0
+    return _teammate_response_intent_probability(state, player_id, current_combo)
+
+
 def _teammate_lane_deference_penalty(
     state: Dict,
     player_id: str,
@@ -10657,18 +10680,7 @@ def _teammate_lane_deference_penalty(
     leader = current_trick.get("player_id")
     if leader is None or _team_of(state, leader) == _team_of(state, player_id):
         return 0.0
-    legacy = getattr(_CORE_LOCAL, "legacy_heuristics", False)
-    if legacy:
-        probability = float(_teammate_can_retake_current_lane(state, player_id))
-    else:
-        teammate = _teammate_of(state, player_id)
-        previous = (state.get("trick_plays") or {}).get(teammate)
-        if not isinstance(previous, list) or not previous:
-            return 0.0
-        previous_combo = _evaluate_combo(previous, state["level_rank"], state.get("config", {}))
-        if not previous_combo or previous_combo.get("type") != current_trick.get("combo", {}).get("type"):
-            return 0.0
-        probability = _teammate_response_intent_probability(state, player_id)
+    probability = _teammate_retake_current_lane_probability(state, player_id)
     if probability <= 0.0:
         return 0.0
 
@@ -10729,18 +10741,7 @@ def _bomb_overcall_teammate_lane_penalty(
     if not current_trick or combo.get("type") not in BOMB_TYPES:
         return 0.0
 
-    legacy = getattr(_CORE_LOCAL, "legacy_heuristics", False)
-    if legacy:
-        probability = float(_teammate_can_retake_current_lane(state, player_id))
-    else:
-        teammate = _teammate_of(state, player_id)
-        previous = (state.get("trick_plays") or {}).get(teammate)
-        if not isinstance(previous, list) or not previous:
-            return 0.0
-        previous_combo = _evaluate_combo(previous, state["level_rank"], state.get("config", {}))
-        if not previous_combo or previous_combo.get("type") != current_trick.get("combo", {}).get("type"):
-            return 0.0
-        probability = _teammate_response_intent_probability(state, player_id)
+    probability = _teammate_retake_current_lane_probability(state, player_id)
     if probability <= 0.0:
         return 0.0
 
@@ -10888,7 +10889,8 @@ def _heuristic_score_cache_key(state: Dict, bot_id: str, depth: int) -> Tuple:
     position = _heuristic_position_cache_key(state, bot_id, depth)
     policy = (_blacklist_cache_signature(state, bot_id) if _blacklist_separate_value(state)
               else ("legacy", _blacklist_value_mode()))
-    return position[:2] + (policy,) + position[2:]
+    mode = bool(getattr(_CORE_LOCAL, "legacy_heuristics", False))
+    return position[:2] + (policy, mode) + position[2:]
 
 
 def _store_heuristic_scored_candidates(
@@ -11935,6 +11937,13 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         partition = partition_hand(hand, level_rank, node_limit=96 if bounded else 512,
                                    expired=_deadline_expired)
         result = float(partition.turns)
+        for group in partition.groups:
+            if any(group[13:]):
+                result += 0.08
+            if sum(group) == 1:
+                rank = next((index + 2 for index, quantity in enumerate(group[:13]) if quantity), None)
+                if rank is not None and _point_order_value(rank, level_rank) < LOW_SINGLE_VALUE_MAX:
+                    result += 0.18
         complete = partition.complete
     if complete and not bounded and not _deadline_expired():
         if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
@@ -12010,7 +12019,8 @@ def _public_finish_turn_panels(state: Dict, observer_id: str) -> List[Dict[str, 
     """
     # Policy costs must not redraw the public hand panel or alter its seed.
     # All candidates and raw/net evaluations compare the same sampled worlds.
-    key = (_heuristic_position_cache_key(state, observer_id, 0), _bounded_finalist_scoring())
+    key = (_heuristic_position_cache_key(state, observer_id, 0), _bounded_finalist_scoring(),
+           bool(getattr(_CORE_LOCAL, "legacy_heuristics", False)))
     cache = state.setdefault("_ai_eval_cache", {}).setdefault("public_finish_turns", {})
     if key in cache:
         return cache[key]
@@ -17681,10 +17691,10 @@ def _compute_bot_score_components(
         if overtrick_penalty > 0:
             components["avoid_overtrick"] = -overtrick_penalty
     elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
-        teammate_can_retake_lane = _teammate_can_retake_current_lane(state, bot_id)
+        teammate_retake = _teammate_retake_current_lane_probability(state, bot_id)
         seize = _takeover_opportunity_score(state, bot_id, cards)
-        if seize > 0 and not teammate_can_retake_lane:
-            components["seize_tempo"] = seize * 1.25
+        if seize > 0 and teammate_retake < 1.0:
+            components["seize_tempo"] = seize * 1.25 * (1.0 - teammate_retake)
         teammate_lane_bonus = _response_teammate_lane_bonus(state, bot_id, cards, combo)
         if teammate_lane_bonus > 0.001:
             components["protect_teammate_lane"] = teammate_lane_bonus
@@ -17702,10 +17712,10 @@ def _compute_bot_score_components(
                 natural_takeover += 4.0
             if (
                 natural_takeover > 0
-                and not teammate_can_retake_lane
+                and teammate_retake < 1.0
                 and not _cards_use_special_material(play_cards, level_rank)
             ):
-                components["deny_short_lead"] = natural_takeover
+                components["deny_short_lead"] = natural_takeover * (1.0 - teammate_retake)
         if combo["type"] in BOMB_TYPES:
             teammate_lane_bomb_penalty = _bomb_overcall_teammate_lane_penalty(state, bot_id, cards, combo)
             if teammate_lane_bomb_penalty > 0.001:
@@ -18643,11 +18653,13 @@ def _shared_response_tactical_components(
         )
         retake_key = (
             player_id,
+            bool(getattr(_CORE_LOCAL, "legacy_heuristics", False)),
             tuple(current_trick.get("cards") or []),
             (tuple(
                 card["id"]
                 for card in state["players"].get(teammate, {}).get("hand", [])
-            ) if state.get("_ai_sampled_world") else _heuristic_score_cache_key(state, player_id, 0)),
+            ) if state.get("_ai_sampled_world") and getattr(_CORE_LOCAL, "legacy_heuristics", False)
+             else _heuristic_score_cache_key(state, player_id, 0)),
         )
         if retake_key not in retake_cache:
             retake_cache[retake_key] = _teammate_can_retake_current_lane(state, player_id)

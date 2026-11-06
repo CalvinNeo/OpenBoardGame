@@ -511,7 +511,7 @@ const GAME_ASSETS = {
   },
   "six_nimmt": {
     "scripts": [
-      "/static/games/six_nimmt.js?v=app_v5"
+      "/static/games/six_nimmt.js?v=app_v6"
     ],
     "styles": [],
     "panel": "sixNimmtPanel",

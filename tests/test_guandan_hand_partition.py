@@ -122,8 +122,16 @@ class GuandanHandPartitionTests(unittest.TestCase):
         state = replay_fixture("88f335", 8)
         hand = state["players"][state["current_turn"]]["hand"]
         remaining = guandan._remove_cards(hand, pick_card_ids(hand, ["♣️2"]))
-        self.assertEqual(guandan._estimated_turns_to_finish(hand, 2), 6.0)
-        self.assertEqual(guandan._estimated_turns_to_finish(remaining, 2), 5.0)
+        self.assertEqual(guandan_hand.partition_hand(hand, 2).turns, 6)
+        self.assertEqual(guandan_hand.partition_hand(remaining, 2).turns, 5)
+        self.assertLess(guandan._estimated_turns_to_finish(remaining, 2),
+                        guandan._estimated_turns_to_finish(hand, 2))
+
+    def test_residual_costs_are_charged_only_to_the_chosen_cover(self):
+        hand = cards_from_labels(["♠️3", "♣️3", "♦️3", "♠️4", "♣️4", "♦️4", "🃏B"])
+        partition = guandan_hand.partition_hand(hand, 2)
+        self.assertEqual(partition.turns, 2)
+        self.assertAlmostEqual(guandan._estimated_turns_to_finish(hand, 2), 2.08)
 
     def test_nn_legacy_turn_cache_is_separate_and_restores_context(self):
         hand = cards_from_labels(["♠️3", "♣️3", "♦️3", "♠️4", "♣️4", "♦️4",

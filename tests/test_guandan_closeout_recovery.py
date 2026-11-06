@@ -161,8 +161,9 @@ class GuandanCloseoutRecoveryTests(unittest.TestCase):
                 state["_ai_eval_cache"] = {"mcts_anytime": {"completed_depth": 2}}
                 scores = [(reference, 0.0, samples, {"paired_reference": 1.0}),
                           (proposal, 1.0, samples, {"paired_lcb": lower_gain, "paired_count": samples})]
-                self.assertEqual(guandan._should_accept_mcts_override(
-                    state, "bot4", reference, proposal, 2, search_scores=scores), expected)
+                with mock.patch.object(guandan_ai, "_mcts_root_heuristic_value", return_value=0.0):
+                    self.assertEqual(guandan._should_accept_mcts_override(
+                        state, "bot4", reference, proposal, 2, search_scores=scores), expected)
                 self.assertIn("closeout_reentry", self.call("_minimax_plan_risks", state, reference, proposal))
 
     def test_finished_enemy_has_no_urgent_bomb_takeover_bonus(self):
