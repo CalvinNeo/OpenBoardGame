@@ -16,6 +16,7 @@
   let focusBeforeDialog = null;
   let configSignature = null;
   let renderSignature = null;
+  let pointerGesture = null;
 
   const explanations = {
     pass: ["No Thanks! · 拒收", "支付 1 枚 Chips（🔴，筹码）到当前牌上，轮到下一位玩家。没有筹码时不能拒收。"],
@@ -30,7 +31,7 @@
     score: ["Net（＝）· 本局净分", "Cards（🃏，牌面分）减去剩余 Chips（🔴，筹码）。Lower is better（↓）：分数越低越好，也可以是负数。多局时将每局净分相加，最低总分获胜；并列时共同获胜。"],
     total: ["Total · 累计总分", "已经结算的各局 Net（＝，净分）之和，不包括正在进行的这一局。最后一局结束后，总分最低者获胜；并列时共同获胜。"],
     winner: ["Winner（🏆）· 获胜者", "所有局结束后 Total（累计总分）最低的玩家。分数越低越好，并列最低的玩家共同获胜。"],
-    delta: ["Take change（Δ）· 拿牌净分变化", "拿牌之后的本局净分减去拿牌之前的本局净分，已经计算连续段合并和收到的筹码。例如 −12 表示你的罚分会减少 12；+6 表示会增加 6。这不是对未来牌的预测。"],
+    delta: ["Take change（Δ）· 拿牌净分变化", "拿牌之后的本局净分减去拿牌之前的本局净分，已经计算连续段合并和收到的筹码。例如 −12 表示你的罚分会减少 12；+6 表示会增加 6。Net → 显示拿牌后的净分。这不是对未来牌的预测。"],
     next: ["Next Round", "确认已看完本局计分。所有玩家都确认后才重新发牌；AI 会自动确认，断线的真人仍需重连后确认。已经确认的按钮不会重复开始下一局。"],
   };
   const help = `
@@ -39,9 +40,9 @@
     <h3>轮到你：拒收或拿牌</h3><p><strong>No Thanks!</strong>：支付 1 枚筹码到牌上，轮到下一位。没有筹码时不能拒收。<br><strong>Take Card</strong>：拿走当前牌及牌上全部筹码，然后翻下一张，<strong>仍由你行动</strong>。可以连续拿牌，直到选择拒收。</p>
     <p>Pot（🔴）是当前牌上累积的筹码，拿牌时全部归你。</p>
     <h3>Runs（🔗，连号）只算段首</h3><p>把公开的牌按连续数字分组，每段只计算最小数字；深色段首计分，浅色牌不额外计分。Cards（🃏）显示这些段首之和，Net（＝）显示牌面分减去剩余筹码。</p><p class="no-thanks-rule-example">🃏 8 ｜ 13·14·15 ｜ 17 → 8 + 13 + 17 = 38<br>再拿 16 → 8 ｜ 13·14·15·16·17 → 8 + 13 = 21<br>还剩 6 枚 🔴 → Net（＝）21 − 6 = 15</p>
-    <p><strong>Take change（Δ）</strong> 显示现在拿牌的净分变化，包含收回筹码。绿色负数表示减分。因为 9 张牌不会出现，等一张连接牌可能落空。</p>
+    <p><strong>Take change（Δ）</strong> 显示现在拿牌的净分变化，包含收回筹码。绿色负数表示减分；旁边的 <strong>Net →</strong> 显示拿牌后的净分。Your cards 是你的公开牌，Cards / Card points（🃏）是牌面分而非牌张数。因为 9 张牌不会出现，等一张连接牌可能落空。</p>
     <h3>本局结束与下一局</h3><p>24 张牌全部被拿走后结算。Round 显示当前局数；Total 是已结算各局净分之和。多局时所有人点击 <strong>Next Round</strong> 才继续；AI 自动确认，真人不会被自动确认。每局重新洗牌并重置筹码。最终结算会保留牌面，通过房间控制重新开始。</p>
-    <h3>线上操作</h3><p>首局随机起始玩家，后续局按座位轮转。AI 只依据可见信息判断连号、筹码和竞争，不读取暗牌或他人的隐藏筹码。点击 Explain 再点牌、数值或按钮可查看解释，灰色按钮也可以解释。Esc 退出解释或关闭弹窗；电脑悬停可查看提示，手机点击后的提示在 3 秒后消失。</p>
+    <h3>线上操作</h3><p>首局随机起始玩家，后续局按座位轮转。AI 只依据可见信息判断连号、筹码和竞争，不读取暗牌或他人的隐藏筹码。Turn 标记当前行动者，轮到你时收起的 Room Control 显示红边。点击 Explain 再点牌、数值或按钮可查看解释，灰色按钮也可以解释；滑动只滚动，不会打开解释。Esc 退出解释或关闭弹窗；电脑悬停可查看提示，手机点击后的提示在 3 秒后消失。</p>
     <p><a href="https://papmajor.dk/wp-content/uploads/mfg5715-rules-en.pdf" target="_blank" rel="noopener noreferrer">AMIGO / Mayfair rules</a> · Base game</p>`;
 
   function text(suffix, value) { byId(suffix).textContent = value; }
@@ -75,6 +76,7 @@
   }
   function setExplain(value) {
     explaining = value;
+    pointerGesture = null;
     panel.classList.toggle("no-thanks-explaining", value);
     byId("ExplainBtn").setAttribute("aria-pressed", String(value));
     byId("ExplainBtn").title = value ? "Choose an item to explain · Esc to exit" : "Explain";
@@ -108,34 +110,62 @@
     byId("Take").disabled = !can("take");
     byId("Next").disabled = !can("next_round");
     text("Next", view?.next_round_ready.includes(view.you) ? "Ready ✓" : "Next Round");
+    const yourTurn = view?.phase === "playing" && view.current_turn === view.you;
+    document.getElementById("roomControlsPanel")?.classList.toggle("no-thanks-turn", Boolean(yourTurn && socket.connected));
+    if (!view) return;
+    const own = view.players.find(player => player.player_id === view.you);
+    text("PassLabel", own?.chips === 0 ? "No chips left" : "Pay 1 🔴");
+    if (view.phase !== "playing") return;
+    const latest = view.history[view.history.length - 1];
+    const lastMove = latest ? latest.type === "pass"
+      ? `${playerName(latest.player_id)} passed ${latest.card} · ${latest.pot} 🔴 on the card.`
+      : `${playerName(latest.player_id)} took ${latest.card} + ${latest.pot} 🔴.` : "";
+    text("Decision", !socket.connected ? "Connection lost. Use Reconnect to rejoin."
+      : pending ? "Sending your move…"
+      : yourTurn ? own?.chips === 0 ? "No chips left. Take this card." : "Pay a chip or collect the offer."
+      : lastMove || (own ? "Waiting for the next move." : "Watching this table."));
+  }
+  function renderRuns(container, player) {
+    const previousScroll = container.scrollTop;
+    container.replaceChildren();
+    if (!player?.runs.length) container.append(element("span", "no-thanks-empty", "No cards yet"));
+    for (const run of player?.runs || []) {
+      const group = tip(element("div", "no-thanks-run"), `Runs（🔗）：${run.join(" · ")} 共计 ${run[0]} 分。`, "runs");
+      run.forEach(value => group.append(element("span", "", value)));
+      container.append(group);
+    }
+    container.scrollTop = previousScroll;
   }
   function renderPlayers() {
     const container = byId("Players");
     container.replaceChildren();
-    for (const player of view.players) {
+    const playing = view.phase === "playing";
+    const players = view.players.filter(player => !playing || player.player_id !== view.you);
+    if (!playing) players.sort((first, second) => view.game_over
+      ? first.total_score - second.total_score : first.net_score - second.net_score);
+    text("PlayersTitle", !playing ? view.game_over ? "Final standings" : "Round scores"
+      : `${players.length < view.players.length ? "Other players" : "At the table"} · ${players.length}`);
+    for (const player of players) {
       const card = element("article", "no-thanks-player");
-      card.classList.toggle("is-current", player.player_id === view.current_turn);
+      card.dataset.playerId = player.player_id;
+      card.classList.toggle("is-current", playing && player.player_id === view.current_turn);
+      card.classList.toggle("is-you", player.player_id === view.you);
       card.classList.toggle("is-winner", view.winner_ids.includes(player.player_id));
       const heading = element("div", "no-thanks-player-heading");
       heading.append(element("strong", "", player.name || player.player_id));
       const badges = element("div", "no-thanks-badges");
       if (player.player_id === view.you) badges.append(element("span", "", "You"));
       if (player.is_bot) badges.append(element("span", "", "Bot"));
-      if (player.player_id === view.current_turn) badges.append(element("span", "", "Turn"));
+      if (playing && player.player_id === view.current_turn) badges.append(element("span", "no-thanks-turn-badge", "Turn"));
       if (view.winner_ids.includes(player.player_id)) badges.append(tip(element("span", "", "🏆"), "Winner（🏆）：累计分最低，共同最低者共享胜利。", "winner"));
       heading.append(badges);
       const scores = element("div", "no-thanks-player-scores");
       scores.append(tip(element("span", "", `🃏 ${player.card_points}`), "Cards（🃏）：各连续段最小数字之和。", "cards"));
       scores.append(tip(element("span", "", player.chips == null ? "🔴 🔒" : `🔴 ${player.chips}`), "Chips（🔴）：结算前只有玩家本人可查看；🔒 表示隐藏。", "chips"));
-      if (player.net_score != null) scores.append(tip(element("span", "", `Net ${player.net_score}`), "Net（＝）：本局牌面分减去筹码。", "score"));
+      if (player.net_score != null) scores.append(tip(element("span", "no-thanks-player-net", `Net ${player.net_score}`), "Net（＝）：本局牌面分减去筹码。", "score"));
       if (view.total_rounds > 1) scores.append(tip(element("span", "", `Total ${player.total_score}`), "Total：已结算各局净分之和。", "total"));
       const runs = element("div", "no-thanks-runs");
-      if (!player.runs.length) runs.append(element("span", "no-thanks-empty", "No cards yet"));
-      for (const run of player.runs) {
-        const group = tip(element("div", "no-thanks-run"), `Runs（🔗）：${run.join(" · ")} 共计 ${run[0]} 分。`, "runs");
-        run.forEach(value => group.append(element("span", "", value)));
-        runs.append(group);
-      }
+      renderRuns(runs, player);
       card.append(heading, scores, runs);
       container.append(card);
     }
@@ -145,6 +175,7 @@
     const previousScroll = log.scrollTop;
     log.replaceChildren();
     const rows = [...view.history].reverse();
+    text("MoveCount", rows.length ? `(${rows.length})` : "");
     if (!rows.length) log.append(element("li", "", "No moves yet."));
     rows.forEach(row => log.append(element("li", "", row.type === "pass"
       ? `${playerName(row.player_id)} passed ${row.card}. Pot: ${row.pot} 🔴.`
@@ -152,6 +183,7 @@
     log.scrollTop = previousScroll;
     byId("ScoreHistory").classList.toggle("hidden", !view.score_history.length);
     const scores = byId("ScoreRows");
+    const previousScoreScroll = scores.scrollTop;
     scores.replaceChildren();
     view.score_history.forEach(round => {
       const row = element("div", "no-thanks-score-round");
@@ -159,24 +191,33 @@
       round.players.forEach(player => row.append(element("div", "", `${playerName(player.player_id)}: ${player.card_points} − ${player.chips} 🔴 = ${player.round_score} · Total ${player.total_score}`)));
       scores.append(row);
     });
+    scores.scrollTop = previousScoreScroll;
   }
   function render() {
     if (!view) return;
     const own = view.players.find(player => player.player_id === view.you);
     const playing = view.phase === "playing";
     const yourTurn = playing && view.current_turn === view.you;
+    panel.classList.toggle("is-your-turn", yourTurn);
+    panel.classList.toggle("is-ended", !playing);
+    panel.classList.toggle("is-spectator", !own);
     text("Round", `Round ${view.round_number} / ${view.total_rounds}`);
     text("Remaining", `🂠 ${view.deck_count} left`);
     text("CardValue", view.current_card ?? "✓");
-    byId("Card").classList.toggle("is-finished", !playing);
+    byId("Card").setAttribute("aria-label", playing ? `Card ${view.current_card}` : "All cards collected");
     text("Pot", view.pot);
     text("YourChips", own?.chips ?? "—");
     text("YourCards", own?.card_points ?? "—");
     text("YourNet", own?.net_score ?? "—");
     text("PersonalTitle", own ? "Your position" : "Spectating");
+    text("YourCardCount", own ? `· ${own.cards.length}` : "");
+    text("YourTotal", `Total ${own?.total_score ?? "—"}`);
+    byId("YourTotal").classList.toggle("hidden", !own || view.total_rounds <= 1);
+    renderRuns(byId("YourRuns"), own);
     text("TakeLabel", `Collect +${view.pot} 🔴`);
     text("Delta", view.take_delta == null ? "—" : `${view.take_delta > 0 ? "+" : ""}${view.take_delta}`);
-    byId("Delta").className = view.take_delta <= 0 ? "no-thanks-good" : "no-thanks-cost";
+    byId("Delta").className = view.take_delta == null ? "" : view.take_delta <= 0 ? "no-thanks-good" : "no-thanks-cost";
+    text("Projection", own && view.take_delta != null ? `Net ${own.net_score} → ${own.net_score + view.take_delta}` : "Net —");
     byId("Preview").classList.toggle("hidden", !own || !playing);
     if (view.game_over) {
       text("Status", "Game complete · final scores");
@@ -188,7 +229,6 @@
       text("Result", "Card points − chips = round score. Scores are now revealed.");
     } else {
       text("Status", yourTurn ? "Your turn" : `Waiting for ${playerName(view.current_turn)}`);
-      text("Decision", yourTurn ? own.chips === 0 ? "No chips left. Take this card." : "Pay a chip or collect the offer." : own ? "Your cards stay visible to everyone." : "Watching this table.");
     }
     byId("Result").classList.toggle("hidden", playing);
     byId("Review").classList.toggle("hidden", view.phase !== "round_summary");
@@ -208,19 +248,57 @@
   });
   dialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus(); });
   const exempt = target => target.closest("#noThanksHelpBtn, #noThanksExplainBtn, #noThanksDialog");
-  document.addEventListener("pointerdown", event => {
-    suppressClick = false;
-    if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const direct = event.target.closest("[data-no-thanks-explain]");
-    const target = direct || [...panel.querySelectorAll("[data-no-thanks-explain]")].find(node => {
-      const rect = node.getBoundingClientRect();
-      return rect.width && rect.height && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-    });
+  function suppressNextClick() {
     suppressClick = true;
     clearTimeout(suppressTimer);
     suppressTimer = setTimeout(() => { suppressClick = false; }, 750);
-    explain(target);
+  }
+  function explanationAtPoint(event) {
+    const direct = event.target.closest("[data-no-thanks-explain]");
+    if (direct && panel.contains(direct)) return direct;
+    return [...panel.querySelectorAll("[data-no-thanks-explain]")].find(node => {
+      const rect = node.getBoundingClientRect();
+      return rect.width && rect.height && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+    });
+  }
+  document.addEventListener("pointerdown", event => {
+    suppressClick = false;
+    pointerGesture = null;
+    if (!event.isPrimary || event.button !== 0 || panel.classList.contains("hidden") || dialog.open || exempt(event.target)) return;
+    if (!explaining && !panel.contains(event.target)) return;
+    pointerGesture = {
+      id: event.pointerId, x: event.clientX, y: event.clientY,
+      pointerType: event.pointerType, moved: false, explaining,
+      target: explanationAtPoint(event),
+    };
+    if (explaining) event.stopImmediatePropagation();
+  }, true);
+  document.addEventListener("pointermove", event => {
+    if (!pointerGesture || pointerGesture.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - pointerGesture.x, event.clientY - pointerGesture.y) > 10) {
+      pointerGesture.moved = true;
+      hideTip();
+    }
+  }, true);
+  document.addEventListener("pointerup", event => {
+    if (!pointerGesture || pointerGesture.id !== event.pointerId) return;
+    const gesture = pointerGesture;
+    pointerGesture = null;
+    if (gesture.moved || Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) {
+      suppressNextClick();
+      hideTip();
+      return;
+    }
+    if (!gesture.explaining || !explaining) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    suppressNextClick();
+    if (gesture.target === explanationAtPoint(event)) explain(gesture.target);
+  }, true);
+  document.addEventListener("pointercancel", event => {
+    if (!pointerGesture || pointerGesture.id !== event.pointerId) return;
+    pointerGesture = null;
+    suppressNextClick();
+    hideTip();
   }, true);
   document.addEventListener("click", event => {
     if (suppressClick) { suppressClick = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
@@ -230,7 +308,9 @@
   }, true);
   panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-no-thanks-tip]")); });
   panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
-  panel.addEventListener("focusin", event => showTip(event.target.closest("[data-no-thanks-tip]")));
+  panel.addEventListener("focusin", event => {
+    if (!pointerGesture || pointerGesture.pointerType === "mouse") showTip(event.target.closest("[data-no-thanks-tip]"));
+  });
   panel.addEventListener("focusout", hideTip);
   panel.addEventListener("click", event => {
     const target = event.target.closest("[data-no-thanks-tip]");
@@ -250,16 +330,26 @@
   window.addEventListener("blur", hideTip);
 
   function clearState() {
-    view = null; pending = false; renderSignature = null; suppressClick = false;
+    view = null; pending = false; renderSignature = null; suppressClick = false; pointerGesture = null;
     clearTimeout(pendingTimer); clearTimeout(suppressTimer);
     setExplain(false); hideTip();
     if (dialog.open) dialog.close();
-    ["Players", "Log", "ScoreRows"].forEach(suffix => byId(suffix).replaceChildren());
+    ["Players", "YourRuns", "Log", "ScoreRows"].forEach(suffix => byId(suffix).replaceChildren());
     ["Result", "Review", "ScoreHistory"].forEach(suffix => byId(suffix).classList.add("hidden"));
     ["YourChips", "YourCards", "YourNet", "Delta", "Round"].forEach(suffix => text(suffix, "—"));
     text("Status", "Waiting to start"); text("CardValue", "?"); text("Pot", "0");
-    text("Remaining", "🂠 — left"); text("Decision", "24 cards. Make each choice count.");
-    byId("Card").classList.remove("is-finished"); renderActions();
+    ["YourCardCount", "YourTotal", "MoveCount"].forEach(suffix => text(suffix, ""));
+    text("Remaining", "🂠 — left"); text("Decision", "Waiting for the first deal.");
+    text("PersonalTitle", "Your position"); text("PlayersTitle", "At the table");
+    text("Projection", "Net —"); text("PassLabel", "Pay 1 🔴"); text("TakeLabel", "Collect the offer");
+    byId("Delta").className = "";
+    byId("Preview").classList.remove("hidden");
+    byId("YourTotal").classList.add("hidden");
+    byId("Card").removeAttribute("aria-label");
+    byId("MoveHistory").open = false;
+    byId("ScoreHistory").open = false;
+    panel.classList.remove("is-your-turn", "is-ended", "is-spectator");
+    renderActions();
   }
   function syncConfig(state) {
     const visible = state?.game_type === "no_thanks" && state.status === "lobby";

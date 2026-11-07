@@ -42,6 +42,7 @@ const output = 'build/game-ai-catalog';
           assert.equal(item.label.includes('Strategic AI available'), game.has_strategic_ai);
         }
         assert.equal(catalog.find(game => game.game_id === 'abraca_what').has_strategic_ai, true);
+        assert.equal(catalog.find(game => game.game_id === 'felix').has_strategic_ai, true);
         assert.equal(catalog.find(game => game.game_id === 'six_nimmt').has_strategic_ai, true);
         assert.equal(catalog.find(game => game.game_id === 'hanabi').has_strategic_ai, false);
 
@@ -76,6 +77,16 @@ const output = 'build/game-ai-catalog';
         assert.equal(bounds.pageFits, true, `${width}: page width`);
         assert.deepEqual(bounds.bad, [], `${width}: game rows`);
         await page.screenshot({ path: `${output}/catalog-${width}.png` });
+
+        await page.locator('#gameSearchInput').fill('菲力猫');
+        const felixItem = page.locator('#gameList [data-game-id="felix"]');
+        assert.equal(await page.locator('#gameList .game-item').count(), 1);
+        assert.equal(await felixItem.locator('.game-item-ai').textContent(), '🤖');
+        assert.match(await felixItem.getAttribute('aria-label'), /Strategic AI available/);
+        await page.locator('#gameSortSelect').selectOption('difficulty_desc');
+        await page.locator('#playerCountFilter').selectOption('3');
+        assert.equal(await felixItem.locator('.game-item-ai').textContent(), '🤖');
+        await page.screenshot({ path: `${output}/felix-${width}.png` });
 
         await page.locator('#gameSearchInput').fill('Abraca');
         assert.equal(await page.locator('#gameList .game-item').count(), 1);

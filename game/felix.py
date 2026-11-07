@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -163,6 +164,7 @@ def _begin_choose_card(state: Dict) -> None:
     state["last_round_summary"] = None
     state["next_ready"] = []
     state["table_slots"] = []
+    state["round_passes"] = []
     for pdata in state.get("players", {}).values():
         pdata["chosen_card_id"] = None
         pdata["round_bid"] = 0
@@ -287,13 +289,15 @@ def _resolve_round_win(state: Dict, winner_id: str, bid: int) -> Dict:
         "removed_cards": [_copy_card(card) for card in removed],
         "old_start_player": old_start,
         "next_start_player": winner_id,
+        "passes": copy.deepcopy(state.get("round_passes", [])),
     }
     state["last_round_summary"] = summary
+    state.setdefault("history", []).append(copy.deepcopy(summary))
     _finalize_if_done(state)
     return summary
 
 
-def _resolve_round_no_sale(state: Dict) -> Dict:
+def _resolve_round_no_sale(state: Dict, last_player_reward: int = 0) -> Dict:
     _reveal_all_slots(state)
     removed = []
     for slot in state.get("table_slots", []):
@@ -316,8 +320,11 @@ def _resolve_round_no_sale(state: Dict) -> Dict:
         "round": state.get("round"),
         "removed_cards": removed,
         "next_start_player": state.get("start_player"),
+        "last_player_reward": last_player_reward,
+        "passes": copy.deepcopy(state.get("round_passes", [])),
     }
     state["last_round_summary"] = summary
+    state.setdefault("history", []).append(copy.deepcopy(summary))
     _finalize_if_done(state)
     return summary
 
@@ -410,6 +417,7 @@ class FelixGame:
             "choose_index": 0,
             "next_ready": [],
             "last_round_summary": None,
+            "history": [],
             "removed_cards": removed_cards,
             "dummy_deck": dummy_deck,
             "skip_refill": False,
@@ -511,6 +519,7 @@ class FelixGame:
             if action_type != "pass":
                 return [], "invalid action"
             reward = _award_lowest_mouse_card(state, player_id)
+            state.setdefault("round_passes", []).append({"player_id": player_id, "reward": reward})
             state["players"][player_id]["round_bid"] = 0
             state["players"][player_id]["passed"] = True
             state["active_players"] = [pid for pid in state.get("active_players", []) if pid != player_id]
@@ -548,9 +557,9 @@ class FelixGame:
                 return events, None
             if action_type == "pass":
                 reward = _award_lowest_mouse_card(state, player_id)
+                state.setdefault("round_passes", []).append({"player_id": player_id, "reward": reward})
                 state["players"][player_id]["passed"] = True
-                summary = _resolve_round_no_sale(state)
-                summary["last_player_reward"] = reward
+                summary = _resolve_round_no_sale(state, reward)
                 events.append({"type": "felix:round_resolved", "payload": summary})
                 return events, None
             return [], "invalid action"
@@ -623,6 +632,7 @@ class FelixGame:
             "round": state.get("round"),
             "current_turn": state.get("current_turn"),
             "start_player": state.get("start_player"),
+            "turn_order": list(state.get("turn_order", [])),
             "active_players": list(state.get("active_players", [])),
             "current_bid": int(state.get("current_bid", 0)),
             "current_bidder": state.get("current_bidder"),
@@ -631,8 +641,15 @@ class FelixGame:
             "table_slots": table_slots,
             "players": players_view,
             "your_hand": your_hand,
+            "your_chosen_card": next(
+                (_public_card(slot.get("card")) for slot in state.get("table_slots", [])
+                 if slot.get("player_id") == viewer_id and viewer_id in state.get("players", {})),
+                None,
+            ),
             "legal_actions": FelixGame.get_legal_actions(state, viewer_id),
-            "last_round_summary": state.get("last_round_summary"),
+            "last_round_summary": copy.deepcopy(state.get("last_round_summary")),
+            "history": copy.deepcopy(state.get("history", [])),
+            "round_passes": copy.deepcopy(state.get("round_passes", [])),
             "next_ready": list(state.get("next_ready", [])),
             "winner": state.get("winner", []),
             "final_results": state.get("final_results"),
@@ -642,27 +659,9 @@ class FelixGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over") or bot_id not in state.get("players", {}):
-            return None
-        phase = state.get("phase")
-        pdata = state["players"][bot_id]
-        if phase == "choose_card" and bot_id == state.get("current_turn"):
-            hand = list(pdata.get("hand", []))
-            if not hand:
-                return None
-            chosen = random.choice(hand)
-            return {"type": "choose_card", "card_id": chosen.get("id")}
-        if phase == "round_summary" and bot_id not in state.get("next_ready", []):
-            return {"type": "next_round"}
-        if phase == "last_chance" and bot_id == state.get("current_turn"):
-            return {"type": "buy_for_one"} if int(pdata.get("mice", 0)) >= 1 else {"type": "pass"}
-        if phase != "auction" or bot_id != state.get("current_turn"):
-            return None
-        current_bid = int(state.get("current_bid", 0))
-        budget = max(1, int(pdata.get("mice", 0)) // 3)
-        if current_bid < budget:
-            return {"type": "bid", "amount": current_bid + 1}
-        return {"type": "pass"}
+        from game.felix_ai import choose_action
+
+        return choose_action(FelixGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

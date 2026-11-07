@@ -7,35 +7,69 @@
   <button id="noThanksExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
 </template>
 <template data-game-target="noThanksPanel" data-game-mode="contents">
-  <header class="no-thanks-heading">
-    <div><span class="no-thanks-eyebrow">LESS IS MORE</span><h2>NO THANKS! <span>不了不了</span></h2></div>
-  </header>
-  <div class="no-thanks-statusbar"><span id="noThanksStatus" role="status" aria-live="polite">Waiting to start</span><span id="noThanksRound" data-no-thanks-explain="round" data-no-thanks-tip="Round：本局编号。多局时累计分最低者获胜。" tabindex="0">Round —</span></div>
+  <div class="no-thanks-statusbar">
+    <span id="noThanksStatus" role="status" aria-live="polite">Waiting to start</span>
+    <span id="noThanksRound" data-no-thanks-explain="round" data-no-thanks-tip="Round：本局编号。多局时累计分最低者获胜。" tabindex="0">Round —</span>
+  </div>
+  <div id="noThanksResult" class="no-thanks-result hidden" role="status"></div>
+  <div id="noThanksReview" class="no-thanks-review hidden">
+    <span id="noThanksReady"></span>
+    <button id="noThanksNext" type="button" data-no-thanks-explain="next" disabled>Next Round</button>
+  </div>
   <div class="no-thanks-table">
     <section class="no-thanks-offer" aria-label="Current offer">
-      <div class="no-thanks-section-heading"><h3>On the table</h3><span id="noThanksRemaining" tabindex="0" data-no-thanks-explain="deck" data-no-thanks-tip="Deck（🂠）：尚未翻开的牌数；另有 9 张牌被暗移除。">🂠 — left</span></div>
-      <div class="no-thanks-offer-content">
-        <div id="noThanksCard" class="no-thanks-card" tabindex="0" data-no-thanks-explain="card" data-no-thanks-tip="Card（🃏）：数字是罚分；连号的一段只计最小数字。"><span class="no-thanks-card-corner" aria-hidden="true">NO</span><strong id="noThanksCardValue">?</strong><span class="no-thanks-card-foot" aria-hidden="true">THANKS!</span></div>
-        <div class="no-thanks-pot" tabindex="0" data-no-thanks-explain="pot" data-no-thanks-tip="Pot（🔴）：当前牌上的筹码，拿牌时一并收走，每枚在结算时抵 1 分。"><span class="no-thanks-eyebrow">COMES WITH</span><div class="no-thanks-chip-stack" aria-hidden="true">🔴</div><strong id="noThanksPot">0</strong><span>chips</span></div>
+      <div class="no-thanks-section-heading">
+        <h3>On the table</h3>
+        <span id="noThanksRemaining" tabindex="0" data-no-thanks-explain="deck" data-no-thanks-tip="Deck（🂠）：尚未翻开的牌数；另有 9 张牌被暗移除。">🂠 — left</span>
       </div>
-      <div id="noThanksDecision" class="no-thanks-decision">24 cards. Make each choice count.</div>
-      <div class="no-thanks-actions"><button id="noThanksPass" type="button" data-no-thanks-explain="pass" disabled><strong>No Thanks!</strong><span>Pay 1 🔴</span></button><button id="noThanksTake" type="button" data-no-thanks-explain="take" disabled><strong>Take Card</strong><span id="noThanksTakeLabel">Collect the offer</span></button></div>
+      <div class="no-thanks-offer-content">
+        <div id="noThanksCard" class="no-thanks-card" tabindex="0" data-no-thanks-explain="card" data-no-thanks-tip="Card（🃏）：数字是罚分；连号的一段只计最小数字。">
+          <span class="no-thanks-card-corner" aria-hidden="true">NO</span>
+          <strong id="noThanksCardValue">?</strong>
+          <span class="no-thanks-card-foot" aria-hidden="true">THANKS!</span>
+        </div>
+        <div class="no-thanks-offer-info">
+          <div class="no-thanks-pot" tabindex="0" data-no-thanks-explain="pot" data-no-thanks-tip="Pot（🔴）：当前牌上的筹码，拿牌时一并收走，每枚在结算时抵 1 分。">
+            <span class="no-thanks-eyebrow">COMES WITH</span>
+            <div class="no-thanks-pot-value"><span class="no-thanks-chip" aria-hidden="true"></span><strong id="noThanksPot">0</strong></div>
+            <span>chips to collect</span>
+          </div>
+          <div id="noThanksPreview" class="no-thanks-preview" tabindex="0" data-no-thanks-explain="delta" data-no-thanks-tip="Take change（Δ）：拿牌后的净分变化，已包括连号和收回筹码；越低越好。">
+            <span>Take change Δ</span><strong id="noThanksDelta">—</strong>
+            <span id="noThanksProjection" class="no-thanks-projection">Net —</span>
+          </div>
+        </div>
+      </div>
     </section>
     <aside class="no-thanks-personal">
       <div class="no-thanks-section-heading"><h3 id="noThanksPersonalTitle">Your position</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-explain="score" data-no-thanks-tip="Lower is better（↓）：牌是罚分，筹码抵分，负分也有效。">↓ Lower is better</span></div>
       <div class="no-thanks-stats">
         <div tabindex="0" data-no-thanks-explain="chips" data-no-thanks-tip="Chips（🔴）：只有你可查看自己的筹码，结算时全部公开。"><span>Chips 🔴</span><strong id="noThanksYourChips">—</strong></div>
-        <div tabindex="0" data-no-thanks-explain="cards" data-no-thanks-tip="Cards（🃏）：各连续段的最小数字之和。"><span>Cards 🃏</span><strong id="noThanksYourCards">—</strong></div>
+        <div tabindex="0" data-no-thanks-explain="cards" data-no-thanks-tip="Cards（🃏）：各连续段的最小数字之和，不是牌的张数。"><span>Card points 🃏</span><strong id="noThanksYourCards">—</strong></div>
         <div class="no-thanks-net" tabindex="0" data-no-thanks-explain="score" data-no-thanks-tip="Net（＝）：本局牌面分 − 剩余筹码数。"><span>Net ＝</span><strong id="noThanksYourNet">—</strong></div>
       </div>
-      <div id="noThanksPreview" class="no-thanks-preview" tabindex="0" data-no-thanks-explain="delta" data-no-thanks-tip="Take change（Δ）：拿牌后的净分变化，已包括连号和收回筹码；越低越好。">Take change Δ <strong id="noThanksDelta">—</strong></div>
-      <div id="noThanksResult" class="no-thanks-result hidden" role="status"></div>
-      <div id="noThanksReview" class="no-thanks-review hidden"><span id="noThanksReady"></span><button id="noThanksNext" type="button" data-no-thanks-explain="next" disabled>Next Round</button></div>
-      <details class="no-thanks-history"><summary>Recent moves</summary><ol id="noThanksLog" aria-label="Recent moves"></ol></details>
+      <div class="no-thanks-hand-heading">
+        <h4>Your cards <span id="noThanksYourCardCount"></span></h4>
+        <span id="noThanksYourTotal" class="no-thanks-small hidden" tabindex="0" data-no-thanks-explain="total" data-no-thanks-tip="Total：已结算各局净分之和，不包括当前未结算的一局。"></span>
+      </div>
+      <div id="noThanksYourRuns" class="no-thanks-runs" aria-label="Your cards"></div>
     </aside>
+    <div id="noThanksActionArea" class="no-thanks-action-area">
+      <p id="noThanksDecision" class="no-thanks-decision">Waiting for the first deal.</p>
+      <div class="no-thanks-actions">
+        <button id="noThanksPass" type="button" data-no-thanks-explain="pass" aria-describedby="noThanksDecision" disabled><strong>No Thanks!</strong><span id="noThanksPassLabel">Pay 1 🔴</span></button>
+        <button id="noThanksTake" type="button" data-no-thanks-explain="take" aria-describedby="noThanksDecision" disabled><strong>Take Card</strong><span id="noThanksTakeLabel">Collect the offer</span></button>
+      </div>
+    </div>
   </div>
-  <section class="no-thanks-collections" aria-label="Players and cards"><div class="no-thanks-section-heading"><h3>At the table</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-explain="runs" data-no-thanks-tip="Runs（🔗）：相邻数字组成一段，只有段首的深色数字计分。">🔗 Runs count once</span></div><div id="noThanksPlayers" class="no-thanks-players"></div></section>
-  <details id="noThanksScoreHistory" class="no-thanks-history hidden"><summary>Score history</summary><div id="noThanksScoreRows"></div></details>
+  <section class="no-thanks-collections" aria-label="Players and cards">
+    <div class="no-thanks-section-heading"><h3 id="noThanksPlayersTitle">At the table</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-explain="runs" data-no-thanks-tip="Runs（🔗）：相邻数字组成一段，只有段首的深色数字计分。">🔗 Runs count once</span></div>
+    <div id="noThanksPlayers" class="no-thanks-players"></div>
+  </section>
+  <footer class="no-thanks-footer">
+    <details id="noThanksMoveHistory" class="no-thanks-history"><summary>Recent moves <span id="noThanksMoveCount"></span></summary><ol id="noThanksLog" aria-label="Recent moves" tabindex="0"></ol></details>
+    <details id="noThanksScoreHistory" class="no-thanks-history hidden"><summary>Score history</summary><div id="noThanksScoreRows" tabindex="0"></div></details>
+  </footer>
   <div id="noThanksTooltip" class="no-thanks-tooltip hidden" role="tooltip"></div>
 </template>
 <template data-game-target="noThanksDialog" data-game-mode="replace">

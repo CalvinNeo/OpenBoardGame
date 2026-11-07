@@ -107,6 +107,13 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(room_id_first, app.ROOMS)
         self.assertEqual(app.SESSIONS[sid]["room_id"], room_id_second)
 
+    async def test_felix_bot_card_is_private_but_bid_is_public(self):
+        action = {"type": "choose_card", "card_id": "red_cat_-8"}
+        self.assertEqual(app._public_bot_action("felix", action), {"type": "choose_card"})
+        bid = {"type": "bid", "amount": 7}
+        self.assertEqual(app._public_bot_action("felix", bid), bid)
+        self.assertEqual(action, {"type": "choose_card", "card_id": "red_cat_-8"})
+
     async def test_bomb_busters_bot_action_is_sanitized(self):
         action = {
             "type": "dual_cut",

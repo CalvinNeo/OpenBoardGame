@@ -78,6 +78,30 @@ class SagradaIntegrationTests(unittest.IsolatedAsyncioTestCase):
         response = await app.download_room_save(room.room_id)
         self.assertTrue(str(response.path).endswith(".save"))
 
+    async def test_placement_auto_ends_in_the_same_socket_broadcast(self):
+        room = await self.make_room()
+        while room.game_state["phase"] == "pattern_select":
+            player, action = self.next_action(room)
+            await app.on_game_action(player.socket_id, {"action": action})
+        state = room.game_state
+        player = next(player for player in room.players if player.player_id == state["current_turn"])
+        state["players"][player.player_id]["favor_tokens"] = 0
+        action = dict(Game.bot_move(state, player.player_id))
+        action.pop("delay_ms", None)
+        self.assertEqual(action["type"], "place_die")
+        revision, draft_index = state["revision"], state["draft_index"]
+        app.sio.emits.clear()
+        await app.on_game_action(player.socket_id, {"action": action})
+        self.assertEqual([message for message in app.sio.emits if message["event"] == "system:error"], [])
+        self.assertEqual(room.game_state["revision"], revision + 1)
+        self.assertEqual(room.game_state["draft_index"], draft_index + 1)
+        messages = [message for message in app.sio.emits if message["event"] == "game:state"]
+        self.assertEqual(len(messages), 2)
+        for message in messages:
+            recipient = next(player for player in room.players if player.socket_id == message["to"])
+            self.assertEqual(message["payload"]["view"], Game.get_public_view(room.game_state, recipient.player_id))
+            self.assertEqual(message["payload"]["view"]["log"][-1]["type"], "end_turn")
+
     async def test_invalid_socket_action_is_atomic_even_without_schema_validation(self):
         room = await self.make_room()
         for skip in (False, True):

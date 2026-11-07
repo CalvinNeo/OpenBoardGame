@@ -29,6 +29,7 @@ class StrategicAiMetadataTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(game=game_id):
                 self.assertIs(entry["has_strategic_ai"], game_id in STRATEGIC_AI_GAME_IDS)
         self.assertTrue(catalog["abraca_what"]["has_strategic_ai"])
+        self.assertTrue(catalog["felix"]["has_strategic_ai"])
         self.assertTrue(catalog["six_nimmt"]["has_strategic_ai"])
         self.assertFalse(catalog["hanabi"]["has_strategic_ai"])
 

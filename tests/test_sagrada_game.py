@@ -347,6 +347,126 @@ class SagradaGameTests(unittest.TestCase):
         self.assertEqual(state["round"], 2)
         self.assertEqual(state["current_turn"], next_player)
 
+    def test_placement_auto_ends_when_tools_cannot_follow_a_normal_draft(self):
+        for tool_id in ("grozing_pliers", "lens_cutter", "flux_brush", "glazing_hammer",
+                        "cork_backed_straightedge", "grinding_stone", "flux_remover"):
+            with self.subTest(tool=tool_id):
+                state, pid = self.fixture(tool_id)
+                revision = state["revision"]
+                events, error = SagradaGame.apply_action(state, pid, {
+                    "type": "place_die", "die_id": "fixture-red", "row": 0, "col": 0,
+                    "revision": revision,
+                })
+                self.assertIsNone(error)
+                self.assertEqual([event["type"] for event in events], ["sagrada:place_die", "sagrada:end_turn"])
+                self.assertEqual(state["draft_index"], 1)
+                self.assertEqual(state["revision"], revision + 1)
+                self.assertEqual(state["players"][pid]["favor_tokens"], 20)
+                self.assertEqual(state["tools"][0]["uses"], 0)
+
+    def test_placement_auto_ends_when_tool_is_used_or_unaffordable(self):
+        for favors, uses, tool_used in ((20, 0, True), (0, 0, False), (1, 1, False)):
+            with self.subTest(favors=favors, uses=uses, tool_used=tool_used):
+                state, pid = self.fixture("eglomise_brush")
+                state["players"][pid]["favor_tokens"] = favors
+                state["tools"][0]["uses"] = uses
+                state["turn_state"]["tool_used"] = tool_used
+                self.apply(state, pid, {"type": "place_die", "die_id": "fixture-red", "row": 0, "col": 0})
+                self.assertEqual(state["draft_index"], 1)
+                self.assertEqual(state["players"][pid]["favor_tokens"], favors)
+
+    def test_placement_preserves_available_movement_tools_then_auto_ends(self):
+        for tool_id in ("eglomise_brush", "copper_foil_burnisher", "lathekin", "tap_wheel"):
+            with self.subTest(tool=tool_id):
+                state, pid = self.fixture(tool_id)
+                state["players"][pid]["grid"][0][0]["die"] = self.die("anchor", "blue", 1)
+                self.apply(state, pid, {"type": "place_die", "die_id": "fixture-red", "row": 1, "col": 1})
+                self.assertEqual(state["draft_index"], 0)
+                self.assertEqual(SagradaGame.get_legal_actions(state, pid), ["use_tool", "end_turn"])
+                moves = [{"from_row": 1, "from_col": 1, "to_row": 0, "to_col": 1}]
+                if tool_id == "lathekin":
+                    moves.append({"from_row": 0, "from_col": 0, "to_row": 1, "to_col": 0})
+                self.use_tool(state, pid, tool_id, moves=moves)
+                self.assertEqual(state["draft_index"], 1)
+                self.assertEqual(state["players"][pid]["favor_tokens"], 19)
+
+    def test_placement_auto_ends_when_movement_tools_have_no_legal_targets(self):
+        cases = (
+            ("eglomise_brush", {"value": 6}, "red"),
+            ("copper_foil_burnisher", {"color": "blue"}, "red"),
+            ("lathekin", None, "red"),
+            ("tap_wheel", None, "blue"),
+            ("tap_wheel", {"color": "blue"}, "red"),
+        )
+        for tool_id, restriction, track_color in cases:
+            with self.subTest(tool=tool_id, restriction=restriction, track_color=track_color):
+                state, pid = self.fixture(tool_id)
+                for row in state["players"][pid]["grid"]:
+                    for cell in row:
+                        cell["restriction"] = copy.deepcopy(restriction)
+                state["players"][pid]["grid"][0][0]["restriction"] = None
+                state["round_track"][0][0]["color"] = track_color
+                self.apply(state, pid, {"type": "place_die", "die_id": "fixture-red", "row": 0, "col": 0})
+                self.assertEqual(state["draft_index"], 1)
+
+    def test_tool_availability_search_preserves_state(self):
+        for tool_id in ("eglomise_brush", "copper_foil_burnisher", "lathekin", "tap_wheel"):
+            with self.subTest(tool=tool_id):
+                state, pid = self.fixture(tool_id)
+                state["players"][pid]["grid"][0][0]["die"] = self.die("anchor", "blue", 1)
+                state["players"][pid]["grid"][1][1]["die"] = self.die("movable", "red", 3)
+                state["turn_state"]["drafted"] = True
+                before = copy.deepcopy(state)
+                self.assertEqual(SagradaGame.get_legal_actions(state, pid), ["use_tool", "end_turn"])
+                self.assertIn("use_tool", SagradaGame.get_public_view(state, pid)["legal_actions"])
+                self.assertEqual(state, before)
+
+    def test_auto_end_preserves_consecutive_turns_and_rejects_duplicate_placement(self):
+        for count in (2, 3, 4):
+            with self.subTest(players=count):
+                state = self.started(count=count)
+                while state["draft_index"] < count - 1:
+                    self.apply(state, state["current_turn"], {"type": "end_turn"})
+                pid = state["current_turn"]
+                state["players"][pid].update(grid=self.empty_grid(), favor_tokens=0)
+                action = {"type": "place_die", "die_id": state["pool"][0]["id"],
+                          "row": 0, "col": 0, "revision": state["revision"]}
+                self.apply(state, pid, action)
+                self.assertEqual(state["draft_index"], count)
+                self.assertEqual(state["current_turn"], pid)
+                self.assertEqual(state["turn_state"], {"drafted": False, "tool_used": False})
+                self.rejected_unchanged(state, pid, action)
+                self.apply(state, pid, {"type": "place_die", "die_id": state["pool"][0]["id"], "row": 1, "col": 1})
+                self.assertEqual(state["draft_index"], count + 1)
+
+    def test_last_placement_auto_ends_at_round_review_not_next_round(self):
+        state = self.started()
+        while state["draft_index"] < len(state["draft_order"]) - 1:
+            self.apply(state, state["current_turn"], {"type": "end_turn"})
+        pid = state["current_turn"]
+        state["players"][pid].update(grid=self.empty_grid(), favor_tokens=0)
+        leftovers = copy.deepcopy(state["pool"][1:])
+        self.apply(state, pid, {"type": "place_die", "die_id": state["pool"][0]["id"], "row": 0, "col": 0})
+        self.assertEqual(state["phase"], "round_end")
+        self.assertEqual(state["round"], 1)
+        self.assertIsNone(state["current_turn"])
+        self.assertEqual(state["round_track"][-1], leftovers)
+        self.assertEqual(state["ready"], [])
+        self.assertEqual([entry["type"] for entry in state["round_summary"][-2:]], ["place_die", "end_turn"])
+        self.apply(state, "p1", {"type": "next_round"})
+        self.assertEqual(state["phase"], "round_end")
+        self.apply(state, "p2", {"type": "next_round"})
+        self.assertEqual(state["round"], 2)
+
+    def test_manual_end_turn_can_decline_a_remaining_tool(self):
+        state, pid = self.fixture("eglomise_brush")
+        self.apply(state, pid, {"type": "place_die", "die_id": "fixture-red", "row": 0, "col": 0})
+        self.assertEqual(state["current_turn"], pid)
+        self.apply(state, pid, {"type": "end_turn"})
+        self.assertEqual(state["draft_index"], 1)
+        self.assertEqual(state["players"][pid]["favor_tokens"], 20)
+        self.assertEqual(state["tools"][0]["uses"], 0)
+
     def test_tool_cannot_be_used_twice_in_a_turn_or_without_favors(self):
         state, pid = self.fixture("grinding_stone")
         self.use_tool(state, pid, "grinding_stone", die_id="fixture-red", row=0, col=0)
@@ -380,13 +500,13 @@ class SagradaGameTests(unittest.TestCase):
     def test_tool_use_resets_each_turn_but_shared_cost_survives_new_rounds(self):
         state, pid = self.fixture("grinding_stone")
         self.use_tool(state, pid, "grinding_stone", die_id="fixture-red", row=0, col=0)
-        self.apply(state, pid, {"type": "end_turn"})
+        self.assertEqual(state["draft_index"], 1)
         while state["current_turn"] != pid:
             self.apply(state, state["current_turn"], {"type": "end_turn"})
         self.assertFalse(state["turn_state"]["tool_used"])
         self.use_tool(state, pid, "grinding_stone", die_id="fixture-blue", row=1, col=1)
         self.assertEqual(state["players"][pid]["favor_tokens"], 17)
-        self.apply(state, pid, {"type": "end_turn"})
+        self.assertEqual(state["phase"], "round_end")
         for player_id in state["turn_order"]:
             self.apply(state, player_id, {"type": "next_round"})
         view = SagradaGame.get_public_view(state, pid)
@@ -481,6 +601,9 @@ class SagradaGameTests(unittest.TestCase):
                 state, pid = self.fixture(tool_id)
                 view = self.use_tool(state, pid, tool_id, die_id="fixture-red")
                 pending = view["pending_tool"]
+                self.assertEqual(state["draft_index"], 0)
+                self.assertEqual(state["current_turn"], pid)
+                self.assertEqual(view["legal_actions"], ["resolve_tool"])
                 self.assertEqual(pending["tool_id"], tool_id)
                 self.assertIn(pending["die"]["color"], COLORS)
                 if tool_id == "flux_brush":
@@ -488,6 +611,8 @@ class SagradaGameTests(unittest.TestCase):
                     self.assertIn(pending["die"]["value"], range(1, 7))
                 self.rejected_unchanged(state, pid, {"type": "end_turn"})
                 self.apply(state, pid, {"type": "resolve_tool", "row": 0, "col": 0, **({"value": 6} if tool_id == "flux_remover" else {})})
+                self.assertEqual(state["draft_index"], 1)
+                self.assertIsNone(state["pending_tool"])
                 placed = state["players"][pid]["grid"][0][0]["die"]
                 self.assertEqual(placed["color"], pending["die"]["color"])
                 if tool_id == "flux_remover":
@@ -501,6 +626,7 @@ class SagradaGameTests(unittest.TestCase):
             for col in range(5):
                 state["players"][pid]["grid"][row][col]["die"] = self.die(f"filled-{row}-{col}", "blue", 2)
         self.apply(state, pid, {"type": "resolve_tool", "return_die": True})
+        self.assertEqual(state["draft_index"], 1)
         self.assertTrue(any(d["id"] == "fixture-red" for d in state["pool"]))
         self.assertIsNone(state.get("pending_tool"))
         self.rejected_unchanged(state, pid, {"type": "place_die", "die_id": "fixture-blue", "row": 0, "col": 0})
@@ -553,6 +679,23 @@ class SagradaGameTests(unittest.TestCase):
         self.use_tool(state, pid, "glazing_hammer")
         self.assertEqual([(d["id"], d["color"]) for d in state["pool"]], previous)
         self.assertTrue(all(d["value"] in range(1, 7) for d in state["pool"]))
+        self.assertEqual(state["draft_index"], len(state["draft_order"]) - 1)
+        self.assertIn("place_die", SagradaGame.get_legal_actions(state, pid))
+
+    def test_tool_auto_ends_when_no_normal_draft_remains_legal(self):
+        for tool_id in ("flux_brush", "glazing_hammer"):
+            with self.subTest(tool=tool_id):
+                state, pid = self.fixture(tool_id, second_turn=tool_id == "glazing_hammer")
+                for row_index, row in enumerate(state["players"][pid]["grid"]):
+                    for col_index, cell in enumerate(row):
+                        cell["die"] = self.die(f"filled-{row_index}-{col_index}", "blue", 2)
+                draft_index = state["draft_index"]
+                dice_before = Counter(die["id"] for die in self.dice_in_state(state))
+                self.use_tool(state, pid, tool_id, **({"die_id": "fixture-red"} if tool_id == "flux_brush" else {}))
+                self.assertEqual(state["draft_index"], draft_index + 1)
+                self.assertIsNone(state["pending_tool"])
+                self.assertEqual(Counter(die["id"] for die in self.dice_in_state(state)), dice_before)
+                self.assertEqual(state["players"][pid]["favor_tokens"], 19)
 
     def test_tap_wheel_allows_one_die_and_movement_can_precede_normal_draft(self):
         state, pid = self.fixture("tap_wheel")
@@ -562,7 +705,10 @@ class SagradaGameTests(unittest.TestCase):
         self.use_tool(state, pid, "tap_wheel", moves=[
             {"from_row": 0, "from_col": 1, "to_row": 1, "to_col": 1},
         ])
+        self.assertEqual(state["draft_index"], 0)
+        self.assertIn("place_die", SagradaGame.get_legal_actions(state, pid))
         self.apply(state, pid, {"type": "place_die", "die_id": "fixture-green", "row": 2, "col": 2})
+        self.assertEqual(state["draft_index"], 1)
         self.assertEqual(len(self.occupied(state["players"][pid]["grid"])), 3)
 
     def test_running_pliers_can_end_first_turn_without_normal_draft_and_skips_second(self):
@@ -570,6 +716,8 @@ class SagradaGameTests(unittest.TestCase):
         self.use_tool(state, pid, "running_pliers", die_id="fixture-red", row=0, col=0)
         self.assertEqual(len(self.occupied(state["players"][pid]["grid"])), 1)
         self.assertNotEqual(state["current_turn"], pid)
+        self.assertEqual(state["draft_index"], 1)
+        self.assertEqual(sum(entry["type"] == "end_turn" for entry in state["round_actions"]), 1)
         self.assertIn(pid, state["skip_second"])
         for _ in range(2):
             self.apply(state, state["current_turn"], {"type": "end_turn"})

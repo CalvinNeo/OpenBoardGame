@@ -237,6 +237,69 @@ def _move_dice(state: Dict, pid: str, tool_id: str, moves: List) -> None:
         moved.add(die["id"])
 
 
+def _has_tool_moves(grid: List, tool_id: str, track_colors: set, moved: Tuple = ()) -> bool:
+    required = 2 if tool_id == "lathekin" else 1
+    for source_row in range(ROWS):
+        for source_col in range(COLS):
+            die = grid[source_row][source_col]["die"]
+            if not die or die["id"] in moved:
+                continue
+            if tool_id == "tap_wheel" and die["color"] not in track_colors:
+                continue
+            grid[source_row][source_col]["die"] = None
+            try:
+                destinations = _placements(grid, die, ignore_color=tool_id == "eglomise_brush",
+                                           ignore_value=tool_id == "copper_foil_burnisher")
+                for target_row, target_col in destinations:
+                    if (source_row, source_col) == (target_row, target_col):
+                        continue
+                    if len(moved) + 1 == required:
+                        return True
+                    grid[target_row][target_col]["die"] = die
+                    try:
+                        if _has_tool_moves(grid, tool_id, track_colors, (*moved, die["id"])):
+                            return True
+                    finally:
+                        grid[target_row][target_col]["die"] = None
+            finally:
+                grid[source_row][source_col]["die"] = die
+    return False
+
+
+def _tool_available(state: Dict, pid: str, tool: Dict) -> bool:
+    turn = state["turn_state"]
+    player = state["players"][pid]
+    if turn["tool_used"] or player["favor_tokens"] < (1 if tool["uses"] == 0 else 2):
+        return False
+    tool_id = tool["id"]
+    grid = player["grid"]
+    if tool_id in ("eglomise_brush", "copper_foil_burnisher", "lathekin", "tap_wheel"):
+        track_colors = {die["color"] for dice in state["round_track"] for die in dice}
+        return _has_tool_moves(copy.deepcopy(grid), tool_id, track_colors)
+    if not state["pool"] or (turn["drafted"] and tool_id != "running_pliers"):
+        return False
+    second = state["draft_index"] >= len(state["turn_order"])
+    if tool_id == "glazing_hammer":
+        return second
+    if tool_id == "running_pliers" and second:
+        return False
+    if tool_id in ("flux_brush", "flux_remover"):
+        return True
+    if tool_id == "lens_cutter":
+        return any(_placements(grid, die) for dice in state["round_track"] for die in dice)
+    for die in state["pool"]:
+        if tool_id == "grozing_pliers":
+            choices = [dict(die, value=die["value"] + delta) for delta in (-1, 1)
+                       if 1 <= die["value"] + delta <= 6]
+        elif tool_id == "grinding_stone":
+            choices = [dict(die, value=7 - die["value"])]
+        else:
+            choices = [die]
+        if any(_placements(grid, choice, isolated=tool_id == "cork_backed_straightedge") for choice in choices):
+            return True
+    return False
+
+
 def _use_tool(state: Dict, pid: str, action: Dict) -> List:
     tool_id = action["tool_id"]
     tool = next((tool for tool in state["tools"] if tool["id"] == tool_id), None)
@@ -433,10 +496,9 @@ class SagradaGame:
             return ["resolve_tool"]
         turn = state["turn_state"]
         actions = ["end_turn"]
-        if not turn["drafted"] and state["pool"]:
+        if not turn["drafted"] and any(_placements(state["players"][player_id]["grid"], die) for die in state["pool"]):
             actions.insert(0, "place_die")
-        if not turn["tool_used"] and any(state["players"][player_id]["favor_tokens"] >= (1 if t["uses"] == 0 else 2)
-                                          for t in state["tools"]):
+        if any(_tool_available(state, player_id, tool) for tool in state["tools"]):
             actions.insert(0, "use_tool")
         return actions
 
@@ -449,6 +511,13 @@ class SagradaGame:
         candidate = copy.deepcopy(state)
         try:
             events = _apply(candidate, player_id, action)
+            if (action["type"] in ("place_die", "use_tool", "resolve_tool")
+                    and candidate["phase"] == "drafting"
+                    and candidate["draft_index"] == state["draft_index"]
+                    and candidate["current_turn"] == player_id
+                    and SagradaGame.get_legal_actions(candidate, player_id) == ["end_turn"]):
+                events.append(_log(candidate, player_id, "end_turn"))
+                _advance(candidate)
         except (ValueError, KeyError, TypeError, IndexError) as error:
             return [], str(error)
         candidate["revision"] += 1

@@ -769,6 +769,8 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type == "for_sale" and action.get("type") == "sell":
         return {"type": "sell"}
+    if game_type == "felix" and action.get("type") == "choose_card":
+        return {"type": "choose_card"}
     if game_type == "red_doors":
         return {"type": "resolve"}
     if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin"):

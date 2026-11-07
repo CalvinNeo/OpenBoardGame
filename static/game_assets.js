@@ -160,10 +160,11 @@ const GAME_ASSETS = {
     "header": "showDiceThroneHeaderActions"
   },
   "no_thanks": {
-    "scripts": ["/static/games/no_thanks.js?v=2"],
-    "styles": ["/static/games/no_thanks.css?v=2"],
-    "markup": "/static/games/no_thanks.html?v=2",
+    "scripts": ["/static/games/no_thanks.js?v=3"],
+    "styles": ["/static/games/no_thanks.css?v=3"],
+    "markup": "/static/games/no_thanks.html?v=3",
     "panel": "noThanksPanel",
+    "panelTitle": "No Thanks!",
     "header": "showNoThanksHeaderActions"
   },
   "orloj": {
@@ -264,9 +265,9 @@ const GAME_ASSETS = {
     "styleFragments": "/static/games/azul.css?v=5"
   },
   "sagrada": {
-    "scripts": ["/static/games/sagrada.js?v=3"],
+    "scripts": ["/static/games/sagrada.js?v=5"],
     "styles": ["/static/games/sagrada.css?v=3"],
-    "markup": "/static/games/sagrada.html?v=3",
+    "markup": "/static/games/sagrada.html?v=4",
     "panel": "sagradaPanel",
     "header": "showSagradaHeaderActions"
   },

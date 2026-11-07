@@ -187,7 +187,10 @@
     });
     const turn = view.current_turn === view.you;
     const turnState = view.current_turn_state || {};
-    $("sagradaPoolHint").textContent = pendingDie ? `Tool result: ${dieLabel(pendingDie)}. ${pendingTool().tool_id === "flux_remover" ? "Choose its value, then a legal cell." : "Choose a highlighted destination."}` : view.phase === "drafting" ? (turn ? (turnState.drafted ? "Draft complete. Use a tool or end your turn." : "Your turn · choose a die and a highlighted cell.") : `${playerName(view.current_turn)} is building their window.`) : "";
+    const legal = view.legal_actions || [];
+    let turnHint = "Your turn · choose a die, then click a highlighted cell to place it.";
+    if (!legal.includes("place_die")) turnHint = legal.includes("use_tool") ? `${turnState.drafted ? "Draft complete" : "No legal draft"} · use a tool or End turn.` : "No actions left · End turn to pass.";
+    $("sagradaPoolHint").textContent = pendingDie ? `Tool result: ${dieLabel(pendingDie)}. ${pendingTool().tool_id === "flux_remover" ? "Choose its value, then click a highlighted cell to place it." : "Click a highlighted cell to place it."}` : view.phase === "drafting" ? (turn ? turnHint : `${playerName(view.current_turn)} is building their window.`) : "";
   }
   function moveTool() { return ["eglomise_brush", "copper_foil_burnisher", "lathekin", "tap_wheel"].includes(selectedTool); }
   function placementTool() { return ["grozing_pliers", "lens_cutter", "running_pliers", "cork_backed_straightedge", "grinding_stone"].includes(selectedTool); }
@@ -245,23 +248,32 @@
       }
       button.disabled = !selectable; button.classList.add(selectable ? "available" : "blocked");
       button.classList.toggle("selected", Boolean((selectedCell?.row === row && selectedCell?.col === col) || (toolSource?.row === row && toolSource?.col === col)));
-      const text = placed ? `${dieLabel(placed)} at row ${row + 1}, column ${col + 1}. ${restrictionLabel(cell)}` : `Row ${row + 1}, column ${col + 1}. ${restrictionLabel(cell)} ${reason || "Legal placement."}`;
+      const placementHint = pendingTool() || !selectedTool ? "Click to place this die immediately." : "Select this destination, then click Use tool.";
+      const text = placed ? `${dieLabel(placed)} at row ${row + 1}, column ${col + 1}. ${restrictionLabel(cell)}` : `Row ${row + 1}, column ${col + 1}. ${restrictionLabel(cell)} ${reason || placementHint}`;
       setTip(button, text); button.setAttribute("aria-label", text);
       button.addEventListener("click", () => {
+        if (button.disabled || pending || explainMode) return;
+        hideTip();
         if (moveTool()) {
           if (!toolSource) toolSource = { row, col };
           else if (row === toolSource.row && col === toolSource.col) toolSource = null;
           else { toolMoves.push({ from_row: toolSource.row, from_col: toolSource.col, to_row: row, to_col: col }); toolSource = null; }
+        } else if (pendingTool() && hasAction("resolve_tool")) {
+          const action = { type: "resolve_tool", row, col };
+          if (pendingTool().tool_id === "flux_remover") action.value = toolValue;
+          send(action); return;
+        } else if (!selectedTool && hasAction("place_die")) {
+          send({ type: "place_die", die_id: selectedDie, row, col }); return;
         } else selectedCell = selectedCell?.row === row && selectedCell?.col === col ? null : { row, col };
-        hideTip(); renderSagrada();
+        renderSagrada();
       });
       root.append(button);
     }
     const selection = $("sagradaSelection");
     if (moveTool()) selection.textContent = toolSource ? "Choose a highlighted destination in your window." : `Choose a die in your window to move. ${toolMoves.length} move(s) selected.`;
-    else selection.textContent = die ? `${dieLabel(die)}${selectedCell ? ` → row ${selectedCell.row + 1}, column ${selectedCell.col + 1}` : " · choose a highlighted cell"}` : "Select a pool die, then a highlighted window cell.";
-    $("sagradaPlaceBtn").textContent = pendingTool() ? "Place tool die" : "Place die";
-    $("sagradaPlaceBtn").disabled = !((pendingTool() ? hasAction("resolve_tool") : hasAction("place_die") && !selectedTool) && die && selectedCell && !placementReason(grid, die, selectedCell.row, selectedCell.col));
+    else if (pendingTool()?.tool_id === "flux_remover" && toolValue == null) selection.textContent = "Choose the replacement die's value, then click a highlighted cell to place it.";
+    else selection.textContent = die ? `${dieLabel(die)}${selectedCell ? ` → row ${selectedCell.row + 1}, column ${selectedCell.col + 1} · click Use tool` : placementTool() ? " · choose a highlighted cell" : " · click a highlighted cell to place"}` : "Select a pool die, then click a highlighted cell to place it.";
+    setTip($("sagradaSkipBtn"), "Pass without drafting or decline a remaining tool. No die is removed from the pool. After an action, your turn ends automatically if no legal action remains.");
     $("sagradaSkipBtn").disabled = !hasAction("end_turn") && !hasAction("skip_die");
   }
   function renderObjectives() {
@@ -301,8 +313,7 @@
     renderToolControls();
   }
   function toolReady() {
-    if (pendingTool()) return Boolean(hasAction("resolve_tool") && transformedDie() && selectedCell && !placementReason(gridFor(selfPlayer()), transformedDie(), selectedCell.row, selectedCell.col));
-    if (!selectedTool || !hasAction("use_tool")) return false;
+    if (pendingTool() || !selectedTool || !hasAction("use_tool")) return false;
     if (moveTool()) return !toolSource && toolMoves.length >= (selectedTool === "lathekin" ? 2 : 1) && toolMoves.length <= (selectedTool === "lathekin" || selectedTool === "tap_wheel" ? 2 : 1);
     if (placementTool()) return Boolean(chosenDie() && transformedDie() && selectedCell && !placementReason(gridFor(selfPlayer()), transformedDie(), selectedCell.row, selectedCell.col, { nonAdjacent: selectedTool === "cork_backed_straightedge" }));
     if (selectedTool === "glazing_hammer") return true;
@@ -335,7 +346,7 @@
     toolMoves.forEach((move, index) => root.append(element("p", "", `${index + 1}. (${move.from_row + 1}, ${move.from_col + 1}) → (${move.to_row + 1}, ${move.to_col + 1})`)));
     if (pendingTool()) {
       const canPlace = selectedTool === "flux_remover" ? [1, 2, 3, 4, 5, 6].some((value) => hasPlacement({ ...chosenDie(), value })) : hasPlacement(chosenDie());
-      if (canPlace) root.append(element("p", "", "Choose the destination in your window and click Place tool die."));
+      if (canPlace) root.append(element("p", "", "Click a highlighted cell in your window to place this die immediately."));
       else { root.append(element("p", "", "This die has no legal placement.")); const giveBack = element("button", "secondary", "Return die to pool"); giveBack.type = "button"; giveBack.disabled = !hasAction("resolve_tool"); giveBack.addEventListener("click", () => send({ type: "resolve_tool", return_die: true, ...(selectedTool === "flux_remover" ? { value: 1 } : {}) })); root.append(giveBack); }
       return;
     }
@@ -425,7 +436,7 @@
     renderPatterns(); renderPool(); renderBoard(); renderObjectives(); renderTools(); renderRoundTrack(); renderPlayers(); renderReview(); renderResults();
   }
 
-  const help = `<h3>Classic base game (2017) · Build a stained glass window 🪟</h3><p>Choose one of four window patterns. Its difficulty is your starting Favor Tokens (🔹). The game lasts 10 rounds; each player normally has two turns per round. Score the most points to win.</p><h3>Draft and place 🎲</h3><p>Each round has two dice per player, plus one extra. Turns go clockwise from the start player, then reverse: the last player takes two consecutive turns. Choose a pool die, select a highlighted cell and click <b>Place die</b>. You may use one tool on your turn, before or after placing. Click <b>End turn</b> when finished; you may pass without drafting. Leftover dice go to the round track (🕰️), and the start player rotates.</p><h3>Placement rules</h3><p>The first die must be on an edge or corner. Later dice must touch a placed die, orthogonally or diagonally. Orthogonal neighbors cannot share either color or value. Diagonal neighbors may match. Match any printed color or value in the destination cell; one die per cell. Colors are Red (🟥), Yellow (🟨), Green (🟩), Blue (🟦), and Purple (🟪). The die symbols ⚀–⚅ mean values 1–6.</p><h3>Tools 🛠️ and Favor Tokens 🔹</h3><p>Three shared tools change dice, move dice, or alter your draft. The first use of a tool costs 1 Favor Token (🔹); subsequent uses cost 2. You may use at most one tool per turn. Select a tool to see its instructions and choose targets directly in the window, pool, or round track. Tools only ignore the restrictions they explicitly mention.</p><h3>Scoring 🎯</h3><p>Three public objective cards score every player's window. Your private color objective (🔒) scores the sum of all dice values of that color. Every unused Favor Token (🔹) scores 1 point; every empty cell loses 1 point. Final ties use private-objective points, then remaining Favor Tokens, then the last round's reverse player order.</p><h3>Round review</h3><p>Every round pauses to show everyone's placements and tool use. All players must click <b>Next Round</b> to continue. Round 10 continues to final scoring after everyone confirms.</p><h3>Controls</h3><p>Click empty space to cancel a selection. <b>Explain</b> then any highlighted item explains it, including disabled buttons. Hover over icons or tap them on a phone for a brief tooltip. Press <b>Esc</b> to close Help, Explain, or cancel a selection.</p>`;
+  const help = `<h3>Classic base game (2017) · Build a stained glass window 🪟</h3><p>Choose one of four window patterns. Its difficulty is your starting Favor Tokens (🔹). The game lasts 10 rounds; each player normally has two turns per round. Score the most points to win.</p><h3>Draft and place 🎲</h3><p>Each round has two dice per player, plus one extra. Turns go clockwise from the start player, then reverse: the last player takes two consecutive turns. Choose a pool die, then click a highlighted cell to place it immediately, without another confirmation. You may use one tool on your turn, before or after placing. After an action, your turn ends automatically when no legal draft or tool action remains. If you can still use a tool, choose it or click <b>End turn</b> to decline. You may also click <b>End turn</b> to pass without drafting. Pending tool results must be resolved first. Leftover dice go to the round track (🕰️), and the start player rotates.</p><h3>Placement rules</h3><p>The first die must be on an edge or corner. Later dice must touch a placed die, orthogonally or diagonally. Orthogonal neighbors cannot share either color or value. Diagonal neighbors may match. Match any printed color or value in the destination cell; one die per cell. Colors are Red (🟥), Yellow (🟨), Green (🟩), Blue (🟦), and Purple (🟪). The die symbols ⚀–⚅ mean values 1–6.</p><h3>Tools 🛠️ and Favor Tokens 🔹</h3><p>Three shared tools change dice, move dice, or alter your draft. The first use of a tool costs 1 Favor Token (🔹); subsequent uses cost 2. You may use at most one tool per turn. Select a tool to see its instructions and choose targets directly in the window, pool, or round track, then click <b>Use tool</b>. For a revealed tool die, choose its value if needed and click a highlighted cell to place it immediately. Tools only ignore the restrictions they explicitly mention.</p><h3>Scoring 🎯</h3><p>Three public objective cards score every player's window. Your private color objective (🔒) scores the sum of all dice values of that color. Every unused Favor Token (🔹) scores 1 point; every empty cell loses 1 point. Final ties use private-objective points, then remaining Favor Tokens, then the last round's reverse player order.</p><h3>Round review</h3><p>Every round pauses to show everyone's placements and tool use. All players must click <b>Next Round</b> to continue. Round 10 continues to final scoring after everyone confirms.</p><h3>Controls</h3><p>Click empty space to cancel a selection. <b>Explain</b> then any highlighted item explains it, including disabled buttons. Hover over icons or tap them on a phone for a brief tooltip. Press <b>Esc</b> to close Help, Explain, or cancel a selection.</p>`;
 
   window.renderSagradaGameState = function (data) {
     if (!data?.view) return;
@@ -438,12 +449,6 @@
     const header = $("sagradaHeaderActions"); if (header) header.style.display = show ? "flex" : "none";
     if (!show) { setExplainMode(false); modal("sagradaHelpModal", false); modal("sagradaExplainModal", false); hideTip(); clearSelection(false); document.body.classList.remove("sagrada-needs-action"); }
   };
-  $("sagradaPlaceBtn")?.addEventListener("click", () => {
-    if (!chosenDie() || !selectedCell) return;
-    if (pendingTool() && toolReady()) {
-      const action = { type: "resolve_tool", ...selectedCell }; if (pendingTool().tool_id === "flux_remover") action.value = toolValue; send(action);
-    } else if (hasAction("place_die")) send({ type: "place_die", die_id: selectedDie, ...selectedCell });
-  });
   $("sagradaSkipBtn")?.addEventListener("click", () => { if (hasAction("end_turn")) send({ type: "end_turn" }); else if (hasAction("skip_die") && chosenDie()) send({ type: "skip_die", die_id: selectedDie }); });
   $("sagradaNextRoundBtn")?.addEventListener("click", () => { if (hasAction("next_round")) send({ type: "next_round" }); });
   $("sagradaHelpBtn")?.addEventListener("click", () => { setExplainMode(false); $("sagradaHelpContent").innerHTML = help; modal("sagradaHelpModal", true); });
