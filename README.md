@@ -15,6 +15,13 @@ the last available room. Use **Reconnect** in the room list to switch between yo
 previous rooms, keeping each room's original player, seat, and game state. Normal
 **Confirm** keeps the existing logout behavior.
 
+Logout waits for server confirmation before clearing credentials, then opens a
+fresh anonymous connection. It also disconnects active seats authenticated by
+this browser's saved room credentials and signs out other open tabs in the same
+browser. A timeout keeps your credentials and offers a retry instead of reporting
+success. Normal logout removes a lobby seat; an ongoing game's seat remains
+visible but offline. Copying the access key preserves lobby seats as well.
+
 The key is a snapshot of all existing room reconnect credentials at export time;
 it does not create an account or add access-key storage. Keep it private. It cannot
 recover a room or seat that no longer exists, but an unavailable room does not

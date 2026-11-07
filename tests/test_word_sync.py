@@ -43,15 +43,28 @@ class WordSyncTests(unittest.TestCase):
         self.assertEqual(before, self.state)
 
     def test_player_counts_and_seat_pairing(self):
-        for count in (2, 4, 6, 8):
+        for count in (2, 4, 6, 8, 10):
             with self.subTest(count=count):
                 state = Game.init_game({}, list(reversed(players(count))))
                 self.assertEqual(state["turn_order"], [f"p{index}" for index in range(count)])
+                self.assertEqual(state["mode"], "team")
                 self.assertEqual([team["player_ids"] for team in state["teams"]],
                                  [[f"p{index}", f"p{index + 1}"] for index in range(0, count, 2)])
-        for count in (0, 1, 3, 5, 7, 9, 10):
+        for count in (0, 1, 3, 5, 7, 9, 11):
             with self.subTest(count=count), self.assertRaises(ValueError):
                 Game.init_game({}, players(count))
+
+    def test_free_for_all_takes_every_count_from_two_to_ten(self):
+        for count in range(2, 11):
+            with self.subTest(count=count):
+                state = Game.init_game({"mode": "free_for_all"}, players(count))
+                self.assertEqual(state["mode"], "free_for_all")
+                self.assertEqual(state["config"], {"mode": "free_for_all"})
+                self.assertEqual([team["player_ids"] for team in state["teams"]],
+                                 [[f"p{index}"] for index in range(count)])
+        for count in (0, 1, 11):
+            with self.subTest(count=count), self.assertRaises(ValueError):
+                Game.init_game({"mode": "free_for_all"}, players(count))
 
     def test_invalid_rosters_and_configs(self):
         invalid = [None, {}, [None, None],
@@ -64,9 +77,13 @@ class WordSyncTests(unittest.TestCase):
         for roster in invalid:
             with self.subTest(roster=roster), self.assertRaises(ValueError):
                 Game.init_game({}, roster)
-        for config in (None, [], {"seed": 1}, {"rounds": 3}):
+        for config in (None, [], {"seed": 1}, {"rounds": 3}, {"mode": "solo"}, {"mode": True},
+                       {"mode": "team", "rounds": 2}):
             with self.subTest(config=config), self.assertRaises(ValueError):
                 Game.init_game(config, players())
+        for config in ({}, {"mode": "team"}):
+            with self.subTest(config=config):
+                self.assertEqual(Game.init_game(config, players())["mode"], "team")
 
     def test_word_normalization(self):
         for raw, cleaned in (("  ＡＰＰＬＥ  ", "APPLE"), ("月亮　", "月亮"),
@@ -230,7 +247,8 @@ class WordSyncTests(unittest.TestCase):
                            ("round", 0), ("window_id", 1), ("revision", True), ("phase", "other"),
                            ("game_token", "bad"), ("game_over", True), ("winner", ["p0"]),
                            ("pending", {"outsider": "word"}), ("next_ready", ["p0"]),
-                           ("turn_order", ["p1", "p0", "p2", "p3"])):
+                           ("turn_order", ["p1", "p0", "p2", "p3"]), ("mode", "free_for_all"),
+                           ("mode", "solo"), ("config", {"mode": "free_for_all"})):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 Game.deserialize({**self.state, key: value})
         self.guess(["same", "same", "a", "b"])
@@ -258,21 +276,122 @@ class WordSyncTests(unittest.TestCase):
         self.assertEqual(move["word"], other["word"])
 
     def test_all_bot_games_finish_for_every_supported_count(self):
-        for count in Game.supported_player_counts:
-            state = Game.init_game({}, players(count))
-            for step in range(4 * count):
-                if state["game_over"]:
-                    break
-                for player_id in state["turn_order"]:
-                    move = Game.bot_move(state, player_id)
-                    if move:
-                        self.assertIsNone(Game.apply_action(state, player_id, move)[1])
-            with self.subTest(count=count):
-                self.assertTrue(state["game_over"])
-                self.assertEqual(state["round"], 2)
-                self.assertEqual(state["winner"], state["turn_order"])
-                self.assertIsNone(Game.bot_move(state, "p0"))
-                self.assertEqual(Game.deserialize(Game.serialize(state)), state)
+        for mode, counts in Game.player_counts_by_mode.items():
+            for count in counts:
+                with self.subTest(mode=mode, count=count):
+                    state = Game.init_game({"mode": mode}, players(count))
+                    for step in range(4 * count):
+                        if state["game_over"]:
+                            break
+                        for player_id in state["turn_order"]:
+                            move = Game.bot_move(state, player_id)
+                            if move:
+                                self.assertIsNone(Game.apply_action(state, player_id, move)[1])
+                    self.assertTrue(state["game_over"])
+                    self.assertLessEqual(state["round"], 2)
+                    self.assertIsNone(Game.bot_move(state, "p0"))
+                    self.assertEqual(Game.deserialize(Game.serialize(state)), state)
+                    if mode == "team":
+                        self.assertEqual(state["round"], 2)
+                        self.assertEqual(state["winner"], state["turn_order"])
+
+    def test_free_for_all_collision_ends_the_game_immediately(self):
+        self.state = Game.init_game({"mode": "free_for_all"}, players(5))
+        for player_id, word in (("p0", "月亮"), ("p1", "海"), ("p2", " ＭＯＯＮ "), ("p3", "moon")):
+            self.play(player_id, word=word)
+        self.assertEqual(self.state["phase"], "guess")
+        self.assertNotIn("月亮", json.dumps(Game.get_public_view(self.state, "p4"), ensure_ascii=False))
+        self.play("p4", word="山")
+        self.assertTrue(self.state["game_over"])
+        self.assertEqual(self.state["phase"], "game_over")
+        self.assertEqual(self.state["winner"], ["p2", "p3"])
+        self.assertEqual(self.state["winning_team_ids"], ["team-3", "team-4"])
+        self.assertEqual([team["matched_round"] for team in self.state["teams"]], [None, None, 1, 1, None])
+        self.assertEqual([team["history"][0]["words"] for team in self.state["teams"]],
+                         [["月亮"], ["海"], ["MOON"], ["moon"], ["山"]])
+        self.assertEqual([team["history"][0]["matched"] for team in self.state["teams"]],
+                         [False, False, True, True, False])
+        standings = Game.get_public_view(self.state, "p0")["standings"]
+        self.assertEqual([(row["team_id"], row["rounds"], row["rank"]) for row in standings],
+                         [("team-3", 1, 1), ("team-4", 1, 1), ("team-1", None, None),
+                          ("team-2", None, None), ("team-5", None, None)])
+        self.assert_rejected("p0", action(self.state, "next_round"))
+
+    def test_free_for_all_without_a_collision_starts_another_round(self):
+        self.state = Game.init_game({"mode": "free_for_all"}, players(3))
+        self.guess(["a", "b", "c"])
+        self.assertEqual((self.state["phase"], self.state["game_over"]), ("reveal", False))
+        self.assertEqual([row["rank"] for row in Game.get_public_view(self.state, "p0")["standings"]],
+                         [None, None, None])
+        self.next_round()
+        self.assertEqual((self.state["round"], self.state["phase"]), (2, "guess"))
+        self.guess(["海岸", "海岸", "山"])
+        self.assertTrue(self.state["game_over"])
+        self.assertEqual(self.state["winner"], ["p0", "p1"])
+        self.assertEqual([len(team["history"]) for team in self.state["teams"]], [2, 2, 2])
+
+    def test_free_for_all_ten_players_keep_seat_order_in_the_standings(self):
+        self.state = Game.init_game({"mode": "free_for_all"}, players(10))
+        self.guess(["a", "b", "c", "d", "e", "f", "g", "h", "i", "i"])
+        self.assertTrue(self.state["game_over"])
+        self.assertEqual(self.state["winner"], ["p8", "p9"])
+        self.assertEqual([row["team_id"] for row in Game.get_public_view(self.state, "p0")["standings"]],
+                         ["team-9", "team-10", "team-1", "team-2", "team-3", "team-4",
+                          "team-5", "team-6", "team-7", "team-8"])
+
+    def test_free_for_all_two_players_and_repeated_words_across_rounds(self):
+        self.state = Game.init_game({"mode": "free_for_all"}, players(2))
+        self.guess(["月亮", "星星"])
+        self.assertFalse(self.state["game_over"])
+        self.next_round()
+        self.guess(["月亮", "星星"])
+        self.assertFalse(self.state["game_over"])
+        self.next_round()
+        self.guess(["月亮", "月亮"])
+        self.assertTrue(self.state["game_over"])
+        self.assertEqual(self.state["winner"], ["p0", "p1"])
+        self.assertEqual(self.state["teams"][0]["matched_round"], 3)
+
+    def test_free_for_all_saves_roundtrip_and_reject_tampering(self):
+        self.state = Game.init_game({"mode": "free_for_all"}, players(4))
+        snapshots = [copy.deepcopy(self.state)]
+        self.play("p0", word="one")
+        snapshots.append(copy.deepcopy(self.state))
+        self.guess(["b", "c", "d"])
+        snapshots.append(copy.deepcopy(self.state))
+        self.next_round()
+        snapshots.append(copy.deepcopy(self.state))
+        self.guess(["x", "x", "y", "z"])
+        snapshots.append(copy.deepcopy(self.state))
+        self.assertEqual(self.state["winner"], ["p0", "p1"])
+        for snapshot in snapshots:
+            with self.subTest(phase=snapshot["phase"], round=snapshot["round"]):
+                encoded = json.loads(json.dumps(Game.serialize(snapshot)))
+                self.assertEqual(Game.deserialize(encoded), snapshot)
+        for mutate in (lambda state: state["teams"][0].__setitem__("matched_round", 1),
+                       lambda state: state["teams"][2]["history"][1].__setitem__("matched", True),
+                       lambda state: state["teams"][0]["history"].pop(),
+                       lambda state: state.__setitem__("mode", "team"),
+                       lambda state: state.__setitem__("game_over", False),
+                       lambda state: state.__setitem__("winning_team_ids", ["team-1"]),
+                       lambda state: state.__setitem__("winner", ["p0", "p1", "p2"]),
+                       lambda state: state.__setitem__("revision", 3)):
+            damaged = copy.deepcopy(self.state)
+            mutate(damaged)
+            with self.subTest(mutate=mutate.__name__ if hasattr(mutate, "__name__") else mutate):
+                with self.assertRaises(ValueError):
+                    Game.deserialize(damaged)
+
+    def test_free_for_all_bots_only_use_public_words(self):
+        self.state = Game.init_game({"mode": "free_for_all"}, players(4))
+        baseline = [Game.bot_move(self.state, player_id) for player_id in ("p1", "p2")]
+        self.play("p0", word="super-secret")
+        self.assertEqual(baseline, [Game.bot_move(self.state, player_id) for player_id in ("p1", "p2")])
+        self.state = Game.init_game({"mode": "free_for_all"}, players(3))
+        self.guess(["zebra", "apple", "mango"])
+        self.next_round()
+        self.assertEqual([Game.bot_move(self.state, player_id)["word"] for player_id in ("p0", "p1", "p2")],
+                         ["apple", "apple", "apple"])
 
 
 if __name__ == "__main__":

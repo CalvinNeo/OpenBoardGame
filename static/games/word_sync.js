@@ -22,19 +22,29 @@
   const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[character]);
+  const freeForAll = () => view.mode === "free_for_all";
   const teamNumber = team => view.teams.findIndex(entry => entry.team_id === team.team_id) + 1;
   const player = playerId => view.players.find(entry => entry.player_id === playerId);
+  const winners = () => view.players.filter(member => view.winner.includes(member.player_id));
   const connected = () => socket.connected && roomSessionReady;
   const normalizedDraft = () => input.value.normalize("NFKC").trim().replace(/\s+/gu, " ");
   const explanations = {
     round: "🔁 Round counts simultaneous word reveals, not seconds. Every unfinished team gets the same number of attempts.",
     word: "Write one word privately, up to 24 Unicode characters. Think freely on round one; afterwards, use your team's previous two words as inspiration. Reusing a word is allowed.",
-    submit: "Lock word (🔒) submits once, without showing your word to anyone else. It cannot be changed. Everyone's words are revealed together after all unfinished teams submit.",
-    next_round: "Next Round confirms that you have read the reveal. Every player, including already matched teams, must confirm. No second confirmation dialog is needed.",
-    pairing: "Adjacent room seats form fixed pairs: 1 + 2, 3 + 4, 5 + 6, 7 + 8. Only your own locked word is visible before the shared reveal.",
+    submit: "Lock word (🔒) submits once, without showing your word to anyone else. It cannot be changed. All words are revealed together once every remaining player has submitted.",
+    next_round: "Next Round confirms that you have read the reveal. Every player must confirm. No second confirmation dialog is needed.",
+    pairing: "Adjacent room seats form fixed pairs: 1 + 2, 3 + 4, 5 + 6, 7 + 8, 9 + 10. Only your own locked word is visible before the shared reveal.",
     ranking: "Match (✓) means both teammates wrote the same word. Fewer rounds rank higher; equal rounds tie. The game finishes when every team matches. With two players, record your cooperative round count.",
-    history: "History contains only words already revealed to everyone, newest first. Your team's entries are highlighted. Opening it never reveals pending words."
+    history: "History contains only words already revealed to everyone, newest first. Your team's entries are highlighted. Opening it never reveals pending words.",
+    free_for_all: "Free-for-all has no teams. Everyone writes one word each round, and the round ends the game the moment two or more players write the same word."
   };
+  const freeForAllExplanations = {
+    round: "🔁 Round counts simultaneous word reveals, not seconds. Every round gives all players exactly one attempt.",
+    word: "Write one word privately, up to 24 Unicode characters. Your goal is to write the word another player will also write. Last round's words are shown as inspiration.",
+    ranking: "🏆 The moment two or more players write the same word, the game ends and all of them win together. Everyone else loses; submission speed never breaks a tie.",
+    history: "History contains only words already revealed to everyone, newest round first. Words that matched are highlighted."
+  };
+  const explanationFor = key => (freeForAll() && freeForAllExplanations[key]) || explanations[key];
 
   function setError(message = "") {
     element("Error").textContent = message;
@@ -78,13 +88,13 @@
   }
 
   function explain(target) {
-    const description = explanations[target?.dataset.wsExplain];
+    const description = explanationFor(target?.dataset.wsExplain);
     if (description) openDialog("Explain", `<p>${escapeHtml(description)}</p>`);
   }
 
-  function showHelp() {
-    openDialog("Help · 同频共词", `
-      <p><b>Word Sync</b> · Two minds, one word. A team association game for <b>2 / 4 / 6 / 8 players</b>.</p>
+  function teamHelp() {
+    return `
+      <p><b>Word Sync</b> · Two minds, one word. A team association game for <b>2 / 4 / 6 / 8 / 10 players</b>.</p>
       <h3>Pair up & think</h3>
       <p>Adjacent room seats are teammates: 1 + 2, 3 + 4, and so on. Each player privately writes one word. Start with any word; in later rounds, use your team's previous two words as inspiration. Do not agree on answers through chat, voice, or signals.</p>
       <h3>🔒 Lock → reveal → repeat</h3>
@@ -95,44 +105,97 @@
       <h3>What counts as the same word?</h3>
       <p>Up to 24 Unicode characters after normalization, containing at least one letter or number. We normalize compatibility / full-width forms, trim outer spaces, collapse inner spaces, and ignore letter case. Synonyms, different punctuation, and simplified / traditional Chinese are not automatically equal. Repeated words are allowed. Control / invisible formatting characters are rejected.</p>
       <h3>Practice & controls</h3>
-      <p>Practice bots start with simple words, then reuse a consistent word from their team's previous public reveal. They never inspect hidden submissions and are not semantic AI partners. History is public and scrollable. Explain inspects controls without playing; Esc closes dialogs or exits Explain.</p>`);
+      <p>Practice bots start with simple words, then reuse a consistent word from their team's previous public reveal. They never inspect hidden submissions and are not semantic AI partners. History is public and scrollable. Explain inspects controls without playing; Esc closes dialogs or exits Explain.</p>`;
   }
 
-  function cardMarkup(team, playerId, position) {
+  function freeForAllHelp() {
+    return `
+      <p><b>Word Sync · Free-for-all</b> · No teams, no partners. An association duel for <b>2 to 10 players</b>.</p>
+      <h3>Write what someone else will write</h3>
+      <p>Every round, each player privately writes one word. You win by writing the same word as at least one other player, so pick the most obvious word you can think of. Last round's words are shown as inspiration.</p>
+      <h3>🔒 Lock → reveal</h3>
+      <p>Lock word (🔒) is final and nobody can see it. Once every player has submitted, all words appear together. The moment two or more players wrote the same word, the game ends immediately and <b>all of them win</b> (🏆). Everyone else loses. If several different words each appear twice or more, every player in those groups wins.</p>
+      <p>If nobody collides, all players press <b>Next Round</b> and try again. There is no timer and no round limit. Submission speed never decides anything.</p>
+      <h3>What counts as the same word?</h3>
+      <p>Up to 24 Unicode characters after normalization, containing at least one letter or number. We normalize compatibility / full-width forms, trim outer spaces, collapse inner spaces, and ignore letter case. Synonyms, different punctuation, and simplified / traditional Chinese are not automatically equal. Only words written in the <b>same round</b> can match. Control / invisible formatting characters are rejected.</p>
+      <h3>Practice & controls</h3>
+      <p>Practice bots start with simple words, then converge on a word from the previous public reveal. They never inspect hidden submissions and are not semantic AI partners. History is public and scrollable. Explain inspects controls without playing; Esc closes dialogs or exits Explain.</p>`;
+  }
+
+  function showHelp() {
+    openDialog("Help · 同频共词", freeForAll() ? freeForAllHelp() : teamHelp());
+  }
+
+  function cardMarkup(team, playerId, position, total) {
     const member = player(playerId);
     const own = playerId === view.you;
+    const matched = team.matched_round !== null;
+    const reveal = freeForAll() ? view.phase !== "guess" : view.phase !== "guess" || matched;
     const latest = team.history[team.history.length - 1];
-    const reveal = view.phase !== "guess" || team.matched_round !== null;
     const word = reveal ? latest?.words[position] : own ? view.your_word : null;
-    const status = reveal ? (team.matched_round ? `✓ Matched in ${team.matched_round}` : "Revealed")
+    const status = reveal
+      ? freeForAll() ? (matched ? "🏆 Same word!" : "Revealed")
+        : (matched ? `✓ Matched in ${team.matched_round}` : "Revealed")
       : member.submitted ? (own ? "🔒 Only you can see this" : "🔒 Word locked") : "Thinking…";
     const tip = reveal ? "Revealed words · Everyone can see these words."
-      : "🔒 Locked words stay private until all unfinished teams submit.";
-    return `<article class="ws-card ${own ? "ws-own" : ""} ${team.matched_round ? "ws-match" : ""}" data-ws-explain="pairing">
-      <div><div class="ws-card-top"><span>${own ? "YOU" : "TEAMMATE"}</span><span>${position + 1} / 2</span></div><div class="ws-card-name">${escapeHtml(member.name)}</div></div>
+      : "🔒 Locked words stay private until everyone submits.";
+    const role = own ? "YOU" : freeForAll() ? "PLAYER" : "TEAMMATE";
+    return `<article class="ws-card ${own ? "ws-own" : ""} ${matched && reveal ? "ws-match" : ""}" data-ws-explain="${freeForAll() ? "free_for_all" : "pairing"}">
+      <div><div class="ws-card-top"><span>${role}</span><span>${position + 1} / ${total}</span></div><div class="ws-card-name">${escapeHtml(member.name)}</div></div>
       <strong class="ws-word ${word === null || word === undefined ? "ws-hidden-word" : ""}">${word === null || word === undefined ? "?" : escapeHtml(word)}</strong>
       <span class="ws-card-status" tabindex="0" data-ws-tip="${tip}">${status}</span>
     </article>`;
   }
 
-  function renderTeams() {
-    element("Progress").textContent = `✓ ${view.teams.filter(team => team.matched_round !== null).length} / ${view.teams.length}`;
-    element("Teams").innerHTML = view.standings.map(row => {
-      const team = view.teams.find(entry => entry.team_id === row.team_id);
-      const latest = team.history[team.history.length - 1];
-      const reveal = view.phase !== "guess" || team.matched_round !== null;
-      const rank = row.rank === null ? "In progress" : `#${row.rank} · ${row.rounds} ${row.rounds === 1 ? "round" : "rounds"}`;
-      return `<article class="ws-team ${team.team_id === view.your_team_id ? "ws-your-team" : ""} ${view.game_over && row.rank === 1 ? "ws-winner" : ""}" data-ws-team="${team.team_id}">
-        <div class="ws-team-heading"><strong>Team ${teamNumber(team)}${team.team_id === view.your_team_id ? " · You" : ""}</strong><span class="ws-rank" tabindex="0" data-ws-explain="ranking" data-ws-tip="Fewer rounds rank higher. Equal rounds tie.">${view.game_over && row.rank === 1 ? "🏆 " : ""}${rank}</span></div>
-        <div class="ws-team-pair">${team.player_ids.map((playerId, index) => {
-          const member = player(playerId);
-          const text = reveal ? latest?.words[index] : member.submitted ? "🔒 Locked" : "Thinking…";
-          return `<div class="ws-team-player"><span>${escapeHtml(member.name)}</span><b>${escapeHtml(text)}</b></div>`;
-        }).join("")}</div></article>`;
-    }).join("");
+  function boardRow(row) {
+    const team = view.teams.find(entry => entry.team_id === row.team_id);
+    const matched = team.matched_round !== null;
+    const reveal = freeForAll() ? view.phase !== "guess" : view.phase !== "guess" || matched;
+    const latest = team.history[team.history.length - 1];
+    const mine = team.team_id === view.your_team_id;
+    const title = freeForAll()
+      ? `${escapeHtml(player(team.player_ids[0]).name)}${mine ? " · You" : ""}`
+      : `Team ${teamNumber(team)}${mine ? " · You" : ""}`;
+    const rank = freeForAll()
+      ? (matched ? "Winner" : view.game_over ? "No match" : "Playing")
+      : (row.rank === null ? "In progress" : `#${row.rank} · ${row.rounds} ${row.rounds === 1 ? "round" : "rounds"}`);
+    const tip = freeForAll()
+      ? "Any players who write the same word win together and the game ends."
+      : "Fewer rounds rank higher. Equal rounds tie.";
+    return `<article class="ws-team ${mine ? "ws-your-team" : ""} ${view.game_over && row.rank === 1 ? "ws-winner" : ""}" data-ws-team="${team.team_id}">
+      <div class="ws-team-heading"><strong>${title}</strong><span class="ws-rank" tabindex="0" data-ws-explain="ranking" data-ws-tip="${tip}">${view.game_over && row.rank === 1 ? "🏆 " : ""}${rank}</span></div>
+      <div class="ws-team-pair ${freeForAll() ? "ws-solo" : ""}">${team.player_ids.map((playerId, index) => {
+        const member = player(playerId);
+        const text = reveal ? latest?.words[index] : member.submitted ? "🔒 Locked" : "Thinking…";
+        // Free-for-all already names the player in the row heading.
+        const name = freeForAll() ? "" : `<span>${escapeHtml(member.name)}</span>`;
+        return `<div class="ws-team-player">${name}<b>${escapeHtml(text ?? "")}</b></div>`;
+      }).join("")}</div></article>`;
+  }
+
+  function renderBoard() {
+    const matched = view.teams.filter(team => team.matched_round !== null).length;
+    element("BoardTitle").textContent = freeForAll() ? "PLAYERS" : "THE TEAMS";
+    element("Progress").textContent = freeForAll()
+      ? (view.game_over ? `🏆 ${matched} / ${view.players.length}` : `${view.players.length} players`)
+      : `✓ ${matched} / ${view.teams.length}`;
+    element("Teams").innerHTML = view.standings.map(boardRow).join("");
   }
 
   function renderHistory() {
+    if (freeForAll()) {
+      const rounds = (view.teams[0]?.history || []).map(entry => entry.round).reverse();
+      element("HistoryCount").textContent = `${rounds.length} ${rounds.length === 1 ? "round" : "rounds"}`;
+      element("HistoryRows").innerHTML = rounds.length ? rounds.map(round => {
+        const chips = view.teams.map(team => {
+          const entry = team.history[round - 1];
+          const member = player(team.player_ids[0]);
+          return `<span class="ws-chip ${entry?.matched ? "ws-chip-match" : ""} ${member.player_id === view.you ? "ws-chip-own" : ""}"><b>${escapeHtml(member.name)}</b>${escapeHtml(entry?.words[0] ?? "")}</span>`;
+        }).join("");
+        return `<li class="ws-history-row"><small>Round ${round}</small><div class="ws-history-chips">${chips}</div></li>`;
+      }).join("") : "<li>No words revealed yet.</li>";
+      return;
+    }
     const rows = view.teams.flatMap(team => team.history.map(entry => ({...entry, team})))
       .sort((first, second) => second.round - first.round || teamNumber(first.team) - teamNumber(second.team));
     element("HistoryCount").textContent = `${rows.length} reveals`;
@@ -145,6 +208,45 @@
     element("Submit").disabled = !view?.legal_actions.includes("submit_word") || !connected() || Boolean(pending) || !normalizedDraft();
   }
 
+  function titleText() {
+    if (!view.game_over) {
+      if (!freeForAll()) return view.phase === "reveal" ? "A little closer together." : "Find your wavelength.";
+      return view.phase === "reveal" ? "No collision this round." : "Find a twin word.";
+    }
+    if (!freeForAll()) {
+      if (view.teams.length === 1) return "Two minds. One word.";
+      const teams = view.teams.filter(team => view.winning_team_ids.includes(team.team_id));
+      return teams.length === 1 ? `Team ${teamNumber(teams[0])} wins!` : `Teams ${teams.map(teamNumber).join(" + ")} tie!`;
+    }
+    const names = winners();
+    if (names.length === view.players.length) return "Everyone found a twin!";
+    return names.length > 3 ? `${names.length} players win!` : `${names.map(member => member.name).join(" + ")} win!`;
+  }
+
+  function finalStatus(ownTeam) {
+    if (!freeForAll()) {
+      return `✓ All words revealed. ${ownTeam ? `Your team matched in ${ownTeam.matched_round} ${ownTeam.matched_round === 1 ? "round" : "rounds"}.` : "Final standings are shown."}`;
+    }
+    if (!ownTeam) return `${winners().length} players wrote the same word. Final result is shown.`;
+    return view.winner.includes(view.you)
+      ? `🏆 You wrote the same word in round ${ownTeam.matched_round}. ${winners().length} ${winners().length === 1 ? "winner" : "winners"} in total.`
+      : "Nobody wrote your word. Try a more obvious one next game.";
+  }
+
+  function statusText(ownTeam, locked, total) {
+    if (!connected()) return "Disconnected. Use Reconnect to return to your seat.";
+    if (view.game_over) return finalStatus(ownTeam);
+    if (view.phase === "reveal") return "Read the words. Everyone confirms before the next round.";
+    if (!ownTeam) return `${locked} / ${total} words locked. Spectators cannot submit.`;
+    if (freeForAll()) {
+      return view.your_word ? `Your word is locked. ${locked} / ${total} locked; reveal together.`
+        : `${locked} / ${total} words locked. Write what someone else will write.`;
+    }
+    if (ownTeam.matched_round) return `Your team is in sync. ${locked} / ${total} words locked by the remaining teams.`;
+    return view.your_word ? `Your word is locked. ${locked} / ${total} words locked; reveal together.`
+      : `${locked} / ${total} words locked. Keep yours a surprise.`;
+  }
+
   function render() {
     if (!view) return;
     element("Waiting").hidden = true;
@@ -153,16 +255,23 @@
     const ownTeam = view.teams.find(team => team.team_id === view.your_team_id);
     const shownTeam = ownTeam || view.teams[0];
     const latest = shownTeam.history[shownTeam.history.length - 1];
-    const winners = view.teams.filter(team => view.winning_team_ids.includes(team.team_id));
-    element("Title").textContent = view.game_over
-      ? view.teams.length === 1 ? "Two minds. One word." : winners.length === 1 ? `Team ${teamNumber(winners[0])} wins!` : `Teams ${winners.map(teamNumber).join(" + ")} tie!`
-      : view.phase === "reveal" ? "A little closer together." : "Find your wavelength.";
+    element("Eyebrow").textContent = freeForAll() ? "MANY MINDS. ONE WORD." : "TWO MINDS. ONE WORD.";
+    element("Title").textContent = titleText();
     element("Round").innerHTML = `<small>ROUND</small><strong>${view.round}</strong>`;
-    element("TeamTitle").textContent = ownTeam ? `YOUR TEAM · ${teamNumber(ownTeam)}` : "SPECTATING · TEAM 1";
-    element("Stage").textContent = view.game_over ? "All teams in sync" : shownTeam.matched_round ? `✓ Matched in ${shownTeam.matched_round}` : view.phase === "reveal" ? "Words revealed" : "Guess privately";
-    element("Pair").innerHTML = shownTeam.player_ids.map((playerId, position) => cardMarkup(shownTeam, playerId, position)).join("");
-    element("Previous").hidden = view.phase !== "guess" || !latest || shownTeam.matched_round !== null;
-    element("Previous").innerHTML = latest ? `<span>Last round</span><strong>${escapeHtml(latest.words[0])}</strong><span>+</span><strong>${escapeHtml(latest.words[1])}</strong>` : "";
+    element("TeamTitle").textContent = freeForAll() ? "YOUR WORD"
+      : ownTeam ? `YOUR TEAM · ${teamNumber(ownTeam)}` : "SPECTATING · TEAM 1";
+    element("Stage").textContent = view.game_over ? (freeForAll() ? "Winners decided" : "All teams in sync")
+      : freeForAll() ? (view.phase === "reveal" ? "Words revealed" : "Guess privately")
+      : shownTeam.matched_round ? `✓ Matched in ${shownTeam.matched_round}`
+      : view.phase === "reveal" ? "Words revealed" : "Guess privately";
+    element("Pair").classList.toggle("ws-single", freeForAll());
+    element("Pair").innerHTML = freeForAll()
+      ? cardMarkup(shownTeam, shownTeam.player_ids[0], 0, view.players.length)
+      : shownTeam.player_ids.map((playerId, position) => cardMarkup(shownTeam, playerId, position, 2)).join("");
+    element("Previous").hidden = view.phase !== "guess" || !latest || (!freeForAll() && shownTeam.matched_round !== null);
+    element("Previous").innerHTML = !latest ? "" : freeForAll()
+      ? `<span>Last round</span>${view.teams.map(team => `<strong>${escapeHtml(team.history[team.history.length - 1].words[0])}</strong>`).join("<span>·</span>")}`
+      : `<span>Last round</span><strong>${escapeHtml(latest.words[0])}</strong><span>+</span><strong>${escapeHtml(latest.words[1])}</strong>`;
     form.hidden = !view.legal_actions.includes("submit_word");
     input.disabled = Boolean(pending) || !connected();
     element("Submit").textContent = pending?.type === "submit_word" ? "Locking…" : "Lock word";
@@ -171,16 +280,11 @@
     element("Next").disabled = !view.legal_actions.includes("next_round") || Boolean(pending) || !connected();
     element("Next").textContent = view.next_ready.includes(view.you) ? "Ready ✓" : pending?.type === "next_round" ? "Sending…" : "Next Round";
     element("Ready").textContent = `${view.next_ready.length} / ${view.players.length} ready`;
-    const activePlayers = view.teams.filter(team => team.matched_round === null).flatMap(team => team.player_ids);
+    const activePlayers = freeForAll() ? view.players.map(member => member.player_id)
+      : view.teams.filter(team => team.matched_round === null).flatMap(team => team.player_ids);
     const locked = view.players.filter(member => activePlayers.includes(member.player_id) && member.submitted).length;
-    element("Status").textContent = !connected() ? "Disconnected. Use Reconnect to return to your seat."
-      : view.game_over ? `✓ All words revealed. ${ownTeam ? `Your team matched in ${ownTeam.matched_round} ${ownTeam.matched_round === 1 ? "round" : "rounds"}.` : "Final standings are shown."}`
-      : view.phase === "reveal" ? "Read the words. Everyone confirms before the next round."
-      : !ownTeam ? `${locked} / ${activePlayers.length} words locked. Spectators cannot submit.`
-      : ownTeam.matched_round ? `Your team is in sync. ${locked} / ${activePlayers.length} words locked by the remaining teams.`
-      : view.your_word ? `Your word is locked. ${locked} / ${activePlayers.length} words locked; reveal together.`
-      : `${locked} / ${activePlayers.length} words locked. Keep yours a surprise.`;
-    renderTeams();
+    element("Status").textContent = statusText(ownTeam, locked, activePlayers.length);
+    renderBoard();
     const historyScroll = element("HistoryRows").scrollTop;
     renderHistory();
     element("HistoryRows").scrollTop = historyScroll;

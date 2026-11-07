@@ -6,6 +6,8 @@ const azulPanel = document.getElementById("azulPanel");
 const goldRushConfigBox = document.getElementById("goldRushConfigBox");
 const goldRushModeRow = document.getElementById("goldRushModeRow");
 const goldRushModeSelect = document.getElementById("goldRushModeSelect");
+const wordSyncConfigBox = document.getElementById("wordSyncConfigBox");
+const wordSyncModeSelect = document.getElementById("wordSyncModeSelect");
 const citadelsConfigBox = document.getElementById("citadelsConfigBox");
 const citadelsWinningCitySizeSelect = document.getElementById("citadelsWinningCitySizeSelect");
 const texasHoldemConfigBox = document.getElementById("texasHoldemConfigBox");
@@ -130,6 +132,40 @@ function updateGoldRushConfigRow() {
     goldRushModeRow.classList.toggle("hidden", !showRow);
     goldRushModeRow.setAttribute("aria-hidden", (!showRow).toString());
   }
+}
+
+function getWordSyncMode() {
+  return wordSyncModeSelect && wordSyncModeSelect.value === "free_for_all" ? "free_for_all" : "team";
+}
+
+let wordSyncConfigRoomId = null;
+
+function updateWordSyncConfigRow() {
+  const showRow = Boolean(currentRoomState) && currentGameType === "word_sync" && currentRoomState.status === "lobby";
+  if (wordSyncConfigBox) {
+    wordSyncConfigBox.classList.toggle("hidden", !showRow);
+    wordSyncConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (!showRow || !wordSyncModeSelect) {
+    wordSyncConfigRoomId = null;
+    return;
+  }
+  const mode = currentRoomState.game_config ? currentRoomState.game_config.mode : null;
+  // A new room starts from the default mode; the same room keeps the local
+  // choice until the server reports the mode a started game actually uses.
+  if (wordSyncConfigRoomId !== currentRoomState.room_id) {
+    wordSyncConfigRoomId = currentRoomState.room_id;
+    wordSyncModeSelect.value = mode === "free_for_all" ? "free_for_all" : "team";
+    if (typeof updateRoomActionButtons === "function") updateRoomActionButtons();
+  } else if (mode === "team" || mode === "free_for_all") {
+    wordSyncModeSelect.value = mode;
+  }
+}
+
+if (wordSyncModeSelect) {
+  wordSyncModeSelect.addEventListener("change", () => {
+    if (typeof updateRoomActionButtons === "function") updateRoomActionButtons();
+  });
 }
 
 function updateBombBustersConfigRow() {

@@ -7,7 +7,14 @@ from jsonschema import Draft7Validator
 
 
 MAX_WORD_LENGTH = 24
-CONFIG_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
+TEAM_MODE = "team"
+FREE_FOR_ALL_MODE = "free_for_all"
+MODES = (TEAM_MODE, FREE_FOR_ALL_MODE)
+CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {"mode": {"enum": list(MODES)}},
+    "additionalProperties": False,
+}
 ACTION_SCHEMA = {
     "type": "object",
     "properties": {
@@ -34,18 +41,35 @@ def normalize_word(value: str) -> str:
     return word
 
 
+def _build_teams(ids: List[str], mode: str) -> List[Dict]:
+    """Team mode pairs adjacent seats; free-for-all gives every player a solo slot."""
+    if mode == TEAM_MODE:
+        return [{"team_id": f"team-{index // 2 + 1}", "player_ids": ids[index:index + 2],
+                 "matched_round": None, "history": []} for index in range(0, len(ids), 2)]
+    return [{"team_id": f"team-{index + 1}", "player_ids": [player_id],
+             "matched_round": None, "history": []} for index, player_id in enumerate(ids)]
+
+
 def _team_for(state: Dict, player_id: str) -> Optional[Dict]:
     return next((team for team in state["teams"] if player_id in team["player_ids"]), None)
 
 
 def _active_players(state: Dict) -> List[str]:
+    if state["mode"] == FREE_FOR_ALL_MODE:
+        return [team["player_ids"][0] for team in state["teams"]]
     return [player_id for team in state["teams"] if team["matched_round"] is None
             for player_id in team["player_ids"]]
 
 
+def _is_complete(state: Dict) -> bool:
+    matched = [team["matched_round"] is not None for team in state["teams"]]
+    return any(matched) if state["mode"] == FREE_FOR_ALL_MODE else all(matched)
+
+
 def _standings(state: Dict) -> List[Dict]:
+    seats = {player_id: index for index, player_id in enumerate(state["turn_order"])}
     teams = sorted(state["teams"], key=lambda team: (
-        team["matched_round"] is None, team["matched_round"] or 0, team["team_id"]))
+        team["matched_round"] is None, team["matched_round"] or 0, seats[team["player_ids"][0]]))
     return [{
         "team_id": team["team_id"],
         "player_ids": team["player_ids"][:],
@@ -56,18 +80,10 @@ def _standings(state: Dict) -> List[Dict]:
     } for team in teams]
 
 
-def _reveal(state: Dict) -> None:
-    for team in state["teams"]:
-        if team["matched_round"] is not None:
-            continue
-        words = [state["pending"][player_id] for player_id in team["player_ids"]]
-        matched = words[0].casefold() == words[1].casefold()
-        team["history"].append({"round": state["round"], "words": words, "matched": matched})
-        if matched:
-            team["matched_round"] = state["round"]
+def _finish_reveal(state: Dict) -> None:
     state["pending"] = {}
     state["window_id"] += 1
-    state["game_over"] = all(team["matched_round"] is not None for team in state["teams"])
+    state["game_over"] = _is_complete(state)
     state["phase"] = "game_over" if state["game_over"] else "reveal"
     if state["game_over"]:
         winners = [row for row in _standings(state) if row["rank"] == 1]
@@ -75,18 +91,68 @@ def _reveal(state: Dict) -> None:
         state["winner"] = [player_id for row in winners for player_id in row["player_ids"]]
 
 
+def _reveal(state: Dict) -> None:
+    if state["mode"] == FREE_FOR_ALL_MODE:
+        counts: Dict[str, int] = {}
+        for team in state["teams"]:
+            folded = state["pending"][team["player_ids"][0]].casefold()
+            counts[folded] = counts.get(folded, 0) + 1
+        for team in state["teams"]:
+            word = state["pending"][team["player_ids"][0]]
+            matched = counts[word.casefold()] > 1
+            team["history"].append({"round": state["round"], "words": [word], "matched": matched})
+            if matched:
+                team["matched_round"] = state["round"]
+    else:
+        for team in state["teams"]:
+            if team["matched_round"] is not None:
+                continue
+            words = [state["pending"][player_id] for player_id in team["player_ids"]]
+            matched = words[0].casefold() == words[1].casefold()
+            team["history"].append({"round": state["round"], "words": words, "matched": matched})
+            if matched:
+                team["matched_round"] = state["round"]
+    _finish_reveal(state)
+
+
+def _free_for_all_rounds(state: Dict) -> Dict[int, Dict[str, str]]:
+    """Map every revealed round to the word each player wrote, for save validation."""
+    rounds: Dict[int, Dict[str, str]] = {}
+    for team in state["teams"]:
+        for entry in team["history"]:
+            rounds.setdefault(entry["round"], {})[team["player_ids"][0]] = entry["words"][0]
+    return rounds
+
+
+def _bot_word(view: Dict, bot_id: str) -> str:
+    if view["mode"] == TEAM_MODE:
+        team = next(team for team in view["teams"] if team["team_id"] == view["your_team_id"])
+        if team["history"]:
+            return min(team["history"][-1]["words"], key=lambda value: (value.casefold(), value))
+        return ("月亮", "星星")[team["player_ids"].index(bot_id)]
+    previous = [team["history"][-1]["words"][0] for team in view["teams"]
+                if team["history"] and team["history"][-1]["round"] == view["round"] - 1]
+    if previous:
+        return min(previous, key=lambda value: (value.casefold(), value))
+    seat = next(index for index, member in enumerate(view["players"]) if member["player_id"] == bot_id)
+    return ("月亮", "星星")[seat % 2]
+
+
 class WordSyncGame:
     game_id = "word_sync"
     min_players = 2
-    max_players = 8
-    supported_player_counts = (2, 4, 6, 8)
+    max_players = 10
+    supported_player_counts = tuple(range(2, 11))
+    player_counts_by_mode = {TEAM_MODE: (2, 4, 6, 8, 10), FREE_FOR_ALL_MODE: tuple(range(2, 11))}
 
     @staticmethod
     def init_game(config: Dict, players: List[Dict]) -> Dict:
         if not isinstance(config, dict) or not _CONFIG_VALIDATOR.is_valid(config):
-            raise ValueError("Word Sync does not accept game options.")
-        if not isinstance(players, list) or len(players) not in WordSyncGame.supported_player_counts:
-            raise ValueError("Word Sync requires 2, 4, 6, or 8 players.")
+            raise ValueError("Word Sync only accepts a team or free_for_all mode.")
+        mode = config.get("mode", TEAM_MODE)
+        if not isinstance(players, list) or len(players) not in WordSyncGame.player_counts_by_mode[mode]:
+            raise ValueError("Word Sync team mode requires 2, 4, 6, 8, or 10 players."
+                             if mode == TEAM_MODE else "Word Sync free-for-all requires 2 to 10 players.")
         metadata = []
         for index, player in enumerate(players):
             if not isinstance(player, dict) or not isinstance(player.get("player_id"), str) or not player["player_id"]:
@@ -102,11 +168,10 @@ class WordSyncGame:
         if len(set(ids)) != len(ids) or len({player["seat"] for player in metadata}) != len(ids):
             raise ValueError("Player IDs and seats must be unique.")
         return {
-            "game_id": WordSyncGame.game_id, "version": 1, "config": {},
+            "game_id": WordSyncGame.game_id, "version": 1, "config": {"mode": mode}, "mode": mode,
             "game_token": secrets.token_hex(16), "window_id": 0, "revision": 0,
             "turn_order": ids, "players": {player["player_id"]: player for player in metadata},
-            "teams": [{"team_id": f"team-{index // 2 + 1}", "player_ids": ids[index:index + 2],
-                       "matched_round": None, "history": []} for index in range(0, len(ids), 2)],
+            "teams": _build_teams(ids, mode),
             "round": 1, "phase": "guess", "pending": {}, "next_ready": [],
             "current_turn": None, "game_over": False, "winner": [], "winning_team_ids": [],
         }
@@ -155,7 +220,7 @@ class WordSyncGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
-        keys = ("game_id", "game_token", "window_id", "revision", "round", "phase", "teams",
+        keys = ("game_id", "game_token", "window_id", "revision", "round", "phase", "mode", "teams",
                 "next_ready", "game_over", "winner", "winning_team_ids")
         team = _team_for(state, viewer_id)
         view = {key: state[key] for key in keys}
@@ -177,12 +242,7 @@ class WordSyncGame:
         kind = view["legal_actions"][0]
         action = {"type": kind, "game_token": view["game_token"], "window_id": view["window_id"]}
         if kind == "submit_word":
-            team = next(team for team in view["teams"] if team["team_id"] == view["your_team_id"])
-            if team["history"]:
-                word = min(team["history"][-1]["words"], key=lambda value: (value.casefold(), value))
-            else:
-                word = ("月亮", "星星")[team["player_ids"].index(bot_id)]
-            action["word"] = word
+            action["word"] = _bot_word(view, bot_id)
         return action
 
     @staticmethod
@@ -198,6 +258,10 @@ class WordSyncGame:
                 raise ValueError("Invalid Word Sync save.")
             players = [state["players"][player_id] for player_id in state["turn_order"]]
             baseline = WordSyncGame.init_game(state["config"], players)
+            free_for_all = baseline["mode"] == FREE_FOR_ALL_MODE
+            if state.get("mode", baseline["mode"]) != baseline["mode"]:
+                raise ValueError("Invalid saved mode.")
+            state["mode"] = baseline["mode"]
             if state["turn_order"] != baseline["turn_order"] or state["players"] != baseline["players"]:
                 raise ValueError("Invalid saved players.")
             if not isinstance(state["game_token"], str) or len(state["game_token"]) != 32:
@@ -209,25 +273,43 @@ class WordSyncGame:
                 raise ValueError("Invalid saved phase.")
             if len(state["teams"]) != len(baseline["teams"]):
                 raise ValueError("Invalid saved teams.")
+            revealed = state["round"] - int(state["phase"] == "guess")
             for team, expected in zip(state["teams"], baseline["teams"]):
                 if team["team_id"] != expected["team_id"] or team["player_ids"] != expected["player_ids"]:
                     raise ValueError("Invalid saved pairing.")
                 finish = team["matched_round"]
                 if finish is not None and (type(finish) is not int or not 1 <= finish <= state["round"]):
                     raise ValueError("Invalid completion round.")
-                revealed = state["round"] - int(state["phase"] == "guess")
                 if len(team["history"]) != (finish if finish is not None else revealed) or (finish or 0) > revealed:
                     raise ValueError("Invalid saved history length.")
                 for number, entry in enumerate(team["history"], 1):
                     words = entry["words"]
-                    if not isinstance(words, list) or len(words) != 2 or any(normalize_word(word) != word for word in words):
+                    if (not isinstance(words, list) or len(words) != len(expected["player_ids"])
+                            or any(normalize_word(word) != word for word in words)):
                         raise ValueError("Invalid saved words.")
-                    matched = words[0].casefold() == words[1].casefold()
-                    if type(entry["round"]) is not int or entry["round"] != number or entry["matched"] is not matched:
+                    if type(entry["round"]) is not int or entry["round"] != number:
                         raise ValueError("Invalid saved reveal.")
-                    if matched != (number == finish):
-                        raise ValueError("Invalid saved completion.")
-            complete = all(team["matched_round"] is not None for team in state["teams"])
+                    if free_for_all:
+                        continue
+                    matched = words[0].casefold() == words[1].casefold()
+                    if entry["matched"] is not matched or matched != (number == finish):
+                        raise ValueError("Invalid saved reveal.")
+            if free_for_all:
+                for number, words in _free_for_all_rounds(state).items():
+                    counts: Dict[str, int] = {}
+                    for word in words.values():
+                        counts[word.casefold()] = counts.get(word.casefold(), 0) + 1
+                    if len(words) != len(state["teams"]) or number > revealed:
+                        raise ValueError("Invalid saved reveal.")
+                    for team in state["teams"]:
+                        finish = team["matched_round"]
+                        matched = counts[words[team["player_ids"][0]].casefold()] > 1
+                        if team["history"][number - 1]["matched"] is not matched:
+                            raise ValueError("Invalid saved reveal.")
+                        # A match ends the game, so a winner finishes exactly on the round they matched.
+                        if not (finish == number if matched else finish is None or finish > number):
+                            raise ValueError("Invalid saved completion.")
+            complete = _is_complete(state)
             if state["game_over"] is not complete or complete != (state["phase"] == "game_over"):
                 raise ValueError("Invalid saved game result.")
             if state["window_id"] != 2 * (state["round"] - 1) + int(state["phase"] != "guess"):
@@ -244,8 +326,8 @@ class WordSyncGame:
                 raise ValueError("Invalid saved confirmations.")
             if (state["phase"] != "reveal" and ready) or len(ready) >= len(players):
                 raise ValueError("Invalid saved confirmation phase.")
-            revision = sum(len(team["history"]) * 2 for team in state["teams"]) + len(pending)
-            revision += len(players) * (state["round"] - 1) + len(ready)
+            revision = sum(len(entry["words"]) for team in state["teams"] for entry in team["history"])
+            revision += len(pending) + len(players) * (state["round"] - 1) + len(ready)
             if state["revision"] != revision:
                 raise ValueError("Invalid saved revision.")
             winners = [row for row in _standings(state) if complete and row["rank"] == 1]

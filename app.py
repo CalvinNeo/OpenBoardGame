@@ -1285,6 +1285,32 @@ async def _on_shutdown() -> None:
     logger.info("Server shutdown complete.")
 
 
+def _room_connection_active(sid: str) -> bool:
+    environ = sio.get_environ(sid)
+    return environ is not None and not environ.get("openboardgame.room_closed", False)
+
+
+def _close_room_connection(sid: str) -> None:
+    environ = sio.get_environ(sid)
+    if environ is not None:
+        environ["openboardgame.room_closed"] = True
+
+
+def _detach_room_player(room: Room, player: Player, *, preserve_seat: bool = False) -> None:
+    player.connected = False
+    player.socket_id = None
+    player.last_seen = time.time()
+    if room.status == "lobby" and not preserve_seat:
+        room.players = [p for p in room.players if p.player_id != player.player_id]
+        if not room.players:
+            ROOMS.pop(room.room_id, None)
+    if not preserve_seat and room.game_type == "the_crew" and room.host_player_id == player.player_id:
+        room.host_player_id = next((p.player_id for p in sorted(room.players, key=lambda p: p.seat)
+                                    if p.player_id != player.player_id and not p.is_bot and p.connected), None)
+        room.state_version += 1
+        _save_room_state(room)
+
+
 async def _leave_session(sid: str, *, preserve_seat: bool = False) -> None:
     session = SESSIONS.pop(sid, None)
     if not session:
@@ -1293,26 +1319,14 @@ async def _leave_session(sid: str, *, preserve_seat: bool = False) -> None:
     if not room:
         return
     player = _find_player(room, session.get("player_id"))
-    if not player:
+    if not player or player.socket_id != sid:
+        await sio.leave_room(sid, room.room_id)
         return
+    _detach_room_player(room, player, preserve_seat=preserve_seat)
     await sio.leave_room(sid, room.room_id)
-    if room.status == "lobby" and not preserve_seat:
-        room.players = [p for p in room.players if p.player_id != player.player_id]
-        if not room.players:
-            ROOMS.pop(room.room_id, None)
-            await _emit_room_list_update()
-            return
-    else:
-        player.connected = False
-        player.socket_id = None
-        player.last_seen = time.time()
-    if not preserve_seat and room.game_type == "the_crew" and room.host_player_id == player.player_id:
-        room.host_player_id = next((p.player_id for p in sorted(room.players, key=lambda p: p.seat)
-                                    if p.player_id != player.player_id and not p.is_bot and p.connected), None)
-        room.state_version += 1
-        _save_room_state(room)
-    await _emit_room_state(room)
-    await _emit_game_state(room)
+    if ROOMS.get(room.room_id) is room:
+        await _emit_room_state(room)
+        await _emit_game_state(room)
     await _emit_room_list_update()
 
 
@@ -1632,6 +1646,7 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
+    _close_room_connection(sid)
     client_addr = _get_client_address(sio.get_environ(sid))
     session = SESSIONS.pop(sid, None)
     if client_addr:
@@ -1662,6 +1677,8 @@ async def disconnect(sid):
 
 @sio.on("room:create")
 async def on_room_create(sid, data):
+    if not _room_connection_active(sid):
+        return
     name = (data or {}).get("name")
     game_type = (data or {}).get("game_type", "cabo")
     if not name:
@@ -1679,6 +1696,8 @@ async def on_room_create(sid, data):
         await _send_error(sid, config_error)
         return
     await _leave_session(sid)
+    if not _room_connection_active(sid):
+        return
     room_id = _generate_room_id()
     player_id = uuid.uuid4().hex
     reconnect_token = _generate_reconnect_token()
@@ -1719,6 +1738,8 @@ async def on_room_create(sid, data):
 
 @sio.on("room:join")
 async def on_room_join(sid, data):
+    if not _room_connection_active(sid):
+        return
     room_id = (data or {}).get("room_id")
     name = (data or {}).get("name")
     if not room_id or not name:
@@ -1754,6 +1775,8 @@ async def on_room_join(sid, data):
         await _send_error(sid, "room full")
         return
     await _leave_session(sid)
+    if not _room_connection_active(sid):
+        return
     player_id = uuid.uuid4().hex
     seat = len(room.players)
     reconnect_token = _generate_reconnect_token()
@@ -1786,6 +1809,8 @@ async def on_room_join(sid, data):
 
 @sio.on("room:reconnect")
 async def on_room_reconnect(sid, data):
+    if not _room_connection_active(sid):
+        return
     room_id = (data or {}).get("room_id")
     player_id = (data or {}).get("player_id")
     reconnect_token = (data or {}).get("reconnect_token")
@@ -1842,21 +1867,31 @@ async def on_room_reconnect(sid, data):
     existing = SESSIONS.get(sid)
     if existing and (existing.get("room_id") != room_id or existing.get("player_id") != player_id):
         await _leave_session(sid, preserve_seat=True)
+    if not _room_connection_active(sid):
+        return
     # A suspended mobile connection can outlive its replacement until heartbeat
     # expiry. A valid reconnect token transfers the seat immediately.
     previous_sid = player.socket_id
     if previous_sid and previous_sid != sid:
         SESSIONS.pop(previous_sid, None)
-        await sio.leave_room(previous_sid, room_id)
-        await sio.emit("room:session_replaced", {"room_id": room_id}, to=previous_sid)
     player.seat_claimed = True
     player.connected = True
     player.socket_id = sid
     player.last_seen = time.time()
-    SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
+    session = {"room_id": room_id, "player_id": player_id}
+    SESSIONS[sid] = session
+    if previous_sid and previous_sid != sid:
+        await sio.leave_room(previous_sid, room_id)
+        await sio.emit("room:session_replaced", {"room_id": room_id}, to=previous_sid)
+    if SESSIONS.get(sid) is not session or player.socket_id != sid:
+        return
     await sio.enter_room(sid, room_id)
+    if SESSIONS.get(sid) is not session or player.socket_id != sid:
+        return
     await _emit_room_state(room)
     await _emit_game_state(room)
+    if SESSIONS.get(sid) is not session or player.socket_id != sid:
+        return
     await sio.emit(
         "system:info",
         {
@@ -1876,6 +1911,48 @@ async def on_room_reconnect(sid, data):
 @sio.on("room:leave")
 async def on_room_leave(sid, data):
     await _leave_session(sid)
+
+
+@sio.on("room:logout")
+async def on_room_logout(sid: str, data: Optional[Dict] = None) -> Dict:
+    if not isinstance(data, (dict, type(None))):
+        return {"ok": False, "message": "invalid logout request"}
+    data = data or {}
+    credentials = data.get("rooms", {})
+    if not isinstance(credentials, dict):
+        return {"ok": False, "message": "invalid room credentials"}
+    preserve_seat = data.get("preserve_seat") is True
+    targets = {sid}
+    offline_room = None
+    for room_id, auth in credentials.items():
+        if not isinstance(auth, dict):
+            continue
+        room = _get_room(room_id)
+        player = _find_player(room, auth.get("player_id")) if room else None
+        if (not player or player.is_bot or not player.reconnect_token
+                or player.reconnect_token != auth.get("reconnect_token")):
+            continue
+        if (not preserve_seat and room_id == data.get("room_id") and room.status == "lobby"
+                and not player.connected and player.socket_id is None):
+            _detach_room_player(room, player)
+            offline_room = room
+        active_sid = player.socket_id
+        session = SESSIONS.get(active_sid)
+        if (active_sid and session and session.get("room_id") == room_id
+                and session.get("player_id") == player.player_id):
+            targets.add(active_sid)
+    for target_sid in targets:
+        _close_room_connection(target_sid)
+    for target_sid in targets:
+        await _leave_session(target_sid, preserve_seat=preserve_seat)
+        if target_sid != sid:
+            await sio.emit("room:logged_out", {}, to=target_sid)
+            await sio.disconnect(target_sid)
+    if offline_room:
+        if ROOMS.get(offline_room.room_id) is offline_room:
+            await _emit_room_state(offline_room)
+        await _emit_room_list_update()
+    return {"ok": True}
 
 
 @sio.on("room:ready")
@@ -2113,7 +2190,7 @@ async def on_room_start(sid, data):
         return
     room.status = "in_game"
     room.state_version = room.state_version + 1 if room.game_type == "the_crew" else 1
-    if room.game_type in ("the_crew", "blokus"):
+    if room.game_type in ("the_crew", "blokus", "word_sync"):
         room.game_config = dict(room.game_state["config"])
     _save_room_state(room)
     await _emit_room_state(room)
@@ -2431,6 +2508,8 @@ async def on_room_seat_list(sid, data):
 
 @sio.on("room:claim_seat")
 async def on_room_claim_seat(sid, data):
+    if not _room_connection_active(sid):
+        return
     room_id = (data or {}).get("room_id")
     seat = (data or {}).get("seat")
     raw_name = (data or {}).get("name")
@@ -2465,6 +2544,8 @@ async def on_room_claim_seat(sid, data):
         await sio.emit("room:claim_result", {"ok": False, "message": "seat already claimed"}, to=sid)
         return
     await _leave_session(sid)
+    if not _room_connection_active(sid):
+        return
     target.name = name
     target.seat_claimed = True
     target.connected = True

@@ -45,6 +45,31 @@ for number in range(35):
     play('p0', 'next_round')
     play('p1', 'next_round')
 snapshot('long_history')
+state = Game.init_game({'mode': 'free_for_all'}, players(6))
+for index, name in enumerate(['Alex', 'Morgan', 'Jamie', 'Riley', 'Casey', 'Sam']):
+    state['players']['p' + str(index)]['name'] = name
+snapshot('ffa_guess')
+play('p1', word='月亮')
+snapshot('ffa_other_locked')
+play('p0', word='云')
+snapshot('ffa_own_locked')
+for index, word in enumerate(['海', '山', '红', '蓝'], 2): play('p' + str(index), word=word)
+snapshot('ffa_reveal')
+for index in range(6): play('p' + str(index), 'next_round')
+snapshot('ffa_round_two', 'p2')
+play('p0', word='月亮')
+play('p3', word='月亮')
+play('p1', word='海')
+play('p2', word='山')
+play('p4', word='红')
+play('p5', word='蓝')
+snapshot('ffa_game_over')
+views['ffa_spectator'] = Game.get_public_view(state, 'visitor')
+views['ffa_long_names'] = copy.deepcopy(views['ffa_game_over'])
+for member in views['ffa_long_names']['players']:
+    member['name'] = 'VeryLongUnbrokenPlayerNameForResponsiveLayout' + member['player_id']
+for team in views['ffa_long_names']['teams']:
+    team['history'][-1]['words'] = ['ABCDEFGHIJKLMNOPQRSTUVWXYZ'[:24], '<img src=x onerror=1>']
 print(json.dumps(views))
 `], { encoding: 'utf8' }));
 
@@ -91,7 +116,8 @@ async function renderFixture(page, key, reset = true) {
     playerId = view.you;
     roomSessionReady = true;
     const room = {room_id: roomId, game_type: 'word_sync', status: view.game_over ? 'game_over' : 'in_game',
-      players: view.players, min_players: 2, max_players: 8, player_counts: [2, 4, 6, 8], game_config: {}};
+      players: view.players, min_players: 2, max_players: 10,
+      player_counts: [2, 3, 4, 5, 6, 7, 8, 9, 10], game_config: {mode: view.mode}};
     renderRoomState(room);
     await ensureGameAssets('word_sync');
     setGamePanelVisibility('word_sync');
@@ -124,11 +150,14 @@ async function testFixtures(browser, errors) {
   });
   for (const width of [320, 390, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 });
-    for (const fixture of ['guess', 'own_locked', 'spectator', 'reveal', 'ready', 'matched_waiting', 'round_two', 'game_over', 'long_names', 'two_players']) {
+    for (const fixture of ['guess', 'own_locked', 'spectator', 'reveal', 'ready', 'matched_waiting', 'round_two', 'game_over', 'long_names', 'two_players',
+      'ffa_guess', 'ffa_own_locked', 'ffa_spectator', 'ffa_reveal', 'ffa_round_two', 'ffa_game_over', 'ffa_long_names']) {
       await renderFixture(page, fixture);
       await checkBounds(page, `${width}px ${fixture}`);
       assert.equal(await page.locator('#wordSyncPanel img').count(), 0);
-      if (['guess', 'reveal', 'game_over'].includes(fixture)) await page.screenshot({path: `${output}/${fixture}-${width}.png`, fullPage: true});
+      if (['guess', 'reveal', 'game_over', 'ffa_guess', 'ffa_reveal', 'ffa_game_over'].includes(fixture)) {
+        await page.screenshot({path: `${output}/${fixture}-${width}.png`, fullPage: true});
+      }
     }
     await page.locator('#wordSyncHelpBtn').click();
     await page.locator('#wordSyncDialog[open]').waitFor();
@@ -197,6 +226,17 @@ async function testFixtures(browser, errors) {
   await page.locator('#wordSyncHistory summary').click();
   assert.equal(await page.locator('#wordSyncHistoryRows').evaluate(node => node.scrollHeight > node.clientHeight && node.clientHeight <= 250), true);
   await checkBounds(page, 'bounded history');
+  await renderFixture(page, 'ffa_game_over');
+  await page.locator('#wordSyncHistory summary').click();
+  assert.equal(await page.locator('#wordSyncHistoryRows .ws-chip').count(), 12);
+  assert.equal(await page.locator('#wordSyncHistoryRows .ws-chip-match').count(), 2);
+  assert.equal(await page.locator('#wordSyncHistoryRows img').count(), 0);
+  await checkBounds(page, 'free-for-all history');
+  await page.setViewportSize({width: 320, height: 844});
+  await checkBounds(page, 'free-for-all history 320px');
+  await page.screenshot({path: `${output}/ffa-history-320.png`, fullPage: true});
+  await page.setViewportSize({width: 1440, height: 1000});
+  await page.locator('#wordSyncHistory summary').click();
   await page.locator('#wordSyncHelpBtn').click();
   await page.evaluate(async () => {
     renderRoomState({room_id: 'other', game_type: 'chromino', status: 'lobby', players: [], game_config: {}});
@@ -318,6 +358,49 @@ async function testLive(browser, errors) {
   assert.match(await host.locator('#wordSyncTitle').innerText(), /Team 1 wins/);
   await checkBounds(host, 'live final mobile');
   await host.screenshot({path: `${output}/live-finished-390.png`, fullPage: true});
+  // Game options live in the lobby, so free-for-all starts from a fresh room.
+  for (const page of pages) await page.evaluate(room => socket.emit('room:leave', {room_id: room}), room);
+  await host.evaluate(() => socket.emit('room:create', {name: 'Alex', game_type: 'word_sync'}));
+  await host.waitForFunction(() => roomSessionReady && currentGameType === 'word_sync' && currentRoomState.status === 'lobby');
+  const ffaRoom = await host.evaluate(() => roomId);
+  assert.notEqual(ffaRoom, room);
+  for (let index = 1; index < 4; index += 1) {
+    await pages[index].evaluate(({ffaRoom, index}) => socket.emit('room:join', {room_id: ffaRoom, name: ['Alex', 'Morgan', 'Jamie', 'Riley'][index]}), {ffaRoom, index});
+    await pages[index].waitForFunction(() => roomSessionReady && currentGameType === 'word_sync');
+  }
+  if (!await host.locator('#wordSyncModeSelect').isVisible()) await host.locator('#roomControlsToggleBtn').click();
+  await host.locator('#wordSyncModeSelect').waitFor({state: 'visible'});
+  assert.equal(await host.locator('#wordSyncModeSelect').inputValue(), 'team');
+  await host.locator('#wordSyncModeSelect').selectOption('free_for_all');
+  for (const page of pages) await page.evaluate(() => socket.emit('room:ready', {ready: true}));
+  await host.waitForFunction(() => !document.getElementById('startBtn').disabled);
+  await host.locator('#startBtn').click();
+  for (const page of pages) await page.waitForFunction(() => lastGameStatePayload?.view?.mode === 'free_for_all' && lastGameStatePayload.view.phase === 'guess');
+  assert.equal(await pages[2].evaluate(() => currentRoomState.game_config.mode), 'free_for_all');
+  await host.locator('#wordSyncWord').fill('海');
+  await host.locator('#wordSyncSubmit').click();
+  await pages[1].locator('#wordSyncWord').fill('海');
+  await pages[1].locator('#wordSyncSubmit').click();
+  await pages[2].locator('#wordSyncWord').fill('山');
+  await pages[2].locator('#wordSyncSubmit').click();
+  await pages[3].waitForFunction(() => lastGameStatePayload?.view?.players?.filter(member => member.submitted).length === 3);
+  assert.equal(await pages[3].evaluate(() => JSON.stringify(lastGameStatePayload).includes('海')), false);
+  assert.match(await pages[3].locator('#wordSyncStatus').innerText(), /3 \/ 4 words locked/);
+  assert.match(await pages[3].locator('#wordSyncTeams').innerText(), /🔒 Locked/);
+  await pages[3].locator('#wordSyncWord').fill('云');
+  await pages[3].locator('#wordSyncSubmit').click();
+  for (const page of pages) await page.waitForFunction(() => lastGameStatePayload?.view?.game_over);
+  const freeForAll = await host.evaluate(() => lastGameStatePayload.view);
+  assert.equal(freeForAll.winner.length, 2);
+  assert.deepEqual(freeForAll.winning_team_ids, ['team-1', 'team-2']);
+  assert.equal(await host.locator('#wordSyncTitle').innerText(), 'Alex + Morgan win!');
+  assert.equal(await pages[2].locator('#wordSyncTitle').innerText(), 'Alex + Morgan win!');
+  assert.match(await host.locator('#wordSyncTeams').innerText(), /🏆/);
+  assert.match(await pages[2].locator('#wordSyncStatus').innerText(), /Nobody wrote your word/);
+  await checkBounds(host, 'live free-for-all final');
+  if (await host.locator('#roomControlsCollapseBtn').isVisible()) await host.locator('#roomControlsCollapseBtn').click();
+  await host.screenshot({path: `${output}/live-ffa-390.png`, fullPage: true});
+
   await host.evaluate(() => socket.emit('room:create', {name: 'Practice', game_type: 'word_sync'}));
   await host.waitForFunction(previous => roomId !== previous && currentRoomState.status === 'lobby', room);
   await host.evaluate(() => socket.emit('room:add_bot', {}));
@@ -332,6 +415,27 @@ async function testLive(browser, errors) {
   await host.locator('#wordSyncSubmit').click();
   await host.waitForFunction(() => lastGameStatePayload?.view?.game_over);
   assert.equal(await host.evaluate(() => lastGameStatePayload.view.round), 1);
+
+  // Team mode blocks an odd roster in the lobby; free-for-all takes the same room.
+  const practiceRoom = await host.evaluate(() => roomId);
+  await host.evaluate(() => socket.emit('room:create', {name: 'Odd', game_type: 'word_sync'}));
+  await host.waitForFunction(previous => roomId !== previous && currentRoomState.status === 'lobby', practiceRoom);
+  for (const total of [2, 3]) {
+    await host.evaluate(() => socket.emit('room:add_bot', {}));
+    await host.waitForFunction(count => currentRoomState.players.length === count, total);
+  }
+  await host.evaluate(() => socket.emit('room:ready', {ready: true}));
+  if (!await host.locator('#wordSyncModeSelect').isVisible()) await host.locator('#roomControlsToggleBtn').click();
+  await host.locator('#wordSyncModeSelect').waitFor({state: 'visible'});
+  assert.match(await host.evaluate(() => getRoomStartReason()), /^Team mode needs 2 \/ 4 \/ 6 \/ 8 \/ 10 players\./);
+  assert.equal(await host.locator('#startBtn').isDisabled(), true);
+  await host.locator('#wordSyncModeSelect').selectOption('free_for_all');
+  assert.equal(await host.evaluate(() => getRoomStartReason()), '');
+  assert.equal(await host.locator('#startBtn').isDisabled(), false);
+  await host.locator('#startBtn').click();
+  await host.waitForFunction(() => lastGameStatePayload?.view?.mode === 'free_for_all' && lastGameStatePayload.view.phase === 'guess');
+  assert.equal(await host.evaluate(() => lastGameStatePayload.view.players.length), 3);
+  assert.equal(await host.evaluate(() => lastGameStatePayload.view.teams.length), 3);
   for (const context of contexts) await context.close();
 }
 
@@ -471,7 +575,7 @@ async function testStartupLoading(browser, errors) {
     await testTouch(browser, errors);
     await testLive(browser, errors);
     assert.deepEqual(errors, []);
-    console.log('Word Sync: deferred startup, real file progress, timeout/retry without duplicate scripts, 320/390/1024/1440px, hidden words, input/IME, reveal/ready/results, Help/Explain/Esc, touch/scroll, history, room switch, reconnect and live bots passed.');
+    console.log('Word Sync: deferred startup, real file progress, timeout/retry without duplicate scripts, 320/390/1024/1440px, team and free-for-all layouts, hidden words, input/IME, reveal/ready/results, Help/Explain/Esc, touch/scroll, history, room switch, mode switch, reconnect and live bots passed.');
   } finally {
     await browser.close();
   }

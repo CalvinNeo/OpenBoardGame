@@ -232,10 +232,10 @@ class TheCrewIntegrationTests(unittest.IsolatedAsyncioTestCase):
         host = room.players[0]
         await app.disconnect("s0")
         self.assertEqual(room.host_player_id, host.player_id)
-        await app.on_room_reconnect("s0", {
+        await app.on_room_reconnect("s0-reconnected", {
             "room_id": room.room_id, "player_id": host.player_id, "reconnect_token": host.reconnect_token,
         })
-        await app._leave_session("s0")
+        await app._leave_session("s0-reconnected")
         self.assertEqual(room.host_player_id, room.players[1].player_id)
         await app.on_the_crew_restart("s1", {
             "room_id": room.room_id, "game_token": room.game_state["game_token"], "config": {"mission": 2},

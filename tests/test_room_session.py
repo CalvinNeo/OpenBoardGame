@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -10,6 +11,8 @@ class DummySio:
         self.emits = []
         self.entered = []
         self.left = []
+        self.environ = {}
+        self.disconnected = []
 
     async def emit(self, event, payload, to=None):
         self.emits.append({"event": event, "payload": payload, "to": to})
@@ -21,7 +24,12 @@ class DummySio:
         self.left.append((sid, room_id))
 
     def get_environ(self, sid):
-        return {}
+        return self.environ.setdefault(sid, {})
+
+    async def disconnect(self, sid):
+        self.disconnected.append(sid)
+        await app.disconnect(sid)
+        self.environ.pop(sid, None)
 
 
 class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
@@ -323,6 +331,200 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(app.ROOMS[room_id].players), 1)
         self.assertEqual(app.SESSIONS["mobile"]["player_id"], player.player_id)
         self.assertFalse(any(event["event"] == "system:error" for event in app.sio.emits))
+
+    async def test_leave_during_reconnect_does_not_restore_session(self):
+        room_id = await self._create_room("old-browser", "Alice")
+        room = app.ROOMS[room_id]
+        room.status = "in_game"
+        player = room.players[0]
+        paused = asyncio.Event()
+        resume = asyncio.Event()
+        original_emit = app.sio.emit
+
+        async def delayed_emit(event, payload, to=None):
+            if event == "room:session_replaced":
+                paused.set()
+                await resume.wait()
+            await original_emit(event, payload, to=to)
+
+        app.sio.emit = delayed_emit
+        reconnect = asyncio.create_task(app.on_room_reconnect("new-browser", {
+            "room_id": room_id, "player_id": player.player_id,
+            "reconnect_token": player.reconnect_token,
+        }))
+        try:
+            await asyncio.wait_for(paused.wait(), 1)
+            await app.on_room_leave("new-browser", {"room_id": room_id})
+        finally:
+            resume.set()
+            await reconnect
+
+        self.assertFalse(player.connected)
+        self.assertIsNone(player.socket_id)
+        self.assertNotIn("new-browser", app.SESSIONS)
+        self.assertFalse(any(event["event"] == "system:info" and event["to"] == "new-browser"
+                             for event in app.sio.emits))
+
+    async def test_disconnect_during_reconnect_does_not_restore_session(self):
+        room_id = await self._create_room("old-browser", "Alice")
+        player = app.ROOMS[room_id].players[0]
+        original_leave = app.sio.leave_room
+
+        async def disconnect_while_replacing(sid, target_room_id):
+            await original_leave(sid, target_room_id)
+            if sid == "old-browser":
+                await app.disconnect("new-browser")
+
+        app.sio.leave_room = disconnect_while_replacing
+        await app.on_room_reconnect("new-browser", {
+            "room_id": room_id, "player_id": player.player_id,
+            "reconnect_token": player.reconnect_token,
+        })
+
+        self.assertFalse(player.connected)
+        self.assertIsNone(player.socket_id)
+        self.assertNotIn("new-browser", app.SESSIONS)
+
+    async def test_logout_during_room_switch_cancels_pending_reconnect(self):
+        first_room_id = await self._create_room("browser", "Alice")
+        target_room_id = await self._create_room("other-browser", "Alice")
+        target = app.ROOMS[target_room_id].players[0]
+        await app.disconnect("other-browser")
+        original_leave = app.sio.leave_room
+
+        async def logout_while_leaving(sid, room_id):
+            await original_leave(sid, room_id)
+            if room_id == first_room_id:
+                result = await app.on_room_logout("browser", {"preserve_seat": True})
+                self.assertEqual(result, {"ok": True})
+
+        app.sio.leave_room = logout_while_leaving
+        await app.on_room_reconnect("browser", {
+            "room_id": target_room_id, "player_id": target.player_id,
+            "reconnect_token": target.reconnect_token,
+        })
+
+        self.assertNotIn("browser", app.SESSIONS)
+        self.assertFalse(target.connected)
+        self.assertIsNone(target.socket_id)
+
+    async def test_leave_does_not_mark_a_replacement_connection_offline(self):
+        room_id = await self._create_room("old-browser", "Alice")
+        room = app.ROOMS[room_id]
+        room.status = "in_game"
+        player = room.players[0]
+        original_leave = app.sio.leave_room
+
+        async def reconnect_while_leaving(sid, target_room_id):
+            await original_leave(sid, target_room_id)
+            if sid == "old-browser":
+                await app.on_room_reconnect("new-browser", {
+                    "room_id": room_id, "player_id": player.player_id,
+                    "reconnect_token": player.reconnect_token,
+                })
+
+        app.sio.leave_room = reconnect_while_leaving
+        await app.on_room_leave("old-browser", {})
+
+        self.assertTrue(player.connected)
+        self.assertEqual(player.socket_id, "new-browser")
+        self.assertIn("new-browser", app.SESSIONS)
+
+    async def test_logout_removes_authenticated_stale_connections_only(self):
+        room_id = await self._create_room("stale-browser", "Alice")
+        room = app.ROOMS[room_id]
+        room.status = "in_game"
+        player = room.players[0]
+        other_room_id = await self._create_room("other-browser", "Bob")
+        result = await app.on_room_logout("refreshed-browser", {"rooms": {
+            room_id: {"player_id": player.player_id, "reconnect_token": player.reconnect_token},
+        }})
+
+        self.assertEqual(result, {"ok": True})
+        self.assertFalse(player.connected)
+        self.assertIsNone(player.socket_id)
+        self.assertEqual(room.players, [player])
+        self.assertNotIn("stale-browser", app.SESSIONS)
+        self.assertIn("stale-browser", app.sio.disconnected)
+        self.assertIn("other-browser", app.SESSIONS)
+        self.assertTrue(app.ROOMS[other_room_id].players[0].connected)
+
+    async def test_logout_rejects_wrong_credentials_for_another_socket(self):
+        room_id = await self._create_room("browser", "Alice")
+        player = app.ROOMS[room_id].players[0]
+        await app.on_room_logout("untrusted", {"rooms": {
+            room_id: {"player_id": player.player_id, "reconnect_token": "wrong-token"},
+        }})
+        self.assertTrue(player.connected)
+        self.assertEqual(player.socket_id, "browser")
+        self.assertIn("browser", app.SESSIONS)
+        self.assertNotIn("browser", app.sio.disconnected)
+
+    async def test_copy_logout_preserves_lobby_credentials_for_new_connection(self):
+        room_id = await self._create_room("browser", "Alice")
+        player = app.ROOMS[room_id].players[0]
+        credentials = {"room_id": room_id, "player_id": player.player_id,
+                       "reconnect_token": player.reconnect_token}
+        result = await app.on_room_logout("browser", {"preserve_seat": True})
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(app.ROOMS[room_id].players, [player])
+        self.assertFalse(player.connected)
+
+        await app.on_room_reconnect("browser", credentials)
+        self.assertNotIn("browser", app.SESSIONS)
+        self.assertFalse(player.connected)
+
+        await app.on_room_reconnect("returning-browser", credentials)
+        self.assertTrue(player.connected)
+        self.assertEqual(player.socket_id, "returning-browser")
+
+    async def test_regular_logout_removes_lobby_seat_and_blocks_late_creation(self):
+        room_id = await self._create_room("browser", "Alice")
+        result = await app.on_room_logout("browser", {})
+        self.assertEqual(result, {"ok": True})
+        self.assertNotIn(room_id, app.ROOMS)
+        self.assertNotIn("browser", app.SESSIONS)
+        await app.on_room_create("browser", {"name": "Alice", "game_type": "cabo"})
+        self.assertEqual(app.ROOMS, {})
+        self.assertNotIn("browser", app.SESSIONS)
+
+    async def test_logout_retry_removes_only_current_authenticated_offline_lobby_seat(self):
+        room_id = await self._create_room("browser", "Alice")
+        player = app.ROOMS[room_id].players[0]
+        other_room_id = await self._create_room("previous-browser", "Alice")
+        other_player = app.ROOMS[other_room_id].players[0]
+        await app.disconnect("browser")
+        await app.disconnect("previous-browser")
+        result = await app.on_room_logout("retry-browser", {"room_id": room_id, "rooms": {
+            room_id: {"player_id": player.player_id, "reconnect_token": player.reconnect_token},
+            other_room_id: {"player_id": other_player.player_id, "reconnect_token": other_player.reconnect_token},
+        }})
+        self.assertEqual(result, {"ok": True})
+        self.assertNotIn(room_id, app.ROOMS)
+        self.assertEqual(app.ROOMS[other_room_id].players, [other_player])
+
+    async def test_logout_acknowledgement_waits_for_cleanup(self):
+        room_id = await self._create_room("browser", "Alice")
+        paused = asyncio.Event()
+        resume = asyncio.Event()
+        original_leave = app.sio.leave_room
+
+        async def delayed_leave(sid, target_room_id):
+            paused.set()
+            await resume.wait()
+            await original_leave(sid, target_room_id)
+
+        app.sio.leave_room = delayed_leave
+        logout = asyncio.create_task(app.on_room_logout("browser", {}))
+        try:
+            await asyncio.wait_for(paused.wait(), 1)
+            self.assertFalse(logout.done())
+            self.assertNotIn("browser", app.SESSIONS)
+            self.assertNotIn(room_id, app.ROOMS)
+        finally:
+            resume.set()
+            result = await logout
+        self.assertEqual(result, {"ok": True})
 
     async def test_reconnect_between_saved_lobbies_preserves_both_seats(self):
         first_room_id = await self._create_room("first-browser", "Alice")

@@ -32,6 +32,7 @@ function decodeAccessKey(key) {
     await page.route('https://fonts.googleapis.com/**', route => route.abort());
     await page.goto(base);
     await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+    await openControls(page);
     await page.evaluate(() => {
       window.accessKeyTestEvents = [];
       socket.onAnyOutgoing(event => window.accessKeyTestEvents.push(event));

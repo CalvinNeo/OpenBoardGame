@@ -38,7 +38,14 @@
     </div>
     <dialog id="sixNimmtSummaryModal" class="sn-dialog" aria-labelledby="sixNimmtSummaryTitle">
         <div class="sn-dialog-heading"><div><span id="sixNimmtSummaryMeta" class="sn-eyebrow"></span><h2 id="sixNimmtSummaryTitle">本次揭牌</h2></div><button id="sixNimmtSummaryHideBtn" type="button">View Table</button></div>
-        <div id="sixNimmtSummaryList" class="sn-summary-list"></div>
+        <div id="sixNimmtSummaryBody" class="sn-summary-body">
+            <figure class="sn-placement-diagram" aria-labelledby="sixNimmtPlacementTitle">
+                <figcaption class="sn-placement-heading"><h3 id="sixNimmtPlacementTitle">摆牌顺序</h3><span id="sixNimmtPlacementOrder" tabindex="0" data-sn-explain="placement"></span></figcaption>
+                <div class="sn-placement-legend" tabindex="0" data-sn-explain="placement" data-sn-tip="灰色是原有牌，蓝色是本次出牌，绿色是你的牌。卡片上的 # 序号表示本次全桌的摆放顺序；虚线牌已被吃走。"><span>原有牌</span><span class="is-new">本次出牌</span><span class="is-you">你的牌</span><span class="is-taken">已吃走</span></div>
+                <div id="sixNimmtPlacementRows" class="sn-placement-rows"></div>
+            </figure>
+            <details id="sixNimmtSummaryDetails" class="sn-summary-details"><summary>罚分明细 <span id="sixNimmtSummaryTotal"></span></summary><div id="sixNimmtSummaryList" class="sn-summary-list"></div></details>
+        </div>
         <div class="sn-summary-footer"><span id="sixNimmtSummaryStatus" aria-live="polite"></span><button id="sixNimmtSummaryNextBtn" class="sn-primary" type="button" data-sn-explain="next">Next Round</button></div>
     </dialog>
     <dialog id="sixNimmtGuide" class="sn-dialog" aria-labelledby="sixNimmtGuideTitle">

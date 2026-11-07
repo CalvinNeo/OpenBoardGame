@@ -42,6 +42,8 @@ let pendingPlayerNameAction = null;
 let pendingPlayerNameRoomId = null;
 let pendingJoinRequest = null;
 let logoutCopyRequest = null;
+let pendingLogoutRequest = null;
+let roomLogoutRequested = false;
 let logReturnFocus = null;
 const roomEntryReturnFocus = new WeakMap();
 const selectedGameTagIds = new Set();
@@ -1040,6 +1042,7 @@ function openRoomEntryModal(modal, input, error) {
 }
 
 function closeRoomEntryModal(modal) {
+  if (modal === logoutModal && pendingLogoutRequest) return;
   if (modal.classList.contains("hidden")) {
     return;
   }
@@ -1466,6 +1469,16 @@ function formatGameWeight(gameId) {
   return Object.prototype.hasOwnProperty.call(GAME_WEIGHT, gameId) ? "N/A" : "?";
 }
 
+// A contiguous run of supported counts reads as one range: 2-10, not 2 / 3 / ... / 10.
+function formatPlayerCounts(counts) {
+  if (!Array.isArray(counts) || !counts.length) return null;
+  const first = counts[0];
+  const last = counts[counts.length - 1];
+  const contiguous = counts.length > 2 && counts.length === last - first + 1
+    && counts.every((value, index) => value === first + index);
+  return contiguous ? `${first}-${last}` : counts.join(" / ");
+}
+
 function getGameSortKey() {
   if (!gameSortSelect) {
     return "alpha";
@@ -1566,8 +1579,10 @@ function renderGameList(games) {
     item.type = "button";
     item.dataset.gameId = g.game_id;
     const weightLabel = formatGameWeight(g.game_id);
-    const playerLabel =
-      Array.isArray(g.player_counts) ? `${g.player_counts.join(" or ")} players` : g.min_players === g.max_players
+    const countsLabel = formatPlayerCounts(g.player_counts);
+    const playerLabel = countsLabel
+      ? `${countsLabel} players`
+      : g.min_players === g.max_players
         ? `${g.min_players} ${g.min_players === 1 ? "player" : "players"}`
         : `${g.min_players}-${g.max_players} players`;
     const chineseName = typeof g.name_zh === "string" ? g.name_zh.trim() : "";
@@ -1606,9 +1621,8 @@ function renderGameList(games) {
     weightEl.setAttribute("aria-hidden", "true");
     const playersEl = document.createElement("span");
     playersEl.className = "game-item-players";
-    playersEl.textContent = `👥 ${
-      Array.isArray(g.player_counts) ? g.player_counts.join(" / ") : g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`
-    }`;
+    playersEl.textContent = `👥 ${countsLabel
+      || (g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`)}`;
     playersEl.setAttribute("aria-hidden", "true");
     metaEl.appendChild(weightEl);
     metaEl.appendChild(playersEl);
@@ -2113,6 +2127,8 @@ function renderSeatList(payload) {
     claimButton.disabled = disabled;
     claimButton.addEventListener("click", () => {
       requirePlayerName(() => {
+        if (pendingLogoutRequest) return;
+        roomLogoutRequested = false;
         socket.emit("room:claim_seat", { room_id: payload.room_id, seat: seat.seat, name: getPlayerName() });
       });
     });
@@ -2135,8 +2151,9 @@ function openLogoutModal() {
   roomEntryReturnFocus.set(logoutModal, document.activeElement);
   logoutError.textContent = "";
   logoutError.classList.add("hidden");
-  logoutConfirmBtn.disabled = false;
-  logoutCopyBtn.disabled = !buildPlayerAccessKey();
+  logoutConfirmBtn.disabled = Boolean(pendingLogoutRequest);
+  logoutCopyBtn.disabled = Boolean(pendingLogoutRequest) || !buildPlayerAccessKey();
+  document.getElementById("logoutCancelBtn").disabled = Boolean(pendingLogoutRequest);
   document.getElementById("logoutKeyHint").textContent = logoutCopyBtn.disabled
     ? "No room credentials are available to copy."
     : "Includes all saved room credentials from this browser. Rooms and seats must still exist; this is not a permanent account.";
@@ -2169,12 +2186,59 @@ async function copyAccessKeyAndLogout() {
 }
 
 function performLogout({ preserveSeat = false } = {}) {
-  pendingJoinRequest = null;
-  if (preserveSeat) {
-    socket.disconnect();
-  } else if (roomId && socket.connected) {
-    socket.emit("room:leave", { room_id: roomId });
+  if (pendingLogoutRequest) return;
+  if (!socket.connected) {
+    logoutError.textContent = "Connect to the server before logging out. Your room credentials have not been cleared.";
+    logoutError.classList.remove("hidden");
+    socket.connect();
+    return;
   }
+  const request = {};
+  pendingLogoutRequest = request;
+  roomLogoutRequested = true;
+  pendingJoinRequest = null;
+  finishRoomRequest();
+  logoutConfirmBtn.disabled = true;
+  logoutCopyBtn.disabled = true;
+  logoutConfirmBtn.textContent = "Logging out...";
+  document.getElementById("logoutCancelBtn").disabled = true;
+  logoutError.classList.add("hidden");
+  setConnectionInfo("Logging out...");
+  socket.timeout(ROOM_REQUEST_TIMEOUT).emit("room:logout", {
+    room_id: roomId || readRoomStorage(LAST_ROOM_ID_KEY),
+    rooms: loadRoomAuthMap(), preserve_seat: preserveSeat,
+  }, (error, response) => {
+    if (pendingLogoutRequest !== request) return;
+    pendingLogoutRequest = null;
+    logoutConfirmBtn.disabled = false;
+    logoutCopyBtn.disabled = !buildPlayerAccessKey();
+    logoutConfirmBtn.textContent = "Confirm";
+    document.getElementById("logoutCancelBtn").disabled = false;
+    if (error || response?.ok !== true) {
+      socket.disconnect();
+      socket.sendBuffer.length = 0;
+      roomSessionReady = false;
+      logoutError.textContent = "Logout was not confirmed. Your room credentials are kept. Reconnect and try again.";
+      logoutError.classList.remove("hidden");
+      setModalVisible(logoutModal, true);
+      setConnectionInfo("Logout not confirmed");
+      updateRoomActionButtons();
+      socket.connect();
+      return;
+    }
+    completeRoomLogout();
+  });
+}
+
+function completeRoomLogout() {
+  roomLogoutRequested = true;
+  pendingLogoutRequest = null;
+  pendingRoomRequest = null;
+  pendingJoinRequest = null;
+  socket.disconnect();
+  socket.sendBuffer.length = 0;
+  logoutConfirmBtn.textContent = "Confirm";
+  document.getElementById("logoutCancelBtn").disabled = false;
   closeRoomEntryModal(logoutModal);
   closeCreateRoomModal();
   closeLoadModal();
@@ -2189,13 +2253,14 @@ function performLogout({ preserveSeat = false } = {}) {
     nameInput.value = "";
   }
   setConnectionInfo("logged out");
-  if (socket.connected) {
-    requestRoomList();
-  } else {
-    socket.connect();
-  }
+  renderRoomList(currentRoomList);
+  socket.connect();
   log("Logged out");
 }
+
+window.addEventListener("storage", (event) => {
+  if (event.key === ROOM_AUTH_KEY && event.newValue === null && !pendingLogoutRequest) completeRoomLogout();
+});
 
 function isTypingTarget(target) {
   if (!target) {
@@ -2300,7 +2365,11 @@ function getRoomStartReason() {
   if (!Number.isFinite(minPlayers)) return "Loading room details...";
   if (players.length < minPlayers) return `Need at least ${minPlayers} players. Add a bot or invite a friend.`;
   if (Array.isArray(playerCounts) && !playerCounts.includes(players.length)) {
-    return `This game needs ${playerCounts.join(" or ")} players.`;
+    return `This game needs ${formatPlayerCounts(playerCounts) || playerCounts.join(" or ")} players.`;
+  }
+  if (currentGameType === "word_sync" && players.length % 2 === 1
+      && (typeof getWordSyncMode !== "function" || getWordSyncMode() === "team")) {
+    return "Team mode needs 2 / 4 / 6 / 8 / 10 players. Switch to Free-for-all or add a player.";
   }
   if (players.some((player) => !player.is_bot && !player.ready)) return "All players must be ready.";
   return "";
@@ -2316,7 +2385,7 @@ function updateRoomCreateButtonLabel() {
 
 function updateRoomActionButtons() {
   const initializing = isSemanticRoomInitializing();
-  const busy = Boolean(pendingRoomRequest) || initializing;
+  const busy = Boolean(pendingRoomRequest) || Boolean(pendingLogoutRequest) || initializing;
   const importingAccessKey = Boolean(pendingRoomRequest?.accessKeyEntry);
   playerNameModeBtn.disabled = importingAccessKey;
   playerAccessKeyModeBtn.disabled = importingAccessKey;
@@ -2389,6 +2458,7 @@ function updateRoomActionButtons() {
 }
 
 function ensureRoomConnection(requiresRoom = true) {
+  if (pendingLogoutRequest) return false;
   if (!socket.connected) {
     setRoomFeedback("Connection lost. Reconnecting... Please try again when connected.", true);
     socket.connect();
@@ -2408,6 +2478,7 @@ function finishRoomRequest() {
 
 function sendRoomRequest(event, payload, message, requiresRoom = true) {
   if (!ensureRoomConnection(requiresRoom)) return false;
+  if (["room:create", "room:join", "room:reconnect"].includes(event)) roomLogoutRequested = false;
   if (isSemanticRoomInitializing() && ["room:start", "room:reopen", "room:ready", "room:add_bot", "room:remove_bot", "room:move_seat"].includes(event)) return false;
   const request = { event, roomId: payload.room_id };
   pendingRoomRequest = request;
@@ -3099,6 +3170,7 @@ function resetRoomState() {
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
+  if (typeof updateWordSyncConfigRow === "function") updateWordSyncConfigRow();
   if (typeof updateYahtzeeConfigRow === "function") updateYahtzeeConfigRow();
   if (typeof updateArkNovaConfigRow === "function") updateArkNovaConfigRow();
   if (typeof updateHanabiConfigRow === "function") updateHanabiConfigRow();
@@ -3250,6 +3322,7 @@ socket.on("connect", () => {
   roomSessionReady = false;
   finishRoomRequest();
   requestRoomList();
+  if (roomLogoutRequested) return;
   const rid = roomId || readRoomStorage(LAST_ROOM_ID_KEY);
   const auth = rid ? getRoomAuth(rid) : null;
   if (auth?.player_id && auth?.reconnect_token) {
@@ -3267,6 +3340,7 @@ socket.on("connect_error", (error) => {
 });
 
 socket.on("system:info", (data) => {
+  if (roomLogoutRequested) return;
   if (data.player_id) {
     playerId = data.player_id;
   }
@@ -3304,6 +3378,7 @@ socket.on("system:info", (data) => {
 });
 
 socket.on("system:error", (data) => {
+  if (roomLogoutRequested) return;
   const failedRequest = pendingRoomRequest;
   finishRoomRequest();
   if (failedRequest?.accessKeyEntry) {
@@ -3354,7 +3429,10 @@ socket.on("room:session_replaced", () => {
   setRoomFeedback("This room is open in another connection. Use Reconnect to return here.", true);
 });
 
+socket.on("room:logged_out", completeRoomLogout);
+
 socket.on("room:state", (state) => {
+  if (roomLogoutRequested) return;
   if (state.room_id !== roomId || state.game_type !== currentGameType || state.status !== "in_game") {
     resetRoomTurnSound();
   }
@@ -3439,6 +3517,7 @@ socket.on("room:seat_list", (data) => {
 });
 
 socket.on("room:claim_result", (data) => {
+  if (roomLogoutRequested) return;
   if (!data || !data.ok) {
     const message = data && data.message ? String(data.message) : "Seat claim failed";
     log(message);
@@ -3478,6 +3557,7 @@ socket.on("room:cleanup_empty_result", (data) => {
 });
 
 socket.on("game:state", (data) => {
+  if (roomLogoutRequested) return;
   lastGameStatePayload = data;
   updateRoomTurnSound(data);
   renderGameState(data);
@@ -3616,7 +3696,7 @@ socket.on("disconnect", (reason) => {
   finishRoomRequest();
   pendingJoinRequest = null;
   cleanupEmptyRoomsBtn.disabled = false;
-  setRoomFeedback("Connection lost. Reconnecting...");
+  if (!roomLogoutRequested) setRoomFeedback("Connection lost. Reconnecting...");
 });
 
 function recordRoomConnectionEvent(event, reason = "") {

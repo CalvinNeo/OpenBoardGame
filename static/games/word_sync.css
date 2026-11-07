@@ -19,6 +19,7 @@
 .ws-section-heading h4 { font-size: 11px; letter-spacing: .09em; font-weight: 700; }
 .ws-section-heading > span { font-size: 11px; color: #63766e; overflow-wrap: anywhere; }
 .ws-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ws-pair.ws-single { grid-template-columns: minmax(0, 420px); }
 .ws-card { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-height: 220px; padding: 17px; background: #fffef9; border: 1px solid #d1dacf; border-bottom: 4px solid #b2c7af; border-radius: 14px; overflow-wrap: anywhere; }
 .ws-card.ws-own { background: #edf4e7; border-color: #a8c2a5; }
 .ws-card.ws-match { background: #e4f0e9; border-color: #428b70; }
@@ -56,6 +57,7 @@
 .ws-team.ws-your-team .ws-team-heading strong { color: #206e50; }
 .ws-team.ws-winner .ws-rank { color: #84601c; font-weight: 600; }
 .ws-team-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ws-team-pair.ws-solo { grid-template-columns: minmax(0, 1fr); }
 .ws-team-player { display: grid; gap: 5px; align-content: start; }
 .ws-team-player > span { color: #6a7e70; font-size: 11px; line-height: 1.5; }
 .ws-team-player > b { font-size: 13px; font-weight: 600; line-height: 1.5; }
@@ -69,6 +71,11 @@
 .ws-history-words { display: grid; grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr); gap: 6px; }
 .ws-history-words b { font-weight: 500; }
 .ws-history-words span { color: #6d8876; text-align: center; }
+.ws-history-chips { display: flex; flex-wrap: wrap; gap: 5px 7px; }
+.ws-chip { display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; padding: 3px 9px; border: 1px solid #d5ded0; border-radius: 999px; background: #fdfcf5; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.ws-chip b { font-weight: 600; font-size: 11px; color: #55705f; }
+.ws-chip.ws-chip-own { border-color: #a8c2a5; background: #edf4e7; }
+.ws-chip.ws-chip-match { border-color: #428b70; background: #e4f0e9; color: #1d5c45; font-weight: 600; }
 .ws-waiting { padding: 65px 0; text-align: center; }
 .ws-waiting p { margin-top: 20px; font-size: 13px; color: #64786c; }
 .ws-tooltip { position: fixed; z-index: 6500; max-width: min(280px, calc(100vw - 24px)); padding: 10px 12px; border: 1px solid #99b5a1; border-radius: 8px; color: #f8fbef; background: #234d3f; box-shadow: 0 4px 18px #173d3025; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; pointer-events: none; }

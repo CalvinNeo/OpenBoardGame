@@ -694,6 +694,17 @@
                     </div>
                     <div class="hint" id="inAGroveInspectionModeHint">First detective: choose 1 of 3. Later detectives: choose 1 of the 2 unblocked suspects.</div>
                   </div>
+                  <div class="game-config-card hidden" id="wordSyncConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Word Sync</div>
+                    <div class="row">
+                      <label for="wordSyncModeSelect">Mode</label>
+                      <select id="wordSyncModeSelect" aria-describedby="wordSyncModeHint">
+                        <option value="team" selected>Team · pairs</option>
+                        <option value="free_for_all">Free-for-all</option>
+                      </select>
+                    </div>
+                    <div class="hint" id="wordSyncModeHint">Team pairs adjacent seats and needs 2 / 4 / 6 / 8 / 10 players. Free-for-all has no teams and takes 2-10 players: anyone who writes the same word as someone else wins at once.</div>
+                  </div>
                   <div class="game-config-card hidden" id="drawGuessConfigBox" aria-hidden="true">
                     <div class="game-config-title">Draw &amp; Guess</div>
                     <div class="row hidden" id="drawGuessLanguageRow">
@@ -1743,9 +1754,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=205" defer></script>
+  <script src="/static/game_assets.js?v=206" defer></script>
   <template id="incanGoldGuide"></template>
-  <script src="/static/games/shared.js?v=app_v42" defer></script>
+  <script src="/static/games/shared.js?v=app_v43" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
   <template id="natsumemoDialog"></template>
@@ -1781,7 +1792,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v62" defer></script>
-  <script src="/static/room.js?v=app_v99" defer></script>
+  <script src="/static/app.js?v=app_v63" defer></script>
+  <script src="/static/room.js?v=app_v101" defer></script>
 </body>
 </html>

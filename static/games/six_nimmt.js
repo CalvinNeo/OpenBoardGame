@@ -18,7 +18,8 @@
         play: "Play Card 锁定所选数字牌（🃏），提交后不能撤回。所有人锁定后才一起揭牌，从小到大依次放入牌桌。",
         take: "牌小于所有行末时，必须选择一整行吃掉。点行后用 Take Row 确认；行头的牛头（🐮）总数就是新增罚分，自己的牌成为这一行的新起点。",
         next: "Next Round 表示已经看过本次揭牌结果，不会再次弹出确认。所有玩家都确认后才继续；机器人只确认自己。View Table、Esc 或点击遮罩只是收起结果，不表示确认。",
-        summary: "揭牌结果按数字从小到大排列，显示每人出的牌、落点及吃牌罚分；你的条目用绿色标出。收起后可以在 Results 中重新打开。",
+        summary: "结算先显示四行摆牌图：本次新牌标有全桌的摆放序号和出牌人，你的牌用绿色标出。展开罚分明细可查看每人吃到的牌和罚分。收起后可以在 Results 中重新打开。",
+        placement: "按 #1、#2… 的序号查看本次全桌从小到大的摆牌顺序，序号不是行内位置。灰色是原有牌，蓝色是本次新牌，绿色是你的牌；新牌底部显示出牌人而非牛头。虚线牌已被吃走，下方注明由谁在哪一步收走和新增罚分，接下来的牌从新行首继续。同一行多次吃牌会依次保留，未吃走的牌就是结算后的牌桌。悬停或点按卡片可看完整名字和说明。",
         reveal: "揭牌顺序只含已公开的牌；选牌期间显示上一次揭牌，不包含任何人尚未公开的选择。可折叠、滚动查看。",
         timer: "倒计时（⏱）由房间设置决定。选牌超时会为未出牌者随机出牌；选行超时会吃掉牛头（🐮）最少的一行。回合结算没有倒计时，必须主动确认。",
         player: "计分栏显示总罚分（🐮）、本轮剩余手牌（🃏）和锁定／确认状态（✓）。其他玩家的手牌与本次暗选牌不会公开。机器人（🤖）使用公开信息评估吃牌风险。",
@@ -33,6 +34,7 @@
     let tipTimer = null;
     let explaining = false;
     let summaryKey = null;
+    let summaryContentKey = null;
     let summaryDocked = false;
     let renderKey = null;
     let pointer = null;
@@ -92,7 +94,7 @@
     }
 
     function openHelp() {
-        openGuide("Help · 6 nimmt!", `<h3>目标 · 少吃牛头（🐮）</h3><p>2–10 人，每人每轮 10 张数字牌（🃏）。共 104 张牌，数字不重复；四行各从一张牌开始。</p><ol><li>各自暗选一张牌，用 <b>Play Card</b> 锁定。</li><li>全部锁定后一起揭牌，从小到大放到“比它小且最接近”的行末。</li><li>成为<b>第六张（6!）</b>时，吃掉前五张并计入它们的牛头罚分；自己的牌留下。</li><li>比所有行末都小时，自选一整行吃掉，再用自己的牌重新开行。</li><li>查看结果后点击 <b>Next Round</b>；所有人确认后继续。每轮出完 10 张再重新发牌。</li></ol><h3>牌面 · 数字与罚分分开看</h3><div class="sn-guide-legend">${[{value: 1, bulls: 1}, {value: 5, bulls: 2}, {value: 10, bulls: 3}, {value: 11, bulls: 5}, {value: 55, bulls: 7}].map(card => cardMarkup(card)).join("")}</div><p>55 = 7🐮；其他 11 的倍数 = 5🐮；10 的倍数 = 3🐮；其他 5 的倍数 = 2🐮；其余 = 1🐮。颜色辅助识别，准确罚分始终显示在牌底。</p><h3>终局与操作</h3><p>${explanations.score}</p><p>${explanations.hand}</p><p>${explanations.next}</p><p>${explanations.timer}</p><h3>AI · 公开信息策略</h3><p>通过 Room Controls 的 Add Bot 添加机器人。AI 只看自己的手牌、公开牌桌和已揭牌历史，对未知对手手牌抽样，评估第六张风险、预计罚分和剩余手牌；选行优先少吃罚分。不会读取其他人的暗牌。</p><p>✓ 表示已锁定或已确认；🤖 表示机器人；⏱ 表示剩余时间。Explain 点选可查看说明；Esc 关闭对话框或取消尚未提交的选择。</p>`);
+        openGuide("Help · 6 nimmt!", `<h3>目标 · 少吃牛头（🐮）</h3><p>2–10 人，每人每轮 10 张数字牌（🃏）。共 104 张牌，数字不重复；四行各从一张牌开始。</p><ol><li>各自暗选一张牌，用 <b>Play Card</b> 锁定。</li><li>全部锁定后一起揭牌，从小到大放到“比它小且最接近”的行末。</li><li>成为<b>第六张（6!）</b>时，吃掉前五张并计入它们的牛头罚分；自己的牌留下。</li><li>比所有行末都小时，自选一整行吃掉，再用自己的牌重新开行。</li><li>查看结果后点击 <b>Next Round</b>；所有人确认后继续。每轮出完 10 张再重新发牌。</li></ol><h3>牌面 · 数字与罚分分开看</h3><div class="sn-guide-legend">${[{value: 1, bulls: 1}, {value: 5, bulls: 2}, {value: 10, bulls: 3}, {value: 11, bulls: 5}, {value: 55, bulls: 7}].map(card => cardMarkup(card)).join("")}</div><p>55 = 7🐮；其他 11 的倍数 = 5🐮；10 的倍数 = 3🐮；其他 5 的倍数 = 2🐮；其余 = 1🐮。普通牌面在牌底显示准确罚分；结算摆牌图改为显示出牌人。</p><h3>结算 · 摆牌顺序图</h3><p>${explanations.placement}</p><p>${explanations.summary}</p><h3>终局与操作</h3><p>${explanations.score}</p><p>${explanations.hand}</p><p>${explanations.next}</p><p>${explanations.timer}</p><h3>AI · 公开信息策略</h3><p>通过 Room Controls 的 Add Bot 添加机器人。AI 只看自己的手牌、公开牌桌和已揭牌历史，对未知对手手牌抽样，评估第六张风险、预计罚分和剩余手牌；选行优先少吃罚分。不会读取其他人的暗牌。</p><p>✓ 表示已锁定或已确认；🤖 表示机器人；⏱ 表示剩余时间。Explain 点选可查看说明；Esc 关闭对话框或取消尚未提交的选择。</p>`);
     }
 
     function previewRow() {
@@ -194,11 +196,36 @@
         if (!summaryDialog.open) summaryDialog.showModal();
     }
 
+    function renderPlacementDiagram(placements) {
+        const played = new Map(placements.map((entry, index) => [entry.card.value, {...entry, order: index + 1}]));
+        const order = byId("PlacementOrder");
+        order.textContent = placements.length ? `#1 → #${placements.length} · 从小到大` : "暂无出牌";
+        order.dataset.snTip = "按卡片上的 # 序号查看全桌的摆放顺序，而不是按行号阅读。";
+        byId("PlacementRows").innerHTML = view.rows.map(row => {
+            const stages = placements.filter(entry => entry.row_index === row.id && entry.took_row).map(entry => ({
+                cards: entry.taken_cards, takenBy: played.get(entry.card.value),
+            }));
+            stages.push({cards: row.cards, takenBy: null});
+            const stagesMarkup = stages.map(stage => {
+                const cards = stage.cards.map(card => {
+                    const entry = played.get(card.value);
+                    const name = entry ? playerName(entry) : "原有牌";
+                    const detail = `${entry ? `第 ${entry.order} 张：${name} 出 ${card.value}` : `原有牌 ${card.value}`}，第 ${row.id + 1} 行${stage.takenBy ? `；在第 ${stage.takenBy.order} 步被 ${playerName(stage.takenBy)} 吃走` : "；留在牌桌"}。`;
+                    return `<div class="sn-card sn-placement-card ${entry ? "is-new" : ""} ${entry?.player_id === view.you ? "is-you" : ""}" data-sn-value="${card.value}" ${entry ? `data-sn-placement="${entry.order}"` : ""} tabindex="0" data-sn-explain="placement" data-sn-tip="${esc(detail)}" aria-label="${esc(detail)}"><span class="sn-placement-step" aria-hidden="true">${entry ? `#${entry.order}` : "原有"}</span><span class="sn-card-value" aria-hidden="true">${card.value}</span><span class="sn-placement-name" aria-hidden="true">${esc(name)}</span></div>`;
+                }).join("");
+                const taken = stage.takenBy;
+                return `<div class="sn-placement-stage ${taken ? "is-taken" : ""}"><div class="sn-placement-cards">${cards}</div>${taken ? `<p class="sn-placement-take" tabindex="0" data-sn-explain="placement" data-sn-tip="${esc(`第 ${taken.order} 步：${playerName(taken)} 吃掉这些牌，增加 ${taken.penalty} 个牛头罚分，用 ${taken.card.value} 重新开行。`)}"><span>↳ #${taken.order} ${esc(playerName(taken))} 吃牌</span><strong>+${taken.penalty}🐮</strong></p>` : ""}</div>`;
+            }).join("");
+            return `<div class="sn-placement-row" data-sn-placement-row="${row.id}"><span class="sn-placement-row-label" tabindex="0" data-sn-explain="placement" data-sn-tip="第 ${row.id + 1} 行；从上到下展示吃牌前后的变化。">第 ${row.id + 1} 行</span><div class="sn-placement-stages">${stagesMarkup}</div></div>`;
+        }).join("");
+    }
+
     function renderSummary() {
         const active = view.phase === "turn_summary";
         byId("SummaryDock").hidden = !active;
         if (!active) {
             summaryKey = null;
+            summaryContentKey = null;
             summaryDocked = false;
             if (summaryDialog.open) summaryDialog.close();
             return;
@@ -207,10 +234,19 @@
         if (nextKey !== summaryKey) {
             summaryKey = nextKey;
             summaryDocked = false;
+            byId("SummaryDetails").open = false;
+            byId("SummaryBody").scrollTop = 0;
         }
         const summary = view.last_turn_summary || {};
+        const placements = summary.placements || [];
         byId("SummaryMeta").textContent = `ROUND ${summary.round ?? view.round} · TURN ${summary.turn ?? view.turn}`;
-        byId("SummaryList").innerHTML = (summary.placements || []).map(entry => `<div class="sn-summary-item ${entry.player_id === view.you ? "is-you" : ""}">${cardMarkup(entry.card)}<div class="sn-summary-player"><strong>${esc(playerName(entry))}</strong><small>→ 第 ${entry.row_index + 1} 行${entry.took_row ? `<br>吃牌 ${entry.taken_cards.map(card => card.value).join(" · ")}` : " · 安全放置"}</small></div><span class="sn-summary-penalty ${entry.took_row ? "" : "is-safe"}">${entry.took_row ? `+${entry.penalty}🐮` : "+0"}</span></div>`).join("");
+        const nextContentKey = JSON.stringify([summary, view.rows, view.you]);
+        if (nextContentKey !== summaryContentKey) {
+            summaryContentKey = nextContentKey;
+            renderPlacementDiagram(placements);
+            byId("SummaryList").innerHTML = placements.map((entry, index) => `<div class="sn-summary-item ${entry.player_id === view.you ? "is-you" : ""}">${cardMarkup(entry.card)}<div class="sn-summary-player"><strong>#${index + 1} ${esc(playerName(entry))}</strong><small>→ 第 ${entry.row_index + 1} 行${entry.took_row ? `<br>吃牌 ${entry.taken_cards.map(card => card.value).join(" · ")}` : " · 安全放置"}</small></div><span class="sn-summary-penalty ${entry.took_row ? "" : "is-safe"}">${entry.took_row ? `+${entry.penalty}🐮` : "+0"}</span></div>`).join("");
+            byId("SummaryTotal").textContent = `${placements.filter(entry => entry.took_row).length} 人吃牌 · +${placements.reduce((total, entry) => total + (entry.penalty || 0), 0)}🐮`;
+        }
         const count = (view.summary_ack || []).length;
         const status = `Ready ${count} / ${view.players.length}${ownPlayer() ? " · 等待全员确认" : " · Spectating"}`;
         byId("SummaryStatus").textContent = status;
@@ -289,6 +325,7 @@
         selection = null;
         selectedRow = null;
         summaryKey = null;
+        summaryContentKey = null;
         summaryDocked = false;
         pointer = null;
         suppressClickUntil = 0;
@@ -299,7 +336,7 @@
         hideTip();
         if (summaryDialog.open) summaryDialog.close();
         if (guide.open) guide.close();
-        for (const suffix of ["Rows", "Hand", "Players", "Reveal", "SummaryList"]) byId(suffix).replaceChildren();
+        for (const suffix of ["Rows", "Hand", "Players", "Reveal", "SummaryList", "PlacementRows"]) byId(suffix).replaceChildren();
         for (const suffix of ["Table", "SummaryDock", "Result", "Timer"]) byId(suffix).hidden = true;
         byId("Round").textContent = "ROUND —";
         byId("Turn").textContent = "TURN — / 10";

@@ -242,3 +242,18 @@ def process_turn(played_cards):
 - UI：`static/games/six_nimmt.html`、`static/games/six_nimmt.css`、`static/games/six_nimmt.js`；资源注册与缓存版本：`static/game_assets.js`、`static/index.html`。
 - 策略与状态：`game/six_nimmt.py`、`game/six_nimmt_ai.py`；机器人事件隐私分支：`app.py`。
 - 验证：`tests/test_six_nimmt.py`、`tests/test_six_nimmt_integration.py`、`tests/six_nimmt.browser.cjs`、`scripts/benchmark_six_nimmt_ai.py`；权重来源：`scripts/bgg_weight_scrape.py`。设计和验收记录直接更新本文，不新建独立任务文档。
+
+## 2026-11-07：结算摆牌顺序图
+
+- 每次揭牌结算优先展示四行牌桌图。本次新牌标注全桌摆放序号（`#1` 到 `#10`）、数字和出牌人，用姓名替换卡片底部牛头；原有牌压低显示，自己的新牌用绿色强调。
+- 使用公开结算中的 `placements`、`taken_cards` 和最终 `rows` 还原行内变化，不依赖客户端历史，也不修改后端规则或公开视图。被吃走的牌保留为虚线卡片，注明收牌人的摆牌序号、姓名和新增罚分；同一行多次吃牌按发生顺序展示，新牌即使本轮又被吃走也保留归属。
+- 罚分明细默认折叠，展开后仍可核对每个人的落点和被收走的数字。正文独立纵向滚动，View Table 与 Next Round 固定保留；确认人数更新不重建图示、不折叠明细，也不重置滚动位置。
+- 手机卡片姓名最多两行，特别长的名字截断；鼠标悬停、键盘聚焦或手机点按可读全名、摆牌序号和去向，手机提示 3 秒后自动消失。说明同步到 Help 和 Explain。
+- 修改文件：`static/games/six_nimmt.html`、`static/games/six_nimmt.css`、`static/games/six_nimmt.js`、`tests/six_nimmt.browser.cjs`、本文；资源版本同步到 `static/game_assets.js` 和 `static/index.html`。
+
+### 验收
+
+- `tests/six_nimmt.browser.cjs` 通过 Chrome headless 的 320、390、1024、1440px 检查，并人工核对桌面／手机截图；没有横向溢出，Next Round 始终可见。覆盖十人同一行连续吃牌、自选吃牌、第六张吃牌、安全放置、多行落点、旧牌／新牌区分、所有新牌只出现一次、出牌人和全桌序号、最终剩余牌、观战、HTML 名字转义、两行长名字、折叠明细及确认更新时滚动保持。
+- 同一浏览器脚本同时通过悬停／触摸提示、Help／Explain／Esc、结算收起和重开、选牌／选行确认、触摸滚动防误选、真实房间机器人、刷新重连与 Next Round 回归。截图在 `tmp/six-nimmt-ui/`。
+- `python3 -m unittest tests.test_frontend_style_assets -v`：2 项通过。`node --check` 检查游戏脚本与浏览器测试脚本，限定修改文件的 `git diff --check` 通过。
+- 本次仅改 UI，没有运行游戏逻辑或全量单元测试。未检查真实 iOS Safari、Windows 字体、物理触摸设备、真实弱网与多设备并发；长图／展开明细保留正文纵向滚动，超长姓名保留截断加完整提示。

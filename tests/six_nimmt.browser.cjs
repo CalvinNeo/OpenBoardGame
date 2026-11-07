@@ -26,19 +26,34 @@ choice['last_reveal_order'] = [{'player_id': 'p0', 'card': card(1)}, {'player_id
 views['choice'] = Game.get_public_view(choice, 'p0')
 views['waiting'] = Game.get_public_view(choice, 'p2')
 summary = copy.deepcopy(state)
-summary.update(phase='turn_summary', summary_pending={'type': 'next_turn'}, pending_timeout=None)
-summary['last_turn_summary'] = {'round': 1, 'turn': 1, 'placements': [
-    {'player_id': f'p{index}', 'card': card(index + 1), 'row_index': index % 4,
-     'took_row': index == 0, 'penalty': 27 if index == 0 else 0,
-     'taken_cards': [card(value) for value in [11, 22, 33, 44, 55]] if index == 0 else []}
-    for index in range(10)]}
-summary['last_reveal_order'] = [{'player_id': f'p{index}', 'card': card(index + 1)} for index in range(10)]
+for index in range(10):
+    summary['players'][f'p{index}']['hand'] = [card(index + 1), card(index + 20)]
+    events, error = Game.apply_action(summary, f'p{index}', {'type': 'select_card', 'value': index + 1})
+    assert error is None, error
+events, error = Game.apply_action(summary, 'p0', {'type': 'choose_row', 'row_index': 0})
+assert error is None and summary['phase'] == 'turn_summary', error
 views['summary'] = Game.get_public_view(summary, 'p0')
 summary['summary_ack'] = {'p0': True}
 views['acked'] = Game.get_public_view(summary, 'p0')
 views['summarySpectator'] = Game.get_public_view(summary, 'spectator')
 summary.update(phase='game_over', game_over=True, winners=['p0', 'p2'])
 views['gameover'] = Game.get_public_view(summary, 'p0')
+mixed = make_state(4)
+mixed['rows'] = [[card(value) for value in row] for row in [[10, 20, 30, 40], [60], [80], [100]]]
+mixed['player_meta']['p0']['name'] = 'Alex'
+mixed['player_meta']['p1']['name'] = '<img src=x onerror=alert(1)>'
+for index, value in enumerate([45, 46, 61, 81]):
+    mixed['players'][f'p{index}']['hand'] = [card(value), card(index + 1)]
+    events, error = Game.apply_action(mixed, f'p{index}', {'type': 'select_card', 'value': value})
+    assert error is None, error
+views['mixedSummary'] = Game.get_public_view(mixed, 'p0')
+safe = make_state(2)
+safe['rows'] = [[card(value)] for value in [10, 40, 70, 100]]
+for index, value in enumerate([15, 45]):
+    safe['players'][f'p{index}']['hand'] = [card(value), card(index + 1)]
+    events, error = Game.apply_action(safe, f'p{index}', {'type': 'select_card', 'value': value})
+    assert error is None, error
+views['safeSummary'] = Game.get_public_view(safe, 'p0')
 print(json.dumps(views))
 `], {encoding: 'utf8'}));
 
@@ -86,6 +101,30 @@ async function bounds(page, label) {
 
 async function actions(page) { return page.evaluate(() => sixNimmtActions); }
 
+async function placementDiagram(page, key) {
+    const view = views[key];
+    const placements = view.last_turn_summary.placements;
+    assert.equal(await page.locator('.sn-placement-row').count(), 4);
+    assert.equal(await page.locator('[data-sn-placement]').count(), placements.length);
+    assert.equal(await page.locator('.sn-placement-card.is-you').count(), placements.filter(entry => entry.player_id === view.you).length);
+    assert.equal(await page.locator('.sn-placement-stage.is-taken').count(), placements.filter(entry => entry.took_row).length);
+    assert.equal(await page.locator('#sixNimmtPlacementRows .sn-card-bulls').count(), 0);
+    assert.equal(await page.locator('#sixNimmtPlacementRows img').count(), 0);
+    for (const [index, entry] of placements.entries()) {
+        const placed = page.locator(`[data-sn-placement="${index + 1}"]`);
+        assert.equal(await placed.getAttribute('data-sn-value'), String(entry.card.value));
+        assert.equal(await placed.locator('.sn-placement-name').textContent(), `${entry.name}${entry.player_id === view.you ? ' · You' : ''}`);
+        assert.equal(await placed.evaluate(element => Number(element.closest('[data-sn-placement-row]').dataset.snPlacementRow)), entry.row_index);
+        assert.equal(await placed.evaluate(element => !!element.closest('.is-taken')), placements.some(later => later.took_row && later.taken_cards.some(card => card.value === entry.card.value)));
+    }
+    for (const row of view.rows) {
+        const remaining = await page.locator(`[data-sn-placement-row="${row.id}"] .sn-placement-stage:not(.is-taken) [data-sn-value]`).evaluateAll(elements => elements.map(element => Number(element.dataset.snValue)));
+        assert.deepEqual(remaining, row.cards.map(card => card.value));
+    }
+    const footer = await page.locator('#sixNimmtSummaryNextBtn').boundingBox();
+    assert(footer.y >= 0 && footer.y + footer.height <= page.viewportSize().height, 'Next Round stays in view without scrolling');
+}
+
 (async () => {
     const browser = await chromium.launch({channel: 'chrome', headless: true});
     const errors = [];
@@ -95,14 +134,19 @@ async function actions(page) { return page.evaluate(() => sixNimmtActions); }
         await prepare(page);
         for (const width of [320, 390, 1024, 1440]) {
             await page.setViewportSize({width, height: width < 500 ? 844 : 960});
-            for (const key of ['selection', 'locked', 'choice', 'waiting', 'spectator', 'summary', 'acked', 'summarySpectator', 'gameover']) {
+            for (const key of ['selection', 'locked', 'choice', 'waiting', 'spectator', 'summary', 'acked', 'summarySpectator', 'mixedSummary', 'safeSummary', 'gameover']) {
                 await render(page, key);
                 await bounds(page, `${width} ${key}`);
-                if (key === 'summary') {
-                    const footer = await page.locator('#sixNimmtSummaryNextBtn').boundingBox();
-                    assert(footer.y >= 0 && footer.y + footer.height <= page.viewportSize().height, 'Next Round stays in view without scrolling');
+                if (views[key].phase === 'turn_summary') {
+                    await placementDiagram(page, key);
+                    assert.equal(await page.locator('#sixNimmtSummaryDetails').evaluate(element => element.open), false);
                 }
-                if (['selection', 'choice', 'summary'].includes(key)) await page.screenshot({path: `${output}/${key}-${width}.png`, fullPage: true});
+                if (['selection', 'choice', 'summary', 'mixedSummary', 'safeSummary'].includes(key)) await page.screenshot({path: `${output}/${key}-${width}.png`, fullPage: true});
+                if (key === 'summary') {
+                    await page.locator('#sixNimmtSummaryDetails > summary').click();
+                    await bounds(page, `${width} expanded penalty details`);
+                    await placementDiagram(page, key);
+                }
             }
             await render(page, 'selection');
             await page.locator('#sixNimmtHelpBtn').click();
@@ -147,6 +191,20 @@ async function actions(page) { return page.evaluate(() => sixNimmtActions); }
         assert.equal(await page.locator('#sixNimmtSummaryModal').evaluate(element => element.open), false);
         await page.locator('#sixNimmtShowSummaryBtn').click();
         assert.equal(await page.locator('.sn-summary-item.is-you').count(), 1);
+        await page.locator('#sixNimmtSummaryDetails > summary').click();
+        await page.locator('[data-sn-placement="2"]').hover();
+        assert.match(await page.locator('#sixNimmtTooltip').innerText(), /VeryLongPlayerName/);
+        assert.match(await page.locator('#sixNimmtTooltip').innerText(), /第 6 步/);
+        await page.locator('#sixNimmtSummaryNextBtn').focus();
+        await page.locator('#sixNimmtSummaryBody').evaluate(element => { element.scrollTop = 150; });
+        const scrollBeforeAck = await page.locator('#sixNimmtSummaryBody').evaluate(element => element.scrollTop);
+        assert(scrollBeforeAck > 0);
+        await page.evaluate(() => { window.sixNimmtPlacementBeforeAck = document.querySelector('[data-sn-placement="2"]'); });
+        await render(page, 'acked', false);
+        assert.equal(await page.locator('#sixNimmtSummaryDetails').evaluate(element => element.open), true);
+        assert.equal(await page.locator('#sixNimmtSummaryBody').evaluate(element => element.scrollTop), scrollBeforeAck);
+        assert.equal(await page.evaluate(() => sixNimmtPlacementBeforeAck === document.querySelector('[data-sn-placement="2"]')), true);
+        await render(page, 'summary', false);
         await page.locator('#sixNimmtSummaryHideBtn').click();
         assert.deepEqual(await actions(page), []);
         await page.locator('#sixNimmtDockNextBtn').click();
@@ -221,6 +279,16 @@ async function actions(page) { return page.evaluate(() => sixNimmtActions); }
         assert.equal(await touch.locator('#sixNimmtTooltip').isVisible(), true);
         assert.equal(await touch.locator('#sixNimmtTooltip').evaluate(element => element.parentNode.id), 'sixNimmtGuide');
         await touch.keyboard.press('Escape');
+        await render(touch, 'summary');
+        await touch.locator('[data-sn-placement="2"]').tap();
+        assert.match(await touch.locator('#sixNimmtTooltip').innerText(), /VeryLongPlayerName/);
+        assert.equal(await touch.locator('#sixNimmtTooltip').evaluate(element => element.parentNode.id), 'sixNimmtSummaryModal');
+        await touch.locator('[data-sn-placement="1"]').tap();
+        assert.match(await touch.locator('#sixNimmtTooltip').innerText(), /Alex/);
+        await touch.waitForTimeout(3200);
+        assert.equal(await touch.locator('#sixNimmtTooltip').isVisible(), false);
+        assert.deepEqual(await actions(touch), []);
+        await touch.keyboard.press('Escape');
         await touch.evaluate(() => setGamePanelVisibility('cabo'));
         assert.equal(await touch.locator('#sixNimmtPanel').isVisible(), false);
         assert.equal(await touch.evaluate(() => document.body.classList.contains('sn-action-needed')), false);
@@ -266,7 +334,7 @@ async function actions(page) { return page.evaluate(() => sixNimmtActions); }
         await bounds(live, 'live room after reconnect and Next Round');
 
         assert.deepEqual(errors, []);
-        console.log('PASS: 320/390/1024/1440px; all phases; Help/Explain; confirmation; docking; privacy; touch scroll; game switch; live bots, reconnect and Next Round.');
+        console.log('PASS: 320/390/1024/1440px; placement order, names, repeated captures, final rows, safe placement, spectator, escaping, details/scroll retention, tooltips; all phases; Help/Explain; confirmation; docking; privacy; touch scroll; game switch; live bots, reconnect and Next Round.');
     } finally {
         await browser.close();
     }

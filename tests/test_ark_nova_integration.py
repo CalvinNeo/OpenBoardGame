@@ -407,6 +407,9 @@ class _SocketRecorder:
     async def leave_room(self, _sid, _room_id) -> None:
         return None
 
+    def get_environ(self, _sid):
+        return {}
+
 
 class ArkNovaRoomIntegrationTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:

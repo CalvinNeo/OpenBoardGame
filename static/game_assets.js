@@ -2,9 +2,9 @@
 const GAME_ASSETS = {
   "word_sync": {
     "loadOnStart": true,
-    "scripts": ["/static/games/word_sync.js?v=2"],
-    "styles": ["/static/games/word_sync.css?v=3"],
-    "markup": "/static/games/word_sync.html?v=1",
+    "scripts": ["/static/games/word_sync.js?v=3"],
+    "styles": ["/static/games/word_sync.css?v=4"],
+    "markup": "/static/games/word_sync.html?v=2",
     "panel": "wordSyncPanel",
     "panelTitle": "同频共词",
     "header": "showWordSyncHeaderActions"
@@ -521,14 +521,14 @@ const GAME_ASSETS = {
   },
   "six_nimmt": {
     "scripts": [
-      "/static/games/six_nimmt.js?v=app_v6"
+      "/static/games/six_nimmt.js?v=app_v7"
     ],
     "styles": [],
     "panel": "sixNimmtPanel",
     "panelTitle": "6 nimmt! · 谁是牛头王",
     "header": "showSixNimmtHeaderActions",
-    "markup": "/static/games/six_nimmt.html?v=2",
-    "styleFragments": "/static/games/six_nimmt.css?v=2"
+    "markup": "/static/games/six_nimmt.html?v=3",
+    "styleFragments": "/static/games/six_nimmt.css?v=3"
   },
   "skull": {
     "scripts": [

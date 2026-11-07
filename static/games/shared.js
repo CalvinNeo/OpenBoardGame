@@ -112,6 +112,8 @@ function emitRoomStart() {
     payload.config = getBoomerangAustraliaConfig();
   } else if (currentGameType === "in_a_grove") {
     payload.config = getInAGroveConfig();
+  } else if (currentGameType === "word_sync") {
+    payload.config = { mode: typeof getWordSyncMode === "function" ? getWordSyncMode() : "team" };
   } else if (currentGameType === "bomb_busters") {
     const practicePreset = bombBustersPresetSelect
       ? bombBustersPresetSelect.value || "standard_practice"
@@ -422,6 +424,7 @@ function renderRoomState(state) {
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
+  if (typeof updateWordSyncConfigRow === "function") updateWordSyncConfigRow();
   if (typeof updateYahtzeeConfigRow === "function") updateYahtzeeConfigRow();
   if (typeof updateArkNovaConfigRow === "function") updateArkNovaConfigRow();
   updateCitadelsConfigRow();
