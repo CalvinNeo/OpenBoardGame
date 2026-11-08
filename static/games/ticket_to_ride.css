@@ -5,25 +5,26 @@
   padding:clamp(8px,1.4vw,16px); min-width:0; font-family:"Work Sans",Arial,sans-serif;
 }
 .ticket-to-ride-panel { min-width:0; }
-.ticket-to-ride-panel *, .ttr-dialog *, .ttr-tooltip { box-sizing:border-box; min-width:0; }
-.ticket-to-ride-panel h2, .ticket-to-ride-panel h3, .ttr-dialog h2, .ttr-dialog h3 { margin:0; }
-.ticket-to-ride-panel button, .ttr-dialog button {
+.ticket-to-ride-panel *, .ttr-tooltip { box-sizing:border-box; min-width:0; }
+.ticket-to-ride-panel h2, .ticket-to-ride-panel h3 { margin:0; }
+.ticket-to-ride-panel button {
   border:1px solid #b9c6d1; border-radius:7px; padding:7px 10px; color:var(--ttr-ink,#1f3347);
   background:#fffef9; font:inherit; font-size:12px; cursor:pointer; white-space:normal; overflow-wrap:anywhere;
 }
 .ticket-to-ride-panel button:disabled { opacity:.45; cursor:default; }
 .ticket-to-ride-panel button:not(:disabled):hover { border-color:var(--ttr-deep); background:#e4eef4; }
-.ticket-to-ride-panel button:focus-visible, .ticket-to-ride-panel [tabindex]:focus-visible,
-.ttr-dialog button:focus-visible { outline:3px solid #e0a12c; outline-offset:2px; }
-.ticket-to-ride-panel .ttr-primary, .ttr-dialog .ttr-primary {
+.ticket-to-ride-panel button:focus-visible, .ticket-to-ride-panel [tabindex]:focus-visible {
+  outline:3px solid #e0a12c; outline-offset:2px;
+}
+.ticket-to-ride-panel .ttr-primary {
   background:var(--ttr-deep); color:#f7fbff; border-color:var(--ttr-deep); font-weight:600;
 }
 .ticket-to-ride-panel .ttr-primary:not(:disabled):hover { background:#2a6a8d; color:#fff; }
-.ticket-to-ride-panel .hidden, .ttr-dialog .hidden { display:none; }
+.ticket-to-ride-panel .hidden { display:none; }
 
-/* The dialog and tooltip are appended outside the themed panel, so they repeat
-   the palette instead of inheriting it. */
-.ttr-dialog, .ttr-tooltip {
+/* The tooltip is appended outside the themed panel, so it repeats the palette
+   instead of inheriting it. */
+.ttr-tooltip {
   --ttr-ink:#1f3347; --ttr-muted:#5f7285; --ttr-line:#d3dbe3; --ttr-paper:#fbfaf5;
   --ttr-deep:#1d4e6b; --ttr-accent:#c8792a;
 }
@@ -163,23 +164,22 @@
   border-radius:8px; padding:8px 10px; font-size:11px; line-height:1.5; pointer-events:none;
   box-shadow:0 6px 18px rgba(15,28,40,.32); overflow-wrap:anywhere;
 }
-.ttr-dialog { width:min(620px,94vw); max-height:88vh; overflow:auto; border:1px solid var(--ttr-line);
-  border-radius:14px; padding:16px; background:var(--ttr-paper,#fbfaf5); color:var(--ttr-ink,#1f3347); }
-.ttr-dialog::backdrop { background:rgba(20,34,46,.5); }
-.ttr-dialog h3 { font-size:13px; margin:14px 0 5px; }
-.ttr-dialog p, .ttr-dialog li { font-size:12px; line-height:1.65; overflow-wrap:anywhere; }
-.ttr-dialog a { color:var(--ttr-deep); }
-.ttr-dialog-lead { color:var(--ttr-muted); }
-.ttr-ticket-choices { display:grid; gap:6px; margin:10px 0; }
+/* Keeping tickets happens in the ticket panel itself. */
+.ttr-ticket-tools { display:flex; align-items:center; gap:6px; }
+.ttr-ticket-tools > span { font-size:10px; color:var(--ttr-muted); white-space:nowrap; }
+.ttr-ticket-tools button { padding:4px 8px; font-size:11px; }
+.ttr-tickets-section.is-choosing { box-shadow:0 0 0 2px rgba(200,121,42,.6); border-color:var(--ttr-accent); }
 .ttr-ticket-choice {
-  display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:8px;
-  border:1px solid var(--ttr-line,#d3dbe3); background:#fffef9; cursor:pointer;
+  display:grid; gap:5px; padding:8px; margin-bottom:6px; border-radius:8px;
+  border:1px dashed var(--ttr-accent); background:#fdf6ec;
 }
-.ttr-ticket-choice:hover { border-color:var(--ttr-deep,#1d4e6b); }
-.ttr-ticket-choice input { width:17px; height:17px; flex-shrink:0; margin:0; }
-.ttr-ticket-choice .ttr-ticket-route { flex:1; }
-.ttr-dialog-actions { display:flex; gap:7px; margin-top:12px; }
-.ttr-dialog-actions button { flex:1; }
+.ttr-choice-lead { margin:0; font-size:11px; font-weight:650; color:var(--ttr-accent); }
+.ttr-ticket.is-offer { cursor:pointer; }
+.ttr-ticket.is-offer:hover { border-color:var(--ttr-deep); }
+.ttr-ticket.is-offer input { width:16px; height:16px; flex-shrink:0; margin:0; }
+.ttr-ticket.is-offer .ttr-ticket-route { flex:1; }
+.ttr-choice-row { display:flex; gap:5px; margin-top:2px; }
+.ttr-choice-row button { flex:1; }
 
 /* full-screen map: everything but the board is docked away */
 body.ttr-map-focus { overflow:hidden; }

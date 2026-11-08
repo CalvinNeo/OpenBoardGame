@@ -2,9 +2,9 @@
 const GAME_ASSETS = {
   "word_sync": {
     "loadOnStart": true,
-    "scripts": ["/static/games/word_sync.js?v=3"],
+    "scripts": ["/static/games/word_sync.js?v=3_h2"],
     "styles": ["/static/games/word_sync.css?v=4"],
-    "markup": "/static/games/word_sync.html?v=2",
+    "markup": "/static/games/word_sync.html?v=2_h2",
     "panel": "wordSyncPanel",
     "panelTitle": "同频共词",
     "header": "showWordSyncHeaderActions"
@@ -41,17 +41,17 @@ const GAME_ASSETS = {
     "header": "showDndStarterSetHeaderActions"
   },
   "moshimo_yusha": {
-    "scripts": ["/static/games/moshimo_yusha.js?v=2"],
+    "scripts": ["/static/games/moshimo_yusha.js?v=2_h2"],
     "styles": ["/static/games/moshimo_yusha.css?v=3"],
-    "markup": "/static/games/moshimo_yusha.html?v=3",
+    "markup": "/static/games/moshimo_yusha.html?v=3_h2",
     "panel": "moshimoYushaPanel",
     "panelTitle": "🗡️ 如果勇者在的话就好了",
     "header": "showMoshimoYushaHeaderActions"
   },
   "the_mind": {
-    "scripts": ["/static/games/the_mind.js?v=2"],
+    "scripts": ["/static/games/the_mind.js?v=2_h2"],
     "styles": ["/static/games/the_mind.css?v=4"],
-    "markup": "/static/games/the_mind.html?v=2",
+    "markup": "/static/games/the_mind.html?v=2_h2",
     "panel": "theMindPanel",
     "panelTitle": "🧠 心意相通",
     "header": "showTheMindHeaderActions"
@@ -72,9 +72,9 @@ const GAME_ASSETS = {
     "header": "showGloomhavenHeaderActions"
   },
   "natsumemo": {
-    "scripts": ["/static/games/natsumemo.js?v=3"],
+    "scripts": ["/static/games/natsumemo.js?v=3_h2"],
     "styles": ["/static/games/natsumemo.css?v=3"],
-    "markup": "/static/games/natsumemo.html?v=3",
+    "markup": "/static/games/natsumemo.html?v=3_h2",
     "panel": "natsumemoPanel",
     "header": "showNatsumemoHeaderActions"
   },
@@ -117,9 +117,9 @@ const GAME_ASSETS = {
     "header": "showStartupsHeaderActions"
   },
   "skull_king": {
-    "scripts": ["/static/games/skull_king.js?v=2"],
+    "scripts": ["/static/games/skull_king.js?v=2_h2"],
     "styles": ["/static/games/skull_king.css?v=2"],
-    "markup": "/static/games/skull_king.html?v=1",
+    "markup": "/static/games/skull_king.html?v=1_h2",
     "panel": "skullKingPanel",
     "header": "showSkullKingHeaderActions"
   },
@@ -146,9 +146,9 @@ const GAME_ASSETS = {
     "header": "showPowerGridHeaderActions"
   },
   "ticket_to_ride": {
-    "scripts": ["/static/games/ticket_to_ride.js?v=11"],
-    "styles": ["/static/games/ticket_to_ride.css?v=9"],
-    "markup": "/static/games/ticket_to_ride.html?v=4",
+    "scripts": ["/static/games/ticket_to_ride.js?v=12"],
+    "styles": ["/static/games/ticket_to_ride.css?v=10"],
+    "markup": "/static/games/ticket_to_ride.html?v=5",
     "panel": "ticketToRidePanel",
     "panelTitle": "🚂 铁路环游",
     "header": "showTicketToRideHeaderActions"
@@ -200,9 +200,9 @@ const GAME_ASSETS = {
     "header": "showDuneImperiumHeaderActions"
   },
   "hive": {
-    "scripts": ["/static/games/hive.js?v=3"],
+    "scripts": ["/static/games/hive.js?v=3_h2"],
     "styles": ["/static/games/hive.css?v=4"],
-    "markup": "/static/games/hive.html?v=4",
+    "markup": "/static/games/hive.html?v=4_h2",
     "panel": "hivePanel",
     "panelTitle": "🐝 昆虫棋",
     "header": "showHiveHeaderActions"
@@ -820,13 +820,13 @@ const GAME_ASSETS = {
   },
   "incan_gold": {
     "scripts": [
-      "/static/games/incan_gold.js?v=app_v5"
+      "/static/games/incan_gold.js?v=app_v5_h2"
     ],
     "styles": [],
     "panel": "incanGoldPanel",
     "panelTitle": "🏺 印加宝藏",
     "header": "showIncanGoldHeaderActions",
-    "markup": "/static/games/incan_gold.html?v=2",
+    "markup": "/static/games/incan_gold.html?v=2_h2",
     "styleFragments": "/static/games/incan_gold.css?v=2"
   },
   "celestia": {
@@ -939,7 +939,7 @@ const GAME_ASSETS = {
   },
   "eternal_decks": {
     "scripts": [
-      "/static/games/eternal_decks.js?v=4"
+      "/static/games/eternal_decks.js?v=4_h2"
     ],
     "styles": [
       "/static/eternal_decks.css?v=4"
@@ -947,7 +947,7 @@ const GAME_ASSETS = {
     "panel": "eternalDecksPanel",
     "panelTitle": "♾️ 永恒牌",
     "header": "showEternalDecksHeaderActions",
-    "markup": "/static/games/eternal_decks.html?v=2"
+    "markup": "/static/games/eternal_decks.html?v=2_h2"
   },
   "grand_austria_hotel": {
     "scripts": ["/static/games/grand_austria_hotel.js?v=5"],
@@ -959,7 +959,7 @@ const GAME_ASSETS = {
   },
   "ponzi_scheme": {
     "scripts": [
-      "/static/games/ponzi_scheme.js?v=4"
+      "/static/games/ponzi_scheme.js?v=4_h2"
     ],
     "styles": [
       "/static/ponzi_scheme.css?v=4"
@@ -967,7 +967,7 @@ const GAME_ASSETS = {
     "panel": "ponziSchemePanel",
     "panelTitle": "🏦 庞氏骗局",
     "header": "showPonziSchemeHeaderActions",
-    "markup": "/static/games/ponzi_scheme.html?v=1"
+    "markup": "/static/games/ponzi_scheme.html?v=1_h2"
   },
   "red_doors": {
     "scripts": [
@@ -1166,9 +1166,9 @@ const GAME_ASSETS = {
     "header": "showSemanticGuessHeaderActions"
   },
   "dare_words": {
-    "scripts": ["/static/games/dare_words.js?v=2"],
+    "scripts": ["/static/games/dare_words.js?v=2_h2"],
     "styles": ["/static/games/dare_words.css?v=1"],
-    "markup": "/static/games/dare_words.html?v=1",
+    "markup": "/static/games/dare_words.html?v=1_h2",
     "panel": "dareWordsPanel",
     "panelTitle": "🀄 胆敢造词",
     "header": "showDareWordsHeaderActions"

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const byId = suffix => document.getElementById(`ticketToRide${suffix}`);
-  const panel = byId("Panel"), dialog = byId("Dialog"), tooltip = byId("Tooltip");
+  const panel = byId("Panel"), tooltip = byId("Tooltip");
   const map = byId("Map"), mapFrame = byId("MapFrame"), overlay = byId("RouteOverlay");
   const GAME = "ticket_to_ride";
   const MAP_W = 1000, MAP_H = 640;
@@ -23,7 +23,7 @@
 
   let view = null, pending = false, pendingTimer, signature = "", stageSignature = "";
   let selectedRoute = null, payment = null;
-  let tipTimer, tipTarget, previousFocus, offerSignature = "";
+  let tipTimer, tipTarget, ticketChoice = null;
   let helpWidget = null, explainWidget = null;
   let mapBox = {x: 0, y: 0, w: MAP_W, h: MAP_H}, drag = null, mapKey = "";
   let bounds = null, focusMode = false;
@@ -71,6 +71,14 @@
     claim: {
       zh: "选中线路后选择用哪种颜色支付，万能牌(🚂)补足差额，再点 Claim。线路立刻计分并扣掉对应数量的车厢(🚃)。",
       en: "After picking a route, choose which colour to spend, top it up with locomotives (🚂), then press Claim. The route scores at once and costs that many train pieces (🚃).",
+    },
+    draw_tickets: {
+      zh: "抽 3 张目的地车票(🎫)，至少保留 1 张。抽到的票会直接出现在下面的列表里，就地勾选要留的即可。",
+      en: "Draw 3 destination tickets (🎫) and keep at least 1. The new tickets appear in the list below, where you tick the ones to keep.",
+    },
+    keep_tickets: {
+      zh: "这一轮发给你的车票(🎫)。勾选要保留的，开局至少留 2 张，局中至少留 1 张。下面已保留的车票可以一起对照，看新票是否和旧票顺路。",
+      en: "The destination tickets (🎫) offered to you this turn. Tick the ones to keep: at least 2 during setup, at least 1 later. Your existing tickets stay visible below so you can judge whether the new ones overlap.",
     },
     draw: {
       zh: "点明牌或抽牌堆(🂠)即可抽牌。第一次点击进入抽牌状态，再点一次完成本回合。抽牌堆是盲抽。",
@@ -598,8 +606,17 @@
     box.replaceChildren();
     const me = own();
     if (!me || !me.tickets) return;
+    const choosing = view.legal_actions.includes("keep_tickets");
+    byId("TicketsSection").classList.toggle("is-choosing", Boolean(choosing));
+    const action = byId("TicketAction");
+    const canDraw = view.legal_actions.includes("draw_tickets");
+    action.classList.toggle("hidden", !canDraw);
+    action.disabled = pending || !canDraw;
+    action.onclick = () => send("draw_tickets");
+
+    if (choosing && me.pending_tickets?.length) box.append(buildTicketChoice(me.pending_tickets));
     if (!me.tickets.length) {
-      box.append(node("p", "ttr-empty", "No destination tickets yet."));
+      if (!choosing) box.append(node("p", "ttr-empty", "No destination tickets yet."));
     } else {
       me.tickets.forEach(id => {
         const ticket = view.destinations[id];
@@ -612,6 +629,46 @@
       });
     }
     text("TicketCount", `${me.tickets.length} kept`);
+  }
+
+  // Keeping tickets happens inside the ticket panel, right next to the tickets
+  // already held, so there is no separate action area and no modal in the way.
+  function buildTicketChoice(offered) {
+    const signature = offered.join(",");
+    const minimum = view.phase === "setup" ? 2 : 1;
+    if (!ticketChoice || ticketChoice.signature !== signature) {
+      ticketChoice = {signature, chosen: new Set(offered.slice(0, minimum))};
+    }
+    const chosen = ticketChoice.chosen;
+    const block = explainable(node("div", "ttr-ticket-choice"), "keep_tickets");
+    block.append(node("p", "ttr-choice-lead", `New tickets · keep at least ${minimum}`));
+    const confirm = node("button", "ttr-primary", "");
+    confirm.type = "button";
+    const sync = () => {
+      confirm.textContent = `Keep ${chosen.size}`;
+      confirm.disabled = pending || chosen.size < minimum;
+    };
+    offered.forEach(id => {
+      const ticket = view.destinations[id];
+      const label = node("label", "ttr-ticket is-offer");
+      const input = node("input");
+      input.type = "checkbox";
+      input.checked = chosen.has(id);
+      input.addEventListener("change", () => {
+        if (input.checked) chosen.add(id); else chosen.delete(id);
+        sync();
+      });
+      label.append(input,
+        node("span", "ttr-ticket-route", `${ticket.a} → ${ticket.b}`),
+        node("strong", "ttr-ticket-points", `${ticket.points}`));
+      block.append(label);
+    });
+    const row = node("div", "ttr-choice-row");
+    row.append(confirm);
+    block.append(row);
+    confirm.addEventListener("click", () => send("keep_tickets", {tickets: [...chosen]}));
+    sync();
+    return block;
   }
 
   function renderRouteList() {
@@ -637,20 +694,12 @@
     });
   }
 
-  // The market header carries the only non-map action left: drawing tickets.
   function renderMarketTools() {
     const hint = byId("DrawHint");
-    const action = byId("TicketAction");
-    if (!view) { hint.textContent = ""; action.classList.add("hidden"); return; }
-    const choosing = view.legal_actions.includes("keep_tickets");
-    const drawing = view.legal_actions.includes("draw_tickets");
+    if (!view) { hint.textContent = ""; return; }
     hint.textContent = view.stage === "drawing"
       ? `Take ${view.draws_left} more`
       : (view.legal_actions.includes("draw_card") ? "Take 2 cards" : "");
-    action.classList.toggle("hidden", !choosing && !drawing);
-    action.textContent = choosing ? "🎫 Choose" : "🎫 Draw 3";
-    action.disabled = pending || (!choosing && !drawing);
-    action.onclick = () => (choosing ? openTicketDialog() : send("draw_tickets"));
   }
 
   function renderPlayers() {
@@ -752,71 +801,6 @@
     const scroll = log.scrollTop;
     log.replaceChildren(...[...view.log].reverse().map(row => node("li", "", `T${row.round} · ${row.text}`)));
     log.scrollTop = scroll;
-    maybeOpenTicketDialog();
-  }
-
-  // ------------------------------------------------------------------ dialog
-  function showDialog(title, body) {
-    text("DialogTitle", title);
-    const target = byId("DialogBody");
-    target.replaceChildren(body);
-    previousFocus = document.activeElement;
-    if (!dialog.open) dialog.showModal();
-  }
-  function openTicketDialog() {
-    const me = own();
-    if (!me?.pending_tickets?.length) return;
-    const setup = view.phase === "setup";
-    const minimum = setup ? 2 : 1;
-    const chosen = new Set(me.pending_tickets.slice(0, minimum));
-    const body = node("div", "ttr-ticket-dialog");
-    body.append(node("p", "ttr-dialog-lead",
-      setup ? "Keep at least 2 of these 3 destination tickets."
-            : "Keep at least 1 of these destination tickets."));
-    const list = node("div", "ttr-ticket-choices");
-    const confirm = node("button", "ttr-primary", "");
-    confirm.type = "button";
-    const sync = () => {
-      confirm.textContent = `Keep ${chosen.size}`;
-      confirm.disabled = chosen.size < minimum;
-    };
-    me.pending_tickets.forEach(id => {
-      const ticket = view.destinations[id];
-      const label = node("label", "ttr-ticket-choice");
-      const input = node("input");
-      input.type = "checkbox";
-      input.checked = chosen.has(id);
-      input.addEventListener("change", () => {
-        if (input.checked) chosen.add(id); else chosen.delete(id);
-        sync();
-      });
-      label.append(input);
-      label.append(node("span", "ttr-ticket-route", `${ticket.a} → ${ticket.b}`));
-      label.append(node("strong", "ttr-ticket-points", `${ticket.points} pts`));
-      list.append(label);
-    });
-    body.append(list);
-    const row = node("div", "ttr-dialog-actions");
-    row.append(confirm);
-    body.append(row);
-    confirm.addEventListener("click", () => {
-      const tickets = [...chosen];
-      dialog.close();
-      send("keep_tickets", {tickets});
-    });
-    sync();
-    showDialog("Destination Tickets 🎫", body);
-  }
-  function maybeOpenTicketDialog() {
-    const me = own();
-    if (!me?.pending_tickets?.length || !view.legal_actions.includes("keep_tickets")) {
-      offerSignature = "";
-      return;
-    }
-    const next = me.pending_tickets.join(",");
-    if (next === offerSignature) return;
-    offerSignature = next;
-    openTicketDialog();
   }
 
   // ---------------------------------------------------------------- tooltips
@@ -844,16 +828,6 @@
   }
 
   // -------------------------------------------------------------- listeners
-  byId("DialogClose").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => {
-    if (previousFocus?.isConnected) previousFocus.focus();
-  });
-  dialog.addEventListener("click", event => {
-    const rect = dialog.getBoundingClientRect();
-    const outside = event.clientX < rect.left || event.clientX > rect.right
-      || event.clientY < rect.top || event.clientY > rect.bottom;
-    if (event.target === dialog && outside) dialog.close();
-  });
   byId("ZoomIn").addEventListener("click", () => zoom(0.75));
   byId("ZoomOut").addEventListener("click", () => zoom(1.33));
   byId("Fit").addEventListener("click", fitMap);
@@ -920,7 +894,7 @@
     if (panel.classList.contains("hidden")) return;
     if (event.key === "Escape") {
       hideTip();
-      if (!dialog.open && selectedRoute) selectRoute(null);
+      if (selectedRoute) selectRoute(null);
     }
   }, true);
   document.addEventListener("scroll", hideTip, true);
@@ -939,7 +913,7 @@
     view = null;
     signature = "";
     stageSignature = "";
-    offerSignature = "";
+    ticketChoice = null;
     selectedRoute = null;
     payment = null;
     pending = false;
@@ -947,7 +921,6 @@
     drag = null;
     clearTimeout(pendingTimer);
     explainWidget?.exit();
-    if (dialog.open) dialog.close();
     ["Market", "Hand", "Tickets", "Players", "Stats", "Routes", "Log", "Results", "Map"]
       .forEach(id => byId(id)?.replaceChildren());
     bounds = null;
@@ -992,7 +965,7 @@
       explanations: TICKET_TO_RIDE_EXPLAIN,
       button: byId("ExplainBtn"),
       root: () => panel,
-      bypass: ["#ticketToRideHelpBtn", "#ticketToRideExplainBtn", "#ticketToRideDialog"],
+      bypass: ["#ticketToRideHelpBtn", "#ticketToRideExplainBtn"],
     });
     byId("HelpBtn").addEventListener("click", () => {
       explainWidget?.exit();

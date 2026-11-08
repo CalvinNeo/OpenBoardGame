@@ -1,3 +1,185 @@
+// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+const DARE_WORDS_HELP_CONFIG = {
+  gameId: "dare_words",
+  title: { zh: "胆敢造词 · Dare to Make Words", en: "Dare to Make Words" },
+  basic: {
+    win: {
+      zh: "收走字卡最多的玩家获胜，字卡数量就是分数，并列时共享胜利。",
+      en: "Whoever collects the most character cards wins, since each card you take is one point, and a tie is a shared victory."
+    },
+    turn: {
+      zh: "轮到你时翻开 1 张字卡(🀄)，它会接到桌面字列的末尾，然后把翻牌权交给下一位。",
+      en: "On your turn you flip one character card (🀄) onto the end of the table row and then hand the flipping duty to the next seat."
+    },
+    key: {
+      zh: "抢答(🗣)不看回合，任何人都能随时发起，但你只能用桌面上已经翻开的字，而且每个字卡在一次词句里最多用一次。",
+      en: "Claiming (🗣) ignores turn order and anyone may start one at any time, but you may only use characters already on the table and each card at most once per phrase."
+    }
+  },
+  sections: [
+    {
+      id: "flow",
+      label: { zh: "流程", en: "Flow" },
+      html: {
+        zh: "<p>牌堆里全是单字卡，把字翻到桌面上，谁先用桌面上的字凑出一句通顺的话，谁就把那些字卡收走。</p>"
+          + "<ol>"
+          + "<li>翻牌权按座位顺时针轮转，轮到的人翻 1 张字卡(🀄)，接到桌面字列末尾。</li>"
+          + "<li>任何人包括刚刚翻牌的人都可以随时发起抢答(🗣)。</li>"
+          + "<li>抢答者以外的所有玩家投票，认可(✅)或不认可(❌)。</li>"
+          + "<li>结算(📣)之后所有人点 Next 才进入下一轮。</li>"
+          + "</ol>"
+          + "<p>牌堆可以选择 Full 共 100 张，或者 Short 共 60 张。字卡越少，一局结束得越快。</p>",
+        en: "<p>The deck holds nothing but single-character cards. Characters reach the table one at a time, and the first player to build a readable phrase out of them takes those cards.</p>"
+          + "<ol>"
+          + "<li>The flipping duty rotates clockwise, and the player on duty flips one character card (🀄) onto the end of the table row.</li>"
+          + "<li>Anyone, including the player who just flipped, may start a claim (🗣) at any moment.</li>"
+          + "<li>Every player except the claimer votes accept (✅) or reject (❌).</li>"
+          + "<li>After the result (📣) everyone presses Next before the next round begins.</li>"
+          + "</ol>"
+          + "<p>The deck comes in Full with 100 cards or Short with 60 cards. A smaller deck simply makes the game shorter.</p>"
+      }
+    },
+    {
+      id: "claim",
+      label: { zh: "抢答与用字", en: "Claiming" },
+      html: {
+        zh: "<p>一次合法的抢答至少要用 3 个字，最多 24 个字，而且只能使用汉字，标点、字母和数字都不行。</p>"
+          + "<p>词句里的每一个字都必须来自桌面字列，同一个字卡在一次词句里只能用一次，桌上有两张同样的字才可以用两次。</p>"
+          + "<p>桌面字卡(🀄)可以直接点选来拼词，手机上完全不需要打字。点面板空白处可以清空当前选择。</p>"
+          + "<p>输入框会实时告诉你用字是否合法，只有合法时抢答按钮才会亮起。</p>",
+        en: "<p>A legal claim uses at least three characters and at most twenty four, and every one of them must be a Chinese character. Punctuation, letters and digits are rejected.</p>"
+          + "<p>Each character in the phrase must come from the table row, and one card can only be spent once per phrase, so using the same character twice needs two copies of it on the table.</p>"
+          + "<p>You can tap the character cards (🀄) on the table to build the phrase, so a phone never needs the keyboard. Tapping empty space on the panel clears the current selection.</p>"
+          + "<p>The input box reports in real time whether your characters are legal, and the claim button only lights up once they are.</p>"
+      }
+    },
+    {
+      id: "vote",
+      label: { zh: "表决与结算", en: "Voting and scoring" },
+      html: {
+        zh: "<p>抢答者以外的所有玩家都要投票。认可(✅)票数多于不认可(❌)票数时抢答才算成立，平票视为不成立。</p>"
+          + "<p>抢答成立时，抢答者收走词句用到的全部字卡，每张记 1 分。</p>"
+          + "<p>抢答不成立时，字卡留在桌上，抢答者必须等桌面上再翻出 1 张新牌之后才能再次抢答。</p>"
+          + "<p>投票期间只显示已投人数，结算(📣)之后才公开每个人的票。结算画面会一直保留到所有人点 Next。</p>",
+        en: "<p>Every player except the claimer casts a vote. The claim succeeds only when accept (✅) votes outnumber reject (❌) votes, and a tie counts as a failure.</p>"
+          + "<p>A successful claim lets the claimer take every card the phrase used, scoring one point for each.</p>"
+          + "<p>A failed claim leaves the cards on the table, and the claimer must wait until one more card is flipped before claiming again.</p>"
+          + "<p>During voting only the number of votes cast is visible. Individual votes are revealed in the result (📣), which stays on screen until everyone presses Next.</p>"
+      }
+    },
+    {
+      id: "ending",
+      label: { zh: "结束与胜负", en: "Ending" },
+      html: {
+        zh: "<p>牌堆翻完而且桌面上剩下的字不足 3 个时，本局自动结束。</p>"
+          + "<p>牌堆已经空了但桌上还够凑词时，可以按结束本局(🏁)提前结算。</p>"
+          + "<p>结束时字卡最多的玩家获胜，出现并列时这些人共享胜利。</p>"
+          + "<p>本局结束后可以按 Play Again 用同样的牌堆配置立刻再来一局。</p>",
+        en: "<p>The game ends automatically once the deck is empty and fewer than three characters remain on the table.</p>"
+          + "<p>When the deck is empty but the table can still form a phrase, anyone may press Finish (🏁) to score the game early.</p>"
+          + "<p>The player holding the most character cards wins, and several players share the victory when they tie.</p>"
+          + "<p>After the game ends you may press Play Again to start a fresh game with the same deck setting.</p>"
+      }
+    },
+    {
+      id: "icons",
+      label: { zh: "图标速查", en: "Icons" },
+      html: {
+        zh: "<p>字卡与牌堆(🀄) · 抢答(🗣) · 认可(✅) · 不认可(❌) · 结算(📣) · 结束本局(🏁) · 获胜(🏆) · 当前翻牌玩家(▶) · 机器人(🤖)</p>"
+          + "<p>牌堆图标后面的数字是还没翻开的字卡数量，桌面字列标题后面的数字是桌上现有的字卡数量。</p>",
+        en: "<p>Cards and deck (🀄) · Claim (🗣) · Accept (✅) · Reject (❌) · Result (📣) · Finish (🏁) · Winner (🏆) · Current flipper (▶) · Bot (🤖)</p>"
+          + "<p>The number beside the deck icon counts cards that are still face down, and the number beside the table heading counts the cards currently on the table.</p>"
+      }
+    }
+  ]
+};
+
+const DARE_WORDS_EXPLAIN = {
+  turn: {
+    zh: "当前阶段。翻牌权按座位顺时针轮转，而抢答随时可以发起，不看回合。",
+    en: "The current phase. The flipping duty rotates clockwise, while a claim may be started at any time regardless of whose turn it is."
+  },
+  row: {
+    zh: "桌面字列。抢答只能使用这里的字，每张字卡在一次词句里最多用一次。点字卡可以把它加进你的词句。",
+    en: "The row of characters on the table. A claim may only use these characters and each card at most once. Tap a card to add it to your phrase."
+  },
+  flip: {
+    zh: "轮到你时翻 1 张字卡，它会接到桌面字列末尾，然后翻牌权交给下一位。",
+    en: "Flip one character card onto the end of the table row, then pass the flipping duty to the next seat."
+  },
+  finish: {
+    zh: "牌堆已经翻完时，如果桌面上再也凑不出合法词句，可以结束本局并结算分数。",
+    en: "Once the deck is empty and the table can no longer form a legal phrase, end the game and score it."
+  },
+  claim: {
+    zh: "凑出至少 3 个字、只用桌面上的字的词语、短语或短句，就可以抢答。是否通顺由其他玩家投票决定。",
+    en: "Claim with a word, phrase or short sentence of at least three characters taken only from the table. The other players vote on whether it reads well."
+  },
+  input: {
+    zh: "词句输入框。点桌面字卡拼词，或者直接输入，输入框会实时告诉你用字是否合法。点击面板空白处可以清空。",
+    en: "The phrase input. Tap table cards to build a phrase or type it directly, and the box reports in real time whether your characters are legal. Tapping empty space clears it."
+  },
+  claim_btn: {
+    zh: "抢答按钮。词句合法时才能按下，抢答之后其他人会投票，认可票更多才算成功。",
+    en: "The claim button. It only becomes pressable once the phrase is legal, and after the claim the others vote, with more accept votes needed to succeed."
+  },
+  vote: {
+    zh: "表决区。抢答者以外的所有玩家都要投票，认可票多于不认可票时抢答者收走用到的字卡，否则字卡留在桌上。",
+    en: "The voting area. Everyone except the claimer votes, and the claimer takes the cards only when accept votes outnumber reject votes."
+  },
+  accept: {
+    zh: "投认可票，表示你认为这个词句通顺合理。",
+    en: "Vote to accept, meaning you find the phrase readable and reasonable."
+  },
+  reject: {
+    zh: "投不认可票，表示你认为这个词句不通顺。",
+    en: "Vote to reject, meaning you find the phrase unreadable."
+  },
+  result: {
+    zh: "本轮结算。展示词句、每个人的投票和得分变化，所有玩家点 Next 之后才继续。",
+    en: "The result of this round. It shows the phrase, every vote and the score change, and the game continues only after everyone presses Next."
+  },
+  next: {
+    zh: "确认看完结算。所有玩家都点过之后才进入下一轮。",
+    en: "Confirm that you have read the result. The next round starts only after every player has pressed it."
+  },
+  scores: {
+    zh: "玩家分数。每人收走的字卡数量就是分数，获胜(🏆)标记本局赢家，翻牌(▶)标记当前翻牌玩家。",
+    en: "Player scores. Each card collected is one point, the winner mark (🏆) shows who won, and the flipper mark (▶) shows who flips next."
+  },
+  history: {
+    zh: "抢答记录。按时序列出每一次抢答的词句、抢答者和结果。",
+    en: "The claim history, listing every claim in order with its phrase, the claimer and the outcome."
+  }
+};
+
+let dareWordsHelpWidget = null;
+let dareWordsExplainWidget = null;
+
+function initDareWordsHelpExplain() {
+  if (dareWordsHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  dareWordsHelpWidget = window.obgCreateHelp(DARE_WORDS_HELP_CONFIG);
+  dareWordsExplainWidget = window.obgCreateExplain({
+    gameId: "dare_words",
+    attribute: "data-dw-explain",
+    explanations: DARE_WORDS_EXPLAIN,
+    button: document.getElementById("dareWordsExplainBtn"),
+    root: () => document.getElementById("dareWordsPanel"),
+    bypass: ["#dareWordsHelpBtn", "#dareWordsExplainBtn"]
+  });
+  document.getElementById("dareWordsHelpBtn")?.addEventListener("click", () => {
+    dareWordsExplainWidget?.exit();
+    dareWordsHelpWidget.open();
+  });
+  document.getElementById("dareWordsExplainBtn")?.addEventListener("click", () => dareWordsExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initDareWordsHelpExplain);
+} else {
+  initDareWordsHelpExplain();
+}
+
 (() => {
   const GAME_ID = "dare_words";
   const id = (name) => document.getElementById(`dareWords${name}`);
@@ -6,7 +188,6 @@
   let activeRoom = null;
   let pending = false;
   let selection = [];
-  let explainMode = false;
   let tipTimer = null;
   let touchTipGesture = null;
   let configSignature = null;
@@ -29,38 +210,7 @@
   const minChars = () => view?.min_chars || 3;
   const isHan = (character) => /[\u3400-\u4DBF\u4E00-\u9FFF]/.test(character);
 
-  const explanations = {
-    turn: ["当前阶段", "翻牌权按座位顺时针轮转；抢答则随时可以发起，不看回合。"],
-    row: ["🀄 桌面字列", "抢答只能使用桌面上的这些字，每张字卡在一次词句里最多用一次。点字卡可以把它加进你的词句。"],
-    flip: ["🀄 翻牌", "轮到你时翻 1 张字卡，它会接到桌面字列末尾，然后翻牌权交给下一位。"],
-    finish: ["🏁 结束本局", "牌堆翻完后，如果桌面上再也凑不出合法词句，可以结束本局并结算分数。"],
-    claim: ["🗣 抢答", "凑出至少 3 个字、只用桌面上的字的词语、短语或短句，就可以抢答。是否通顺由其他玩家投票决定。"],
-    input: ["词句输入", "点桌面字卡拼词，或者直接输入。输入框会实时告诉你用字是否合法。点击面板空白处可以清空。"],
-    claimBtn: ["🗣 抢答按钮", "词句合法时才能抢答。抢答后其他人会投票，认可票更多才算成功。"],
-    vote: ["表决", "抢答者以外的所有玩家都要投票。认可票多于不认可票，抢答者收走用到的字卡；否则字卡留在桌上。"],
-    accept: ["✅ 认可", "你认为这个词句通顺合理。"],
-    reject: ["❌ 不认可", "你认为这个词句不通顺。"],
-    result: ["📣 结算", "展示本轮词句、每个人的投票和得分变化。所有玩家点 Next 之后才继续。"],
-    next: ["Next ▶", "确认看完结算。所有玩家都点过之后才进入下一轮。"],
-    scores: ["玩家分数", "每人收走的字卡数量就是分数，🏆 表示本局获胜者，▶ 表示当前翻牌玩家。"],
-  };
-  const help = `<h3>🀄 胆敢造词</h3>
-<p>牌堆里全是单字卡。把字翻到桌面上，谁先用桌面上的字凑出一句通顺的话，谁就把那些字卡收走。</p>
-<h3>流程</h3>
-<ol>
-<li>翻牌权按座位顺时针轮转，轮到的人翻 1 张 🀄 字卡，接到桌面字列末尾。</li>
-<li>任何人（包括翻牌的人）都可以随时 🗣 抢答：只用桌面上的字，凑出<strong>至少 3 个字</strong>的词语、短语或短句。</li>
-<li>抢答者以外的所有玩家投票：✅ 认可 / ❌ 不认可。认可票更多才算成立。</li>
-<li>成立：抢答者收走用到的全部字卡（1 张 1 分）；不成立：字卡留在桌上，抢答者要等桌上再翻出 1 张牌才能再次抢答。</li>
-<li>结算后所有人点 <strong>Next</strong> 继续下一轮。</li>
-</ol>
-<h3>结束</h3>
-<p>牌堆翻完且桌面剩余字不足 3 个时自动结束；也可以在牌堆已空时点 🏁 结束本局。字卡最多的玩家获胜，并列则共享胜利。</p>
-<h3>图标</h3>
-<p>🀄 字卡与牌堆 · 🗣 抢答 · ✅ 认可 · ❌ 不认可 · 📣 结算 · 🏁 结束本局 · 🏆 获胜 · ▶ 当前翻牌玩家 · 🤖 Bot</p>
-<h3>操作提示</h3>
-<p>点桌面字卡即可拼词句，手机上不需要打字；点击面板空白处清空当前选择。投票期间只显示已投人数，结算后才公开每个人的票。</p>`;
-
+  // Help and Explain now live in the shared widgets above.
   function checkPhrase(text) {
     const characters = (text || "").replace(/\s+/g, "");
     if (!characters.length) return { ok: false, message: "" };
@@ -331,24 +481,6 @@
     send("claim", { phrase });
   }
 
-  function showDialog(title, content, html = false) {
-    setExplain(false);
-    setText("DialogTitle", title);
-    const target = id("DialogContent");
-    if (html) target.innerHTML = content;
-    else target.replaceChildren(node("p", "", content));
-    const dialog = id("Dialog");
-    if (!dialog.open) dialog.showModal();
-    id("DialogCloseBtn").focus({ preventScroll: true });
-  }
-
-  function setExplain(enabled) {
-    explainMode = enabled;
-    panel.classList.toggle("dare-words-explain-mode", enabled);
-    id("ExplainBtn").setAttribute("aria-pressed", String(enabled));
-    hideTip();
-  }
-
   function hideTip() {
     clearTimeout(tipTimer);
     id("Tooltip").hidden = true;
@@ -356,7 +488,7 @@
 
   function showTip(target) {
     hideTip();
-    if (!target?.dataset.dwTip || explainMode) return;
+    if (!target?.dataset.dwTip) return;
     const tip = id("Tooltip");
     tip.textContent = target.dataset.dwTip;
     tip.hidden = false;
@@ -366,16 +498,9 @@
     tipTimer = setTimeout(hideTip, 3000);
   }
 
-  function explainAt(target) {
-    const info = explanations[target?.dataset?.dwExplain];
-    if (!info) return false;
-    showDialog(...info);
-    return true;
-  }
-
   id("Row").addEventListener("click", (event) => {
     const button = event.target.closest(".dare-words-card");
-    if (!button || explainMode) return;
+    if (!button) return;
     const cardId = Number(button.dataset.cardId);
     if (!can("claim")) return;
     const index = selection.indexOf(cardId);
@@ -402,15 +527,11 @@
   id("AcceptBtn").addEventListener("click", () => send("vote", { accept: true }));
   id("RejectBtn").addEventListener("click", () => send("vote", { accept: false }));
   id("NextBtn").addEventListener("click", () => send(view?.phase === "game_over" ? "play_again" : "next_round"));
-  id("HelpBtn").addEventListener("click", () => showDialog("胆敢造词 · Help", help, true));
-  id("ExplainBtn").addEventListener("click", () => setExplain(!explainMode));
-  id("DialogCloseBtn").addEventListener("click", () => id("Dialog").close());
   id("DeckSelect").addEventListener("change", () => {
     if (typeof updateRoomActionButtons === "function") updateRoomActionButtons();
   });
 
   panel.addEventListener("click", (event) => {
-    if (explainMode) return;
     if (event.target.closest("button, input, label, summary, details, a")) return;
     if (!selection.length && !id("Input").value) return;
     clearSelection();
@@ -418,19 +539,11 @@
     renderClaim();
   });
 
-  panel.addEventListener("pointerdown", (event) => {
-    if (!explainMode) return;
-    const target = event.target.closest?.("[data-dw-explain]");
-    if (!target) return;
-    event.preventDefault();
-    event.stopPropagation();
-    explainAt(target);
-  }, true);
   panel.addEventListener("pointerover", (event) => {
     if (event.pointerType === "mouse") showTip(event.target.closest("[data-dw-tip]"));
   });
   panel.addEventListener("pointerdown", (event) => {
-    if (event.pointerType === "mouse" || explainMode) return;
+    if (event.pointerType === "mouse") return;
     touchTipGesture = {
       pointerId: event.pointerId, x: event.clientX, y: event.clientY,
       target: event.target.closest("[data-dw-tip]"), started: performance.now(), moved: false,
@@ -461,27 +574,6 @@
     if (touchTipGesture) touchTipGesture.moved = true;
     hideTip();
   }, true);
-  document.addEventListener("keydown", (event) => {
-    if (!active()) return;
-    if (event.key === "Escape") {
-      setExplain(false);
-      if (id("Dialog").open) id("Dialog").close();
-    }
-    if (explainMode && event.key === "Enter") {
-      const target = event.target.closest?.("[data-dw-explain]");
-      if (target && explainAt(target)) event.preventDefault();
-    }
-  });
-  document.addEventListener("click", (event) => {
-    if (!active() || !explainMode) return;
-    if (event.target.closest("#dareWordsHelpBtn,#dareWordsExplainBtn,#dareWordsDialogCloseBtn")) return;
-    const target = event.target.closest("[data-dw-explain]");
-    if (!target) return;
-    event.preventDefault();
-    event.stopPropagation();
-    explainAt(target);
-  }, true);
-
   window.getDareWordsConfig = () => ({ deck_size: id("DeckSelect").value === "short" ? "short" : "full" });
   window.renderDareWordsGameState = (data) => {
     if (!active()) return;
@@ -503,8 +595,6 @@
       view = null;
       pending = false;
       clearSelection();
-      if (id("Dialog").open) id("Dialog").close();
-      setExplain(false);
     }
     render();
   };

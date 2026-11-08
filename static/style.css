@@ -3886,7 +3886,7 @@ button[id$="ExplainBtn"]::after {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid #2a3446;
   background: #182131;
 }
@@ -3894,7 +3894,7 @@ button[id$="ExplainBtn"]::after {
 .obg-help-title {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 15px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3932,10 +3932,15 @@ button[id$="ExplainBtn"]::after {
   font-size: 14px;
 }
 
+/* Tabs wrap onto extra rows so more are visible at once; anything past the
+   cap scrolls instead of eating the whole dialog. */
 .obg-help-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
+  max-height: 108px;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: 8px;
   margin-bottom: 10px;
   border-bottom: 1px solid #2a3446;
@@ -4041,39 +4046,41 @@ body.obg-explaining {
   }
 
   .obg-help-head {
-    gap: 10px;
-    padding: 12px 14px;
+    gap: 6px;
+    padding: 7px 10px;
   }
 
   .obg-help-title {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .obg-help-lang button,
   .obg-help-close {
-    min-height: 42px;
-    padding: 10px 16px;
-    font-size: 15px;
-    border-radius: 8px;
+    min-height: 36px;
+    padding: 7px 12px;
+    font-size: 14px;
+    border-radius: 7px;
   }
 
   .obg-help-content {
-    max-height: calc(94vh - 66px);
-    padding: 14px 16px 22px;
+    max-height: calc(94vh - 52px);
+    padding: 12px 14px 20px;
     font-size: 15px;
     line-height: 1.7;
   }
 
+  /* Up to three rows of 32px tabs; anything beyond that scrolls. */
   .obg-help-tabs {
-    gap: 8px;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
+    gap: 5px;
+    max-height: 114px;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
   }
 
   .obg-help-tab {
-    min-height: 40px;
-    padding: 10px 16px;
-    font-size: 14px;
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 13px;
   }
 
   .obg-help-section h3 {

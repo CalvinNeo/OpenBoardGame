@@ -5,28 +5,28 @@
 </template>
 <template data-game-target="hivePanel" data-game-mode="contents">
   <div class="hive-heading">
-    <div class="hive-tools"><button id="hiveHelp" type="button">Help</button><button id="hiveExplain" type="button" aria-pressed="false">Explain</button></div>
+    <div class="hive-tools"><button id="hiveHelpBtn" type="button">Help</button><button id="hiveExplainBtn" type="button" aria-pressed="false">Explain</button></div>
   </div>
   <div id="hivePlayers" class="hive-players"></div>
-  <div id="hiveResult" class="hive-result hidden" role="status"></div>
+  <div id="hiveResult" class="hive-result hidden" role="status" data-hive-explain="result"></div>
   <div class="hive-layout">
     <section class="hive-board-card" aria-label="Hive board">
       <div class="hive-board-toolbar">
-        <div id="hiveTurn" aria-live="polite"></div>
-        <div class="hive-tools"><button type="button" id="hiveZoomOut" data-hive-explain="Zoom out to see more of the hive." aria-label="Zoom out">−</button><button type="button" id="hiveFit" data-hive-explain="Fit the whole hive and all currently highlighted destinations inside the board.">Fit</button><button type="button" id="hiveZoomIn" data-hive-explain="Zoom in to inspect individual insects and stacks." aria-label="Zoom in">+</button></div>
+        <div id="hiveTurn" aria-live="polite" data-hive-explain="turn"></div>
+        <div class="hive-tools"><button type="button" id="hiveZoomOut" data-hive-explain="zoom_out" aria-label="Zoom out">−</button><button type="button" id="hiveFit" data-hive-explain="fit">Fit</button><button type="button" id="hiveZoomIn" data-hive-explain="zoom_in" aria-label="Zoom in">+</button></div>
       </div>
       <svg id="hiveBoard" class="hive-board" viewBox="-240 -180 480 360" aria-label="Hexagonal Hive board. Drag to pan; select an insect and then a highlighted hex.">
         <defs><pattern id="hiveDots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="1" fill="#547366" opacity=".25" /></pattern></defs>
         <rect x="-100000" y="-100000" width="200000" height="200000" fill="url(#hiveDots)" />
         <g id="hiveTiles"></g>
       </svg>
-      <div class="hive-selection-bar"><span id="hiveSelection" role="status">Choose an insect.</span><button type="button" id="hiveConfirm" data-hive-explain="Confirm the previewed placement or move. Nothing changes until you confirm." disabled>Confirm</button></div>
+      <div class="hive-selection-bar"><span id="hiveSelection" role="status" data-hive-explain="selection">Choose an insect.</span><button type="button" id="hiveConfirm" data-hive-explain="confirm" disabled>Confirm</button></div>
     </section>
     <aside class="hive-sidebar">
-      <section class="hive-reserve-card"><div class="hive-section-heading"><h3 id="hiveReserveTitle">Your insects</h3><span id="hiveReserveCount" data-hive-tip="Insects still available to place from your reserve." tabindex="0"></span></div><div id="hiveReserve" class="hive-reserve"></div><p id="hiveHint" class="hive-hint"></p></section>
+      <section class="hive-reserve-card"><div class="hive-section-heading"><h3 id="hiveReserveTitle">Your insects</h3><span id="hiveReserveCount" data-hive-tip="Insects still available to place from your reserve." data-hive-explain="reserve_count" tabindex="0"></span></div><div id="hiveReserve" class="hive-reserve"></div><p id="hiveHint" class="hive-hint" data-hive-explain="hint"></p></section>
       <div id="hiveDrawOffer" class="hive-draw-offer hidden"></div>
-      <div class="hive-actions"><button id="hivePass" type="button" data-hive-explain="Pass only when you have no legal placement or movement. You cannot pass voluntarily." disabled>Pass</button><button id="hiveOfferDraw" type="button" data-hive-explain="Offer a draw. The game ends in a draw only if the other player accepts." disabled>Offer Draw</button></div>
-      <details class="hive-history"><summary>Move history</summary><ol id="hiveLog" aria-label="Move history"></ol></details>
+      <div class="hive-actions"><button id="hivePass" type="button" data-hive-explain="pass" disabled>Pass</button><button id="hiveOfferDraw" type="button" data-hive-explain="offer_draw" disabled>Offer Draw</button></div>
+      <details class="hive-history"><summary>Move history</summary><ol id="hiveLog" aria-label="Move history" data-hive-explain="log"></ol></details>
     </aside>
   </div>
   <div id="hiveTooltip" class="hive-tooltip hidden" role="tooltip"></div>

@@ -4,26 +4,26 @@
 </template>
 <template data-game-target="incanGoldPanel" data-game-mode="contents">
   <div class="incan-gold-overview">
-    <strong>Round <span id="incanGoldRound">-</span>/<span id="incanGoldMaxRounds">5</span></strong>
-    <span id="incanGoldPhase">Waiting</span>
-    <span data-incan-tip="Cards left in this expedition's draw pile.">Deck <strong id="incanGoldDeck">-</strong></span>
+    <strong data-incan-explain="round">Round <span id="incanGoldRound">-</span>/<span id="incanGoldMaxRounds">5</span></strong>
+    <span id="incanGoldPhase" data-incan-explain="phase">Waiting</span>
+    <span data-incan-explain="deck" data-incan-tip="Cards left in this expedition's draw pile.">Deck <strong id="incanGoldDeck">-</strong></span>
   </div>
   <div class="incan-gold-decision-meta">
-    <span>Exploring <strong id="incanGoldInCave">-</strong></span>
-    <span>Decided <strong id="incanGoldDecided">-</strong></span>
-    <span id="incanGoldRisk" data-incan-tip="Chance the next card repeats a hazard already on the path, calculated from public cards.">Risk -</span>
+    <span data-incan-explain="exploring">Exploring <strong id="incanGoldInCave">-</strong></span>
+    <span data-incan-explain="decided">Decided <strong id="incanGoldDecided">-</strong></span>
+    <span id="incanGoldRisk" data-incan-explain="risk" data-incan-tip="Chance the next card repeats a hazard already on the path, calculated from public cards.">Risk -</span>
   </div>
-  <div class="incan-gold-personal" data-incan-tip="Banked gems are safe. Gems in hand are lost if a second matching hazard appears. Artifacts add to your final score.">
+  <div class="incan-gold-personal" data-incan-explain="personal" data-incan-tip="Banked gems are safe. Gems in hand are lost if a second matching hazard appears. Artifacts add to your final score.">
     <span>Banked 💎 <strong id="incanGoldBanked">-</strong></span>
     <span>At risk 💎 <strong id="incanGoldHand">-</strong></span>
     <span>Artifacts 🏺 <strong id="incanGoldArtifacts">-</strong></span>
   </div>
-  <div id="incanGoldRoundNotice" class="round-notice hidden" aria-hidden="true">
+  <div id="incanGoldRoundNotice" class="round-notice hidden" aria-hidden="true" data-incan-explain="round_notice">
     <div id="incanGoldRoundNoticeTitle" class="round-notice-title">Round End</div>
     <div id="incanGoldRoundNoticeBody" class="round-notice-body"></div>
     <div id="incanGoldWinnerRow" class="hidden">🏆 <strong id="incanGoldWinner"></strong></div>
   </div>
-  <div id="incanGoldStatus" class="incan-gold-status" role="status" aria-live="polite">Waiting for game state…</div>
+  <div id="incanGoldStatus" class="incan-gold-status" role="status" aria-live="polite" data-incan-explain="status">Waiting for game state…</div>
   <div class="incan-gold-actions">
     <button id="incanGoldContinueBtn" class="hidden" type="button" data-incan-explain="continue">Continue →</button>
     <button id="incanGoldLeaveBtn" class="hidden" type="button" data-incan-explain="leave">Leave &amp; bank 💎</button>
@@ -32,24 +32,13 @@
   </div>
   <div class="incan-gold-section-heading">
     <h3>Expedition path</h3>
-    <span id="incanGoldLoot" data-incan-tip="Treasure remainders are divided separately on each card among returning explorers. Only a lone returner claims artifacts."></span>
+    <span id="incanGoldLoot" data-incan-explain="loot" data-incan-tip="Treasure remainders are divided separately on each card among returning explorers. Only a lone returner claims artifacts."></span>
   </div>
-  <div id="incanGoldPath" class="incan-gold-path" aria-label="Revealed expedition cards" tabindex="0"></div>
+  <div id="incanGoldPath" class="incan-gold-path" aria-label="Revealed expedition cards" tabindex="0" data-incan-explain="path"></div>
   <h3>Explorers</h3>
-  <div id="incanGoldPlayers" class="incan-gold-players"></div>
+  <div id="incanGoldPlayers" class="incan-gold-players" data-incan-explain="players"></div>
   <details class="incan-gold-history">
-    <summary>Hazards removed</summary>
+    <summary data-incan-explain="hazards">Hazards removed</summary>
     <div id="incanGoldRemovedHazards" class="incan-gold-hazards"></div>
   </details>
-</template>
-<template data-game-target="incanGoldGuide" data-game-mode="replace">
-  <section id="incanGoldGuide" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="incanGoldGuideTitle">
-    <div class="modal-content incan-gold-guide-content">
-      <div class="modal-header">
-        <h2 id="incanGoldGuideTitle">Incan Gold · Help</h2>
-        <button id="incanGoldGuideCloseBtn" type="button">Close</button>
-      </div>
-      <div id="incanGoldGuideBody" class="modal-body"></div>
-    </div>
-  </section>
 </template>

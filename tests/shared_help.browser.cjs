@@ -94,6 +94,42 @@ const fixture = `<!DOCTYPE html>
   const activeText = await page.textContent('.obg-help-section[data-obg-help-section="c"]');
   check('R6 tab switches section', activeText.includes('中文C'), activeText);
 
+  // Switching tabs must not reset the tab strip scroll position (mobile)
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.waitForTimeout(150);
+  const stripState = await page.evaluate(() => {
+    const strip = document.querySelector('.obg-help-tabs');
+    strip.scrollLeft = strip.scrollWidth;
+    return { overflow: strip.scrollWidth - strip.clientWidth, left: strip.scrollLeft };
+  });
+  await page.waitForTimeout(150);
+  const tabsNow = await page.$$('.obg-help-tab');
+  await tabsNow[tabsNow.length - 1].click();
+  await page.waitForTimeout(200);
+  const afterSwitch = await page.evaluate(() => ({
+    left: document.querySelector('.obg-help-tabs').scrollLeft,
+    active: document.querySelector('.obg-help-tab.is-active')?.textContent.trim(),
+  }));
+  check('Tab strip keeps its scroll position after switching',
+    Math.abs(afterSwitch.left - stripState.left) < 5,
+    `${Math.round(stripState.left)} -> ${Math.round(afterSwitch.left)}`);
+  check('Last tab stays selected after switching',
+    afterSwitch.active === '竞价阶段', afterSwitch.active);
+  // Language switch must also preserve it
+  await page.click('[data-obg-help-lang="en"]');
+  await page.waitForTimeout(200);
+  const afterLang = await page.evaluate(() => ({
+    left: document.querySelector('.obg-help-tabs').scrollLeft,
+    active: document.querySelector('.obg-help-tab.is-active')?.textContent.trim(),
+  }));
+  check('Tab strip keeps position after language switch',
+    Math.abs(afterLang.left - stripState.left) < 5,
+    `${Math.round(afterLang.left)}`);
+  check('Active tab survives language switch', afterLang.active === 'Bidding', afterLang.active);
+  await page.click('[data-obg-help-lang="zh"]');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForTimeout(150);
+
   // Esc closes help
   await page.keyboard.press('Escape');
   await page.waitForTimeout(150);
@@ -140,7 +176,32 @@ const fixture = `<!DOCTYPE html>
   check('Explain sets help cursor', styled.cursor === 'help', styled.cursor);
   check('Explain sets dashed outline', styled.outline === 'dashed', styled.outline);
 
+  // A drag (scroll gesture) must never open an explanation
+  const playBox = await page.$eval('#skullPlayBtn', (el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  await page.mouse.move(playBox.x, playBox.y);
+  await page.mouse.down();
+  await page.mouse.move(playBox.x, playBox.y + 60, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  check('Dragging does not open an explanation',
+    !(await page.isVisible('.obg-explain-dialog[open]')));
+  check('Explain stays active after a drag',
+    await page.evaluate(() => document.body.classList.contains('obg-explaining')));
+
+  // A clean tap on the same control must explain
+  await page.mouse.click(playBox.x, playBox.y);
+  await page.waitForTimeout(200);
+  check('Tapping opens the explanation',
+    await page.isVisible('.obg-explain-dialog[open]'));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+
   // Unexplained control must NOT be marked
+  await page.click('#skullExplainBtn');
+  await page.waitForTimeout(100);
   const plainCls = await page.$eval('#skullPlainBtn', (el) => el.className);
   check('Unexplained control unmarked', !plainCls.includes('obg-has-explanation'), plainCls);
 

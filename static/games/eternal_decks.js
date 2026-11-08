@@ -1,3 +1,160 @@
+const ETERNAL_DECKS_HELP_CONFIG = {
+  gameId: "eternal_decks",
+  title: { zh: "永恒牌 · Eternal Decks", en: "Eternal Decks" },
+  basic: {
+    win: {
+      zh: "全队一起取得任意四颗星(⭐)就算共同获胜，只要有玩家再也做不出主行动、或者生命之河(🌊)发出 Game Over，全队就一起失败。",
+      en: "The team wins together by collecting any four stars (⭐), and loses together the moment a player has no main action left or the river of life (🌊) hands out a Game Over."
+    },
+    turn: {
+      zh: "轮到你时从三种主行动里选一种：把一张牌放进场地或生命之河(🌊)、用手牌生成一颗宝石(💎)、或者花掉一颗共享心(❤️)把一张牌暗中交给队友。",
+      en: "On your turn you take one of three main actions: place a card on a field or in the river of life (🌊), generate a jewel (💎) out of cards in your hand, or spend one shared heart (❤️) to pass a card secretly to a teammate."
+    },
+    key: {
+      zh: "这个游戏的重点，是在绝不透露普通牌数字和颜色的前提下，用交流圆片和公开讨论把全队的牌序一点点拼出来。",
+      en: "The key to the game is piecing the team's card order together through communication discs and open discussion, while never revealing the number or the colour of an ordinary card."
+    }
+  },
+  sections: [
+    {
+      id: "turn",
+      label: { zh: "回合与行动", en: "Turns and actions" },
+      html: {
+        zh: "<p>每位玩家开局持有自己颜色的 1 到 5 各一张，洗牌之后抽三张进手牌。两人局还会在牌库底各加入两张随机副色牌。</p>"
+          + "<p>全员按下 Ready 之后，由大家选定的起始玩家开始轮流行动。每个回合结束时只有刚刚行动的人从自己的牌库补牌补到三张，手牌超额不用弃掉，牌库空了也不会重洗。</p>"
+          + "<p>三种主行动分别是放牌或使用能力、生成宝石(💎)、以及花一颗共享心(❤️)给队友一张牌。移动交流圆片不消耗回合。</p>",
+        en: "<p>Every player starts with one card of each value from 1 to 5 in their own colour, shuffles them, and draws three. In a two-player game two random off-colour cards are also shuffled to the bottom of each deck.</p>"
+          + "<p>Once everyone has pressed Ready, the chosen first explorer starts and play goes around the table. At the end of a turn only the player who acted refills to three cards from their own deck. Extra cards are never discarded and an empty deck is never reshuffled.</p>"
+          + "<p>The three main actions are placing a card or using an ability, generating a jewel (💎), and spending one shared heart (❤️) to give a teammate a card. Moving a communication disc costs no turn.</p>"
+      }
+    },
+    {
+      id: "fields",
+      label: { zh: "场地与放牌", en: "Fields and placement" },
+      html: {
+        zh: "<p>三块场地各有七格，牌只能从左往右放进下一个空格。相邻的两张牌必须颜色不同、数字也不同，山地要求数字递增，洞穴要求数字递减。</p>"
+          + "<p>双色牌的左右半色分别约束左右两侧的邻牌，放下之前可以翻转方向，放下之后方向就固定下来。</p>"
+          + "<p>稀有牌(🌈)落位的这一次会跳过数字、颜色和升降序的全部限制，但女巫的诅咒仍然能禁止它。</p>",
+        en: "<p>Each of the three fields has seven spaces and cards may only go into the next empty space from left to right. Neighbouring cards must differ in both colour and number, the mountain requires rising numbers and the cave requires falling numbers.</p>"
+          + "<p>On a dual-colour card the left and right halves constrain the neighbours on their own side. You may flip the card before placing it, and the orientation is locked once it lands.</p>"
+          + "<p>A rare card (🌈) ignores every number, colour and ordering restriction for this placement, although the witch's curse can still forbid it.</p>"
+      }
+    },
+    {
+      id: "eternals",
+      label: { zh: "永恒族与复苏", en: "Eternals and revival" },
+      html: {
+        zh: "<p>每一行的前三圈分别要填满四张、五张、六张牌，填满之后可以选择唤醒这一行沉睡的一位永恒族。他的八张牌会加入你的牌库底，这一行已经放下的牌全部弃掉。</p>"
+          + "<p>永恒族的诅咒立刻对全队生效，只有把对应的宝石(💎)献给他才能解除。点击角色可以查看他的能力、诅咒和公开的牌组构成。</p>"
+          + "<p>第四圈填满七张牌之后这一行关闭。上行会把另一条还没关闭的场地改成营地(⛺)，中行恢复全部三颗共享心(❤️)，下行直接获得一颗星(⭐)。</p>",
+        en: "<p>The first three laps of a row need four, then five, then six cards. Once a lap is full you may awaken one eternal sleeping in that row, whose eight cards go to the bottom of your personal deck while the cards already in the row are discarded.</p>"
+          + "<p>The eternal's curse takes effect for the whole team at once, and only offering the matching jewel (💎) lifts it. Click a character to read its ability, its curse and its public deck list.</p>"
+          + "<p>After the fourth lap fills all seven spaces the row closes. The top row turns another open field into a camp (⛺), the middle row restores all three shared hearts (❤️), and the bottom row grants a star (⭐).</p>"
+      }
+    },
+    {
+      id: "jewels",
+      label: { zh: "宝石与河流", en: "Jewels and the river" },
+      html: {
+        zh: "<p>每个宝石(💎)配方只能使用一次，并且必须献给一位还没有拿到宝石(💎)的复苏者。先点配方，再选手牌和目标，最后按 Generate 生成。</p>"
+          + "<p>被消耗的牌会进入生命之河(🌊)。稀有牌(🌈)可以替代任意颜色或数字，双色牌可以任选其中一色，能力牌只适用于任意两张或任意三张的配方。</p>"
+          + "<p>生命之河(🌊)里任何手牌都能放进去，凑到五张就全部弃掉并且只领取一次奖励。前三份奖励通常是稀有牌(🌈)，再下一次就是 Game Over。</p>",
+        en: "<p>Every jewel (💎) recipe may be used once and must be given to a revived eternal that has no jewel (💎) yet. Open the recipe, choose the hand cards and the target, then press Generate.</p>"
+          + "<p>The spent cards go into the river of life (🌊). A rare card (🌈) may stand in for any colour or number, a dual-colour card may use either of its halves, and ability cards only fit the recipes that ask for any two or any three cards.</p>"
+          + "<p>Any hand card can enter the river of life (🌊). At five cards the river is cleared and hands out a single reward. The first three rewards are usually rare cards (🌈) and the next one is a Game Over.</p>"
+      }
+    },
+    {
+      id: "stars",
+      label: { zh: "星与胜负", en: "Stars and winning" },
+      html: {
+        zh: "<p>一共有六条拿星(⭐)的路线，分别是前三位复苏者全部获得宝石(💎)、第四到第六位全部获得宝石(💎)、复苏全部九位永恒族、完成 1／5／9 配方、下行第四圈、以及使用三张 A 系能力牌。</p>"
+          + "<p>每条路线只计一次，拿到任意四颗星(⭐)就共同获胜。同一回合同时满足胜负条件时，胜利优先于失败。</p>",
+        en: "<p>There are six ways to earn a star (⭐): every one of the first three revived eternals receives a jewel (💎), the fourth through sixth revived eternals all receive a jewel (💎), all nine eternals are revived, a 1, 5 and 9 recipe set is completed, the bottom row finishes its fourth lap, and three A-series ability cards are used.</p>"
+          + "<p>Each route scores only once and any four stars (⭐) win the game together. When a win and a loss would happen in the same turn, the win takes priority.</p>"
+      }
+    },
+    {
+      id: "talk",
+      label: { zh: "交流与圆片", en: "Table talk and discs" },
+      html: {
+        zh: "<p>你不能说出普通牌的数字、颜色、自己缺什么牌或者手里拿着双色牌，但是可以自由讨论稀有牌(🌈)、能力牌和所有公开的场面信息。</p>"
+          + "<p>每人有两个交流圆片，可以免费放到场地或河流的任意格子上表达意图。圆片只是提示，不保证那张牌真的放得下去。</p>"
+          + "<p>每一整圈以及复苏、奖励、第四圈结算之后都会暂停，全员各自确认 Next Round 才继续。已经清空的场地和河流仍然会在回顾里保留。</p>",
+        en: "<p>You may never say the number or the colour of an ordinary card, what you are missing, or that you hold a dual-colour card. Rare cards (🌈), ability cards and all public board information are free to discuss.</p>"
+          + "<p>Everyone owns two communication discs that can be placed on any field or river space for free to signal an intention. A disc is only a hint and never guarantees that the card can legally go there.</p>"
+          + "<p>The game pauses after each full lap and after every revival, reward or fourth-lap payout. Every seat confirms Next Round before play continues, and emptied fields and river cards stay visible in the review.</p>"
+      }
+    }
+  ]
+};
+
+const ETERNAL_DECKS_EXPLAIN = {
+  card: {
+    zh: "底部的手牌入口(🃏)可以展开或收起你的手牌。先点场地或生命之河(🌊)的下一个空格，再选牌并确认，也可以从这里打开宝石(💎)配方或 Give ❤️。",
+    en: "The hand dock (🃏) at the bottom expands or collapses your hand. Tap the next empty space on a field or in the river of life (🌊), then pick a card and confirm, or open a jewel (💎) recipe or Give ❤️ from here."
+  },
+  field: {
+    zh: "点格子可以选出牌或者放交流圆片。牌只能从左向右放进下一个空格，相邻的牌必须不同色也不同数字，山地递增而洞穴递减。稀有牌(🌈)这一次落位跳过全部限制，女巫的诅咒仍然能禁止它。",
+    en: "Tap a space to place a card or a communication disc. Cards only go into the next empty space from left to right, neighbours must differ in colour and number, the mountain rises and the cave falls. A rare card (🌈) skips every restriction this time, but the witch's curse can still forbid it."
+  },
+  eternal: {
+    zh: "沉睡角色的牌组构成公开但顺序隐藏。复苏时你会获得八张牌到个人牌库底，并立刻激活他的诅咒，献上宝石(💎)才能解除。点击可以查看角色能力和测试牌表。",
+    en: "A sleeping character's deck list is public but its order is hidden. Reviving it puts eight cards at the bottom of your personal deck and activates its curse at once, which only a jewel (💎) can lift. Click to read the character and its prototype card list."
+  },
+  jewel: {
+    zh: "点宝石(💎)打开配方，再在抽屉里选择手牌和一位还没有宝石(💎)的复苏者。消耗掉的牌进入生命之河(🌊)，双色牌可以任选一色，稀有牌(🌈)可以替代，能力牌只能用于任意两张或三张。",
+    en: "Tap the jewel (💎) to open the recipes, then pick hand cards and a revived eternal that has no jewel (💎) yet. The spent cards enter the river of life (🌊). A dual-colour card may use either half, a rare card (🌈) may stand in for anything, and ability cards only fit the any-two or any-three recipes."
+  },
+  river: {
+    zh: "任何手牌都可以放进生命之河(🌊)。凑到五张就全部弃掉并且只领取一次奖励，前三份是稀有牌(🌈)，之后就是 Game Over，美杜莎能把稀有牌(🌈)放回奖励顶。",
+    en: "Any hand card may enter the river of life (🌊). At five cards the river is cleared and hands out one reward only. The first three are rare cards (🌈) and the next is a Game Over, while Medusa can put a rare card (🌈) back on top of the rewards."
+  },
+  give: {
+    zh: "消耗一颗共享心(❤️)，把一张手牌暗中交给队友。接收者的手牌可以超过三张，只有你在回合结束时补牌。",
+    en: "Spend one shared heart (❤️) to hand a card secretly to a teammate. The receiver may go above three cards and only you refill at the end of the turn."
+  },
+  ability: {
+    zh: "先选择手中的能力牌，再点 Use Ability，选择目标并确认。具体效果会显示在行动区域里。",
+    en: "Select an ability card in your hand, press Use Ability, then choose a target and confirm. The exact effect is spelled out in the action area."
+  },
+  confirm: {
+    zh: "这个按钮只会提交服务器验证过的行动。先完成选牌、选目标和必要的选项，按钮变灰时请检查轮次、诅咒、场地条件、剩余资源以及宝石(💎)配方。",
+    en: "This button only submits a move the server has already validated. Finish the card, target and any required options first. When it is greyed out, check the turn order, curses, field conditions, remaining resources and the jewel (💎) recipes."
+  },
+  disc: {
+    zh: "每人有两个交流圆片。点场地或河流的任意格子，选 Discs，再选要放的圆片，已经有牌的格子也能放，Return 可以收回。放圆片不消耗回合，也不保证那张牌真的放得下去。",
+    en: "Everyone has two communication discs. Tap any field or river space, choose Discs, then pick the disc to place. Spaces that already hold a card are fine and Return takes a disc back. Placing a disc costs no turn and never guarantees the card fits."
+  },
+  next: {
+    zh: "每一整圈和重要结算之后都会暂停，所有席位分别确认才继续，掉线的玩家也需要回来确认。已经清空的场地和河流仍然会在回顾里保留。",
+    en: "The game pauses after each full lap and after every important payout. Every seat confirms separately before play continues and a disconnected player still has to come back. Emptied fields and river cards stay visible in the review."
+  },
+  ready: {
+    zh: "先商量起始玩家和路线。改变起始玩家会清空所有人的确认，全员 Ready 之后游戏开始。",
+    en: "Agree on the first explorer and on a route first. Changing the first explorer clears every confirmation, and the game starts once all players are Ready."
+  },
+  rotate: {
+    zh: "双色牌的左右半色分别约束左邻牌和右邻牌。翻转只改变方向，不改变数字，提交之后方向就固定了。",
+    en: "The left and right halves of a dual-colour card constrain the neighbours on their own side. Flipping only changes the orientation and never the number, and the orientation is locked once you submit."
+  },
+  discussion: {
+    zh: "幽灵会暂时公开全员手牌，大家可以自由讨论。所有玩家确认 End Discussion 之后手牌恢复私密，游戏继续。",
+    en: "The ghost reveals every hand for a while so the table can talk freely. Once all players confirm End Discussion the hands become private again and play continues."
+  },
+  help: {
+    zh: "打开永恒牌的完整规则说明，包含目标、回合结构、三种主行动、永恒族与复苏、宝石(💎)与河流、以及交流限制。",
+    en: "Open the full Eternal Decks rules: the goal, the turn structure, the three main actions, eternals and revival, jewels (💎) and the river, and the table-talk limits."
+  },
+  explain: {
+    zh: "打开解释模式之后再点界面上的任意控件，就会显示这个控件的说明。解释模式下不会执行任何游戏动作，按 Esc 可以退出。",
+    en: "Turn on explain mode and then tap any control to read what it does. No game action is ever performed in explain mode and Esc leaves it."
+  }
+};
+
+let eternalDecksHelpWidget = null;
+let eternalDecksExplainWidget = null;
+
 (() => {
   "use strict";
   const panel = document.getElementById("eternalDecksPanel");
@@ -23,9 +180,6 @@
   let drawerOpen = false;
   let pending = false;
   let pendingTimer = null;
-  let explaining = false;
-  let suppressClick = false;
-  let suppressTimer = null;
   let tipTimer = null;
   let returnFocus = null;
   const openDetails = new Set();
@@ -35,21 +189,32 @@
     window.requestAnimationFrame(keepSpaceVisible);
   });
 
-  const explain = {
-    card: "底部 🃏 入口可展开或收起手牌。先点场地／河流的下一个空格，再选牌并确认；也可点宝石配方或 Give ❤️。普通牌的数字和颜色不能告诉队友。点击空白或按 Esc 取消。",
-    field: "点格子可选出牌或放 Communication discs（交流圆片）。牌从左向右放入下一个空格：相邻不同色、不同数；山地递增，洞穴递减。Rare 本次落位跳过限制，女巫诅咒仍能禁止 Rare。",
-    eternal: "沉睡角色的牌组构成公开，但顺序隐藏。复苏时获得八张牌到个人牌库底，并立刻激活诅咒；献宝石解除。点击可查看角色及测试牌表。",
-    jewel: "点 💎 宝石打开配方，再在抽屉中选择手牌和未获宝石的复苏者。消耗牌进入河流；双色牌可选任一色，Rare 可替代。能力牌只能用于任意两张／三张。",
-    river: "任何手牌均可进入生命之河。达到五张便全部弃掉，只领取一次奖励。前三份为 Rare，之后 Game Over；美杜莎能把 Rare 放回奖励顶。",
-    give: "消耗一颗共享心，将一张手牌暗中交给队友。接收者可以超过三张；只有你在回合末补牌。",
-    ability: "选择手中的能力牌，再点 Use Ability，选择目标并确认。具体效果会显示在行动区域。",
-    confirm: "只会提交服务器验证过的行动。先完成选牌、目标及必要选项。按钮不可用时检查轮次、诅咒、场地条件、剩余资源与宝石配方。",
-    disc: "每人两个 Communication discs（交流圆片）。点任意场地／河流格，选 Discs，再选要放的圆片；已有牌的格子也能放。Return 收回。不消耗回合，也不保证能合法出牌。",
-    next: "每一整圈及重要结算后暂停，所有席位分别确认才继续；掉线玩家也需回来确认。已清空的场地和河流仍在 Review 中保留。",
-    ready: "先商量起始玩家和路线。改变起始玩家会清空确认；所有人 Ready 后开始。",
-    rotate: "双色牌的左右色分别约束左、右邻牌。翻转只改变方向，不改变数字；提交后方向固定。",
-    discussion: "幽灵暂时公开全员手牌，可以自由讨论。所有人确认 End Discussion 后，手牌恢复私密，继续游戏。",
-  };
+  function initEternalDecksHelpExplain() {
+    if (eternalDecksHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    eternalDecksHelpWidget = window.obgCreateHelp(ETERNAL_DECKS_HELP_CONFIG);
+    eternalDecksExplainWidget = window.obgCreateExplain({
+      gameId: "eternal_decks",
+      attribute: "data-ed-explain",
+      explanations: ETERNAL_DECKS_EXPLAIN,
+      button: explainButton,
+      root: () => panel,
+      bypass: ["#eternalDecksHelpBtn", "#eternalDecksExplainBtn"],
+      onChange: active => { if (active) hideTip(); }
+    });
+    helpButton?.addEventListener("click", () => {
+      eternalDecksExplainWidget?.exit();
+      eternalDecksHelpWidget.open();
+    });
+    explainButton?.addEventListener("click", () => eternalDecksExplainWidget?.toggle());
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initEternalDecksHelpExplain);
+  } else {
+    initEternalDecksHelpExplain();
+  }
+
+  const explaining = () => Boolean(eternalDecksExplainWidget?.isActive());
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
   const own = () => view?.players.find(player => player.player_id === view.you);
   const name = pid => view.players.find(player => player.player_id === pid)?.name || "—";
@@ -103,16 +268,13 @@
   function fieldHTML(row, index) {
     const field = view.fields[row.field];
     const capacity = 7 - row.sleeping.length;
-    const card = selectedCard();
-    const check = view.field_checks.find(item => item.row === index && item.card_id === card?.id && item.orientation === orientation);
-    const reason = check?.reason || field.rule;
     const cells = Array.from({length: 7}, (_, slot) => {
       const sleeping = row.sleeping[slot - capacity];
       const sleeperLabel = sleeping ? `${sleeping} · ${view.eternals[sleeping].name} is sleeping here.` : "";
       const content = row.cards[slot] ? cardHTML(row.cards[slot]) : sleeping ? `<span class="eternal-decks-sleeper" title="${esc(sleeperLabel)}" data-ed-tip="${esc(sleeperLabel)}">💤<small>${sleeping}</small></span>` : `<span class="eternal-decks-empty">${slot + 1}</span>`;
       const next = slot === row.cards.length && slot < capacity && !row.closed;
       return button(`${content}<span class="eternal-decks-disc-markers">${discsAt(index * 7 + slot)}</span>`, "slot", "field", false,
-        `class="eternal-decks-slot ${next ? "is-next" : ""} ${selectedPosition === index * 7 + slot ? "is-selected" : ""}" data-row="${index}" data-position="${index * 7 + slot}" data-ed-description="${esc(explain.field + " " + reason)}" aria-label="Row ${index + 1}, slot ${slot + 1}${next ? ", next space" : ""}"`);
+        `class="eternal-decks-slot ${next ? "is-next" : ""} ${selectedPosition === index * 7 + slot ? "is-selected" : ""}" data-row="${index}" data-position="${index * 7 + slot}" aria-label="Row ${index + 1}, slot ${slot + 1}${next ? ", next space" : ""}"`);
     }).join("");
     return `<section class="eternal-decks-field ${selectedRow === index ? "is-selected" : ""} ${row.closed ? "is-closed" : ""}">
       <div class="eternal-decks-field-heading"><h3 data-ed-tip="${esc(field.rule)}" tabindex="0">${field.icon} ${field.name}</h3><span>${row.closed ? "✓ Closed" : `Lap ${row.lap}/4 · ${row.cards.length}/${capacity}`}</span></div>
@@ -236,7 +398,7 @@
     }
     const chosen = candidate();
     const labels = {play: "Play card", river: "Place in river", give: "Give ❤️", jewel: "Generate 💎", ability: "Use Ability ✦"};
-    return `${controls}<p class="eternal-decks-selection" aria-live="polite">${esc(hint)}</p>${button(pending ? "Sending…" : labels[mode], "confirm", "confirm", !chosen, `class="eternal-decks-primary" data-ed-description="${esc(chosen ? explain.confirm : hint)}"`)}`;
+    return `${controls}<p class="eternal-decks-selection" aria-live="polite">${esc(hint)}</p>${button(pending ? "Sending…" : labels[mode], "confirm", "confirm", !chosen, `class="eternal-decks-primary"`)}`;
   }
 
   function drawerHTML() {
@@ -274,7 +436,6 @@
       <div class="eternal-decks-details-grid"><details data-ed-detail="stars" ${openDetails.has("stars") ? "open" : ""}><summary>⭐ Star objectives · ${view.stars.length}/4</summary><ul>${Object.entries(view.star_goals).map(([id, goal]) => `<li>${view.stars.includes(id) ? "✅" : "☆"} ${esc(goal)}</li>`).join("")}</ul><p>A 系能力牌：${view.stage_card_count}/3</p></details>
       <details data-ed-detail="discard" ${openDetails.has("discard") ? "open" : ""}><summary>Discard · ${view.discard_count}${view.strict_discard ? " · Hidden" : ""}</summary><div class="eternal-decks-discard">${view.discard.map(card => cardHTML(card)).join("")}</div></details>
       <details data-ed-detail="log" ${openDetails.has("log") ? "open" : ""}><summary>Activity</summary><ol class="eternal-decks-log">${view.log.slice().reverse().map(item => `<li>${esc(item)}</li>`).join("")}</ol></details></div>${drawerHTML()}<div class="eternal-decks-toast" role="status" aria-live="polite"></div></div>`;
-    panel.classList.toggle("eternal-decks-explaining", explaining);
     panel.classList.toggle("eternal-decks-has-dock", Boolean(player));
     panel.querySelectorAll("details").forEach(element => element.addEventListener("toggle", () => element.open ? openDetails.add(element.dataset.edDetail) : openDetails.delete(element.dataset.edDetail)));
     const dock = panel.querySelector(".eternal-decks-dock");
@@ -290,11 +451,6 @@
   function resetSelection() {
     selectedCards = []; selectedRow = null; selectedTarget = null; selectedRecipe = null;
     selectedOption = null; selectedPosition = null; orientation = "normal"; mode = "browse"; drawerOpen = false;
-  }
-  function setExplain(value) {
-    explaining = value;
-    panel.classList.toggle("eternal-decks-explaining", value);
-    explainButton.setAttribute("aria-pressed", String(value));
   }
   function openDialog(title, body, html = false) {
     hideTip();
@@ -374,7 +530,7 @@
 
   panel.addEventListener("click", event => {
     const target = event.target.closest("[data-ed-action]");
-    if (!target || target.disabled || explaining || !view) return;
+    if (!target || target.disabled || explaining() || !view) return;
     const data = target.dataset;
     switch (data.edAction) {
       case "card":
@@ -433,12 +589,12 @@
   [panel, dialog].forEach(root => {
     root.addEventListener("click", event => {
       const target = event.target.closest("[data-ed-tip]");
-      if (!target || target.closest("[data-ed-action]") || explaining) return;
+      if (!target || target.closest("[data-ed-action]") || explaining()) return;
       showTip(target.dataset.edTip, target);
     });
     root.addEventListener("pointerover", event => {
       const target = event.target.closest("[data-ed-tip]");
-      if (!target || target.contains(event.relatedTarget) || explaining || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+      if (!target || target.contains(event.relatedTarget) || explaining() || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
       showTip(target.dataset.edTip, target, false);
     });
     root.addEventListener("pointerout", event => {
@@ -453,77 +609,30 @@
     });
   });
 
-  helpButton.addEventListener("click", () => {
-    setExplain(false);
-    const fields = view ? Object.values(view.fields).map(field => `<li>${field.icon} ${field.name}：${field.rule}</li>`).join("") : "";
-    openDialog("Eternal Decks · Help", `
-      <p><strong>Stage A · Beginner · Prototype card data</strong>：本实现开放 2 或 4 个席位，可加机器人。永恒族八张牌采用明确标注的测试组合，非正式完整牌表；未开放其他关卡、三人专用配方或单人故事模式。</p>
-      <p><strong>🤝 目标</strong>：取得任意四颗星共同获胜。当前玩家没有任何主行动，或取得河流 Game Over 时全队失败；同一回合同时胜负时胜利优先。</p>
-      <p><strong>🃏 开局与回合</strong>：每人本色 1–5，洗牌抽三张；两人局各在牌库底加入两张随机副色牌。全员 Ready 后由选定玩家开始轮流行动。回合末从自己的牌库补到三张；超额不弃，空库不重洗。</p>
-      <p><strong>三种主行动</strong>：① 出一张牌到场地／河流，或使用能力；② 用手牌生成一颗宝石；③ 消耗一心暗中给队友一张牌。只有行动者在回合末补牌。</p><ul>${fields}</ul>
-      <p><strong>操作</strong>：底部 🃏 入口展开／收起手牌。先点场地或河流的下一个空格，在抽屉中选牌并确认；双色牌可翻转。💎 宝石与 Give ❤️ 入口相邻，选牌和目标都在抽屉内完成。使用能力时，展开手牌、点能力牌，再点 Use Ability ✦。</p>
-      <p><strong>🌈 Rare 与双色</strong>：Rare 当下忽略场地和相邻限制，但女巫能禁止 Rare；之后是可变通配。山地 9、洞穴 1 后仍可接 Rare。双色牌选好方向后，左右半色分别比较两侧；落下后不能旋转。</p>
-      <p><strong>✨ 复苏</strong>：各行前三圈分别填四、五、六张，选择复苏本行一位永恒族，八张牌加入自己的牌库底，行中牌弃掉。诅咒立即对全队生效；献宝石后解除。点角色可查能力、诅咒及公开牌组构成。</p>
-      <p><strong>第四圈</strong>：填满七张后关闭。上行将另一行改成营地；中行恢复全部三颗心；下行得星。关闭行不能再放牌。</p>
-      <p><strong>💎 宝石</strong>：每个配方仅能用一次，必须献给尚无宝石的复苏者。先点配方，再点选手牌与目标，Generate 💎。消耗牌进入河流。Rare 可替任意颜色／数字，双色可选其中一色；能力牌只适用任意两张／三张。女巫免费生成非 1/5/9 的宝石。</p>
-      <p><strong>🌊 河流</strong>：达到五张或更多时全部清空，只取一次奖励。前三次通常拿 Rare，下一次 Game Over；美杜莎可以补充奖励。生成 1/5/9 会同时得星，第四星优先于 Game Over。</p>
-      <p><strong>⭐ 六条路线</strong>：第 1–3 位全部获宝石；第 4–6 位全部获宝石；复苏九位；1/5/9 配方；下行第四圈；使用三张 A 系能力牌。每项只计一次。</p>
-      <p><strong>能力</strong>：幽灵公开手牌直到全员 End Discussion；骷髅回一心；女巫免费宝石；美杜莎回收弃牌 Rare；牛头人与场地牌交换、留作 Rare；海怪取回河流最多两张。能力没有有效目标时可空用。</p>
-      <p><strong>🤫 交流</strong>：不能透露普通数字牌的数字、颜色、缺少什么或持有双色；可讨论 Rare、能力和公开局面。Communication discs（交流圆片）可免费移动：点格子、选 Discs，再点圆片的 Place here；Return 收回。圆片只表达意图。</p>
-      <p><strong>牌面说明</strong>：点永恒族可查看公开牌组。电脑悬停牌面、手机点击牌面可查看数字、颜色、Rare 或能力说明；手机提示 3 秒后消失，连续点选会更新内容。</p>
-      <p><strong>⏸ 回顾</strong>：每整圈以及复苏、河流奖励、星星、第四圈奖励后，所有人 Next Round 才继续。掉线不会自动确认。空白和 Esc 取消选牌；Explain 可解释灰色按钮，期间不会执行游戏动作。</p>
-      <p><a href="https://boardgamegeek.com/filepage/289015/eternaldecks-english-rulebooks" target="_blank" rel="noopener noreferrer">Author’s rulebooks</a> · 规则整理基于第四版，牌表仍待核实。</p>`, true);
-  });
-  explainButton.addEventListener("click", () => setExplain(!explaining));
   dialogClose.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { hideTip(); if (returnFocus?.isConnected) returnFocus.focus(); });
   dialog.addEventListener("click", event => {
     const rect = dialog.getBoundingClientRect();
     if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
   });
-  function explainTarget(target) {
-    if (!target) return;
-    const text = target.dataset.edDescription || explain[target.dataset.edExplain];
-    if (text) { setExplain(false); openDialog("Explain", text); }
-  }
   document.addEventListener("pointerdown", event => {
-    if (!explaining || panel.classList.contains("hidden") || header.contains(event.target) || dialog.contains(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const target = Array.from(panel.querySelectorAll("[data-ed-explain]")).find(element => {
-      const r = element.getBoundingClientRect();
-      return r.width > 0 && r.height > 0 && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
-    });
-    if (target) {
-      suppressClick = true;
-      window.clearTimeout(suppressTimer);
-      suppressTimer = window.setTimeout(() => { suppressClick = false; }, 600);
-      explainTarget(target);
-    }
-  }, true);
-  document.addEventListener("click", event => {
-    if (suppressClick) { suppressClick = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (!explaining || header.contains(event.target) || dialog.contains(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    if (panel.contains(event.target)) explainTarget(event.target.closest("[data-ed-explain]"));
-  }, true);
-  document.addEventListener("pointerdown", event => {
-    if (!view || explaining || !panel.contains(event.target) || event.target.closest("button, input, select, summary, a, dialog, [data-ed-tip]")) return;
+    if (!view || explaining() || !panel.contains(event.target) || event.target.closest("button, input, select, summary, a, dialog, [data-ed-tip]")) return;
     resetSelection(); render();
   });
   document.addEventListener("keydown", event => {
     if (event.key !== "Escape" || panel.classList.contains("hidden")) return;
     hideTip();
     if (dialog.open) return;
-    setExplain(false); resetSelection(); render();
+    resetSelection(); render();
   });
 
   function clearState() {
     view = null; signature = null; pending = false;
-    resetSelection(); setExplain(false); openDetails.clear();
+    resetSelection(); openDetails.clear();
     dockObserver.disconnect(); hideTip();
     panel.classList.remove("eternal-decks-has-dock");
     panel.style.removeProperty("--ed-dock-height");
-    window.clearTimeout(pendingTimer); window.clearTimeout(suppressTimer); window.clearTimeout(tipTimer); suppressClick = false;
+    window.clearTimeout(pendingTimer); window.clearTimeout(tipTimer);
     if (dialog.open) dialog.close();
     panel.innerHTML = "";
   }

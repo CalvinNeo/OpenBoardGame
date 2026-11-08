@@ -1,7 +1,5 @@
 let currentIncanGoldView = null;
-let incanGoldExplainMode = false;
 let incanGoldTooltipTimer = null;
-let incanGoldGuideReturnFocus = null;
 
 const INCAN_GOLD_HAZARD_ICONS = {
   snake: "🐍",
@@ -32,8 +30,6 @@ const incanGoldGamePanel = document.getElementById("incanGoldPanel");
 const incanGoldStatus = document.getElementById("incanGoldStatus");
 const incanGoldHelpBtn = document.getElementById("incanGoldHelpBtn");
 const incanGoldExplainBtn = document.getElementById("incanGoldExplainBtn");
-const incanGoldGuide = document.getElementById("incanGoldGuide");
-const incanGoldGuideCloseBtn = document.getElementById("incanGoldGuideCloseBtn");
 const incanGoldTooltip = document.createElement("div");
 incanGoldTooltip.className = "incan-gold-tooltip";
 incanGoldTooltip.id = "incanGoldTooltip";
@@ -41,21 +37,137 @@ incanGoldTooltip.setAttribute("role", "tooltip");
 incanGoldTooltip.hidden = true;
 document.body.appendChild(incanGoldTooltip);
 
-const INCAN_GOLD_EXPLANATIONS = {
-  continue: "Continue exploring. You share the next treasure with explorers still in the cave. A second matching hazard loses all gems in hand, but your banked gems and artifacts remain safe.",
-  leave: "Return to camp and bank your gems. Returning explorers divide the remainder on each treasure card separately. If you leave alone, you also collect every artifact (🏺); if several leave together, those artifacts are discarded.",
-  next: "Confirm you have reviewed the round. The next expedition begins after every player confirms. Bots confirm automatically; your confirmation does not skip other players' review.",
-  again: "Start a fresh five-round game with the same players. Scores, artifacts and removed hazards reset.",
+const INCAN_GOLD_HELP_CONFIG = {
+  gameId: "incan_gold",
+  title: { zh: "印加黄金 · Incan Gold", en: "Incan Gold" },
+  basic: {
+    win: {
+      zh: "五次探险结束后，存进营地的宝石(💎) 加上手里神器(🏺) 的分数最高的人获胜，神器(🏺) 数量更多的人打破平局。",
+      en: "After five expeditions the player with the most banked gems (💎) plus artifact (🏺) points wins, and holding more artifacts (🏺) breaks a tie."
+    },
+    turn: {
+      zh: "每翻开一张新牌之后，你要在 Continue 和 Leave 之间悄悄选一个，等所有还在洞里的探险者都决定完才一起揭晓。",
+      en: "After each newly revealed card you secretly choose Continue or Leave, and every choice is revealed together once all explorers still in the cave have decided."
+    },
+    key: {
+      zh: "在洞里待得越久分到的宝石(💎) 越多，但只要同一种危险出现第二次，你手上还没存起来的宝石(💎) 就会全部归零。",
+      en: "The longer you stay in the cave the more gems (💎) you collect, but the second copy of the same hazard wipes out every gem (💎) you have not banked yet."
+    }
+  },
+  sections: [
+    {
+      id: "expedition",
+      label: { zh: "探险流程", en: "How an expedition runs" },
+      html: {
+        zh: "<p>每一轮探险都会重新洗好牌堆：15 张宝石(💎) 牌、每种危险各 3 张，再加上本轮唯一的一张神器(🏺) 牌。</p>"
+          + "<p>翻开一张牌之后，还在洞里的每个人都要在 Continue 和 Leave 之间选一个，谁都看不到别人的选择。</p>"
+          + "<p>所有人决定完毕后一起结算：选择离开的人当场回营，其余的人继续面对下一张牌。</p>",
+        en: "<p>Every expedition reshuffles its deck: 15 treasure (💎) cards, 3 copies of each hazard, and the single artifact (🏺) card for that round.</p>"
+          + "<p>After a card is revealed, everyone still in the cave picks Continue or Leave, and nobody can see anybody else's choice.</p>"
+          + "<p>Once everybody has decided, the choices resolve together: the explorers who left return to camp and the rest face the next card.</p>"
+      }
+    },
+    {
+      id: "treasure",
+      label: { zh: "宝石与神器", en: "Treasure and artifacts" },
+      html: {
+        zh: "<p>翻出宝石(💎) 时，它的数值会当场平分给还在洞里的探险者，除不尽的余数留在这张牌上，等着之后回营的人来分。</p>"
+          + "<p>回营时，每张宝石(💎) 牌上剩下的余数会被单独拿出来平分给这批回营的人，人数多到分不动时余数就继续留着。</p>"
+          + "<p>神器(🏺) 牌不会当场结算。如果你独自回营，路径上所有神器(🏺) 都归你，如果同时有多人回营，这些神器(🏺) 全部作废。</p>"
+          + "<p>神器(🏺) 的分数按轮次递增：第 1 到第 3 轮各值 5 分，第 4 和第 5 轮各值 10 分。</p>",
+        en: "<p>When treasure (💎) is revealed its value is split at once among the explorers still in the cave, and the remainder stays on that card for later returners to divide.</p>"
+          + "<p>On the way out, the remainder of each treasure (💎) card is divided separately among that group of returners. If there are too many of them to share it, the remainder simply stays on the card.</p>"
+          + "<p>Artifacts (🏺) are never settled on the spot. If you leave alone you take every artifact (🏺) on the path, and if several explorers leave together those artifacts (🏺) are discarded.</p>"
+          + "<p>Artifacts (🏺) grow in value with the round: 5 points each in rounds 1 to 3, and 10 points each in rounds 4 and 5.</p>"
+      }
+    },
+    {
+      id: "hazards",
+      label: { zh: "五种危险", en: "The five hazards" },
+      html: {
+        zh: "<p>危险一共有五种：蛇(🐍)、蜘蛛(🕷️)、火焰(🔥)、落石(🪨) 和木乃伊(🧟)，每种各有 3 张。</p>"
+          + "<p>本次探险里第一次出现某种危险只是警告，第二次出现同一种危险就会让探险立刻崩盘。</p>"
+          + "<p>崩盘时，还在洞里的人手上所有宝石(💎) 全部清零，只有已经存进营地的宝石(💎) 和神器(🏺) 是安全的。</p>"
+          + "<p>崩盘还会永久移除一张这种危险牌，所以后面的探险会稍微安全一点，但这种危险也从此更容易再次引爆。</p>",
+        en: "<p>There are five hazards: Snake (🐍), Spider (🕷️), Fire (🔥), Rockfall (🪨) and Mummy (🧟), with 3 copies of each.</p>"
+          + "<p>The first copy of a hazard in an expedition is only a warning. A second copy of the same hazard busts the expedition at once.</p>"
+          + "<p>When it busts, every explorer still in the cave loses all the gems (💎) in hand. Only gems (💎) already banked in camp and your artifacts (🏺) stay safe.</p>"
+          + "<p>A bust also removes one card of that hazard from the deck forever, so later expeditions are a little safer even though the same hazard is now quicker to blow up again.</p>"
+      }
+    },
+    {
+      id: "scoring",
+      label: { zh: "计分与胜负", en: "Scoring" },
+      html: {
+        zh: "<p>只有回到营地时，手上的宝石(💎) 才会被存起来，变成谁也拿不走的安全分。</p>"
+          + "<p>总分等于存好的宝石(💎) 加上神器(🏺) 的分数。五轮全部结束后总分最高的人获胜。</p>"
+          + "<p>如果总分打平，神器(🏺) 数量更多的人胜出，再平就并列获胜。</p>",
+        en: "<p>Gems (💎) only become safe the moment you return to camp and bank them, and nobody can take that score away from you.</p>"
+          + "<p>Your total score is your banked gems (💎) plus your artifact (🏺) points, and the highest total after all five rounds wins.</p>"
+          + "<p>If totals tie, the player holding more artifacts (🏺) wins, and a remaining tie is shared.</p>"
+      }
+    },
+    {
+      id: "rounds",
+      label: { zh: "轮次与结束", en: "Rounds and endings" },
+      html: {
+        zh: "<p>所有人都回营，或者牌堆被抽空时，本次探险都会安全结束，洞里的人也能把宝石(💎) 全部存起来。</p>"
+          + "<p>结算后先看清结果再按 Next Round，必须所有玩家都确认，下一次探险才会开始。</p>"
+          + "<p>打完第五轮后游戏结束，Play Again 会用同一批玩家重开一局，分数、神器(🏺) 和被移除的危险都会重置。</p>",
+        en: "<p>An expedition ends safely when everybody has returned to camp or when the deck runs out, and the explorers still inside bank every gem (💎) they hold.</p>"
+          + "<p>Read the result and then press Next Round. Every player has to confirm before the next expedition begins.</p>"
+          + "<p>The game finishes after the fifth round, and Play Again starts a fresh game with the same players where scores, artifacts (🏺) and removed hazards all reset.</p>"
+      }
+    }
+  ]
 };
 
-const INCAN_GOLD_HELP = [
-  "Goal: collect the most gems (💎) over five expeditions. Banked gems plus artifact points determine your score; artifact count breaks ties.",
-  "Each step, secretly choose Continue or Leave. Choices are revealed together only after all explorers decide. Leaving banks your hand and divides each treasure card's remainder separately among returners.",
-  "Treasure (💎) is divided equally among explorers still in the cave. Undivided gems stay on that card. Artifact (🏺) goes only to a lone returner; multiple returners discard it. Artifacts are worth 5 points in rounds 1–3 and 10 in rounds 4–5.",
-  "Hazards: Snake (🐍), Spider (🕷️), Fire (🔥), Rockfall (🪨), Mummy (🧟). The first of a kind is a warning. The second ends the expedition: explorers lose their hand, and one card of that hazard is permanently removed.",
-  "When everyone returns or the deck empties, the expedition ends safely. Review the results and click Next Round; all players must confirm. Play Again appears only after the fifth round.",
-  "Risk is the next-card bust chance based on revealed cards and removed hazards. Hover or tap informational cards for a short explanation, or use Explain to inspect a control without taking an action.",
-];
+const INCAN_GOLD_EXPLAIN = {
+  round: { zh: "当前是第几次探险，一共五次。", en: "Which expedition is being played. There are five in total." },
+  phase: { zh: "当前阶段。Exploring 是还在洞里做选择，Round review 是本次探险结束后的回顾，Final scores 是五轮全部打完。", en: "The current phase. Exploring means choices are still open, Round review follows the end of an expedition, and Final scores appears once all five rounds are done." },
+  deck: { zh: "本次探险的牌堆里还剩多少张牌。牌堆抽空时所有探险者都能安全回营。", en: "How many cards are left in this expedition's draw pile. When the pile runs out every explorer returns safely." },
+  exploring: { zh: "还在洞里、仍然承担风险的人数。", en: "How many explorers are still in the cave and still at risk." },
+  decided: { zh: "已经锁定选择的探险者人数。只有所有还在洞里的人都决定完，这一轮才会结算并翻开下一张牌。", en: "How many explorers have locked a choice. The round only resolves and reveals the next card once everyone still in the cave has decided." },
+  risk: { zh: "下一张牌引爆危险的概率。它根据已经翻开的牌和被永久移除的危险推算，牌堆越薄越危险。", en: "The chance that the next card busts the expedition. It is derived from the revealed cards and the permanently removed hazards, so a thinner deck is more dangerous." },
+  personal: { zh: "你的家当。Banked 是已经存进营地的宝石(💎)，At risk 是还在手上、随时可能清零的宝石(💎)，Artifacts 是神器(🏺) 带来的分数。", en: "Your own holdings. Banked gems (💎) are already safe in camp, gems At risk can still be wiped out, and Artifacts (🏺) are the points you have collected." },
+  status: { zh: "当前局面的一句话说明，告诉你该做什么，或者正在等谁。", en: "A one line summary of the situation, telling you what to do or whom you are waiting for." },
+  round_notice: { zh: "本次探险的结束原因，可能是危险爆发、所有人回营或者牌堆抽空。", en: "Why this expedition ended, which is either a triggered hazard, everybody returning to camp, or an empty deck." },
+  loot: { zh: "如果现在回营还能分到的东西：路径上没分完的宝石(💎) 余数，以及只有独自回营才能拿走的神器(🏺)。", en: "What you could still collect by leaving now: the gem (💎) remainders left on the path and the artifacts (🏺) that only a lone returner may claim." },
+  path: { zh: "本次探险已经翻开的牌。宝石(💎) 会当场平分给洞里的人，余数留在牌上，神器(🏺) 要等到有人回营才结算。", en: "The cards revealed so far in this expedition. Treasure (💎) is split at once among the explorers in the cave with the remainder staying on the card, while artifacts (🏺) only settle when somebody leaves." },
+  players: { zh: "所有探险者的状态，包括存好的宝石(💎)、手上的宝石(💎)、神器(🏺) 数量和总分。", en: "Every explorer with their banked gems (💎), gems in hand, artifact (🏺) count and total score." },
+  hazards: { zh: "被永久移除的危险牌。每种危险初始各有 3 张，每爆发一次就永久移除 1 张。", en: "The permanently removed hazard cards. Each hazard starts with 3 copies and every bust removes 1 of them forever." },
+  continue: { zh: "继续深入。你会和还在洞里的人平分下一张宝石(💎)，但同一种危险出现第二次时，手上的宝石(💎) 会全部清零，存好的和神器(🏺) 不受影响。", en: "Keep exploring. You share the next treasure (💎) with the explorers still in the cave, and if a second matching hazard appears you lose every gem (💎) in hand while your banked gems and artifacts (🏺) stay safe." },
+  leave: { zh: "回营并把宝石(💎) 存起来。一起回营的人会逐张平分每张宝石(💎) 牌上剩下的余数。如果你独自回营，还能拿走路径上所有神器(🏺)，多个人一起走则神器(🏺) 全部作废。", en: "Return to camp and bank your gems (💎). The returning explorers divide the remainder on each treasure card separately, and if you leave alone you also collect every artifact (🏺) on the path while several returners discard them." },
+  next: { zh: "确认你已经看完本次探险的结果。所有玩家都确认后下一次探险才开始，你的确认不会跳过别人的回顾。", en: "Confirm that you have reviewed the expedition. The next one begins only after every player confirms, and your own confirmation never skips anyone else's review." },
+  again: { zh: "用同一批玩家重开一局全新的五次探险，分数、神器(🏺) 和被移除的危险都会重置。", en: "Start a fresh five-round game with the same players. Scores, artifacts (🏺) and removed hazards all reset." }
+};
+
+let incanGoldHelpWidget = null;
+let incanGoldExplainWidget = null;
+
+function initIncanGoldHelpExplain() {
+  if (incanGoldHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  incanGoldHelpWidget = window.obgCreateHelp(INCAN_GOLD_HELP_CONFIG);
+  incanGoldExplainWidget = window.obgCreateExplain({
+    gameId: "incan_gold",
+    attribute: "data-incan-explain",
+    explanations: INCAN_GOLD_EXPLAIN,
+    button: incanGoldExplainBtn,
+    root: () => incanGoldGamePanel,
+    bypass: ["#incanGoldHelpBtn", "#incanGoldExplainBtn"]
+  });
+  incanGoldHelpBtn?.addEventListener("click", () => {
+    incanGoldExplainWidget?.exit();
+    incanGoldHelpWidget.open();
+  });
+  incanGoldExplainBtn?.addEventListener("click", () => incanGoldExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initIncanGoldHelpExplain);
+} else {
+  initIncanGoldHelpExplain();
+}
 
 function formatIncanGoldHazard(hazard) {
   if (!hazard) {
@@ -243,8 +355,7 @@ function updateIncanGoldActionButtons() {
 
 function clearIncanGoldState() {
   currentIncanGoldView = null;
-  setIncanGoldExplainMode(false);
-  closeIncanGoldGuide();
+  incanGoldExplainWidget?.exit();
   hideIncanGoldTooltip();
   ["incanGoldBanked", "incanGoldHand", "incanGoldArtifacts", "incanGoldLoot"].forEach((id) => {
     document.getElementById(id).textContent = "-";
@@ -390,43 +501,13 @@ function renderIncanGoldSummary(view) {
   document.querySelector("#incanGoldPanel .incan-gold-decision-meta").classList.toggle("hidden", view.phase !== "decision");
 }
 
-function setIncanGoldExplainMode(enabled) {
-  incanGoldExplainMode = Boolean(enabled);
-  document.body.classList.toggle("incan-gold-explaining", incanGoldExplainMode);
-  incanGoldExplainBtn.setAttribute("aria-pressed", String(incanGoldExplainMode));
-  hideIncanGoldTooltip();
-}
-
-function openIncanGoldGuide(title, paragraphs) {
-  incanGoldGuideReturnFocus = document.activeElement;
-  setIncanGoldExplainMode(false);
-  document.getElementById("incanGoldGuideTitle").textContent = title;
-  const body = document.getElementById("incanGoldGuideBody");
-  body.replaceChildren();
-  paragraphs.forEach((text) => {
-    const paragraph = document.createElement("p");
-    paragraph.textContent = text;
-    body.appendChild(paragraph);
-  });
-  incanGoldGuide.classList.remove("hidden");
-  incanGoldGuide.setAttribute("aria-hidden", "false");
-  incanGoldGuideCloseBtn.focus();
-}
-
-function closeIncanGoldGuide() {
-  const wasOpen = !incanGoldGuide.classList.contains("hidden");
-  incanGoldGuide.classList.add("hidden");
-  incanGoldGuide.setAttribute("aria-hidden", "true");
-  if (wasOpen && incanGoldGuideReturnFocus?.isConnected) incanGoldGuideReturnFocus.focus();
-}
-
 function hideIncanGoldTooltip() {
   window.clearTimeout(incanGoldTooltipTimer);
   incanGoldTooltip.hidden = true;
 }
 
 function showIncanGoldTooltip(target) {
-  if (!target?.dataset.incanTip || incanGoldExplainMode) return;
+  if (!target?.dataset.incanTip || document.body.classList.contains("obg-explaining")) return;
   incanGoldTooltip.textContent = target.dataset.incanTip;
   incanGoldTooltip.hidden = false;
   const bounds = target.getBoundingClientRect();
@@ -440,18 +521,11 @@ function showIncanGoldTooltip(target) {
 function showIncanGoldHeaderActions(show) {
   document.getElementById("incanGoldHeaderActions").style.display = show ? "flex" : "none";
   if (!show) {
-    setIncanGoldExplainMode(false);
-    closeIncanGoldGuide();
+    incanGoldExplainWidget?.exit();
     hideIncanGoldTooltip();
   }
 }
 
-incanGoldHelpBtn.addEventListener("click", () => openIncanGoldGuide("Incan Gold · Help", INCAN_GOLD_HELP));
-incanGoldExplainBtn.addEventListener("click", () => setIncanGoldExplainMode(!incanGoldExplainMode));
-incanGoldGuideCloseBtn.addEventListener("click", closeIncanGoldGuide);
-incanGoldGuide.addEventListener("click", (event) => {
-  if (event.target === incanGoldGuide) closeIncanGoldGuide();
-});
 incanGoldGamePanel.addEventListener("pointerover", (event) => {
   if (event.pointerType === "mouse") showIncanGoldTooltip(event.target.closest("[data-incan-tip]"));
 });
@@ -460,40 +534,6 @@ incanGoldGamePanel.addEventListener("click", (event) => {
   if (!event.target.closest("button, summary")) showIncanGoldTooltip(event.target.closest("[data-incan-tip]"));
 });
 document.addEventListener("scroll", hideIncanGoldTooltip, true);
-document.addEventListener("click", (event) => {
-  if (!incanGoldExplainMode || currentGameType !== "incan_gold") return;
-  const button = event.target.closest("button");
-  if ([incanGoldHelpBtn, incanGoldExplainBtn, incanGoldGuideCloseBtn].includes(button)) return;
-  const target = event.target.closest("[data-incan-explain], #incanGoldPanel [data-incan-tip]");
-  if (!button && !target) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  if (target) {
-    const description = INCAN_GOLD_EXPLANATIONS[target.dataset.incanExplain] || target.dataset.incanTip;
-    openIncanGoldGuide("Explanation", [description]);
-  }
-}, true);
-document.addEventListener("pointerdown", (event) => {
-  if (!incanGoldExplainMode || currentGameType !== "incan_gold") return;
-  for (const button of incanGoldGamePanel.querySelectorAll("button:disabled[data-incan-explain]")) {
-    const bounds = button.getBoundingClientRect();
-    if (bounds.width && bounds.height && event.clientX >= bounds.left && event.clientX <= bounds.right
-      && event.clientY >= bounds.top && event.clientY <= bounds.bottom) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      openIncanGoldGuide("Explanation", [INCAN_GOLD_EXPLANATIONS[button.dataset.incanExplain]]);
-      break;
-    }
-  }
-}, true);
 document.addEventListener("keydown", (event) => {
-  if (currentGameType !== "incan_gold") return;
-  if (event.key === "Escape") {
-    setIncanGoldExplainMode(false);
-    closeIncanGoldGuide();
-    hideIncanGoldTooltip();
-  } else if (event.key === "Tab" && !incanGoldGuide.classList.contains("hidden")) {
-    event.preventDefault();
-    incanGoldGuideCloseBtn.focus();
-  }
+  if (currentGameType === "incan_gold" && event.key === "Escape") hideIncanGoldTooltip();
 });

@@ -60,12 +60,13 @@ async function waitRoomIdle(page) {
     await page.evaluate(() => socket.emit('room:start', { room_id: roomId, config: {} }));
 
     // The draft dialog opens by itself; keep the preselected tickets.
-    await page.waitForSelector('.ttr-dialog[open] .ttr-ticket-choice');
+    // The draft is inline in the ticket panel: tick the offered tickets and keep.
+    await page.waitForSelector('#ticketToRideTickets .ttr-ticket-choice');
+    assert.equal(await page.locator('#ticketToRideTickets .ttr-ticket.is-offer').count(), 3);
     await waitRoomIdle(page);
-    await page.locator('.ttr-dialog[open] .ttr-dialog-actions button').click();
-    await page.waitForFunction(() => !document.getElementById('ticketToRideDialog').open);
+    await page.locator('#ticketToRideTickets .ttr-choice-row button').click();
     // Wait for the server to confirm the draft, otherwise the loop below can act
-    // on the pre-submit snapshot and look for a dialog that is already gone.
+    // on the pre-submit snapshot.
     await page.waitForFunction(() => {
       const v = window.currentTicketToRideView;
       const me = v && v.players.find(p => p.player_id === v.you);
@@ -74,6 +75,7 @@ async function waitRoomIdle(page) {
 
     let steps = 0;
     let shots = 0;
+    let retries = 0;
     while (steps < 400) {
       await page.waitForFunction(() => {
         const v = window.currentTicketToRideView;
@@ -87,7 +89,7 @@ async function waitRoomIdle(page) {
         'other hands and tickets stay hidden until scoring');
       // The snapshot can go stale between the wait and the read while the other
       // seats are still drafting, so simply re-check on the next pass.
-      if (!state.legal_actions.length) continue;
+      if (!state.legal_actions.length) { retries += 1; if (retries > 15) throw new Error('stalled waiting for a turn'); continue; }
 
       if (shots < 2 && steps > 6) {
         await page.screenshot({ path: `${output}/live-${shots}.png`, fullPage: true });
@@ -97,8 +99,8 @@ async function waitRoomIdle(page) {
       await waitRoomIdle(page);
       const legal = state.legal_actions;
       if (legal.includes('keep_tickets')) {
-        await page.waitForSelector('.ttr-dialog[open] .ttr-dialog-actions button');
-        await page.locator('.ttr-dialog[open] .ttr-dialog-actions button').click();
+        await page.waitForSelector('#ticketToRideTickets .ttr-choice-row button');
+        await page.locator('#ticketToRideTickets .ttr-choice-row button').click();
       } else if (legal.includes('claim_route') && await page.evaluate(() =>
         Boolean(document.querySelector('#ticketToRideMap .ttr-route.is-claimable')))) {
         const route = await page.evaluate(() =>
@@ -117,7 +119,7 @@ async function waitRoomIdle(page) {
         // turn away, so treat a missing panel as "retry on the next pass".
         const panel = await page.waitForSelector('#ticketToRideRouteOverlay:not(.hidden)', { timeout: 6000 })
           .catch(() => null);
-        if (!panel) continue;
+        if (!panel) { retries += 1; if (retries > 15) throw new Error('stalled opening the claim panel'); continue; }
         await page.locator('#ticketToRideRouteOverlay button', { hasText: 'Claim' }).click();
       } else if (legal.includes('draw_card')) {
         await page.locator('#ticketToRideMarket .ttr-card--deck').click();
@@ -134,9 +136,13 @@ async function waitRoomIdle(page) {
           before, { timeout: 15000 });
       } catch (error) {
         // The snapshot went stale before the click landed; re-read and retry.
+        retries += 1;
+        if (retries > 15) throw new Error('stalled waiting for the state to change');
         continue;
       }
       steps += 1;
+      retries = 0;
+      if (steps % 10 === 0) console.log('  ...' + steps + ' turns played');
     }
 
     const final = await page.evaluate(() => window.currentTicketToRideView);

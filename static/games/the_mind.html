@@ -3,12 +3,6 @@
   <button id="theMindExplainBtn" type="button" aria-pressed="false">Explain</button>
 </template>
 <template data-game-target="theMindPanel" data-game-mode="contents">
-  <div id="tmSurface" class="tm-root"><p class="tm-waiting">Waiting to start</p></div>
+  <div id="tmSurface" class="tm-root"><p class="tm-waiting" data-tm-explain="table">Waiting to start</p></div>
   <div id="tmTooltip" class="tm-tooltip" role="tooltip" hidden></div>
-</template>
-<template data-game-target="theMindDialog" data-game-mode="replace">
-  <dialog id="theMindDialog" class="tm-dialog" aria-labelledby="tmDialogTitle">
-    <div class="tm-dialog-head"><h2 id="tmDialogTitle">Help</h2><button id="tmDialogClose" type="button">Close</button></div>
-    <div id="tmDialogBody"></div>
-  </dialog>
 </template>

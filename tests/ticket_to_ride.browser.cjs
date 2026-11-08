@@ -123,7 +123,7 @@ async function bounds(page, label) {
   const issues = await page.evaluate(() => {
     const issues = [];
     if (document.documentElement.scrollWidth > innerWidth + 1) issues.push('page horizontal overflow');
-    const roots = '#ticketToRidePanel *, .game-panel > .panel-header, .ttr-dialog[open], .ttr-dialog[open] *, .obg-help-dialog[open], .obg-help-dialog[open] *';
+    const roots = '#ticketToRidePanel *, .game-panel > .panel-header, .obg-help-dialog[open], .obg-help-dialog[open] *';
     const frame = document.getElementById('ticketToRideMapFrame');
     if (frame && getComputedStyle(frame).overflow !== 'hidden') issues.push('map frame does not clip');
     for (const node of document.querySelectorAll(roots)) {
@@ -196,15 +196,14 @@ async function bounds(page, label) {
       await page.setViewportSize({ width, height: width < 500 ? 844 : 1000 });
       for (const key of Object.keys(views)) {
         await render(page, key);
-        await page.evaluate(() => { if (document.getElementById('ticketToRideDialog').open) document.getElementById('ticketToRideDialog').close(); });
         await bounds(page, `${width}px ${key}`);
       }
-      // The ticket draft dialog is a modal, so it is checked on its own.
+      // Ticket drafting now lives inside the ticket panel, so it is checked there.
       await render(page, 'setup');
-      await page.waitForSelector('.ttr-dialog[open] .ttr-ticket-choice');
-      await bounds(page, `${width}px setup dialog`);
-      await page.screenshot({ path: `${output}/setup-dialog-${width}.png`, fullPage: true });
-      await page.evaluate(() => document.getElementById('ticketToRideDialog').close());
+      await page.waitForSelector('#ticketToRideTickets .ttr-ticket-choice');
+      assert.equal(await page.locator('#ticketToRideTickets .ttr-ticket.is-offer').count(), 3);
+      await bounds(page, `${width}px inline ticket draft`);
+      await page.screenshot({ path: `${output}/setup-tickets-${width}.png`, fullPage: true });
 
       await render(page, 'claim');
       await page.screenshot({ path: `${output}/claim-${width}.png`, fullPage: true });

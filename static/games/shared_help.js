@@ -76,33 +76,41 @@
       return list;
     }
 
-    function renderBody() {
-      const list = sections();
-      const useTabs = list.length >= 3;
-      if (!activeSection || !list.some((entry) => entry.id === activeSection)) {
-        activeSection = list.length ? list[0].id : null;
-      }
-
-      const tabs = useTabs
-        ? '<div class="obg-help-tabs" role="tablist">'
-          + list.map((entry) =>
-            '<button type="button" role="tab" class="obg-help-tab'
-            + (entry.id === activeSection ? " is-active" : "") + '" data-obg-help-tab="'
-            + esc(entry.id) + '" aria-selected="' + (entry.id === activeSection) + '">'
-            + esc(pick(entry.label)) + "</button>").join("")
-          + "</div>"
-        : "";
-
-      const visible = useTabs ? list.filter((entry) => entry.id === activeSection) : list;
-      const body = visible.map((entry) =>
-        '<section class="obg-help-section" data-obg-help-section="' + esc(entry.id) + '">'
-        + (useTabs ? "" : "<h3>" + esc(pick(entry.label)) + "</h3>")
-        + pick(entry.html)
-        + "</section>").join("");
-
-      return tabs + '<div class="obg-help-body">' + body + "</div>";
+    function useTabs() {
+      return sections().length >= 3;
     }
 
+    // The tab strip is built once and then only patched. Rebuilding it would
+    // throw away the horizontal scroll position, which on phones means the
+    // strip jumps back to the first tab after every tap.
+    function buildTabs(list) {
+      return '<div class="obg-help-tabs" role="tablist">'
+        + list.map((entry) =>
+          '<button type="button" role="tab" class="obg-help-tab" data-obg-help-tab="'
+          + esc(entry.id) + '" aria-selected="false">'
+          + esc(pick(entry.label)) + "</button>").join("")
+        + "</div>";
+    }
+
+    function buildBody(list, tabs) {
+      const visible = tabs ? list.filter((entry) => entry.id === activeSection) : list;
+      return visible.map((entry) =>
+        '<section class="obg-help-section" data-obg-help-section="' + esc(entry.id) + '">'
+        + (tabs ? "" : "<h3>" + esc(pick(entry.label)) + "</h3>")
+        + pick(entry.html)
+        + "</section>").join("");
+    }
+
+    function syncTabs() {
+      if (!dialog) return;
+      dialog.querySelectorAll("[data-obg-help-tab]").forEach((button) => {
+        const on = button.dataset.obgHelpTab === activeSection;
+        button.classList.toggle("is-active", on);
+        button.setAttribute("aria-selected", String(on));
+      });
+    }
+
+    // Full render, used on open and on language change.
     function render() {
       if (!dialog) return;
       const t = ui();
@@ -113,7 +121,42 @@
         button.classList.toggle("is-active", on);
         button.setAttribute("aria-pressed", String(on));
       });
-      dialog.querySelector(".obg-help-content").innerHTML = renderBody();
+
+      const list = sections();
+      const tabs = useTabs();
+      if (!activeSection || !list.some((entry) => entry.id === activeSection)) {
+        activeSection = list.length ? list[0].id : null;
+      }
+
+      const content = dialog.querySelector(".obg-help-content");
+      const previousStrip = content.querySelector(".obg-help-tabs");
+      // Tabs wrap onto two rows and scroll vertically, so keep both axes.
+      const previousTabScroll = {
+        left: previousStrip?.scrollLeft || 0,
+        top: previousStrip?.scrollTop || 0
+      };
+      content.innerHTML = (tabs ? buildTabs(list) : "")
+        + '<div class="obg-help-body">' + buildBody(list, tabs) + "</div>";
+
+      const strip = content.querySelector(".obg-help-tabs");
+      if (strip) {
+        strip.scrollLeft = previousTabScroll.left;
+        strip.scrollTop = previousTabScroll.top;
+      }
+      syncTabs();
+    }
+
+    // Switching sections only swaps the body, so the tab strip keeps its
+    // scroll position and the active tab stays where the player left it.
+    function showSection(id) {
+      if (!dialog) return;
+      const list = sections();
+      if (!list.some((entry) => entry.id === id)) return;
+      activeSection = id;
+      const tabs = useTabs();
+      const body = dialog.querySelector(".obg-help-body");
+      if (body) body.innerHTML = buildBody(list, tabs);
+      syncTabs();
     }
 
     function build() {
@@ -144,8 +187,7 @@
         }
         const tab = event.target.closest("[data-obg-help-tab]");
         if (tab) {
-          activeSection = tab.dataset.obgHelpTab;
-          render();
+          showSection(tab.dataset.obgHelpTab);
           return;
         }
         if (event.target === dialog) dialog.close();
@@ -246,16 +288,51 @@
       }) || null;
     }
 
+    // A press only counts as an explain request when the finger stays put.
+    // Scrolling the page must never open an explanation (DEV_GUIDE).
+    const MOVE_TOLERANCE = 10;
+    let gesture = null;
+
     function onPointerDown(event) {
       if (!active) return;
       if (isBypass(event.target)) return;
-      const node = atPoint(event.clientX, event.clientY);
+      if (!event.isPrimary || (event.button !== undefined && event.button !== 0)) return;
+      gesture = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        moved: false,
+        node: atPoint(event.clientX, event.clientY)
+      };
+      // Block the real handler straight away; the decision happens on release.
+      event.stopPropagation();
+    }
+
+    function onPointerMove(event) {
+      if (!gesture || gesture.id !== event.pointerId) return;
+      if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > MOVE_TOLERANCE) {
+        gesture.moved = true;
+      }
+    }
+
+    function onPointerUp(event) {
+      if (!active || !gesture || gesture.id !== event.pointerId) return;
+      const press = gesture;
+      gesture = null;
+      if (press.moved || Math.hypot(event.clientX - press.x, event.clientY - press.y) > MOVE_TOLERANCE) {
+        return;
+      }
+      const node = press.node || atPoint(event.clientX, event.clientY);
       if (!node) return;
       event.preventDefault();
       event.stopPropagation();
       const description = described(node);
       setActive(false);
       if (description) show(description);
+    }
+
+    function onPointerCancel() {
+      gesture = null;
     }
 
     // Capture-phase guard: explain mode must never trigger a real action.
@@ -281,6 +358,9 @@
     }
 
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("pointermove", onPointerMove, true);
+    document.addEventListener("pointerup", onPointerUp, true);
+    document.addEventListener("pointercancel", onPointerCancel, true);
     document.addEventListener("click", onClick, true);
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("obg:help-lang", () => {

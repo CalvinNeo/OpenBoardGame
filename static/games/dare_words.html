@@ -38,7 +38,7 @@
     </div>
     <div class="dare-words-claim-row">
       <input id="dareWordsInput" type="text" maxlength="24" placeholder="至少 3 个字…" autocomplete="off" spellcheck="false" enterkeyhint="send" data-dw-explain="input" aria-describedby="dareWordsInputHint dareWordsFeedback" disabled>
-      <button id="dareWordsClaimBtn" class="dare-words-primary" type="button" data-dw-explain="claimBtn" disabled>🗣 抢答</button>
+      <button id="dareWordsClaimBtn" class="dare-words-primary" type="button" data-dw-explain="claim_btn" disabled>🗣 抢答</button>
     </div>
     <div id="dareWordsFeedback" class="dare-words-feedback" role="status" aria-live="polite"></div>
   </section>
@@ -65,8 +65,7 @@
   </section>
   <details id="dareWordsHistoryDetails" class="dare-words-history">
     <summary><span>🕘 抢答记录 <span id="dareWordsHistoryCount">0</span></span><span class="dare-words-history-toggle" aria-hidden="true">⌄</span></summary>
-    <div id="dareWordsHistory" class="dare-words-history-list" tabindex="0" role="region" aria-label="抢答记录"></div>
+    <div id="dareWordsHistory" class="dare-words-history-list" tabindex="0" role="region" aria-label="抢答记录" data-dw-explain="history"></div>
   </details>
   <div id="dareWordsTooltip" class="dare-words-tooltip" role="tooltip" hidden></div>
 </template>
-<template data-game-target="dareWordsDialog" data-game-mode="replace"><dialog id="dareWordsDialog" class="dare-words-dialog" aria-labelledby="dareWordsDialogTitle"><div class="dare-words-dialog-header"><h2 id="dareWordsDialogTitle">Help</h2><button id="dareWordsDialogCloseBtn" type="button">Close</button></div><div id="dareWordsDialogContent" class="dare-words-dialog-content"></div></dialog></template>

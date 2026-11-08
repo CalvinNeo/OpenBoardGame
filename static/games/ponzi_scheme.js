@@ -1,3 +1,164 @@
+const PONZI_SCHEME_HELP_CONFIG = {
+  gameId: "ponzi_scheme",
+  title: { zh: "庞氏骗局 · Ponzi Scheme", en: "Ponzi Scheme" },
+  basic: {
+    win: {
+      zh: "赢法是不要破产：有人付不起利息时，当轮所有破产者立刻落败，活下来的玩家再按行业分和财富分（进阶模式改算奢侈品(💎)分）比出胜负。",
+      en: "You win by staying solvent: as soon as somebody cannot pay their interest every player who went bankrupt that round loses at once, and the survivors are ranked by industry points plus wealth points, or luxury (💎) points in the advanced mode."
+    },
+    turn: {
+      zh: "每一轮按顺序做四件事：所有人依次募资或 Pass，各自可以发起一次暗盘交易，新的起始玩家移除一张市场资金牌，最后时间前进并且全员一起付息。",
+      en: "Every round runs in four steps: each player in turn funds an industry or passes, everyone may open one backroom trade, the new start player removes one fund card from the market, and finally time moves forward while everybody pays interest at the same time."
+    },
+    key: {
+      zh: "重点是管住现金流，每张资金牌都会永久按周期收租，你要算准下一次付息之前手里还剩多少现金，并且尽量把债务周期错开。",
+      en: "The key is managing cash flow, because every fund card charges rent forever on its own period. Work out how much cash you will still hold before the next payment and spread your debts across different periods."
+    }
+  },
+  sections: [
+    {
+      id: "funding",
+      label: { zh: "募资", en: "Funding" },
+      html: {
+        zh: "<p>开局时你没有现金也没有行业。按起始玩家顺序，每人要么取得一个行业加一张资金牌，要么 Pass。</p>"
+          + "<p>取得之后同类行业有几个就只能拿市场第几行的资金牌，一个拿第 1 行，两个拿第 2 行，三个拿第 3 行。同类行业已经有三个或更多时不能再募资。</p>"
+          + "<p>资金牌的本金立即进入你的私人金库并且只收一次，之后这张牌会按它的周期永远向你收利息。市场每被取走一张牌就立刻补到九张，并按本金从小到大重新排序。</p>",
+        en: "<p>You start with no cash and no industries. In start-player order each player either takes one industry together with one fund card, or passes.</p>"
+          + "<p>The row you may take from depends on how many industries of that type you will own afterwards: one takes row 1, two take row 2 and three take row 3. Once you already own three or more of a type you can no longer fund it.</p>"
+          + "<p>The principal lands in your private vault immediately and is collected only once. From then on the card charges you interest forever on its own period. Whenever a card leaves the market it is refilled to nine cards and re-sorted by principal from low to high.</p>"
+      }
+    },
+    {
+      id: "trade",
+      label: { zh: "暗盘交易", en: "Backroom trades" },
+      html: {
+        zh: "<p>每人每轮有一次发起暗盘交易的机会，也可以 Pass。你选择的行业必须是双方都拥有的，然后给出一个秘密的整数报价，零元同样合法。</p>"
+          + "<p>报价会先从你的可用现金里托管进信封。接收者只有两个选择：卖出自己的一个该行业并收下这笔钱，或者按同样的价格反向买下你的一个该行业。没有拒绝，也没有还价。</p>"
+          + "<p>卖出时钱归接收者，反买时托管的钱退还给你而接收者另付同额。行业会转移，但对应的债务留在原持有人身上，交易换来的行业也不受三个的上限约束。</p>",
+        en: "<p>Each player may open one backroom trade per round, or pass. The industry you pick must be owned by both sides, and you name a secret whole-number offer, where zero is perfectly legal.</p>"
+          + "<p>The offer is held in an envelope straight out of your available cash. The receiver has exactly two options: sell one of their own industries of that type and take the money, or buy one of yours at the same price. There is no refusing and no haggling.</p>"
+          + "<p>Selling pays the receiver, while buying returns the held money to you and the receiver pays the same amount separately. The industry moves but its debts stay with the original owner, and industries gained by trade ignore the limit of three.</p>"
+      }
+    },
+    {
+      id: "market",
+      label: { zh: "市场与崩盘", en: "Market and crash" },
+      html: {
+        zh: "<p>交易阶段结束后起始标记顺移一位，新的起始玩家从市场移除任意一张资金牌，然后补齐并重排。起始资金牌被移除后永久出局，其他牌进入弃牌堆。</p>"
+          + "<p>如果调整之后市场里的熊牌(🐻)数量达到玩家人数，本轮就崩盘一次。市场里的熊牌、弃牌堆和剩余牌库混洗后重新补满市场，并且不会立刻再次崩盘。</p>"
+          + "<p>崩盘时从新的起始玩家开始，每人归还一个自己数量最多的行业，并列时可以自选，没有行业就跳过。崩盘会让本轮时间前进两格。</p>",
+        en: "<p>After the trading step the start marker passes to the next seat and the new start player removes any one fund card from the market before it is refilled and re-sorted. A starting fund card is out of the game for good, and every other card goes to the discard pile.</p>"
+          + "<p>If the market then holds as many bear cards (🐻) as there are players, the round crashes once. The bear cards in the market, the discard pile and the rest of the deck are shuffled together to refill the market, and this cannot trigger a second crash right away.</p>"
+          + "<p>On a crash, beginning with the new start player, everybody returns one industry of which they own the most, choosing freely on a tie and skipping if they own none. A crash also pushes time forward by two spaces this round.</p>"
+      }
+    },
+    {
+      id: "interest",
+      label: { zh: "付息与破产", en: "Interest and bankruptcy" },
+      html: {
+        zh: "<p>通常时间前进一格，崩盘时前进两格。所有到期或者越过到期点的资金牌都只支付一次利息，所有玩家同时结算。</p>"
+          + "<p>付得起的玩家扣掉现金，债务回到原来的周期继续循环，付不起的玩家破产。资金牌永远留在你手里，既不能提前付息，也不能偿清本金。</p>"
+          + "<p>所有人的资金牌、利息、周期和到期位置都是公开信息，只有现金是秘密。破产的玩家失去获胜资格。</p>",
+        en: "<p>Time normally moves forward one space and two spaces after a crash. Every fund card that is due or passed over pays its interest exactly once, and all players settle at the same time.</p>"
+          + "<p>A player who can pay loses the cash and the debt returns to its original period to keep cycling, while a player who cannot pay goes bankrupt. Fund cards stay in your hands forever, and you can neither pay early nor clear the principal.</p>"
+          + "<p>Everyone's fund cards, interest, periods and due positions are public information, and only cash is secret. A bankrupt player can no longer win.</p>"
+      }
+    },
+    {
+      id: "scoring",
+      label: { zh: "计分与进阶", en: "Scoring and advanced" },
+      html: {
+        zh: "<p>每个行业的 n 个按 n(n+1)/2 计分，0 到 6 个分别对应 0、1、3、6、10、15、21 分，四类行业分别计算之后相加。</p>"
+          + "<p>基础模式下剩余现金 0 到 29、30 到 55、56 到 77、78 到 95、96 以上分别得 0、1、2、3、4 分。同分时持有本金最大的资金牌者胜，再同分就共享胜利。</p>"
+          + "<p>进阶模式下现金不计分，改为用一次发起交易的机会购买奢侈品(💎)。戒指(💍) 30 元 1 分，跑车(🚘) 56 元 2 分，游艇(🛥️) 78 元 3 分，城市(🏙️) 96 元 4 分，每件唯一而且不能转卖。</p>",
+        en: "<p>Each industry scores n(n+1)/2 for the n you own, so zero to six are worth 0, 1, 3, 6, 10, 15 and 21 points, and the four industries are counted separately and added up.</p>"
+          + "<p>In the basic mode leftover cash of 0 to 29, 30 to 55, 56 to 77, 78 to 95 and 96 or more scores 0, 1, 2, 3 and 4 points. Ties are broken by the highest principal fund card you hold, and a remaining tie shares the win.</p>"
+          + "<p>In the advanced mode cash scores nothing and you may spend one trade opportunity on a luxury (💎) instead. The ring (💍) costs 30 for 1 point, the car (🚘) 56 for 2 points, the yacht (🛥️) 78 for 3 points and the city (🏙️) 96 for 4 points. Each one is unique and cannot be resold.</p>"
+      }
+    },
+    {
+      id: "round",
+      label: { zh: "轮次流程", en: "Round flow" },
+      html: {
+        zh: "<p>一轮的完整流程是募资、暗盘交易、市场调整、崩盘检查、付息结算。每轮结算之后游戏暂停，所有席位分别点击 Next Round 才继续，掉线的人不会自动确认。</p>"
+          + "<p>公共日志只记录行业的流向，不公开秘密报价。Private trades 只显示你本人参与过的金额，Debts 可以展开查看每一张债务的利息和到期位置。</p>",
+        en: "<p>A full round is funding, backroom trading, market adjustment, the crash check and the interest settlement. After the settlement the game pauses and every seat confirms Next Round separately before play continues, so a disconnected player never confirms automatically.</p>"
+          + "<p>The public log records only which industries moved and never the secret offers. Private trades shows just the amounts of deals you took part in, and Debts expands to list the interest and due position of every single debt.</p>"
+      }
+    }
+  ]
+};
+
+const PONZI_SCHEME_EXPLAIN = {
+  fund: {
+    zh: "同时选择一个行业和一张资金牌。取得后该行业有 1、2、3 个时必须取市场第 1、2、3 行。立即收本金，之后永久按周期付息。同类已有三个或更多就不能再募资取得。",
+    en: "Pick an industry and a fund card together. Owning 1, 2 or 3 of that industry after the deal forces you to take row 1, 2 or 3 of the market. The principal arrives at once and the card charges interest forever on its period. You cannot fund a type you already own three or more of."
+  },
+  market: {
+    zh: "市场按本金从小到大排列，三行各三张，每取走一张就立即补充并重排。蓝色起始牌被移除时永久出局。红色熊牌仍然可以募资，但会计入市场崩盘数量。",
+    en: "The market is sorted by principal from low to high in three rows of three, and any card taken away is replaced and re-sorted at once. A blue starting card removed from the market leaves the game for good. A red bear card can still be funded but it counts towards the crash."
+  },
+  industry: {
+    zh: "各行业分别按数量计分，1、2、3、4、5 个分别是 1、3、6、10、15 分。交易可以突破三个的募资上限。行业有独立颜色和图标，功能完全相同。",
+    en: "Each industry scores on its own count, where 1, 2, 3, 4 and 5 are worth 1, 3, 6, 10 and 15 points. Trading can push you past the funding limit of three. The industries have their own colours and icons but work identically."
+  },
+  trade: {
+    zh: "双方必须都拥有所选行业。报价只给参与者看，发起时就放入信封托管。对方必须卖出一个该行业，或者以相同价格反向买入你的一个该行业，不能拒绝也不能改价。零元报价合法。",
+    en: "Both sides must own the industry you choose. The offer is visible only to the two of you and is held in an envelope from the moment it is made. The other player must sell one industry of that type or buy one of yours at the same price, with no refusing and no counter-offer. An offer of zero is legal."
+  },
+  sell: {
+    zh: "收下信封里的钱，交出一个约定的行业。该行业对应的债务仍然留在原持有人处，不会跟着行业转移。",
+    en: "Take the money in the envelope and hand over one industry of the agreed type. The debts tied to that industry stay with the original owner and never travel with it."
+  },
+  buy: {
+    zh: "另外支付与报价相同的钱买入对方的一个行业。原信封里的钱也会退还给对方，对方净收一次报价。余额不足时你只能选择卖出。",
+    en: "Pay the same amount as the offer to buy one of the other player's industries. The money in the envelope is returned to them as well, so they receive the offer exactly once. If you cannot afford it, selling is your only option."
+  },
+  remove: {
+    zh: "你刚收到起始标记。选择任意一张市场资金牌移除，再补牌，随后检查崩盘。移除起始牌会让它永久出局，其他牌进入弃牌堆。",
+    en: "You have just received the start marker. Remove any one fund card from the market, refill it, and then check for a crash. A removed starting card leaves the game for good and every other card goes to the discard pile."
+  },
+  crash: {
+    zh: "市场熊牌达到玩家人数时本轮崩盘一次，市场熊牌、弃牌堆和剩余牌库混洗。按照新起始玩家的顺序，各人归还一个自己数量最多的行业，并列时自选。时间前进两格，越过到期点的债务也要付款一次。",
+    en: "When the market holds as many bear cards as there are players the round crashes once and the market bears, the discard pile and the rest of the deck are shuffled. In new start-player order everybody returns one industry they own the most of, choosing freely on a tie. Time moves forward two spaces and any debt passed over still pays once."
+  },
+  luxury: {
+    zh: "进阶模式中，可以用一次发起交易的机会购买一件市场奢侈品。每件唯一，不能转卖，结束时增加所示分数。进阶模式的现金不计分。",
+    en: "In the advanced mode you may spend one opportunity to open a trade on a luxury instead. Each one is unique, cannot be resold and adds the points shown at the end. Cash scores nothing in the advanced mode."
+  },
+  pass: {
+    zh: "只跳过本次募资或发起交易的机会。你的债务仍然存在，市场调整之后会照常推进时间与付息。收到暗盘报价之后不能 Pass。",
+    en: "This only skips your chance to fund or to open a trade. Your debts stay in place and time still advances and charges interest after the market adjustment. You cannot pass once you have received a backroom offer."
+  },
+  confirm: {
+    zh: "确认当前选择并交给服务器验证。按钮变灰时请先选择合法的行业、卡牌或交易对象，并检查现在是否轮到你。",
+    en: "Confirm the current selection and hand it to the server for validation. When the button is greyed out, choose a legal industry, card or trading partner first and check that it is actually your turn."
+  },
+  next: {
+    zh: "本轮付息之后暂停供全员回顾。每个席位各自点击 Next Round，所有人确认之后才继续。掉线的人不会自动确认。",
+    en: "The game pauses after the interest payment so everyone can review. Each seat presses Next Round separately and play resumes only once everybody has confirmed. A disconnected player never confirms automatically."
+  },
+  debt: {
+    zh: "所有人的资金牌、利息、周期和到期位置都是公开的。1 格内和 2 格内分别表示正常推进与崩盘时要支付的总额。付息之后回到原周期，不会偿清本金也不会消除债务。",
+    en: "Everyone's fund cards, interest, periods and due positions are public. Within 1 space and within 2 spaces show what you owe on a normal advance and on a crash. After paying, the debt returns to its original period, and the principal is never cleared."
+  },
+  history: {
+    zh: "公共日志只记录行业流向，不公开秘密报价。Private trades 只显示你本人参与过的金额。现金只有本人可见。",
+    en: "The public log records only which industries moved and never the secret offers. Private trades shows just the deals you were involved in, and cash is visible to its owner alone."
+  },
+  help: {
+    zh: "打开庞氏骗局的完整规则说明，包含募资、暗盘交易、市场崩盘、付息破产和计分方式。",
+    en: "Open the full Ponzi Scheme rules: funding, backroom trades, market crashes, interest and bankruptcy, and how the final score is counted."
+  },
+  explain: {
+    zh: "打开解释模式之后再点界面上的任意控件，就会显示这个控件的说明。解释模式下不会执行任何游戏动作，按 Esc 可以退出。",
+    en: "Turn on explain mode and then tap any control to read what it does. No game action is ever performed in explain mode and Esc leaves it."
+  }
+};
+
+let ponziSchemeHelpWidget = null;
+let ponziSchemeExplainWidget = null;
+
 (() => {
     "use strict";
     const panel = document.getElementById("ponziSchemePanel");
@@ -9,22 +170,6 @@
     const dialogBody = document.getElementById("ponziSchemeDialogBody");
     const dialogClose = document.getElementById("ponziSchemeDialogClose");
     const phaseNames = {funding: "募资", trading: "暗盘交易", trade_response: "打开信封", market_remove: "调整市场", crash_discard: "市场崩盘", round_end: "本轮结算", game_over: "最终结算"};
-    const explanations = {
-        fund: "同时选择一个行业和一张资金牌。取得后该行业有 1／2／3 个时，必须取市场第 1／2／3 行。立即收本金，之后永久按周期付息；同类已有三个或更多，不能再募资取得。",
-        market: "市场按本金从小到大排列，三行各三张，每取走一张立即补充并重排。蓝色起始牌被移除时永久出局。红色熊牌仍可募资，但会计入市场崩盘数量。",
-        industry: "各行业分别按数量计分：1／2／3／4／5 个 = 1／3／6／10／15 分。交易可突破三个的募资上限。行业有独立颜色和图标，功能相同。",
-        trade: "双方必须拥有所选同类行业。报价只给参与者看，发起时放入信封托管。对方必须卖出一个行业，或以相同价格反向买入你的一个行业；不可拒绝或改价。零元报价合法。",
-        sell: "收下信封内的钱，交出一个约定行业。该行业对应的债务仍留在原持有人处，不跟随行业转移。",
-        buy: "另付与报价相同的钱买入对方一个行业。原信封里的钱也退给对方；对方净收报价一次。余额不足时只能卖出。",
-        remove: "你刚收到起始标记。选择任意一张市场资金牌移除，再补牌，随后检查崩盘。移除起始牌永久出局，其他牌进入弃牌堆。",
-        crash: "市场熊牌达到人数时本轮崩盘一次，市场熊牌、弃牌、剩余牌库混洗。依新起始玩家顺序，各归还一个自己最多的行业，并列时自选。时间前进两格，越过到期点的债务也要付款一次。",
-        luxury: "进阶模式中，可用一次发起交易的机会购买一件市场奢侈品。每件唯一，不能转卖，结束时增加所示分数。进阶模式现金不计分。",
-        pass: "只跳过本次募资或发起交易的机会。你的债务仍然存在，市场调整后会照常推进时间与付息。收到暗盘报价后不能 Pass。",
-        confirm: "确认当前选择并交给服务器验证。灰色时请先选择合法行业、卡牌或交易对象，并检查当前是否轮到你。",
-        next: "本轮付息后暂停供全员回顾。每个席位各自点击 Next Round，所有人确认后才继续。掉线的人不会自动确认。",
-        debt: "所有人的资金牌、利息、周期和到期位置都公开。1 格内和 2 格内分别表示正常推进／崩盘时要支付的总额。付息后回到原周期，不会偿清本金或消除债务。",
-        history: "公共日志只记录行业流向，不公开秘密报价。Private trades 只显示你本人参与的金额。现金仅本人可见。",
-    };
     let view = null;
     let signature = null;
     let selectedIndustry = null;
@@ -33,8 +178,6 @@
     let amount = "0";
     let pending = false;
     let pendingTimer = null;
-    let explaining = false;
-    let suppressedPointer = null;
     let returnFocus = null;
     const immediateTip = document.createElement("div");
     immediateTip.id = "ponziSchemeImmediateTip";
@@ -54,6 +197,33 @@
     const available = type => !pending && view?.legal_actions.includes(type);
     const industryLabel = key => `${view.industry_defs[key].icon} ${view.industry_defs[key].name}`;
     const button = (label, action, explain, disabled = false, attributes = "") => `<button type="button" data-ps-action="${action}" data-ps-explain="${explain}" ${disabled ? "disabled" : ""} ${attributes}>${label}</button>`;
+
+    function initPonziSchemeHelpExplain() {
+        if (ponziSchemeHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        ponziSchemeHelpWidget = window.obgCreateHelp(PONZI_SCHEME_HELP_CONFIG);
+        ponziSchemeExplainWidget = window.obgCreateExplain({
+            gameId: "ponzi_scheme",
+            attribute: "data-ps-explain",
+            explanations: PONZI_SCHEME_EXPLAIN,
+            button: explainButton,
+            root: () => panel,
+            bypass: ["#ponziSchemeHelpBtn", "#ponziSchemeExplainBtn"],
+            onChange: active => { if (active) hideImmediateTip(); }
+        });
+        helpButton?.addEventListener("click", () => {
+            ponziSchemeExplainWidget?.exit();
+            ponziSchemeHelpWidget.open();
+        });
+        explainButton?.addEventListener("click", () => ponziSchemeExplainWidget?.toggle());
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initPonziSchemeHelpExplain);
+    } else {
+        initPonziSchemeHelpExplain();
+    }
+
+    const explaining = () => Boolean(ponziSchemeExplainWidget?.isActive());
 
     function resetSelection() {
         selectedIndustry = null; selectedCard = null; selectedTarget = null; amount = "0";
@@ -209,7 +379,7 @@
     function render() {
         if (!view) return;
         hideImmediateTip();
-        panel.innerHTML = `<div class="ponzi-scheme-shell ${explaining ? "ponzi-scheme-explaining" : ""}">
+        panel.innerHTML = `<div class="ponzi-scheme-shell">
             <div class="ponzi-scheme-masthead"><span class="ponzi-scheme-eyebrow">${view.advanced ? "ADVANCED" : "BASIC"}</span><div class="ponzi-scheme-round"><span>Round</span><strong>${view.round}</strong></div></div>
             <div class="ponzi-scheme-status" role="status"><div><b>${phaseNames[view.phase]}</b><span>${view.current_turn ? `${view.current_turn === view.you ? "Your turn" : "Waiting for"} · ${esc(name(view.current_turn))}` : view.game_over ? "Game over" : `${view.next_ready.length} / ${view.players.length} ready`}</span></div><span class="ponzi-scheme-bears ${view.bear_count >= view.players.length ? "is-danger" : ""}">🐻 ${view.bear_count} / ${view.players.length} 崩盘</span></div>
             ${reviewHTML()}<div class="ponzi-scheme-layout"><div>${marketHTML()}</div><aside class="ponzi-scheme-sidebar">${cashHTML()}${actionHTML()}${historyHTML()}</aside></div>${playersHTML()}
@@ -224,34 +394,16 @@
     function addTip(target, text) {
         if (!target) return;
         target.dataset.psTip = text;
-        target.dataset.psExplain ||= "tip";
         target.setAttribute("tabindex", "0");
         target.setAttribute("aria-label", text);
         if (target.tagName !== "BUTTON") target.setAttribute("role", "button");
     }
 
     function decorateTips() {
-        // Explain mode uses the existing game controls as targets. Keep their
-        // details attached to the control without adding a separate info button
-        // to every card, industry, or action area.
-        panel.querySelectorAll("button[data-ps-explain]").forEach(control => {
-            let text = explanations[control.dataset.psExplain];
-            if (control.dataset.card) text = describeCard(view.market.find(card => card.id === control.dataset.card));
-            if (control.dataset.industry) {
-                const key = control.dataset.industry;
-                text = `${view.industry_defs[key].name}产业：持有 ${own().industries[key]} 个，按 n(n+1)/2 计分。募资最多到三个，按取得后的数量选对应资金行；交易没有数量上限。${view.phase === "crash_discard" ? "崩盘须归还一个数量最多的行业，并列可自选。" : ""}`;
-            }
-            if (control.dataset.luxury) {
-                const spec = view.luxury_defs[control.dataset.luxury];
-                text = `${spec.name}：花费 ${spec.cost} 单位现金获得 ${spec.points} 分。${explanations.luxury}`;
-            }
-            if (control.dataset.psAction === "amount") text = "秘密报价调整：以现金为单位增减报价，不会发送信封。选择好双方共同行业后，点击 Send offer 才会提交。";
-            if (text) control.dataset.psExplainText = text;
-        });
         const mark = (selector, text) => panel.querySelectorAll(selector).forEach(target => addTip(target, text));
         mark(".ponzi-scheme-round", "轮数：当前进行的完整轮次。每轮募资、交易、调整市场并支付到期利息，直到出现破产。 ");
         mark(".ponzi-scheme-bears", "熊市预警：前一个数字是市场熊牌张数，后一个是玩家人数。调整市场后达到人数就崩盘，本轮时间会前进两格。");
-        mark(".ponzi-scheme-status > div > b", `当前阶段：${phaseNames[view.phase]}。${({funding: explanations.fund, trading: explanations.trade, trade_response: explanations.trade, market_remove: explanations.remove, crash_discard: explanations.crash, round_end: explanations.next, game_over: "破产者出局，存活者按行业及财富／奢侈品计分。"})[view.phase]}`);
+        mark(".ponzi-scheme-status > div > b", `当前阶段：${phaseNames[view.phase]}。${({funding: PONZI_SCHEME_EXPLAIN.fund.zh, trading: PONZI_SCHEME_EXPLAIN.trade.zh, trade_response: PONZI_SCHEME_EXPLAIN.trade.zh, market_remove: PONZI_SCHEME_EXPLAIN.remove.zh, crash_discard: PONZI_SCHEME_EXPLAIN.crash.zh, round_end: PONZI_SCHEME_EXPLAIN.next.zh, game_over: "破产者出局，存活者按行业及财富／奢侈品计分。"})[view.phase]}`);
         mark(".ponzi-scheme-market h3", "资金市场：九张公开资金牌，按本金从小到大排成三行。根据取得行业后的数量选择对应行。");
         mark(".ponzi-scheme-cash > div:first-child > span, .ponzi-scheme-cash strong", "私人现金：只有你能看到的可用余额，单位为现金。用于暗盘交易、购买奢侈品及支付利息；已放入信封的金额暂不计入余额。");
         panel.querySelectorAll(".ponzi-scheme-pressure > span").forEach((target, index) => addTip(target,
@@ -260,11 +412,11 @@
         mark(".ponzi-scheme-wealth", "基础财富分：结束时剩余现金达到 30／56／78／96，分别得 1／2／3／4 分；最多 4 分。破产玩家不能获胜。");
         mark(".ponzi-scheme-price > span", "秘密报价：单位为现金，允许零元。加减按钮仅调整金额，点击 Send offer 才发送。发起时先托管，只有交易双方看到金额。");
         mark(".ponzi-scheme-trade-budget, .ponzi-scheme-envelope > small", "交易可用现金：放入信封的报价暂不计入可用余额。卖出时接收者拿到报价；反买时原报价退给发起者，接收者另付相同金额。");
-        mark(".ponzi-scheme-private-lock", explanations.history);
-        mark(".ponzi-scheme-envelope > span:not(.ponzi-scheme-envelope-icon)", view.offer ? `${view.industry_defs[view.offer.industry].name}产业：本次信封交易一个该行业。${explanations.trade}` : "");
+        mark(".ponzi-scheme-private-lock", PONZI_SCHEME_EXPLAIN.history.zh);
+        mark(".ponzi-scheme-envelope > span:not(.ponzi-scheme-envelope-icon)", view.offer ? `${view.industry_defs[view.offer.industry].name}产业：本次信封交易一个该行业。${PONZI_SCHEME_EXPLAIN.trade.zh}` : "");
         mark(".ponzi-scheme-market .ponzi-scheme-section-head > span, .ponzi-scheme-row-title", "市场排序与行号：本金从小到大排列。取得后的同类行业数量决定可选的第 1／2／3 行；cards left 表示尚未抽出的牌库张数。");
         mark(".ponzi-scheme-portfolios h3", "产业与公开债务：展示每名玩家的行业数量及循环利息，现金和暗盘价格保密。");
-        mark(".ponzi-scheme-luxuries h4", explanations.luxury);
+        mark(".ponzi-scheme-luxuries h4", PONZI_SCHEME_EXPLAIN.luxury.zh);
         mark(".ponzi-scheme-envelope-icon, .ponzi-scheme-offer-value", "秘密交易信封：显示双方约定的现金报价，只有参与者能看到金额；其他人只看到交易对象及行业。");
         mark(".ponzi-scheme-review h3, .ponzi-scheme-review .ponzi-scheme-section-head > span", "本轮结算：崩盘时推进两格，否则推进一格。所有人同时付息后在此回顾结果，全员 Next Round 才继续。");
         mark(".ponzi-scheme-winner", "获胜玩家：未破产玩家中总分最高者胜，同分比较持有资金牌的最高本金。全员破产时无人获胜。");
@@ -277,7 +429,7 @@
             if (status.textContent) addTip(status, player.bankrupt ? "破产：无法全额支付本轮利息，失去获胜资格。" : player.player_id === view.start_player ? "起始玩家标记：本轮从该玩家开始。交易结束后交给下一位，由新持有人移除一张市场资金牌。" : "机器人玩家：只依据公开局面和自己的私人信息进行操作。");
             addTip(target.querySelector(".ponzi-scheme-portfolio-value > strong"), "行业分：四类行业分别按 n(n+1)/2 计分后相加，尚未包含财富或奢侈品分数。");
             addTip(target.querySelector(".ponzi-scheme-portfolio-value > span"), player.player_id === view.you ? "你的私人现金：可用于报价、反买和付息，其他玩家看不到这个余额。" : "私人现金已隐藏：其他玩家的现金数额属于秘密信息。");
-            target.querySelectorAll(".ponzi-scheme-player-industries > span").forEach((chip, i) => addTip(chip, `${view.industry_defs[keys[i]].name}产业：持有 ${player.industries[keys[i]]} 个。${explanations.industry}`));
+            target.querySelectorAll(".ponzi-scheme-player-industries > span").forEach((chip, i) => addTip(chip, `${view.industry_defs[keys[i]].name}产业：持有 ${player.industries[keys[i]]} 个。${PONZI_SCHEME_EXPLAIN.industry.zh}`));
             addTip(target.querySelector(".ponzi-scheme-owned-luxuries"), `已购奢侈品：${player.luxuries.map(lid => `${view.luxury_defs[lid].name} ${view.luxury_defs[lid].points} 分`).join("、")}。这些资产公开且不可转卖。`);
             target.querySelectorAll(".ponzi-scheme-debt-track > div").forEach((slot, i) => addTip(slot, `债务到期位置：还需前进 ${i + 1} 格。大数字是该位置所有债务的利息总额，单位现金；零表示这里没有债务。`));
             target.querySelectorAll(".ponzi-scheme-debt-list > div").forEach((row, i) => addTip(row, `${describeCard(player.debts[i])} 当前${player.debts[i].remaining === 0 ? "已经到期" : `还需前进 ${player.debts[i].remaining} 格到期`}。`));
@@ -303,7 +455,7 @@
     }
 
     function showImmediateTip(target, touch = false) {
-        if (!target?.dataset.psTip || explaining || dialog.open || panel.classList.contains("hidden")) return;
+        if (!target?.dataset.psTip || explaining() || dialog.open || panel.classList.contains("hidden")) return;
         hideImmediateTip();
         tipAnchor = target;
         immediateTip.setAttribute("role", touch ? "status" : "tooltip");
@@ -344,13 +496,6 @@
         if (html) dialogBody.innerHTML = content;
         else dialogBody.textContent = content;
         if (!dialog.open) dialog.showModal();
-    }
-
-    function setExplain(enabled) {
-        hideImmediateTip();
-        explaining = enabled;
-        explainButton.setAttribute("aria-pressed", String(enabled));
-        panel.querySelector(".ponzi-scheme-shell")?.classList.toggle("ponzi-scheme-explaining", enabled);
     }
 
     panel.addEventListener("toggle", event => {
@@ -397,54 +542,12 @@
         const rect = dialog.getBoundingClientRect();
         if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
     });
-    helpButton.addEventListener("click", () => {
-        setExplain(false);
-        openDialog("Ponzi Scheme · Help", `
-            <p><strong>目标</strong>：不要成为最先破产的人。3–5 人，开局无现金、无行业；有人付不起利息时，所有当轮破产者落败，存活者按分数决胜。</p>
-            <p><strong>① 募资</strong>：按起始玩家顺序，取得一个行业与一张对应行资金牌，或 Pass。取得后同类行业有 1／2／3 个，分别只能拿第 1／2／3 行；已有三个及以上不能再募资该行业。本金立即入账，只收一次。每次取牌后补市场到九张，按本金重新排序。</p>
-            <p><strong>② 暗盘交易</strong>：每人有一次发起机会，可 Pass。选择双方均拥有的行业，给出秘密整数报价（可为零）。接收者必须卖出自己的一个行业并收钱，或支付同价反买发起者的一个行业。没有拒绝或改价；债务不会跟随行业转移，交易取得行业不受三个上限。</p>
-            <p><strong>🔒 信封</strong>：报价从发起者可用现金中暂扣。卖出时交给接收者；反买时，报价退还发起者，接收者另支付同额。只有双方能看到价格或私人交易记录，他人只能看到行业流向。</p>
-            <p><strong>③ 市场调整</strong>：起始标记顺移一位，新起始玩家移除市场任意一张牌，再补齐。起始牌永久出局，其他牌进入弃牌堆。牌库空时重洗弃牌。</p>
-            <p><strong>④ 🐻 崩盘</strong>：调整后的熊牌数量达到玩家人数，本轮崩盘一次。所有市场熊牌、弃牌与剩余牌库混洗后补市场；不会立刻再次崩盘。自新起始玩家开始，每人归还一个自己最多的行业，并列时自选，无行业时跳过。</p>
-            <p><strong>⑤ ⏳ 付息</strong>：通常时间前进一格；崩盘前进两格。到期或越过到期点的牌都只支付一次。所有人同时检查能否全额支付。付得起的扣款，债务回到原周期；付不起的破产。资金牌永远保留，不能提前付息或偿清债务。</p>
-            <p><strong>⏸ Next Round</strong>：每轮结算后全员分别确认再继续，掉线不会自动确认。Private trades 保留本人参与的交易；Debts 可展开查看每张债务。</p>
-            <p><strong>⭐ 计分</strong>：每个行业 n 个 = n(n+1)/2 分：0／1／2／3／4／5／6 个对应 0／1／3／6／10／15／21 分。基础模式现金 0–29／30–55／56–77／78–95／96+ 对应 0／1／2／3／4 分。同分时最大本金资金牌较高者胜，再同则共享胜利。全员破产时无人获胜。</p>
-            <p><strong>💎 进阶</strong>：发起交易的机会可改为购买一件奢侈品：💍30→1分、🚘56→2分、🛥️78→3分、🏙️96→4分。每件唯一，不能转卖；进阶现金不计分。</p>
-            <p><strong>版本</strong>：四类行业各 15 个，72 张资金牌（9 起始、47 普通、16 熊）。默认采用作者补充的首轮跳过交易；房间可开启 First-round trading。牌表来自可追溯的 MIT 许可转录，并核对规则书示例与作者勘误。</p>
-            <p><strong>Controls</strong>：点选后 Confirm，点击空白或 Esc 取消；Close、Esc 或对话框外关闭弹窗。点击 Explain 后再点选板块、卡牌或区域查看说明；图标和缩写可悬停或聚焦查看即时提示，手机轻点后显示三秒，再点重新计时。Explain 模式只展示说明，灰色按钮也可点，按 Esc 退出。</p>
-            <p><a href="https://cdn.1j1ju.com/medias/0c/7f/67-ponzi-scheme-rulebook.pdf" target="_blank" rel="noopener noreferrer">Rulebook</a> · <a href="https://www.flyingv.cc/projects/4303/comments" target="_blank" rel="noopener noreferrer">Designer’s corrections</a></p>`, true);
-    });
-    explainButton.addEventListener("click", () => setExplain(!explaining));
     dialogClose.addEventListener("click", () => dialog.close());
     dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
 
-    function explainTarget(target) {
-        const text = target && (target.dataset.psExplainText || target.dataset.psTip || explanations[target.dataset.psExplain]);
-        if (text) { setExplain(false); openDialog("Explain", text); }
-    }
-    document.addEventListener("pointerdown", event => {
-        if (!explaining || panel.classList.contains("hidden") || header.contains(event.target) || dialog.contains(event.target)) return;
-        event.preventDefault(); event.stopImmediatePropagation();
-        const target = Array.from(panel.querySelectorAll("[data-ps-explain]")).find(element => {
-            const rect = element.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0 && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-        });
-        if (target) { suppressedPointer = {x: event.clientX, y: event.clientY, time: Date.now()}; explainTarget(target); }
-    }, true);
-    document.addEventListener("click", event => {
-        if (suppressedPointer) {
-            const point = suppressedPointer; suppressedPointer = null;
-            if (Date.now() - point.time < 700 && Math.abs(event.clientX - point.x) < 6 && Math.abs(event.clientY - point.y) < 6) {
-                event.preventDefault(); event.stopImmediatePropagation(); return;
-            }
-        }
-        if (!explaining || header.contains(event.target) || dialog.contains(event.target)) return;
-        event.preventDefault(); event.stopImmediatePropagation();
-        if (panel.contains(event.target)) explainTarget(event.target.closest("[data-ps-explain]"));
-    }, true);
     const isInteractiveSelectionTarget = target => target?.closest?.("button, input, select, summary, a, dialog, label, [data-ps-tip]");
     panel.addEventListener("pointerdown", event => {
-        if (!view || explaining || pending || !(selectedCard || selectedIndustry || selectedTarget) || isInteractiveSelectionTarget(event.target)) return;
+        if (!view || explaining() || pending || !(selectedCard || selectedIndustry || selectedTarget) || isInteractiveSelectionTarget(event.target)) return;
         // Defer clearing until pointerup. A touch that moves is a scroll gesture,
         // while a short, stationary tap is an intentional blank-area click.
         selectionPointer = {
@@ -459,16 +562,16 @@
     });
     document.addEventListener("keydown", event => {
         if (event.key === "Tab") inputKind = "keyboard";
-        if ((event.key === "Enter" || event.key === " ") && event.target.closest("[data-ps-tip]") && !explaining) {
+        if ((event.key === "Enter" || event.key === " ") && event.target.closest("[data-ps-tip]") && !explaining()) {
             event.preventDefault(); showImmediateTip(event.target.closest("[data-ps-tip]")); return;
         }
         if (event.key === "Escape" && !immediateTip.hidden) { hideImmediateTip(); event.preventDefault(); return; }
         if (dialog.open) return;
-        if (event.key === "Escape" && !panel.classList.contains("hidden")) { setExplain(false); resetSelection(); render(); }
+        if (event.key === "Escape" && !panel.classList.contains("hidden")) { resetSelection(); render(); }
     });
 
     document.addEventListener("pointerover", event => {
-        if (event.pointerType === "touch" || event.pointerType === "pen" || explaining) return;
+        if (event.pointerType === "touch" || event.pointerType === "pen" || explaining()) return;
         if (immediateTip.contains(event.target) || tipAnchor?.contains(event.target)) window.clearTimeout(tipHideTimer);
         const target = event.target.closest("#ponziSchemePanel [data-ps-tip]");
         if (target && target !== tipAnchor) { inputKind = "mouse"; showImmediateTip(target); }
@@ -480,13 +583,13 @@
     });
     document.addEventListener("focusin", event => {
         const target = event.target.closest("#ponziSchemePanel [data-ps-tip]");
-        if (target && inputKind !== "touch" && !explaining) showImmediateTip(target);
+        if (target && inputKind !== "touch" && !explaining()) showImmediateTip(target);
     });
     document.addEventListener("focusout", event => {
         if (inputKind !== "touch" && tipAnchor?.contains(event.target) && !immediateTip.contains(event.relatedTarget)) hideImmediateTip();
     });
     document.addEventListener("pointerdown", event => {
-        if (explaining || panel.classList.contains("hidden")) return;
+        if (explaining() || panel.classList.contains("hidden")) return;
         const target = event.target.closest("#ponziSchemePanel [data-ps-tip]");
         inputKind = event.pointerType === "touch" || event.pointerType === "pen" ? "touch" : "mouse";
         if (target && inputKind === "touch") touchStart = {id: event.pointerId, target, x: event.clientX, y: event.clientY, time: Date.now(), moved: false};
@@ -506,21 +609,21 @@
             const start = selectionPointer;
             selectionPointer = null;
             const intentionalTap = !start.moved && !start.tipDismissed && Date.now() - start.time < 700;
-            if (intentionalTap && panel.contains(event.target) && !isInteractiveSelectionTarget(event.target) && view && !explaining && !pending) {
+            if (intentionalTap && panel.contains(event.target) && !isInteractiveSelectionTarget(event.target) && view && !explaining() && !pending) {
                 resetSelection();
                 render();
             }
         }
         if (!touchStart || touchStart.id !== event.pointerId) return;
         const start = touchStart; touchStart = null;
-        if (!start.moved && Date.now() - start.time < 700 && start.target.isConnected && !explaining) {
+        if (!start.moved && Date.now() - start.time < 700 && start.target.isConnected && !explaining()) {
             event.preventDefault(); event.stopImmediatePropagation(); showImmediateTip(start.target, true);
         }
     }, true);
     document.addEventListener("pointercancel", () => { touchStart = null; selectionPointer = null; }, true);
     document.addEventListener("click", event => {
         const target = event.target.closest("#ponziSchemePanel [data-ps-tip]");
-        if (!target || explaining) return;
+        if (!target || explaining()) return;
         event.preventDefault(); event.stopImmediatePropagation();
         if (inputKind !== "touch") showImmediateTip(target);
     }, true);
@@ -529,8 +632,8 @@
 
     function clearState() {
         hideImmediateTip(); touchStart = null; selectionPointer = null;
-        view = null; signature = null; pending = false; suppressedPointer = null;
-        resetSelection(); setExplain(false); openDetails.clear(); window.clearTimeout(pendingTimer);
+        view = null; signature = null; pending = false;
+        resetSelection(); openDetails.clear(); ponziSchemeExplainWidget?.exit(); window.clearTimeout(pendingTimer);
         if (dialog.open) dialog.close();
         panel.innerHTML = "";
     }

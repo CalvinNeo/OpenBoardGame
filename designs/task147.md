@@ -88,6 +88,16 @@
 - `ROOM_TEST_URL=http://127.0.0.1:8147 PLAYWRIGHT_MODULE=<playwright> node tests/the_mind.browser.cjs` 通过（连续三次）：17 个视图 × 320／390／1024／1440px 的页面与容器无横向溢出、无内容溢出、关键容器两两不重叠；面板本身即桌面（内部容器无边框无背景）、页头三枚按钮不换行、无 Clear Selection、无逐块 i 标记；他人手牌数值不出现在 DOM，注入的 `<img onerror>` 名字被转义；Ready／Play／Stop／飞镖投票／Next Round 的提交与禁用态、系统错误后恢复；日志默认折叠、可展开且有界；悬停与三秒点按提示；Help 含 `Life (❤️)`／`Throwing star (🌟)`／`Ready (🖐️)`／`Stop (⏸️)` 且 Esc 关闭后焦点回到 Help；Explain 对区域与禁用按钮生效且不误发动作；触屏滑动不解释、轻点才解释；真实房间加机器人完成发牌→准备→出牌→（飞镖）→结算→下一关→刷新恢复→离开清理。
 - 截图保存在 `build/the-mind-ui/`（各宽度对局、结算、12 张手牌、长名字、Help 与真实房间结算）。
 
+### 手机版间距修正（同日追加）
+
+首版把网格间距写在 `.tm-panel` 上，但真正的渲染根是 `#tmSurface`（`.tm-root`）——状态条、进度轨、席位与主体都是它的子元素，那一层没有任何 `gap`，所以这四段一直是 0 间距贴死；只有 `.tm-main` 里的桌面／行动区／手牌间距生效。已把布局改为 `.tm-root { display: grid; gap }`，并引入 `--tm-gap`／`--tm-gap-sm`／`--tm-pad` 间距变量（桌面 14／10／16px，≤600px 为 12／9／13px，≤360px 再收一档），同时把统计块、席位、牌堆、按钮、卡片、回顾行、日志的内边距整体调大一档。
+
+- 实测各断点相邻板块间距：320px 11px、390px 12px、1024／1440px 14px，全部一致；`#theMindPanel` 高度 320px 为 646px、390px 为 660px，仍在一屏内。
+- 进度轨底色由 `#263a3f` 提到 `#2e444b` 并加内描边，否则只有已完成的绿色段可见，整条轨道读起来像随机色块。
+- `.tm-felt-info` 的 `minmax(168px, 1fr)` 在 320px 下会撑出容器，改为 `minmax(min(168px, 100%), 1fr)`。
+- 浏览器用例新增「相邻板块最小间距 ≥7px」断言（按垂直重叠判断是否同行，以兼容 `align-self: center` 的阶段药丸）。反向验证：把 `.tm-root` 的 `gap` 改回 0 后该断言立即报出 3 处 `tight spacing 0.0px in .tm-root`。
+- 资源版本 `the_mind.css` 升至 v=4，首页加载器版本同步。
+
 ### 未检查项
 
 - 未做 iOS／Android／Windows 真机验证；Emoji 兼容性按 iOS／Windows 常见集合挑选，牌背图标改为自绘以规避缺字。
