@@ -88,3 +88,33 @@ python3 -m unittest tests.test_boomerang_australia tests.test_boomerang_australi
 JS 语法检查及 `git diff --check` 通过。纯 UI 收尾未重跑逻辑测试。验收脚本、结果和截图位于 `tmp/task104/`：`browser-qa-results.json`、`browser-bot-results.json`、`desktop-initial.png`、`desktop-review.png`、`draft-375-compact.png`、`draft-320-compact.png`、`final-1440.png`、`final-375.png`、`mobile-tooltip.png`。
 
 工作区同期有另一款游戏正在实现；早期仅为避开其未完成导入而使用临时隔离验证，最终上述 68 项测试和浏览器验收均已在正常完整工作区导入下通过。未修改另一游戏的专属文件，保留其共享文件接入。
+
+## UI 优化记录（DEV_GUIDE 复核）
+
+按 `DEV_GUIDE.md` 重新过了一遍前端，目标是去掉嵌套框、把移动端关键操作提到首屏、把决策信息放到做决定的地方。
+
+### 复核发现的问题
+
+1. 面板内又套了一层 `.boomerang-shell` 圆角纸框，且面板标题仍是通用 `Game`，违反“主体直接实现在 Game 内、禁止再嵌套一层框”。
+2. 顶部标题块（英文 eyebrow + 中英标题 + 轮次徽章）占用约 90px，移动端把 Confirm 挤到首屏之外（390px 下 Confirm 落在 y≈860）。
+3. 手牌没有“该地点是否已访问”“该地区已收几个”这两个直接影响选牌的信息，玩家必须翻到页面底部的旅行记录才能判断。
+4. 轮末结果里所有人的条目样式相同，没有按交互要求加强显示自己的条目。
+5. 活动阶段缺少本轮已得分概览，玩家要在活动按钮和侧栏计分之间来回滚动。
+
+### 改动
+
+- `static/game_assets.js`：新增 `panelTitle`（🪃 世界巡游 · 澳洲），面板标题改由游戏名与图标承担；脚本与样式版本号升到 `?v=4` / `?v=2`，首页加载器版本同步升到 `game_assets.js?v=211`。
+- `static/games/boomerang_australia.js`：删除内部标题块，改为紧凑状态条（Round n/4 + 阶段标题 + 传牌方向 + Pick 进度点）；手牌新增 `n/4` 地区进度与 `✓` 已访问标记（0/4 不显示以减少噪音）；轮末结果给自己的条目加 `is-you` 高亮与 `You` 标签；活动阶段在按钮上方加入 `Round so far` 分项条（不含尚未计分的活动）；Help 补充 ✓ 与 n/4 的说明。
+- `static/boomerang_australia.css`：外框、纸色背景与内边距迁到 `.game-panel[data-game-theme="boomerang_australia"]`，`.boomerang-shell` 退化为无边框容器；新增状态条、地区进度、已访问标记、预览条、`is-you` 结果卡样式；移动端手牌改为 4 列（≤350px 为 3 列），已收集牌与旅行手册同样 4 列，并整体压缩间距。
+
+### 验证
+
+```sh
+node --check static/games/boomerang_australia.js static/game_assets.js tests/boomerang_australia.browser.cjs
+python3 -m unittest tests.test_frontend_style_assets
+PLAYWRIGHT_MODULE=<playwright> ROOM_TEST_URL=http://127.0.0.1:8000 node tests/boomerang_australia.browser.cjs
+```
+
+新增 `tests/boomerang_australia.browser.cjs`：1 真人 + 2 机器人完整四轮到终局，在 1440／1024／390／320px 采集 6 个阶段共 24 组布局指标与截图，并断言选牌、Esc 取消选择、Help 的 Esc 关闭、Explain 对 disabled 控件生效且不提交动作、桌面悬停提示。结果：24 组均无页面／面板横向溢出、无同类元素重叠；仅 `.boomerang-opponents`、`.boomerang-log ul`、`.boomerang-score-history` 三个刻意保留的滚动区被标记为内部滚动。截图与 `report.json` 位于 `build/boomerang-australia-ui/`。
+
+390px 首屏高度由 1401px 降到 1186px，Confirm 回到首屏内。纯 UI 改动，未触碰规则与协议。

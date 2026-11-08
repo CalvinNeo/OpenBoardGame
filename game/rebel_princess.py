@@ -989,10 +989,12 @@ class RebelPrincessGame:
                 return events, None
             if action_type != "use_princess":
                 return [], "invalid action"
-            hand_card = _remove_card(pdata["hand"], action.get("hand_card_id"))
+            hand_card = _find_card(pdata["hand"], action.get("hand_card_id"))
             trick_card = _find_card(pending.get("trick_cards") or [], action.get("trick_card_id"))
-            if not hand_card or not trick_card:
+            if not hand_card or not trick_card or not _find_card(pdata["won_cards"], trick_card["id"]):
                 return [], "invalid exchange"
+            _remove_card(pdata["hand"], hand_card["id"])
+            _remove_card(pdata["won_cards"], trick_card["id"])
             _remove_card(pending["trick_cards"], trick_card["id"])
             pdata["hand"].append(trick_card)
             pdata["hand"] = _sort_cards(pdata["hand"])
@@ -1179,30 +1181,22 @@ class RebelPrincessGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        legal = RebelPrincessGame.get_legal_actions(state, bot_id)
-        if not legal:
+        from game.rebel_princess_ai import choose_action
+
+        if not RebelPrincessGame.get_legal_actions(state, bot_id):
             return None
         pdata = state["players"][bot_id]
-        if "pass_cards" in legal:
-            return {"type": "pass_cards", "card_ids": [c["id"] for c in pdata["hand"][: _pass_requirement(state)]]}
-        if "setup_choice" in legal:
-            if state["phase"] == "reveal_suit":
-                return {"type": "setup_choice", "suit": random.choice(SUITS)}
-            count = max(1, len(pdata["hand"]) // 2) if state["phase"] == "split_hand" else 1
-            key = "card_ids" if state["phase"] == "split_hand" else "card_id"
-            ids = [c["id"] for c in pdata["hand"][:count]]
-            return {"type": "setup_choice", key: ids if key == "card_ids" else ids[0]}
-        if "choose_card" in legal:
-            return {"type": "choose_card", "card_id": pdata["hand"][0]["id"]}
-        if "play_card" in legal:
-            options = _legal_cards(state, bot_id)
-            if options:
-                return {"type": "play_card", "card_id": random.choice(options)["id"]}
-        if "next_round_ready" in legal:
-            return {"type": "next_round_ready"}
-        if "skip" in legal:
-            return {"type": "skip"}
-        return None
+        view = RebelPrincessGame.get_public_view(state, bot_id)
+        view.update({
+            "rank_inversions": state.get("rank_inversions", 0),
+            "forced_lead_suit": state.get("forced_lead_suit"),
+            "random_lead": state.get("random_lead", False),
+            "pea_constraint": state.get("pea_constraint", False),
+            "_your_won_cards": [_public_card(card) for card in pdata["won_cards"]],
+            "_your_set_aside": [_public_card(card) for card in pdata.get("set_aside", [])],
+            "_your_reserved_card": _public_card(pdata.get("reserved_last_card")),
+        })
+        return choose_action(view)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

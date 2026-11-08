@@ -114,6 +114,23 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(app._public_bot_action("felix", bid), bid)
         self.assertEqual(action, {"type": "choose_card", "card_id": "red_cat_-8"})
 
+    async def test_rebel_princess_bot_choices_are_sanitized(self):
+        actions = [
+            {"type": "pass_cards", "card_ids": ["pet-8", "queen-10", "prince-10"]},
+            {"type": "setup_choice", "card_ids": ["queen-10", "prince-10"]},
+            {"type": "setup_choice", "card_id": "queen-2"},
+            {"type": "choose_card", "card_id": "pet-8"},
+            {"type": "play_card", "card_id": "prince-10", "use_snow_white": False},
+            {"type": "use_princess", "give_card_id": "pet-8"},
+            {"type": "use_princess", "keep_card_id": "queen-2"},
+            {"type": "use_princess", "hand_card_id": "queen-10", "trick_card_id": "pet-8"},
+        ]
+        for action in actions:
+            with self.subTest(action=action):
+                original = dict(action)
+                self.assertEqual(app._public_bot_action("rebel_princess", action), {"type": action["type"]})
+                self.assertEqual(action, original)
+
     async def test_bomb_busters_bot_action_is_sanitized(self):
         action = {
             "type": "dual_cut",

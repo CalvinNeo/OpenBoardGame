@@ -1,6 +1,8 @@
 import random
 from typing import Dict, List, Optional, Tuple
 
+from game.kobayakawa_ai import choose_action
+
 DEFAULT_CONFIG = {
     "starting_tokens": 4,
     "end_mode": "bankrupt",
@@ -458,39 +460,7 @@ class KobayakawaGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
-            return None
-        pdata = state.get("players", {}).get(bot_id)
-        if not pdata or bot_id != state.get("current_turn"):
-            return None
-        phase = state.get("phase")
-        if phase == "action":
-            drawn = pdata.get("drawn_card")
-            if drawn is not None:
-                hand = pdata.get("hand")
-                if hand is None:
-                    return {"type": "discard_drawn"}
-                if drawn >= hand:
-                    return {"type": "keep_drawn"}
-                return {"type": "discard_drawn"}
-            if random.random() < 0.7:
-                return {"type": "draw_card"}
-            return {"type": "replace_kobayakawa"}
-        if phase == "betting":
-            if int(pdata.get("tokens", 0)) <= 0:
-                return {"type": "pass"}
-            hand = pdata.get("hand")
-            kobayakawa = state.get("kobayakawa")
-            if hand is None or kobayakawa is None:
-                return {"type": "pass"}
-            if hand <= 3 and kobayakawa >= 11:
-                return {"type": "fight"}
-            if hand < 7 and kobayakawa <= 4:
-                return {"type": "pass"}
-            if hand >= 10:
-                return {"type": "fight"}
-            return {"type": "fight"} if random.random() < 0.5 else {"type": "pass"}
-        return None
+        return choose_action(KobayakawaGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

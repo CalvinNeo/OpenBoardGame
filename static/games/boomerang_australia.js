@@ -40,6 +40,9 @@
         animal: "动物每两只同类计一对：袋鼠(🦘) 3、鸸鹋(🐦) 4、袋熊(🐾) 5、考拉(🐨) 7、鸭嘴兽(🦆) 9。落单不计，四只计两对。",
         direction: "每批次所有玩家选一张后把余牌向箭头所示方向传递。默认向左；开启方向变体时，第 2、4 轮向右。两人局方向不影响交换对象。",
         history: "计分纸保留四轮的分项结果。景点一列只计本轮新地点，地区一列只计本轮新奖励，累计总分不会重复加入已访问地点。",
+        visited: "✓ 表示这个地点你以前已经访问过：图标仍照常计分，但景点(📍)的 1 分不会重复获得。",
+        progress: "n/4 表示你在这个地区已经访问过的地点数。收满四个时，最早完成的同一轮所有完成者各得 3 分地区奖励(🗺️)。",
+        round: "一局共四轮。Round n/4 显示当前是第几轮；🏆 表示四轮已结束，正在展示最终结果。",
     };
     let view = null, selection = null, activitySelection = null, signature = null;
     let pending = false, pendingAction = null, pendingTimer = null, explaining = false, suppressed = null;
@@ -68,6 +71,7 @@
     const cardById = id => view?.catalog?.[id];
     const name = id => view?.players.find(player => player.player_id === id)?.name || "—";
     const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const visitedSet = () => new Set(own()?.visited || []);
     const button = (label, action, explanation, disabled = false, className = "") => `<button type="button" class="${className}" data-boomerang-action="${action}" data-boomerang-explain="${explanation}" ${disabled ? "disabled" : ""}>${label}</button>`;
     const info = (text, label = "Info") => `<button type="button" class="boomerang-info" aria-label="${esc(label)}" data-boomerang-tip="${esc(text)}">ⓘ</button>`;
     const badge = (text, explanation, className = "") => `<span class="boomerang-symbol ${className}" tabindex="0" role="button" data-boomerang-tip="${esc(explanation)}" aria-label="${esc(explanation)}">${text}</span>`;
@@ -114,7 +118,7 @@
             <h3>选牌与传牌</h3><ol><li>每轮每人七张，秘密选择第一张 Throw 投掷牌(🪃)。自己始终可见，别人到选牌结束才看到。</li><li>余牌向指定方向传递，每次点选一张并 Confirm。所有人锁定后一起揭示和传牌，未提交的选择只给本人看。</li><li>共六次选牌；最后剩下的一张自动传给下家，成为 Catch 接回牌(🪃)。七张都计分。</li><li>选择一种尚未计分的活动，或 Skip。全员选择后保留本轮计分；每人点击 Next Round 才继续，第四轮确认后展示胜者。</li></ol>
             <h3>计分</h3><ul><li>${explanations.throw}</li><li>${explanations.region}</li><li>${explanations.collection}</li><li>${explanations.animal}</li><li>游泳(🏊)、徒步(🥾)、原住民文化(🪃)、观光(📷)：每轮可选一种未使用的活动；每种整局只用一次，零分也会占用。也可 Skip 保留机会。</li></ul>
             <div class="boomerang-help-table"><div><strong>本轮图标</strong><span>0 / 1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div><div><strong>活动分数</strong><span>0</span><span>2</span><span>4</span><span>7</span><span>10</span><span>15</span></div></div>
-            <h3>累计旅行与胜负</h3><p>同一个景点只计一次。每个地区四个景点，最早完成的同一轮可有多位玩家各得 3 分；以后完成没有奖励。${explanations.score}</p>
+            <h3>累计旅行与胜负</h3><p>同一个景点只计一次，牌面上的 ✓ 表示这个地点你已访问过。牌面上的 n/4 是你在该地区已访问的地点数。每个地区四个景点，最早完成的同一轮可有多位玩家各得 3 分；以后完成没有奖励。${explanations.score}</p>
             <h3>发牌与方向变体</h3><p>四人局每轮重洗全部 28 张。二／三人局上轮未发的牌保留在顶部，使用过的牌洗好放在下方，优先发出此前未发的牌。默认全程向左；开启方向变体时，第 2、4 轮向右。两人局方向不改变交换对象。</p>
             <h3>线上操作</h3><p>点选后 Confirm；空白或 Esc 取消尚未提交的选择。已经锁定的选择不可撤回。回顾必须等待所有席位各自确认，机器人仅确认自己，断线玩家不会自动跳过。手牌、未揭示 Throw 和尚未公开的选择只有本人可见。</p>
             <p>桌面悬停或键盘聚焦查看图标说明；手机轻点图标显示三秒提示。Explain 可解释禁用控件，不会执行游戏操作。图标为辅助识别，名称与图标共同说明含义；地区面板是旅行记录，并非可拖拽地图。</p>`);
@@ -132,11 +136,17 @@
         const selected = selectable && (selection === card.id || view.pending_card === card.id);
         const cardRegion = region(card.region);
         const label = index === 0 ? "Throw" : index === 6 ? "Catch" : null;
+        const regionCards = cardRegion.cards || [];
+        const visited = visitedSet();
+        const alreadyVisited = selectable && visited.has(card.id);
+        const collected = regionCards.filter(cardId => visited.has(cardId)).length;
+        const awarded = view.players.some(player => (player.region_bonuses || []).includes(card.region));
         const accessible = `${card.id} · ${cardName(card)} · ${cardRegion.name_zh} · ${card.number}`;
-        return `<article class="boomerang-card ${selected ? "is-selected" : ""} ${selectable ? "is-selectable" : ""} ${compact ? "is-compact" : ""}" style="--boomerang-region:${regionColors[card.region] || "#62857c"}" ${selectable ? `role="button" tabindex="0" data-boomerang-card="${esc(card.id)}" aria-pressed="${selected}" aria-disabled="${!legal("draft_card")}"` : ""} data-boomerang-explain="card" aria-label="${esc(accessible)}">
-            <div class="boomerang-card-top"><span class="boomerang-place-code" tabindex="0" role="button" data-boomerang-tip="${esc(`${card.id}：${cardName(card)}${card.name && card.name !== cardName(card) ? ` (${card.name})` : ""}，所属${cardRegion.name_zh}。访问过的景点不再重复计分。`)}">${esc(card.id)}</span>${badge(esc(card.number), explanations.throw, "boomerang-number")}</div>
+        const regionTip = `${cardRegion.name_zh}(${cardRegion.name})：${collected}/${regionCards.length || 4} 已访问。${awarded ? "地区奖励已颁发。" : "首次收齐的同一轮，所有完成者各得 3 分。"}`;
+        return `<article class="boomerang-card ${selected ? "is-selected" : ""} ${selectable ? "is-selectable" : ""} ${compact ? "is-compact" : ""} ${alreadyVisited ? "is-visited" : ""}" style="--boomerang-region:${regionColors[card.region] || "#62857c"}" ${selectable ? `role="button" tabindex="0" data-boomerang-card="${esc(card.id)}" aria-pressed="${selected}" aria-disabled="${!legal("draft_card")}"` : ""} data-boomerang-explain="card" aria-label="${esc(accessible)}">
+            <div class="boomerang-card-top"><span class="boomerang-place-code" tabindex="0" role="button" data-boomerang-tip="${esc(`${card.id}：${cardName(card)}${card.name && card.name !== cardName(card) ? ` (${card.name})` : ""}，所属${cardRegion.name_zh}。${alreadyVisited ? "你已访问过这个地点，景点分不再重复。" : "访问过的景点不再重复计分。"}`)}">${esc(card.id)}</span>${badge(esc(card.number), explanations.throw, "boomerang-number")}</div>
             <div class="boomerang-card-place"><strong>${esc(cardName(card))}</strong><small lang="en">${esc(card.name || "")}</small></div>
-            <div class="boomerang-card-region">${esc(cardRegion.name_zh || cardRegion.name)}</div>
+            <div class="boomerang-card-region"><span class="boomerang-region-name">${esc(cardRegion.name_zh || cardRegion.name)}</span>${selectable && collected ? `<span class="boomerang-region-progress ${awarded ? "is-awarded" : ""}" tabindex="0" role="button" data-boomerang-tip="${esc(regionTip)}">${collected}/${regionCards.length || 4}</span>` : ""}${alreadyVisited ? `<span class="boomerang-visited-flag" tabindex="0" role="button" data-boomerang-tip="${esc(explanations.visited)}">✓</span>` : ""}</div>
             <div class="boomerang-card-icons">${symbolHTML("collection", card.collection)}${symbolHTML("animal", card.animal)}${symbolHTML("activity", card.activity)}</div>
             ${label ? `<span class="boomerang-card-role">${label === "Throw" ? "🪃" : "↩"} ${label}</span>` : ""}
             ${selected ? '<span class="boomerang-card-selected">✓</span>' : ""}
@@ -152,10 +162,31 @@
         return view.pick === 1 ? "Choose your secret Throw card." : "Choose one destination from the cards passed to you.";
     }
 
+    function statusHTML() {
+        const title = view.game_over ? "Final results" : view.phase === "round_end" ? "Round review" : view.phase === "choose_activity" ? "Choose an activity" : view.pick === 1 ? "Choose your Throw card" : "Choose a destination";
+        return `<div class="boomerang-status">
+            <span class="boomerang-round-chip" tabindex="0" role="button" data-boomerang-tip="${esc(explanations.round)}">${view.game_over ? "🏆 Final" : `Round ${view.round}/4`}</span>
+            <strong class="boomerang-phase-title">${title}</strong>
+            ${view.game_over ? "" : `<span class="boomerang-direction" tabindex="0" role="button" data-boomerang-tip="${esc(explanations.direction)}">${view.direction === "right" ? "Pass right →" : "← Pass left"}</span>`}
+            ${view.phase === "draft" && !view.game_over ? `<div class="boomerang-pick-progress"><span>Pick ${view.pick}/6</span><div>${Array.from({length: 6}, (_, index) => `<i class="${index < view.pick ? "is-done" : ""}"></i>`).join("")}</div></div>` : ""}
+        </div>`;
+    }
+
     function playerHTML(player) {
         const ready = view.next_ready?.includes(player.player_id);
         const status = view.phase === "round_end" ? (ready ? "Ready ✓" : "Reviewing") : view.game_over ? "Final score" : player.submitted ? "Locked ✓" : "Choosing";
         return `<div class="boomerang-player ${player.player_id === view.you ? "is-you" : ""}"><div><strong>${esc(player.name)}</strong><small>${player.player_id === view.you ? "You" : player.is_bot ? "Bot" : "Player"} · ${status}</small></div><span class="boomerang-player-total" data-boomerang-tip="${esc(explanations.score)}" tabindex="0">${number(player.total)}<small>pts</small></span></div>`;
+    }
+
+    function scoreSymbols(score) {
+        return [["🪃", score.throw_catch, "throw"], ["🎁", score.collections, "collection"], ["🐾", score.animals, "animal"], ["📷", score.activity_score, "activity"], ["📍", (score.new_sites || []).length, "region"], ["🗺️", (score.new_regions || []).length * 3, "region"]].map(([icon, points, key]) => `<span tabindex="0" data-boomerang-tip="${esc(explanations[key])}">${icon} ${number(points)}</span>`).join("");
+    }
+
+    function previewStripHTML() {
+        const preview = own()?.preview;
+        if (!preview) return "";
+        const parts = [["🪃", preview.throw_catch, "throw"], ["🎁", preview.collections, "collection"], ["🐾", preview.animals, "animal"], ["📍", (preview.new_sites || []).length, "region"], ["🗺️", (preview.new_regions || []).length * 3, "region"]];
+        return `<div class="boomerang-preview-strip"><small>Round so far</small><div>${parts.map(([icon, points, key]) => `<span tabindex="0" data-boomerang-tip="${esc(explanations[key])}">${icon} ${number(points)}</span>`).join("")}</div></div>`;
     }
 
     function actionHTML() {
@@ -167,7 +198,7 @@
         }
         if (view.game_over) return "";
         if (view.phase === "choose_activity") {
-            return `<div class="boomerang-activity-grid">${(view.activity_options || []).map(option => {
+            return `${previewStripHTML()}<div class="boomerang-activity-grid">${(view.activity_options || []).map(option => {
                 const item = activities[option.id] || {name: option.id, icon: "📷"};
                 return `<button type="button" class="boomerang-activity ${activitySelection === option.id || view.pending_activity === option.id ? "is-selected" : ""}" data-boomerang-activity="${esc(option.id)}" data-boomerang-explain="activity" aria-pressed="${activitySelection === option.id}" ${option.used || !legal("choose_activity") ? "disabled" : ""}><strong>${item.icon} ${item.name}</strong><span>${option.used ? "Used" : `${number(option.count)} × → ${number(option.points)} pts`}</span></button>`;
             }).join("")}</div><div class="boomerang-action-row">${button(mine.submitted ? "Locked ✓" : "Confirm", "confirm_activity", "activity", !legal("choose_activity") || !activitySelection, "boomerang-primary")}${button("Skip", "skip", "skip", !legal("choose_activity"))}${info(explanations.activity)}</div>`;
@@ -195,7 +226,7 @@
     function regionsHTML() {
         const mine = own();
         if (!mine) return "";
-        const visited = new Set(mine.visited || []);
+        const visited = visitedSet();
         return `<section class="boomerang-box boomerang-destinations"><div class="boomerang-section-title"><h3>📍 Travel journal</h3><span class="boomerang-counter">${visited.size} / 28</span>${info(explanations.region)}</div><div class="boomerang-region-list">${Object.entries(view.regions || {}).map(([id, data]) => {
             const completed = (mine.region_bonuses || []).includes(id);
             const claimed = view.players.some(player => (player.region_bonuses || []).includes(id));
@@ -210,11 +241,7 @@
 
     function roundSummaryHTML() {
         if (view.phase !== "round_end" && !view.game_over) return "";
-        return `<section class="boomerang-box boomerang-round-review"><div class="boomerang-section-title"><h3>Round ${view.round} · Results</h3>${info(explanations.history)}</div><div class="boomerang-round-results">${(view.round_summary || []).map(score => `<div class="boomerang-round-result"><strong>${esc(name(score.player_id))}</strong><span class="boomerang-result-points">+${number(score.round_points)}</span><p>${scoreSymbols(score)}</p><small>${score.activity ? `${activities[score.activity]?.icon || "📷"} ${activities[score.activity]?.name || score.activity}` : "Activity skipped"}${(score.new_regions || []).length ? ` · ${score.new_regions.map(id => `${region(id).name_zh} +3`).join(", ")}` : ""}</small></div>`).join("")}</div></section>`;
-    }
-
-    function scoreSymbols(score) {
-        return [["🪃", score.throw_catch, "throw"], ["🎁", score.collections, "collection"], ["🐾", score.animals, "animal"], ["📷", score.activity_score, "activity"], ["📍", (score.new_sites || []).length, "region"], ["🗺️", (score.new_regions || []).length * 3, "region"]].map(([icon, points, key]) => `<span tabindex="0" data-boomerang-tip="${esc(explanations[key])}">${icon} ${number(points)}</span>`).join("");
+        return `<section class="boomerang-box boomerang-round-review"><div class="boomerang-section-title"><h3>Round ${view.round} · Results</h3>${info(explanations.history)}</div><div class="boomerang-round-results">${(view.round_summary || []).map(score => `<div class="boomerang-round-result ${score.player_id === view.you ? "is-you" : ""}"><strong>${esc(name(score.player_id))}${score.player_id === view.you ? "<em>You</em>" : ""}</strong><span class="boomerang-result-points">+${number(score.round_points)}</span><p>${scoreSymbols(score)}</p><small>${score.activity ? `${activities[score.activity]?.icon || "📷"} ${activities[score.activity]?.name || score.activity}` : "Activity skipped"}${(score.new_regions || []).length ? ` · ${score.new_regions.map(id => `${region(id).name_zh} +3`).join(", ")}` : ""}</small></div>`).join("")}</div></section>`;
     }
 
     function scoreHistory(scores) {
@@ -225,7 +252,7 @@
         const mine = own();
         if (view.game_over) {
             const ranked = view.players.slice().sort((left, right) => right.total - left.total || right.scores.reduce((sum, score) => sum + score.throw_catch, 0) - left.scores.reduce((sum, score) => sum + score.throw_catch, 0));
-            return `<section class="boomerang-box"><div class="boomerang-section-title"><h3>Final score sheets</h3>${info(explanations.score)}</div><div class="boomerang-final-sheets">${ranked.map(player => `<details class="boomerang-final-sheet" data-boomerang-player="${esc(player.player_id)}" ${player.player_id === view.you ? "open" : ""}><summary><span>${view.winner.includes(player.player_id) ? "🏆 " : ""}${esc(player.name)}</span><strong>${player.total} pts</strong></summary><p class="boomerang-muted" tabindex="0" data-boomerang-tip="${esc(explanations.throw)}">Throw & Catch tiebreak: ${player.scores.reduce((sum, score) => sum + score.throw_catch, 0)}</p>${scoreHistory(player.scores)}</details>`).join("")}</div></section>`;
+            return `<section class="boomerang-box"><div class="boomerang-section-title"><h3>Final score sheets</h3>${info(explanations.score)}</div><div class="boomerang-final-sheets">${ranked.map(player => `<details class="boomerang-final-sheet" data-boomerang-player="${esc(player.player_id)}" ${player.player_id === view.you ? "open" : ""}><summary><span>${view.winner.includes(player.player_id) ? "🏆 " : ""}${esc(player.name)}${player.player_id === view.you ? " (You)" : ""}</span><strong>${player.total} pts</strong></summary><p class="boomerang-muted" tabindex="0" data-boomerang-tip="${esc(explanations.throw)}">Throw & Catch tiebreak: ${player.scores.reduce((sum, score) => sum + score.throw_catch, 0)}</p>${scoreHistory(player.scores)}</details>`).join("")}</div></section>`;
         }
         if (!mine?.scores?.length) return "";
         return `<details class="boomerang-box boomerang-history"><summary>Score sheet · ${mine.scores.length} / 4 rounds</summary>${scoreHistory(mine.scores)}</details>`;
@@ -238,11 +265,11 @@
         const mine = own();
         const hasHand = view.phase === "draft" && view.hand?.length;
         panel.innerHTML = `<div class="boomerang-shell">
-            <div class="boomerang-top"><div><div class="boomerang-eyebrow">THE AUSTRALIAN TRAVEL JOURNAL</div><h2>世界巡游<span>澳洲</span></h2><p lang="en">Boomerang: Australia</p></div><div class="boomerang-round-badge"><strong>${view.game_over ? "🏆" : `0${view.round}`}</strong><span>${view.game_over ? "Final results" : "ROUND / 04"}</span></div></div>
+            ${statusHTML()}
             <div class="boomerang-players" style="--boomerang-player-count:${view.players.length}">${view.players.map(playerHTML).join("")}</div>
             ${view.game_over ? `<div class="boomerang-winner"><span>🏆</span><div><small>${view.winner.length > 1 ? "Joint winners" : "Winner"}</small><strong>${esc(view.winner.map(name).join(" · "))}</strong></div></div>` : ""}
-            <div class="boomerang-layout"><main class="boomerang-main"><section class="boomerang-box boomerang-play-area"><div class="boomerang-section-title"><h3>${view.phase === "draft" ? "Choose a destination" : view.phase === "choose_activity" ? "Choose an activity" : view.game_over ? "The final journey" : "Round review"}</h3><span class="boomerang-direction" tabindex="0" data-boomerang-tip="${esc(explanations.direction)}">${view.direction === "right" ? "Pass right →" : "← Pass left"}</span></div><p class="boomerang-step" aria-live="polite">${stepText()}</p>
-            ${hasHand ? `<div class="boomerang-pick-progress"><span>Pick ${view.pick} / 6</span><div>${Array.from({length: 6}, (_, index) => `<i class="${index < view.pick ? "is-done" : ""}"></i>`).join("")}</div></div><div class="boomerang-hand">${view.hand.map(card => cardHTML(card, true)).join("")}</div>` : ""}
+            <div class="boomerang-layout"><main class="boomerang-main"><section class="boomerang-box boomerang-play-area"><p class="boomerang-step" aria-live="polite">${stepText()}</p>
+            ${hasHand ? `<div class="boomerang-hand">${view.hand.map(card => cardHTML(card, true)).join("")}</div>` : ""}
             ${actionHTML()}</section>
             ${roundSummaryHTML()}
             ${mine?.cards?.length ? `<section class="boomerang-box boomerang-my-cards"><div class="boomerang-section-title"><h3>Your journey</h3><span class="boomerang-counter">${mine.cards.length} / 7 cards</span>${info(explanations.throw)}</div><div class="boomerang-tableau">${mine.cards.map((card, index) => cardHTML(card, false, index, true)).join("")}</div></section>` : ""}

@@ -49,10 +49,11 @@ const GAME_ASSETS = {
     "header": "showMoshimoYushaHeaderActions"
   },
   "the_mind": {
-    "scripts": ["/static/games/the_mind.js?v=1"],
-    "styles": ["/static/games/the_mind.css?v=1"],
-    "markup": "/static/games/the_mind.html?v=1",
+    "scripts": ["/static/games/the_mind.js?v=2"],
+    "styles": ["/static/games/the_mind.css?v=2"],
+    "markup": "/static/games/the_mind.html?v=2",
     "panel": "theMindPanel",
+    "panelTitle": "🧠 心意相通",
     "header": "showTheMindHeaderActions"
   },
   "night_of_the_ninja": {
@@ -985,12 +986,13 @@ const GAME_ASSETS = {
   },
   "boomerang_australia": {
     "scripts": [
-      "/static/games/boomerang_australia.js?v=2"
+      "/static/games/boomerang_australia.js?v=4"
     ],
     "styles": [
-      "/static/boomerang_australia.css?v=1"
+      "/static/boomerang_australia.css?v=2"
     ],
     "panel": "boomerangAustraliaPanel",
+    "panelTitle": "🪃 世界巡游 · 澳洲",
     "header": "showBoomerangAustraliaHeaderActions"
   },
   "spirit_island": {

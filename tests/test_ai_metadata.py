@@ -31,6 +31,7 @@ class StrategicAiMetadataTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(catalog["abraca_what"]["has_strategic_ai"])
         self.assertTrue(catalog["felix"]["has_strategic_ai"])
         self.assertTrue(catalog["six_nimmt"]["has_strategic_ai"])
+        self.assertTrue(catalog["rebel_princess"]["has_strategic_ai"])
         self.assertFalse(catalog["hanabi"]["has_strategic_ai"])
 
 
