@@ -1641,3 +1641,47 @@ python -m unittest
 - `tests/game_panel_themes.browser.cjs` 仅选择 `bomb_busters`，验证真实房间的初始线索推进、触屏滑动不选线、手机原地确认、Help / Explain / Esc、四种宽度和主题切换。
 - 前端检查：`node --check`、`tests.test_frontend_style_assets`、`tests.test_frontend_script_names` 与 `git diff --check`。本次只改 UI，不运行游戏逻辑单测。
 - 截图与测量输出在 `build/bomb-busters-ui/after/`；本地 Chromium 的触屏模拟不等于 iOS Safari / Android 真机验收，尚未执行真机测试。多玩家全量线位仍允许正常纵向滚动，不压缩到不可点选尺寸。
+
+## 22. 2026-11-08：剪错线的公共砸屎特效
+
+本节新增一个跨游戏复用的特效组件，并在炸弹克星里接入；不改动游戏规则、服务器动作合同和公开信息边界。
+
+### 22.1 公共组件契约
+
+- 组件脚本是 `static/games/shared_effects.js`，在首页 `static/index.html` 与 `shared.js`、`shared_help.js` 一起以 `defer` 加载。它是公共脚本，因此不进 `GAME_ASSETS` 清单，任何游戏都无需注册即可调用。
+- 样式是跨游戏共用规则，按 `DEV_GUIDE.md` 放在 `static/style.css` 末尾，全部类名带 `obg-poop-` 前缀，不与任何游戏样式冲突，也不占用 `obg-game-*` media 占位组。
+- 对外只暴露一个全局函数：
+
+  ```js
+  window.obgPlayPoopSplash({
+    name,          // 必填，犯错玩家的显示名，会标在人物身体上
+    caption,       // 可选，默认 "💥 Splat!"
+    durationMs,    // 可选，默认 2900；reduced-motion 下默认 1500
+    announce,      // 可选，非空时写入组件自带的 aria-live 区域
+  });
+  ```
+
+- 画面构成：一坨 💩 从左下飞入，砸中卡通人物的脸并炸开棕色污渍与飞溅颗粒，人物身体（蓝色上衣）上有 💩 徽标和写有 `name` 的白色名牌，下方是 caption 文字。
+- 组件自己负责：把名字写进名牌（长名字省略号截断且不越出身体）、串行排队（最多缓存 3 次，不叠加播放）、播放结束自动移除节点、`prefers-reduced-motion` 时跳过飞行与抖动只保留静态结果。
+- 遮罩是 `position: fixed` 且 `pointer-events: none`，播放期间不拦截游戏操作；尺寸由 `--obg-poop-scale` 按 `100vw` / `100dvh` 取最小值缩放，320px 起不会溢出视口。
+- 名字只作为 `textContent` 写入，不拼 HTML，避免玩家名注入。
+
+### 22.2 炸弹克星接入
+
+- 触发点是 `static/games/bomb_busters.js` 的 `bombBustersPlayMissEffect(data)`，在 `bombBustersRenderGameState` 里紧跟 `bombBustersView = view` 之后调用，保证动画先于 DOM 渲染起播。
+- 监听的三个事件都表示"剪错线"，且服务端已在 payload 里带 `player_id`：
+  - `bomb_busters:duo_miss`（Duo Cut 目标不匹配，引爆器 -1）
+  - `bomb_busters:detector_miss`（Double Detector 落空，引爆器 -1）
+  - `bomb_busters:red_wire`（剪到红线，炸弹爆炸），caption 改为 "💥 Red wire!"
+- 名字不新增服务端字段，而是用 `bombBustersPlayerName(bombBustersView, player_id)` 从公开 view 的 `players` 解析，因此所有观众看到的名字一致，也不泄露任何隐藏线值。
+- 事件可能因游戏资源延迟加载而被重放一次，所以用 `state_version + 事件数 + 首事件类型` 组成 token 去重；`clearBombBustersState` 会清空该 token。
+- 未加载 `shared_effects.js` 时静默跳过，不影响游戏本身。
+
+### 22.3 UI 验收记录
+
+- 验收页 `build/poop-effect-qa/`（`build/` 已被 git 忽略），用同源 iframe 精确模拟 320×640、390×780、1024×720、1440×900 四种视口。
+- 四种视口实测：`horizontalOverflow` 均为 0，舞台完整落在视口内（`stageInViewport: true`），名牌在身体内（`nameInsideTorso: true`），超长名 "Bartholomew Fitzgerald-Wellington" 省略号截断不溢出，污渍命中头部（`splatOnHead: true`），遮罩 `pointer-events: none`。
+- 集成验证：iframe 内加载真实 `static/games/bomb_busters.js` 并调用 `renderBombBustersGameState`，传入 `bomb_busters:duo_miss` 事件后特效正常播放，名牌显示的正是 payload 里 `player_id` 对应的玩家名；控制台无 warn / error。
+- reduced-motion 模拟：`is-reduced` 生效，飞行与飞溅隐藏，污渍、名牌和 caption 直接可见。
+- 检查命令：`node --check static/games/shared_effects.js`、`node --check static/games/bomb_busters.js`、`python3 -m unittest tests.test_frontend_style_assets tests.test_frontend_script_names tests.test_help_contract`、`git diff --check`。本次只改前端，未改动 `game/bomb_busters.py`，因此不运行游戏逻辑单测。
+- 未执行：真机 iOS Safari / Android 触控验收；本机未安装 Playwright，`tests/*.browser.cjs` 未运行。

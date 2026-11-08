@@ -40,7 +40,7 @@
     phase: "夜晚顺序：密探 (👁️) → 秘术师 (🔮) → 百变者 (🎭) → 盲刺客 (🗡️) → 上忍 (🥷)。每阶段同时亮牌，再按编号从 1 到 6 结算。",
   };
   let view = null, selected = [], targets = [], mode = "house", tokenIndex = 0, ownIndex = 0;
-  let signature = null, busy = false, busyTimer = null, explaining = false, tipTimer = null, suppress = 0, returnFocus = null;
+  let signature = null, busy = false, busyTimer = null, tipTimer = null, returnFocus = null;
   const esc = text => String(text ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
   const name = pid => view?.players.find(p => p.player_id === pid)?.name || "—";
   const card = id => view?.catalog.find(c => c.id === id);
@@ -56,31 +56,121 @@
   function clearSelection() { selected = []; targets = []; mode = "house"; tokenIndex = 0; ownIndex = 0; }
   function hideTip() { tip.hidden = true; clearTimeout(tipTimer); }
   function showTip(el, temporary = false) {
-    if (!el?.dataset.nnTip || explaining) return;
+    if (!el?.dataset.nnTip || nightNinjaExplainWidget?.isActive() || nightNinjaHelpWidget?.isOpen()) return;
     hideTip(); tip.textContent = el.dataset.nnTip; tip.hidden = false;
     const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
     tip.style.left = `${Math.max(8, Math.min(r.left, innerWidth - t.width - 8))}px`;
     tip.style.top = `${Math.max(8, Math.min(r.top - t.height - 8 > 8 ? r.top - t.height - 8 : r.bottom + 8, innerHeight - t.height - 8))}px`;
     if (temporary) tipTimer = setTimeout(hideTip, 3000);
   }
-  function setExplain(value) { explaining = value; panel.classList.toggle("nn-explaining", value); explainButton.setAttribute("aria-pressed", String(value)); hideTip(); }
-  function openDialog(title, html) {
-    returnFocus = document.activeElement; hideTip();
-    document.getElementById("nnDialogTitle").textContent = title;
-    document.getElementById("nnDialogBody").innerHTML = html;
-    if (!dialog.open) dialog.showModal();
-    document.getElementById("nnDialogClose").focus();
-  }
-  function help() {
-    setExplain(false);
-    openDialog("Help · 忍者杀", `<p>Night of the Ninja · 4–11 人。为家族争胜，为自己积累荣誉。家族每轮重新分配，没有主持人，所有人都能参与。你可以通过房间聊天交流或诈唬，死者也可继续讨论。</p>
-      <h3>身份与胜利</h3><p>${details.house} ${details.honor}</p>
-      <h3>选牌与夜晚</h3><p>${details.draft} ${details.phase} ${details.reveal}</p>
-      <p>33 张牌：密探、秘术师、百变者、盲刺客、上忍各 6 张；各阶段的编号从 1 到 6。另有镜僧、殉道者、幕后主使各 1 张。每轮重新使用全副牌。</p>
-      ${Object.entries(effects).map(([kind, effect]) => `<div class="nn-help-card"><strong>${esc(effect[1].split("：")[0])}</strong><p>${esc(effect[1].split("：").slice(1).join("："))}</p></div>`).join("")}
-      <h3>死亡与轮末</h3><p>${details.player} ${details.result} ${details.next} 只在轮末检查是否达到 10 分，不在偷取或殉道时提前结束。没有存活者且未达到胜利分数时，没有人获得轮末荣誉，继续下一轮。</p>
-      <h3>线上操作与信息</h3><p>${details.notes} ${details.table} 点选牌与目标后确认，空白处或 Esc 取消未提交的选择。非操作图标支持悬停或触屏点击提示，手机提示三秒后消失。</p>
-      <p>规则依据 Brotherwise Games 官方规则书与 FAQ。线上适配：荣誉 2/3/4 等概率独立抽取；轮末公开所有身份供复盘；同时行动与反应使用明确提交，不设抢答倒计时。标准多人版，不包含双人变体。</p>`);
+  const NN_EXPLAIN = {
+    spy: { zh: effects.spy[1], en: "Spy (👁️): look at another player's clan and rank. Only you see the result." },
+    mystic: { zh: effects.mystic[1], en: "Mystic (🔮): look at another player's clan and rank, plus one random Ninja card still hidden in their hand." },
+    shapeshifter: { zh: effects.shapeshifter[1], en: "Shapeshifter (🔀): look at two players' identities and secretly swap them or leave them alone. The targets may include yourself or the dead, a chosen player cannot freely re-check their identity, and they are marked uncertain whether or not you swap." },
+    gravedigger: { zh: effects.gravedigger[1], en: "Gravedigger (🪦): look at two random face-down discards and either play one immediately or hold it for the right phase. Mirror Monk, Martyr and Mastermind must be held for their own timing." },
+    troublemaker: { zh: effects.troublemaker[1], en: "Troublemaker (📣): look at another player's identity and either reveal it to everyone or keep it secret." },
+    spirit_merchant: { zh: effects.spirit_merchant[1], en: "Spirit Merchant (⚖️): look at another player's identity or one honor token (🌟), then optionally swap one token each way. You need not swap the token you just looked at." },
+    thief: { zh: effects.thief[1], en: "Thief (💰): reveal your own identity first, then take one token from a player holding more honor tokens (🌟) than you. Counts are compared, not hidden scores, and with no valid target you only reveal." },
+    judge: { zh: effects.judge[1], en: "Judge (⚔️): reveal your own identity first, then kill one living player. Mirror Monk (🪞) and Martyr (🌟) cannot respond." },
+    blind_assassin: { zh: effects.blind_assassin[1], en: "Blind Assassin (🗡️): choose a living player and assassinate them. The target may respond with Mirror Monk or Martyr." },
+    shinobi: { zh: effects.shinobi[1], en: "Shinobi (🥷): choose a living player, secretly check their identity, then decide to kill or spare. You may inspect yourself to re-confirm an identity changed by the Shapeshifter." },
+    mirror_monk: { zh: effects.mirror_monk[1], en: "Mirror Monk (🪞): reveal when assassinated by the Blind Assassin (🗡️) or Shinobi (🥷), survive, and kill the assassin instead. That counter-kill never triggers Mirror Monk or Martyr again." },
+    martyr: { zh: effects.martyr[1], en: "Martyr (🌟): reveal when assassinated by the Blind Assassin (🗡️) or Shinobi (🥷), gain one honor token (🌟), then die." },
+    mastermind: { zh: effects.mastermind[1], en: "Mastermind (🧠): if you are still alive when the night ends you may reveal yourself and make your current clan win. A revealed Ronin (🟠) blocks both clans instead, while the Ronin still gains honor for surviving." },
+    house: { zh: details.house, en: "Clans: Crane (🟢) and Lotus (🔴) are reassigned every round, where 1 is the boss and 2 the second, so a lower number is a higher rank. The Ronin (🟠) acts alone and gains honor for surviving. When an identity is uncertain the display shows your earlier memory, not the true current identity." },
+    honor: { zh: details.honor, en: "Honor (🌟): each token is worth 2, 3 or 4 points, only you know the value and the count is public. At the end of a round whoever among those at 10 points scores highest wins, and a tie is shared. This online build draws the three values independently with equal probability because the official rules do not state a physical distribution." },
+    draft: { zh: details.draft, en: "Draft: pick one of three Ninja cards and pass the rest to your left, then pick one of the two you receive and discard the other face down. Everyone moves on together once all players are done." },
+    reveal: { zh: details.reveal, en: "Reveal: select every Ninja card you want to play this phase and press Reveal Selected, or press Pass to play nothing. All cards flip at once and resolve in order from 1 to 6, and a card you skip cannot be used in a later phase." },
+    target: { zh: details.target, en: "Target: choose the target for this Ninja card and press Confirm Target. The Shapeshifter needs two different players, and an assassination may only target a living player." },
+    decide: { zh: details.decide, en: "Decide: finish this card's choice using your private information. Secret information never appears in the public log, and the next card resolves once you confirm." },
+    react: { zh: details.react, en: "React: you are being assassinated. Mirror Monk (🪞) kills the assassin instead, Martyr (🌟) gains honor and then dies, and Accept takes the death. Only you may respond, and the death does not reveal identities yet." },
+    next: { zh: details.next, en: "Next Round means you have read the result, and the next round starts only once every seat including the dead has confirmed. A disconnected human must reconnect to confirm while bots confirm only for themselves." },
+    player: { zh: details.player, en: "Player seat: 💀 means dead this round, 🂠 is the number of unrevealed Ninja cards, 🌟 is the honor token count and ✓ means the current choice is submitted. The dead no longer act but still gain honor when their clan wins." },
+    notes: { zh: details.notes, en: "Private intel (🔒): stores the identities and Ninja cards you have seen this round and is visible only to you. The Shapeshifter may change an identity so those records are marked uncertain, and Ninja cards are only a record of what you saw." },
+    table: { zh: details.table, en: "Revealed Ninja cards are listed in the order they were used. Queued is waiting to resolve, Acting is choosing right now, Done is finished and Cancelled means the holder died first so the effect was voided." },
+    result: { zh: details.result, en: "Compare the ranks of each side's surviving members from the highest rank down, and every member of the winning side gains honor. A complete tie gives honor only to the survivors. A surviving Ronin gains one token independently and the Mastermind can override the normal outcome. This online build reveals the dead players' identities at the end of the round for review." },
+    phase: { zh: details.phase, en: "Night order: Spy (👁️), Mystic (🔮), Trickster (🎭), Blind Assassin (🗡️), Shinobi (🥷). Every phase reveals cards at the same time and then resolves them in number order from 1 to 6." },
+    dialog_close: { zh: "关闭当前对话框并回到牌桌。", en: "Close the current dialog and return to the table." }
+  };
+  const nnCards = lang => Object.keys(effects).map(key => {
+    const text = lang === "en" ? NN_EXPLAIN[key].en : effects[key][1];
+    const cut = lang === "en" ? text.indexOf(": ") : text.indexOf("：");
+    const head = cut < 0 ? text : text.slice(0, cut);
+    const body = cut < 0 ? "" : text.slice(cut + (lang === "en" ? 2 : 1));
+    return `<div class="nn-help-card"><strong>${esc(head)}</strong><p>${esc(body)}</p></div>`;
+  }).join("");
+  const NIGHT_NINJA_HELP_CONFIG = {
+    gameId: "night_of_the_ninja",
+    title: { zh: "忍者杀 · Night of the Ninja", en: "Night of the Ninja" },
+    basic: {
+      win: {
+        zh: "为家族争胜，也为自己积累荣誉(🌟)。轮末达到 10 分的玩家中分数最高者获胜，同分共享胜利。",
+        en: "Win for your clan while collecting honor (🌟) for yourself. At the end of a round the highest scorer among those at 10 points wins, and a tie is shared."
+      },
+      turn: {
+        zh: "每轮先传牌选牌，夜晚再按密探(👁️)、秘术师(🔮)、百变者(🎭)、盲刺客(🗡️)、上忍(🥷)五个阶段同时亮牌并按编号结算，你只在自己需要行动时做选择。",
+        en: "Each round you draft cards, then the night runs through the Spy (👁️), Mystic (🔮), Trickster (🎭), Blind Assassin (🗡️) and Shinobi (🥷) phases where everyone reveals at once and cards resolve in number order, and you only act when a choice is yours."
+      },
+      key: {
+        zh: "你的身份每轮重新分配而且可能被换形师(🔀)悄悄改掉，所以关键是分清哪些情报仍然可靠，并让家族的存活成员位阶压过对方。",
+        en: "Your identity is reassigned every round and the Shapeshifter (🔀) may quietly change it, so the real skill is telling which intel is still trustworthy and making your clan's surviving ranks beat the other side."
+      }
+    },
+    sections: [
+      {
+        id: "identity",
+        label: { zh: "身份与胜利", en: "Identity and victory" },
+        html: { zh: `<p>${esc(details.house)}</p><p>${esc(details.honor)}</p>`, en: `<p>${esc(NN_EXPLAIN.house.en)}</p><p>${esc(NN_EXPLAIN.honor.en)}</p>` }
+      },
+      {
+        id: "night",
+        label: { zh: "选牌与夜晚", en: "Draft and night" },
+        html: {
+          zh: `<p>${esc(details.draft)}</p><p>${esc(details.phase)}</p><p>${esc(details.reveal)}</p><p>33 张牌：密探、秘术师、百变者、盲刺客、上忍各 6 张，各阶段的编号从 1 到 6。另有镜僧、殉道者、幕后主使各 1 张。每轮重新使用全副牌。</p>`,
+          en: `<p>${esc(NN_EXPLAIN.draft.en)}</p><p>${esc(NN_EXPLAIN.phase.en)}</p><p>${esc(NN_EXPLAIN.reveal.en)}</p><p>There are 33 cards: six each of Spy, Mystic, Trickster, Blind Assassin and Shinobi, numbered 1 to 6 within their phase, plus one each of Mirror Monk, Martyr and Mastermind. The full deck is reused every round.</p>`
+        }
+      },
+      {
+        id: "cards",
+        label: { zh: "忍者牌图鉴", en: "Ninja card catalogue" },
+        html: { zh: nnCards("zh"), en: nnCards("en") }
+      },
+      {
+        id: "death",
+        label: { zh: "死亡与轮末", en: "Death and round end" },
+        html: {
+          zh: `<p>${esc(details.player)}</p><p>${esc(details.result)}</p><p>${esc(details.next)}</p><p>只在轮末检查是否达到 10 分，不在偷取或殉道时提前结束。没有存活者且未达到胜利分数时，没有人获得轮末荣誉，继续下一轮。</p>`,
+          en: `<p>${esc(NN_EXPLAIN.player.en)}</p><p>${esc(NN_EXPLAIN.result.en)}</p><p>${esc(NN_EXPLAIN.next.en)}</p><p>The 10 point check happens only at the end of a round and never early on a theft or a martyrdom. If nobody survives and nobody has reached the winning score, no end of round honor is awarded and play continues.</p>`
+        }
+      },
+      {
+        id: "online",
+        label: { zh: "线上操作与信息", en: "Online notes" },
+        html: {
+          zh: `<p>${esc(details.notes)}</p><p>${esc(details.table)}</p><p>点选牌与目标后确认，点击空白处或按 Esc 取消未提交的选择。非操作图标支持悬停或触屏点击提示，手机提示三秒后消失。</p><p>规则依据 Brotherwise Games 官方规则书与 FAQ。线上适配：荣誉 2、3、4 等概率独立抽取，轮末公开所有身份供复盘，同时行动与反应使用明确提交而不设抢答倒计时。标准多人版，不包含双人变体。</p>`,
+          en: `<p>${esc(NN_EXPLAIN.notes.en)}</p><p>${esc(NN_EXPLAIN.table.en)}</p><p>Select cards and targets, then confirm, and click blank space or press Esc to drop an unsubmitted choice. Non-interactive icons can be hovered or tapped for a tip, and a tip on a phone disappears after three seconds.</p><p>Rules follow the official Brotherwise Games rulebook and FAQ. Online adaptations: honor values 2, 3 and 4 are drawn independently with equal probability, all identities are revealed at the end of the round for review, and simultaneous actions and reactions use explicit submissions with no countdown race. This is the standard multiplayer game without the two player variant.</p>`
+        }
+      }
+    ]
+  };
+  let nightNinjaHelpWidget = null;
+  let nightNinjaExplainWidget = null;
+  function initNightNinjaHelpExplain() {
+    if (nightNinjaHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    nightNinjaHelpWidget = window.obgCreateHelp(NIGHT_NINJA_HELP_CONFIG);
+    nightNinjaExplainWidget = window.obgCreateExplain({
+      gameId: "night_of_the_ninja",
+      attribute: "data-nn-explain",
+      explanations: NN_EXPLAIN,
+      button: explainButton,
+      root: () => panel,
+      bypass: ["#nightNinjaHelpBtn", "#nightNinjaExplainBtn", "#nnDialogClose"]
+    });
+    helpButton?.addEventListener("click", () => {
+      nightNinjaExplainWidget?.exit();
+      nightNinjaHelpWidget.open();
+    });
+    explainButton?.addEventListener("click", () => nightNinjaExplainWidget?.toggle());
   }
   function renderCards(cards, selectable) {
     return `<div class="nn-cards" data-nn-scroll="cards">${cards.map(c => `<button type="button" class="nn-card ${selected.includes(c.id) ? "is-selected" : ""}" data-nn-card="${c.id}" data-kind="${c.kind}" data-nn-explain="${c.kind}" aria-pressed="${selected.includes(c.id)}" ${!selectable(c) || busy ? "disabled" : ""}>
@@ -171,7 +261,7 @@
     busyTimer = setTimeout(() => { busy = false; render(); }, 5000);
   }
   surface.addEventListener("click", event => {
-    if (!view || explaining || busy) return;
+    if (!view || busy) return;
     const el = event.target.closest("button");
     if (el && !el.disabled) {
       if (el.dataset.nnCard) {
@@ -212,36 +302,14 @@
     if (event.target.id === "nnToken") tokenIndex = Number(event.target.value);
     if (event.target.id === "nnOwnToken") ownIndex = Number(event.target.value);
   });
-  function explain(el) {
-    if (!el) return;
-    const text = explanation(el.dataset.nnExplain);
-    if (!text) return;
-    setExplain(false); openDialog("Explain", `<p>${esc(text)}</p>`);
-  }
-  const exempt = el => el.closest("#nightNinjaHelpBtn, #nightNinjaExplainBtn, #nightNinjaDialog");
-  document.addEventListener("pointerdown", event => {
-    if (!explaining || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    let el = event.target.closest("[data-nn-explain]");
-    if (!el) el = [...surface.querySelectorAll("button:disabled[data-nn-explain]")].find(b => { const r = b.getBoundingClientRect(); return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; });
-    if (el) { suppress = performance.now() + 700; explain(el); }
-  }, true);
-  document.addEventListener("click", event => {
-    if (performance.now() < suppress) { suppress = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (!explaining || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-nn-explain]"));
-  }, true);
   document.addEventListener("keydown", event => {
     if (panel.classList.contains("hidden")) return;
-    if (event.key === "Escape") { setExplain(false); hideTip(); if (!dialog.open && !busy) { clearSelection(); render(); } return; }
-    if (explaining && !exempt(event.target) && ["Enter", " "].includes(event.key)) { event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-nn-explain]")); }
+    if (event.key === "Escape") { nightNinjaExplainWidget?.exit(); hideTip(); if (!dialog.open && !busy) { clearSelection(); render(); } }
   }, true);
   surface.addEventListener("pointerover", e => { if (e.pointerType === "mouse") showTip(e.target.closest("[data-nn-tip]")); });
   surface.addEventListener("pointerout", e => { if (e.pointerType === "mouse") hideTip(); });
   surface.addEventListener("focusin", e => showTip(e.target.closest("[data-nn-tip]")));
   surface.addEventListener("focusout", hideTip);
-  helpButton.addEventListener("click", help);
-  explainButton.addEventListener("click", () => setExplain(!explaining));
   document.getElementById("nnDialogClose").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
   dialog.addEventListener("click", event => {
@@ -253,7 +321,7 @@
   window.addEventListener("blur", hideTip);
   document.addEventListener("scroll", hideTip, true);
   function clearState() {
-    view = null; signature = null; busy = false; clearTimeout(busyTimer); clearSelection(); setExplain(false); hideTip();
+    view = null; signature = null; busy = false; clearTimeout(busyTimer); clearSelection(); nightNinjaExplainWidget?.exit(); hideTip();
     document.body.classList.remove("nn-needs-action");
     if (dialog.open) dialog.close();
     surface.innerHTML = '<div class="nn-waiting">Waiting to start</div>';
@@ -276,6 +344,7 @@
     if (typeof currentRoomState !== "undefined") syncRoom(currentRoomState);
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "night_of_the_ninja") window.renderNightNinjaGameState(lastGameStatePayload);
   }
+  initNightNinjaHelpExplain();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sync, {once:true});
   else sync();
 })();

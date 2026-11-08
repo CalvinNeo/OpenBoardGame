@@ -92,6 +92,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "tucano",
     "turing_machine",
     "twelve_rivers",
+    "witchs_brew",
     "wriggle_roulette",
     "yahtzee",
 })

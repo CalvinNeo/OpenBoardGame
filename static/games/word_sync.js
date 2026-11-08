@@ -282,9 +282,11 @@
     element("Submit").disabled = !view?.legal_actions.includes("submit_word") || !connected()
       || Boolean(pending) || !normalizedDraft() || Boolean(blocked);
     if (blocked) setError(blockedMessage(blocked));
+    renderUsed();
   }
 
   function renderUsed() {
+    if (!view) return;
     const words = view.used_words || [];
     const box = element("Used");
     box.hidden = !words.length || view.game_over;
@@ -366,7 +368,6 @@
     input.disabled = Boolean(pending) || !connected();
     element("Submit").textContent = pending?.type === "submit_word" ? "Locking…" : "Lock word";
     updateDraft();
-    renderUsed();
     element("Review").hidden = view.phase !== "reveal" || !ownTeam;
     element("Next").disabled = !view.legal_actions.includes("next_round") || Boolean(pending) || !connected();
     element("Next").textContent = view.next_ready.includes(view.you) ? "Ready ✓" : pending?.type === "next_round" ? "Sending…" : "Next Round";
@@ -420,6 +421,7 @@
     clearPending();
     setError();
     wordSyncExplainWidget?.exit();
+    wordSyncHelpWidget?.close();
     document.body.classList.remove("ws-needs-action");
     element("Content").hidden = true;
     element("Waiting").hidden = false;

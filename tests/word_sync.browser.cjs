@@ -76,7 +76,7 @@ print(json.dumps(views))
 async function checkBounds(page, label) {
   const result = await page.evaluate(() => {
     const issues = [];
-    const selectors = '#wordSyncPanel, #wordSyncPanel *, .game-panel > .panel-header, .game-panel > .panel-header *, #wordSyncDialog[open], #wordSyncDialog[open] > .ws-dialog-heading, #wordSyncDialog[open] > .ws-dialog-heading *, #wordSyncDialog[open] > #wordSyncDialogBody, #wordSyncDialog[open] > #wordSyncDialogBody *';
+    const selectors = '#wordSyncPanel, #wordSyncPanel *, .game-panel > .panel-header, .game-panel > .panel-header *, dialog.obg-help-dialog[open], dialog.obg-help-dialog[open] .obg-help-head, dialog.obg-help-dialog[open] .obg-help-head *, dialog.obg-help-dialog[open] .obg-help-content, dialog.obg-help-dialog[open] .obg-help-content *, dialog.obg-help-dialog[open] .obg-explain-text';
     for (const node of document.querySelectorAll(selectors)) {
       const rect = node.getBoundingClientRect();
       if (!node.getClientRects().length || !rect.width || !rect.height || node.closest('[hidden]') || node.matches('input')) continue;
@@ -160,10 +160,10 @@ async function testFixtures(browser, errors) {
       }
     }
     await page.locator('#wordSyncHelpBtn').click();
-    await page.locator('#wordSyncDialog[open]').waitFor();
+    await page.locator('dialog.obg-help-dialog[data-obg-help-game="word_sync"][open]').waitFor();
     await checkBounds(page, `${width}px Help`);
     await page.keyboard.press('Escape');
-    assert.equal(await page.locator('#wordSyncDialog').evaluate(node => node.open), false);
+    assert.equal(await page.locator('dialog.obg-help-dialog[open]').count(), 0);
   }
   await renderFixture(page, 'guess');
   await page.locator('#wordSyncWord').fill('private draft');
@@ -230,8 +230,8 @@ async function testFixtures(browser, errors) {
   await page.locator('#wordSyncExplainBtn').click();
   assert.equal(await page.locator('#wordSyncExplainBtn').getAttribute('aria-pressed'), 'true');
   await clickDisabled(page, page.locator('#wordSyncSubmit'));
-  await page.locator('#wordSyncDialog[open]').waitFor();
-  assert.match(await page.locator('#wordSyncDialogBody').innerText(), /cannot be changed/);
+  await page.locator('dialog.obg-explain-dialog[open]').waitFor();
+  assert.match(await page.locator('dialog.obg-explain-dialog .obg-explain-text').innerText(), /cannot be changed|不能修改/);
   assert.equal(await page.locator('#wordSyncExplainBtn').getAttribute('aria-pressed'), 'false');
   assert.equal(await page.evaluate(() => window.wordSyncTestActions.length), 0);
   await page.keyboard.press('Escape');
@@ -256,7 +256,7 @@ async function testFixtures(browser, errors) {
   await renderFixture(page, 'reveal');
   await page.locator('#wordSyncNext').click();
   assert.equal(await page.evaluate(() => window.wordSyncTestActions[0].type), 'next_round');
-  assert.equal(await page.locator('#wordSyncDialog').evaluate(node => node.open), false);
+  assert.equal(await page.locator('dialog.obg-help-dialog[open]').count(), 0);
   await renderFixture(page, 'ready', false);
   assert.equal(await page.locator('#wordSyncNext').isDisabled(), true);
   await renderFixture(page, 'long_history');
@@ -280,7 +280,7 @@ async function testFixtures(browser, errors) {
     await ensureGameAssets('chromino');
     setGamePanelVisibility('chromino');
   });
-  assert.equal(await page.locator('#wordSyncDialog').evaluate(node => node.open), false);
+  assert.equal(await page.locator('dialog.obg-help-dialog[open]').count(), 0);
   assert.equal(await page.locator('#wordSyncPanel').isVisible(), false);
   assert.equal(await page.evaluate(() => document.body.classList.contains('ws-needs-action') || document.body.classList.contains('ws-explaining')), false);
   await renderFixture(page, 'guess');
@@ -313,12 +313,12 @@ async function testTouch(browser, errors) {
   await cdp.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [start]});
   await cdp.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: start.x, y: start.y - 70}]});
   await cdp.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
-  assert.equal(await page.locator('#wordSyncDialog').evaluate(node => node.open), false);
+  assert.equal(await page.locator('dialog.obg-help-dialog[open]').count(), 0);
   assert.equal(await page.evaluate(() => window.wordSyncTestActions.length), 0);
   await target.tap();
-  await page.locator('#wordSyncDialog[open]').waitFor();
+  await page.locator('dialog.obg-explain-dialog[open]').waitFor();
   assert.equal(await page.evaluate(() => window.wordSyncTestActions.length), 0);
-  await page.locator('#wordSyncDialogClose').tap();
+  await page.locator('dialog.obg-explain-dialog .obg-help-close').tap();
   await checkBounds(page, 'touch after explain');
   await context.close();
 }

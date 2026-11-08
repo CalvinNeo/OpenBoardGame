@@ -1,6 +1,8 @@
 import random
 from typing import Dict, List, Optional, Tuple
 
+from game.witchs_brew_ai import choose_action
+
 
 ROLES = [
     "wolf_keeper",
@@ -139,16 +141,6 @@ def _gain(player: Dict, gains: Dict[str, int]) -> None:
     for key, value in gains.items():
         if key in RESOURCES and int(value) > 0:
             player["resources"][key] = int(player["resources"].get(key, 0)) + int(value)
-
-
-def _ingredient_payment(resources: Dict, amount: int) -> Optional[Dict[str, int]]:
-    remaining = max(0, int(amount))
-    payment = {key: 0 for key in INGREDIENTS}
-    for key in INGREDIENTS:
-        take = min(max(0, int(resources.get(key, 0))), remaining)
-        payment[key] = take
-        remaining -= take
-    return payment if remaining == 0 else None
 
 
 def _sorted_player_ids(state: Dict) -> List[str]:
@@ -502,87 +494,6 @@ def _finish_begging_monk(state: Dict) -> Tuple[bool, str]:
     return True, f"added {sum(augment.values())} ingredients; {result}"
 
 
-def _bot_resolve_action(state: Dict, player_id: str) -> Dict:
-    pending = state.get("pending_action") or {}
-    role = pending.get("role")
-    full = pending.get("strength") == "full"
-    player = state["players"][player_id]
-    resources = player["resources"]
-    action = {"type": "resolve_action"}
-    skip = {"type": "resolve_action", "skip": True}
-
-    if role in ("wolf_keeper", "snake_hunter", "herb_collector"):
-        return action
-
-    if role == "alchemist":
-        available = [color for color in INGREDIENTS if int(resources.get(color, 0)) > 0]
-        if not available:
-            return skip
-        color = max(available, key=lambda item: int(resources.get(item, 0)))
-        return {**action, "pay_ingredient": color}
-
-    if role == "fortune_teller":
-        return action if int(resources.get("gold", 0)) > 0 else skip
-
-    if role == "assistant":
-        if int(resources.get("gold", 0)) <= 0:
-            return skip
-        amount = 3 if full else 1
-        gains = {color: 0 for color in INGREDIENTS}
-        for _ in range(amount):
-            color = min(INGREDIENTS, key=lambda item: int(resources.get(item, 0)) + gains[item])
-            gains[color] += 1
-        return {**action, "gain_ingredients": gains}
-
-    if role in ("wizard", "witch", "druid"):
-        stack = ROLE_DEFS[role]["stack"]
-        cards = state.get("cauldrons", {}).get(stack) or []
-        if not cards:
-            return skip
-        cost = {key: int(value) for key, value in cards[0].get("cost", {}).items()}
-        if not full:
-            cost["gold"] = cost.get("gold", 0) + 2
-        return action if _can_pay(player, cost) else skip
-
-    if role == "warlock":
-        if not full:
-            return action
-        spell = (state.get("spell_deck") or [None])[0]
-        if spell == "copia":
-            return {**action, "gain_ingredients": {color: 1 for color in INGREDIENTS}}
-        if spell == "optio":
-            affordable = []
-            for stack in CAULDRON_DATA:
-                cards = state.get("cauldrons", {}).get(stack) or []
-                if not cards:
-                    continue
-                cost = {key: int(value) for key, value in cards[0].get("cost", {}).items()}
-                if _can_pay(player, cost):
-                    affordable.append((int(cards[0].get("vp", 0)), stack))
-            if not affordable:
-                return skip
-            _, stack = max(affordable)
-            return {**action, "stack": stack}
-        spell_cost = {"herba": "green", "lupus": "red", "serpens": "white"}
-        if spell in spell_cost:
-            return action if int(resources.get(spell_cost[spell], 0)) > 0 else skip
-        spell_stack = {"magus": "copper", "sanatio": "silver", "strix": "iron"}
-        if spell in spell_stack:
-            cards = state.get("cauldrons", {}).get(spell_stack[spell]) or []
-            if not cards:
-                return skip
-            amount = sum(int(value) for value in cards[0].get("cost", {}).values())
-            payment = _ingredient_payment(resources, amount)
-            return {**action, "payment": payment} if payment is not None else skip
-        return skip
-
-    if role == "cutpurse":
-        return {**action, "augment_gold": 0}
-    if role == "begging_monk":
-        return {**action, "augment_ingredients": {color: 0 for color in INGREDIENTS}}
-    return skip
-
-
 class WitchsBrewGame:
     game_id = "witchs_brew"
     min_players = 3
@@ -853,28 +764,11 @@ class WitchsBrewGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        """Delegate to the strategy module, which only sees the public view."""
         legal = WitchsBrewGame.get_legal_actions(state, bot_id)
         if not legal:
             return None
-        if "select_roles" in legal:
-            disabled = set(state.get("disabled_roles", []))
-            roles = [role for role in ROLES if role not in disabled]
-            return {"type": "select_roles", "roles": random.sample(roles, 5)}
-        if "play_role" in legal:
-            hand = state["players"][bot_id].get("hand_roles", [])
-            return {"type": "play_role", "role": hand[0]} if hand else None
-        if "respond" in legal:
-            return {"type": "respond", "response": random.choice(["claim_full", "take_favor"])}
-        if "next_round" in legal:
-            return {"type": "next_round"}
-        if "choose_loss" in legal:
-            amount = ((state.get("monk_resolution") or {}).get("pending_losses") or [{}])[0].get("amount", 0)
-            resources = state["players"][bot_id]["resources"]
-            loss = _ingredient_payment(resources, amount)
-            return {"type": "choose_loss", "loss": loss} if loss is not None else None
-        if "resolve_action" in legal:
-            return _bot_resolve_action(state, bot_id)
-        return None
+        return choose_action(WitchsBrewGame.get_public_view(state, bot_id), legal)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
