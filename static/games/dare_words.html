@@ -1,0 +1,72 @@
+<template data-game-target="dareWordsHeaderActions" data-game-mode="contents">
+  <button id="dareWordsHelpBtn" type="button">Help</button>
+  <button id="dareWordsExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="dareWordsConfigBox" data-game-mode="contents">
+  <div class="game-config-title">胆敢造词</div>
+  <div class="row">
+    <label for="dareWordsDeckSelect">牌堆 Deck</label>
+    <select id="dareWordsDeckSelect" aria-describedby="dareWordsDeckHint">
+      <option value="full" selected>Full · 100 张</option>
+      <option value="short">Short · 60 张</option>
+    </select>
+  </div>
+  <div class="hint" id="dareWordsDeckHint">字卡越少，一局越短。两种牌堆都要求词句至少 3 个字。</div>
+</template>
+<template data-game-target="dareWordsPanel" data-game-mode="contents">
+  <div class="dare-words-status" role="status" aria-live="polite" data-dw-explain="turn">
+    <span id="dareWordsStatus">等待开始</span>
+    <span id="dareWordsDeckCount" class="dare-words-deck-count" data-dw-tip="牌堆里还没翻开的字卡数量。">🀄 牌堆 —</span>
+  </div>
+  <section class="dare-words-table" aria-labelledby="dareWordsRowTitle" data-dw-explain="row" data-dw-tip="桌面字列：抢答只能用这些字，每张字卡最多用一次。" tabindex="0">
+    <div class="dare-words-table-head">
+      <span id="dareWordsRowTitle" class="dare-words-eyebrow">🀄 桌面字列</span>
+      <span id="dareWordsRowCount" class="dare-words-muted">0 张</span>
+    </div>
+    <div id="dareWordsRow" class="dare-words-row"></div>
+    <p id="dareWordsRowEmpty" class="dare-words-empty">还没有翻牌，轮到的人先翻一张。</p>
+  </section>
+  <div class="dare-words-flip">
+    <button id="dareWordsFlipBtn" class="dare-words-primary" type="button" data-dw-explain="flip" disabled>🀄 翻牌</button>
+    <button id="dareWordsFinishBtn" type="button" data-dw-explain="finish" hidden>🏁 结束本局</button>
+    <span id="dareWordsFlipHint" class="dare-words-muted"></span>
+  </div>
+  <section class="dare-words-claim" aria-labelledby="dareWordsClaimTitle" data-dw-explain="claim">
+    <div class="dare-words-claim-head">
+      <label id="dareWordsClaimTitle" for="dareWordsInput">🗣 你的词句</label>
+      <span id="dareWordsInputHint">点字卡拼词，或直接输入</span>
+    </div>
+    <div class="dare-words-claim-row">
+      <input id="dareWordsInput" type="text" maxlength="24" placeholder="至少 3 个字…" autocomplete="off" spellcheck="false" enterkeyhint="send" data-dw-explain="input" aria-describedby="dareWordsInputHint dareWordsFeedback" disabled>
+      <button id="dareWordsClaimBtn" class="dare-words-primary" type="button" data-dw-explain="claimBtn" disabled>🗣 抢答</button>
+    </div>
+    <div id="dareWordsFeedback" class="dare-words-feedback" role="status" aria-live="polite"></div>
+  </section>
+  <section id="dareWordsVote" class="dare-words-vote" aria-labelledby="dareWordsVoteTitle" data-dw-explain="vote" hidden>
+    <div class="dare-words-vote-head"><span id="dareWordsVoteTitle">🗣 抢答中</span><span id="dareWordsVoteName" class="dare-words-muted"></span></div>
+    <div id="dareWordsVotePhrase" class="dare-words-vote-phrase"></div>
+    <div class="dare-words-vote-actions">
+      <button id="dareWordsAcceptBtn" class="dare-words-accept" type="button" data-dw-explain="accept">✅ 认可</button>
+      <button id="dareWordsRejectBtn" class="dare-words-reject" type="button" data-dw-explain="reject">❌ 不认可</button>
+    </div>
+    <div id="dareWordsVoteProgress" class="dare-words-muted" role="status" aria-live="polite"></div>
+  </section>
+  <section id="dareWordsResult" class="dare-words-result" aria-labelledby="dareWordsResultTitle" data-dw-explain="result" hidden>
+    <div class="dare-words-result-head"><span id="dareWordsResultTitle">📣 结算</span><span id="dareWordsResultScore" class="dare-words-muted"></span></div>
+    <div id="dareWordsResultPhrase" class="dare-words-vote-phrase"></div>
+    <div id="dareWordsResultVotes" class="dare-words-result-votes"></div>
+    <div class="dare-words-result-actions">
+      <button id="dareWordsNextBtn" class="dare-words-primary" type="button" data-dw-explain="next">Next ▶</button>
+      <span id="dareWordsNextHint" class="dare-words-muted"></span>
+    </div>
+  </section>
+  <section class="dare-words-board" aria-label="玩家分数" data-dw-explain="scores" data-dw-tip="每人收走的字卡数量就是分数。">
+    <div id="dareWordsScoreboard" class="dare-words-scoreboard"></div>
+  </section>
+  <details id="dareWordsHistoryDetails" class="dare-words-history">
+    <summary><span>🕘 抢答记录 <span id="dareWordsHistoryCount">0</span></span><span class="dare-words-history-toggle" aria-hidden="true">⌄</span></summary>
+    <div id="dareWordsHistory" class="dare-words-history-list" tabindex="0" role="region" aria-label="抢答记录"></div>
+  </details>
+  <div id="dareWordsTooltip" class="dare-words-tooltip" role="tooltip" hidden></div>
+</template>
+<template data-game-target="dareWordsDialog" data-game-mode="replace"><dialog id="dareWordsDialog" class="dare-words-dialog" aria-labelledby="dareWordsDialogTitle"><div class="dare-words-dialog-header"><h2 id="dareWordsDialogTitle">Help</h2><button id="dareWordsDialogCloseBtn" type="button">Close</button></div><div id="dareWordsDialogContent" class="dare-words-dialog-content"></div></dialog></template>

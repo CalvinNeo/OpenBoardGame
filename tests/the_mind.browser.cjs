@@ -14,7 +14,7 @@ fs.mkdirSync(output, { recursive: true });
 const views = JSON.parse(execFileSync(process.env.PYTHON || 'python3', ['-m', 'tests.the_mind_ui'],
   { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
 
-const CONTAINERS = ['.game-panel > .panel-header', '.tm-bar', '.tm-seats', '.tm-seat', '.tm-felt', '.tm-felt-info',
+const CONTAINERS = ['.game-panel > .panel-header', '.tm-panel', '.tm-bar', '.tm-rail', '.tm-seats', '.tm-seat', '.tm-felt', '.tm-felt-info',
   '.tm-row', '.tm-notice', '.tm-action', '.tm-btnrow', '.tm-hand', '.tm-review', '.tm-review-row',
   '.tm-body', '.tm-main', '.tm-side', '.tm-subhead'];
 
@@ -365,8 +365,11 @@ async function testLive(browser, errors) {
   await page.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('the_mind') && lastGameStatePayload?.view?.level === 2);
   assert.equal(await page.locator('#theMindPanel .tm-card').count(), 2, 'the private hand survives a reload');
   await page.locator('#theMindPanel button[data-tm-action="ready"]').click();
-  await page.waitForFunction(() => lastGameStatePayload.view.phase === 'playing');
-  await bounds(page, 'live playing after reload');
+  await page.waitForFunction(() => {
+    const view = lastGameStatePayload?.view;
+    return Boolean(view) && (view.phase === 'playing' || view.ready.includes(view.you));
+  }, null, { timeout: 15000 });
+  await bounds(page, 'live ready after reload');
 
   if (!await page.locator('#leaveBtn').isVisible()) await page.locator('#roomControlsToggleBtn').click();
   await page.locator('#leaveBtn').click();

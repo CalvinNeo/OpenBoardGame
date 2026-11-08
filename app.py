@@ -736,7 +736,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind"):
         return {"type": action.get("type")}
-    if game_type in ("semantic_guess", "word_sync"):
+    if game_type in ("semantic_guess", "word_sync", "dare_words"):
         return {"type": action.get("type")}
     if game_type == "night_of_the_ninja":
         return {"type": action.get("type")}
@@ -1906,7 +1906,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven", "semantic_guess", "word_sync"):
+    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven", "semantic_guess", "word_sync", "dare_words"):
         await _maybe_run_bots(room)
 
 

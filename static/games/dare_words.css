@@ -1,0 +1,106 @@
+.game-panel[data-game-theme="dare_words"]{--dw-ink:#2b2119;--dw-muted:#7d6a56;--dw-paper:#fdf7ec;--dw-line:#e2d3ba;--dw-red:#b23a2f;--dw-green:#2f6b4f;--dw-gold:#b8862f;background:var(--dw-paper);border-color:var(--dw-line);color:var(--dw-ink)}
+.game-panel[data-game-theme="dare_words"]>.panel-header{border-bottom:1px solid var(--dw-line);padding-bottom:12px;margin-bottom:14px}
+.dare-words-panel{min-width:0;font-family:"Work Sans",Arial,sans-serif}
+.dare-words-panel *,.dare-words-dialog *{min-width:0;overflow-wrap:anywhere}
+.dare-words-panel button,#dareWordsHeaderActions button,.dare-words-dialog button{border:1px solid #d8c6a9;border-radius:9px;background:#fffdf8;color:#4a3826;min-height:38px;padding:8px 14px;font-weight:600;cursor:pointer}
+.dare-words-panel button:disabled{opacity:.45;cursor:not-allowed}
+.dare-words-panel button:focus-visible,.dare-words-panel input:focus-visible,.dare-words-panel summary:focus-visible,.dare-words-panel [tabindex]:focus-visible,.dare-words-dialog button:focus-visible{outline:3px solid var(--dw-gold);outline-offset:3px}
+.dare-words-panel button.dare-words-primary{background:var(--dw-red);border-color:var(--dw-red);color:#fff;padding-inline:20px}
+.dare-words-status{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;font-size:14px;font-weight:600}
+.dare-words-status.is-your-turn>:first-child{color:var(--dw-red)}
+.dare-words-deck-count{flex-shrink:0;font-size:12px;font-weight:500;color:var(--dw-muted);white-space:nowrap}
+.dare-words-muted{color:var(--dw-muted);font-size:11px;line-height:1.5}
+.dare-words-eyebrow{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--dw-muted)}
+.dare-words-table{border:1px solid var(--dw-line);border-radius:14px;background:#fffdf7;padding:14px 16px 16px}
+.dare-words-table-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.dare-words-row{display:flex;flex-wrap:wrap;gap:10px}
+.dare-words-row:empty{display:none}
+.dare-words-card{flex:0 0 auto;width:58px;height:76px;display:grid;place-items:center;border:1px solid #d9c8ab;border-radius:10px;background:linear-gradient(180deg,#fffefb,#f7efe0);box-shadow:0 2px 0 #e6d8bf;font-size:32px;font-weight:600;color:#33261a;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;padding:0}
+.dare-words-card:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 0 #e0d0b3}
+.dare-words-card.is-selected{border-color:var(--dw-red);box-shadow:0 0 0 2px #b23a2f33,0 3px 0 #d9b3ad;background:#fff4ef;transform:translateY(-3px)}
+.dare-words-card.is-order{position:relative}
+.dare-words-card.is-order:after{content:attr(data-order);position:absolute;top:3px;left:5px;font-size:10px;font-weight:600;color:var(--dw-red)}
+.dare-words-card:disabled{cursor:default;opacity:1}
+.dare-words-empty{margin:2px 0 0;color:var(--dw-muted);font-size:12px}
+.dare-words-flip{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0 4px;min-height:38px}
+.dare-words-claim{margin-top:14px;border-top:1px solid var(--dw-line);padding-top:14px}
+.dare-words-claim-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.dare-words-claim-head label{font-size:13px;font-weight:600}
+.dare-words-claim-head span{font-size:11px;color:var(--dw-muted);text-align:right}
+.dare-words-claim-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.dare-words-claim-row input{width:100%;min-width:0;margin:0;border:1px solid #d3bd9a;border-radius:9px;background:#fff;color:var(--dw-ink);padding:11px 12px;font-size:17px;letter-spacing:.08em}
+.dare-words-claim-row input:disabled{background:#f3ece0;color:#94836d}
+.dare-words-feedback{margin-top:7px;font-size:12px;line-height:1.5;color:var(--dw-red);min-height:1.2em}
+.dare-words-feedback.is-ok{color:var(--dw-green)}
+.dare-words-vote,.dare-words-result{margin-top:14px;border:1px solid var(--dw-line);border-radius:14px;background:#fffdf7;padding:14px 16px}
+.dare-words-vote{border-color:#e0b9b2;background:#fff6f3}
+.dare-words-vote[hidden],.dare-words-result[hidden]{display:none}
+.dare-words-vote-head,.dare-words-result-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;font-weight:600}
+.dare-words-vote-phrase{margin:10px 0 12px;font-size:clamp(22px,3.4vw,30px);font-weight:600;letter-spacing:.14em;line-height:1.35}
+.dare-words-vote-actions{display:flex;flex-wrap:wrap;gap:10px}
+.dare-words-panel button.dare-words-accept{border-color:#9dc3ac;background:#eef7f0;color:#255c42}
+.dare-words-panel button.dare-words-reject{border-color:#e0b0a9;background:#fdeeeb;color:#95302a}
+.dare-words-vote-actions button[aria-pressed=true]{box-shadow:inset 0 0 0 2px currentColor}
+.dare-words-result-votes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.dare-words-vote-chip{padding:4px 9px;border-radius:7px;font-size:11px;background:#f1e8d8;color:#6b573f}
+.dare-words-vote-chip.is-accept{background:#e6f2e9;color:#2b6248}
+.dare-words-vote-chip.is-reject{background:#fbe9e6;color:#95302a}
+.dare-words-result-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.dare-words-result.is-win{border-color:#cfe0cd;background:#f4faf3}
+.dare-words-result.is-lose{border-color:#e6cfc6;background:#fdf3f0}
+.dare-words-board{margin-top:16px}
+.dare-words-scoreboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.dare-words-player{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border:1px solid var(--dw-line);border-radius:10px;background:#fffdf7;font-size:12px}
+.dare-words-player.is-you{border-color:#d8b98f;background:#fdf5e6;font-weight:600}
+.dare-words-player.is-flipper{box-shadow:inset 0 0 0 1px #c8a86f}
+.dare-words-player.is-winner{border-color:#9dc3ac;background:#f1f9f2}
+.dare-words-player-name{display:flex;align-items:center;gap:5px;min-width:0}
+.dare-words-player-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dare-words-player-score{flex-shrink:0;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--dw-red)}
+.dare-words-history{margin-top:16px;border-top:1px solid var(--dw-line);padding-top:12px}
+.dare-words-history summary{display:flex;justify-content:space-between;align-items:center;gap:10px;list-style:none;cursor:pointer;font-size:13px;font-weight:600}
+.dare-words-history summary::-webkit-details-marker{display:none}
+.dare-words-history[open] .dare-words-history-toggle{transform:rotate(180deg)}
+#dareWordsHistoryCount{margin-left:5px;font-size:11px;font-weight:400;color:var(--dw-muted)}
+.dare-words-history-list{max-height:260px;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;padding-right:3px;scrollbar-width:thin}
+.dare-words-history-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;column-gap:10px;padding:7px 8px;border-bottom:1px solid #efe4d1;font-size:12px}
+.dare-words-history-row:last-child{border-bottom:0}
+.dare-words-history-mark{font-size:13px;text-align:center}
+.dare-words-history-phrase{font-size:15px;font-weight:600;letter-spacing:.08em}
+.dare-words-history-meta{color:var(--dw-muted);font-size:11px;text-align:right;white-space:nowrap}
+.dare-words-history-empty{padding:22px 10px;text-align:center;color:var(--dw-muted);font-size:12px}
+.dare-words-tooltip{position:fixed;z-index:3000;max-width:min(280px,calc(100vw - 24px));padding:9px 12px;border-radius:8px;background:#3a2b1d;color:#fff7e9;font-size:12px;line-height:1.5;box-shadow:0 6px 20px #2a1d1233;pointer-events:none}
+.dare-words-tooltip[hidden]{display:none}
+.dare-words-panel.dare-words-explain-mode [data-dw-explain]{outline:2px dashed var(--dw-gold);outline-offset:3px;cursor:help}
+#dareWordsExplainBtn[aria-pressed=true]{background:#f7ecd6;border-color:var(--dw-gold)}
+.dare-words-dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 40px);padding:0;border:1px solid #d9c6a8;border-radius:14px;background:var(--dw-paper);color:var(--dw-ink);box-shadow:0 20px 80px #2a1d1233;overflow:auto}
+.dare-words-dialog::backdrop{background:#2a1d1266}
+.dare-words-dialog-header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;background:var(--dw-paper);border-bottom:1px solid var(--dw-line)}
+.dare-words-dialog-header h2{margin:0;font-size:18px}
+.dare-words-dialog-content{padding:4px 20px 20px;font-size:14px;line-height:1.7}
+.dare-words-dialog-content h3{margin:18px 0 6px;font-size:15px}
+.dare-words-dialog-content p{margin:8px 0}
+.dare-words-dialog-content ol,.dare-words-dialog-content ul{padding-left:22px;margin:8px 0}
+.dare-words-dialog-content li+li{margin-top:6px}
+@media(max-width:620px){
+  .dare-words-status{margin-bottom:8px;font-size:12px;gap:8px}
+  .dare-words-deck-count{font-size:10px}
+  .dare-words-table{padding:11px 12px 13px;border-radius:12px}
+  .dare-words-row{gap:7px}
+  .dare-words-card{width:46px;height:60px;font-size:25px;border-radius:9px}
+  .dare-words-flip{margin:10px 0 2px}
+  .dare-words-claim{margin-top:11px;padding-top:11px}
+  .dare-words-claim-row{gap:6px}
+  .dare-words-claim-row input{padding:10px;font-size:16px}
+  .dare-words-panel button.dare-words-primary{padding-inline:13px}
+  .dare-words-vote,.dare-words-result{padding:12px;border-radius:12px}
+  .dare-words-vote-phrase{margin:8px 0 10px;font-size:22px}
+  .dare-words-scoreboard{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .dare-words-player{padding:7px 9px;font-size:11px}
+  .dare-words-player-score{font-size:14px}
+  .dare-words-history-list{max-height:210px}
+  .dare-words-history-row{grid-template-columns:20px minmax(0,1fr);row-gap:2px;column-gap:7px}
+  .dare-words-history-meta{grid-column:2;text-align:left}
+  .dare-words-dialog-header{padding:12px 15px}
+  .dare-words-dialog-content{padding:4px 15px 15px}
+}

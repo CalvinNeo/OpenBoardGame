@@ -263,6 +263,10 @@ function renderGameState(data) {
     if (typeof renderSemanticGuessGameState === "function") renderSemanticGuessGameState(data);
     return;
   }
+  if (gameType === "dare_words") {
+    if (typeof renderDareWordsGameState === "function") renderDareWordsGameState(data);
+    return;
+  }
   if (gameType === "colt_express") {
     if (typeof renderColtExpressGameState === "function") renderColtExpressGameState(data);
     return;

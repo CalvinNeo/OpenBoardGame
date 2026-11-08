@@ -249,6 +249,9 @@ function emitRoomStart() {
   if (currentGameType === "semantic_guess" && typeof getSemanticGuessConfig === "function") {
     payload.config = getSemanticGuessConfig();
   }
+  if (currentGameType === "dare_words" && typeof getDareWordsConfig === "function") {
+    payload.config = getDareWordsConfig();
+  }
   sendRoomRequest("room:start", payload, "Starting game...");
 }
 

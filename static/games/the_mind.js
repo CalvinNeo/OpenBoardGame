@@ -283,7 +283,11 @@
         + "</div>";
     }).join("");
     return '<section class="tm-review" data-tm-explain="review"><div class="tm-subhead"><h3>LEVEL '
-      + summary.level + " REVIEW</h3><span>❤️ −" + summary.lost_lives + " · 🌟 " + summary.stars_used + " used</span></div>"
+      + summary.level + " REVIEW</h3><span>"
+      + (summary.lost_lives || summary.stars_used
+        ? "❤️ −" + summary.lost_lives + " · 🌟 " + summary.stars_used + " used"
+        : "No Life (❤️) lost")
+      + "</span></div>"
       + rewardRow + rows + "</section>";
   }
 

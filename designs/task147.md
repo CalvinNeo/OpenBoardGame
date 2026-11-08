@@ -55,3 +55,40 @@
 工作区备注：另一项并行的 Compress 游戏后来加入了新的 style fragment，但尚未补充公共样式占位，因此全局 `test_frontend_style_assets` 会报告该并行改动；本游戏使用独立 `styles`，不需要公共占位组。
 
 范围说明：实现标准正面出牌版，不含 Extreme 版、通关后的盲打挑战和语音／聊天同步。线上版没有倒计时，机器人使用延迟模拟练习伙伴，不能代替真人默契。
+
+## UI 优化（2026-11-07）
+
+按 DEV_GUIDE.md 的前端要求、交互要求与 UI Acceptance Gate 重做界面，规则与服务端逻辑未改动。
+
+### 结构与布局
+
+- 去掉 `.tm-surface` 这层嵌套框：整块 `.game-panel` 通过 `data-game-theme="the_mind"` 直接变成深色桌面，页头标题由 `panelTitle` 换成「🧠 心意相通」，Help／Explain／Reconnect 均 `nowrap`。面板内不再有大框套小框。
+- 删除主界面的大段装饰与规则文字（`COOPERATIVE SYNCHRONIZATION` 眉标、副标题、`Feel the moment.`/`No turns. No countdown…` 说明段），规则全部留在 Help。
+- 竖向重排为：状态条 → 关卡进度轨 → 席位 → 桌面（牌堆＋轨迹＋弃牌＋公告）→ 行动区 → 手牌 → 结算回顾；共享日志收进右侧（窄屏移到末尾）可折叠 `<details>`，有高度上限且重绘后保持展开状态。
+- 突出主体：牌堆卡与 `▶️ Play n` 大按钮是视觉重心；手牌用 `auto-fill` 保持卡片尺寸，宽屏不再被拉伸。
+
+### 交互与信息
+
+- 新增「RECENT PLAYS」按席位配色的最近出牌轨迹与「DISCARDED」明牌弃牌区，让同时行动的每个人都能看到别人刚做了什么；失误公告直接列出被弃的牌。
+- 状态条用 ❤️／🌟 圆点串表示生命与飞镖，并补齐图标提示：桌面端悬停显示、手机端点按显示并在 3 秒后自动消失、键盘聚焦同样可读；席位手牌数改用 CSS 绘制的牌背图标，避免 `🂠` 在 Windows 上缺字。
+- 手牌卡片改为非交互元素（原先只有最小牌可点的按钮点不出任何结果），最小牌高亮并标注 PLAY；出牌仍只用固定大按钮，不做二次确认。
+- 触屏区分滑动与点击：只有位移小于 8px 的抬手才触发提示或解释，滑动滚动不会误触发。
+- 修正两处交互缺陷：解释后的点击拦截改为按坐标匹配（此前 700ms 内任意点击—including Explain 按钮本身—都会被吞掉）；触屏点按先触发 focus 时提示曾被「不自动消失」分支覆盖而永不消失。
+- Explain 覆盖状态条、进度轨、席位、牌堆、轨迹、弃牌、公告、行动按钮、手牌、回顾与日志；禁用按钮仍可解释，Esc 退出，无解释的按钮在解释模式下不触发原功能。
+- 轮到自己时为收起的 RC 加红框；离开房间或切换游戏时清理面板、弹窗与该标记。
+
+### 修改文件
+
+`static/games/the_mind.css`、`static/games/the_mind.js`、`static/games/the_mind.html`、`static/game_assets.js`（资源版本 v=2 与 `panelTitle`）、`static/index.html`（加载器版本）、新增 `tests/the_mind_ui.py` 与 `tests/the_mind.browser.cjs`、本文。
+
+### 验证结果
+
+- `node --check static/games/the_mind.js tests/the_mind.browser.cjs`、`git diff --check` 通过。
+- `python3 -m unittest tests.test_the_mind tests.test_room_session tests.test_frontend_style_assets tests.test_frontend_script_names tests.test_game_names tests.test_game_tags tests.test_game_dev_order tests.test_bot_threading`：65 项通过。
+- `ROOM_TEST_URL=http://127.0.0.1:8147 PLAYWRIGHT_MODULE=<playwright> node tests/the_mind.browser.cjs` 通过（连续三次）：17 个视图 × 320／390／1024／1440px 的页面与容器无横向溢出、无内容溢出、关键容器两两不重叠；面板本身即桌面（内部容器无边框无背景）、页头三枚按钮不换行、无 Clear Selection、无逐块 i 标记；他人手牌数值不出现在 DOM，注入的 `<img onerror>` 名字被转义；Ready／Play／Stop／飞镖投票／Next Round 的提交与禁用态、系统错误后恢复；日志默认折叠、可展开且有界；悬停与三秒点按提示；Help 含 `Life (❤️)`／`Throwing star (🌟)`／`Ready (🖐️)`／`Stop (⏸️)` 且 Esc 关闭后焦点回到 Help；Explain 对区域与禁用按钮生效且不误发动作；触屏滑动不解释、轻点才解释；真实房间加机器人完成发牌→准备→出牌→（飞镖）→结算→下一关→刷新恢复→离开清理。
+- 截图保存在 `build/the-mind-ui/`（各宽度对局、结算、12 张手牌、长名字、Help 与真实房间结算）。
+
+### 未检查项
+
+- 未做 iOS／Android／Windows 真机验证；Emoji 兼容性按 iOS／Windows 常见集合挑选，牌背图标改为自绘以规避缺字。
+- 未改动规则、AI 与服务端；机器人在页面刷新后的准备时序偶发不稳定，属服务端机器人调度范畴，本次未修改，浏览器用例已改为只断言本人准备被接受。

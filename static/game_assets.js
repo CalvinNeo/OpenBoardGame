@@ -1156,6 +1156,14 @@ const GAME_ASSETS = {
     "panel": "semanticGuessPanel",
     "panelTitle": "🧭 词语雷达",
     "header": "showSemanticGuessHeaderActions"
+  },
+  "dare_words": {
+    "scripts": ["/static/games/dare_words.js?v=1"],
+    "styles": ["/static/games/dare_words.css?v=1"],
+    "markup": "/static/games/dare_words.html?v=1",
+    "panel": "dareWordsPanel",
+    "panelTitle": "🀄 胆敢造词",
+    "header": "showDareWordsHeaderActions"
   }
 };
 

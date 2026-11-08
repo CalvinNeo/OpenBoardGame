@@ -147,6 +147,11 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+from game.dare_words import (
+    DareWordsGame,
+    ACTION_SCHEMA as DARE_WORDS_ACTION_SCHEMA,
+    CONFIG_SCHEMA as DARE_WORDS_CONFIG_SCHEMA,
+)
 
 register_game(
     GameDefinition(
@@ -6294,5 +6299,21 @@ register_game(
         module=WordSyncGame,
         serialize=WordSyncGame.serialize,
         deserialize=WordSyncGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DareWordsGame.game_id,
+        name="Dare to Make Words",
+        name_zh="胆敢造词",
+        min_players=DareWordsGame.min_players,
+        max_players=DareWordsGame.max_players,
+        turn_mode="turn",
+        action_schema=DARE_WORDS_ACTION_SCHEMA,
+        config_schema=DARE_WORDS_CONFIG_SCHEMA,
+        module=DareWordsGame,
+        serialize=DareWordsGame.serialize,
+        deserialize=DareWordsGame.deserialize,
     )
 )
