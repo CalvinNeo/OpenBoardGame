@@ -1,114 +1,121 @@
 <template data-game-target="cyberPicturesPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="cyberPhase">-</span></div>
-                <div>Round: <span id="cyberRound">-</span>/<span id="cyberTotalRounds">-</span></div>
-                <div>Tool: <span id="cyberToolLabel">-</span></div>
-                <div>Target: <span id="cyberTargetLabel">-</span></div>
+              <div class="cyber-toolbar" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: nowrap; margin: 0 0 10px;">
+                <h3 style="margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" data-cyber-pictures-explain="game_title">🖼️ Cyber Pictures</h3>
+                <div class="cyber-tools" style="display: flex; align-items: center; gap: 6px; flex: 0 0 auto;">
+                  <button id="cyberPicturesHelpBtn" type="button" style="white-space: nowrap;">Help</button>
+                  <button id="cyberPicturesExplainBtn" type="button" aria-pressed="false" style="white-space: nowrap;">Explain</button>
+                </div>
               </div>
               <div class="row">
-                <div>Submitted: <span id="cyberSubmitted">-</span></div>
-                <div>Guessed: <span id="cyberGuessed">-</span></div>
+                <div data-cyber-pictures-explain="phase">Phase: <span id="cyberPhase">-</span></div>
+                <div data-cyber-pictures-explain="round">Round: <span id="cyberRound">-</span>/<span id="cyberTotalRounds">-</span></div>
+                <div data-cyber-pictures-explain="tool">Tool: <span id="cyberToolLabel">-</span></div>
+                <div data-cyber-pictures-explain="target">Target: <span id="cyberTargetLabel">-</span></div>
+              </div>
+              <div class="row">
+                <div data-cyber-pictures-explain="submitted">Submitted: <span id="cyberSubmitted">-</span></div>
+                <div data-cyber-pictures-explain="guessed">Guessed: <span id="cyberGuessed">-</span></div>
               </div>
 
               <h3>Matrix</h3>
-              <div id="cyberMatrix" class="cyber-matrix"></div>
+              <div id="cyberMatrix" class="cyber-matrix" data-cyber-pictures-explain="matrix"></div>
 
               <div id="cyberCraftArea">
                 <h3>Craft</h3>
                 <div id="cyberToolShoelaces" class="cyber-tool hidden">
                   <div class="row">
-                    <canvas id="cyberShoelaceCanvas" width="360" height="360"></canvas>
+                    <canvas id="cyberShoelaceCanvas" width="360" height="360" data-cyber-pictures-explain="shoelace_canvas"></canvas>
                   </div>
                   <div class="row actions">
-                    <button id="cyberShoelaceUndoBtn">Undo Path</button>
-                    <button id="cyberShoelaceClearBtn">Clear</button>
+                    <button id="cyberShoelaceUndoBtn" data-cyber-pictures-explain="shoelace_undo">Undo Path</button>
+                    <button id="cyberShoelaceClearBtn" data-cyber-pictures-explain="shoelace_clear">Clear</button>
                   </div>
-                  <div class="hint">Draw up to 2 paths.</div>
+                  <div class="hint" data-cyber-pictures-explain="shoelace_hint">Draw up to 2 paths.</div>
                 </div>
                 <div id="cyberToolPixel" class="cyber-tool hidden">
-                  <div id="cyberPixelGrid" class="cyber-pixel-grid"></div>
+                  <div id="cyberPixelGrid" class="cyber-pixel-grid" data-cyber-pictures-explain="pixel_grid"></div>
                   <div class="row cyber-pixel-palette" id="cyberPixelPalette"></div>
                 </div>
                 <div id="cyberToolIconSet" class="cyber-tool hidden">
                   <div class="row cyber-icon-palette" id="cyberIconPalette"></div>
-                  <div id="cyberIconCanvas" class="cyber-stage"></div>
+                  <div id="cyberIconCanvas" class="cyber-stage" data-cyber-pictures-explain="icon_canvas"></div>
                   <div class="row actions">
-                    <button id="cyberIconRemoveBtn">Remove Last</button>
-                    <button id="cyberIconClearBtn">Clear</button>
+                    <button id="cyberIconRemoveBtn" data-cyber-pictures-explain="icon_remove">Remove Last</button>
+                    <button id="cyberIconClearBtn" data-cyber-pictures-explain="icon_clear">Clear</button>
                   </div>
-                  <div class="hint">Use 2-5 icons. Tap to rotate 90°.</div>
+                  <div class="hint" data-cyber-pictures-explain="icon_hint">Use 2-5 icons. Tap to rotate 90°.</div>
                 </div>
                 <div id="cyberToolLetters" class="cyber-tool hidden">
                   <div class="row cyber-letter-palette" id="cyberLetterPalette"></div>
-                  <div id="cyberLetterCanvas" class="cyber-stage"></div>
+                  <div id="cyberLetterCanvas" class="cyber-stage" data-cyber-pictures-explain="letter_canvas"></div>
                   <div class="row">
                     <label for="cyberLetterRotate">Rotation</label>
-                    <input id="cyberLetterRotate" type="range" min="0" max="360" value="0" />
-                    <span id="cyberLetterRotateValue">0°</span>
+                    <input id="cyberLetterRotate" type="range" min="0" max="360" value="0" data-cyber-pictures-explain="letter_rotate" />
+                    <span id="cyberLetterRotateValue" data-cyber-pictures-explain="letter_rotate_value">0°</span>
                   </div>
                   <div class="row actions">
-                    <button id="cyberLetterRotateBtn">Rotate Selected</button>
-                    <button id="cyberLetterRemoveBtn">Remove Selected</button>
-                    <button id="cyberLetterClearBtn">Clear</button>
+                    <button id="cyberLetterRotateBtn" data-cyber-pictures-explain="letter_rotate_btn">Rotate Selected</button>
+                    <button id="cyberLetterRemoveBtn" data-cyber-pictures-explain="letter_remove">Remove Selected</button>
+                    <button id="cyberLetterClearBtn" data-cyber-pictures-explain="letter_clear">Clear</button>
                   </div>
-                  <div class="hint">Rotate with the slider or tap to spin 90°; up to 10 letters.</div>
+                  <div class="hint" data-cyber-pictures-explain="letter_hint">Rotate with the slider or tap to spin 90°; up to 10 letters.</div>
                 </div>
                 <div id="cyberToolShapes" class="cyber-tool hidden">
                   <div class="row cyber-shape-palette" id="cyberShapePalette"></div>
-                  <div id="cyberShapeCanvas" class="cyber-stage"></div>
+                  <div id="cyberShapeCanvas" class="cyber-stage" data-cyber-pictures-explain="shape_canvas"></div>
                   <div class="row">
                     <label for="cyberShapeRotate">Rotation</label>
-                    <input id="cyberShapeRotate" type="range" min="0" max="360" value="0" />
-                    <span id="cyberShapeRotateValue">0°</span>
+                    <input id="cyberShapeRotate" type="range" min="0" max="360" value="0" data-cyber-pictures-explain="shape_rotate" />
+                    <span id="cyberShapeRotateValue" data-cyber-pictures-explain="shape_rotate_value">0°</span>
                   </div>
                   <div class="row actions">
-                    <button id="cyberShapeRemoveBtn">Remove Selected</button>
-                    <button id="cyberShapeClearBtn">Clear</button>
+                    <button id="cyberShapeRemoveBtn" data-cyber-pictures-explain="shape_remove">Remove Selected</button>
+                    <button id="cyberShapeClearBtn" data-cyber-pictures-explain="shape_clear">Clear</button>
                   </div>
-                  <div class="hint">Drag hollow shapes; rotate freely.</div>
+                  <div class="hint" data-cyber-pictures-explain="shape_hint">Drag hollow shapes; rotate freely.</div>
                 </div>
                 <div id="cyberToolThruster" class="cyber-tool hidden">
                   <div class="row">
-                    <canvas id="cyberThrusterCanvas" width="360" height="360"></canvas>
+                    <canvas id="cyberThrusterCanvas" width="360" height="360" data-cyber-pictures-explain="thruster_canvas"></canvas>
                   </div>
                   <div class="row actions cyber-thruster-controls">
-                    <div id="cyberThrusterAttempts" class="hint"></div>
-                    <button id="cyberThrusterUndoBtn" class="cyber-thruster-undo">Undo</button>
+                    <div id="cyberThrusterAttempts" class="hint" data-cyber-pictures-explain="thruster_attempts"></div>
+                    <button id="cyberThrusterUndoBtn" class="cyber-thruster-undo" data-cyber-pictures-explain="thruster_undo">Undo</button>
                   </div>
                   <div class="row cyber-thruster-metrics">
-                    <div id="cyberThrusterAccel" class="hint">Acceleration (up +): +0.0 px/s^2</div>
-                    <div id="cyberThrusterVelocityLabel" class="hint">Velocity (up +): +0.0 px/s</div>
+                    <div id="cyberThrusterAccel" class="hint" data-cyber-pictures-explain="thruster_accel">Acceleration (up +): +0.0 px/s^2</div>
+                    <div id="cyberThrusterVelocityLabel" class="hint" data-cyber-pictures-explain="thruster_velocity">Velocity (up +): +0.0 px/s</div>
                   </div>
-                  <div class="hint">Hold mouse/touch or space to thrust.</div>
+                  <div class="hint" data-cyber-pictures-explain="thruster_hint">Hold mouse/touch or space to thrust.</div>
                 </div>
                 <div id="cyberToolSynth" class="cyber-tool hidden">
-                  <div id="cyberSynthGrid" class="cyber-synth-grid"></div>
-                  <div class="hint">Adjust 10 sliders (integers) to set bar heights.</div>
+                  <div id="cyberSynthGrid" class="cyber-synth-grid" data-cyber-pictures-explain="synth_grid"></div>
+                  <div class="hint" data-cyber-pictures-explain="synth_hint">Adjust 10 sliders (integers) to set bar heights.</div>
                 </div>
                 <div class="row actions">
-                  <button id="cyberSubmitBtn">Submit Creation</button>
+                  <button id="cyberSubmitBtn" data-cyber-pictures-explain="submit_craft">Submit Creation</button>
                 </div>
-                <div id="cyberSubmissionHint" class="hint"></div>
+                <div id="cyberSubmissionHint" class="hint" data-cyber-pictures-explain="submission_hint"></div>
               </div>
 
               <div id="cyberGuessArea" class="hidden">
                 <h3>Guess</h3>
                 <div id="cyberWorks"></div>
                 <div class="row actions">
-                  <button id="cyberSubmitGuessBtn">Submit Guesses</button>
+                  <button id="cyberSubmitGuessBtn" data-cyber-pictures-explain="submit_guesses">Submit Guesses</button>
                 </div>
               </div>
 
               <div id="cyberScoreArea" class="hidden">
                 <h3>Round Results</h3>
-                <div id="cyberRoundScores" class="cyber-score-grid"></div>
-                <div id="cyberReveal" class="cyber-reveal-list"></div>
+                <div id="cyberRoundScores" class="cyber-score-grid" data-cyber-pictures-explain="round_scores"></div>
+                <div id="cyberReveal" class="cyber-reveal-list" data-cyber-pictures-explain="reveal"></div>
                 <div class="row actions">
-                  <button id="cyberNextRoundBtn">Next Round</button>
+                  <button id="cyberNextRoundBtn" data-cyber-pictures-explain="next_round">Next Round</button>
                 </div>
-                <div id="cyberGameOverNotice" class="hint hidden">Game over.</div>
+                <div id="cyberGameOverNotice" class="hint hidden" data-cyber-pictures-explain="game_over">Game over.</div>
               </div>
 
               <h3>Players</h3>
-              <div id="cyberPlayers"></div>
+              <div id="cyberPlayers" data-cyber-pictures-explain="players"></div>
             </template>

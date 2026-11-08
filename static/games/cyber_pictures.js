@@ -1,3 +1,196 @@
+// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+const cyberPicturesHelpButton = document.getElementById("cyberPicturesHelpBtn");
+const cyberPicturesExplainButton = document.getElementById("cyberPicturesExplainBtn");
+
+const CYBER_PICTURES_HELP_CONFIG = {
+  gameId: "cyber_pictures",
+  title: { zh: "赛博画影 · Cyber Pictures", en: "Cyber Pictures" },
+  basic: {
+    win: {
+      zh: "五轮结束后总分最高的人获胜，你的分数来自猜中别人作品的次数，以及别人猜中你作品的次数。",
+      en: "After five rounds the highest total score wins. Your points come from how many other works you identify correctly and from how many players read your work correctly."
+    },
+    turn: {
+      zh: "每一轮你先用手上的工具重画矩阵里属于你的那张照片，然后为除自己以外的每一件作品各选一个坐标。",
+      en: "Each round you first rebuild your assigned photo from the matrix with the tool in your hands, and then you pick one coordinate for every work except your own."
+    },
+    key: {
+      zh: "重点是把照片里最容易被认出来的那几个特征，用手上这件受限的工具夸张地表现出来，同时从别人的抽象作品里反推坐标。",
+      en: "The key is to exaggerate the most recognisable features of your photo with the limited tool you were given, and to reverse that reasoning when you look at everyone else's abstractions."
+    }
+  },
+  sections: [
+    {
+      id: "matrix",
+      label: { zh: "矩阵与目标", en: "Matrix and target" },
+      html: {
+        zh: "<p>每轮开始时系统摆出一面 4×4 的照片矩阵(🖼️)，行用 A B C D，列用 1 2 3 4，所以坐标从 A1 排到 D4。</p>"
+          + "<p>每位玩家会被秘密分配其中一个坐标作为本轮目标(Target)，只有你自己看得到，矩阵里会用高亮框标出它。</p>"
+          + "<p>目标默认互不重复，如果房间允许重复目标，也可能出现两个人盯上同一张照片。</p>"
+          + "<p>每一轮都会重新抽 16 张照片并重新分配目标，所以上一轮记住的布局没有用。</p>",
+        en: "<p>Every round opens a 4×4 photo matrix (🖼️). Rows are labelled A to D and columns 1 to 4, so the coordinates run from A1 to D4.</p>"
+          + "<p>Each player is secretly handed one of those coordinates as the round's target, and only you can see yours. The matrix highlights it for you.</p>"
+          + "<p>Targets are normally all different, but a room that allows duplicates can point two players at the same photo.</p>"
+          + "<p>Sixteen fresh photos are drawn and targets are reassigned every round, so nothing you memorised last round carries over.</p>"
+      }
+    },
+    {
+      id: "flow",
+      label: { zh: "回合流程", en: "Round flow" },
+      html: {
+        zh: "<p>一轮分三步：Crafting 创作、Guessing 竞猜、Scoring 结算，三个阶段里所有玩家都是同时行动的。</p>"
+          + "<p>创作阶段要等所有人都按了 Submit Creation 才进入竞猜，竞猜阶段要等所有人都按了 Submit Guesses 才结算。</p>"
+          + "<p>结算界面按 Next Round 进入下一轮，工具会轮换给下家，第五轮结束后直接进入 Game over。</p>"
+          + "<p>Submitted 和 Guessed 告诉你自己这一轮走到哪一步了。</p>",
+        en: "<p>A round has three steps: Crafting, Guessing and Scoring, and every player acts at the same time in all three.</p>"
+          + "<p>The guessing step only starts once everyone has pressed Submit Creation, and scoring only happens once everyone has pressed Submit Guesses.</p>"
+          + "<p>Press Next Round on the scoring screen to move on. Tools rotate to the next player, and the fifth round runs straight into Game over.</p>"
+          + "<p>Submitted and Guessed tell you how far you personally have got in the current round.</p>"
+      }
+    },
+    {
+      id: "tools_line",
+      label: { zh: "线条类工具", en: "Line tools" },
+      html: {
+        zh: "<p>鞋带线(Shoelaces)：在画布上按住拖动就能拉出一条线，整轮最多画 2 条路径，Undo Path 撤销最后一条，Clear 全部清空。</p>"
+          + "<p>推进器(Thruster)：火箭点(🟠)从左边匀速向右飞，重力一直把它往下拉，你按住鼠标、手指或空格键点火就能把它往上推，飞出来的轨迹就是你的作品。</p>"
+          + "<p>推进器整轮只有 3 次尝试，飞出画布就算这次结束，Undo 可以删掉上一次轨迹并把这次机会还给你。</p>"
+          + "<p>合成器(Synthesizer)：10 根取值为 0 到 100 的整数滑块决定 10 根柱子的高度，作品会被画成深色背景上的十根绿色柱子。</p>",
+        en: "<p>Shoelaces: press and drag on the canvas to pull out a line. You may lay at most 2 paths in a round, Undo Path removes the last one and Clear removes them all.</p>"
+          + "<p>Thruster: a rocket dot (🟠) flies from the left edge at a constant speed while gravity pulls it down. Holding the mouse, a finger or the space bar fires the engine and pushes it up, and the trail it leaves behind is your artwork.</p>"
+          + "<p>The thruster gives you only 3 attempts per round. Leaving the canvas ends an attempt, and Undo deletes the last trail and hands that attempt back.</p>"
+          + "<p>Synthesizer: 10 integer sliders from 0 to 100 set the height of 10 bars, and the finished work is drawn as ten green bars on a dark background.</p>"
+      }
+    },
+    {
+      id: "tools_collage",
+      label: { zh: "拼贴类工具", en: "Collage tools" },
+      html: {
+        zh: "<p>像素网格(Pixel Grid)：3×3 一共九个格子，先在九色调色板里选好颜色再点格子填色，九格全部填满才能提交。</p>"
+          + "<p>图标组合(Icon Set)：从表情图标库里点选，例如笑脸(😀)、树(🌳)、房子(🏠)、星星(⭐)，画布上要放 2 到 5 个，拖动可以移动，轻点一下就转 90°。</p>"
+          + "<p>字母拼贴(AEIOU Collage)：只能用 A E I O U 五个大写字母，最多放 10 个，Rotation 滑块可以转到任意角度，轻点字母则快速转 90°。</p>"
+          + "<p>几何堆叠(Shape Stacker)：七种空心图形，正方形(□)、长方形(▭)、三角形(△)、圆形(○)、拱形(◠)、椭圆(⬭)、正六边形(⬡)，可以拖动摆放并自由旋转。</p>",
+        en: "<p>Pixel Grid: nine cells in a 3×3 block. Pick a colour from the nine-swatch palette and click a cell to fill it, and all nine cells must be filled before you can submit.</p>"
+          + "<p>Icon Set: pick from the emoji library, for example the smiley (😀), the tree (🌳), the house (🏠) or the star (⭐). Place between 2 and 5 of them, drag to move and tap one to spin it 90°.</p>"
+          + "<p>AEIOU Collage: only the five capital letters A, E, I, O and U are available, with at most 10 on the canvas. The Rotation slider turns the selected letter to any angle and a tap spins it 90°.</p>"
+          + "<p>Shape Stacker: seven hollow shapes, the square (□), the rectangle (▭), the triangle (△), the circle (○), the arch (◠), the ellipse (⬭) and the hexagon (⬡). Drag them into place and rotate them freely.</p>"
+      }
+    },
+    {
+      id: "guess",
+      label: { zh: "竞猜阶段", en: "Guessing" },
+      html: {
+        zh: "<p>竞猜阶段会匿名列出本轮所有作品，标题只写 Work #1、Work #2，作者是谁完全隐藏。</p>"
+          + "<p>你必须为除自己以外的每一件作品在下拉框里选一个坐标，全部选完才能按 Submit Guesses。</p>"
+          + "<p>自己的作品不需要猜，界面上会直接说明你不能猜自己的图。</p>"
+          + "<p>所有人的猜测是同时提交的，所以谁也看不到别人选了什么。</p>",
+        en: "<p>The guessing step lists every work from the round anonymously, labelled only as Work #1, Work #2 and so on, with the author hidden.</p>"
+          + "<p>You must choose a coordinate from the dropdown for every work except your own, and Submit Guesses only unlocks once they are all filled in.</p>"
+          + "<p>You never guess your own work, and the card says so where the dropdown would be.</p>"
+          + "<p>Everyone submits at the same time, so nobody can see what the others picked.</p>"
+      }
+    },
+    {
+      id: "score",
+      label: { zh: "计分与胜负", en: "Scoring and winning" },
+      html: {
+        zh: "<p>你每猜对一件别人的作品就得 1 分猜测分(Guess Points)。</p>"
+          + "<p>每有一个人猜中你的作品，你就得 1 分艺术家分(Artist Points)，所以你的图被越多人认出来，加分越多。</p>"
+          + "<p>本轮加分是这两项之和，直接累加进总分(Total)，五轮下来的总分决定胜负。</p>"
+          + "<p>Round Results 会公布每件作品是谁画的、目标坐标是什么，以及每个人的猜测是对是错。</p>",
+        en: "<p>Every other player's work you identify correctly earns you one Guess Point.</p>"
+          + "<p>Every player who identifies your work earns you one Artist Point, so the more people read your picture the more it pays.</p>"
+          + "<p>The two are added together for the round and go straight into your Total, and the total after five rounds decides the winner.</p>"
+          + "<p>Round Results reveals who made each work, which coordinate it targeted, and whether each guess was right or wrong.</p>"
+      }
+    }
+  ]
+};
+
+const CYBER_PICTURES_EXPLAIN = {
+  game_title: { zh: "赛博画影(🖼️)，用受限的数字工具重画照片、再互相竞猜坐标的游戏。", en: "Cyber Pictures (🖼️), where you rebuild photos with limited digital tools and then guess each other's coordinates." },
+  phase: { zh: "当前阶段。crafting 是创作，guessing 是竞猜，scoring 是结算，ended 是游戏结束。", en: "The current phase: crafting, guessing, scoring, or ended once the game is over." },
+  round: { zh: "当前是第几轮，这一局固定打五轮。", en: "Which round is running. A game always lasts five rounds." },
+  tool: { zh: "本轮分配给你的工具，每轮都会轮换一次，所以每种工具你都会轮到。", en: "The tool assigned to you this round. Tools rotate every round so you get to try all of them." },
+  target: { zh: "你本轮的秘密目标坐标，你要用工具把矩阵(🖼️)里这张照片重画出来。", en: "Your secret target coordinate for this round. You rebuild that photo from the matrix (🖼️) with your tool." },
+  submitted: { zh: "你本轮是否已经提交作品，要等所有人提交完才进入竞猜。", en: "Whether you have submitted your work. Guessing starts once everyone has." },
+  guessed: { zh: "你本轮是否已经提交猜测，要等所有人提交完才结算。", en: "Whether you have submitted your guesses. Scoring starts once everyone has." },
+  matrix: { zh: "本轮的 4×4 照片矩阵(🖼️)，行是 A 到 D，列是 1 到 4，你的目标坐标会用高亮框标出来。", en: "This round's 4×4 photo matrix (🖼️) with rows A to D and columns 1 to 4. Your target coordinate is highlighted." },
+  shoelace_canvas: { zh: "鞋带线(Shoelaces)的画布，按住拖动就拉出一条线，整轮最多两条路径。", en: "The Shoelaces canvas. Press and drag to pull out a line, with at most two paths per round." },
+  shoelace_undo: { zh: "撤销最后画的那条路径，只剩一条时按它就等于清空。", en: "Remove the path you drew last. Pressing it with a single path left empties the canvas." },
+  shoelace_clear: { zh: "清空鞋带线(Shoelaces)画布上的全部路径，重新开始画。", en: "Wipe every path from the Shoelaces canvas and start again." },
+  shoelace_hint: { zh: "提醒你鞋带线(Shoelaces)最多只能画 2 条路径。", en: "A reminder that Shoelaces allows at most 2 paths." },
+  pixel_grid: { zh: "像素网格(Pixel Grid)的 3×3 九个格子，点一下就用当前选中的颜色填满这一格。", en: "The nine cells of the 3×3 Pixel Grid. Clicking one fills it with the colour currently selected." },
+  pixel_color: { zh: "像素网格(Pixel Grid)九色调色板里的一种颜色，先选中它，再去点九宫格就能把那一格填成这个颜色。", en: "One colour from the nine-swatch Pixel Grid palette. Select it first, then click a cell to fill that cell with it." },
+  icon_pick: { zh: "图标组合(Icon Set)图标库里的一个图标，点一下就把它加到画布中央，之后可以拖动位置、轻点旋转。", en: "One icon from the Icon Set library. Clicking it adds it to the middle of the canvas, where you can drag and rotate it." },
+  icon_canvas: { zh: "图标组合(Icon Set)的画布，拖动图标换位置，轻点图标转 90°，一共要放 2 到 5 个。", en: "The Icon Set canvas. Drag icons to move them and tap one to spin it 90°. You need between 2 and 5 of them." },
+  icon_remove: { zh: "移除最后放上去的那个图标。", en: "Remove the icon you placed last." },
+  icon_clear: { zh: "清空画布上的全部图标，重新挑选。", en: "Clear every icon off the canvas and pick again." },
+  icon_hint: { zh: "提醒你图标组合(Icon Set)要放 2 到 5 个图标，轻点可以转 90°。", en: "A reminder that the Icon Set needs 2 to 5 icons and that a tap rotates by 90°." },
+  letter_pick: { zh: "字母拼贴(AEIOU Collage)的一个大写字母，A E I O U 五个里挑一个，点一下就往画布上加一个。", en: "One capital letter for the AEIOU Collage, chosen from A, E, I, O and U. Clicking it adds a copy to the canvas." },
+  letter_canvas: { zh: "字母拼贴(AEIOU Collage)的画布，拖动字母摆位置，轻点字母转 90°，最多放 10 个。", en: "The AEIOU Collage canvas. Drag letters into place and tap one to spin it 90°, with at most 10 letters." },
+  letter_rotate: { zh: "旋转滑块，把当前选中的字母转到 0 到 360 度之间的任意角度。", en: "The rotation slider, turning the selected letter to any angle between 0 and 360 degrees." },
+  letter_rotate_value: { zh: "当前选中字母的角度读数。", en: "The angle currently applied to the selected letter." },
+  letter_rotate_btn: { zh: "把选中的字母快速旋转 90 度，效果和轻点字母一样。", en: "Spin the selected letter 90 degrees, the same as tapping the letter itself." },
+  letter_remove: { zh: "删掉当前选中的那个字母。", en: "Delete the letter you currently have selected." },
+  letter_clear: { zh: "清空画布上的全部字母。", en: "Clear every letter off the canvas." },
+  letter_hint: { zh: "提醒你字母拼贴(AEIOU Collage)可以用滑块任意旋转、轻点转 90°，上限是 10 个字母。", en: "A reminder that the AEIOU Collage rotates freely with the slider, spins 90° on a tap, and holds up to 10 letters." },
+  shape_pick: { zh: "几何堆叠(Shape Stacker)七种空心图形之一，正方形(□)、长方形(▭)、三角形(△)、圆形(○)、拱形(◠)、椭圆(⬭)、正六边形(⬡)，点一下就把它加到画布中央。", en: "One of the seven hollow Shape Stacker shapes: square (□), rectangle (▭), triangle (△), circle (○), arch (◠), ellipse (⬭) and hexagon (⬡). Clicking it adds it to the middle of the canvas." },
+  shape_canvas: { zh: "几何堆叠(Shape Stacker)的画布，拖动图形摆位置，轻点图形可以选中它。", en: "The Shape Stacker canvas. Drag shapes into place and tap one to select it." },
+  shape_rotate: { zh: "旋转滑块，把当前选中的图形转到 0 到 360 度之间的任意角度。", en: "The rotation slider, turning the selected shape to any angle between 0 and 360 degrees." },
+  shape_rotate_value: { zh: "当前选中图形的角度读数。", en: "The angle currently applied to the selected shape." },
+  shape_remove: { zh: "删掉当前选中的那个图形。", en: "Delete the shape you currently have selected." },
+  shape_clear: { zh: "清空画布上的全部图形。", en: "Clear every shape off the canvas." },
+  shape_hint: { zh: "提醒你几何堆叠(Shape Stacker)的图形可以拖动摆放并自由旋转。", en: "A reminder that Shape Stacker shapes can be dragged into place and rotated freely." },
+  thruster_canvas: { zh: "推进器(Thruster)的画布，火箭点(🟠)从这里起飞，按住鼠标、手指或空格键点火把它往上推。", en: "The Thruster canvas. The rocket dot (🟠) launches from here, and holding the mouse, a finger or the space bar fires the engine to push it up." },
+  thruster_attempts: { zh: "推进器(Thruster)本轮还剩几次尝试，整轮一共 3 次，飞出画布就算用掉一次。", en: "How many Thruster attempts you have left this round. You get 3 in total and leaving the canvas spends one." },
+  thruster_undo: { zh: "删掉上一次飞出来的轨迹，并把那次尝试机会还给你。", en: "Delete the last flight trail and hand that attempt back to you." },
+  thruster_accel: { zh: "火箭点(🟠)当前的加速度，向上为正。点火时推力大于重力，不点火就一直往下掉。", en: "The rocket dot's (🟠) current acceleration with up as positive. Thrust beats gravity while firing, and without it the rocket only falls." },
+  thruster_velocity: { zh: "火箭点(🟠)当前的竖直速度，向上为正，可以据此判断该点多久的火。", en: "The rocket dot's (🟠) current vertical speed with up as positive, which tells you how long to fire next." },
+  thruster_hint: { zh: "提醒你按住鼠标、手指或空格键就能点火推进。", en: "A reminder that holding the mouse, a finger or the space bar fires the thruster." },
+  synth_grid: { zh: "合成器(Synthesizer)的 10 根滑块，每根取 0 到 100 的整数，决定对应柱子的高度。", en: "The 10 Synthesizer sliders. Each takes an integer from 0 to 100 and sets the height of its bar." },
+  synth_hint: { zh: "提醒你合成器(Synthesizer)要调 10 根整数滑块来决定柱子的高度。", en: "A reminder that the Synthesizer uses 10 integer sliders to set bar heights." },
+  submit_craft: { zh: "提交你的作品。工具的完成条件没满足时按钮会保持禁用，提示会说明还差什么。", en: "Submit your work. The button stays disabled until your tool's requirements are met, and the hint says what is missing." },
+  submission_hint: { zh: "提交状态提示，告诉你作品是否已经交上去，或者还差哪一步才能提交。", en: "The submission status, telling you whether the work is in or what still has to be done." },
+  work_label: { zh: "这件作品的编号，作者名字被隐藏起来，只有 Work #1 这样的编号，Your Work 才是你自己那件。", en: "The label of this work. Authors are hidden behind numbers like Work #1, and only Your Work is your own." },
+  work_preview: { zh: "这件作品的画面，别人就是靠它去猜目标坐标的。", en: "The picture of this work, which is all the other players get when they guess its target coordinate." },
+  work_select: { zh: "为这件作品选一个坐标，从 A1 到 D4，你认为作者画的是矩阵(🖼️)里的哪一张。", en: "Pick a coordinate from A1 to D4 for this work, meaning which photo in the matrix (🖼️) you think the author was drawing." },
+  work_self: { zh: "这是你自己的作品，你不需要也不能猜它。", en: "This is your own work, so you neither need to nor may guess it." },
+  submit_guesses: { zh: "提交你对所有其他作品的坐标猜测，必须每件都选好才能按。", en: "Submit your coordinate guesses for every other work. It unlocks only when all of them are chosen." },
+  round_scores: { zh: "本轮每个人的得分明细，Guess 是猜对别人的加分，Artist 是被别人猜对的加分，Total 是累计总分。", en: "This round's score breakdown for each player: Guess for the works you identified, Artist for the players who identified yours, and Total for the running score." },
+  reveal: { zh: "本轮答案揭晓，每件作品都会标出作者、目标坐标，以及每个人猜的坐标是对是错。", en: "The round's reveal. Each work shows its author, the target coordinate, and whether every guess was right or wrong." },
+  next_round: { zh: "进入下一轮，工具会轮换给下家，矩阵和目标重新分配。", en: "Move to the next round. Tools rotate to the next player and the matrix and targets are dealt again." },
+  game_over: { zh: "五轮全部打完，游戏结束，总分最高的人获胜。", en: "All five rounds are done and the game is over. The highest total score wins." },
+  players: { zh: "所有玩家的总分和本轮拿到的工具，你自己那一行会高亮。", en: "Every player with their total score and the tool they hold this round. Your own row is highlighted." }
+};
+
+let cyberPicturesHelpWidget = null;
+let cyberPicturesExplainWidget = null;
+
+function initCyberPicturesHelpExplain() {
+  if (cyberPicturesHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  cyberPicturesHelpWidget = window.obgCreateHelp(CYBER_PICTURES_HELP_CONFIG);
+  cyberPicturesExplainWidget = window.obgCreateExplain({
+    gameId: "cyber_pictures",
+    attribute: "data-cyber-pictures-explain",
+    explanations: CYBER_PICTURES_EXPLAIN,
+    button: cyberPicturesExplainButton,
+    root: () => document.getElementById("cyberPicturesPanel"),
+    bypass: ["#cyberPicturesHelpBtn", "#cyberPicturesExplainBtn"]
+  });
+  cyberPicturesHelpButton?.addEventListener("click", () => {
+    cyberPicturesExplainWidget?.exit();
+    cyberPicturesHelpWidget.open();
+  });
+  cyberPicturesExplainButton?.addEventListener("click", () => cyberPicturesExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCyberPicturesHelpExplain);
+} else {
+  initCyberPicturesHelpExplain();
+}
+
 const CYBER_TOOL_KEYS = [
   "shoelaces",
   "pixel_grid",
@@ -307,6 +500,7 @@ function renderCyberPixelPalette() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "cyber-pixel-color";
+    button.setAttribute("data-cyber-pictures-explain", "pixel_color");
     button.style.background = color;
     button.title = color;
     button.addEventListener("click", () => {
@@ -373,6 +567,7 @@ function renderCyberIconPalette() {
   CYBER_ICON_SET.forEach((emoji) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.setAttribute("data-cyber-pictures-explain", "icon_pick");
     button.textContent = emoji;
     button.addEventListener("click", () => addCyberIcon(emoji));
     cyberIconPalette.appendChild(button);
@@ -508,6 +703,7 @@ function renderCyberLetterPalette() {
   ["A", "E", "I", "O", "U"].forEach((char) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.setAttribute("data-cyber-pictures-explain", "letter_pick");
     button.textContent = char;
     button.addEventListener("click", () => addCyberLetter(char));
     cyberLetterPalette.appendChild(button);
@@ -694,6 +890,7 @@ function renderCyberShapePalette() {
   shapes.forEach((shape) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.setAttribute("data-cyber-pictures-explain", "shape_pick");
     button.textContent = shape.label;
     button.addEventListener("click", () => addCyberShape(shape.id));
     cyberShapePalette.appendChild(button);
@@ -1750,6 +1947,7 @@ function renderCyberGuessArea(view) {
     const header = document.createElement("div");
     header.className = "cyber-work-header";
     header.textContent = work.is_self ? "Your Work" : `Work #${index + 1}`;
+    header.setAttribute("data-cyber-pictures-explain", "work_label");
     card.appendChild(header);
 
     const body = document.createElement("div");
@@ -1758,12 +1956,14 @@ function renderCyberGuessArea(view) {
     canvas.className = "cyber-preview";
     canvas.width = 180;
     canvas.height = 180;
+    canvas.setAttribute("data-cyber-pictures-explain", "work_preview");
     renderCyberSubmission(canvas, work.submission);
     body.appendChild(canvas);
 
     if (!work.is_self) {
       const select = document.createElement("select");
       select.className = "cyber-guess-select";
+      select.setAttribute("data-cyber-pictures-explain", "work_select");
       const empty = document.createElement("option");
       empty.value = "";
       empty.textContent = "-";
@@ -1786,6 +1986,7 @@ function renderCyberGuessArea(view) {
     } else {
       const note = document.createElement("div");
       note.className = "hint";
+      note.setAttribute("data-cyber-pictures-explain", "work_self");
       note.textContent = "You do not guess your own work.";
       body.appendChild(note);
     }

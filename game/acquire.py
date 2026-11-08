@@ -236,7 +236,16 @@ def _stabilize_hand(state: Dict, player_id: str) -> None:
             stalled += 1
 
 
-def _advance_turn(state: Dict) -> None:
+def _turn_stage(state: Dict) -> str:
+    stage = state.get("turn_stage", "play_tile")
+    player = state["players"].get(state.get("current_turn"))
+    if stage == "play_tile" and not state.get("pending") and player:
+        if not any(_tile_play_status(state, tile) == "legal" for tile in player["hand"]):
+            return "buy"
+    return stage
+
+
+def _advance_turn(state: Dict, events: List[Dict]) -> None:
     if state.get("game_over"):
         state["current_turn"] = None
         state["turn_stage"] = "game_over"
@@ -250,6 +259,13 @@ def _advance_turn(state: Dict) -> None:
     state["turn_stage"] = "play_tile"
     state["pending"] = None
     _stabilize_hand(state, state["current_turn"])
+    state["turn_stage"] = _turn_stage(state)
+    if not state["draw_pile"] and not any(
+        _tile_play_status(state, tile) == "legal"
+        for player in state["players"].values()
+        for tile in player["hand"]
+    ):
+        _finalize_game(state, events)
 
 
 def _pending_merge_candidates(state: Dict, pending: Dict) -> List[str]:
@@ -596,9 +612,9 @@ class AcquireGame:
                     if index < len(order) and order[index] == player_id:
                         return ["dispose_stock"]
                 return []
-        if state.get("turn_stage") == "play_tile":
+        if _turn_stage(state) == "play_tile":
             return ["play_tile"]
-        if state.get("turn_stage") == "buy":
+        if _turn_stage(state) == "buy":
             return ["buy_stocks"]
         if state.get("turn_stage") == "end_turn":
             return ["end_turn"]
@@ -656,7 +672,7 @@ class AcquireGame:
             error = _play_tile(state, player_id, action.get("tile"), events)
             return events, error
         if action_type == "buy_stocks":
-            if state.get("turn_stage") != "buy":
+            if _turn_stage(state) != "buy":
                 return [], "cannot buy stocks now"
             chain_ids = action.get("chain_ids")
             declare_end = bool(action.get("declare_end"))
@@ -701,8 +717,9 @@ class AcquireGame:
                     return [], "end condition not met"
                 _finalize_game(state, events)
                 return events, None
-            _advance_turn(state)
-            events.append({"type": "acquire:end_turn", "payload": {"player_id": player_id, "next_player_id": state["current_turn"]}})
+            _advance_turn(state, events)
+            if not state["game_over"]:
+                events.append({"type": "acquire:end_turn", "payload": {"player_id": player_id, "next_player_id": state["current_turn"]}})
             return events, None
         if action_type == "end_turn":
             if state.get("turn_stage") != "end_turn":
@@ -713,47 +730,19 @@ class AcquireGame:
                     return [], "end condition not met"
                 _finalize_game(state, events)
                 return events, None
-            _advance_turn(state)
-            events.append({"type": "acquire:end_turn", "payload": {"player_id": player_id, "next_player_id": state["current_turn"]}})
+            _advance_turn(state, events)
+            if not state["game_over"]:
+                events.append({"type": "acquire:end_turn", "payload": {"player_id": player_id, "next_player_id": state["current_turn"]}})
             return events, None
         return [], "unknown action"
 
     @staticmethod
     def bot_move(state: Dict, player_id: str) -> Optional[Dict]:
-        legal = AcquireGame.get_legal_actions(state, player_id)
-        if not legal:
+        from game.acquire_ai import choose_action
+
+        if not AcquireGame.get_legal_actions(state, player_id):
             return None
-        pending = state.get("pending")
-        if pending and "choose_chain" in legal:
-            return {"type": "choose_chain", "chain_id": pending["options"][0]}
-        if "dispose_stock" in legal and pending and pending.get("current_defunct"):
-            holdings = int(state["players"][player_id]["stocks"][pending["current_defunct"]])
-            trade = min(holdings // 2, int(state["chains"][pending["acquirer"]]["available_shares"]))
-            sell = holdings - trade * 2
-            return {"type": "dispose_stock", "sell": sell, "trade": trade, "hold": 0}
-        if state.get("turn_stage") == "play_tile":
-            for tile in list(state["players"][player_id]["hand"]):
-                if _tile_play_status(state, tile) == "legal":
-                    return {"type": "play_tile", "tile": tile}
-            return None
-        if state.get("turn_stage") == "buy":
-            affordable: List[Tuple[int, str]] = []
-            for chain_id in CHAIN_IDS:
-                chain = state["chains"][chain_id]
-                if chain["active"] and chain["available_shares"] > 0:
-                    affordable.append((_chain_price(state, chain_id), chain_id))
-            affordable.sort(key=lambda item: (item[0], item[1]))
-            money = int(state["players"][player_id]["money"])
-            picks: List[str] = []
-            for price, chain_id in affordable:
-                if len(picks) >= 3 or money < price:
-                    break
-                picks.append(chain_id)
-                money -= price
-            return {"type": "buy_stocks", "chain_ids": picks}
-        if state.get("turn_stage") == "end_turn":
-            return {"type": "end_turn", "declare_end": _can_end_game(state)}
-        return None
+        return choose_action(AcquireGame.get_public_view(state, player_id))
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
@@ -809,7 +798,7 @@ class AcquireGame:
             "game_id": AcquireGame.game_id,
             "you": viewer_id,
             "current_turn": state.get("current_turn"),
-            "turn_stage": state.get("turn_stage"),
+            "turn_stage": _turn_stage(state),
             "game_over": bool(state.get("game_over")),
             "winner": list(state.get("winner") or []),
             "can_end_game": _can_end_game(state),

@@ -1,3 +1,169 @@
+// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+const impressionFlowerHelpButton = document.getElementById("impressionFlowerHelpBtn");
+const impressionFlowerExplainButton = document.getElementById("impressionFlowerExplainBtn");
+
+const IMPRESSION_FLOWER_HELP_CONFIG = {
+  gameId: "impression_flower",
+  title: { zh: "印象花语 · Impression Flower", en: "Impression Flower" },
+  basic: {
+    win: {
+      zh: "当每位玩家都当过一次猜题者(Guesser)之后游戏结束，此时分数最高的人赢得整局。",
+      en: "The game ends once every player has been the guesser, and whoever holds the highest score at that point wins."
+    },
+    turn: {
+      zh: "轮到你时，你要么作为出题者(Setter)用有限的印章把自己的词画出来，要么作为猜题者(Guesser)把词库里的词条配到对应的画上。",
+      en: "On your turn you either act as a setter and stamp a picture of the word you were given, or act as the guesser and pair the words from the bank with the drawings."
+    },
+    key: {
+      zh: "你手里只有几枚印章(Stamp)，画得太直白会被人一眼看穿，画得太抽象又会让猜题者(Guesser)配错，所以分寸全在落笔的位置和角度上。",
+      en: "You only get a handful of stamps, so a picture that is too literal gives itself away while one that is too abstract gets mismatched, and the whole game lives in where and how you place them."
+    }
+  },
+  sections: [
+    {
+      id: "roles",
+      label: { zh: "角色与轮次", en: "Roles and rounds" },
+      html: {
+        zh: "<p>每一轮有一个人当猜题者(Guesser)，其余的人都是出题者(Setter)。猜题者这一轮不画画，只等着看别人的作品。</p>"
+          + "<p>系统会给每位出题者发一个只有他自己知道的词，同时额外抽两个干扰词，它们会和出题者的词一起进入词库。</p>"
+          + "<p>同一位猜题者要连闯数关，每闯完一关印章数量就会减少，全部闯完之后猜题者的位置传给下一位玩家。</p>"
+          + "<p>轮完所有玩家游戏就结束，中途也可以在结算画面直接结束整局。</p>",
+        en: "<p>Each round has one guesser and everyone else is a setter. The guesser does not draw this round and simply waits to see the finished pictures.</p>"
+          + "<p>The system hands every setter a word that only they can see, then draws two extra decoy words that join the setters' words in the word bank.</p>"
+          + "<p>One guesser plays several rounds in a row, the stamp allowance shrinks after each of them, and the guesser role then passes to the next player.</p>"
+          + "<p>Once everyone has been the guesser the game is over, and you can also end it early from the round summary.</p>"
+      }
+    },
+    {
+      id: "stamps",
+      label: { zh: "印章作画", en: "Stamping" },
+      html: {
+        zh: "<p>在画布上按住不放会先出现一个预览印章(Stamp)，按住的时间越长它越不透明，最长半秒就能达到最浓的效果，松手才真正盖下去。</p>"
+          + "<p>每盖一个印章，你的 Stamps Left 就少一个，所以每一枚都要花在最能暗示那个词的地方。</p>"
+          + "<p>形状和颜色是绑定的，默认圆形(Circle)是红色(🔴)，三角(Triangle)是绿色(🟢)，方形(Square)是蓝色(🔵)，长条(Bar)是黄色(🟡)。</p>"
+          + "<p>刚盖下的印章处于选中状态，用左旋(◀)和右旋(▶)可以按住持续旋转它，也可以直接把它拖到别的位置。</p>"
+          + "<p>按 Undo 会撤掉最后一枚印章并把它还给你，让你在按下 Submit Drawing 之前还有反悔的机会。</p>",
+        en: "<p>Press and hold on the canvas to see a preview stamp. The longer you hold the more opaque it becomes, reaching full strength after half a second, and it is only placed when you let go.</p>"
+          + "<p>Every stamp placed costs one from your Stamps Left, so spend each of them where it hints at your word best.</p>"
+          + "<p>Shapes and colours are tied together. By default Circle is red (🔴), Triangle is green (🟢), Square is blue (🔵), and Bar is yellow (🟡).</p>"
+          + "<p>The stamp you just placed stays selected, so you can hold the rotate left (◀) or rotate right (▶) button to spin it, or drag it somewhere else.</p>"
+          + "<p>Undo removes the last stamp and gives it back to you, which leaves room to change your mind before pressing Submit Drawing.</p>"
+      }
+    },
+    {
+      id: "mask",
+      label: { zh: "废纸遮罩", en: "The mask" },
+      html: {
+        zh: "<p>按下 Mask 会取出一张废纸遮罩，它是一块可以拖动的方框，代表你希望从印章上挖掉的部分。</p>"
+          + "<p>遮罩打开时盖下的印章会被它挖空一块，因此同一个印章既能留下完整形状，也能只留下边缘的一圈痕迹。</p>"
+          + "<p>Mask Rotation 决定挖空的角度，Mask Scale 决定挖空的大小，两者都只影响接下来盖下的印章。</p>"
+          + "<p>如果此时正好有一枚还没被遮罩处理过的印章处于选中状态，遮罩会直接作用在它身上。</p>",
+        en: "<p>Pressing Mask pulls out a waste paper mask, a draggable square that marks the part you want cut away from your stamps.</p>"
+          + "<p>Any stamp placed while the mask is open gets a piece removed by it, so one shape can be left whole or reduced to a thin rim.</p>"
+          + "<p>Mask Rotation sets the angle of the cut and Mask Scale sets its size, and both only affect the stamps you place next.</p>"
+          + "<p>If a stamp that has not been masked yet is selected at that moment, the mask is applied to that stamp right away.</p>"
+      }
+    },
+    {
+      id: "matching",
+      label: { zh: "配对与计分", en: "Matching and scoring" },
+      html: {
+        zh: "<p>所有出题者交稿之后进入配对阶段，猜题者(Guesser)会看到全部的画和一个词库，词库里既有真词也有干扰词。</p>"
+          + "<p>配对时可以先点一个词再点画上的虚线框，也可以直接把词拖进框里，每张画都必须配一个词，而且同一个词不能用两次。</p>"
+          + "<p>配错或者想换词时，点一下画上已经放好的词就能把它退回词库。</p>"
+          + "<p>每一对配对成功，猜题者和那幅画的作者都会得到同样的分数，默认等于当前是第几关。</p>"
+          + "<p>配对阶段的作者是公开的，所以猜题者既要看画，也要琢磨是谁画的。</p>",
+        en: "<p>Once every setter has submitted, the guess phase begins and the guesser sees all the drawings together with a word bank that mixes real words and decoys.</p>"
+          + "<p>To match, either click a word and then the dashed box on a drawing, or drag the word straight into the box. Every drawing needs a word and no word may be used twice.</p>"
+          + "<p>If you change your mind, click the word already sitting on a drawing to send it back to the bank.</p>"
+          + "<p>Each correct pair scores the same number of points for the guesser and for the author of that drawing, equal to the current round number by default.</p>"
+          + "<p>Authors are not hidden during matching, so the guesser reads both the picture and who drew it.</p>"
+      }
+    },
+    {
+      id: "review",
+      label: { zh: "回顾与评价", en: "Review and votes" },
+      html: {
+        zh: "<p>结算之后所有人都能在 Review 里看到每一幅画，它的真实词是什么，以及猜题者(Guesser)给它配了哪个词。</p>"
+          + "<p>配对正确的画会显示绿色边框，配错的显示红色边框。</p>"
+          + "<p>如果房间开启了评价功能，你可以给别人的画按 Up 或 Down，每一张赞或者踩都会直接改变作者的分数，你不能评价自己的画。</p>"
+          + "<p>所有人都按下 Continue 之后才会进入下一关，想就此收工则按 End Game。</p>",
+        en: "<p>After scoring, everyone can look through Review to see each drawing, the word it really stood for, and the word the guesser gave it.</p>"
+          + "<p>A correct match is framed in green and a wrong one in red.</p>"
+          + "<p>When the room enables review votes you may press Up or Down on somebody else's drawing, and each vote changes that author's score directly. You cannot vote on your own drawing.</p>"
+          + "<p>The next round only starts once everyone has pressed Continue, and End Game closes the whole game instead.</p>"
+      }
+    }
+  ]
+};
+
+const IMPRESSION_FLOWER_EXPLAIN = {
+  phase: { zh: "当前阶段。draw 是出题者作画，guess 是猜题者配对，round_end 是本轮结算。", en: "Current phase. draw is the setters painting, guess is the guesser matching, round_end is the round summary." },
+  round: { zh: "当前是这位猜题者(Guesser)的第几关，以及他一共要闯几关。", en: "Which round of the current guesser's run is being played, and how many rounds that run lasts." },
+  guesser: { zh: "本轮的猜题者(Guesser)，他不作画，只负责把词配到画上。", en: "This round's guesser, who does not draw and only pairs words with the pictures." },
+  role: { zh: "你本轮的角色。Guesser 是猜题者，Setter 是出题者。", en: "Your role this round. Guesser means you match words, Setter means you draw." },
+  stamps_left: { zh: "你本轮还剩几枚印章(Stamp)，每盖一枚就少一枚。", en: "How many stamps you may still place this round. Each stamp placed costs one." },
+  score: { zh: "你当前的分数。", en: "Your current score." },
+  prompt: { zh: "系统分配给你的词，只有你知道，你要用印章(Stamp)把它画出来。", en: "The word the system gave you. Only you can see it, and you have to draw it with stamps." },
+  canvas: { zh: "画布。按住不放会出现预览印章(Stamp)，按得越久印章越不透明，松手才真正盖下去。", en: "The canvas. Press and hold to preview a stamp, hold longer for a more opaque stamp, and release to place it." },
+  mask_overlay: { zh: "废纸遮罩，拖动它可以决定下一个印章(Stamp)被挖掉哪一块。", en: "The waste paper mask. Drag it to choose which part of the next stamp gets cut away." },
+  rotate_left: { zh: "左旋(◀)，按住可以持续逆时针旋转选中的印章(Stamp)。", en: "Rotate left (◀). Hold it to keep turning the selected stamp counterclockwise." },
+  rotate_right: { zh: "右旋(▶)，按住可以持续顺时针旋转选中的印章(Stamp)。", en: "Rotate right (▶). Hold it to keep turning the selected stamp clockwise." },
+  shape: { zh: "选择印章(Stamp)的形状，每个形状都固定绑定一种颜色。", en: "Pick the shape of your stamp. Every shape is tied to one fixed colour." },
+  color_hint: { zh: "颜色跟着形状走，所以选定形状的同时颜色也就定下来了。", en: "Colours follow shapes, so choosing a shape also chooses its colour." },
+  undo: { zh: "撤掉最后盖下的印章(Stamp)，并把这枚印章还给你。", en: "Remove the last stamp you placed and get that stamp back." },
+  mask_toggle: { zh: "打开或关闭废纸遮罩，遮罩打开时盖下的印章会被挖掉一块。", en: "Open or close the waste paper mask. Stamps placed while it is open lose a piece of themselves." },
+  submit_drawing: { zh: "提交你的画，等所有人都交完之后进入配对阶段。", en: "Submit your picture. The matching phase starts once everyone has submitted." },
+  mask_rotation: { zh: "旋转废纸遮罩，决定挖空部分的角度。", en: "Rotate the waste paper mask to set the angle of the cut." },
+  mask_scale: { zh: "缩放废纸遮罩，决定挖空部分的大小。", en: "Scale the waste paper mask to set the size of the cut." },
+  word_bank: { zh: "词库，里面既有每位出题者(Setter)的真词，也有两个干扰词。", en: "The word bank, holding every setter's real word plus two decoys." },
+  word_chip: { zh: "一个候选词。点一下选中它再点画上的虚线框，或者直接把它拖进框里。", en: "One candidate word. Click it and then the dashed box on a drawing, or drag it straight into the box." },
+  drawings: { zh: "本轮所有出题者(Setter)交上来的画，猜题者(Guesser)要把词配上去。", en: "All the pictures the setters handed in this round. The guesser has to match words to them." },
+  drawing: { zh: "一张画。猜题阶段不隐藏作者，所以你能看到它是谁画的。", en: "One picture. Authors are not hidden during matching, so you can see who drew it." },
+  drawing_author: { zh: "这幅画的作者，猜题阶段作者是公开的。", en: "The author of this picture, which stays public during the matching phase." },
+  dropzone: { zh: "配对框。先在词库里选好一个词再点这里，或者直接把词拖进来。", en: "The matching box. Select a word in the bank and click here, or drag a word straight in." },
+  assigned_word: { zh: "你已经配上去的词，点一下就能把它退回词库重新分配。", en: "The word you already assigned. Click it to send it back to the bank." },
+  submit_matches: { zh: "提交全部配对，每一张画都配好词之后才能按下。", en: "Submit every pairing. It only unlocks once each drawing has a word." },
+  round_notice: { zh: "本轮结算区，所有人确认之后才会开始下一关。", en: "The round summary. The next round only starts after everyone confirms." },
+  round_result: { zh: "本轮配对的结果，包括猜对的数量和每个人得到的分数。", en: "This round's outcome, with the number of correct pairs and the points each player earned." },
+  continue_game: { zh: "继续下一关，所有人都按下之后才会真正开始。", en: "Move on to the next round, which starts once everyone has pressed it." },
+  end_game: { zh: "立刻结束整局游戏，当前分数就是最终成绩。", en: "End the whole game right away and keep the current scores as the final result." },
+  review: { zh: "回顾区，可以逐张查看本轮每幅画的真实词和被配上的词。", en: "The review area, where you can check the real word and the guessed word of every picture." },
+  review_card: { zh: "一幅画的回顾，绿色边框表示配对正确，红色边框表示配错。", en: "One picture under review. A green frame means the match was right and a red frame means it was wrong." },
+  review_words: { zh: "这幅画的真实词和猜题者(Guesser)给它配上的词。", en: "The real word of this picture and the word the guesser gave it." },
+  review_up: { zh: "Up 按钮，给这幅画点赞，作者会因此加 1 分。", en: "The Up button. It praises the picture and adds 1 point to its author." },
+  review_down: { zh: "Down 按钮，给这幅画点踩，作者会因此减 1 分。", en: "The Down button. It criticises the picture and costs its author 1 point." },
+  review_counts: { zh: "这幅画收到的赞和踩的数量，以及它们合计带来的分数变化。", en: "How many up and down votes this picture received and the score change they add up to." },
+  players: { zh: "所有玩家的分数和状态，当前的猜题者(Guesser)会被标出来。", en: "All players with their scores and status. The current guesser is marked." }
+};
+
+let impressionFlowerHelpWidget = null;
+let impressionFlowerExplainWidget = null;
+
+function initImpressionFlowerHelpExplain() {
+  if (impressionFlowerHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  impressionFlowerHelpWidget = window.obgCreateHelp(IMPRESSION_FLOWER_HELP_CONFIG);
+  impressionFlowerExplainWidget = window.obgCreateExplain({
+    gameId: "impression_flower",
+    attribute: "data-impression-flower-explain",
+    explanations: IMPRESSION_FLOWER_EXPLAIN,
+    button: impressionFlowerExplainButton,
+    root: () => document.getElementById("impressionFlowerPanel"),
+    bypass: ["#impressionFlowerHelpBtn", "#impressionFlowerExplainBtn"]
+  });
+  impressionFlowerHelpButton?.addEventListener("click", () => {
+    impressionFlowerExplainWidget?.exit();
+    impressionFlowerHelpWidget.open();
+  });
+  impressionFlowerExplainButton?.addEventListener("click", () => impressionFlowerExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initImpressionFlowerHelpExplain);
+} else {
+  initImpressionFlowerHelpExplain();
+}
+
 const impressionConfigBox = document.getElementById("impressionConfigBox");
 const impressionVoteRow = document.getElementById("impressionVoteRow");
 const impressionVoteToggle = document.getElementById("impressionVoteToggle");
@@ -224,6 +390,7 @@ function applyImpressionConfig(config) {
       button.type = "button";
       button.className = "impression-shape-btn";
       button.dataset.shape = shape;
+      button.dataset.impressionFlowerExplain = "shape";
       const swatch = document.createElement("span");
       swatch.className = "impression-shape-swatch";
       swatch.style.background = impressionShapeColorMap[shape] || "#111827";
@@ -1113,6 +1280,7 @@ function renderImpressionWordBank(view) {
   words.forEach((word) => {
     const chip = document.createElement("div");
     chip.className = "impression-word";
+    chip.dataset.impressionFlowerExplain = "word_chip";
     chip.textContent = word;
     const isAssigned = assignedWords.has(word);
     if (isAssigned) {
@@ -1151,10 +1319,12 @@ function renderImpressionDrawings(view) {
     const card = document.createElement("div");
     card.className = "impression-drawing";
     const author = document.createElement("div");
+    author.dataset.impressionFlowerExplain = "drawing_author";
     author.textContent = drawing.author_name ? `By ${drawing.author_name}` : "By ?";
     const media = document.createElement("div");
     media.className = "impression-drawing-media";
     const image = document.createElement("img");
+    image.dataset.impressionFlowerExplain = "drawing";
     image.src = drawing.image_data;
     image.alt = "drawing";
     const dropzone = document.createElement("div");
@@ -1163,6 +1333,7 @@ function renderImpressionDrawings(view) {
     if (assignedWord) {
       const assigned = document.createElement("span");
       assigned.className = "impression-assigned-word";
+      assigned.dataset.impressionFlowerExplain = "assigned_word";
       assigned.textContent = assignedWord;
       assigned.title = "Click to clear";
       assigned.addEventListener("click", () => {
@@ -1174,6 +1345,7 @@ function renderImpressionDrawings(view) {
       dropzone.innerHTML = "";
       dropzone.appendChild(assigned);
     } else {
+      dropzone.dataset.impressionFlowerExplain = "dropzone";
       dropzone.textContent = "Drop word here";
       dropzone.addEventListener("click", () => {
         if (!impressionSelectedWord) {
@@ -1275,14 +1447,17 @@ function renderImpressionReview(view) {
     }
 
     const author = document.createElement("div");
+    author.dataset.impressionFlowerExplain = "drawing_author";
     author.textContent = drawing.author_name ? `By ${drawing.author_name}` : "By ?";
 
     const image = document.createElement("img");
+    image.dataset.impressionFlowerExplain = "review_card";
     image.src = drawing.image_data;
     image.alt = "drawing";
 
     const words = document.createElement("div");
     words.className = "impression-review-words";
+    words.dataset.impressionFlowerExplain = "review_words";
     const actual = document.createElement("div");
     actual.textContent = `Actual: ${drawing.actual_word ?? "-"}`;
     const guessed = document.createElement("div");
@@ -1308,6 +1483,7 @@ function renderImpressionReview(view) {
       const upBtn = document.createElement("button");
       upBtn.type = "button";
       upBtn.className = "impression-review-vote-btn";
+      upBtn.dataset.impressionFlowerExplain = "review_up";
       upBtn.textContent = "Up";
       upBtn.disabled = !canVote;
       if (yourVote === 1) {
@@ -1321,6 +1497,7 @@ function renderImpressionReview(view) {
       const downBtn = document.createElement("button");
       downBtn.type = "button";
       downBtn.className = "impression-review-vote-btn";
+      downBtn.dataset.impressionFlowerExplain = "review_down";
       downBtn.textContent = "Down";
       downBtn.disabled = !canVote;
       if (yourVote === -1) {
@@ -1333,6 +1510,7 @@ function renderImpressionReview(view) {
 
       const counts = document.createElement("span");
       counts.className = "impression-review-vote-count";
+      counts.dataset.impressionFlowerExplain = "review_counts";
       const totalLabel = `${total >= 0 ? "+" : ""}${total}`;
       counts.textContent = `Up ${upCount} / Down ${downCount} (Total ${totalLabel})`;
 

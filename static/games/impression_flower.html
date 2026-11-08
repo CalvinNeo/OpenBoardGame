@@ -1,67 +1,74 @@
 <template data-game-target="impressionFlowerPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="impressionPhase">-</span></div>
-                <div>Round: <span id="impressionRound">-</span>/<span id="impressionRoundsPerGuesser">-</span></div>
-                <div>Guesser: <span id="impressionGuesser">-</span></div>
+              <div class="impression-toolbar">
+                <h3>🌸 Impression Flower</h3>
+                <div class="impression-tools">
+                  <button id="impressionFlowerHelpBtn" type="button">Help</button>
+                  <button id="impressionFlowerExplainBtn" type="button" aria-pressed="false">Explain</button>
+                </div>
               </div>
               <div class="row">
-                <div>Your Role: <span id="impressionRole">-</span></div>
-                <div>Stamps Left: <span id="impressionStampsLeft">-</span></div>
-                <div>Your Score: <span id="impressionScore">-</span></div>
+                <div data-impression-flower-explain="phase">Phase: <span id="impressionPhase">-</span></div>
+                <div data-impression-flower-explain="round">Round: <span id="impressionRound">-</span>/<span id="impressionRoundsPerGuesser">-</span></div>
+                <div data-impression-flower-explain="guesser">Guesser: <span id="impressionGuesser">-</span></div>
+              </div>
+              <div class="row">
+                <div data-impression-flower-explain="role">Your Role: <span id="impressionRole">-</span></div>
+                <div data-impression-flower-explain="stamps_left">Stamps Left: <span id="impressionStampsLeft">-</span></div>
+                <div data-impression-flower-explain="score">Your Score: <span id="impressionScore">-</span></div>
               </div>
 
               <div class="row hidden" id="impressionPromptRow">
-                <div>Prompt: <span id="impressionPrompt">-</span></div>
+                <div data-impression-flower-explain="prompt">Prompt: <span id="impressionPrompt">-</span></div>
               </div>
 
               <div id="impressionDrawArea" class="hidden">
                 <div class="impression-canvas-wrapper">
-                  <canvas id="impressionCanvas" width="600" height="600"></canvas>
-                  <div id="impressionMask" class="impression-mask hidden"></div>
+                  <div id="impressionMask" class="impression-mask hidden" data-impression-flower-explain="mask_overlay"></div>
                   <div id="impressionRotateControls" class="impression-rotate-controls hidden" aria-label="Rotation controls">
-                    <button id="impressionRotateLeftBtn" type="button" class="impression-rotate-btn" aria-label="Rotate left">◀</button>
-                    <button id="impressionRotateRightBtn" type="button" class="impression-rotate-btn" aria-label="Rotate right">▶</button>
+                    <button id="impressionRotateLeftBtn" type="button" class="impression-rotate-btn" aria-label="Rotate left" data-impression-flower-explain="rotate_left">◀</button>
+                    <button id="impressionRotateRightBtn" type="button" class="impression-rotate-btn" aria-label="Rotate right" data-impression-flower-explain="rotate_right">▶</button>
                   </div>
+                  <canvas id="impressionCanvas" width="600" height="600" data-impression-flower-explain="canvas"></canvas>
                 </div>
                 <div class="row impression-controls">
                   <div id="impressionShapeButtons" class="impression-shapes"></div>
-                  <span class="hint impression-color-hint">Colors are tied to shapes.</span>
-                  <button id="impressionUndoBtn">Undo</button>
-                  <button id="impressionMaskBtn">Mask</button>
-                  <button id="impressionSubmitDrawBtn">Submit Drawing</button>
+                  <span class="hint impression-color-hint" data-impression-flower-explain="color_hint">Colors are tied to shapes.</span>
+                  <button id="impressionUndoBtn" data-impression-flower-explain="undo">Undo</button>
+                  <button id="impressionMaskBtn" data-impression-flower-explain="mask_toggle">Mask</button>
+                  <button id="impressionSubmitDrawBtn" data-impression-flower-explain="submit_drawing">Submit Drawing</button>
                 </div>
                 <div id="impressionMaskControls" class="row impression-mask-controls hidden">
-                  <label for="impressionMaskRotation">Mask Rotation</label>
-                  <input id="impressionMaskRotation" type="range" min="0" max="360" value="0" />
-                  <label for="impressionMaskScale">Mask Scale</label>
-                  <input id="impressionMaskScale" type="range" min="0.5" max="2" step="0.1" value="1" />
+                  <label for="impressionMaskRotation" data-impression-flower-explain="mask_rotation">Mask Rotation</label>
+                  <input id="impressionMaskRotation" type="range" min="0" max="360" value="0" data-impression-flower-explain="mask_rotation" />
+                  <label for="impressionMaskScale" data-impression-flower-explain="mask_scale">Mask Scale</label>
+                  <input id="impressionMaskScale" type="range" min="0.5" max="2" step="0.1" value="1" data-impression-flower-explain="mask_scale" />
                 </div>
               </div>
 
               <div id="impressionGuessArea" class="hidden">
-                <h3>Word Bank</h3>
+                <h3 data-impression-flower-explain="word_bank">Word Bank</h3>
                 <div id="impressionWordBank" class="impression-word-bank"></div>
-                <h3>Drawings</h3>
+                <h3 data-impression-flower-explain="drawings">Drawings</h3>
                 <div id="impressionDrawings" class="impression-drawings"></div>
                 <div class="row actions">
-                  <button id="impressionSubmitMatchesBtn">Submit Matches</button>
+                  <button id="impressionSubmitMatchesBtn" data-impression-flower-explain="submit_matches">Submit Matches</button>
                 </div>
               </div>
 
               <div id="impressionRoundEnd" class="round-notice hidden">
-                <div class="round-notice-title">Last Round</div>
-                <div id="impressionRoundResult" class="round-notice-body">-</div>
+                <div class="round-notice-title" data-impression-flower-explain="round_notice">Last Round</div>
+                <div id="impressionRoundResult" class="round-notice-body" data-impression-flower-explain="round_result">-</div>
                 <div class="row actions">
-                  <button id="impressionContinueBtn">Continue</button>
-                  <button id="impressionEndBtn">End Game</button>
+                  <button id="impressionContinueBtn" data-impression-flower-explain="continue_game">Continue</button>
+                  <button id="impressionEndBtn" data-impression-flower-explain="end_game">End Game</button>
                 </div>
               </div>
 
               <div id="impressionReview" class="hidden">
-                <h3>Review</h3>
+                <h3 data-impression-flower-explain="review">Review</h3>
                 <div id="impressionReviewList" class="impression-drawings"></div>
               </div>
 
-              <h3>Players</h3>
+              <h3 data-impression-flower-explain="players">Players</h3>
               <div id="impressionPlayers"></div>
             </template>

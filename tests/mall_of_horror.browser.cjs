@@ -123,17 +123,27 @@ async function pointClick(page, locator, touch=false) {
     for(const page of [host,guest])await page.evaluate(()=>socket.emit('room:ready',{room_id:roomId,ready:true}));
     await host.waitForFunction(()=>!document.getElementById('startBtn').disabled);await host.locator('#startBtn').click();
     await host.waitForFunction(()=>lastGameStatePayload?.view.game_id==='mall_of_horror');
-    let reviewed=false;
-    for(let i=0;i<220;i++) {
+    let reviewed=false, stalls=0;
+    for(let i=0;i<400;i++) {
       const v=await host.evaluate(()=>lastGameStatePayload.view);
       if(v.phase==='round_review'){reviewed=true;break;}
       assert.notEqual(v.phase,'game_over','expected at least one round review');
+      // Both clients can lag the host view by a revision, so try each page independently
+      // and retry instead of breaking out and waiting for a bump only that page can cause.
       for(const page of [host,guest]) {
         const current=await page.evaluate(()=>lastGameStatePayload.view);
-        if(current.revision!==v.revision)break;
-        if(await humanMove(page,current))break;
+        if(current.revision!==v.revision)continue;
+        try { await humanMove(page,current); } catch (err) { console.error('move failed', err.message.split('\n')[0]); }
       }
-      await host.waitForFunction(rev=>lastGameStatePayload.view.revision>rev,v.revision,{timeout:12000});
+      try {
+        await host.waitForFunction(rev=>lastGameStatePayload.view.revision>rev,v.revision,{timeout:8000});
+        stalls=0;
+      } catch {
+        if(++stalls>8) {
+          const dbg=await host.evaluate(()=>{const v=lastGameStatePayload.view;return {phase:v.phase,turn:v.current_turn,legal:v.legal_actions,rev:v.revision}});
+          throw new Error('game stalled: '+JSON.stringify(dbg));
+        }
+      }
     }
     assert(reviewed,'round review reached');
     const round=await host.evaluate(()=>lastGameStatePayload.view.round);
@@ -183,6 +193,41 @@ async function pointClick(page, locator, touch=false) {
       if(width===390)await host.locator('#mallOfHorrorDialog').screenshot({path:`${output}/help-mobile.png`});
       await host.keyboard.press('Escape');
     }
+    // Mobile action dock: sticky under the room-controls bar, collapsible, and the
+    // confirming action must stay reachable without scrolling past the board.
+    await host.setViewportSize({width:390,height:844});
+    await host.evaluate(()=>{document.body.classList.add('room-controls-docked');document.documentElement.style.setProperty('--room-controls-bar-height','34px');});
+    await render(host,'move');
+    const dock=host.locator('#mallOfHorrorCommand');
+    assert.equal(await dock.evaluate(e=>getComputedStyle(e).position),'sticky');
+    assert.equal(await host.locator('#mallOfHorrorDockToggle').isVisible(),true);
+    assert(await dock.evaluate(e=>e.getBoundingClientRect().top)<await host.locator('#mallOfHorrorMap').evaluate(e=>e.getBoundingClientRect().top),'dock above board');
+    await host.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
+    await host.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    const stuck=await dock.evaluate(e=>e.getBoundingClientRect().top);
+    assert(stuck>=0&&stuck<200,`dock stays pinned while scrolled (top=${stuck})`);
+    assert.equal(await host.locator('#mallOfHorrorControls').getByRole('button',{name:'Move survivor',exact:true}).isVisible(),true);
+    await host.screenshot({path:`${output}/dock-mobile-scrolled.png`});
+    await host.locator('#mallOfHorrorDockToggle').click();
+    assert.equal(await host.locator('#mallOfHorrorControls').isVisible(),false);
+    assert.equal(await host.locator('#mallOfHorrorDockToggle').innerText(),'Show');
+    await host.evaluate(()=>window.scrollTo(0,0));
+    await host.screenshot({path:`${output}/dock-mobile-collapsed.png`});
+    await host.locator('#mallOfHorrorDockToggle').click();
+    assert.equal(await host.locator('#mallOfHorrorControls').isVisible(),true);
+    await render(host,'distribute');
+    const drows=host.locator('#mallOfHorrorControls .moh-choices');
+    await drows.nth(0).locator('button').first().click();
+    await drows.nth(1).locator('button').nth(1).click();
+    await drows.nth(2).locator('button').first().click();
+    const confirmBtn=host.locator('#mallOfHorrorControls').getByRole('button',{name:'Distribute cards',exact:true});
+    assert.equal(await confirmBtn.isVisible(),true,'confirm action visible without scrolling the dock');
+    const cbox=await confirmBtn.boundingBox(),dbox=await dock.boundingBox();
+    assert(cbox.y+cbox.height<=dbox.y+dbox.height+1,'confirm action sits inside the dock');
+    await confirmBtn.click();
+    assert.equal(await host.evaluate(()=>mallOfHorrorTestActions.at(-1).type),'distribute');
+    await host.screenshot({path:`${output}/dock-mobile-distribute.png`});
+    await host.evaluate(()=>{document.body.classList.remove('room-controls-docked');document.documentElement.style.removeProperty('--room-controls-bar-height');});
     await host.setViewportSize({width:390,height:900});await render(host,'move');
     const stat=host.locator('.moh-location-stats [data-moh-tip]').first();await pointClick(host,stat,true);
     assert.equal(await host.locator('#mallOfHorrorTooltip').isVisible(),true);

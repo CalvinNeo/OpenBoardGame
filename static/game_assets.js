@@ -87,9 +87,9 @@ const GAME_ASSETS = {
     "header": "showExplodingKittensHeaderActions"
   },
   "mall_of_horror": {
-    "scripts": ["/static/games/mall_of_horror.js?v=2"],
-    "styles": ["/static/games/mall_of_horror.css?v=2"],
-    "markup": "/static/games/mall_of_horror.html?v=1",
+    "scripts": ["/static/games/mall_of_horror.js?v=3"],
+    "styles": ["/static/games/mall_of_horror.css?v=3"],
+    "markup": "/static/games/mall_of_horror.html?v=2",
     "panel": "mallOfHorrorPanel",
     "header": "showMallOfHorrorHeaderActions"
   },
@@ -144,6 +144,14 @@ const GAME_ASSETS = {
     "panel": "powerGridPanel",
     "panelTitle": "⚡ 电力公司",
     "header": "showPowerGridHeaderActions"
+  },
+  "ticket_to_ride": {
+    "scripts": ["/static/games/ticket_to_ride.js?v=7"],
+    "styles": ["/static/games/ticket_to_ride.css?v=5"],
+    "markup": "/static/games/ticket_to_ride.html?v=2",
+    "panel": "ticketToRidePanel",
+    "panelTitle": "🚂 铁路环游",
+    "header": "showTicketToRideHeaderActions"
   },
   "a_feast_for_odin": {
     "scripts": ["/static/games/a_feast_for_odin.js?v=3"],
@@ -274,29 +282,29 @@ const GAME_ASSETS = {
   },
   "draw_guess": {
     "scripts": [
-      "/static/games/draw_guess.js?v=app_v4"
+      "/static/games/draw_guess.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "drawGuessPanel",
-    "markup": "/static/games/draw_guess.html?v=1",
+    "markup": "/static/games/draw_guess.html?v=1_h1",
     "styleFragments": "/static/games/draw_guess.css?v=1"
   },
   "cyber_pictures": {
     "scripts": [
-      "/static/games/cyber_pictures.js?v=app_v4"
+      "/static/games/cyber_pictures.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "cyberPicturesPanel",
-    "markup": "/static/games/cyber_pictures.html?v=1",
+    "markup": "/static/games/cyber_pictures.html?v=1_h1",
     "styleFragments": "/static/games/cyber_pictures.css?v=1"
   },
   "blitz_sketch": {
     "scripts": [
-      "/static/games/blitz_sketch.js?v=app_v4"
+      "/static/games/blitz_sketch.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "blitzSketchPanel",
-    "markup": "/static/games/blitz_sketch.html?v=1",
+    "markup": "/static/games/blitz_sketch.html?v=1_h1",
     "styleFragments": "/static/games/blitz_sketch.css?v=1"
   },
   "fake_artist": {
@@ -321,11 +329,11 @@ const GAME_ASSETS = {
   },
   "impression_flower": {
     "scripts": [
-      "/static/games/impression_flower.js?v=app_v4"
+      "/static/games/impression_flower.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "impressionFlowerPanel",
-    "markup": "/static/games/impression_flower.html?v=1",
+    "markup": "/static/games/impression_flower.html?v=1_h1",
     "styleFragments": "/static/games/impression_flower.css?v=1"
   },
   "gizmos": {
@@ -352,11 +360,11 @@ const GAME_ASSETS = {
   },
   "splendor": {
     "scripts": [
-      "/static/games/splendor.js?v=app_v4"
+      "/static/games/splendor.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "splendorPanel",
-    "markup": "/static/games/splendor.html?v=1"
+    "markup": "/static/games/splendor.html?v=1_h1"
   },
   "splendor_pokemon": {
     "scripts": [
@@ -443,11 +451,11 @@ const GAME_ASSETS = {
   },
   "aidixit": {
     "scripts": [
-      "/static/games/aidixit.js?v=app_v4"
+      "/static/games/aidixit.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "aidixitPanel",
-    "markup": "/static/games/aidixit.html?v=1",
+    "markup": "/static/games/aidixit.html?v=1_h1",
     "styleFragments": "/static/games/aidixit.css?v=1"
   },
   "hanabi": {
@@ -534,11 +542,11 @@ const GAME_ASSETS = {
   },
   "skull": {
     "scripts": [
-      "/static/games/skull.js?v=app_v4"
+      "/static/games/skull.js?v=app_v5_h1"
     ],
     "styles": [],
     "panel": "skullPanel",
-    "markup": "/static/games/skull.html?v=1"
+    "markup": "/static/games/skull.html?v=2_h1"
   },
   "rebel_princess": {
     "scripts": [
@@ -566,20 +574,20 @@ const GAME_ASSETS = {
   },
   "cabo": {
     "scripts": [
-      "/static/games/cabo.js?v=app_v9"
+      "/static/games/cabo.js?v=app_v9_h1"
     ],
     "styles": [],
     "panel": "caboPanel",
-    "markup": "/static/games/cabo.html?v=2",
+    "markup": "/static/games/cabo.html?v=2_h1",
     "styleFragments": "/static/games/cabo.css?v=1"
   },
   "flip7": {
     "scripts": [
-      "/static/games/flip7.js?v=app_v4"
+      "/static/games/flip7.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "flip7Panel",
-    "markup": "/static/games/flip7.html?v=1",
+    "markup": "/static/games/flip7.html?v=1_h1",
     "styleFragments": "/static/games/flip7.css?v=1"
   },
   "hot_streak": {
@@ -625,11 +633,11 @@ const GAME_ASSETS = {
   },
   "perfect_mismatch": {
     "scripts": [
-      "/static/games/perfect_mismatch.js?v=app_v4"
+      "/static/games/perfect_mismatch.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "mismatchPanel",
-    "markup": "/static/games/perfect_mismatch.html?v=1",
+    "markup": "/static/games/perfect_mismatch.html?v=1_h1",
     "styleFragments": "/static/games/perfect_mismatch.css?v=1"
   },
   "compress": {
@@ -644,11 +652,11 @@ const GAME_ASSETS = {
   },
   "coyote": {
     "scripts": [
-      "/static/games/coyote.js?v=app_v4"
+      "/static/games/coyote.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "coyotePanel",
-    "markup": "/static/games/coyote.html?v=1",
+    "markup": "/static/games/coyote.html?v=1_h1",
     "styleFragments": "/static/games/coyote.css?v=1"
   },
   "in_a_grove": {
@@ -728,22 +736,22 @@ const GAME_ASSETS = {
   },
   "kronologic": {
     "scripts": [
-      "/static/games/kronologic.js?v=app_v4"
+      "/static/games/kronologic.js?v=app_v5"
     ],
     "styles": [],
     "panel": "kronologicPanel",
     "panelTitle": "🕰️ 时空神探",
     "header": "showKronologicHeaderActions",
-    "markup": "/static/games/kronologic.html?v=1",
-    "styleFragments": "/static/games/kronologic.css?v=2"
+    "markup": "/static/games/kronologic.html?v=2",
+    "styleFragments": "/static/games/kronologic.css?v=3"
   },
   "halli_galli": {
     "scripts": [
-      "/static/games/halli_galli.js?v=app_v4"
+      "/static/games/halli_galli.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "halliPanel",
-    "markup": "/static/games/halli_galli.html?v=1",
+    "markup": "/static/games/halli_galli.html?v=1_h1",
     "styleFragments": "/static/games/halli_galli.css?v=1"
   },
   "texas_holdem": {
@@ -844,11 +852,11 @@ const GAME_ASSETS = {
   },
   "kobayakawa": {
     "scripts": [
-      "/static/games/kobayakawa.js?v=app_v4"
+      "/static/games/kobayakawa.js?v=app_v4_h1"
     ],
     "styles": [],
     "panel": "kobayakawaPanel",
-    "markup": "/static/games/kobayakawa.html?v=1",
+    "markup": "/static/games/kobayakawa.html?v=1_h1",
     "styleFragments": "/static/games/kobayakawa.css?v=1"
   },
   "high_society": {
@@ -1087,13 +1095,13 @@ const GAME_ASSETS = {
   },
   "ra": {
     "scripts": [
-      "/static/games/ra.js?v=app_v7"
+      "/static/games/ra.js?v=app_v8"
     ],
     "styles": [],
     "panel": "raPanel",
     "header": "showRaHeaderActions",
-    "markup": "/static/games/ra.html?v=1",
-    "styleFragments": "/static/games/ra.css?v=1"
+    "markup": "/static/games/ra.html?v=2",
+    "styleFragments": "/static/games/ra.css?v=2"
   },
   "scout": {
     "scripts": [

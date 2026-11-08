@@ -1,6 +1,36 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-aidixit-1 {
 
+.aidixit-toolbar,
+.aidixit-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aidixit-toolbar {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  margin-bottom: 10px;
+}
+
+.aidixit-toolbar h3 {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aidixit-tools {
+  flex: 0 0 auto;
+}
+
+.aidixit-tools button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .aidixit-hand,
 .aidixit-pool,
 .aidixit-round-cards {
@@ -165,6 +195,16 @@
 @media all, obg-game-aidixit-2 {
 
 @media (max-width: 900px) {
+  .aidixit-toolbar {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .aidixit-tools button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
   .aidixit-hand,
   .aidixit-pool,
   .aidixit-round-cards {

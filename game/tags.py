@@ -140,6 +140,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "tacta": ("filler", "abstract"),
     "tagiron": ("puzzle",),
     "texas_holdem": ("push_your_luck", "bluffing"),
+    "ticket_to_ride": ("filler", "euro"),
     "the_gang": ("push_your_luck", "cooperative"),
     "things_in_rings": ("filler", "puzzle", "cooperative"),
     "trekking_history": ("euro",),

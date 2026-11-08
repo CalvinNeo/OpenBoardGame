@@ -180,6 +180,7 @@
       players_title: "Investigators",
       notebook_title: "Your Notebook",
       notebook_hint: "Tap a person to cycle · ○ ✕ ★.",
+      notebook_auto_hint: "Dashed = auto-filled from clues; your own taps always win.",
       notebook_dock: "Notebook",
       notebook_hide: "Hide",
       count_notes_title: "Count Notes",
@@ -227,6 +228,7 @@
       players_title: "调查员",
       notebook_title: "你的笔记本",
       notebook_hint: "点击人物可循环切换 · ○ ✕ ★。",
+      notebook_auto_hint: "虚线＝按线索自动填入，你自己点过的格子始终优先。",
       notebook_dock: "笔记",
       notebook_hide: "收起",
       count_notes_title: "数量笔记",
@@ -252,6 +254,9 @@
   let kronologicSeenAccusationKey = null;
   let kronologicNotebookOpen = false;
   let kronologicNotebookReturnFocus = null;
+  let kronologicAutoNotes = { marks: {}, counts: {} };
+  let kronologicAutoNotesKey = "";
+  let kronologicPathUniverseCache = { key: "", byStart: {} };
 
   const kronologicPanel = document.getElementById("kronologicPanel");
   const kronologicConfigBox = document.getElementById("kronologicConfigBox");
@@ -699,6 +704,8 @@
     kronologicSelectedLocation = null;
     kronologicSelectedSelector = null;
     kronologicNotebookTime = 1;
+    kronologicAutoNotes = { marks: {}, counts: {} };
+    kronologicAutoNotesKey = "";
     kronologicCountMode = "time";
     kronologicCountCharacter = "archivist";
     kronologicSeenAccusationKey = null;
@@ -951,21 +958,245 @@
     }).join("");
   }
 
+  function kronologicNeighborMap() {
+    const neighbors = {};
+    (kronologicView && kronologicView.locations ? kronologicView.locations : []).forEach((location) => {
+      neighbors[location.id] = [];
+    });
+    (kronologicView && kronologicView.edges ? kronologicView.edges : []).forEach((edge) => {
+      const [left, right] = edge;
+      if (!neighbors[left] || !neighbors[right]) return;
+      if (!neighbors[left].includes(right)) neighbors[left].push(right);
+      if (!neighbors[right].includes(left)) neighbors[right].push(left);
+    });
+    return neighbors;
+  }
+
+  function kronologicPathUniverse() {
+    if (!kronologicView) return {};
+    const locations = kronologicView.locations || [];
+    const key = JSON.stringify([locations.map((item) => item.id), kronologicView.edges || []]);
+    if (kronologicPathUniverseCache.key !== key) {
+      const neighbors = kronologicNeighborMap();
+      const byStart = {};
+      locations.forEach((location) => {
+        const paths = [];
+        const walk = (current) => {
+          if (current.length === 6) {
+            paths.push(current.slice());
+            return;
+          }
+          (neighbors[current[current.length - 1]] || []).forEach((next) => walk([...current, next]));
+        };
+        walk([location.id]);
+        byStart[location.id] = paths;
+      });
+      kronologicPathUniverseCache = { key, byStart };
+    }
+    return kronologicPathUniverseCache.byStart;
+  }
+
+  function kronologicPathMatchesClues(path, characterId, publicClues, privateClues) {
+    for (const clue of publicClues) {
+      if (clue.query_type === "character" && clue.character_id === characterId) {
+        const visits = path.reduce((total, value) => total + (value === clue.location_id ? 1 : 0), 0);
+        if (visits !== Number(clue.count)) return false;
+      } else if (clue.query_type === "time" && (Number(clue.count) === 0 || Number(clue.count) === 6)) {
+        const index = Number(clue.time) - 1;
+        if (index < 0 || index > 5) continue;
+        if (Number(clue.count) === 0 ? path[index] === clue.location_id : path[index] !== clue.location_id) return false;
+      }
+    }
+    for (const clue of privateClues) {
+      if (clue.query_type === "time" && clue.private_character_id === characterId) {
+        const index = Number(clue.time) - 1;
+        if (index < 0 || index > 5) continue;
+        if (path[index] !== clue.location_id) return false;
+      } else if (clue.query_type === "character" && clue.character_id === characterId && Number.isInteger(clue.private_time)) {
+        if (path[clue.private_time - 1] !== clue.location_id) return false;
+      }
+    }
+    return true;
+  }
+
+  function kronologicSolveAutoNotes() {
+    const empty = { marks: {}, counts: {} };
+    if (!kronologicView) return empty;
+    const characters = kronologicView.characters || [];
+    const locations = kronologicView.locations || [];
+    const starts = (kronologicView.case && kronologicView.case.starting_positions) || {};
+    const publicClues = kronologicView.public_clues || [];
+    const privateClues = kronologicView.your_private_clues || [];
+    if (!characters.length || !locations.length) return empty;
+
+    const universe = kronologicPathUniverse();
+    const candidates = {};
+    let usable = true;
+    characters.forEach((character) => {
+      const start = starts[character.id];
+      const paths = start && universe[start] ? universe[start] : null;
+      if (!paths || !paths.length) {
+        usable = false;
+        return;
+      }
+      candidates[character.id] = paths.slice();
+    });
+    if (!usable) return empty;
+
+    const cellState = (characterId, index, locationId) => {
+      const list = candidates[characterId] || [];
+      if (!list.length) return "unknown";
+      const hits = list.reduce((total, path) => total + (path[index] === locationId ? 1 : 0), 0);
+      if (hits === list.length) return "in";
+      if (hits === 0) return "out";
+      return "mixed";
+    };
+
+    const applyCharacterFilters = () => {
+      let changed = false;
+      characters.forEach((character) => {
+        const list = candidates[character.id];
+        if (!list || list.length <= 1) return;
+        const next = list.filter((path) => kronologicPathMatchesClues(path, character.id, publicClues, privateClues));
+        if (next.length && next.length !== list.length) {
+          candidates[character.id] = next;
+          changed = true;
+        }
+      });
+      return changed;
+    };
+
+    const applySharedCounts = () => {
+      let changed = false;
+      publicClues.forEach((clue) => {
+        if (clue.query_type !== "time") return;
+        const index = Number(clue.time) - 1;
+        if (index < 0 || index > 5) return;
+        const total = Number(clue.count);
+        const states = characters.map((character) => ({
+          id: character.id,
+          state: cellState(character.id, index, clue.location_id),
+        }));
+        if (states.some((item) => item.state === "unknown")) return;
+        const inside = states.filter((item) => item.state === "in").length;
+        const mixed = states.filter((item) => item.state === "mixed");
+        if (!mixed.length) return;
+        let force = null;
+        if (inside === total) force = "out";
+        else if (inside + mixed.length === total) force = "in";
+        if (!force) return;
+        mixed.forEach((item) => {
+          const list = candidates[item.id];
+          const next = list.filter((path) => (force === "in" ? path[index] === clue.location_id : path[index] !== clue.location_id));
+          if (next.length && next.length !== list.length) {
+            candidates[item.id] = next;
+            changed = true;
+          }
+        });
+      });
+      return changed;
+    };
+
+    for (let round = 0; round < 12; round += 1) {
+      const changed = applyCharacterFilters() || applySharedCounts();
+      if (!changed) break;
+    }
+
+    const marks = {};
+    const counts = {};
+    characters.forEach((character) => {
+      for (let index = 0; index < 6; index += 1) {
+        const time = index + 1;
+        locations.forEach((location) => {
+          const state = cellState(character.id, index, location.id);
+          if (state === "in") marks[`${time}|${location.id}|${character.id}`] = "confirmed";
+          else if (state === "out") marks[`${time}|${location.id}|${character.id}`] = "excluded";
+        });
+      }
+    });
+
+    publicClues.forEach((clue) => {
+      if (clue.query_type === "time" && Number.isInteger(Number(clue.time))) {
+        counts[`time|${clue.location_id}|${Number(clue.time)}`] = Number(clue.count);
+      } else if (clue.query_type === "character" && clue.character_id) {
+        counts[`character|${clue.location_id}|${clue.character_id}`] = Number(clue.count);
+      }
+    });
+
+    locations.forEach((location) => {
+      for (let index = 0; index < 6; index += 1) {
+        const time = index + 1;
+        const key = `time|${location.id}|${time}`;
+        if (counts[key] != null) continue;
+        const states = characters.map((character) => cellState(character.id, index, location.id));
+        if (states.some((state) => state === "mixed" || state === "unknown")) continue;
+        counts[key] = states.filter((state) => state === "in").length;
+      }
+    });
+    characters.forEach((character) => {
+      locations.forEach((location) => {
+        const key = `character|${location.id}|${character.id}`;
+        if (counts[key] != null) return;
+        const states = Array.from({ length: 6 }, (_, index) => cellState(character.id, index, location.id));
+        if (states.some((state) => state === "mixed" || state === "unknown")) return;
+        counts[key] = states.filter((state) => state === "in").length;
+      });
+    });
+
+    return { marks, counts };
+  }
+
+  function kronologicRefreshAutoNotes() {
+    if (!kronologicView) {
+      kronologicAutoNotes = { marks: {}, counts: {} };
+      kronologicAutoNotesKey = "";
+      return;
+    }
+    const key = JSON.stringify([
+      kronologicView.case && kronologicView.case.case_id,
+      kronologicView.public_clues,
+      kronologicView.your_private_clues,
+    ]);
+    if (key === kronologicAutoNotesKey) return;
+    kronologicAutoNotesKey = key;
+    kronologicAutoNotes = kronologicSolveAutoNotes();
+  }
+
+  function kronologicManualMarks() {
+    return (kronologicView && kronologicView.your_notes && kronologicView.your_notes.marks) || {};
+  }
+
+  function kronologicEffectiveMark(key) {
+    const manual = kronologicManualMarks()[key];
+    if (manual) return { mark: manual, auto: false };
+    const auto = kronologicAutoNotes.marks[key];
+    if (auto) return { mark: auto, auto: true };
+    return { mark: "unknown", auto: false };
+  }
+
+  function kronologicEffectiveCount(key) {
+    const manual = (kronologicView && kronologicView.your_notes && kronologicView.your_notes.counts) || {};
+    if (manual[key] != null) return { value: manual[key], auto: false };
+    const auto = kronologicAutoNotes.counts[key];
+    if (auto != null) return { value: auto, auto: true };
+    return { value: null, auto: false };
+  }
+
   function kronologicRenderNotebook() {
     if (!kronologicNotebook || !kronologicView) return;
-    const marks = (kronologicView.your_notes && kronologicView.your_notes.marks) || {};
     kronologicNotebook.innerHTML = (kronologicView.locations || []).map((location) => {
       const people = (kronologicView.characters || []).map((character) => {
         const key = `${kronologicNotebookTime}|${location.id}|${character.id}`;
-        const mark = marks[key] || "unknown";
+        const { mark, auto } = kronologicEffectiveMark(key);
         const symbol = KRONOLOGIC_MARK_SYMBOLS[mark] || "·";
         return `
           <button
             type="button"
-            class="kronologic-note-person mark-${kronologicEscape(mark)} pattern-${kronologicEscape(character.pattern)}"
+            class="kronologic-note-person mark-${kronologicEscape(mark)} pattern-${kronologicEscape(character.pattern)}${auto ? " is-auto" : ""}"
             data-note-character="${kronologicEscape(character.id)}"
             data-note-location="${kronologicEscape(location.id)}"
             data-note-mark="${kronologicEscape(mark)}"
+            data-note-auto="${auto ? "1" : "0"}"
             data-kronologic-explain="notebook"
             aria-label="${kronologicEscape(kronologicIsChinese()
               ? `${kronologicTimeLabel(kronologicNotebookTime)}，${location.name}内的${character.name}：${KRONOLOGIC_MARK_LABELS.zh[mark] || mark}`
@@ -1006,19 +1237,19 @@
           return `<button type="button" class="${selected ? "is-selected" : ""}" data-count-character="${kronologicEscape(character.id)}" data-kronologic-explain="count-notes" aria-pressed="${selected}">${kronologicEscape(character.emoji)} ${kronologicEscape(character.code)}</button>`;
         }).join("")
       : "";
-    const counts = (kronologicView.your_notes && kronologicView.your_notes.counts) || {};
     kronologicCountGrid.innerHTML = (kronologicView.locations || []).map((location) => {
       const selector = kronologicCountMode === "time" ? kronologicNotebookTime : kronologicCountCharacter;
       const key = `${kronologicCountMode}|${location.id}|${selector}`;
+      const count = kronologicEffectiveCount(key);
       const label = kronologicCountMode === "time"
         ? (kronologicIsChinese() ? `${kronologicTimeLabel(kronologicNotebookTime)}人数` : `people at Time ${kronologicNotebookTime}`)
         : (kronologicIsChinese()
             ? `${kronologicCharacter(kronologicCountCharacter).name}到访次数`
             : `${kronologicCharacter(kronologicCountCharacter).name} visits`);
       return `
-        <label>
+        <label class="${count.auto ? "is-auto" : ""}">
           <span>${kronologicEscape(location.emoji)} ${kronologicEscape(location.name)} <small>${kronologicEscape(label)}</small></span>
-          <select data-count-location="${kronologicEscape(location.id)}" ${kronologicView.can_edit_notes ? "" : "disabled"}>${kronologicCountOptions(counts[key])}</select>
+          <select data-count-location="${kronologicEscape(location.id)}" data-count-auto="${count.auto ? "1" : "0"}" ${kronologicView.can_edit_notes ? "" : "disabled"}>${kronologicCountOptions(count.value)}</select>
         </label>
       `;
     }).join("");
@@ -1251,6 +1482,7 @@
     kronologicRenderLatestClue();
     kronologicRenderPlayers();
     kronologicRenderReview();
+    kronologicRefreshAutoNotes();
     kronologicRenderNotebookTimes();
     kronologicRenderNotebook();
     kronologicRenderCountNotes();

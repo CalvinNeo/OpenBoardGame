@@ -240,6 +240,9 @@ class CaboGameTests(unittest.TestCase):
                 self.state["pending_choice"] = {"type": choice}
                 self.state["players"]["p1"]["hand"] = opponent_hand
                 self.state["players"]["p2"]["hand"] = bot_hand
+                if choice == "swap":
+                    self.state["knowledge"]["p2"]["p1"][1] = True
+                    self.state["knowledge"]["p2"]["p2"][3] = True
 
                 action = CaboGame.bot_move(self.state, "p2")
 

@@ -1,65 +1,72 @@
 <template data-game-target="drawGuessPanel" data-game-mode="contents">
+              <div class="draw-guess-toolbar" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: nowrap; margin: 0 0 10px;">
+                <h3 style="margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" data-draw-guess-explain="game_title">🎨 Draw &amp; Guess</h3>
+                <div class="draw-guess-tools" style="display: flex; align-items: center; gap: 6px; flex: 0 0 auto;">
+                  <button id="drawGuessHelpBtn" type="button" style="white-space: nowrap;">Help</button>
+                  <button id="drawGuessExplainBtn" type="button" aria-pressed="false" style="white-space: nowrap;">Explain</button>
+                </div>
+              </div>
               <div class="row">
-                <div>Phase: <span id="drawGuessPhase">-</span></div>
-                <div>Round: <span id="drawGuessRound">-</span>/<span id="drawGuessTotalRounds">-</span></div>
-                <div>Submitted: <span id="drawGuessSubmitted">-</span></div>
+                <div data-draw-guess-explain="phase">Phase: <span id="drawGuessPhase">-</span></div>
+                <div data-draw-guess-explain="round">Round: <span id="drawGuessRound">-</span>/<span id="drawGuessTotalRounds">-</span></div>
+                <div data-draw-guess-explain="submitted">Submitted: <span id="drawGuessSubmitted">-</span></div>
               </div>
 
-              <div class="row" id="drawGuessPromptRow">
+              <div class="row" id="drawGuessPromptRow" data-draw-guess-explain="prompt">
                 <div>Prompt: <span id="drawGuessPrompt">-</span></div>
               </div>
 
               <div id="drawGuessDrawArea">
                 <div class="row">
-                  <canvas id="drawGuessCanvas" width="480" height="360"></canvas>
+                  <canvas id="drawGuessCanvas" width="480" height="360" data-draw-guess-explain="canvas"></canvas>
                 </div>
                 <div class="row draw-guess-colors" id="drawGuessColorPalette">
-                  <span class="draw-guess-color-label">Color:</span>
-                  <button class="draw-guess-color" type="button" data-color="#000000" style="background: #000000;" title="Black" aria-label="Black"></button>
-                  <button class="draw-guess-color" type="button" data-color="#ef4444" style="background: #ef4444;" title="Red" aria-label="Red"></button>
-                  <button class="draw-guess-color" type="button" data-color="#f97316" style="background: #f97316;" title="Orange" aria-label="Orange"></button>
-                  <button class="draw-guess-color" type="button" data-color="#eab308" style="background: #eab308;" title="Yellow" aria-label="Yellow"></button>
-                  <button class="draw-guess-color" type="button" data-color="#facc15" style="background: #facc15;" title="Bright Yellow" aria-label="Bright Yellow"></button>
-                  <button class="draw-guess-color" type="button" data-color="#22c55e" style="background: #22c55e;" title="Green" aria-label="Green"></button>
-                  <button class="draw-guess-color" type="button" data-color="#3b82f6" style="background: #3b82f6;" title="Blue" aria-label="Blue"></button>
-                  <button class="draw-guess-color" type="button" data-color="#8b5cf6" style="background: #8b5cf6;" title="Purple" aria-label="Purple"></button>
-                  <button class="draw-guess-color" type="button" data-color="#a16207" style="background: #a16207;" title="Brown" aria-label="Brown"></button>
+                  <span class="draw-guess-color-label" data-draw-guess-explain="colors">Color:</span>
+                  <button class="draw-guess-color" type="button" data-color="#000000" style="background: #000000;" title="Black" aria-label="Black" data-draw-guess-explain="color_black"></button>
+                  <button class="draw-guess-color" type="button" data-color="#ef4444" style="background: #ef4444;" title="Red" aria-label="Red" data-draw-guess-explain="color_red"></button>
+                  <button class="draw-guess-color" type="button" data-color="#f97316" style="background: #f97316;" title="Orange" aria-label="Orange" data-draw-guess-explain="color_orange"></button>
+                  <button class="draw-guess-color" type="button" data-color="#eab308" style="background: #eab308;" title="Yellow" aria-label="Yellow" data-draw-guess-explain="color_yellow"></button>
+                  <button class="draw-guess-color" type="button" data-color="#facc15" style="background: #facc15;" title="Bright Yellow" aria-label="Bright Yellow" data-draw-guess-explain="color_bright_yellow"></button>
+                  <button class="draw-guess-color" type="button" data-color="#22c55e" style="background: #22c55e;" title="Green" aria-label="Green" data-draw-guess-explain="color_green"></button>
+                  <button class="draw-guess-color" type="button" data-color="#3b82f6" style="background: #3b82f6;" title="Blue" aria-label="Blue" data-draw-guess-explain="color_blue"></button>
+                  <button class="draw-guess-color" type="button" data-color="#8b5cf6" style="background: #8b5cf6;" title="Purple" aria-label="Purple" data-draw-guess-explain="color_purple"></button>
+                  <button class="draw-guess-color" type="button" data-color="#a16207" style="background: #a16207;" title="Brown" aria-label="Brown" data-draw-guess-explain="color_brown"></button>
                 </div>
                 <div class="row draw-guess-brush" id="drawGuessBrushSizes">
-                  <span class="draw-guess-color-label">Brush:</span>
-                  <button class="draw-guess-size" type="button" data-size="2" title="Small brush" aria-label="Small brush">S</button>
-                  <button class="draw-guess-size" type="button" data-size="3" title="Medium brush" aria-label="Medium brush">M</button>
-                  <button class="draw-guess-size" type="button" data-size="6" title="Large brush" aria-label="Large brush">L</button>
-                  <button class="draw-guess-size" type="button" data-size="9" title="Extra large brush" aria-label="Extra large brush">XL</button>
+                  <span class="draw-guess-color-label" data-draw-guess-explain="brush">Brush:</span>
+                  <button class="draw-guess-size" type="button" data-size="2" title="Small brush" aria-label="Small brush" data-draw-guess-explain="brush_s">S</button>
+                  <button class="draw-guess-size" type="button" data-size="3" title="Medium brush" aria-label="Medium brush" data-draw-guess-explain="brush_m">M</button>
+                  <button class="draw-guess-size" type="button" data-size="6" title="Large brush" aria-label="Large brush" data-draw-guess-explain="brush_l">L</button>
+                  <button class="draw-guess-size" type="button" data-size="9" title="Extra large brush" aria-label="Extra large brush" data-draw-guess-explain="brush_xl">XL</button>
                 </div>
                 <div class="row actions">
-                  <button id="drawGuessClearBtn">Clear</button>
-                  <button id="drawGuessEraserBtn">Eraser</button>
-                  <button id="drawGuessSubmitDrawBtn">Submit Drawing</button>
+                  <button id="drawGuessClearBtn" data-draw-guess-explain="clear">Clear</button>
+                  <button id="drawGuessEraserBtn" data-draw-guess-explain="eraser">Eraser</button>
+                  <button id="drawGuessSubmitDrawBtn" data-draw-guess-explain="submit_drawing">Submit Drawing</button>
                 </div>
               </div>
 
               <div id="drawGuessGuessArea">
                 <div class="row">
-                  <img id="drawGuessImage" class="draw-guess-image" alt="Drawing to guess" />
+                  <img id="drawGuessImage" class="draw-guess-image" alt="Drawing to guess" data-draw-guess-explain="image" />
                 </div>
-                <div class="row hidden" id="drawGuessAnswerLengthHintRow">
+                <div class="row hidden" id="drawGuessAnswerLengthHintRow" data-draw-guess-explain="answer_length">
                   <div class="hint">Display length: <span id="drawGuessAnswerLength">-</span></div>
                 </div>
                 <div class="row actions">
-                  <input id="drawGuessInput" type="text" placeholder="Your guess" />
-                  <button id="drawGuessSubmitGuessBtn">Submit Guess</button>
+                  <input id="drawGuessInput" type="text" placeholder="Your guess" data-draw-guess-explain="guess_input" />
+                  <button id="drawGuessSubmitGuessBtn" data-draw-guess-explain="submit_guess">Submit Guess</button>
                 </div>
               </div>
 
               <h3>Players</h3>
-              <div id="drawGuessPlayers"></div>
+              <div id="drawGuessPlayers" data-draw-guess-explain="players"></div>
 
               <div id="drawGuessReview" class="hidden">
                 <h3>Review</h3>
-                <div id="drawGuessBooks"></div>
+                <div id="drawGuessBooks" data-draw-guess-explain="books"></div>
                 <div class="row actions">
-                  <button id="drawGuessRestartBtn">Play Again</button>
+                  <button id="drawGuessRestartBtn" data-draw-guess-explain="restart">Play Again</button>
                 </div>
               </div>
             </template>

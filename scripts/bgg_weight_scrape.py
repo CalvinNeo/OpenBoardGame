@@ -38,6 +38,7 @@ GAME_URLS = {
     "for_sale": "https://boardgamegeek.com/boardgame/172/for-sale",
     "cheaty_mages": "https://boardgamegeek.com/boardgame/38194/cheaty-mages",
     "hive": "https://boardgamegeek.com/boardgame/2655/hive",
+    "ticket_to_ride": "https://boardgamegeek.com/boardgame/9209/ticket-to-ride",
     "grand_austria_hotel": "https://boardgamegeek.com/boardgame/182874/grand-austria-hotel",
     "love_letter": "https://boardgamegeek.com/boardgame/129622/love-letter",
     "spirit_island": "https://boardgamegeek.com/boardgame/162886/spirit-island",

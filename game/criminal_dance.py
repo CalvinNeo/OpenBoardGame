@@ -1,4 +1,5 @@
 import random
+from copy import deepcopy
 from typing import Dict, List, Optional, Tuple
 
 
@@ -181,6 +182,14 @@ def _push_private_note(state: Dict, player_id: str, text: str) -> None:
     state["players"][player_id]["private_log"].append(text)
 
 
+def _record_private_hand(state: Dict, viewer_id: str, target_id: str) -> None:
+    state["players"][viewer_id].setdefault("private_clues", []).append({
+        "turn": len(state["played"]),
+        "target_player_id": target_id,
+        "card_types": [card["type"] for card in state["players"][target_id]["hand"]],
+    })
+
+
 def _round_ready_players(state: Dict) -> List[str]:
     if not state.get("game_over"):
         return []
@@ -202,6 +211,7 @@ def _begin_round(state: Dict, keep_scores: bool) -> None:
             "score": score,
             "is_accomplice": False,
             "private_log": [],
+            "private_clues": [],
         }
 
     state["discard"] = []
@@ -222,11 +232,17 @@ def _begin_round(state: Dict, keep_scores: bool) -> None:
     state["current_turn_index"] = player_ids.index(first_player) if first_player in player_ids else 0
     state["current_player_id"] = player_ids[state["current_turn_index"]] if player_ids else None
 
+    for player_id in player_ids:
+        _record_private_hand(state, player_id, player_id)
     boy_holders = [pid for pid in player_ids if _hand_has_type(state["players"][pid]["hand"], CARD_BOY)]
     criminal_holder = _find_criminal_holder(state)
     if criminal_holder and boy_holders:
         for boy_pid in boy_holders:
             _push_private_note(state, boy_pid, f"You are Boy. Criminal is {_player_name(state, criminal_holder)}.")
+            state["players"][boy_pid]["private_clues"].append({
+                "turn": 0,
+                "criminal_holder_player_id": criminal_holder,
+            })
         if state["config"]["boy_visibility_mode"] == "mutual":
             _push_private_note(state, criminal_holder, "Boy knows your identity.")
 
@@ -437,6 +453,7 @@ class CriminalDanceGame:
             if selected and selected["type"] != CARD_FIRST_FINDER:
                 return [], "must play first finder first"
         hand_before = len(state["players"][player_id]["hand"])
+        hand_counts_before = {pid: len(state["players"][pid]["hand"]) for pid in state["player_order"]}
         card = _remove_card_from_hand(state, player_id, card_id)
         if not card:
             return [], "card not in hand"
@@ -444,7 +461,7 @@ class CriminalDanceGame:
         if card_type == CARD_CRIMINAL and hand_before != 1:
             state["players"][player_id]["hand"].append(card)
             return [], "criminal can only be played as last card"
-        played_entry = {"player_id": player_id, "card": card}
+        played_entry = {"player_id": player_id, "card": card, "hand_counts_before": hand_counts_before}
         state["played"].append(played_entry)
         state["discard"].append(card)
         events: List[Dict] = [{"type": "criminal_dance:play_card", "payload": {"player_id": player_id, "card_type": card_type}}]
@@ -455,9 +472,11 @@ class CriminalDanceGame:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            played_entry["target_player_id"] = target_id
             played_entry["result"] = f"Looked at {_player_name(state, target_id)}'s hand."
             hand_types = [c["type"] for c in state["players"][target_id]["hand"]]
             _push_private_note(state, player_id, f"Witness: {_player_name(state, target_id)} has {hand_types}.")
+            _record_private_hand(state, player_id, target_id)
         elif card_type == CARD_INFO_CONTROL:
             _same_time_left_pass(state)
         elif card_type == CARD_RUMOR:
@@ -466,6 +485,8 @@ class CriminalDanceGame:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            played_entry["target_player_id"] = target_id
+            played_entry["trade_completed"] = False
             target_name = _player_name(state, target_id)
             your_hand = state["players"][player_id]["hand"]
             your_pick_id = action.get("your_card_id")
@@ -490,33 +511,41 @@ class CriminalDanceGame:
                     target_card = target_hand.pop(random.randrange(len(target_hand)))
                 state["players"][player_id]["hand"].append(target_card)
                 state["players"][target_id]["hand"].append(your_card)
+                played_entry["trade_completed"] = True
         elif card_type == CARD_DETECTIVE:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            played_entry["target_player_id"] = target_id
             target_name = _player_name(state, target_id)
             if _detective_is_active(state, hand_before):
                 target_hand = state["players"][target_id]["hand"]
                 has_criminal = _hand_has_type(target_hand, CARD_CRIMINAL)
                 if has_criminal and not _hand_has_type(target_hand, CARD_ALIBI):
+                    played_entry["detective_result"] = "caught"
                     played_entry["result"] = f"Accused {target_name}: Criminal found, no Alibi."
                     _end_round(state, "detective", [player_id], f"{_player_name(state, player_id)} caught the criminal.")
                 elif has_criminal:
+                    played_entry["detective_result"] = "alibi"
                     played_entry["result"] = f"Accused {target_name}: Criminal found but blocked by Alibi."
                     events.append({"type": "criminal_dance:alibi_block", "payload": {"player_id": target_id}})
                 else:
+                    played_entry["detective_result"] = "clear"
                     played_entry["result"] = f"Accused {target_name}: no Criminal found."
             else:
+                played_entry["detective_result"] = "inactive"
                 played_entry["result"] = f"Detective inactive by rule ({state['config']['detective_activation_rule']})."
                 events.append({"type": "criminal_dance:detective_inactive", "payload": {"player_id": player_id}})
         elif card_type == CARD_DOG:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            played_entry["target_player_id"] = target_id
             target_hand = state["players"][target_id]["hand"]
             if not target_hand:
                 return [], "target has no cards"
             pick = target_hand[random.randrange(len(target_hand))]
+            played_entry["dog_reveal"] = pick["type"]
             events.append({"type": "criminal_dance:dog_reveal", "payload": {"target_id": target_id, "card_type": pick["type"]}})
             if pick["type"] == CARD_CRIMINAL:
                 _end_round(state, "dog", [player_id], f"{_player_name(state, player_id)} used Dog to catch the criminal.")
@@ -530,11 +559,15 @@ class CriminalDanceGame:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            played_entry["target_player_id"] = target_id
             state["chief_marks"][player_id] = target_id
         elif card_type == CARD_CRIMINAL:
             criminal_team = [pid for pid in state["player_order"] if state["players"][pid]["is_accomplice"]]
             criminal_team.append(player_id)
             _end_round(state, "criminal", criminal_team, f"{_player_name(state, player_id)} escaped with Criminal.")
+
+        for viewer_id in state["player_order"]:
+            _record_private_hand(state, viewer_id, viewer_id)
 
         if not state.get("game_over"):
             _advance_turn(state)
@@ -568,6 +601,7 @@ class CriminalDanceGame:
                     "hand": list(pdata["hand"]) if show_hand else [],
                     "is_accomplice": bool(pdata["is_accomplice"]),
                     "private_log": list(pdata["private_log"]) if show_hand else [],
+                    "private_clues": deepcopy(pdata.get("private_clues", [])) if show_hand else [],
                     "you": pid == viewer_id,
                     "round_ready": pid in ready_players,
                 }
@@ -593,36 +627,18 @@ class CriminalDanceGame:
             ],
             "config": dict(state.get("config", {})),
             "legal_actions": CriminalDanceGame.get_legal_actions(state, viewer_id),
+            "playable_cards": [
+                dict(card) for card in state["players"].get(viewer_id, {}).get("hand", [])
+                if "play_card" in CriminalDanceGame.get_legal_actions(state, viewer_id)
+                and _is_card_playable(state, viewer_id, card)
+            ],
         }
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        legal = CriminalDanceGame.get_legal_actions(state, bot_id)
-        if "play_again" in legal:
-            return {"type": "play_again", "delay_ms": 500}
-        if "play_card" not in legal:
-            return None
-        hand = list(state["players"][bot_id]["hand"])
-        if not hand:
-            return None
-        playable = [card for card in hand if _is_card_playable(state, bot_id, card)]
-        if not playable:
-            return None
-        card = random.choice(playable)
-        payload = {"type": "play_card", "card_id": card["id"], "delay_ms": 350}
-        if card["type"] in (CARD_DETECTIVE, CARD_CHIEF):
-            targets = [pid for pid in state["player_order"] if pid != bot_id]
-            if targets:
-                payload["target_player_id"] = random.choice(targets)
-        elif card["type"] in (CARD_DOG, CARD_WITNESS, CARD_TRADE):
-            targets = [pid for pid in state["player_order"] if pid != bot_id and len(state["players"][pid]["hand"]) > 0]
-            if targets:
-                payload["target_player_id"] = random.choice(targets)
-        if card["type"] == CARD_TRADE:
-            own_cards = [c for c in hand if c["id"] != card["id"]]
-            if own_cards:
-                payload["your_card_id"] = random.choice(own_cards)["id"]
-        return payload
+        from game.criminal_dance_ai import choose_action
+
+        return choose_action(CriminalDanceGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

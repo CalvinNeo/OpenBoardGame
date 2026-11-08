@@ -39,7 +39,7 @@
     <h3>行动牌（🃏）</h3><p>七种各三张，共 21 张，用后不回洗。威胁（✊）给本次投票和重投 +1 票；监控（📹）秘密看骰；冲刺（🏃）在移动时改地点；加固（🪵）防御 +1，停车场和超市四只以上僵尸不适用；单杀（🔪）消灭一只、双杀（🪓）至多两只；躲藏（🫥）使自己的一个角色不能被牺牲、也不能投票，但仍提供防御。</p>
     <h3>操作与回顾</h3><p>点选角色、地点或牌，再点击对应确认按钮；空白或 Esc 取消。每轮全部攻击结算后，全员点击 Next Round 才继续。淘汰者也需要确认，断线真人须重连。Help 汇总规则，Explain 点选解释，禁用按钮也可查看，Esc 退出。静态信息可悬停、聚焦或手机点击查看，点击提示 3 秒后消失。机器人只用自己的手牌和公共信息，适合练习。</p>`;
 
-  let view = null, selected = {}, signature = null, pending = false, pendingTimer, tipTimer;
+  let view = null, selected = {}, signature = null, pending = false, pendingTimer, tipTimer, wasUrgent = false;
   let explaining = false, suppressClick = false, suppressTimer, returnFocus;
   const el = (tag, cls = "", value = "") => { const node = document.createElement(tag); node.className = cls; node.textContent = value; return node; };
   const text = (suffix, value) => { byId(suffix).textContent = value; };
@@ -77,13 +77,20 @@
     return can("play_card") && !!option?.character_ids.includes(c.id);
   }
   function makeCharacter(c) {
-    const node = chosenButton("", "character", "characterId", c.id, characterEnabled(c), "moh-character");
+    const node = chosenButton("", "character", "characterId", c.id, characterEnabled(c), `moh-character${c.hidden ? " is-hidden" : ""}`);
     node.dataset.characterId = c.id; node.style.setProperty("--seat-color", seatColor(c.owner));
-    node.append(el("span", "moh-char-glyph", c.emoji));
-    const label = el("span", "moh-char-name", `${player(c.owner).seat + 1} · ${shortName(c.owner)}`); label.append(el("small", "", `${c.points}⭐${c.hidden ? " 🫥" : ""}`)); node.append(label);
+    node.append(el("span", "moh-char-glyph", c.emoji), el("span", "moh-char-seat", String(player(c.owner).seat + 1)), el("span", "moh-char-points", `${c.points}⭐`));
+    if (c.hidden) node.append(el("span", "moh-char-flag", "🫥"));
     node.setAttribute("aria-label", `${name(c.owner)} · ${charLabel(c)}${c.hidden ? " · Hidden" : ""}`);
     node.dataset.mohTip = `${name(c.owner)} · ${c.name}（${c.emoji}）：${c.points} 分，${c.strength} 防御，${c.hidden ? 0 : c.votes} 票。${c.hidden ? "本轮躲藏：不能被牺牲。" : ""}`;
     return node;
+  }
+  function ruleFor(loc) {
+    if (loc.closed) return loc.id === 2 ? {chip:"🚫 3/4人", text:"3／4 人局关闭。", special:true} : {chip:"🚫 关闭", text:"该地点已永久关闭，僵尸已被清走。", special:true};
+    if (loc.id === 4) return {chip:"🧟≥1", text:"停车场有僵尸就突破，每只僵尸单独投票选一个牺牲者。", special:true};
+    if (loc.id === 6) return {chip:"🧟≥4", text:"超市有四只及以上僵尸必定突破，加固无效。", special:true};
+    if (loc.id === 5) return {chip:"🗳️ 队长", text:"保安室内的角色投票选举本轮保安队长。", special:true};
+    return {chip:"🧟≥🛡️", text:"僵尸数不少于防御时突破。", special:false};
   }
   function destinationEnabled(number) {
     if (can("place")) return view.setup_locations.includes(number);
@@ -99,18 +106,21 @@
       area.dataset.location = loc.id;
       const title = chosenButton("", "location", "destination", loc.id, destinationEnabled(loc.id), "moh-location-name");
       title.append(el("span", "moh-location-number", loc.id), el("span", "moh-location-label", `${loc.emoji} ${loc.name}`));
-      const rule = loc.id === 4 ? "每只僵尸吃一人" : loc.id === 6 ? "4 只僵尸必突破" : loc.id === 5 ? "选举保安队长" : loc.id === 2 && loc.closed ? "3 / 4 人局关闭" : "僵尸 ≥ 防御时突破";
-      title.dataset.mohDetail = `${placeLabel(loc.id)}：容量 ${loc.capacity ?? "不限"}。${rule}。${explanations.location[1]}`;
-      title.dataset.mohTip = `${loc.name}（${loc.emoji}）：容量 ${loc.capacity ?? "不限"}。${rule}。`;
+      const rule = ruleFor(loc);
+      title.dataset.mohDetail = `${placeLabel(loc.id)}：容量 ${loc.capacity ?? "不限"}。${rule.text}${explanations.location[1]}`;
+      title.dataset.mohTip = `${loc.name}（${loc.emoji}）：容量 ${loc.capacity ?? "不限"}。${rule.text}`;
       area.append(title);
       const stats = el("div", "moh-location-stats");
       stats.append(tip(el("span", loc.breached ? "moh-alert" : "", `🧟 ${loc.zombies}`), `Zombies（🧟）：门外有 ${loc.zombies} 只僵尸。`, "stats"));
       stats.append(tip(el("span", "", `🛡️ ${loc.strength}${view.attack_location === loc.id && view.defense_bonus ? ` +${view.defense_bonus}` : ""}`), "Defense（🛡️）：壮汉提供 2，其余角色提供 1；躲藏仍提供防御。", "stats"));
-      stats.append(tip(el("span", "", `👥 ${loc.occupants}/${loc.capacity ?? "∞"}`), "Capacity（👥）：每个角色占一格。∞ 表示人数不限。", "location")); area.append(stats);
+      const full = loc.capacity !== null && loc.occupants >= loc.capacity;
+      stats.append(tip(el("span", full ? "moh-full" : "", `👥 ${loc.occupants}/${loc.capacity ?? "∞"}`), `Capacity（👥）：每个角色占一格，${full ? "当前已满员。" : ""}∞ 表示人数不限。`, "location"));
+      stats.append(tip(el("span", `moh-location-rule${rule.special ? " is-special" : ""}`, rule.chip), `${loc.emoji} ${loc.name}：${rule.text}`, "location"));
+      area.append(stats);
       const occupants = el("div", "moh-occupants");
       view.characters.filter(c => c.alive && c.location === loc.id).forEach(c => occupants.append(makeCharacter(c)));
       if (!occupants.childElementCount) occupants.append(el("span", "moh-empty", loc.closed ? "CLOSED" : "No survivors"));
-      area.append(occupants, tip(el("div", "moh-location-note", rule), `${loc.emoji} ${loc.name}：${rule}。`, "location")); map.append(area);
+      area.append(occupants); map.append(area);
     });
   }
   function renderPlayers() {
@@ -118,8 +128,8 @@
     view.players.forEach(p => {
       const block = el("div", `moh-player${p.player_id === view.you ? " is-you" : ""}${!p.survivors ? " is-out" : ""}`);
       block.style.setProperty("--seat-color", seatColor(p.player_id));
-      block.append(el("strong", "", `${p.seat + 1} · ${p.player_id === view.chief ? "🛡️ " : ""}${p.name}${p.player_id === view.you ? " · You" : ""}`));
-      block.append(el("small", "", `${p.points}⭐ · ${p.survivors}👥 · ${p.cards}🃏${view.ready.includes(p.player_id) ? " · ✓" : ""}`));
+      block.append(el("strong", "", `${p.seat + 1} ${p.player_id === view.chief ? "🛡️" : ""} ${p.name}${p.player_id === view.you ? " · You" : ""}`));
+      block.append(el("small", "", `${p.points}⭐ ${p.survivors}👥 ${p.cards}🃏${view.ready.includes(p.player_id) ? " ✓" : ""}`));
       tip(block, `${p.name}：生存分（⭐）${p.points}，幸存角色（👥）${p.survivors}，手牌（🃏）${p.cards}。${!p.survivors ? "仍可参加平票重投。" : ""}`, "score"); node.append(block);
     });
   }
@@ -136,6 +146,9 @@
   function locationChoices(container, numbers) { choices(container, "Choose a destination", numbers.map(n => [n, placeLabel(n)]), "destination", "destination"); }
   function renderControls() {
     const node = byId("Controls"); node.replaceChildren(); text("ActionTitle", phaseNames[view.phase]); text("Step", pending ? "Sending…" : "");
+    const urgent = !!view.legal_actions.length && !!player(view.you) && view.phase !== "game_over";
+    if (urgent && !wasUrgent) setDockCollapsed(false);
+    wasUrgent = urgent; byId("Command").classList.toggle("is-urgent", urgent);
     const own = ownCharacters();
     if (!socket.connected) { node.append(el("div", "moh-locked", "Reconnecting…")); return; }
     if (view.phase === "game_over") { node.append(el("p", "", "Game complete. Use Start Game in room controls to play again.")); return; }
@@ -216,16 +229,17 @@
       const node = button("", card.kind, () => { selected[key] = selected[key] === card.id ? null : card.id; if (sprint) selected.destination = null; else selected.characterId = null; render(); }, enabled, "moh-card");
       node.dataset.cardId = card.id; node.dataset.mohTip = `${card.name}（${card.emoji}）：${card.text}`;
       node.classList.toggle("is-selected", selected[key] === card.id); node.setAttribute("aria-pressed", String(selected[key] === card.id));
-      node.append(el("span", "", card.emoji)); const label = el("strong", "", card.name); label.append(el("small", "", cardStages[card.kind])); node.append(label); hand.append(node);
+      node.append(el("span", "moh-card-glyph", card.emoji), el("span", "moh-card-stage", cardStages[card.kind]), el("span", "moh-card-name", card.name)); hand.append(node);
     });
     if (!view.hand.length) hand.append(el("p", "moh-empty", "No cards"));
   }
   function renderIntel() {
     const setup = view.phase === "setup", dice = setup ? view.setup_dice : view.forecast;
-    text("IntelLabel", setup || view.revealed ? "REVEALED" : dice ? "PRIVATE" : "HIDDEN");
+    const known = Array.isArray(dice) && dice.length > 0;
+    text("IntelLabel", !known ? "HIDDEN" : setup || view.revealed ? "REVEALED" : "PRIVATE");
     const node = byId("Dice"); node.replaceChildren();
-    (dice || [null,null,null,null]).forEach(value => node.append(el("span", `moh-die${value === null ? " is-hidden" : ""}`, value === null ? "?" : value)));
-    node.dataset.mohTip = setup ? "Setup dice（🎲）：选择对应的可用地点布置。" : dice ? view.revealed ? "僵尸骰子已公开，并已加入棋盘。" : "Private（🔒）：仅你能看到；目前尚未放置到棋盘。" : "Hidden（🔒）：秘密骰子尚未揭晓。";
+    (known ? dice : [null,null,null,null]).forEach(value => node.append(el("span", `moh-die${value === null ? " is-hidden" : ""}`, value === null ? "?" : value)));
+    node.dataset.mohTip = setup ? "Setup dice（🎲）：选择对应的可用地点布置。" : !known ? "Hidden（🔒）：秘密骰子尚未揭晓。" : view.revealed ? "僵尸骰子已公开，并已加入棋盘。" : "Private（🔒）：仅你能看到；目前尚未放置到棋盘。";
     const destinations = byId("Destinations"); destinations.replaceChildren();
     view.players.filter(p => p.survivors).forEach(p => {
       if (!view.destination_submitted.includes(p.player_id)) return;
@@ -257,8 +271,10 @@
     if (!view) return;
     const scroll = ["Controls", "Hand", "Log"].map(id => [id, byId(id).scrollTop]);
     text("Round", view.phase === "setup" ? "SETUP" : `ROUND ${String(view.round).padStart(2,"0")}`);
-    const who = view.current_turn ? ` · ${view.current_turn === view.you ? "Your turn" : shortName(view.current_turn)}` : "";
-    text("Status", `${phaseNames[view.phase]}${who}`); text("Chief", `🛡️ ${shortName(view.chief)}`);
+    const acting = !!view.legal_actions.length && !!player(view.you) && view.phase !== "game_over";
+    const status = !player(view.you) ? "👀 Spectating" : acting ? "🎯 Your turn" : view.current_turn ? `⏳ Waiting for ${shortName(view.current_turn)}` : "⏳ Waiting for other players";
+    text("Status", status); byId("Status").classList.toggle("is-you", acting);
+    text("Chief", `🛡️ ${shortName(view.chief)}`);
     byId("Chief").dataset.mohTip = `Chief（🛡️）：${name(view.chief)}。${view.elected ? "当轮当选，可免费看骰子。" : "本轮尚未当选，不享有免费看骰子的权限。"}`;
     const survivors = view.characters.filter(c => c.alive).length;
     text("Remaining", `👥 ${survivors} survivors`); byId("Remaining").dataset.mohTip = `Survivors（👥）：现有 ${survivors} 人；不超过 ${view.players.length === 6 ? 6 : 4} 人时轮末救援抵达。`;
@@ -274,6 +290,11 @@
     tooltip.style.top = `${r.bottom + box.height + 12 < innerHeight ? r.bottom + 6 : Math.max(12, r.top - box.height - 6)}px`;
     if (autoHide) tipTimer = setTimeout(hideTip, 3000);
   }
+  function setDockCollapsed(value) {
+    byId("Command").classList.toggle("is-collapsed", value);
+    byId("DockToggle").setAttribute("aria-expanded", String(!value));
+    text("DockToggle", value ? "Show" : "Hide");
+  }
   function setExplain(value) { explaining = value; panel.classList.toggle("moh-explaining", value); byId("ExplainBtn").setAttribute("aria-pressed", String(value)); hideTip(); }
   function showDialog(title, body, html = false) {
     hideTip(); returnFocus = document.activeElement; text("DialogTitle", title);
@@ -287,6 +308,7 @@
   }
   byId("HelpBtn").addEventListener("click", () => { setExplain(false); showDialog("Mall of Horror · Game Rules", help, true); });
   byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
+  byId("DockToggle").addEventListener("click", () => setDockCollapsed(!byId("Command").classList.contains("is-collapsed")));
   byId("DialogClose").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
   dialog.addEventListener("click", event => { const r = dialog.getBoundingClientRect(); if (event.target === dialog && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) dialog.close(); });
@@ -321,7 +343,7 @@
   });
   document.addEventListener("scroll", hideTip, true); window.addEventListener("resize", hideTip); window.addEventListener("blur", hideTip);
   function clearState() {
-    view = null; signature = null; selected = {}; pending = false; suppressClick = false;
+    view = null; signature = null; selected = {}; pending = false; suppressClick = false; wasUrgent = false;
     clearTimeout(pendingTimer); clearTimeout(suppressTimer); setExplain(false); hideTip(); if (dialog.open) dialog.close();
     ["Players", "Map", "Controls", "Dice", "Destinations", "Hand", "Review", "Log", "VoteResult"].forEach(s => byId(s).replaceChildren());
     byId("Review").classList.add("hidden"); text("Status", "Waiting to start");

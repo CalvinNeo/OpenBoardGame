@@ -171,6 +171,29 @@ class KronologicFrontendIntegrationTests(unittest.TestCase):
         self.assertNotIn("kronologicPublicClues", script)
         self.assertNotIn("kronologicPrivateClues", script)
 
+    def test_auto_notes_solver_is_wired(self):
+        markup = (ROOT / "static" / "games" / "kronologic.html").read_text(encoding="utf-8")
+        script = (ROOT / "static" / "games" / "kronologic.js").read_text(encoding="utf-8")
+        styles = (ROOT / "static" / "games" / "kronologic.css").read_text(encoding="utf-8")
+
+        self.assertIn("function kronologicSolveAutoNotes()", script)
+        self.assertIn("kronologicRefreshAutoNotes();", script)
+        self.assertIn("kronologicPathMatchesClues", script)
+        # Auto conclusions must never overwrite a mark the player stored.
+        self.assertIn("function kronologicEffectiveMark(key)", script)
+        self.assertIn("const manual = kronologicManualMarks()[key];", script)
+        self.assertIn("const auto = kronologicAutoNotes.marks[key];", script)
+        self.assertIn('data-note-auto="' + '$' + '{auto ? "1" : "0"}"', script)
+        self.assertIn('data-kronologic-copy="notebook_auto_hint"', markup)
+        self.assertIn("button.kronologic-note-person.is-auto", styles)
+        self.assertIn(".kronologic-count-grid label.is-auto select", styles)
+
+    def test_mobile_notebook_dock_stays_narrow(self):
+        styles = (ROOT / "static" / "games" / "kronologic.css").read_text(encoding="utf-8")
+        dock = styles.split(".kronologic-notebook-dock {", 1)[1].split("}", 1)[0]
+        width = dock.split("min-width:", 1)[1].split(";", 1)[0].strip()
+        self.assertEqual(width, "34px")
+
     def test_room_render_and_reset_hooks_are_wired(self):
         shared = (ROOT / "static" / "games" / "shared.js").read_text(encoding="utf-8")
         room = (ROOT / "static" / "room.js").read_text(encoding="utf-8")

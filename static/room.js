@@ -1488,6 +1488,7 @@ const GAME_WEIGHT = {
   mind_the_lines: 1.10,
   no_thanks: 1.13,
   power_grid: 3.25,
+  ticket_to_ride: 1.82,
 };
 
 function getGameWeight(gameId) {

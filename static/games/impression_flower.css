@@ -1,6 +1,36 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-impression_flower-1 {
 
+.impression-toolbar,
+.impression-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.impression-toolbar {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  margin-bottom: 10px;
+}
+
+.impression-toolbar h3 {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.impression-tools {
+  flex: 0 0 auto;
+}
+
+.impression-tools button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .impression-canvas-wrapper {
   position: relative;
   display: inline-block;
@@ -168,6 +198,16 @@
 @media (max-width: 600px) {
   .impression-drawings {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .impression-toolbar {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .impression-tools button {
+    padding: 4px 8px;
+    font-size: 12px;
   }
 }
 

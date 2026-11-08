@@ -3862,6 +3862,224 @@ button[id$="ExplainBtn"]::after {
   transform-origin: left center;
 }
 
+
+/* ---- Shared Help & Explain widgets (designs/task185.md) ---- */
+
+/* Shared Help dialog and Explain mode styling. See designs/task185.md. */
+
+.obg-help-dialog {
+  width: min(680px, 94vw);
+  max-height: min(86vh, 720px);
+  padding: 0;
+  border: 1px solid #2f3a4d;
+  border-radius: 12px;
+  background: #131a26;
+  color: #e8edf6;
+  overflow: hidden;
+}
+
+.obg-help-dialog::backdrop {
+  background: rgba(6, 10, 16, 0.66);
+}
+
+.obg-help-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #2a3446;
+  background: #182131;
+}
+
+.obg-help-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.obg-help-lang {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.obg-help-lang button,
+.obg-help-close {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: 1px solid #3a4761;
+  border-radius: 6px;
+  background: #1f2a3c;
+  color: #cfd9ea;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.obg-help-lang button.is-active {
+  background: #2f6fd0;
+  border-color: #2f6fd0;
+  color: #fff;
+}
+
+.obg-help-content {
+  max-height: calc(min(86vh, 720px) - 48px);
+  overflow-y: auto;
+  padding: 12px 14px 16px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.obg-help-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #2a3446;
+  scrollbar-width: thin;
+}
+
+.obg-help-tab {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid #3a4761;
+  border-radius: 999px;
+  background: #1b2434;
+  color: #b9c6da;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.obg-help-tab.is-active {
+  background: #2f6fd0;
+  border-color: #2f6fd0;
+  color: #fff;
+}
+
+.obg-help-section + .obg-help-section {
+  margin-top: 14px;
+}
+
+.obg-help-section h3 {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  color: #8fb6ef;
+}
+
+.obg-help-section h3:first-child {
+  margin-top: 0;
+}
+
+.obg-help-section p {
+  margin: 0 0 8px;
+}
+
+.obg-help-section ul,
+.obg-help-section ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.obg-help-section li {
+  margin-bottom: 4px;
+}
+
+.obg-help-basic {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.obg-help-basic-row {
+  display: grid;
+  grid-template-columns: minmax(76px, 96px) 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1a2434;
+}
+
+.obg-help-basic-row dt {
+  font-weight: 600;
+  color: #8fb6ef;
+  font-size: 13px;
+}
+
+.obg-help-basic-row dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.obg-explain-text {
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Explain mode: question cursor and dashed outline only on explained controls. */
+body.obg-explaining .obg-has-explanation {
+  cursor: help;
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+}
+
+body.obg-explaining {
+  cursor: default;
+}
+
+@media (max-width: 420px) {
+  .obg-help-dialog {
+    width: 96vw;
+    max-height: 88vh;
+  }
+
+  .obg-help-content {
+    max-height: calc(88vh - 48px);
+    padding: 10px 11px 14px;
+    font-size: 13px;
+  }
+
+  .obg-help-basic-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+
+/* ---- Game header toolbars: Help / Explain must never wrap (DEV_GUIDE) ---- */
+
+[class$="-toolbar"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  margin-bottom: 8px;
+}
+
+[class$="-toolbar"] > h3 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[class$="-tools"] {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+[class$="-tools"] > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 @media all, obg-game-nine_upper-1 {}
 
 

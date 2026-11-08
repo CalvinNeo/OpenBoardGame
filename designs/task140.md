@@ -49,3 +49,21 @@
 - `node --check static/games/mall_of_horror.js`、`git diff --check`：通过。
 - `tests/mall_of_horror.browser.cjs`：真实双客户端加机器人完成布置、投票、移动、攻击、全员回顾及刷新重连；15 种阶段／视角在 1440、1024、740、390、320px 全部通过页面与容器溢出检查。Help、Explain（含 disabled 和无说明按钮）、空白／Esc 取消、冲刺、使用牌和手机 3 秒提示均通过。
 - 截图与机器检查结果保存在 `build/mall-of-horror-ui/`，包含桌面、手机、Help 以及 `result.json`；美术完全由 CSS／Emoji 构成。
+
+## UI 优化记录
+
+按 `DEV_GUIDE.md` 复核后重排前端，只改 `static/games/mall_of_horror.{html,css,js}` 与资源清单版本，未触碰服务端规则。
+
+- **移动端操作区改为 sticky dock**：手机端把 `.moh-sidebar` 设为 `display: contents`，操作区用 `order` 提到棋盘之前，并 `position: sticky; top: calc(var(--room-controls-bar-height) + 4px)`（沿用 `power_grid` 的既有约定），滚动棋盘时始终可见；`max-height: 46dvh` 内部滚动，标题栏的 Hide／Show 按钮可临时折叠以让出主板图。轮到自己行动时 dock 边框转红并自动展开。此前操作区位于整块地图之后，玩家要滚过约 1000px 才能行动。
+- **确认按钮固定在 dock 底部**：选择列表较长时（如货车分牌的留一／送一／收牌人共 11 个选项），`#mallOfHorrorControls` 内的最后一个按钮 `position: sticky; bottom: 0`，配合不透明背景与 3px 遮罩，保证「点按钮确认这个列表」不需要来回翻动。禁用态改用 `filter` 降亮而非 `opacity`，避免滚动内容透过按钮显示。
+- **玩家条压缩为单行**：姓名改为单行省略而非两行夹取，统计行同排显示 `⭐ 👥 🃏`；手机端固定三列。6 人局从三行约 270px 降到两行约 90px。
+- **棋盘角色改为座位徽章**：原先显示「座位 · 截断姓名」在 320px 下只剩 6 个字符且难以辨认，改为 `角色 Emoji + 座位号徽章（座位色底）+ 分数`，姓名保留在悬停／点击提示与 `aria-label`。`🫥` 躲藏标记改为右上角绝对定位，不占布局宽度；`is-hidden` 另加虚线边框。占用格改用 `repeat(auto-fill, minmax(72px, 1fr))` 自适应列数，320px 下隐藏分数并降为 52px 下限以容纳两列。
+- **地点规则改为图标徽章**：每块地点底部的整行中文规则文字换成统计行内的 `🧟≥🛡️`／`🧟≥1`／`🧟≥4`／`🗳️ 队长`／`🚫 3/4人` 徽章，完整规则移入提示与 Explain；满员时 `👥` 容量转黄。地点最小高度由 178px 降到 126px。
+- **状态栏去重**：原先状态栏与操作区标题同时显示阶段名，现在状态栏只显示 `🎯 Your turn`／`⏳ Waiting for X`／`👀 Spectating`，阶段名移到 dock 标题并加 `aria-live`。
+- **手牌三处定位**：卡面改为 Emoji（左）／触发阶段徽章（右上）／牌名（右下）三处分区；监控面板在无骰数据时补齐四枚 `?` 占位并标 HIDDEN，修掉此前空白面板。
+- **320px 标题**：恢复「MALL OF HORROR／僵尸商场」两行显示（此前内联导致「僵尸商」与「场」拆行），`ROUND` 徽章保持同行不换行。
+- 资源版本 `mall_of_horror.js/css → v3`、`mall_of_horror.html → v2`、`game_assets.js → v219`。
+
+验证：`node --check`、`python3 -m unittest tests.test_frontend_style_assets` 通过；浏览器检查覆盖真实双人＋机器人对局（布置、投票、移动、攻击、全员回顾、刷新重连）、15 种阶段在 1440／1024／740／390／320px 的页面与容器溢出、Help／Explain（含 disabled 与无说明控件）、空白与 Esc 取消、手机 3 秒提示，以及新增的移动端 dock 断言（sticky 定位、位于棋盘之上、滚动时保持吸附、折叠／展开、分牌确认按钮可见且可点击并正确派发动作）。截图见 `build/mall-of-horror-ui/`。
+
+顺带修掉 `tests/mall_of_horror.browser.cjs` 对局循环里的一个既有缺陷：原循环在第二个客户端落后一个 revision 时 `break`，随后只等待 host 的 revision 上升，而该 revision 只有被跳过的那个客户端才能推进，于是随机卡死在 `camera`／`victim` 等阶段（在未改动的旧 UI 上同样复现）。改为逐页独立尝试、失败重试，连续 8 次无进展才判为卡死。

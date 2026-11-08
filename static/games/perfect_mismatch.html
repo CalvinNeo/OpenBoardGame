@@ -1,36 +1,43 @@
 <template data-game-target="mismatchPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="mismatchPhase">-</span></div>
-                <div>Round: <span id="mismatchRound">-</span></div>
-                <div>Leader: <span id="mismatchLeader">-</span></div>
-                <div>Target: <span id="mismatchTarget">-</span></div>
+              <div class="mismatch-toolbar">
+                <h3>🎯 Perfect Mismatch</h3>
+                <div class="mismatch-tools">
+                  <button id="mismatchHelpBtn" type="button">Help</button>
+                  <button id="mismatchExplainBtn" type="button" aria-pressed="false">Explain</button>
+                </div>
               </div>
               <div class="row">
-                <div>Guessing: <span id="mismatchGuessing">-</span></div>
-                <div>Winner: <span id="mismatchWinner">-</span></div>
+                <div data-mismatch-explain="phase">Phase: <span id="mismatchPhase">-</span></div>
+                <div data-mismatch-explain="round">Round: <span id="mismatchRound">-</span></div>
+                <div data-mismatch-explain="leader">Leader: <span id="mismatchLeader">-</span></div>
+                <div data-mismatch-explain="target">Target: <span id="mismatchTarget">-</span></div>
+              </div>
+              <div class="row">
+                <div data-mismatch-explain="guessing">Guessing: <span id="mismatchGuessing">-</span></div>
+                <div data-mismatch-explain="winner">Winner: <span id="mismatchWinner">-</span></div>
               </div>
 
               <h3>Words</h3>
               <div id="mismatchWords" class="mismatch-words"></div>
               <div class="row">
-                <div>Your Guess: <span id="mismatchYourGuess">-</span></div>
+                <div data-mismatch-explain="your_guess">Your Guess: <span id="mismatchYourGuess">-</span></div>
               </div>
 
               <h3>Sliders</h3>
               <div id="mismatchSliders" class="mismatch-sliders"></div>
 
               <div class="row actions">
-                <button id="mismatchRevealBtn">Reveal</button>
-                <button id="mismatchNextRoundBtn">Next Round</button>
-                <button id="mismatchPlayAgainBtn">Play Again</button>
+                <button id="mismatchRevealBtn" data-mismatch-explain="reveal">Reveal</button>
+                <button id="mismatchNextRoundBtn" data-mismatch-explain="next_round">Next Round</button>
+                <button id="mismatchPlayAgainBtn" data-mismatch-explain="play_again">Play Again</button>
               </div>
 
-              <div id="mismatchRoundSummary" class="round-notice hidden">
+              <div id="mismatchRoundSummary" class="round-notice hidden" data-mismatch-explain="round_summary">
                 <div class="round-notice-title">Round Summary</div>
                 <div id="mismatchRoundSummaryBody" class="round-notice-body">-</div>
                 <div id="mismatchRoundSummaryGuesses" class="mismatch-summary-list"></div>
               </div>
 
               <h3>Players</h3>
-              <div id="mismatchPlayers"></div>
+              <div id="mismatchPlayers" data-mismatch-explain="players"></div>
             </template>

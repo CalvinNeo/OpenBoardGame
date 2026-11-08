@@ -1,3 +1,138 @@
+// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+const flip7HelpButton = document.getElementById("flip7HelpBtn");
+const flip7ExplainButton = document.getElementById("flip7ExplainBtn");
+
+const FLIP7_HELP_CONFIG = {
+  gameId: "flip7",
+  title: { zh: "翻七 · Flip 7", en: "Flip 7" },
+  basic: {
+    win: {
+      zh: "把总分累计到 Target Score（默认 200）的玩家结束整局，此时总分最高的那位玩家获胜。",
+      en: "The game ends once someone's total reaches the Target Score of 200 by default, and the highest total score at that moment wins."
+    },
+    turn: {
+      zh: "轮到你时按 Flip 翻一张牌，或者按 Stay 收手，把当前牌面结算成本轮分数存进总分并退出这一轮。",
+      en: "On your turn you either press Flip to turn over one more card, or press Stay to bank the cards in front of you as your round score and leave the round."
+    },
+    key: {
+      zh: "你要收集尽量多的不同数字牌，可是同一个数字第二次出现就会让你爆掉(busted)，所以每一次 Flip 都是在多拿分和多冒险之间下注。",
+      en: "You want as many different number cards as possible, yet a number appearing twice busts you, so every Flip is a bet between scoring more and risking everything."
+    }
+  },
+  sections: [
+    {
+      id: "cards",
+      label: { zh: "牌堆构成", en: "The deck" },
+      html: {
+        zh: "<p>牌堆里有三种牌：数字牌、行动牌和分数牌。数字牌从 0 到 12，其中 1 到 12 各有和数字相同的张数，所以越大的数字越容易翻到。</p>"
+          + "<p>分数牌是 +2、+4、+6、+8、+10 和一张 x2，它们不会让你爆掉，只会让本轮分数变高。</p>"
+          + "<p>行动牌有三种，每种三张：Second Chance、Freeze 和 Flip Three。</p>"
+          + "<p>每一轮开始时，每位玩家都会自动先翻一张牌，然后才轮到第一个人行动。</p>",
+        en: "<p>The deck holds three kinds of cards: number cards, action cards and scoring cards. Number cards run from 0 to 12, and each value from 1 to 12 appears as many times as its own number, so bigger numbers turn up more often.</p>"
+          + "<p>The scoring cards are +2, +4, +6, +8, +10 and a single x2. They never bust you and only make the round score bigger.</p>"
+          + "<p>There are three kinds of action card with three copies each, namely Second Chance, Freeze and Flip Three.</p>"
+          + "<p>At the start of every round each player automatically flips one card before anyone gets to act.</p>"
+      }
+    },
+    {
+      id: "turn",
+      label: { zh: "Flip 与 Stay", en: "Flipping and staying" },
+      html: {
+        zh: "<p>按 Flip 翻开的数字牌会加入你的牌面，前提是这个数字你还没有。翻到分数牌就直接加入牌面。</p>"
+          + "<p>按 Stay 立刻结算当前牌面，把分数存进总分，并且本轮不能再翻牌，状态会显示成 out。</p>"
+          + "<p>翻到一个你已经有的数字就是爆掉(busted)，你的整手牌作废，本轮记 0 分。</p>"
+          + "<p>所以牌面越丰富，继续 Flip 的风险就越高。</p>",
+        en: "<p>A number card you flip joins your tableau as long as you do not already hold that number, and a scoring card simply joins the tableau as well.</p>"
+          + "<p>Stay settles your tableau at once, adds the score to your total and takes you out of the round with the status out.</p>"
+          + "<p>Flipping a number you already hold is a bust, which wipes your whole tableau and scores zero for the round.</p>"
+          + "<p>The fuller your tableau becomes, the riskier every further Flip is.</p>"
+      }
+    },
+    {
+      id: "actions",
+      label: { zh: "三种行动牌", en: "The three action cards" },
+      html: {
+        zh: "<p>Second Chance 让你把它交给任意一位还在场并且手上没有这张牌的玩家，你也可以留给自己。之后这个人第一次爆掉时会被救回来，这张牌随即消失。</p>"
+          + "<p>Freeze 让你指定任意一位还在场上的玩家，他立刻结算当前分数并退出本轮，既可能是救命也可能是截断。</p>"
+          + "<p>Flip Three 只能由抽到它的人自己承受，他要连续翻三张牌，中途爆掉或者集齐七张就提前停止。</p>"
+          + "<p>抽到行动牌时游戏会暂停，Pending Action 一栏显示这张牌和抽到它的人，由他点选目标玩家。</p>",
+        en: "<p>Second Chance lets you hand it to any player still in the round who does not already hold one, yourself included. The next time that player would bust they are saved instead, and the card is used up.</p>"
+          + "<p>Freeze lets you pick any player still in the round, who immediately banks their current score and leaves the round, which can rescue them or cut them short.</p>"
+          + "<p>Flip Three always lands on the player who drew it, who has to flip three cards in a row and stops early on a bust or on collecting seven numbers.</p>"
+          + "<p>Drawing an action card pauses the game, the Pending Action field names the card and the player who drew it, and that player clicks a target to resolve it.</p>"
+      }
+    },
+    {
+      id: "scoring",
+      label: { zh: "计分与 flip7flash", en: "Scoring and flip7flash" },
+      html: {
+        zh: "<p>本轮分数等于所有数字牌之和乘以 x2 的倍数，再加上分数牌的点数。</p>"
+          + "<p>集齐七张不同数字牌就会触发 flip7flash(🃏)，本轮立刻结束并且你额外获得 15 分奖励。</p>"
+          + "<p>爆掉的玩家本轮记 0 分，之前翻到的牌全部作废。</p>"
+          + "<p>当所有人都退出本轮，或者有人触发 flip7flash(🃏) 时，这一轮就结束。</p>",
+        en: "<p>Your round score is the sum of your number cards multiplied by x2 for each copy you hold, plus the points on your scoring cards.</p>"
+          + "<p>Collecting seven different number cards triggers flip7flash(🃏), which ends the round at once and earns you a 15 point bonus.</p>"
+          + "<p>A busted player scores zero for the round and loses every card flipped so far.</p>"
+          + "<p>The round ends when everyone has left it, or the moment somebody triggers flip7flash(🃏).</p>"
+      }
+    },
+    {
+      id: "ending",
+      label: { zh: "回合与整局结束", en: "Rounds and the endgame" },
+      html: {
+        zh: "<p>每轮结束后 Last Round 会列出每个人本轮翻到的所有牌和拿到的分数。</p>"
+          + "<p>只要还没有人达到 Target Score，就会自动开始新的一轮，所有人重新回到场上。</p>"
+          + "<p>一旦有人达到或者超过 Target Score，整局结束，总分最高的玩家获胜。</p>",
+        en: "<p>After each round the Last Round panel lists every card each player flipped and the score they took from it.</p>"
+          + "<p>As long as nobody has reached the Target Score a fresh round starts automatically with everyone back in play.</p>"
+          + "<p>The moment somebody reaches or passes the Target Score the game ends and the highest total score wins.</p>"
+      }
+    }
+  ]
+};
+
+const FLIP7_EXPLAIN = {
+  phase: { zh: "当前阶段。playing 是正常翻牌，action_target 是等待某位玩家为行动牌选择目标，round_end 是等待下一轮，game_over 表示整局结束。", en: "Current phase: playing is normal flipping, action_target waits for a player to pick a target for an action card, round_end waits for the next round, and game_over means the game has ended." },
+  round: { zh: "当前是第几轮。每一轮都会重新发牌并清空所有人的牌面。", en: "Which round is being played. Every round deals fresh cards and clears every tableau." },
+  turn: { zh: "现在轮到谁 Flip 或者 Stay。", en: "Whose turn it is to Flip or to Stay." },
+  deck: { zh: "牌堆里还剩多少张牌。用完之后会把弃牌堆洗回去。", en: "How many cards are left in the deck. Once it runs out the discard pile is shuffled back in." },
+  discard: { zh: "弃牌堆里的牌数。它决定牌堆还能洗回多少张，也让你大致判断剩下的数字分布。", en: "How many cards sit in the discard pile. It tells you how much can be shuffled back into the deck and roughly which numbers are left." },
+  target_score: { zh: "整局的目标总分，默认是 200。有人达到它时游戏立刻结束。", en: "The total score the game is played to, 200 by default. The game ends as soon as somebody reaches it." },
+  pending: { zh: "当前挂起的行动牌和抽到它的玩家。需要由他在下方的玩家列表里点选目标才能继续。", en: "The action card currently waiting and the player who drew it. That player has to click a target in the player list below before play continues." },
+  flip7_winner: { zh: "本轮触发 flip7flash(🃏) 的玩家。他集齐了七张不同数字牌，本轮立刻结束并额外获得 15 分。", en: "The player who triggered flip7flash(🃏) this round by collecting seven different number cards, which ends the round at once and adds a 15 point bonus." },
+  flip: { zh: "翻一张牌。翻到新的数字牌会扩大你的牌面，翻到重复数字则会爆掉(busted)。", en: "Flip one card. A new number card grows your tableau, while a number you already hold busts you." },
+  stay: { zh: "收手，把当前牌面结算成本轮分数存进总分，然后退出本轮。", en: "Stay, which banks your current tableau as the round score and takes you out of the round." },
+  players: { zh: "所有玩家的牌面和状态。score 是累计总分，numbers 是你手上不同数字牌的张数，busted 表示本轮爆掉记 0 分，second chance 表示你还留着一张保险牌。有行动牌挂起时，点击带高亮的玩家卡片就是把它选为目标。", en: "Every player's tableau and state. The score badge is the running total, numbers counts your distinct number cards, busted means a bust worth zero this round, and second chance means you still hold a safety card. While an action card is pending, clicking a highlighted player card chooses them as its target." },
+  last_round: { zh: "上一轮的结果，按玩家列出本轮翻到的每一张牌和最终拿到的分数。", en: "The previous round's result, listing every card each player flipped and the score they ended up with." }
+};
+
+let flip7HelpWidget = null;
+let flip7ExplainWidget = null;
+
+function initFlip7HelpExplain() {
+  if (flip7HelpWidget || typeof window.obgCreateHelp !== "function") return;
+  flip7HelpWidget = window.obgCreateHelp(FLIP7_HELP_CONFIG);
+  flip7ExplainWidget = window.obgCreateExplain({
+    gameId: "flip7",
+    attribute: "data-flip7-explain",
+    explanations: FLIP7_EXPLAIN,
+    button: flip7ExplainButton,
+    root: () => document.getElementById("flip7Panel"),
+    bypass: ["#flip7HelpBtn", "#flip7ExplainBtn"]
+  });
+  flip7HelpButton?.addEventListener("click", () => {
+    flip7ExplainWidget?.exit();
+    flip7HelpWidget.open();
+  });
+  flip7ExplainButton?.addEventListener("click", () => flip7ExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initFlip7HelpExplain);
+} else {
+  initFlip7HelpExplain();
+}
+
 const flip7PhaseLabel = document.getElementById("flip7Phase");
 const flip7RoundLabel = document.getElementById("flip7Round");
 const flip7TurnLabel = document.getElementById("flip7Turn");

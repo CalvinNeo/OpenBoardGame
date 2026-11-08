@@ -1,43 +1,50 @@
 <template data-game-target="coyotePanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="coyotePhase">-</span></div>
-                <div>Round: <span id="coyoteRound">-</span></div>
-                <div>Current Turn: <span id="coyoteTurn">-</span></div>
+              <div class="coyote-toolbar">
+                <h3>🐺 Coyote</h3>
+                <div class="coyote-tools">
+                  <button id="coyoteHelpBtn" type="button">Help</button>
+                  <button id="coyoteExplainBtn" type="button" aria-pressed="false">Explain</button>
+                </div>
               </div>
-              <div id="coyoteRoundNotice" class="round-notice hidden">
+              <div class="row">
+                <div data-coyote-explain="phase">Phase: <span id="coyotePhase">-</span></div>
+                <div data-coyote-explain="round">Round: <span id="coyoteRound">-</span></div>
+                <div data-coyote-explain="turn">Current Turn: <span id="coyoteTurn">-</span></div>
+              </div>
+              <div id="coyoteRoundNotice" class="round-notice hidden" data-coyote-explain="round_notice">
                 <div id="coyoteRoundNoticeTitle" class="round-notice-title">Last Round</div>
                 <div id="coyoteRoundNoticeBody" class="round-notice-body">-</div>
               </div>
 
               <h3>Table</h3>
               <div id="coyoteTable" class="coyote-table">
-                <div id="coyotePlayers" class="coyote-players"></div>
+                <div id="coyotePlayers" class="coyote-players" data-coyote-explain="players"></div>
                 <div class="coyote-bid-center">
                   <div class="coyote-bid-status" role="status" aria-live="polite">
-                    <div class="coyote-bid-line">
+                    <div class="coyote-bid-line" data-coyote-explain="last_bid">
                       <span class="coyote-bid-label">Last Bid:</span>
                       <span id="coyoteBid" class="coyote-bid-highlight">-</span>
                     </div>
-                    <div class="coyote-bid-line">
+                    <div class="coyote-bid-line" data-coyote-explain="bidder">
                       <span class="coyote-bid-label">Bidder:</span>
                       <span id="coyoteBidder" class="coyote-bidder-name">-</span>
                     </div>
-                    <div class="coyote-bid-line coyote-winner-line">
+                    <div class="coyote-bid-line coyote-winner-line" data-coyote-explain="winner">
                       <span class="coyote-bid-label">Winner:</span>
                       <span id="coyoteWinner">-</span>
                     </div>
                   </div>
                   <div class="coyote-center-actions">
-                    <button id="coyoteBidMinusBtn">-</button>
-                    <input id="coyoteBidInput" type="number" min="1" step="1" placeholder="Bid" />
-                    <button id="coyoteBidPlusBtn">+</button>
-                    <button id="coyoteBidBtn">Bid</button>
-                    <button id="coyoteChallengeBtn">Challenge</button>
+                    <button id="coyoteBidMinusBtn" data-coyote-explain="bid_minus">-</button>
+                    <input id="coyoteBidInput" type="number" min="1" step="1" placeholder="Bid" data-coyote-explain="bid_input" />
+                    <button id="coyoteBidPlusBtn" data-coyote-explain="bid_plus">+</button>
+                    <button id="coyoteBidBtn" data-coyote-explain="bid">Bid</button>
+                    <button id="coyoteChallengeBtn" data-coyote-explain="challenge">Challenge</button>
                   </div>
                 </div>
               </div>
 
               <div class="row actions coyote-actions">
-                <button id="coyoteResetBtn">Reset Game</button>
+                <button id="coyoteResetBtn" data-coyote-explain="reset">Reset Game</button>
               </div>
             </template>

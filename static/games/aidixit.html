@@ -2,7 +2,7 @@
     <div class="modal-content aidixit-zoom-modal">
       <div class="modal-header">
         <h2>Card Detail</h2>
-        <button id="aidixitZoomCloseBtn" type="button">Close</button>
+        <button id="aidixitZoomCloseBtn" type="button" data-aidixit-explain="zoom_close">Close</button>
       </div>
       <div class="modal-body">
         <img id="aidixitZoomImage" alt="Card detail" />
@@ -10,43 +10,50 @@
     </div>
   </section></template>
 <template data-game-target="aidixitPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="aidixitPhase">-</span></div>
-                <div>Round: <span id="aidixitRound">-</span></div>
-                <div>Storyteller: <span id="aidixitStoryteller">-</span></div>
+              <div class="aidixit-toolbar">
+                <h3>🖼️ AI Dixit</h3>
+                <div class="aidixit-tools">
+                  <button id="aidixitHelpBtn" type="button">Help</button>
+                  <button id="aidixitExplainBtn" type="button" aria-pressed="false">Explain</button>
+                </div>
               </div>
               <div class="row">
-                <div>Clue: <span id="aidixitClue">-</span></div>
-                <div>Target: <span id="aidixitTargetScore">-</span></div>
-                <div>Deck: <span id="aidixitDeckCount">-</span></div>
-                <div>Discard: <span id="aidixitDiscardCount">-</span></div>
+                <div data-aidixit-explain="phase">Phase: <span id="aidixitPhase">-</span></div>
+                <div data-aidixit-explain="round">Round: <span id="aidixitRound">-</span></div>
+                <div data-aidixit-explain="storyteller">Storyteller: <span id="aidixitStoryteller">-</span></div>
               </div>
               <div class="row">
-                <div>Submitted: <span id="aidixitSubmitted">-</span></div>
-                <div>Voted: <span id="aidixitVoted">-</span></div>
-                <div>Winner: <span id="aidixitWinner">-</span></div>
+                <div data-aidixit-explain="clue">Clue: <span id="aidixitClue">-</span></div>
+                <div data-aidixit-explain="target">Target: <span id="aidixitTargetScore">-</span></div>
+                <div data-aidixit-explain="deck">Deck: <span id="aidixitDeckCount">-</span></div>
+                <div data-aidixit-explain="discard">Discard: <span id="aidixitDiscardCount">-</span></div>
+              </div>
+              <div class="row">
+                <div data-aidixit-explain="submitted">Submitted: <span id="aidixitSubmitted">-</span></div>
+                <div data-aidixit-explain="voted">Voted: <span id="aidixitVoted">-</span></div>
+                <div data-aidixit-explain="winner">Winner: <span id="aidixitWinner">-</span></div>
               </div>
 
               <div class="row actions">
-                <label for="aidixitClueInput">Your Clue</label>
-                <input id="aidixitClueInput" type="text" placeholder="Enter clue" />
-                <button id="aidixitSubmitStoryBtn">Submit Story</button>
-                <button id="aidixitSubmitCardBtn">Submit Card</button>
-                <button id="aidixitSubmitVoteBtn">Vote</button>
+                <label for="aidixitClueInput" data-aidixit-explain="clue_input">Your Clue</label>
+                <input id="aidixitClueInput" type="text" placeholder="Enter clue" data-aidixit-explain="clue_input" />
+                <button id="aidixitSubmitStoryBtn" data-aidixit-explain="submit_story">Submit Story</button>
+                <button id="aidixitSubmitCardBtn" data-aidixit-explain="submit_card">Submit Card</button>
+                <button id="aidixitSubmitVoteBtn" data-aidixit-explain="submit_vote">Vote</button>
               </div>
 
-              <h3>Your Hand</h3>
+              <h3 data-aidixit-explain="hand">Your Hand</h3>
               <div id="aidixitHand" class="aidixit-hand"></div>
 
-              <h3>Pool</h3>
+              <h3 data-aidixit-explain="pool">Pool</h3>
               <div id="aidixitPool" class="aidixit-pool"></div>
 
               <div id="aidixitRoundNotice" class="round-notice hidden">
-                <div class="round-notice-title">Last Round</div>
-                <div id="aidixitRoundNoticeBody" class="round-notice-body">-</div>
+                <div class="round-notice-title" data-aidixit-explain="round_notice">Last Round</div>
+                <div id="aidixitRoundNoticeBody" class="round-notice-body" data-aidixit-explain="round_result">-</div>
                 <div id="aidixitRoundNoticeCards" class="aidixit-round-cards"></div>
               </div>
 
-              <h3>Players</h3>
+              <h3 data-aidixit-explain="players">Players</h3>
               <div id="aidixitPlayers"></div>
             </template>

@@ -513,47 +513,9 @@ class CatInBoxGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
-            return None
-        pdata = state["players"].get(bot_id)
-        if not pdata:
-            return None
-        legal = CatInBoxGame.get_legal_actions(state, bot_id)
-        if not legal:
-            return None
+        from game.cat_in_box_ai import choose_action
 
-        if state.get("phase") == "discard":
-            if pdata["hand"]:
-                return {"type": "discard", "card_value": random.choice(pdata["hand"])}
-            return None
-
-        if state.get("phase") == "bidding":
-            return {"type": "bid", "bid": random.choice(list(BID_OPTIONS))}
-
-        if state.get("phase") == "trick":
-            if bot_id != state.get("current_turn"):
-                return None
-            if not _has_valid_move(state, bot_id):
-                return None
-            max_number = state.get("max_number", 0)
-            board = state.get("board") or []
-            options = []
-            for value in pdata["hand"]:
-                if value < 1 or value > max_number:
-                    continue
-                col_index = value - 1
-                for color, available in pdata["color_available"].items():
-                    if not available:
-                        continue
-                    row = _color_index(color)
-                    if board[row][col_index] is None:
-                        options.append((value, color))
-            if not options:
-                return None
-            value, color = random.choice(options)
-            return {"type": "play_card", "card_value": value, "color": color}
-
-        return None
+        return choose_action(CatInBoxGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

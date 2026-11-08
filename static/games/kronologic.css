@@ -496,6 +496,24 @@ button.kronologic-note-person.mark-confirmed {
   box-shadow: inset 0 0 0 1px rgba(99, 207, 158, 0.24);
 }
 
+button.kronologic-note-person.is-auto {
+  border-style: dashed;
+  background-image: linear-gradient(160deg, rgba(232, 189, 99, 0.12), rgba(232, 189, 99, 0));
+}
+
+.kronologic-notebook-auto-hint {
+  margin: -4px 0 8px;
+  color: var(--krono-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.kronologic-count-grid label.is-auto select {
+  border-style: dashed;
+  border-color: rgba(232, 189, 99, 0.55);
+  color: #ffe9b8;
+}
+
 #kronologicPanel .pattern-lines { background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 5px); }
 #kronologicPanel .pattern-diagonal { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.035) 0 1px, transparent 1px 6px); }
 #kronologicPanel .pattern-dots { background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px); background-size: 6px 6px; }
@@ -844,22 +862,23 @@ body.kronologic-explain-mode button.has-explanation {
     align-items: center;
     justify-content: center;
     gap: 2px;
-    min-width: 52px;
-    min-height: 76px;
-    padding: 9px 7px;
+    min-width: 34px;
+    min-height: 58px;
+    padding: 6px 4px;
     transform: translateY(-50%);
     border: 1px solid rgba(232, 189, 99, 0.62);
     border-right: 0;
-    border-radius: 13px 0 0 13px;
+    border-radius: 11px 0 0 11px;
     background: linear-gradient(155deg, #6f2d43, #34273e);
     color: #fff7df;
     box-shadow: -6px 8px 18px rgba(3, 7, 18, 0.4);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 800;
+    letter-spacing: -0.02em;
   }
 
   .kronologic-notebook-dock > span:first-child {
-    font-size: 19px;
+    font-size: 16px;
   }
 
   .kronologic-notebook-dock.is-open {

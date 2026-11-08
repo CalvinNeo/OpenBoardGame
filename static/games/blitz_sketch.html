@@ -1,43 +1,50 @@
 <template data-game-target="blitzSketchPanel" data-game-mode="contents">
+              <div class="blitz-sketch-toolbar" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: nowrap; margin: 0 0 10px;">
+                <h3 style="margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" data-blitz-sketch-explain="game_title">⚡ Blitz Sketch</h3>
+                <div class="blitz-sketch-tools" style="display: flex; align-items: center; gap: 6px; flex: 0 0 auto;">
+                  <button id="blitzSketchHelpBtn" type="button" style="white-space: nowrap;">Help</button>
+                  <button id="blitzSketchExplainBtn" type="button" aria-pressed="false" style="white-space: nowrap;">Explain</button>
+                </div>
+              </div>
               <div class="row">
-                <div>Phase: <span id="blitzSketchPhase">-</span></div>
-                <div>Draw: <span id="blitzSketchDrawProgress">-</span></div>
-                <div>Guess: <span id="blitzSketchGuessProgress">-</span></div>
-                <div>Score: <span id="blitzSketchScore">-</span></div>
+                <div data-blitz-sketch-explain="phase">Phase: <span id="blitzSketchPhase">-</span></div>
+                <div data-blitz-sketch-explain="draw_progress">Draw: <span id="blitzSketchDrawProgress">-</span></div>
+                <div data-blitz-sketch-explain="guess_progress">Guess: <span id="blitzSketchGuessProgress">-</span></div>
+                <div data-blitz-sketch-explain="score">Score: <span id="blitzSketchScore">-</span></div>
               </div>
 
               <div id="blitzSketchDrawArea">
                 <div class="row">
-                  <div>Prompt: <span id="blitzSketchPrompt">-</span></div>
-                  <div>Time: <span id="blitzSketchTimer">-</span></div>
+                  <div data-blitz-sketch-explain="prompt">Prompt: <span id="blitzSketchPrompt">-</span></div>
+                  <div data-blitz-sketch-explain="timer">Time: <span id="blitzSketchTimer">-</span></div>
                 </div>
                 <div class="row">
-                  <canvas id="blitzSketchCanvas" width="480" height="360"></canvas>
+                  <canvas id="blitzSketchCanvas" width="480" height="360" data-blitz-sketch-explain="canvas"></canvas>
                 </div>
               </div>
 
               <div id="blitzSketchGuessArea">
                 <div class="row">
-                  <img id="blitzSketchImage" class="draw-guess-image" alt="Drawing to guess" />
+                  <img id="blitzSketchImage" class="draw-guess-image" alt="Drawing to guess" data-blitz-sketch-explain="image" />
                 </div>
                 <div class="row actions">
-                  <input id="blitzSketchInput" type="text" placeholder="你的答案" />
-                  <button id="blitzSketchSubmitGuessBtn">提交</button>
-                  <button id="blitzSketchSkipBtn">我跳过</button>
+                  <input id="blitzSketchInput" type="text" placeholder="你的答案" data-blitz-sketch-explain="guess_input" />
+                  <button id="blitzSketchSubmitGuessBtn" data-blitz-sketch-explain="submit_guess">提交</button>
+                  <button id="blitzSketchSkipBtn" data-blitz-sketch-explain="skip">我跳过</button>
                 </div>
                 <div class="row">
-                  <div id="blitzSketchFeedback" class="hint"></div>
+                  <div id="blitzSketchFeedback" class="hint" data-blitz-sketch-explain="feedback"></div>
                 </div>
-                <div class="row hidden" id="blitzSketchRevealRow">
+                <div class="row hidden" id="blitzSketchRevealRow" data-blitz-sketch-explain="reveal">
                   <div class="hint">正确答案：<span id="blitzSketchRevealAnswer">-</span></div>
                 </div>
               </div>
 
               <h3>Players</h3>
-              <div id="blitzSketchPlayers"></div>
+              <div id="blitzSketchPlayers" data-blitz-sketch-explain="players"></div>
 
               <div id="blitzSketchReview" class="hidden">
                 <h3>回顾</h3>
-                <div id="blitzSketchReviewGrid"></div>
+                <div id="blitzSketchReviewGrid" data-blitz-sketch-explain="review"></div>
               </div>
             </template>

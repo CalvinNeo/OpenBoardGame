@@ -217,3 +217,49 @@
 * `STATE_RESOLVE_DISASTER`: 如果赢家拿到灾难，挂起等待其在个人面板中点击需要献祭的受害板块。
 * `STATE_CHECK_EPOCH_END`: 检查 Ra 轨道是否满，或全员轮盘是否耗尽。
 * `STATE_EPOCH_SCORING`: 时代计分动画展示与数值累加，清理资源。
+---
+
+## 九、 前端优化记录（UI 重排）
+
+本节记录按 [DEV_GUIDE.md](../DEV_GUIDE.md) / [FRONTEND.md](../FRONTEND.md) 对 RA 前端做的整体重排。规则与后端状态机未改动。
+
+### 改动文件
+
+- `static/games/ra.html`：面板结构重写。
+- `static/games/ra.js`：渲染与交互逻辑重写（对外仍只导出 `clearRaState` / `renderRaGameState` / `showRaHeaderActions`）。
+- `static/games/ra.css`：桌面与移动端排版重写，仍位于 `@media all, obg-game-ra-1` 占位组内。
+- `static/game_assets.js`：`ra` 清单版本号 `ra.js v=app_v8`、`ra.html v=2`、`ra.css v=2`。
+- `static/index.html`：加载器版本 `game_assets.js?v=216`。
+
+### 布局
+
+- 顶部两条整行状态行合并为一条紧凑状态胶囊条（Epoch / Phase / Turn / Bag / Center ☀️ / Ra / Auction）；`Winner` 只在结算面板出现。
+- 桌面 ≥980px 为「棋盘 + 玩家」双栏，棋盘 `position: sticky`，玩家区内部按 `auto-fit minmax(286px, 1fr)` 自适应分栏；<980px 单栏堆叠。
+- 玩家面板由「每张板块一张卡牌」改为按种类聚合的计数徽章（`👑 ×3`），并按 Keep / Epoch end 两组分行，板块名称不再逐个重复。桌面 1440px 页面高度由 2582px 降到 950px（视口内一屏），390px 由 3196px 降到 1356px。
+- 拍卖轨在移动端由 2 列改为 4 列 × 2 行；轨道为空时折叠为单行占位条。
+
+### 交互
+
+- 神明（⚡）改为贴附在拍卖轨下方的**原地确认条**：选中板块后显示「Take N tiles · spend N God」，并提供 Play God / Cancel；无需在板块列表与远处按钮之间来回滚动。
+- Pass 按钮移入拍卖面板，与自己的太阳轮盘同一行；出价顺序以「名字 + 状态（☀️出价 / passed / deciding / waiting）」徽章展示。
+- 行动条只在轮到自己的回合显示 Draw Tile / Invoke Ra；Next Round 移入结算面板并显示 `n/N ready`。
+- 选择取消：点击面板空白处、Cancel 按钮或 Esc 均可，无 Clear Selection 按钮。
+- 触摸与滚动区分：`pointerdown`/`pointermove` 记录位移，超过 8px 视为滚动手势，不再触发板块选中或浮动提示。
+
+### Help / Explain（task40）
+
+- Help 扩充为完整规则（回合行动、拍卖、灾难、每时代计分、第三时代计分、跨时代保留）并附 23 项板块图例，均以 `Gold (🟨)` 形式同时给出 Emoji 与文字。
+- Explain 覆盖全部可交互控件与关键区域（两条轨道、出价顺序、收藏区、太阳轮盘、各类板块），沿用 pointerdown 坐标命中，因此 disabled 按钮同样可解释；Esc 退出。
+- 非交互图标（计数徽章、计分徽章、轮盘、状态胶囊）统一走 `data-ra-tip`：桌面悬停显示，手机点击显示并在 3 秒后自动消失；可交互元素点击不弹提示。
+
+### 其它
+
+- 轮到自己行动时为 `body.ra-needs-action`，配合 CSS 把折叠态 RC Dock / 抽屉按钮切成红色边框。
+- 所有字号 ≥9px（原先存在 6.5–7.5px 的 `ra-tile-family`），按钮最小高度 32–40px。
+
+### 验收
+
+- 无头 Chrome（CDP）四档宽度 1440 / 1024 / 390 / 320 × 五个场景（自己的回合、拍卖、灾难、时代结算、游戏结束）：无横向溢出、无文字裁切、无元素重叠、无小于 9px 的文字、无过小点击目标、无 console 报错。
+- 交互回归 37 项断言全部通过：神明选择与原地确认、三种取消路径、桌面悬停提示、Explain（含 disabled 按钮）、Help 与 Esc、拍卖出价与 Pass、灾难建议与提交、Next Round、RC 提示、移动端点击提示与 3 秒消失、滚动手势不误触。
+- `python3 -m unittest tests.test_ra_game tests.test_frontend_style_assets tests.test_frontend_script_names tests.test_game_dev_order`：12 项通过。
+- 未检查：iOS / Android 真机；本机未安装 Playwright，`tests/game_assets.browser.cjs` 未运行，浏览器验证改用 `tmp/ra-ui/` 下的 CDP 脚本完成。截图与报告位于 `tmp/ra-ui/before` 与 `tmp/ra-ui/after`。

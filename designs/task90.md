@@ -540,3 +540,64 @@ python -m unittest
 - 前端主要逻辑独立在 `static/games/kronologic.js`，所有全局名有游戏前缀。
 - 满足 `FRONTEND.md` 与 `designs/task40.md`，移动端无水平滚动，所有长日志可滚动；公开/私密线索按 `clue_id` 绑定展示，手机 Notebook 可从右侧 Dock 唤出和收回。
 - 新增测试和全量现有测试通过；未改坏用户工作区中与本任务无关的 Ark Nova 等改动。
+## 17. 笔记自动填充与手机 Dock 收窄（2026-11-08）
+
+### 17.1 需求
+
+- 手机版右侧 Notebook Dock 的「笔记」按钮过宽，需要收窄。
+- 笔记希望自动填上所有已知的公共信息和自己的私有信息，减少手动记录。
+
+### 17.2 手机 Dock 尺寸
+
+`.kronologic-notebook-dock` 的移动端规则（`max-width: 620px` 组内）由 `min-width: 52px / min-height: 76px / padding: 9px 7px / font-size: 11px / emoji 19px` 调整为 `min-width: 34px / min-height: 58px / padding: 6px 4px / font-size: 10px / emoji 16px`，圆角由 13px 收到 11px。
+
+保留「笔记」文字而非改为纯图标，入口仍然可辨识；34×58 仍高于 44px 的可点击高度下限。桌面端不受影响（该断点以下才显示 Dock）。
+
+### 17.3 自动填充的推理模型
+
+自动层在浏览器端复刻服务端 `_visible_candidate_paths` 的推理方式，并做了更强的传播：
+
+1. **枚举候选路线**：按 `view.edges` 建立邻接表，从每名人物的公开起点（`case.starting_positions`）深度优先枚举全部 6 段合法路线（每步必须移动到相邻房间）。本地图每个起点 70–99 条，全量 478 条，按 `edges` 签名缓存。
+2. **单人线索过滤**（`kronologicPathMatchesClues`）：
+   - 公开「房间 + 人物」线索：该人物到访该房间的次数必须等于公开数量。
+   - 公开「房间 + 时段」线索：数量为 0 或 6 时直接约束该格。
+   - 自己的私密线索：`private_character_id` 锁定该人物在该时段的位置；`private_time` 锁定该人物在该时段到访该房间。
+3. **房间人数传播**（`applySharedCounts`）：对数量为 1–5 的公开「房间 + 时段」线索，统计该格已确定在内 / 在外 / 未定的人物数；已在内等于公开数量时其余全部排除，已在内加未定等于公开数量时其余全部确认。
+4. **迭代到不动点**：两类过滤交替执行，最多 12 轮。
+5. **导出结论**：某格在全部候选路线中一致为真 → `confirmed`；一致为假 → `excluded`；其余保持 `unknown`（不写 `possible`，避免把「尚未排除」当成已知信息）。
+
+数量笔记同样自动填充：公开线索直接给出 `time|地点|时段` 与 `character|地点|人物` 两类数量；当某格所有人物（或某人物在该房间的所有时段）状态都被确定时，再补出可推出的数量。
+
+### 17.4 与手动标记的关系
+
+- 自动层是**派生数据**，不写服务端、不发 `set_note_mark`/`set_note_count`，因此不会覆盖玩家已保存的笔记。
+- 渲染时 `kronologicEffectiveMark` 先取 `your_notes.marks`，只有该格没有手动标记时才用自动结论；数量笔记同理。
+- 点击循环从**当前显示**的标记开始，所以点一下自动格就会写入一个手动标记并立即生效；再点到 `unknown` 会清除手动标记，自动结论重新显示。
+- 自动填入的格子用虚线边框 + 淡金色渐变区分，数量笔记的下拉框用虚线金色边框区分；笔记顶部新增说明「虚线＝按线索自动填入，你自己点过的格子始终优先。」
+- 计算结果按 `case_id + public_clues + your_private_clues` 做键缓存，只有线索变化才重算。
+
+### 17.5 验收
+
+新增 `tests/kronologic_notebook.browser.cjs`：
+
+- 用 `tests/test_kronologic_game.py` 的 `_state` 造出 2 / 5 / 10 条公开线索的三个局面，连同案件真实路线一起注入前端。
+- 逐个时段读取 DOM，断言每个 `confirmed` 都与真实路线一致、每个 `excluded` 都与真实路线不冲突，其余必须为 `unknown`；并断言自动格数量不为零。
+- 断言数量笔记存在自动填入项。
+- 断言点击自动格会变成手动标记，且服务端已存的手动标记在冲突时压过自动结论。
+- 断言手机 320 / 390 下 Dock 宽度 ≤ 38px、高度 ≤ 66px、≥ 44px 可点击、右边缘贴齐视口，抽屉可开可关且无横向溢出。
+- 断言桌面 1024 / 1440 下 Dock 隐藏、笔记内联、无溢出。
+- 全程收集 `pageerror`，要求为空。
+
+同时在 `tests/test_kronologic_game.py` 增加 `test_auto_notes_solver_is_wired` 与 `test_mobile_notebook_dock_stays_narrow` 两个前端接线断言。
+
+运行命令：
+
+```bash
+python -m unittest tests.test_kronologic_game
+python -m unittest tests.test_frontend_style_assets
+ROOM_TEST_URL=... PYTHON=python3 PLAYWRIGHT_MODULE=... node tests/kronologic_notebook.browser.cjs
+ROOM_TEST_URL=... PYTHON=python3 PLAYWRIGHT_MODULE=... node tests/game_assets.browser.cjs
+```
+
+资源版本：`kronologic.js?v=app_v5`、`kronologic.html?v=2`、`kronologic.css?v=3`，并同步提升首页 `game_assets.js` 版本号。
+

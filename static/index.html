@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v146" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v149" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -1420,6 +1420,7 @@
             <div class="panel-header-actions" id="mindTheLinesHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="compressHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="powerGridHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="ticketToRideHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="theMindHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="wordSyncHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="nightNinjaHeaderActions" style="display: none;"></div>
@@ -1567,6 +1568,7 @@
             <div id="mindTheLinesPanel" class="hidden mind-the-lines-panel"></div>
             <div id="compressPanel" class="hidden"></div>
             <div id="powerGridPanel" class="hidden power-grid-panel"></div>
+            <div id="ticketToRidePanel" class="hidden ticket-to-ride-panel"></div>
             <div id="theMindPanel" class="hidden tm-panel"></div>
             <div id="wordSyncPanel" class="hidden ws-panel"></div>
             <div id="nightNinjaPanel" class="hidden nn-panel"></div>
@@ -1758,9 +1760,10 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=215" defer></script>
+  <script src="/static/game_assets.js?v=219" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v44" defer></script>
+  <script src="/static/games/shared_help.js?v=1" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
   <template id="natsumemoDialog"></template>
@@ -1775,6 +1778,7 @@
   <div id="mindTheLinesDialog"></div>
   <div id="compressDialog"></div>
   <template id="powerGridDialog"></template>
+  <template id="ticketToRideDialog"></template>
   <template id="semanticGuessDialog"></template>
   <template id="dareWordsDialog"></template>
   <template id="coltExpressDialog"></template>
@@ -1797,7 +1801,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v64" defer></script>
+  <script src="/static/app.js?v=app_v65" defer></script>
   <script src="/static/room.js?v=app_v103" defer></script>
 </body>
 </html>

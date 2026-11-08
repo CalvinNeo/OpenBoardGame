@@ -331,6 +331,10 @@ function renderGameState(data) {
     if (typeof renderPowerGridGameState === "function") renderPowerGridGameState(data);
     return;
   }
+  if (gameType === "ticket_to_ride") {
+    if (typeof renderTicketToRideGameState === "function") renderTicketToRideGameState(data);
+    return;
+  }
   if (gameType === "dice_throne") {
     if (typeof renderDiceThroneGameState === "function") renderDiceThroneGameState(data);
     return;

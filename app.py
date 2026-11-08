@@ -611,7 +611,7 @@ async def _emit_room_state(room: Room) -> None:
         "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
         "supports_memories": _game_supports_memories(game_def),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin") or key != "seed"},
+                        if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin", "ticket_to_ride") or key != "seed"},
         "auto_save": room.auto_save,
         "initialization": dict(room.initialization) if room.initialization else None,
         "source_room_id": room.source_room_id,
@@ -763,6 +763,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "criminal_dance":
+        return {"type": action.get("type")}
     if game_type == "compress":
         return {"type": action.get("type")}
     if game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind"):
@@ -794,6 +796,9 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type == "power_grid":
         return {"type": action.get("type")}
+    if game_type == "ticket_to_ride":
+        # Destination tickets are secret, so a bot's picks must never be echoed.
+        return {"type": action.get("type")}
     if game_type == "las_vegas" and action.get("type") == "royale_choose":
         return {"type": "royale_choose"}
     if game_type == "cheaty_mages":
@@ -802,6 +807,8 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": "sell"}
     if game_type == "felix" and action.get("type") == "choose_card":
         return {"type": "choose_card"}
+    if game_type == "cat_in_box" and action.get("type") == "discard":
+        return {"type": "discard"}
     if game_type == "red_doors":
         return {"type": "resolve"}
     if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin"):

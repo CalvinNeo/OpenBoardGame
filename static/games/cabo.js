@@ -1,3 +1,143 @@
+// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+const caboHelpButton = document.getElementById("caboHelpBtn");
+const caboExplainButton = document.getElementById("caboExplainBtn");
+
+const CABO_HELP_CONFIG = {
+  gameId: "cabo",
+  title: { zh: "卡波 · Cabo", en: "Cabo" },
+  basic: {
+    win: {
+      zh: "每位玩家都要避免成为总分最高的人，因为任何人的总分累计到 100 分时游戏立刻结束，此时总分最低的玩家赢下整局。",
+      en: "Everyone is trying to avoid a high total, because the game ends the moment anybody reaches 100 points and the player with the lowest score at that moment wins."
+    },
+    turn: {
+      zh: "轮到你时你要么从牌堆抽一张牌，要么拿走弃牌堆顶的那张明牌并替换掉自己的一张手牌，也可以一张都不抽就直接喊 Cabo。",
+      en: "On your turn you either draw one card from the deck, or take the face-up card on the discard pile to replace one of your own cards, or skip drawing entirely and call Cabo."
+    },
+    key: {
+      zh: "你要用手上看过的信息判断哪几张牌点数大、哪一张换掉最安全，赶在别人把分数拉开之前把自己四张手牌的总点数压到最低。",
+      en: "Use the cards you have already seen to judge which ones are expensive and which one is safest to replace, then push the total value of your four cards below everyone else's before the scores run away."
+    }
+  },
+  sections: [
+    {
+      id: "cards",
+      label: { zh: "牌与目标", en: "Cards and goal" },
+      html: {
+        zh: "<p>牌堆由 0 到 13 的数字牌组成，每个数字各四张，点数越小越好。每位玩家在每一轮开始时拿到四张面朝下的手牌。</p>"
+          + "<p>每轮开局先做 Initial Peek，你挑自己的两张牌看一眼并记住点数，之后它们会重新盖回去。</p>"
+          + "<p>一轮结束时所有人的手牌都会亮开，把四张牌的点数加起来就是这一轮的分数，数字越小越有利。</p>",
+        en: "<p>The deck is made of the numbers 0 to 13 with four copies of each, and low numbers are always better. Every player receives four face-down cards at the start of a round.</p>"
+          + "<p>Each round opens with the Initial Peek, where you choose two of your own cards, look at them and memorise their values before they are turned back over.</p>"
+          + "<p>At the end of a round every hand is revealed and the four values are added together, so a small total is exactly what you are playing for.</p>"
+      }
+    },
+    {
+      id: "turn",
+      label: { zh: "抽牌与喊 Cabo", en: "Drawing and calling Cabo" },
+      html: {
+        zh: "<p>按 Draw Deck 从牌堆抽一张，这张牌只有你自己能看到。牌堆摸空时，弃牌堆会自动洗回去继续用。</p>"
+          + "<p>你也可以点弃牌堆顶的那张明牌，它会换掉你选中的一张手牌，被换掉的旧牌进入弃牌堆，而这张新牌对所有人都是公开的。</p>"
+          + "<p>如果你觉得自己的点数已经够低，按 Call Cabo 就能结束这一轮，从你之后每位玩家还各有一次行动机会。</p>",
+        en: "<p>Press Draw Deck to take one card that only you get to see. When the deck runs out, the discard pile is shuffled back in and play continues.</p>"
+          + "<p>You may also click the face-up card on top of the discard pile, which replaces one selected card in your hand. The old card goes onto the discard pile and the new one becomes public knowledge.</p>"
+          + "<p>If you think your total is already low enough, press Call Cabo to close the round, which leaves every other player exactly one more turn.</p>"
+      }
+    },
+    {
+      id: "drawn",
+      label: { zh: "抽到牌之后", en: "After drawing" },
+      html: {
+        zh: "<p>抽到牌之后有三种处理方式。选中自己的一张手牌再按 Replace / Match，新牌会换上去，旧牌进入弃牌堆。</p>"
+          + "<p>按 Discard Drawn 则把这张牌直接丢进弃牌堆，你手上的牌一张都不会变。</p>"
+          + "<p>如果你手上已经有几张点数相同的牌，可以同时选中两到四张再按 Replace / Match 尝试配对。配对成功时这些手牌连同刚抽到的牌一起进入弃牌堆，你的手牌就变少了。配对失败时被选中的牌会全部亮给所有人看，并且刚抽到的牌会塞进你的手牌，等于白白多拿一张。</p>",
+        en: "<p>Once the card is in your hand you have three ways to deal with it. Select one of your own cards and press Replace / Match to swap the new card in and send the old one to the discard pile.</p>"
+          + "<p>Press Discard Drawn to throw the new card straight onto the discard pile and leave your hand completely untouched.</p>"
+          + "<p>If several of your cards share a value you can select two to four of them and press Replace / Match to attempt a match. A successful match sends those cards and the drawn card to the discard pile, which shrinks your hand. A failed match reveals every selected card to the table and adds the drawn card to your hand, so you end up holding one card more than before.</p>"
+      }
+    },
+    {
+      id: "powers",
+      label: { zh: "能力牌", en: "Power cards" },
+      html: {
+        zh: "<p>7 和 8 带 Peek，抽到并弃掉它时可以偷看自己的一张手牌。</p>"
+          + "<p>9 和 10 带 Spy，可以偷看任意一位对手的一张手牌，看完只有你自己知道。</p>"
+          + "<p>11 和 12 带 Swap，可以把自己的一张手牌和对手的一张手牌对调，交换之后双方都不知道手里换成了什么。</p>"
+          + "<p>能力必须在你抽到这张牌的同一个回合里发动，而且这张牌会被弃掉。你可以直接按 Use Choice 立刻发动，也可以先按 Discard Drawn 弃牌再决定，按 Skip Choice 则放弃这次能力。</p>",
+        en: "<p>The 7 and 8 carry Peek, which lets you look at one card in your own hand.</p>"
+          + "<p>The 9 and 10 carry Spy, which lets you look at one card in any opponent's hand, and only you learn what you saw.</p>"
+          + "<p>The 11 and 12 carry Swap, which exchanges one of your cards with one of an opponent's cards, leaving both of you unsure about what you now hold.</p>"
+          + "<p>A power only works on the turn you drew the card, and using it sends that card to the discard pile. Press Use Choice to trigger it right away, or press Discard Drawn first and decide afterwards, while Skip Choice lets the power go unused.</p>"
+      }
+    },
+    {
+      id: "scoring",
+      label: { zh: "结算与胜负", en: "Scoring and winning" },
+      html: {
+        zh: "<p>按 Call Cabo 之后倒数的行动次数归零，本轮立刻结束并亮牌。</p>"
+          + "<p>计分时手牌点数最小的玩家本轮加 0 分，其他人都要把自己的手牌点数加到总分上。</p>"
+          + "<p>如果喊 Cabo 的人不是点数最小的那位，他还要额外再加 5 分，所以喊之前一定要有把握。</p>"
+          + "<p>任何人的总分累计到 100 分时游戏结束，此时总分最低的玩家赢得整局。</p>",
+        en: "<p>The round ends and every hand is revealed as soon as the countdown after Call Cabo reaches zero.</p>"
+          + "<p>When scoring, the player with the lowest hand total adds nothing this round while everyone else adds their own hand total to their running score.</p>"
+          + "<p>If the player who called Cabo does not hold the lowest total, they take 5 extra points on top, so only call it when you are confident.</p>"
+          + "<p>The game ends as soon as anyone's score reaches 100, and the player with the lowest score at that moment wins.</p>"
+      }
+    }
+  ]
+};
+
+const CABO_EXPLAIN = {
+  phase: { zh: "当前阶段。initial_peek 是开局记牌，turn 是抽牌或喊 Cabo，drawn 是处理刚抽到的牌，choice_pending 是等待你发动能力，round_end 是本轮结算。", en: "Current phase: initial_peek memorises cards, turn is for drawing or calling Cabo, drawn is for handling the card you just took, choice_pending waits for a power, and round_end scores the round." },
+  round: { zh: "当前是第几轮。", en: "Which round is being played." },
+  turn: { zh: "现在轮到谁行动。", en: "Whose turn it is right now." },
+  deck: { zh: "牌堆里还剩多少张牌。牌堆摸空之后弃牌堆会自动洗回去。", en: "How many cards are left in the deck. When it runs out the discard pile is shuffled back in." },
+  cabo_called: { zh: "本轮是谁喊了 Cabo。喊过之后其他玩家每人只剩一次行动机会。", en: "Who called Cabo this round. After the call every other player has only one turn left." },
+  cabo_left: { zh: "喊 Cabo 之后还剩几次行动机会，倒数到 0 时本轮结束并亮牌。", en: "How many turns remain after the Cabo call. The round ends and hands are revealed when this reaches zero." },
+  pending_choice: { zh: "当前等待你发动的能力。peek 是看自己的牌，spy 是看对手的牌，swap 是和对手换牌。", en: "The power waiting to be used: peek looks at your own card, spy looks at an opponent's card, and swap exchanges cards with an opponent." },
+  choice_hint: { zh: "针对当前这一步的操作提示，会跟着你手上的能力一起变化。", en: "A hint for the step you are on, updated to match the power you are holding." },
+  hand: { zh: "你的四张手牌。数字是你已经知道的点数，问号表示你还没看过这张牌。点击一张牌就能选中它。", en: "Your four cards. A number is a value you already know and a question mark is a card you have not seen. Click a card to select it." },
+  cancel: { zh: "取消当前的选牌和选目标。", en: "Clear the cards and targets you have selected." },
+  last_drawn: { zh: "你刚刚抽到的那张牌，只有你自己能看到。如果它带能力，这里会标出 peek、spy 或 swap。", en: "The card you just drew, which only you can see. If it carries a power, peek, spy or swap is named here." },
+  discard_drawn: { zh: "把刚抽到的牌直接弃掉。如果这张牌带能力，弃掉之后你还可以决定要不要发动。", en: "Discard the card you just drew. If it carries a power you may still decide to use it afterwards." },
+  discard_top: { zh: "弃牌堆顶的那张明牌。选中自己的一张手牌再点它，就能用这张牌替换掉选中的手牌。", en: "The face-up card on top of the discard pile. Select one of your own cards and click here to replace it with this card." },
+  initial_peek: { zh: "开局记牌。选中自己的两张手牌再按下它，你就能看到这两张牌的点数。", en: "The opening peek. Select two of your own cards and press this to learn their values." },
+  draw_deck: { zh: "从牌堆抽一张牌，只有你自己知道它是什么。", en: "Draw one card from the deck. Only you get to see it." },
+  replace_match: { zh: "选一张手牌时它会用刚抽到的牌替换这张手牌。选两到四张时它会尝试配对消牌，点数全部相同才算成功。", en: "With one card selected it swaps the drawn card into that slot. With two to four selected it attempts a match, which only succeeds when all of those cards share the same value." },
+  call_cabo: { zh: "宣布本轮即将结束，之后其他玩家每人还有一次行动机会。如果你的点数不是最小的，你会额外加 5 分。", en: "Announce that the round is ending, leaving every other player one final turn. If your total is not the lowest you take 5 extra points." },
+  use_choice: { zh: "发动刚抽到的牌的能力。按钮会变成 Peek、Spy 或 Swap，选好目标之后再按它。", en: "Trigger the power on the card you just drew. The button renames itself to Peek, Spy or Swap, and you select a target before pressing it." },
+  skip_choice: { zh: "放弃当前这次能力，直接进入下一步。", en: "Give up the current power and move on." },
+  next_round: { zh: "确认你已经看完本轮结算。所有玩家都按下之后才会开始下一轮。", en: "Confirm that you have read the round result. The next round only starts once every player has pressed it." },
+  players: { zh: "所有玩家的手牌、手牌数量和总分。手牌上的问号表示你还不知道那是什么，就绪(✅ ready)表示他已经确认结算，等待(⏳ waiting)表示他还在看结果。", en: "Every player with their hand, hand size and total score. A question mark means you do not know that card, the ready badge (✅ ready) means the player confirmed the round result and the waiting badge (⏳ waiting) means they have not yet." }
+};
+
+let caboHelpWidget = null;
+let caboExplainWidget = null;
+
+function initCaboHelpExplain() {
+  if (caboHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  caboHelpWidget = window.obgCreateHelp(CABO_HELP_CONFIG);
+  caboExplainWidget = window.obgCreateExplain({
+    gameId: "cabo",
+    attribute: "data-cabo-explain",
+    explanations: CABO_EXPLAIN,
+    button: caboExplainButton,
+    root: () => document.getElementById("caboPanel"),
+    bypass: ["#caboHelpBtn", "#caboExplainBtn"]
+  });
+  caboHelpButton?.addEventListener("click", () => {
+    caboExplainWidget?.exit();
+    caboHelpWidget.open();
+  });
+  caboExplainButton?.addEventListener("click", () => caboExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCaboHelpExplain);
+} else {
+  initCaboHelpExplain();
+}
+
 const phaseLabel = document.getElementById("phaseLabel");
 const roundLabel = document.getElementById("roundLabel");
 const turnLabel = document.getElementById("turnLabel");

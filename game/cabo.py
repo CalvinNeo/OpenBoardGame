@@ -59,6 +59,11 @@ def _clear_slot_knowledge(state: Dict, player_id: str, slot: int) -> None:
     state["players"][player_id]["public_known"][slot] = False
     for viewer_id in state["knowledge"].keys():
         state["knowledge"][viewer_id][player_id][slot] = False
+    state.get("bot_memory", {}).get(player_id, {}).pop(str(slot), None)
+
+
+def _remember_drawn_card(state: Dict, player_id: str, slot: int, card: Dict) -> None:
+    state.setdefault("bot_memory", {}).setdefault(player_id, {})[str(slot)] = card["value"]
 
 
 def _add_card_to_hand(state: Dict, player_id: str, card: Dict) -> int:
@@ -184,6 +189,7 @@ def _deck_reshuffle_if_needed(state: Dict) -> bool:
 
 
 def _advance_turn(state: Dict, ended_player_id: str) -> Optional[Dict]:
+    state["turn_count"] = state.get("turn_count", 0) + 1
     if state["cabo_called_by"] and ended_player_id != state["cabo_called_by"]:
         state["cabo_turns_left"] -= 1
         if state["cabo_turns_left"] <= 0:
@@ -300,6 +306,7 @@ class CaboGame:
             "cabo_turns_left": 0,
             "config": cfg,
             "round": 1,
+            "turn_count": 0,
             "player_meta": player_meta,
             "last_round_summary": None,
             "game_over": False,
@@ -329,6 +336,8 @@ class CaboGame:
         state["cabo_called_by"] = None
         state["cabo_turns_left"] = 0
         state["round"] += 1
+        state["turn_count"] = 0
+        state.pop("bot_memory", None)
         state["current_turn"] = state["turn_order"][0]
         state["last_round_summary"] = None
         state["game_over"] = False
@@ -514,6 +523,7 @@ class CaboGame:
                 hand[slot] = drawn
                 state["last_drawn"] = None
                 _clear_slot_knowledge(state, player_id, slot)
+                _remember_drawn_card(state, player_id, slot, drawn)
                 summary = _advance_turn(state, player_id)
                 if summary:
                     events.append({"type": "game:round_end", "payload": summary})
@@ -561,7 +571,8 @@ class CaboGame:
                     for s in slots:
                         state["players"][player_id]["public_known"][s] = True
                         state["knowledge"][player_id][player_id][s] = True
-                    _add_card_to_hand(state, player_id, drawn)
+                    added_slot = _add_card_to_hand(state, player_id, drawn)
+                    _remember_drawn_card(state, player_id, added_slot, drawn)
                     events.append({"type": "game:match_fail", "payload": {"player_id": player_id}})
                 state["last_drawn"] = None
                 summary = _advance_turn(state, player_id)
@@ -644,6 +655,7 @@ class CaboGame:
             "you": viewer_id,
             "phase": state["phase"],
             "round": state["round"],
+            "turn_count": state.get("turn_count", 0),
             "current_turn": state["current_turn"],
             "players": players_view,
             "deck_count": len(state["deck"]),
@@ -665,74 +677,19 @@ class CaboGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state["phase"] == "initial_peek":
-            if not state["players"][bot_id]["initial_peek_done"]:
-                available_slots = _occupied_slots(state["players"][bot_id]["hand"])
-                if len(available_slots) < 2:
-                    return None
-                slots = random.sample(available_slots, 2)
-                return {"type": "initial_peek", "slots": slots}
-            return None
+        from game.cabo_ai import choose_action
 
-        if state["phase"] == "round_end":
-            if "next_round" in CaboGame.get_legal_actions(state, bot_id):
-                return {"type": "next_round", "delay_ms": 300}
-            return None
-
-        if bot_id != state["current_turn"]:
-            return None
-
-        phase = state["phase"]
-        if phase == "turn":
-            legal = CaboGame.get_legal_actions(state, bot_id)
-            options = [action for action in ("draw_deck", "draw_discard") if action in legal]
-            if not options:
-                return {"type": "call_cabo"} if "call_cabo" in legal else None
-            choice = random.choice(options)
-            if choice == "draw_discard":
-                slots = _occupied_slots(state["players"][bot_id]["hand"])
-                if not slots:
-                    return {"type": "call_cabo"} if "call_cabo" in legal else None
-                return {"type": "draw_discard", "slot": random.choice(slots)}
-            return {"type": "draw_deck"}
-
-        if phase == "drawn":
-            drawn = state["last_drawn"]
-            if not drawn:
-                return {"type": "discard_drawn"}
-            hand = state["players"][bot_id]["hand"]
-            matches = {}
-            for i, card in enumerate(hand):
-                if card is None:
-                    continue
-                matches.setdefault(card["value"], []).append(i)
-            match_candidates = [slots for slots in matches.values() if len(slots) >= 2]
-            if match_candidates:
-                slots = random.choice(match_candidates)
-                slots = slots[: min(4, len(slots))]
-                return {"type": "attempt_match", "slots": slots}
-            slots = [i for i, c in enumerate(hand) if c is not None]
-            if not slots:
-                return {"type": "discard_drawn"}
-            if random.random() < 0.5:
-                return {"type": "replace_card", "slot": random.choice(slots)}
-            return {"type": "discard_drawn"}
-
-        if phase == "choice_pending":
-            pending = state["pending_choice"]
-            if not pending:
-                return None
-            choice = pending["type"]
-            targets = _choice_targets(state, bot_id, choice)
-            if not targets:
-                return {"type": "skip_choice"}
-            return {
-                "type": "use_choice_action",
-                "choice_type": choice,
-                "target": random.choice(targets),
-            }
-
-        return None
+        view = CaboGame.get_public_view(state, bot_id)
+        view["config"]["deck_counts"] = dict(state["config"]["deck_counts"])
+        memory = state.get("bot_memory", {}).get(bot_id, {})
+        for player in view["players"]:
+            if player["player_id"] != bot_id:
+                continue
+            for slot, card in enumerate(player["hand"]):
+                if not card["empty"] and not card["known"] and str(slot) in memory:
+                    card["known"] = True
+                    card["value"] = memory[str(slot)]
+        return choose_action(view)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

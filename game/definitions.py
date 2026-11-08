@@ -152,6 +152,27 @@ from game.dare_words import (
     ACTION_SCHEMA as DARE_WORDS_ACTION_SCHEMA,
     CONFIG_SCHEMA as DARE_WORDS_CONFIG_SCHEMA,
 )
+from game.ticket_to_ride import (
+    TicketToRideGame,
+    ACTION_SCHEMA as TICKET_TO_RIDE_ACTION_SCHEMA,
+    CONFIG_SCHEMA as TICKET_TO_RIDE_CONFIG_SCHEMA,
+)
+
+register_game(
+    GameDefinition(
+        game_id=TicketToRideGame.game_id,
+        name="Ticket to Ride",
+        name_zh="铁路环游",
+        min_players=TicketToRideGame.min_players,
+        max_players=TicketToRideGame.max_players,
+        turn_mode="turn",
+        action_schema=TICKET_TO_RIDE_ACTION_SCHEMA,
+        config_schema=TICKET_TO_RIDE_CONFIG_SCHEMA,
+        module=TicketToRideGame,
+        serialize=TicketToRideGame.serialize,
+        deserialize=TicketToRideGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(
@@ -1490,6 +1511,7 @@ CABO_ACTION_SCHEMA = {
             "additionalProperties": False,
         },
         {"type": "object", "properties": {"type": {"const": "call_cabo"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "skip_choice"}}, "required": ["type"], "additionalProperties": False},
         {
             "type": "object",
             "properties": {

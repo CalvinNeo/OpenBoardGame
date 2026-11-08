@@ -1,3 +1,140 @@
+// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+const blitzSketchHelpButton = document.getElementById("blitzSketchHelpBtn");
+const blitzSketchExplainButton = document.getElementById("blitzSketchExplainBtn");
+
+const BLITZ_SKETCH_HELP_CONFIG = {
+  gameId: "blitz_sketch",
+  title: { zh: "闪电速写 · Blitz Sketch", en: "Blitz Sketch" },
+  basic: {
+    win: {
+      zh: "每猜对一张自己画的图就得 1 分，把要猜的图全部猜完后，分数最高的人赢下这一局。",
+      en: "Every one of your own drawings you name correctly is worth one point, and whoever holds the highest score after the last drawing wins the game."
+    },
+    turn: {
+      zh: "作画阶段你在极短的倒计时里一张接一张地照着词画图，时间一到画布(🖌️)自动交卷，猜词阶段你再凭记忆写出自己刚才画过的词。",
+      en: "In the drawing phase you sketch one word after another against a very short countdown and the canvas (🖌️) submits itself when time runs out, and in the guessing phase you write down those same words from memory."
+    },
+    key: {
+      zh: "重点是趁画的时候把词记住，因为你猜的全都是自己刚画的图，画得越有辨识度、记得越牢，猜起来就越快。",
+      en: "The key is to memorise the word while you draw, because every picture you guess is one you drew yourself, so a distinctive sketch and a sharp memory pay off twice."
+    }
+  },
+  sections: [
+    {
+      id: "flow",
+      label: { zh: "流程与设置", en: "Flow and setup" },
+      html: {
+        zh: "<p>一局分三个阶段：Draw 限时作画、Guess 回忆作答、Review 回顾，作答完毕就进入回顾并结束游戏。</p>"
+          + "<p>所有人同时进行，你画完自己的全部词只代表你个人的进度，要等所有人都画完才会一起进入猜词阶段。</p>"
+          + "<p>房主可以设置作画张数（默认 20 张）、要猜的张数（默认 10 张，并且不会超过作画张数）、每张画的时间以及跳过后揭示答案的时间。</p>"
+          + "<p>游戏支持一个人独自练习，也支持最多 8 人同场比拼。</p>",
+        en: "<p>A game runs through three phases: Draw for the timed sketching, Guess for the memory round, and Review for the final look back.</p>"
+          + "<p>Everyone plays at the same time. Finishing all of your own drawings only advances your own progress, and the guessing phase starts once every player is done.</p>"
+          + "<p>The host sets how many drawings each player makes (20 by default), how many of them come back for guessing (10 by default and never more than the drawing count), how long each drawing lasts, and how long a skipped answer stays on screen.</p>"
+          + "<p>The game works solo for practice and supports up to eight players competing together.</p>"
+      }
+    },
+    {
+      id: "draw",
+      label: { zh: "限时作画", en: "Timed drawing" },
+      html: {
+        zh: "<p>Prompt 显示当前要画的词，你用画布(🖌️)把它画出来，画笔固定是黑色细线，没有颜色也没有橡皮。</p>"
+          + "<p>Time 是这一张剩下的秒数，倒数到零时画布会自动提交，你来不及再做修改。</p>"
+          + "<p>交卷后立刻换成下一个词，画布自动清空，Draw 后面的数字记录你已经画完几张。</p>"
+          + "<p>时间非常短，所以画出轮廓和最有辨识度的那个特征就够了，不必追求细节。</p>",
+        en: "<p>Prompt shows the word you have to draw and you sketch it on the canvas (🖌️). The pen is a fixed thin black line with no colours and no eraser.</p>"
+          + "<p>Time counts down the seconds left for this picture. When it hits zero the canvas submits itself and there is no chance to touch it up.</p>"
+          + "<p>A new word appears right after each submission and the canvas clears itself, while the number behind Draw tracks how many pictures you have finished.</p>"
+          + "<p>The clock is short, so an outline plus the single most recognisable feature is enough. Detail is not the point.</p>"
+      }
+    },
+    {
+      id: "guess",
+      label: { zh: "回忆作答", en: "Guessing from memory" },
+      html: {
+        zh: "<p>进入猜词阶段后，系统打乱顺序抽出你刚画过的一部分图，一次只给你看一张，你要写出当初那个词。</p>"
+          + "<p>答案要和原词完全一致（空格会被忽略）才算答对，答对得 1 分并自动跳到下一张。</p>"
+          + "<p>答错会提示你不对，但这张图不会跳过，你可以改了再答，直到答对为止。</p>"
+          + "<p>Guess 后面的数字是你已经猜完的张数，Score 是你当前的得分。</p>",
+        en: "<p>When the guessing phase starts, the game shuffles a subset of the pictures you just drew and shows them one at a time, and you write the word each one came from.</p>"
+          + "<p>An answer counts only when it matches the original word exactly, with spaces ignored. A correct answer scores one point and moves straight to the next picture.</p>"
+          + "<p>A wrong answer tells you it is wrong but keeps the same picture on screen, so you can edit your answer and try again until it lands.</p>"
+          + "<p>The number behind Guess is how many pictures you have finished, and Score is your current total.</p>"
+      }
+    },
+    {
+      id: "skip",
+      label: { zh: "跳过与揭示", en: "Skipping and reveals" },
+      html: {
+        zh: "<p>实在想不起词时可以按我跳过，这张图不算分，直接进入下一张。</p>"
+          + "<p>跳过之后系统会把正确答案显示出来几秒，同时把这张图再放一遍，方便你对照。</p>"
+          + "<p>揭示的这几秒里不能作答，时间结束后自动跳到下一张。</p>",
+        en: "<p>When a word will not come back to you, press the skip button. That picture scores nothing and the game moves on.</p>"
+          + "<p>After a skip the game shows the correct answer for a few seconds and puts the same picture back on screen so you can compare them.</p>"
+          + "<p>You cannot answer during that reveal, and the next picture arrives automatically once the reveal ends.</p>"
+      }
+    },
+    {
+      id: "review",
+      label: { zh: "回顾与胜负", en: "Review and winning" },
+      html: {
+        zh: "<p>所有人都猜完之后进入回顾，每位玩家的全部作品会连同当时的词和猜测一起列出来。</p>"
+          + "<p>猜对的条目和跳过的条目分别标记，你一眼就能看出哪些词自己记得最牢。</p>"
+          + "<p>最终比较 Score，得分最高的人获胜，同分则并列。</p>",
+        en: "<p>Once everyone has finished guessing, the review lists every drawing each player made together with its word and the guess that was made.</p>"
+          + "<p>Correct answers and skips are marked separately, so you can see at a glance which words stuck with you.</p>"
+          + "<p>The final comparison is Score. The highest total wins, and players on the same total share the win.</p>"
+      }
+    }
+  ]
+};
+
+const BLITZ_SKETCH_EXPLAIN = {
+  game_title: { zh: "闪电速写(⚡)，在几秒钟内画完一个词、再凭记忆把它答回来的游戏。", en: "Blitz Sketch (⚡), where you sketch a word in a few seconds and then recall it from memory." },
+  phase: { zh: "当前阶段。draw 是限时作画，guess 是回忆作答，review 是回顾。", en: "The current phase: draw is the timed sketching, guess is the memory round, and review is the final look back." },
+  draw_progress: { zh: "你已经画完几张，以及这一局一共要画几张。", en: "How many drawings you have finished and how many this game asks for." },
+  guess_progress: { zh: "你已经猜完几张，以及一共要猜几张。要猜的张数不会超过作画张数。", en: "How many pictures you have guessed and how many you must guess. The guess count never exceeds the drawing count." },
+  score: { zh: "你当前的得分，每答对一张自己画的图加 1 分。", en: "Your current score. Each of your own drawings you name correctly adds one point." },
+  prompt: { zh: "当前要画的词。趁画的时候把它记住，猜词阶段还要用。", en: "The word you have to draw right now. Memorise it while you sketch, because the guessing phase will ask for it." },
+  timer: { zh: "这一张画剩下的秒数，归零时画布(🖌️)会自动交卷。", en: "The seconds left for this picture. The canvas (🖌️) submits itself the moment it reaches zero." },
+  canvas: { zh: "画布(🖌️)。按住鼠标或手指拖动就能画，笔是固定的黑色细线，没有颜色和橡皮。", en: "The canvas (🖌️). Drag with the mouse or a finger to draw. The pen is a fixed thin black line with no colours and no eraser." },
+  image: { zh: "现在要猜的图，它是你自己在作画阶段画的，你要写出当时的词。", en: "The picture you have to name. You drew it yourself during the drawing phase and now you must recall its word." },
+  guess_input: { zh: "写下你记得的词，答案要和原词一致（空格忽略），按回车也能提交。", en: "Type the word you remember. It must match the original word with spaces ignored, and Enter submits it too." },
+  submit_guess: { zh: "提交你的答案。答对得 1 分并跳到下一张，答错可以改了再答。", en: "Submit your answer. A correct one scores a point and moves on, and a wrong one lets you edit and try again." },
+  skip: { zh: "放弃这一张，不计分直接进入下一张，同时会揭示正确答案。", en: "Give up on this picture. It scores nothing, the game moves on, and the correct answer is revealed." },
+  feedback: { zh: "上一答案的反馈，答对会恭喜你，答错会提示再试。", en: "Feedback on your last answer, congratulating a correct one and telling you to retry a wrong one." },
+  reveal: { zh: "跳过之后显示的正确答案，只停留几秒，这段时间不能作答。", en: "The correct answer shown after a skip. It stays for a few seconds and you cannot answer while it is up." },
+  players: { zh: "所有玩家的作画进度、猜词进度和当前得分。", en: "Every player with their drawing progress, guessing progress and current score." },
+  review: { zh: "回顾阶段的全部作品，每张都标出词语和你当时的猜测。", en: "Every drawing from the review, each labelled with its word and the guess you made." }
+};
+
+let blitzSketchHelpWidget = null;
+let blitzSketchExplainWidget = null;
+
+function initBlitzSketchHelpExplain() {
+  if (blitzSketchHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  blitzSketchHelpWidget = window.obgCreateHelp(BLITZ_SKETCH_HELP_CONFIG);
+  blitzSketchExplainWidget = window.obgCreateExplain({
+    gameId: "blitz_sketch",
+    attribute: "data-blitz-sketch-explain",
+    explanations: BLITZ_SKETCH_EXPLAIN,
+    button: blitzSketchExplainButton,
+    root: () => document.getElementById("blitzSketchPanel"),
+    bypass: ["#blitzSketchHelpBtn", "#blitzSketchExplainBtn"]
+  });
+  blitzSketchHelpButton?.addEventListener("click", () => {
+    blitzSketchExplainWidget?.exit();
+    blitzSketchHelpWidget.open();
+  });
+  blitzSketchExplainButton?.addEventListener("click", () => blitzSketchExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initBlitzSketchHelpExplain);
+} else {
+  initBlitzSketchHelpExplain();
+}
+
 const blitzSketchConfigBox = document.getElementById("blitzSketchConfigBox");
 const blitzSketchDrawTimeRow = document.getElementById("blitzSketchDrawTimeRow");
 const blitzSketchDrawTimeSelect = document.getElementById("blitzSketchDrawTimeSelect");
