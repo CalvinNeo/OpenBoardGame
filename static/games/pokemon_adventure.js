@@ -1,34 +1,162 @@
+// --- Help & Explain (designs/task185.md) ------------------------------
+const pokemonAdventureHelpButton = document.getElementById("pokemonAdventureHelpBtn");
+const pokemonAdventureExplainButton = document.getElementById("pokemonAdventureExplainBtn");
+
+const POKEMON_ADVENTURE_HELP_CONFIG = {
+  gameId: "pokemon_adventure",
+  title: { zh: "宝可梦奇遇 · Pokémon Paper Safari", en: "Pokémon Paper Safari" },
+  basic: {
+    win: {
+      zh: "每一小局结束时三列总分最低的训练家赢得该小局并获得一枚精灵球代币(🔴)，先攒够目标数量代币的训练家赢得整场。",
+      en: "At the end of a round the trainer with the lowest total across the three columns wins that round and takes one Poké Ball token (🔴), and the first trainer to reach the target number of tokens wins the match."
+    },
+    turn: {
+      zh: "轮到你时先从牌库或弃牌堆抽一张牌，再决定把它公开换入自己的某个位置还是直接弃掉，抽到的特殊牌换入后还会立刻发动能力。",
+      en: "On your turn you first draw one card from the deck or the discard pile, then decide whether to swap it face up into one of your own slots or discard it, and a special card you swap in fires its ability right away."
+    },
+    key: {
+      zh: "玩这个游戏的重点是让上排和下排同一列的两张牌数字相同，因为相同的列记 0 分，你的总分才会足够低。",
+      en: "The key to the game is making the two cards in the same column match, because a matched column scores 0 and only that keeps your total low enough."
+    }
+  },
+  sections: [
+    {
+      id: "setup",
+      label: { zh: "准备与目标", en: "Setup and goal" },
+      html: {
+        zh: "<p>每位训练家面前摆六张牌，上排三张、下排三张，全部背面朝上。每一小局开始时，所有人先从自己的六张暗牌里选一张公开。</p>"
+          + "<p>牌库共 56 张宝可梦牌。牌库摸空时，弃牌堆的顶牌会留在原处，其余弃牌洗回牌库。</p>"
+          + "<p>每一小局的最低分者得到一枚精灵球代币(🔴)。先攒够目标数量代币的训练家赢得整场，默认目标是 3 枚。</p>",
+        en: "<p>Every trainer lays out six cards, three on the top row and three on the bottom row, all face down. At the start of a round everyone first picks one of their own six cards to reveal.</p>"
+          + "<p>The deck holds 56 Pokémon cards. When the deck runs out the top card of the discard pile stays in place and the remaining discards are shuffled back into the deck.</p>"
+          + "<p>The lowest score of a round earns one Poké Ball token (🔴). The first trainer to reach the target number of tokens wins the match, and the default target is 3.</p>"
+      }
+    },
+    {
+      id: "flow",
+      label: { zh: "回合流程", en: "Your turn" },
+      html: {
+        zh: "<p>轮到你时先从牌库(牌背)抽一张，或者拿走弃牌堆的公开顶牌。从牌库抽到的牌只有你自己能看见。</p>"
+          + "<p>抽到牌以后，选择自己的一个位置把它公开换入，被换掉的旧牌公开弃掉。如果是从牌库抽到的普通牌，你也可以直接弃掉它来结束回合。</p>"
+          + "<p>从弃牌堆拿到的牌必须使用，不能直接弃掉。闪电鸟(⚡)、梦幻(✨)和火箭队(🚀)即使从牌库抽到也必须使用。</p>"
+          + "<p>只要有人把自己的六张牌全部公开，这一小局就在当前行动与它的能力结算完之后立刻结束。</p>",
+        en: "<p>On your turn you either draw one card from the deck (the card back) or take the face-up top card of the discard pile. A card drawn from the deck is visible to you alone.</p>"
+          + "<p>After drawing, pick one of your own slots to swap the card in face up, and the card you replace goes to the discard pile face up. A plain card drawn from the deck may instead be discarded outright to end your turn.</p>"
+          + "<p>A card taken from the discard pile must be used and can never be discarded directly. Zapdos (⚡), Mew (✨) and Team Rocket (🚀) must be used even when they come from the deck.</p>"
+          + "<p>As soon as any trainer has all six of their cards face up, the round ends once the current action and its ability have finished resolving.</p>"
+      }
+    },
+    {
+      id: "abilities",
+      label: { zh: "六种能力", en: "The six abilities" },
+      html: {
+        zh: "<table><thead><tr><th>卡牌</th><th>能力</th></tr></thead><tbody>"
+          + "<tr><td>喷火龙(🐲) · 10</td><td>换入后可以窥视自己的一张暗牌，只有你自己知道这张牌，也可以跳过。</td></tr>"
+          + "<tr><td>卡比兽(💤) · 10</td><td>换入后可以交换自己任意两个位置的牌，公开状态跟着牌一起移动，也可以跳过。</td></tr>"
+          + "<tr><td>闪电鸟(⚡) · 10</td><td>必须使用。选一个位置，沿回合顺序把每个人该位置的旧牌依次交给下一位，所有换入的牌都公开，最后交出的那张牌放到弃牌堆底。</td></tr>"
+          + "<tr><td>梦幻(✨) · 2</td><td>必须使用。先选对手的一张明牌，再选自己的接收位置。梦幻进入对手的该位置，夺到的明牌公开换入你的位置，你原来的牌弃掉。</td></tr>"
+          + "<tr><td>百变怪(🔮) · 0</td><td>结算时复制同一排左侧或右侧相邻牌的数字。边缘位置自动复制唯一的邻居，中间位置由持有者选择方向，互相复制形成的环按 0 计。</td></tr>"
+          + "<tr><td>火箭队(🚀) · 12</td><td>必须使用。选好自己的位置后投币，喵喵面按普通牌换入，皮卡丘面让全员弃掉该位置的旧牌并弃掉火箭队，再从当前玩家起依次补入公开新牌。</td></tr>"
+          + "</tbody></table>"
+          + "<p>只有你主动抽到并换入的特殊牌才会发动能力。开局翻开的牌、被闪电鸟传递的牌、被梦幻夺走的牌和火箭队补入的新牌都不会连锁发动。</p>",
+        en: "<table><thead><tr><th>Card</th><th>Ability</th></tr></thead><tbody>"
+          + "<tr><td>Charizard (🐲) · 10</td><td>After it enters you may peek at one of your own face-down cards, and only you learn what it is. You may also skip.</td></tr>"
+          + "<tr><td>Snorlax (💤) · 10</td><td>After it enters you may swap any two of your own slots, and the face-up state travels with the card. You may also skip.</td></tr>"
+          + "<tr><td>Zapdos (⚡) · 10</td><td>Must be used. Choose a slot, then every player in turn order hands the old card in that slot to the next player, every incoming card is face up, and the last card handed out goes to the bottom of the discard pile.</td></tr>"
+          + "<tr><td>Mew (✨) · 2</td><td>Must be used. First pick a face-up card of an opponent, then pick your own receiving slot. Mew lands in that opponent slot, the stolen card enters your slot face up, and your old card is discarded.</td></tr>"
+          + "<tr><td>Ditto (🔮) · 0</td><td>At scoring it copies the number of the card to its left or right in the same row. An edge slot copies its only neighbour automatically, a middle slot is chosen by its owner, and a loop of mutual copies counts as 0.</td></tr>"
+          + "<tr><td>Team Rocket (🚀) · 12</td><td>Must be used. After you pick your own slot a coin is flipped. Meowth enters like a normal card, while Pikachu makes every player discard the card in that slot, discards Team Rocket itself, and then deals a new face-up card to each player in turn order starting from you.</td></tr>"
+          + "</tbody></table>"
+          + "<p>Only a special card that you draw and swap in yourself fires its ability. Cards revealed at setup, passed by Zapdos, stolen by Mew, or refilled by Team Rocket never trigger a chain.</p>"
+      }
+    },
+    {
+      id: "scoring",
+      label: { zh: "计分与小局结束", en: "Scoring and round end" },
+      html: {
+        zh: "<p>把上排和下排同一列的两张有效数字相比，相同则这一列记 0 分，不同则把两个数字相加。三列分数加起来就是你这一小局的总分，总分越低越好。</p>"
+          + "<p>总分最低的训练家赢得这一小局并得到一枚精灵球代币(🔴)，下一小局由他先手。同分时把六张牌的有效数字从大到小排列，首个不同的数字较大者获胜，仍完全相同则座位靠前者获胜。</p>"
+          + "<p>如果牌库彻底摸空且无法补牌，这一小局直接进入结算。结算前如果还有百变怪(🔮)需要选方向，先选完再显示分数。</p>"
+          + "<p>所有人看完结果并点击 Next Round 之后才会重新发牌，机器人会自动确认。</p>",
+        en: "<p>Compare the two effective numbers in the same column of the top and the bottom row. A matching pair scores 0 for that column, and a different pair scores the sum of the two numbers. The three columns added together are your round total, and lower is better.</p>"
+          + "<p>The trainer with the lowest total wins the round, takes one Poké Ball token (🔴), and starts the next round. On a tie the six effective numbers are sorted from high to low and the first number that differs decides in favour of the higher one, while a perfect tie is settled by seat order.</p>"
+          + "<p>If the deck is completely empty and no card can be drawn, the round goes straight to scoring. When a Ditto (🔮) still needs a direction, that choice is made before the scores appear.</p>"
+          + "<p>New cards are only dealt after everyone has read the result and pressed Next Round, and bots confirm on their own.</p>"
+      }
+    },
+    {
+      id: "online",
+      label: { zh: "线上操作", en: "Playing online" },
+      html: {
+        zh: "<p>绿色描边表示当前可以点的位置，金色表示已经选中。点击周围空白或按 Esc 可以取消选择。</p>"
+          + "<p>锁形标记(🔒)表示这张暗牌只有你自己记住了，其他训练家依然看不到。Log 默认折叠，可以展开查看行动记录。</p>"
+          + "<p>Explain 可以解释灰色或暂时不可点的控件，解释模式不会执行任何游戏行动。电脑上悬停可以看图标提示，手机上轻触的提示会在 3 秒后消失。</p>",
+        en: "<p>A green outline marks the slots you may click right now, and gold marks the slot you have selected. Click the empty space around the table or press Esc to cancel a selection.</p>"
+          + "<p>A padlock (🔒) marks a face-down card that only you have memorised, and the other trainers still cannot see it. The log is collapsed by default and can be expanded to review the actions.</p>"
+          + "<p>Explain describes greyed out or currently unclickable controls, and explain mode never performs a game action. On a desktop you can hover for icon tips, and on a phone a tap shows a tip that fades after 3 seconds.</p>"
+      }
+    }
+  ]
+};
+
+const POKEMON_ADVENTURE_EXPLAIN = {
+  deck: { zh: "牌库。点它抽一张牌，只有你能看见。抽到的普通牌可以换入自己的一个位置，也可以直接弃掉。", en: "The deck. Tap it to draw one card that only you can see. A plain card drawn here can be swapped into one of your slots or discarded outright." },
+  discard: { zh: "弃牌堆。拿走公开的顶牌，这张牌必须使用，不能直接弃掉。", en: "The discard pile. Take its face-up top card, which must be used and can never be discarded directly." },
+  drawn: { zh: "你刚抽到的牌。从牌库抽的牌别人看不见，点自己的一个位置后在原地确认换入。", en: "The card you just drew. A card from the deck stays hidden from everyone else. Pick one of your own slots and confirm in place to swap it in." },
+  discard_drawn: { zh: "弃掉刚从牌库抽到的牌并结束回合。来自弃牌堆的牌以及闪电鸟(⚡)、梦幻(✨)、火箭队(🚀)不能这样弃掉。", en: "Discard the card you just drew from the deck and end your turn. Cards from the discard pile, plus Zapdos (⚡), Mew (✨) and Team Rocket (🚀), cannot be discarded this way." },
+  skip: { zh: "跳过喷火龙(🐲)的窥视或卡比兽(💤)的交换。跳过后保留刚换入的牌，当前回合结束。", en: "Skip the peek from Charizard (🐲) or the swap from Snorlax (💤). You keep the card you just swapped in and your turn ends." },
+  next_round: { zh: "确认已经看完这一小局的结果。所有真人都确认后才会重新发牌，机器人自动确认。", en: "Confirm that you have read the result of this round. New cards are dealt once every human has confirmed, and bots confirm automatically." },
+  tokens: { zh: "精灵球代币(🔴)。每一小局的最低分者得到一枚，先达到目标数量的训练家赢得整场。", en: "Poké Ball tokens (🔴). The lowest score of a round earns one, and the first trainer to reach the target number wins the match." },
+  columns: { zh: "按列计分。同一列上下两张牌的有效数字相同记 0 分，不同则相加。三列合计就是你这一小局的分数。", en: "Column scoring. A column whose top and bottom effective numbers match scores 0, otherwise the two numbers are added. The three columns together are your round score." },
+  card: { zh: "一张宝可梦牌。数字是它的分值，牌面下方是它的能力。点选后在牌旁确认当前行动。", en: "One Pokémon card. The number is its value and the line underneath is its ability. Select it and confirm the current action next to the card." },
+  confirm: { zh: "确认对选中位置执行当前行动。点击周围空白或按 Esc 可以取消选择。", en: "Confirm the current action on the selected slot. Click the empty space around the table or press Esc to cancel the selection." },
+  ditto: { zh: "为百变怪(🔮)选择复制方向。只能复制同一排左边或右边的邻居，选完在对应卡牌旁确认。", en: "Choose which direction Ditto (🔮) copies. It can only copy its left or right neighbour in the same row, and you confirm next to that card." }
+};
+
+let pokemonAdventureHelpWidget = null;
+let pokemonAdventureExplainWidget = null;
+
+function initPokemonAdventureHelpExplain() {
+  if (pokemonAdventureHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  pokemonAdventureHelpWidget = window.obgCreateHelp(POKEMON_ADVENTURE_HELP_CONFIG);
+  pokemonAdventureExplainWidget = window.obgCreateExplain({
+    gameId: "pokemon_adventure",
+    attribute: "data-pa-explain",
+    explanations: POKEMON_ADVENTURE_EXPLAIN,
+    button: pokemonAdventureExplainButton,
+    root: () => document.getElementById("pokemonAdventurePanel"),
+    bypass: ["#pokemonAdventureHelpBtn", "#pokemonAdventureExplainBtn"]
+  });
+  pokemonAdventureHelpButton?.addEventListener("click", () => {
+    pokemonAdventureExplainWidget?.exit();
+    pokemonAdventureHelpWidget.open();
+  });
+  pokemonAdventureExplainButton?.addEventListener("click", () => pokemonAdventureExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initPokemonAdventureHelpExplain);
+} else {
+  initPokemonAdventureHelpExplain();
+}
+
 (() => {
   "use strict";
 
   const byId = suffix => document.getElementById(`pokemonAdventure${suffix}`);
   const panel = byId("Panel");
-  const dialog = byId("Dialog");
   const tooltip = byId("Tooltip");
   const abilityLabels = {charizard: "窥视", snorlax: "交换", zapdos: "传递", mew: "夺取", ditto: "复制", rocket: "投币", team_rocket: "投币"};
   const cardColors = {pink: "#f2dae5", brown: "#e6d6ba", yellow: "#f2e6ac", green: "#d1e8ca", blue: "#cfe3ed", orange: "#f2d7b4", purple: "#ded5ee", gray: "#dedfd7"};
-  const explanations = {
-    deck: ["牌库", "从牌库抽一张，只有你能看见。通常可换入自己的一个位置，或弃掉抽牌。闪电鸟、梦幻、火箭队必须使用。"],
-    discard: ["弃牌堆", "拿走公开的弃牌堆顶牌。这张牌必须使用，不能再直接弃掉。主动使用特殊牌时会发动能力。"],
-    drawn: ["你的抽牌", "抽到的牌在这里显示，其他玩家看不见从牌库抽的牌。点自己的一个位置并在原地确认换入。"],
-    discard_drawn: ["弃掉抽牌", "弃掉刚从牌库抽到的可选牌，然后结束回合。来自弃牌堆的牌及闪电鸟、梦幻、火箭队不能这样弃掉。"],
-    skip: ["跳过能力", "可以跳过喷火龙的窥视或卡比兽的交换。跳过后保留刚换入的特殊牌，结束当前回合。"],
-    next_round: ["Next Round", "确认已经看完这一小局的结果。所有真人确认后开始下一小局，机器人自动确认。此操作不再弹出确认。"],
-    tokens: ["精灵球代币（🔴）", "每小局最低分者得到一枚代币。先达到本场目标数量的训练家获胜。"],
-    columns: ["按列计分", "上排与下排在同一列的有效数字相同，这列记 0 分；不同则两数相加。三列合计，分数越低越好。"],
-  };
   let view = null;
   let signature = null;
   let selection = {};
   let pending = false;
   let pendingTimer = null;
-  let explaining = false;
   let tipTimer = null;
   let tipAnchor = null;
   let gesture = null;
-  let explainGesture = null;
   let suppressClickUntil = 0;
-  let returnFocus = null;
 
   const active = () => panel && !panel.classList.contains("hidden") && (typeof currentGameType === "undefined" || currentGameType === "pokemon_adventure");
   const players = () => Array.isArray(view?.players) ? view.players : [];
@@ -96,7 +224,7 @@
   }
 
   function selectSlot(playerId, slot) {
-    if (explaining || !selectable(playerId, slot)) return;
+    if (!selectable(playerId, slot)) return;
     hideTip();
     if (playerId !== view.you) selection = {target: {playerId, slot}};
     else if (can("swap_cards")) {
@@ -182,7 +310,7 @@
     text("YouName", own ? `${own.name} · 你的六牌` : "Spectating");
     text("Tokens", own ? `🔴 ${own.tokens || 0} / ${view?.config?.target_tokens || 3}` : "");
     byId("Tokens").dataset.paExplain = "tokens";
-    byId("Tokens").dataset.paTip = explanations.tokens[1];
+    byId("Tokens").dataset.paTip = POKEMON_ADVENTURE_EXPLAIN.tokens.zh;
     byId("Tokens").tabIndex = 0;
     const hand = byId("Hand");
     hand.replaceChildren();
@@ -194,7 +322,7 @@
     if (ownSummary?.columns) ownSummary.columns.forEach((score, index) => {
       const label = element("span", "", `第 ${index + 1} 列：${typeof score === "object" ? score.score : score} 分`);
       label.dataset.paExplain = "columns";
-      label.dataset.paTip = explanations.columns[1];
+      label.dataset.paTip = POKEMON_ADVENTURE_EXPLAIN.columns.zh;
       label.tabIndex = 0;
       columnScores.append(label);
     });
@@ -331,7 +459,7 @@
   function render() { renderTable(); renderActions(); renderResult(); renderLog(); }
 
   function dispatch(action) {
-    if (explaining || !can(action.type) || typeof sendAction !== "function") return;
+    if (!can(action.type) || typeof sendAction !== "function") return;
     hideTip(); feedback(); pending = true;
     resetSelection();
     renderTable(); renderActions();
@@ -342,7 +470,7 @@
 
   function hideTip() { clearTimeout(tipTimer); tipAnchor = null; tooltip.classList.add("hidden"); }
   function showTip(target, autoHide = false) {
-    if (!target || explaining || dialog.open || !active()) return;
+    if (!target || !active()) return;
     const message = target.dataset.paTip;
     if (!message) return;
     clearTimeout(tipTimer);
@@ -355,52 +483,6 @@
     tooltip.style.top = `${Math.max(10, Math.min(innerHeight - box.height - 10, rect.bottom + 7))}px`;
     if (autoHide) tipTimer = setTimeout(hideTip, 3000);
   }
-  function setExplain(enabled) {
-    explaining = enabled;
-    hideTip();
-    document.body.classList.toggle("pa-explaining", enabled);
-    byId("ExplainBtn").setAttribute("aria-pressed", String(enabled));
-    byId("ExplainHint").classList.toggle("hidden", !enabled);
-  }
-  function openDialog(title, content, html = false) {
-    hideTip();
-    returnFocus = document.activeElement;
-    text("DialogTitle", title);
-    if (html) byId("DialogBody").innerHTML = content;
-    else byId("DialogBody").replaceChildren(element("p", "", content));
-    if (!dialog.open) dialog.showModal();
-    byId("DialogClose").focus({preventScroll: true});
-  }
-  function explain(target) {
-    const entry = explanations[target.dataset.paExplain];
-    const message = entry || [target.dataset.paExplain === "card" ? "宝可梦卡牌" : "Explain", target.dataset.paTip || "选择牌后在附近确认。点击周围空白或按 Esc 可以取消选择。"];
-    setExplain(false);
-    openDialog(message[0], message[1]);
-  }
-
-  const help = `<h3>六张牌，分数越低越好</h3>
-    <p>每人面前有上、下两排各三张牌。开局从六张暗牌中选一张公开。先获得 3 枚精灵球代币（🔴）的训练家赢得整场。</p>
-    <h3>你的回合</h3>
-    <p>从牌库（牌背）或弃牌堆顶抽一张。选择自己的一个位置，把抽牌公开换入，旧牌公开弃掉。从牌库抽的普通牌可直接弃掉；从弃牌堆拿的牌必须使用。点选位置后在牌旁确认，点击周围空白或按 Esc 取消选择。</p>
-    <h3>六种能力</h3>
-    <table><thead><tr><th>卡牌</th><th>能力</th></tr></thead><tbody>
-    <tr><td>🔥 喷火龙 · 10</td><td>换入后，可窥视自己一张暗牌，仍只有自己知道；也可跳过。</td></tr>
-    <tr><td>💤 卡比兽 · 10</td><td>换入后，可交换自己任意两个位置；公开状态随牌，也可跳过。</td></tr>
-    <tr><td>⚡ 闪电鸟 · 10</td><td>必须使用。选择一个位置，沿回合顺序传递该位置的旧牌，所有换入牌公开，最后一张放到弃牌堆底。</td></tr>
-    <tr><td>✨ 梦幻 · 2</td><td>必须使用。先选对手的一张明牌，再选自己的接收位置：梦幻放入对手位置，夺到的牌公开换入自己，自己的旧牌弃掉。</td></tr>
-    <tr><td>🟣 百变怪 · 0</td><td>结算时复制同一排左或右相邻牌的数字。边缘自动选唯一邻居；中间由持有者选择。相互复制形成的环按 0 处理。</td></tr>
-    <tr><td>🚀 火箭队 · 12</td><td>必须使用。选自己的一个位置后投币：喵喵面正常换入；皮卡丘面将全员该位置的旧牌放弃牌堆底，弃掉火箭队，再从当前玩家起依次补入公开新牌。</td></tr>
-    </tbody></table><p>只有主动抽到并使用的特殊牌发动能力。开局翻牌、被传递、被梦幻夺取或补入的新牌不连锁触发。</p>
-    <h3>小局结束与计分</h3><p>当前行动及能力全部结算后，只要有人六张牌全公开，所有人翻开余牌并结算。上、下同列数字相同记 0（两张 −2 也记 0），否则相加；三列总分最低者得到一枚 🔴。同分比较降序排列的有效数字，首个不同数字较高者胜；仍完全相同按座位顺序决定。牌库空时保留弃牌顶，将其余弃牌洗回；无法抽牌则结算。</p>
-    <p>百变怪需要选择时，先完成选择再显示分数。结果与所有牌面会保留，所有真人点击 <strong>Next Round</strong> 后再发牌，机器人自动确认。后续小局由前局胜者先手。最终整场结束后可从 Room Controls 重新开始。</p>
-    <h3>线上操作</h3><p>绿色描边表示当前可选位置，金色表示已选。🔒 表示自己记住的暗牌，别人仍看不到。Log 默认折叠。Explain 可以解释灰色按钮；解释模式不会执行游戏行动。Esc 关闭对话框或退出解释。电脑悬停可查看静态图标提示，手机轻触提示在 3 秒后消失。</p>
-    <h3>版本与边界约定</h3><p>采用 56 张、六能力的宝可梦版，核心规则与 Mandoo 原版规则书交叉核对。完全相同的平局按座位、百变怪递归复制且循环按 0、能力可跳过、重洗保留弃牌顶属于本项目明确约定。宝可梦版能力参考 <a href="https://boardgamegeek.com/thread/3349400/quick-summary-of-english-rules-for-pokemon-safari" target="_blank" rel="noopener noreferrer">韩版英文规则摘要</a>；卡面由 CSS 与 Emoji 绘制。</p>`;
-
-  byId("HelpBtn").addEventListener("click", () => { setExplain(false); openDialog("宝可梦奇遇 · Help", help, true); });
-  byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
-  byId("DialogClose").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => { returnFocus?.focus?.({preventScroll: true}); returnFocus = null; });
-  dialog.addEventListener("click", event => { if (event.target === dialog) { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); } });
   byId("DrawDeckBtn").addEventListener("click", () => dispatch({type: "draw_deck"}));
   byId("DrawDiscardBtn").addEventListener("click", () => dispatch({type: "draw_discard"}));
   byId("DiscardBtn").addEventListener("click", () => dispatch({type: "discard_drawn"}));
@@ -408,7 +490,7 @@
   byId("NextRoundBtn").addEventListener("click", () => dispatch({type: "next_round"}));
 
   panel.addEventListener("click", event => {
-    if (!active() || explaining || dialog.open) return;
+    if (!active()) return;
     const card = event.target.closest("[data-pa-player]");
     if (card) {
       const playerId = card.dataset.paPlayer;
@@ -430,73 +512,33 @@
   panel.addEventListener("focusin", event => { const target = event.target.closest("[data-pa-tip]"); if (target && !target.matches("button")) showTip(target); });
   panel.addEventListener("focusout", hideTip);
 
-  function targetAtPoint(event) {
-    const direct = event.target.closest?.("[data-pa-explain]");
-    if (direct && panel.contains(direct)) return direct;
-    return Array.from(panel.querySelectorAll("[data-pa-explain]")).find(node => {
-      const rect = node.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-    });
-  }
   document.addEventListener("pointerdown", event => {
-    if (!active() || dialog.open) return;
-    if (event.target.closest("#pokemonAdventureHelpBtn, #pokemonAdventureExplainBtn")) return;
-    const inside = panel.contains(event.target);
-    if (inside) gesture = {pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false, pointerType: event.pointerType};
-    if (!explaining || !inside) return;
-    explainGesture = {target: targetAtPoint(event), x: event.clientX, y: event.clientY, moved: false, pointerId: event.pointerId};
-    event.preventDefault(); event.stopImmediatePropagation();
+    if (!active()) return;
+    if (panel.contains(event.target)) gesture = {pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false, pointerType: event.pointerType};
   }, true);
   document.addEventListener("pointermove", event => {
     if (gesture?.pointerId === event.pointerId && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 9) gesture.moved = true;
-    if (explainGesture?.pointerId === event.pointerId && Math.hypot(event.clientX - explainGesture.x, event.clientY - explainGesture.y) > 9) explainGesture.moved = true;
   }, {capture: true, passive: true});
   document.addEventListener("pointerup", event => {
     if (gesture?.pointerId === event.pointerId && gesture.moved) suppressClickUntil = performance.now() + 550;
-    if (!explainGesture || explainGesture.pointerId !== event.pointerId) return;
-    const target = explainGesture.target;
-    const moved = explainGesture.moved;
-    explainGesture = null;
-    suppressClickUntil = performance.now() + 550;
-    event.preventDefault(); event.stopImmediatePropagation();
-    if (!moved && target && explaining) explain(target);
   }, true);
   document.addEventListener("pointercancel", event => {
     if (gesture?.pointerId === event.pointerId) { gesture = null; suppressClickUntil = performance.now() + 550; }
-    if (explainGesture?.pointerId === event.pointerId) explainGesture = null;
   }, true);
   document.addEventListener("click", event => {
     if (!active()) return;
-    if (event.target.closest("#pokemonAdventureHelpBtn, #pokemonAdventureExplainBtn")) return;
-    if (dialog.contains(event.target)) return;
-    if (performance.now() < suppressClickUntil && panel.contains(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (dialog.open) return;
-    if (!explaining) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const target = targetAtPoint(event);
-    if (target) explain(target);
+    if (performance.now() < suppressClickUntil && panel.contains(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); }
   }, true);
   document.addEventListener("keydown", event => {
-    if (!active()) return;
-    if (event.key === "Escape") {
-      hideTip();
-      if (dialog.open) { dialog.close(); event.preventDefault(); }
-      else if (explaining) setExplain(false);
-      else { resetSelection(); renderTable(); renderActions(); }
-    }
-    if (explaining && ["Enter", " "].includes(event.key) && event.target.closest("button, a, input, select")) {
-      if (event.target.closest("#pokemonAdventureHelpBtn, #pokemonAdventureExplainBtn")) return;
-      event.preventDefault(); event.stopImmediatePropagation();
-      const target = event.target.closest("[data-pa-explain]");
-      if (target) explain(target);
-    }
+    if (!active() || event.key !== "Escape") return;
+    hideTip();
+    resetSelection(); renderTable(); renderActions();
   }, true);
 
   function clear() {
     view = null; signature = null; pending = false;
     clearTimeout(pendingTimer);
-    resetSelection(); hideTip(); setExplain(false);
-    if (dialog.open) dialog.close();
+    resetSelection(); hideTip(); pokemonAdventureExplainWidget?.exit();
     document.body.classList.remove("pa-your-turn");
     render();
     feedback();
@@ -508,7 +550,7 @@
     if (!next || next.game_id && next.game_id !== "pokemon_adventure") return;
     const nextSignature = JSON.stringify([data.room_id, next.you, next.round, next.turn, next.phase, next.current_turn, next.drawn?.card?.id, next.pending_ability, next.ditto_choices]);
     if (signature !== nextSignature) resetSelection();
-    if (view && view.you !== next.you) { hideTip(); setExplain(false); }
+    if (view && view.you !== next.you) { hideTip(); pokemonAdventureExplainWidget?.exit(); }
     signature = nextSignature; view = next;
     pending = false; clearTimeout(pendingTimer); feedback();
     render();

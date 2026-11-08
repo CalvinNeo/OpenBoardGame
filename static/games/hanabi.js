@@ -1,3 +1,144 @@
+// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+const hanabiHelpButton = document.getElementById("hanabiHelpBtn");
+const hanabiExplainButton = document.getElementById("hanabiExplainBtn");
+
+const HANABI_HELP_CONFIG = {
+  gameId: "hanabi",
+  title: { zh: "烟花 · Hanabi", en: "Hanabi" },
+  basic: {
+    win: {
+      zh: "这是一款合作游戏，团队要把五堆烟花(🎆)从 1 依次叠到 5，让总分(⭐)尽量接近满分 25。",
+      en: "This is a cooperative game. Your team wins by stacking all five fireworks (🎆) from 1 up to 5, pushing the score (⭐) as close to 25 as possible."
+    },
+    turn: {
+      zh: "轮到你时只做一件事，打出一张牌(🎆 Play)，弃掉一张牌(♻️ Discard)，或者花掉一个线索标记(💡)告诉队友一个颜色或数字。",
+      en: "On your turn you take exactly one action. Play a card (🎆 Play), discard a card (♻️ Discard), or spend one clue token (💡) to tell a teammate a color or a number."
+    },
+    key: {
+      zh: "你看不到自己的手牌，只能靠队友给的提示推断它们是什么，所以提示给得准、给得省，比抢着出牌更重要。",
+      en: "You never see your own hand and must reason it out from the clues your teammates give, so spending clues wisely matters more than playing fast."
+    }
+  },
+  sections: [
+    {
+      id: "cards",
+      label: { zh: "牌与分数", en: "Cards and score" },
+      html: {
+        zh: "<p>牌有五种颜色，红色(🔴)、黄色(🟡)、绿色(🟢)、蓝色(🔵)、白色(⚪)，每种颜色都有数字 1 到 5。</p>"
+          + "<p>每种颜色的 1 有三张，2、3、4 各两张，5 只有一张，所以数字越大的牌越少见。</p>"
+          + "<p>两位或三位玩家开局各拿五张牌，四位或五位玩家各拿四张牌。</p>"
+          + "<p>总分(⭐)等于五堆烟花(🎆)的高度之和，每成功打出一张牌就加 1 分，满分 25 分。</p>",
+        en: "<p>The deck has five colors, red (🔴), yellow (🟡), green (🟢), blue (🔵) and white (⚪), and each color runs from 1 to 5.</p>"
+          + "<p>Every color holds three 1s, two each of 2, 3 and 4, and a single 5, so the high numbers are the scarce ones.</p>"
+          + "<p>Two or three players start with five cards each, while four or five players start with four cards each.</p>"
+          + "<p>The score (⭐) is the total height of the five fireworks (🎆). Every card played successfully adds one point, up to a maximum of 25.</p>"
+      }
+    },
+    {
+      id: "actions",
+      label: { zh: "回合动作", en: "Your turn" },
+      html: {
+        zh: "<p>打出(🎆 Play)：选中的牌必须正好是它那个颜色烟花的下一个数字，该颜色还没开始时必须先打 1。</p>"
+          + "<p>打对了就把牌叠上去，打错了这张牌进弃牌堆(♻️)，并且扣掉一个引信(❤️)。</p>"
+          + "<p>弃牌(♻️ Discard)：把一张牌丢进弃牌堆(♻️)，换回一个线索标记(💡)。八个线索标记都在手上时不能弃牌。</p>"
+          + "<p>给提示(💡 Give Clue)：花掉一个线索标记(💡)，告诉一位队友一个颜色或一个数字。你选的值必须真的出现在他手里。</p>"
+          + "<p>打出或弃牌之后，只要牌库(🃏)还有牌，你就补摸一张。</p>",
+        en: "<p>Play (🎆 Play): the chosen card must be exactly the next number of its own color, and a color that has not started yet must begin with a 1.</p>"
+          + "<p>A correct play stacks the card. A wrong play sends it to the discards (♻️) and costs one fuse (❤️).</p>"
+          + "<p>Discard (♻️ Discard): throw one card into the discards (♻️) to get one clue token (💡) back. You cannot discard while all eight clue tokens are available.</p>"
+          + "<p>Give Clue (💡 Give Clue): spend one clue token (💡) to name a color or a number for one teammate. The value you pick must really appear in their hand.</p>"
+          + "<p>After playing or discarding you draw one replacement card as long as the deck (🃏) still has cards.</p>"
+      }
+    },
+    {
+      id: "clues",
+      label: { zh: "线索与推理", en: "Clues and deduction" },
+      html: {
+        zh: "<p>一次提示只会指向队友手里真实存在的牌。所有符合条件的牌都会被标记，其余的牌则排除这个值。</p>"
+          + "<p>例如你告诉队友他的第 2 张和第 4 张是红色(🔴)，那他的第 1 张和第 3 张就不是红色(🔴)，这同样是信息。</p>"
+          + "<p>你最多存八个线索标记(💡)。给一次提示花掉一个，弃一张牌或成功打出数字 5 各能补回一个。</p>"
+          + "<p>牌面下方的五个小圆点按红色(🔴)、黄色(🟡)、绿色(🟢)、蓝色(🔵)、白色(⚪)排列，变淡的空心点和被划掉的小数字表示已经排除。</p>",
+        en: "<p>A clue only ever points at cards that really exist in the teammate's hand. Every matching card gets marked, and every other card rules that value out.</p>"
+          + "<p>If you tell a teammate that their cards 2 and 4 are red (🔴), then their cards 1 and 3 are not red (🔴), and that is information too.</p>"
+          + "<p>You can hold at most eight clue tokens (💡). Giving a clue spends one, while discarding a card or successfully playing a 5 each give one back.</p>"
+          + "<p>The five small dots under a card follow red (🔴), yellow (🟡), green (🟢), blue (🔵) and white (⚪). Faded hollow dots and crossed-out numbers are ruled out.</p>"
+      }
+    },
+    {
+      id: "reading",
+      label: { zh: "读牌与界面", en: "Reading the board" },
+      html: {
+        zh: "<p>你看得见所有人的牌，唯独看不见自己的。自己的牌只显示已经确认的提示，问号表示还不知道。</p>"
+          + "<p>别人的牌下方那排小圆点和小数字，显示的是他自己从提示里知道了什么，而不是你看见的牌面。</p>"
+          + "<p>牌位从 1 开始编号，和游戏日志(📜)里说的第几张对得上。</p>"
+          + "<p>在提示区选中队友后，他的牌会出现在提示控件旁边，命中的牌带金色描边。弃牌堆(♻️)里每格记录该颜色该数字被弃掉的数量，整格变红说明这张牌已经全部用光。</p>",
+        en: "<p>You can see everyone's cards except your own. Your cards only show the clues you have received, and a question mark means still unknown.</p>"
+          + "<p>The dots and numbers under another player's card show what that player knows from clues, not what you can see on the face.</p>"
+          + "<p>Card positions are numbered from 1, which matches the positions named in the game log (📜).</p>"
+          + "<p>Pick a teammate in the clue area to show their hand beside the clue controls, where matching cards get a gold outline. Each cell in the discards (♻️) counts how many copies of that color and number are gone, and a fully red cell means every copy is lost.</p>"
+      }
+    },
+    {
+      id: "ending",
+      label: { zh: "结束条件", en: "Endings" },
+      html: {
+        zh: "<p>三个引信(❤️)全部扣光时游戏立刻结束，标准计分为 0 分，界面会同时显示当前牌面的实际分数。</p>"
+          + "<p>五堆烟花(🎆)全部叠到 5 就是完美通关，拿到满分 25 分。</p>"
+          + "<p>最后回合倒计时(⏳)是房间里的可选规则，默认关闭。开启后，摸走牌库(🃏)最后一张牌就开始倒数，其他玩家各走完一回合后游戏结束。关闭时，牌库摸空不会自动结束游戏。</p>"
+          + "<p>游戏结束后所有人的牌都会翻开，正好用来复盘谁算错了什么。</p>",
+        en: "<p>Losing all three fuses (❤️) ends the game at once. The standard score is then zero, and the actual board score is shown next to it.</p>"
+          + "<p>Stacking all five fireworks (🎆) up to 5 is a perfect game worth the full 25 points.</p>"
+          + "<p>The Final Turns countdown (⏳) is an optional room rule and is off by default. When it is on, drawing the last card of the deck (🃏) starts the countdown, and the game ends once every other player has taken one more turn. With it off, an empty deck never ends the game by itself.</p>"
+          + "<p>When the game ends every hand is revealed, which is the perfect moment to review who miscounted what.</p>"
+      }
+    }
+  ]
+};
+
+const HANABI_EXPLAIN = {
+  clues: { zh: "线索标记(💡)。给队友一个提示要花掉一个，手上最多存八个。弃一张牌或成功打出数字 5 各能补回一个。", en: "Clue tokens (💡). Giving a teammate a clue costs one and you can hold at most eight. Discarding a card or successfully playing a 5 each give one back." },
+  fuses: { zh: "引信(❤️)。每次打错牌扣掉一个，扣光三个游戏立刻结束，此时标准计分为 0 分。", en: "Fuses (❤️). Every failed play costs one. Losing all three ends the game immediately and the standard score becomes zero." },
+  deck: { zh: "牌库(🃏)剩余张数。每次打出或弃牌后，只要牌库还有牌就补摸一张。", en: "Cards left in the deck (🃏). After you play or discard you draw one card as long as the deck is not empty." },
+  score: { zh: "总分(⭐)。每张成功打出的牌记 1 分，等于五堆烟花的高度之和，最高 25 分。", en: "Score (⭐). Each successfully played card is worth one point, equal to the total height of the five fireworks, up to 25." },
+  final: { zh: "最后回合(⏳)倒计时。这是房间可选规则，默认关闭。开启后摸走最后一张牌就开始倒数，归零时游戏结束。", en: "Final Turns (⏳) countdown. This optional room rule is off by default. When on, drawing the last card starts the countdown and the game ends when it reaches zero." },
+  play: { zh: "打出选中的牌(🎆 Play)。它必须正好是该颜色烟花的下一个数字，从 1 开始。打错扣一个引信(❤️)，成功打出数字 5 补回一个线索标记(💡)。只有轮到你并且选好牌时才能按。", en: "Play the selected card (🎆 Play). It must be exactly the next number of its color, starting at 1. A wrong play costs one fuse (❤️) and a successful 5 returns one clue token (💡). The button works only on your turn with a card selected." },
+  discard: { zh: "弃掉选中的牌(♻️ Discard)。弃牌换回一个线索标记(💡)，并在牌库有牌时补摸一张。八个线索标记都在手上时不能弃牌。", en: "Discard the selected card (♻️ Discard). It returns one clue token (💡) and you draw a replacement if the deck still has cards. You cannot discard while all eight clue tokens are available." },
+  target: { zh: "选择要提示的队友。选中后他的牌会显示在提示区旁边。你不能给自己提示。", en: "Choose the teammate you want to clue. Their hand then appears beside the clue controls. You can never clue yourself." },
+  clue: { zh: "给队友提示(💡 Give Clue)。先选队友，再选颜色或数字，最后选一个他手里确实存在的值，金色描边会预览所有命中的牌。给提示要花掉一个线索标记(💡)。", en: "Give a clue (💡 Give Clue). Pick a teammate, then a color or a number, then a value that really exists in their hand. Gold outlines preview every matching card. Giving the clue spends one clue token (💡)." },
+  players: { zh: "其他玩家的手牌。你能看到他们的牌面，下方的小圆点和小数字表示这名玩家自己从提示里知道了什么。", en: "The other players' hands. You can see their card faces, while the small dots and numbers below show what that player knows from clues." },
+  discards: { zh: "弃牌堆(♻️)统计。每格记录该颜色该数字被弃掉的数量，打错的牌也算在内。每种颜色有三张 1，两张 2、3、4 和一张 5，整格变红表示这张牌已经全部用光。", en: "Discard pile (♻️) statistics. Each cell counts how many copies of that color and number are gone, failed plays included. Every color has three 1s, two each of 2, 3 and 4, and one 5, and a fully red cell means every copy is lost." },
+  log: { zh: "游戏日志(📜)。最新的行动排在最上面，可以往回翻看之前的记录。", en: "Game log (📜). The newest action is listed first and you can scroll back through earlier entries." },
+  card: { zh: "一张牌。大符号和数字表示可见的牌，或者你自己已经确认的提示，问号表示未知。下方五个小圆点按红色(🔴)、黄色(🟡)、绿色(🟢)、蓝色(🔵)、白色(⚪)排列，变淡的空心点和被划掉的小数字表示已经排除。", en: "One card. The large symbol and number show a visible card or the clues you have confirmed about your own, and a question mark means unknown. The five dots below follow red (🔴), yellow (🟡), green (🟢), blue (🔵) and white (⚪), while faded hollow dots and crossed-out numbers are ruled out." },
+  stack: { zh: "一堆烟花(🎆)。中间的数字表示这堆已经叠到几，右边写着下一个必须打出的数字，叠到 5 就完成。", en: "One firework (🎆). The number in the middle is how high the stack already is, the right side names the next number you must play, and reaching 5 completes it." }
+};
+
+let hanabiHelpWidget = null;
+let hanabiExplainWidget = null;
+
+function initHanabiHelpExplain() {
+  if (hanabiHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  hanabiHelpWidget = window.obgCreateHelp(HANABI_HELP_CONFIG);
+  hanabiExplainWidget = window.obgCreateExplain({
+    gameId: "hanabi",
+    attribute: "data-hanabi-explain",
+    explanations: HANABI_EXPLAIN,
+    button: hanabiExplainButton,
+    root: () => document.getElementById("hanabiPanel"),
+    bypass: ["#hanabiHelpBtn", "#hanabiExplainBtn"]
+  });
+  hanabiHelpButton?.addEventListener("click", () => {
+    hanabiExplainWidget?.exit();
+    hanabiHelpWidget.open();
+  });
+  hanabiExplainButton?.addEventListener("click", () => hanabiExplainWidget?.toggle());
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initHanabiHelpExplain);
+} else {
+  initHanabiHelpExplain();
+}
+
 const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle");
 
 (() => {
@@ -14,37 +155,13 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
   let selectedCard = null;
   let clueType = "color";
   let clueValue = null;
-  let explaining = false;
   let pending = false;
   let pendingTimer;
   let tipTimer;
   let tipTarget = null;
   let returnFocus = null;
-  let suppressClick = false;
-  let suppressTimer;
 
-  const explanations = {
-    clues: ["Clues (💡)", "Spend one clue token to tell another player a color or number. Discard a card or successfully play a 5 to recover one, up to eight."],
-    fuses: ["Fuses (❤️)", "An incorrect play loses one fuse and discards that card. At zero fuses the game ends. The standard score is then zero; the board score is also shown."],
-    deck: ["Deck (🃏)", "After playing or discarding, draw one card if the deck is not empty. If Final Round Countdown is enabled in the lobby, drawing the last card starts the final-turn counter."],
-    score: ["Score (⭐)", "Each successfully played card scores one point. Add the heights of all five fireworks for a maximum of 25. Losing all fuses makes the standard score zero."],
-    final: ["Final Turns (⏳)", "When the optional Final Round Countdown is enabled, the game ends when this counter reaches zero. With the option off, an empty deck does not start a countdown."],
-    play: ["Play (🎆)", "Select one of your cards, then Play. It must be exactly one higher than the current firework of its color, starting at 1. A failed play loses a fuse (❤️); a successful 5 restores one clue (💡). You draw a replacement if any remain. This button is available only on your turn with a card selected."],
-    discard: ["Discard (♻️)", "Select one of your cards, then Discard to recover one clue token (💡) and draw a replacement if available. You cannot discard when all eight clues are available, outside your turn, or without selecting a card."],
-    target: ["Clue Target", "Choose a teammate to inspect their hand and give a clue. You cannot give clues to yourself. Other Hands shows the remaining players without repeating your own cards."],
-    clue: ["Give Clue (💡)", "Choose a teammate, Color or Number, and a value present in their hand. The gold outlines preview every matching card. Give Clue spends one clue token and tells them all matching positions; the other cards rule out that value. You must have a clue token and it must be your turn."],
-    players: ["Other Hands", "Open this section to see the other teammates. The chosen clue target is shown next to the clue controls. Their card faces are visible to you, while the small dots and numbers below show what that player knows from clues."],
-    discards: ["Discards (♻️)", "Each cell counts discarded cards of that color and number, including failed plays. Each color has three 1s, two each of 2, 3 and 4, and one 5. A red cell means every copy of that card has been discarded."],
-    log: ["Game Log (📜)", "Recent actions appear first. Scroll inside this section to read older entries."],
-  };
-  const helpHTML = `
-    <p><strong>Goal · Fireworks (🎆)</strong><br>Work together to build five fireworks from 1 to 5, in order: Red (🔴), Yellow (🟡), Green (🟢), Blue (🔵), and White (⚪). Score (⭐) is their total height, up to 25.</p>
-    <p><strong>Your hidden hand</strong><br>You see everyone else's cards, but only received clues on your own. Two or three players start with five cards each; four or five players start with four. Each color has three 1s, two each of 2, 3 and 4, and one 5.</p>
-    <p><strong>On your turn, take one action</strong><br>Play (🎆) a card: it must be the next number of its color. An incorrect play discards the card and costs a Fuse (❤️); a successful 5 restores one Clue (💡).<br>Discard (♻️) a card to restore one Clue (💡), unless all eight are already available.<br>Give Clue (💡): spend one token to name a color or number present in a teammate's hand. Every matching card is marked, and every other card rules out that value. Do not reveal extra card information outside these clues.</p>
-    <p><strong>Reading cards</strong><br>The large symbol and number show a visible card, or confirmed clues for your own card; ? means unknown. The five small dots follow Red (🔴), Yellow (🟡), Green (🟢), Blue (🔵), White (⚪). Faded hollow dots and crossed-out numbers have been ruled out. Use Explain (🔎) on any card to read its full information. Card positions start at 1.</p>
-    <p><strong>Controls</strong><br>Select your card, then Play or Discard. Tap it again, tap empty space, or press Esc to cancel selection. Choose a clue target to see their hand beside the clue controls; gold outlines preview the matching cards. Open Other Hands, Discards (♻️), or Game Log (📜) when needed. Hover over symbols on desktop or tap them on mobile for a tip; mobile tips disappear after three seconds.</p>
-    <p><strong>Deck (🃏) and ending</strong><br>Draw one replacement after playing or discarding while cards remain. Completing all five fireworks earns 25 points. Losing all three Fuses (❤️) ends the game with zero standard points; the board score is also displayed. The optional Final Round Countdown is off by default. If enabled in the lobby, drawing the last card starts the Final Turns (⏳) counter; the game ends at zero. With it off, an empty deck does not trigger an automatic ending.</p>
-    <p><strong>Help &amp; Explain</strong><br>Explain (🔎) highlights elements with descriptions, including disabled buttons. Choose an element to read about it; game controls do not act while explaining. Esc exits Explain and closes dialogs.</p>`;
+  // Help and Explain now come from the shared widgets in static/games/shared_help.js.
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -71,7 +188,6 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
     if (color) node.dataset.color = color;
     const description = cardDescription(card, index);
     node.dataset.hanabiExplain = "card";
-    node.dataset.hanabiDescription = description;
     node.dataset.cardIndex = index;
     node.setAttribute("aria-label", description);
     if (own) {
@@ -199,7 +315,6 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
       stack.dataset.color = color;
       stack.dataset.hanabiExplain = "stack";
       const description = `${colorName(color)} firework: ${value}/5. ${value < 5 ? `Play a ${value + 1} next.` : "Complete!"}`;
-      stack.dataset.hanabiDescription = description;
       setTip(stack, description);
       const name = element("span", "hanabi-stack-color");
       name.append(element("span", "", symbols[color]), element("span", "", labels[color]));
@@ -291,7 +406,7 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
     tipTarget = null;
   }
   function showTip(target, timed = false) {
-    if (!target || explaining || dialog.open) return;
+    if (!target || hanabiExplainWidget?.isActive() || dialog.open) return;
     hideTip();
     tipTarget = target;
     tooltip.textContent = target.dataset.hanabiTip;
@@ -305,12 +420,6 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
     tooltip.style.top = `${top}px`;
     if (timed) tipTimer = window.setTimeout(hideTip, 3000);
   }
-  function setExplain(enabled) {
-    explaining = enabled;
-    hideTip();
-    panel.classList.toggle("hanabi-explaining", enabled);
-    $("ExplainBtn").setAttribute("aria-pressed", String(enabled));
-  }
   function openDialog(title, body, html = false) {
     hideTip();
     returnFocus = document.activeElement;
@@ -320,14 +429,6 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
     $("ConfirmActions").hidden = true;
     if (!dialog.open) dialog.showModal();
     $("DialogClose").focus();
-  }
-  function explainTarget(target) {
-    if (!target) return;
-    const info = explanations[target.dataset.hanabiExplain];
-    const description = target.dataset.hanabiDescription || info?.[1];
-    if (!description) return;
-    setExplain(false);
-    openDialog(info?.[0] || "Explain", description);
   }
   function submit(action) {
     if (pending || !view?.legal_actions.includes(action.type)) return;
@@ -371,8 +472,6 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
     clueValue = event.target.value;
     updateCluePreview();
   });
-  $("HelpBtn").addEventListener("click", () => { setExplain(false); openDialog("Hanabi · Help", helpHTML, true); });
-  $("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
   $("DialogClose").addEventListener("click", () => dialog.close());
   $("ConfirmPlay").addEventListener("click", playSelected);
   $("CancelPlay").addEventListener("click", () => dialog.close());
@@ -381,36 +480,6 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
     const rect = dialog.getBoundingClientRect();
     if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
   });
-  function explainExempt(target) {
-    return dialog.contains(target) || target.closest("#hanabiHelpBtn, #hanabiExplainBtn");
-  }
-  document.addEventListener("pointerdown", (event) => {
-    if (!explaining || panel.classList.contains("hidden") || explainExempt(event.target)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    // Pointer events and hit testing also reach disabled controls, unlike click.
-    const target = document.elementsFromPoint(event.clientX, event.clientY)
-      .map((node) => node.closest("#hanabiPanel [data-hanabi-explain]"))
-      .find(Boolean);
-    if (target) {
-      suppressClick = true;
-      window.clearTimeout(suppressTimer);
-      suppressTimer = window.setTimeout(() => { suppressClick = false; }, 600);
-      explainTarget(target);
-    }
-  }, true);
-  document.addEventListener("click", (event) => {
-    if (suppressClick) {
-      suppressClick = false;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      return;
-    }
-    if (!explaining || panel.classList.contains("hidden") || explainExempt(event.target)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    explainTarget(event.target.closest("#hanabiPanel [data-hanabi-explain]"));
-  }, true);
   panel.addEventListener("pointerover", (event) => {
     if (event.pointerType !== "mouse") return;
     const target = event.target.closest("[data-hanabi-tip]");
@@ -434,15 +503,10 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
   });
   document.addEventListener("keydown", (event) => {
     if (panel.classList.contains("hidden")) return;
-    if (explaining && !explainExempt(event.target) && [" ", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (event.key === " " || event.key === "Enter") explainTarget(event.target.closest("[data-hanabi-explain]"));
-    }
     if (event.key !== "Escape") return;
     hideTip();
-    if (dialog.open) return;
-    setExplain(false);
+    if (dialog.open || document.querySelector(".obg-help-dialog[open]")) return;
+    hanabiExplainWidget?.exit();
     selectedCard = null;
     updateSelection();
   }, true);
@@ -455,10 +519,8 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
     clueType = "color";
     clueValue = null;
     pending = false;
-    suppressClick = false;
     window.clearTimeout(pendingTimer);
-    window.clearTimeout(suppressTimer);
-    setExplain(false);
+    hanabiExplainWidget?.exit();
     if (dialog.open) dialog.close();
     $("Turn").textContent = "Waiting for the game to start";
     $("Turn").classList.remove("hanabi-your-turn");
@@ -480,7 +542,7 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
   window.showHanabiHeaderActions = (visible) => {
     $("HeaderActions").hidden = !visible;
     if (!visible) {
-      setExplain(false);
+      hanabiExplainWidget?.exit();
       if (dialog.open) dialog.close();
     }
   };

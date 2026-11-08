@@ -12,23 +12,67 @@
     const structureColors = {white: "#fffef2", green: "#4a8054", blue: "#427baf", black: "#303b39"};
     const W = 744, H = 674;
     const phaseNames = {initial_clues: "开局分享", turn: "探索", search_extra_disc: "补放圆片", compensate_cube: "补放方块", round_end: "本轮回顾", game_over: "探索结束"};
-    const explanations = {
-        map: "点选六边形后，在该格附近的地图蒙版内选择行动，并用 Confirm／Cancel 确认或取消。亮圈保留所选位置，确认区始终位于地图内。拖动或缩放不会提交动作。熊(🐻)用虚线，美洲狮(🐾)用实线边界。结构物有独立的类型与颜色。",
-        question: "询问(❓)：选择无排除(■)的格子和尚未回答该格的另一名玩家。可以询问不符合自己线索的位置。系统诚实给出可能(●)或排除(■)；得到排除后，你须另放一个方块。",
-        search: "搜索(🔍)：只能搜索符合自己线索、无排除(■)的格子。先放可能(●)；若已有自己的圆片，先在别处补圆片。依席位核对，首个否定后停止并补方块；全部通过才获胜。",
-        place: "排除(■)必须不符合你的线索，可能(●)必须符合。标记不能重复；有任何方块的格子都不能再互动。当前阶段只允许所需标记的合法新位置。",
-        confirm: "Confirm 提交蒙版内的当前选择。请先选合法格子；询问(❓)还需选一名尚未回答的对手。等待其他人、回顾未结束或发送中时不可提交。",
-        cancel_selection: "Cancel 关闭选格蒙版，取消尚未提交的选择；点击蒙版周围空白或按 Esc 也可以。不会撤销已经提交的动作，补放圆片(●)／方块(■)的义务仍需完成。",
-        next: "每圈结束暂停回顾。每人分别点击 Next Round，全员确认才继续。机器人只确认自己，断线真人不会自动跳过。",
-        notes: "笔记(📝)仅你可见：手动标记候选／排除格，或勾掉你认为不成立的对手线索。Save 保存到个人笔记，Close／Esc 放弃未保存编辑。不会替你自动推理。",
-        clue: "Your clue(🔒) 从右侧打开你的秘密线索，Close／Esc 收起。开启 Highlight on map 后收起侧栏，回到地图查看高亮。距离包括目标本身，within 2 表示 0、1、2 格。",
-        highlight: "Highlight 用金色描边与勾号(✓)标出符合你自己线索的格子，其余格子的地形淡化；公开标记仍然保留。高亮不代表符合别人线索，也不排除已出现方块的位置。地图工具栏可随时开启或关闭。",
-        hint: "提示(💡)需要投票：三人全部同意；四或五人至少人数减一同意。每局最多公开一次未使用的线索类别；没有可用类别时，在投票通过后说明。开局未完成或已揭示时不可投票。",
-        zoom: "使用 +／− 缩放，Fit 查看整张地图。地图区域内拖动平移，手机支持双指缩放；区域外正常滚动页面。",
-        legend: "可能(●)只符合放置者的线索，排除(■)则让整格停止互动。玩家用颜色和座位编号区分；结构物的颜色与玩家归属无关。",
+    const CRYPTID_EXPLAIN = {
+        map: {
+            zh: "点选六边形后，在该格附近的地图蒙版内选择行动，并用 Confirm／Cancel 确认或取消。亮圈保留所选位置，确认区始终位于地图内。拖动或缩放不会提交动作。熊(🐻)用虚线，美洲狮(🐾)用实线边界。结构物有独立的类型与颜色。",
+            en: "Tap a hex, then pick an action in the map overlay near that cell and confirm or cancel it. The bright ring keeps your chosen spot and the confirm area always stays inside the map. Dragging or zooming never submits a move. Bears (🐻) use dashed borders and cougars (🐾) use solid ones, and structures have their own type and colour."
+        },
+        question: {
+            zh: "询问(❓)：选择无排除(■)的格子和尚未回答该格的另一名玩家。可以询问不符合自己线索的位置。系统诚实给出可能(●)或排除(■)；得到排除后，你须另放一个方块。",
+            en: "Question (❓): pick a cell with no exclusion (■) and another player who has not answered for that cell yet. You may ask about a cell that fails your own clue. The server answers honestly with possible (●) or excluded (■), and a negative answer obliges you to place a cube elsewhere."
+        },
+        search: {
+            zh: "搜索(🔍)：只能搜索符合自己线索、无排除(■)的格子。先放可能(●)；若已有自己的圆片，先在别处补圆片。依席位核对，首个否定后停止并补方块；全部通过才获胜。",
+            en: "Search (🔍): you may only search a cell that matches your own clue and carries no exclusion (■). Place a possible disc (●) first, and if your disc is already there you top it up somewhere else. Checks run in seat order and stop at the first refusal, and you win only if everyone passes."
+        },
+        place: {
+            zh: "排除(■)必须不符合你的线索，可能(●)必须符合。标记不能重复；有任何方块的格子都不能再互动。当前阶段只允许所需标记的合法新位置。",
+            en: "An exclusion (■) must contradict your clue and a possible disc (●) must match it. You can never repeat your own marker, and any cell holding a cube is closed to everyone. The current phase only allows legal new spots for the marker it asks for."
+        },
+        confirm: {
+            zh: "Confirm 提交蒙版内的当前选择。请先选合法格子；询问(❓)还需选一名尚未回答的对手。等待其他人、回顾未结束或发送中时不可提交。",
+            en: "Confirm submits the current choice in the overlay. Select a legal cell first, and a question (❓) also needs an opponent who has not answered yet. You cannot submit while waiting for others, during the round review, or while a move is in flight."
+        },
+        cancel_selection: {
+            zh: "Cancel 关闭选格蒙版，取消尚未提交的选择；点击蒙版周围空白或按 Esc 也可以。不会撤销已经提交的动作，补放圆片(●)／方块(■)的义务仍需完成。",
+            en: "Cancel closes the cell overlay and drops the unsubmitted choice, and tapping the empty area around the overlay or pressing Esc does the same. It never undoes a submitted move, and any outstanding disc (●) or cube (■) you owe is still due."
+        },
+        next: {
+            zh: "每圈结束暂停回顾。每人分别点击 Next Round，全员确认才继续。机器人只确认自己，断线真人不会自动跳过。",
+            en: "Each lap ends with a review pause. Every player presses Next Round separately and play resumes only once all of them confirm. Bots confirm for themselves only, and a disconnected human is never skipped automatically."
+        },
+        notes: {
+            zh: "笔记(📝)仅你可见：手动标记候选／排除格，或勾掉你认为不成立的对手线索。Save 保存到个人笔记，Close／Esc 放弃未保存编辑。不会替你自动推理。",
+            en: "Notes (📝) are private to you. Mark cells as candidate or excluded by hand, or tick off opponent clues you think are false. Save stores them on your personal notepad and Close or Esc discards unsaved edits. It never reasons for you."
+        },
+        clue: {
+            zh: "Your clue(🔒) 从右侧打开你的秘密线索，Close／Esc 收起。开启 Highlight on map 后收起侧栏，回到地图查看高亮。距离包括目标本身，within 2 表示 0、1、2 格。",
+            en: "Your clue (🔒) opens your secret clue from the right, and Close or Esc puts it away. Turning on Highlight on map collapses the panel so you can see the highlight on the map. Distances include the target itself, so within 2 means 0, 1 or 2 hexes."
+        },
+        highlight: {
+            zh: "Highlight 用金色描边与勾号(✓)标出符合你自己线索的格子，其余格子的地形淡化；公开标记仍然保留。高亮不代表符合别人线索，也不排除已出现方块的位置。地图工具栏可随时开启或关闭。",
+            en: "Highlight outlines the cells matching your own clue in gold with a check (✓) and fades the terrain everywhere else, while public markers stay visible. A highlight says nothing about other players' clues and does not skip cells that already hold a cube. The map toolbar toggles it at any time."
+        },
+        hint: {
+            zh: "提示(💡)需要投票：三人全部同意；四或五人至少人数减一同意。每局最多公开一次未使用的线索类别；没有可用类别时，在投票通过后说明。开局未完成或已揭示时不可投票。",
+            en: "A hint (💡) needs a vote: all three players in a three player game, or at least one less than the full table otherwise. It reveals one unused clue category at most once per game, and if none is left the vote simply says so. Voting is closed before setup finishes and after the solution is revealed."
+        },
+        zoom: {
+            zh: "使用 +／− 缩放，Fit 查看整张地图。地图区域内拖动平移，手机支持双指缩放；区域外正常滚动页面。",
+            en: "Use + and − to zoom and Fit to frame the whole map. Drag inside the map area to pan and pinch to zoom on a phone, while dragging outside the area scrolls the page normally."
+        },
+        legend: {
+            zh: "可能(●)只符合放置者的线索，排除(■)则让整格停止互动。玩家用颜色和座位编号区分；结构物的颜色与玩家归属无关。",
+            en: "A possible disc (●) only matches the clue of the player who placed it, while an exclusion (■) shuts the whole cell down. Players are told apart by colour and seat number, and structure colours have nothing to do with player ownership."
+        },
+        dialog_close: {
+            zh: "关闭当前对话框并回到地图。",
+            en: "Close the current dialog and return to the map."
+        }
     };
+    const explainText = key => CRYPTID_EXPLAIN[key]?.[window.obgHelpLang?.() === "en" ? "en" : "zh"] || "";
     let view = null, signature = null, selected = null, target = "", mode = "question";
-    let pending = false, pendingTimer = null, explaining = false, suppressed = null;
+    let pending = false, pendingTimer = null, suppressed = null;
     let zoom = 1, center = {x: W / 2, y: H / 2}, showClue = false;
     let notesDraft = null, notebookPlayer = "", notebookCell = null, returnFocus = null, returnFocusAction = null;
     let narrowLayout = window.innerWidth < 600;
@@ -166,7 +210,7 @@
 
     function highlightHTML() {
         if (!showClue) return "";
-        return `<div class="cryptid-highlight-status" role="status" data-cryptid-explain="highlight" data-cryptid-tip="${esc(explanations.highlight)}"><span class="cryptid-highlight-key" aria-hidden="true">✓</span><span>符合你的线索 <strong>${view.my_matches.length} / ${view.board.length}</strong></span><span class="cryptid-highlight-muted">其余地形淡化</span></div>`;
+        return `<div class="cryptid-highlight-status" role="status" data-cryptid-explain="highlight" data-cryptid-tip="${esc(explainText("highlight"))}"><span class="cryptid-highlight-key" aria-hidden="true">✓</span><span>符合你的线索 <strong>${view.my_matches.length} / ${view.board.length}</strong></span><span class="cryptid-highlight-muted">其余地形淡化</span></div>`;
     }
 
     function resultsHTML() {
@@ -183,14 +227,13 @@
         panel.innerHTML = `<div class="cryptid-shell"><div class="cryptid-top"><span class="cryptid-badge">${view.advanced ? "Advanced" : "Normal"} · ${view.round ? `Round ${view.round}` : "Setup"}</span></div>
             <div class="cryptid-players">${view.players.map(p => `<div class="cryptid-player ${p.player_id === view.current_turn ? "is-current" : ""}"><strong><span class="cryptid-dot" style="background:${color(p.player_id)}"></span>${p.seat + 1} · ${esc(p.name)}</strong><small>${p.player_id === view.you ? "You" : p.is_bot ? "Bot" : "Player"}${p.player_id === view.current_turn ? " · Acting" : view.next_ready.includes(p.player_id) ? " · Ready ✓" : ""}</small></div>`).join("")}</div>
             <div class="cryptid-layout"><div class="cryptid-map-area"><div class="cryptid-map-frame"><div class="cryptid-map-tools"><div class="cryptid-zoom-tools">${btn("−", "out", "zoom")}${btn("+", "in", "zoom")}${btn("Fit", "fit", "zoom")}<span class="cryptid-zoom">${Math.round(zoom * 100)}%</span>${btn(`${showClue ? "✓ " : ""}Highlight`, "highlight", "highlight", !view.my_clue, `class="cryptid-highlight-toggle" aria-pressed="${showClue}"`)}</div><div class="cryptid-dock-tools">${btn("🔒 Your clue", "clue", "clue", !view.my_clue, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}${btn("📝 Notes", "notes", "notes", !view.notes, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}</div></div>${actionHTML()}${highlightHTML()}<div class="cryptid-map-viewport">${mapHTML()}${selectionHTML()}</div></div>
-                <div class="cryptid-legend">${Object.values(view.terrain_defs).map(t => `<button type="button" data-cryptid-explain data-cryptid-tip="${esc(`${t.name}(${t.icon})：五种地形之一。`)}">${t.icon} ${t.name}</button>`).join("")}<button type="button" data-cryptid-explain="legend" data-cryptid-tip="${esc(explanations.legend)}">● / ■</button><button type="button" data-cryptid-explain data-cryptid-tip="熊(🐻)用虚线边界，美洲狮(🐾)用实线边界；领地叠加在地形上。">🐻 / 🐾</button><button type="button" data-cryptid-explain data-cryptid-tip="立石(🗿)与废弃小屋(🏚️)；色框表示结构物的白、绿、蓝、黑颜色，与玩家颜色无关。">🗿 / 🏚️</button></div>
+                <div class="cryptid-legend">${Object.values(view.terrain_defs).map(t => `<button type="button" data-cryptid-explain data-cryptid-tip="${esc(`${t.name}(${t.icon})：五种地形之一。`)}">${t.icon} ${t.name}</button>`).join("")}<button type="button" data-cryptid-explain="legend" data-cryptid-tip="${esc(explainText("legend"))}">● / ■</button><button type="button" data-cryptid-explain data-cryptid-tip="熊(🐻)用虚线边界，美洲狮(🐾)用实线边界；领地叠加在地形上。">🐻 / 🐾</button><button type="button" data-cryptid-explain data-cryptid-tip="立石(🗿)与废弃小屋(🏚️)；色框表示结构物的白、绿、蓝、黑颜色，与玩家颜色无关。">🗿 / 🏚️</button></div>
                 ${view.phase === "round_end" ? `<section class="cryptid-box cryptid-review"><h3>Round review</h3><ul class="cryptid-history">${view.last_round.map(line => `<li>${esc(line)}</li>`).join("")}</ul></section>` : ""}
                 ${view.game_over ? `<section class="cryptid-box cryptid-review"><h3>🏆 ${esc(name(view.winner[0]))} · ${view.solution}</h3><div class="cryptid-results">${view.players.map(p => `<div class="cryptid-result"><strong>${esc(p.name)}</strong>：${esc(view.revealed_clues[p.player_id].description)}</div>`).join("")}</div></section>` : ""}
             </div><div class="cryptid-sidebar">${resultsHTML()}
                 ${!view.game_over || view.hint ? `<section class="cryptid-box" data-cryptid-explain="hint"><h3 data-cryptid-tip="提示(💡)：表决通过后公开一个额外线索类别，每局最多一次。">💡 Hint</h3>${view.hint ? `<p class="cryptid-muted">${esc(view.hint)}</p>` : `<p class="cryptid-muted">${Object.values(view.hint_votes).filter(Boolean).length} / ${view.players.length === 3 ? 3 : view.players.length - 1} votes</p><div class="cryptid-actions">${btn("Agree", "hint_yes", "hint", !available("vote_hint"))}${btn("Decline", "hint_no", "hint", !available("vote_hint"))}</div>`}</section>` : ""}
                 <details class="cryptid-box"><summary>Public log</summary><ul class="cryptid-history">${view.log.slice().reverse().map(line => `<li>${esc(line)}</li>`).join("")}</ul></details>
             </div></div><p class="cryptid-footer">${esc(view.map_source)} · ${view.catalog.length} clue types</p></div>`;
-        panel.classList.toggle("is-explaining", explaining);
         updateMap(); updateDockButtons();
         const selectionBody = panel.querySelector(".cryptid-selection-body");
         if (selectionBody) selectionBody.scrollTop = scrollTop;
@@ -256,15 +299,8 @@
     }
 
     function setZoom(value) { zoom = Math.max(1, Math.min(3.4, value)); updateMap(); hideTip(); }
-    function setExplain(value) {
-        explaining = value; panel.classList.toggle("is-explaining", value);
-        explainButton.setAttribute("aria-pressed", String(value)); hideTip();
-    }
-    function explainElement(element) {
-        if (!element) return;
-        const text = explanations[element.dataset.cryptidExplain] || element.dataset.cryptidTip || explanations.map;
-        setExplain(false); openDialog("Explain", `<p>${esc(text)}</p>`);
-    }
+    let cryptidHelpWidget = null;
+    let cryptidExplainWidget = null;
     function submit(action) {
         if (!action || !available(action.type)) return;
         if (action.cell_id) { selected = null; target = ""; }
@@ -291,17 +327,113 @@
         openDialog("🔒 Your clue", `<p class="cryptid-muted">Private</p><section class="cryptid-box cryptid-clue"><p>${esc(view.my_clue.description)}</p><label class="cryptid-inline-label"><input id="cryptidShowClue" type="checkbox" ${showClue ? "checked" : ""}/><span>Highlight on map</span></label></section>`, "clue");
     }
 
-    function showHelp() {
-        setExplain(false);
-        openDialog("Help · 诡影寻踪", `<p>3–5 位研究者各持一条秘密线索，地图上只有一个格子符合全部人的线索。先成功搜索该格的玩家获胜；仅在笔记中推断出来不算获胜。</p>
-            <h3>开局与标记</h3><p>依起始席位，每人轮流放一个排除(■)，共两圈，每人两个。可能(●)表示符合放置者自己的线索，排除(■)表示不符合。每格可以有不同玩家的圆片，但至多一个方块；方块出现后不能再对该格进行任何操作。自己的标记不可重复，标记不移走。</p>
-            <h3>地形与距离</h3><p>森林(🌲)、沙漠(🏜️)、水域(🌊)、山地(⛰️)、沼泽(🌿)是五种地形。熊(🐻)与美洲狮(🐾)是叠加的领地。立石(🗿)与废弃小屋(🏚️)分别有不同颜色。按六边形相邻格计距，包括目标自身的 0 格；地形不阻挡距离。</p>
-            <h3>每回合二选一</h3><p>${explanations.question}</p><p>${explanations.search}</p><p>搜索中已有对方圆片就跳过此人。补圆片不改变原搜索格；遇到首个方块立即停止，后续玩家不泄露结果。搜索失败不出局，补方块后继续正常轮转。</p>
-            <h3>线索目录</h3><p>普通模式包含两种地形之一、1 格内某地形、1 格内任意动物、2 格内某类结构物、2 格内某种动物、3 格内某颜色结构物，共 23 条。进阶增加黑色结构物及完整条件的否定，共 48 条。例如“不满足：位于森林或水域”是既非森林也非水域；“不在 2 格内”是距离大于 2。建筑类型线索忽略颜色，颜色线索忽略类型。</p>
-            <details><summary>All clue types</summary><ul>${(view?.catalog || []).map(clue => `<li>${esc(clue.description)}</li>`).join("")}</ul></details>
-            <h3>提示、笔记与回顾</h3><p>${explanations.hint}</p><p>${explanations.notes}</p><p>${explanations.next}</p>
-            <h3>线上适配</h3><p>强制回答由服务器诚实计算。仅当所有合法新落点已耗尽时，免除对应的额外圆片／补偿方块，并公开记录。这是避免卡局的线上约定。地图地形依据官方辅助站转录，题目独立生成并验证唯一解；界面使用原创图形。普通模式六个结构物，进阶八个。没有双人规则或 Urban Legends 模式。</p>
-            <h3>地图操作</h3><p>${explanations.zoom}</p><p>${explanations.map} Cancel、蒙版周围空白或 Esc 取消未提交选择。</p><p>${explanations.clue} ${explanations.highlight} Notes(📝) 也从右侧打开；Save 保存私人笔记。图标可悬停查看说明，手机轻点显示三秒提示。</p>`);
+    const CRYPTID_CLUE_BASE = {
+        zh: "<p>普通模式收录 23 条线索，覆盖两种地形之一、1 格内某地形、1 格内任意动物、2 格内某类结构物、2 格内某种动物，以及 3 格内某颜色结构物。</p><p>进阶模式再加入黑色结构物与完整条件的否定，共 48 条。例如不满足位于森林或水域，意思是既非森林也非水域。不在 2 格内则表示距离大于 2。建筑类型线索忽略颜色，颜色线索忽略类型。</p>",
+        en: "<p>Normal mode holds 23 clues covering one of two terrain types, a terrain within 1, any animal within 1, a structure type within 2, an animal within 2, and a structure colour within 3.</p><p>Advanced mode adds black structures and full negations for a total of 48. Not satisfied by forest or water means the cell is neither forest nor water, and not within 2 means the distance is greater than 2. Structure type clues ignore colour and colour clues ignore type.</p>"
+    };
+
+    const CRYPTID_HELP_CONFIG = {
+        gameId: "cryptid",
+        title: { zh: "诡影寻踪 · Cryptid", en: "Cryptid" },
+        basic: {
+            win: {
+                zh: "地图上只有一个格子同时符合所有人的线索，先成功搜索(🔍)该格的玩家获胜，光在笔记(📝)里推断出来并不算赢。",
+                en: "Exactly one cell on the map satisfies every player's clue at once, and the first player to search (🔍) that cell wins. Working it out in your notes (📝) alone does not count."
+            },
+            turn: {
+                zh: "轮到你时二选一，向一名对手询问(❓)某个格子，或者搜索(🔍)一个符合你自己线索的格子，两种行动都会在地图上留下可能(●)或排除(■)标记。",
+                en: "On your turn you pick one of two actions, either question (❓) an opponent about a cell or search (🔍) a cell matching your own clue, and both leave a possible (●) or excluded (■) marker on the map."
+            },
+            key: {
+                zh: "你的线索只有你自己知道，所以真正的功夫在于用别人被迫放下的标记反推出他们的线索，并锁定那个唯一解。",
+                en: "Only you know your own clue, so the real work is reading the markers your opponents are forced to place, reconstructing their clues, and pinning down the single cell that fits them all."
+            }
+        },
+        sections: [
+            {
+                id: "setup",
+                label: { zh: "开局与标记", en: "Setup and markers" },
+                html: {
+                    zh: "<p>按照起始席位，每人轮流放一个排除(■)，一共两圈，每人两个。可能(●)表示符合放置者自己的线索，排除(■)表示不符合。</p><p>每格可以有不同玩家的圆片，但至多一个方块。方块出现之后就不能再对该格进行任何操作。自己的标记不可重复，标记也不会移走。</p>",
+                    en: "<p>Following the starting seating, players take turns placing one exclusion (■) each, two full laps so everyone places two. A possible disc (●) means the cell matches the placer's own clue, and an exclusion (■) means it does not.</p><p>A cell may carry discs from several different players but at most one cube. Once a cube appears the cell is closed to every further action. You can never repeat your own marker, and markers are never removed.</p>"
+                }
+            },
+            {
+                id: "terrain",
+                label: { zh: "地形与距离", en: "Terrain and distance" },
+                html: {
+                    zh: "<p>森林(🌲)、沙漠(🏜️)、水域(🌊)、山地(⛰️)与沼泽(🌿)是五种地形。熊(🐻)与美洲狮(🐾)是叠加在地形之上的领地。立石(🗿)与废弃小屋(🏚️)各自有不同的颜色。</p><p>距离按六边形相邻格计算，包含目标自身的 0 格，地形不会阻挡距离。</p>",
+                    en: "<p>Forest (🌲), desert (🏜️), water (🌊), mountain (⛰️) and swamp (🌿) are the five terrain types. Bears (🐻) and cougars (🐾) are territories layered on top of the terrain. Standing stones (🗿) and abandoned shacks (🏚️) each come in several colours.</p><p>Distance is counted in adjacent hexes and includes the target itself at 0, and terrain never blocks distance.</p>"
+                }
+            },
+            {
+                id: "turn",
+                label: { zh: "每回合二选一", en: "Your two actions" },
+                html: {
+                    zh: "<p>询问(❓)要选一个没有排除(■)的格子，再选一名尚未回答过该格的对手。你可以问一个不符合自己线索的位置，系统会诚实回答，得到否定后你必须另放一个方块。</p><p>搜索(🔍)只能选符合自己线索且没有排除(■)的格子。你先放一个可能(●)，如果那里已经有自己的圆片，就先在别处补一个。系统按席位逐一核对，遇到第一个否定就停下并让你补方块，全部通过才算获胜。</p><p>搜索过程中已有对方圆片就跳过那个人。补圆片不会改变原来的搜索格，遇到第一个方块立刻停止，后面的玩家不会泄露结果。搜索失败不会出局，补完方块后照常轮转。</p>",
+                    en: "<p>A question (❓) needs a cell with no exclusion (■) plus an opponent who has not answered for that cell yet. You may ask about a spot that fails your own clue, the server answers honestly, and a negative answer obliges you to place a cube elsewhere.</p><p>A search (🔍) may only target a cell that matches your own clue and carries no exclusion (■). You place a possible disc (●) first, and if your disc already sits there you top it up somewhere else. The server checks players in seat order, stops at the first refusal and makes you place a cube, and you win only when everybody passes.</p><p>Players who already have a disc on the searched cell are skipped. Topping up a disc never changes the original search cell, the check halts at the first cube, and later players learn nothing. Failing a search does not knock you out, and play continues normally once you place your cube.</p>"
+                }
+            },
+            {
+                id: "clues",
+                label: { zh: "线索目录", en: "Clue catalogue" },
+                html: { zh: CRYPTID_CLUE_BASE.zh, en: CRYPTID_CLUE_BASE.en }
+            },
+            {
+                id: "tools",
+                label: { zh: "提示与笔记", en: "Hints and notes" },
+                html: {
+                    zh: "<p>提示(💡)需要投票通过，三人局要全员同意，四人或五人局至少要人数减一同意。每局最多公开一个尚未使用的线索类别，没有可用类别时会在投票通过后说明。开局未完成或答案已揭示时不能投票。</p><p>笔记(📝)只有你自己看得到，可以手动标记候选格与排除格，也可以勾掉你认为不成立的对手线索，按 Save 保存。Your clue(🔒) 用来查看自己的秘密线索，Highlight 用金色描边标出符合你线索的格子。</p><p>每圈结束会暂停回顾，每人分别点 Next Round，全员确认之后才继续。</p>",
+                    en: "<p>A hint (💡) needs a vote, unanimous in a three player game and at least one less than the full table in four or five player games. It reveals at most one unused clue category per game, and says so when none is left. Voting is closed before setup finishes and after the solution is revealed.</p><p>Notes (📝) are private, letting you mark candidate and excluded cells by hand or tick off opponent clues you believe are false, then Save. Your clue (🔒) shows your secret clue, and Highlight outlines the cells matching it in gold.</p><p>Each lap ends with a review pause where everyone presses Next Round separately, and play resumes only once all of them confirm.</p>"
+                }
+            },
+            {
+                id: "online",
+                label: { zh: "线上适配", en: "Online notes" },
+                html: {
+                    zh: "<p>强制回答由服务器诚实计算。只有当所有合法新落点都已耗尽时，才会免除对应的额外圆片或补偿方块，并公开记录，这是避免卡局的线上约定。</p><p>地图地形依据官方辅助站转录，题目独立生成并验证唯一解，界面使用原创图形。普通模式有六个结构物，进阶模式有八个。本实现没有双人规则，也没有 Urban Legends 模式。</p>",
+                    en: "<p>Forced answers are computed honestly by the server. Only when every legal new placement is exhausted does it waive the matching extra disc or compensating cube, and that waiver is logged publicly as an online convention that keeps games from stalling.</p><p>Map terrain is transcribed from the official helper site, puzzles are generated independently and verified to have a unique solution, and the interface art is original. Normal mode uses six structures and advanced mode uses eight. There is no two player rule and no Urban Legends mode here.</p>"
+                }
+            },
+            {
+                id: "controls",
+                label: { zh: "地图操作", en: "Map controls" },
+                html: {
+                    zh: "<p>用 +／− 缩放，按 Fit 查看整张地图。在地图区域内拖动可以平移，手机支持双指缩放，区域之外则正常滚动页面。</p><p>点选六边形后会在附近弹出蒙版，在蒙版里选行动并用 Confirm 或 Cancel 确认取消。点蒙版周围的空白或按 Esc 也能取消未提交的选择。</p><p>图标可以悬停查看说明，手机轻点会显示三秒提示。</p>",
+                    en: "<p>Use + and − to zoom and Fit to frame the whole map. Dragging inside the map area pans it, phones support pinch zoom, and dragging outside the area scrolls the page normally.</p><p>Tapping a hex opens an overlay next to it where you pick an action and confirm or cancel it. Tapping the empty space around the overlay or pressing Esc also drops an unsubmitted choice.</p><p>Icons can be hovered for a description, and a tap on a phone shows a three second tip.</p>"
+                }
+            }
+        ]
+    };
+
+    // The full clue list only exists once a game is running, so it is folded
+    // into the catalogue section right before the dialog opens.
+    function refreshCryptidClueCatalogue() {
+        const section = CRYPTID_HELP_CONFIG.sections.find(item => item.id === "clues");
+        if (!section) return;
+        const items = (view?.catalog || []).map(clue => `<li>${esc(clue.description)}</li>`).join("");
+        const extra = items ? `<details><summary>All clue types</summary><ul>${items}</ul></details>` : "";
+        section.html.zh = CRYPTID_CLUE_BASE.zh + extra;
+        section.html.en = CRYPTID_CLUE_BASE.en + extra;
+    }
+
+    function initCryptidHelpExplain() {
+        if (cryptidHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        cryptidHelpWidget = window.obgCreateHelp(CRYPTID_HELP_CONFIG);
+        cryptidExplainWidget = window.obgCreateExplain({
+            gameId: "cryptid",
+            attribute: "data-cryptid-explain",
+            explanations: CRYPTID_EXPLAIN,
+            button: explainButton,
+            root: () => panel,
+            bypass: ["#cryptidHelpBtn", "#cryptidExplainBtn", "#cryptidDialogClose"]
+        });
+        helpButton?.addEventListener("click", () => {
+            cryptidExplainWidget?.exit();
+            refreshCryptidClueCatalogue();
+            cryptidHelpWidget.open();
+        });
+        explainButton?.addEventListener("click", () => cryptidExplainWidget?.toggle());
     }
 
     function notebookHTML() {
@@ -379,7 +511,7 @@
     }
     panel.addEventListener("pointerdown", event => {
         const svg = event.target.closest(".cryptid-map");
-        if (!svg || selected || explaining || event.button > 0) return;
+        if (!svg || selected || event.button > 0) return;
         svg.setPointerCapture(event.pointerId);
         pointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
         const points = [...pointers.values()];
@@ -422,52 +554,30 @@
     panel.addEventListener("pointercancel", event => { blockClickUntil = Date.now() + 700; endPointer(event); });
     panel.addEventListener("lostpointercapture", endPointer);
     panel.addEventListener("wheel", event => {
-        if (!event.target.closest(".cryptid-map") || explaining) return;
+        if (!event.target.closest(".cryptid-map")) return;
         event.preventDefault(); setZoom(zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12));
     }, {passive: false});
     panel.addEventListener("keydown", event => {
         if (event.target.closest("[data-cell]") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); event.target.dispatchEvent(new MouseEvent("click", {bubbles: true})); }
     });
 
-    document.addEventListener("pointerdown", event => {
-        suppressed = null;
-        if (!explaining || !view) return;
-        if ([helpButton, explainButton, dialogClose].includes(event.target)) return;
-        let element = event.target.closest("[data-cryptid-explain]");
-        if (!element) element = [...panel.querySelectorAll("[data-cryptid-explain]")].find(item => {
-            if (item.closest("[inert]")) return false;
-            const r = item.getBoundingClientRect(); return r.width && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
-        });
-        event.preventDefault(); event.stopImmediatePropagation();
-        suppressed = {x: event.clientX, y: event.clientY, until: Date.now() + 900};
-        explainElement(element);
-    }, true);
+    document.addEventListener("pointerdown", () => { suppressed = null; }, true);
     document.addEventListener("click", event => {
         if (suppressed && Date.now() < suppressed.until && Math.abs(event.clientX - suppressed.x) < 5 && Math.abs(event.clientY - suppressed.y) < 5) {
             event.preventDefault(); event.stopImmediatePropagation(); suppressed = null; return;
         }
-        if (!explaining || !view || [helpButton, explainButton, dialogClose].includes(event.target)) return;
-        event.preventDefault(); event.stopImmediatePropagation();
-        const element = event.target.closest("[data-cryptid-explain]");
-        explainElement(element);
     }, true);
     document.addEventListener("keydown", event => {
-        if (!view) return;
+        if (!view || event.defaultPrevented) return;
         if (event.key === "Escape") {
             hideTip(); resetGesture();
-            if (explaining) { event.preventDefault(); setExplain(false); }
-            else if (!dialog.open && selected) cancelSelection();
-        } else if (explaining && ["Enter", " "].includes(event.key) && event.target.matches("input,select,textarea")) {
-            event.preventDefault(); event.stopImmediatePropagation();
-            explainElement(event.target.closest("[data-cryptid-explain]"));
+            if (!dialog.open && selected) cancelSelection();
         }
     }, true);
-    panel.addEventListener("pointerover", event => { const el = event.target.closest("[data-cryptid-tip]"); if (el && event.pointerType !== "touch" && !explaining && !pointers.size) showTip(el.dataset.cryptidTip, el); });
+    panel.addEventListener("pointerover", event => { const el = event.target.closest("[data-cryptid-tip]"); if (el && event.pointerType !== "touch" && !pointers.size) showTip(el.dataset.cryptidTip, el); });
     panel.addEventListener("pointerout", event => { if (event.pointerType !== "touch") hideTip(); });
-    panel.addEventListener("focusin", event => { const el = event.target.closest("[data-cryptid-tip]"); if (el && !explaining) showTip(el.dataset.cryptidTip, el); });
+    panel.addEventListener("focusin", event => { const el = event.target.closest("[data-cryptid-tip]"); if (el) showTip(el.dataset.cryptidTip, el); });
     panel.addEventListener("focusout", hideTip);
-    helpButton.addEventListener("click", showHelp);
-    explainButton.addEventListener("click", () => setExplain(!explaining));
     dialogClose.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
     dialog.addEventListener("close", () => {
@@ -489,7 +599,7 @@
 
     function clearState() {
         view = null; signature = null; selected = null; target = ""; pending = false;
-        setExplain(false); hideTip(); resetGesture(); window.clearTimeout(pendingTimer);
+        cryptidExplainWidget?.exit(); hideTip(); resetGesture(); window.clearTimeout(pendingTimer);
         if (dialog.open) dialog.close();
         dialogBody.replaceChildren(); notesDraft = null; returnFocusAction = null; panel.innerHTML = "";
     }
@@ -517,6 +627,11 @@
         };
         socket.on("room:state", syncRoomConfig);
         if (typeof currentRoomState !== "undefined") syncRoomConfig(currentRoomState);
+    }
+    if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", initCryptidHelpExplain, {once: true});
+    } else {
+        initCryptidHelpExplain();
     }
     if (document.readyState === "loading" || typeof socket === "undefined") {
         window.addEventListener("DOMContentLoaded", connectEvents, {once: true});

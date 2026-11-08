@@ -335,6 +335,10 @@ function renderGameState(data) {
     if (typeof renderTicketToRideGameState === "function") renderTicketToRideGameState(data);
     return;
   }
+  if (gameType === "twelve_rivers") {
+    if (typeof renderTwelveRiversGameState === "function") renderTwelveRiversGameState(data);
+    return;
+  }
   if (gameType === "dice_throne") {
     if (typeof renderDiceThroneGameState === "function") renderDiceThroneGameState(data);
     return;

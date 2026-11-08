@@ -108,6 +108,7 @@ from game.wandering_towers import WanderingTowersGame
 from game.semantic_guess import SemanticGuessGame
 from game.dare_words import DareWordsGame
 from game.ticket_to_ride import TicketToRideGame
+from game.twelve_rivers import TwelveRiversGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -219,6 +220,7 @@ __all__ = [
     "DareWordsGame",
     "WordSyncGame",
     "TicketToRideGame",
+    "TwelveRiversGame",
     "GameDefinition",
     "get_game",
     "list_games",

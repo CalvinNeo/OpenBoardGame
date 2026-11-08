@@ -95,6 +95,62 @@ class CelestiaGameTests(unittest.TestCase):
         self.assertEqual(state["phase"], "game_over")
         self.assertEqual(state["winner"], ["p1"])
 
+    def test_every_passenger_decides_once_in_seat_order(self):
+        for captain, expected in (("p1", ["p2", "p3", "p4"]), ("p3", ["p4", "p1", "p2"])):
+            with self.subTest(captain=captain):
+                state = CelestiaGame.init_game({}, self._players(4))
+                for player in state["players"].values():
+                    player["hand"] = []
+                state.update(phase="passenger_choice", captain=captain, pending_passenger=expected[0])
+                for player_id, choice in zip(expected, ("stay", "leave", "stay")):
+                    self.assertEqual(state["pending_passenger"], player_id)
+                    _, error = CelestiaGame.apply_action(state, player_id, {"type": "passenger_choice", "choice": choice})
+                    self.assertIsNone(error)
+                self.assertEqual(state["phase"], "captain_action")
+                self.assertIsNone(state["pending_passenger"])
+
+    def test_passenger_order_skips_players_who_already_left_the_ship(self):
+        state = CelestiaGame.init_game({}, self._players(4))
+        for player in state["players"].values():
+            player["hand"] = []
+        state.update(phase="passenger_choice", captain="p4", pending_passenger="p1")
+        state["players"]["p2"]["on_ship"] = False
+        _, error = CelestiaGame.apply_action(state, "p1", {"type": "passenger_choice", "choice": "stay"})
+        self.assertIsNone(error)
+        self.assertEqual(state["pending_passenger"], "p3")
+        _, error = CelestiaGame.apply_action(state, "p3", {"type": "passenger_choice", "choice": "leave"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "captain_action")
+
+    def test_special_pass_is_not_offered_again_until_a_power_resets_it(self):
+        for phase, kind in (("reroll_window", "wind_gust"), ("ejection_window", "ejection")):
+            with self.subTest(phase=phase):
+                state = CelestiaGame.init_game({}, self._players(3))
+                state.update(phase=phase, dice_results=["blank", "blank"])
+                state["players"]["p1"]["hand"] = []
+                for player_id in ("p2", "p3"):
+                    state["players"][player_id]["hand"] = [{"id": player_id, "category": "power", "kind": kind}]
+                _, error = CelestiaGame.apply_action(state, "p2", {"type": "pass_special"})
+                self.assertIsNone(error)
+                self.assertEqual(CelestiaGame.get_legal_actions(state, "p2"), [])
+                self.assertIsNone(CelestiaGame.bot_move(state, "p2"))
+                self.assertIn("pass_special", CelestiaGame.get_legal_actions(state, "p3"))
+                _, error = CelestiaGame.apply_action(state, "p3", {"type": "pass_special"})
+                self.assertIsNone(error)
+                self.assertNotEqual(state["phase"], phase)
+
+    def test_ejection_resets_other_players_special_passes(self):
+        state = CelestiaGame.init_game({}, self._players(3))
+        state["phase"] = "ejection_window"
+        state["players"]["p1"]["hand"] = []
+        for player_id in ("p2", "p3"):
+            state["players"][player_id]["hand"] = [{"id": player_id, "category": "power", "kind": "ejection"}]
+        self.assertIsNone(CelestiaGame.apply_action(state, "p2", {"type": "pass_special"})[1])
+        action = {"type": "play_power", "card_id": "p3", "target_player_id": "p3"}
+        self.assertIsNone(CelestiaGame.apply_action(state, "p3", action)[1])
+        self.assertEqual(state["special_passes"], [])
+        self.assertIn("pass_special", CelestiaGame.get_legal_actions(state, "p2"))
+
 
 if __name__ == "__main__":
     unittest.main()

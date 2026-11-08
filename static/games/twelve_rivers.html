@@ -1,0 +1,67 @@
+<template data-game-target="twelveRiversHeaderActions" data-game-mode="contents">
+  <button id="twelveRiversHelpBtn" type="button" aria-label="Help" title="Help">Help</button>
+  <button id="twelveRiversExplainBtn" type="button" aria-label="Explain" title="Explain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="twelveRiversPanel" data-game-mode="contents">
+  <header class="tr12-heading">
+    <div id="twelveRiversRound" class="tr12-round" data-tr12-explain="round" tabindex="0">Round 1 / 5</div>
+    <strong id="twelveRiversStatus" class="tr12-status" role="status" aria-live="polite">Waiting to start</strong>
+    <button id="twelveRiversNext" class="tr12-next hidden" type="button">Next Round</button>
+  </header>
+  <div class="tr12-main">
+    <section class="tr12-board-section" aria-label="River valley board">
+      <div class="tr12-section-heading">
+        <h3>THE VALLEY</h3>
+        <div class="tr12-map-controls">
+          <button id="twelveRiversZoomOut" type="button" aria-label="Zoom out" data-tr12-explain="zoom">−</button>
+          <button id="twelveRiversZoomIn" type="button" aria-label="Zoom in" data-tr12-explain="zoom">+</button>
+          <button id="twelveRiversFit" type="button" data-tr12-explain="zoom">Fit</button>
+          <button id="twelveRiversOrigin" type="button" data-tr12-explain="zoom">1:1</button>
+          <button id="twelveRiversDockBtn" type="button" data-tr12-explain="dock">🧺 My camp</button>
+        </div>
+      </div>
+      <div id="twelveRiversMapFrame" class="tr12-map-frame" data-tr12-explain="board" tabindex="0">
+        <svg id="twelveRiversMap" viewBox="0 0 1000 760" role="img" aria-label="Twelve rivers flowing down to the village"></svg>
+        <div id="twelveRiversSlotOverlay" class="tr12-slot-overlay hidden"></div>
+      </div>
+      <div id="twelveRiversTrack" class="tr12-track" data-tr12-explain="track" tabindex="0"></div>
+    </section>
+    <aside id="twelveRiversDock" class="tr12-dock" aria-label="Your camp">
+      <div class="tr12-dock-head">
+        <h3>MY CAMP</h3>
+        <button id="twelveRiversDockClose" type="button" aria-label="Close camp">✕</button>
+      </div>
+      <section class="tr12-alpaca-section" data-tr12-explain="alpaca">
+        <h4>🦙 Alpaca <span id="twelveRiversAlpacaCount"></span></h4>
+        <div id="twelveRiversAlpaca" class="tr12-alpaca"></div>
+        <div id="twelveRiversAlpacaGoals" class="tr12-goals"></div>
+      </section>
+      <section class="tr12-hand-section" data-tr12-explain="hand">
+        <h4>🎴 Camp cards <span id="twelveRiversHandCount"></span></h4>
+        <div id="twelveRiversHand" class="tr12-hand"></div>
+      </section>
+      <section class="tr12-fairy-section" data-tr12-explain="fairies">
+        <h4>🧚 Fairies</h4>
+        <div id="twelveRiversFairies" class="tr12-fairies"></div>
+      </section>
+      <section class="tr12-markaya-section" data-tr12-explain="markaya">
+        <h4>🏘️ My Markaya</h4>
+        <div id="twelveRiversMarkaya" class="tr12-markaya"></div>
+      </section>
+    </aside>
+  </div>
+  <section class="tr12-village-section" data-tr12-explain="village">
+    <div class="tr12-section-heading"><h3>MARKAYA ON OFFER</h3><span id="twelveRiversDeckInfo" class="tr12-deck-info"></span></div>
+    <div id="twelveRiversOffer" class="tr12-offer"></div>
+  </section>
+  <section class="tr12-players-section" aria-label="Players">
+    <div class="tr12-section-heading"><h3>AT THE TABLE</h3></div>
+    <div id="twelveRiversPlayers" class="tr12-players"></div>
+  </section>
+  <section id="twelveRiversReview" class="tr12-review hidden" aria-label="Final scores">
+    <div class="tr12-section-heading"><h3>FINAL SCORES</h3></div>
+    <div id="twelveRiversResults" class="tr12-results"></div>
+  </section>
+  <details class="tr12-log"><summary>Activity log</summary><ol id="twelveRiversLog"></ol></details>
+  <div id="twelveRiversTooltip" class="tr12-tooltip hidden" role="tooltip"></div>
+</template>

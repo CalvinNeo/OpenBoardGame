@@ -27,7 +27,7 @@
     control:"控制 Control（🚩）：冲突可给予厄拉金、迦太格或帝国盆地控制权。任何玩家访问时，控制者得一索拉里（💰），帝国盆地改为一香料（🟠）。下一次该城市冲突可从供应区投入一防御部队（🛡️）。",
     deck:"牌库 Deck（🃏）：抽牌堆耗尽时才重洗弃牌堆。购买的新牌先进入弃牌堆。移除 Trash（✖）可选手牌、弃牌或在场牌；储备牌被移除会回到储备堆。",
   };
-  let view = null, selected = null, selectedCard = null, tab = "board", boardGroup = "factions", pending = false, explaining = false;
+  let view = null, selected = null, selectedCard = null, tab = "board", boardGroup = "factions", pending = false;
   let pendingTimer = null, tipTimer = null, suppressedUntil = 0, focusBack = null;
   let gesture = null;
   const esc = v => String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -41,7 +41,23 @@
   const sourceName = uid => view.cards[uid] ? card(uid).name_zh : "";
   const amounts = values => Object.entries(values).map(([k,n])=>`${icons[k]||""} ${n}`).join(" · ");
   const amountWords = values => Object.entries(values).map(([k,n])=>`${names[k]||k}(${icons[k]||""}) ${n}`).join("、");
-  const explainAttr = text => `data-di-explain="${esc(text)}"`;
+  // Explanations are generated per card, space and move, so the shared widget
+  // gets a short-lived key that is written into the very map it reads from.
+  const DUNE_IMPERIUM_EXPLAIN = {
+    help_button: { zh: "打开沙丘：帝国的完整规则讲解。", en: "Open the full Dune Imperium rules." },
+    explain_button: { zh: "进入解释模式。可解释的控件会高亮，点一下看说明，按 Esc 退出。", en: "Enter explain mode. Explained controls highlight, tap one to read it, press Esc to leave." },
+    dialog_close: { zh: "关闭当前对话框并回到棋盘。", en: "Close the current dialog and return to the board." }
+  };
+  let dynExplainKeys = [];
+  function resetDynExplain() { dynExplainKeys.forEach(key=>delete DUNE_IMPERIUM_EXPLAIN[key]); dynExplainKeys=[]; }
+  const explainAttr = text => {
+    if(!text) return "";
+    const key=`dyn${dynExplainKeys.length}`;
+    dynExplainKeys.push(key);
+    DUNE_IMPERIUM_EXPLAIN[key]={zh:String(text),en:String(text)};
+    return `data-di-explain="${key}"`;
+  };
+  const explainText = key => DUNE_IMPERIUM_EXPLAIN[key]?.zh || "";
   const tooltipAttr = text => `data-di-tip="${esc(text)}" tabindex="0"`;
   function token(key,n,label) { return `<span class="di-token" ${tooltipAttr(label||`${names[key]}(${icons[key]})`)}>${icons[key]} ${esc(n)}</span>`; }
   function effectText(e, words=false) {
@@ -81,10 +97,6 @@
     if(html)content.innerHTML=body;else content.textContent=body;
     if(!dialog.open)dialog.showModal();
     document.getElementById("duneImperiumClose").focus();
-  }
-  function setExplain(value) {
-    explaining=value;hideTip();root.classList.toggle("di-explaining",value);
-    explainButton.setAttribute("aria-pressed",String(value));
   }
   function resetSelection() { selected=null;selectedCard=null;hideTip(); }
   function moveButton(m,label,explanation="effect",extra="") {
@@ -298,6 +310,7 @@
   }
   function render({compactHand=false,reopenHand=false}={}) {
     if(!view)return;
+    resetDynExplain();
     const scrolls=new Map([...root.querySelectorAll("[data-di-scroll]")].map(el=>[el.dataset.diScroll,el.scrollTop]));
     const details=new Map([...root.querySelectorAll("[data-di-detail]")].map(el=>[el.dataset.diDetail,el.open]));
     const pageY=scrollY;
@@ -317,7 +330,6 @@
     const nextFocus=focusId?document.getElementById(focusId):focusIndex!=null?root.querySelector(`[data-index="${focusIndex}"]`):null;
     if(nextFocus&&!nextFocus.disabled)nextFocus.focus({preventScroll:true});
     if(scrollY!==pageY)window.scrollTo({top:pageY,behavior:"instant"});
-    root.classList.toggle("di-explaining",explaining);
     updateActionAttention();
   }
 
@@ -336,7 +348,7 @@
   root.addEventListener("click",event=>{
     const target=event.target.closest("[data-di-action]");
     if(!target){const t=event.target.closest("[data-di-tip]");if(t)showTip(t);return;}
-    if(target.disabled||explaining)return;
+    if(target.disabled)return;
     const action=target.dataset.diAction;
     if(action==="confirm"){submit();return;}
     if(action==="leader"){selected=moves("leader").find(m=>m.leader===target.dataset.leader);submit();return;}
@@ -344,7 +356,7 @@
     if(action==="change-card"){resetSelection();render({reopenHand:true});root.querySelector(".di-hand-section").scrollIntoView({block:"nearest",behavior:"smooth"});return;}
     if(action==="tab"){tab=target.dataset.tab;hideTip();render();return;}
     if(action==="region"){boardGroup=target.dataset.region;hideTip();render();return;}
-    if(action==="info"){openDialog("Details",target.dataset.diExplain);return;}
+    if(action==="info"){openDialog("Details",explainText(target.dataset.diExplain));return;}
     if(action==="player"){
       const p=player(target.dataset.player), leader=view.catalog.leaders[p.leader];
       const sections=[["In play",p.played.concat(p.revealed)],["Discard",p.discard],["Reserved",p.reserved]];
@@ -390,47 +402,150 @@
     const key=event.target.id==="duneImperiumAmount"?"amount":event.target.id==="duneImperiumAgent"?"agent":null;
     if(key){const value=key==="amount"?Number(event.target.value):event.target.value;selected=moves("agent").find(m=>m.card===selected.card&&m.space===selected.space&&m[key]===value&&(key==="agent"?m.amount===selected.amount:m.agent===selected.agent));render();}
   });
-  root.addEventListener("pointerover",event=>{if(event.pointerType!=="touch"&&!explaining)showTip(event.target.closest("[data-di-tip]"));});
+  root.addEventListener("pointerover",event=>{if(event.pointerType!=="touch")showTip(event.target.closest("[data-di-tip]"));});
   root.addEventListener("pointerout",hideTip);
-  root.addEventListener("focusin",event=>{if(!explaining)showTip(event.target.closest("[data-di-tip]"));});
+  root.addEventListener("focusin",event=>{showTip(event.target.closest("[data-di-tip]"));});
   window.addEventListener("resize",hideTip);document.addEventListener("scroll",hideTip,true);
-  function help() {
-    setExplain(false);
-    const sections=[
-      ["目标与开局","2–4 个玩家席位，八位原版领袖，67 张帝国牌、40 张阴谋牌。每人相同 10 张起始牌、两特工（👤）、一水（💧）、三驻军（🛡️），总兵力 12。四人局 1 分开局，双人及三人局 0 分开局。一个人可在房间里 Add Bot。冲突牌顺序是 1 张 I、5 张 II、4 张 III，最多十轮。"],
-      ["特工回合",explanations.agent+" 剑师永久增加一名特工，包括本轮；门塔特是临时特工。高议会永久在揭示时加二说服力（🗣️）。"],
-      ["揭示与购牌",explanations.reveal+" "+explanations.buy+" 普通卡牌收益自动汇总到说服力、剑和资源。部署数量、支付费用、选择派系或移除卡牌时，点选项一次就生效。只有效果顺序会影响结果时才选择先结算哪项，并显示对应卡牌或行动格。抽牌堆用完才洗弃牌；揭示期间抽到的牌立即揭示并结算。"],
-      ["四派系与联盟",explanations.influence+" 皇帝（👑）、宇航公会（🚀）、贝尼·杰瑟里特（🔮）、弗雷曼（🏜️）。塔布穴地需要弗雷曼影响力至少 2。"],
-      ["部署与战斗",explanations.deploy+" "+explanations.conflict+" "+explanations.pass+" 独赢者结算后还可使用胜后阴谋牌。"],
-      ["香料与控制",explanations.maker+" "+explanations.control],
-      ["阴谋牌与卡牌联动",explanations.intrigue+" 弗雷曼羁绊要求另一张弗雷曼牌在场；贝尼·杰瑟里特联动同理。特工牌与揭示牌在揭示结束前均算在场。移除储备牌回到储备，其他牌退出本局。移除暗杀任务得四索拉里（💰）；帝国间谍只有用自己的能力移除才抽阴谋牌。"],
-      ["轮末与终局",explanations.next+" 达到 10 分（⭐）或第十轮结束时，在本轮冲突完整结算后触发终局。先打终局阴谋牌，再比胜利点、香料、索拉里、水、驻军，仍相同则最后揭示者胜。"],
-      ["双人局 House Hagal","自动加入第三方干扰者，无分数、手牌及资源。每轮先手玩家每次特工回合后，Hagal 根据卡牌派特工，至多三次；卡牌格被占或封锁则重抽。它可占格、招兵、争联盟并参与冲突，但不领取奖励；若赢得城市冲突，移除原控制权。"],
-      ["图标与操作",Object.entries(names).map(([k,n])=>`${n}(${icons[k]})`).join("、")+"；特工 Agent（👤）、戒指 Signet（💍）、联盟 Alliance（🤝）、控制 Control（🚩）、移除 Trash（✖）。卡牌右上角为购买价格，中间为特工效果，底部为 Reveal 揭示效果。仅派遣特工与购牌保留原地确认：点击手牌→棋盘→Confirm，Market 点卡牌→Buy / Cancel。Reveal、阴谋牌、部署数量、支付选项、效果顺序、Next Round、Pass、End Turn 均点一次提交。空白轻点或 Esc 取消选择，Esc 关闭对话框；滑动只滚动页面或列表。Explain 点选后自动退出，禁用按钮也可解释；悬停或手机点击非交互图标显示三秒提示。"],
-      ["版本","原版基础盒；不含伊克斯、不朽、起义、促销牌或纸面单人挑战。AI 使用公开信息及自己的手牌在本地计算，不需要额外模型。"]
-    ];
-    openDialog("Help · 沙丘：帝国",sections.map(([title,text])=>`<h3>${esc(title)}</h3><p>${esc(text)}</p>`).join("")+`<p><a href="https://www.direwolfdigital.com/dune-imperium/resources/" target="_blank" rel="noopener noreferrer">Official rules and FAQ</a></p>`,true);
+  const DUNE_IMPERIUM_HELP_CONFIG = {
+    gameId: "dune_imperium",
+    title: { zh: "沙丘：帝国 · Dune Imperium", en: "Dune Imperium" },
+    basic: {
+      win: {
+        zh: "任意玩家拿到 10 点胜利点(⭐)，或第十轮的冲突完整结算之后，游戏进入终局，先比胜利点(⭐)，再依次比香料(🟠)、索拉里(💰)、水(💧)与驻军(🛡️)，全部相同则最后揭示手牌的玩家获胜。",
+        en: "The game ends as soon as a player reaches 10 victory points (⭐), or once the tenth round's conflict has fully resolved. Compare victory points (⭐) first, then spice (🟠), solari (💰), water (💧) and garrison troops (🛡️), and if everything still ties the player who revealed last wins."
+      },
+      turn: {
+        zh: "特工回合里你打出一张手牌，并把一名特工(👤)派到图标匹配的合法行动格，揭示回合里你公开剩余手牌并用说服力(🗣️)购买新牌。",
+        en: "On an agent turn you play one card from hand and send an agent (👤) to a legal board space that matches its icons. On your reveal turn you turn the rest of your hand face up and spend persuasion (🗣️) to buy new cards."
+      },
+      key: {
+        zh: "把行动格与卡牌滚成联盟(🤝)、部队(🛡️)和索拉里(💰)，再换成胜利点(⭐)，同时盯住冲突(⚔️)奖励与对手的阴谋牌(🕵️)。",
+        en: "Roll board spaces and cards into alliances (🤝), troops (🛡️) and solari (💰), turn those into victory points (⭐), and keep an eye on conflict (⚔️) rewards and your rivals' intrigue cards (🕵️)."
+      }
+    },
+    sections: [
+      {
+        id: "setup",
+        label: { zh: "目标与开局", en: "Setup" },
+        html: {
+          zh: "<p>支持 2 到 4 名玩家，使用八位原版领袖、67 张帝国牌与 40 张阴谋牌。每人的起始配置完全相同，分别是 10 张起始牌、两名特工(👤)、一水(💧)与三驻军(🛡️)，兵力总量上限为 12。</p><p>四人局每人开局就有 1 点胜利点(⭐)，双人局与三人局则从 0 点开始。冲突牌按 1 张 I 级、5 张 II 级、4 张 III 级的顺序洗好，一局最多进行十轮。</p><p>一个人也能开局，在房间里点 Add Bot 就能添加电脑对手。</p>",
+          en: "<p>The game seats 2 to 4 players and uses the eight original leaders, 67 Imperium cards and 40 intrigue cards. Everyone starts identically with a 10 card deck, two agents (👤), one water (💧) and three garrison troops (🛡️), and a personal supply of 12 troops.</p><p>In a four player game everyone begins with 1 victory point (⭐), while two and three player games start at 0. The conflict deck is stacked as one tier I card, five tier II cards and four tier III cards, and a game lasts at most ten rounds.</p><p>You can also play alone in a room by adding a bot with Add Bot.</p>"
+        }
+      },
+      {
+        id: "agent",
+        label: { zh: "特工回合", en: "Agent turns" },
+        html: {
+          zh: "<p>特工回合是游戏的主体。你打出一张手牌，把它派到图标匹配的行动格，先支付入场费，再按任意顺序结算格子与卡牌的效果。每个行动格通常只能容纳一名特工。</p><p>剑师让你永久多出一名特工(👤)，本轮立刻生效。门塔特是只在本轮有效的临时特工。高议会席位让你在每次揭示时永久多得两点说服力(🗣️)。</p>",
+          en: "<p>Agent turns are the heart of the game. You play a card from hand, send it to a board space whose icon matches, pay the entry cost, then resolve the space and the card in any order you like. A space normally holds only one agent.</p><p>The Swordmaster permanently grants you a third agent (👤), starting with the current round. The Mentat is a temporary agent that lasts a single round. A seat on the High Council permanently adds two persuasion (🗣️) to every reveal.</p>"
+        }
+      },
+      {
+        id: "reveal",
+        label: { zh: "揭示与购牌", en: "Reveal and buying" },
+        html: {
+          zh: "<p>当你不想再派特工时就进入揭示回合，公开剩余手牌并结算揭示区。说服力(🗣️)可以购买多张牌，新牌默认进入弃牌堆。揭示结束后本轮不能再派特工。</p><p>剑(⚔️)只有在你已经于当前冲突中投入部队(🛡️)时才提供战力。牌库(🃏)要等抽牌堆耗尽才会重洗弃牌堆。</p><p>购买后帝国行会立刻补充新牌，你可以接着买。香料必须流动这张牌费用为 9，买下时立即得到 1 点胜利点(⭐)。</p>",
+          en: "<p>When you no longer want to send agents you take a reveal turn, turning your remaining hand face up and resolving its reveal effects. Persuasion (🗣️) can buy several cards, and new cards enter your discard pile by default. After revealing you cannot send agents again this round.</p><p>Swords (⚔️) only add strength if you already have troops (🛡️) in the current conflict. The deck (🃏) is reshuffled from the discard pile only when the draw pile runs out.</p><p>The Imperium row refills immediately after each purchase so you can keep buying. The Spice Must Flow costs 9 and grants 1 victory point (⭐) the moment you acquire it.</p>"
+        }
+      },
+      {
+        id: "influence",
+        label: { zh: "四派系与联盟", en: "Factions and alliances" },
+        html: {
+          zh: "<p>四条派系影响力轨道各从 0 走到 6。达到 2 时得到 1 点胜利点(⭐)，跌回 2 以下就会失去这一点。跨入 4 时获得资源奖励。</p><p>第一次到达 4 时你取得该派系的联盟(🤝)并再得 1 分。只有严格超过当前持有者才能抢走联盟，持有者掉到 4 以下或被反超也会失去它。</p><p>四个派系分别是皇帝(👑)、宇航公会(🚀)、贝尼·杰瑟里特(🔮)与弗雷曼(🏜️)。塔布穴地要求你的弗雷曼影响力至少为 2。</p>",
+          en: "<p>Each of the four faction influence tracks runs from 0 to 6. Reaching 2 scores 1 victory point (⭐), and dropping back below 2 takes that point away. Crossing into 4 grants a resource bonus.</p><p>The first time you reach 4 you take that faction's alliance (🤝) and score another point. Only a strictly higher total can steal an alliance, and the holder also loses it by falling below 4 or being overtaken.</p><p>The four factions are the Emperor (👑), the Spacing Guild (🚀), the Bene Gesserit (🔮) and the Fremen (🏜️). Sietch Tabr requires your Fremen influence to be at least 2.</p>"
+        }
+      },
+      {
+        id: "combat",
+        label: { zh: "部署与战斗", en: "Deploy and combat" },
+        html: {
+          zh: "<p>派特工到战斗格之后可以部署部队(🛡️)，投入本回合新招募的部队以及至多两名原驻军，部署数量也可以为零。每人的兵力总量为 12。</p><p>冲突结算时每名参战部队(🛡️)提供 2 点战力，再加上剑(⚔️)。没有部队则战力为 0。第一名与第二名拿走对应奖励，只有四人局才给第三名奖励。</p><p>并列第一时双方都拿第二档奖励，并列第二时双方都拿第三档奖励，并列第三没有奖励，战力为零同样没有奖励。冲突结束后部队回到供应区，撤退的部队则回到驻军。</p><p>Pass 表示暂时不再出战斗阴谋牌(🕵️)。只要还有人参战，你之后仍然可以再次响应。所有参战玩家连续 Pass 之后才结算冲突，独赢者结算后还能使用胜后阴谋牌。</p>",
+          en: "<p>After sending an agent to a combat space you may deploy troops (🛡️), committing the troops you recruited this turn plus up to two garrison troops, and deploying zero is allowed. Your personal supply holds 12 troops in total.</p><p>During a conflict each committed troop (🛡️) is worth 2 strength, and swords (⚔️) add on top. A player with no troops has 0 strength. First and second place take their rewards, and only a four player game rewards third place.</p><p>Tied for first means both players take the second tier reward, tied for second means both take the third tier reward, a tie for third wins nothing, and zero strength wins nothing either. After a conflict troops return to the supply, while retreated troops go back to your garrison.</p><p>Pass means you stop playing combat intrigue cards (🕵️) for now. If somebody keeps playing you may respond again, the conflict resolves only once every participant passes in a row, and an outright winner may still use post victory intrigue cards.</p>"
+        }
+      },
+      {
+        id: "spice",
+        label: { zh: "香料与控制", en: "Spice and control" },
+        html: {
+          zh: "<p>产地(🟠)会在轮末累积香料。大平原、哈加盆地与帝国盆地在轮末没有特工时各累积 1 香料(🟠)，下一次到访的玩家拿走基础产量加上累积值。</p><p>冲突可以把厄拉金、迦太格或帝国盆地的控制权(🚩)判给某位玩家。任何玩家到访时，控制者得到 1 索拉里(💰)，帝国盆地则改为 1 香料(🟠)。下一次该城市的冲突，控制者可以从供应区投入一名防御部队(🛡️)。</p>",
+          en: "<p>Maker spaces (🟠) accumulate spice between rounds. The Great Flat, Hagga Basin and the Imperial Basin each pile up 1 spice (🟠) at the end of a round if they hold no agent, and the next visitor takes the base yield plus everything accumulated.</p><p>A conflict can hand control (🚩) of Arrakeen, Carthag or the Imperial Basin to a player. Whenever anyone visits, the controller gains 1 solari (💰), except at the Imperial Basin where it is 1 spice (🟠). In the next conflict at that city the controller may commit one defensive troop (🛡️) from the supply.</p>"
+        }
+      },
+      {
+        id: "intrigue",
+        label: { zh: "阴谋牌与联动", en: "Intrigue and combos" },
+        html: {
+          zh: "<p>阴谋牌(🕵️)与主牌库分开。Plot 类只能在自己的特工回合或揭示回合打出，Combat 类只能在战斗阶段且你有部队时打出，胜后类必须独赢冲突才能使用，Endgame 类只能在本局结束时打出。</p><p>出牌前必须满足条件并支付费用。弗雷曼羁绊要求另一张弗雷曼牌已经在场，贝尼·杰瑟里特的联动同理。特工牌与揭示牌在揭示结束之前都算在场。</p><p>移除储备牌会让它回到储备堆，其他被移除的牌退出本局。暗杀任务被别人的效果移除时你得到 4 索拉里(💰)。帝国间谍只有用你自己的移除能力触发时才抽阴谋牌。</p>",
+          en: "<p>Intrigue cards (🕵️) live apart from the main deck. Plot cards work only on your own agent or reveal turn, Combat cards only during the combat phase and only if you have troops, post victory cards require you to win the conflict outright, and Endgame cards wait until the game is ending.</p><p>You must meet the condition and pay the cost before playing one. The Fremen bond needs another Fremen card already in play, and the Bene Gesserit combo works the same way. Agent cards and revealed cards both count as in play until the reveal finishes.</p><p>Trashing a reserve card returns it to the reserve, while any other trashed card leaves the game. Assassination Mission pays you 4 solari (💰) when somebody else removes it. Imperial Spy draws an intrigue card only when your own ability does the removing.</p>"
+        }
+      },
+      {
+        id: "endgame",
+        label: { zh: "轮末与终局", en: "Round end and endgame" },
+        html: {
+          zh: "<p>Next Round 表示你已经看完本轮结算。所有玩家都确认之后才收回部队(🛡️)与特工(👤)并开始下一轮，电脑对手会自动确认。</p><p>任意玩家达到 10 点胜利点(⭐)，或第十轮结束时，在本轮冲突完整结算后触发终局。先结算终局阴谋牌(🕵️)，再依次比胜利点(⭐)、香料(🟠)、索拉里(💰)、水(💧)与驻军(🛡️)，仍然相同则最后揭示手牌的玩家获胜。</p>",
+          en: "<p>Next Round confirms that you have finished reading the round summary. Troops (🛡️) and agents (👤) return and the next round begins only once every player has confirmed, and bots confirm automatically.</p><p>The endgame triggers as soon as a player reaches 10 victory points (⭐), or at the end of the tenth round, after that round's conflict has fully resolved. Endgame intrigue cards (🕵️) resolve first, then you compare victory points (⭐), spice (🟠), solari (💰), water (💧) and garrison troops (🛡️), and a remaining tie goes to the player who revealed last.</p>"
+        }
+      },
+      {
+        id: "hagal",
+        label: { zh: "双人局 Hagal", en: "Two player Hagal" },
+        html: {
+          zh: "<p>双人局会自动加入第三方干扰者 House Hagal。它没有分数、手牌与资源，也从不领取任何奖励。</p><p>每轮先手玩家每次特工回合之后，Hagal 会按翻出的卡牌派出特工，最多三次。如果卡牌对应的格子已被占用或被封锁，它会重新抽一张。</p><p>它可以占格、招兵、争夺联盟(🤝)并参与冲突(⚔️)。如果它赢下一座城市的冲突，原有的控制权(🚩)会被移除。</p>",
+          en: "<p>A two player game automatically adds House Hagal as a third party spoiler. It has no score, no hand and no resources, and it never collects rewards.</p><p>After each agent turn taken by the starting player, House Hagal sends an agent based on a revealed card, up to three times per round. If the matching space is occupied or blocked it simply draws again.</p><p>It can occupy spaces, recruit troops, contest alliances (🤝) and fight in conflicts (⚔️). If it wins a conflict in a city, the existing control (🚩) is removed.</p>"
+        }
+      },
+      {
+        id: "icons",
+        label: { zh: "图标与操作", en: "Icons and controls" },
+        html: {
+          zh: "<p>图标含义如下。皇帝(👑)、宇航公会(🚀)、贝尼·杰瑟里特(🔮)、弗雷曼(🏜️)、议会(🏛️)、城市(🏙️)、香料(🟠)、水(💧)、索拉里(💰)、部队(🛡️)、剑(⚔️)、说服力(🗣️)、胜利点(⭐)、抽牌(🃏)、阴谋牌(🕵️)、特工(👤)、戒指(💍)、联盟(🤝)、控制(🚩)与移除(✖)。</p><p>卡牌右上角是购买价格，中段是特工效果，底部是揭示效果。只有派遣特工与购买保留原地确认，流程是点击手牌再点棋盘最后按 Confirm。Market 里则是点卡牌之后按 Buy 或 Cancel。</p><p>Reveal、阴谋牌、部署数量、支付选项、效果顺序、Next Round、Pass 与 End Turn 都是点一次就提交。点空白处或按 Esc 取消选择，Esc 同时关闭对话框，滑动只用来滚动页面。</p><p>悬停或用手机点击非交互图标会显示三秒提示。完整官方规则见 <a href=\"https://www.direwolfdigital.com/dune-imperium/resources/\" target=\"_blank\" rel=\"noopener noreferrer\">Official rules and FAQ</a>。</p>",
+          en: "<p>The icons mean Emperor (👑), Spacing Guild (🚀), Bene Gesserit (🔮), Fremen (🏜️), Landsraad (🏛️), city (🏙️), spice (🟠), water (💧), solari (💰), troops (🛡️), swords (⚔️), persuasion (🗣️), victory points (⭐), card draw (🃏), intrigue (🕵️), agents (👤), signet rings (💍), alliance (🤝), control (🚩) and trash (✖).</p><p>A card shows its purchase cost in the top right corner, its agent effect in the middle and its reveal effect at the bottom. Only sending an agent and buying a card keep an in place confirmation, where you tap a hand card, then a board space, then Confirm. In the Market you tap a card and then Buy or Cancel.</p><p>Reveal, intrigue cards, deployment counts, payment options, effect order, Next Round, Pass and End Turn all submit on a single tap. Tapping empty space or pressing Esc clears your selection, Esc also closes dialogs, and dragging only scrolls the page.</p><p>Hovering or tapping a non interactive icon shows a three second tip. The complete official rules live at <a href=\"https://www.direwolfdigital.com/dune-imperium/resources/\" target=\"_blank\" rel=\"noopener noreferrer\">Official rules and FAQ</a>.</p>"
+        }
+      },
+      {
+        id: "version",
+        label: { zh: "版本", en: "Version" },
+        html: {
+          zh: "<p>本实现基于原版基础盒，不含伊克斯、不朽、起义、促销牌与纸面单人挑战。</p><p>电脑对手只使用公开信息与它自己的手牌在本地计算，不需要额外模型。</p>",
+          en: "<p>This implementation covers the original base box only, without Ix, Immortality, Rise of Ix, promo cards or the print and play solo challenge.</p><p>The bot reasons locally from public information and its own hand, so no extra model is required.</p>"
+        }
+      }
+    ]
+  };
+
+  let duneHelpWidget = null;
+  let duneExplainWidget = null;
+
+  function initDuneImperiumHelpExplain() {
+    if (duneHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    duneHelpWidget = window.obgCreateHelp(DUNE_IMPERIUM_HELP_CONFIG);
+    duneExplainWidget = window.obgCreateExplain({
+      gameId: "dune_imperium",
+      attribute: "data-di-explain",
+      explanations: DUNE_IMPERIUM_EXPLAIN,
+      button: explainButton,
+      root: () => panel,
+      bypass: ["#duneImperiumHelpBtn", "#duneImperiumExplainBtn"]
+    });
+    document.getElementById("duneImperiumHelpBtn")?.addEventListener("click", () => {
+      duneExplainWidget?.exit();
+      duneHelpWidget.open();
+    });
+    explainButton?.addEventListener("click", () => duneExplainWidget?.toggle());
   }
-  document.getElementById("duneImperiumHelp").addEventListener("click",help);
-  explainButton.addEventListener("click",()=>setExplain(!explaining));
   document.getElementById("duneImperiumClose").addEventListener("click",()=>dialog.close());
   dialog.addEventListener("click",event=>{const r=dialog.getBoundingClientRect();if(event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom))dialog.close();});
   dialog.addEventListener("close",()=>{suppressedUntil=0;if(focusBack?.isConnected)focusBack.focus();});
   const active=()=>!!view&&!panel.classList.contains("hidden");
-  function explainTarget(target) { if(target?.dataset.diExplain){setExplain(false);openDialog("Explain",target.dataset.diExplain);} }
   const controlTarget=target=>header.contains(target)||explainButton.contains(target)||dialog.contains(target)||target.closest("#roomControlsPanel");
-  function explainAtPoint(event) {
-    const direct=event.target.closest("[data-di-explain]");
-    return (direct&&root.contains(direct)?direct:null)||[...root.querySelectorAll("[data-di-explain]")].reverse().find(el=>{
-      const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom;
-    });
-  }
   document.addEventListener("pointerdown",event=>{
     if(!active()||controlTarget(event.target)||!root.contains(event.target))return;
     suppressedUntil=0;
-    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,moved:false,explaining};
+    if(duneExplainWidget?.isActive())return;
     // Keep native touch scrolling available, including over disabled controls.
-    if(explaining)event.stopImmediatePropagation();
+    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
   },true);
   document.addEventListener("pointermove",event=>{
     if(gesture?.id===event.pointerId&&Math.hypot(event.clientX-gesture.x,event.clientY-gesture.y)>8)gesture.moved=true;
@@ -443,9 +558,7 @@
     if(gesture?.id!==event.pointerId)return;
     const tap=gesture;gesture=null;
     if(tap.moved||Math.hypot(event.clientX-tap.x,event.clientY-tap.y)>8){suppressedUntil=Date.now()+650;return;}
-    if(tap.explaining){
-      event.preventDefault();event.stopImmediatePropagation();suppressedUntil=Date.now()+650;explainTarget(explainAtPoint(event));return;
-    }
+    if(duneExplainWidget?.isActive())return;
     if(root.contains(event.target)&&!event.target.closest("button,select,input,summary,a,[data-di-tip],.di-confirm")&&(selected||selectedCard)){
       const reopenHand=!!selectedCard;resetSelection();render({reopenHand});
     }
@@ -453,16 +566,12 @@
   document.addEventListener("click",event=>{
     if(!active()||controlTarget(event.target))return;
     if(Date.now()<suppressedUntil){event.preventDefault();event.stopImmediatePropagation();return;}
-    if(explaining){event.preventDefault();event.stopImmediatePropagation();explainTarget(event.target.closest("[data-di-explain]"));}
   },true);
   document.addEventListener("keydown",event=>{
-    if(!active())return;
-    if(event.key==="Escape"){hideTip();setExplain(false);if(!dialog.open){const reopenHand=!!selectedCard;resetSelection();render({reopenHand});}return;}
-    if(explaining&&!controlTarget(event.target)&&[" ","Enter","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(event.key)){
-      event.preventDefault();event.stopImmediatePropagation();if(event.key==="Enter"||event.key===" ")explainTarget(event.target.closest("[data-di-explain]"));
-    }
+    if(!active()||event.defaultPrevented)return;
+    if(event.key==="Escape"){hideTip();if(!dialog.open){const reopenHand=!!selectedCard;resetSelection();render({reopenHand});}return;}
   },true);
-  function clear() { view=null;pending=false;gesture=null;tab="board";boardGroup="factions";clearTimeout(pendingTimer);resetSelection();setExplain(false);document.body.classList.remove("dune-needs-action");panel.classList.remove("di-needs-action");root.replaceChildren();if(dialog.open)dialog.close(); }
+  function clear() { view=null;pending=false;gesture=null;tab="board";boardGroup="factions";clearTimeout(pendingTimer);resetSelection();duneExplainWidget?.exit();document.body.classList.remove("dune-needs-action");panel.classList.remove("di-needs-action");root.replaceChildren();if(dialog.open)dialog.close(); }
   window.renderDuneImperiumGameState=data=>{
     if(!data?.view||data.view.game_id!=="dune_imperium")return;
     if(typeof currentRoomState!=="undefined"&&data.room_id&&currentRoomState?.room_id!==data.room_id)return;
@@ -480,5 +589,6 @@
     }
     if(typeof currentRoomState!=="undefined"&&currentRoomState?.game_type==="dune_imperium"&&typeof lastGameStatePayload!=="undefined"&&lastGameStatePayload?.game_type==="dune_imperium")window.renderDuneImperiumGameState(lastGameStatePayload);
   }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",connect,{once:true});else connect();
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{initDuneImperiumHelpExplain();connect();},{once:true});
+  else {initDuneImperiumHelpExplain();connect();}
 })();

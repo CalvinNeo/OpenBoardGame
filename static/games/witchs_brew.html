@@ -1,58 +1,79 @@
+<template data-game-target="witchsBrewHeaderActions" data-game-mode="contents">
+  <button id="witchsBrewHelpBtn" type="button">Help</button>
+  <button id="witchsBrewExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
 <template data-game-target="witchsBrewPanel" data-game-mode="contents">
-              <div class="witchs-brew-header">
-                <div>
-                  <h2>Witch's Brew</h2>
-                  <div class="witchs-brew-subtitle">Choose roles, challenge claims, brew potions.</div>
-                </div>
-                <div class="witchs-brew-header-actions">
-                  <button id="witchsBrewHelpBtn" type="button">Help</button>
-                  <button id="witchsBrewExplainBtn" type="button">Explain</button>
-                </div>
-              </div>
+  <div class="wb-strip">
+    <span class="wb-chip" data-wb-explain="set">🧪 Set <b id="witchsBrewSet">-</b></span>
+    <span class="wb-chip" data-wb-explain="round">🔁 Round <b id="witchsBrewRound">-</b></span>
+    <span class="wb-chip" data-wb-explain="ravens">🐦‍⬛ <b id="witchsBrewRavens">-</b></span>
+    <span class="wb-chip wb-chip-phase" data-wb-explain="phase"><b id="witchsBrewPhase">-</b></span>
+  </div>
 
-              <div class="witchs-brew-status-grid">
-                <div>Phase: <span id="witchsBrewPhase">-</span></div>
-                <div>Current: <span id="witchsBrewCurrent">-</span></div>
-                <div>Role: <span id="witchsBrewRole">-</span></div>
-                <div>Spell: <span id="witchsBrewSpell">-</span></div>
-                <div>Ravens: <span id="witchsBrewRavens">-</span></div>
-                <div>Winner: <span id="witchsBrewWinner">-</span></div>
-              </div>
+  <div id="witchsBrewStatus" class="wb-status" role="status" aria-live="polite" data-wb-explain="status">Waiting for game state…</div>
 
-              <div id="witchsBrewNotice" class="round-notice hidden" aria-hidden="true">
-                <div id="witchsBrewNoticeTitle" class="round-notice-title">Round</div>
-                <div id="witchsBrewNoticeBody" class="round-notice-body">-</div>
-              </div>
+  <div id="witchsBrewNotice" class="round-notice hidden" aria-hidden="true" data-wb-explain="notice">
+    <div class="round-notice-title" id="witchsBrewNoticeTitle">Round resolved</div>
+    <div class="round-notice-body" id="witchsBrewNoticeBody">-</div>
+    <div class="wb-notice-rows" id="witchsBrewNoticeRows"></div>
+    <div class="wb-notice-foot">
+      <span class="wb-notice-ready" id="witchsBrewNoticeReady" data-wb-explain="ready"></span>
+      <button id="witchsBrewNextRoundBtn" type="button" data-wb-explain="next_round">Next Round</button>
+    </div>
+  </div>
 
-              <h3>Public Cards</h3>
-              <div id="witchsBrewPublicCards" class="witchs-brew-public"></div>
+  <section class="wb-stage" id="witchsBrewStage" data-wb-explain="stage"></section>
 
-              <h3>Your Roles</h3>
-              <div id="witchsBrewHand" class="witchs-brew-hand"></div>
+  <section class="wb-block wb-hand-block">
+    <div class="wb-head">
+      <h3 id="witchsBrewHandTitle">Your roles</h3>
+      <span class="wb-head-meta" id="witchsBrewHandMeta" data-wb-explain="hand_meta"></span>
+    </div>
+    <div id="witchsBrewHand" class="wb-hand" data-wb-explain="hand"></div>
+    <div id="witchsBrewHandBar" class="wb-hand-bar"></div>
+    <div id="witchsBrewHandOverlay" class="wb-overlay hidden" aria-hidden="true"></div>
+  </section>
 
-              <h3>Actions</h3>
-              <div id="witchsBrewActions" class="witchs-brew-actions"></div>
+  <section class="wb-block">
+    <div class="wb-head">
+      <h3>Brewing table</h3>
+      <span class="wb-head-meta" data-wb-explain="table">Public stacks</span>
+    </div>
+    <div id="witchsBrewPublic" class="wb-public" data-wb-explain="public"></div>
+    <div id="witchsBrewSpell" class="wb-spell" data-wb-explain="spell"></div>
+  </section>
 
-              <h3>Players</h3>
-              <div id="witchsBrewPlayers" class="witchs-brew-players"></div>
+  <section class="wb-block">
+    <div class="wb-head">
+      <h3>Players</h3>
+      <span class="wb-head-meta" id="witchsBrewTurnMeta" data-wb-explain="turn"></span>
+    </div>
+    <div id="witchsBrewPlayers" class="wb-players" data-wb-explain="players"></div>
+  </section>
 
-              <section id="witchsBrewHelpModal" class="modal hidden" aria-hidden="true">
-                <div class="modal-content witchs-brew-modal">
-                  <div class="modal-header">
-                    <h2>Witch's Brew Help</h2>
-                    <button id="witchsBrewHelpModalCloseBtn" type="button">Close</button>
-                  </div>
-                  <div id="witchsBrewHelpContent" class="modal-body"></div>
-                </div>
-              </section>
-
-              <section id="witchsBrewExplainModal" class="modal hidden" aria-hidden="true">
-                <div class="modal-content witchs-brew-modal">
-                  <div class="modal-header">
-                    <h2>Witch's Brew Explain</h2>
-                    <button id="witchsBrewExplainModalCloseBtn" type="button">Close</button>
-                  </div>
-                  <div id="witchsBrewExplainContent" class="modal-body"></div>
-                </div>
-              </section>
-            </template>
+  <details class="wb-ref" data-wb-explain="reference">
+    <summary>Reference &amp; log</summary>
+    <div class="wb-ref-body">
+      <details class="wb-ref-sub">
+        <summary>Spell book order</summary>
+        <ol id="witchsBrewSpellList" class="wb-list"></ol>
+      </details>
+      <details class="wb-ref-sub">
+        <summary>Cauldron stacks</summary>
+        <div id="witchsBrewStackList" class="wb-stacks"></div>
+      </details>
+      <details class="wb-ref-sub">
+        <summary>Shelf stacks</summary>
+        <div id="witchsBrewShelfList" class="wb-stacks"></div>
+      </details>
+      <details class="wb-ref-sub">
+        <summary>All twelve roles</summary>
+        <div id="witchsBrewRoleList" class="wb-role-ref"></div>
+      </details>
+      <details class="wb-ref-sub">
+        <summary>Round log</summary>
+        <ol id="witchsBrewLog" class="wb-log"></ol>
+      </details>
+    </div>
+  </details>
+</template>

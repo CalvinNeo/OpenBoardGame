@@ -2,41 +2,200 @@
   "use strict";
   const byId = suffix => document.getElementById(`startups${suffix}`);
   const panel = byId("Panel"), header = byId("HeaderActions"), configBox = byId("ConfigBox");
-  const dialog = byId("Dialog"), tooltip = byId("Tooltip");
-  let view = null, selection = null, pending = false, explaining = false;
-  let pendingTimer, tipTimer, suppressTimer, suppressClick = false, focusBeforeDialog;
+  const tooltip = byId("Tooltip");
+  let view = null, selection = null, pending = false;
+  let pendingTimer, tipTimer;
   let configSignature = null, renderSignature = null;
   let pointerGesture = null;
-  const explanations = {
-    round: ["Round · 局数", "默认单局。四局赛每局按财富排名：第一名 +2、第二名 +1、最后一名 −1，其余 0。下局由上局最后一名先手，所有资本和牌重置。"],
-    deck: ["Deck（🂠）· 牌堆", "45 张股份，每局暗移除 5 张，每人发 3 张。剩余数量不包括手牌、市场和公开投资。抽走最后一张的玩家仍须放一张牌，随后全部手牌同时计入股份并结算。"],
-    company: ["Company（公司）· 发行量", "🦒 Giraffe Beer 5、🐶 Bowwow Games 6、🦩 Flamingo Soft 7、🐙 Octo Coffee 8、🦛 Hippo Powertech 9、🐘 Elephant Mars Travel 10。牌上数字是整副牌的发行总量，不是分值。每张代表一股。"],
-    marker: ["Anti-Monopoly（🚫）· 反垄断标记", "公开持股最多者持有标记。手机上的 # 数字对应 Investors 的玩家座位号。首张投资取得标记，追平时原持有者保留，严格超过才转移。持有者不能从市场拿该公司股份，但抽牌时不必给该公司市场牌付资本。结算最高并列时标记不破平，所有人都不收付。"],
-    player: ["Investor · 玩家", "# 数字为玩家座位号，与公司反垄断标记（🚫）上的编号一致。You 是自己，Turn 是当前行动玩家。点击或悬停姓名可以查看完整名字。"],
-    capital: ["Capital（💰）· 资本", "每局从 10 枚开始，抽牌费用按市场中需要付费的牌逐张计算；从市场拿牌时收走牌上资本。每枚未支出的资本价值 1。结算时支付方每张小股东股份只失去 1；收到的筹码翻为 3 分。"],
-    draw: ["Draw · 从牌堆抽牌", "先给市场中未被自己反垄断标记（🚫）豁免的每张牌支付 1 枚资本（💰），再秘密抽 1 张。相同公司有多张牌也逐张收费。资本不够不能抽。空市场或全部豁免时免费。"],
-    take: ["Take Card · 从市场拿牌", "拿走选中的股份和上面全部资本（💰）。持有反垄断标记（🚫）的公司不能拿。随后必须放一张手牌，本回合不能把同公司的任何手牌弃回市场。"],
-    hand: ["Hand（🃏）· 隐藏手牌", "拿牌后从四张手牌中放一张，回合结束保持三张。其他人只能看到数量。牌堆耗尽后全部手牌一起计入最终持股，未投资的牌同样可能带来收入或支出。"],
-    invest: ["Invest · 公开投资", "将所选股份放到自己面前，成为公开持股（📊）。若严格超过该公司反垄断标记（🚫）的持有者，立即取得标记。已投资的牌不能收回或弃掉。"],
-    discard: ["To Market · 弃到市场", "把所选股份放进公共市场，其上资本（💰）从 0 开始。若这回合从市场拿过股份，不能把任何同公司的手牌放回市场，即使不是刚拿到的那一张。"],
-    portfolio: ["Portfolio（📊）· 持股", "游戏中显示已公开投资的数量，不含隐藏手牌（🃏）；结算时自动把手牌加上。每家公司只有唯一最多股份者收款，最高并列则该公司无人收付。"],
-    wealth: ["Wealth（💰）· 最终财富", "结算前资本 − 付出的筹码数 + 3 × 收入筹码数。资本不足可以负债，不用刚收到的 3 分筹码偿付。财富相同比收入筹码数，再比最近完成回合的顺序。"],
-    income: ["Income（🪙）· 收入筹码", "每家公司唯一最大股东从其他股东每张股份收 1 枚筹码；收到后每枚计 3 分。支出方每枚只失去 1 分。收入筹码数也是本局财富相同的第一破平条件。"],
-    points: ["Match points（🏆）· 比赛积分", "四局赛第一名 +2、第二名 +1、最后一名 −1，其余 0。最终比累计积分，再比第一名次数、第二名次数，最后比第四局排名。单局直接比较最终财富（💰）。"],
-    next: ["Next Round", "确认看完结算。所有玩家确认后才开始下一局，机器人自动确认自己，断线真人仍需重连后确认。最终结果会保留。"],
-    cancel: ["Cancel", "取消当前选牌，不执行任何游戏动作。也可以点击空白处或按 Esc。"],
+  const STARTUPS_EXPLAIN = {
+    round: {
+      zh: "当前是第几局。单局赛只打一局，四局赛每局按财富排名发放积分。",
+      en: "Which round is being played. A single-round match ends after one round, while a four-round match awards points every round."
+    },
+    deck: {
+      zh: "牌堆(🂠)里还剩多少张股份，不含手牌、市场和公开投资。抽走最后一张的玩家仍须放一张牌，随后本局立刻结算。",
+      en: "How many shares are left in the deck (🂠), excluding hands, the market and public investments. Whoever takes the last card still places a share, and the round then settles at once."
+    },
+    company: {
+      zh: "这家公司整副牌的发行量，不是分值。每张股份都算一股，发行量越大越容易堆出多数。",
+      en: "How many shares of this company exist in the whole deck. It is not a score. Every share counts as one, and a bigger supply makes majorities easier to build."
+    },
+    marker: {
+      zh: "反垄断标记(🚫)由公开持股最多者持有。首张公开投资即可取得，只有别人严格超过你才会转移。它让你免付这家公司的抽牌费用，也禁止你从市场拿这家公司的股份。",
+      en: "The anti-monopoly marker (🚫) belongs to the largest public holder. The first public investment takes it, and it only moves when someone strictly passes you. It frees you from that company's draw fees and blocks you from taking its market shares."
+    },
+    player: {
+      zh: "玩家座位号，与公司反垄断标记(🚫)上的编号一致。You 是你自己，Turn 表示现在轮到谁行动。",
+      en: "The seat number of a player, matching the number printed on the anti-monopoly marker (🚫). You marks yourself and Turn marks whoever is acting."
+    },
+    capital: {
+      zh: "资本(💰)。每局从 10 枚开始，抽牌时按市场里需要付费的牌逐张支付，从市场拿牌则收走牌上的全部资本。结算时每枚没花掉的资本值 1 分。",
+      en: "Capital (💰). You start every round with 10, pay one coin per chargeable market card when you draw, and collect every coin on a card when you take it. Each unspent coin is worth 1 point at settlement."
+    },
+    draw: {
+      zh: "从牌堆抽 1 张。先给市场中每张未被自己反垄断标记(🚫)豁免的牌支付 1 枚资本(💰)，这些资本会留在牌上。资本不够就不能抽。",
+      en: "Draw one card from the deck. First pay 1 capital (💰) for every market card not exempted by your own anti-monopoly marker (🚫), and those coins stay on the cards. You cannot draw without enough capital."
+    },
+    take: {
+      zh: "从市场拿走选中的股份，连同牌上的全部资本(💰)。自己持有反垄断标记(🚫)的公司不能拿。",
+      en: "Take the selected share from the market together with every coin on it. You may not take a company whose anti-monopoly marker (🚫) you hold."
+    },
+    hand: {
+      zh: "隐藏手牌(🃏)。拿到牌后手里有四张，放一张后回到三张。别人只看得到数量。结算时手牌全部公开并计入最终持股。",
+      en: "Your hidden hand (🃏). After taking a share you hold four cards and place one to return to three. Others only see the count. Every hand card is revealed and counted at settlement."
+    },
+    invest: {
+      zh: "把选中的股份公开投资到自己面前。公开持股(📊)参与反垄断标记(🚫)的争夺，已投资的牌不能收回。",
+      en: "Invest the selected share face up in front of you. Public holdings (📊) compete for the anti-monopoly marker (🚫), and invested cards can never be taken back."
+    },
+    discard: {
+      zh: "把选中的股份弃到公共市场，牌上的资本(💰)从 0 开始。本回合从市场拿过股份后，不能把同公司的任何手牌放回市场。",
+      en: "Send the selected share to the public market with its capital (💰) reset to 0. After taking a share from the market this turn you may not return any hand card of that same company."
+    },
+    portfolio: {
+      zh: "公开持股(📊)。游戏中只显示已投资的股份，不含隐藏手牌(🃏)。结算时手牌会自动加上，每家公司的唯一最大股东收款。",
+      en: "Public holdings (📊). During play only invested shares are shown, never the hidden hand (🃏). Hands are added at settlement, and the single largest holder of each company collects."
+    },
+    wealth: {
+      zh: "最终财富(💰)，等于结算前的资本减去付出的筹码数，再加上 3 倍收入筹码数。资本不够可以负债。",
+      en: "Final wealth (💰): capital before settlement minus chips paid plus three times the chips collected. Going into debt is allowed."
+    },
+    income: {
+      zh: "收入筹码(🪙)。每家公司的唯一最大股东从其他股东手里每张股份收 1 枚，收到后每枚计 3 分。",
+      en: "Income chips (🪙). The single largest holder of a company collects 1 chip per share from every other holder, and each collected chip is worth 3 points."
+    },
+    points: {
+      zh: "比赛积分(🏆)。四局赛每局第一名 +2、第二名 +1、最后一名 −1，其余 0。最终先比累计积分。",
+      en: "Match points (🏆). Every round of a four-round match gives +2 to the winner, +1 to second, −1 to last and 0 to everyone else. Total points decide the match."
+    },
+    next: {
+      zh: "确认看完结算并开始下一局。所有玩家都确认后才开局，上一局的最后一名先手。",
+      en: "Confirm the settlement and start the next round. The round begins once every player has confirmed, and the last player of the previous round goes first."
+    },
+    cancel: {
+      zh: "取消当前选牌，不执行任何游戏动作。点击空白处或按 Esc 同样可以取消。",
+      en: "Cancel the current selection without taking any game action. Clicking empty space or pressing Esc does the same."
+    },
+    settlement: {
+      zh: "逐公司展开查看谁向谁支付了多少筹码(🪙)。并列最高的公司没有任何收付。",
+      en: "Expand to see who paid how many chips (🪙) to whom, company by company. A tied company produces no payments at all."
+    },
+    history: {
+      zh: "本局与历局的行动记录和分数，用来复盘谁在什么时候拿走了哪张股份。",
+      en: "Action and score history for this round and earlier rounds, useful to retrace who took which share and when."
+    }
   };
-  const help = `
-    <h3>把握最大的那份股份</h3><p>3–7 人。公开投资和三张隐藏手牌（🃏）共同决定最终股份。每家公司只有唯一最大股东能够获得收入（🪙），最终财富（💰）最高者获胜。</p>
-    <h3>六家公司，共 45 张股份</h3><p>🦒 Giraffe Beer ×5 · 🐶 Bowwow Games ×6 · 🦩 Flamingo Soft ×7 · 🐙 Octo Coffee ×8 · 🦛 Hippo Powertech ×9 · 🐘 Elephant Mars Travel ×10。数字是整副牌的发行量，不是分值；每张代表一股。</p><p>每局随机暗移除 5 张，每人拿 3 张手牌和 10 枚 Capital（💰，资本）。市场从空开始，牌堆（🂠）面朝下。线上首局随机先手，按座位顺序轮转，资本和公开持股可见。</p>
-    <h3>每回合：拿一张，再放一张</h3><p><strong>Draw：</strong>给市场里每张牌支付 1 枚资本后，秘密抽一张牌。自己持有反垄断标记（🚫）的公司免付；同公司多张牌按张数收费。钱不够不能抽，空市场免费。</p><p><strong>Take Card：</strong>从市场选一张股份，连同其上全部资本拿到自己手里。不能拿自己持有反垄断标记的公司。</p><p>随后从四张手牌中选一张：<strong>Invest</strong> 放到自己面前，加入 Portfolio（📊，公开持股）；或 <strong>To Market</strong> 弃到市场，牌上资本从 0 开始。<strong>从市场拿牌后，本回合不能弃同公司的任何牌</strong>。放牌后手里重新保持三张。</p>
-    <h3>Anti-Monopoly（🚫，反垄断标记）</h3><p>第一位公开投资该公司的玩家取得标记；只有别人公开持股<strong>严格超过</strong>你时才转移。追平时原持有者保留，隐藏手牌此时不参与比较。标记让你免付该公司抽牌费用，也限制你从市场拿该公司牌。它不是最终结算的平手优势。</p>
-    <h3>最后一张与结算</h3><p>抽走牌堆最后一张的人仍须完成放牌，然后立刻结束本局；其他人不再行动。全部手牌同时公开并加入最终持股，市场和暗移除的牌不计入。</p><p>每家公司若有唯一最大股东，其他股东每持有一张该公司股份，就付给他 <strong>1 枚资本</strong>。收到的筹码翻到 <strong>3 分面</strong>。最高持股并列时，该公司所有人都不收付。资本不足时记负债，不使用新收到的 3 分筹码支付。</p>
-    <p class="startups-rule-example">例如 A 有 4 股、B 有 2 股、C 有 1 股：<br>A 收入 3 枚筹码＝+9 分；B 支出 2；C 支出 1。<br>最终 Wealth（💰，财富）＝结算前资本 − 支出 + 3 × 收入筹码。<br>B 若只剩 1 枚资本且没有其他收入，最终为 −1。</p>
-    <p>本局先比财富，再比收入筹码数，仍相同则最近完成回合者优先。结算卡片展示资本、支出、收入和财富；Company settlements 可展开查看逐公司收付。</p>
-    <h3>四局赛 · Match points（🏆）</h3><p>可在开始前选择 Four-round match。每局第一名 +2、第二名 +1、最后一名 −1，其余 0。所有玩家点击 <strong>Next Round</strong> 后，回收全部牌并重新准备，上一局最后一名先手。四局后比累计积分、第一名次数、第二名次数，最后按第四局排名破平。此最后一步也明确覆盖第四局冠军不在并列者中的情形。</p>
-    <h3>操作</h3><p>点选市场或手牌后，在牌区的半透明蒙版上确认；点击空白、Cancel 或 Esc 取消。Draw 和 Next Round 直接执行。手机公司标记中的 # 数字对应 Investors 的玩家座位号，点击标记或姓名可看完整信息。Help 集中规则，Explain 再点牌面、指标或按钮可解释，灰色按钮也支持。Esc 退出解释或关闭弹窗。静态图标可悬停，手机点击提示三秒后消失。机器人只使用自己的手牌及公开信息，是练习级对手。</p>
-    <p><a href="https://oinkgames.com/en/games/analog/startups/" target="_blank" rel="noopener noreferrer">Oink Games · Startups</a> · <a href="https://hobbygames.ru/download/rules/startups-rules.pdf" target="_blank" rel="noopener noreferrer">Rules reference</a></p>`;
+  const STARTUPS_HELP_CONFIG = {
+    gameId: "startups",
+    title: { zh: "初创公司 · Startups", en: "Startups" },
+    basic: {
+      win: {
+        zh: "一局结束时最终财富(💰)最高的人获胜，财富等于结算前的资本减去付出的筹码，再加上 3 倍收到的筹码。",
+        en: "The player with the highest final wealth (💰) wins the round. Wealth is your capital before settlement minus the chips you paid plus three times the chips you collected."
+      },
+      turn: {
+        zh: "轮到你时先拿一张股份，可以付资本从牌堆(🂠)抽一张，也可以从市场拿走一张现成的股份，然后必须从手牌里放一张出去。",
+        en: "On your turn you first take one share, either by paying capital to draw from the deck (🂠) or by taking a ready-made share from the market, and then you must place one card from your hand."
+      },
+      key: {
+        zh: "每家公司只有唯一最大股东才能收钱，所以真正的胜负藏在你那三张别人看不见的手牌(🃏)里。",
+        en: "Only the single largest holder of a company collects money, so the real outcome hides inside the three hand cards (🃏) that nobody else can see."
+      }
+    },
+    sections: [
+      {
+        id: "setup",
+        label: { zh: "准备", en: "Setup" },
+        html: {
+          zh: "<p>3 到 7 人同场。每局从 45 张股份里暗移除 5 张，其余洗成牌堆(🂠)，每人发 3 张隐藏手牌(🃏)和 10 枚资本(💰)，市场从空开始。</p>"
+            + "<p>六家公司的发行量分别是长颈鹿啤酒(🦒) 5 张、汪汪游戏(🐶) 6 张、火烈鸟软件(🦩) 7 张、章鱼咖啡(🐙) 8 张、河马动力(🦛) 9 张、大象火星旅行(🐘) 10 张。牌上的数字是整副牌的发行量，不是分值，每一张都算一股。</p>",
+          en: "<p>Three to seven players. Every round removes 5 of the 45 shares face down and shuffles the rest into the deck (🂠). Each player receives 3 hidden hand cards (🃏) and 10 capital (💰), and the market starts empty.</p>"
+            + "<p>The six companies issue Giraffe Beer (🦒) with 5 shares, Bowwow Games (🐶) with 6, Flamingo Soft (🦩) with 7, Octo Coffee (🐙) with 8, Hippo Powertech (🦛) with 9 and Elephant Mars Travel (🐘) with 10. The number on a card is its print run rather than a score, and every card counts as one share.</p>"
+        }
+      },
+      {
+        id: "turn",
+        label: { zh: "每回合", en: "Your turn" },
+        html: {
+          zh: "<p>轮到你时先拿一张股份。选 Draw 就要给市场里每张需要付费的牌付 1 枚资本(💰)，这些资本留在牌上，然后秘密抽 1 张。选 Take Card 就拿走市场里的一张股份和它上面的全部资本(💰)。自己持有反垄断标记(🚫)的公司不能从市场拿。</p>"
+            + "<p>拿到牌后手里有四张，必须放一张出去。Invest 把它公开放到自己面前，计入公开持股(📊)。To Market 把它弃到市场，牌上的资本从 0 开始重新累积。</p>"
+            + "<p>如果这回合是从市场拿的牌，就不能把同公司的任何手牌放回市场，哪怕不是刚拿到的那一张。放完牌手里重新保持三张，轮到下一位。</p>",
+          en: "<p>Your turn starts by taking one share. Draw pays 1 capital (💰) for every chargeable card in the market, leaves those coins on the cards and then draws one card in secret. Take Card instead removes one market share and every coin sitting on it. You may never take a company whose anti-monopoly marker (🚫) you hold.</p>"
+            + "<p>After taking a share you hold four cards and must place one. Invest puts it face up in front of you and adds it to your public holdings (📊). To Market sends it to the market, where its capital starts again from 0.</p>"
+            + "<p>If you took your share from the market this turn, you may not return any hand card of that same company, even a different copy of it. Placing a card brings your hand back to three and play passes on.</p>"
+        }
+      },
+      {
+        id: "marker",
+        label: { zh: "反垄断标记", en: "Anti-Monopoly marker" },
+        html: {
+          zh: "<p>第一位公开投资某家公司的玩家立即取得该公司的反垄断标记(🚫)。之后只有别人的公开持股严格超过你时标记才会转移，追平时原持有者保留。隐藏手牌(🃏)在争夺标记时不参与比较。</p>"
+            + "<p>标记带来两个效果。你抽牌时不必为市场上这家公司的牌付资本(💰)，但你也不能从市场拿走这家公司的股份。结算时它并不破平，最高并列的公司所有人都没有收付。</p>",
+          en: "<p>The first player to invest publicly in a company takes that company's anti-monopoly marker (🚫). From then on it only moves when another player's public holding strictly passes yours, so a tie leaves it with the current holder. Hidden hand cards (🃏) never count in this contest.</p>"
+            + "<p>The marker has two effects. You skip the draw fee for that company's market cards, and you may not take that company's shares from the market. It breaks no tie at settlement, where a tied company simply produces no payments.</p>"
+        }
+      },
+      {
+        id: "scoring",
+        label: { zh: "结算与财富", en: "Settlement" },
+        html: {
+          zh: "<p>抽走牌堆(🂠)最后一张的人仍须完成放牌，随后本局立刻结束，其他人不再行动。所有手牌同时公开，和公开持股(📊)一起算作最终持股，市场上的牌和暗移除的牌不计入。</p>"
+            + "<p>每家公司若存在唯一最大股东，其他股东每持有 1 张该公司的股份就要付给他 1 枚筹码(🪙)。收到的筹码每枚计 3 分，付出的每枚只扣 1 分。最高并列时这家公司没有任何收付。</p>"
+            + "<p>最终财富(💰)等于结算前的资本减去付出的筹码数，再加上 3 倍收到的筹码数。资本不够可以负债。财富相同先比收入筹码数，仍相同则最近完成回合的人优先。</p>",
+          en: "<p>The player who takes the last card of the deck (🂠) still finishes placing a share, and the round then ends at once without anyone else acting. Every hand is revealed and counted together with the public holdings (📊). Market cards and the removed cards never count.</p>"
+            + "<p>When a company has a single largest holder, every other holder pays that player 1 chip (🪙) for each share of that company they own. A collected chip is worth 3 points while a paid chip costs only 1 point. A tied company pays nothing at all.</p>"
+            + "<p>Final wealth (💰) is your capital before settlement minus the chips you paid plus three times the chips you collected. Running out of capital only means debt. Ties break first on income chips and then on who completed their turn most recently.</p>"
+        }
+      },
+      {
+        id: "match",
+        label: { zh: "四局赛", en: "Four-round match" },
+        html: {
+          zh: "<p>开局前可以把 Match 选成 Four-round match。每局第一名 +2、第二名 +1、最后一名 −1，其余 0，累加为比赛积分(🏆)。</p>"
+            + "<p>所有人按下 Next Round 之后回收全部牌重新准备，上一局的最后一名先手。四局打完先比累计积分，再比第一名次数、第二名次数，最后看第四局的排名。单局赛直接比较最终财富(💰)。</p>",
+          en: "<p>Before the game starts you may switch Match to a four-round match. Every round gives +2 to the winner, +1 to second place, −1 to last place and 0 to everyone else, and these add up to your match points (🏆).</p>"
+            + "<p>Once everyone presses Next Round the cards are collected and a fresh round is dealt, started by the last player of the previous round. After four rounds the totals decide the match, then the number of first places, then second places, and finally the ranking of round four. A single-round match simply compares final wealth (💰).</p>"
+        }
+      },
+      {
+        id: "controls",
+        label: { zh: "操作", en: "Controls" },
+        html: {
+          zh: "<p>点市场或手牌里的股份会在牌区弹出确认层，再点 Take Card、Invest 或 To Market 执行。点空白处、Cancel 或按 Esc 都能取消选择。Draw 与 Next Round 直接执行。</p>"
+            + "<p>Help 汇总全部规则，Explain 打开后再点牌面、指标或按钮可以逐项解释，灰色不可用的按钮同样能解释，按 Esc 退出解释。带说明的图标可以悬停查看，手机上点一下会显示三秒。机器人只使用自己的手牌和公开信息，是练习级对手。</p>",
+          en: "<p>Tapping a share in the market or in your hand opens a confirmation layer over the card area, where Take Card, Invest or To Market performs the move. Click empty space, press Cancel or hit Esc to drop the selection. Draw and Next Round act immediately.</p>"
+            + "<p>Help gathers every rule, and once Explain is on you can tap any card, indicator or button for a single explanation, including greyed-out buttons, with Esc leaving explain mode. Annotated icons show a hint on hover, or for three seconds when tapped on a phone. Bots only use their own hand and public information, so they are practice-level opponents.</p>"
+        }
+      }
+    ]
+  };
+
+  let startupsHelpWidget = null;
+  let startupsExplainWidget = null;
+
+  function initStartupsHelpExplain() {
+    if (startupsHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    startupsHelpWidget = window.obgCreateHelp(STARTUPS_HELP_CONFIG);
+    startupsExplainWidget = window.obgCreateExplain({
+      gameId: "startups",
+      attribute: "data-su-explain",
+      explanations: STARTUPS_EXPLAIN,
+      button: byId("ExplainBtn"),
+      root: () => document.getElementById("startupsPanel"),
+      bypass: ["#startupsHelpBtn", "#startupsExplainBtn"]
+    });
+    byId("HelpBtn")?.addEventListener("click", () => {
+      startupsExplainWidget?.exit();
+      startupsHelpWidget.open();
+    });
+    byId("ExplainBtn")?.addEventListener("click", () => startupsExplainWidget?.toggle());
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initStartupsHelpExplain);
+  } else {
+    initStartupsHelpExplain();
+  }
 
   function el(tag, className, value) {
     const node = document.createElement(tag);
@@ -49,9 +208,14 @@
   function name(id) { return view?.players.find(player => player.player_id === id)?.name || id || "—"; }
   function label(id) { const c = company(id); return `${c.emoji} ${c.name}`; }
   function can(kind) { return !!view && !pending && socket.connected && view.legal_actions.includes(kind); }
+  function explainText(key) {
+    const entry = STARTUPS_EXPLAIN[key];
+    if (!entry) return "";
+    return (window.obgHelpLang?.() === "en" ? entry.en : entry.zh) || entry.zh;
+  }
   function tip(node, key, message) {
     node.dataset.suExplain = key;
-    node.dataset.suTip = message || explanations[key][1];
+    node.dataset.suTip = message || explainText(key);
     if (node.tagName !== "BUTTON") node.tabIndex = 0;
     return node;
   }
@@ -138,7 +302,7 @@
       const playerName = `#${index + 1} ${player.name || player.player_id}`;
       heading.append(tip(el("strong", "", playerName), "player", playerName), el("small", "", [player.player_id === view.you ? "You" : "", player.is_bot ? "Bot" : "", view.ready.includes(player.player_id) ? "Ready ✓" : player.player_id === view.current_turn ? "Turn" : ""].filter(Boolean).join(" · ")));
       const stats = el("div", "startups-player-stats");
-      const handCount = tip(el("span", "", `🃏 ${player.hand_count}`), "hand", view.hands_revealed ? `Hand（🃏）：${player.hand.map(card => label(card.company)).join(" · ")}` : explanations.hand[1]);
+      const handCount = tip(el("span", "", `🃏 ${player.hand_count}`), "hand", view.hands_revealed ? `Hand（🃏）：${player.hand.map(card => label(card.company)).join(" · ")}` : explainText("hand"));
       handCount.append(el("span", "startups-hand-visibility", view.hands_revealed ? " revealed" : " hidden"));
       stats.append(tip(el("span", "", `💰 ${view.hands_revealed ? player.round_score : player.capital}`), view.hands_revealed ? "wealth" : "capital"),
         handCount);
@@ -221,7 +385,7 @@
     }
   }
   function dispatch(kind, extra = {}) {
-    if (explaining || !can(kind)) return;
+    if (!can(kind)) return;
     const context = {game_token: view.game_token, round_number: view.round_number, turn_number: view.turn_number};
     pending = true; clearTimeout(pendingTimer); hideTip();
     pendingTimer = setTimeout(() => { pending = false; render(); }, 2500);
@@ -229,7 +393,7 @@
   }
   ["Market", "Hand"].forEach(suffix => byId(suffix).addEventListener("click", event => {
     const card = event.target.closest("button[data-card-id]");
-    if (!card || card.disabled || explaining || (event.detail && pointerGesture?.moved)) return;
+    if (!card || card.disabled || (event.detail && pointerGesture?.moved)) return;
     selection = selection?.id === card.dataset.cardId ? null : {id: card.dataset.cardId, area: card.dataset.area};
     hideTip(); renderMarket(); renderHand();
     if (selection) byId(selection.area === "market" ? "Take" : "Invest").focus({preventScroll: true});
@@ -243,46 +407,15 @@
 
   function hideTip() { clearTimeout(tipTimer); tooltip.classList.add("hidden"); }
   function showTip(target, autoHide = false) {
-    if (!target || explaining || dialog.open) return;
+    if (!target) return;
     clearTimeout(tipTimer); tooltip.textContent = target.dataset.suTip; tooltip.classList.remove("hidden");
     const rect = target.getBoundingClientRect(), box = tooltip.getBoundingClientRect();
     tooltip.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - box.width - 12))}px`;
     tooltip.style.top = `${rect.bottom + box.height + 18 < innerHeight ? rect.bottom + 7 : Math.max(12, rect.top - box.height - 7)}px`;
     if (autoHide) tipTimer = setTimeout(hideTip, 3000);
   }
-  function setExplain(value) {
-    explaining = value; panel.classList.toggle("startups-explaining", value);
-    byId("ExplainBtn").setAttribute("aria-pressed", String(value)); hideTip();
-  }
-  function showDialog(title, body, html = false) {
-    hideTip(); focusBeforeDialog = document.activeElement; text("DialogTitle", title);
-    if (html) byId("DialogBody").innerHTML = body;
-    else byId("DialogBody").replaceChildren(el("p", "", body));
-    if (!dialog.open) dialog.showModal(); byId("DialogClose").focus();
-  }
-  function explain(target) {
-    const entry = explanations[target?.dataset.suExplain];
-    if (!entry) return;
-    setExplain(false); showDialog(entry[0], entry[1]);
-  }
-  byId("HelpBtn").addEventListener("click", () => { setExplain(false); showDialog("Startups · 初创公司", help, true); });
-  byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
-  byId("DialogClose").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus(); });
-  dialog.addEventListener("click", event => {
-    const rect = dialog.getBoundingClientRect();
-    if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
-  });
-  const exempt = target => target.closest("#startupsHelpBtn, #startupsExplainBtn, #startupsDialog");
   document.addEventListener("pointerdown", event => {
     pointerGesture = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, active: true};
-    suppressClick = false;
-    if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    // Hit-test the visible layer so disabled controls work without reaching covered cards.
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-su-explain]");
-    suppressClick = true; clearTimeout(suppressTimer);
-    suppressTimer = setTimeout(() => { suppressClick = false; }, 750); explain(target);
   }, true);
   document.addEventListener("pointermove", event => {
     if (pointerGesture?.id === event.pointerId && Math.hypot(event.clientX - pointerGesture.x, event.clientY - pointerGesture.y) > 8) pointerGesture.moved = true;
@@ -291,20 +424,13 @@
   document.addEventListener("pointercancel", () => {
     if (pointerGesture) { pointerGesture.moved = true; pointerGesture.active = false; }
   }, true);
-  document.addEventListener("click", event => {
-    if (suppressClick) { suppressClick = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-su-explain]"));
-  }, true);
   document.addEventListener("keydown", event => {
     if (panel.classList.contains("hidden")) return;
-    if (event.key === "Escape") { setExplain(false); hideTip(); deselect(); }
-    if (!explaining || exempt(event.target) || !["Enter", " "].includes(event.key)) return;
-    event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-su-explain]"));
+    if (event.key === "Escape") { hideTip(); deselect(); }
   }, true);
   document.addEventListener("click", event => {
     if (event.detail && pointerGesture?.moved) return;
-    if (!panel.classList.contains("hidden") && !dialog.open && !event.target.closest("button, input, select, dialog, summary, a")) deselect();
+    if (!panel.classList.contains("hidden") && !event.target.closest("button, input, select, dialog, summary, a")) deselect();
   });
   panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-su-tip]")); });
   panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
@@ -329,8 +455,8 @@
     view = null; selection = null; pending = false; renderSignature = null; pointerGesture = null;
     document.body.classList.remove("startups-needs-action");
     ["Market", "Hand"].forEach(suffix => { byId(suffix).inert = false; });
-    suppressClick = false; clearTimeout(pendingTimer); clearTimeout(suppressTimer);
-    setExplain(false); hideTip(); if (dialog.open) dialog.close();
+    clearTimeout(pendingTimer);
+    hideTip(); startupsExplainWidget?.exit(); startupsHelpWidget?.close();
     ["Companies", "Market", "Hand", "Players", "Scores", "Settlements", "History", "ScoreHistory"].forEach(suffix => byId(suffix).replaceChildren());
     ["MarketSelection", "HandSelection", "Review"].forEach(suffix => byId(suffix).classList.add("hidden"));
     ["Draw", "Take", "Invest", "Discard", "Next"].forEach(suffix => { byId(suffix).disabled = true; });

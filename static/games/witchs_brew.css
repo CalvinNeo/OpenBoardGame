@@ -1,172 +1,1001 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+/* Loaded into the matching style.css group by loadGameStyleFragments. */
 @media all, obg-game-witchs_brew-1 {
 
 .witchs-brew-panel {
-  display: grid;
-  gap: 14px;
-}
-
-.witchs-brew-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.witchs-brew-header h2 {
-  margin: 0;
-}
-
-.witchs-brew-subtitle,
-.witchs-brew-player-meta,
-.witchs-brew-selection-label,
-.witchs-brew-action-form .hint {
-  color: #5e6570;
-  font-size: 13px;
-}
-
-.witchs-brew-header-actions,
-.witchs-brew-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.witchs-brew-status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
-}
-
-.witchs-brew-status-grid > div {
-  border: 1px solid #d2d8df;
-  border-radius: 8px;
-  background: #fbfcfe;
-  padding: 8px 10px;
-}
-
-.witchs-brew-public,
-.witchs-brew-hand,
-.witchs-brew-players {
+  --wb-ink: #2b2440;
+  --wb-muted: #6b6480;
+  --wb-line: #e3dcf2;
+  --wb-accent: #6d28d9;
+  --wb-accent-soft: #f4efff;
   display: grid;
   gap: 10px;
+  color: var(--wb-ink);
 }
 
-.witchs-brew-public {
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
-}
+/* ---- Top strip ---------------------------------------------------- */
 
-.witchs-brew-hand {
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-}
-
-.witchs-brew-players {
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-}
-
-.witchs-brew-public-card,
-.witchs-brew-role-card,
-.witchs-brew-player-card,
-.witchs-brew-action-form {
-  border: 1px solid #d2d8df;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #26313d;
-  padding: 10px;
-}
-
-.witchs-brew-public-card {
-  display: grid;
+.wb-strip {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  min-height: 86px;
 }
 
-.witchs-brew-public-card strong,
-.witchs-brew-action-title,
-.witchs-brew-player-header {
+.wb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid var(--wb-line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.wb-chip b {
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-chip-phase {
+  border-color: #d9c9f5;
+  background: var(--wb-accent-soft);
+  color: var(--wb-accent);
+}
+
+.wb-status {
+  padding: 6px 10px;
+  border-left: 3px solid var(--wb-accent);
+  border-radius: 0 6px 6px 0;
+  background: var(--wb-accent-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* ---- Round notice ------------------------------------------------- */
+
+.wb-notice-rows {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.wb-notice-row {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.wb-notice-key {
+  flex: 0 0 82px;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.wb-notice-val {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #1f2937;
+  overflow-wrap: anywhere;
+}
+
+.wb-notice-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wb-notice-ready {
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---- Stage -------------------------------------------------------- */
+
+.wb-stage {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--wb-line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fbf8ff 0%, #ffffff 100%);
+}
+
+.wb-stage-prompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.wb-stage-prompt-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.wb-stage-role {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--wb-line);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.wb-stage-emoji {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.wb-stage-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wb-stage-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.wb-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.wb-tag.is-full {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.wb-tag.is-favor {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.wb-stage-effects {
+  display: grid;
+  gap: 2px;
+}
+
+.wb-effect {
+  display: flex;
+  gap: 6px;
+  color: var(--wb-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.wb-effect i {
+  flex: 0 0 38px;
+  color: var(--wb-accent);
+  font-style: normal;
   font-weight: 700;
 }
 
-.witchs-brew-public-card small,
-.witchs-brew-role-card small {
-  color: #5e6570;
+.wb-contest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.wb-contest-line {
+  display: inline-flex;
+  gap: 5px;
   font-size: 12px;
 }
 
-.witchs-brew-role-card {
-  display: grid;
-  grid-template-rows: auto auto 1fr 1fr;
-  gap: 5px;
-  min-height: 138px;
-  text-align: left;
+.wb-contest-key {
+  color: var(--wb-muted);
 }
 
-.witchs-brew-role-card > span {
+.wb-contest-val {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.wb-stage-text {
+  color: var(--wb-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* ---- Buttons and controls ----------------------------------------- */
+
+.wb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.wb-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--wb-line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--wb-ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.wb-btn.is-primary.action-allowed {
+  border-color: var(--wb-accent);
+  background: var(--wb-accent);
+  color: #fff;
+}
+
+.wb-btn.is-ghost {
+  color: var(--wb-muted);
+  font-weight: 500;
+}
+
+.wb-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- Ingredient picker -------------------------------------------- */
+
+.wb-picker {
+  display: block;
+}
+
+.wb-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wb-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--wb-line);
+  border-radius: 999px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.wb-pill-btn {
+  width: 26px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--wb-accent);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wb-pill-btn:disabled {
+  color: #cbd0d9;
+  cursor: not-allowed;
+}
+
+.wb-pill-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 34px;
+  justify-content: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-pill-face.is-zero b {
+  color: var(--wb-muted);
+}
+
+.wb-pill-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.wb-pick-count {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f0f5;
+  color: var(--wb-muted);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-pick-count.is-ready {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.wb-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.wb-extra-label {
+  color: var(--wb-muted);
+  font-size: 12px;
+}
+
+.wb-chips {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.wb-chip-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--wb-line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wb-chip-btn.is-on {
+  border-color: var(--wb-accent);
+  background: var(--wb-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--wb-accent);
+}
+
+/* ---- Blocks ------------------------------------------------------- */
+
+.wb-block {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--wb-line);
+}
+
+.wb-hand-block {
+  position: relative;
+  min-height: 132px;
+}
+
+.wb-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.wb-head h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+
+.wb-head-meta {
+  color: var(--wb-muted);
+  font-size: 12px;
+}
+
+/* ---- Role cards --------------------------------------------------- */
+
+.wb-hand {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+  gap: 6px;
+}
+
+.wb-hand.is-select {
+  grid-template-columns: repeat(auto-fill, minmax(94px, 1fr));
+}
+
+.wb-role {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 3px;
+  padding: 7px 8px;
+  border: 1px solid var(--wb-line);
+  border-left: 4px solid #cbd0d9;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--wb-ink);
+  text-align: left;
+  cursor: default;
+}
+
+.wb-role.kind-resource { border-left-color: #16a34a; }
+.wb-role.kind-gold { border-left-color: #d97706; }
+.wb-role.kind-cauldron { border-left-color: #2563eb; }
+.wb-role.kind-spell { border-left-color: #7c3aed; }
+.wb-role.kind-shelf { border-left-color: #dc2626; }
+
+.wb-role-emoji {
+  font-size: 21px;
+  line-height: 1.1;
+}
+
+.wb-role-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.wb-role-effects {
+  display: grid;
+  gap: 1px;
+  align-content: start;
+}
+
+.wb-role-effect {
+  display: flex;
+  gap: 4px;
+  color: var(--wb-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.wb-role-effect i {
+  flex: 0 0 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.wb-role-effect.is-full i { color: #5b21b6; }
+.wb-role-effect.is-favor i { color: #92400e; }
+
+.wb-role.is-actionable {
+  cursor: pointer;
+}
+
+.wb-role.is-actionable:hover,
+.wb-role.is-actionable:focus-visible {
+  border-color: var(--wb-accent);
+  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.16);
+}
+
+.wb-role.is-selected {
+  border-color: var(--wb-accent);
+  background: var(--wb-accent-soft);
+  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.2);
+}
+
+.wb-role.is-disabled {
+  background: #f5f5f7;
+  opacity: 0.6;
+}
+
+.wb-hand-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.wb-hand-count {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--wb-accent-soft);
+  color: var(--wb-accent);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-hand-note {
+  color: var(--wb-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ---- In-place confirmation overlay -------------------------------- */
+
+.wb-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(43, 36, 64, 0.55);
+}
+
+.wb-overlay-sheet {
+  display: grid;
+  gap: 8px;
+  width: min(360px, 100%);
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(24, 18, 46, 0.32);
+}
+
+.wb-overlay-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.wb-overlay-emoji {
   font-size: 24px;
   line-height: 1;
 }
 
-.witchs-brew-role-card.selected {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+.wb-overlay-text {
+  margin: 0;
+  color: var(--wb-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
-.witchs-brew-role-card:disabled {
-  cursor: default;
-}
-
-.witchs-brew-player-card.current {
-  border-color: #9333ea;
-  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.14);
-}
-
-.witchs-brew-player-card.self {
-  background: #f8fbff;
-}
-
-.witchs-brew-player-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.witchs-brew-action-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.witchs-brew-action-title {
-  width: 100%;
-}
-
-.witchs-brew-pay-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.witchs-brew-pay-grid label,
-.witchs-brew-inline {
-  display: inline-flex;
-  align-items: center;
+.wb-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
-.witchs-brew-number {
-  width: 64px;
+.wb-compare-col {
+  display: grid;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid var(--wb-line);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
-.witchs-brew-modal {
-  max-width: 760px;
+.wb-compare-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-body.witchs-brew-explain-mode .has-explanation {
-  cursor: help;
-  outline: 2px dashed #2563eb;
-  outline-offset: 2px;
+.wb-compare-tag.is-full { color: #5b21b6; }
+.wb-compare-tag.is-favor { color: #92400e; }
+
+.wb-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---- Brewing table ------------------------------------------------ */
+
+.wb-public {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 6px;
+}
+
+.wb-card {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 8px;
+  border: 1px solid var(--wb-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.wb-cauldron.stack-copper { background: #fff8f1; border-color: #f0d5b8; }
+.wb-cauldron.stack-iron { background: #f6f7fb; border-color: #d6dbe8; }
+.wb-cauldron.stack-silver { background: #f4fbf7; border-color: #cbe6d6; }
+.wb-shelf.shelf-gold_shelf { background: #fffaef; border-color: #eddfb6; }
+.wb-shelf.shelf-ingredient_shelf { background: #fdf6fb; border-color: #ecd2e6; }
+
+.wb-card-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.wb-card-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.wb-card-cost {
+  font-size: 15px;
+  letter-spacing: 1px;
+  line-height: 1.3;
+}
+
+.wb-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.wb-vp {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-weight: 700;
+}
+
+.wb-raven {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.wb-card-left {
+  color: var(--wb-muted);
+}
+
+.wb-card-empty,
+.wb-card-stored {
+  color: var(--wb-muted);
+  font-size: 11px;
+}
+
+.wb-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #ece9f3;
+  overflow: hidden;
+}
+
+.wb-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #a78bfa, #6d28d9);
+}
+
+.wb-card-progress {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-spell-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #ddd0f2;
+  border-radius: 8px;
+  background: #f8f4ff;
+  font-size: 12px;
+}
+
+.wb-spell-text {
+  flex: 1 1 160px;
+  min-width: 0;
+  color: var(--wb-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Players ------------------------------------------------------ */
+
+.wb-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+}
+
+.wb-player {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--wb-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.wb-player.is-you {
+  border-color: #c4b5fd;
+  background: #faf8ff;
+}
+
+.wb-player.is-current {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16);
+}
+
+.wb-player.is-ready {
+  border-color: #16a34a;
+}
+
+.wb-player.is-winner {
+  border-color: #d97706;
+  background: #fffbeb;
+}
+
+.wb-player-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.wb-player-name {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.wb-player-tag {
+  color: var(--wb-muted);
+  font-size: 11px;
+}
+
+.wb-player-score {
+  margin-left: auto;
+  color: var(--wb-accent);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.wb-player-res {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.wb-res {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #f4f4f7;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-res-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.wb-player-meta {
+  color: var(--wb-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.wb-player-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.wb-won {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ---- Reference ---------------------------------------------------- */
+
+.wb-ref {
+  padding-top: 8px;
+  border-top: 1px solid var(--wb-line);
+}
+
+.wb-ref > summary {
+  color: var(--wb-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wb-ref-body {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.wb-ref-sub > summary {
+  padding: 5px 8px;
+  border: 1px solid var(--wb-line);
+  border-radius: 7px;
+  background: #fbfaff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wb-list,
+.wb-log,
+.wb-stack-list {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 0 0 0 4px;
+  max-height: 190px;
+  overflow-y: auto;
+  list-style: none;
+  font-size: 12px;
+}
+
+.wb-list li,
+.wb-log li,
+.wb-stack-list li {
+  display: flex;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: #fbfaff;
+  line-height: 1.4;
+}
+
+.wb-list li span,
+.wb-log li span,
+.wb-stack-list li span {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--wb-muted);
+  overflow-wrap: anywhere;
+}
+
+.wb-list li.is-current,
+.wb-stack-list li.is-top {
+  background: var(--wb-accent-soft);
+}
+
+.wb-stacks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.wb-stack {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.wb-role-ref {
+  display: grid;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.wb-role-row {
+  display: grid;
+  grid-template-columns: 22px minmax(70px, 1fr) minmax(0, 1.3fr) minmax(0, 1.1fr);
+  gap: 6px;
+  align-items: center;
+  padding: 4px 6px;
+  border-left: 3px solid #cbd0d9;
+  border-radius: 5px;
+  background: #fbfaff;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.wb-role-row.kind-resource { border-left-color: #16a34a; }
+.wb-role-row.kind-gold { border-left-color: #d97706; }
+.wb-role-row.kind-cauldron { border-left-color: #2563eb; }
+.wb-role-row.kind-spell { border-left-color: #7c3aed; }
+.wb-role-row.kind-shelf { border-left-color: #dc2626; }
+
+.wb-role-row-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.wb-role-row-full,
+.wb-role-row-favor {
+  color: var(--wb-muted);
+  overflow-wrap: anywhere;
+}
+
+.wb-empty {
+  padding: 8px;
+  color: var(--wb-muted);
+  font-size: 12px;
+}
+
+/* ---- Tooltip ------------------------------------------------------ */
+
+.wb-tooltip {
+  position: fixed;
+  z-index: 4000;
+  max-width: min(260px, 80vw);
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: rgba(28, 22, 46, 0.95);
+  color: #f5f2ff;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* ---- Phones ------------------------------------------------------- */
+
+@media (max-width: 700px) {
+  .witchs-brew-panel {
+    gap: 8px;
+  }
+
+  .wb-stage {
+    padding: 8px;
+  }
+
+  .wb-stage-emoji {
+    font-size: 26px;
+  }
+
+  .wb-hand {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  }
+
+  .wb-hand.is-select {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 5px;
+  }
+
+  .wb-hand.is-select .wb-role {
+    padding: 6px;
+  }
+
+  .wb-hand.is-select .wb-role-emoji {
+    font-size: 18px;
+  }
+
+  .wb-hand.is-select .wb-role-effect {
+    font-size: 10px;
+  }
+
+  .wb-public {
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  }
+
+  .wb-players {
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  }
+
+  .wb-role-row {
+    grid-template-columns: 20px minmax(0, 1fr);
+    row-gap: 2px;
+  }
+
+  .wb-role-row-full,
+  .wb-role-row-favor {
+    grid-column: 2;
+  }
+
+  .wb-compare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wb-overlay-actions .wb-btn {
+    flex: 1 1 auto;
+  }
 }
 }

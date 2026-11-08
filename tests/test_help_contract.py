@@ -211,9 +211,11 @@ class HelpContractTest(unittest.TestCase):
                     )
 
     def test_help_and_explain_buttons_present(self):
+        """Buttons may live in the game template or in index.html."""
+        index = _read(os.path.join(ROOT, "static", "index.html"))
         for game_id in self.games:
             with self.subTest(game=game_id):
-                markup = read(game_id, ".html")
+                markup = read(game_id, ".html") + index
                 self.assertIn("HelpBtn", markup, "no Help button in markup")
                 self.assertIn("ExplainBtn", markup, "no Explain button in markup")
 

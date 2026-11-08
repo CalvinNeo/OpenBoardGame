@@ -5,8 +5,158 @@
   const targets = document.getElementById("chrominoTargets");
   const ghost = document.getElementById("chrominoPreview");
   const hand = document.getElementById("chrominoHand");
-  const dialog = document.getElementById("chrominoDialog");
   const tooltip = document.getElementById("chrominoTooltip");
+  // --- Help & Explain (designs/task40.md, designs/task185.md) -------------
+  const chrominoHelpButton = document.getElementById("chrominoHelpBtn");
+  const chrominoExplainButton = document.getElementById("chrominoExplainBtn");
+
+  const CHROMINO_HELP_CONFIG = {
+    gameId: "chromino",
+    title: { zh: "三色拼图 Chromino", en: "Chromino" },
+    basic: {
+      win: {
+        zh: "最先把手上的牌全部放上棋盘的玩家获胜。末轮里所有清空手牌的人并列获胜。",
+        en: "The first player to place every tile from their hand wins. Everyone who empties their hand during the final round shares the win."
+      },
+      turn: {
+        zh: "轮到你时放一枚三格牌到棋盘上，或者在无处可放时抽一枚牌。",
+        en: "On your turn you place one three-square tile on the board, or draw one tile when none of your tiles fits."
+      },
+      key: {
+        zh: "每条与相邻牌接触的边都必须同色，而且至少要有两条这样的接触边，所以要提前想好下一枚牌接在哪里。",
+        en: "Every edge touching a neighbouring tile must match in colour, and you need at least two such contacts, so plan where your next tile will connect."
+      }
+    },
+    sections: [
+      {
+        id: "setup",
+        label: { zh: "准备与目标", en: "Setup and goal" },
+        html: {
+          zh: "<p>标准套装共 80 枚三格牌，其中 75 枚普通牌和 5 枚变色龙(★)。开局随机取一枚变色龙(★)放在棋盘中央，每人发 8 枚暗牌，其余的牌留在牌袋里。</p>"
+            + "<p>先手玩家随机决定，之后按座次轮流行动。1 人也可以按同样规则练习。</p>",
+          en: "<p>The standard set has 80 three-square tiles, made of 75 ordinary tiles and 5 Chameleon (★) tiles. One random Chameleon (★) starts in the middle of the board, every player receives 8 hidden tiles, and the rest stay in the bag.</p>"
+            + "<p>The first player is chosen at random and play then follows the seating order. A single player can practise under the same rules.</p>"
+        }
+      },
+      {
+        id: "colours",
+        label: { zh: "颜色与符号", en: "Colours and symbols" },
+        html: {
+          zh: "<p>五种颜色各配一个几何符号，颜色和符号同时显示，避免只靠颜色辨认。红色(●)、黄色(◆)、绿色(✚)、蓝色(■)、紫色(▲)。</p>"
+            + "<p>变色龙(★)是牌中央的万能格，它两端的格子仍然是印好的普通颜色。</p>",
+          en: "<p>Each of the five colours carries a geometric symbol, and both are shown so the board never relies on colour alone. Red (●), Yellow (◆), Green (✚), Blue (■) and Purple (▲).</p>"
+            + "<p>The Chameleon (★) is the wild square in the middle of a tile. The two end squares keep their printed colours.</p>"
+        }
+      },
+      {
+        id: "placing",
+        label: { zh: "放牌规则", en: "Placing a tile" },
+        html: {
+          zh: "<p>每回合放 1 枚牌，可以绕中间那格旋转，但不能和棋盘上已有的牌重叠。</p>"
+            + "<p>新牌必须与已有的牌形成至少 2 条正交接触边，这两条边允许接触同一枚旧牌。</p>"
+            + "<p>每一条接触边都必须同色，多出来的接触边同样要同色，对角接触不算。</p>",
+          en: "<p>Each turn you place one tile. You may rotate it around its middle square, but it may never overlap a tile already on the board.</p>"
+            + "<p>The new tile must form at least 2 orthogonal edge contacts with the board, and both contacts may touch the same existing tile.</p>"
+            + "<p>Every touching edge must match in colour, including any extra contacts. Diagonal contact does not count.</p>"
+        }
+      },
+      {
+        id: "chameleon",
+        label: { zh: "变色龙(★)", en: "Chameleon (★)" },
+        html: {
+          zh: "<p>变色龙(★)位于牌的中间一格，它在每条边上分别匹配相邻的颜色，因此可以同时满足两个不同颜色的邻居。</p>"
+            + "<p>它不会永久变成某种颜色，下一次接触时仍然按万能格计算。</p>"
+            + "<p>牌的两端必须按印好的颜色匹配，变色龙(★)只负责中间那一格。</p>"
+            + "<p>变色龙(★)不能作为最后一枚牌打出。手上只剩它时你必须抽牌，牌袋空了则只能跳过。</p>",
+          en: "<p>The Chameleon (★) sits in the middle square of a tile. It matches each neighbouring colour separately, so it can satisfy two neighbours of different colours at once.</p>"
+            + "<p>It never becomes a permanent colour. The next contact still treats it as a wild square.</p>"
+            + "<p>The two ends of the tile must match their printed colours. The Chameleon (★) only covers the middle square.</p>"
+            + "<p>A Chameleon (★) cannot be played as your last tile. Holding only that tile forces you to draw, or to pass once the bag is empty.</p>"
+        }
+      },
+      {
+        id: "draw",
+        label: { zh: "抽牌与跳过", en: "Drawing and passing" },
+        html: {
+          zh: "<p>只有当你手上所有牌都无处可放时，才可以按 Draw 抽 1 枚。</p>"
+            + "<p>抽到的牌如果放得下，你可以立刻打出，也可以按 Keep &amp; Pass 把它留在手上并结束回合。抽牌之后不能再打出旧手牌。</p>"
+            + "<p>抽到的牌如果放不下，会自动留在手上并轮到下一位玩家。</p>"
+            + "<p>牌袋空了而且你没有合法落点时，才可以按 Pass 跳过。</p>",
+          en: "<p>You may press Draw for one tile only when none of the tiles in your hand can be placed.</p>"
+            + "<p>If the drawn tile fits, you either play it at once or press Keep &amp; Pass to keep it and end your turn. After drawing you can no longer play an older tile.</p>"
+            + "<p>If the drawn tile does not fit, it is kept automatically and play moves on.</p>"
+            + "<p>Pass becomes available only when the bag is empty and you have no legal placement.</p>"
+        }
+      },
+      {
+        id: "ending",
+        label: { zh: "末牌与获胜", en: "Last tile and victory" },
+        html: {
+          zh: "<p>手上只剩 1 枚牌时，这枚牌会对所有人公开。</p>"
+            + "<p>第一位清空手牌的玩家触发末轮，本轮继续进行到当前轮的最后一位玩家。</p>"
+            + "<p>末轮里所有把手牌放完的玩家并列获胜，已经在这一轮行动过的人不会得到额外回合。</p>",
+          en: "<p>When you hold a single tile, that tile is revealed to everyone.</p>"
+            + "<p>The first player to empty their hand triggers the final round, and the round continues to the last seat in turn order.</p>"
+            + "<p>Every player who empties their hand during that final round shares the win. Nobody receives an extra turn for having already acted.</p>"
+        }
+      },
+      {
+        id: "blocked",
+        label: { zh: "线上死局约定", en: "Online blocked rule" },
+        html: {
+          zh: "<p>牌袋空了以后，如果连续一轮里所有玩家都没有放牌，对局立即结束。</p>"
+            + "<p>结束时手里剩余牌最少的玩家获胜，人数可以并列。</p>"
+            + "<p>把一张放得下的新牌留在手上不会错误触发这个判定。单人练习如果没能清空手牌，就算练习未完成。</p>"
+            + "<p>这是为了避免线上对局卡死而采用的约定，不是官方 Expert 计分规则。</p>",
+          en: "<p>Once the bag is empty, the game ends immediately if a full round passes with nobody placing a tile.</p>"
+            + "<p>The player holding the fewest remaining tiles then wins, and ties share the win.</p>"
+            + "<p>Keeping a drawn tile that could have been placed never triggers this check by mistake. A solo practice that fails to clear the hand counts as unfinished practice.</p>"
+            + "<p>This is an online convention that keeps games from stalling. It is not the official Expert scoring rule.</p>"
+        }
+      }
+    ]
+  };
+
+  const CHROMINO_EXPLAIN = {
+    rotate: { zh: "把选中的牌绕中间那格顺时针旋转 90 度，中间格的位置不变。也可以按 R 键。", en: "Rotate the selected tile clockwise by 90 degrees around its middle square. The middle stays in the same place. You can also press R." },
+    confirm: { zh: "放下预览中的牌。先选一枚手牌，再点棋盘上高亮的中点，选好之后按这里才会真正落子。", en: "Place the previewed tile. First select a tile, then a highlighted centre on the board. No move is sent until you confirm." },
+    zoom_out: { zh: "缩小视图，看到更大范围的棋盘。", en: "Zoom out to see more of the board." },
+    fit: { zh: "把整个棋盘和当前选中牌的所有合法落点收进可视区域。", en: "Fit the whole board and the selected tile's legal destinations into the visible area." },
+    zoom_in: { zh: "放大视图，看清每个色块。拖动棋盘可以平移。", en: "Zoom in to inspect the coloured squares. Drag the board to pan." },
+    hand_tile: { zh: "你手上的一枚三格牌。选中它之后可以旋转，再点棋盘上高亮的中点决定落点。变色龙(★)不能作为最后一枚牌。", en: "One three-square tile in your hand. Select it, rotate around its middle, then choose a highlighted destination. A Chameleon (★) cannot be your last tile." },
+    placed_tile: { zh: "已经放在棋盘上的牌。每一条和相邻牌接触的边都必须同色，中间的变色龙(★)对每条边分别匹配。", en: "A tile already on the board. Every edge touching another tile must match. The Chameleon (★) in the middle matches each neighbour independently." },
+    target_center: { zh: "把选中的牌以这一格为中点预览。只有按 Confirm 才会落子，光选落点不会放牌。", en: "Preview the selected tile with its middle at this highlighted square. Confirm sends the move, while selecting a destination alone does not place the tile." },
+    draw: { zh: "只有手上所有牌都无处可放时才可以抽 1 枚。手上只剩变色龙(★)时不能打出，所以必须抽牌。抽到的牌放得下就可以立刻打出或者保留，放不下会自动保留。", en: "Draw one tile only if none of your current tiles can be placed. A last Chameleon (★) cannot be played, so you must draw. A playable draw can be placed or kept, while an unplayable draw is kept automatically." },
+    keep: { zh: "留下刚抽到的牌并结束回合，即使它本来放得下。抽牌之后不能再打出旧手牌。", en: "Keep the tile you just drew and end your turn, even if it could be placed. You cannot play an older tile after drawing." },
+    pass: { zh: "只有牌袋空了而且你没有合法落点时才能跳过。手上有牌放得下时不能主动跳过。", en: "Pass only when the bag is empty and you have no legal placement. You cannot pass voluntarily while a tile can be played." }
+  };
+
+  let chrominoHelpWidget = null;
+  let chrominoExplainWidget = null;
+
+  function initChrominoHelpExplain() {
+    if (chrominoHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    chrominoHelpWidget = window.obgCreateHelp(CHROMINO_HELP_CONFIG);
+    chrominoExplainWidget = window.obgCreateExplain({
+      gameId: "chromino",
+      attribute: "data-chromino-explain",
+      explanations: CHROMINO_EXPLAIN,
+      button: chrominoExplainButton,
+      root: () => panel,
+      bypass: ["#chrominoHelpBtn", "#chrominoExplainBtn"]
+    });
+    chrominoHelpButton?.addEventListener("click", () => {
+      chrominoExplainWidget?.exit();
+      chrominoHelpWidget.open();
+    });
+    chrominoExplainButton?.addEventListener("click", () => chrominoExplainWidget?.toggle());
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initChrominoHelpExplain);
+  } else {
+    initChrominoHelpExplain();
+  }
   const colors = {
     red: {name: "Red 红色", symbol: "●", fill: "#c94350", ink: "#fff"},
     yellow: {name: "Yellow 黄色", symbol: "◆", fill: "#e6be3d", ink: "#493e16"},
@@ -24,13 +174,10 @@
   let pending = false;
   let pendingTimer = null;
   let tipTimer = null;
-  let explaining = false;
-  let blockedClick = null;
   let camera = null;
   let manualCamera = false;
   let pan = null;
   let handGesture = null;
-  let returnFocus = null;
 
   const escape = value => String(value ?? "").replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
   const active = () => !panel.classList.contains("hidden") && currentGameType === "chromino";
@@ -55,7 +202,7 @@
 
   function showTip(element, text) {
     hideTip();
-    if (explaining || dialog.open || !element || !active()) return;
+    if (chrominoExplainWidget?.isActive() || !element || !active()) return;
     tooltip.textContent = text || element.dataset.chrominoTip;
     if (!tooltip.textContent) return;
     tooltip.classList.remove("hidden");
@@ -72,25 +219,6 @@
     selected = null;
     preview = null;
     rotation = 0;
-  }
-
-  function setExplain(enabled) {
-    explaining = enabled;
-    hideTip();
-    endPan();
-    panel.classList.toggle("chromino-explaining", enabled);
-    document.getElementById("chrominoExplainBtn").setAttribute("aria-pressed", String(enabled));
-  }
-
-  function openDialog(title, content, html = false) {
-    hideTip();
-    returnFocus = document.activeElement;
-    document.getElementById("chrominoDialogTitle").textContent = title;
-    const body = document.getElementById("chrominoDialogBody");
-    if (html) body.innerHTML = content;
-    else body.textContent = content;
-    if (!dialog.open) dialog.showModal();
-    document.getElementById("chrominoDialogClose").focus();
   }
 
   function tileSvg(tile, tileRotation, centerX, centerY, outlineClass = "") {
@@ -134,7 +262,7 @@
   }
 
   function zoom(factor) {
-    if (!camera || explaining) return;
+    if (!camera) return;
     const width = Math.max(120, Math.min(40000, camera.width * factor));
     const height = width * board.clientHeight / board.clientWidth;
     camera = {x: camera.x + (camera.width - width) / 2, y: camera.y + (camera.height - height) / 2, width, height};
@@ -146,8 +274,8 @@
   function renderBoard() {
     if (!view) return;
     const lastTile = view.placed_tiles[view.placed_tiles.length - 1];
-    pieces.innerHTML = view.placed_tiles.map(tile => `<g data-chromino-tip="${escape(describeTile(tile))}" data-chromino-explain="${escape(`Placed Chromino: ${describeTile(tile)}. Every edge touching another tile must match. The Chameleon (★) matches each neighbour independently.`)}" aria-label="${escape(describeTile(tile))}">${tileSvg(tile, tile.rotation, tile.x * 40, tile.y * 40, lastTile === tile && tile.player_id ? "chromino-last-outline" : "")}</g>`).join("");
-    targets.innerHTML = candidates().map(move => `<g role="button" tabindex="0" data-chromino-center="${move.x},${move.y}" data-chromino-explain="Preview the selected tile with its middle at this highlighted square. Confirm sends the move; selecting a destination alone does not place the tile." aria-label="Preview tile at ${move.x}, ${move.y}"><rect class="chromino-target${preview?.x === move.x && preview?.y === move.y ? " chromino-selected-target" : ""}" x="${move.x * 40 - 17}" y="${move.y * 40 - 17}" width="34" height="34" rx="7" /><text class="chromino-target-cross" x="${move.x * 40}" y="${move.y * 40}">+</text></g>`).join("");
+    pieces.innerHTML = view.placed_tiles.map(tile => `<g data-chromino-tip="${escape(describeTile(tile))}" data-chromino-explain="placed_tile" aria-label="${escape(describeTile(tile))}">${tileSvg(tile, tile.rotation, tile.x * 40, tile.y * 40, lastTile === tile && tile.player_id ? "chromino-last-outline" : "")}</g>`).join("");
+    targets.innerHTML = candidates().map(move => `<g role="button" tabindex="0" data-chromino-center="${move.x},${move.y}" data-chromino-explain="target_center" aria-label="Preview tile at ${move.x}, ${move.y}"><rect class="chromino-target${preview?.x === move.x && preview?.y === move.y ? " chromino-selected-target" : ""}" x="${move.x * 40 - 17}" y="${move.y * 40 - 17}" width="34" height="34" rx="7" /><text class="chromino-target-cross" x="${move.x * 40}" y="${move.y * 40}">+</text></g>`).join("");
     ghost.innerHTML = preview && selectedTile() ? tileSvg(selectedTile(), rotation, preview.x * 40, preview.y * 40, "chromino-preview-outline") : "";
     if (!camera || !manualCamera) fit();
   }
@@ -167,7 +295,7 @@
       const enabled = available("place") && playable.has(tile.tile_id);
       const isDrawn = tile.tile_id === view.drawn_tile_id;
       const label = view.game_over ? "Remaining" : isDrawn ? "Just drawn" : view.current_turn !== view.you ? "In hand" : playable.has(tile.tile_id) ? "Ready to place" : tile.chameleon && view.hand.length === 1 ? "Draw first" : "No fit";
-      return `<button type="button" class="chromino-hand-tile${selected === tile.tile_id ? " is-selected" : ""}${isDrawn ? " is-drawn" : ""}" data-chromino-tile="${tile.tile_id}" data-chromino-explain="${escape(`Chromino: ${describeTile(tile)}. Select this tile, rotate around its middle, and choose a highlighted destination. A Chameleon (★) cannot be your last tile.`)}" aria-label="${escape(`${describeTile(tile)}. ${label}`)}" aria-pressed="${selected === tile.tile_id}"${enabled ? "" : " disabled"}>${tileHtml(tile)}<span class="chromino-hand-label">${label}</span></button>`;
+      return `<button type="button" class="chromino-hand-tile${selected === tile.tile_id ? " is-selected" : ""}${isDrawn ? " is-drawn" : ""}" data-chromino-tile="${tile.tile_id}" data-chromino-explain="hand_tile" aria-label="${escape(`${describeTile(tile)}. ${label}`)}" aria-pressed="${selected === tile.tile_id}"${enabled ? "" : " disabled"}>${tileHtml(tile)}<span class="chromino-hand-label">${label}</span></button>`;
     }).join("") || `<span class="chromino-hand-label">${view.players.some(player => player.player_id === view.you) ? "All tiles placed" : "Spectating · hands are private"}</span>`;
     hand.scrollTop = scrollTop;
   }
@@ -217,7 +345,7 @@
   }
 
   function selectTile(tileId) {
-    if (!available("place") || explaining) return;
+    if (!available("place")) return;
     if (tileId === selected) resetSelection();
     else {
       const firstMove = view.legal_placements.find(move => move.tile_id === tileId);
@@ -231,7 +359,7 @@
   }
 
   function selectCenter(center) {
-    if (!available("place") || explaining) return;
+    if (!available("place")) return;
     const match = candidates().find(move => `${move.x},${move.y}` === center);
     if (!match) return;
     preview = {...match};
@@ -239,14 +367,14 @@
   }
 
   function rotate() {
-    if (!selected || !available("place") || explaining) return;
+    if (!selected || !available("place")) return;
     rotation = (rotation + 90) % 360;
     preview = preview ? candidates().find(move => move.x === preview.x && move.y === preview.y) || null : null;
     renderBoard(); renderControls();
   }
 
   function submit(action) {
-    if (!action || !available(action.type) || explaining || typeof sendAction !== "function") return;
+    if (!action || !available(action.type) || typeof sendAction !== "function") return;
     pending = true;
     hideTip();
     renderHand(); renderControls();
@@ -270,7 +398,7 @@
   }
 
   board.addEventListener("pointerdown", event => {
-    if (event.button !== 0 || !event.isPrimary || !camera || explaining) return;
+    if (event.button !== 0 || !event.isPrimary || !camera) return;
     hideTip();
     pan = {
       pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, camera: {...camera}, moved: false,
@@ -323,52 +451,8 @@
   document.getElementById("chrominoPass").addEventListener("click", () => submit({type: "pass"}));
   document.getElementById("chrominoZoomIn").addEventListener("click", () => zoom(.8));
   document.getElementById("chrominoZoomOut").addEventListener("click", () => zoom(1.25));
-  document.getElementById("chrominoFit").addEventListener("click", () => { if (!explaining) fit(); });
-  document.getElementById("chrominoExplainBtn").addEventListener("click", () => setExplain(!explaining));
-  document.getElementById("chrominoHelpBtn").addEventListener("click", () => {
-    setExplain(false);
-    openDialog("Chromino · Classic Help", `
-      <h3>目标与准备</h3><p>本游戏采用 BGA 经典规则版，不使用新版规则书的变体。先出完手中的三格牌。标准套装共 80 枚：75 种普通牌和 5 枚 Chameleon 变色龙牌（★）。随机选 1 枚变色龙放在中央，每人获得 8 枚隐藏手牌，随机先手后按座次轮流行动。1 人可按相同规则练习。</p>
-      <h3>颜色与符号</h3><p>${Object.values(colors).map(color => `${color.name}（${color.symbol}）`).join("、")}。颜色与几何符号同时显示，避免只靠颜色辨认。</p>
-      <h3>放牌</h3><p>每回合放 1 枚牌，可绕中格旋转，不能重叠。新牌与已放的牌至少形成 2 条正交接触边；两条边可以接触同一枚旧牌。所有额外接触也必须同色，对角接触不计。变色龙中央的万能格（★）能在每条边分别匹配不同颜色，不会永久变色；两端仍须按印色匹配。</p>
-      <h3>抽牌与跳过</h3><p>只有全部现有手牌都无处可放时，才可 Draw 1 枚。若新牌可放，可以立刻打出，或用 Keep &amp; Pass 保留并结束回合；此时不能改出旧手牌。若新牌不可放，自动保留并换人。牌袋空且没有合法落点时才可以 Pass。</p>
-      <h3>末牌与获胜</h3><p>只剩 1 枚时，牌面向所有人公开。变色龙（★）不能作为最后一枚打出：只剩变色龙时必须抽牌，袋空则跳过。首位出完牌者触发末轮，继续到当前轮最后一席；这轮出完手牌的玩家并列获胜，不会给本轮已经行动的人额外回合。</p>
-      <h3>线上死局约定</h3><p>牌袋空，且连续所有席位都没有放牌时结束，以剩余牌最少者获胜，可并列；保留可出的新牌不会错误触发死局。单人无法清空手牌则视为练习未完成。此为防止线上对局卡住的约定，不是 Expert 计分规则。</p>
-      <h3>操作与标记</h3><p>选手牌 → Rotate 或 R 旋转 → 点虚线中点预览 → Confirm。预览中金色边框表示待放的牌，绿色边框表示最后落子。点棋盘空白或 Esc 取消。拖动棋盘平移，＋／− 缩放，Fit 查看全局。你的手牌过多时可以在手牌区滚动，滑动不会选牌。非交互图标可悬停或轻触查看提示；Explain 后点控件查看说明，禁用控件亦可解释。对局结束后保留棋盘，重新开局使用 Room Control。</p>
-    `, true);
-  });
-  document.getElementById("chrominoDialogClose").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => { if (returnFocus?.isConnected && active()) returnFocus.focus({preventScroll: true}); });
+  document.getElementById("chrominoFit").addEventListener("click", () => fit());
 
-  const isExplainControl = target => !!target.closest("#chrominoHelpBtn, #chrominoExplainBtn, #chrominoDialog");
-  function explanationAt(event) {
-    const direct = event.target.closest("[data-chromino-explain]");
-    if (direct && panel.contains(direct)) return direct;
-    return [...panel.querySelectorAll("[data-chromino-explain]")].filter(element => {
-      const bounds = element.getBoundingClientRect();
-      return bounds.width && bounds.height && event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
-    }).sort((first, second) => first.getBoundingClientRect().width * first.getBoundingClientRect().height - second.getBoundingClientRect().width * second.getBoundingClientRect().height)[0];
-  }
-  document.addEventListener("pointerdown", event => {
-    if (!active() || !explaining || isExplainControl(event.target)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    blockedClick = {x: event.clientX, y: event.clientY, until: Date.now() + 700};
-    const element = explanationAt(event);
-    if (element) { setExplain(false); openDialog("Explain", element.dataset.chrominoExplain); }
-  }, true);
-  document.addEventListener("click", event => {
-    if (!active()) return;
-    if (blockedClick && Date.now() < blockedClick.until && Math.hypot(event.clientX - blockedClick.x, event.clientY - blockedClick.y) < 8) {
-      blockedClick = null;
-      event.preventDefault(); event.stopImmediatePropagation();
-      return;
-    }
-    if (!explaining || isExplainControl(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const element = explanationAt(event);
-    if (element) { setExplain(false); openDialog("Explain", element.dataset.chrominoExplain); }
-  }, true);
   panel.addEventListener("pointerover", event => {
     if (event.pointerType === "touch" || pan?.moved) return;
     const target = event.target.closest("[data-chromino-tip]");
@@ -386,14 +470,10 @@
     if (target && !target.closest("button, [role=button]") && !board.contains(target)) showTip(target);
   });
   document.addEventListener("keydown", event => {
-    if (!active() || dialog.open) return;
+    if (!active()) return;
     if (event.key === "Escape") {
-      hideTip(); setExplain(false); endPan(); resetSelection(); renderHand(); renderControls(); renderBoard();
-    } else if (explaining && ["Enter", " "].includes(event.key) && !isExplainControl(event.target)) {
-      event.preventDefault(); event.stopImmediatePropagation();
-      const element = event.target.closest("[data-chromino-explain]");
-      if (element) { setExplain(false); openDialog("Explain", element.dataset.chrominoExplain); }
-    } else if (!explaining && event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.closest("input, textarea, select, [contenteditable]")) {
+      hideTip(); endPan(); resetSelection(); renderHand(); renderControls(); renderBoard();
+    } else if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.closest("input, textarea, select, [contenteditable]")) {
       if (selected) { event.preventDefault(); rotate(); }
     }
   }, true);
@@ -408,10 +488,9 @@
   }).observe(board);
 
   function clear() {
-    endPan(); resetSelection(); setExplain(false); hideTip();
+    endPan(); resetSelection(); hideTip();
     clearTimeout(pendingTimer);
-    pending = false; view = null; signature = null; camera = null; manualCamera = false; handGesture = null; blockedClick = null;
-    if (dialog.open) dialog.close();
+    pending = false; view = null; signature = null; camera = null; manualCamera = false; handGesture = null;
     pieces.replaceChildren(); targets.replaceChildren(); ghost.replaceChildren(); hand.replaceChildren();
     ["chrominoPlayers", "chrominoLog", "chrominoResult"].forEach(id => document.getElementById(id).replaceChildren());
     document.getElementById("chrominoResult").classList.add("hidden");

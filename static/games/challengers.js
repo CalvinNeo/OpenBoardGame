@@ -5,10 +5,6 @@
   const header = document.getElementById("challengersHeaderActions");
   const helpButton = document.getElementById("challengersHelpBtn");
   const explainButton = document.getElementById("challengersExplainBtn");
-  const dialog = document.getElementById("challengersDialog");
-  const dialogTitle = document.getElementById("challengersDialogTitle");
-  const dialogBody = document.getElementById("challengersDialogBody");
-  const dialogClose = document.getElementById("challengersDialogClose");
   const tip = document.getElementById("challengersTip");
   const configBox = document.getElementById("challengersConfigBox");
   let view = null;
@@ -21,27 +17,228 @@
   let pendingRevision = null;
   let pendingTimer = null;
   let tipTimer = null;
-  let explaining = false;
-  let suppressed = null;
-  let focusBeforeDialog = null;
+  let explainActive = false;
   let lastPointerType = "mouse";
   const openLogs = new Set();
   const stageLabels = {choose_level: "Choose a level", pick: "Drafting", trim: "Preparing deck", ready: "Ready", match: "In match", finished: "Match finished", spectating: "Watching"};
-  const explain = {
-    pick: "先选一张候选牌，再点 Pick。新牌立即加入你的牌组。等级 A / B / C 和本轮可选张数在上方显示。",
-    redraw: "每轮可重抽一次全部剩余候选。允许先选第一张，再重抽剩余四张；重抽不能更换等级。",
-    ready: "选中要永久移除的牌，再点 Ready；不选任何牌即可原样参赛。同名牌共用替补席(🪑)，但牌组不限制六种。双方 Ready 后独立开始对战。",
-    level: "A 为初级、B 为中级、C 为高级。每轮允许的等级和选牌张数不同，选择后本轮不能更换。",
-    reveal: "Reveal 翻开牌顶一张，先处理能力，再比较战力(⚔️)。攻击可累加多张；达到防守战力就必须立即夺旗(🚩)，此后只有最后一张防守。",
-    reveal_for_bot: "Reveal for Bot 替你的 Bot / Robot 对手翻开一张牌，每张都由你点击推进。Bot 的技能目标由 AI 立即选择；如果能力需要你作选择，则先由你 Confirm，再继续翻牌。",
-    resolve: "选择卡牌能力的目标，再点 Confirm。顺序选择中的编号表示牌顶到牌底；可选能力可 Skip。看牌信息只有你能看到。",
-    next: "本轮场面与奖杯(🏆)结果会保留到每个席位确认 Next Round。房间 AI 自动确认，真人及断线席位必须本人确认。",
-    bench: "替补席(🪑)最多六种名称。同名牌叠放一格，即使等级不同。失旗时整叠进入替补席，放不下就输；替补能力逐张叠加。",
-    flag: "旗帜(🚩)只由最上方的一张牌持有。压在下面的牌不提供战力或效果；失旗时整叠一起去替补席。",
-    score: "粉丝(⭐)包括公开标记与奖杯(🏆)背面的分数。多人局其他人的奖杯分数到第七轮结束才揭晓；届时前二决赛。同分比较奖杯数量，再比较最高轮次。",
-    park: "每个公园独立进行一场对战。可以观看其他公园；你的操作区始终对应自己的比赛。",
-    deck: "同名卡合并展示数量，但 S 起始版与市场版仍保留各自等级。比赛中牌序保密，只有特定效果能查看。疲劳区(💤)的牌在下轮回到牌组。",
+  const benchTip = "替补席(🪑)最多六种名称。同名牌叠放一格，即使等级不同。失旗时整叠进入替补席，放不下就输；替补能力逐张叠加。";
+
+  const CHALLENGERS_HELP_CONFIG = {
+    gameId: "challengers",
+    title: { zh: "冠军挑战者 · Challengers!", en: "Challengers!" },
+    basic: {
+      win: {
+        zh: "锦标赛结束时粉丝(⭐)总数最高的玩家成为冠军。",
+        en: "The player with the highest total of fans (⭐) when the tournament ends becomes the champion."
+      },
+      turn: {
+        zh: "每轮先挑一个等级并从五张候选牌里选牌强化牌组，然后在自己的公园(🌳)里逐张翻牌抢下旗帜(🚩)。",
+        en: "Each round you first pick a level and draft from five offered cards, then reveal cards one by one in your own park (🌳) to take the flag (🚩)."
+      },
+      key: {
+        zh: "重点是让牌组一轮比一轮强，同时别让替补席(🪑)的六格被同名牌塞满。",
+        en: "The key is to make your deck stronger every round while keeping your bench (🪑) from running out of its six slots."
+      }
+    },
+    sections: [
+      {
+        id: "draft",
+        label: { zh: "组牌与赛程", en: "Drafting and schedule" },
+        html: {
+          zh: "<p>每人开局拿到三张新人、一张天才、一张狗和一张冠军。城市系列必定启用，其余六个系列里随机启用五个。</p>"
+            + "<p>每轮先选一个等级，系统展示五张候选牌，你按张挑选。每轮可以重抽一次剩余的全部候选，选完第一张之后也还能重抽。</p>"
+            + "<p>挑够张数后可以移除任意数量的牌，再按 Ready 参赛。移除的牌不会回到牌组。</p>"
+            + "<p>不同公园(🌳)的对战各自独立进行。配对表会轮转，八人局前七轮会遇到所有对手，席位更少时循环配对。</p>"
+            + "<table><tr><th>轮次</th><th>可选等级与张数</th></tr>"
+            + "<tr><td>第 1 轮</td><td>A × 2</td></tr><tr><td>第 2 轮</td><td>A × 2</td></tr>"
+            + "<tr><td>第 3 轮</td><td>A × 2 或 B × 1</td></tr><tr><td>第 4 轮</td><td>A × 2 或 B × 2</td></tr>"
+            + "<tr><td>第 5 轮</td><td>B × 2</td></tr><tr><td>第 6 轮</td><td>B × 2 或 C × 1</td></tr>"
+            + "<tr><td>第 7 轮</td><td>C × 2</td></tr></table>",
+          en: "<p>Every player starts with three newcomers, one genius, one dog and one champion. The city set is always in play and five of the other six sets are chosen at random.</p>"
+            + "<p>Each round you choose a level, see five offered cards and draft them one at a time. Once per round you may redraw all remaining offers, even after you already took the first card.</p>"
+            + "<p>Once you have drafted enough cards you may remove any number of them and then press Ready. Removed cards never come back.</p>"
+            + "<p>Each park (🌳) runs its own match. The pairing table rotates, so an eight player table meets every opponent within the first seven rounds and smaller tables simply cycle.</p>"
+            + "<table><tr><th>Round</th><th>Levels and cards</th></tr>"
+            + "<tr><td>Round 1</td><td>A × 2</td></tr><tr><td>Round 2</td><td>A × 2</td></tr>"
+            + "<tr><td>Round 3</td><td>A × 2 or B × 1</td></tr><tr><td>Round 4</td><td>A × 2 or B × 2</td></tr>"
+            + "<tr><td>Round 5</td><td>B × 2</td></tr><tr><td>Round 6</td><td>B × 2 or C × 1</td></tr>"
+            + "<tr><td>Round 7</td><td>C × 2</td></tr></table>"
+        }
+      },
+      {
+        id: "match",
+        label: { zh: "夺旗对战", en: "Capture the flag" },
+        html: {
+          zh: "<p>开赛时把牌组洗匀，第一轮随机决定谁先持旗，之后由奖杯(🏆)轮次最高的玩家先持旗。</p>"
+            + "<p>攻击方按 Reveal 逐张翻牌，每张牌翻出时都会先结算能力。</p>"
+            + "<p>攻击方可以把多张牌的战力(⚔️)累加，一旦达到防守方的战力(⚔️)就立刻夺旗(🚩)。</p>"
+            + "<p>只有最后翻出的那张牌负责防守，压在下面的牌不再提供战力(⚔️)或效果。</p>"
+            + "<p>失旗时整叠牌一起进入替补席(🪑)。替补席(🪑)只有六格，同名牌叠在同一格，等级不同也算同名，需要第七格就输掉比赛。</p>"
+            + "<p>攻击方把牌库翻完仍没能夺旗(🚩)时同样判负。疲劳区(💤)不限张数，下一轮收回牌组。</p>",
+          en: "<p>Decks are shuffled when a match starts. The first flag holder is random in round one, and afterwards it is the player whose trophy (🏆) comes from the latest round.</p>"
+            + "<p>The attacker presses Reveal to turn over one card at a time, and every card resolves its ability as it is revealed.</p>"
+            + "<p>The attacker may add the power (⚔️) of several cards together and takes the flag (🚩) as soon as the total reaches the defender's power (⚔️).</p>"
+            + "<p>Only the card revealed last defends. Cards underneath it no longer give power (⚔️) or effects.</p>"
+            + "<p>Losing the flag sends the whole stack to the bench (🪑). The bench (🪑) has six slots, cards with the same name share one slot whatever their level, and needing a seventh slot loses the match.</p>"
+            + "<p>An attacker who empties the deck without taking the flag (🚩) also loses. The exhaust zone (💤) has no size limit and returns to the deck next round.</p>"
+        }
+      },
+      {
+        id: "effects",
+        label: { zh: "效果时机", en: "Card effects" },
+        html: {
+          zh: "<p>普通效果在卡牌翻出时结算，立刻获得的战力(⚔️)加成会保留到这张牌失去旗帜(🚩)。</p>"
+            + "<p>攻击中的能力只在本次攻击生效，持旗能力只在最上方那张牌持旗时生效。</p>"
+            + "<p>替补席(🪑)能力持续生效，同名的每一张都会再叠加一次。</p>"
+            + "<p>失旗效果先结算，然后才轮到新的持旗者结算能力。</p>"
+            + "<p>选牌时触发的能力只在你选中它的那一次结算。需要指定目标的能力会先让你 Confirm 才能继续，可选能力可以 Skip。</p>",
+          en: "<p>Normal effects resolve when the card is revealed, and power (⚔️) gained immediately stays with that card until it loses the flag (🚩).</p>"
+            + "<p>Abilities that care about attacking work only during that attack, and flag abilities work only while that card is the topmost one holding the flag (🚩).</p>"
+            + "<p>Bench (🪑) abilities are always active and every copy with the same name adds its bonus again.</p>"
+            + "<p>Losing the flag resolves first, and only then does the new holder resolve its ability.</p>"
+            + "<p>Abilities that trigger while drafting resolve only on the pick you make. Abilities that need a target ask you to Confirm before play continues, and optional ones can be skipped.</p>"
+        }
+      },
+      {
+        id: "scoring",
+        label: { zh: "奖杯与决赛", en: "Trophies and final" },
+        html: {
+          zh: "<p>每个公园(🌳)每轮的胜者获得一座奖杯(🏆)，奖杯背面的粉丝(⭐)价值逐轮提高。</p>"
+            + "<p>多人局里别人的奖杯(🏆)分数只有本人可见，公开的粉丝(⭐)标记所有人都能看到。</p>"
+            + "<p>第七轮结束时公开全部分数，前两名进入决赛。同分先比奖杯(🏆)数量，再比最高轮次的奖杯(🏆)。</p>"
+            + "<p>决赛不再选新牌，只可以删牌，最终胜者成为冠军，其他人可以观战。</p>"
+            + "<p>单人和双人局没有决赛。轮末领先至少 11 点粉丝(⭐)可以提前获胜，否则七轮后总分最高者胜出。</p>"
+            + "<p>每轮结束会保留场面，所有席位都按 Next Round 之后才继续下一轮。</p>",
+          en: "<p>The winner of each park (🌳) every round takes a trophy (🏆) whose hidden fan (⭐) value grows round by round.</p>"
+            + "<p>In games with more than two players the fan (⭐) value on other players' trophies (🏆) stays secret, while the public fan (⭐) markers are visible to everyone.</p>"
+            + "<p>All scores are revealed after round seven and the top two players reach the final. Ties are broken by the number of trophies (🏆) and then by the highest round on a trophy (🏆).</p>"
+            + "<p>The final has no drafting, only trimming, and its winner becomes the champion. Everyone else can watch.</p>"
+            + "<p>Solo and two player games skip the final. A lead of at least 11 fans (⭐) at the end of a round wins at once, otherwise the highest total after seven rounds takes it.</p>"
+            + "<p>The board stays on screen at the end of a round and the next round begins only once every seat has pressed Next Round.</p>"
+        }
+      },
+      {
+        id: "robot",
+        label: { zh: "Robot 对手", en: "Robot opponent" },
+        html: {
+          zh: "<p>单人和奇数人数会自动加入 Robot(🤖)。它使用固定牌组，不选新牌。</p>"
+            + "<p>Robot(🤖)的赛博格基础战力(⚔️)等于当前轮数。等级 2、3、4 依次替换阿尔法、贝塔和好机器人，等级 5 再把机甲冠军换成两张升级牌。</p>"
+            + "<p>Solo special challenge 会在单人局的升级池里加入三种挑战牌。</p>"
+            + "<p>多人局里补位的 Robot(🤖)不积累奖杯(🏆)也不进决赛。单人局的 Robot(🤖)正常计分，也可以提前获胜。</p>"
+            + "<p>被送进 Robot(🤖)牌组的普通牌会留在后续轮次，但 Robot(🤖)忽略这些牌的全部能力，只使用基础战力(⚔️)、名称和系列。</p>",
+          en: "<p>Solo games and tables with an odd number of players add a Robot (🤖). It plays a fixed deck and never drafts.</p>"
+            + "<p>The cyborg of the Robot (🤖) has base power (⚔️) equal to the current round number. Robot levels 2, 3 and 4 replace Alpha, Beta and Good Bot, and level 5 also swaps Mech Champion for two upgrade cards.</p>"
+            + "<p>The solo special challenge adds three challenge cards to the upgrade pool in a solo game.</p>"
+            + "<p>A Robot (🤖) that only fills a seat in a multiplayer game collects no trophies (🏆) and never reaches the final. In a solo game it scores normally and can win early.</p>"
+            + "<p>Ordinary cards sent into the Robot (🤖) deck stay for later rounds, but the Robot (🤖) ignores all of their abilities and uses only base power (⚔️), name and set.</p>"
+        }
+      },
+      {
+        id: "controls",
+        label: { zh: "操作", en: "Controls" },
+        html: {
+          zh: "<p>点击卡牌进行选择，再按 Pick、Confirm 或 Ready。点击空白处或按 Esc 取消选择。</p>"
+            + "<p>对手是 Bot 或 Robot(🤖)时，由你按红色的 Reveal for Bot 逐张替对手翻牌。</p>"
+            + "<p>Bot 的组牌由 AI 决定，战斗中的技能目标也由 AI 立即选择。需要你决定的能力会先让你 Confirm。</p>"
+            + "<p>开启 Explain 之后可以点击任意高亮区域查看说明，禁用状态的按钮同样可以解释。</p>"
+            + "<p>图标可以悬停或点击查看提示，提示 3 秒后自动消失。比赛中的牌序和对手的候选牌都是保密的。</p>",
+          en: "<p>Click a card to select it, then press Pick, Confirm or Ready. Click empty space or press Esc to clear the selection.</p>"
+            + "<p>When your opponent is a bot or the Robot (🤖), you press the red Reveal for Bot button to turn over its cards one at a time.</p>"
+            + "<p>Bots draft on their own and choose their ability targets immediately. An ability that needs your decision asks you to Confirm first.</p>"
+            + "<p>Turn on Explain and click any highlighted area to read what it does. Disabled buttons can be explained too.</p>"
+            + "<p>Hover or click an icon to read a tooltip, which disappears after three seconds. Deck order and the offers of other players stay hidden.</p>"
+        }
+      }
+    ]
   };
+
+  const CHALLENGERS_EXPLAIN = {
+    panel: {
+      zh: "冠军挑战者的游戏面板。上方是记分板与赛程，下方是牌组和当前公园(🌳)的对战。",
+      en: "The Challengers board. Scores and the round track sit on top, your deck and the match in the current park (🌳) below."
+    },
+    card: {
+      zh: "一张卡牌。左上角是战力(⚔️)，卡面下方是能力说明。悬停或点击卡牌可以看完整信息。",
+      en: "A card. Its power (⚔️) sits in the top left corner and its ability below. Hover or click the card for the full text."
+    },
+    level: {
+      zh: "A 为初级、B 为中级、C 为高级。每轮允许的等级和选牌张数不同，选定后本轮不能更换。",
+      en: "A is basic, B is intermediate and C is advanced. Each round allows different levels and card counts, and you cannot switch afterwards."
+    },
+    pick: {
+      zh: "先选一张候选牌，再点 Pick。新牌立刻加入你的牌组，上方显示当前等级和本轮还能选几张。",
+      en: "Select an offered card and press Pick. It joins your deck at once, and the header shows your level and how many picks are left."
+    },
+    redraw: {
+      zh: "每轮可以重抽一次全部剩余候选。允许先选第一张，再重抽剩下的四张，重抽不能更换等级。",
+      en: "Once per round you may redraw every remaining offer. You can take the first card and still redraw the rest, but the level never changes."
+    },
+    ready: {
+      zh: "选中要永久移除的牌，再点 Ready。不选任何牌就是原样参赛。牌组本身不限制种类，只有替补席(🪑)限制六种。",
+      en: "Select the cards you want to remove for good and press Ready. Selecting nothing keeps the deck as it is. Only the bench (🪑) is limited to six names."
+    },
+    resolve: {
+      zh: "为卡牌能力选择目标，再点 Confirm。顺序选择里的编号表示从牌顶到牌底。可选能力可以 Skip。",
+      en: "Choose the targets for a card ability and press Confirm. Numbers in an ordering choice run from the top of the deck downwards. Optional abilities can be skipped."
+    },
+    reveal: {
+      zh: "Reveal 翻开牌顶的一张牌，先结算能力，再比较战力(⚔️)。攻击可以累加多张，达到防守战力(⚔️)时立刻夺旗(🚩)。",
+      en: "Reveal turns over the top card, resolves its ability and then compares power (⚔️). An attack may add several cards and takes the flag (🚩) as soon as it reaches the defender."
+    },
+    reveal_for_bot: {
+      zh: "Reveal for Bot 替你对面的 Bot 或 Robot(🤖)翻一张牌，每张都由你点击推进。需要你决定的能力会先让你 Confirm。",
+      en: "Reveal for Bot turns over a card for your bot or Robot (🤖) opponent, one click per card. Abilities that need your decision ask you to Confirm first."
+    },
+    next: {
+      zh: "本轮的场面和奖杯(🏆)结果会保留到每个席位都确认 Next Round。房间 AI 会自动确认，真人必须自己按。",
+      en: "The board and the trophy (🏆) results stay on screen until every seat confirms Next Round. Room AI confirms on its own, humans must press it."
+    },
+    park: {
+      zh: "每个公园(🌳)独立进行一场对战。你可以观看其他公园，你的操作区始终对应自己的比赛。",
+      en: "Every park (🌳) runs its own match. You may watch the others while your controls always belong to your own match."
+    },
+    score: {
+      zh: "粉丝(⭐)由公开标记和奖杯(🏆)背面的分数组成。多人局其他人的奖杯(🏆)分数到第七轮结束才揭晓。",
+      en: "Fans (⭐) combine the public markers with the hidden value on each trophy (🏆). In multiplayer the trophy scores of others are revealed only after round seven."
+    },
+    bench: {
+      zh: "替补席(🪑)最多六种名称。同名牌叠在一格，等级不同也算同名。失旗时整叠进入替补席，放不下就输掉比赛。",
+      en: "The bench (🪑) holds six names at most. Cards with the same name share a slot whatever their level. Losing the flag sends the whole stack here and overflowing loses the match."
+    },
+    flag: {
+      zh: "旗帜(🚩)只由最上方的一张牌持有。压在下面的牌不提供战力(⚔️)或效果，失旗时整叠一起去替补席(🪑)。",
+      en: "Only the topmost card holds the flag (🚩). Cards underneath give no power (⚔️) and no effect, and the whole stack goes to the bench (🪑) when the flag is lost."
+    },
+    deck: {
+      zh: "同名卡合并显示数量，S 起始版与市场版仍保留各自等级。比赛中牌序保密。疲劳区(💤)的牌下一轮回到牌组。",
+      en: "Cards with the same name are shown as one row with a count, while starter and market copies keep their own level. Deck order stays secret during a match and the exhaust zone (💤) returns next round."
+    }
+  };
+
+  let challengersHelpWidget = null;
+  let challengersExplainWidget = null;
+
+  function initChallengersHelpExplain() {
+    if (challengersHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    challengersHelpWidget = window.obgCreateHelp(CHALLENGERS_HELP_CONFIG);
+    challengersExplainWidget = window.obgCreateExplain({
+      gameId: "challengers",
+      attribute: "data-ch-explain",
+      explanations: CHALLENGERS_EXPLAIN,
+      button: explainButton,
+      root: () => document.getElementById("challengersPanel"),
+      bypass: ["#challengersHelpBtn", "#challengersExplainBtn"],
+      onChange: active => { explainActive = active; if (active) hideTip(); }
+    });
+    helpButton?.addEventListener("click", () => {
+      challengersExplainWidget?.exit();
+      challengersHelpWidget.open();
+    });
+    explainButton?.addEventListener("click", () => challengersExplainWidget?.toggle());
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initChallengersHelpExplain, {once: true});
+  else initChallengersHelpExplain();
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[char]));
   const name = pid => view?.players.find(p => p.player_id === pid)?.name || "—";
   const legal = type => !pending && view?.legal_actions.includes(type);
@@ -82,7 +279,7 @@
   function deckHTML() {
     const kept = view.deck.filter(c => !selected.includes(c.id) || view.stage !== "trim");
     return `<section class="ch-section"><div class="ch-section-head"><h3>🃏 我的牌组</h3><span class="ch-badge">${view.deck.length} cards</span></div>
-      <div class="ch-deck-stats"><span data-ch-kept-kinds ${tipAttrs(explain.bench, "bench")}>🪑 ${groups(kept).length} 种 / 6 格</span><span data-ch-kept-power ${tipAttrs("战力(⚔️)：保留牌组的基础战力总和，不计能力加成；单张持旗时仅使用那张牌的战力。")}>⚔️ ${kept.reduce((n, c) => n + c.power, 0)} 基础战力</span></div>
+      <div class="ch-deck-stats"><span data-ch-kept-kinds ${tipAttrs(benchTip, "bench")}>🪑 ${groups(kept).length} 种 / 6 格</span><span data-ch-kept-power ${tipAttrs("战力(⚔️)：保留牌组的基础战力总和，不计能力加成；单张持旗时仅使用那张牌的战力。")}>⚔️ ${kept.reduce((n, c) => n + c.power, 0)} 基础战力</span></div>
       <div class="ch-deck-list" data-ch-scroll="deck">${groups(view.deck).sort((a, b) => a[0].set.localeCompare(b[0].set) || b[0].power - a[0].power).map(group => {
         const c = group[0];
         return `<div class="ch-deck-row" style="--set-color:${view.set_info[c.set].color}" ${tipAttrs(`${cardText(c)} · ${group.length} 张`, "deck")}><span>${c.icon}</span><strong>${esc(c.name_zh)}</strong><small>${c.power} × ${group.length}</small></div>`;
@@ -115,7 +312,7 @@
 
   function benchHTML(lane) {
     const seats = groups(lane.bench);
-    return `<div class="ch-bench-heading" ${tipAttrs(explain.bench, "bench")}><span>🪑 替补席</span><span>${seats.length}/6</span></div><div class="ch-bench">${Array.from({length: Math.max(6, seats.length)}, (_, i) => {
+    return `<div class="ch-bench-heading" ${tipAttrs(benchTip, "bench")}><span>🪑 替补席</span><span>${seats.length}/6</span></div><div class="ch-bench">${Array.from({length: Math.max(6, seats.length)}, (_, i) => {
       const group = seats[i];
       if (!group) return `<div class="ch-bench-seat" ${tipAttrs(`替补席(🪑)空格 ${i + 1}`, "bench")}>${i + 1}</div>`;
       const card = group[0];
@@ -231,7 +428,6 @@
       ${scoreHTML()}<div class="ch-layout${drafting ? "" : " ch-match-layout"}">${drafting ? `<div>${draftHTML()}</div>${deckHTML()}` : `<div>${arenaHTML()}</div><div>${controlsHTML()}${own && view.deck.length && view.phase !== "round_end" && !view.game_over ? deckHTML() : ""}</div>`}</div>`;
     if (keepPosition) syncContent(content, template.content);
     else content.replaceChildren(template.content);
-    panel.classList.toggle("ch-explaining", explaining);
     if (keepPosition) {
       content.querySelectorAll("[data-ch-scroll]").forEach(node => {
         if (scrollPositions.has(node.dataset.chScroll)) node.scrollTop = scrollPositions.get(node.dataset.chScroll);
@@ -264,21 +460,7 @@
     tip.style.top = `${Math.max(12, Math.min(window.innerHeight - height - 12, box.bottom + 7))}px`;
     tipTimer = window.setTimeout(hideTip, 3000);
   }
-  function setExplain(enabled) {
-    explaining = enabled;
-    panel.classList.toggle("ch-explaining", enabled);
-    explainButton.setAttribute("aria-pressed", String(enabled));
-    hideTip();
-  }
-  function openDialog(title, body) {
-    hideTip();
-    focusBeforeDialog = document.activeElement;
-    dialogTitle.textContent = title;
-    dialogBody.innerHTML = body;
-    if (!dialog.open) dialog.showModal();
-  }
-  function showHelp() {
-    setExplain(false);
+  function __REMOVED_HELP_START__() {
     const cards = view ? Object.values(view.catalog) : [];
     openDialog("Help · 冠军挑战者", `<p>用不断优化的牌组争夺旗帜(🚩)，通过粉丝(⭐)晋级，成为冠军！支持 1–8 名玩家；Add Bot 添加的是会组牌的 AI，奇数人数另有固定牌组的 Robot(🤖) 补位。</p>
       <h3>🃏 组牌与赛程</h3><p>每人以三张新人、一张天才、一张狗和一张冠军开始。城市必选，其他六个系列选五个。每轮选择等级，查看五张候选，逐张选择。每轮可以 Redraw 一次全部剩余候选，已选第一张后也可以重抽。选完后可移除任意数量牌，再 Ready。不同公园独立进行；配对表轮转，八席前七轮会遇到所有对手，较少席位循环配对。</p>

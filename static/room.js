@@ -1489,6 +1489,7 @@ const GAME_WEIGHT = {
   no_thanks: 1.13,
   power_grid: 3.25,
   ticket_to_ride: 1.82,
+  twelve_rivers: 2.00,
 };
 
 function getGameWeight(gameId) {

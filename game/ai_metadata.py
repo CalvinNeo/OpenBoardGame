@@ -19,6 +19,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "castles_of_burgundy",
     "cat_in_box",
     "catan_starfarers",
+    "celestia",
     "century_spice_road",
     "challengers",
     "cheaty_mages",
@@ -90,6 +91,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "trekking_history",
     "tucano",
     "turing_machine",
+    "twelve_rivers",
     "wriggle_roulette",
     "yahtzee",
 })

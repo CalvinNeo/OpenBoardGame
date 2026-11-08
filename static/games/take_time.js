@@ -3,7 +3,7 @@
 
     const panel = document.getElementById("takeTimePanel");
     const header = document.getElementById("takeTimeHeaderActions");
-    const help = document.getElementById("takeTimeHelpBtn");
+    const helpButton = document.getElementById("takeTimeHelpBtn");
     const explainButton = document.getElementById("takeTimeExplainBtn");
     const dialog = document.getElementById("takeTimeDialog");
     const dialogTitle = document.getElementById("takeTimeDialogTitle");
@@ -14,11 +14,8 @@
     let version = null;
     let selectedCard = null;
     let selectedSegment = null;
-    let explaining = false;
     let pending = false;
     let pendingTimer = null;
-    let suppressClick = false;
-    let suppressTimer = null;
     let returnFocus = null;
     let planOpen = false;
     let logOpen = false;
@@ -64,20 +61,160 @@
         rules: "禁明牌(🙈)；先出手中最大(⬆️)／最小(⬇️)；自由指针(🧭)可改变起点。",
     };
 
-    const helpHTML = `
-        <p><strong>🤝 合作目标</strong>：共同把 12 张牌放到六个时段。太阳 ☀️ 和月亮 🌙 各有 1–12，每次从 24 张中随机发 12 张。牌背颜色公开。</p>
-        <p><strong>💬 讨论</strong>：先看钟盘条件、约定策略。可以用公共目标作参考；目标不参与胜负。点击 Ready 才看自己的牌，此后保持静默。所有人准备后，任何一人都可以先出第一张，之后按座位顺序轮流。</p>
-        <p><strong>🃏 放置</strong>：点击一张手牌与一个时段，再选择 Place face down 或 Place face up。每回合必须放一张，已放牌不能挪动。暗置／仅自己可见(🔒)，明置／公开可见(👁)。全队通常共享与人数相同的明牌额度。点空白或按 Esc 取消未提交的选择。</p>
-        <p><strong>✉️ 两人局</strong>：每人先拿 4 张，另有 2 张不看的备用牌。双方各放两张后，同时拿起备用牌。三人各 4 张，四人各 3 张。</p>
-        <p><strong>🕰️ 揭牌</strong>：每个时段至少一张。从指针起顺时针，六段总和应非递减（允许相等），每段通常最多 24。还要满足钟盘上的数量、颜色和目标条件。结算前不会替你预检隐藏数字。</p>
-        <p><strong>🌅 官方入门</strong>：Chapter 1 · Clock 1。第一时段恰好一张太阳牌，最后时段恰好三张牌；这一关总和没有 24 的上限。</p>
-        <p><strong>🧩 练习</strong>：其余 11 个钟盘是本项目的原创练习配置，并非官方 2–40 关。包含区间、最近目标（允许并列）、禁明牌、指定首尾落点、先出最高／最低牌、极值、自由指针和双牌差值。当前钟盘会直接显示条件。</p>
-        <p><strong>🧭 自由指针／差值</strong>：可以在看牌前选起点；结算也会尝试六个起点。差值关每段必须两张，按较大数减较小数比较先后，其他条件依旧看牌面总和。</p>
-        <p><strong>🔁 失败与遗憾</strong>：每次失败让下次重试多一次明牌，最多 +3。禁明牌关仍不能明牌。成功或跳过清空奖励。跳过的关卡会在主路线之后重访。</p>
-        <p><strong>⏸ 回顾</strong>：揭牌后暂停，所有玩家点击 Next Round 才继续。修改继续方式会清空确认。End Journey 可以结束本次路线，结果会标明还有多少关未完成。</p>
-        <p><strong>图标与缩写</strong>：太阳 Solar(☀️)、月亮 Lunar(🌙)、未知数值(?)、总和(Σ)、差值(Δ)、起点(🧭 / START)、顺时针序号(↻)、大于等于(≥)、上限(≤)、无上限(∞)、通过(✓ / ✅)、未通过(✕ / 🔎)、公共目标(🎯)、备用牌(✉️ Reserve)、遗憾封套(✉️ Regrets)、禁止明牌(🙈)、先出最大(⬆️)／最小(⬇️)、机器人(🤖)、放置顺序(#)。</p>
-        <p><strong>Controls</strong>：悬停图标旁的说明按钮(ⓘ)或已放置的牌即可查看简短说明；手机轻点后显示 3 秒，连续轻点更新为最新说明。Explain 模式下所有游戏操作暂停，灰色按钮也可解释；点选一个解释或按 Esc 退出。对话框支持 Esc 或点击外部关闭。</p>
-        <p><a href="https://www.libellud.com/en/resources/take-time/" target="_blank" rel="noopener noreferrer">Official rules & resources</a></p>`;
+    const TAKE_TIME_HELP_CONFIG = {
+        gameId: "take_time",
+        title: { zh: "Take Time · 时光共度", en: "Take Time" },
+        basic: {
+            win: {
+                zh: "这是一款全队合作游戏，你们要一起把 12 张牌放进六个时段，让每一段都满足钟盘上的全部条件，走完路线上的每一个钟盘就算赢。",
+                en: "This is a cooperative game. Together you place twelve cards into six segments so that every segment satisfies all of its clock conditions, and you win by clearing every clock on the route."
+            },
+            turn: {
+                zh: "讨论阶段按下 Ready 才会看到自己的手牌，放牌阶段轮到你时选一张手牌和一个时段，再决定暗置还是明置。",
+                en: "Press Ready in the discussion phase to look at your own hand, and on your turn in the placement phase choose one card plus one segment, then decide face down or face up."
+            },
+            key: {
+                zh: "只有你自己知道暗置牌的数字，所以真正的难点是用讨论和有限的全队明牌额度(👁)把信息传给队友。",
+                en: "Only you know the value of a card you place face down, so the real challenge is passing that information to your team through discussion and a small shared face-up allowance (👁)."
+            }
+        },
+        sections: [
+            {
+                id: "flow",
+                label: { zh: "一关的流程", en: "Round flow" },
+                html: {
+                    zh: "<p>每一关都从讨论阶段(💬)开始。所有玩家都按下 Ready 之后进入放牌阶段，第一张牌任何人都可以先放，之后按座位顺序轮流。</p>"
+                        + "<p>放满 12 张牌后自动揭牌，全队进入回顾阶段。所有玩家都按下 Next Round 之后，才会执行你们选定的继续方式。</p>"
+                        + "<p>只要还有人没确认，任何人都能改选继续方式。一旦有人改选，已经按下的确认会全部清空。</p>",
+                    en: "<p>Every clock starts with a discussion phase (💬). Once every player has pressed Ready the placement phase begins. Anyone may place the first card, and play then continues in seat order.</p>"
+                        + "<p>When the twelfth card lands the clock is revealed and the team enters the review phase. The continuation you picked only happens after every player presses Next Round.</p>"
+                        + "<p>As long as somebody has not confirmed yet, anyone may change the continuation. Changing it clears every confirmation made so far.</p>"
+                }
+            },
+            {
+                id: "cards",
+                label: { zh: "牌与手牌", en: "Cards and hands" },
+                html: {
+                    zh: "<p>牌堆共 24 张，太阳(☀️)和月亮(🌙)各有 1 到 12。每一关只随机发 12 张，牌背颜色对所有人公开。</p>"
+                        + "<p>两人局每人 4 张手牌外加 2 张备用牌(✉️)，三人局每人 4 张，四人局每人 3 张。</p>"
+                        + "<p>两人局在全队放下第 4 张牌之后，双方同时拿起备用牌(✉️)。在那之前备用牌(✉️)连本人都看不到数字。</p>"
+                        + "<p>按下 Ready 之前你的手牌显示为未知数值(?)，Ready 之后数字只有你自己看得见。</p>",
+                    en: "<p>The deck holds 24 cards. Solar (☀️) and lunar (🌙) each run from 1 to 12. Only twelve cards are dealt per clock, and the colour on every card back is public.</p>"
+                        + "<p>In a two player game each player holds 4 cards plus 2 reserve cards (✉️). Three players get 4 cards each and four players get 3 cards each.</p>"
+                        + "<p>In a two player game both players pick up their reserve cards (✉️) at the same time, right after the fourth card of the team lands. Until then nobody, not even the owner, may look at them.</p>"
+                        + "<p>Before you press Ready your hand shows unknown values (?). After Ready only you can see the numbers.</p>"
+                }
+            },
+            {
+                id: "placing",
+                label: { zh: "暗置与明置", en: "Face down and face up" },
+                html: {
+                    zh: "<p>暗置(🔒)把选中的手牌扣在选中的时段，数字只有你自己知道。队友只能看到牌背颜色、出牌人和放置顺序(#)。已经放下的牌不能再移动。</p>"
+                        + "<p>明置(👁)花掉一次全队共享的明牌额度(👁)，把牌正面朝上放好，所有玩家都能看到数字。</p>"
+                        + "<p>额度总数通常等于玩家人数。失败之后重试会累积额外额度，最多 3 次。禁止明牌(🙈)的关卡额度始终为 0。</p>"
+                        + "<p>点击空白处或按 Esc 可以取消还没提交的选牌。</p>",
+                    en: "<p>Face down (🔒) puts the selected card on the selected segment with only you knowing its value. Teammates see the card back colour, who played it and the placement order (#). A placed card can never be moved again.</p>"
+                        + "<p>Face up (👁) spends one shared face-up allowance (👁) and places the card so that every player can read the number.</p>"
+                        + "<p>The allowance normally equals the number of players. Failing a clock earns extra allowance for the retry, up to three extra. A clock that forbids face-up cards (🙈) always has zero.</p>"
+                        + "<p>Click an empty area or press Esc to cancel a selection you have not submitted.</p>"
+                }
+            },
+            {
+                id: "reveal",
+                label: { zh: "揭牌与判定", en: "Reveal and checks" },
+                html: {
+                    zh: "<p>每个时段至少要有一张牌。</p>"
+                        + "<p>从指针起点(🧭)开始按顺时针(↻)比较，后一个时段的总和(Σ)必须大于等于(≥)前一个，允许相等。</p>"
+                        + "<p>上限(≤)约束每个时段的总和(Σ)。官方入门关没有上限(∞)。</p>"
+                        + "<p>差值(Δ)关每个时段必须两张牌，比较的是大数减小数。</p>"
+                        + "<p>还要满足钟盘上写出的颜色、数量、区间、最接近和极值条件。判定结果用通过(✓)与未通过(✕)标出，结算前不会替你预检隐藏的数字。</p>",
+                    en: "<p>Every segment needs at least one card.</p>"
+                        + "<p>Starting from the clock hand (🧭) and moving clockwise (↻), the sum (Σ) of each segment must be greater than or equal to (≥) the one before it. Equal values are allowed.</p>"
+                        + "<p>The cap (≤) limits the sum (Σ) of each segment. The official introductory clock has no cap (∞).</p>"
+                        + "<p>On a difference clock (Δ) every segment holds exactly two cards and the comparison uses the larger number minus the smaller one.</p>"
+                        + "<p>The clock also lists colour, count, range, closest and extreme conditions. Results appear as passed (✓) or failed (✕). Nothing is checked for you before the reveal.</p>"
+                }
+            },
+            {
+                id: "clocks",
+                label: { zh: "钟盘与特殊规则", en: "Clocks and special rules" },
+                html: {
+                    zh: "<p>路线一共 12 个钟盘。第一个是官方入门的苏醒，其余 11 个是本项目的原创练习配置。当前钟盘会把条件直接写在界面上。</p>"
+                        + "<p>禁止明牌(🙈)表示这一关只能暗置。先出最大(⬆️)和先出最小(⬇️)表示每次都要从自己当前手牌里选最大或最小的牌。</p>"
+                        + "<p>自由指针(🧭)允许你在看牌之前选择比较起点。结算时如果所选起点不成立，会自动改用第一个可行的起点。</p>"
+                        + "<p>有些钟盘规定第几张牌必须落在哪个时段。公共目标(🎯)只是讨论时的参考数值，不参与胜负判定，并在第一位玩家按下 Ready 后锁定。</p>",
+                    en: "<p>The route holds twelve clocks. The first one is the official introduction, Awakening, and the other eleven are original practice configurations written for this project. The current clock prints its conditions on screen.</p>"
+                        + "<p>No face-up (🙈) means this clock only allows face down cards. Highest first (⬆️) and lowest first (⬇️) mean you must always play the largest or smallest card in your current hand.</p>"
+                        + "<p>A movable hand (🧭) lets you choose the starting segment before you look at your cards. If your choice turns out to be impossible at scoring time, the first workable start is used instead.</p>"
+                        + "<p>Some clocks dictate which segment a given placement must go to. The shared target (🎯) is only a reference for discussion, never part of the result, and it locks as soon as the first player presses Ready.</p>"
+                }
+            },
+            {
+                id: "retry",
+                label: { zh: "失败与遗憾", en: "Failing and regrets" },
+                html: {
+                    zh: "<p>六个时段的判定全部通过才算成功，任何一段没通过就是失败。</p>"
+                        + "<p>失败后可以重试(🔁)。每一次失败都让下一次重试多一次明牌额度(👁)，最多 3 次。</p>"
+                        + "<p>也可以跳过(✉️)，把这一关放进遗憾封套(✉️)。主路线走完之后会依次重访这些关卡。</p>"
+                        + "<p>通关或者跳过都会清空累积的额外额度。End Journey 可以随时结束本次路线。</p>",
+                    en: "<p>You succeed only when all six segments pass. A single failing segment means the clock is failed.</p>"
+                        + "<p>After a failure you may retry (🔁). Every failure grants one extra face-up allowance (👁) for the next attempt, up to three extra.</p>"
+                        + "<p>You may also skip (✉️), which files the clock into the regrets envelope (✉️). Those clocks are revisited one by one after the main route ends.</p>"
+                        + "<p>Clearing or skipping a clock resets the accumulated bonus. End Journey closes the route at any time.</p>"
+                }
+            }
+        ]
+    };
+
+    const TAKE_TIME_EXPLAIN = {
+        card: { zh: "你的手牌。太阳(☀️)和月亮(🌙)各有 1 到 12，未知数值(?)在按下 Ready 之前隐藏。点击选中一张自己的牌，再选一个时段。", en: "Your hand. Solar (☀️) and lunar (🌙) each run from 1 to 12, and unknown values (?) stay hidden until you press Ready. Click one of your cards to select it, then pick a segment." },
+        sector: { zh: "钟盘上的六个时段。从指针起点(🧭 / START)开始按顺时针(↻)编号比较。每段至少一张，总和(Σ)允许相等。颜色、数量和目标条件在揭牌时判定。", en: "The six segments of the clock. They are compared clockwise (↻) starting from the clock hand (🧭 / START). Each needs at least one card and equal sums (Σ) are allowed. Colour, count and target conditions are judged at the reveal." },
+        ready: { zh: "先讨论(💬)并商量目标。按下 Ready 才会看见自己的手牌，并且此后保持静默(🤫)，不能撤销。全员准备后才允许出牌，第一位玩家按下 Ready 后公共目标(🎯)锁定。", en: "Discuss (💬) and agree on a plan first. Ready reveals your own hand and starts the silence (🤫), and it cannot be undone. Cards may only be placed once everyone is ready, and the shared target (🎯) locks when the first player presses Ready." },
+        down: { zh: "暗置(🔒)。把选中的手牌扣到选中的时段，并立即结束你的回合。队友能看到牌背颜色、出牌人和放置顺序(#)，看不到数值。已放的牌不能移动。", en: "Face down (🔒). Place the selected card on the selected segment and end your turn at once. Teammates see the card back colour, the player and the placement order (#), but never the value. Placed cards cannot be moved." },
+        up: { zh: "明置(👁)。花掉一次全队共享的明牌额度(👁)，把选中的牌公开放置。额度通常等于人数，重试最多额外获得 3 次。禁止明牌(🙈)的关卡即使有额度也不能明置。", en: "Face up (👁). Spend one shared face-up allowance (👁) to place the selected card in the open. The allowance normally equals the player count and a retry grants at most three extra. A clock that forbids face-up cards (🙈) never allows it." },
+        plan: { zh: "公共目标(🎯)。讨论时用加号(+)和减号(−)约定各段的大致目标。目标只是参考，不参与胜负，并在首位玩家按下 Ready 后锁定。", en: "Shared target (🎯). Use plus (+) and minus (−) during discussion to agree on a rough value per segment. It is a reference only, never part of the result, and it locks when the first player presses Ready." },
+        hand: { zh: "指针起点(🧭 / START)决定顺时针(↻)的比较顺序。普通钟盘从时段 1 开始，自由指针关卡可以在看牌前选择起点，结算时也会尝试其他起点。", en: "The clock hand (🧭 / START) decides where the clockwise (↻) comparison begins. A normal clock starts at segment 1, while a movable hand clock lets you choose the start before looking at your cards and also tries other starts at scoring time." },
+        next: { zh: "确认你已经看完揭牌结果。所有玩家都确认之后，才会执行显示的重试、跳过、下一关或结束。有人改选继续方式时，已有确认会被清空。", en: "Confirm that you have read the reveal. The displayed retry, skip, next clock or end only happens once every player has confirmed. Changing the continuation clears the confirmations already given." },
+        choice: { zh: "选择继续方式。重试(🔁)保留失败得到的奖励额度。跳过(✉️)把本关记入遗憾封套(✉️)并重置奖励，主路线结束后会重新挑战。下一关(→)前往下一个钟盘。End Journey 结束本次路线。", en: "Choose how to continue. Retry (🔁) keeps the bonus earned by failing. Skip (✉️) files this clock into the regrets envelope (✉️) and resets the bonus, and you meet the clock again after the main route. Next clock (→) moves on. End Journey closes the route." },
+        reserve: { zh: "备用牌(✉️)。两人局每人两张未查看的牌，全队放下第 4 张牌之后同时加入手牌。未知数值(?)连本人也不能提前看到。", en: "Reserve cards (✉️). In a two player game each player holds two unseen cards that join the hand together once the fourth card of the team lands. Their unknown values (?) stay hidden even from the owner." },
+        quota: { zh: "明牌额度(👁)。已使用次数与全队总额度，太阳(☀️)和月亮(🌙)共用。总额度通常等于人数，重试奖励最多 +3，禁止明牌(🙈)的关卡为 0。", en: "Face-up allowance (👁), shown as used out of the team total and shared by solar (☀️) and lunar (🌙) cards. The total normally equals the player count, a retry adds at most three, and a no face-up clock (🙈) is always zero." },
+        regrets: { zh: "遗憾封套(✉️)记录被跳过的钟盘数量，主路线完成之后会依次重访。它与两人局的备用牌(✉️)用途不同。", en: "The regrets envelope (✉️) counts the clocks you skipped, and they are revisited one by one after the main route. It has nothing to do with the two player reserve cards (✉️)." },
+        players: { zh: "所有玩家的状态。讨论中(💬)、已准备并保持静默(🤫)、当前出牌者(▶)、已确认继续(✓)。牌背的太阳(☀️)和月亮(🌙)颜色公开，备用牌(✉️)显示剩余数量。", en: "The state of every player: discussing (💬), ready and silent (🤫), currently playing (▶) or confirmed to continue (✓). Card back colours solar (☀️) and lunar (🌙) are public, and reserve cards (✉️) show how many are left." },
+        metric: { zh: "钟盘数值。总和(Σ)是时段内所有牌相加，差值(Δ)是两张牌的大数减小数。从起点(🧭)顺时针(↻)比较，后一段必须大于等于(≥)前一段，允许相等。上限(≤)约束总和，无上限(∞)表示本关不限制总和。", en: "Clock values. The sum (Σ) adds every card in a segment and the difference (Δ) is the larger number minus the smaller one. Compared clockwise (↻) from the start (🧭), each segment must be greater than or equal to (≥) the previous one, and equal values are fine. The cap (≤) limits the sum and no cap (∞) means this clock does not limit it." },
+        checks: { zh: "揭牌后的条件判定。通过(✓)与未通过(✕)标出每个条件，未通过的直接列出，展开 Passed checks 可以查看已经通过的条件。", en: "The conditions judged after the reveal. Passed (✓) and failed (✕) mark every condition. Failed ones are listed directly and expanding Passed checks shows the ones that succeeded." },
+        rules: { zh: "本关的特殊规则。禁止明牌(🙈)表示只能暗置。先出最大(⬆️)和先出最小(⬇️)表示每次从自己的手牌里选最大或最小的值。自由指针(🧭)可以改变比较起点。", en: "The special rules of this clock. No face-up (🙈) means face down only. Highest first (⬆️) and lowest first (⬇️) mean you always play the largest or smallest value in your hand. A movable hand (🧭) can change the starting segment." },
+        dialog_close: { zh: "关闭当前对话框。对话框也可以按 Esc 或者点击外部区域关闭。", en: "Close the current dialog. You can also press Esc or click outside the dialog to dismiss it." },
+    };
+
+    let takeTimeHelpWidget = null;
+    let takeTimeExplainWidget = null;
+
+    function initTakeTimeHelpExplain() {
+        if (takeTimeHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        takeTimeHelpWidget = window.obgCreateHelp(TAKE_TIME_HELP_CONFIG);
+        takeTimeExplainWidget = window.obgCreateExplain({
+            gameId: "take_time",
+            attribute: "data-tt-explain",
+            explanations: TAKE_TIME_EXPLAIN,
+            button: explainButton,
+            root: () => panel,
+            bypass: ["#takeTimeHelpBtn", "#takeTimeExplainBtn"],
+            onChange: active => { if (active) hideTip(); }
+        });
+        helpButton?.addEventListener("click", () => {
+            takeTimeExplainWidget?.exit();
+            takeTimeHelpWidget.open();
+        });
+        explainButton?.addEventListener("click", () => takeTimeExplainWidget?.toggle());
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initTakeTimeHelpExplain);
+    } else {
+        initTakeTimeHelpExplain();
+    }
+
+    const explaining = () => Boolean(takeTimeExplainWidget?.isActive());
 
     function esc(value) {
         return String(value ?? "").replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
@@ -230,7 +367,6 @@
             <div class="take-time-footer">${info(`✉️ Regrets · ${view.regrets.length}`, explanations.regrets[1], "regrets")}<span>${own ? "🤝 Win or learn together" : "Spectator"}</span></div>
             <details class="take-time-details" data-detail="log" ${logOpen ? "open" : ""}><summary>Activity</summary><ol class="take-time-log">${view.log.slice().reverse().map(line => `<li>${esc(line)}</li>`).join("")}</ol></details>
             </div>`;
-        panel.classList.toggle("take-time-explaining", explaining);
         panel.querySelectorAll("details[data-detail]").forEach(details => details.addEventListener("toggle", () => {
             if (details.dataset.detail === "plan") planOpen = details.open;
             else logOpen = details.open;
@@ -244,13 +380,6 @@
         render();
     }
 
-    function setExplain(enabled) {
-        explaining = enabled;
-        hideTip();
-        panel.classList.toggle("take-time-explaining", enabled);
-        explainButton.setAttribute("aria-pressed", String(enabled));
-    }
-
     function hideTip() {
         window.clearTimeout(tipTimer);
         window.clearTimeout(tipHideTimer);
@@ -260,7 +389,7 @@
     }
 
     function showTip(target, touch = false) {
-        if (!target?.isConnected || explaining || dialog.open) return;
+        if (!target?.isConnected || explaining() || dialog.open) return;
         hideTip();
         tipAnchor = target;
         tip.textContent = target.dataset.ttTip;
@@ -291,20 +420,6 @@
         dialogClose.focus();
     }
 
-    function explainTarget(target) {
-        const entry = explanations[target?.dataset.ttExplain];
-        if (!entry) return;
-        setExplain(false);
-        const detail = target.classList.contains("take-time-mini") || target.closest(".take-time-sector-heading")?.contains(target)
-            ? target.dataset.ttTip : null;
-        openDialog(entry[0], detail ? `${detail}\n\n${entry[1]}` : entry[1]);
-    }
-
-    function isExplainExempt(target) {
-        // The shared mobile header moves these buttons outside their original wrapper.
-        return help.contains(target) || explainButton.contains(target) || dialog.contains(target);
-    }
-
     function submit(action) {
         if (pending || !view || typeof sendAction !== "function") return;
         pending = true;
@@ -320,7 +435,7 @@
         if (event.target.closest("summary, .take-time-checks")) return;
         const target = event.target.closest("[data-tt-action]")
             || event.target.closest(".take-time-sector")?.querySelector('[data-tt-action="sector"]');
-        if (!target || target.disabled || explaining) return;
+        if (!target || target.disabled || explaining()) return;
         const kind = target.dataset.ttAction;
         if (kind === "card") {
             selectedCard = selectedCard === target.dataset.card ? null : target.dataset.card;
@@ -341,12 +456,6 @@
         }
     });
 
-    help.addEventListener("click", () => {
-        setExplain(false);
-        const clockRules = view ? `<p><strong>${esc(view.clock.name)}</strong> · ${view.clock.metric === "difference" ? "按差值(Δ)" : "按总和(Σ)"}排序，${view.clock.cap === null ? "无总和上限(∞)" : `总和(Σ) ≤ ${view.clock.cap}`}。</p><ul>${view.clock.segments.map((segment, index) => `<li>时段 ${index + 1}：${esc(segment.labels.join("；") || "至少一张牌")}</li>`).join("")}</ul>` : "";
-        openDialog("Take Time · Help", clockRules + helpHTML, true);
-    });
-    explainButton.addEventListener("click", () => setExplain(!explaining));
     dialogClose.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => {
         if (event.target !== dialog) return;
@@ -355,40 +464,8 @@
     });
     dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
 
-    // Coordinate hit-testing is necessary because disabled controls do not emit click.
     document.addEventListener("pointerdown", event => {
-        if (!explaining) { suppressClick = false; return; }
-        if (panel.classList.contains("hidden")) return;
-        if (isExplainExempt(event.target)) return;
-        const target = document.elementsFromPoint(event.clientX, event.clientY)
-            .map(element => element.closest("#takeTimePanel [data-tt-explain]"))
-            .find(Boolean);
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        if (target) {
-            suppressClick = true;
-            window.clearTimeout(suppressTimer);
-            suppressTimer = window.setTimeout(() => { suppressClick = false; }, 600);
-            explainTarget(target);
-        }
-    }, true);
-
-    document.addEventListener("click", event => {
-        if (suppressClick) {
-            suppressClick = false;
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            return;
-        }
-        if (!explaining) return;
-        if (isExplainExempt(event.target)) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        if (panel.contains(event.target)) explainTarget(event.target.closest("[data-tt-explain]"));
-    }, true);
-
-    document.addEventListener("pointerdown", event => {
-        if (explaining || !view || !panel.contains(event.target)) return;
+        if (explaining() || !view || !panel.contains(event.target)) return;
         if (event.target.closest("button, input, select, summary, a, .take-time-hand-picker, .take-time-sector")) return;
         clearSelection();
     });
@@ -397,12 +474,12 @@
         if (event.key !== "Escape" || panel.classList.contains("hidden")) return;
         if (dialog.open) return;
         if (!tip.hidden) { hideTip(); return; }
-        setExplain(false);
+        takeTimeExplainWidget?.exit();
         clearSelection();
     });
 
     document.addEventListener("pointerover", event => {
-        if (event.pointerType === "touch" || event.pointerType === "pen" || explaining) return;
+        if (event.pointerType === "touch" || event.pointerType === "pen" || explaining()) return;
         if (tip.contains(event.target) || tipAnchor?.contains(event.target)) window.clearTimeout(tipHideTimer);
         const target = event.target.closest("#takeTimePanel [data-tt-tip]");
         if (target && target !== tipAnchor) { inputKind = "mouse"; showTip(target); }
@@ -422,7 +499,7 @@
         if (inputKind !== "touch" && tipAnchor?.contains(event.target)) hideTip();
     });
     document.addEventListener("pointerdown", event => {
-        if (explaining || panel.classList.contains("hidden")) return;
+        if (explaining() || panel.classList.contains("hidden")) return;
         inputKind = ["touch", "pen"].includes(event.pointerType) ? "touch" : "mouse";
         const target = event.target.closest("#takeTimePanel [data-tt-tip]");
         if (target && inputKind === "touch") {
@@ -440,12 +517,12 @@
         if (!touchStart || touchStart.id !== event.pointerId) return;
         const start = touchStart;
         touchStart = null;
-        if (!start.moved && start.target.isConnected && !explaining) showTip(start.target, true);
+        if (!start.moved && start.target.isConnected && !explaining()) showTip(start.target, true);
     }, true);
     document.addEventListener("pointercancel", () => { touchStart = null; }, true);
     document.addEventListener("click", event => {
         const target = event.target.closest("#takeTimePanel [data-tt-tip]");
-        if (!target || explaining) return;
+        if (!target || explaining()) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         if (inputKind !== "touch" || event.detail === 0) showTip(target);
@@ -467,9 +544,7 @@
         logOpen = false;
         touchStart = null;
         window.clearTimeout(pendingTimer);
-        window.clearTimeout(suppressTimer);
-        suppressClick = false;
-        setExplain(false);
+        takeTimeExplainWidget?.exit();
         if (dialog.open) dialog.close();
         panel.innerHTML = "";
     }

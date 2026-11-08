@@ -157,6 +157,27 @@ from game.ticket_to_ride import (
     ACTION_SCHEMA as TICKET_TO_RIDE_ACTION_SCHEMA,
     CONFIG_SCHEMA as TICKET_TO_RIDE_CONFIG_SCHEMA,
 )
+from game.twelve_rivers import (
+    TwelveRiversGame,
+    ACTION_SCHEMA as TWELVE_RIVERS_ACTION_SCHEMA,
+    CONFIG_SCHEMA as TWELVE_RIVERS_CONFIG_SCHEMA,
+)
+
+register_game(
+    GameDefinition(
+        game_id=TwelveRiversGame.game_id,
+        name="12 Rivers",
+        name_zh="十二河谷",
+        min_players=TwelveRiversGame.min_players,
+        max_players=TwelveRiversGame.max_players,
+        turn_mode="turn",
+        action_schema=TWELVE_RIVERS_ACTION_SCHEMA,
+        config_schema=TWELVE_RIVERS_CONFIG_SCHEMA,
+        module=TwelveRiversGame,
+        serialize=TwelveRiversGame.serialize,
+        deserialize=TwelveRiversGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

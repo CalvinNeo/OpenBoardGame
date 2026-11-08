@@ -16,6 +16,17 @@ POWER_KINDS = {
     "alternative_route",
     "wind_gust",
 }
+ACTION_CARD_COUNTS = {
+    "compass": 20,
+    "lightning_rod": 18,
+    "foghorn": 16,
+    "cannon": 14,
+    "turbo": 8,
+    "jetpack": 2,
+    "ejection": 2,
+    "alternative_route": 2,
+    "wind_gust": 2,
+}
 
 DEFAULT_CONFIG: Dict = {
     "target_score": 50,
@@ -65,15 +76,6 @@ def _ship_order(state: Dict) -> List[str]:
     return [pid for pid in state.get("turn_order", []) if state["players"][pid].get("on_ship")]
 
 
-def _ship_order_starting_after_captain(state: Dict) -> List[str]:
-    captain = state.get("captain")
-    ship = _ship_order(state)
-    if captain not in ship:
-        return ship
-    idx = ship.index(captain)
-    return ship[idx + 1 :] + ship[:idx]
-
-
 def _next_on_ship_after(state: Dict, player_id: str) -> Optional[str]:
     ship = _ship_order(state)
     if not ship:
@@ -114,18 +116,8 @@ def _make_treasure_card(state: Dict, city_no: int, value: int) -> Dict:
 
 def _build_action_deck(state: Dict) -> List[Dict]:
     deck: List[Dict] = []
-    for _ in range(20):
-        deck.append(_make_action_card(state, "compass"))
-    for _ in range(18):
-        deck.append(_make_action_card(state, "lightning_rod"))
-    for _ in range(16):
-        deck.append(_make_action_card(state, "foghorn"))
-    for _ in range(14):
-        deck.append(_make_action_card(state, "cannon"))
-    for _ in range(8):
-        deck.append(_make_action_card(state, "turbo"))
-    for kind in ["jetpack", "ejection", "alternative_route", "wind_gust"]:
-        for _ in range(2):
+    for kind, count in ACTION_CARD_COUNTS.items():
+        for _ in range(count):
             deck.append(_make_action_card(state, kind))
     random.shuffle(deck)
     return deck
@@ -263,14 +255,16 @@ def _award_city_treasure(state: Dict, player_id: str, city_no: int, summary: Opt
         summary.setdefault("rewards", []).append({"player_id": player_id, "treasure": _public_treasure(card)})
 
 
-def _set_pending_passenger(state: Dict) -> None:
+def _set_pending_passenger(state: Dict, after_player_id: Optional[str] = None) -> None:
     captain = state.get("captain")
-    pending = None
-    for pid in _ship_order_starting_after_captain(state):
-        if pid != captain:
-            pending = pid
-            break
-    state["pending_passenger"] = pending
+    order = state.get("turn_order", [])
+    captain_index = order.index(captain) if captain in order else -1
+    passengers = order[captain_index + 1 :] + order[:max(0, captain_index)]
+    if after_player_id in passengers:
+        passengers = passengers[passengers.index(after_player_id) + 1 :]
+    state["pending_passenger"] = next(
+        (pid for pid in passengers if state["players"][pid].get("on_ship")), None
+    )
 
 
 def _eligible_reroll_players(state: Dict) -> List[str]:
@@ -548,7 +542,7 @@ class CelestiaGame:
             return actions
         if phase == "reroll_window":
             eligible = _eligible_special_players(state)
-            if player_id not in eligible:
+            if player_id not in eligible or player_id in state.get("special_passes", []):
                 return []
             actions = ["pass_special"]
             hand = state["players"][player_id]["hand"]
@@ -562,7 +556,7 @@ class CelestiaGame:
             return ["passenger_choice"] if player_id == state.get("pending_passenger") else []
         if phase == "ejection_window":
             eligible = _eligible_special_players(state)
-            if player_id not in eligible:
+            if player_id not in eligible or player_id in state.get("special_passes", []):
                 return []
             return ["pass_special", "play_power"]
         if phase == "captain_action":
@@ -767,9 +761,7 @@ class CelestiaGame:
                 )
             else:
                 events.append({"type": "celestia:passenger_choice", "payload": {"player_id": player_id, "choice": choice}})
-            _set_pending_passenger(state)
-            if state.get("pending_passenger") == player_id:
-                state["pending_passenger"] = None
+            _set_pending_passenger(state, after_player_id=player_id)
             if state.get("pending_passenger") is None:
                 _advance_to_ejection_or_captain(state)
             return events, None
@@ -920,53 +912,11 @@ class CelestiaGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        legal = CelestiaGame.get_legal_actions(state, bot_id)
-        if not legal:
+        if state.get("game_over") or not CelestiaGame.get_legal_actions(state, bot_id):
             return None
-        phase = state.get("phase")
-        if phase == "journey_end":
-            return {"type": "next_journey"}
-        if phase == "roll":
-            if "solo_leave" in legal and state.get("current_city", 1) >= 5:
-                return {"type": "solo_leave"}
-            return {"type": "roll_dice"}
-        if phase == "reroll_window":
-            hand = state["players"][bot_id]["hand"]
-            if bot_id == state.get("captain"):
-                route = next((card for card in hand if card.get("kind") == "alternative_route"), None)
-                if route and sum(state.get("hazard_counts", {}).values()) >= 3:
-                    indexes = [idx for idx, face in enumerate(state.get("dice_results", [])) if face != "blank"]
-                    if indexes:
-                        return {"type": "play_power", "card_id": route["id"], "dice_indexes": indexes[:2]}
-            gust = next((card for card in hand if card.get("kind") == "wind_gust"), None)
-            if gust and "blank" in state.get("dice_results", []) and random.random() < 0.35:
-                return {"type": "play_power", "card_id": gust["id"]}
-            return {"type": "pass_special"}
-        if phase == "passenger_choice":
-            current_city = int(state.get("current_city", 1))
-            danger = sum(state.get("hazard_counts", {}).values())
-            choice = "leave" if current_city >= 5 or danger >= 3 else "stay"
-            return {"type": "passenger_choice", "choice": choice}
-        if phase == "ejection_window":
-            hand = state["players"][bot_id]["hand"]
-            eject = next((card for card in hand if card.get("kind") == "ejection"), None)
-            targets = [pid for pid in _ship_order(state) if pid != state.get("captain")]
-            if eject and targets and random.random() < 0.3:
-                target = max(targets, key=lambda pid: _player_total_score(state, pid))
-                return {"type": "play_power", "card_id": eject["id"], "target_player_id": target}
-            return {"type": "pass_special"}
-        if phase == "captain_action":
-            hand = state["players"][bot_id]["hand"]
-            hazards = state.get("hazard_counts", {})
-            if _full_resolution_possible(hand, hazards):
-                return {"type": "captain_resolve", "method": "cards"}
-            telescope = next((card for card in state["players"][bot_id]["treasures"] if card.get("kind") == "telescope"), None)
-            if telescope:
-                return {"type": "captain_resolve", "method": "telescope", "treasure_id": telescope.get("id")}
-            return {"type": "captain_fail"}
-        if phase == "jetpack_window":
-            return {"type": "jetpack_decision", "use": int(state.get("current_city", 1)) >= 4}
-        return None
+        from game.celestia_ai import choose_action
+
+        return choose_action(CelestiaGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

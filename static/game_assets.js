@@ -153,6 +153,14 @@ const GAME_ASSETS = {
     "panelTitle": "🚂 铁路环游",
     "header": "showTicketToRideHeaderActions"
   },
+  "twelve_rivers": {
+    "scripts": ["/static/games/twelve_rivers.js?v=4"],
+    "styles": ["/static/games/twelve_rivers.css?v=1"],
+    "markup": "/static/games/twelve_rivers.html?v=1",
+    "panel": "twelveRiversPanel",
+    "panelTitle": "🏞️ 十二河谷",
+    "header": "showTwelveRiversHeaderActions"
+  },
   "a_feast_for_odin": {
     "scripts": ["/static/games/a_feast_for_odin.js?v=3"],
     "styles": ["/static/games/a_feast_for_odin.css?v=3"],
@@ -1085,13 +1093,14 @@ const GAME_ASSETS = {
   },
   "witchs_brew": {
     "scripts": [
-      "/static/games/witchs_brew.js?v=app_v1"
+      "/static/games/witchs_brew.js?v=app_v2"
     ],
     "styles": [],
     "panel": "witchsBrewPanel",
+    "panelTitle": "🧪 女巫的佳酿",
     "header": "showWitchsBrewHeaderActions",
-    "markup": "/static/games/witchs_brew.html?v=1",
-    "styleFragments": "/static/games/witchs_brew.css?v=1"
+    "markup": "/static/games/witchs_brew.html?v=2",
+    "styleFragments": "/static/games/witchs_brew.css?v=2"
   },
   "ra": {
     "scripts": [
