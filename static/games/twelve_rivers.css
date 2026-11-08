@@ -28,8 +28,8 @@
 }
 .tr12-next.hidden { display: none; }
 
-.tr12-main { display: flex; gap: 10px; align-items: flex-start; }
-.tr12-board-section { flex: 1 1 auto; min-width: 0; }
+.tr12-main { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+.tr12-board-section { flex: 1 1 auto; min-width: 0; max-width: 100%; }
 
 .tr12-section-heading {
   display: flex;
@@ -59,6 +59,8 @@
 .tr12-map-frame {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   height: 52vh;
   min-height: 300px;
   border-radius: 12px;
@@ -101,6 +103,8 @@
 .tr12-track {
   display: flex;
   gap: 3px;
+  min-width: 0;
+  max-width: 100%;
   margin-top: 6px;
   padding: 4px;
   border-radius: 8px;
@@ -308,6 +312,8 @@
 
 @media (max-width: 420px) {
   .tr12-map-frame { height: 54vh; min-height: 300px; }
+  .tr12-track { gap: 2px; }
+  .tr12-track-slot { width: 17px; height: 17px; font-size: 9px; }
   .tr12-map-controls button { padding: 3px 6px; font-size: 11px; min-width: 26px; }
   .tr12-round { font-size: 12px; padding: 2px 8px; }
   .tr12-status { font-size: 13px; }

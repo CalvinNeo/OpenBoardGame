@@ -20,6 +20,8 @@ const WITCHS_BREW_RES_NAME = {
   vial: "Vial",
 };
 const WITCHS_BREW_INGREDIENTS = ["red", "green", "white"];
+// "Any ingredient" is written with the three ingredient glyphs so role cards need no English abbreviation.
+const WITCHS_BREW_ANY_ING = "🔴🟢⚪";
 const WITCHS_BREW_RAVEN = "🐦‍⬛";
 const WITCHS_BREW_STACKS = [
   { key: "copper", label: "Copper", icon: "🧙", role: "wizard" },
@@ -41,15 +43,15 @@ const WITCHS_BREW_ROLE_SHORT = {
   wolf_keeper: { full: "🔴×3", favor: "🔴×1" },
   snake_hunter: { full: "⚪×3", favor: "⚪×1" },
   herb_collector: { full: "🟢×3", favor: "🟢×1" },
-  alchemist: { full: "1 ing → 🟡×5", favor: "1 ing → 🟡×2" },
-  fortune_teller: { full: "🟡1 → 🧴×2", favor: "🟡1 → 🧴×1" },
-  assistant: { full: "🟡1 → any 3 ing", favor: "🟡1 → any 1 ing" },
+  alchemist: { full: "1×" + WITCHS_BREW_ANY_ING + " → 🟡×5", favor: "1×" + WITCHS_BREW_ANY_ING + " → 🟡×2" },
+  fortune_teller: { full: "🟡1 → 🧴×2", favor: "🟡1 → 🧴×1" },
+  assistant: { full: "🟡1 → 3×" + WITCHS_BREW_ANY_ING, favor: "🟡1 → 1×" + WITCHS_BREW_ANY_ING },
   wizard: { full: "Buy 🧙 copper", favor: "Buy copper +2🟡" },
   witch: { full: "Buy 🧪 iron", favor: "Buy iron +2🟡" },
   druid: { full: "Buy 🍃 silver", favor: "Buy silver +2🟡" },
   warlock: { full: "Cast the spell", favor: "🟡×1" },
-  cutpurse: { full: "Tax 🟡 → shelf", favor: "Lose 1 less 🟡" },
-  begging_monk: { full: "Tax ing → shelf", favor: "Lose 1 less ing" },
+  cutpurse: { full: "Tax 🟡 → shelf", favor: "Lose 1 less 🟡" },
+  begging_monk: { full: "Tax " + WITCHS_BREW_ANY_ING + " → shelf", favor: "Lose 1 less " + WITCHS_BREW_ANY_ING },
 };
 const WITCHS_BREW_ROLE_KIND = {
   wolf_keeper: "resource", snake_hunter: "resource", herb_collector: "resource",
@@ -1132,7 +1134,7 @@ function renderWitchsBrewPublic(view) {
       bar.appendChild(fill);
       node.appendChild(bar);
       const progress = witchsBrewElement("div", "wb-card-progress",
-        (shelf.unit === "gold" ? WITCHS_BREW_RES.gold : "ing") + " " + storedTotal + "/" + witchsBrewAmount(card.threshold));
+        (shelf.unit === "gold" ? WITCHS_BREW_RES.gold : WITCHS_BREW_ANY_ING) + " " + storedTotal + "/" + witchsBrewAmount(card.threshold));
       progress.dataset.wbTip = shelf.unit === "gold"
         ? "Gold piled on this shelf card. Filling the threshold lets the Cutpurse take it."
         : "Ingredients piled on this shelf card. Filling the threshold lets the Begging Monk take it.";

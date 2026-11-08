@@ -279,13 +279,21 @@
     }
 
     // pointerdown + hit test, so disabled controls stay explainable.
+    // Hit test by geometry, then keep the deepest match. querySelectorAll
+    // returns document order, so an ancestor would otherwise shadow every
+    // explained control nested inside it.
     function atPoint(x, y) {
-      return targets().find((node) => {
+      const hits = targets().filter((node) => {
         const box = node.getBoundingClientRect();
         return box.width && box.height
           && x >= box.left && x <= box.right
           && y >= box.top && y <= box.bottom;
-      }) || null;
+      });
+      if (!hits.length) return null;
+      const deepest = hits.find(
+        (node) => !hits.some((other) => other !== node && node.contains(other))
+      );
+      return deepest || hits[hits.length - 1];
     }
 
     // A press only counts as an explain request when the finger stays put.

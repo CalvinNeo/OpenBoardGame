@@ -2,22 +2,10 @@
   <button id="felixHelpBtn" type="button" aria-label="Help">Help</button>
   <button id="felixExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
 </template>
-<template data-game-target="felixHelpModal" data-game-mode="replace">
-  <dialog id="felixHelpModal" class="felix-dialog" aria-labelledby="felixHelpTitle">
-    <div class="felix-dialog-heading"><h2 id="felixHelpTitle">Felix · How to play</h2><button id="felixHelpCloseBtn" type="button">Close</button></div>
-    <div id="felixHelpContent" class="felix-dialog-body"></div>
-  </dialog>
-</template>
-<template data-game-target="felixExplainModal" data-game-mode="replace">
-  <dialog id="felixExplainModal" class="felix-dialog" aria-labelledby="felixExplainTitle">
-    <div class="felix-dialog-heading"><h2 id="felixExplainTitle">Explanation</h2><button id="felixExplainCloseBtn" type="button">Close</button></div>
-    <div id="felixExplainContent" class="felix-dialog-body"></div>
-  </dialog>
-</template>
 <template data-game-target="felixPanel" data-game-mode="contents">
   <div class="felix-topbar">
     <div class="felix-round">Round <strong id="felixRound">—</strong><span id="felixPhase">Waiting to start</span></div>
-    <strong id="felixBalance" class="felix-balance" tabindex="0" data-felix-tip="Mice (🐭) are your money. Each mouse left after round 9 scores one point. Only you can see your balance during play.">🐭 —</strong>
+    <strong id="felixBalance" class="felix-balance" tabindex="0" data-felix-explain="balance" data-felix-tip="Mice (🐭) are your money. Each mouse left after round 9 scores one point. Only you can see your balance during play.">🐭 —</strong>
   </div>
   <div id="felixActionHint" class="felix-action-hint" role="status" aria-live="polite">Ready up in Room Controls to start.</div>
   <section id="felixNotice" class="felix-notice hidden" aria-label="Round results">
@@ -28,11 +16,11 @@
   </section>
   <div class="felix-play-area">
     <section class="felix-sack" aria-label="The sack and auction">
-      <div class="felix-section-heading"><h3>🎒 The sack</h3><span id="felixRevealed" tabindex="0" data-felix-tip="Animals reveal from left to right. Each Pass reveals another card. Hidden animals and other players’ money stay secret.">0 revealed</span></div>
+      <div class="felix-section-heading"><h3>🎒 The sack</h3><span id="felixRevealed" tabindex="0" data-felix-explain="reveal_order" data-felix-tip="Animals reveal from left to right. Each Pass reveals another card. Hidden animals and other players’ money stay secret.">0 revealed</span></div>
       <div id="felixTableSlots" class="felix-slots"></div>
       <div id="felixAuction" class="felix-auction hidden">
         <div class="felix-auction-meta">
-          <div tabindex="0" data-felix-tip="High bid (🐭): only the winner pays. Your next bid must be higher, but cannot exceed your own balance."><span>High bid</span><strong id="felixBid">0 🐭</strong></div>
+          <div tabindex="0" data-felix-explain="high_bid" data-felix-tip="High bid (🐭): only the winner pays. Your next bid must be higher, but cannot exceed your own balance."><span>High bid</span><strong id="felixBid">0 🐭</strong></div>
           <div><span>Leading</span><strong id="felixBidder">No bids yet</strong></div>
         </div>
         <div id="felixBidEntry" class="felix-bid-entry">
@@ -50,7 +38,7 @@
           <button id="felixPassBtn" type="button">Pass</button>
         </div>
       </div>
-      <div class="felix-table-footer"><span>Opener <strong id="felixStart">—</strong></span><span tabindex="0" data-felix-tip="Bank (🐭): refills the mouse rewards after a sale. If it cannot refill all rewards, all become zero. An unsold sack skips the refill.">Bank <strong id="felixBank">—</strong> 🐭</span></div>
+      <div class="felix-table-footer"><span>Opener <strong id="felixStart">—</strong></span><span tabindex="0" data-felix-explain="bank" data-felix-tip="Bank (🐭): refills the mouse rewards after a sale. If it cannot refill all rewards, all become zero. An unsold sack skips the refill.">Bank <strong id="felixBank">—</strong> 🐭</span></div>
     </section>
     <section id="felixHandSection" class="felix-hand-section" aria-label="Your animal cards">
       <div class="felix-section-heading"><h3>Your hand</h3><span id="felixHandCount"></span></div>

@@ -146,6 +146,11 @@ from game.tacta import TactaGame
 from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
+from game.witch_cauldron import (
+    WitchCauldronGame,
+    ACTION_SCHEMA as WITCH_CAULDRON_ACTION_SCHEMA,
+    CONFIG_SCHEMA as WITCH_CAULDRON_CONFIG_SCHEMA,
+)
 from game.wriggle_roulette import WriggleRouletteGame
 from game.dare_words import (
     DareWordsGame,
@@ -6342,6 +6347,22 @@ register_game(
         module=WordSyncGame,
         serialize=WordSyncGame.serialize,
         deserialize=WordSyncGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=WitchCauldronGame.game_id,
+        name="Witch's Cauldron",
+        name_zh="女巫坩埚",
+        min_players=WitchCauldronGame.min_players,
+        max_players=WitchCauldronGame.max_players,
+        turn_mode="turn",
+        action_schema=WITCH_CAULDRON_ACTION_SCHEMA,
+        config_schema=WITCH_CAULDRON_CONFIG_SCHEMA,
+        module=WitchCauldronGame,
+        serialize=WitchCauldronGame.serialize,
+        deserialize=WitchCauldronGame.deserialize,
     )
 )
 

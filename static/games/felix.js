@@ -6,7 +6,6 @@
   const colors = { red: "#c76755", blue: "#5785b2", green: "#5d9165", purple: "#9571ad", orange: "#c39244" };
   let view = null;
   let selectedCardId = null;
-  let explaining = false;
   let pending = false;
   let pendingTimer = null;
   let tooltipTimer = null;
@@ -26,32 +25,166 @@
   const animalName = (card) => ({ cat: "Cat", rabbit: "Rabbit", big_dog: "Big dog", small_dog: "Small dog" }[card?.kind] || "Hidden");
   const cardLabel = (card) => `${emoji(card)} ${animalName(card)}${card?.value != null ? ` ${signed(card.value)}` : ""}`;
   const nextReward = () => [...(view?.mouse_cards || [])].sort((first, second) => first.value - second.value).find((card) => card.mice > 0);
-  const explanations = {
-    BidBtn: "Bid with Mice (🐭). Your total must exceed the high bid without exceeding your balance. Only the winner pays, after the auction ends.",
-    PassBtn: "Pass leaves the auction without paying a bid. Take the lowest non-empty mouse reward (🐭), then reveal the next animal. In the last-chance offer, Pass discards the sack and skips the next refill.",
-    BuyOneBtn: "Buy the fully revealed Sack (🎒) for 1 mouse (🐭). Dog effects still apply. This offer appears only when nobody has bid and you are the last player remaining.",
-    NextBtn: "Confirm you have reviewed the result. The next round begins only after every player chooses Next Round. There is no second confirmation.",
-    PlayBtn: "Commit this animal face down to the Sack (🎒). This cannot be undone. The next player then chooses a card.",
-    CancelBtn: "Return to your hand without playing a card. Clicking unused space or pressing Esc also cancels the selection.",
-    BidDownBtn: "Decrease your bid by one mouse (🐭), never below the current high bid plus one.",
-    BidUpBtn: "Increase your bid by one mouse (🐭), never above your own balance.",
-    BidInput: "Enter a whole number of mice (🐭), from the current high bid plus one up to your balance. Editing the number does not submit a bid.",
+  const FELIX_EXPLAIN = {
+    bid: {
+      zh: "用老鼠(🐭)出价。你的报价必须高于当前最高价，同时不能超过自己的余额。拍卖结束后只有赢家真正付钱。",
+      en: "Bid with Mice (🐭). Your total must exceed the high bid without exceeding your balance. Only the winner pays, after the auction ends."
+    },
+    pass: {
+      zh: "Pass 退出拍卖且不用付钱，并拿走最低的非空老鼠奖励(🐭)，然后翻开下一只动物。在最后机会中，Pass 会丢掉整个袋子并跳过下一次补充。",
+      en: "Pass leaves the auction without paying a bid. Take the lowest non-empty mouse reward (🐭), then reveal the next animal. In the last-chance offer, Pass discards the sack and skips the next refill."
+    },
+    buy_one: {
+      zh: "用一只老鼠(🐭)买下已经完全翻开的袋子(🎒)，狗的效果照常结算。只有在无人出价且你是最后剩下的玩家时才会出现这个选项。",
+      en: "Buy the fully revealed Sack (🎒) for 1 mouse (🐭). Dog effects still apply. This offer appears only when nobody has bid and you are the last player remaining."
+    },
+    next_round: {
+      zh: "确认你已经看过本轮结果。所有玩家都选择 Next Round 之后下一轮才开始，不会再弹第二次确认。",
+      en: "Confirm you have reviewed the result. The next round begins only after every player chooses Next Round. There is no second confirmation."
+    },
+    play_card: {
+      zh: "把这只动物面朝下放进袋子(🎒)，放出去就不能反悔。之后轮到下一位玩家选牌。",
+      en: "Commit this animal face down to the Sack (🎒). This cannot be undone. The next player then chooses a card."
+    },
+    cancel: {
+      zh: "回到手牌而不打出任何牌。点击空白处或按 Esc 同样可以取消选择。",
+      en: "Return to your hand without playing a card. Clicking unused space or pressing Esc also cancels the selection."
+    },
+    bid_down: {
+      zh: "把你的出价减少一只老鼠(🐭)，最低不会低于当前最高价加一。",
+      en: "Decrease your bid by one mouse (🐭), never below the current high bid plus one."
+    },
+    bid_up: {
+      zh: "把你的出价增加一只老鼠(🐭)，最高不会超过你自己的余额。",
+      en: "Increase your bid by one mouse (🐭), never above your own balance."
+    },
+    bid_input: {
+      zh: "输入整数的老鼠(🐭)数量，范围从当前最高价加一直到你的余额。只修改数字并不会提交出价。",
+      en: "Enter a whole number of mice (🐭), from the current high bid plus one up to your balance. Editing the number does not submit a bid."
+    },
+    hand_card: {
+      zh: "你手上的一张动物牌。先选中它，再确认 Play card 把它放进袋子(🎒)。好猫(🐱)是正分，坏猫(😾)是负分，兔子(🐰)零分，狗(🐕)会赶走猫。",
+      en: "One animal card in your hand. Select it, then confirm Play card to put it in the Sack (🎒). Good Cats (🐱) score positive, bad Cats (😾) negative, Rabbits (🐰) score zero, and dogs (🐕) chase cats away."
+    },
+    balance: {
+      zh: "老鼠(🐭)就是你的钱。第九轮结束后每剩一只老鼠记一分。游戏进行中只有你自己看得到余额。",
+      en: "Mice (🐭) are your money. Each mouse left after round 9 scores one point. Only you can see your balance during play."
+    },
+    reveal_order: {
+      zh: "动物从左到右依次翻开。每有人 Pass 就再翻一张。隐藏的动物和其他玩家的钱在游戏结束前都保持秘密。",
+      en: "Animals reveal from left to right. Each Pass reveals another card. Hidden animals and other players' money stay secret until the game ends."
+    },
+    high_bid: {
+      zh: "当前最高价(🐭)，只有赢家需要支付。你的下一次出价必须更高，但不能超过自己的余额。",
+      en: "High bid (🐭): only the winner pays. Your next bid must be higher, but cannot exceed your own balance."
+    },
+    bank: {
+      zh: "银行(🐭)在一次成交后补充老鼠奖励。如果银行不足以补满所有奖励，那么所有奖励都变为零。没有卖出的袋子不会触发补充。",
+      en: "Bank (🐭): refills the mouse rewards after a sale. If it cannot refill all rewards, all become zero. An unsold sack skips the refill."
+    }
   };
-  const help = `
-    <h3>🐱 Nine rounds of bluffing</h3>
-    <p>Each player starts with 15 Mice (🐭) and nine animal cards after one of their ten cards is secretly removed. In turn, everyone places one animal face down into the Sack (🎒). The opener’s card is revealed before bidding. With three players, an extra Dummy card is placed first and revealed instead.</p>
-    <h3>Choose, then confirm</h3>
-    <p>Tap a card, then Play card on the hand overlay. Cancel, Esc or unused space returns to your hand without playing. Face-down animals stay secret until revealed. Other players’ money and everyone’s won collections remain hidden until the game ends.</p>
-    <h3>🐭 Raise or leave</h3>
-    <p>Bid a whole number higher than the current high bid, up to your balance. Bids are not charged immediately: only the last remaining player pays their winning bid. Pass costs nothing, takes the lowest non-empty mouse reward and reveals the next hidden animal. The reward above a slot is the number of mice currently available, not its refill value.</p>
-    <p>If everyone passes without bidding, the last player sees all animals and may Buy for 1 🐭 or Pass. Passing discards the sack, keeps the same opener and skips the refill. After a sale, the winner opens the next round and rewards refill from the Bank (🐭). If the bank cannot refill all rewards, all become zero.</p>
-    <h3>Meet the animals</h3>
-    <p>Good Cat (🐱): +3, +5, +8, +11 or +15 points. Bad Cat (😾): −5 or −8 points. Rabbit (🐰): zero points.</p>
-    <p>One Big dog (🐕) removes the highest positive cat; if there are no positive cats, it removes the most negative cat. One Small dog (🐶) removes the most negative cat; without negative cats, it removes the lowest positive cat. The dog also leaves. Two or more dogs remove only the dogs, leaving all cats. A dog with no cats just leaves by itself.</p>
-    <h3>Review &amp; score</h3>
-    <p>All animals reveal at settlement. Kept cards go to the winner; Removed cards leave play. Every player chooses Next Round before play continues. After round 9, add your cat points and remaining mice. Highest total wins; ties use higher cat points, then share the win.</p>
-    <h3>Reading the table</h3>
-    <p>Cards is your remaining hand size; Won is your face-down collection size; Bid (🐭) is public. A lock (🔒) hides another player’s money. Turn, Placed, Leading, Passed and Ready describe each player’s state. Hover or tap non-interactive symbols for a brief tip. Explain inspects cards and controls, even disabled controls, without taking an action. Esc closes a dialog or exits Explain.</p>`;
+
+  const FELIX_EXPLAIN_BUTTONS = {
+    BidBtn: "bid",
+    PassBtn: "pass",
+    BuyOneBtn: "buy_one",
+    NextBtn: "next_round",
+    PlayBtn: "play_card",
+    CancelBtn: "cancel",
+    BidDownBtn: "bid_down",
+    BidUpBtn: "bid_up",
+    BidInput: "bid_input"
+  };
+
+  const FELIX_HELP_CONFIG = {
+    gameId: "felix",
+    title: { zh: "袋中猫 · Felix", en: "Felix: The Cat in the Sack" },
+    basic: {
+      win: {
+        zh: "九轮结束后，把你赢得的猫牌分数和剩下的老鼠(🐭)相加，总分最高的玩家获胜。",
+        en: "After nine rounds you add the points of the cats you won to your remaining Mice (🐭), and the highest total wins."
+      },
+      turn: {
+        zh: "轮到你时先从手牌选一只动物，面朝下放进袋子(🎒)，之后拍卖开始，你可以不断加价或者 Pass 退出。",
+        en: "On your turn you choose an animal from your hand and place it face down into the Sack (🎒), then the auction starts and you either keep raising or Pass."
+      },
+      key: {
+        zh: "你看不到别人放了什么，所以要靠别人出价和 Pass 的时机判断袋子(🎒)里藏着好猫(🐱)还是坏猫(😾)，别为一只兔子(🐰)付太多老鼠(🐭)。",
+        en: "You never see what the others placed, so the real skill is reading their bids and passes to work out whether the Sack (🎒) hides a good Cat (🐱) or a bad one (😾), and not overpaying Mice (🐭) for a Rabbit (🐰)."
+      }
+    },
+    sections: [
+      {
+        id: "rounds",
+        label: { zh: "九轮虚张声势", en: "Nine rounds of bluffing" },
+        html: {
+          zh: "<p>每位玩家开局有十五只老鼠(🐭)和九张动物牌，这是从十张牌里秘密去掉一张之后剩下的。</p><p>轮流行动时，每人都把一只动物面朝下放进袋子(🎒)。开牌者的牌会在拍卖前翻开。三人局会先额外放一张 Dummy 牌并翻开它。</p>",
+          en: "<p>Each player starts with 15 Mice (🐭) and nine animal cards after one of their ten cards is secretly removed.</p><p>In turn, everyone places one animal face down into the Sack (🎒). The opener's card is revealed before bidding. With three players, an extra Dummy card is placed first and revealed instead.</p>"
+        }
+      },
+      {
+        id: "choose",
+        label: { zh: "先选后确认", en: "Choose, then confirm" },
+        html: {
+          zh: "<p>点一张牌，再在手牌浮层上按 Play card。Cancel、Esc 或点击空白处都会退回手牌而不打出。</p><p>面朝下的动物在翻开之前始终保密。其他玩家的钱和所有人赢得的收藏在游戏结束前也保持隐藏。</p>",
+          en: "<p>Tap a card, then Play card on the hand overlay. Cancel, Esc or unused space returns to your hand without playing.</p><p>Face-down animals stay secret until revealed. Other players' money and everyone's won collections remain hidden until the game ends.</p>"
+        }
+      },
+      {
+        id: "auction",
+        label: { zh: "加价或退出", en: "Raise or leave" },
+        html: {
+          zh: "<p>报一个比当前最高价更高的整数，最多到你的余额。出价不会立刻扣钱，只有最后剩下的那位玩家支付自己的中标价。</p><p>Pass 不花钱，会拿走最低的非空老鼠奖励(🐭)并翻开下一只隐藏动物。格子上的奖励数字是当前可拿的老鼠数，不是它的补充值。</p><p>如果所有人都 Pass 而无人出价，最后一位玩家会看到全部动物，可以花一只老鼠(🐭)买下或者 Pass。此时 Pass 会丢掉袋子、保留同一位开牌者并跳过补充。成交之后赢家开下一轮，奖励从银行(🐭)补充。若银行不足以补满所有奖励，则全部变为零。</p>",
+          en: "<p>Bid a whole number higher than the current high bid, up to your balance. Bids are not charged immediately, and only the last remaining player pays their winning bid.</p><p>Pass costs nothing, takes the lowest non-empty mouse reward and reveals the next hidden animal. The reward above a slot is the number of mice currently available, not its refill value.</p><p>If everyone passes without bidding, the last player sees all animals and may Buy for 1 mouse (🐭) or Pass. Passing discards the sack, keeps the same opener and skips the refill. After a sale the winner opens the next round and rewards refill from the Bank (🐭). If the bank cannot refill all rewards, all become zero.</p>"
+        }
+      },
+      {
+        id: "animals",
+        label: { zh: "认识这些动物", en: "Meet the animals" },
+        html: {
+          zh: "<p>好猫(🐱)有 +3、+5、+8、+11 或 +15 分。坏猫(😾)是 −5 或 −8 分。兔子(🐰)零分。</p><p>一只大狗(🐕)会赶走分数最高的正分猫，若没有正分猫则赶走最负的那只。一只小狗(🐶)会赶走最负的猫，没有负分猫时赶走最低的正分猫。狗自己也会离开。两只或更多狗只会让狗彼此离开，所有猫都留下。没有猫时，狗自己离开。</p>",
+          en: "<p>Good Cat (🐱): +3, +5, +8, +11 or +15 points. Bad Cat (😾): −5 or −8 points. Rabbit (🐰): zero points.</p><p>One Big dog (🐕) removes the highest positive cat, or the most negative cat if there are no positive ones. One Small dog (🐶) removes the most negative cat, or the lowest positive cat if there are no negative ones. The dog also leaves. Two or more dogs remove only the dogs and leave all cats. A dog with no cats just leaves by itself.</p>"
+        }
+      },
+      {
+        id: "score",
+        label: { zh: "回顾与计分", en: "Review and score" },
+        html: {
+          zh: "<p>结算时所有动物都会翻开。留下的牌归赢家所有，被赶走的牌直接离场。每位玩家都要选择 Next Round 之后游戏才继续。</p><p>第九轮结束后，把你的猫牌分数和剩下的老鼠(🐭)相加。总分最高者获胜，平分时先比猫牌分数，仍然相同则共享胜利。</p>",
+          en: "<p>All animals reveal at settlement. Kept cards go to the winner while removed cards leave play. Every player chooses Next Round before play continues.</p><p>After round 9, add your cat points and remaining mice. The highest total wins, ties use higher cat points, and a remaining tie shares the win.</p>"
+        }
+      },
+      {
+        id: "table",
+        label: { zh: "读懂牌桌", en: "Reading the table" },
+        html: {
+          zh: "<p>Cards 是你剩余的手牌数，Won 是你面朝下的收藏数量，Bid (🐭) 是公开的。锁(🔒)表示另一位玩家的钱对你隐藏。Turn、Placed、Leading、Passed 和 Ready 描述每位玩家的状态。</p><p>把鼠标悬停在非交互符号上或轻点它可以看到简短提示。Explain 可以检查卡牌和控件，包括已禁用的控件，而且不会触发任何操作。按 Esc 可以关闭对话框或退出 Explain。</p>",
+          en: "<p>Cards is your remaining hand size, Won is your face-down collection size, and Bid (🐭) is public. A lock (🔒) hides another player's money. Turn, Placed, Leading, Passed and Ready describe each player's state.</p><p>Hover or tap non-interactive symbols for a brief tip. Explain inspects cards and controls, even disabled ones, without taking an action. Esc closes a dialog or exits Explain.</p>"
+        }
+      }
+    ]
+  };
+
+  let felixHelpWidget = null;
+  let felixExplainWidget = null;
+
+  function initFelixHelpExplain() {
+    if (felixHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    felixHelpWidget = window.obgCreateHelp(FELIX_HELP_CONFIG);
+    felixExplainWidget = window.obgCreateExplain({
+      gameId: "felix",
+      attribute: "data-felix-explain",
+      explanations: FELIX_EXPLAIN,
+      button: byId("ExplainBtn"),
+      root: () => root,
+      bypass: ["#felixHelpBtn", "#felixExplainBtn"]
+    });
+    byId("HelpBtn")?.addEventListener("click", () => {
+      felixExplainWidget?.exit();
+      felixHelpWidget.open();
+    });
+    byId("ExplainBtn")?.addEventListener("click", () => felixExplainWidget?.toggle());
+  }
 
   function element(tag, className, content) {
     const node = document.createElement(tag);
@@ -79,7 +212,8 @@
     if (interactive) {
       node.type = "button";
       node.dataset.cardId = card.id;
-      node.dataset.felixExplain = `${cardDescription(card)} Select it, then confirm Play card to put it in the sack.`;
+      node.dataset.felixExplain = "hand_card";
+      tip(node, cardDescription(card));
       node.setAttribute("aria-label", cardLabel(card));
     } else {
       tip(node, waiting ? "Empty slot: this player has not placed an animal yet." : cardDescription(card));
@@ -307,7 +441,6 @@
     const needsAction = active() && connected() && !pending && !!view?.legal_actions?.length;
     byId("ActionHint").classList.toggle("your-turn", needsAction);
     document.body.classList.toggle("felix-needs-action", needsAction);
-    root.querySelectorAll("[data-felix-explain], [data-felix-tip]").forEach((node) => node.classList.toggle("has-explanation", explaining));
   }
 
   function render() {
@@ -329,7 +462,7 @@
   }
 
   function submit(action) {
-    if (!can(action.type) || explaining) return;
+    if (!can(action.type)) return;
     if (action.type === "bid" && byId("BidBtn").disabled) return;
     if (action.type === "choose_card" && !view.your_hand.some((card) => card.id === action.card_id)) return;
     pending = true;
@@ -354,7 +487,7 @@
   }
 
   function showTip(target) {
-    if (!target || explaining || !active() || target.closest("button, input, summary") || byId("HelpModal").open || byId("ExplainModal").open) return;
+    if (!target || felixExplainWidget?.isActive() || felixHelpWidget?.isOpen() || !active() || target.closest("button, input, summary")) return;
     hideTip();
     const tooltip = byId("Tooltip");
     tooltip.textContent = target.dataset.felixTip;
@@ -367,34 +500,6 @@
     tooltipTimer = setTimeout(hideTip, 3000);
   }
 
-  function setExplain(value) {
-    explaining = value;
-    hideTip();
-    byId("ExplainBtn").setAttribute("aria-pressed", String(value));
-    updateControls();
-  }
-
-  function openModal(suffix) {
-    hideTip();
-    const modal = byId(suffix);
-    if (!modal.open) modal.showModal();
-    modal.querySelector("button").focus({ preventScroll: true });
-  }
-
-  function showExplanation(target) {
-    if (!target || !root.contains(target)) return;
-    const description = target.dataset.felixExplain || target.dataset.felixTip;
-    if (!description) return;
-    text("ExplainContent", description);
-    setExplain(false);
-    openModal("ExplainModal");
-  }
-
-  function explanationAt(clientX, clientY) {
-    const target = document.elementFromPoint(clientX, clientY)?.closest("[data-felix-explain], [data-felix-tip]");
-    return target && root.contains(target) ? target : null;
-  }
-
   function reset() {
     view = null;
     selectedCardId = null;
@@ -402,9 +507,7 @@
     gesture = null;
     handSignature = null;
     clearTimeout(pendingTimer);
-    setExplain(false);
-    byId("HelpModal").close();
-    byId("ExplainModal").close();
+    felixExplainWidget?.exit();
     byId("BidInput").value = "";
     render();
   }
@@ -432,11 +535,10 @@
     else updateControls();
   };
 
-  Object.entries(explanations).forEach(([suffix, content]) => { byId(suffix).dataset.felixExplain = content; });
-  byId("HelpContent").innerHTML = help;
+  Object.entries(FELIX_EXPLAIN_BUTTONS).forEach(([suffix, key]) => { byId(suffix).dataset.felixExplain = key; });
   byId("Hand").addEventListener("click", (event) => {
     const button = event.target.closest("button[data-card-id]");
-    if (!button || explaining || !can("choose_card")) return;
+    if (!button || !can("choose_card")) return;
     selectedCardId = button.dataset.cardId;
     hideTip();
     updateControls();
@@ -451,28 +553,18 @@
   byId("NextBtn").addEventListener("click", () => submit({ type: "next_round" }));
   [["BidDownBtn", -1], ["BidUpBtn", 1]].forEach(([suffix, delta]) => {
     byId(suffix).addEventListener("click", () => {
-      if (!can("bid") || explaining) return;
+      if (!can("bid")) return;
       const minimum = Number(view.current_bid) + 1;
       const amount = Number(byId("BidInput").value);
       byId("BidInput").value = String(Math.max(minimum, Math.min(Number(self().mice), (Number.isInteger(amount) ? amount : minimum) + delta)));
       updateControls();
     });
   });
-  byId("HelpBtn").addEventListener("click", () => { setExplain(false); openModal("HelpModal"); });
-  byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
-  ["Help", "Explain"].forEach((kind) => {
-    const modal = byId(`${kind}Modal`);
-    byId(`${kind}CloseBtn`).addEventListener("click", () => modal.close());
-    modal.addEventListener("click", (event) => {
-      const bounds = modal.getBoundingClientRect();
-      if (event.target === modal && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) modal.close();
-    });
-  });
 
   document.addEventListener("pointerdown", (event) => {
     if (!active()) return;
     suppressClickUntil = 0;
-    gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, down: true, target: explanationAt(event.clientX, event.clientY) };
+    gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, down: true };
     hideTip();
   }, true);
   document.addEventListener("pointermove", (event) => {
@@ -484,31 +576,16 @@
   document.addEventListener("pointerup", (event) => {
     if (!active() || !gesture || gesture.pointerId !== event.pointerId) return;
     gesture.down = false;
-    if (gesture.moved) { suppressClickUntil = Date.now() + 500; return; }
-    const target = explanationAt(event.clientX, event.clientY);
-    if (explaining && target && target === gesture.target) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      suppressClickUntil = Date.now() + 500;
-      showExplanation(target);
-    }
+    if (gesture.moved) suppressClickUntil = Date.now() + 500;
   }, true);
   document.addEventListener("click", (event) => {
     if (!active()) return;
     if (Date.now() < suppressClickUntil && root.contains(event.target)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      return;
-    }
-    if (!explaining || event.target.closest("#felixHelpBtn, #felixExplainBtn, #felixHelpModal, #felixExplainModal")) return;
-    if (event.target.closest("button, input, select, summary, a, [data-felix-tip]")) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      showExplanation(event.target.closest("[data-felix-explain], [data-felix-tip]"));
     }
   }, true);
   root.addEventListener("click", (event) => {
-    if (explaining) return;
     const target = event.target.closest("[data-felix-tip]");
     if (target) showTip(target);
     else if (!event.target.closest("button, input, summary, a")) clearSelection();
@@ -522,14 +599,8 @@
   document.addEventListener("keydown", (event) => {
     if (!active()) return;
     if (event.key === "Escape") {
-      setExplain(false);
-      byId("HelpModal").close();
-      byId("ExplainModal").close();
+      felixExplainWidget?.exit();
       clearSelection(true);
-    } else if (explaining && root.contains(event.target) && event.key !== "Tab") {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (["Enter", " "].includes(event.key)) showExplanation(event.target.closest("[data-felix-explain], [data-felix-tip]"));
     }
   }, true);
 
@@ -550,6 +621,7 @@
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "felix") window.renderFelixGameState(lastGameStatePayload);
   }
   render();
+  initFelixHelpExplain();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
   else initialize();
 })();

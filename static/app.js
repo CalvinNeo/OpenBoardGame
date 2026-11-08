@@ -519,6 +519,10 @@ function renderGameState(data) {
     renderBoomerangAustraliaGameState(data);
     return;
   }
+  if (gameType === "witch_cauldron") {
+    if (typeof renderWitchCauldronGameState === "function") renderWitchCauldronGameState(data);
+    return;
+  }
   if (gameType === "felix") {
     renderFelixGameState(data);
     return;

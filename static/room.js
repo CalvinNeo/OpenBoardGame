@@ -1490,6 +1490,8 @@ const GAME_WEIGHT = {
   power_grid: 3.25,
   ticket_to_ride: 1.82,
   twelve_rivers: 2.00,
+  // Chinese original (2026 Modian crowdfunding); no BoardGameGeek entry yet.
+  witch_cauldron: null,
 };
 
 function getGameWeight(gameId) {

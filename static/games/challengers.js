@@ -153,6 +153,10 @@
   };
 
   const CHALLENGERS_EXPLAIN = {
+    dialog_close: {
+      zh: "关闭当前对话框并回到牌桌。",
+      en: "Close the current dialog and return to the table."
+    },
     panel: {
       zh: "冠军挑战者的游戏面板。上方是记分板与赛程，下方是牌组和当前公园(🌳)的对战。",
       en: "The Challengers board. Scores and the round track sit on top, your deck and the match in the current park (🌳) below."

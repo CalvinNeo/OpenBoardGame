@@ -42,7 +42,7 @@
   let tipTimer = null, tipTarget = null;
   let helpWidget = null, explainWidget = null;
   let vb = {x: 0, y: 0, w: W, h: H};
-  let drag = null, pinch = null;
+  let drag = null, userZoomed = false;
 
   const active = () => !panel.classList.contains("hidden") && currentGameType === GAME;
   const available = type => !pending && !!view && (view.legal_actions || []).includes(type);
@@ -88,6 +88,23 @@
     map.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h);
   }
   function fitMap() { vb = {x: 0, y: 0, w: W, h: H}; applyViewBox(); }
+  // A phone screen is far taller than the board is wide, so covering the frame
+  // keeps the rivers readable instead of letterboxing them into a thin strip.
+  function fillMap() {
+    const rect = frame.getBoundingClientRect();
+    if (!rect.width || !rect.height) { fitMap(); return; }
+    const aspect = rect.width / rect.height;
+    let w, h;
+    if (aspect < W / H) { h = H; w = H * aspect; } else { w = W; h = W / aspect; }
+    // Anchor a horizontal crop to the left edge so the cost rail - the reference
+    // every placement decision is made against - is always on screen.
+    vb = {x: aspect < W / H ? 0 : (W - w) / 2, y: (H - h) / 2, w, h};
+    applyViewBox();
+  }
+  function defaultView() {
+    userZoomed = false;
+    if (window.innerWidth <= 900) fillMap(); else fitMap();
+  }
   function zoomBy(factor, cx, cy) {
     const w = Math.min(W * 1.6, Math.max(W * 0.28, vb.w * factor));
     const h = w * (H / W);
@@ -130,6 +147,7 @@
     if (!drag.moved) {
       if (Math.abs(dx) + Math.abs(dy) <= 5) return;
       drag.moved = true;
+      userZoomed = true;
       frame.classList.add("dragging");
       try { frame.setPointerCapture(drag.id); drag.captured = true; } catch (error) { /* ignore */ }
     }
@@ -156,6 +174,7 @@
   }, true);
   frame.addEventListener("wheel", event => {
     event.preventDefault();
+    userZoomed = true;
     const rect = frame.getBoundingClientRect();
     zoomBy(event.deltaY > 0 ? 1.12 : 0.89,
       (event.clientX - rect.left) / rect.width,
@@ -1179,10 +1198,11 @@
 
   // ------------------------------------------------------------------ wiring
   byId("Next").addEventListener("click", () => send({type: "next_round"}));
-  byId("ZoomIn").addEventListener("click", () => zoomBy(0.82));
-  byId("ZoomOut").addEventListener("click", () => zoomBy(1.22));
-  byId("Fit").addEventListener("click", fitMap);
-  byId("Origin").addEventListener("click", () => { vb = {x: 0, y: 0, w: W, h: H}; applyViewBox(); });
+  byId("ZoomIn").addEventListener("click", () => { userZoomed = true; zoomBy(0.82); });
+  byId("ZoomOut").addEventListener("click", () => { userZoomed = true; zoomBy(1.22); });
+  byId("Fit").addEventListener("click", () => { userZoomed = true; fitMap(); });
+  byId("Origin").addEventListener("click", () => { userZoomed = true; vb = {x: 0, y: 0, w: W, h: H}; applyViewBox(); });
+  window.addEventListener("resize", () => { if (!userZoomed) defaultView(); });
   byId("DockBtn").addEventListener("click", () => byId("Dock").classList.toggle("open"));
   byId("DockClose").addEventListener("click", () => byId("Dock").classList.remove("open"));
   panel.addEventListener("click", event => {
@@ -1216,7 +1236,7 @@
     byId("Next").classList.add("hidden");
     byId("Dock").classList.remove("open");
     text("Status", "Waiting to start");
-    fitMap();
+    defaultView();
   }
 
   window.renderTwelveRiversGameState = data => {
@@ -1253,7 +1273,7 @@
         if (room.game_type !== GAME || room.status === "lobby") clearState();
       });
     }
-    fitMap();
+    defaultView();
     if (typeof lastGameStatePayload !== "undefined"
         && lastGameStatePayload?.game_type === GAME) {
       window.renderTwelveRiversGameState(lastGameStatePayload);

@@ -1,176 +1,607 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
-@media all, obg-game-aidixit-1 {
+/* AI Dixit (aidixit) — standalone game stylesheet, loaded via GAME_ASSETS.styles. */
 
-.aidixit-toolbar,
-.aidixit-tools {
+.game-panel[data-game-theme="aidixit"] {
+  --adx-bg: #1d1730;
+  --adx-panel: #2b2245;
+  --adx-panel-2: #352a55;
+  --adx-line: #4a3d70;
+  --adx-ink: #f4eeff;
+  --adx-muted: #b0a3d0;
+  --adx-gold: #f2c96b;
+  --adx-good: #6ee7a8;
+  color: var(--adx-ink);
+  background:
+    radial-gradient(ellipse at 12% -10%, #4b2f7a66, transparent 55%),
+    radial-gradient(ellipse at 95% 0%, #7a3f5566, transparent 45%),
+    var(--adx-bg);
+  border: 1px solid var(--adx-line);
+  border-radius: 18px;
+  padding: clamp(10px, 1.6vw, 20px);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.game-panel[data-game-theme="aidixit"] > .panel-header button {
+  color: var(--adx-ink);
+  background: var(--adx-panel-2);
+  border-color: var(--adx-line);
+}
+
+.game-panel[data-game-theme="aidixit"] > .panel-header button[aria-pressed="true"] {
+  color: #2b1c05;
+  background: var(--adx-gold);
+  border-color: var(--adx-gold);
+}
+
+/* ---------------------------------------------------------------- root */
+
+.aidixit-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.aidixit-root > * {
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------- prompt */
+
+.aidixit-prompt {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--adx-line);
+  border-radius: 12px;
+  background: linear-gradient(90deg, #3a2b5e, #2b2245);
 }
 
-.aidixit-toolbar {
-  justify-content: space-between;
-  flex-wrap: nowrap;
-  margin-bottom: 10px;
+.aidixit-prompt.is-you {
+  border-color: var(--adx-gold);
+  box-shadow: inset 0 0 0 1px #f2c96b55;
 }
 
-.aidixit-toolbar h3 {
-  margin: 0;
+.aidixit-prompt-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.aidixit-prompt-text {
+  flex: 1 1 auto;
   min-width: 0;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------- clue bar */
+
+.aidixit-cluebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 10px 14px;
+  border: 1px dashed var(--adx-gold);
+  border-radius: 12px;
+  background: #3a2c1a66;
+}
+
+.aidixit-cluebar-tag {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--adx-gold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aidixit-cluebar-text {
+  flex: 1 1 160px;
+  min-width: 0;
+  font-size: clamp(16px, 2.4vw, 22px);
+  font-weight: 700;
+  font-style: italic;
+  color: #ffe9b8;
+}
+
+.aidixit-cluebar-by {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--adx-muted);
+}
+
+/* ------------------------------------------------------------ scoreboard */
+
+.aidixit-scores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aidixit-seat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--adx-line);
+  border-radius: 999px;
+  background: var(--adx-panel);
+}
+
+.aidixit-seat.is-storyteller {
+  border-color: var(--adx-gold);
+  background: #3d3153;
+}
+
+.aidixit-seat.is-you {
+  box-shadow: inset 0 0 0 1px #ffffff40;
+}
+
+.aidixit-seat-dot {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid #00000055;
+  background: #9ca3af;
+}
+
+.aidixit-seat-name {
+  min-width: 0;
+  max-width: 11ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.aidixit-tools {
+.aidixit-seat-score {
   flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--adx-gold);
+  font-variant-numeric: tabular-nums;
 }
 
-.aidixit-tools button {
+.aidixit-seat-tag {
   flex: 0 0 auto;
-  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1;
 }
 
-.aidixit-hand,
-.aidixit-pool,
-.aidixit-round-cards {
+/* ---------------------------------------------------------------- stage */
+
+.aidixit-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--adx-line);
+  border-radius: 14px;
+  background: #241c3c;
+}
+
+.aidixit-stage-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+
+.aidixit-stage-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.aidixit-stage-note {
+  font-size: 12px;
+  color: var(--adx-muted);
+}
+
+.aidixit-stage-note:empty {
+  display: none;
+}
+
+.aidixit-empty {
+  padding: 10px;
+  border: 1px dashed var(--adx-line);
+  border-radius: 10px;
+  color: var(--adx-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------- composer */
+
+.aidixit-composer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--adx-gold);
+  border-radius: 10px;
+  background: #3a2c1a55;
+}
+
+.aidixit-composer.needs-clue {
+  animation: aidixit-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes aidixit-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #f2c96b00; }
+  50% { box-shadow: 0 0 0 3px #f2c96b55; }
+}
+
+.aidixit-composer-label {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--adx-gold);
+}
+
+.aidixit-composer input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--adx-line);
+  border-radius: 8px;
+  background: #191330;
+  color: var(--adx-ink);
+  font: inherit;
+}
+
+.aidixit-composer input:focus {
+  outline: 2px solid var(--adx-gold);
+  outline-offset: 1px;
+}
+
+.aidixit-composer input::placeholder {
+  color: #7d6fa6;
+}
+
+/* ---------------------------------------------------------------- cards */
+
+.aidixit-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+}
+
+.aidixit-grid:empty {
+  display: none;
 }
 
 .aidixit-card {
   position: relative;
-  width: 200px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
+  min-width: 0;
   padding: 4px;
+  border: 2px solid var(--adx-line);
+  border-radius: 10px;
+  background: #efe9ff;
   cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
 }
 
-.aidixit-hand .aidixit-card {
-  width: 240px;
+.aidixit-card:not(.is-locked):hover {
+  transform: translateY(-2px);
+  border-color: #8f7ac4;
 }
 
-.aidixit-card img {
+.aidixit-card.is-selected {
+  border-color: var(--adx-gold);
+  box-shadow: 0 0 0 3px #f2c96b40;
+}
+
+.aidixit-card.is-story {
+  border-color: var(--adx-gold);
+}
+
+.aidixit-card.is-locked {
+  cursor: default;
+}
+
+.aidixit-card.is-locked .aidixit-card-img {
+  opacity: 0.62;
+}
+
+.aidixit-card.is-mine {
+  border-color: #7dd3fc;
+}
+
+.aidixit-card-img {
+  display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  display: block;
-  border-radius: 4px;
-  background: #f3f4f6;
+  border-radius: 6px;
+  background: #d9d2ee;
+}
+
+/* Overlays sit above the image; Explain mode picks the deepest node. */
+.aidixit-card-badge {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.aidixit-card-votes {
+  top: 8px;
+  right: 8px;
+  color: #1b1330;
+  background: var(--adx-gold);
+}
+
+.aidixit-card-story {
+  bottom: 8px;
+  left: 8px;
+  color: #2b1c05;
+  background: var(--adx-gold);
+}
+
+.aidixit-card-mine {
+  top: 8px;
+  left: 8px;
+  color: #06283a;
+  background: #7dd3fc;
 }
 
 .aidixit-zoom-btn {
   position: absolute;
-  right: 6px;
-  bottom: 6px;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  background: rgba(15, 23, 42, 0.7);
-  cursor: zoom-in;
-  display: inline-block;
-  padding: 0;
+  right: 8px;
+  bottom: 8px;
   z-index: 2;
-}
-
-.aidixit-zoom-btn::before {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  top: 6px;
-  left: 6px;
-  box-sizing: border-box;
-}
-
-.aidixit-zoom-btn::after {
-  content: "";
-  position: absolute;
-  width: 8px;
-  height: 2px;
-  background: #fff;
-  border-radius: 2px;
-  bottom: 6px;
-  right: 6px;
-  transform: rotate(45deg);
-  transform-origin: left center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #ffffff66;
+  border-radius: 999px;
+  background: #14102acc;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: zoom-in;
 }
 
 .aidixit-zoom-btn:hover {
-  background: rgba(15, 23, 42, 0.85);
-}
-
-.aidixit-card.selected {
-  border-color: #1f6feb;
-  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.15);
-}
-
-.aidixit-card.story {
-  border-color: #f59e0b;
-}
-
-.aidixit-card.disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.aidixit-card-count {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: #111827;
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 999px;
-}
-
-.aidixit-card-story {
-  position: absolute;
-  bottom: 6px;
-  left: 6px;
-  background: #f59e0b;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 6px;
+  background: #14102a;
 }
 
 .aidixit-votes {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 6px;
+  margin-top: 5px;
+  padding: 0 2px;
 }
 
 .aidixit-vote-dot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #00000055;
   background: #9ca3af;
 }
 
-.aidixit-round-cards {
-  margin-top: 8px;
+/* --------------------------------------------------- in-place confirmation */
+
+.aidixit-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #150f2bd9;
 }
 
-.aidixit-color-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+.aidixit-overlay-hint {
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  color: #ffd9d9;
 }
+
+.aidixit-overlay-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.aidixit-overlay-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 7px 4px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.aidixit-overlay-btn.is-primary {
+  color: #2b1c05;
+  background: var(--adx-gold);
+  border: 1px solid var(--adx-gold);
+}
+
+.aidixit-overlay-btn.is-ghost {
+  color: var(--adx-ink);
+  background: #ffffff1f;
+  border: 1px solid #ffffff59;
+}
+
+.aidixit-overlay-btn:disabled {
+  color: #8b7fb0;
+  background: #ffffff14;
+  border-color: #ffffff2e;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------- result */
+
+.aidixit-result {
+  border: 1px solid var(--adx-line);
+  border-radius: 14px;
+  background: #241c3c;
+  overflow: hidden;
+}
+
+.aidixit-result-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 0;
+  background: #2f2550;
+  color: var(--adx-ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aidixit-result-toggle:hover {
+  background: #372c5d;
+}
+
+.aidixit-result-chevron {
+  flex: 0 0 auto;
+  transition: transform 0.15s ease;
+}
+
+.aidixit-result-toggle[aria-expanded="false"] .aidixit-result-chevron {
+  transform: rotate(-90deg);
+}
+
+.aidixit-result-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.aidixit-result-body[hidden] {
+  display: none;
+}
+
+.aidixit-result-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--adx-muted);
+}
+
+.aidixit-result-line b {
+  color: var(--adx-ink);
+}
+
+.aidixit-result-case {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2b1c05;
+  background: var(--adx-gold);
+}
+
+.aidixit-result-case.is-fail {
+  color: #33111a;
+  background: #f9a8b4;
+}
+
+.aidixit-result-deltas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aidixit-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--adx-line);
+  border-radius: 999px;
+  background: var(--adx-panel);
+  font-size: 12px;
+}
+
+.aidixit-delta.is-you {
+  border-color: #ffffff66;
+}
+
+.aidixit-delta b {
+  color: var(--adx-good);
+  font-variant-numeric: tabular-nums;
+}
+
+.aidixit-delta b.is-zero {
+  color: var(--adx-muted);
+}
+
+/* ------------------------------------------------------------- game over */
+
+.aidixit-gameover {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--adx-gold);
+  border-radius: 14px;
+  background: linear-gradient(90deg, #4a3a1c, #2b2245);
+}
+
+.aidixit-gameover-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.aidixit-gameover-text {
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffe9b8;
+}
+
+/* ----------------------------------------------------------------- meta */
+
+.aidixit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding-top: 2px;
+  font-size: 11.5px;
+  color: var(--adx-muted);
+}
+
+.aidixit-meta-item b {
+  color: var(--adx-ink);
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------- zoom modal */
 
 .aidixit-zoom-modal {
   max-width: 960px;
@@ -178,8 +609,8 @@
 
 .aidixit-zoom-modal .modal-body {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 }
 
 .aidixit-zoom-modal img {
@@ -187,33 +618,103 @@
   max-height: 72vh;
   height: auto;
   border-radius: 8px;
-  background: #f3f4f6;
+  background: #d9d2ee;
   object-fit: contain;
 }
-}
 
-@media all, obg-game-aidixit-2 {
+/* ----------------------------------------------------------- responsive */
 
 @media (max-width: 900px) {
-  .aidixit-toolbar {
+  .aidixit-seat-name {
+    max-width: 8ch;
+  }
+}
+
+@media (max-width: 640px) {
+  .game-panel[data-game-theme="aidixit"] {
+    padding: 8px;
+    border-radius: 13px;
+  }
+
+  .aidixit-root {
+    gap: 8px;
+  }
+
+  .aidixit-prompt,
+  .aidixit-cluebar {
+    padding: 8px 10px;
+  }
+
+  .aidixit-stage,
+  .aidixit-result-body {
+    padding: 8px;
+  }
+
+  .aidixit-grid {
     gap: 6px;
-    margin-bottom: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .aidixit-tools button {
-    padding: 4px 8px;
-    font-size: 12px;
-  }
-
-  .aidixit-hand,
   .aidixit-pool,
   .aidixit-round-cards {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .aidixit-card {
-    width: 100%;
+    padding: 3px;
+    border-radius: 8px;
+  }
+
+  .aidixit-card-badge {
+    padding: 1px 5px;
+    font-size: 10px;
+  }
+
+  .aidixit-card-votes { top: 6px; right: 6px; }
+  .aidixit-card-story { bottom: 6px; left: 6px; }
+  .aidixit-card-mine { top: 6px; left: 6px; }
+
+  .aidixit-zoom-btn {
+    right: 6px;
+    bottom: 6px;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .aidixit-overlay-actions {
+    flex-direction: column;
+  }
+
+  .aidixit-seat {
+    padding: 4px 8px;
+    gap: 5px;
+    font-size: 13px;
+  }
+
+  .aidixit-meta {
+    gap: 3px 10px;
+    font-size: 11px;
   }
 }
+
+@media (max-width: 360px) {
+  .aidixit-hand {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .aidixit-seat-name {
+    max-width: 7ch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aidixit-card,
+  .aidixit-result-chevron {
+    transition: none;
+  }
+
+  .aidixit-composer.needs-clue {
+    animation: none;
+  }
 }

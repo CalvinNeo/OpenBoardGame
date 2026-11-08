@@ -146,6 +146,8 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "trekking_history": ("euro",),
     "tucano": ("filler", "push_your_luck"),
     "turing_machine": ("puzzle",),
+    "twelve_rivers": ("filler", "euro"),
+    "witch_cauldron": ("filler", "bluffing", "push_your_luck"),
     "wandering_towers": ("filler", "euro", "ameritrash"),
     "wavelength": ("filler", "cooperative", "creative"),
     "semantic_guess": ("puzzle", "creative"),

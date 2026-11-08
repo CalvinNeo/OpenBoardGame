@@ -1,104 +1,141 @@
 <template data-game-target="hotStreakPanel" data-game-mode="contents">
-              <div class="hot-streak-status-bar" aria-label="Race status">
-                <div><span aria-hidden="true">🔥</span> <strong id="hotStreakRaceLabel">Race 1 of 3</strong></div>
-                <div><span aria-hidden="true">🏁</span> <strong id="hotStreakPhaseLabel">Betting</strong></div>
-                <div><span aria-hidden="true">👉</span> <strong id="hotStreakTurnLabel">-</strong></div>
+              <div class="hot-streak-status" role="status" aria-label="Race status">
+                <span class="hot-streak-status-item" data-hot-streak-explain="race" data-hot-streak-tip="race">
+                  <span class="hot-streak-status-icon" aria-hidden="true">🔥</span>
+                  <strong id="hotStreakRaceLabel">Race 1 of 3</strong>
+                </span>
+                <span class="hot-streak-status-item" data-hot-streak-explain="phase" data-hot-streak-tip="phase">
+                  <span class="hot-streak-status-icon" aria-hidden="true">🏁</span>
+                  <strong id="hotStreakPhaseLabel">Betting</strong>
+                </span>
+                <span class="hot-streak-status-item hot-streak-status-turn" data-hot-streak-explain="turn" data-hot-streak-tip="turn">
+                  <span class="hot-streak-status-icon" aria-hidden="true">👉</span>
+                  <strong id="hotStreakTurnLabel">-</strong>
+                </span>
+                <button id="hotStreakNoticeToggle" class="hot-streak-notice-chip" type="button"
+                        aria-expanded="false" aria-controls="hotStreakDataNotice"
+                        data-hot-streak-explain="notice">ⓘ Data</button>
               </div>
-              <p id="hotStreakDataNotice" class="hot-streak-data-notice">
+              <p id="hotStreakDataNotice" class="hot-streak-data-notice" hidden>
                 Star rows and Swerve directions match the second-printing rulebook · remaining component values are prototype-compatible.
               </p>
 
-              <div id="hotStreakPlayers" class="hot-streak-players" aria-label="Players"></div>
+              <section id="hotStreakPlayersSection" class="hot-streak-panel hot-streak-players-panel" data-hot-streak-explain="players">
+                <div class="hot-streak-panel-head">
+                  <h3>👥 Players</h3>
+                  <span id="hotStreakPlayersSummary" class="hot-streak-mini-status">-</span>
+                </div>
+                <div id="hotStreakPlayers" class="hot-streak-players"></div>
+              </section>
 
               <div class="hot-streak-layout">
-                <section class="hot-streak-race-column" aria-label="Race track">
-                  <div class="hot-streak-track-shell">
-                    <div class="hot-streak-track-caption">
-                      <span>Folded edge</span>
-                      <span>Finish 🏁</span>
-                    </div>
-                    <div id="hotStreakSwerveKey" class="hot-streak-swerve-key" data-hot-streak-explain="swerve" aria-label="Swerve directions"></div>
-                    <div id="hotStreakTrack" class="hot-streak-track" role="grid" aria-label="Four lane race track"></div>
-                  </div>
-                  <div id="hotStreakCurrentCard" class="hot-streak-current-card" aria-live="polite">Waiting for the race…</div>
-                  <div id="hotStreakRaceActions" class="hot-streak-action-row">
-                    <button id="hotStreakContinueBtn" class="hidden" type="button" data-hot-streak-explain="continue">Continue Race</button>
-                  </div>
-                </section>
-
-                <aside class="hot-streak-side-column">
-                  <section id="hotStreakPoolSection" class="hot-streak-card-panel" data-hot-streak-explain="pool">
-                    <div class="hot-streak-section-heading">
-                      <h3>Public Race Pool</h3>
-                      <span id="hotStreakPoolCount" class="hot-streak-mini-status">0 cards</span>
-                    </div>
-                    <p class="hot-streak-pool-hint">Known cards before secret additions</p>
-                    <div id="hotStreakPool" class="hot-streak-pool" role="list" aria-label="Public race card pool"></div>
-                  </section>
-
-                  <section id="hotStreakTicketSection" class="hot-streak-card-panel">
-                    <div class="hot-streak-section-heading">
-                      <h3>Betting</h3>
+                <div class="hot-streak-main-column">
+                  <section id="hotStreakTicketSection" class="hot-streak-panel hot-streak-ticket-panel" data-hot-streak-explain="betting">
+                    <div class="hot-streak-panel-head">
+                      <h3>🎟️ Betting Tickets</h3>
                       <span id="hotStreakDraftProgress" class="hot-streak-mini-status">-</span>
                     </div>
-                    <div class="hot-streak-bet-context" data-hot-streak-explain="side">
-                      <span class="hot-streak-bet-context-label">Current Side Bet</span>
-                      <div id="hotStreakSideBet" class="hot-streak-side-bet">-</div>
-                    </div>
-                    <div id="hotStreakTicketChoices" class="hot-streak-ticket-choices">
-                      <p class="hot-streak-ticket-group-label">Betting Tickets</p>
-                      <div id="hotStreakTickets" class="hot-streak-ticket-grid"></div>
+                    <p id="hotStreakTicketHint" class="hot-streak-hint">Take a ticket, then choose Safe or Risky.</p>
+                    <div class="hot-streak-ticket-stage">
+                      <div id="hotStreakTickets" class="hot-streak-ticket-grid" role="list" aria-label="Ticket stacks"></div>
+                      <div id="hotStreakTicketMask" class="hot-streak-ticket-mask" hidden>
+                        <div class="hot-streak-confirm" role="group" aria-label="Confirm ticket">
+                          <strong id="hotStreakConfirmTitle" class="hot-streak-confirm-title">-</strong>
+                          <div id="hotStreakConfirmModes" class="hot-streak-mode-actions"></div>
+                          <button id="hotStreakConfirmCancel" class="hot-streak-confirm-cancel" type="button"
+                                  data-hot-streak-explain="cancel">✕ Cancel</button>
+                        </div>
+                      </div>
                     </div>
                   </section>
 
-                  <section id="hotStreakHandSection" class="hot-streak-card-panel">
-                    <div class="hot-streak-section-heading">
-                      <h3>Your Race Cards</h3>
+                  <section id="hotStreakHandSection" class="hot-streak-panel hot-streak-hand-panel" data-hot-streak-explain="hand">
+                    <div class="hot-streak-panel-head">
+                      <h3>🃏 Your Race Cards</h3>
                       <span id="hotStreakSubmissionProgress" class="hot-streak-mini-status">-</span>
                     </div>
-                    <p id="hotStreakHandHint" class="hint">Choose a race card.</p>
+                    <p id="hotStreakHandHint" class="hot-streak-hint">Choose a race card.</p>
                     <div id="hotStreakHand" class="hot-streak-hand"></div>
                     <button id="hotStreakSubmitBtn" type="button" data-hot-streak-explain="submit">Submit Card</button>
                   </section>
 
-                  <section id="hotStreakResult" class="hot-streak-card-panel hidden" aria-live="polite"></section>
+                  <section id="hotStreakTrackSection" class="hot-streak-panel hot-streak-track-panel" data-hot-streak-explain="track">
+                    <div class="hot-streak-panel-head">
+                      <button id="hotStreakTrackToggle" class="hot-streak-log-toggle" type="button"
+                              aria-expanded="true" aria-controls="hotStreakTrackBody" data-hot-streak-explain="track_toggle">
+                        <span>🏁 Race Track</span>
+                        <span id="hotStreakTrackStatus" class="hot-streak-mini-status">-</span>
+                      </button>
+                    </div>
+                    <div id="hotStreakTrackBody">
+                      <div id="hotStreakSwerveKey" class="hot-streak-swerve-key" data-hot-streak-explain="swerve"></div>
+                      <div class="hot-streak-track-frame">
+                        <div class="hot-streak-track-caption hot-streak-caption-top">
+                          <span class="hot-streak-cap-wide">◀ Folded edge</span>
+                          <span class="hot-streak-cap-narrow">Finish 🏁 ▲</span>
+                          <span class="hot-streak-cap-wide">Finish 🏁 ▶</span>
+                        </div>
+                        <div id="hotStreakTrack" class="hot-streak-track" role="grid" aria-label="Four lane race track"></div>
+                        <div class="hot-streak-track-caption hot-streak-caption-bottom">
+                          <span class="hot-streak-cap-narrow">Folded edge ▼</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
 
-                  <section class="hot-streak-card-panel hot-streak-log-panel">
-                    <h3>Race Log</h3>
-                    <div id="hotStreakLog" class="hot-streak-log" tabindex="0"></div>
+                  <div id="hotStreakCurrentCard" class="hot-streak-current-card" aria-live="polite" hidden></div>
+
+                  <section id="hotStreakStandings" class="hot-streak-panel hot-streak-standings-panel" data-hot-streak-explain="standings" hidden>
+                    <div class="hot-streak-panel-head">
+                      <h3>🏆 Standings</h3>
+                    </div>
+                    <div id="hotStreakStandingsList" class="hot-streak-standings-list"></div>
+                  </section>
+
+                  <section id="hotStreakResult" class="hot-streak-panel hot-streak-result-panel" aria-live="polite" hidden>
+                    <div class="hot-streak-panel-head">
+                      <h3 id="hotStreakResultTitle">Race Results</h3>
+                      <span id="hotStreakReadyProgress" class="hot-streak-mini-status"></span>
+                    </div>
+                    <div id="hotStreakResultBody"></div>
+                    <div class="hot-streak-result-actions">
+                      <button id="hotStreakNextRaceBtn" type="button" data-hot-streak-explain="next" hidden>Next Race</button>
+                      <button id="hotStreakPlayAgainBtn" type="button" data-hot-streak-explain="again" hidden>Play Again</button>
+                    </div>
+                  </section>
+
+                  <div id="hotStreakRaceActions" class="hot-streak-action-row">
+                    <button id="hotStreakContinueBtn" type="button" data-hot-streak-explain="continue" hidden>▶ Continue Race</button>
+                  </div>
+                </div>
+
+                <aside class="hot-streak-side-column">
+                  <section id="hotStreakSideBetSection" class="hot-streak-panel" data-hot-streak-explain="side">
+                    <div class="hot-streak-panel-head">
+                      <h3>🎲 Side Bet</h3>
+                      <span id="hotStreakSideResult" class="hot-streak-side-result">Pending</span>
+                    </div>
+                    <p id="hotStreakSideBet" class="hot-streak-side-bet">-</p>
+                    <p id="hotStreakSideEvidence" class="hot-streak-side-evidence" hidden></p>
+                  </section>
+
+                  <section id="hotStreakPoolSection" class="hot-streak-panel" data-hot-streak-explain="pool" hidden>
+                    <div class="hot-streak-panel-head">
+                      <h3>🗂️ Public Race Pool</h3>
+                      <span id="hotStreakPoolCount" class="hot-streak-mini-status">0 cards</span>
+                    </div>
+                    <p class="hot-streak-hint">Known cards before the secret additions</p>
+                    <div id="hotStreakPool" class="hot-streak-pool" role="list" aria-label="Public race card pool"></div>
+                  </section>
+
+                  <section id="hotStreakLogPanel" class="hot-streak-panel hot-streak-log-panel" hidden>
+                    <button id="hotStreakLogToggle" class="hot-streak-log-toggle" type="button"
+                            aria-expanded="false" aria-controls="hotStreakLog" data-hot-streak-explain="log">
+                      <span>📜 Race Log</span>
+                      <span id="hotStreakLogCount" class="hot-streak-mini-status">0</span>
+                    </button>
+                    <div id="hotStreakLog" class="hot-streak-log" tabindex="0" hidden></div>
                   </section>
                 </aside>
               </div>
-
-              <div class="hot-streak-footer-actions">
-                <button id="hotStreakNextRaceBtn" class="hidden" type="button" data-hot-streak-explain="next">Next Race</button>
-                <button id="hotStreakPlayAgainBtn" class="hidden" type="button" data-hot-streak-explain="again">Play Again</button>
-              </div>
             </template>
-<template data-game-target="hotStreakBetModal" data-game-mode="replace"><div id="hotStreakBetModal" class="modal hidden" aria-hidden="true">
-              <div class="modal-content hot-streak-modal-content" role="dialog" aria-modal="true" aria-labelledby="hotStreakBetModalTitle">
-                <div class="modal-header">
-                  <h2 id="hotStreakBetModalTitle">Choose a Ticket</h2>
-                  <button id="hotStreakBetModalCloseBtn" type="button">Close</button>
-                </div>
-                <div id="hotStreakBetModalBody" class="modal-body"></div>
-              </div>
-            </div></template>
-<template data-game-target="hotStreakHelpModal" data-game-mode="replace"><div id="hotStreakHelpModal" class="modal hidden" aria-hidden="true">
-              <div class="modal-content hot-streak-modal-content" role="dialog" aria-modal="true" aria-labelledby="hotStreakHelpModalTitle">
-                <div class="modal-header">
-                  <h2 id="hotStreakHelpModalTitle">Hot Streak Help</h2>
-                  <button id="hotStreakHelpModalCloseBtn" type="button">Close</button>
-                </div>
-                <div id="hotStreakHelpContent" class="modal-body hot-streak-help-content"></div>
-              </div>
-            </div></template>
-<template data-game-target="hotStreakExplainModal" data-game-mode="replace"><div id="hotStreakExplainModal" class="modal hidden" aria-hidden="true">
-              <div class="modal-content hot-streak-modal-content" role="dialog" aria-modal="true" aria-labelledby="hotStreakExplainModalTitle">
-                <div class="modal-header">
-                  <h2 id="hotStreakExplainModalTitle">Hot Streak Explain</h2>
-                  <button id="hotStreakExplainModalCloseBtn" type="button">Close</button>
-                </div>
-                <div id="hotStreakExplainContent" class="modal-body"></div>
-              </div>
-            </div></template>

@@ -1,0 +1,317 @@
+/* Witch's Cauldron (女巫坩埚) */
+
+.witch-cauldron-root {
+    min-width: 0;
+    max-width: 100%;
+    --wc-red: #c4553b;
+    --wc-blue: #3f7fa6;
+    --wc-neutral: #8a8070;
+    --wc-special: #8c6bb1;
+    --wc-ink: #2c2318;
+    --wc-paper: #efe4d2;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--wc-ink);
+}
+
+.witch-cauldron-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(44, 35, 24, 0.08);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.witch-cauldron-goal { font-weight: 500; opacity: 0.8; }
+
+.witch-cauldron-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.witch-cauldron-pot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 8px 8px;
+    border: 2px solid rgba(44, 35, 24, 0.25);
+    border-radius: 10px;
+    background: var(--wc-paper);
+    min-width: 0;
+}
+
+.witch-cauldron-pot.is-me { border-color: #b8860b; box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.25); }
+.witch-cauldron-pot.is-out { opacity: 0.55; filter: grayscale(0.6); }
+.witch-cauldron-pot.is-target { cursor: pointer; border-color: #2e7d32; }
+.witch-cauldron-pot.is-target:hover { background: #f6ecd8; }
+.witch-cauldron-pot.is-chosen { border-color: #2e7d32; box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.3); }
+
+.witch-cauldron-pot-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.witch-cauldron-pot-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.witch-cauldron-pot-score { flex: none; font-variant-numeric: tabular-nums; }
+
+.witch-cauldron-tokens { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; }
+.witch-cauldron-token { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.witch-cauldron-token.is-sealed { color: #7a4f9c; font-weight: 700; }
+
+.witch-cauldron-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 54px;
+    align-content: flex-start;
+}
+
+.witch-cauldron-empty { font-size: 12px; opacity: 0.6; align-self: center; }
+
+.witch-cauldron-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 58px;
+    min-height: 74px;
+    padding: 12px 2px 4px;
+    border: 2px solid var(--wc-neutral);
+    border-radius: 7px;
+    background: #fbf5ea;
+    font-size: 10px;
+    line-height: 1.15;
+    text-align: center;
+    overflow: hidden;
+}
+
+.witch-cauldron-card.is-small { width: 44px; min-height: 58px; padding-top: 10px; font-size: 9px; }
+.witch-cauldron-card.tone-red { border-color: var(--wc-red); background: #fbe9e3; }
+.witch-cauldron-card.tone-blue { border-color: var(--wc-blue); background: #e4eff6; }
+.witch-cauldron-card.tone-neutral { border-color: var(--wc-neutral); background: #f1ede5; }
+.witch-cauldron-card.tone-special { border-color: var(--wc-special); background: #efe6f7; }
+.witch-cauldron-card.tone-back { border-color: #6b5a44; background: repeating-linear-gradient(45deg, #7b6a52, #7b6a52 4px, #6b5a44 4px, #6b5a44 8px); }
+.witch-cauldron-card.is-selected { outline: 3px solid #2e7d32; outline-offset: 1px; }
+.witch-cauldron-card.is-known { box-shadow: inset 0 0 0 2px rgba(140, 107, 177, 0.75); }
+
+.witch-cauldron-icon { font-size: 20px; line-height: 1; }
+.witch-cauldron-card.is-small .witch-cauldron-icon { font-size: 16px; }
+.witch-cauldron-back { font-size: 20px; opacity: 0.85; }
+
+.witch-cauldron-name {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.witch-cauldron-corner { position: absolute; top: 1px; left: 2px; font-size: 9px; line-height: 1; }
+.witch-cauldron-mark { font-size: 9px; }
+
+.witch-cauldron-value {
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.witch-cauldron-mask {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 8px;
+    background: rgba(20, 15, 8, 0.72);
+}
+
+.witch-cauldron-mask button {
+    min-width: 96px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    background: #f3e7d0;
+    color: #2c2318;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.witch-cauldron-mask button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.witch-cauldron-tray {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 10px;
+    background: rgba(44, 35, 24, 0.06);
+}
+
+.witch-cauldron-tray-head { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.witch-cauldron-hand, .witch-cauldron-display { display: flex; flex-wrap: wrap; gap: 6px; }
+.witch-cauldron-hand .witch-cauldron-card, .witch-cauldron-display .witch-cauldron-card { cursor: pointer; }
+
+.witch-cauldron-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.witch-cauldron-swaps { gap: 4px; }
+
+.witch-cauldron-actions button, .witch-cauldron-chip {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 7px 12px;
+    border: 1px solid rgba(44, 35, 24, 0.35);
+    border-radius: 7px;
+    background: #f6eddc;
+    color: var(--wc-ink);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.witch-cauldron-actions button:hover:not(:disabled) { background: #fff8ea; }
+.witch-cauldron-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+.witch-cauldron-chip.is-on { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+
+.witch-cauldron-summary { display: flex; flex-direction: column; gap: 4px; }
+
+.witch-cauldron-summary-row {
+    display: grid;
+    grid-template-columns: minmax(56px, 1fr) auto auto auto;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+}
+
+.witch-cauldron-summary-row.is-me { background: rgba(184, 134, 11, 0.2); font-weight: 700; }
+.witch-cauldron-summary-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.witch-cauldron-summary-diff { font-variant-numeric: tabular-nums; opacity: 0.85; }
+.witch-cauldron-summary-pts { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.witch-cauldron-root.is-explaining [data-wc-explain],
+.witch-cauldron-panel.is-explaining [data-wc-explain] {
+    outline: 1px dashed #8c6bb1;
+    cursor: help;
+}
+
+.witch-cauldron-tip {
+    position: fixed;
+    z-index: 60;
+    max-width: min(280px, 88vw);
+    padding: 6px 9px;
+    border-radius: 7px;
+    background: rgba(28, 22, 14, 0.94);
+    color: #f6eddc;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.witch-cauldron-dialog {
+    width: min(560px, 94vw);
+    max-height: 86vh;
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+    background: var(--wc-paper, #efe4d2);
+    color: #2c2318;
+}
+
+.witch-cauldron-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+
+.witch-cauldron-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(44, 35, 24, 0.2);
+}
+
+.witch-cauldron-dialog-head h2 { margin: 0; font-size: 16px; }
+.witch-cauldron-dialog-tools { display: flex; gap: 6px; }
+
+.witch-cauldron-dialog-head button {
+    padding: 5px 10px;
+    border: 1px solid rgba(44, 35, 24, 0.35);
+    border-radius: 6px;
+    background: #f6eddc;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.witch-cauldron-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 12px 0;
+}
+
+.witch-cauldron-tab {
+    padding: 5px 9px;
+    border: 1px solid rgba(44, 35, 24, 0.3);
+    border-radius: 999px;
+    background: transparent;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.witch-cauldron-tab.is-on { background: #2c2318; color: #f6eddc; border-color: #2c2318; }
+
+.witch-cauldron-dialog-body {
+    padding: 10px 14px 16px;
+    overflow-y: auto;
+    max-height: 62vh;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.witch-cauldron-dialog-body h3 { margin: 12px 0 4px; font-size: 14px; }
+.witch-cauldron-dialog-body p { margin: 0 0 8px; }
+.witch-cauldron-dialog-body ul, .witch-cauldron-dialog-body ol { margin: 0 0 8px; padding-left: 20px; }
+.witch-cauldron-dialog-body li { margin-bottom: 4px; }
+
+@media (min-width: 1024px) {
+    .witch-cauldron-board { grid-template-columns: repeat(auto-fit, minmax(186px, 1fr)); }
+    .witch-cauldron-card { width: 68px; min-height: 88px; font-size: 11px; }
+    .witch-cauldron-card.is-small { width: 54px; min-height: 70px; font-size: 10px; }
+    .witch-cauldron-icon { font-size: 24px; }
+    .witch-cauldron-card.is-small .witch-cauldron-icon { font-size: 19px; }
+    .witch-cauldron-value { font-size: 14px; }
+    .witch-cauldron-status { font-size: 14px; }
+    .witch-cauldron-pot-head { font-size: 14px; }
+}
+
+@media (max-width: 560px) {
+    .witch-cauldron-board { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 6px; }
+    .witch-cauldron-card { width: 50px; min-height: 66px; }
+    .witch-cauldron-card.is-small { width: 40px; min-height: 52px; }
+    .witch-cauldron-status { font-size: 12px; }
+    .witch-cauldron-summary-row { grid-template-columns: minmax(44px, 1fr) auto auto; }
+    .witch-cauldron-summary-diff { display: none; }
+    .witch-cauldron-dialog-body { max-height: 58vh; }
+}

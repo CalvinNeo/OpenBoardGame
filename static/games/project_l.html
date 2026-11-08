@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="projectLUpgradeTitle">Upgrade a piece · 1 AP</h2>
-                <button id="projectLUpgradeModalCloseBtn" type="button">Close</button>
+                <button id="projectLUpgradeModalCloseBtn" type="button" data-project-l-explain="dialog_close">Close</button>
             </div>
             <div class="modal-body">
                 <div id="projectLUpgradeFromLabel"></div>
@@ -12,34 +12,12 @@
         </div>
     </section>
 </template>
-<template data-game-target="projectLHelpModal" data-game-mode="replace">
-    <section id="projectLHelpModal" class="modal hidden project-l-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="projectLHelpTitle">
-        <div class="modal-content project-l-help-modal">
-            <div class="modal-header">
-                <h2 id="projectLHelpTitle">Project L · Help</h2>
-                <button id="projectLHelpModalCloseBtn" type="button">Close</button>
-            </div>
-            <div class="modal-body project-l-help-content"></div>
-        </div>
-    </section>
-</template>
-<template data-game-target="projectLExplainModal" data-game-mode="replace">
-    <section id="projectLExplainModal" class="modal hidden project-l-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="projectLExplainTitle">
-        <div class="modal-content project-l-explain-modal">
-            <div class="modal-header">
-                <h2 id="projectLExplainTitle">Explain</h2>
-                <button id="projectLExplainModalCloseBtn" type="button">Close</button>
-            </div>
-            <div class="modal-body" id="projectLExplainContent"></div>
-        </div>
-    </section>
-</template>
 <template data-game-target="projectLPanel" data-game-mode="contents">
     <div class="project-l-status" aria-live="polite">
         <strong id="projectLTurn">Waiting for players</strong>
         <span id="projectLPhase" class="project-l-pill">Main</span>
-        <span class="project-l-pill" data-project-l-tip="Action points (AP): spend up to 3 on your turn." tabindex="0">⚡ <span id="projectLAp">–</span> AP</span>
-        <span class="project-l-pill" data-project-l-tip="Master Action (✦): one piece per puzzle for 1 AP, once per turn." tabindex="0">✦ <span id="projectLMasterUsed">Ready</span></span>
+        <span class="project-l-pill" data-project-l-explain="ap" data-project-l-tip="Action points (AP): spend up to 3 on your turn." tabindex="0">⚡ <span id="projectLAp">–</span> AP</span>
+        <span class="project-l-pill" data-project-l-explain="master_action" data-project-l-tip="Master Action (✦): one piece per puzzle for 1 AP, once per turn." tabindex="0">✦ <span id="projectLMasterUsed">Ready</span></span>
     </div>
     <div id="projectLEndTriggered" class="project-l-notice hidden">Final round · the black deck is empty.</div>
     <div id="projectLWinner" class="project-l-result hidden" role="status"></div>
@@ -66,7 +44,7 @@
             </div>
             <div class="project-l-section-heading">
                 <h3>Your puzzles</h3>
-                <span id="projectLPuzzleCount" class="project-l-muted" data-project-l-tip="You can work on up to 4 puzzles at once." tabindex="0">0 / 4</span>
+                <span id="projectLPuzzleCount" class="project-l-muted" data-project-l-explain="puzzle_limit" data-project-l-tip="You can work on up to 4 puzzles at once." tabindex="0">0 / 4</span>
             </div>
             <div id="projectLActivePuzzles" class="project-l-puzzle-list"></div>
             <section id="projectLMasterSection" class="project-l-master-section hidden" aria-label="Master Action plan">
@@ -85,14 +63,14 @@
             <h3>Puzzle market</h3>
             <div class="project-l-market-section">
                 <div class="project-l-section-heading">
-                    <span data-project-l-tip="White puzzles (⚪): easier puzzles to build your inventory." tabindex="0">⚪ White</span>
+                    <span data-project-l-explain="white_deck" data-project-l-tip="White puzzles (⚪): easier puzzles to build your inventory." tabindex="0">⚪ White</span>
                     <button id="projectLDrawWhiteBtn" type="button">Draw · <span id="projectLWhiteRemaining">–</span> left</button>
                 </div>
                 <div id="projectLMarketWhite" class="project-l-market-grid"></div>
             </div>
             <div class="project-l-market-section">
                 <div class="project-l-section-heading">
-                    <span data-project-l-tip="Black puzzles (⚫): harder puzzles worth more points. An empty black deck triggers the final round." tabindex="0">⚫ Black</span>
+                    <span data-project-l-explain="black_deck" data-project-l-tip="Black puzzles (⚫): harder puzzles worth more points. An empty black deck triggers the final round." tabindex="0">⚫ Black</span>
                     <button id="projectLDrawBlackBtn" type="button">Draw · <span id="projectLBlackRemaining">–</span> left</button>
                 </div>
                 <div id="projectLMarketBlack" class="project-l-market-grid"></div>

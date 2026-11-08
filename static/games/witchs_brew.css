@@ -116,7 +116,7 @@
 
 .wb-stage-prompt-icon {
   font-size: 20px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-stage-role {
@@ -132,7 +132,7 @@
 
 .wb-stage-emoji {
   font-size: 30px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-stage-body {
@@ -307,7 +307,7 @@
 
 .wb-pill-icon {
   font-size: 13px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-pick-count {
@@ -539,7 +539,7 @@
 
 .wb-overlay-emoji {
   font-size: 24px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-overlay-text {
@@ -615,7 +615,7 @@
 
 .wb-card-icon {
   font-size: 15px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-card-cost {
@@ -642,7 +642,7 @@
 
 .wb-raven {
   font-size: 13px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-card-left {
@@ -774,7 +774,7 @@
 
 .wb-res-icon {
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-player-meta {
@@ -906,7 +906,7 @@
 
 .wb-role-row-icon {
   font-size: 15px;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .wb-role-row-full,

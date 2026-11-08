@@ -10,25 +10,25 @@ const GAME_ASSETS = {
     "header": "showWordSyncHeaderActions"
   },
   "pokemon_adventure": {
-    "scripts": ["/static/games/pokemon_adventure.js?v=3"],
+    "scripts": ["/static/games/pokemon_adventure.js?v=3_h3"],
     "styles": ["/static/games/pokemon_adventure.css?v=3"],
-    "markup": "/static/games/pokemon_adventure.html?v=2",
+    "markup": "/static/games/pokemon_adventure.html?v=2_h3",
     "panel": "pokemonAdventurePanel",
     "panelTitle": "🔴 宝可梦奇遇",
     "header": "showPokemonAdventureHeaderActions"
   },
   "chromino": {
-    "scripts": ["/static/games/chromino.js?v=3"],
+    "scripts": ["/static/games/chromino.js?v=3_h3"],
     "styles": ["/static/games/chromino.css?v=3"],
-    "markup": "/static/games/chromino.html?v=3",
+    "markup": "/static/games/chromino.html?v=3_h3",
     "panel": "chrominoPanel",
     "panelTitle": "🟥 Chromino",
     "header": "showChrominoHeaderActions"
   },
   "colt_express": {
-    "scripts": ["/static/games/colt_express.js?v=2"],
+    "scripts": ["/static/games/colt_express.js?v=2_h3"],
     "styles": ["/static/games/colt_express.css?v=2"],
-    "markup": "/static/games/colt_express.html?v=1",
+    "markup": "/static/games/colt_express.html?v=1_h3",
     "panel": "coltExpressPanel",
     "panelTitle": "🚂 柯尔特快车",
     "header": "showColtExpressHeaderActions"
@@ -110,9 +110,9 @@ const GAME_ASSETS = {
     "header": "showMaskmenHeaderActions"
   },
   "startups": {
-    "scripts": ["/static/games/startups.js?v=3"],
+    "scripts": ["/static/games/startups.js?v=3_h3"],
     "styles": ["/static/games/startups.css?v=4"],
-    "markup": "/static/games/startups.html?v=3",
+    "markup": "/static/games/startups.html?v=3_h3",
     "panel": "startupsPanel",
     "header": "showStartupsHeaderActions"
   },
@@ -124,9 +124,9 @@ const GAME_ASSETS = {
     "header": "showSkullKingHeaderActions"
   },
   "deception": {
-    "scripts": ["/static/games/deception.js?v=3"],
+    "scripts": ["/static/games/deception.js?v=3_h3"],
     "styles": ["/static/games/deception.css?v=3"],
-    "markup": "/static/games/deception.html?v=3",
+    "markup": "/static/games/deception.html?v=3_h3",
     "panel": "deceptionPanel",
     "header": "showDeceptionHeaderActions"
   },
@@ -154,8 +154,8 @@ const GAME_ASSETS = {
     "header": "showTicketToRideHeaderActions"
   },
   "twelve_rivers": {
-    "scripts": ["/static/games/twelve_rivers.js?v=4"],
-    "styles": ["/static/games/twelve_rivers.css?v=1"],
+    "scripts": ["/static/games/twelve_rivers.js?v=6"],
+    "styles": ["/static/games/twelve_rivers.css?v=2"],
     "markup": "/static/games/twelve_rivers.html?v=1",
     "panel": "twelveRiversPanel",
     "panelTitle": "🏞️ 十二河谷",
@@ -193,16 +193,16 @@ const GAME_ASSETS = {
     "header": "showOrlojHeaderActions"
   },
   "challengers": {
-    "scripts": ["/static/games/challengers.js?v=6"],
+    "scripts": ["/static/games/challengers.js?v=6_h3"],
     "styles": ["/static/games/challengers.css?v=5"],
-    "markup": "/static/games/challengers.html?v=1",
+    "markup": "/static/games/challengers.html?v=1_h3",
     "panel": "challengersPanel",
     "header": "showChallengersHeaderActions"
   },
   "dune_imperium": {
-    "scripts": ["/static/games/dune_imperium.js?v=6"],
+    "scripts": ["/static/games/dune_imperium.js?v=6_h3"],
     "styles": ["/static/games/dune_imperium.css?v=6"],
-    "markup": "/static/games/dune_imperium.html?v=2",
+    "markup": "/static/games/dune_imperium.html?v=2_h3",
     "panel": "duneImperiumPanel",
     "panelTitle": "🏜️ 沙丘：帝国",
     "header": "showDuneImperiumHeaderActions"
@@ -387,13 +387,13 @@ const GAME_ASSETS = {
   },
   "project_l": {
     "scripts": [
-      "/static/games/project_l.js?v=app_v5"
+      "/static/games/project_l.js?v=app_v5_h3"
     ],
     "styles": [],
     "panel": "projectLPanel",
     "panelTitle": "Project L",
     "header": "showProjectLHeaderActions",
-    "markup": "/static/games/project_l.html?v=2",
+    "markup": "/static/games/project_l.html?v=2_h3",
     "styleFragments": "/static/games/project_l.css?v=2"
   },
   "decrypto": {
@@ -468,12 +468,12 @@ const GAME_ASSETS = {
   },
   "hanabi": {
     "scripts": [
-      "/static/games/hanabi.js?v=app_v5"
+      "/static/games/hanabi.js?v=app_v5_h3"
     ],
     "styles": [],
     "panel": "hanabiPanel",
     "header": "showHanabiHeaderActions",
-    "markup": "/static/games/hanabi.html?v=2",
+    "markup": "/static/games/hanabi.html?v=2_h3",
     "styleFragments": "/static/games/hanabi.css?v=2"
   },
   "the_gang": {
@@ -600,13 +600,14 @@ const GAME_ASSETS = {
   },
   "hot_streak": {
     "scripts": [
-      "/static/games/hot_streak.js?v=app_v5"
+      "/static/games/hot_streak.js?v=app_v7"
     ],
     "styles": [],
     "panel": "hotStreakPanel",
+    "panelTitle": "🔥 Hot Streak",
     "header": "showHotStreakHeaderActions",
-    "markup": "/static/games/hot_streak.html?v=3",
-    "styleFragments": "/static/games/hot_streak.css?v=3"
+    "markup": "/static/games/hot_streak.html?v=5",
+    "styleFragments": "/static/games/hot_streak.css?v=5"
   },
   "acquire": {
     "scripts": [
@@ -650,12 +651,12 @@ const GAME_ASSETS = {
   },
   "compress": {
     "scripts": [
-      "/static/games/compress.js?v=1"
+      "/static/games/compress.js?v=1_h3"
     ],
     "styles": [],
     "panel": "compressPanel",
     "header": "showCompressHeaderActions",
-    "markup": "/static/games/compress.html?v=1",
+    "markup": "/static/games/compress.html?v=1_h3",
     "styleFragments": "/static/games/compress.css?v=1"
   },
   "coyote": {
@@ -935,7 +936,7 @@ const GAME_ASSETS = {
   },
   "take_time": {
     "scripts": [
-      "/static/games/take_time.js?v=2"
+      "/static/games/take_time.js?v=2_h3"
     ],
     "styles": [
       "/static/take_time.css?v=3"
@@ -943,7 +944,7 @@ const GAME_ASSETS = {
     "panel": "takeTimePanel",
     "panelTitle": "⏳ 时序谜局",
     "header": "showTakeTimeHeaderActions",
-    "markup": "/static/games/take_time.html?v=1"
+    "markup": "/static/games/take_time.html?v=1_h3"
   },
   "eternal_decks": {
     "scripts": [
@@ -990,7 +991,7 @@ const GAME_ASSETS = {
   },
   "cryptid": {
     "scripts": [
-      "/static/games/cryptid.js?v=6"
+      "/static/games/cryptid.js?v=6_h3"
     ],
     "styles": [
       "/static/cryptid.css?v=5"
@@ -998,7 +999,18 @@ const GAME_ASSETS = {
     "panel": "cryptidPanel",
     "panelTitle": "🔎 诡影寻踪",
     "header": "showCryptidHeaderActions",
-    "markup": "/static/games/cryptid.html?v=1"
+    "markup": "/static/games/cryptid.html?v=1_h3"
+  },
+  "witch_cauldron": {
+    "scripts": [
+      "/static/games/witch_cauldron.js?v=3"
+    ],
+    "styles": [
+      "/static/games/witch_cauldron.css?v=2"
+    ],
+    "panel": "witchCauldronPanel",
+    "panelTitle": "🫕 女巫坩埚",
+    "header": "showWitchCauldronHeaderActions"
   },
   "boomerang_australia": {
     "scripts": [
@@ -1050,13 +1062,13 @@ const GAME_ASSETS = {
   },
   "felix": {
     "scripts": [
-      "/static/games/felix.js?v=app_v2"
+      "/static/games/felix.js?v=app_v2_h3"
     ],
     "styles": [],
     "panel": "felixPanel",
     "panelTitle": "🐱 Felix: The Cat in the Sack",
     "header": "showFelixHeaderActions",
-    "markup": "/static/games/felix.html?v=2",
+    "markup": "/static/games/felix.html?v=2_h3",
     "styleFragments": "/static/games/felix.css?v=2"
   },
   "tacta": {
@@ -1093,14 +1105,14 @@ const GAME_ASSETS = {
   },
   "witchs_brew": {
     "scripts": [
-      "/static/games/witchs_brew.js?v=app_v2"
+      "/static/games/witchs_brew.js?v=app_v3"
     ],
     "styles": [],
     "panel": "witchsBrewPanel",
     "panelTitle": "🧪 女巫的佳酿",
     "header": "showWitchsBrewHeaderActions",
     "markup": "/static/games/witchs_brew.html?v=2",
-    "styleFragments": "/static/games/witchs_brew.css?v=2"
+    "styleFragments": "/static/games/witchs_brew.css?v=3"
   },
   "ra": {
     "scripts": [

@@ -5,10 +5,10 @@
     const marketConfirmation = byId("MarketConfirmation");
     const placementConfirmation = byId("PlacementConfirmation");
     const tooltip = byId("Tooltip");
-    const modalNames = ["Upgrade", "Help", "Explain"];
+    const modalNames = ["Upgrade"];
     const state = {
         view: null, market: null, pieceId: null, puzzleId: null, origin: null,
-        anchor: null, rotation: 0, flip: false, queue: [], explain: false,
+        anchor: null, rotation: 0, flip: false, queue: [],
     };
     let gesture = null;
     let suppressClick = false;
@@ -17,49 +17,219 @@
     let modalReturnFocus = null;
     let marketSelectedAt = 0;
 
-    const explanations = {
-        TakeMarketBtn: ["Take a puzzle", "Take this face-up puzzle into your workbench. You can hold at most 4 active puzzles.", "1 AP"],
-        DrawWhiteBtn: ["Draw a white puzzle (⚪)", "Take an unknown puzzle from the white deck. White puzzles usually help build your inventory.", "1 AP"],
-        DrawBlackBtn: ["Draw a black puzzle (⚫)", "Take an unknown puzzle from the black deck. Emptying this deck triggers the final round.", "1 AP"],
-        TakeLevel1Btn: ["Take a level-1 piece", "Add one yellow square to your inventory. This action may be repeated while you have action points.", "1 AP"],
-        UpgradeBtn: ["Upgrade a piece (↑)", "Select a piece, then choose a shape one level higher. Level-3 and level-4 pieces can also change to a different shape at the same level.", "1 AP"],
-        RotateLeftBtn: ["Rotate left (↶)", "Turn the selected piece 90° counter-clockwise around its center. The preview shows whether it fits.", "Free"],
-        RotateRightBtn: ["Rotate right (↷)", "Turn the selected piece 90° clockwise around its center. The preview shows whether it fits.", "Free"],
-        FlipBtn: ["Flip (↔)", "Mirror the piece horizontally before applying rotation. Its center stays anchored to the selected position.", "Free"],
-        PlaceBtn: ["Place a piece", "Confirm the preview on this puzzle. Green is valid; red means the piece overlaps, lies outside the puzzle, or covers an unavailable cell.", "1 AP"],
-        QueueMasterBtn: ["Add to Master plan (✦)", "Reserve this piece and position. A Master plan may contain one placement per puzzle. Remove a planned placement before changing it.", "Free to plan"],
-        UseMasterBtn: ["Master Action (✦)", "Execute the planned placements together, using one piece per chosen puzzle. You may use Master Action only once per turn.", "1 AP"],
-        FinishingPlaceBtn: ["Finishing placement", "Place a piece during finishing touches. Completed puzzles return used pieces but do not grant a reward piece. Every finishing placement deducts one point.", "−1 point"],
-        FinishingDoneBtn: ["Finish", "Finish your placements. Final results appear when every player is done. Unfinished puzzles score no points.", "End finishing touches"],
-        CancelMarketBtn: ["Cancel", "Close this preview without taking the puzzle.", "Free"],
-        CancelPlacementBtn: ["Cancel", "Cancel this position without spending a piece. You can also click blank space to deselect.", "Free"],
+    const PROJECT_L_EXPLAIN = {
+        take_market: {
+            zh: "拿走一张拼图(1 AP)：把这张面朝上的拼图收进你的工作台。你最多同时持有四张进行中的拼图。",
+            en: "Take a puzzle (1 AP): move this face-up puzzle into your workbench. You can hold at most 4 active puzzles."
+        },
+        draw_white: {
+            zh: "抽一张白拼图(⚪)(1 AP)：从白色牌库抽一张未知拼图。白拼图通常帮你积累零件。",
+            en: "Draw a white puzzle (⚪) (1 AP): take an unknown puzzle from the white deck. White puzzles usually help build your inventory."
+        },
+        draw_black: {
+            zh: "抽一张黑拼图(⚫)(1 AP)：从黑色牌库抽一张未知拼图。黑色牌库抽空会触发最后一轮。",
+            en: "Draw a black puzzle (⚫) (1 AP): take an unknown puzzle from the black deck. Emptying this deck triggers the final round."
+        },
+        take_level1: {
+            zh: "拿一块一级零件(1 AP)：往库存里加一个黄色方块。只要还有行动点，这个动作可以重复。",
+            en: "Take a level-1 piece (1 AP): add one yellow square to your inventory. This action may be repeated while you have action points."
+        },
+        upgrade: {
+            zh: "升级零件(↑)(1 AP)：先选中一块零件，再选一个高一级的形状。三级和四级零件还可以在同级内换成别的形状。",
+            en: "Upgrade a piece (↑) (1 AP): select a piece, then choose a shape one level higher. Level-3 and level-4 pieces can also change to a different shape at the same level."
+        },
+        rotate_left: {
+            zh: "向左旋转(↶)(免费)：把选中的零件绕中心逆时针转 90 度。预览会告诉你它是否放得下。",
+            en: "Rotate left (↶) (Free): turn the selected piece 90° counter-clockwise around its center. The preview shows whether it fits."
+        },
+        rotate_right: {
+            zh: "向右旋转(↷)(免费)：把选中的零件绕中心顺时针转 90 度。预览会告诉你它是否放得下。",
+            en: "Rotate right (↷) (Free): turn the selected piece 90° clockwise around its center. The preview shows whether it fits."
+        },
+        flip: {
+            zh: "镜像翻转(↔)(免费)：在旋转之前先水平镜像这块零件，它的中心仍然锚定在选中的位置上。",
+            en: "Flip (↔) (Free): mirror the piece horizontally before applying rotation. Its center stays anchored to the selected position."
+        },
+        placement_rotate_left: {
+            zh: "向左旋转(↶)(免费)：把预览中的零件绕中心逆时针转 90 度，再确认放置。",
+            en: "Rotate left (↶) (Free): turn the previewed piece 90° counter-clockwise around its center before confirming the placement."
+        },
+        placement_rotate_right: {
+            zh: "向右旋转(↷)(免费)：把预览中的零件绕中心顺时针转 90 度，再确认放置。",
+            en: "Rotate right (↷) (Free): turn the previewed piece 90° clockwise around its center before confirming the placement."
+        },
+        placement_flip: {
+            zh: "镜像翻转(↔)(免费)：在确认放置之前先水平镜像预览中的零件。",
+            en: "Flip (↔) (Free): mirror the previewed piece horizontally before confirming the placement."
+        },
+        place: {
+            zh: "放置零件(1 AP)：确认这块拼图上的预览。绿色表示合法，红色表示零件重叠、超出拼图范围或者盖住了不可用的格子。",
+            en: "Place a piece (1 AP): confirm the preview on this puzzle. Green is valid, while red means the piece overlaps, lies outside the puzzle, or covers an unavailable cell."
+        },
+        queue_master: {
+            zh: "加入大师计划(✦)(计划免费)：预订这块零件和这个位置。每张拼图只能有一条计划，要修改就先移除原来的计划。",
+            en: "Add to Master plan (✦) (Free to plan): reserve this piece and position. A Master plan may contain one placement per puzzle, so remove a planned placement before changing it."
+        },
+        use_master: {
+            zh: "大师行动(✦)(1 AP)：一次性执行计划中的所有放置，每张选中的拼图放一块零件。每回合只能使用一次大师行动。",
+            en: "Master Action (✦) (1 AP): execute the planned placements together, using one piece per chosen puzzle. You may use Master Action only once per turn."
+        },
+        finishing_place: {
+            zh: "收尾放置(−1 分)：在收尾阶段放置一块零件。已完成的拼图会归还用过的零件，但不再给奖励零件。每一次收尾放置扣一分。",
+            en: "Finishing placement (−1 point): place a piece during finishing touches. Completed puzzles return used pieces but do not grant a reward piece, and every finishing placement deducts one point."
+        },
+        finishing_done: {
+            zh: "完成(结束收尾)：结束你的放置。所有玩家都完成之后才显示最终结果，没有完成的拼图不计分。",
+            en: "Finish (End finishing touches): finish your placements. Final results appear when every player is done, and unfinished puzzles score no points."
+        },
+        cancel_market: {
+            zh: "取消(免费)：关闭这个预览而不拿走拼图。",
+            en: "Cancel (Free): close this preview without taking the puzzle."
+        },
+        cancel_placement: {
+            zh: "取消(免费)：放弃这个位置而不消耗零件。点击空白处也可以取消选择。",
+            en: "Cancel (Free): cancel this position without spending a piece. You can also click blank space to deselect."
+        },
+        upgrade_option: {
+            zh: "升级到这个零件(1 AP)：交回你选中的那块零件，换成这一块。",
+            en: "Upgrade to this piece (1 AP): return the piece you selected and take this one instead."
+        },
+        ap: {
+            zh: "行动点(⚡)：每回合有三点，每个动作消耗一点，大师行动每回合只能用一次。",
+            en: "Action points (⚡): you get 3 per turn, each action costs 1 AP, and Master Action can be used only once per turn."
+        },
+        master_action: {
+            zh: "大师行动(✦)：花一点行动点，在任意多张自己的拼图上各放一块零件，每回合一次。",
+            en: "Master Action (✦): for 1 AP, place one piece on each of any number of your puzzles, once per turn."
+        },
+        white_deck: {
+            zh: "白拼图(⚪)：通常比较容易，适合用来积累零件。",
+            en: "White puzzles (⚪): usually easier, and good for building up your inventory."
+        },
+        black_deck: {
+            zh: "黑拼图(⚫)：更难但分数更高。黑色牌库抽空会触发最后一轮。",
+            en: "Black puzzles (⚫): harder and worth more points. Emptying the black deck triggers the final round."
+        },
+        puzzle_limit: {
+            zh: "你最多同时进行四张拼图。",
+            en: "You can work on up to 4 puzzles at once."
+        },
+        dialog_close: {
+            zh: "关闭当前对话框并回到工作台。",
+            en: "Close the current dialog and return to the workbench."
+        }
     };
-    ["RotateLeftBtn", "RotateRightBtn", "FlipBtn"].forEach((suffix) => {
-        explanations[`Placement${suffix}`] = explanations[suffix];
-    });
 
-    const helpText = `
-        <h3>Build, complete, repeat</h3>
-        <p>Fill puzzle spaces to earn their points (★) and reward pieces (+). All pieces used on a completed puzzle return to your inventory, together with its reward.</p>
-        <h3>Your turn</h3>
-        <p>Start with one level-1 square and one level-2 bar. Each turn gives you 3 action points (⚡ AP). Each action below costs 1 AP; actions may be repeated except Master Action.</p>
-        <ul>
-            <li><strong>Take a puzzle:</strong> select a market card and confirm Take, or draw an unknown card from a deck. Hold up to 4 active puzzles.</li>
-            <li><strong>+ Lv 1:</strong> take one yellow square.</li>
-            <li><strong>Upgrade (↑):</strong> select an inventory piece and choose a shape one level higher. Level-3 and level-4 pieces can also change shape within the same level.</li>
-            <li><strong>Place:</strong> select a piece, tap a puzzle cell, then confirm next to that puzzle.</li>
-            <li><strong>Master Action (✦):</strong> place one piece on each of any number of your puzzles for 1 AP, once per turn.</li>
-        </ul>
-        <h3>Pieces and previews</h3>
-        <p>Lv means level: 1–4 squares. Shape letters identify the outline: I is a bar, V is a corner, O is a square, and T, L and Z match their letters. Color and the drawn shape identify every piece.</p>
-        <p>Rotate left (↶), rotate right (↷), or mirror (↔) for free. Rotation keeps the selected piece centered. Light dots mark valid origins; green previews fit, red previews do not. An origin is the top-left of the piece's bounding rectangle, including any empty corner. Tapping blank space or pressing Escape cancels a selection. Scrolling never selects or places a piece.</p>
-        <h3>Master plan</h3>
-        <p>Choose a valid placement and press + Master plan. Its piece is reserved and its puzzle locked until you remove that entry. Repeat on other puzzles, then press Use Master. The inventory shows available pieces after reservations. Planning costs nothing and is cleared when your turn or your pieces change.</p>
-        <h3>Markets and finishing touches</h3>
-        <p>White (⚪) puzzles are usually easier; black (⚫) puzzles are harder and worth more points. Emptying the black deck triggers the final round, which continues through the player before the starting player.</p>
-        <p>Then everyone may place remaining pieces, losing 1 point per placement. Completed puzzles return used pieces but no longer grant a reward piece. Press Finish when done. Final score is completed puzzle points minus finishing penalties. Ties favor more completed puzzles, then more pieces in inventory.</p>
-        <h3>Reading the board</h3>
-        <p>Points (★) appear above each puzzle; its reward (+) appears below. The Players section shows public progress and placed pieces. Completed puzzles and player details can be collapsed. Hover or tap non-interactive symbols for a short explanation. Explain highlights controls and lets you inspect them without acting, including disabled controls. Escape closes dialogs or leaves Explain.</p>`;
+    const PROJECT_L_EXPLAIN_BUTTONS = {
+        TakeMarketBtn: "take_market",
+        DrawWhiteBtn: "draw_white",
+        DrawBlackBtn: "draw_black",
+        TakeLevel1Btn: "take_level1",
+        UpgradeBtn: "upgrade",
+        RotateLeftBtn: "rotate_left",
+        RotateRightBtn: "rotate_right",
+        FlipBtn: "flip",
+        PlaceBtn: "place",
+        QueueMasterBtn: "queue_master",
+        UseMasterBtn: "use_master",
+        FinishingPlaceBtn: "finishing_place",
+        FinishingDoneBtn: "finishing_done",
+        CancelMarketBtn: "cancel_market",
+        CancelPlacementBtn: "cancel_placement",
+        PlacementRotateLeftBtn: "placement_rotate_left",
+        PlacementRotateRightBtn: "placement_rotate_right",
+        PlacementFlipBtn: "placement_flip"
+    };
+
+    const PROJECT_L_HELP_CONFIG = {
+        gameId: "project_l",
+        title: { zh: "项目L · Project L", en: "Project L" },
+        basic: {
+            win: {
+                zh: "用零件填满拼图空格就能拿到它的分数(★)和奖励零件(+)，终局时完成拼图的分数减去收尾罚分最高的玩家获胜。",
+                en: "Filling a puzzle's spaces earns its points (★) and reward pieces (+), and at the end the player with the highest completed puzzle score minus finishing penalties wins."
+            },
+            turn: {
+                zh: "每回合有三点行动点(⚡)，你可以拿拼图、拿一级零件、升级零件、放置零件，或者花一点行动点执行大师行动(✦)。",
+                en: "Each turn gives you 3 action points (⚡), which you spend on taking a puzzle, taking a level-1 piece, upgrading a piece, placing a piece, or running the Master Action (✦) for 1 AP."
+            },
+            key: {
+                zh: "所有放在已完成拼图上的零件都会回到你的库存，所以真正的效率在于让同一批零件反复填满更多拼图，而不是把好零件锁死在一张拼图上。",
+                en: "Every piece used on a completed puzzle returns to your inventory, so real efficiency comes from recycling the same pieces through as many puzzles as possible instead of locking good ones into a single puzzle."
+            }
+        },
+        sections: [
+            {
+                id: "build",
+                label: { zh: "拼图与奖励", en: "Build and complete" },
+                html: {
+                    zh: "<p>填满拼图的空格就能得到它的分数(★)与奖励零件(+)。所有用在一张已完成拼图上的零件都会回到你的库存，奖励零件也一并到手。</p>",
+                    en: "<p>Fill puzzle spaces to earn their points (★) and reward pieces (+). All pieces used on a completed puzzle return to your inventory, together with its reward.</p>"
+                }
+            },
+            {
+                id: "turn",
+                label: { zh: "你的回合", en: "Your turn" },
+                html: {
+                    zh: "<p>你开局有一块一级方块和一块二级长条。每回合给你三点行动点(⚡)，下面每个动作消耗一点行动点，除大师行动外都可以重复。</p><ul><li><strong>Take a puzzle：</strong>选中一张市场牌并确认 Take，或者从牌库抽一张未知牌。最多同时持有四张进行中的拼图。</li><li><strong>+ Lv 1：</strong>拿一个黄色方块。</li><li><strong>Upgrade (↑)：</strong>选中库存零件，再选一个高一级的形状。三级和四级零件还可以在同级内换形状。</li><li><strong>Place：</strong>选中零件，点一个拼图格，再在那张拼图旁确认。</li><li><strong>Master Action (✦)：</strong>花一点行动点，在任意多张自己的拼图上各放一块零件，每回合一次。</li></ul>",
+                    en: "<p>You start with one level-1 square and one level-2 bar. Each turn gives you 3 action points (⚡), each action below costs 1 AP, and actions may be repeated except Master Action.</p><ul><li><strong>Take a puzzle:</strong> select a market card and confirm Take, or draw an unknown card from a deck. Hold up to 4 active puzzles.</li><li><strong>+ Lv 1:</strong> take one yellow square.</li><li><strong>Upgrade (↑):</strong> select an inventory piece and choose a shape one level higher. Level-3 and level-4 pieces can also change shape within the same level.</li><li><strong>Place:</strong> select a piece, tap a puzzle cell, then confirm next to that puzzle.</li><li><strong>Master Action (✦):</strong> place one piece on each of any number of your puzzles for 1 AP, once per turn.</li></ul>"
+                }
+            },
+            {
+                id: "pieces",
+                label: { zh: "零件与预览", en: "Pieces and previews" },
+                html: {
+                    zh: "<p>Lv 表示等级，一到四级都是方块。形状字母标识轮廓，I 是长条，V 是拐角，O 是正方形，T、L 和 Z 与字母形状一致。颜色和画出来的形状共同标识每一块零件。</p><p>向左旋转(↶)、向右旋转(↷)和镜像(↔)都免费。旋转时选中的零件保持居中。浅色圆点标出合法的起点，绿色预览表示放得下，红色表示放不下。起点是零件外接矩形的左上角，包含空缺的那一角。点击空白处或按 Esc 取消选择，滚动页面永远不会选中或放置零件。</p>",
+                    en: "<p>Lv means level, from 1 to 4. Shape letters identify the outline, where I is a bar, V is a corner, O is a square, and T, L and Z match their letters. Colour and the drawn shape identify every piece.</p><p>Rotate left (↶), rotate right (↷), or mirror (↔) for free. Rotation keeps the selected piece centered. Light dots mark valid origins, green previews fit and red previews do not. An origin is the top-left of the piece's bounding rectangle, including any empty corner. Tapping blank space or pressing Escape cancels a selection, and scrolling never selects or places a piece.</p>"
+                }
+            },
+            {
+                id: "master",
+                label: { zh: "大师计划", en: "Master plan" },
+                html: {
+                    zh: "<p>选好一个合法放置后按 + Master plan。这块零件会被预订，对应拼图也会锁定，直到你移除这条计划。在其他拼图上重复这个操作，然后按 Use Master。库存显示的是扣除预订之后仍然可用的零件。计划本身不花任何东西，并在你的回合或零件发生变化时清空。</p>",
+                    en: "<p>Choose a valid placement and press + Master plan. Its piece is reserved and its puzzle locked until you remove that entry. Repeat on other puzzles, then press Use Master. The inventory shows available pieces after reservations. Planning costs nothing and is cleared when your turn or your pieces change.</p>"
+                }
+            },
+            {
+                id: "market",
+                label: { zh: "市场与收尾", en: "Markets and finishing" },
+                html: {
+                    zh: "<p>白拼图(⚪)通常比较容易，黑拼图(⚫)更难但分数更高。黑色牌库抽空会触发最后一轮，游戏会一直进行到起始玩家的前一位。</p><p>之后每个人都可以继续放置剩余零件，每放一块扣一分。已完成的拼图会归还用过的零件，但不再给奖励零件。放完就按 Finish。最终分数是完成拼图的分数减去收尾罚分，平分时先比完成的拼图数量，再比库存零件数量。</p>",
+                    en: "<p>White (⚪) puzzles are usually easier while black (⚫) puzzles are harder and worth more points. Emptying the black deck triggers the final round, which continues through the player before the starting player.</p><p>Then everyone may place remaining pieces, losing 1 point per placement. Completed puzzles return used pieces but no longer grant a reward piece. Press Finish when done. Final score is completed puzzle points minus finishing penalties, and ties favor more completed puzzles, then more pieces in inventory.</p>"
+                }
+            },
+            {
+                id: "board",
+                label: { zh: "读懂界面", en: "Reading the board" },
+                html: {
+                    zh: "<p>分数(★)显示在每张拼图上方，奖励(+)显示在下方。Players 区域展示公开进度和已放置的零件。已完成的拼图和玩家详情都可以折叠。</p><p>把鼠标悬停在非交互符号上或轻点它可以看到简短说明。Explain 会高亮控件并让你查看它们而不触发操作，已禁用的控件也可以查看。按 Esc 关闭对话框或退出 Explain。</p>",
+                    en: "<p>Points (★) appear above each puzzle and its reward (+) appears below. The Players section shows public progress and placed pieces, and completed puzzles and player details can be collapsed.</p><p>Hover or tap non-interactive symbols for a short explanation. Explain highlights controls and lets you inspect them without acting, including disabled controls. Escape closes dialogs or leaves Explain.</p>"
+                }
+            }
+        ]
+    };
+
+    let projectLHelpWidget = null;
+    let projectLExplainWidget = null;
+
+    function initProjectLHelpExplain() {
+        if (projectLHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        projectLHelpWidget = window.obgCreateHelp(PROJECT_L_HELP_CONFIG);
+        projectLExplainWidget = window.obgCreateExplain({
+            gameId: "project_l",
+            attribute: "data-project-l-explain",
+            explanations: PROJECT_L_EXPLAIN,
+            button: byId("ExplainBtn"),
+            root: () => panel,
+            bypass: ["#projectLHelpBtn", "#projectLExplainBtn"]
+        });
+        byId("HelpBtn")?.addEventListener("click", () => {
+            projectLExplainWidget?.exit();
+            projectLHelpWidget.open();
+        });
+        byId("ExplainBtn")?.addEventListener("click", () => projectLExplainWidget?.toggle());
+    }
 
     function element(tag, className, text) {
         const node = document.createElement(tag);
@@ -71,13 +241,11 @@
     function setTip(node, text) {
         node.dataset.projectLTip = text;
         node.tabIndex = 0;
-        node.classList.toggle("project-l-has-explanation", state.explain);
         return node;
     }
 
-    function setExplanation(node, title, description, cost = "Free") {
-        node.dataset.projectLExplain = JSON.stringify([title, description, cost]);
-        node.classList.toggle("project-l-has-explanation", state.explain);
+    function setExplanation(node, key) {
+        node.dataset.projectLExplain = key;
         return node;
     }
 
@@ -508,7 +676,7 @@
         renderQueue();
         renderPlayers();
         updateControls();
-        if (state.explain) setExplain(true);
+        projectLExplainWidget?.refresh();
         if (focusKey) panel.querySelector(`[data-project-l-key="${CSS.escape(focusKey)}"]`)?.focus({ preventScroll: true });
         else if (active?.isConnected && !active.closest(".hidden")) active.focus({ preventScroll: true });
         window.scrollTo(scrollPosition);
@@ -539,7 +707,7 @@
 
     function clearState() {
         modalNames.forEach((name) => closeModal(name));
-        setExplain(false);
+        projectLExplainWidget?.exit();
         hideTooltip();
         state.view = null;
         state.market = null;
@@ -640,7 +808,8 @@
             button.type = "button";
             button.dataset.pieceId = pieceId;
             button.append(shapeGrid(definition.shape, definition.color, 14), element("span", "", pieceName(pieceId)));
-            setExplanation(button, `Upgrade to ${pieceName(pieceId)}`, `Return ${pieceName(fromPiece)} and take this piece.`, "1 AP");
+            setExplanation(button, "upgrade_option");
+            setTip(button, `Return ${pieceName(fromPiece)} and take ${pieceName(pieceId)} for 1 AP.`);
             button.addEventListener("click", () => {
                 if (remaining(fromPiece) > 0 && send("upgrade_piece", { from_piece_id: fromPiece, to_piece_id: pieceId })) {
                     closeModal("Upgrade");
@@ -653,41 +822,7 @@
         });
         openModal("Upgrade");
     });
-    byId("HelpBtn").addEventListener("click", () => {
-        setExplain(false);
-        byId("HelpModal").querySelector(".project-l-help-content").innerHTML = helpText;
-        openModal("Help", byId("HelpBtn"));
-    });
-
-    function setExplain(enabled) {
-        state.explain = enabled;
-        hideTooltip();
-        document.body.classList.toggle("project-l-explain-mode", enabled);
-        byId("ExplainBtn").classList.toggle("active", enabled);
-        byId("ExplainBtn").setAttribute("aria-pressed", String(enabled));
-        document.querySelectorAll("[data-project-l-explain], #projectLPanel [data-project-l-tip]").forEach((node) => node.classList.toggle("project-l-has-explanation", enabled));
-    }
-
-    Object.entries(explanations).forEach(([suffix, explanation]) => setExplanation(byId(suffix), ...explanation));
-    byId("ExplainBtn").addEventListener("click", () => setExplain(!state.explain));
-
-    function explainTarget(target) {
-        return target?.closest?.("[data-project-l-explain], #projectLPanel [data-project-l-tip]");
-    }
-
-    function explainExempt(target) {
-        const button = target?.closest?.("button");
-        return [byId("HelpBtn"), byId("ExplainBtn"), ...modalNames.map((name) => byId(`${name}ModalCloseBtn`))].includes(button);
-    }
-
-    function showExplanation(target) {
-        const explanation = target.dataset.projectLExplain ? JSON.parse(target.dataset.projectLExplain) : ["Board information", target.dataset.projectLTip, ""];
-        const content = byId("ExplainContent");
-        content.replaceChildren(element("h4", "", explanation[0]), element("p", "", explanation[1]));
-        if (explanation[2]) content.appendChild(element("span", "explain-cost", explanation[2]));
-        setExplain(false);
-        openModal("Explain", byId("ExplainBtn"));
-    }
+    Object.entries(PROJECT_L_EXPLAIN_BUTTONS).forEach(([suffix, key]) => setExplanation(byId(suffix), key));
 
     function inScope(target) {
         return target instanceof Element && !!target.closest("#projectLPanel, .project-l-modal");
@@ -695,7 +830,7 @@
 
     document.addEventListener("pointerdown", (event) => {
         suppressClick = false;
-        if (!inScope(event.target) && !state.explain) { gesture = null; return; }
+        if (!inScope(event.target)) { gesture = null; return; }
         gesture = { pointerId: event.pointerId, target: event.target, left: event.clientX, top: event.clientY, moved: false };
     }, true);
     document.addEventListener("pointermove", (event) => {
@@ -710,27 +845,11 @@
         const previous = gesture;
         gesture = null;
         if (previous.moved) { suppressClick = true; return; }
-        if (!state.explain || explainExempt(event.target)) return;
-        const target = explainTarget(document.elementFromPoint(event.clientX, event.clientY));
-        if (target && target === explainTarget(previous.target)) {
-            suppressClick = true;
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            showExplanation(target);
-        }
     }, true);
     document.addEventListener("click", (event) => {
-        if (suppressClick && event.detail !== 0 && (inScope(event.target) || state.explain)) {
+        if (suppressClick && event.detail !== 0 && inScope(event.target)) {
             event.preventDefault();
             event.stopImmediatePropagation();
-            return;
-        }
-        if (!state.explain || explainExempt(event.target)) return;
-        const target = explainTarget(event.target);
-        if (target || event.target.closest("button, input, select, textarea, summary")) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            if (target) showExplanation(target);
         }
     }, true);
 
@@ -742,7 +861,7 @@
     }
 
     function showTooltip(target) {
-        if (state.explain || target.closest("button, a, input, select, summary")) return;
+        if (projectLExplainWidget?.isActive() || target.closest("button, a, input, select, summary")) return;
         hideTooltip();
         tooltipTarget = target;
         tooltip.textContent = target.dataset.projectLTip;
@@ -767,7 +886,6 @@
     });
     panel.addEventListener("focusout", hideTooltip);
     panel.addEventListener("click", (event) => {
-        if (state.explain) return;
         const target = event.target.closest("[data-project-l-tip]");
         if (target && !target.closest("button")) { showTooltip(target); return; }
         hideTooltip();
@@ -782,7 +900,7 @@
         const openName = modalNames.find((name) => !byId(`${name}Modal`).classList.contains("hidden"));
         if (event.key === "Escape") {
             if (openName) closeModal(openName);
-            else if (state.explain) setExplain(false);
+            else if (projectLExplainWidget?.isActive()) projectLExplainWidget.exit();
             else clearSelection();
             hideTooltip();
             event.preventDefault();
@@ -801,7 +919,7 @@
     window.showProjectLHeaderActions = (show) => {
         byId("HeaderActions").style.display = show ? "flex" : "none";
         if (!show) {
-            setExplain(false);
+            projectLExplainWidget?.exit();
             modalNames.forEach(closeModal);
             document.body.classList.remove("project-l-turn-active");
         } else if (state.view) updateControls();
@@ -809,4 +927,5 @@
     if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "project_l"
             && typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "project_l"
             && lastGameStatePayload.room_id === currentRoomState.room_id) renderState(lastGameStatePayload);
+    initProjectLHelpExplain();
 })();
