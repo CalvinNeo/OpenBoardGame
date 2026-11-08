@@ -499,24 +499,11 @@ class InAGroveGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
+        from game.in_a_grove_ai import choose_action
+
+        if not InAGroveGame.get_legal_actions(state, bot_id):
             return None
-        legal = InAGroveGame.get_legal_actions(state, bot_id)
-        if "next_round" in legal:
-            return {"type": "next_round", "delay_ms": 0}
-        if bot_id != state.get("current_turn"):
-            return None
-        if "peek_suspects" in legal:
-            blocked = state.get("blocked_suspect_index")
-            choices = [index for index in range(3) if index != blocked]
-            count = _peek_count(state)
-            if len(choices) < count:
-                return None
-            random.shuffle(choices)
-            return {"type": "peek_suspects", "suspect_indexes": choices[:count]}
-        if "place_bet" in legal:
-            return {"type": "place_bet", "suspect_index": random.randint(0, 2)}
-        return None
+        return choose_action(InAGroveGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

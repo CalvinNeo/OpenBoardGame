@@ -258,13 +258,13 @@ def _score_action(view: Dict, knowledge: Knowledge, own: Dict, card: Dict, targe
         if _detective_is_active(view, counts[viewer]):
             success = probability * (1.0 - _alibi_probability(view, knowledge, target, counts[target]))
             score = 12.0 - 100.0 * success if ally else 95.0 * success - 14.0 * (1.0 - success)
-            probabilities[target] *= 1.0 - success
+            probabilities[target] = max(0.0, probability - success)
         else:
             score = -15.0 if view["config"]["detective_activation_rule"] == "hand_leq_3" else 12.0
     elif card_type == CARD_DOG:
         success = probability / counts[target]
         score = 12.0 - 100.0 * success if ally else 115.0 * success - 16.0 * (1.0 - success)
-        probabilities[target] *= 1.0 - success
+        probabilities[target] = max(0.0, probability - success)
         if view["config"]["dog_fail_behavior"] == "give_to_target" and criminal:
             score -= 18.0 / max(1, counts[viewer] - 1)
     elif card_type == CARD_WITNESS:

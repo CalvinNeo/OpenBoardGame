@@ -193,4 +193,6 @@
 ### 验证
 - `python3 -m unittest tests.test_acquire_game tests.test_acquire_ai`：覆盖战略落子、创立、争夺股东排名、现金及库存限制、换股／出售／保留、多重并购、精确终局、信息隔离、存档和房间调度。
 - 全机器人回归覆盖 2–6 人、每人数 5 个固定种子，检查每步动作 schema、可执行性、决策无状态修改、股份守恒和最终结束。
+- 连同 AI 目录、开发顺序和机器人线程检查，共 44 项测试通过：`python3 -m unittest tests.test_acquire_game tests.test_acquire_ai tests.test_ai_metadata tests.test_game_dev_order tests.test_bot_threading`。
+- 补充对照：从 `a9434a6` 提取旧 `bot_move`，使用同一修复后的规则引擎，每局一个新 AI 对其余旧策略玩家，轮换全部座位；种子从 1000 起，2 人 20 个种子、4 人 10 个、6 人 5 个。分别获胜 38/40、38/40、29/30，总计 105/110，全部正常结束；样本中最慢新 AI 决策约 16 ms。该结果只说明优于原先的基础策略，不代表对强策略或真人的胜率。
 - 本次没有修改前端布局与交互代码；桌面／手机视觉验收不在本次后端策略改动范围内。

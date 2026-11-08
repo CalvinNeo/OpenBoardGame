@@ -55,30 +55,7 @@ async function waitRoomIdle(page) {
     }
     await page.evaluate(() => {
       window.ttrSystemErrors = [];
-      window.ttrSent = [];
       socket.on('system:error', payload => ttrSystemErrors.push(payload));
-      const real = window.sendAction;
-      window.sendAction = action => {
-        ttrSent.push({ action: JSON.parse(JSON.stringify(action)),
-          conn: { connected: socket.connected, ready: roomSessionReady, room: !!roomId,
-                  pendingRoom: !!pendingRoomRequest, logout: !!pendingLogoutRequest,
-                  recovery: !!pendingAccessKeyRecovery } });
-        return real(action);
-      };
-      window.ttrStates = [];
-      socket.on('game:state', payload => {
-        const v = payload && payload.view;
-        if (!v) return;
-        const me = v.players.find(p => p.player_id === v.you);
-        ttrStates.push({ rev: v.revision, phase: v.phase, ready: me && me.ready,
-                         pend: me && me.pending_tickets ? me.pending_tickets.length : null });
-      });
-      window.ttrEmits = [];
-      const realEmit = socket.emit.bind(socket);
-      socket.emit = (name, payload) => {
-        if (name === 'game:action') ttrEmits.push(JSON.parse(JSON.stringify(payload)));
-        return realEmit(name, payload);
-      };
     });
     await page.evaluate(() => socket.emit('room:start', { room_id: roomId, config: {} }));
 
@@ -87,6 +64,13 @@ async function waitRoomIdle(page) {
     await waitRoomIdle(page);
     await page.locator('.ttr-dialog[open] .ttr-dialog-actions button').click();
     await page.waitForFunction(() => !document.getElementById('ticketToRideDialog').open);
+    // Wait for the server to confirm the draft, otherwise the loop below can act
+    // on the pre-submit snapshot and look for a dialog that is already gone.
+    await page.waitForFunction(() => {
+      const v = window.currentTicketToRideView;
+      const me = v && v.players.find(p => p.player_id === v.you);
+      return Boolean(me && me.ready);
+    });
 
     let steps = 0;
     let shots = 0;
@@ -98,9 +82,9 @@ async function waitRoomIdle(page) {
       const state = await page.evaluate(() => window.currentTicketToRideView);
       assert.equal(state.players.filter(p => p.is_bot).length, 2);
       assert.ok(!('deck' in state), 'the deck order is never sent to the client');
-      assert.ok(state.players.every(p => p.player_id === state.you || (p.hand === null && p.tickets === null)),
-        'other hands and tickets stay hidden');
       if (state.game_over) break;
+      assert.ok(state.players.every(p => p.player_id === state.you || (p.hand === null && p.tickets === null)),
+        'other hands and tickets stay hidden until scoring');
       // The snapshot can go stale between the wait and the read while the other
       // seats are still drafting, so simply re-check on the next pass.
       if (!state.legal_actions.length) continue;
@@ -112,15 +96,6 @@ async function waitRoomIdle(page) {
 
       await waitRoomIdle(page);
       const legal = state.legal_actions;
-      if (process.env.TTR_DEBUG) {
-        console.log('STEP', steps, 'phase', state.phase, 'stage', state.stage, 'legal', JSON.stringify(legal),
-          'dialog', await page.evaluate(() => document.getElementById('ticketToRideDialog')?.open),
-          'you', state.you, JSON.stringify(state.players.map(p => ({ id: p.player_id, bot: p.is_bot, ready: p.ready, pend: p.pending_tickets ? p.pending_tickets.length : null, tk: p.ticket_count }))),
-          'sent', JSON.stringify(await page.evaluate(() => ttrSent)),
-          'errs', JSON.stringify(await page.evaluate(() => ttrSystemErrors)),
-          'emits', JSON.stringify(await page.evaluate(() => ttrEmits)),
-          'states', JSON.stringify(await page.evaluate(() => ttrStates)));
-      }
       if (legal.includes('keep_tickets')) {
         await page.waitForSelector('.ttr-dialog[open] .ttr-dialog-actions button');
         await page.locator('.ttr-dialog[open] .ttr-dialog-actions button').click();
@@ -128,11 +103,13 @@ async function waitRoomIdle(page) {
         const route = await page.evaluate(() =>
           document.querySelector('#ticketToRideMap .ttr-route.is-claimable')?.dataset.route);
         assert.ok(route, 'a claimable route is highlighted on the map');
+        await page.locator('#ticketToRideMap').scrollIntoViewIfNeeded();
         const point = await page.evaluate(id => {
           const g = document.querySelector(`#ticketToRideMap .ttr-route[data-route="${id}"]`);
           const b = g.getBoundingClientRect();
           return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
         }, route);
+        assert.ok(point.y > 0 && point.y < 1000, 'the route is inside the viewport');
         await page.mouse.click(point.x, point.y);
         await page.waitForSelector('#ticketToRideRouteOverlay:not(.hidden)');
         await page.locator('#ticketToRideRouteOverlay button', { hasText: 'Claim' }).click();
@@ -146,8 +123,13 @@ async function waitRoomIdle(page) {
         throw new Error('unhandled legal actions: ' + JSON.stringify(legal));
       }
       const before = JSON.stringify(state);
-      await page.waitForFunction(previous => JSON.stringify(window.currentTicketToRideView) !== previous,
-        before, { timeout: 30000 });
+      try {
+        await page.waitForFunction(previous => JSON.stringify(window.currentTicketToRideView) !== previous,
+          before, { timeout: 15000 });
+      } catch (error) {
+        // The snapshot went stale before the click landed; re-read and retry.
+        continue;
+      }
       steps += 1;
     }
 
