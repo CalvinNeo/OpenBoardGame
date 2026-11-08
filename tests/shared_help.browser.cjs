@@ -99,6 +99,36 @@ const fixture = `<!DOCTYPE html>
   await page.waitForTimeout(150);
   check('Esc closes Help dialog', !(await page.isVisible('.obg-help-dialog[open]')));
 
+  // Close button must actually close the dialog
+  await page.click('#skullHelpBtn');
+  await page.waitForSelector('.obg-help-dialog[open]');
+  await page.click('.obg-help-close');
+  await page.waitForTimeout(200);
+  check('Close button closes Help dialog', !(await page.isVisible('.obg-help-dialog[open]')));
+
+  // Mobile sizing: readable text and no horizontal overflow at 320px
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.click('#skullHelpBtn');
+  await page.waitForSelector('.obg-help-dialog[open]');
+  const mobile = await page.evaluate(() => {
+    const dialog = document.querySelector('.obg-help-dialog');
+    const content = document.querySelector('.obg-help-content');
+    const close = document.querySelector('.obg-help-close');
+    return {
+      fontSize: parseFloat(getComputedStyle(content).fontSize),
+      closeHeight: close.getBoundingClientRect().height,
+      widthRatio: dialog.getBoundingClientRect().width / window.innerWidth,
+    };
+  });
+  check('Mobile body text is at least 15px', mobile.fontSize >= 15, mobile.fontSize + 'px');
+  check('Mobile close button is a comfortable target', mobile.closeHeight >= 40,
+    Math.round(mobile.closeHeight) + 'px');
+  check('Mobile dialog uses most of the width', mobile.widthRatio >= 0.9,
+    Math.round(mobile.widthRatio * 100) + '%');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+  await page.setViewportSize({ width: 1280, height: 900 });
+
   // Explain: explained control gets dashed outline + help cursor
   await page.click('#skullExplainBtn');
   await page.waitForTimeout(100);

@@ -132,6 +132,10 @@
         + '<div class="obg-help-content"></div>';
 
       dialog.addEventListener("click", (event) => {
+        if (event.target.closest(".obg-help-close")) {
+          dialog.close();
+          return;
+        }
         const langButton = event.target.closest("[data-obg-help-lang]");
         if (langButton) {
           setLang(langButton.dataset.obgHelpLang);

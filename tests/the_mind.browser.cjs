@@ -29,8 +29,9 @@ async function prepare(page) {
   });
 }
 
-async function render(page, key) {
-  await page.evaluate(view => {
+async function render(page, key, reset = true) {
+  await page.evaluate(({ view, reset }) => {
+    if (reset) showTheMindHeaderActions(false);
     playerId = view.you;
     roomSessionReady = true;
     renderRoomState({
@@ -42,7 +43,7 @@ async function render(page, key) {
     setRoomControlsCollapsed(true);
     window.theMindTestActions.length = 0;
     window.scrollTo(0, 0);
-  }, views[key]);
+  }, { view: views[key], reset });
   await page.locator('#theMindPanel').waitFor({ state: 'visible' });
 }
 
@@ -78,6 +79,23 @@ async function bounds(page, label) {
                 && Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top) > 1) {
               problems.push('overlap in ' + selector);
             }
+          }
+        }
+      }
+    }
+    // Adjacent blocks must never touch: a missing gap on the render root is invisible to overlap checks.
+    const MIN_GAP = 7;
+    for (const selector of ['.tm-root', '.tm-body', '.tm-main', '.tm-side', '.tm-bar', '.tm-seats',
+      '.tm-btnrow', '.tm-hand', '.tm-review', '.tm-action', '.tm-hand-area']) {
+      for (const parent of document.querySelectorAll(selector)) {
+        const children = [...parent.children].filter(node => node.checkVisibility());
+        for (let index = 1; index < children.length; index += 1) {
+          const previous = children[index - 1].getBoundingClientRect();
+          const current = children[index].getBoundingClientRect();
+          const sameRow = Math.min(previous.bottom, current.bottom) - Math.max(previous.top, current.top) > 0;
+          const gap = sameRow ? current.left - previous.right : current.top - previous.bottom;
+          if (gap < MIN_GAP - 0.5) {
+            problems.push('tight spacing ' + gap.toFixed(1) + 'px in ' + selector);
           }
         }
       }
@@ -198,7 +216,7 @@ async function testFixtures(browser, errors) {
   const logBox = await page.locator('#theMindPanel .tm-log').evaluate(node => ({ scroll: node.scrollHeight, client: node.clientHeight }));
   assert(logBox.client <= 260, 'log stays bounded');
   await bounds(page, 'open log');
-  await render(page, 'playing');
+  await render(page, 'playing', false);
   assert.equal(await page.locator('#theMindPanel .tm-logbox').evaluate(node => node.open), true, 'log stays open across updates');
 
   await render(page, 'playing');

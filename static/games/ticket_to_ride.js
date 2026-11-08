@@ -365,12 +365,29 @@
     clampBox();
     applyMapBox();
   }
+  // Full-screen mode matches the viewBox to the screen so a wide board fills a
+  // portrait phone instead of floating in a letterbox. Fit still shows it all.
+  function fillScreen() {
+    const rect = map.getBoundingClientRect();
+    if (!rect.width || !rect.height || !bounds) return;
+    const aspect = rect.width / rect.height;
+    let h = bounds.h, w = h * aspect;
+    if (w > bounds.w) { w = bounds.w; h = w / aspect; }
+    const cx = bounds.x + bounds.w / 2, cy = bounds.y + bounds.h / 2;
+    mapBox = {x: cx - w / 2, y: cy - h / 2, w, h};
+    clampBox();
+    applyMapBox();
+  }
   function setFocus(next) {
     focusMode = next;
     panel.dataset.ttrFocus = next ? "map" : "";
     byId("Focus").setAttribute("aria-pressed", String(next));
     document.body.classList.toggle("ttr-map-focus", next);
-    requestAnimationFrame(fitMap);
+    requestAnimationFrame(() => {
+      if (!view) return;
+      bounds = contentBounds();
+      if (next) fillScreen(); else fitMap();
+    });
   }
 
   function positionOverlay() {
@@ -907,7 +924,14 @@
     }
   }, true);
   document.addEventListener("scroll", hideTip, true);
-  window.addEventListener("resize", () => { hideTip(); positionOverlay(); });
+  window.addEventListener("resize", () => {
+    hideTip();
+    if (view) {
+      bounds = contentBounds();
+      if (focusMode || window.innerWidth <= 900) fillScreen(); else fitMap();
+    }
+    positionOverlay();
+  });
   window.addEventListener("blur", hideTip);
 
   // ------------------------------------------------------------------ socket
@@ -948,7 +972,11 @@
     window.currentTicketToRideView = next;
     const firstView = !bounds;
     render();
-    if (firstView) fitMap();
+    if (firstView) {
+      // A phone screen is far taller than the board is wide, so open filled
+      // rather than letterboxed. Desktop has room to frame the whole board.
+      if (window.innerWidth <= 900) fillScreen(); else fitMap();
+    }
   };
   window.showTicketToRideHeaderActions = visible => {
     byId("HeaderActions").style.display = visible ? "flex" : "none";

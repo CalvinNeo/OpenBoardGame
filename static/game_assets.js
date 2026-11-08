@@ -50,7 +50,7 @@ const GAME_ASSETS = {
   },
   "the_mind": {
     "scripts": ["/static/games/the_mind.js?v=2"],
-    "styles": ["/static/games/the_mind.css?v=2"],
+    "styles": ["/static/games/the_mind.css?v=4"],
     "markup": "/static/games/the_mind.html?v=2",
     "panel": "theMindPanel",
     "panelTitle": "🧠 心意相通",
@@ -146,9 +146,9 @@ const GAME_ASSETS = {
     "header": "showPowerGridHeaderActions"
   },
   "ticket_to_ride": {
-    "scripts": ["/static/games/ticket_to_ride.js?v=9"],
-    "styles": ["/static/games/ticket_to_ride.css?v=6"],
-    "markup": "/static/games/ticket_to_ride.html?v=3",
+    "scripts": ["/static/games/ticket_to_ride.js?v=11"],
+    "styles": ["/static/games/ticket_to_ride.css?v=9"],
+    "markup": "/static/games/ticket_to_ride.html?v=4",
     "panel": "ticketToRidePanel",
     "panelTitle": "🚂 铁路环游",
     "header": "showTicketToRideHeaderActions"

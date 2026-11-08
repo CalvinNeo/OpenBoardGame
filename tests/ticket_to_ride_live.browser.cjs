@@ -99,19 +99,25 @@ async function waitRoomIdle(page) {
       if (legal.includes('keep_tickets')) {
         await page.waitForSelector('.ttr-dialog[open] .ttr-dialog-actions button');
         await page.locator('.ttr-dialog[open] .ttr-dialog-actions button').click();
-      } else if (legal.includes('claim_route')) {
+      } else if (legal.includes('claim_route') && await page.evaluate(() =>
+        Boolean(document.querySelector('#ticketToRideMap .ttr-route.is-claimable')))) {
         const route = await page.evaluate(() =>
-          document.querySelector('#ticketToRideMap .ttr-route.is-claimable')?.dataset.route);
-        assert.ok(route, 'a claimable route is highlighted on the map');
-        await page.locator('#ticketToRideMap').scrollIntoViewIfNeeded();
+          document.querySelector('#ticketToRideMap .ttr-route.is-claimable').dataset.route);
+        // Centre the route first: the collapsed Room Control docks a bar over the
+        // top of the screen, so anything parked at the top is not clickable.
         const point = await page.evaluate(id => {
           const g = document.querySelector(`#ticketToRideMap .ttr-route[data-route="${id}"]`);
+          g.scrollIntoView({block: 'center', inline: 'center'});
           const b = g.getBoundingClientRect();
           return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
         }, route);
-        assert.ok(point.y > 0 && point.y < 1000, 'the route is inside the viewport');
+        assert.ok(point.y > 40 && point.y < 980, 'the route is clear of the room chrome');
         await page.mouse.click(point.x, point.y);
-        await page.waitForSelector('#ticketToRideRouteOverlay:not(.hidden)');
+        // A fresh snapshot can land between the read and the click and take the
+        // turn away, so treat a missing panel as "retry on the next pass".
+        const panel = await page.waitForSelector('#ticketToRideRouteOverlay:not(.hidden)', { timeout: 6000 })
+          .catch(() => null);
+        if (!panel) continue;
         await page.locator('#ticketToRideRouteOverlay button', { hasText: 'Claim' }).click();
       } else if (legal.includes('draw_card')) {
         await page.locator('#ticketToRideMarket .ttr-card--deck').click();

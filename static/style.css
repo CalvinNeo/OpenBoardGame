@@ -4031,21 +4031,86 @@ body.obg-explaining {
   cursor: default;
 }
 
-@media (max-width: 420px) {
+/* Mobile: use the full screen and keep touch targets comfortable. */
+@media (max-width: 560px) {
   .obg-help-dialog {
-    width: 96vw;
-    max-height: 88vh;
+    width: calc(100vw - 10px);
+    max-width: none;
+    max-height: 94vh;
+    border-radius: 10px;
+  }
+
+  .obg-help-head {
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .obg-help-title {
+    font-size: 17px;
+  }
+
+  .obg-help-lang button,
+  .obg-help-close {
+    min-height: 42px;
+    padding: 10px 16px;
+    font-size: 15px;
+    border-radius: 8px;
   }
 
   .obg-help-content {
-    max-height: calc(88vh - 48px);
-    padding: 10px 11px 14px;
-    font-size: 13px;
+    max-height: calc(94vh - 66px);
+    padding: 14px 16px 22px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .obg-help-tabs {
+    gap: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  .obg-help-tab {
+    min-height: 40px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .obg-help-section h3 {
+    margin: 18px 0 8px;
+    font-size: 16px;
+  }
+
+  .obg-help-section p,
+  .obg-help-section li {
+    font-size: 15px;
+  }
+
+  .obg-help-section ul,
+  .obg-help-section ol {
+    padding-left: 22px;
+  }
+
+  .obg-help-basic {
+    gap: 10px;
   }
 
   .obg-help-basic-row {
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 4px;
+    padding: 12px 14px;
+  }
+
+  .obg-help-basic-row dt {
+    font-size: 15px;
+  }
+
+  .obg-help-basic-row dd {
+    font-size: 15px;
+  }
+
+  .obg-explain-text {
+    font-size: 15px;
   }
 }
 

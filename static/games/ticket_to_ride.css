@@ -185,6 +185,9 @@
 body.ttr-map-focus { overflow:hidden; }
 .ticket-to-ride-panel[data-ttr-focus="map"] {
   position:fixed; inset:0; z-index:55; border-radius:0; padding:7px;
+  /* The collapsed Room Control docks a bar over the top of the screen and always
+     stays on top, so the map controls have to start below it. */
+  padding-top:52px;
   display:flex; flex-direction:column; overflow:hidden;
 }
 .ticket-to-ride-panel[data-ttr-focus="map"] > *:not(.ttr-board) { display:none; }
@@ -193,11 +196,18 @@ body.ttr-map-focus { overflow:hidden; }
 .ticket-to-ride-panel[data-ttr-focus="map"] .ttr-route-list { display:none; }
 .ticket-to-ride-panel[data-ttr-focus="map"] .ttr-map-section { height:100%; display:flex; flex-direction:column; }
 .ticket-to-ride-panel[data-ttr-focus="map"] .ttr-map-frame { flex:1; min-height:0; }
-.ticket-to-ride-panel[data-ttr-focus="map"] #ticketToRideMap { height:100%; aspect-ratio:auto; max-height:none; }
+.ticket-to-ride-panel[data-ttr-focus="map"] #ticketToRideMap { height:100%; aspect-ratio:auto; max-height:none; min-height:0; }
 
 @media (max-width:900px) {
   .ttr-board { grid-template-columns:minmax(0,1fr); }
-  #ticketToRideMap { max-height:none; }
+  /* Keep the controls away from the top-right corner, where the app's sticky
+     room chrome lives. */
+  .ttr-section-heading { justify-content:flex-start; flex-wrap:wrap; }
+  .ttr-section-heading > span { text-align:left; }
+  /* The board is much wider than a phone, so give the frame real height and let
+     the viewBox fill it: the player pans across a readable map instead of
+     squinting at a thin letterboxed strip. */
+  #ticketToRideMap { aspect-ratio:auto; max-height:none; height:clamp(240px,42vh,420px); }
   .ttr-stat-label { display:none; }
   .ttr-stat { gap:4px; padding:5px 4px; }
   .ttr-stat strong { font-size:15px; }

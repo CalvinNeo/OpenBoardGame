@@ -106,13 +106,31 @@ async function render(page, key) {
   }, views[key]);
 }
 
+// The collapsed Room Control docks a translucent bar over the top of the screen
+// by design, so anything scrolled to the very top sits under it. Park the target
+// clear of that bar and dispatch a real mouse click.
+async function clickClear(page, selector) {
+  const point = await page.evaluate(sel => {
+    const node = document.querySelector(sel);
+    node.scrollIntoView({block: 'center'});
+    const box = node.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  }, selector);
+  await page.mouse.click(point.x, point.y);
+}
+
 async function bounds(page, label) {
   const issues = await page.evaluate(() => {
     const issues = [];
     if (document.documentElement.scrollWidth > innerWidth + 1) issues.push('page horizontal overflow');
     const roots = '#ticketToRidePanel *, .game-panel > .panel-header, .ttr-dialog[open], .ttr-dialog[open] *, .obg-help-dialog[open], .obg-help-dialog[open] *';
+    const frame = document.getElementById('ticketToRideMapFrame');
+    if (frame && getComputedStyle(frame).overflow !== 'hidden') issues.push('map frame does not clip');
     for (const node of document.querySelectorAll(roots)) {
       if (!node.checkVisibility()) continue;
+      // Map internals are deliberately clipped by the frame, so their geometric
+      // rect may sit outside the viewport while nothing is actually visible there.
+      if (node.closest('#ticketToRideMap')) continue;
       const box = node.getBoundingClientRect();
       if (box.width < 1 || box.height < 1) continue;
       if (box.left < -1 || box.right > innerWidth + 1) issues.push(`${node.id || node.className} outside viewport`);
@@ -200,18 +218,25 @@ async function bounds(page, label) {
     for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: width < 500 ? 844 : 1000 });
       await render(page, 'claim');
+      // Only routes actually inside the visible frame can be clicked; the phone
+      // view crops a board that is wider than the screen.
       const route = await page.evaluate(() => {
-        const group = document.querySelector('#ticketToRideMap .ttr-route.is-claimable');
-        return group ? group.dataset.route : null;
+        const frame = document.getElementById('ticketToRideMapFrame').getBoundingClientRect();
+        for (const group of document.querySelectorAll('#ticketToRideMap .ttr-route.is-claimable')) {
+          const box = group.getBoundingClientRect();
+          const x = box.left + box.width / 2, y = box.top + box.height / 2;
+          if (x > frame.left + 6 && x < frame.right - 6 && y > frame.top + 6 && y < frame.bottom - 6) {
+            return group.dataset.route;
+          }
+        }
+        return null;
       });
-      assert.ok(route, `${width}px has an affordable route on the map`);
+      assert.ok(route, `${width}px shows an affordable route inside the frame`);
       const point = await page.evaluate(id => {
         const group = document.querySelector(`#ticketToRideMap .ttr-route[data-route="${id}"]`);
-        if (!group) return null;
         const box = group.getBoundingClientRect();
         return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
       }, route);
-      assert.ok(point, `${width}px route group has a box`);
       await page.mouse.click(point.x, point.y);
       await page.waitForSelector('#ticketToRideRouteOverlay:not(.hidden)');
       await bounds(page, `${width}px route selected`);
@@ -241,24 +266,37 @@ async function bounds(page, label) {
       const vb = document.getElementById('ticketToRideMap').getAttribute('viewBox').split(' ').map(Number);
       return { x: vb[0], y: vb[1], w: vb[2], h: vb[3] };
     });
+    const viewWidth = () => page.evaluate(() =>
+      Number(document.getElementById('ticketToRideMap').getAttribute('viewBox').split(' ')[2]));
+    // The app reframes on resize; wait for that instead of racing it.
+    await page.waitForFunction(() =>
+      Number(document.getElementById('ticketToRideMap').getAttribute('viewBox').split(' ')[2]) < 900,
+      null, { timeout: 8000 });
+    const opened = await readBox();
+    assert.ok(opened.w < 900, 'the phone view opens filled rather than letterboxed');
+    await clickClear(page, '#ticketToRideFit');
     const fitted = await readBox();
     assert.ok(fitted.w > 900 && fitted.w < 1010, 'Fit frames the real content, not the empty canvas');
     assert.ok(fitted.x > 0 && fitted.x < 20, 'Fit trims the left padding');
-    await page.locator('#ticketToRideOrigin').click();
+    await clickClear(page, '#ticketToRideOrigin');
+    await page.waitForFunction(() =>
+      Number(document.getElementById('ticketToRideMap').getAttribute('viewBox').split(' ')[2]) < 900);
     const native = await readBox();
     const mapWidth = await page.evaluate(() => document.getElementById('ticketToRideMap').getBoundingClientRect().width);
     assert.ok(Math.abs(native.w - mapWidth) < 2, 'Origin shows one map unit per screen pixel');
     assert.ok(native.w < fitted.w, 'Origin is zoomed in compared with Fit');
-    await page.locator('#ticketToRideFit').click();
-    assert.deepEqual(await readBox(), fitted, 'Fit restores the framed board');
-    await page.locator('#ticketToRideFocus').click();
+    await clickClear(page, '#ticketToRideFit');
+    await page.waitForFunction(() =>
+      Number(document.getElementById('ticketToRideMap').getAttribute('viewBox').split(' ')[2]) > 900);
+    assert.deepEqual(await readBox(), fitted, 'Fit restores the framed board after Origin');
+    await clickClear(page, '#ticketToRideFocus');
     await page.waitForFunction(() => document.body.classList.contains('ttr-map-focus'));
     await bounds(page, '390px full-screen map');
     const focusHeight = await page.evaluate(() =>
       document.getElementById('ticketToRideMap').getBoundingClientRect().height);
     assert.ok(focusHeight > 500, 'the full-screen map fills the phone screen');
     await page.screenshot({ path: `${output}/map-focus-390.png`, fullPage: false });
-    await page.locator('#ticketToRideFocus').click();
+    await clickClear(page, '#ticketToRideFocus');
     await page.waitForFunction(() => !document.body.classList.contains('ttr-map-focus'));
 
     // Card market: two face-up picks, and a locomotive may not be the second.
