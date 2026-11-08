@@ -61,10 +61,12 @@
           zh: "<p>每一轮，还在猜的玩家私下写一个词。按下 Lock word(🔒) 之后就不能修改，其他人也看不到它。</p>"
             + "<p>等所有还在猜的玩家都锁定，所有词会同时公开给全场。</p>"
             + "<p>公开之后所有人都要按 Next Round，包括已经成功的队伍，全部确认后才会进入下一轮。</p>"
+            + "<p>每一轮公开过的词都会记进 Used words，从下一轮开始全场都不能再写它们。</p>"
             + "<p>游戏没有倒计时，也没有轮数上限，最后一次公开的结果会一直留在桌面上。</p>",
           en: "<p>Each round the players who are still guessing write one word privately. Once you press Lock word (🔒) it cannot be changed and nobody else can see it.</p>"
             + "<p>As soon as every remaining player has locked a word, all of the words are revealed together.</p>"
             + "<p>After the reveal everybody presses Next Round, including the teams that already matched, and the next round only begins once all of them have confirmed.</p>"
+            + "<p>Every revealed word is listed under Used words, and from the next round on nobody may write any of them again.</p>"
             + "<p>There is no timer and no round limit, and the final reveal stays on the table.</p>"
         }
       },
@@ -99,11 +101,11 @@
           zh: "<p>一个词最多 24 个字符，并且必须至少含有一个字母或者数字。</p>"
             + "<p>比较之前会先统一化：全角和兼容字符转成半角，首尾空格去掉，连续空格合并成一个，字母大小写不计入差别。</p>"
             + "<p>同义词、标点不同、简繁不同都不会自动算作同一个词，而且只有同一轮里写的词才能配对。</p>"
-            + "<p>重复使用以前写过的词是允许的，但控制字符和不可见的格式字符会被拒绝。</p>",
+            + "<p>之前轮次里任何人公开过的词都会进入 Used words，全场都不能再写；控制字符和不可见的格式字符同样会被拒绝。</p>",
           en: "<p>A word is at most 24 characters long and has to contain at least one letter or number.</p>"
             + "<p>Words are normalised before they are compared: full width and compatibility characters become half width, outer spaces are trimmed, runs of spaces collapse into one, and letter case is ignored.</p>"
             + "<p>Synonyms, different punctuation and simplified versus traditional Chinese are never treated as the same word, and only words written in the same round can match.</p>"
-            + "<p>Reusing a word you wrote before is allowed, while control characters and invisible formatting characters are rejected.</p>"
+            + "<p>Any word revealed in an earlier round is listed under Used words and nobody may write it again, while control characters and invisible formatting characters are rejected.</p>"
         }
       },
       {
@@ -111,10 +113,10 @@
         label: { zh: "操作与练习", en: "Controls and practice" },
         html: {
           zh: "<p>History 里只有已经公开给所有人的词，最新的排在最前面，你自己的队伍会高亮。</p>"
-            + "<p>练习用的 bot 会先写简单的词，之后固定复用上一轮公开过的词。它们看不到任何隐藏提交，也不是真正的语义 AI 队友。</p>"
+            + "<p>练习用的 bot 会先写简单的词，之后改写还没有人公开过的新词。它们看不到任何隐藏提交，也不是真正的语义 AI 队友。</p>"
             + "<p>打开 Explain 之后再点任意控件，可以在不真正行动的情况下查看它的说明。按 Esc 可以关闭对话框或者退出 Explain。</p>",
           en: "<p>History only contains words that have already been revealed to everyone, newest first, with your own team highlighted.</p>"
-            + "<p>Practice bots start with simple words and then keep reusing a word from the previous public reveal. They never inspect hidden submissions and are not semantic AI partners.</p>"
+            + "<p>Practice bots start with simple words and then move on to a word nobody has revealed yet. They never inspect hidden submissions and are not semantic AI partners.</p>"
             + "<p>Turn on Explain and then tap any control to read what it does without taking a real action. Press Esc to close a dialog or to leave Explain.</p>"
         }
       }
@@ -123,7 +125,8 @@
 
   const WORD_SYNC_EXPLAIN = {
     round: { zh: "当前是第几轮。一轮指一次同时公开，不是秒钟数，每一轮里还在猜的人都只有一次机会。", en: "Which round is being played. A round counts simultaneous reveals rather than seconds, and every player still guessing gets exactly one attempt in it." },
-    word: { zh: "在这里私下写一个词，最多 24 个字符。第一轮可以自由发挥，之后请用已经公开的词作为灵感，重复使用旧词也允许。", en: "Write one word privately here, up to 24 characters. Think freely in round one and afterwards use the revealed words as inspiration. Reusing an old word is allowed." },
+    word: { zh: "在这里私下写一个词，最多 24 个字符。第一轮可以自由发挥，之后请用已经公开的词作为灵感，但 Used words 里已经公开过的词不能再写。", en: "Write one word privately here, up to 24 characters. Think freely in round one and afterwards use the revealed words as inspiration, but a word already listed under Used words can never be written again." },
+    used_words: { zh: "这里列出之前轮次里已经公开过的词，全部带删除线。任何一个都不能再写，输入到它会立刻标红，并且无法提交。", en: "These words were revealed in earlier rounds and are struck through. None of them can be written again: typing one marks it red and blocks the submit." },
     submit: { zh: "Lock word(🔒) 只会提交一次，不会把你的词显示给任何人，提交之后也不能修改。所有还在猜的人都锁定后，所有词会一起公开。", en: "Lock word (🔒) submits once without showing your word to anyone else, and it cannot be changed afterwards. Every word is revealed together once all remaining players have locked in." },
     next_round: { zh: "Next Round 表示你已经看完这一轮的公开结果。所有玩家都确认之后才会进入下一轮，不需要再点一次确认。", en: "Next Round confirms that you have read the reveal. The next round only starts once every player has confirmed, and no second confirmation dialog is needed." },
     pairing: { zh: "相邻座位组成固定队伍：1 + 2、3 + 4、5 + 6，依此类推。在同时公开之前，你只能看到自己锁定的那个词。", en: "Adjacent room seats form fixed pairs: 1 + 2, 3 + 4, 5 + 6, and so on. Before the shared reveal you can only see your own locked word." },
@@ -262,9 +265,37 @@
       <small>Round ${entry.round} · Team ${teamNumber(entry.team)}</small><div class="ws-history-words"><b>${escapeHtml(entry.words[0])}</b><span aria-label="${entry.matched ? "match" : "different"}">${entry.matched ? "=" : "↔"}</span><b>${escapeHtml(entry.words[1])}</b></div></li>`).join("") : "<li>No words revealed yet.</li>";
   }
 
+  // The server is authoritative; this only mirrors the burn list for instant feedback.
+  function usedDraft() {
+    const draft = normalizedDraft();
+    if (!draft || !view) return null;
+    return (view.used_words || []).find(word => word.toLowerCase() === draft.toLowerCase()) || null;
+  }
+
+  function blockedMessage(word) {
+    return `"${word}" was already used in an earlier round. Pick a new one.`;
+  }
+
   function updateDraft() {
+    const blocked = usedDraft();
     element("Count").textContent = `${Array.from(normalizedDraft()).length} / 24`;
-    element("Submit").disabled = !view?.legal_actions.includes("submit_word") || !connected() || Boolean(pending) || !normalizedDraft();
+    element("Submit").disabled = !view?.legal_actions.includes("submit_word") || !connected()
+      || Boolean(pending) || !normalizedDraft() || Boolean(blocked);
+    if (blocked) setError(blockedMessage(blocked));
+  }
+
+  function renderUsed() {
+    const words = view.used_words || [];
+    const box = element("Used");
+    box.hidden = !words.length || view.game_over;
+    element("UsedCount").textContent = words.length ? `· ${words.length}` : "";
+    if (box.hidden) {
+      element("UsedChips").innerHTML = "";
+      return;
+    }
+    const blocked = usedDraft();
+    element("UsedChips").innerHTML = words.map(word =>
+      `<span class="ws-used-chip ${word === blocked ? "ws-used-hit" : ""}">${escapeHtml(word)}</span>`).join("");
   }
 
   function titleText() {
@@ -335,6 +366,7 @@
     input.disabled = Boolean(pending) || !connected();
     element("Submit").textContent = pending?.type === "submit_word" ? "Locking…" : "Lock word";
     updateDraft();
+    renderUsed();
     element("Review").hidden = view.phase !== "reveal" || !ownTeam;
     element("Next").disabled = !view.legal_actions.includes("next_round") || Boolean(pending) || !connected();
     element("Next").textContent = view.next_ready.includes(view.you) ? "Ready ✓" : pending?.type === "next_round" ? "Sending…" : "Next Round";
@@ -356,6 +388,12 @@
       const word = normalizedDraft();
       if (!word || Array.from(word).length > 24 || !/[\p{L}\p{N}]/u.test(word) || /\p{C}/u.test(input.value)) {
         setError("Use up to 24 characters with letters or numbers, without invisible control characters.");
+        input.focus();
+        return;
+      }
+      const blocked = usedDraft();
+      if (blocked) {
+        setError(blockedMessage(blocked));
         input.focus();
         return;
       }

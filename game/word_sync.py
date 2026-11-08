@@ -7,6 +7,9 @@ from jsonschema import Draft7Validator
 
 
 MAX_WORD_LENGTH = 24
+USED_WORD_MESSAGE = "That word was already used in an earlier round. Pick a new one."
+BOT_WORDS = ("月亮", "星星", "海", "山", "雨", "风", "火", "树",
+             "鸟", "鱼", "云", "花", "雪", "光", "路", "门")
 TEAM_MODE = "team"
 FREE_FOR_ALL_MODE = "free_for_all"
 MODES = (TEAM_MODE, FREE_FOR_ALL_MODE)
@@ -48,6 +51,30 @@ def _build_teams(ids: List[str], mode: str) -> List[Dict]:
                  "matched_round": None, "history": []} for index in range(0, len(ids), 2)]
     return [{"team_id": f"team-{index + 1}", "player_ids": [player_id],
              "matched_round": None, "history": []} for index, player_id in enumerate(ids)]
+
+
+def _revealed_words(state: Dict) -> List[Tuple[int, int, int, str]]:
+    """Every revealed word as (round, team index, slot, word), oldest reveal first."""
+    return sorted((entry["round"], index, slot, word)
+                  for index, team in enumerate(state["teams"])
+                  for entry in team["history"]
+                  for slot, word in enumerate(entry["words"]))
+
+
+def _used_words(state: Dict) -> set:
+    """Case folded words revealed in earlier rounds; nobody may write them again."""
+    return {word.casefold() for _, _, _, word in _revealed_words(state)}
+
+
+def _used_word_list(state: Dict) -> List[str]:
+    """Revealed words in reveal order, de-duplicated, for the player facing list."""
+    seen: set = set()
+    ordered: List[str] = []
+    for _, _, _, word in _revealed_words(state):
+        if word.casefold() not in seen:
+            seen.add(word.casefold())
+            ordered.append(word)
+    return ordered
 
 
 def _team_for(state: Dict, player_id: str) -> Optional[Dict]:
@@ -124,18 +151,29 @@ def _free_for_all_rounds(state: Dict) -> Dict[int, Dict[str, str]]:
     return rounds
 
 
+def _fresh_bot_word(used: set) -> str:
+    """First practice word nobody has revealed yet, so bots never repeat a used word."""
+    for candidate in BOT_WORDS:
+        if candidate.casefold() not in used:
+            return candidate
+    index = 1
+    while f"词{index}".casefold() in used:
+        index += 1
+    return f"词{index}"
+
+
 def _bot_word(view: Dict, bot_id: str) -> str:
+    """Round one differs by seat, later rounds take the first still unused practice word."""
+    used = {word.casefold() for word in view["used_words"]}
     if view["mode"] == TEAM_MODE:
         team = next(team for team in view["teams"] if team["team_id"] == view["your_team_id"])
         if team["history"]:
-            return min(team["history"][-1]["words"], key=lambda value: (value.casefold(), value))
-        return ("月亮", "星星")[team["player_ids"].index(bot_id)]
-    previous = [team["history"][-1]["words"][0] for team in view["teams"]
-                if team["history"] and team["history"][-1]["round"] == view["round"] - 1]
-    if previous:
-        return min(previous, key=lambda value: (value.casefold(), value))
+            return _fresh_bot_word(used)
+        return BOT_WORDS[team["player_ids"].index(bot_id) % 2]
+    if view["round"] > 1:
+        return _fresh_bot_word(used)
     seat = next(index for index, member in enumerate(view["players"]) if member["player_id"] == bot_id)
-    return ("月亮", "星星")[seat % 2]
+    return BOT_WORDS[seat % 2]
 
 
 class WordSyncGame:
@@ -168,7 +206,7 @@ class WordSyncGame:
         if len(set(ids)) != len(ids) or len({player["seat"] for player in metadata}) != len(ids):
             raise ValueError("Player IDs and seats must be unique.")
         return {
-            "game_id": WordSyncGame.game_id, "version": 1, "config": {"mode": mode}, "mode": mode,
+            "game_id": WordSyncGame.game_id, "version": 2, "config": {"mode": mode}, "mode": mode,
             "game_token": secrets.token_hex(16), "window_id": 0, "revision": 0,
             "turn_order": ids, "players": {player["player_id"]: player for player in metadata},
             "teams": _build_teams(ids, mode),
@@ -205,6 +243,9 @@ class WordSyncGame:
                 word = normalize_word(action["word"])
             except ValueError as error:
                 return [], str(error)
+            # Words revealed in earlier rounds are burned for everybody; same round copies still match.
+            if word.casefold() in _used_words(state):
+                return [], USED_WORD_MESSAGE
             state["pending"][player_id] = word
             if all(player in state["pending"] for player in _active_players(state)):
                 _reveal(state)
@@ -227,6 +268,7 @@ class WordSyncGame:
         view.update(
             you=viewer_id, your_team_id=team["team_id"] if team else None,
             your_word=state["pending"].get(viewer_id), max_word_length=MAX_WORD_LENGTH,
+            used_words=_used_word_list(state),
             legal_actions=WordSyncGame.get_legal_actions(state, viewer_id),
             standings=_standings(state),
             players=[{**state["players"][player_id], "submitted": player_id in state["pending"]}
@@ -254,7 +296,7 @@ class WordSyncGame:
         try:
             state = copy.deepcopy(payload)
             if (not isinstance(state, dict) or state["game_id"] != WordSyncGame.game_id
-                    or type(state["version"]) is not int or state["version"] != 1):
+                    or type(state["version"]) is not int or state["version"] not in (1, 2)):
                 raise ValueError("Invalid Word Sync save.")
             players = [state["players"][player_id] for player_id in state["turn_order"]]
             baseline = WordSyncGame.init_game(state["config"], players)
@@ -274,6 +316,8 @@ class WordSyncGame:
             if len(state["teams"]) != len(baseline["teams"]):
                 raise ValueError("Invalid saved teams.")
             revealed = state["round"] - int(state["phase"] == "guess")
+            revealed_rows = _revealed_words(state)
+            revealed_words = {word.casefold() for _, _, _, word in revealed_rows}
             for team, expected in zip(state["teams"], baseline["teams"]):
                 if team["team_id"] != expected["team_id"] or team["player_ids"] != expected["player_ids"]:
                     raise ValueError("Invalid saved pairing.")
@@ -309,6 +353,12 @@ class WordSyncGame:
                         # A match ends the game, so a winner finishes exactly on the round they matched.
                         if not (finish == number if matched else finish is None or finish > number):
                             raise ValueError("Invalid saved completion.")
+            # Version 2 burns a word once its round is revealed, so a word may only appear in one round.
+            if state["version"] >= 2:
+                first_round: Dict[str, int] = {}
+                for number, _, _, word in revealed_rows:
+                    if first_round.setdefault(word.casefold(), number) != number:
+                        raise ValueError("Invalid saved words.")
             complete = _is_complete(state)
             if state["game_over"] is not complete or complete != (state["phase"] == "game_over"):
                 raise ValueError("Invalid saved game result.")
@@ -318,6 +368,8 @@ class WordSyncGame:
             if not isinstance(pending, dict) or not set(pending).issubset(_active_players(state)):
                 raise ValueError("Invalid saved submissions.")
             if any(normalize_word(word) != word for word in pending.values()):
+                raise ValueError("Invalid saved submission text.")
+            if state["version"] >= 2 and any(word.casefold() in revealed_words for word in pending.values()):
                 raise ValueError("Invalid saved submission text.")
             if (state["phase"] != "guess" and pending) or (state["phase"] == "guess" and len(pending) == len(_active_players(state))):
                 raise ValueError("Invalid saved submission phase.")

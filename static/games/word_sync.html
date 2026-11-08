@@ -25,6 +25,10 @@
             <button id="wordSyncSubmit" class="ws-primary" type="submit" data-ws-explain="submit">Lock word</button>
           </div>
         </form>
+        <div id="wordSyncUsed" class="ws-used" hidden>
+          <span class="ws-used-label" tabindex="0" data-ws-explain="used_words" data-ws-tip="Used words · Revealed in an earlier round, so nobody may write them again.">Used words <span id="wordSyncUsedCount"></span></span>
+          <div id="wordSyncUsedChips" class="ws-used-chips"></div>
+        </div>
         <div id="wordSyncReview" class="ws-review" hidden>
           <button id="wordSyncNext" class="ws-primary" type="button" data-ws-explain="next_round">Next Round</button>
           <span id="wordSyncReady" aria-live="polite"></span>

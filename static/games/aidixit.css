@@ -22,10 +22,41 @@
   overflow-wrap: anywhere;
 }
 
+/* Keep the title, Reconnect, Help and Explain on a single row at every
+   width. The game name is the only part allowed to shrink. */
+.game-panel[data-game-theme="aidixit"] > .panel-header {
+  flex-wrap: nowrap;
+  gap: 6px 10px;
+}
+
+.game-panel[data-game-theme="aidixit"] .game-panel-title {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.game-panel[data-game-theme="aidixit"] .game-panel-title h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-panel[data-game-theme="aidixit"] #gameReconnectBtn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.game-panel[data-game-theme="aidixit"] > .panel-header > .panel-header-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
 .game-panel[data-game-theme="aidixit"] > .panel-header button {
   color: var(--adx-ink);
   background: var(--adx-panel-2);
   border-color: var(--adx-line);
+  white-space: nowrap;
 }
 
 .game-panel[data-game-theme="aidixit"] > .panel-header button[aria-pressed="true"] {
@@ -182,6 +213,22 @@
   background: #241c3c;
 }
 
+.aidixit-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Voting is about the pool, so it takes the top slot while the hand steps aside. */
+.aidixit-stage.is-voting #aidixitPoolBlock {
+  order: -1;
+}
+
+.aidixit-stage.is-voting #aidixitHandBlock .aidixit-card-img {
+  opacity: 0.72;
+}
+
 .aidixit-stage-head {
   display: flex;
   flex-wrap: wrap;
@@ -268,7 +315,8 @@
 .aidixit-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  justify-content: center;
 }
 
 .aidixit-grid:empty {
@@ -277,6 +325,9 @@
 
 .aidixit-card {
   position: relative;
+  justify-self: center;
+  width: 100%;
+  max-width: 340px;
   min-width: 0;
   padding: 4px;
   border: 2px solid var(--adx-line);

@@ -2,9 +2,9 @@
 const GAME_ASSETS = {
   "word_sync": {
     "loadOnStart": true,
-    "scripts": ["/static/games/word_sync.js?v=3_h2"],
-    "styles": ["/static/games/word_sync.css?v=4"],
-    "markup": "/static/games/word_sync.html?v=2_h2",
+    "scripts": ["/static/games/word_sync.js?v=4_h2"],
+    "styles": ["/static/games/word_sync.css?v=5"],
+    "markup": "/static/games/word_sync.html?v=3_h2",
     "panel": "wordSyncPanel",
     "panelTitle": "同频共词",
     "header": "showWordSyncHeaderActions"
@@ -459,12 +459,15 @@ const GAME_ASSETS = {
   },
   "aidixit": {
     "scripts": [
-      "/static/games/aidixit.js?v=app_v4_h1"
+      "/static/games/aidixit.js?v=app_v4_h3"
     ],
-    "styles": [],
+    "styles": [
+      "/static/games/aidixit.css?v=3"
+    ],
     "panel": "aidixitPanel",
-    "markup": "/static/games/aidixit.html?v=1_h1",
-    "styleFragments": "/static/games/aidixit.css?v=1"
+    "panelTitle": "🖼️ AI 画物语",
+    "header": "showAidixitHeaderActions",
+    "markup": "/static/games/aidixit.html?v=2_h3"
   },
   "hanabi": {
     "scripts": [

@@ -42,6 +42,12 @@
 .ws-panel .ws-primary:hover:not(:disabled) { background: #21523f; }
 .ws-panel button:disabled { cursor: default; opacity: .58; }
 .ws-panel :focus-visible { outline: 2px solid #2b6c55; outline-offset: 3px; }
+.ws-used { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; margin-top: 14px; }
+.ws-used-label { flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: #7c6a45; }
+.ws-used-label span { font-weight: 400; color: #8d7c58; }
+.ws-used-chips { display: flex; flex-wrap: wrap; gap: 5px 6px; min-width: 0; max-height: 80px; padding-right: 4px; overflow-y: auto; overscroll-behavior: contain; }
+.ws-used-chip { max-width: 100%; padding: 2px 9px; border: 1px dashed #c8bda1; border-radius: 999px; background: #f7f2e3; color: #6f6244; font-size: 12px; line-height: 1.5; text-decoration: line-through; text-decoration-color: #b6a67c; overflow-wrap: anywhere; }
+.ws-used-chip.ws-used-hit { border-style: solid; border-color: #b3402f; background: #f8e4e0; color: #953024; font-weight: 600; text-decoration-color: #b3402f; }
 .ws-review { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 .ws-review > span { font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; color: #5a7265; }
 .ws-review > button { flex-shrink: 0; }
@@ -115,6 +121,8 @@ body.ws-needs-action #roomControlsPanel.collapsed { border-color: #c45b43; box-s
   .ws-card-name { font-size: 12px; }
   .ws-card-status { font-size: 10px; }
   .ws-form, .ws-review { margin-top: 15px; }
+  .ws-used { margin-top: 11px; }
+  .ws-used-chips { max-height: 68px; }
   .ws-panel button { padding: 10px 11px; font-size: 12px; }
   .ws-section-heading { margin-bottom: 9px; }
   .ws-teams { gap: 10px; }

@@ -24,23 +24,27 @@
 
                 <div class="aidixit-scores" id="aidixitPlayers" data-aidixit-explain="players"></div>
 
-                <section class="aidixit-stage">
-                  <div class="aidixit-stage-head">
-                    <h3 class="aidixit-stage-title" data-aidixit-explain="hand">🖐️ Your Hand</h3>
-                    <span class="aidixit-stage-note" id="aidixitHandNote" data-aidixit-explain="submitted"></span>
+                <section class="aidixit-stage" id="aidixitStage">
+                  <div class="aidixit-block" id="aidixitPoolBlock">
+                    <div class="aidixit-stage-head hidden" id="aidixitPoolHead">
+                      <h3 class="aidixit-stage-title" data-aidixit-explain="pool">🎴 Pool</h3>
+                      <span class="aidixit-stage-note" id="aidixitPoolNote" data-aidixit-explain="voted"></span>
+                    </div>
+                    <div id="aidixitPool" class="aidixit-grid aidixit-pool"></div>
                   </div>
-                  <div class="aidixit-composer hidden" id="aidixitComposer">
-                    <label class="aidixit-composer-label" for="aidixitClueInput" data-aidixit-explain="clue_input">✍️ Your Clue</label>
-                    <input id="aidixitClueInput" type="text" maxlength="80" autocomplete="off"
-                           placeholder="A word, a sentence, or an inside joke" data-aidixit-explain="clue_input" />
-                  </div>
-                  <div id="aidixitHand" class="aidixit-grid aidixit-hand"></div>
 
-                  <div class="aidixit-stage-head hidden" id="aidixitPoolHead">
-                    <h3 class="aidixit-stage-title" data-aidixit-explain="pool">🎴 Pool</h3>
-                    <span class="aidixit-stage-note" id="aidixitPoolNote" data-aidixit-explain="voted"></span>
+                  <div class="aidixit-block" id="aidixitHandBlock">
+                    <div class="aidixit-stage-head">
+                      <h3 class="aidixit-stage-title" data-aidixit-explain="hand">🖐️ Your Hand</h3>
+                      <span class="aidixit-stage-note" id="aidixitHandNote" data-aidixit-explain="submitted"></span>
+                    </div>
+                    <div class="aidixit-composer hidden" id="aidixitComposer">
+                      <label class="aidixit-composer-label" for="aidixitClueInput" data-aidixit-explain="clue_input">✍️ Your Clue</label>
+                      <input id="aidixitClueInput" type="text" maxlength="80" autocomplete="off"
+                             placeholder="A word, a sentence, or an inside joke" data-aidixit-explain="clue_input" />
+                    </div>
+                    <div id="aidixitHand" class="aidixit-grid aidixit-hand"></div>
                   </div>
-                  <div id="aidixitPool" class="aidixit-grid aidixit-pool"></div>
                 </section>
 
                 <section class="aidixit-result hidden" id="aidixitRoundNotice">

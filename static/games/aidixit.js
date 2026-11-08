@@ -4,19 +4,19 @@ const aidixitExplainButton = document.getElementById("aidixitExplainBtn");
 
 const AIDIXIT_HELP_CONFIG = {
   gameId: "aidixit",
-  title: { zh: "AI 画物语 · AI Dixit", en: "AI Dixit" },
+  title: { zh: "🖼️ AI 画物语 · AI Dixit", en: "🖼️ AI Dixit" },
   basic: {
     win: {
       zh: "谁先把分数累积到目标分数（默认 30 分）谁就赢下整局。",
       en: "The first player to reach the target score, 30 points by default, wins the whole game."
     },
     turn: {
-      zh: "轮到你时，你要么作为讲述者(Storyteller)选一张手牌并写一句线索，要么按线索交出一张手牌，要么在投票阶段指认哪张牌属于讲述者。",
-      en: "On your turn you either act as the storyteller and pair one hand card with a written clue, or answer the clue with one card from your own hand, or point out which face-up card belongs to the storyteller."
+      zh: "轮到你时，你要么作为讲述者(🗣️)选一张手牌并写一句线索，要么按线索交出一张手牌，要么在投票阶段指认哪张牌属于讲述者(🗣️)。",
+      en: "On your turn you either act as the Storyteller(🗣️) and pair one hand card with a written clue, or answer the clue with one card from your own hand, or point out which face-up card belongs to the Storyteller(🗣️)."
     },
     key: {
-      zh: "线索必须拿捏在太直白和太晦涩之间，因为只有一部分人猜中时讲述者(Storyteller)才拿得到分数。",
-      en: "Your clue has to sit between too obvious and too obscure, because the storyteller only scores when some of the guessers find the card."
+      zh: "线索必须拿捏在太直白和太晦涩之间，因为只有一部分人猜中时讲述者(🗣️)才拿得到分数。",
+      en: "Your clue has to sit between too obvious and too obscure, because the Storyteller(🗣️) only scores when some of the guessers find the card."
     }
   },
   sections: [
@@ -24,28 +24,28 @@ const AIDIXIT_HELP_CONFIG = {
       id: "flow",
       label: { zh: "回合流程", en: "Round flow" },
       html: {
-        zh: "<p>每一轮分成三步。第一步由讲述者(Storyteller)从手牌里挑一张不公开的牌，然后在 Your Clue 里写一句线索，线索可以是单词、句子、拟声词，甚至是只有你们才懂的梗。</p>"
-          + "<p>第二步其他玩家各自从手牌里挑一张最贴合线索的牌，按下 Submit Card 交上去。系统收齐所有牌后会把它们打乱，然后一起亮在 Pool 里。</p>"
-          + "<p>第三步除了讲述者以外的每个人都要投票，指认哪一张是讲述者的牌。三步走完就结算分数，讲述者再顺时针轮换到下一位。</p>",
-        en: "<p>Every round has three steps. First the storyteller picks one card from their hand without revealing it, then writes a clue in Your Clue. The clue can be a word, a sentence, a sound, or a joke only your group understands.</p>"
-          + "<p>Second, every other player picks the hand card that fits the clue best and presses Submit Card. Once all cards are in, the system shuffles them and lays them face up in the Pool.</p>"
-          + "<p>Third, everyone except the storyteller votes for the card they believe is the storyteller's. The round is scored right after the last vote, and the storyteller role passes clockwise.</p>"
+        zh: "<p>每一轮分成三步。第一步由讲述者(🗣️)从手牌里挑一张不公开的牌，然后在 Your Clue(✍️) 里写一句线索，线索可以是单词、句子、拟声词，甚至是只有你们才懂的梗。</p>"
+          + "<p>第二步其他玩家各自从手牌里挑一张最贴合线索的牌，点开这张牌后按 Play Card(🃏) 交上去。系统收齐所有牌后会把它们打乱，然后一起亮在 Pool(🎴) 里。</p>"
+          + "<p>第三步除了讲述者(🗣️)以外的每个人都要投票，点开 Pool(🎴) 里的牌再按 Vote(🗳️) 指认哪一张是讲述者的牌。三步走完就结算分数，讲述者再顺时针轮换到下一位。</p>",
+        en: "<p>Every round has three steps. First the Storyteller(🗣️) picks one card from their hand without revealing it, then writes a clue in Your Clue(✍️). The clue can be a word, a sentence, a sound, or a joke only your group understands.</p>"
+          + "<p>Second, every other player picks the hand card that fits the clue best and confirms it with Play Card(🃏). Once all cards are in, the system shuffles them and lays them face up in the Pool(🎴).</p>"
+          + "<p>Third, everyone except the Storyteller(🗣️) votes with Vote(🗳️) for the card they believe is the storyteller's. The round is scored right after the last vote, and the storyteller role passes clockwise.</p>"
       }
     },
     {
       id: "scoring",
       label: { zh: "计分规则", en: "Scoring" },
       html: {
-        zh: "<p>结算时只看一件事，那就是有多少人投中了讲述者的牌。</p>"
-          + "<p>如果所有人都猜中，说明线索太直白，讲述者(Storyteller)一分不得，其他每人加 2 分。</p>"
+        zh: "<p>结算时只看一件事，那就是有多少人投中了讲述者(🗣️)的牌。</p>"
+          + "<p>如果所有人都猜中，说明线索太直白，讲述者一分不得，其他每人加 2 分。</p>"
           + "<p>如果没有人猜中，说明线索太晦涩，讲述者同样一分不得，其他每人加 2 分。</p>"
           + "<p>只要猜中的人数落在这两者之间，讲述者和每一个猜中的人都加 3 分，这才是最理想的结果。</p>"
-          + "<p>另外只要本轮不是所有人都猜中，别人投给你那张混淆牌的每一票，都会让你额外加 1 分。</p>",
-        en: "<p>Scoring looks at one thing only, namely how many players voted for the storyteller's card.</p>"
+          + "<p>另外只要本轮不是所有人都猜中，别人投给你那张混淆牌的每一票，都会让你额外加 1 分，结算面板里的 +1 就来自这里。</p>",
+        en: "<p>Scoring looks at one thing only, namely how many players voted for the Storyteller(🗣️) card.</p>"
           + "<p>If everybody guessed it the clue was too obvious, so the storyteller scores nothing and every other player gains 2 points.</p>"
           + "<p>If nobody guessed it the clue was too obscure, so the storyteller again scores nothing and every other player gains 2 points.</p>"
           + "<p>When the number of correct votes falls between those extremes, the storyteller and every correct guesser gain 3 points, which is the result you want.</p>"
-          + "<p>On top of that, whenever the round is not a clean sweep, each vote your decoy card receives gives you 1 extra point.</p>"
+          + "<p>On top of that, whenever the round is not a clean sweep, each vote your decoy card receives gives you 1 extra point, and that is where the small bonus in the result panel comes from.</p>"
       }
     },
     {
@@ -53,72 +53,75 @@ const AIDIXIT_HELP_CONFIG = {
       label: { zh: "手牌与牌库", en: "Cards and deck" },
       html: {
         zh: "<p>开局时每位玩家拿到 6 张手牌，每轮结束时系统会自动把每个人的手牌补回 6 张。</p>"
-          + "<p>本轮亮出来的所有牌在结算后都会进入弃牌堆，所以 Deck 表示牌库还剩多少张，Discard 表示弃牌堆已经积攒了多少张。</p>"
+          + "<p>本轮亮出来的所有牌在结算后都会进入弃牌堆，所以 Deck(🃏) 表示牌库还剩多少张，Discard(🗑️) 表示弃牌堆已经积攒了多少张。</p>"
           + "<p>牌库抽空时会按房间设置决定要不要把弃牌堆洗回去重新使用，因此打到后期也不必担心没有牌可发。</p>"
-          + "<p>任何玩家达到目标分数时游戏立刻结束，如果有几个人分数并列最高，他们会一起被记为获胜者。</p>",
+          + "<p>任何玩家达到 Target(🎯) 分数时游戏立刻结束，如果有几个人分数并列最高，他们会一起被记为获胜者。</p>",
         en: "<p>Every player starts with 6 cards in hand, and the system refills each hand back to 6 cards at the end of every round.</p>"
-          + "<p>All cards revealed this round move to the discard pile after scoring, so Deck tells you how many cards the deck still holds and Discard tells you how many have been used.</p>"
+          + "<p>All cards revealed this round move to the discard pile after scoring, so Deck(🃏) tells you how many cards the deck still holds and Discard(🗑️) tells you how many have been used.</p>"
           + "<p>When the deck runs out the room setting decides whether the discard pile is shuffled back into play, so a long game never runs short of cards.</p>"
-          + "<p>The game ends the moment a player reaches the target score, and anyone tied for the highest score is recorded as a winner.</p>"
+          + "<p>The game ends the moment a player reaches the Target(🎯) score, and anyone tied for the highest score is recorded as a winner.</p>"
       }
     },
     {
       id: "voting",
       label: { zh: "投票规则", en: "Voting" },
       html: {
-        zh: "<p>投票阶段所有人都能看到打乱后的牌面，讲述者(Storyteller)不参与投票，其他每个人都必须投出一票。</p>"
-          + "<p>你不能投给自己交上去的那张牌，系统会直接拒绝这样的投票。</p>"
-          + "<p>投票是公开的，牌旁边的彩色圆点(●)会显示已经投给它的玩家，所以你能看着别人的选择再决定自己要投谁。</p>"
-          + "<p>票投出去之后不能更改，等最后一个人投完，本轮立刻结算并把结果展示在 Last Round 里。</p>",
-        en: "<p>During voting everyone sees the shuffled cards. The storyteller does not vote, while every other player has to cast exactly one vote.</p>"
-          + "<p>You may not vote for the card you submitted yourself, and the system rejects such a vote outright.</p>"
-          + "<p>Votes are public. The colour dots (●) next to a card show who already voted for it, so you can watch other choices before making your own.</p>"
-          + "<p>A vote cannot be changed once it is cast, and the round settles the moment the last player votes, with the result shown under Last Round.</p>"
+        zh: "<p>投票阶段所有人都能看到打乱后的牌面，讲述者(🗣️)不参与投票，其他每个人都必须投出一票。</p>"
+          + "<p>你不能投给自己交上去的那张牌，那张牌会带着 Yours(🔹) 标记，系统会直接拒绝这样的投票。</p>"
+          + "<p>投票是公开的，牌下方的彩色圆点是投给它的玩家，所以你能看着别人的选择再决定自己要投谁。</p>"
+          + "<p>票投出去之后不能更改，等最后一个人投完，本轮立刻结算并把结果展示在 Last Round(📜) 里。</p>",
+        en: "<p>During voting everyone sees the shuffled cards. The Storyteller(🗣️) does not vote, while every other player has to cast exactly one vote.</p>"
+          + "<p>You may not vote for the card you submitted yourself. That card carries the Yours(🔹) mark and the system rejects such a vote outright.</p>"
+          + "<p>Votes are public. The colour dots under a card are the players who voted for it, so you can watch other choices before making your own.</p>"
+          + "<p>A vote cannot be changed once it is cast, and the round settles the moment the last player votes, with the result shown under Last Round(📜).</p>"
       }
     },
     {
       id: "clue",
       label: { zh: "线索的分寸", en: "Balancing the clue" },
       html: {
-        zh: "<p>好的线索不是让所有人都看懂，而是让一部分人产生联想。如果所有人都猜中，你作为讲述者(Storyteller)一分都拿不到。</p>"
+        zh: "<p>好的线索不是让所有人都看懂，而是让一部分人产生联想。如果所有人都猜中，你作为讲述者(🗣️)一分都拿不到。</p>"
           + "<p>作为其他玩家时，你的任务是既猜中讲述者的牌，又用自己那张混淆牌去骗到别人的票，因为骗到的每一票都值 1 分。</p>"
-          + "<p>所以看牌的时候既要猜讲述者在想什么，也要留意别人的牌为什么摆在那里。</p>",
-        en: "<p>A good clue does not speak to everybody. It only has to spark an idea in some players, because if every single one of them guesses your card you score nothing as the storyteller.</p>"
+          + "<p>所以看牌的时候既要猜讲述者在想什么，也要留意别人的牌为什么摆在那里。卡面太小的时候可以按 Zoom(🔍) 放大看清楚。</p>",
+        en: "<p>A good clue does not speak to everybody. It only has to spark an idea in some players, because if every single one of them guesses your card you score nothing as the Storyteller(🗣️).</p>"
           + "<p>As a guesser your job is twofold. Find the storyteller's card, and make your own decoy tempting enough to steal votes, since every stolen vote is worth 1 point.</p>"
-          + "<p>Read the table with both questions in mind, what the storyteller was thinking, and why the other cards are sitting there.</p>"
+          + "<p>Read the table with both questions in mind, what the storyteller was thinking, and why the other cards are sitting there. Press Zoom(🔍) whenever a card is too small to read.</p>"
       }
     }
   ]
 };
 
 const AIDIXIT_EXPLAIN = {
+  prompt: { zh: "行动提示条。它告诉你现在轮到你做什么，或者你正在等谁。整条变成金色边框时说明该你出手了。", en: "The action banner. It tells you what to do now, or who you are waiting for. A gold border means it is your move." },
+  clue: { zh: "线索条。讲述者(🗣️)本轮写下的线索，提交阶段和投票阶段所有人都能看到它。", en: "The clue bar. The clue the Storyteller(🗣️) wrote this round, visible to everybody during the submit and vote phases." },
+  players: { zh: "计分板。每一位玩家一个胶囊，左边是他专属颜色的圆点，中间是名字，右边是当前分数。", en: "The scoreboard. One pill per player, with their own colour dot on the left, their name in the middle, and their current score on the right." },
+  seat: { zh: "一位玩家的计分胶囊。", en: "One player's score pill." },
+  score: { zh: "这位玩家的当前分数，格式是 已得分/目标分。", en: "This player's current score, written as earned over target." },
+  storyteller_tag: { zh: "皇冠(👑)标记，表示这位玩家是本轮的讲述者(🗣️)。", en: "The crown(👑) marks this player as the Storyteller(🗣️) for the current round." },
+  round: { zh: "当前是第几轮，每轮结束后讲述者(🗣️)顺时针轮换。", en: "Which round is being played. The Storyteller(🗣️) role rotates clockwise after each round." },
   phase: { zh: "当前阶段。story 是讲述者出题，submit 是其他玩家出牌，vote 是投票。", en: "Current phase. story is the storyteller's clue, submit is the other players picking cards, vote is the guessing round." },
-  round: { zh: "当前是第几轮，每轮结束后讲述者顺时针轮换。", en: "Which round is being played. The storyteller role rotates clockwise after each round." },
-  storyteller: { zh: "本轮的讲述者(Storyteller)，由他出题并且不参与投票。", en: "This round's storyteller, who gives the clue and never votes." },
-  clue: { zh: "讲述者本轮写下的线索，所有人都能看到它。", en: "The clue the storyteller wrote this round. Everybody can read it." },
-  target: { zh: "获胜所需的目标分数，默认是 30 分。", en: "The score needed to win, 30 points by default." },
-  deck: { zh: "牌库里还剩多少张可以发的牌。", en: "How many cards are left in the deck to deal." },
-  discard: { zh: "弃牌堆里已经用过的牌，牌库抽空时可能会被洗回去。", en: "Cards already used this game. They may be shuffled back once the deck runs out." },
+  storyteller: { zh: "本轮的讲述者(🗣️)，由他出题并且不参与投票。", en: "This round's Storyteller(🗣️), who gives the clue and never votes." },
+  target: { zh: "获胜所需的目标分数 Target(🎯)，默认是 30 分。", en: "The Target(🎯) score needed to win, 30 points by default." },
+  deck: { zh: "牌库 Deck(🃏)里还剩多少张可以发的牌。", en: "How many cards are left in the Deck(🃏) to deal." },
+  discard: { zh: "弃牌堆 Discard(🗑️)里已经用过的牌，牌库抽空时可能会被洗回去。", en: "Cards already used this game, held in the Discard(🗑️) pile. They may be shuffled back once the deck runs out." },
   submitted: { zh: "你本轮是否已经交出牌。", en: "Whether you have already submitted a card this round." },
-  voted: { zh: "你本轮是否已经投票，投完之后不能改票。", en: "Whether you have already voted this round. A vote cannot be changed." },
+  voted: { zh: "你本轮是否已经投票，投完之后不能改票。右边的数字是本轮已经投出的票数。", en: "Whether you have already voted this round. A vote cannot be changed. The number beside it counts the votes cast so far." },
   winner: { zh: "整局游戏的获胜者，分数并列时会一起显示。", en: "The winners of the whole game. Tied players are listed together." },
-  clue_input: { zh: "在这里写下你的线索，可以是单词、句子或者一个梗，只有轮到你当讲述者(Storyteller)时才能输入。", en: "Write your clue here. It can be a word, a sentence, or an inside joke, and only the storyteller may type in it." },
-  submit_story: { zh: "把选中的手牌和线索一起提交，本轮你的牌不会公开。", en: "Submit the selected hand card together with your clue. Your card stays hidden this round." },
-  submit_card: { zh: "交出选中的手牌去混淆视听，系统收齐所有人的牌后会打乱展示。", en: "Submit the selected hand card as your decoy. All cards are shuffled and revealed once everyone has submitted." },
-  submit_vote: { zh: "把票投给选中的牌，指认它是讲述者(Storyteller)的那张。", en: "Vote for the selected card, claiming it is the storyteller's card." },
+  clue_input: { zh: "在这里写下你的线索，可以是单词、句子或者一个梗，只有轮到你当讲述者(🗣️)时才能输入。", en: "Write your clue here. It can be a word, a sentence, or an inside joke, and only the Storyteller(🗣️) may type in it." },
   hand: { zh: "你的手牌，每轮结束时会被补回 6 张。", en: "Your hand, which is refilled to 6 cards at the end of every round." },
-  hand_card: { zh: "一张手牌。点击选中它，然后按 Submit Story 或 Submit Card 把它交出去。", en: "One hand card. Click to select it, then press Submit Story or Submit Card to play it." },
+  hand_card: { zh: "一张手牌。点它会盖上一层确认蒙版，在蒙版上选 Play Card(🃏) 或 Tell Story(🗣️) 才真正出牌。", en: "One hand card. Tapping it lays a confirmation shade over the card, and you commit with Play Card(🃏) or Tell Story(🗣️) on that shade." },
   pool: { zh: "本轮所有玩家交上来的牌，打乱后一起亮在这里。", en: "Every card submitted this round, shuffled and revealed together." },
-  pool_card: { zh: "一张候选牌。点击选中它再按 Vote 投票，你不能投给自己交的那张。", en: "One candidate card. Click to select it and press Vote. You cannot vote for your own card." },
-  zoom: { zh: "放大镜(🔍)按钮，点开可以看清这张牌的细节。", en: "The magnifier (🔍) button opens a larger view so you can study the card." },
+  pool_card: { zh: "一张候选牌。点它会盖上确认蒙版，在蒙版上按 Vote(🗳️) 才真正投票。", en: "One candidate card. Tapping it lays a confirmation shade over the card, and you commit with Vote(🗳️) on that shade." },
+  zoom: { zh: "放大镜 Zoom(🔍)按钮，点开可以看清这张牌的细节。", en: "The Zoom(🔍) button opens a larger view so you can study the card." },
   vote_count: { zh: "这张牌收到的票数。", en: "How many votes this card received." },
-  story_badge: { zh: "Story 标记，表示这张牌就是讲述者(Storyteller)出的那张。", en: "The Story badge marks the card the storyteller actually played." },
-  result_card: { zh: "上一轮的一张牌，上面的数字是它得到的票数，下方的彩色圆点(●)是投给它的玩家。", en: "One card from last round. The number is its vote count and the colour dots (●) below are the players who voted for it." },
-  vote_dots: { zh: "投给这张牌的玩家，用他们各自的颜色圆点(●)表示。", en: "The players who voted for this card, shown as colour dots (●) in their own colours." },
-  round_notice: { zh: "上一轮的结算记录，会一直保留到本轮结束。", en: "The scoring summary of the previous round, kept until the current round ends." },
-  round_result: { zh: "上一轮的结果，包括讲述者、线索、猜中的人以及每个人的得分变化。", en: "Last round's outcome, including the storyteller, the clue, who guessed correctly, and every score change." },
-  players: { zh: "所有玩家的当前分数，讲述者(Storyteller)会被标出来。", en: "All players with their current scores. The storyteller is marked." },
-  zoom_close: { zh: "关闭放大的卡牌详情。", en: "Close the enlarged card view." }
+  story_badge: { zh: "Story 标记，表示这张牌就是讲述者(🗣️)出的那张。", en: "The Story badge marks the card the Storyteller(🗣️) actually played." },
+  own_card: { zh: "Yours(🔹) 标记，表示这张牌是你自己交上去的，你不能投它。", en: "The Yours(🔹) mark shows this is the card you submitted yourself, and you may not vote for it." },
+  result_card: { zh: "上一轮的一张牌，右上角的数字是它得到的票数，下方的彩色圆点是投给它的玩家。", en: "One card from last round. The number at the top right is its vote count and the colour dots below are the players who voted for it." },
+  vote_dots: { zh: "投给这张牌的玩家，用他们各自的颜色圆点表示。", en: "The players who voted for this card, shown as colour dots in their own colours." },
+  round_notice: { zh: "上一轮的结算记录，点标题可以折叠或者展开，会一直保留到本轮结束。", en: "The scoring summary of the previous round. Tap the header to collapse or expand it. It is kept until the current round ends." },
+  round_result: { zh: "上一轮的结果，包括结算类型、讲述者、线索以及猜中的人。", en: "Last round's outcome, including the scoring case, the storyteller, the clue, and who guessed correctly." },
+  score_delta: { zh: "上一轮每个人的分数变化，绿色数字是本轮拿到的分数。", en: "How every player's score changed last round. The green number is what they earned." },
+  zoom_close: { zh: "关闭放大的卡牌详情，也可以按 Esc 退出。", en: "Close the enlarged card view. Escape works too." }
 };
 
 let aidixitHelpWidget = null;
@@ -142,44 +145,65 @@ function initAidixitHelpExplain() {
   aidixitExplainButton?.addEventListener("click", () => aidixitExplainWidget?.toggle());
 }
 
+function showAidixitHeaderActions(show) {
+  const slot = document.getElementById("aidixitHeaderActions");
+  if (slot) slot.style.display = show ? "flex" : "none";
+  if (!show) {
+    aidixitExplainWidget?.exit();
+    closeAidixitZoom();
+  }
+}
+
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initAidixitHelpExplain);
 } else {
   initAidixitHelpExplain();
 }
 
+// --- Lobby deck picker -------------------------------------------------
 let aidixitDecksLoaded = false;
 let aidixitDecks = [];
 let aidixitDeckSelections = new Set();
+
 let aidixitSelectedHandCardId = null;
 let aidixitSelectedVoteCardId = null;
-
+let aidixitSelectedCardEl = null;
 let currentAidixitView = null;
 
 const aidixitConfigBox = document.getElementById("aidixitConfigBox");
 const aidixitDeckRow = document.getElementById("aidixitDeckRow");
 const aidixitDeckOptions = document.getElementById("aidixitDeckOptions");
-const aidixitPanel = document.getElementById("aidixitPanel");
+
+const aidixitRoot = document.getElementById("aidixitRoot");
+const aidixitPromptBox = document.getElementById("aidixitPromptBox");
+const aidixitPromptIcon = document.getElementById("aidixitPromptIcon");
+const aidixitPrompt = document.getElementById("aidixitPrompt");
+const aidixitClueBar = document.getElementById("aidixitClueBar");
+const aidixitClueLabel = document.getElementById("aidixitClue");
+const aidixitClueBy = document.getElementById("aidixitClueBy");
+const aidixitPlayers = document.getElementById("aidixitPlayers");
+const aidixitStage = document.getElementById("aidixitStage");
+const aidixitComposer = document.getElementById("aidixitComposer");
+const aidixitClueInput = document.getElementById("aidixitClueInput");
+const aidixitHand = document.getElementById("aidixitHand");
+const aidixitHandNote = document.getElementById("aidixitHandNote");
+const aidixitPoolHead = document.getElementById("aidixitPoolHead");
+const aidixitPool = document.getElementById("aidixitPool");
+const aidixitPoolNote = document.getElementById("aidixitPoolNote");
+const aidixitRoundNotice = document.getElementById("aidixitRoundNotice");
+const aidixitResultToggle = document.getElementById("aidixitResultToggle");
+const aidixitResultBody = document.getElementById("aidixitResultBody");
+const aidixitRoundNoticeBody = document.getElementById("aidixitRoundNoticeBody");
+const aidixitResultDeltas = document.getElementById("aidixitResultDeltas");
+const aidixitRoundNoticeCards = document.getElementById("aidixitRoundNoticeCards");
+const aidixitGameOver = document.getElementById("aidixitGameOver");
+const aidixitWinnerLabel = document.getElementById("aidixitWinner");
 const aidixitPhaseLabel = document.getElementById("aidixitPhase");
 const aidixitRoundLabel = document.getElementById("aidixitRound");
 const aidixitStorytellerLabel = document.getElementById("aidixitStoryteller");
-const aidixitClueLabel = document.getElementById("aidixitClue");
 const aidixitTargetScoreLabel = document.getElementById("aidixitTargetScore");
 const aidixitDeckCountLabel = document.getElementById("aidixitDeckCount");
 const aidixitDiscardCountLabel = document.getElementById("aidixitDiscardCount");
-const aidixitSubmittedLabel = document.getElementById("aidixitSubmitted");
-const aidixitVotedLabel = document.getElementById("aidixitVoted");
-const aidixitWinnerLabel = document.getElementById("aidixitWinner");
-const aidixitClueInput = document.getElementById("aidixitClueInput");
-const aidixitSubmitStoryBtn = document.getElementById("aidixitSubmitStoryBtn");
-const aidixitSubmitCardBtn = document.getElementById("aidixitSubmitCardBtn");
-const aidixitSubmitVoteBtn = document.getElementById("aidixitSubmitVoteBtn");
-const aidixitHand = document.getElementById("aidixitHand");
-const aidixitPool = document.getElementById("aidixitPool");
-const aidixitRoundNotice = document.getElementById("aidixitRoundNotice");
-const aidixitRoundNoticeBody = document.getElementById("aidixitRoundNoticeBody");
-const aidixitRoundNoticeCards = document.getElementById("aidixitRoundNoticeCards");
-const aidixitPlayers = document.getElementById("aidixitPlayers");
 const aidixitZoomModal = document.getElementById("aidixitZoomModal");
 const aidixitZoomCloseBtn = document.getElementById("aidixitZoomCloseBtn");
 const aidixitZoomImage = document.getElementById("aidixitZoomImage");
@@ -285,67 +309,11 @@ function closeAidixitZoom() {
   if (!aidixitZoomModal || !aidixitZoomImage) {
     return;
   }
+  if (aidixitZoomModal.classList.contains("hidden")) {
+    return;
+  }
   setModalVisible(aidixitZoomModal, false);
   aidixitZoomImage.src = "";
-}
-
-function clearAidixitState() {
-  currentAidixitView = null;
-  aidixitSelectedHandCardId = null;
-  aidixitSelectedVoteCardId = null;
-  if (aidixitPhaseLabel) {
-    aidixitPhaseLabel.textContent = "-";
-  }
-  if (aidixitRoundLabel) {
-    aidixitRoundLabel.textContent = "-";
-  }
-  if (aidixitStorytellerLabel) {
-    aidixitStorytellerLabel.textContent = "-";
-  }
-  if (aidixitClueLabel) {
-    aidixitClueLabel.textContent = "-";
-  }
-  if (aidixitTargetScoreLabel) {
-    aidixitTargetScoreLabel.textContent = "-";
-  }
-  if (aidixitDeckCountLabel) {
-    aidixitDeckCountLabel.textContent = "-";
-  }
-  if (aidixitDiscardCountLabel) {
-    aidixitDiscardCountLabel.textContent = "-";
-  }
-  if (aidixitSubmittedLabel) {
-    aidixitSubmittedLabel.textContent = "-";
-  }
-  if (aidixitVotedLabel) {
-    aidixitVotedLabel.textContent = "-";
-  }
-  if (aidixitWinnerLabel) {
-    aidixitWinnerLabel.textContent = "-";
-  }
-  if (aidixitClueInput) {
-    aidixitClueInput.value = "";
-    aidixitClueInput.disabled = true;
-  }
-  if (aidixitHand) {
-    aidixitHand.innerHTML = "";
-  }
-  if (aidixitPool) {
-    aidixitPool.innerHTML = "";
-  }
-  if (aidixitRoundNotice) {
-    aidixitRoundNotice.classList.add("hidden");
-  }
-  if (aidixitRoundNoticeBody) {
-    aidixitRoundNoticeBody.textContent = "-";
-  }
-  if (aidixitRoundNoticeCards) {
-    aidixitRoundNoticeCards.innerHTML = "";
-  }
-  if (aidixitPlayers) {
-    aidixitPlayers.innerHTML = "";
-  }
-  updateAidixitButtons();
 }
 
 function aidixitCardUrl(cardId) {
@@ -364,33 +332,190 @@ function aidixitCardUrl(cardId) {
   return `/api/aidixit/card?deck=${encodeURIComponent(deck)}&file=${encodeURIComponent(file)}`;
 }
 
+function aidixitIsStoryteller(view) {
+  return !!view && view.storyteller_id === view.you;
+}
+
+function aidixitClueText() {
+  return aidixitClueInput ? aidixitClueInput.value.trim() : "";
+}
+
+// --- Selection ---------------------------------------------------------
+// Selection is applied to the live DOM instead of re-rendering the grid, so
+// tapping a card never scrolls the list back to the top (DEV_GUIDE).
+
+function clearAidixitSelection() {
+  if (aidixitSelectedCardEl) {
+    aidixitSelectedCardEl.classList.remove("is-selected");
+    aidixitSelectedCardEl.querySelector(".aidixit-card-overlay")?.remove();
+  }
+  aidixitSelectedCardEl = null;
+  aidixitSelectedHandCardId = null;
+  aidixitSelectedVoteCardId = null;
+  syncAidixitComposer();
+}
+
+function selectAidixitCard(cardEl, cardId, kind) {
+  if (aidixitSelectedCardEl === cardEl) {
+    clearAidixitSelection();
+    return;
+  }
+  clearAidixitSelection();
+  aidixitSelectedCardEl = cardEl;
+  if (kind === "hand") {
+    aidixitSelectedHandCardId = cardId;
+  } else {
+    aidixitSelectedVoteCardId = cardId;
+  }
+  cardEl.classList.add("is-selected");
+  cardEl.appendChild(buildAidixitOverlay(kind));
+  syncAidixitComposer();
+  syncAidixitOverlay();
+}
+
+function buildAidixitOverlay(kind) {
+  const view = currentAidixitView;
+  const overlay = document.createElement("div");
+  overlay.className = "aidixit-card-overlay";
+
+  const hint = document.createElement("div");
+  hint.className = "aidixit-overlay-hint";
+  hint.hidden = true;
+  hint.textContent = "Write a clue first";
+
+  const actions = document.createElement("div");
+  actions.className = "aidixit-overlay-actions";
+
+  const confirm = document.createElement("button");
+  confirm.type = "button";
+  confirm.className = "aidixit-overlay-btn is-primary";
+  confirm.textContent = kind === "vote" ? "🗳️ Vote" : (aidixitIsStoryteller(view) ? "🗣️ Tell Story" : "🃏 Play Card");
+  confirm.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    commitAidixitSelection(kind);
+  });
+
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "aidixit-overlay-btn is-ghost";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    clearAidixitSelection();
+  });
+
+  actions.appendChild(confirm);
+  actions.appendChild(cancel);
+  overlay.appendChild(hint);
+  overlay.appendChild(actions);
+  overlay.addEventListener("click", (event) => event.stopPropagation());
+  return overlay;
+}
+
+function syncAidixitOverlay() {
+  if (!aidixitSelectedCardEl) {
+    return;
+  }
+  const overlay = aidixitSelectedCardEl.querySelector(".aidixit-card-overlay");
+  if (!overlay) {
+    return;
+  }
+  const needsClue = !!aidixitSelectedHandCardId && aidixitIsStoryteller(currentAidixitView);
+  const ready = !needsClue || aidixitClueText().length > 0;
+  const confirm = overlay.querySelector(".is-primary");
+  const hint = overlay.querySelector(".aidixit-overlay-hint");
+  if (confirm) confirm.disabled = !ready;
+  if (hint) hint.hidden = ready;
+}
+
+function syncAidixitComposer() {
+  if (!aidixitComposer) {
+    return;
+  }
+  const waiting = !!aidixitSelectedHandCardId && aidixitClueText().length === 0;
+  aidixitComposer.classList.toggle("needs-clue", waiting);
+}
+
+function commitAidixitSelection(kind) {
+  const view = currentAidixitView;
+  if (!view) {
+    log("Game not ready");
+    return;
+  }
+  if (kind === "vote") {
+    const cardId = aidixitSelectedVoteCardId;
+    if (!cardId) {
+      log("Select a card to vote");
+      return;
+    }
+    if (cardId === view.your_submission) {
+      log("Cannot vote for your own card");
+      return;
+    }
+    sendAction({ type: "submit_vote", card_id: cardId });
+    clearAidixitSelection();
+    return;
+  }
+  const cardId = aidixitSelectedHandCardId;
+  if (!cardId) {
+    log("Select a card");
+    return;
+  }
+  if (aidixitIsStoryteller(view)) {
+    const clue = aidixitClueText();
+    if (!clue) {
+      log("Enter a clue");
+      return;
+    }
+    sendAction({ type: "submit_story", card_id: cardId, clue });
+    if (aidixitClueInput) {
+      aidixitClueInput.value = "";
+    }
+  } else {
+    sendAction({ type: "submit_card", card_id: cardId });
+  }
+  clearAidixitSelection();
+}
+
+// --- Card rendering ----------------------------------------------------
+
 function createAidixitCardElement(card, options = {}) {
   const wrapper = document.createElement("div");
   wrapper.className = "aidixit-card";
-  if (options.selected) {
-    wrapper.classList.add("selected");
-  }
-  if (options.disabled) {
-    wrapper.classList.add("disabled");
-  }
-  if (options.story) {
-    wrapper.classList.add("story");
-  }
+  if (options.locked) wrapper.classList.add("is-locked");
+  if (options.story) wrapper.classList.add("is-story");
+  if (options.mine) wrapper.classList.add("is-mine");
+
   const img = document.createElement("img");
+  img.className = "aidixit-card-img";
   const cardId = card.card_id || "";
   img.src = card.image_url || aidixitCardUrl(cardId);
   img.alt = cardId || "card";
+  img.loading = "lazy";
   if (options.explain) {
     img.dataset.aidixitExplain = options.explain;
   }
+
   // Overlays are appended before the image so Explain mode resolves the
   // smallest element under the pointer instead of the whole card.
+  if (options.mine) {
+    wrapper.appendChild(buildAidixitBadge("aidixit-card-mine", "own_card", "🔹 Yours"));
+  }
+  if (options.count !== undefined) {
+    wrapper.appendChild(buildAidixitBadge("aidixit-card-votes", "vote_count", `🗳️ ${options.count}`));
+  }
+  if (options.story) {
+    wrapper.appendChild(buildAidixitBadge("aidixit-card-story", "story_badge", "👑 Story"));
+  }
   if (options.zoomable) {
     const zoomBtn = document.createElement("button");
     zoomBtn.type = "button";
     zoomBtn.className = "aidixit-zoom-btn";
     zoomBtn.setAttribute("aria-label", "Zoom card");
     zoomBtn.title = "Zoom";
+    zoomBtn.textContent = "🔍";
     zoomBtn.dataset.aidixitExplain = "zoom";
     zoomBtn.addEventListener("click", (event) => {
       event.preventDefault();
@@ -399,22 +524,153 @@ function createAidixitCardElement(card, options = {}) {
     });
     wrapper.appendChild(zoomBtn);
   }
-  if (options.count !== undefined) {
-    const badge = document.createElement("div");
-    badge.className = "aidixit-card-count";
-    badge.dataset.aidixitExplain = "vote_count";
-    badge.textContent = String(options.count);
-    wrapper.appendChild(badge);
-  }
-  if (options.story) {
-    const label = document.createElement("div");
-    label.className = "aidixit-card-story";
-    label.dataset.aidixitExplain = "story_badge";
-    label.textContent = "Story";
-    wrapper.appendChild(label);
-  }
   wrapper.appendChild(img);
+
+  if (Array.isArray(options.votes) && options.votes.length) {
+    wrapper.appendChild(buildAidixitVoteDots(options.votes));
+  }
+  if (options.onSelect) {
+    wrapper.addEventListener("click", () => options.onSelect(wrapper, cardId));
+  }
   return wrapper;
+}
+
+function buildAidixitBadge(className, explainKey, text) {
+  const badge = document.createElement("div");
+  badge.className = `aidixit-card-badge ${className}`;
+  badge.dataset.aidixitExplain = explainKey;
+  badge.textContent = text;
+  return badge;
+}
+
+function buildAidixitVoteDots(votes) {
+  const row = document.createElement("div");
+  row.className = "aidixit-votes";
+  row.dataset.aidixitExplain = "vote_dots";
+  votes.forEach((vote) => {
+    const dot = document.createElement("span");
+    dot.className = "aidixit-vote-dot";
+    if (vote && vote.color) {
+      dot.style.backgroundColor = vote.color;
+    }
+    if (vote && vote.name) {
+      dot.title = vote.name;
+    }
+    row.appendChild(dot);
+  });
+  return row;
+}
+
+function aidixitEmptyNote(text) {
+  const note = document.createElement("div");
+  note.className = "aidixit-empty";
+  note.textContent = text;
+  return note;
+}
+
+// --- Section renderers -------------------------------------------------
+
+function renderAidixitPrompt(view) {
+  if (!aidixitPromptBox || !aidixitPrompt || !aidixitPromptIcon) {
+    return;
+  }
+  const state = aidixitPromptState(view);
+  aidixitPromptIcon.textContent = state.icon;
+  aidixitPrompt.textContent = state.text;
+  aidixitPromptBox.classList.toggle("is-you", !!state.yours);
+}
+
+function aidixitPromptState(view) {
+  const storyteller = view.storyteller_name || findPlayerName(view, view.storyteller_id) || "the storyteller";
+  if (view.game_over) {
+    return { icon: "🏆", text: "Game over. Final scores are on the scoreboard.", yours: false };
+  }
+  const mine = aidixitIsStoryteller(view);
+  if (view.phase === "story") {
+    return mine
+      ? { icon: "🗣️", text: "You are the Storyteller. Pick a card, write a clue, then confirm on the card.", yours: true }
+      : { icon: "⏳", text: `Waiting for ${storyteller} to give a clue.`, yours: false };
+  }
+  if (view.phase === "submit") {
+    if (mine) {
+      return { icon: "⏳", text: "Clue is out. Waiting for the others to submit their cards.", yours: false };
+    }
+    return view.submitted
+      ? { icon: "✅", text: "Card submitted. Waiting for the others.", yours: false }
+      : { icon: "🃏", text: "Pick the hand card that matches the clue, then confirm on the card.", yours: true };
+  }
+  if (view.phase === "vote") {
+    if (mine) {
+      return { icon: "👀", text: "Cards are on the table. Watch how the votes come in.", yours: false };
+    }
+    return view.voted
+      ? { icon: "✅", text: "Vote locked in. Waiting for the others.", yours: false }
+      : { icon: "🗳️", text: "Tap the card you believe is the Storyteller's, then confirm.", yours: true };
+  }
+  return { icon: "🎭", text: "-", yours: false };
+}
+
+function renderAidixitClue(view) {
+  if (!aidixitClueBar || !aidixitClueLabel) {
+    return;
+  }
+  const clue = view.clue || "";
+  const show = !!clue && !view.game_over;
+  aidixitClueBar.classList.toggle("hidden", !show);
+  aidixitClueLabel.textContent = clue ? `“${clue}”` : "-";
+  if (aidixitClueBy) {
+    const name = view.storyteller_name || findPlayerName(view, view.storyteller_id);
+    aidixitClueBy.textContent = show && name ? `— ${name}` : "";
+  }
+}
+
+function renderAidixitScores(view) {
+  if (!aidixitPlayers) {
+    return;
+  }
+  aidixitPlayers.innerHTML = "";
+  const target = view.target_score ?? "-";
+  (view.players || []).forEach((player) => {
+    const seat = document.createElement("div");
+    seat.className = "aidixit-seat";
+    seat.dataset.aidixitExplain = "seat";
+    const isStoryteller = player.player_id === view.storyteller_id;
+    if (isStoryteller) seat.classList.add("is-storyteller");
+    if (player.player_id === view.you) seat.classList.add("is-you");
+
+    const dot = document.createElement("span");
+    dot.className = "aidixit-seat-dot";
+    dot.style.backgroundColor = player.color || "#9ca3af";
+    seat.appendChild(dot);
+
+    const name = document.createElement("span");
+    name.className = "aidixit-seat-name";
+    name.textContent = player.name || "?";
+    name.title = player.name || "";
+    seat.appendChild(name);
+
+    const score = document.createElement("span");
+    score.className = "aidixit-seat-score";
+    score.dataset.aidixitExplain = "score";
+    score.textContent = `${player.score}/${target}`;
+    seat.appendChild(score);
+
+    if (isStoryteller) {
+      const tag = document.createElement("span");
+      tag.className = "aidixit-seat-tag";
+      tag.dataset.aidixitExplain = "storyteller_tag";
+      tag.textContent = "👑";
+      seat.appendChild(tag);
+    }
+    if (player.is_bot) {
+      const tag = document.createElement("span");
+      tag.className = "aidixit-seat-tag";
+      tag.textContent = "🤖";
+      tag.title = "Bot";
+      seat.appendChild(tag);
+    }
+    aidixitPlayers.appendChild(seat);
+  });
 }
 
 function renderAidixitHand(view) {
@@ -422,161 +678,149 @@ function renderAidixitHand(view) {
     return;
   }
   aidixitHand.innerHTML = "";
-  if (!Array.isArray(view.hand) || !view.hand.length) {
-    aidixitHand.textContent = "-";
+  const hand = Array.isArray(view.hand) ? view.hand : [];
+  if (aidixitHandNote) {
+    let note = `${hand.length} cards`;
+    if (view.phase === "submit" && !aidixitIsStoryteller(view)) {
+      note = view.submitted ? "✅ Submitted" : "⏳ Not submitted yet";
+    } else if (view.phase === "story" && aidixitIsStoryteller(view)) {
+      note = "Pick one, it stays hidden";
+    }
+    aidixitHandNote.textContent = view.game_over ? "" : note;
+  }
+  if (!hand.length) {
+    aidixitHand.appendChild(aidixitEmptyNote("No cards in hand."));
     return;
   }
-  const isStoryteller = view.storyteller_id === view.you;
-  const canSelect = (view.phase === "story" && isStoryteller) || (view.phase === "submit" && !isStoryteller);
-  const locked = view.game_over || !canSelect || view.submitted;
-  view.hand.forEach((card) => {
-    const selected = aidixitSelectedHandCardId === card.card_id;
-    const cardEl = createAidixitCardElement(card, { selected, disabled: locked, zoomable: true, explain: "hand_card" });
-    if (!locked) {
-      cardEl.addEventListener("click", () => {
-        aidixitSelectedHandCardId = card.card_id;
-        updateAidixitButtons();
-        renderAidixitHand(view);
-      });
-    }
+  const mine = aidixitIsStoryteller(view);
+  const canAct = !view.game_over
+    && ((view.phase === "story" && mine) || (view.phase === "submit" && !mine && !view.submitted));
+  hand.forEach((card) => {
+    const cardEl = createAidixitCardElement(card, {
+      locked: !canAct,
+      zoomable: true,
+      explain: "hand_card",
+      onSelect: canAct
+        ? (element, cardId) => selectAidixitCard(element, cardId, "hand")
+        : null,
+    });
     aidixitHand.appendChild(cardEl);
   });
 }
 
 function renderAidixitPool(view) {
-  if (!aidixitPool) {
+  if (!aidixitPool || !aidixitPoolHead) {
     return;
   }
   aidixitPool.innerHTML = "";
-  if (view.phase !== "vote") {
-    aidixitPool.textContent = "-";
+  const inVote = view.phase === "vote" && !view.game_over;
+  aidixitPoolHead.classList.toggle("hidden", !inVote);
+  if (aidixitStage) aidixitStage.classList.toggle("is-voting", inVote);
+  if (!inVote) {
+    if (aidixitPoolNote) aidixitPoolNote.textContent = "";
     return;
   }
-  const isStoryteller = view.storyteller_id === view.you;
-  const selectedVoteId = view.voted ? view.vote_card_id : aidixitSelectedVoteCardId;
-  const disableAll = view.game_over || view.voted || isStoryteller;
-  const poolCards = Array.isArray(view.pool_cards) ? view.pool_cards : [];
-  if (!poolCards.length) {
-    aidixitPool.textContent = "-";
+  const pool = Array.isArray(view.pool_cards) ? view.pool_cards : [];
+  const votesByCard = view.votes_by_card || {};
+  const mine = aidixitIsStoryteller(view);
+  const cast = Object.values(votesByCard).reduce((total, list) => total + (list?.length || 0), 0);
+  const expected = Math.max(0, (view.players?.length || 1) - 1);
+  if (aidixitPoolNote) {
+    const progress = `${cast}/${expected} votes in`;
+    aidixitPoolNote.textContent = mine ? progress : `${view.voted ? "✅ Voted" : "⏳ Not voted"} · ${progress}`;
+  }
+  if (!pool.length) {
+    aidixitPool.appendChild(aidixitEmptyNote("Waiting for the cards to be revealed."));
     return;
   }
-  poolCards.forEach((card) => {
-    const isOwn = view.your_submission === card.card_id;
-    const selected = selectedVoteId === card.card_id;
+  pool.forEach((card) => {
+    const cardId = card.card_id;
+    const isOwn = view.your_submission === cardId;
+    const canAct = !mine && !view.voted && !isOwn;
     const cardEl = createAidixitCardElement(card, {
-      selected,
-      disabled: disableAll || isOwn,
+      locked: !canAct,
+      mine: isOwn,
       zoomable: true,
       explain: "pool_card",
+      votes: votesByCard[cardId] || [],
+      onSelect: canAct
+        ? (element, id) => selectAidixitCard(element, id, "vote")
+        : null,
     });
-    if (!disableAll && !isOwn) {
-      cardEl.addEventListener("click", () => {
-        aidixitSelectedVoteCardId = card.card_id;
-        updateAidixitButtons();
-        renderAidixitPool(view);
-      });
-    }
     aidixitPool.appendChild(cardEl);
   });
 }
 
-function renderAidixitPlayers(view) {
-  if (!aidixitPlayers) {
-    return;
-  }
-  aidixitPlayers.innerHTML = "";
-  view.players.forEach((p) => {
-    const card = document.createElement("div");
-    card.className = "player-card";
-    if (p.player_id === view.storyteller_id) {
-      card.classList.add("current");
-    }
-
-    const header = document.createElement("div");
-    header.className = "player-header";
-    const nameRow = document.createElement("div");
-    nameRow.className = "player-name";
-    const colorDot = document.createElement("span");
-    colorDot.className = "aidixit-color-dot";
-    colorDot.style.backgroundColor = p.color || "#9ca3af";
-    nameRow.appendChild(colorDot);
-    const nameText = document.createElement("span");
-    nameText.textContent = p.name;
-    nameRow.appendChild(nameText);
-    header.appendChild(nameRow);
-
-    const badges = document.createElement("div");
-    badges.className = "player-badges";
-    const score = document.createElement("span");
-    score.className = "badge";
-    score.textContent = `score ${p.score}`;
-    badges.appendChild(score);
-    if (p.player_id === view.storyteller_id) {
-      const storyteller = document.createElement("span");
-      storyteller.className = "badge highlight";
-      storyteller.textContent = "storyteller";
-      badges.appendChild(storyteller);
-    }
-    if (p.player_id === view.you) {
-      const you = document.createElement("span");
-      you.className = "badge";
-      you.textContent = "you";
-      badges.appendChild(you);
-    }
-    if (p.is_bot) {
-      const bot = document.createElement("span");
-      bot.className = "badge";
-      bot.textContent = "bot";
-      badges.appendChild(bot);
-    }
-    header.appendChild(badges);
-
-    card.appendChild(header);
-    aidixitPlayers.appendChild(card);
-  });
-}
-
-function renderAidixitRoundNotice(view) {
+function renderAidixitResult(view) {
   if (!aidixitRoundNotice || !aidixitRoundNoticeBody) {
     return;
   }
   const result = view.last_result;
   if (!result) {
     aidixitRoundNotice.classList.add("hidden");
-    if (aidixitRoundNoticeCards) {
-      aidixitRoundNoticeCards.innerHTML = "";
-    }
+    aidixitRoundNoticeBody.innerHTML = "";
+    if (aidixitResultDeltas) aidixitResultDeltas.innerHTML = "";
+    if (aidixitRoundNoticeCards) aidixitRoundNoticeCards.innerHTML = "";
     return;
   }
   aidixitRoundNotice.classList.remove("hidden");
   const caseMap = {
-    all: "All guessed (too obvious)",
-    none: "None guessed (too obscure)",
-    partial: "Some guessed",
+    all: { text: "Everyone guessed", fail: true },
+    none: { text: "Nobody guessed", fail: true },
+    partial: { text: "Some guessed", fail: false },
   };
-  const label = caseMap[result.case] || result.case || "Round";
+  const info = caseMap[result.case] || { text: result.case || "Round", fail: false };
   const correctNames = Array.isArray(result.correct_voters) && result.correct_voters.length
     ? result.correct_voters.map((pid) => findPlayerName(view, pid)).join(", ")
-    : "none";
-  const scoreEntries = result.scores_delta || {};
-  const scoreSummary = Object.keys(scoreEntries)
-    .map((pid) => {
-      const delta = scoreEntries[pid];
-      const sign = delta >= 0 ? "+" : "";
-      return `${findPlayerName(view, pid)} ${sign}${delta}`;
-    })
-    .join(", ");
-  const clue = result.clue || view.clue || "-";
+    : "nobody";
   const storytellerName = result.storyteller_id ? findPlayerName(view, result.storyteller_id) : "-";
-  aidixitRoundNoticeBody.textContent =
-    `Storyteller: ${storytellerName} · Clue: ${clue} · ${label} · Correct: ${correctNames}` +
-    (scoreSummary ? ` · Scores: ${scoreSummary}` : "");
+  const clue = result.clue || "-";
+
+  aidixitRoundNoticeBody.innerHTML = "";
+  const badge = document.createElement("span");
+  badge.className = "aidixit-result-case" + (info.fail ? " is-fail" : "");
+  badge.textContent = info.text;
+  aidixitRoundNoticeBody.appendChild(badge);
+  aidixitRoundNoticeBody.appendChild(
+    aidixitResultChunk("🗣️ Storyteller", storytellerName)
+  );
+  aidixitRoundNoticeBody.appendChild(
+    aidixitResultChunk("💬 Clue", `“${clue}”`)
+  );
+  aidixitRoundNoticeBody.appendChild(
+    aidixitResultChunk("🎯 Correct", correctNames)
+  );
+
+  if (aidixitResultDeltas) {
+    aidixitResultDeltas.innerHTML = "";
+    const deltas = result.scores_delta || {};
+    (view.players || []).forEach((player) => {
+      if (!(player.player_id in deltas)) {
+        return;
+      }
+      const delta = deltas[player.player_id] || 0;
+      const chip = document.createElement("span");
+      chip.className = "aidixit-delta" + (player.player_id === view.you ? " is-you" : "");
+      const dot = document.createElement("span");
+      dot.className = "aidixit-seat-dot";
+      dot.style.backgroundColor = player.color || "#9ca3af";
+      chip.appendChild(dot);
+      const name = document.createElement("span");
+      name.textContent = player.name || "?";
+      chip.appendChild(name);
+      const value = document.createElement("b");
+      value.textContent = delta > 0 ? `+${delta}` : "0";
+      if (delta <= 0) value.classList.add("is-zero");
+      chip.appendChild(value);
+      aidixitResultDeltas.appendChild(chip);
+    });
+  }
 
   if (aidixitRoundNoticeCards) {
     aidixitRoundNoticeCards.innerHTML = "";
     const voteCounts = result.vote_counts || {};
     const votesByCard = result.votes_by_card || {};
-    let cardIds = Array.isArray(result.pool_cards) ? result.pool_cards : [];
+    let cardIds = Array.isArray(result.pool_cards) ? result.pool_cards.slice() : [];
     if (!cardIds.length) {
       cardIds = Object.keys(voteCounts);
     }
@@ -585,72 +829,117 @@ function renderAidixitRoundNotice(view) {
     }
     cardIds.forEach((cardId) => {
       const count = voteCounts[cardId];
-      const card = { card_id: cardId, image_url: aidixitCardUrl(cardId) };
-      const cardEl = createAidixitCardElement(card, {
-        count: typeof count === "number" ? count : undefined,
+      const cardEl = createAidixitCardElement({ card_id: cardId, image_url: aidixitCardUrl(cardId) }, {
+        locked: true,
         story: cardId === result.story_card,
-        disabled: true,
+        count: typeof count === "number" ? count : 0,
         zoomable: true,
         explain: "result_card",
+        votes: votesByCard[cardId] || [],
       });
-      const votes = (votesByCard && votesByCard[cardId]) || [];
-      if (votes.length) {
-        const voteRow = document.createElement("div");
-        voteRow.className = "aidixit-votes";
-        voteRow.dataset.aidixitExplain = "vote_dots";
-        votes.forEach((vote) => {
-          const dot = document.createElement("span");
-          dot.className = "aidixit-vote-dot";
-          if (vote.color) {
-            dot.style.backgroundColor = vote.color;
-          }
-          if (vote.name) {
-            dot.title = vote.name;
-          }
-          voteRow.appendChild(dot);
-        });
-        cardEl.appendChild(voteRow);
-      }
       aidixitRoundNoticeCards.appendChild(cardEl);
     });
   }
 }
 
-function updateAidixitButtons() {
-  if (!aidixitSubmitStoryBtn || !aidixitSubmitCardBtn || !aidixitSubmitVoteBtn) {
+function aidixitResultChunk(label, value) {
+  const chunk = document.createElement("span");
+  chunk.append(`${label} `);
+  const strong = document.createElement("b");
+  strong.textContent = value;
+  chunk.appendChild(strong);
+  return chunk;
+}
+
+function renderAidixitMeta(view) {
+  if (aidixitRoundLabel) aidixitRoundLabel.textContent = view.round ?? "-";
+  if (aidixitPhaseLabel) aidixitPhaseLabel.textContent = view.phase || "-";
+  if (aidixitStorytellerLabel) {
+    aidixitStorytellerLabel.textContent = view.storyteller_name
+      || (view.storyteller_id ? findPlayerName(view, view.storyteller_id) : "-");
+  }
+  if (aidixitTargetScoreLabel) aidixitTargetScoreLabel.textContent = view.target_score ?? "-";
+  if (aidixitDeckCountLabel) aidixitDeckCountLabel.textContent = view.deck_count ?? "-";
+  if (aidixitDiscardCountLabel) aidixitDiscardCountLabel.textContent = view.discard_count ?? "-";
+}
+
+function renderAidixitGameOver(view) {
+  if (!aidixitGameOver || !aidixitWinnerLabel) {
     return;
   }
+  const winners = Array.isArray(view.winner) ? view.winner : [];
+  const show = !!view.game_over && winners.length > 0;
+  aidixitGameOver.classList.toggle("hidden", !show);
+  if (show) {
+    const names = winners.map((pid) => findPlayerName(view, pid)).join(", ");
+    aidixitWinnerLabel.textContent = `${names} win${winners.length > 1 ? "" : "s"} the game`;
+  } else {
+    aidixitWinnerLabel.textContent = "-";
+  }
+}
+
+function renderAidixitComposer(view) {
+  if (!aidixitComposer || !aidixitClueInput) {
+    return;
+  }
+  const canEdit = !view.game_over && view.phase === "story" && aidixitIsStoryteller(view);
+  aidixitComposer.classList.toggle("hidden", !canEdit);
+  aidixitClueInput.disabled = !canEdit;
+  if (!canEdit) {
+    aidixitClueInput.value = "";
+  }
+}
+
+function renderAidixitView() {
   const view = currentAidixitView;
-  if (!view || currentGameType !== "aidixit") {
-    aidixitSubmitStoryBtn.disabled = true;
-    aidixitSubmitCardBtn.disabled = true;
-    aidixitSubmitVoteBtn.disabled = true;
+  if (!view) {
     return;
   }
-  const isStoryteller = view.storyteller_id === view.you;
-  const clueReady = aidixitClueInput && aidixitClueInput.value.trim().length > 0;
-  const canStory =
-    !view.game_over &&
-    view.phase === "story" &&
-    isStoryteller &&
-    !!aidixitSelectedHandCardId &&
-    clueReady;
-  const canSubmit =
-    !view.game_over &&
-    view.phase === "submit" &&
-    !isStoryteller &&
-    !view.submitted &&
-    !!aidixitSelectedHandCardId;
-  const canVote =
-    !view.game_over &&
-    view.phase === "vote" &&
-    !isStoryteller &&
-    !view.voted &&
-    !!aidixitSelectedVoteCardId &&
-    aidixitSelectedVoteCardId !== view.your_submission;
-  aidixitSubmitStoryBtn.disabled = !canStory;
-  aidixitSubmitCardBtn.disabled = !canSubmit;
-  aidixitSubmitVoteBtn.disabled = !canVote;
+  renderAidixitPrompt(view);
+  renderAidixitClue(view);
+  renderAidixitScores(view);
+  renderAidixitComposer(view);
+  renderAidixitHand(view);
+  renderAidixitPool(view);
+  renderAidixitResult(view);
+  renderAidixitGameOver(view);
+  renderAidixitMeta(view);
+  syncAidixitComposer();
+  syncAidixitOverlay();
+  aidixitExplainWidget?.refresh();
+}
+
+function clearAidixitState() {
+  currentAidixitView = null;
+  clearAidixitSelection();
+  if (aidixitPrompt) aidixitPrompt.textContent = "-";
+  if (aidixitPromptIcon) aidixitPromptIcon.textContent = "🎭";
+  if (aidixitPromptBox) aidixitPromptBox.classList.remove("is-you");
+  if (aidixitClueBar) aidixitClueBar.classList.add("hidden");
+  if (aidixitPlayers) aidixitPlayers.innerHTML = "";
+  if (aidixitComposer) aidixitComposer.classList.add("hidden");
+  if (aidixitClueInput) {
+    aidixitClueInput.value = "";
+    aidixitClueInput.disabled = true;
+  }
+  if (aidixitHand) aidixitHand.innerHTML = "";
+  if (aidixitHandNote) aidixitHandNote.textContent = "";
+  if (aidixitPool) aidixitPool.innerHTML = "";
+  if (aidixitPoolHead) aidixitPoolHead.classList.add("hidden");
+  if (aidixitStage) aidixitStage.classList.remove("is-voting");
+  if (aidixitPoolNote) aidixitPoolNote.textContent = "";
+  if (aidixitRoundNotice) aidixitRoundNotice.classList.add("hidden");
+  if (aidixitRoundNoticeBody) aidixitRoundNoticeBody.innerHTML = "";
+  if (aidixitResultDeltas) aidixitResultDeltas.innerHTML = "";
+  if (aidixitRoundNoticeCards) aidixitRoundNoticeCards.innerHTML = "";
+  if (aidixitGameOver) aidixitGameOver.classList.add("hidden");
+  if (aidixitWinnerLabel) aidixitWinnerLabel.textContent = "-";
+  if (aidixitPhaseLabel) aidixitPhaseLabel.textContent = "-";
+  if (aidixitRoundLabel) aidixitRoundLabel.textContent = "-";
+  if (aidixitStorytellerLabel) aidixitStorytellerLabel.textContent = "-";
+  if (aidixitTargetScoreLabel) aidixitTargetScoreLabel.textContent = "-";
+  if (aidixitDeckCountLabel) aidixitDeckCountLabel.textContent = "-";
+  if (aidixitDiscardCountLabel) aidixitDiscardCountLabel.textContent = "-";
 }
 
 function renderAidixitGameState(data) {
@@ -660,81 +949,22 @@ function renderAidixitGameState(data) {
     currentGameType = "aidixit";
     setGamePanelVisibility("aidixit");
   }
-  if (
-    aidixitSelectedHandCardId &&
-    (!Array.isArray(view.hand) || !view.hand.some((card) => card.card_id === aidixitSelectedHandCardId))
-  ) {
-    aidixitSelectedHandCardId = null;
+  const handIds = new Set((view.hand || []).map((card) => card.card_id));
+  const poolIds = new Set((view.pool_cards || []).map((card) => card.card_id));
+  const selectionLost = (aidixitSelectedHandCardId && !handIds.has(aidixitSelectedHandCardId))
+    || (aidixitSelectedVoteCardId && !poolIds.has(aidixitSelectedVoteCardId))
+    || (aidixitSelectedVoteCardId && view.phase !== "vote");
+  if (selectionLost) {
+    clearAidixitSelection();
   }
-  if (
-    aidixitSelectedVoteCardId &&
-    (!Array.isArray(view.pool_cards) || !view.pool_cards.some((card) => card.card_id === aidixitSelectedVoteCardId))
-  ) {
-    aidixitSelectedVoteCardId = null;
-  }
-  if (view.phase !== "vote") {
-    aidixitSelectedVoteCardId = null;
-  }
-
-  if (aidixitPhaseLabel) {
-    aidixitPhaseLabel.textContent = view.phase || "-";
-  }
-  if (aidixitRoundLabel) {
-    aidixitRoundLabel.textContent = view.round ?? "-";
-  }
-  if (aidixitStorytellerLabel) {
-    aidixitStorytellerLabel.textContent = view.storyteller_id
-      ? findPlayerName(view, view.storyteller_id)
-      : "-";
-  }
-  if (aidixitClueLabel) {
-    aidixitClueLabel.textContent = view.clue || "-";
-  }
-  if (aidixitTargetScoreLabel) {
-    aidixitTargetScoreLabel.textContent = view.target_score ?? "-";
-  }
-  if (aidixitDeckCountLabel) {
-    aidixitDeckCountLabel.textContent = view.deck_count ?? "-";
-  }
-  if (aidixitDiscardCountLabel) {
-    aidixitDiscardCountLabel.textContent = view.discard_count ?? "-";
-  }
-  if (aidixitSubmittedLabel) {
-    aidixitSubmittedLabel.textContent = view.submitted ? "yes" : "no";
-  }
-  if (aidixitVotedLabel) {
-    aidixitVotedLabel.textContent = view.voted ? "yes" : "no";
-  }
-  if (aidixitWinnerLabel) {
-    if (Array.isArray(view.winner) && view.winner.length) {
-      const names = view.winner.map((pid) => findPlayerName(view, pid));
-      aidixitWinnerLabel.textContent = names.join(", ");
-    } else {
-      aidixitWinnerLabel.textContent = "-";
-    }
-  }
-
-  const isStoryteller = view.storyteller_id === view.you;
-  if (aidixitClueInput) {
-    const canEdit = !view.game_over && view.phase === "story" && isStoryteller;
-    aidixitClueInput.disabled = !canEdit;
-    if (!canEdit) {
-      aidixitClueInput.value = "";
-    }
-  }
-
-  renderAidixitHand(view);
-  renderAidixitPool(view);
-  renderAidixitPlayers(view);
-  renderAidixitRoundNotice(view);
+  renderAidixitView();
   logGameEvents(data);
-  updateAidixitButtons();
 }
 
+// --- Wiring ------------------------------------------------------------
+
 if (aidixitZoomCloseBtn) {
-  aidixitZoomCloseBtn.addEventListener("click", () => {
-    closeAidixitZoom();
-  });
+  aidixitZoomCloseBtn.addEventListener("click", () => closeAidixitZoom());
 }
 
 if (aidixitZoomModal) {
@@ -745,69 +975,47 @@ if (aidixitZoomModal) {
   });
 }
 
+if (aidixitResultToggle && aidixitResultBody) {
+  aidixitResultToggle.addEventListener("click", () => {
+    const open = aidixitResultToggle.getAttribute("aria-expanded") === "true";
+    aidixitResultToggle.setAttribute("aria-expanded", String(!open));
+    aidixitResultBody.hidden = open;
+  });
+}
+
 if (aidixitClueInput) {
-  aidixitClueInput.addEventListener("input", () => updateAidixitButtons());
-}
-
-if (aidixitSubmitStoryBtn) {
-  aidixitSubmitStoryBtn.addEventListener("click", () => {
-    if (!currentAidixitView) {
-      log("Game not ready");
-      return;
-    }
-    const cardId = aidixitSelectedHandCardId;
-    if (!cardId) {
-      log("Select a card");
-      return;
-    }
-    const clue = aidixitClueInput ? aidixitClueInput.value.trim() : "";
-    if (!clue) {
-      log("Enter a clue");
-      return;
-    }
-    sendAction({ type: "submit_story", card_id: cardId, clue });
-    aidixitSelectedHandCardId = null;
-    if (aidixitClueInput) {
-      aidixitClueInput.value = "";
-    }
-    updateAidixitButtons();
+  aidixitClueInput.addEventListener("input", () => {
+    syncAidixitComposer();
+    syncAidixitOverlay();
   });
 }
 
-if (aidixitSubmitCardBtn) {
-  aidixitSubmitCardBtn.addEventListener("click", () => {
-    if (!currentAidixitView) {
-      log("Game not ready");
+// Tapping empty space cancels the pending selection, so no Clear Selection
+// button is needed (DEV_GUIDE).
+if (aidixitRoot) {
+  aidixitRoot.addEventListener("click", (event) => {
+    if (!aidixitSelectedCardEl) {
       return;
     }
-    const cardId = aidixitSelectedHandCardId;
-    if (!cardId) {
-      log("Select a card");
+    if (event.target.closest(".aidixit-card")) {
       return;
     }
-    sendAction({ type: "submit_card", card_id: cardId });
-    aidixitSelectedHandCardId = null;
-    updateAidixitButtons();
+    if (event.target.closest("button, input, label, a, select")) {
+      return;
+    }
+    clearAidixitSelection();
   });
 }
 
-if (aidixitSubmitVoteBtn) {
-  aidixitSubmitVoteBtn.addEventListener("click", () => {
-    if (!currentAidixitView) {
-      log("Game not ready");
-      return;
-    }
-    const cardId = aidixitSelectedVoteCardId;
-    if (!cardId) {
-      log("Select a card to vote");
-      return;
-    }
-    if (cardId === currentAidixitView.your_submission) {
-      log("Cannot vote for your own card");
-      return;
-    }
-    sendAction({ type: "submit_vote", card_id: cardId });
-    aidixitSelectedVoteCardId = null;
-    updateAidixitButtons();
-  });
-}
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") {
+    return;
+  }
+  if (aidixitZoomModal && !aidixitZoomModal.classList.contains("hidden")) {
+    closeAidixitZoom();
+    return;
+  }
+  if (currentGameType === "aidixit" && aidixitSelectedCardEl) {
+    clearAidixitSelection();
+  }
+});

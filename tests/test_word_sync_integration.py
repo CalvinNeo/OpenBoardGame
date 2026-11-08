@@ -125,6 +125,30 @@ class WordSyncIntegrationTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(room.game_state, before)
                     self.assertEqual(app.sio.emits[-1]["event"], "system:error")
 
+    async def test_used_words_are_rejected_over_the_socket(self):
+        for mode in ("team", "free_for_all"):
+            with self.subTest(mode=mode):
+                app.ROOMS.clear()
+                app.SESSIONS.clear()
+                room = await self.make_room(4, mode=mode)
+                for index, word in enumerate(("月亮", "星星", "山", "海")):
+                    await app.on_game_action(f"s{index}", {"action": action(room.game_state, "submit_word", word=word)})
+                self.assertEqual(room.game_state["phase"], "reveal")
+                for index in range(4):
+                    await app.on_game_action(f"s{index}", {"action": action(room.game_state, "next_round")})
+                self.assertEqual((room.game_state["round"], room.game_state["phase"]), (2, "guess"))
+                states = [event for event in app.sio.emits if event["event"] == "game:state"]
+                self.assertEqual(states[-1]["payload"]["view"]["used_words"], ["月亮", "星星", "山", "海"])
+                before = copy.deepcopy(room.game_state)
+                for skip in (False, True):
+                    await app.on_game_action("s0", {"skip_validation": skip,
+                                                  "action": action(room.game_state, "submit_word", word="  月亮 ")})
+                    self.assertEqual(room.game_state, before)
+                    self.assertEqual(app.sio.emits[-1]["event"], "system:error")
+                    self.assertIn("already used", app.sio.emits[-1]["payload"]["message"])
+                await app.on_game_action("s0", {"action": action(room.game_state, "submit_word", word="河")})
+                self.assertEqual(room.game_state["pending"], {room.players[0].player_id: "河"})
+
     async def test_live_and_cold_save_privacy_and_reconnect(self):
         room = await self.make_room()
         owner = room.players[0]

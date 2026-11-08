@@ -177,14 +177,51 @@ class WordSyncTests(unittest.TestCase):
         self.assertFalse(self.state["game_over"])
         self.assertTrue(all(team["matched_round"] is None for team in self.state["teams"]))
 
-    def test_repeated_words_and_no_arbitrary_round_cap(self):
+    def test_used_words_are_burned_without_a_round_cap(self):
         self.state = Game.init_game({}, players(2))
         for round_number in range(1, 26):
-            self.guess(["月亮", "星星"])
+            self.guess([f"词{round_number}", f"星{round_number}"])
             self.assertEqual(self.state["round"], round_number)
             self.next_round()
+            self.assert_rejected("p0", action(self.state, "submit_word", word=f"  词{round_number} "))
         self.guess(["月亮", "月亮"])
         self.assertEqual(self.state["teams"][0]["matched_round"], 26)
+        self.assertEqual(len(Game.get_public_view(self.state, "p0")["used_words"]), 51)
+
+    def test_used_words_block_every_player_and_normalised_variants(self):
+        self.guess(["apple", "banana", "海", "山"])
+        self.next_round()
+        for player_id in ("p0", "p1", "p2", "p3"):
+            self.assertEqual(Game.get_public_view(self.state, player_id)["used_words"],
+                             ["apple", "banana", "海", "山"])
+        for player_id in ("p0", "p2"):
+            for word in ("apple", "APPLE", "  Apple  ", "ＡＰＰＬＥ", "banana", "海", "山"):
+                with self.subTest(player_id=player_id, word=word):
+                    self.assert_rejected(player_id, action(self.state, "submit_word", word=word))
+        self.assertEqual(Game.apply_action(self.state, "p0", action(self.state, "submit_word", word="apple"))[1],
+                         "That word was already used in an earlier round. Pick a new one.")
+        self.play("p0", word="樱桃")
+        self.assertEqual(self.state["pending"], {"p0": "樱桃"})
+
+    def test_same_round_duplicates_stay_legal_and_still_match(self):
+        self.guess(["海", "海", "海", "山"])
+        self.assertEqual([team["matched_round"] for team in self.state["teams"]], [1, None])
+        self.assertEqual(self.state["teams"][1]["history"][0]["words"], ["海", "山"])
+        self.assertEqual(Game.get_public_view(self.state, "p0")["used_words"], ["海", "山"])
+        self.assertEqual(Game.deserialize(Game.serialize(self.state)), self.state)
+
+    def test_version_one_saves_may_repeat_words_while_version_two_rejects_them(self):
+        self.state = Game.init_game({}, players(2))
+        self.guess(["月亮", "星星"])
+        self.next_round()
+        self.guess(["海", "山"])
+        self.assertEqual(Game.init_game({}, players(2))["version"], 2)
+        legacy = copy.deepcopy(self.state)
+        legacy["version"] = 1
+        legacy["teams"][0]["history"][1]["words"] = ["月亮", "星星"]
+        self.assertEqual(Game.deserialize(legacy), legacy)
+        with self.assertRaises(ValueError):
+            Game.deserialize({**legacy, "version": 2})
 
     def test_illegal_requests_preserve_state(self):
         valid = action(self.state, "submit_word", word="test")
@@ -243,7 +280,7 @@ class WordSyncTests(unittest.TestCase):
                 self.assertNotEqual(restored, encoded)
 
     def test_corrupt_saves_are_rejected(self):
-        for key, value in (("game_id", "other"), ("version", 2), ("version", True), ("players", {}), ("teams", []),
+        for key, value in (("game_id", "other"), ("version", 3), ("version", True), ("players", {}), ("teams", []),
                            ("round", 0), ("window_id", 1), ("revision", True), ("phase", "other"),
                            ("game_token", "bad"), ("game_over", True), ("winner", ["p0"]),
                            ("pending", {"outsider": "word"}), ("next_ready", ["p0"]),
@@ -271,7 +308,8 @@ class WordSyncTests(unittest.TestCase):
         with patch.object(Game, "get_public_view", return_value=public) as get_view:
             move = Game.bot_move({}, "p0")
             get_view.assert_called_once_with({}, "p0")
-        self.assertIn(move["word"], ["super-secret", "星星"])
+        self.assertNotIn(move["word"], ["super-secret", "星星", "海", "山"])
+        self.assertEqual(move["word"], "月亮")
         other = Game.bot_move(self.state, "p1")
         self.assertEqual(move["word"], other["word"])
 
@@ -339,15 +377,19 @@ class WordSyncTests(unittest.TestCase):
                          ["team-9", "team-10", "team-1", "team-2", "team-3", "team-4",
                           "team-5", "team-6", "team-7", "team-8"])
 
-    def test_free_for_all_two_players_and_repeated_words_across_rounds(self):
+    def test_free_for_all_two_players_cannot_reuse_words_across_rounds(self):
         self.state = Game.init_game({"mode": "free_for_all"}, players(2))
         self.guess(["月亮", "星星"])
         self.assertFalse(self.state["game_over"])
         self.next_round()
-        self.guess(["月亮", "星星"])
+        for word in ("月亮", "星星", "  月亮 ", "　星星　"):
+            with self.subTest(word=word):
+                self.assert_rejected("p0", action(self.state, "submit_word", word=word))
+        self.guess(["海", "山"])
         self.assertFalse(self.state["game_over"])
+        self.assertEqual(Game.get_public_view(self.state, "p0")["used_words"], ["月亮", "星星", "海", "山"])
         self.next_round()
-        self.guess(["月亮", "月亮"])
+        self.guess(["河", "河"])
         self.assertTrue(self.state["game_over"])
         self.assertEqual(self.state["winner"], ["p0", "p1"])
         self.assertEqual(self.state["teams"][0]["matched_round"], 3)
@@ -368,7 +410,8 @@ class WordSyncTests(unittest.TestCase):
             with self.subTest(phase=snapshot["phase"], round=snapshot["round"]):
                 encoded = json.loads(json.dumps(Game.serialize(snapshot)))
                 self.assertEqual(Game.deserialize(encoded), snapshot)
-        for mutate in (lambda state: state["teams"][0].__setitem__("matched_round", 1),
+        for mutate in (lambda state: state["teams"][2]["history"][1].__setitem__("words", ["c"]),
+                       lambda state: state["teams"][0].__setitem__("matched_round", 1),
                        lambda state: state["teams"][2]["history"][1].__setitem__("matched", True),
                        lambda state: state["teams"][0]["history"].pop(),
                        lambda state: state.__setitem__("mode", "team"),
@@ -391,7 +434,7 @@ class WordSyncTests(unittest.TestCase):
         self.guess(["zebra", "apple", "mango"])
         self.next_round()
         self.assertEqual([Game.bot_move(self.state, player_id)["word"] for player_id in ("p0", "p1", "p2")],
-                         ["apple", "apple", "apple"])
+                         ["月亮", "月亮", "月亮"])
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@
   let bombBustersPopoverAnchorWireId = null;
   let bombBustersPopoverFrame = null;
   let bombBustersTooltipTimer = null;
+  let bombBustersEffectToken = null;
 
   const bombBustersPanelEl = document.getElementById("bombBustersPanel");
   const bombBustersHeaderActionsEl = document.getElementById("bombBustersHeaderActions");
@@ -929,6 +930,34 @@
     bombBustersRefreshExplainTargets();
   }
 
+  // Wrong cuts are the moment the whole table reacts, so every miss event
+  // drives the shared poop splash. The effect labels the culprit itself, which
+  // keeps this call identical for every viewer.
+  const BOMB_BUSTERS_MISS_EVENTS = new Set([
+    "bomb_busters:duo_miss",
+    "bomb_busters:detector_miss",
+    "bomb_busters:red_wire",
+  ]);
+
+  function bombBustersPlayMissEffect(data) {
+    if (typeof window.obgPlayPoopSplash !== "function") return;
+    const events = data && data.events;
+    if (!Array.isArray(events) || !events.length) return;
+    // Assets can load after the first state, which replays the same payload.
+    const token = `${data.state_version}|${events.length}|${events[0].type}`;
+    if (token === bombBustersEffectToken) return;
+    bombBustersEffectToken = token;
+    events.forEach((event) => {
+      if (!BOMB_BUSTERS_MISS_EVENTS.has(event.type)) return;
+      const playerId = (event.payload || {}).player_id;
+      if (!playerId) return;
+      window.obgPlayPoopSplash({
+        name: bombBustersPlayerName(bombBustersView, playerId),
+        caption: event.type === "bomb_busters:red_wire" ? "💥 Red wire!" : "💥 Wrong wire!",
+      });
+    });
+  }
+
   function bombBustersAnnounceEvents(events) {
     if (!bombBustersLiveRegionEl || !Array.isArray(events) || !events.length) return;
     const messages = [];
@@ -969,6 +998,8 @@
       currentGameType = "bomb_busters";
       setGamePanelVisibility("bomb_busters");
     }
+    // Start the splash before the DOM work below so the table reacts at once.
+    bombBustersPlayMissEffect(data);
 
     if (bombBustersPresetLabelEl) bombBustersPresetLabelEl.textContent = view.practice && view.practice.name || "Core Practice";
     if (bombBustersMissionLabelEl) {
@@ -999,6 +1030,7 @@
   function bombBustersClearState() {
     bombBustersView = null;
     bombBustersStateVersion = null;
+    bombBustersEffectToken = null;
     bombBustersPendingAction = false;
     if (bombBustersPendingTimer) window.clearTimeout(bombBustersPendingTimer);
     bombBustersPendingTimer = null;

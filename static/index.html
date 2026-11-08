@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v152" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v154" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -1486,6 +1486,10 @@
             <div class="panel-header-actions" id="coltExpressHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="dndStarterSetHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="moshimoYushaHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="aidixitHeaderActions" style="display: none;">
+              <button id="aidixitHelpBtn" type="button" aria-label="Help">Help</button>
+              <button id="aidixitExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions tucano-header-actions" id="tucanoHeaderActions" style="display: none;" role="group" aria-label="Tucano controls">
               <button id="tucanoHelpBtn" type="button" aria-controls="tucanoHelpModal">Help</button>
               <button id="tucanoExplainBtn" type="button" aria-controls="tucanoExplainModal" aria-pressed="false">Explain</button>
@@ -1768,10 +1772,11 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=229" defer></script>
+  <script src="/static/game_assets.js?v=231" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v44" defer></script>
   <script src="/static/games/shared_help.js?v=1" defer></script>
+  <script src="/static/games/shared_effects.js?v=1" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
   <template id="natsumemoDialog"></template>

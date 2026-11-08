@@ -21,7 +21,7 @@ snapshot('other_locked')
 play('p0', word='月亮')
 snapshot('own_locked')
 snapshot('spectator', 'visitor')
-for index, word in enumerate(['海', '山', '红', '蓝', '树', '花'], 2): play('p'+str(index), word=word)
+for index, word in enumerate(['海', '山', 'Red', 'Blue', '树', '花'], 2): play('p'+str(index), word=word)
 snapshot('reveal')
 play('p0', 'next_round')
 snapshot('ready')
@@ -31,8 +31,8 @@ snapshot('round_two', 'p2')
 for index, word in enumerate(['海岸', '海岸', '天空', '天空', '森林', '果园'], 2): play('p'+str(index), word=word)
 snapshot('second_reveal')
 for index in range(8): play('p'+str(index), 'next_round')
-play('p6', word='森林')
-play('p7', word='森林')
+play('p6', word='春风')
+play('p7', word='春风')
 snapshot('game_over')
 views['long_names'] = copy.deepcopy(views['reveal'])
 for member in views['long_names']['players']: member['name'] = 'VeryLongUnbrokenPlayerNameForResponsiveLayout' + member['player_id']
@@ -40,8 +40,8 @@ for team in views['long_names']['teams']: team['history'][0]['words'] = ['ABCDEF
 state = Game.init_game({}, players(2))
 snapshot('two_players')
 for number in range(35):
-    play('p0', word='月亮')
-    play('p1', word='星星')
+    play('p0', word='月亮' + str(number))
+    play('p1', word='星星' + str(number))
     play('p0', 'next_round')
     play('p1', 'next_round')
 snapshot('long_history')
@@ -57,12 +57,12 @@ for index, word in enumerate(['海', '山', '红', '蓝'], 2): play('p' + str(in
 snapshot('ffa_reveal')
 for index in range(6): play('p' + str(index), 'next_round')
 snapshot('ffa_round_two', 'p2')
-play('p0', word='月亮')
-play('p3', word='月亮')
-play('p1', word='海')
-play('p2', word='山')
-play('p4', word='红')
-play('p5', word='蓝')
+play('p0', word='春天')
+play('p3', word='春天')
+play('p1', word='夏天')
+play('p2', word='秋天')
+play('p4', word='冬天')
+play('p5', word='星空')
 snapshot('ffa_game_over')
 views['ffa_spectator'] = Game.get_public_view(state, 'visitor')
 views['ffa_long_names'] = copy.deepcopy(views['ffa_game_over'])
@@ -150,7 +150,7 @@ async function testFixtures(browser, errors) {
   });
   for (const width of [320, 390, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 });
-    for (const fixture of ['guess', 'own_locked', 'spectator', 'reveal', 'ready', 'matched_waiting', 'round_two', 'game_over', 'long_names', 'two_players',
+    for (const fixture of ['guess', 'own_locked', 'spectator', 'reveal', 'ready', 'matched_waiting', 'round_two', 'second_reveal', 'game_over', 'long_names', 'two_players', 'long_history',
       'ffa_guess', 'ffa_own_locked', 'ffa_spectator', 'ffa_reveal', 'ffa_round_two', 'ffa_game_over', 'ffa_long_names']) {
       await renderFixture(page, fixture);
       await checkBounds(page, `${width}px ${fixture}`);
@@ -188,6 +188,43 @@ async function testFixtures(browser, errors) {
   await page.evaluate(() => socket.listeners('system:error').forEach(handler => handler({message: 'Test rejection'})));
   assert.equal(await page.locator('#wordSyncSubmit').isDisabled(), false);
   assert.equal(await page.locator('#wordSyncWord').inputValue(), 'ocean');
+
+  await renderFixture(page, 'guess');
+  assert.equal(await page.locator('#wordSyncUsed').isVisible(), false);
+  await renderFixture(page, 'reveal');
+  assert.equal(await page.locator('#wordSyncUsed').isVisible(), true);
+  assert.equal(await page.locator('#wordSyncUsedChips .ws-used-chip').count(), views.reveal.used_words.length);
+  await renderFixture(page, 'game_over');
+  assert.equal(await page.locator('#wordSyncUsed').isVisible(), false);
+  await renderFixture(page, 'round_two');
+  const burned = views.round_two.used_words;
+  assert.deepEqual(burned, ['月亮', '海', '山', 'Red', 'Blue', '树', '花']);
+  assert.equal(await page.locator('#wordSyncUsed').isVisible(), true);
+  assert.equal(await page.locator('#wordSyncUsedChips .ws-used-chip').count(), burned.length);
+  assert.match(await page.locator('#wordSyncUsedCount').innerText(), /7/);
+  assert.equal(await page.locator('#wordSyncUsedChips .ws-used-hit').count(), 0);
+  for (const word of ['Red', 'RED', 'red', '  Red  ', '月亮', '树']) {
+    await page.locator('#wordSyncWord').fill(word);
+    assert.equal(await page.locator('#wordSyncSubmit').isDisabled(), true, word);
+    assert.equal(await page.locator('#wordSyncUsedChips .ws-used-hit').count(), 1, word);
+    assert.match(await page.locator('#wordSyncError').innerText(), /already used/);
+  }
+  await clickDisabled(page, page.locator('#wordSyncSubmit'));
+  assert.equal(await page.evaluate(() => window.wordSyncTestActions.length), 0);
+  await page.locator('#wordSyncWord').fill('新鲜词');
+  assert.equal(await page.locator('#wordSyncSubmit').isDisabled(), false);
+  assert.equal(await page.locator('#wordSyncUsedChips .ws-used-hit').count(), 0);
+  assert.equal(await page.locator('#wordSyncError').isVisible(), false);
+  await page.locator('#wordSyncSubmit').click();
+  assert.equal(await page.evaluate(() => window.wordSyncTestActions.at(-1).word), '新鲜词');
+  await renderFixture(page, 'long_history');
+  assert.equal(await page.locator('#wordSyncUsedChips .ws-used-chip').count(), 70);
+  assert.equal(await page.locator('#wordSyncUsedChips').evaluate(node => node.scrollHeight > node.clientHeight), true);
+  await checkBounds(page, 'used words list');
+  await page.setViewportSize({width: 320, height: 844});
+  await checkBounds(page, 'used words list 320px');
+  await page.screenshot({path: `${output}/used-words-320.png`, fullPage: true});
+  await page.setViewportSize({width: 1440, height: 1000});
 
   await renderFixture(page, 'guess');
   await page.locator('#wordSyncExplainBtn').click();
