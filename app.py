@@ -660,6 +660,37 @@ def _room_list_payload() -> List[Dict]:
     return rooms
 
 
+def _room_auth_payload(sid: str, credentials: Optional[Dict] = None) -> Dict:
+    if not _room_connection_active(sid):
+        return {}
+    identities = set()
+    if isinstance(credentials, dict):
+        for auth in credentials.values():
+            if not isinstance(auth, dict):
+                continue
+            player_id = auth.get("player_id")
+            reconnect_token = auth.get("reconnect_token")
+            if isinstance(player_id, str) and player_id and isinstance(reconnect_token, str) and reconnect_token:
+                identities.add((player_id, reconnect_token))
+    session = SESSIONS.get(sid)
+    if session:
+        room = _get_room(session["room_id"])
+        player = _find_player(room, session["player_id"]) if room else None
+        if player and not player.is_bot and player.connected and player.socket_id == sid and player.reconnect_token:
+            identities.add((player.player_id, player.reconnect_token))
+    room_auth = {}
+    for room in ROOMS.values():
+        for player in room.players:
+            if not player.is_bot and (player.player_id, player.reconnect_token) in identities:
+                room_auth[room.room_id] = {
+                    "player_id": player.player_id,
+                    "reconnect_token": player.reconnect_token,
+                    "name": player.name,
+                }
+                break
+    return room_auth
+
+
 def _room_blocking_players(room: Room) -> List[Dict]:
     return [{"name": p.name, "connected": p.connected} for p in room.players if not p.is_bot and p.connected]
 
@@ -2192,7 +2223,7 @@ async def on_room_start(sid, data):
         return
     room.status = "in_game"
     room.state_version = room.state_version + 1 if room.game_type == "the_crew" else 1
-    if room.game_type in ("the_crew", "blokus", "word_sync"):
+    if room.game_type in ("the_crew", "blokus", "word_sync", "dare_words"):
         room.game_config = dict(room.game_state["config"])
     _save_room_state(room)
     await _emit_room_state(room)
@@ -2351,8 +2382,14 @@ async def on_room_reopen(sid, data=None):
 
 
 @sio.on("room:list")
-async def on_room_list(sid, data=None):
-    await sio.emit("room:list", {"rooms": _room_list_payload()}, to=sid)
+async def on_room_list(sid: str, data: Optional[Dict] = None) -> None:
+    request = data if isinstance(data, dict) else {}
+    payload = {
+        "rooms": _room_list_payload(),
+        "room_auth": _room_auth_payload(sid, request.get("credentials")),
+        "request_id": request.get("request_id"),
+    }
+    await sio.emit("room:list", payload, to=sid)
 
 
 @sio.on("room:load_list")

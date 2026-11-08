@@ -1023,14 +1023,14 @@ const GAME_ASSETS = {
   },
   "bomb_busters": {
     "scripts": [
-      "/static/games/bomb_busters.js?v=app_v3"
+      "/static/games/bomb_busters.js?v=app_v4"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=3",
-    "styleFragments": "/static/games/bomb_busters.css?v=3"
+    "markup": "/static/games/bomb_busters.html?v=4",
+    "styleFragments": "/static/games/bomb_busters.css?v=4"
   },
   "felix": {
     "scripts": [
@@ -1158,7 +1158,7 @@ const GAME_ASSETS = {
     "header": "showSemanticGuessHeaderActions"
   },
   "dare_words": {
-    "scripts": ["/static/games/dare_words.js?v=1"],
+    "scripts": ["/static/games/dare_words.js?v=2"],
     "styles": ["/static/games/dare_words.css?v=1"],
     "markup": "/static/games/dare_words.html?v=1",
     "panel": "dareWordsPanel",

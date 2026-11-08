@@ -112,6 +112,44 @@ class StartupsIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(player.socket_id, "replacement")
         self.assertEqual(Game.get_public_view(room.game_state, player.player_id), before)
 
+    async def test_offline_player_can_choose_each_existing_room_after_reopen(self):
+        old_room = await self.make_room()
+        old_room.status = "game_over"
+        old_room.game_state["game_over"] = True
+        old_room.game_state["phase"] = "game_over"
+        app._save_room_state(old_room)
+        player = old_room.players[1]
+        credentials = {old_room.room_id: {"player_id": player.player_id,
+                                         "reconnect_token": player.reconnect_token}}
+        await app.disconnect("s1")
+        await app.on_room_reopen("s0", {})
+        new_room_id = app.SESSIONS["s0"]["room_id"]
+        new_room = app.ROOMS[new_room_id]
+        new_state = copy.deepcopy(new_room.game_state)
+        new_player = next(seat for seat in new_room.players if seat.player_id == player.player_id)
+        self.assertNotIn(old_room.room_id, app.ROOMS)
+
+        await app.on_room_list("returning", {"credentials": credentials})
+        recovered = app.sio.emits[-1]["payload"]["room_auth"]
+        self.assertIn(new_room_id, recovered)
+        self.assertNotIn("returning", app.SESSIONS)
+        self.assertFalse(new_player.connected)
+
+        await app.on_room_reconnect("returning", {"room_id": old_room.room_id, **credentials[old_room.room_id]})
+        self.assertEqual(app.SESSIONS["returning"]["room_id"], old_room.room_id)
+        self.assertEqual(app.ROOMS[old_room.room_id].status, "game_over")
+        await app.on_room_list("returning", {"credentials": credentials})
+        recovered = app.sio.emits[-1]["payload"]["room_auth"]
+        self.assertEqual(set(recovered), {old_room.room_id, new_room_id})
+
+        for target_room in (new_room_id, old_room.room_id, new_room_id):
+            await app.on_room_reconnect("returning", {"room_id": target_room, **recovered[target_room]})
+            self.assertEqual(app.SESSIONS["returning"]["room_id"], target_room)
+            self.assertEqual(new_player.connected, target_room == new_room_id)
+            self.assertEqual(new_room.game_state, new_state)
+        self.assertEqual(new_player.seat, player.seat)
+        self.assertEqual(new_player.player_id, player.player_id)
+
 
 if __name__ == "__main__":
     unittest.main()

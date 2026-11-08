@@ -104,21 +104,31 @@
     const container = id("Row");
     const cards = rowCards();
     const claimable = can("claim");
-    container.replaceChildren();
     id("RowEmpty").hidden = cards.length > 0;
     setText("RowCount", `${cards.length} 张`);
+    // Rebuild only when the table itself changed. Tapping a card must keep the
+    // other buttons alive so fast taps and keyboard focus are not dropped.
+    const children = [...container.children];
+    const sameOrder = children.length === cards.length
+      && cards.every((card, index) => Number(children[index].dataset.cardId) === card.card_id);
+    const existing = new Map(sameOrder ? children.map((child) => [Number(child.dataset.cardId), child]) : []);
+    if (!sameOrder) container.replaceChildren();
     cards.forEach((card) => {
+      let button = existing.get(card.card_id);
+      if (!button) {
+        button = node("button", "dare-words-card", card.char);
+        button.type = "button";
+        button.dataset.cardId = String(card.card_id);
+        button.setAttribute("aria-label", `字卡 ${card.char}`);
+        container.append(button);
+      }
       const order = selection.indexOf(card.card_id);
-      const button = node("button", "dare-words-card", card.char);
-      button.type = "button";
-      button.dataset.cardId = String(card.card_id);
       button.classList.toggle("is-selected", order >= 0);
       button.classList.toggle("is-order", order >= 0);
       if (order >= 0) button.dataset.order = String(order + 1);
+      else delete button.dataset.order;
       button.setAttribute("aria-pressed", String(order >= 0));
-      button.setAttribute("aria-label", `字卡 ${card.char}`);
       button.classList.toggle("is-locked", !claimable && order < 0);
-      container.append(button);
     });
   }
 

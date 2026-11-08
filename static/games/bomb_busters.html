@@ -18,18 +18,13 @@
   </section></template>
 <template data-game-target="bombBustersPanel" data-game-mode="contents">
               <div class="bomb-busters-topbar">
-                <div class="bomb-busters-title-block">
-                  <span class="bomb-busters-eyebrow">Core Practice · Original Practice</span>
+                <div class="bomb-busters-title-block" data-bomb-busters-tip="Core Practice uses original practice setups, without shared equipment or the official campaign.">
                   <div class="bomb-busters-subtitle">
                     <span id="bombBustersPresetLabel">Standard Practice</span>
                     <span>· Bomb <span id="bombBustersMissionLabel">1</span></span>
-                    <span>· Shared Equipment: Off</span>
                   </div>
                 </div>
-                <div class="bomb-busters-turn-card">
-                  <span id="bombBustersCaptainLabel">🧭 Captain -</span>
-                  <strong id="bombBustersTurnLabel">Waiting…</strong>
-                </div>
+                <strong id="bombBustersTurnLabel" class="bomb-busters-turn-label">Waiting…</strong>
               </div>
 
               <div id="bombBustersStatus" class="bomb-busters-status" role="status" aria-live="polite">Waiting for game state…</div>
@@ -37,34 +32,9 @@
               <div class="bomb-busters-instruments">
                 <section id="bombBustersDetonator" class="bomb-busters-detonator" data-bomb-busters-explain="detonator" aria-label="Detonator status"></section>
                 <section class="bomb-busters-markers" aria-labelledby="bombBustersMarkersHeading">
-                  <h3 id="bombBustersMarkersHeading">Public Markers</h3>
+                  <h3 id="bombBustersMarkersHeading" data-bomb-busters-tip="Public color markers show the yellow and red sorting positions in this bomb, not which player owns them.">Color Markers</h3>
                   <div id="bombBustersMarkers"></div>
                 </section>
-              </div>
-
-              <div class="bomb-busters-layout">
-                <section class="bomb-busters-racks-section" aria-labelledby="bombBustersRacksHeading">
-                  <div class="bomb-busters-section-heading">
-                    <h3 id="bombBustersRacksHeading">Team Racks</h3>
-                    <span>Slots stay fixed after every cut.</span>
-                  </div>
-                  <div id="bombBustersRacks" class="bomb-busters-racks"></div>
-                </section>
-
-                <aside class="bomb-busters-side">
-                  <section class="bomb-busters-validation-card" data-bomb-busters-explain="validation">
-                    <h3>✅ Validation</h3>
-                    <div id="bombBustersValidation" class="bomb-busters-validation"></div>
-                  </section>
-                  <section class="bomb-busters-detector-card">
-                    <h3>🔎 Your Double Detector</h3>
-                    <div id="bombBustersDetectorStatus">Ready</div>
-                  </section>
-                  <section class="bomb-busters-activity-card" aria-labelledby="bombBustersActivityHeading">
-                    <h3 id="bombBustersActivityHeading">Team Activity</h3>
-                    <div id="bombBustersActivity" class="bomb-busters-activity" tabindex="0">No actions yet.</div>
-                  </section>
-                </aside>
               </div>
 
               <section id="bombBustersActionDock" class="bomb-busters-action-dock" aria-labelledby="bombBustersActionsHeading">
@@ -72,7 +42,7 @@
                   <h3 id="bombBustersActionsHeading">Your Action</h3>
                   <span id="bombBustersActionMode">Duo Cut</span>
                 </div>
-                <div id="bombBustersActionSummary" class="bomb-busters-action-summary">Choose one of your 🔵 or 🟡 wires.</div>
+                <div id="bombBustersActionSummary" class="bomb-busters-action-summary" role="status" aria-live="polite">Choose one of your 🔵 or 🟡 wires.</div>
                 <div id="bombBustersSoloOptions" class="bomb-busters-solo-options"></div>
                 <div class="bomb-busters-actions">
                   <button id="bombBustersShareClueBtn" type="button">Share Clue</button>
@@ -84,6 +54,34 @@
                   <button id="bombBustersSecureRedBtn" type="button">🛡️ Secure Red Wires</button>
                 </div>
               </section>
+
+              <div class="bomb-busters-layout">
+                <section class="bomb-busters-racks-section" aria-labelledby="bombBustersRacksHeading">
+                  <div class="bomb-busters-section-heading">
+                    <h3 id="bombBustersRacksHeading" data-bomb-busters-tip="Each rack is sorted separately. Cut wires stay in their original numbered slots.">Team Racks</h3>
+                  </div>
+                  <div id="bombBustersRacks" class="bomb-busters-racks"></div>
+                </section>
+
+                <aside class="bomb-busters-side">
+                  <details id="bombBustersIntel" class="bomb-busters-details">
+                    <summary>✅ Validation <span id="bombBustersValidationSummary"></span></summary>
+                    <div class="bomb-busters-details-body">
+                      <div id="bombBustersValidation" class="bomb-busters-validation" data-bomb-busters-explain="validation"></div>
+                      <div class="bomb-busters-detector-card" data-bomb-busters-explain="detector">
+                        <h3>🔎 Your Double Detector</h3>
+                        <div id="bombBustersDetectorStatus">Ready</div>
+                      </div>
+                    </div>
+                  </details>
+                  <details id="bombBustersActivityDetails" class="bomb-busters-details">
+                    <summary aria-label="Team Activity">Activity <span id="bombBustersActivityCount">0 actions</span></summary>
+                    <div class="bomb-busters-details-body">
+                      <div id="bombBustersActivity" class="bomb-busters-activity" tabindex="0" aria-label="Team activity">No actions yet.</div>
+                    </div>
+                  </details>
+                </aside>
+              </div>
 
               <section id="bombBustersResult" class="bomb-busters-result hidden" aria-live="polite">
                 <div>
@@ -103,5 +101,6 @@
                 </div>
               </div>
 
+              <div id="bombBustersTooltip" class="bomb-busters-tooltip hidden" role="tooltip"></div>
               <div id="bombBustersLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
             </template>

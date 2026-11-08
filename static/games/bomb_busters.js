@@ -12,6 +12,7 @@
   let bombBustersExplainMode = false;
   let bombBustersPopoverAnchorWireId = null;
   let bombBustersPopoverFrame = null;
+  let bombBustersTooltipTimer = null;
 
   const bombBustersPanelEl = document.getElementById("bombBustersPanel");
   const bombBustersHeaderActionsEl = document.getElementById("bombBustersHeaderActions");
@@ -25,15 +26,16 @@
   const bombBustersExplainContentEl = document.getElementById("bombBustersExplainContent");
   const bombBustersPresetLabelEl = document.getElementById("bombBustersPresetLabel");
   const bombBustersMissionLabelEl = document.getElementById("bombBustersMissionLabel");
-  const bombBustersCaptainLabelEl = document.getElementById("bombBustersCaptainLabel");
   const bombBustersTurnLabelEl = document.getElementById("bombBustersTurnLabel");
   const bombBustersStatusEl = document.getElementById("bombBustersStatus");
   const bombBustersDetonatorEl = document.getElementById("bombBustersDetonator");
   const bombBustersMarkersEl = document.getElementById("bombBustersMarkers");
   const bombBustersRacksEl = document.getElementById("bombBustersRacks");
   const bombBustersValidationEl = document.getElementById("bombBustersValidation");
+  const bombBustersValidationSummaryEl = document.getElementById("bombBustersValidationSummary");
   const bombBustersDetectorStatusEl = document.getElementById("bombBustersDetectorStatus");
   const bombBustersActivityEl = document.getElementById("bombBustersActivity");
+  const bombBustersActivityCountEl = document.getElementById("bombBustersActivityCount");
   const bombBustersActionDockEl = document.getElementById("bombBustersActionDock");
   const bombBustersActionModeEl = document.getElementById("bombBustersActionMode");
   const bombBustersActionSummaryEl = document.getElementById("bombBustersActionSummary");
@@ -55,6 +57,7 @@
   const bombBustersWirePopoverTextEl = document.getElementById("bombBustersWirePopoverText");
   const bombBustersWirePopoverConfirmBtnEl = document.getElementById("bombBustersWirePopoverConfirmBtn");
   const bombBustersWirePopoverCancelBtnEl = document.getElementById("bombBustersWirePopoverCancelBtn");
+  const bombBustersTooltipEl = document.getElementById("bombBustersTooltip");
 
   const BOMB_BUSTERS_EXPLANATIONS = {
     own_wire: {
@@ -136,12 +139,14 @@
       <p>The mission succeeds when no uncut wires remain. It fails on a RED cut or when the detonator reaches zero. Final faces remain visible until every human chooses Next Bomb or Retry Mission.</p>
       <h3>Digital Notes</h3>
       <p>Seats increase clockwise. The first Captain is selected by the server, then the Captain moves one seat after every success or retry. Wires are dealt around the rack order and every rack is sorted separately. Cut wires remain in place; attached Info tokens return to the supply when their wire is cut.</p>
-      <p>The mistake limit equals the number of players. The server derives every declaration from the acting player's selected wire, validates all Solo sets again, and keeps teammate faces and random setup data private. On phones, a wire action is confirmed in the floating card above the selected wire. Clicking blank board space or pressing Esc cancels an unsubmitted selection.</p>
+      <p>The mistake limit equals the number of players. The server derives every declaration from the acting player's selected wire, validates all Solo sets again, and keeps teammate faces and random setup data private. Your racks appear first, followed by teammates in clockwise seat order. The Captain (🧭), Bot (🤖), and Double Detector (🔎 ready / 🔎✓ used) badges describe each player. Open Validation (✅) for cut progress and Team Activity for recent actions.</p>
+      <p>On phones, confirm a wire action in the floating card beside the selected wire. Hover over status labels on desktop, or tap them on a phone, for a short description. Clicking blank board space or pressing Esc cancels an unsubmitted selection.</p>
     </div>
   `;
 
   function bombBustersSetModal(modal, visible, returnFocus) {
     if (!modal) return;
+    bombBustersHideTooltip();
     modal.classList.toggle("hidden", !visible);
     modal.setAttribute("aria-hidden", visible ? "false" : "true");
     if (visible) {
@@ -150,6 +155,29 @@
     } else if (returnFocus) {
       returnFocus.focus();
     }
+  }
+
+  function bombBustersHideTooltip() {
+    if (bombBustersTooltipTimer) window.clearTimeout(bombBustersTooltipTimer);
+    bombBustersTooltipTimer = null;
+    if (bombBustersTooltipEl) bombBustersTooltipEl.classList.add("hidden");
+  }
+
+  function bombBustersShowTooltip(target, timed = false) {
+    bombBustersHideTooltip();
+    if (!bombBustersTooltipEl || bombBustersExplainMode) return;
+    bombBustersTooltipEl.textContent = target.dataset.bombBustersTip;
+    bombBustersTooltipEl.classList.remove("hidden");
+    const anchor = target.getBoundingClientRect();
+    const bounds = bombBustersTooltipEl.getBoundingClientRect();
+    const edge = 8;
+    const left = Math.max(edge, Math.min(anchor.left, document.documentElement.clientWidth - bounds.width - edge));
+    const top = anchor.bottom + bounds.height + edge * 2 <= window.innerHeight
+      ? anchor.bottom + edge
+      : Math.max(edge, anchor.top - bounds.height - edge);
+    bombBustersTooltipEl.style.left = `${left}px`;
+    bombBustersTooltipEl.style.top = `${top}px`;
+    if (timed) bombBustersTooltipTimer = window.setTimeout(bombBustersHideTooltip, 3000);
   }
 
   function bombBustersFindPlayer(view, playerId) {
@@ -315,17 +343,21 @@
       return;
     }
     const anchorRect = anchor.getBoundingClientRect();
-    if (anchorRect.bottom <= 0 || anchorRect.top >= window.innerHeight) {
+    const edge = 8;
+    const roomControls = document.getElementById("roomControlsPanel");
+    const topInset = document.body.classList.contains("room-controls-docked") && roomControls
+      ? Math.max(edge, roomControls.getBoundingClientRect().bottom + edge)
+      : edge;
+    if (anchorRect.bottom <= topInset || anchorRect.top >= window.innerHeight) {
       bombBustersWirePopoverEl.style.visibility = "hidden";
       return;
     }
     const popoverRect = bombBustersWirePopoverEl.getBoundingClientRect();
     const viewportWidth = document.documentElement.clientWidth;
-    const edge = 8;
     const gap = 10;
     let placement = "above";
     let top = anchorRect.top - popoverRect.height - gap;
-    if (top < edge) {
+    if (top < topInset) {
       placement = "below";
       top = Math.min(window.innerHeight - popoverRect.height - edge, anchorRect.bottom + gap);
     }
@@ -334,7 +366,7 @@
     const arrowLeft = Math.max(14, Math.min(popoverRect.width - 14, anchorRect.left + anchorRect.width / 2 - left));
     bombBustersWirePopoverEl.dataset.placement = placement;
     bombBustersWirePopoverEl.style.left = `${Math.round(left)}px`;
-    bombBustersWirePopoverEl.style.top = `${Math.max(edge, Math.round(top))}px`;
+    bombBustersWirePopoverEl.style.top = `${Math.max(topInset, Math.round(top))}px`;
     bombBustersWirePopoverEl.style.setProperty("--bomb-busters-popover-arrow-left", `${Math.round(arrowLeft)}px`);
     bombBustersWirePopoverEl.style.visibility = "visible";
   }
@@ -398,6 +430,7 @@
   }
 
   function bombBustersSetExplainMode(enabled) {
+    bombBustersHideTooltip();
     bombBustersExplainMode = Boolean(enabled);
     document.body.classList.toggle("bomb-busters-explain-mode", bombBustersExplainMode);
     if (bombBustersExplainBtnEl) {
@@ -432,7 +465,9 @@
 
   function bombBustersFindDisabledExplainTargetAtPoint(x, y) {
     if (!bombBustersPanelEl) return null;
-    const targets = bombBustersPanelEl.querySelectorAll("[data-bomb-busters-explain]:disabled");
+    const targets = Array.from(bombBustersPanelEl.querySelectorAll(
+      "[data-bomb-busters-explain]:disabled, :disabled [data-bomb-busters-explain]"
+    )).reverse();
     for (const target of targets) {
       const rect = target.getBoundingClientRect();
       if (
@@ -552,14 +587,13 @@
     slot.appendChild(button);
 
     if (wire.public_info) {
-      const info = document.createElement("button");
-      info.type = "button";
+      const info = document.createElement("span");
       info.className = "bomb-busters-info-token";
       info.dataset.bombBustersExplain = "info";
       info.textContent = `ℹ️ ${wire.public_info === "yellow" ? "🟡" : wire.public_info}`;
-      info.setAttribute("aria-label", `Info token: ${wire.public_info}`);
-      info.addEventListener("click", () => bombBustersHandleWireClick(rack, wire));
-      slot.appendChild(info);
+      info.setAttribute("aria-hidden", "true");
+      button.classList.add("has-info");
+      button.appendChild(info);
     }
     return slot;
   }
@@ -567,7 +601,9 @@
   function bombBustersRenderRacks(view) {
     if (!bombBustersRacksEl) return;
     bombBustersRacksEl.innerHTML = "";
-    const players = view.players || [];
+    const seatedPlayers = view.players || [];
+    const ownSeat = Math.max(0, seatedPlayers.findIndex((player) => player.player_id === view.you));
+    const players = [...seatedPlayers.slice(ownSeat), ...seatedPlayers.slice(0, ownSeat)];
     players.forEach((player) => {
       const card = document.createElement("article");
       card.className = "bomb-busters-player-card";
@@ -579,22 +615,28 @@
       heading.className = "bomb-busters-player-heading";
       const name = document.createElement("strong");
       name.textContent = player.name || player.player_id;
+      name.dataset.bombBustersTip = name.textContent;
       const badges = document.createElement("div");
       badges.className = "bomb-busters-badges";
       const badgeTexts = [];
-      if (player.is_captain) badgeTexts.push("🧭 Captain");
-      if (player.player_id === view.you) badgeTexts.push("You");
-      if (player.is_bot) badgeTexts.push("Bot");
-      if (player.player_id === view.current_turn) badgeTexts.push("Turn");
-      badgeTexts.push(player.personal_detector_used ? "Detector used" : "Detector ready");
-      badgeTexts.forEach((text) => {
+      if (player.is_captain) badgeTexts.push(["🧭", "Captain: shares the first clue and takes the first turn."]);
+      if (player.player_id === view.you) badgeTexts.push(["You", "Your private wire faces are visible only to you."]);
+      if (player.is_bot) badgeTexts.push(["🤖", "Bot player"]);
+      if (player.player_id === view.current_turn) badgeTexts.push(["Turn", "This player has the current turn."]);
+      badgeTexts.push(player.personal_detector_used
+        ? ["🔎✓", "Double Detector: already used for this bomb."]
+        : ["🔎", "Double Detector: ready, one use per bomb."]);
+      badgeTexts.forEach(([text, description]) => {
         const badge = document.createElement("span");
         badge.textContent = text;
+        badge.dataset.bombBustersTip = description;
+        badge.setAttribute("aria-label", description);
         badges.appendChild(badge);
       });
       const count = document.createElement("span");
       count.className = "bomb-busters-wire-count";
-      count.textContent = `${player.remaining_count} uncut`;
+      count.textContent = `${player.remaining_count} left`;
+      count.dataset.bombBustersTip = `${player.remaining_count} uncut wires across this player's racks.`;
       heading.append(name, badges, count);
       card.appendChild(heading);
 
@@ -625,7 +667,8 @@
     const title = document.createElement("h3");
     title.textContent = "🧨 Detonator";
     const count = document.createElement("strong");
-    count.textContent = `Remaining ${Math.max(0, limit - used)} / ${limit}`;
+    count.textContent = `${Math.max(0, limit - used)} / ${limit} left`;
+    bombBustersDetonatorEl.dataset.bombBustersTip = `Detonator: ${used} of ${limit} mistakes used. A red wire explodes the bomb immediately.`;
     heading.append(title, count);
     const track = document.createElement("div");
     track.className = "bomb-busters-detonator-track";
@@ -636,9 +679,7 @@
       segment.textContent = index < used ? "⚠️" : "●";
       track.appendChild(segment);
     }
-    const caption = document.createElement("span");
-    caption.textContent = `Mistakes: ${used} / ${limit}`;
-    bombBustersDetonatorEl.append(heading, track, caption);
+    bombBustersDetonatorEl.append(heading, track);
   }
 
   function bombBustersRenderMarkers(view) {
@@ -657,6 +698,7 @@
       const values = document.createElement("span");
       const markers = view.public_color_markers && view.public_color_markers[kind] || [];
       values.textContent = markers.length ? markers.map((marker) => marker.sort_label).join(" · ") : "None in play";
+      row.dataset.bombBustersTip = `${kind === "yellow" ? "Yellow" : "Red"} sorting positions: ${values.textContent}. These do not identify a rack or owner.`;
       row.append(label, values);
       bombBustersMarkersEl.appendChild(row);
     });
@@ -664,16 +706,20 @@
 
   function bombBustersRenderValidation(view) {
     if (!bombBustersValidationEl) return;
+    const inPlayValues = Object.values(view.in_play_blue_counts || {}).filter((count) => Number(count) > 0).length;
+    const completedValues = Object.values(view.validation_complete || {}).filter(Boolean).length;
+    if (bombBustersValidationSummaryEl) bombBustersValidationSummaryEl.textContent = `${completedValues} / ${inPlayValues}`;
     bombBustersValidationEl.innerHTML = "";
     for (let value = 1; value <= 12; value += 1) {
       const key = String(value);
       const inPlay = Number(view.in_play_blue_counts && view.in_play_blue_counts[key] || 0);
       const cut = Number(view.cut_blue_counts && view.cut_blue_counts[key] || 0);
       const complete = Boolean(view.validation_complete && view.validation_complete[key]);
-      const cell = document.createElement("button");
-      cell.type = "button";
-      cell.disabled = true;
+      const cell = document.createElement("span");
       cell.dataset.bombBustersExplain = "validation";
+      cell.dataset.bombBustersTip = inPlay
+        ? `Blue ${value}: ${cut} of ${inPlay} wires cut.${complete ? " Validated." : " Cut every copy to validate this number."}`
+        : `Blue ${value} is not included in this practice setup.`;
       cell.className = "bomb-busters-validation-cell";
       if (!inPlay) cell.classList.add("is-out");
       if (complete) cell.classList.add("is-complete");
@@ -686,6 +732,7 @@
     if (!bombBustersActivityEl) return;
     bombBustersActivityEl.innerHTML = "";
     const activity = view.public_activity || [];
+    if (bombBustersActivityCountEl) bombBustersActivityCountEl.textContent = `${activity.length} action${activity.length === 1 ? "" : "s"}`;
     if (!activity.length) {
       bombBustersActivityEl.textContent = "No actions yet.";
       return;
@@ -740,22 +787,24 @@
     const isTurn = phase === "playing" && view.current_turn === view.you;
     const ownWire = bombBustersFindWire(view, bombBustersSelectedOwnWireId);
     const targetWires = bombBustersSelectedTargetWireIds.map((wireId) => bombBustersFindWire(view, wireId)).filter(Boolean);
-    bombBustersActionDockEl.classList.toggle("hidden", phase === "mission_result");
+    const needsAction = isTurn || (phase === "initial_info" && view.initial_info_player_id === view.you)
+      || (phase === "awaiting_detector_choice" && view.current_responder_id === view.you);
+    bombBustersActionDockEl.classList.toggle("hidden", !needsAction);
 
     bombBustersSetButtonState(bombBustersShareClueBtnEl, phase === "initial_info", bombBustersHasAction("place_initial_info") && Boolean(ownWire));
     bombBustersSetButtonState(bombBustersConfirmDuoBtnEl, isTurn && bombBustersActionMode === "duo", bombBustersHasAction("dual_cut") && Boolean(ownWire) && targetWires.length === 1);
-    bombBustersSetButtonState(bombBustersDetectorBtnEl, isTurn && bombBustersActionMode !== "solo", bombBustersHasAction("double_detector_cut"));
+    bombBustersSetButtonState(bombBustersDetectorBtnEl, isTurn && bombBustersActionMode !== "solo" && bombBustersHasAction("double_detector_cut"), true);
     bombBustersSetButtonState(bombBustersConfirmDetectorBtnEl, isTurn && bombBustersActionMode === "detector", bombBustersHasAction("double_detector_cut") && Boolean(ownWire) && targetWires.length === 2);
     bombBustersSetButtonState(bombBustersConfirmSoloBtnEl, isTurn && bombBustersActionMode === "solo", bombBustersHasAction("solo_cut") && [2, 4].includes(bombBustersSelectedSoloWireIds.length));
     bombBustersSetButtonState(bombBustersResolveBtnEl, phase === "awaiting_detector_choice", bombBustersHasAction("resolve_detector_choice") && targetWires.length === 1);
-    bombBustersSetButtonState(bombBustersSecureRedBtnEl, isTurn, bombBustersHasAction("reveal_red_wires"));
+    bombBustersSetButtonState(bombBustersSecureRedBtnEl, isTurn && bombBustersHasAction("reveal_red_wires"), true);
 
     if (phase === "initial_info") {
       if (bombBustersActionModeEl) bombBustersActionModeEl.textContent = "Initial Info";
       bombBustersActionSummaryEl.textContent = ownWire
         ? `Share ${bombBustersDeclarationLabel(ownWire)} as your initial clue.`
         : view.initial_info_player_id === view.you
-          ? "Choose one of your 🔵 wires, then confirm Share Clue."
+          ? "Choose one of your 🔵 wires to share a clue."
           : `Waiting for ${bombBustersPlayerName(view, view.initial_info_player_id)} to choose an initial clue…`;
       return;
     }
@@ -871,6 +920,7 @@
   }
 
   function bombBustersRenderInteractive(view) {
+    bombBustersHideTooltip();
     bombBustersRenderRacks(view);
     bombBustersRenderSoloOptions(view);
     bombBustersRenderActions(view);
@@ -913,6 +963,7 @@
     bombBustersPendingAction = false;
     if (bombBustersPendingTimer) window.clearTimeout(bombBustersPendingTimer);
     bombBustersPendingTimer = null;
+    bombBustersHideTooltip();
     bombBustersView = view;
     if (typeof currentGameType !== "undefined" && currentGameType !== "bomb_busters") {
       currentGameType = "bomb_busters";
@@ -924,7 +975,6 @@
       const attempt = Number(view.attempt_number || 1);
       bombBustersMissionLabelEl.textContent = `${view.mission_number || 1}${attempt > 1 ? ` · Attempt ${attempt}` : ""}`;
     }
-    if (bombBustersCaptainLabelEl) bombBustersCaptainLabelEl.textContent = `🧭 Captain ${bombBustersPlayerName(view, view.captain_id)}`;
     if (bombBustersTurnLabelEl) {
       if (view.phase === "playing") {
         bombBustersTurnLabelEl.textContent = view.current_turn === view.you ? "Your Turn" : `${bombBustersPlayerName(view, view.current_turn)}'s turn`;
@@ -954,6 +1004,12 @@
     bombBustersPendingTimer = null;
     bombBustersResetSelection(false);
     bombBustersHideWirePopover();
+    bombBustersHideTooltip();
+    if (bombBustersPanelEl) {
+      bombBustersPanelEl.querySelectorAll("details").forEach((details) => {
+        details.open = false;
+      });
+    }
     bombBustersSetExplainMode(false);
     bombBustersSetModal(bombBustersHelpModalEl, false);
     bombBustersSetModal(bombBustersExplainModalEl, false);
@@ -968,6 +1024,7 @@
     if (bombBustersHeaderActionsEl) bombBustersHeaderActionsEl.style.display = show ? "flex" : "none";
     if (!show) {
       bombBustersResetSelection(false);
+      bombBustersHideWirePopover();
       bombBustersSetExplainMode(false);
       bombBustersSetModal(bombBustersHelpModalEl, false);
       bombBustersSetModal(bombBustersExplainModalEl, false);
@@ -1081,9 +1138,27 @@
   }
 
   window.addEventListener("resize", () => {
+    bombBustersHideTooltip();
     if (bombBustersView) bombBustersRenderWirePopover(bombBustersView);
   });
   window.addEventListener("scroll", bombBustersScheduleWirePopoverPosition, {capture: true, passive: true});
+  window.addEventListener("scroll", bombBustersHideTooltip, {capture: true, passive: true});
+
+  if (bombBustersPanelEl) {
+    bombBustersPanelEl.addEventListener("pointerover", (event) => {
+      if (event.pointerType !== "mouse") return;
+      const target = event.target.closest("[data-bomb-busters-tip]");
+      if (target && !event.target.closest("button, summary")) bombBustersShowTooltip(target);
+    });
+    bombBustersPanelEl.addEventListener("pointerout", (event) => {
+      const target = event.target.closest("[data-bomb-busters-tip]");
+      if (target && !target.contains(event.relatedTarget)) bombBustersHideTooltip();
+    });
+    bombBustersPanelEl.addEventListener("click", (event) => {
+      const target = event.target.closest("[data-bomb-busters-tip]");
+      if (target && !event.target.closest("button, summary")) bombBustersShowTooltip(target, true);
+    });
+  }
 
   document.addEventListener(
     "click",
@@ -1139,12 +1214,13 @@
     ) return;
     const hasSelection = bombBustersSelectedOwnWireId || bombBustersSelectedTargetWireIds.length || bombBustersSelectedSoloWireIds.length;
     if (!hasSelection) return;
-    if (event.target.closest("button, .bomb-busters-wire-slot, .bomb-busters-wire-popover")) return;
+    if (event.target.closest("button, summary, [data-bomb-busters-tip], .bomb-busters-wire-slot, .bomb-busters-wire-popover")) return;
     bombBustersResetSelection(true);
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    bombBustersHideTooltip();
     if (bombBustersExplainMode) bombBustersSetExplainMode(false);
     const hasSelection = bombBustersSelectedOwnWireId || bombBustersSelectedTargetWireIds.length || bombBustersSelectedSoloWireIds.length;
     if (hasSelection) bombBustersResetSelection(true);

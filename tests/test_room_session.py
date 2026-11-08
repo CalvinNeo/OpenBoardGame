@@ -356,6 +356,118 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(app.SESSIONS["mobile"]["player_id"], player.player_id)
         self.assertFalse(any(event["event"] == "system:error" for event in app.sio.emits))
 
+    async def test_room_list_recovers_only_authenticated_existing_seats(self):
+        old_room_id = await self._create_room("original", "Alice")
+        original = app.ROOMS[old_room_id].players[0]
+        app.ROOMS[old_room_id].status = "game_over"
+        await app.disconnect("original")
+        related_player = app.Player(original.player_id, "Alice", 2, None, connected=False,
+                                    reconnect_token=original.reconnect_token, seat_claimed=True)
+        same_name = app.Player("unrelated-player", "Alice", 0, None, connected=False,
+                               reconnect_token="unrelated-token", seat_claimed=True)
+        changed_token = app.Player(original.player_id, "Alice", 0, None, connected=False,
+                                   reconnect_token="changed-token", seat_claimed=True)
+        app.ROOMS["new-room"] = app.Room("new-room", status="in_game", players=[related_player])
+        app.ROOMS["other-room"] = app.Room("other-room", players=[same_name])
+        app.ROOMS["changed-room"] = app.Room("changed-room", players=[changed_token])
+        credentials = {old_room_id: {"player_id": original.player_id,
+                                    "reconnect_token": original.reconnect_token}}
+        app.sio.emits.clear()
+
+        await app.on_room_list("returning", {"credentials": credentials})
+
+        reply = app.sio.emits[-1]
+        self.assertEqual(reply["event"], "room:list")
+        self.assertEqual(reply["to"], "returning")
+        self.assertEqual(set(reply["payload"]["room_auth"]), {old_room_id, "new-room"})
+        self.assertEqual(reply["payload"]["room_auth"]["new-room"], {
+            "player_id": original.player_id, "reconnect_token": original.reconnect_token, "name": "Alice",
+        })
+        self.assertEqual(app.SESSIONS, {})
+        self.assertFalse(original.connected)
+        self.assertFalse(related_player.connected)
+        self.assertEqual(app.sio.entered, [("original", old_room_id)])
+        self.assertNotIn("reconnect_token", str(reply["payload"]["rooms"]))
+        await app._emit_room_list_update()
+        self.assertNotIn("room_auth", app.sio.emits[-1]["payload"])
+
+        app.ROOMS.pop(old_room_id)
+        await app.on_room_list("returning", {"credentials": credentials})
+        self.assertEqual(set(app.sio.emits[-1]["payload"]["room_auth"]), {"new-room"})
+        self.assertNotIn(old_room_id, app.ROOMS)
+
+    async def test_room_list_credentials_require_both_player_and_token(self):
+        room_id = await self._create_room("owner", "Alice")
+        player = app.ROOMS[room_id].players[0]
+        for credentials in ({}, {room_id: {"player_id": player.player_id}},
+                            {room_id: {"player_id": player.player_id, "reconnect_token": "wrong"}},
+                            {room_id: {"player_id": "wrong", "reconnect_token": player.reconnect_token}},
+                            {room_id: {"name": "Alice"}}, {room_id: {"player_id": [], "reconnect_token": {}}},
+                            {room_id: None}, [], None):
+            with self.subTest(credentials=credentials):
+                await app.on_room_list("outsider", {"credentials": credentials})
+                self.assertEqual(app.sio.emits[-1]["payload"]["room_auth"], {})
+        self.assertEqual(player.socket_id, "owner")
+        self.assertTrue(player.connected)
+
+    async def test_room_list_can_recover_current_session_without_local_credentials(self):
+        room_id = await self._create_room("owner", "Alice")
+        player = app.ROOMS[room_id].players[0]
+        await app.on_room_list("owner", {})
+        self.assertEqual(app.sio.emits[-1]["payload"]["room_auth"], {
+            room_id: {"player_id": player.player_id, "reconnect_token": player.reconnect_token, "name": "Alice"},
+        })
+        await app.on_room_logout("owner", {"preserve_seat": True})
+        await app.on_room_list("owner", {"credentials": {
+            room_id: {"player_id": player.player_id, "reconnect_token": player.reconnect_token},
+        }})
+        self.assertEqual(app.sio.emits[-1]["payload"]["room_auth"], {})
+
+    async def test_room_list_recovers_multiple_independent_room_identities(self):
+        first_room_id = await self._create_room("first-owner", "Alice")
+        second_room_id = await self._create_room("second-owner", "Bob")
+        credentials = {
+            room_id: {"player_id": app.ROOMS[room_id].players[0].player_id,
+                      "reconnect_token": app.ROOMS[room_id].players[0].reconnect_token}
+            for room_id in (first_room_id, second_room_id)
+        }
+
+        await app.on_room_list("returning", {"credentials": credentials, "request_id": 42})
+
+        reply = app.sio.emits[-1]
+        self.assertEqual(reply["to"], "returning")
+        self.assertEqual(reply["payload"]["request_id"], 42)
+        self.assertEqual(set(reply["payload"]["room_auth"]), {first_room_id, second_room_id})
+        self.assertNotIn("returning", app.SESSIONS)
+        self.assertEqual(app.ROOMS[first_room_id].players[0].socket_id, "first-owner")
+        self.assertEqual(app.ROOMS[second_room_id].players[0].socket_id, "second-owner")
+
+    async def test_room_list_never_grants_bot_or_empty_token_seats(self):
+        app.ROOMS["bots"] = app.Room("bots", players=[
+            app.Player("bot", "Alice", 0, None, is_bot=True, reconnect_token="bot-token"),
+        ])
+        app.ROOMS["empty"] = app.Room("empty", players=[
+            app.Player("human", "Alice", 0, None, connected=False, reconnect_token=""),
+        ])
+        await app.on_room_list("returning", {"credentials": {
+            "bots": {"player_id": "bot", "reconnect_token": "bot-token"},
+            "empty": {"player_id": "human", "reconnect_token": ""},
+        }})
+        self.assertEqual(app.sio.emits[-1]["payload"]["room_auth"], {})
+
+    async def test_room_list_requires_current_session_ownership(self):
+        room_id = await self._create_room("old-owner", "Alice")
+        app.ROOMS[room_id].players[0].socket_id = "new-owner"
+        await app.on_room_list("old-owner", {})
+        self.assertEqual(app.sio.emits[-1]["payload"]["room_auth"], {})
+
+    async def test_room_list_handles_malformed_request_without_credentials(self):
+        await self._create_room("owner", "Alice")
+        for data in (None, [], "room", 42):
+            with self.subTest(data=data):
+                await app.on_room_list("outsider", data)
+                self.assertEqual(app.sio.emits[-1]["payload"]["room_auth"], {})
+
     async def test_leave_during_reconnect_does_not_restore_session(self):
         room_id = await self._create_room("old-browser", "Alice")
         room = app.ROOMS[room_id]

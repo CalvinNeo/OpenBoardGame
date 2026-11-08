@@ -194,6 +194,7 @@ function decodeAccessKey(key) {
     await returning.locator('#playerNameForm button[type=submit]').click();
     assert.equal(await returning.locator('#playerNameForm button[type=submit]').isDisabled(), true);
     assert.equal(await returning.locator('#playerNameModeBtn').isDisabled(), true);
+    await returning.waitForFunction(() => typeof window.accessKeyTestReconnectAck === 'function');
     await returning.evaluate(() => window.accessKeyTestReconnectAck(new Error('Timed out')));
     assert.match(await returning.locator('#playerNameError').textContent(), /No response from the server/);
     assert.equal(await returning.locator('#playerNameForm button[type=submit]').isDisabled(), false);
@@ -263,7 +264,9 @@ function decodeAccessKey(key) {
     assert.match(await returning.locator('#playerNameError').textContent(), /Could not restore your saved seats/);
     assert.equal(await returning.evaluate(() => !playerId && !playerName && !readRoomStorage(ROOM_AUTH_KEY)), true);
     await returning.locator('#accessKeyInput').fill(encodeAccessKey({
-      last_room_id: 'missing-transfer-room', rooms: { 'missing-transfer-room': credentials.rooms[identity.room] },
+      last_room_id: 'missing-transfer-room', rooms: {
+        'missing-transfer-room': { player_id: 'missing-player', reconnect_token: 'missing-token' },
+      },
     }));
     await returning.locator('#playerNameForm button[type=submit]').click();
     await returning.waitForFunction(() => document.getElementById('playerNameError').textContent.includes('no longer exists'));

@@ -32,6 +32,9 @@ const ROOM_REQUEST_TIMEOUT = 15000;
 const roomStorageCache = new Map();
 const roomConnectionLog = [];
 let currentRoomList = [];
+let roomListRequestSequence = 0;
+const roomListRequests = new Map();
+let pendingAccessKeyRecovery = null;
 let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
 let pendingReopenRoomId = null;
@@ -693,6 +696,16 @@ function normalizeRoomAccessAuth(rid, auth) {
   return { player_id: auth.player_id, reconnect_token: auth.reconnect_token, ...(auth.name !== undefined ? { name: auth.name } : {}) };
 }
 
+function normalizeRoomAuthMap(value) {
+  const rooms = {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) return rooms;
+  for (const [rid, entry] of Object.entries(value)) {
+    const auth = normalizeRoomAccessAuth(rid, entry);
+    if (auth) rooms[rid] = auth;
+  }
+  return rooms;
+}
+
 function parsePlayerAccessKey(value) {
   if (typeof value !== "string" || value.length > PLAYER_ACCESS_KEY_MAX_LENGTH) return null;
   const key = value.trim();
@@ -769,7 +782,8 @@ function updateGameReconnectButton() {
   }
   const reconnectRoomId = getQuickReconnectRoomId();
   const auth = reconnectRoomId ? getRoomAuth(reconnectRoomId) : null;
-  const canReconnect = Boolean(auth && auth.player_id && auth.reconnect_token && !pendingRoomRequest);
+  const canReconnect = Boolean(auth && auth.player_id && auth.reconnect_token
+    && !pendingRoomRequest && !pendingLogoutRequest && !pendingAccessKeyRecovery);
   gameReconnectBtn.disabled = !canReconnect;
   gameReconnectBtn.title = canReconnect
     ? `Reconnect to room ${reconnectRoomId}`
@@ -1048,6 +1062,8 @@ function closeRoomEntryModal(modal) {
   }
   setModalVisible(modal, false);
   if (modal === playerNameModal) {
+    pendingAccessKeyRecovery = null;
+    updateRoomActionButtons();
     pendingPlayerNameAction = null;
     pendingPlayerNameRoomId = null;
     nameInput.value = "";
@@ -1104,7 +1120,8 @@ function setPlayerEntryMode(useAccessKey) {
   }
 }
 
-function reconnectWithAccessKey() {
+async function reconnectWithAccessKey() {
+  if (pendingAccessKeyRecovery || pendingRoomRequest) return;
   const credentials = parsePlayerAccessKey(accessKeyInput.value);
   if (!credentials) {
     showRoomEntryError(accessKeyInput, playerNameError, "Enter the complete access key copied when logging out.");
@@ -1115,9 +1132,25 @@ function reconnectWithAccessKey() {
     socket.connect();
     return;
   }
-  const roomIds = [...new Set([pendingPlayerNameRoomId, credentials.last_room_id, ...Object.keys(credentials.rooms).reverse()])]
-    .filter(rid => typeof rid === "string" && Object.hasOwn(credentials.rooms, rid));
-  reconnectImportedRoom({ rooms: credentials.rooms, roomIds });
+  const recovery = { targetRoomId: pendingPlayerNameRoomId };
+  pendingAccessKeyRecovery = recovery;
+  updateRoomActionButtons();
+  const response = await requestRoomList(credentials.rooms);
+  if (pendingAccessKeyRecovery !== recovery) return;
+  pendingAccessKeyRecovery = null;
+  updateRoomActionButtons();
+  if (!response) {
+    showRoomEntryError(accessKeyInput, playerNameError, "Could not check your saved rooms. Reconnect and try again.");
+    return;
+  }
+  const rooms = { ...credentials.rooms, ...normalizeRoomAuthMap(response.room_auth) };
+  if (recovery.targetRoomId && !Object.hasOwn(rooms, recovery.targetRoomId)) {
+    showRoomEntryError(accessKeyInput, playerNameError, "This access key does not contain a seat in that room.");
+    return;
+  }
+  const roomIds = recovery.targetRoomId ? [recovery.targetRoomId]
+    : [...new Set([credentials.last_room_id, ...Object.keys(rooms).reverse()])];
+  reconnectImportedRoom({ rooms, roomIds });
 }
 
 function reconnectImportedRoom(accessKeyEntry) {
@@ -2197,6 +2230,8 @@ function performLogout({ preserveSeat = false } = {}) {
   const request = {};
   pendingLogoutRequest = request;
   roomLogoutRequested = true;
+  cancelRoomListRequests();
+  pendingAccessKeyRecovery = null;
   pendingJoinRequest = null;
   finishRoomRequest();
   logoutConfirmBtn.disabled = true;
@@ -2233,6 +2268,8 @@ function performLogout({ preserveSeat = false } = {}) {
 
 function completeRoomLogout() {
   roomLogoutRequested = true;
+  cancelRoomListRequests();
+  pendingAccessKeyRecovery = null;
   pendingLogoutRequest = null;
   pendingRoomRequest = null;
   pendingJoinRequest = null;
@@ -2386,8 +2423,8 @@ function updateRoomCreateButtonLabel() {
 
 function updateRoomActionButtons() {
   const initializing = isSemanticRoomInitializing();
-  const busy = Boolean(pendingRoomRequest) || Boolean(pendingLogoutRequest) || initializing;
-  const importingAccessKey = Boolean(pendingRoomRequest?.accessKeyEntry);
+  const busy = Boolean(pendingRoomRequest) || Boolean(pendingLogoutRequest) || Boolean(pendingAccessKeyRecovery) || initializing;
+  const importingAccessKey = Boolean(pendingRoomRequest?.accessKeyEntry) || Boolean(pendingAccessKeyRecovery);
   playerNameModeBtn.disabled = importingAccessKey;
   playerAccessKeyModeBtn.disabled = importingAccessKey;
   accessKeyInput.readOnly = importingAccessKey;
@@ -2459,7 +2496,7 @@ function updateRoomActionButtons() {
 }
 
 function ensureRoomConnection(requiresRoom = true) {
-  if (pendingLogoutRequest) return false;
+  if (pendingLogoutRequest || pendingAccessKeyRecovery) return false;
   if (!socket.connected) {
     setRoomFeedback("Connection lost. Reconnecting... Please try again when connected.", true);
     socket.connect();
@@ -2768,8 +2805,27 @@ function updateRoomControlsForStatus(status) {
   updateRoomControlsDock();
 }
 
-function requestRoomList() {
-  socket.emit("room:list", {});
+function requestRoomList(credentials = null) {
+  if (!socket.connected) return Promise.resolve(null);
+  const requestId = ++roomListRequestSequence;
+  return new Promise(resolve => {
+    const request = { socketId: socket.id, storeAuth: credentials === null };
+    request.complete = data => {
+      clearTimeout(request.timer);
+      roomListRequests.delete(requestId);
+      resolve(data);
+    };
+    request.timer = setTimeout(() => request.complete(null), ROOM_REQUEST_TIMEOUT);
+    roomListRequests.set(requestId, request);
+    socket.emit("room:list", {
+      credentials: normalizeRoomAuthMap(credentials ?? (roomLogoutRequested ? {} : loadRoomAuthMap())),
+      request_id: requestId,
+    });
+  });
+}
+
+function cancelRoomListRequests() {
+  for (const request of roomListRequests.values()) request.complete(null);
 }
 
 function requestLoadList() {
@@ -3322,15 +3378,18 @@ socket.on("connect", () => {
   recordRoomConnectionEvent("connected");
   roomSessionReady = false;
   finishRoomRequest();
-  requestRoomList();
-  if (roomLogoutRequested) return;
+  const connectionId = socket.id;
   const rid = roomId || readRoomStorage(LAST_ROOM_ID_KEY);
-  const auth = rid ? getRoomAuth(rid) : null;
-  if (auth?.player_id && auth?.reconnect_token) {
-    attemptReconnect(rid, auth);
-  } else {
-    setRoomFeedback("Connected. Select a game to create a room.");
-  }
+  requestRoomList().then(() => {
+    if (roomLogoutRequested || socket.id !== connectionId || !socket.connected
+        || roomSessionReady || pendingRoomRequest || pendingAccessKeyRecovery || (roomId && roomId !== rid)) return;
+    const auth = rid ? getRoomAuth(rid) : null;
+    if (auth?.player_id && auth?.reconnect_token) {
+      attemptReconnect(rid, auth);
+    } else {
+      setRoomFeedback("Connected. Select a game to create a room.");
+    }
+  });
 });
 
 socket.on("connect_error", (error) => {
@@ -3363,8 +3422,9 @@ socket.on("system:info", (data) => {
     if (importedAccessKey) {
       closeRoomEntryModal(playerNameModal);
       closeRoomEntryModal(joinRoomModal);
-      renderRoomList(currentRoomList);
     }
+    renderRoomList(currentRoomList);
+    requestRoomList();
     setRoomFeedback();
     // The room snapshot arrives before identity, so refresh the player's controls.
     if (currentRoomState) renderRoomState(currentRoomState);
@@ -3471,11 +3531,26 @@ socket.on("game:initialization", (data) => {
 });
 
 socket.on("room:list", (data) => {
+  if (data?.request_id != null) {
+    const request = roomListRequests.get(data.request_id);
+    if (!request) return;
+    if (!socket.connected || request.socketId !== socket.id) {
+      request.complete(null);
+      return;
+    }
+    if (request.storeAuth && !roomLogoutRequested) {
+      const recovered = normalizeRoomAuthMap(data.room_auth);
+      if (Object.keys(recovered).length) saveRoomAuthMap({ ...loadRoomAuthMap(), ...recovered });
+      updateGameReconnectButton();
+    }
+    request.complete(data);
+  }
   renderRoomList((data || {}).rooms || []);
 });
 
 socket.on("room:list_update", (data) => {
   renderRoomList((data || {}).rooms || []);
+  if (!roomLogoutRequested && (roomSessionReady || Object.keys(loadRoomAuthMap()).length)) requestRoomList();
 });
 
 socket.on("room:load_list", (data) => {
@@ -3688,10 +3763,12 @@ cleanupEmptyRoomsBtn.addEventListener("click", () => {
 });
 
 socket.on("disconnect", (reason) => {
-  resetRoomTurnSound();
-  if (pendingRoomRequest?.accessKeyEntry && !playerNameModal.classList.contains("hidden")) {
+  cancelRoomListRequests();
+  if ((pendingAccessKeyRecovery || pendingRoomRequest?.accessKeyEntry) && !playerNameModal.classList.contains("hidden")) {
     showRoomEntryError(accessKeyInput, playerNameError, "Connection lost. Try reconnecting when the server is available.");
   }
+  pendingAccessKeyRecovery = null;
+  resetRoomTurnSound();
   recordRoomConnectionEvent("disconnected", reason);
   roomSessionReady = false;
   finishRoomRequest();
