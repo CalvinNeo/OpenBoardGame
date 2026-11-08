@@ -95,12 +95,12 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
             criminal: "Whoever holds Criminal (🕵️) is the current criminal. Play it only as your last hand card to escape and win with everyone who has played Accomplice (😈).",
             detective: `Choose another player to accuse. Catching Criminal (🕵️) wins the round unless they hold Alibi (🧾), which blocks automatically. ${detectiveRule()} An inactive Detective (🔍) can still be played, with no accusation effect.`,
             alibi: "While held, Alibi (🧾) automatically blocks Detective (🔍). Playing it discards that protection. It does not protect against Dog (🐶).",
-            dog: `Choose another player with cards and reveal a random hand card. Revealing Criminal (🕵️) wins immediately, even with Alibi (🧾). On a miss, ${settings().dog_fail_behavior === "give_to_target" ? "Dog (🐶) goes into the target's hand" : "Dog (🐶) stays discarded"}.`,
+            dog: `Choose another player with cards and reveal a random hand card. Revealing Criminal (🕵️) wins immediately, even with Alibi (🧾). On a miss, ${settings().dog_fail_behavior === "give_to_target" ? "Dog (🐶) goes into the target's hand" : "Dog (🐶) stays discarded"}. If everyone else has no cards, discard it with no effect.`,
             accomplice: "Playing Accomplice (😈) joins the criminal team for the rest of this round. You win with Criminal (🕵️) if they escape, even if your hand changes.",
-            witness: "Choose another player with cards. Only you see their current hand in Private Notes (🔒). Cards can move afterward, so this information may become outdated.",
+            witness: "Choose another player with cards. Only you see their current hand in Private Notes (🔒). Cards can move afterward, so this information may become outdated. If everyone else has no cards, discard it with no effect.",
             info_control: "After playing Info Control (↩️), each player with cards passes a randomly chosen card to the next seat on the left, simultaneously.",
             rumor: "After playing Rumor (🗣️), everyone draws a random card from the next seat on their right if that player has cards.",
-            trade: "Choose another player with cards, then choose one of your remaining cards to exchange for a random card from their hand. If Trade (🤝) is your last card, it has no exchange effect.",
+            trade: "Choose another player with cards, then choose one of your remaining cards to exchange for a random card from their hand. If Trade (🤝) is your last card or everyone else has no cards, it has no exchange effect.",
             boy: `At the start of the round, Boy (🧒) privately learns who holds Criminal (🕵️). ${settings().boy_visibility_mode === "mutual" ? "The criminal is also told that Boy (🧒) knows their identity." : "Only Boy (🧒) receives this information."} Playing the card has no further effect.`,
             civilian: "Civilian (🙂) has no effect. Play it to reduce your hand.",
             chief: "Choose another player to mark with Chief (👮). When no legal turns remain, the server checks whether the marked player holds Criminal (🕵️) and awards a catch win if they do.",
@@ -111,6 +111,10 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         const requireCards = card && (["dog", "witness"].includes(card.type) || (card.type === "trade" && hand().length > 1));
         return (view?.players || []).filter(p => !p.you && (!requireCards || p.hand_count > 0));
     }
+    function hasNoCardTarget(card) {
+        return card && ["dog", "witness", "trade"].includes(card.type)
+            && !(view?.players || []).some(player => !player.you && player.hand_count > 0);
+    }
     function blockedReason(card) {
         if (view?.game_over) return "Round complete. Review the result before continuing.";
         if (!legal("play_card")) return "Wait for your turn.";
@@ -118,7 +122,6 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
             return "Play First Finder (🥇) first.";
         }
         if (card.type === "criminal" && hand().length !== 1) return "Criminal (🕵️) must be your last card.";
-        if (["dog", "witness", "trade"].includes(card.type) && !targets(card).length) return "No eligible player has cards.";
         return "";
     }
     function resetSelection() {
@@ -218,14 +221,14 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         if (!legal("play_card")) return;
         const card = hand().find(c => c.id === selectedId);
         controls.append(node("div", "criminal-dance-action-title", card ? cardLabel(card.type) : "Select a card to play"));
-        const needsTarget = card && ["detective", "dog", "witness", "trade", "chief"].includes(card.type);
+        const needsTarget = card && ["detective", "dog", "witness", "trade", "chief"].includes(card.type) && !hasNoCardTarget(card);
         const fields = node("div", "criminal-dance-action-fields");
         if (needsTarget) {
             const eligible = targets(card);
             if (!eligible.some(p => p.player_id === targetId)) targetId = eligible[0]?.player_id || "";
             fields.append(field("Target", "criminalDanceTarget", eligible.map(p => [p.player_id, p.name]), targetId, "pick_target", value => { targetId = value; }));
         }
-        if (card?.type === "trade" && hand().length > 1) {
+        if (card?.type === "trade" && hand().length > 1 && needsTarget) {
             const extra = hand().filter(c => c.id !== card.id);
             if (!extra.some(c => c.id === tradeId)) tradeId = extra[0]?.id || "";
             fields.append(field("Give", "criminalDanceTradeCard", extra.map(c => [c.id, cardLabel(c.type)]), tradeId, "trade_card", value => { tradeId = value; }));
@@ -239,12 +242,13 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
             if (!card || blockedReason(card)) return;
             const action = { type: "play_card", card_id: card.id };
             if (needsTarget) action.target_player_id = targetId;
-            if (card.type === "trade" && tradeId) action.your_card_id = tradeId;
+            if (card.type === "trade" && tradeId && needsTarget) action.your_card_id = tradeId;
             sendAction(action);
         });
         row.append(btn);
         if (card?.type === "detective" && !detectiveActive()) row.append(node("span", "hint", "Accusation inactive this turn."));
-        if (card?.type === "trade" && hand().length === 1) row.append(node("span", "hint", "Last card: no exchange."));
+        if (hasNoCardTarget(card)) row.append(node("span", "hint", "No other player has cards. No effect."));
+        else if (card?.type === "trade" && hand().length === 1) row.append(node("span", "hint", "Last card: no exchange."));
         controls.append(row);
     }
     function renderPlayed() {
@@ -346,7 +350,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
             private: ["Private Notes (🔒)", "Expand this section to see your private clues. The new badge marks unread clues, including Boy (🧒) information and hands seen by Witness (👀). They describe what was known then; cards may have moved since."],
             results: ["Results (🏆)", "The completed result remains visible until every human player confirms. Bots are ready automatically. Scores (⭐) carry into the next round and reset for a new match."],
             play_card: ["Play Card", "Play the selected card and resolve its effect. Choose any required target and exchange card first. This button is unavailable until a playable card is selected."],
-            pick_target: ["Target", "Choose another player. Dog (🐶), Witness (👀), and an active Trade (🤝) need a player with cards. Only eligible targets appear."],
+            pick_target: ["Target", "Choose another player. Dog (🐶), Witness (👀), and an active Trade (🤝) need a player with cards. Only eligible targets appear. If everyone else has no cards, these cards are discarded with no effect."],
             trade_card: ["Give", "Choose which remaining card to give with Trade (🤝). You receive a random card from the target's hand."],
             play_again: [view?.match_over ? "New Match" : "Next Round", `Confirm that you have reviewed the result. The next deal waits for every human player; bots confirm automatically. ${view?.match_over ? "Starting a new match resets scores." : "Starting the next round keeps scores."}`],
         };

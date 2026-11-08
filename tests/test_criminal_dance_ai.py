@@ -308,6 +308,57 @@ class CriminalDanceAiTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertFalse(state["played"][-1]["trade_completed"])
 
+    def test_target_cards_discard_without_effect_when_everyone_else_is_empty(self):
+        for card_type in ("dog", "witness", "trade"):
+            with self.subTest(card_type=card_type):
+                state = _state([["criminal", card_type], [], []], {"dog_fail_behavior": "give_to_target"})
+                chosen_type, action = self._move_card(state)
+                self.assertEqual(card_type, chosen_type)
+                self.assertNotIn("target_player_id", action)
+                self.assertNotIn("your_card_id", action)
+                _, error = CriminalDanceGame.apply_action(state, "p1", action)
+                self.assertIsNone(error)
+                self.assertEqual([{"id": "p1_card_0", "type": "criminal"}], state["players"]["p1"]["hand"])
+                self.assertEqual(card_type, state["discard"][-1]["type"])
+                self.assertIn("No effect", state["played"][-1]["result"])
+                _play(state, "p1", "criminal")
+                self.assertTrue(state["game_over"])
+                self.assertEqual(["p1"], state["winner_ids"])
+
+    def test_target_cards_cannot_skip_effect_or_target_empty_player_when_target_exists(self):
+        for card_type in ("dog", "witness", "trade"):
+            for target in (None, "p3"):
+                with self.subTest(card_type=card_type, target=target):
+                    state = _state([["criminal", card_type], ["civilian"], []])
+                    before = deepcopy(state)
+                    action = {"type": "play_card", "card_id": "p1_card_1"}
+                    if target:
+                        action["target_player_id"] = target
+                    events, error = CriminalDanceGame.apply_action(state, "p1", action)
+                    self.assertIsNotNone(error)
+                    self.assertEqual([], events)
+                    self.assertEqual(before, state)
+
+    def test_seed_929_no_target_endgame_completes(self):
+        random.seed(929)
+        players = _players(3)
+        for player in players:
+            player["is_bot"] = True
+        state = CriminalDanceGame.init_game({
+            "scoring_enabled": False, "dog_fail_behavior": "give_to_target",
+            "detective_activation_rule": "always", "boy_visibility_mode": "mutual",
+        }, players)
+        state["round_number"] = 2
+        for _ in range(80):
+            if state["game_over"]:
+                break
+            actor = state["current_player_id"]
+            action = CriminalDanceGame.bot_move(state, actor)
+            self.assertIsNotNone(action)
+            _, error = CriminalDanceGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+        self.assertTrue(state["game_over"])
+
     def test_complete_rounds_across_player_counts_and_rules(self):
         for player_count in range(3, 9):
             for seed in range(18):
@@ -329,6 +380,12 @@ class CriminalDanceAiTests(unittest.TestCase):
                         if state["game_over"]:
                             break
                         actor = state["current_player_id"]
+                        knowledge = infer_knowledge(CriminalDanceGame.get_public_view(state, actor))
+                        holder = next(
+                            player_id for player_id, player in state["players"].items()
+                            if any(card["type"] == "criminal" for card in player["hand"])
+                        )
+                        self.assertGreater(knowledge.criminal[holder], 0)
                         action = CriminalDanceGame.bot_move(state, actor)
                         self.assertIsNotNone(action)
                         _, error = CriminalDanceGame.apply_action(state, actor, action)

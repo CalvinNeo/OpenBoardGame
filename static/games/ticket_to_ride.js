@@ -26,6 +26,7 @@
   let tipTimer, tipTarget, previousFocus, offerSignature = "";
   let helpWidget = null, explainWidget = null;
   let mapBox = {x: 0, y: 0, w: MAP_W, h: MAP_H}, drag = null, mapKey = "";
+  let bounds = null, focusMode = false;
 
   // Help and Explain both come from static/games/shared_help.js so the bilingual
   // toggle, the section tabs and the explain-mode plumbing stay identical across
@@ -44,8 +45,16 @@
       en: "Each route on the map is drawn as a row of slots, and the number of slots is how many train pieces (🚃) it costs. Gray routes are any colour (🎨) and accept any single colour.",
     },
     zoom: {
-      zh: "拖动地图可以平移，加号和减号缩放，Fit 回到全图。手机端由地图自己接管触摸手势，拖动结束时不会误选线路。",
-      en: "Drag the map to pan, use plus and minus to zoom, and Fit to see the whole board. On phones the map claims the touch gesture so dragging never scrolls the page or mis-selects a route.",
+      zh: "加号和减号缩放，Fit 把整张地图收进视野，1:1 按原始比例显示。拖动地图可以平移，手机端由地图自己接管触摸手势，拖动结束时不会误选线路。",
+      en: "Plus and minus zoom, Fit frames the whole board, and 1:1 shows it at native size. Drag to pan. On phones the map claims the touch gesture so dragging never scrolls the page or mis-selects a route.",
+    },
+    origin: {
+      zh: "1:1 按原始比例显示地图，一个地图单位对应屏幕一个像素，适合放大查看密集区域。Fit 会重新把整张地图收进视野。",
+      en: "1:1 shows the map at native size, one map unit per screen pixel, which helps in dense regions. Fit frames the whole board again.",
+    },
+    focus: {
+      zh: "把地图放大到整屏，只保留缩放和线路认领面板。再按一次退出。这是手机端查看地图最舒服的方式。",
+      en: "Expand the map to the whole screen, keeping only the zoom controls and the claim panel. Press again to exit. This is the most comfortable way to read the map on a phone.",
     },
     market: {
       zh: "五张明牌加一个抽牌堆(🂠)。轮到你时可以抽 2 张，明牌和牌堆任意组合。拿走明牌中的万能牌(🚂)会让本回合只剩这一张。",
@@ -211,14 +220,13 @@
     pending = true;
     clearTimeout(pendingTimer);
     pendingTimer = setTimeout(releasePending, 4000);
-    renderAction();
     renderMarket();
     sendAction(action);
   }
   function releasePending() {
     pending = false;
     clearTimeout(pendingTimer);
-    if (view) { renderMarket(); renderAction(); renderHand(); }
+    if (view) { renderMarket(); renderMarketTools(); renderHand(); }
   }
 
   // --------------------------------------------------------------- map layout
@@ -300,26 +308,70 @@
     map.setAttribute("viewBox", `${mapBox.x} ${mapBox.y} ${mapBox.w} ${mapBox.h}`);
     positionOverlay();
   }
+  // The board never fills the whole 1000x640 canvas, so the default view frames
+  // the real content instead of paying for empty margin.
+  function contentBounds() {
+    if (!view) return {x: 0, y: 0, w: MAP_W, h: MAP_H};
+    const FONT = 15, CHAR = 0.53, LINE = FONT * 1.02, PAD = 6;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const add = (x0, y0, x1, y1) => {
+      minX = Math.min(minX, x0); minY = Math.min(minY, y0);
+      maxX = Math.max(maxX, x1); maxY = Math.max(maxY, y1);
+    };
+    for (const [name, city] of Object.entries(view.cities)) {
+      add(city.x - 8, city.y - 8, city.x + 8, city.y + 8);
+      const lx = city.x + (city.lx || 0), ly = city.y + (city.ly == null ? -11 : city.ly);
+      const width = name.length * FONT * CHAR;
+      const x0 = city.anchor === "start" ? lx : (city.anchor === "end" ? lx - width : lx - width / 2);
+      add(x0, ly - LINE * 0.8, x0 + width, ly + LINE * 0.25);
+    }
+    return {x: minX - PAD, y: minY - PAD, w: maxX - minX + PAD * 2, h: maxY - minY + PAD * 2};
+  }
   function clampBox() {
-    const minW = MAP_W / 5, maxW = MAP_W;
-    mapBox.w = Math.min(maxW, Math.max(minW, mapBox.w));
-    mapBox.h = mapBox.w * (MAP_H / MAP_W);
-    mapBox.x = Math.min(MAP_W - mapBox.w, Math.max(0, mapBox.x));
-    mapBox.y = Math.min(MAP_H - mapBox.h, Math.max(0, mapBox.y));
+    const b = bounds || {x: 0, y: 0, w: MAP_W, h: MAP_H};
+    const minW = b.w / 6;
+    let w = Math.min(b.w, Math.max(minW, mapBox.w));
+    let h = mapBox.h * (w / mapBox.w);
+    if (h > b.h) { h = b.h; w = mapBox.w * (h / mapBox.h); }
+    const cx = mapBox.x + mapBox.w / 2, cy = mapBox.y + mapBox.h / 2;
+    mapBox = {w, h, x: cx - w / 2, y: cy - h / 2};
+    mapBox.x = Math.min(b.x + b.w - w, Math.max(b.x, mapBox.x));
+    mapBox.y = Math.min(b.y + b.h - h, Math.max(b.y, mapBox.y));
   }
   function zoom(factor, cx, cy) {
     const px = cx == null ? mapBox.x + mapBox.w / 2 : cx;
     const py = cy == null ? mapBox.y + mapBox.h / 2 : cy;
-    const w = mapBox.w * factor;
+    const w = mapBox.w * factor, h = mapBox.h * factor;
     mapBox = {
       x: px - (px - mapBox.x) * (w / mapBox.w),
-      y: py - (py - mapBox.y) * (w / mapBox.w),
-      w, h: w * (MAP_H / MAP_W),
+      y: py - (py - mapBox.y) * (h / mapBox.h),
+      w, h,
     };
     clampBox();
     applyMapBox();
   }
-  function fitMap() { mapBox = {x: 0, y: 0, w: MAP_W, h: MAP_H}; applyMapBox(); }
+  function fitMap() {
+    // Only cache real bounds: the startup call happens before any view exists.
+    if (view) bounds = contentBounds();
+    mapBox = {...(bounds || {x: 0, y: 0, w: MAP_W, h: MAP_H})};
+    applyMapBox();
+  }
+  // Native size: one map unit per screen pixel.
+  function originMap() {
+    const rect = map.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const cx = mapBox.x + mapBox.w / 2, cy = mapBox.y + mapBox.h / 2;
+    mapBox = {x: cx - rect.width / 2, y: cy - rect.height / 2, w: rect.width, h: rect.height};
+    clampBox();
+    applyMapBox();
+  }
+  function setFocus(next) {
+    focusMode = next;
+    panel.dataset.ttrFocus = next ? "map" : "";
+    byId("Focus").setAttribute("aria-pressed", String(next));
+    document.body.classList.toggle("ttr-map-focus", next);
+    requestAnimationFrame(fitMap);
+  }
 
   function positionOverlay() {
     if (!selectedRoute || !view || !view.routes[selectedRoute]) {
@@ -334,17 +386,70 @@
     if (!matrix) return;
     const screen = point.matrixTransform(matrix);
     const frame = mapFrame.getBoundingClientRect();
-    overlay.style.left = `${screen.x - frame.left}px`;
-    overlay.style.top = `${screen.y - frame.top}px`;
     overlay.classList.remove("hidden");
+    const box = overlay.getBoundingClientRect();
+    const halfW = box.width / 2;
+    const left = Math.min(Math.max(screen.x - frame.left, halfW + 4),
+                          Math.max(halfW + 4, frame.width - halfW - 4));
+    let top = screen.y - frame.top + 18;
+    if (top + box.height > frame.height - 4) top = screen.y - frame.top - box.height - 18;
+    top = Math.max(4, Math.min(top, Math.max(4, frame.height - box.height - 4)));
+    overlay.style.left = `${left}px`;
+    overlay.style.top = `${top}px`;
   }
 
+  // The claim panel lives on the map itself, next to the route, so the board
+  // never needs a separate action column.
   function renderOverlay() {
     overlay.replaceChildren();
     if (!selectedRoute || !view) { overlay.classList.add("hidden"); return; }
     const route = view.routes[selectedRoute];
-    overlay.append(button("Claim", () => confirmClaim(), "claim", !payment || !can("claim_route"), true));
-    overlay.append(button("Cancel", () => selectRoute(null), "claim"));
+    const head = explainable(node("div", "ttr-claim-head"), "claim");
+    head.append(node("strong", "", routeName(route)));
+    head.append(node("span", "ttr-claim-meta",
+      `${route.length} 🚃 · ${colorLabel(route.color)} · +${view.route_points[route.length]}`));
+    overlay.append(head);
+    const options = paymentOptions(route);
+    if (!options.length) {
+      overlay.append(node("p", "ttr-empty", "You cannot pay for this route."));
+    } else {
+      const grid = node("div", "ttr-payment");
+      options.forEach(option => {
+        const active = payment && option.color === payment.color
+          && option.count === payment.count && option.locomotives === payment.locomotives;
+        const chip = button("", () => { payment = option; renderOverlay(); }, "claim");
+        chip.className = `ttr-payment-chip${active ? " is-active" : ""}`;
+        if (option.count) {
+          const part = node("span", "ttr-payment-part");
+          part.append(node("span", "", META[option.color].emoji), node("span", "", `×${option.count}`));
+          chip.append(part);
+        }
+        if (option.locomotives) {
+          const part = node("span", "ttr-payment-part");
+          part.append(node("span", "", "🚂"), node("span", "", `×${option.locomotives}`));
+          chip.append(part);
+        }
+        grid.append(chip);
+      });
+      overlay.append(grid);
+      if (payment && payment.color !== "locomotive") {
+        const range = wildRange(route, payment.color);
+        if (range.max > range.min) {
+          const wilds = explainable(node("div", "ttr-wild-row"), "claim",
+            "🚂 是万能牌，可以代替任意颜色。用 −／+ 决定这次花掉几张。");
+          wilds.append(node("span", "", "🚂"));
+          wilds.append(button("−", () => shiftWilds(-1), "claim", payment.locomotives <= range.min));
+          wilds.append(node("strong", "", payment.locomotives));
+          wilds.append(button("+", () => shiftWilds(1), "claim", payment.locomotives >= range.max));
+          wilds.append(node("span", "", `${META[payment.color].emoji} ×${payment.count}`));
+          overlay.append(wilds);
+        }
+      }
+    }
+    const row = node("div", "ttr-claim-row");
+    row.append(button("Claim", confirmClaim, "claim", !payment || !can("claim_route"), true));
+    row.append(button("Cancel", () => selectRoute(null), "claim"));
+    overlay.append(row);
     overlay.setAttribute("aria-label", `Claim ${routeName(route)}`);
     positionOverlay();
   }
@@ -381,7 +486,6 @@
     const next = Math.min(range.max, Math.max(range.min, payment.locomotives + delta));
     if (next === payment.locomotives) return;
     payment = {color: payment.color, count: route.length - next, locomotives: next};
-    renderAction();
     renderOverlay();
   }
   function defaultPayment(route) {
@@ -402,7 +506,6 @@
     mapKey = "";
     renderMap();
     renderOverlay();
-    renderAction();
     renderHand();
     renderRouteList();
   }
@@ -517,100 +620,20 @@
     });
   }
 
-  function renderAction() {
-    const box = byId("Action");
-    box.replaceChildren();
-    if (!view) return;
-    const me = own();
-    const mine = view.current_turn === view.you;
-    text("ActionTitle", view.game_over ? "GAME OVER" : (mine ? "YOUR MOVE" : "WAITING"));
-    const badge = byId("ActionBadge");
-    badge.textContent = view.game_over ? "🏆" : (view.last_round ? "Final Round" : "");
-
-    if (view.game_over) {
-      box.append(explainable(node("p", "ttr-guidance", "The final scores are on the board."), "scoring"));
-      return;
-    }
-    if (view.phase === "setup" || view.stage === "choosing_tickets") {
-      const ready = view.phase === "setup" && me?.ready;
-      box.append(explainable(node("p", "ttr-guidance",
-        ready ? "Waiting for the other players to choose their tickets."
-              : "Choose which destination tickets to keep."), "tickets"));
-      if (!ready && me?.pending_tickets?.length) {
-        box.append(button("Choose Tickets 🎫", () => openTicketDialog(), "tickets", false, true));
-      }
-      return;
-    }
-    if (!mine) {
-      box.append(node("p", "ttr-guidance", `${playerName(view.current_turn)} is taking their turn.`));
-      return;
-    }
-    if (view.stage === "drawing") {
-      box.append(explainable(node("p", "ttr-guidance",
-        `Take ${view.draws_left} more card${view.draws_left === 1 ? "" : "s"} from the market or the deck.`), "draw"));
-      return;
-    }
-    if (selectedRoute) {
-      const route = view.routes[selectedRoute];
-      const head = explainable(node("div", "ttr-claim-head"), "claim");
-      head.append(node("strong", "", routeName(route)));
-      head.append(node("span", "ttr-claim-meta",
-        `${route.length} 🚃 · ${colorLabel(route.color)} · +${view.route_points[route.length]} pts`));
-      box.append(head);
-      const options = paymentOptions(route);
-      if (!options.length) {
-        box.append(node("p", "ttr-empty", "You cannot pay for this route."));
-      } else {
-        const grid = node("div", "ttr-payment");
-        options.forEach(option => {
-          const active = payment && option.color === payment.color
-            && option.count === payment.count && option.locomotives === payment.locomotives;
-          const chip = button("", () => { payment = option; renderAction(); renderOverlay(); }, "claim");
-          chip.className = `ttr-payment-chip${active ? " is-active" : ""}`;
-          if (option.count) {
-            const part = node("span", "ttr-payment-part");
-            part.append(node("span", "", META[option.color].emoji), node("span", "", `×${option.count}`));
-            chip.append(part);
-          }
-          if (option.locomotives) {
-            const part = node("span", "ttr-payment-part");
-            part.append(node("span", "", "🚂"), node("span", "", `×${option.locomotives}`));
-            chip.append(part);
-          }
-          grid.append(chip);
-        });
-        box.append(grid);
-        if (payment && payment.color !== "locomotive") {
-          const range = wildRange(route, payment.color);
-          if (range.max > range.min) {
-            const wilds = explainable(node("div", "ttr-wild-row"), "claim",
-              "🚂 是万能牌，可以代替任意颜色。用 −／+ 决定这次花掉几张。");
-            wilds.append(node("span", "", "🚂 wilds"));
-            wilds.append(button("−", () => shiftWilds(-1), "claim", payment.locomotives <= range.min));
-            wilds.append(node("strong", "", payment.locomotives));
-            wilds.append(button("+", () => shiftWilds(1), "claim", payment.locomotives >= range.max));
-            wilds.append(node("span", "", `${META[payment.color].emoji} ×${payment.count}`));
-            box.append(wilds);
-          }
-        }
-        const row = node("div", "ttr-claim-row");
-        row.append(button("Claim Route", confirmClaim, "claim", !payment || pending, true));
-        row.append(button("Cancel", () => selectRoute(null), "claim"));
-        box.append(row);
-      }
-      return;
-    }
-
-    box.append(explainable(node("p", "ttr-guidance",
-      "Take 2 cards, claim a route on the map, or draw more tickets."), "draw"));
-    const row = node("div", "ttr-action-row");
-    row.append(button("Draw Tickets 🎫", () => send("draw_tickets"), "tickets",
-      !can("draw_tickets")));
-    box.append(row);
-    const claimable = view.claimable.length;
-    box.append(explainable(node("p", "ttr-hint",
-      claimable ? `${claimable} route${claimable === 1 ? "" : "s"} you can afford — tap one on the map.`
-                : "No route is affordable yet; take cards first."), "claim"));
+  // The market header carries the only non-map action left: drawing tickets.
+  function renderMarketTools() {
+    const hint = byId("DrawHint");
+    const action = byId("TicketAction");
+    if (!view) { hint.textContent = ""; action.classList.add("hidden"); return; }
+    const choosing = view.legal_actions.includes("keep_tickets");
+    const drawing = view.legal_actions.includes("draw_tickets");
+    hint.textContent = view.stage === "drawing"
+      ? `Take ${view.draws_left} more`
+      : (view.legal_actions.includes("draw_card") ? "Take 2 cards" : "");
+    action.classList.toggle("hidden", !choosing && !drawing);
+    action.textContent = choosing ? "🎫 Choose" : "🎫 Draw 3";
+    action.disabled = pending || (!choosing && !drawing);
+    action.onclick = () => (choosing ? openTicketDialog() : send("draw_tickets"));
   }
 
   function renderPlayers() {
@@ -668,14 +691,16 @@
     if (!view) return;
     const me = own();
     const rows = [
-      ["🚃 Trains", me ? me.trains : "—", "map"],
-      ["🃏 Cards", me ? me.hand_count : "—", "hand"],
-      ["🎫 Tickets", me ? me.ticket_count : "—", "tickets"],
-      ["⭐ Route pts", me ? me.route_points : "—", "scoring"],
+      ["🚃", "Trains", me ? me.trains : "—", "map"],
+      ["🃏", "Cards", me ? me.hand_count : "—", "hand"],
+      ["🎫", "Tickets", me ? me.ticket_count : "—", "tickets"],
+      ["⭐", "Route pts", me ? me.route_points : "—", "scoring"],
     ];
-    rows.forEach(([label, value, key]) => {
+    rows.forEach(([icon, label, value, key]) => {
       const n = explainable(node("div", "ttr-stat"), key);
-      n.append(node("span", "", label), node("strong", "", value));
+      n.append(node("span", "ttr-stat-icon", icon),
+               node("span", "ttr-stat-label", label),
+               node("strong", "", value));
       box.append(n);
     });
   }
@@ -692,16 +717,16 @@
       : view.phase === "setup"
         ? `${view.players.filter(p => p.ready).length} / ${view.players.length} ready`
         : view.current_turn === view.you ? "Your turn" : `${playerName(view.current_turn)} is playing`);
-    const hint = byId("TurnHint");
-    hint.textContent = view.last_round && !view.game_over
-      ? `${view.final_turns.length} final turn${view.final_turns.length === 1 ? "" : "s"} left`
-      : (me && me.trains <= 4 && !view.game_over ? `${me.trains} 🚃 left` : "");
+    const hint = view.last_round && !view.game_over
+      ? ` · ${view.final_turns.length} final turn${view.final_turns.length === 1 ? "" : "s"} left`
+      : (me && me.trains <= 4 && !view.game_over ? ` · ${me.trains} 🚃 left` : "");
+    byId("Status").textContent += hint;
     renderStats();
     renderMap();
     renderMarket();
+    renderMarketTools();
     renderHand();
     renderTickets();
-    renderAction();
     renderRouteList();
     renderPlayers();
     renderReview();
@@ -815,6 +840,8 @@
   byId("ZoomIn").addEventListener("click", () => zoom(0.75));
   byId("ZoomOut").addEventListener("click", () => zoom(1.33));
   byId("Fit").addEventListener("click", fitMap);
+  byId("Origin").addEventListener("click", originMap);
+  byId("Focus").addEventListener("click", () => setFocus(!focusMode));
 
   map.addEventListener("pointerdown", event => {
     if (drag) return;
@@ -897,8 +924,10 @@
     clearTimeout(pendingTimer);
     explainWidget?.exit();
     if (dialog.open) dialog.close();
-    ["Action", "Market", "Hand", "Tickets", "Players", "Stats", "Routes", "Log", "Results", "Map"]
+    ["Market", "Hand", "Tickets", "Players", "Stats", "Routes", "Log", "Results", "Map"]
       .forEach(id => byId(id)?.replaceChildren());
+    bounds = null;
+    setFocus(false);
     byId("Review").classList.add("hidden");
     overlay.classList.add("hidden");
     text("Status", "Waiting to start");
@@ -917,7 +946,9 @@
     stageSignature = stage;
     view = next;
     window.currentTicketToRideView = next;
+    const firstView = !bounds;
     render();
+    if (firstView) fitMap();
   };
   window.showTicketToRideHeaderActions = visible => {
     byId("HeaderActions").style.display = visible ? "flex" : "none";

@@ -116,7 +116,7 @@ async function waitRoomIdle(page) {
       } else if (legal.includes('draw_card')) {
         await page.locator('#ticketToRideMarket .ttr-card--deck').click();
       } else if (legal.includes('draw_tickets')) {
-        await page.locator('#ticketToRideAction button', { hasText: 'Draw Tickets' }).click();
+        await page.locator('#ticketToRideTicketAction').click();
       } else if (legal.includes('pass')) {
         await page.evaluate(() => sendAction({ type: 'pass', revision: currentTicketToRideView.revision }));
       } else {

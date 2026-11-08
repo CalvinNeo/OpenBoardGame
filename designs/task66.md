@@ -397,5 +397,10 @@ type RuleConfig = {
 - 交易只指定自身交出的牌与目标玩家，不指定对手暗牌 ID。第一发现者、最后一张犯人、空手目标、回合结束及人类确认下一局等规则仍由游戏模块处理。
 - `bot:action` 广播仅保留动作类型，避免交换牌 ID 暴露；选游戏目录复用现有策略 AI 标记。
 - 旧存档缺少结构化线索时仍可出牌，缺失信息按未知处理，新产生的可见线索正常累积。
+- 自动对局发现「仅剩一人持有犯人和神犬，其他玩家全部空手」会停滞。补充电子版边界约定：仅当所有其他玩家都空手时，神犬、目击者、交易可无目标弃置且不触发效果；有人有牌时仍必须指定合法目标。客户端同步省略无效的目标/交牌选择并提示无效果，Help / Explain 同步说明。
 - 回归覆盖：线索时序与换牌失效、房规差异、阵营策略、保存恢复、重名玩家、暗牌隔离、决策不改变状态/RNG、3–8 人自动对局、计分多局及真实房间 Bot 调度。
-- 验证命令：`python3 -m unittest tests.test_criminal_dance tests.test_criminal_dance_ai tests.test_ai_metadata tests.test_room_session`。
+- 涉及文件：`game/criminal_dance.py`、`game/criminal_dance_ai.py`、`game/ai_metadata.py`、`app.py`；`static/games/criminal_dance.js`、`static/game_assets.js`、`static/index.html`；`tests/test_criminal_dance_ai.py`、`tests/criminal_dance_ai.browser.cjs` 及本文档。
+- Python 验证：`python3 -m unittest tests.test_criminal_dance tests.test_criminal_dance_ai tests.test_ai_metadata tests.test_room_session tests.test_frontend_style_assets`，103 项通过。
+- 批量验证：3–8 人各 1,000 个随机种子，共 6,000 局、94,452 步；覆盖三种侦探规则、两种神犬失败规则、少年/警部开关及少年可见性。全部正常结束，同时逐步检查真实犯人未被概率排除、仍然有效的已知手牌与实牌一致；最长 35 步。
+- 浏览器验证：`tests/game_panel_themes.browser.cjs`（`GAME_PANEL_GAMES=criminal_dance`）和 `tests/criminal_dance_ai.browser.cjs`；Chromium 下 320、390、1024、1440px 均通过。检查无目标神犬/目击者/交易弃牌、正常交易选择与动作载荷、Help / Explain / Escape、页面与面板横向溢出；人工复核 320px 和 1440px 截图，结果保存在 `tmp/criminal-dance-ai/`。
+- 检查边界：未运行全部其他游戏测试，未做真实 iOS / Windows 浏览器验收；本次未改布局或样式，仅调整无目标交互和说明文案。

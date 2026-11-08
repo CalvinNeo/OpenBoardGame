@@ -123,7 +123,7 @@ async function bounds(page, label) {
     }
     const pairs = [
       ['#ticketToRideMapFrame', '.ttr-workstation'],
-      ['.ttr-market-section', '.ttr-action-section'],
+      ['.ttr-market-section', '.ttr-hand-section'],
       ['.ttr-hand-section', '.ttr-tickets-section'],
       ['#ticketToRideReview', '.ttr-players-section'],
       ['.ttr-players-section', '.ttr-log'],
@@ -215,7 +215,7 @@ async function bounds(page, label) {
       await page.mouse.click(point.x, point.y);
       await page.waitForSelector('#ticketToRideRouteOverlay:not(.hidden)');
       await bounds(page, `${width}px route selected`);
-      const payment = await page.locator('.ttr-payment-chip').count();
+      const payment = await page.locator('#ticketToRideRouteOverlay .ttr-payment-chip').count();
       assert.ok(payment > 0, `${width}px offers a payment option`);
       await page.screenshot({ path: `${output}/route-selected-${width}.png`, fullPage: true });
       const before = await page.evaluate(() => ticketToRideTestActions.length);
@@ -232,6 +232,34 @@ async function bounds(page, label) {
       // the in-flight guard exactly like a real server update would.
       await render(page, 'waiting');
     }
+
+    // Map viewport controls: Fit frames the board, 1:1 is native size, and the
+    // full-screen toggle docks everything except the board away.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await render(page, 'claim');
+    const readBox = () => page.evaluate(() => {
+      const vb = document.getElementById('ticketToRideMap').getAttribute('viewBox').split(' ').map(Number);
+      return { x: vb[0], y: vb[1], w: vb[2], h: vb[3] };
+    });
+    const fitted = await readBox();
+    assert.ok(fitted.w > 900 && fitted.w < 1010, 'Fit frames the real content, not the empty canvas');
+    assert.ok(fitted.x > 0 && fitted.x < 20, 'Fit trims the left padding');
+    await page.locator('#ticketToRideOrigin').click();
+    const native = await readBox();
+    const mapWidth = await page.evaluate(() => document.getElementById('ticketToRideMap').getBoundingClientRect().width);
+    assert.ok(Math.abs(native.w - mapWidth) < 2, 'Origin shows one map unit per screen pixel');
+    assert.ok(native.w < fitted.w, 'Origin is zoomed in compared with Fit');
+    await page.locator('#ticketToRideFit').click();
+    assert.deepEqual(await readBox(), fitted, 'Fit restores the framed board');
+    await page.locator('#ticketToRideFocus').click();
+    await page.waitForFunction(() => document.body.classList.contains('ttr-map-focus'));
+    await bounds(page, '390px full-screen map');
+    const focusHeight = await page.evaluate(() =>
+      document.getElementById('ticketToRideMap').getBoundingClientRect().height);
+    assert.ok(focusHeight > 500, 'the full-screen map fills the phone screen');
+    await page.screenshot({ path: `${output}/map-focus-390.png`, fullPage: false });
+    await page.locator('#ticketToRideFocus').click();
+    await page.waitForFunction(() => !document.body.classList.contains('ttr-map-focus'));
 
     // Card market: two face-up picks, and a locomotive may not be the second.
     await page.setViewportSize({ width: 1440, height: 1000 });

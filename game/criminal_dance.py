@@ -330,12 +330,6 @@ def _is_card_playable(state: Dict, player_id: str, card: Dict) -> bool:
         return False
     if card_type == CARD_CRIMINAL and len(hand) != 1:
         return False
-    if card_type == CARD_DOG:
-        return any(len(state["players"][pid]["hand"]) > 0 for pid in state["player_order"] if pid != player_id)
-    if card_type == CARD_WITNESS:
-        return any(len(state["players"][pid]["hand"]) > 0 for pid in state["player_order"] if pid != player_id)
-    # Trade is still playable as last hand card. In that case, if no extra card is left
-    # after playing Trade, its exchange effect simply does not trigger.
     return True
 
 
@@ -454,6 +448,19 @@ class CriminalDanceGame:
                 return [], "must play first finder first"
         hand_before = len(state["players"][player_id]["hand"])
         hand_counts_before = {pid: len(state["players"][pid]["hand"]) for pid in state["player_order"]}
+        selected = next((card for card in hand_now if card["id"] == card_id), None)
+        if not selected:
+            return [], "card not in hand"
+        card_type = selected["type"]
+        no_card_target = card_type in (CARD_DOG, CARD_WITNESS, CARD_TRADE) and not any(
+            count for pid, count in hand_counts_before.items() if pid != player_id
+        )
+        if card_type in (CARD_DETECTIVE, CARD_DOG, CARD_WITNESS, CARD_TRADE, CARD_CHIEF) and not no_card_target:
+            target_id = action.get("target_player_id")
+            if target_id not in state["players"] or target_id == player_id:
+                return [], "valid target_player_id required"
+            if (card_type in (CARD_DOG, CARD_WITNESS) or (card_type == CARD_TRADE and hand_before > 1)) and not hand_counts_before[target_id]:
+                return [], "target has no cards"
         card = _remove_card_from_hand(state, player_id, card_id)
         if not card:
             return [], "card not in hand"
@@ -466,7 +473,11 @@ class CriminalDanceGame:
         state["discard"].append(card)
         events: List[Dict] = [{"type": "criminal_dance:play_card", "payload": {"player_id": player_id, "card_type": card_type}}]
 
-        if card_type == CARD_ACCOMPLICE:
+        if no_card_target:
+            played_entry["result"] = "No other player has cards. No effect."
+            if card_type == CARD_TRADE:
+                played_entry["trade_completed"] = False
+        elif card_type == CARD_ACCOMPLICE:
             state["players"][player_id]["is_accomplice"] = True
         elif card_type == CARD_WITNESS:
             target_id = action.get("target_player_id")

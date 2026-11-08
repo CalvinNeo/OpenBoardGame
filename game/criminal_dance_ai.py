@@ -254,6 +254,8 @@ def _score_action(view: Dict, knowledge: Knowledge, own: Dict, card: Dict, targe
     score = 10.0
     if card_type == CARD_CRIMINAL:
         return 1000.0
+    if card_type in (CARD_DOG, CARD_WITNESS, CARD_TRADE) and target is None:
+        return score
     if card_type == CARD_DETECTIVE:
         if _detective_is_active(view, counts[viewer]):
             success = probability * (1.0 - _alibi_probability(view, knowledge, target, counts[target]))
@@ -323,8 +325,10 @@ def choose_action(view: Dict) -> Optional[Dict]:
                 if player["hand_count"] or card_type in (CARD_DETECTIVE, CARD_CHIEF)
                 or (card_type == CARD_TRADE and len(own["hand"]) == 1)
             ]
+            if card_type in (CARD_DOG, CARD_WITNESS, CARD_TRADE) and not any(player["hand_count"] for player in opponents):
+                targets = [None]
         gifts = [None]
-        if card_type == CARD_TRADE:
+        if card_type == CARD_TRADE and targets != [None]:
             gifts = [item for item in own["hand"] if item["id"] != card["id"]] or [None]
         for target in targets:
             for given in gifts:

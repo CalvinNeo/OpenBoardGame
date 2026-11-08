@@ -5,12 +5,9 @@
 <template data-game-target="ticketToRidePanel" data-game-mode="contents">
   <header class="ttr-heading">
     <div id="ticketToRideRound" class="ttr-round" data-ttr-explain="turn" data-ttr-tip="Turn：当前是第几个行动。Final Round：有人降到 2 辆以下后，每人还有最后一次行动。" tabindex="0">Setup</div>
+    <strong id="ticketToRideStatus" class="ttr-status" role="status" aria-live="polite">Waiting to start</strong>
     <div id="ticketToRideDeckInfo" class="ttr-deck-info" data-ttr-explain="deck" data-ttr-tip="🂠 抽牌堆剩余张数；♻️ 弃牌堆张数，牌堆耗尽时会洗回。" tabindex="0"></div>
   </header>
-  <div class="ttr-status-line">
-    <strong id="ticketToRideStatus" role="status" aria-live="polite">Waiting to start</strong>
-    <span id="ticketToRideTurnHint" class="ttr-turn-hint"></span>
-  </div>
   <div id="ticketToRideStats" class="ttr-stats"></div>
   <div class="ttr-board">
     <section class="ttr-map-section" aria-label="North America rail network" data-ttr-explain="map">
@@ -20,23 +17,26 @@
           <button id="ticketToRideZoomOut" type="button" aria-label="Zoom out" data-ttr-explain="zoom">−</button>
           <button id="ticketToRideZoomIn" type="button" aria-label="Zoom in" data-ttr-explain="zoom">+</button>
           <button id="ticketToRideFit" type="button" data-ttr-explain="zoom">Fit</button>
+          <button id="ticketToRideOrigin" type="button" data-ttr-explain="origin">1:1</button>
+          <button id="ticketToRideFocus" type="button" aria-label="Full-screen map" data-ttr-explain="focus">⛶</button>
         </div>
       </div>
       <div id="ticketToRideMapFrame" class="ttr-map-frame">
         <svg id="ticketToRideMap" viewBox="0 0 1000 640" role="img" aria-label="North America route map; choose a route or use the route list"></svg>
         <div id="ticketToRideRouteOverlay" class="ttr-route-overlay hidden"></div>
       </div>
-      <div id="ticketToRideMapLegend" class="ttr-map-legend"></div>
       <details class="ttr-route-list"><summary>Route list · claimable routes</summary><div id="ticketToRideRoutes"></div></details>
     </section>
     <div class="ttr-workstation">
       <section class="ttr-market-section" aria-label="Face-up train cards" data-ttr-explain="market">
-        <div class="ttr-section-heading"><h3>02 / CARD MARKET</h3><span id="ticketToRideDrawHint" class="ttr-draw-hint"></span></div>
+        <div class="ttr-section-heading">
+          <h3>02 / CARD MARKET</h3>
+          <div class="ttr-market-tools">
+            <span id="ticketToRideDrawHint" class="ttr-draw-hint"></span>
+            <button id="ticketToRideTicketAction" type="button" data-ttr-explain="tickets">🎫 Tickets</button>
+          </div>
+        </div>
         <div id="ticketToRideMarket" class="ttr-market"></div>
-      </section>
-      <section class="ttr-action-section" aria-label="Current action">
-        <div class="ttr-section-heading"><h3 id="ticketToRideActionTitle">YOUR MOVE</h3><span id="ticketToRideActionBadge"></span></div>
-        <div id="ticketToRideAction" class="ttr-action"></div>
       </section>
       <section class="ttr-hand-section" aria-label="Your train cards" data-ttr-explain="hand">
         <div class="ttr-section-heading"><h3>03 / YOUR HAND</h3><span id="ticketToRideHandCount"></span></div>

@@ -146,9 +146,9 @@ const GAME_ASSETS = {
     "header": "showPowerGridHeaderActions"
   },
   "ticket_to_ride": {
-    "scripts": ["/static/games/ticket_to_ride.js?v=7"],
-    "styles": ["/static/games/ticket_to_ride.css?v=5"],
-    "markup": "/static/games/ticket_to_ride.html?v=2",
+    "scripts": ["/static/games/ticket_to_ride.js?v=9"],
+    "styles": ["/static/games/ticket_to_ride.css?v=6"],
+    "markup": "/static/games/ticket_to_ride.html?v=3",
     "panel": "ticketToRidePanel",
     "panelTitle": "🚂 铁路环游",
     "header": "showTicketToRideHeaderActions"
@@ -713,7 +713,7 @@ const GAME_ASSETS = {
   },
   "criminal_dance": {
     "scripts": [
-      "/static/games/criminal_dance.js?v=app_v6"
+      "/static/games/criminal_dance.js?v=app_v7"
     ],
     "styles": [
       "/static/criminal_dance.css?v=3"
