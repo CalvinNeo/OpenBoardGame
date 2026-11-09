@@ -7,7 +7,7 @@
   const helpButton = document.getElementById("explodingKittensHelpBtn");
   const explainButton = document.getElementById("explodingKittensExplainBtn");
   const tooltip = $("Tooltip");
-  let view = null, selected = [], busy = false, explaining = false, signature = null, botStatus = null;
+  let view = null, selected = [], busy = false, signature = null, botStatus = null;
   let tipTimer, busyTimer, suppressTimer, suppressClick = false, focusBeforeDialog;
   let handGesture = null, suppressHandClickUntil = 0;
   const singles = ["attack", "skip", "favor", "shuffle", "see_future"];
@@ -67,7 +67,7 @@
   function can(kind) { return !!(view && !busy && socket.connected && view.legal_actions.includes(kind)); }
   function hideTip() { clearTimeout(tipTimer); tooltip.classList.add("hidden"); }
   function tip(target, autoHide = false) {
-    if (!target || explaining || dialog.open) return;
+    if (!target || ekExplainWidget?.isActive() || ekHelpWidget?.isOpen() || dialog.open) return;
     hideTip();
     tooltip.textContent = target.dataset.ekTip;
     tooltip.classList.remove("hidden");
@@ -76,12 +76,6 @@
     tooltip.style.top = `${rect.bottom + box.height + 15 < innerHeight ? rect.bottom + 6 : Math.max(12, rect.top - box.height - 6)}px`;
     if (autoHide) tipTimer = setTimeout(hideTip, 3000);
   }
-  function setExplain(value) {
-    explaining = value;
-    panel.classList.toggle("ek-explaining", value);
-    explainButton.setAttribute("aria-pressed", String(value));
-    hideTip();
-  }
   function openDialog(title, content) {
     hideTip(); focusBeforeDialog = document.activeElement;
     text("DialogTitle", title);
@@ -89,14 +83,8 @@
     if (!dialog.open) dialog.showModal();
     $("DialogClose").focus();
   }
-  function explain(target) {
-    if (!target) return;
-    const [title, description] = info(target.dataset.ekExplain);
-    setExplain(false);
-    openDialog(title, description);
-  }
   function send(kind, fields = {}) {
-    if (explaining || !can(kind)) return;
+    if (!can(kind)) return;
     busy = true; hideTip(); renderActions();
     clearTimeout(busyTimer);
     busyTimer = setTimeout(() => { busy = false; renderActions(); }, 4000);
@@ -275,31 +263,139 @@
     renderOptions(); renderPlayers(); renderHand(); renderActions();
   }
 
-  function help() {
-    const body = el("div");
-    const sections = [
-      ["目标与准备", "2–5 人，最后存活者为 Winner（🏆）。每人 1 张 Defuse（🧯）和 7 张普通牌，再加入人数减 1 张 Exploding Kitten（💥）。2–3 人只放回 2 张额外拆弹，4–5 人放回其余拆弹。起始玩家随机，之后按座位顺序行动。"],
-      ["你的回合", "任意出牌或不出牌，然后从 Draw pile（🂠）抽 1 张结束一个回合。牌可以连续出，没有手牌上限。抽到爆炸猫（💥）时必须拆弹（🧯）才可存活；拆弹后秘密放回任意位置，这次抽牌仍完成一个回合。没有拆弹则弃掉全部手牌、淘汰出局。"],
-      ["Attack（⚡）与 Skip（⏭️）", "普通回合打攻击：不抽牌，下家连续做 2 回合。被攻击时再打攻击：把所有尚未完成的回合加 2 转给下家（例如 2 → 4；已完成一个则 1 → 3）。每次跳过或抽牌仅完成一个回合；死亡不把剩余攻击债务传给下家。"],
-      ["Nope（🙅）与线上响应", "除爆炸猫、拆弹与抽牌外，出牌和组合在结算前都可否决。原出牌者默认 Pass；其他存活者无论有无 Nope 都要确认。窗口开放时任何存活者可打 Nope，含已 Pass 者；每次 Nope 翻转效果，并重新等待所有其他存活者确认。奇数层取消，偶数层恢复。原牌和 Nope 全部留在弃牌堆。效果开始执行后不能再否决。"],
-      ["Pairs / Triples · 同名组合", "任意两张同名牌（包括功能牌）可随机偷另一位存活玩家 1 张手牌；任意三张同名牌可以点名一种牌，对方有则必须给一张，否则落空。选牌、目标、请求牌名后确认。组合不执行卡牌原效果。五种猫咪（🌮 🍉 🥔 🧔 🌈）单张无效；本实现采用 2022 原版规则，没有旧版五种不同牌组合或扩展牌。"],
-      ["牌与图标", "以下是原版全部牌类（括号内为整盒数量）；实际入局的爆炸猫与拆弹数量取决于玩家数。"],
-    ];
-    for (const [title, content] of sections) body.append(el("h3", "", title), el("p", "", content));
-    const rules = [
-      ["exploding_kitten", "Exploding Kitten（💥，爆炸猫，4 张）"], ["defuse", "Defuse（🧯，拆弹，6 张）"],
-      ["nope", "Nope（🙅，否决，5 张）"], ["attack", "Attack（⚡，攻击，4 张）"],
-      ["skip", "Skip（⏭️，跳过，4 张）"], ["favor", "Favor（🎁，索取，4 张）"],
-      ["shuffle", "Shuffle（🔀，洗牌，4 张）"], ["see_future", "See the Future（🔮，预知未来，5 张）"],
-      ["cat", "Tacocat（🌮，墨西哥卷猫）、Cattermelon（🍉，西瓜猫）、Hairy Potato Cat（🥔，毛毛土豆猫）、Beard Cat（🧔，胡子猫）、Rainbow-Ralphing Cat（🌈，彩虹猫），各 4 张"],
-    ];
-    for (const [kind, title] of rules) body.append(el("p", "", `${title}：${effects[kind]}`));
-    body.append(el("h3", "", "保密、回顾与操作"), el("p", "", "Hand（🔒）只有本人可见，Players 的 Cards（🃏）只公开数量；弃牌全部公开。Future（🔮）只给本人查看，Continue 才继续。秘密交牌、偷牌结果和插入位置不公开。非最终淘汰后暂停，全员（包括淘汰者）点击 Next Round 继续，机器人自动确认。最终结果保留，通过房间控制重新开局。"), el("p", "", "选牌后点空白或 Esc 可取消，滚动手牌不影响选中状态。Help 查看规则；Explain 后点目标查看解释，禁用按钮也可解释，Esc 退出。电脑悬停显示图标说明，手机点击后浮层 3 秒自动消失。"), el("h3", "", "AI opponent（🤖）"), el("p", "", "在 Room Control 中点击 Add Bot 即可与 AI 对局。机器人会自动处理出牌、否决、交牌、拆弹、秘密放回及 Next Round；它会等待真人完成自己的行动与回顾。AI 只根据自己的手牌、私人窥视和公开信息决策，不知道其他人的隐藏手牌、牌库顺序或秘密插入位置。Thinking 表示该机器人正在行动；Recent moves 保留其已经公开的操作。"));
-    const source = el("a", "", "Official Original Edition rules · 2022");
-    source.href = "https://dumekj556jp75.cloudfront.net/exploding-kittens/English.pdf";
-    source.target = "_blank"; source.rel = "noopener noreferrer";
-    body.append(source);
-    return body;
+  const EK_EXPLAIN = {
+    deck: { zh: explanations.deck[1], en: "The draw pile hides both faces and order, and the number is how many cards remain. Draw Card takes the top card and ends one turn, and you may draw an Exploding Kitten (💥)." },
+    draw: { zh: explanations.draw[1], en: "End one turn and draw a card. You may draw without playing anything. Drawing an Exploding Kitten (💥) means you must defuse (🧯) or be eliminated, and each draw during an attack completes only one turn." },
+    discard: { zh: explanations.discard[1], en: "Every card here is public. Click to review the full discard pile, and a card stays here even when its effect was cancelled by a Nope (🙅)." },
+    kittens: { zh: explanations.kittens[1], en: "How many Exploding Kittens (💥) are still in play, including one currently drawn and waiting to be defused. Each elimination removes one, and the last survivor wins." },
+    turns: { zh: explanations.turns[1], en: "How many turns the current player still owes. Drawing or Skip (⏭️) spends one, and Attack (⚡) hands the unfinished attack turns plus 2 to the next player." },
+    player: { zh: explanations.player[1], en: "Shows each player's name, public hand count (🃏) and whether they are alive. Turn marks the acting player, Out means eliminated, Ready means confirmed, and You or AI (🤖) marks yourself or a bot." },
+    ai: { zh: explanations.ai[1], en: "Add a bot with Add Bot in Room Control. Bots play, nope, give cards, defuse and confirm eliminations on their own, deciding only from their own hand and public information without reading other players' hidden hands, the deck order or secret insertion positions. Thinking means the server is processing its move." },
+    hand: { zh: explanations.hand[1], en: "Only you can see your own cards. Select one action card or 2 or 3 cards of the same name, then press Play Selected. Click blank space or press Esc to cancel, there is no hand limit, and others only see the count." },
+    play: { zh: explanations.play[1], en: "Play the selected cards. A single card may attack, skip, ask for a favour, shuffle or see the future, while two or three cards of the same name, including Defuse and Nope, work as a combo that only performs the combo effect." },
+    reaction: { zh: explanations.reaction[1], en: "An effect that has not resolved yet waits for every living player to confirm Pass, and the player who played it is confirmed by default. Any living player may still play a Nope (🙅), even one who already passed, each Nope reopens the window with its player confirmed by default, and once everyone confirms an even number of nopes resolves the effect while an odd number cancels it." },
+    pass: { zh: explanations.pass[1], en: "Confirm the current nope window. Once every living player has confirmed the effect resolves at once. This neither draws a card nor ends your game turn." },
+    give: { zh: explanations.give[1], en: "The target of a favour picks one hand card themselves, which may be a Defuse, and hands it over. Only the two of you see which card it was, and the effect has already begun so this exchange can no longer be noped." },
+    future: { zh: explanations.future[1], en: "Up to 3 cards from the top of the deck, visible only to you and listed from the top down. Press Continue to carry on, and nobody else can close the preview for you." },
+    reinsert: { zh: explanations.reinsert[1], en: "Secretly choose a gap to insert the Exploding Kitten, where 0 is the top of the deck and the largest position is the bottom. After N cards means N cards sit above it. The rest of the deck keeps its order and the position is never broadcast." },
+    next: { zh: explanations.next[1], en: "Confirm that you have read the elimination result. Everyone confirms before the next player acts, including the player just eliminated. Bots confirm automatically and a disconnected human must reconnect." },
+    winner: { zh: explanations.winner[1], en: "The last living player wins. The final result stays on the page and room control can start a new game." },
+    exploding_kitten: { zh: effects.exploding_kitten, en: "Reveal it immediately. Without a Defuse (🧯) you are eliminated, and after using one you secretly place the kitten back into the deck." },
+    defuse: { zh: effects.defuse, en: "When you draw an Exploding Kitten (💥), discard a Defuse and then secretly choose where the kitten goes back. This completes one turn and cannot be noped." },
+    nope: { zh: effects.nope, en: "Cancel a card or combo that has not resolved yet. You may play it on someone else's turn and you may nope another Nope (🙅), where an even count restores the original effect. It cannot cancel a draw, an Exploding Kitten or a Defuse." },
+    attack: { zh: effects.attack, en: "Do not draw, hand the turn to the next player and make them take 2 turns in a row. If you are already under attack you pass on every remaining turn plus 2, so a single remaining turn becomes 3." },
+    skip: { zh: effects.skip, en: "Do not draw and end one turn. Under attack it only reduces the remaining turns by 1." },
+    favor: { zh: effects.favor, en: "Choose another living player who has cards and let them pick 1 card to give you. Which card changes hands is not revealed." },
+    shuffle: { zh: effects.shuffle, en: "Shuffle the whole draw pile at random. Any future preview you had becomes invalid and it is still your turn afterwards." },
+    see_future: { zh: effects.see_future, en: "Privately look at up to 3 cards from the top of the deck in their current order. Continue resumes your turn, and drawing, shuffling or inserting a kitten invalidates the preview." },
+    cat: { zh: effects.cat, en: "A single cat card does nothing. Two cards of the same name steal 1 random card, and three cards of the same name let you name a card type and take one if the target has it, otherwise nothing happens." },
+    dialog_close: { zh: "关闭当前对话框并回到牌桌。", en: "Close the current dialog and return to the table." }
+  };
+
+  const EK_HELP_CONFIG = {
+    gameId: "exploding_kittens",
+    title: { zh: "爆炸猫 · Exploding Kittens", en: "Exploding Kittens" },
+    basic: {
+      win: {
+        zh: "2 到 5 人，最后存活者为胜者(🏆)。抽到爆炸猫(💥)时必须用拆弹(🧯)才活得下来，没有拆弹就被淘汰。",
+        en: "For 2 to 5 players, the last survivor wins (🏆). Drawing an Exploding Kitten (💥) means you must use a Defuse (🧯) to survive, and without one you are eliminated."
+      },
+      turn: {
+        zh: "轮到你时任意出牌或不出牌，然后从抽牌堆(🂠)抽 1 张结束一个回合。牌可以连续出，手牌没有上限。",
+        en: "On your turn play any cards you like or none at all, then draw 1 card from the draw pile (🂠) to end one turn. You may play several cards in a row and there is no hand limit."
+      },
+      key: {
+        zh: "爆炸猫的数量只比存活人数少一张，所以每一张拆弹(🧯)都是一条命，而否决(🙅)的层数决定了一个效果到底会不会发生。",
+        en: "There is always exactly one fewer Exploding Kitten than living players, so every Defuse (🧯) is a life, and the number of Nopes (🙅) decides whether an effect happens at all."
+      }
+    },
+    sections: [
+      {
+        id: "goal",
+        label: { zh: "目标与准备", en: "Goal and setup" },
+        html: {
+          zh: "<p>2 到 5 人，最后存活者为胜者(🏆)。每人 1 张拆弹(🧯)和 7 张普通牌，再加入人数减 1 张爆炸猫(💥)。2 到 3 人只放回 2 张额外拆弹，4 到 5 人放回其余拆弹。起始玩家随机，之后按座位顺序行动。</p>",
+          en: "<p>For 2 to 5 players the last survivor wins (🏆). Everyone gets 1 Defuse (🧯) and 7 ordinary cards, and you add one fewer Exploding Kitten (💥) than the number of players. A 2 or 3 player game returns only 2 extra Defuses while 4 or 5 players return the rest. The starting player is random and play then follows seat order.</p>"
+        }
+      },
+      {
+        id: "turn",
+        label: { zh: "你的回合", en: "Your turn" },
+        html: {
+          zh: "<p>任意出牌或不出牌，然后从抽牌堆(🂠)抽 1 张结束一个回合。牌可以连续出，没有手牌上限。抽到爆炸猫(💥)时必须拆弹(🧯)才可存活，拆弹后秘密放回任意位置，这次抽牌仍完成一个回合。没有拆弹则弃掉全部手牌、淘汰出局。</p>",
+          en: "<p>Play any cards you like or none at all, then draw 1 card from the draw pile (🂠) to end one turn. You may play several cards in a row and there is no hand limit. Drawing an Exploding Kitten (💥) means you must defuse (🧯) to survive, after which you secretly place it anywhere in the deck and the draw still completes one turn. With no Defuse you discard your whole hand and are eliminated.</p>"
+        }
+      },
+      {
+        id: "attack",
+        label: { zh: "攻击与跳过", en: "Attack and Skip" },
+        html: {
+          zh: "<p>普通回合打攻击(⚡)：不抽牌，下家连续做 2 回合。被攻击时再打攻击：把所有尚未完成的回合加 2 转给下家，例如 2 变 4，已完成一个则 1 变 3。每次跳过(⏭️)或抽牌仅完成一个回合，死亡不把剩余攻击债务传给下家。</p>",
+          en: "<p>Attacking (⚡) on a normal turn means you do not draw and the next player takes 2 turns in a row. Attacking while already under attack passes every unfinished turn plus 2 to the next player, so 2 becomes 4, or 1 becomes 3 when one is already done. Each Skip (⏭️) or draw completes only one turn, and dying does not pass the remaining attack debt on.</p>"
+        }
+      },
+      {
+        id: "nope",
+        label: { zh: "否决与线上响应", en: "Nope and reactions" },
+        html: {
+          zh: "<p>除爆炸猫、拆弹与抽牌外，出牌和组合在结算前都可否决(🙅)。原出牌者默认 Pass，其他存活者无论有无否决牌都要确认。窗口开放时任何存活者可打否决，含已 Pass 者，每次否决翻转效果并重新等待所有其他存活者确认。奇数层取消，偶数层恢复。原牌和否决牌全部留在弃牌堆，效果开始执行后不能再否决。</p>",
+          en: "<p>Except for Exploding Kittens, Defuses and drawing, any card or combo may be noped (🙅) before it resolves. The original player is confirmed by default and every other living player must confirm whether or not they hold a Nope. While the window is open any living player may play a Nope, including one who already passed, each Nope flips the effect and reopens the wait for all other living players. An odd count cancels and an even count restores. Both the original cards and the Nopes stay in the discard pile, and once an effect starts it can no longer be noped.</p>"
+        }
+      },
+      {
+        id: "combos",
+        label: { zh: "同名组合", en: "Pairs and triples" },
+        html: {
+          zh: "<p>任意两张同名牌（包括功能牌）可随机偷另一位存活玩家 1 张手牌，任意三张同名牌可以点名一种牌，对方有则必须给一张，否则落空。选牌、目标、请求牌名后确认，组合不执行卡牌原效果。五种猫咪(🌮 🍉 🥔 🧔 🌈)单张无效。本实现采用 2022 原版规则，没有旧版五种不同牌组合或扩展牌。</p>",
+          en: "<p>Any two cards of the same name, including action cards, steal 1 random hand card from another living player, and any three cards of the same name let you name a card type which the target must hand over if they have it, otherwise nothing happens. Choose the cards, the target and the requested card name, then confirm, and the combo does not perform the cards' own effects. The five cats (🌮 🍉 🥔 🧔 🌈) do nothing on their own. This build uses the 2022 original edition rules without the older five different card combo or any expansion cards.</p>"
+        }
+      },
+      {
+        id: "cards",
+        label: { zh: "牌与图标", en: "Cards and icons" },
+        html: {
+          zh: "<p>以下是原版全部牌类（括号内为整盒数量），实际入局的爆炸猫与拆弹数量取决于玩家数。</p><p>Exploding Kitten（💥，爆炸猫，4 张）：立即展示。没有拆弹就淘汰，使用拆弹后秘密放回牌堆。</p><p>Defuse（🧯，拆弹，6 张）：抽到爆炸猫时弃掉一张拆弹，再秘密选择爆炸猫的插入位置。完成一个回合，不能被否决。</p><p>Nope（🙅，否决，5 张）：取消尚未执行的牌或组合，可在别人回合打出，也可否决另一张否决，偶数张恢复原效果。</p><p>Attack（⚡，攻击，4 张）：不抽牌，将行动交给下一位并让其连续进行 2 回合。</p><p>Skip（⏭️，跳过，4 张）：不抽牌，结束一个回合。</p><p>Favor（🎁，索取，4 张）：选择另一个有手牌的存活玩家，让对方自行选 1 张牌交给你。</p><p>Shuffle（🔀，洗牌，4 张）：随机重洗整个抽牌堆。</p><p>See the Future（🔮，预知未来，5 张）：只给自己查看牌堆顶至多 3 张。</p><p>Tacocat（🌮）、Cattermelon（🍉）、Hairy Potato Cat（🥔）、Beard Cat（🧔）、Rainbow-Ralphing Cat（🌈），各 4 张。</p>",
+          en: "<p>These are all the card types in the original edition with the box count in brackets, while the number of kittens and Defuses actually in play depends on the player count.</p><p>Exploding Kitten (💥, 4 cards): reveal it immediately, you are eliminated without a Defuse, and after using one you secretly place it back into the deck.</p><p>Defuse (🧯, 6 cards): discard one when you draw a kitten and then secretly choose where it goes back. This completes one turn and cannot be noped.</p><p>Nope (🙅, 5 cards): cancel a card or combo that has not resolved, playable on someone else's turn and able to nope another Nope, where an even count restores the effect.</p><p>Attack (⚡, 4 cards): do not draw and make the next player take 2 turns in a row.</p><p>Skip (⏭️, 4 cards): do not draw and end one turn.</p><p>Favor (🎁, 4 cards): choose another living player with cards and let them pick 1 card to give you.</p><p>Shuffle (🔀, 4 cards): shuffle the whole draw pile at random.</p><p>See the Future (🔮, 5 cards): privately look at up to 3 cards from the top of the deck.</p><p>Tacocat (🌮), Cattermelon (🍉), Hairy Potato Cat (🥔), Beard Cat (🧔) and Rainbow-Ralphing Cat (🌈), 4 cards each.</p>"
+        }
+      },
+      {
+        id: "privacy",
+        label: { zh: "保密、回顾与操作", en: "Privacy, review and controls" },
+        html: {
+          zh: "<p>手牌(🔒)只有本人可见，Players 的 Cards（🃏）只公开数量，弃牌全部公开。预知未来(🔮)只给本人查看，Continue 才继续。秘密交牌、偷牌结果和插入位置不公开。非最终淘汰后暂停，全员（包括淘汰者）点击 Next Round 继续，机器人自动确认。最终结果保留，通过房间控制重新开局。</p><p>选牌后点空白或按 Esc 可取消，滚动手牌不影响选中状态。Help 查看规则，Explain 之后点目标查看解释，禁用按钮也可解释，按 Esc 退出。电脑悬停显示图标说明，手机点击后浮层 3 秒自动消失。</p>",
+          en: "<p>Your hand (🔒) is visible only to you, Players shows only public card counts (🃏), and the discard pile is fully public. Seeing the Future (🔮) is private and Continue resumes play. Secret exchanges, steal results and insertion positions are never revealed. After a non-final elimination the game pauses until everyone, including the eliminated player, presses Next Round, and bots confirm automatically. The final result stays on screen and a new game starts from room control.</p><p>Click blank space or press Esc to cancel a selection, and scrolling your hand does not change what is selected. Help shows the rules and Explain lets you tap a target for a description, disabled buttons included, with Esc to leave. Hovering an icon on desktop shows its description, and on mobile a tapped overlay disappears after 3 seconds.</p>"
+        }
+      },
+      {
+        id: "ai",
+        label: { zh: "AI 对手", en: "AI opponent" },
+        html: {
+          zh: "<p>在 Room Control 中点击 Add Bot 即可与 AI 对局。机器人会自动处理出牌、否决、交牌、拆弹、秘密放回及 Next Round，它会等待真人完成自己的行动与回顾。AI 只根据自己的手牌、私人窥视和公开信息决策，不知道其他人的隐藏手牌、牌库顺序或秘密插入位置。Thinking 表示该机器人正在行动，Recent moves 保留其已经公开的操作。</p>",
+          en: "<p>Press Add Bot in Room Control to play against an AI. Bots handle playing cards, noping, giving cards, defusing, secret placement and Next Round on their own, and they wait for humans to finish their own actions and reviews. The AI decides only from its own hand, private peeks and public information, and never knows other players' hidden hands, the deck order or secret insertion positions. Thinking means that bot is acting, and Recent moves keeps the actions it has made public.</p>"
+        }
+      }
+    ]
+  };
+
+  let ekHelpWidget = null;
+  let ekExplainWidget = null;
+
+  function initEkHelpExplain() {
+    if (ekHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    ekHelpWidget = window.obgCreateHelp(EK_HELP_CONFIG);
+    ekExplainWidget = window.obgCreateExplain({
+      gameId: "exploding_kittens",
+      attribute: "data-ek-explain",
+      explanations: EK_EXPLAIN,
+      button: explainButton,
+      root: () => panel,
+      bypass: ["#explodingKittensHelpBtn", "#explodingKittensExplainBtn", "#ekDialogClose"]
+    });
+    helpButton?.addEventListener("click", () => {
+      ekExplainWidget?.exit();
+      ekHelpWidget.open();
+    });
+    explainButton?.addEventListener("click", () => ekExplainWidget?.toggle());
   }
   $("Play").addEventListener("click", () => {
     const s = selectionInfo(); if (!s.valid) return;
@@ -317,39 +413,15 @@
     if (!list.children.length) list.append(el("p", "", "No discarded cards yet."));
     openDialog("Discard pile · newest first", list);
   });
-  helpButton.addEventListener("click", () => { setExplain(false); openDialog("Exploding Kittens · Rules", help()); });
-  explainButton.addEventListener("click", () => setExplain(!explaining));
   $("DialogClose").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus(); });
   dialog.addEventListener("click", event => {
     const r = dialog.getBoundingClientRect();
     if (event.target === dialog && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) dialog.close();
   });
-  const exempt = target => target.closest("#explodingKittensHelpBtn, #explodingKittensExplainBtn, #explodingKittensDialog");
-  document.addEventListener("pointerdown", event => {
-    suppressClick = false;
-    if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const target = event.target.closest("[data-ek-explain]") || [...panel.querySelectorAll("[data-ek-explain]")].find(node => {
-      const r = node.getBoundingClientRect();
-      return r.width && r.height && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
-    });
-    suppressClick = true; clearTimeout(suppressTimer);
-    suppressTimer = setTimeout(() => { suppressClick = false; }, 750);
-    explain(target);
-  }, true);
-  document.addEventListener("click", event => {
-    if (suppressClick) { suppressClick = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    explain(event.target.closest("[data-ek-explain]"));
-  }, true);
   document.addEventListener("keydown", event => {
     if (panel.classList.contains("hidden")) return;
-    if (event.key === "Escape") { setExplain(false); hideTip(); clearSelection(); return; }
-    if (!explaining || exempt(event.target) || !["Enter", " "].includes(event.key)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    explain(event.target.closest("[data-ek-explain]"));
+    if (event.key === "Escape") { ekExplainWidget?.exit(); hideTip(); clearSelection(); }
   }, true);
   panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") tip(event.target.closest("[data-ek-tip]")); });
   panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
@@ -387,7 +459,7 @@
   function clearState() {
     view = null; selected = []; busy = false; signature = null; botStatus = null;
     handGesture = null; suppressHandClickUntil = 0; delete panel.dataset.phase;
-    clearTimeout(busyTimer); setExplain(false); hideTip();
+    clearTimeout(busyTimer); ekExplainWidget?.exit(); hideTip();
     if (dialog.open) dialog.close();
     for (const id of ["Players", "Hand", "Log", "FutureCards", "Pending", "Position", "Target"]) $(id).replaceChildren();
     for (const id of ["Composer", "ReactionActions", "GiveArea", "Continue", "Defuse", "InsertArea", "Review", "Result", "Future", "Pending", "BotStatus"]) show(id, false);
@@ -424,6 +496,7 @@
     if (typeof currentRoomState !== "undefined") syncRoom(currentRoomState);
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "exploding_kittens") window.renderExplodingKittensGameState(lastGameStatePayload);
   }
+  initEkHelpExplain();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sync, {once: true});
   else sync();
 })();

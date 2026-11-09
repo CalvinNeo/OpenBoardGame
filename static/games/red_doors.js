@@ -32,7 +32,7 @@
     const phases = {choose_door: "选择一扇门", resolve_door: "私下看牌", choose_target: "选择目标", private_result: "私密线索", resolving: "正在处理门牌", public_review: "公开结算", round_end: "本局结局", game_over: "Game over"};
     const endings = {silver_escape: "三把银钥匙 · 逃脱成功", tainted_escape: "杀人鬼的钥匙 · 逃脱失败", sole_killer: "杀人鬼独自生还", all_dead: "无人生还"};
     let view = null, signature = null, selection = null, pending = false, pendingTimer = null;
-    let explaining = false, suppressedPointer = null, returnFocus = null, tipAnchor = null, tipTimer = null, tipHideTimer = null, touchStart = null, inputKind = "mouse", historyOpen = false;
+    let suppressedPointer = null, returnFocus = null, tipAnchor = null, tipTimer = null, tipHideTimer = null, touchStart = null, inputKind = "mouse", historyOpen = false;
     const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
     const own = () => view?.players.find(p => p.player_id === view.you);
     const name = pid => view?.players.find(p => p.player_id === pid)?.name || "—";
@@ -109,7 +109,7 @@
     function render() {
         if (!view) return;
         hideTip();
-        panel.innerHTML = `<div class="red-doors-shell ${explaining ? "rd-explaining" : ""}"><div class="rd-masthead"><div><p class="rd-eyebrow">RED DOORS · THE MURDERER'S KEY</p><h2>红色的门和杀人鬼的钥匙</h2><p class="rd-subtitle">Base rules · 16 cards · 4–6 players</p></div><div class="rd-round"><span>ROUND</span><b>${view.round}</b></div></div>
+        panel.innerHTML = `<div class="red-doors-shell"><div class="rd-masthead"><div><p class="rd-eyebrow">RED DOORS · THE MURDERER'S KEY</p><h2>红色的门和杀人鬼的钥匙</h2><p class="rd-subtitle">Base rules · 16 cards · 4–6 players</p></div><div class="rd-round"><span>ROUND</span><b>${view.round}</b></div></div>
             <div class="rd-status" role="status"><span><strong>${phases[view.phase]}</strong> · ${esc(name(view.current_turn))}</span>${badge(`🔑 ${view.held_key_count} / 3 · 已持有钥匙`, "银钥匙（🔑）与杀人鬼钥匙（🗝️）在公开前统一计数。全桌持有三把即可尝试出口（🚪✨）；第四把出现会匿名回收全部钥匙并重洗场地。")}</div>
             ${reviewHTML()}<div class="rd-layout">${boardHTML()}<aside class="rd-side">${actionHTML()}<section class="rd-box"><div class="rd-section-head"><h3 data-rd-explain="memory">🔒 Private memory</h3></div><p class="rd-card-text">${view.doors.filter(d => d.known_kind && !d.kind).length} 扇门留在你的记忆中</p><p class="rd-hint">带 🔒 的门牌信息仅你可见。迷宫重排后清空。</p>
             ${Object.keys(view.removed).length ? `<div class="rd-inventory">${Object.entries(view.removed).map(([kind, count]) => badge(`${label(kind)} ×${count}`, `${label(kind)}：已移出本局。`)).join("")}</div>` : ""}</section>
@@ -148,17 +148,135 @@
         if (touch) tipTimer = window.setTimeout(hideTip, 3000);
     }
 
-    function setExplain(enabled) {
-        explaining = enabled; hideTip();
-        explain.setAttribute("aria-pressed", String(enabled));
-        panel.querySelector(".red-doors-shell")?.classList.toggle("rd-explaining", enabled);
+    const RD_EXPLAIN = {
+        door: { zh: descriptions.door, en: "Dark door (🚪): select one, then press Confirm in the confirmation area on the door card. Opening shows the card only to you and you must then resolve it. A face up card cannot be a normal door target, and a greyed door cannot be chosen right now." },
+        confirm: { zh: descriptions.confirm, en: "Confirm: submit the current choice. Selecting a door is only a local choice and confirming is what privately reveals the card. Click blank space or press Esc to cancel an unsubmitted choice." },
+        cancel: { zh: descriptions.cancel, en: "Cancel: drop the unsubmitted choice without opening a door or spending a turn. You may also click the surrounding blank space or press Esc, and a submitted door cannot be undone." },
+        return: { zh: descriptions.return, en: "Return face down: put this card back where it was, and the public log only records that you claimed an empty room (🚪). An ordinary player needs the card to allow it, while a killer (🗝️) may hide the effect of a normal door." },
+        use: { zh: descriptions.use, en: "Resolve the card: keys (🔑 or 🗝️) are held face down, items (🦺 or 🔫) are held face up and everything else resolves as printed. Taking the killer key for the first time forces you to become a killer, and you cannot take the identity and then undo the card." },
+        escape: { zh: descriptions.escape, en: "Attempt escape (🚪✨): the table must hold all three keys. Once revealed, three silver keys (🔑) make every ordinary player win, while a killer key (🗝️) among them makes every killer win. Both endings include dead players of that side." },
+        target: { zh: descriptions.target, en: "Choose a target: Seeing Through (👁️) picks another player's face down key, the Bullet Room (🔸) picks a living player, and the Inconspicuous Clue (🔎) picks another dark door to look at without triggering it. You may change your choice or press Esc before confirming." },
+        private: { zh: descriptions.private, en: "Private (🔒): only you can see this information. The Clue (🔎) only reveals a card face without taking a key, triggering a trap or changing an identity. Press Continue once you have read it." },
+        review: { zh: descriptions.review, en: "Continue: the game pauses after a public effect resolves. Every seat in the room must confirm, including dead players. Bots confirm only for themselves and a disconnected human is never skipped." },
+        next: { zh: descriptions.next, en: "Next Round: the result of this game stays on screen until every player confirms the next step separately. Play again starts a new game and Finish ends the match, and changing the next step clears the existing confirmations." },
+        mode: { zh: descriptions.mode, en: "Play again or Finish: choose what the table does once everyone has confirmed, and changing the option clears the confirmed list. Any player may propose it and it only happens after everyone confirms." },
+        role: { zh: descriptions.role, en: "Identity (🗝️ or 🧑): taking the killer key makes you a killer, and neither losing the key nor dying removes that identity. Your own identity is secret and becomes public once Seeing Through (👁️) exposes it. Several killers still compete with each other and cannot simply share a sole survivor win." },
+        memory: { zh: descriptions.memory, en: "Private memory (🔒): shows only the cards you have actually seen. Everything is invalidated after the board is reshuffled (🌀), door numbers are reassigned and face up cards are turned face down again." },
+        inventory: { zh: descriptions.inventory, en: "Inventory: keys (🔑 or 🗝️) are face down by default so others only see the count, while the gun (🔫) and the vest (🦺) are public. A trap, gas or hit effect that returns an item to the board does not remove a killer identity." },
+        tip: { zh: "这是一个说明标记，指向界面上的一个数值或图例。鼠标悬停或轻点可以查看它此刻的具体含义。", en: "This is an information marker pointing at a figure or a legend on the board. Hover or tap it to see what that element means right now." },
+        dialog_close: { zh: "关闭当前对话框并回到迷宫。", en: "Close the current dialog and return to the maze." }
+    };
+
+    const RD_HELP_CONFIG = {
+        gameId: "red_doors",
+        title: { zh: "红门 · Red Doors", en: "Red Doors" },
+        basic: {
+            win: {
+                zh: "三把银钥匙从出口逃脱则所有普通人获胜，出口混入杀人鬼钥匙(🗝️)则所有杀人鬼获胜。这两种结局都包含已死亡的同阵营玩家。",
+                en: "Escaping through the exit with three silver keys makes every ordinary player win, while a killer key (🗝️) among them makes every killer win. Both endings include dead players of that side."
+            },
+            turn: {
+                zh: "轮到你时点选一扇暗门(🚪)并 Confirm，牌面只给你本人看，然后必须按牌面取得、公开、选目标或暗置放回。",
+                en: "On your turn you select a dark door (🚪) and Confirm, the card face is shown only to you, and you must then take, reveal, target or return it face down as printed."
+            },
+            key: {
+                zh: "开门只让你一个人看到牌面，而所有人都要靠你在公开日志里的说法来判断，所以真正的博弈在于你说的「空房」有几分可信。",
+                en: "Opening a door reveals it to you alone while everyone else judges you only by what you say in the public log, so the real game is how believable your claim of an empty room is."
+            }
+        },
+        sections: [
+            {
+                id: "goal",
+                label: { zh: "基础版", en: "Base game" },
+                html: {
+                    zh: "<p>基础版 · 4 到 6 人 · 16 张牌。所有人从普通人开始，无持有物。线上由首席先开门，之后按座位行动，跳过死亡者。本次只开放基础牌，尚未包含 2 到 3 人 NPC 与进阶 40 级。</p>",
+                    en: "<p>Base game for 4 to 6 players with 16 cards. Everyone starts as an ordinary person with no items, the first seat opens the first door online, play then follows seat order and dead players are skipped. Only the base cards are available here, without the 2 to 3 player NPC rules or the 40 card advanced set.</p>"
+                }
+            },
+            {
+                id: "open",
+                label: { zh: "① 开门", en: "1. Opening doors" },
+                html: {
+                    zh: "<p>点选场上一张暗牌，在门牌上的确认区点击 Confirm，牌面只给本人看。按牌面取得、公开、选择目标或暗置放回。已公开留场的牌不能普通开门，暗置放回的牌可以重访。口头讨论与欺骗允许，系统不会核实「空房」的声称。</p>",
+                    en: "<p>Select a face down card on the board and press Confirm in the confirmation area on the door card, and only you see its face. Then take, reveal, target or return it face down as printed. A card left face up cannot be opened normally, while a card returned face down may be visited again. Talking and bluffing are allowed and the system never verifies a claim of an empty room.</p>"
+                }
+            },
+            {
+                id: "role",
+                label: { zh: "② 身份", en: "2. Identity" },
+                html: {
+                    zh: "<p>首次取得杀人鬼钥匙(🗝️)必须拿取并成为杀人鬼。之后开门可以不执行效果而声称是空房。失去钥匙或死亡都保留身份，钥匙回场后可能产生第二个杀人鬼。线索偷看钥匙不会改变身份。</p>",
+                    en: "<p>Taking the killer key (🗝️) for the first time forces you to take it and become a killer. After that you may open doors without resolving the effect and claim an empty room. Losing the key or dying never removes the identity, and a key returning to the board can create a second killer. Peeking at a key with a clue does not change anyone's identity.</p>"
+                }
+            },
+            {
+                id: "keys",
+                label: { zh: "③ 四把钥匙", en: "3. The fourth key" },
+                html: {
+                    zh: "<p>全桌拿到第四把钥匙时，匿名回收所有钥匙，移除杀人鬼钥匙，把银钥匙放回场地一起重洗(🌀)。不会透露原持有人，所有已存在的杀人鬼身份保留。</p>",
+                    en: "<p>When the table collects a fourth key, every key is collected anonymously, the killer key is removed and the silver keys go back onto the board for a full reshuffle (🌀). The original holders are never revealed and every existing killer identity stays.</p>"
+                }
+            },
+            {
+                id: "win",
+                label: { zh: "④ 胜负", en: "4. Winning" },
+                html: {
+                    zh: "<p>三把银钥匙从出口逃脱，所有普通人获胜。出口混入杀人鬼钥匙，所有杀人鬼获胜。这两种结局包含死亡的同阵营玩家。只有一个杀人鬼存活时他单独获胜，多个杀人鬼存活时继续竞争。只剩普通人一人仍须寻找出口，全员死亡无人获胜。</p>",
+                    en: "<p>Escaping through the exit with three silver keys makes every ordinary player win, while a killer key among them makes every killer win, and both endings include dead players of that side. A single surviving killer wins alone while several surviving killers keep competing. A lone ordinary player must still find the exit, and if everyone dies then nobody wins.</p>"
+                }
+            },
+            {
+                id: "review",
+                label: { zh: "⑤ 线上回顾", en: "5. Online review" },
+                html: {
+                    zh: "<p>陷阱、瓦斯、射击、看破与第四把钥匙处理后暂停，全员 Continue。本局终局停留在结果，所有席位（包括死亡者）分别 Next Round 后才重开。可选择 Finish 并全员确认结束，切换选项会清空确认。断线真人不会自动确认。</p>",
+                    en: "<p>The game pauses for everyone to Continue after a trap, gas, shooting, exposure or the fourth key resolves. The final result stays on screen and every seat, including dead players, presses Next Round separately before a new game starts. You may choose Finish and have everyone confirm to end the match, and switching the option clears the confirmations. A disconnected human is never confirmed automatically.</p>"
+                }
+            },
+            {
+                id: "cards",
+                label: { zh: "牌表", en: "Card list" },
+                html: { zh: "<p>开始游戏后在此显示全部牌面说明。</p>", en: "<p>The full card list appears here once the game starts.</p>" }
+            },
+            {
+                id: "controls",
+                label: { zh: "操作", en: "Controls" },
+                html: {
+                    zh: "<p>点选门牌后原位显示 Confirm 与 Cancel，手机门牌空间不足时确认区覆盖迷宫区域并显示所选门号。Confirm 才提交开门，Cancel、空白或 Esc 取消未提交的选择，Help 关闭不撤销已开的门。</p><p>要了解门牌或操作，先点 Explain 再点对应位置。Explain 拦截操作，灰色按钮也可解释，解释一次后退出。没有游戏操作的身份或道具徽标可悬停、聚焦查看，手机轻点显示三秒，连续轻点更新计时，滚动不触发提示。</p>",
+                    en: "<p>Selecting a door shows Confirm and Cancel in place, and when a door card is too small on a phone the confirmation area covers the maze and shows the chosen door number. Only Confirm submits the door, while Cancel, blank space or Esc drops an unsubmitted choice, and closing Help never undoes a door you already opened.</p><p>To read about a door card or a control, press Explain and then tap it. Explain blocks actions, greyed buttons can be explained too, and it exits after one explanation. Identity and item badges with no game action can be hovered or focused, and on a phone a tap shows a tip for three seconds, repeated taps reset the timer and scrolling never triggers one.</p>"
+                }
+            }
+        ]
+    };
+
+    function refreshRedDoorsHelp() {
+        const section = RD_HELP_CONFIG.sections.find(item => item.id === "cards");
+        if (!section) return;
+        const list = Object.entries(view?.card_defs || {}).map(([kind, spec]) => `<li><b>${label(kind)} ×${spec.count}</b>：${esc(spec.text)}</li>`).join("");
+        if (list) section.html.zh = `<p>名称、图标和数量如下。牌面说明适用于普通玩家，杀人鬼普通开门可以选择暗置忽略。</p><ul>${list}</ul>`;
     }
 
-    function openDialog(title, content, html = false) {
-        hideTip(); returnFocus = document.activeElement;
-        dialogTitle.textContent = title;
-        if (html) dialogBody.innerHTML = content; else dialogBody.textContent = content;
-        if (!dialog.open) dialog.showModal();
+    let rdHelpWidget = null;
+    let rdExplainWidget = null;
+
+    function initRedDoorsHelpExplain() {
+        if (rdHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        rdHelpWidget = window.obgCreateHelp(RD_HELP_CONFIG);
+        rdExplainWidget = window.obgCreateExplain({
+            gameId: "red_doors",
+            attribute: "data-rd-explain",
+            explanations: RD_EXPLAIN,
+            button: explain,
+            root: () => panel,
+            bypass: ["#redDoorsHelpBtn", "#redDoorsExplainBtn", "#redDoorsDialogClose"]
+        });
+        help?.addEventListener("click", () => {
+            if (!view) return;
+            rdExplainWidget?.exit();
+            refreshRedDoorsHelp();
+            rdHelpWidget.open();
+        });
+        explain?.addEventListener("click", () => rdExplainWidget?.toggle());
     }
 
     panel.addEventListener("click", event => {
@@ -186,7 +304,7 @@
     });
     panel.addEventListener("toggle", event => { if (event.target.closest(".rd-history")) historyOpen = event.target.open; }, true);
     panel.addEventListener("pointerdown", event => {
-        if (!explaining && !pending && selection && !event.target.closest("button, summary, a, dialog")) {
+        if (!pending && selection && !event.target.closest("button, summary, a, dialog")) {
             if (event.target.closest(".rd-confirm-overlay")) {
                 suppressedPointer = {x: event.clientX, y: event.clientY, time: Date.now()};
                 event.preventDefault(); event.stopPropagation();
@@ -194,76 +312,8 @@
             selection = null; render();
         }
     });
-    help.addEventListener("click", () => {
-        if (!view) return;
-        setExplain(false);
-        openDialog("Red Doors · Help", `<p><b>基础版 · 4–6 人 · 16 张牌</b>。所有人从普通人开始，无持有物；线上由首席先开门，之后按座位行动，跳过死亡者。本次只开放基础牌，尚未包含 2–3 人 NPC 与进阶 40 级。</p>
-            <p><b>① 开门（🚪）</b>：点选场上一张暗牌，在门牌上的确认区点击 Confirm；牌面只给本人看。按牌面取得、公开、选择目标或暗置放回。已公开留场的牌不能普通开门；暗置放回的牌可以重访。口头讨论与欺骗允许，系统不会核实“空房”的声称。</p>
-            <p><b>② 身份（🗝️）</b>：首次取得杀人鬼钥匙必须拿取并成为杀人鬼。之后开门可以不执行效果而声称是空房。失去钥匙或死亡都保留身份；钥匙回场后可能产生第二个杀人鬼。线索偷看钥匙不会改变身份。</p>
-            <p><b>③ 四把钥匙（🌀）</b>：全桌拿到第四把钥匙时，匿名回收所有钥匙，移除杀人鬼钥匙，把银钥匙放回场地一起重洗。不会透露原持有人；所有已存在的杀人鬼身份保留。</p>
-            <p><b>④ 胜负（🏁）</b>：三把银钥匙从出口逃脱，所有普通人获胜；出口混入杀人鬼钥匙，所有杀人鬼获胜。这两种结局包含死亡的同阵营玩家。只有一个杀人鬼存活时，他单独获胜；多个杀人鬼存活时继续竞争。只剩普通人一人仍须寻找出口；全员死亡无人获胜。</p>
-            <p><b>⑤ 线上回顾（⏸）</b>：陷阱、瓦斯、射击、看破与第四把钥匙处理后暂停，全员 Continue。本局终局停留在结果，所有席位（包括死亡者）分别 Next Round 后才重开。可选择 Finish 并全员确认结束；切换选项会清空确认。断线真人不会自动确认。</p>
-            <p><b>牌表</b>：名称、图标和数量如下。牌面说明适用于普通玩家；杀人鬼普通开门可以选择暗置忽略。</p><ul>${Object.entries(view.card_defs).map(([kind, spec]) => `<li><b>${label(kind)} ×${spec.count}</b>：${esc(spec.text)}</li>`).join("")}</ul>
-            <p><b>Controls</b>：点选门牌后，原位显示 Confirm / Cancel；手机门牌空间不足时，确认区覆盖迷宫区域并显示所选门号。Confirm 才提交开门；Cancel、空白或 Esc 取消未提交的选择。Help 关闭不撤销已开的门。要了解门牌或操作，先点 Explain 再点对应位置；Explain 拦截操作，灰色按钮也可解释，解释一次后退出。没有游戏操作的身份／道具徽标可悬停、聚焦查看；手机轻点显示三秒，连续轻点更新计时，滚动不触发提示。</p>
-            <p><a href="https://www.yellowsubmarine.co.jp/hobbybase/game/reddoor/card.htm" target="_blank" rel="noopener noreferrer">Publisher rules</a> · <a href="https://humaoz.wixsite.com/ozplanning/q-a-akaitobira" target="_blank" rel="noopener noreferrer">Designer FAQ</a></p>`, true);
-    });
-    explain.addEventListener("click", () => setExplain(!explaining));
-    close.addEventListener("click", () => dialog.close());
-    dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
-    dialog.addEventListener("click", event => {
-        const r = dialog.getBoundingClientRect();
-        if (event.target === dialog && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) dialog.close();
-    });
-    function explainTarget(target) {
-        const message = target?.dataset.rdTip || target?.dataset.rdDescription || descriptions[target?.dataset.rdExplain];
-        if (message) { setExplain(false); openDialog("Explain", message); }
-    }
-    document.addEventListener("pointerdown", event => {
-        if (!explaining || panel.classList.contains("hidden") || header.contains(event.target) || dialog.contains(event.target)) return;
-        event.preventDefault(); event.stopImmediatePropagation();
-        const target = [...panel.querySelectorAll("[data-rd-explain]")].reverse().find(el => {
-            const r = el.getBoundingClientRect();
-            return r.width && r.height && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
-        });
-        if (target) { suppressedPointer = {x: event.clientX, y: event.clientY, time: Date.now()}; explainTarget(target); }
-    }, true);
-    document.addEventListener("click", event => {
-        if (suppressedPointer) {
-            const point = suppressedPointer; suppressedPointer = null;
-            if (Date.now() - point.time < 700 && Math.abs(event.clientX - point.x) < 6 && Math.abs(event.clientY - point.y) < 6) { event.preventDefault(); event.stopImmediatePropagation(); return; }
-        }
-        if (!explaining || header.contains(event.target) || dialog.contains(event.target)) return;
-        event.preventDefault(); event.stopImmediatePropagation();
-        if (panel.contains(event.target)) explainTarget(event.target.closest("[data-rd-explain]"));
-    }, true);
     document.addEventListener("keydown", event => {
-        if (panel.classList.contains("hidden")) return;
-        if (event.key === "Tab") inputKind = "keyboard";
-        if (event.key === "Escape" && !tip.hidden) { hideTip(); event.preventDefault(); return; }
-        if (dialog.open) return;
-        if (event.key === "Escape") { setExplain(false); selection = null; render(); }
-    });
-    document.addEventListener("pointerover", event => {
-        if (event.pointerType === "touch" || event.pointerType === "pen" || explaining) return;
-        if (tip.contains(event.target) || tipAnchor?.contains(event.target)) window.clearTimeout(tipHideTimer);
-        const target = event.target.closest("#redDoorsPanel [data-rd-tip]");
-        if (target && target !== tipAnchor) { inputKind = "mouse"; showTip(target); }
-    });
-    document.addEventListener("pointerout", event => {
-        if (inputKind === "touch" || !tipAnchor) return;
-        if ((tipAnchor.contains(event.target) || tip.contains(event.target)) && !tipAnchor.contains(event.relatedTarget) && !tip.contains(event.relatedTarget)) tipHideTimer = window.setTimeout(hideTip, 150);
-    });
-    document.addEventListener("focusin", event => {
-        const target = event.target.closest("#redDoorsPanel [data-rd-tip]");
-        if (target && inputKind !== "touch" && !explaining) showTip(target);
-    });
-    document.addEventListener("focusout", event => { if (inputKind !== "touch" && tipAnchor?.contains(event.target)) hideTip(); });
-    document.addEventListener("pointerdown", event => {
-        if (explaining || panel.classList.contains("hidden")) return;
-        const target = event.target.closest("#redDoorsPanel [data-rd-tip]");
-        inputKind = ["touch", "pen"].includes(event.pointerType) ? "touch" : "mouse";
-        if (target && inputKind === "touch") touchStart = {id: event.pointerId, target, x: event.clientX, y: event.clientY, time: Date.now(), moved: false};
-        else if (!target && !tip.contains(event.target)) hideTip();
+        if (event.key === "Escape") { rdExplainWidget?.exit(); selection = null; render(); }
     }, true);
     document.addEventListener("pointermove", event => {
         if (touchStart?.id === event.pointerId && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 10) { touchStart.moved = true; hideTip(); }
@@ -271,12 +321,12 @@
     document.addEventListener("pointerup", event => {
         if (!touchStart || touchStart.id !== event.pointerId) return;
         const start = touchStart; touchStart = null;
-        if (!start.moved && Date.now() - start.time < 700 && start.target.isConnected && !explaining) { event.preventDefault(); event.stopImmediatePropagation(); showTip(start.target, true); }
+        if (!start.moved && Date.now() - start.time < 700 && start.target.isConnected && !rdExplainWidget?.isActive()) { event.preventDefault(); event.stopImmediatePropagation(); showTip(start.target, true); }
     }, true);
     document.addEventListener("pointercancel", () => { touchStart = null; }, true);
     document.addEventListener("click", event => {
         const target = event.target.closest("#redDoorsPanel [data-rd-tip]");
-        if (!target || explaining) return;
+        if (!target || rdExplainWidget?.isActive()) return;
         event.preventDefault(); event.stopImmediatePropagation();
         if (inputKind !== "touch") showTip(target);
     }, true);
@@ -284,7 +334,7 @@
     document.addEventListener("scroll", () => { if (inputKind !== "touch") hideTip(); }, true);
 
     function clearState() {
-        hideTip(); setExplain(false); window.clearTimeout(pendingTimer);
+        hideTip(); rdExplainWidget?.exit(); window.clearTimeout(pendingTimer);
         view = null; signature = null; selection = null; pending = false; historyOpen = false; touchStart = null; suppressedPointer = null;
         if (dialog.open) dialog.close();
         panel.innerHTML = "";
@@ -306,4 +356,5 @@
     } else {
         connectEvents();
     }
+    initRedDoorsHelpExplain();
 })();

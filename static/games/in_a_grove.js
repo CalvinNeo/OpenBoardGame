@@ -1,5 +1,4 @@
 let currentInAGroveView = null;
-let inAGroveExplainMode = false;
 let inAGroveSelectedPeekIndexes = [];
 let inAGroveSelectedTargetIndex = null;
 let inAGroveModalReturnFocus = null;
@@ -14,48 +13,126 @@ const inAGroveUI = Object.fromEntries([
     "SelectionCount", "ExplainNotice", "ConfigBox", "InspectionModeSelect", "InspectionModeHint", "InspectionRule",
 ].map((name) => [name, document.getElementById("inAGrove" + name)]));
 
-const IN_A_GROVE_HELP_HTML = [
-    "<h3>🎯 The aim</h3><p>Finish with the fewest penalty chips. Each detective starts with 7 accusation chips.</p>",
-    "<h3>🪪 Follow the evidence</h3><p>At 3–5 players, see your own tile and the tile passed from your right (<strong>From right</strong>). With 2 players, see only your own tile and one public alibi; do not exchange tiles. These alibis stay visible in both inspection modes. The victim stays hidden.</p><p>Use numbers 2–8, plus one X at 4 players or two X tiles at 5 players.</p>",
-    "<h3>🔎 Investigate, then accuse</h3><ul>",
-    "<li>With <strong>Inspect 1 of 2</strong> (the default room variant), every detective inspects one suspect: the first chooses one of all three; later detectives choose one of the two unblocked suspects. Confirm with <strong>Inspect 1 (🔎)</strong>.</li>",
-    "<li>With <strong>Inspect both</strong>, the first detective selects two of the three suspects; later detectives inspect both unblocked suspects. Confirm with <strong>Inspect 2 (🔎)</strong>.</li>",
-    "<li>Later detectives cannot inspect the previous detective's accusation.</li>",
-    "<li>After confirming an inspection, you must accuse. You cannot inspect another card this turn.</li>",
-    "<li><strong>First skipped (👁)</strong> marks the suspects the first detective did not inspect. These markers stay there; they do not block later detectives. Tiles are never swapped in the revised edition.</li>",
-    "<li>Select any suspect and confirm your accusation. You can accuse the blocked suspect, a hidden suspect, or one with chips already on it.</li>",
-    "<li>Each detective places one chip. New chips go on top. Click a selected card again, click empty space, or press Esc to cancel a selection.</li></ul>",
-    "<h3>⚖️ Find the murderer</h3><p>The highest number is guilty, unless a <strong>5</strong> is among the suspects: then the lowest number is guilty. <strong>X is always innocent.</strong></p>",
-    "<h3>🪙 Settle the case</h3><ul>",
-    "<li>Chips on the murderer leave the game.</li>",
-    "<li>The top chip's owner takes the entire stack on an innocent suspect as penalties.</li>",
-    "<li>Among everyone except the previous first detective, the player with the most total penalties starts next. Ties go clockwise. At 2 players, alternate who starts.</li>",
-    "<li>The game ends at 5 penalties or when accusation chips run out (at most 7 rounds).</li></ul>",
-    "<p>Tied penalties? Fewer penalty chips of your own color ranks higher. If still tied, clockwise order after the final first detective decides.</p>",
-    "<h3>✓ Review together</h3><p>The revealed scene stays on screen until everyone chooses <strong>Next Round</strong>. Bots confirm automatically. The final result also waits for everyone.</p>",
-].join("");
 
-const IN_A_GROVE_BUTTON_EXPLANATIONS = {
-    PeekBtn: {
-        name: "Inspect suspects",
-        description: "Select the required number of suspects, then confirm to see their identities privately.",
-        note: "A blocked suspect cannot be inspected. Choosing cards alone does not submit a move.",
+const IN_A_GROVE_EXPLAIN = {
+    peek: {
+        zh: "查验嫌疑人：选中规定数量的嫌疑人后确认，私下看到他们的身份。被封锁的嫌疑人不能查验，只选牌并不会提交行动。本回合确认查验后必须指认，不能再查验其他牌。",
+        en: "Inspect suspects: select the required number of suspects, then confirm to see their identities privately. A blocked suspect cannot be inspected, and choosing cards alone does not submit a move. After confirming an inspection you must accuse and cannot inspect another card this turn."
     },
-    BetBtn: {
-        name: "Accuse a suspect",
-        description: "Place one of your chips on the selected suspect, on top of any existing chips.",
-        note: "You may accuse any suspect, even the blocked one. If they are innocent, the top chip's owner takes the entire stack as penalties.",
+    bet: {
+        zh: "指认嫌疑人：把自己的一枚筹码放到选中的嫌疑人身上，压在已有筹码之上。任何嫌疑人都可以指认，包括被封锁的那位。若对方无罪，最上层筹码的持有者要拿走整叠作为罚分。",
+        en: "Accuse a suspect: place one of your chips on the selected suspect, on top of any existing chips. You may accuse any suspect, even the blocked one. If they are innocent, the top chip's owner takes the entire stack as penalties."
     },
-    NextRoundBtn: {
-        name: "Next Round",
-        description: "Confirm that you have finished reviewing this round.",
-        note: "Everyone must confirm before the next deal or final ranking. A disabled button means your confirmation is already recorded.",
+    next_round: {
+        zh: "Next Round：确认你已看完本轮。所有人确认后才进入下一副牌或最终排名，按钮变灰表示你的确认已被记录。",
+        en: "Next Round: confirm that you have finished reviewing this round. Everyone must confirm before the next deal or final ranking, and a disabled button means your confirmation is already recorded."
     },
-    PlayAgainBtn: {
-        name: "Start a new game",
-        description: "Start a fresh In a Grove game with these players.",
+    play_again: {
+        zh: "开始新的一局：用当前这些玩家重新开一局密林之谜。",
+        en: "Start a new game: start a fresh In a Grove game with these players."
     },
+    suspect: {
+        zh: "嫌疑人：选中规定数量的未被封锁的牌来查验，或者选中任意一张牌来指认，然后用场景下方的按钮确认。只有查验过的身份会在揭晓前对你可见。首个跳过(👁)标记第一位侦探没有看过的牌，它并不禁止查验。",
+        en: "Suspect: select the required number of unblocked cards to inspect, or any one card to accuse, then confirm with the action below the scene. Only inspected identities are visible to you before the reveal, and First skipped (👁) marks cards the first detective did not see without forbidding inspection."
+    },
+    dialog_close: {
+        zh: "关闭当前对话框并回到现场。",
+        en: "Close the current dialog and return to the scene."
+    }
 };
+
+const IN_A_GROVE_EXPLAIN_KEYS = { PeekBtn: "peek", BetBtn: "bet", NextRoundBtn: "next_round", PlayAgainBtn: "play_again" };
+
+const IN_A_GROVE_HELP_CONFIG = {
+    gameId: "in_a_grove",
+    title: { zh: "密林之谜 · In a Grove", en: "In a Grove" },
+    basic: {
+        win: {
+            zh: "结束时罚分筹码最少者获胜。每位侦探开局有 7 枚指认筹码。",
+            en: "Finish with the fewest penalty chips. Each detective starts with 7 accusation chips."
+        },
+        turn: {
+            zh: "轮到你时先按规定数量查验嫌疑人，私下看到身份后必须指认一位，把一枚筹码压到他的牌上。",
+            en: "On your turn you first inspect the required number of suspects, and once you have privately seen their identities you must accuse one of them by stacking one of your chips on their card."
+        },
+        key: {
+            zh: "凶手是数字最大的那位，但只要嫌疑人里有 5，凶手就变成数字最小的那位，而 X 永远无罪——所以真正的判断在于你看到的那几张牌能不能排除 5。",
+            en: "The murderer is the highest number, unless a 5 is among the suspects, in which case the lowest number is guilty, and X is always innocent, so the real judgement is whether the cards you saw rule out a 5."
+        }
+    },
+    sections: [
+        {
+            id: "aim",
+            label: { zh: "目标", en: "The aim" },
+            html: {
+                zh: "<p>结束时罚分筹码最少者获胜。每位侦探开局有 7 枚指认筹码。</p>",
+                en: "<p>Finish with the fewest penalty chips. Each detective starts with 7 accusation chips.</p>"
+            }
+        },
+        {
+            id: "evidence",
+            label: { zh: "跟随证据", en: "Follow the evidence" },
+            html: {
+                zh: "<p>3 到 5 人时，你能看到自己的牌和右手边传来的那张牌（<strong>From right</strong>）。2 人时只看到自己的牌和一张公开的不在场证明，不交换牌。这些不在场证明在两种查验模式下都保持可见。受害者始终隐藏。</p><p>使用数字 2 到 8，4 人时另有一张 X，5 人时另有两张 X。</p>",
+                en: "<p>At 3 to 5 players you see your own tile and the tile passed from your right (<strong>From right</strong>). With 2 players you see only your own tile and one public alibi, and tiles are not exchanged. These alibis stay visible in both inspection modes, and the victim stays hidden.</p><p>Use numbers 2 to 8, plus one X at 4 players or two X tiles at 5 players.</p>"
+            }
+        },
+        {
+            id: "investigate",
+            label: { zh: "查验与指认", en: "Investigate and accuse" },
+            html: {
+                zh: "<ul><li><strong>查验 1 of 2</strong>（房间默认变体）下每位侦探查验一位嫌疑人：第一位从全部三位中选一位，后面的侦探从两位未被封锁的嫌疑人中选一位，用 <strong>Inspect 1 (🔎)</strong> 确认。</li><li><strong>Inspect both</strong> 下第一位侦探从三位中选两位，后面的侦探查验两位未被封锁的嫌疑人，用 <strong>Inspect 2 (🔎)</strong> 确认。</li><li>后面的侦探不能查验上一位侦探指认过的对象。</li><li>确认查验后必须指认，本回合不能再查验其他牌。</li><li><strong>首个跳过(👁)</strong>标记第一位侦探没有查验的嫌疑人。这些标记会一直留着，但不会封锁后面的侦探。修订版中牌不会被交换。</li><li>选中任意嫌疑人并确认指认，你可以指认被封锁的、隐藏的或已经有筹码的嫌疑人。</li><li>每位侦探放一枚筹码，新筹码压在最上层。再次点击已选中的牌、点击空白处或按 Esc 可以取消选择。</li></ul>",
+                en: "<ul><li>With <strong>Inspect 1 of 2</strong> (the default room variant), every detective inspects one suspect: the first chooses one of all three and later detectives choose one of the two unblocked suspects. Confirm with <strong>Inspect 1 (🔎)</strong>.</li><li>With <strong>Inspect both</strong>, the first detective selects two of the three suspects and later detectives inspect both unblocked suspects. Confirm with <strong>Inspect 2 (🔎)</strong>.</li><li>Later detectives cannot inspect the previous detective's accusation.</li><li>After confirming an inspection you must accuse, and you cannot inspect another card this turn.</li><li><strong>First skipped (👁)</strong> marks the suspects the first detective did not inspect. These markers stay there and do not block later detectives, and tiles are never swapped in the revised edition.</li><li>Select any suspect and confirm your accusation. You can accuse the blocked suspect, a hidden suspect, or one with chips already on it.</li><li>Each detective places one chip and new chips go on top. Click a selected card again, click empty space, or press Esc to cancel a selection.</li></ul>"
+            }
+        },
+        {
+            id: "murderer",
+            label: { zh: "找出凶手", en: "Find the murderer" },
+            html: {
+                zh: "<p>数字最大的那位有罪，除非嫌疑人中出现 <strong>5</strong>，此时数字最小的那位有罪。<strong>X 永远无罪。</strong></p>",
+                en: "<p>The highest number is guilty, unless a <strong>5</strong> is among the suspects, in which case the lowest number is guilty. <strong>X is always innocent.</strong></p>"
+            }
+        },
+        {
+            id: "settle",
+            label: { zh: "结算案件", en: "Settle the case" },
+            html: {
+                zh: "<ul><li>压在凶手身上的筹码离开游戏。</li><li>无罪嫌疑人身上最上层筹码的持有者，要拿走整叠作为罚分。</li><li>除上一轮首位侦探之外，罚分总数最多的玩家下轮先手，平手按顺时针决定。2 人局轮流先手。</li><li>有人达到 5 点罚分，或指认筹码用尽时游戏结束（最多 7 轮）。</li></ul><p>罚分相同怎么办？自己颜色的罚分筹码较少者排名更高，仍然相同则由最终首位侦探之后的顺时针顺序决定。</p>",
+                en: "<ul><li>Chips on the murderer leave the game.</li><li>The top chip's owner takes the entire stack on an innocent suspect as penalties.</li><li>Among everyone except the previous first detective, the player with the most total penalties starts next, and ties go clockwise. At 2 players you alternate who starts.</li><li>The game ends at 5 penalties or when accusation chips run out, after at most 7 rounds.</li></ul><p>Tied penalties? Fewer penalty chips of your own colour ranks higher, and if still tied the clockwise order after the final first detective decides.</p>"
+            }
+        },
+        {
+            id: "review",
+            label: { zh: "一起回顾", en: "Review together" },
+            html: {
+                zh: "<p>揭晓后的现场会一直显示，直到所有人都选择 <strong>Next Round</strong>。机器人自动确认，最终结果同样等待所有人确认。</p>",
+                en: "<p>The revealed scene stays on screen until everyone chooses <strong>Next Round</strong>. Bots confirm automatically, and the final result also waits for everyone.</p>"
+            }
+        }
+    ]
+};
+
+let inAGroveHelpWidget = null;
+let inAGroveExplainWidget = null;
+
+function initInAGroveHelpExplain() {
+    if (inAGroveHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    inAGroveHelpWidget = window.obgCreateHelp(IN_A_GROVE_HELP_CONFIG);
+    inAGroveExplainWidget = window.obgCreateExplain({
+        gameId: "in_a_grove",
+        attribute: "data-in-a-grove-explain",
+        explanations: IN_A_GROVE_EXPLAIN,
+        button: inAGroveUI.ExplainBtn,
+        root: () => inAGroveUI.Panel,
+        bypass: ["#inAGroveHelpBtn", "#inAGroveExplainBtn", "#inAGroveHelpModalCloseBtn", "#inAGroveExplainModalCloseBtn"]
+    });
+    inAGroveUI.HelpBtn?.addEventListener("click", () => {
+        inAGroveExplainWidget?.exit();
+        inAGroveHelpWidget.open();
+    });
+    inAGroveUI.ExplainBtn?.addEventListener("click", () => inAGroveExplainWidget?.toggle());
+}
+
 
 function inAGroveElement(tag, className, text) {
     const element = document.createElement(tag);
@@ -136,7 +213,7 @@ function clearInAGroveSelection() {
 function showInAGroveHeaderActions(show) {
     if (inAGroveUI.HeaderActions) inAGroveUI.HeaderActions.style.display = show ? "flex" : "none";
     if (!show) {
-        exitInAGroveExplainMode();
+        inAGroveExplainWidget?.exit();
         [inAGroveUI.HelpModal, inAGroveUI.ExplainModal].forEach((modal) => setModalVisible(modal, false));
     }
 }
@@ -144,7 +221,7 @@ function showInAGroveHeaderActions(show) {
 function clearInAGroveState() {
     currentInAGroveView = null;
     clearInAGroveSelection();
-    exitInAGroveExplainMode();
+    inAGroveExplainWidget?.exit();
     ["Phase", "Round", "Turn", "FirstPlayer", "Blocked", "Winner"].forEach((key) => {
         inAGroveUI[key].textContent = "—";
     });
@@ -248,7 +325,7 @@ function renderInAGroveSuspects(view) {
             (peekedByNames.length ? ", seen this round by " + peekedByNames.join(", ") : "") +
             (selected ? ", selected" : ""));
         card.addEventListener("click", () => {
-            if (inAGroveExplainMode || !inAGroveCanSelectSuspect(suspect)) return;
+            if (inAGroveExplainWidget?.isActive() || !inAGroveCanSelectSuspect(suspect)) return;
             if (inAGroveHasLegalAction("peek_suspects")) {
                 if (inAGroveSelectedPeekIndexes.includes(suspect.index)) {
                     inAGroveSelectedPeekIndexes = inAGroveSelectedPeekIndexes.filter((index) => index !== suspect.index);
@@ -265,7 +342,6 @@ function renderInAGroveSuspects(view) {
         column.append(card, buildInAGroveStack(suspect.stack));
         inAGroveUI.Suspects.append(column);
     });
-    updateInAGroveExplainClasses();
     if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll: true });
 }
 
@@ -377,7 +453,6 @@ function updateInAGroveActionButtons() {
     }
     inAGroveUI.ActionHint.textContent = hint;
     inAGroveUI.SelectionCount.textContent = count;
-    updateInAGroveExplainClasses();
 }
 
 function renderInAGroveGameState(data) {
@@ -420,39 +495,6 @@ function renderInAGroveGameState(data) {
     logGameEvents(data);
 }
 
-function updateInAGroveExplainClasses() {
-    inAGroveUI.Panel.querySelectorAll("button[data-in-a-grove-explain]").forEach((button) => {
-        button.classList.toggle("has-explanation", inAGroveExplainMode);
-    });
-}
-
-function exitInAGroveExplainMode() {
-    inAGroveExplainMode = false;
-    document.body.classList.remove("in-a-grove-explain-mode");
-    inAGroveUI.ExplainBtn.classList.remove("active");
-    inAGroveUI.ExplainBtn.setAttribute("aria-pressed", "false");
-    inAGroveUI.ExplainNotice.classList.add("hidden");
-    updateInAGroveExplainClasses();
-}
-
-function toggleInAGroveExplainMode() {
-    if (inAGroveExplainMode) {
-        exitInAGroveExplainMode();
-        return;
-    }
-    inAGroveExplainMode = true;
-    document.body.classList.add("in-a-grove-explain-mode");
-    inAGroveUI.ExplainBtn.classList.add("active");
-    inAGroveUI.ExplainBtn.setAttribute("aria-pressed", "true");
-    inAGroveUI.ExplainNotice.classList.remove("hidden");
-    updateInAGroveExplainClasses();
-}
-
-function showInAGroveModal(key) {
-    inAGroveModalReturnFocus = document.activeElement;
-    setModalVisible(inAGroveUI[key + "Modal"], true);
-    inAGroveUI[key + "ModalCloseBtn"].focus();
-}
 
 function closeInAGroveModal(key) {
     setModalVisible(inAGroveUI[key + "Modal"], false);
@@ -462,42 +504,9 @@ function closeInAGroveModal(key) {
     inAGroveModalReturnFocus = null;
 }
 
-function showInAGroveExplanation(button) {
-    let info = IN_A_GROVE_BUTTON_EXPLANATIONS[button.dataset.inAGroveExplain];
-    if (button === inAGroveUI.PeekBtn) {
-        info = {
-            ...info,
-            name: "Inspect " + inAGrovePeekCount() + " (🔎)",
-            description: inAGrovePeekCount() === 1
-                ? (Number.isInteger(currentInAGroveView?.blocked_suspect_index)
-                    ? "Choose one of the two unblocked suspects. " : "Choose one of the three suspects. ") +
-                    "Confirm to see only that identity, then proceed to your accusation. You cannot inspect again this turn."
-                : "Select two unblocked suspects, then confirm to see both identities privately.",
-        };
-    }
-    if (button.dataset.inAGroveExplain === "suspect") {
-        const index = Number(button.dataset.index);
-        const suspect = currentInAGroveView?.suspects?.find((entry) => entry.index === index);
-        info = {
-            name: "Suspect " + (index + 1),
-            description: "Select " + inAGrovePeekCount() + " unblocked card(s) to inspect, or any one card to accuse. Confirm with the action below the scene.",
-            note: suspect?.blocked
-                ? "The previous detective accused this suspect, so you cannot inspect them this turn. You may still accuse them. The top chip's owner takes the whole stack if they are innocent."
-                : "Only inspected identities are visible to you before the reveal. First skipped (👁) marks cards the first detective did not see; it does not forbid inspecting those cards later. The top chip is the newest accusation.",
-        };
-    }
-    if (!info) return;
-    inAGroveUI.ExplainContent.replaceChildren(
-        inAGroveElement("h3", "", info.name),
-        inAGroveElement("p", "", info.description),
-    );
-    if (info.note) inAGroveUI.ExplainContent.append(inAGroveElement("p", "", info.note));
-    exitInAGroveExplainMode();
-    showInAGroveModal("Explain");
-}
 
-Object.keys(IN_A_GROVE_BUTTON_EXPLANATIONS).forEach((key) => {
-    inAGroveUI[key].dataset.inAGroveExplain = key;
+Object.entries(IN_A_GROVE_EXPLAIN_KEYS).forEach(([id, key]) => {
+    inAGroveUI[id].dataset.inAGroveExplain = key;
 });
 
 inAGroveUI.PeekBtn.addEventListener("click", () => {
@@ -514,16 +523,7 @@ inAGroveUI.NextRoundBtn.addEventListener("click", () => {
 inAGroveUI.PlayAgainBtn.addEventListener("click", () => {
     if (currentInAGroveView?.game_over) emitRoomStart();
 });
-inAGroveUI.HelpBtn.addEventListener("click", () => {
-    exitInAGroveExplainMode();
-    inAGroveUI.HelpContent.innerHTML = IN_A_GROVE_HELP_HTML;
-    const mode = currentInAGroveView?.config?.inspection_mode || getInAGroveConfig().inspection_mode;
-    inAGroveUI.HelpContent.prepend(inAGroveElement("p", "", "Current room: " +
-        (mode === "choose_one" ? "Inspect 1 of 2 — every detective inspects one card." : "Inspect both — every detective inspects two cards.")));
-    showInAGroveModal("Help");
-});
 inAGroveUI.InspectionModeSelect.addEventListener("change", updateInAGroveConfigHint);
-inAGroveUI.ExplainBtn.addEventListener("click", toggleInAGroveExplainMode);
 
 ["Help", "Explain"].forEach((key) => {
     inAGroveUI[key + "ModalCloseBtn"].addEventListener("click", () => closeInAGroveModal(key));
@@ -533,35 +533,13 @@ inAGroveUI.ExplainBtn.addEventListener("click", toggleInAGroveExplainMode);
 });
 
 inAGroveUI.Panel.addEventListener("click", (event) => {
-    if (inAGroveExplainMode || event.target.closest("button, a, input, select, textarea, summary, .in-a-grove-stack")) return;
+    if (inAGroveExplainWidget?.isActive() || event.target.closest("button, a, input, select, textarea, summary, .in-a-grove-stack")) return;
     if (!inAGroveSelectedPeekIndexes.length && inAGroveSelectedTargetIndex === null) return;
     clearInAGroveSelection();
     if (currentInAGroveView) renderInAGroveSuspects(currentInAGroveView);
     updateInAGroveActionButtons();
 });
 
-document.addEventListener("click", (event) => {
-    if (!inAGroveExplainMode || currentGameType !== "in_a_grove") return;
-    const button = event.target.closest("button");
-    if (!button || [inAGroveUI.HelpBtn, inAGroveUI.ExplainBtn, inAGroveUI.HelpModalCloseBtn, inAGroveUI.ExplainModalCloseBtn].includes(button)) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    if (button.dataset.inAGroveExplain) showInAGroveExplanation(button);
-}, true);
-
-// Disabled buttons do not dispatch click events, so handle their pointer press.
-document.addEventListener("pointerdown", (event) => {
-    if (!inAGroveExplainMode || currentGameType !== "in_a_grove" || event.target.closest(".modal")) return;
-    const button = [...inAGroveUI.Panel.querySelectorAll("button:disabled[data-in-a-grove-explain]")].find((candidate) => {
-        const rect = candidate.getBoundingClientRect();
-        return rect.width && rect.height && event.clientX >= rect.left && event.clientX <= rect.right &&
-            event.clientY >= rect.top && event.clientY <= rect.bottom;
-    });
-    if (!button) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    showInAGroveExplanation(button);
-}, true);
 
 document.addEventListener("keydown", (event) => {
     if (currentGameType !== "in_a_grove") return;
@@ -572,7 +550,7 @@ document.addEventListener("keydown", (event) => {
     }
     if (event.key !== "Escape") return;
     if (modal) closeInAGroveModal(modal);
-    else if (inAGroveExplainMode) exitInAGroveExplainMode();
+    else if (inAGroveExplainWidget?.isActive()) inAGroveExplainWidget.exit();
     else {
         clearInAGroveSelection();
         if (currentInAGroveView) renderInAGroveSuspects(currentInAGroveView);
@@ -583,3 +561,5 @@ document.addEventListener("keydown", (event) => {
 window.renderInAGroveGameState = renderInAGroveGameState;
 window.showInAGroveHeaderActions = showInAGroveHeaderActions;
 window.clearInAGroveState = clearInAGroveState;
+
+initInAGroveHelpExplain();

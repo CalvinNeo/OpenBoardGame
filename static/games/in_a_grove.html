@@ -27,10 +27,10 @@
                   <div class="in-a-grove-action-dock">
                     <p id="inAGroveActionHint" role="status" aria-live="polite">Waiting for the next move.</p>
                     <div class="in-a-grove-actions">
-                      <button id="inAGrovePeekBtn" type="button" disabled>🔎 Inspect 1</button>
-                      <button id="inAGroveBetBtn" type="button" class="hidden" disabled>🎯 Accuse suspect</button>
-                      <button id="inAGroveNextRoundBtn" type="button" class="hidden" disabled>Next Round →</button>
-                      <button id="inAGrovePlayAgainBtn" type="button" class="hidden" disabled>↻ Start New Game</button>
+                      <button id="inAGrovePeekBtn" type="button" data-in-a-grove-explain="peek" disabled>🔎 Inspect 1</button>
+                      <button id="inAGroveBetBtn" type="button" class="hidden" data-in-a-grove-explain="bet" disabled>🎯 Accuse suspect</button>
+                      <button id="inAGroveNextRoundBtn" type="button" class="hidden" data-in-a-grove-explain="next_round" disabled>Next Round →</button>
+                      <button id="inAGrovePlayAgainBtn" type="button" class="hidden" data-in-a-grove-explain="play_again" disabled>↻ Start New Game</button>
                     </div>
                   </div>
                   <div class="in-a-grove-rule-strip"><span>🔺 Highest number is guilty</span><span>5 present? 🔻 Lowest instead</span><span>✕ Always innocent</span></div>

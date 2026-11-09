@@ -3,7 +3,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2>Celestia Help</h2>
-        <button id="celestiaHelpModalCloseBtn" type="button">Close</button>
+        <button id="celestiaHelpModalCloseBtn" type="button" data-celestia-explain="dialog_close">Close</button>
       </div>
       <div class="modal-body" id="celestiaHelpContent"></div>
     </div>
@@ -75,9 +75,9 @@
       </div>
       <div id="celestiaDice" class="celestia-dice" aria-label="Rolled hazards"></div>
       <div id="celestiaActions" class="celestia-actions" aria-label="Available actions">
-        <button id="celestiaRollBtn" class="celestia-action-primary hidden" type="button">🎲 Roll dice</button>
-        <button id="celestiaStayBtn" class="celestia-action-primary hidden" type="button">Stay aboard</button>
-        <button id="celestiaLeaveBtn" class="celestia-action-secondary hidden" type="button">Take treasure</button>
+        <button id="celestiaRollBtn" class="celestia-action-primary hidden" type="button" data-celestia-explain="roll">🎲 Roll dice</button>
+        <button id="celestiaStayBtn" class="celestia-action-primary hidden" type="button" data-celestia-explain="stay">Stay aboard</button>
+        <button id="celestiaLeaveBtn" class="celestia-action-secondary hidden" type="button" data-celestia-explain="leave">Take treasure</button>
         <button id="celestiaPassSpecialBtn" class="celestia-action-primary hidden" type="button">Continue</button>
         <button id="celestiaResolveCardsBtn" class="celestia-action-primary hidden" type="button">Use equipment</button>
         <button id="celestiaResolveTelescopeBtn" class="celestia-action-secondary hidden" type="button">🔭 Use spyglass</button>

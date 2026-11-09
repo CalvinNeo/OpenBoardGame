@@ -7,7 +7,6 @@
     let selectedCardId = null;
     let selectedTarget = null;
     let selectedDice = [];
-    let explaining = false;
     let suppressClickUntil = 0;
     let tooltipTimer = null;
     let modalReturnFocus = null;
@@ -50,23 +49,116 @@
         NextJourneyBtn: ["Next journey", "Confirm that you have reviewed the summary. The next journey begins only after every player is ready."],
         PlayAgainBtn: ["Play again", "Start a new game after the final result."],
     };
-    const help = `
-        <h3>Collect treasures above the clouds</h3>
-        <p>Travel through nine cities and collect Treasures (💎). At the end of a journey, reaching the target score ends the game. The highest score wins; ties favor the player with fewer treasure cards.</p>
-        <h3>A flight, step by step</h3>
-        <ol><li>The Captain (🧭) rolls Dice (🎲) for the next city. A Blank (⬜) creates no hazard.</li>
-        <li>Players may use Alternative Route (🗺️) or Wind Gust (🌪️), then passengers decide in order: stay aboard or take current-city treasure (💎).</li>
-        <li>Players may use Ejection (🪂). The captain then resolves hazards with equipment, Turbo (🛠️), or Magic Spyglass (🔭).</li>
-        <li>A successful flight reaches the next city and passes the captain's role to the next player aboard. A crash ends the journey; Jetpack (🎒) users can still take treasure.</li></ol>
-        <h3>Equipment and hazards</h3>
-        <p>Compass (🧭) covers Cloud (☁️); Lightning Arrester (⚡) covers Lightning (⚡); Foghorn (📯) covers Bird (🐦); Cannon (💣) covers Pirate (🏴‍☠️). Each card covers one matching die.</p>
-        <p>Use equipment automatically spends matching cards, then Turbo (🛠️) for missing matches. If matching equipment alone is insufficient, you may instead spend a Magic Spyglass (🔭), or let the airship crash to save special cards.</p>
-        <h3>Power cards</h3>
-        <p>Alternative Route (🗺️): the captain selects dice to reroll. Wind Gust (🌪️): reroll all Blank (⬜) dice. Ejection (🪂): select a passenger aboard, including yourself but never the captain, to send ashore with treasure. Jetpack (🎒): collect treasure after a crash.</p>
-        <h3>Journeys and controls</h3>
-        <p>The last player aboard can take treasure instead of rolling. Reaching City 9 awards treasure to everyone still aboard. Review the journey summary and select Next journey; everyone must be ready before the game continues.</p>
-        <p>Identical hand cards share one tile with a quantity. Only playable power cards can be selected. Select a card, choose any required dice or passenger, then confirm below your hand. Click the card again, click empty space, or press Esc to cancel the selection.</p>
-        <p>Hover over information for a short tooltip; on a phone, tap it for a three-second tooltip. Select Explain and then an item or button for more detail, including disabled buttons. Esc exits Explain or closes a dialog.</p>`;
+    const CELESTIA_EXPLAIN = {
+        roll: { zh: "掷骰(🎲)：船长为下一座城市掷出所需骰子，揭示它的危险。", en: explanations.RollBtn[1] },
+        stay: { zh: "留在船上：继续飞往下一座城市。飞艇坠毁时除非使用喷射背包(🎒)，否则得不到宝物。", en: explanations.StayBtn[1] },
+        leave: { zh: "拿取宝物(💎)：离开飞艇并收取当前城市的宝物。如果你是船上唯一的玩家，这就安全地结束了本段旅程。", en: explanations.LeaveBtn[1] },
+        pass_special: { zh: "继续：跳过这个功能牌窗口。所有有资格的玩家都跳过之后游戏继续，打出功能牌会重置这些跳过。", en: explanations.PassSpecialBtn[1] },
+        resolve_cards: { zh: "使用装备：为每个危险自动花掉对应的装备，再用涡轮(🛠️)补上缺少的匹配。不需要手动选手牌。", en: explanations.ResolveCardsBtn[1] },
+        resolve_telescope: { zh: "魔法望远镜(🔭)：花掉一个魔法望远镜宝物来解决全部危险。只有在仅靠装备无法覆盖骰子时才可用，它可以保住你的涡轮(🛠️)。", en: explanations.ResolveTelescopeBtn[1] },
+        crash: { zh: "飞艇坠毁：当仅靠装备不足以应对时宣告坠毁。你可以保住涡轮(🛠️)或魔法望远镜(🔭)，仍在船上的玩家只有使用喷射背包(🎒)才能拿到宝物。", en: explanations.CrashBtn[1] },
+        jetpack_use: { zh: "使用喷射背包(🎒)：坠毁后花掉一个喷射背包，收取当前城市的宝物(💎)。", en: explanations.JetpackUseBtn[1] },
+        jetpack_skip: { zh: "跳过喷射背包(🎒)：保住你的喷射背包，这次坠毁不收取任何宝物。", en: explanations.JetpackSkipBtn[1] },
+        play_power: { zh: "打出功能牌：打出选中的牌。备选航线(🗺️)需要选中骰子，弹射(🪂)需要船上一名乘客。", en: explanations.PlayPowerBtn[1] },
+        next_journey: { zh: "下一段旅程：确认你已看过结算。所有玩家都准备好之后下一段旅程才开始。", en: explanations.NextJourneyBtn[1] },
+        play_again: { zh: "再玩一次：最终结果出来之后开始新的一局。", en: explanations.PlayAgainBtn[1] },
+        city: { zh: "城市：飞艇当前所在或即将前往的城市。牌上显示剩余宝物(💎)数量和要掷的骰子(🎲)数。抵达第 9 座城市时，仍在船上的所有人都能获得宝物。", en: "City: where the airship is now or where it is heading next. The tile shows how many treasure cards (💎) remain and how many dice (🎲) are rolled there. Reaching City 9 awards treasure to everyone still aboard." },
+        die: { zh: "危险骰(🎲)：每种危险需要一张对应的装备来覆盖。空白(⬜)不产生危险。", en: "Hazard die (🎲): each hazard needs one matching equipment card to cover it, and a Blank (⬜) creates no hazard." },
+        equipment: { zh: "装备牌：每张装备覆盖一个对应的危险骰。涡轮(🛠️)可以当作任意类型使用一次。", en: "Equipment card: each one covers a single matching hazard die, and Turbo (🛠️) can stand in for any type once." },
+        treasure: { zh: "宝物(💎)：收集自城市的分数牌。魔法望远镜(🔭)可以解决全部危险。", en: "Treasure (💎): a scoring card collected from a city, and a Magic Spyglass (🔭) can resolve every hazard." },
+        player: { zh: "玩家席位：显示是否在船上、是否为船长(🧭)、手牌(🃏)数量和宝物(💎)数量。", en: "Player seat: shows whether they are aboard, whether they are the captain (🧭), their hand size (🃏) and their treasure count (💎)." },
+        detail: { zh: "这是一个说明标记，指向界面上的一个数值或图例。鼠标悬停或轻点可以查看它此刻的具体含义。", en: "This is an information marker pointing at a figure or a legend on the board. Hover or tap it to see what that element means right now." },
+        dialog_close: { zh: "关闭当前对话框并回到飞艇。", en: "Close the current dialog and return to the airship." }
+    };
+
+    const CELESTIA_BUTTON_KEYS = {
+        RollBtn: "roll", StayBtn: "stay", LeaveBtn: "leave", PassSpecialBtn: "pass_special",
+        ResolveCardsBtn: "resolve_cards", ResolveTelescopeBtn: "resolve_telescope", CrashBtn: "crash",
+        JetpackUseBtn: "jetpack_use", JetpackSkipBtn: "jetpack_skip", PlayPowerBtn: "play_power",
+        NextJourneyBtn: "next_journey", PlayAgainBtn: "play_again",
+    };
+
+    const CELESTIA_HELP_CONFIG = {
+        gameId: "celestia",
+        title: { zh: "云端飞行 · Celestia", en: "Celestia" },
+        basic: {
+            win: {
+                zh: "穿越九座城市收集宝物(💎)。一段旅程结束时达到目标分数即结束游戏，分数最高者获胜，平分时宝物牌较少者优先。",
+                en: "Travel through nine cities and collect Treasures (💎). Reaching the target score at the end of a journey ends the game, the highest score wins, and ties favour the player with fewer treasure cards."
+            },
+            turn: {
+                zh: "船长(🧭)为下一座城市掷骰(🎲)揭示危险，乘客依次决定留在船上还是拿当前城市的宝物(💎)下船，船长最后用装备、涡轮(🛠️)或魔法望远镜(🔭)解决危险。",
+                en: "The captain (🧭) rolls dice (🎲) for the next city to reveal its hazards, passengers then decide in order whether to stay aboard or take the current city's treasure (💎), and the captain finally resolves the hazards with equipment, Turbo (🛠️) or a Magic Spyglass (🔭)."
+            },
+            key: {
+                zh: "每一轮都有人要先下船，而留在船上的人才拿得到下一座城的宝物，所以真正的判断是你愿意为眼前这座城放弃后面多少。",
+                en: "Every round someone must get off, and only those who stay aboard reach the next city's treasure, so the real judgement is how much you give up later for the city in front of you."
+            }
+        },
+        sections: [
+            {
+                id: "goal",
+                label: { zh: "云端之上的宝物", en: "Treasures above the clouds" },
+                html: {
+                    zh: "<p>穿越九座城市收集宝物(💎)。一段旅程结束时达到目标分数即结束游戏，分数最高者获胜，平分时宝物牌较少者优先。</p>",
+                    en: "<p>Travel through nine cities and collect Treasures (💎). Reaching the target score at the end of a journey ends the game, the highest score wins, and ties favour the player with fewer treasure cards.</p>"
+                }
+            },
+            {
+                id: "flight",
+                label: { zh: "一次飞行的步骤", en: "A flight, step by step" },
+                html: {
+                    zh: "<ol><li>船长(🧭)为下一座城市掷骰(🎲)，空白(⬜)不产生危险。</li><li>玩家可以使用备选航线(🗺️)或阵风(🌪️)，然后乘客依次决定：留在船上或拿当前城市的宝物(💎)。</li><li>玩家可以使用弹射(🪂)。随后船长用装备、涡轮(🛠️)或魔法望远镜(🔭)解决危险。</li><li>飞行成功就抵达下一座城市，并把船长身份传给船上的下一位玩家。坠毁则结束这段旅程，使用喷射背包(🎒)的人仍能拿到宝物。</li></ol>",
+                    en: "<ol><li>The Captain (🧭) rolls Dice (🎲) for the next city, and a Blank (⬜) creates no hazard.</li><li>Players may use Alternative Route (🗺️) or Wind Gust (🌪️), then passengers decide in order whether to stay aboard or take current-city treasure (💎).</li><li>Players may use Ejection (🪂), and the captain then resolves hazards with equipment, Turbo (🛠️) or Magic Spyglass (🔭).</li><li>A successful flight reaches the next city and passes the captain's role to the next player aboard, while a crash ends the journey and Jetpack (🎒) users can still take treasure.</li></ol>"
+                }
+            },
+            {
+                id: "equipment",
+                label: { zh: "装备与危险", en: "Equipment and hazards" },
+                html: {
+                    zh: "<p>罗盘(🧭)覆盖云(☁️)，避雷针(⚡)覆盖闪电(⚡)，雾号(📯)覆盖飞鸟(🐦)，加农炮(💣)覆盖海盗(🏴‍☠️)。每张牌覆盖一个对应的骰子。</p><p>使用装备会自动花掉对应的牌，再用涡轮(🛠️)补上缺少的匹配。如果仅靠装备不够，你可以改用魔法望远镜(🔭)，或者让飞艇坠毁以保住特殊牌。</p>",
+                    en: "<p>Compass (🧭) covers Cloud (☁️), Lightning Arrester (⚡) covers Lightning (⚡), Foghorn (📯) covers Bird (🐦), and Cannon (💣) covers Pirate (🏴‍☠️). Each card covers one matching die.</p><p>Use equipment automatically spends matching cards and then Turbo (🛠️) for missing matches. If matching equipment alone is insufficient you may instead spend a Magic Spyglass (🔭), or let the airship crash to save your special cards.</p>"
+                }
+            },
+            {
+                id: "power",
+                label: { zh: "功能牌", en: "Power cards" },
+                html: {
+                    zh: "<p>备选航线(🗺️)：船长选择骰子重掷。阵风(🌪️)：重掷全部空白(⬜)骰子。弹射(🪂)：选择船上一名乘客，包括你自己但绝不能是船长，把他连同宝物送上岸。喷射背包(🎒)：坠毁后收取宝物。</p>",
+                    en: "<p>Alternative Route (🗺️): the captain selects dice to reroll. Wind Gust (🌪️): reroll all Blank (⬜) dice. Ejection (🪂): select a passenger aboard, including yourself but never the captain, to send ashore with treasure. Jetpack (🎒): collect treasure after a crash.</p>"
+                }
+            },
+            {
+                id: "journeys",
+                label: { zh: "旅程与操作", en: "Journeys and controls" },
+                html: {
+                    zh: "<p>船上最后一名玩家可以选择拿宝物而不掷骰。抵达第 9 座城市时，仍在船上的所有人都能获得宝物。看完旅程结算后选择下一段旅程，所有人准备好之后游戏才继续。</p><p>相同的手牌会合并成一块并显示数量，只有可打出的功能牌才能被选中。选中一张牌，按需要选择骰子或乘客，再在手牌下方确认。再次点击该牌、点击空白处或按 Esc 可以取消选择。</p><p>鼠标悬停可以看简短提示，手机轻点显示三秒提示。先点 Explain 再点某个元素或按钮可以看到更详细的说明，包括已禁用的按钮。按 Esc 退出 Explain 或关闭对话框。</p>",
+                    en: "<p>The last player aboard can take treasure instead of rolling. Reaching City 9 awards treasure to everyone still aboard. Review the journey summary and select Next journey, and everyone must be ready before the game continues.</p><p>Identical hand cards share one tile with a quantity, and only playable power cards can be selected. Select a card, choose any required dice or passenger, then confirm below your hand. Click the card again, click empty space, or press Esc to cancel the selection.</p><p>Hover over information for a short tooltip, and on a phone tap it for a three-second tooltip. Select Explain and then an item or button for more detail, including disabled buttons. Esc exits Explain or closes a dialog.</p>"
+                }
+            }
+        ]
+    };
+
+    let celestiaHelpWidget = null;
+    let celestiaExplainWidget = null;
+
+    function initCelestiaHelpExplain() {
+        if (celestiaHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        celestiaHelpWidget = window.obgCreateHelp(CELESTIA_HELP_CONFIG);
+        celestiaExplainWidget = window.obgCreateExplain({
+            gameId: "celestia",
+            attribute: "data-celestia-explain",
+            explanations: CELESTIA_EXPLAIN,
+            button: byId("ExplainBtn"),
+            root: () => panel,
+            bypass: ["#celestiaHelpBtn", "#celestiaExplainBtn", "#celestiaHelpModalCloseBtn", "#celestiaExplainModalCloseBtn"]
+        });
+        byId("HelpBtn")?.addEventListener("click", () => {
+            celestiaExplainWidget?.exit();
+            celestiaHelpWidget.open();
+        });
+        byId("ExplainBtn")?.addEventListener("click", () => celestiaExplainWidget?.toggle());
+    }
 
     function text(suffix, value) {
         byId(suffix).textContent = value;
@@ -120,12 +212,11 @@
             spyglass: has("captain_resolve") && missing > 0 && view.your_treasures?.some(card => card.kind === "telescope"),
         };
     }
-    function describe(node, title, description, tooltip = description) {
+    function describe(node, title, description, tooltip = description, key = "detail") {
         node.dataset.celestiaExplainTitle = title;
         node.dataset.celestiaExplainText = description;
         if (tooltip) node.dataset.celestiaTooltip = tooltip;
         if (node.tagName !== "BUTTON") node.tabIndex = 0;
-        node.classList.toggle("has-explanation", explaining);
         return node;
     }
     function renderRoute() {
@@ -412,7 +503,7 @@
         logGameEvents(data);
     }
     function dispatch(action) {
-        if (explaining || !has(action.type)) return;
+        if (!has(action.type)) return;
         hideTooltip();
         sendAction(action);
     }
@@ -437,7 +528,7 @@
         },
     };
     for (const [id, getAction] of Object.entries(actions)) {
-        describe(byId(id), ...explanations[id]);
+        describe(byId(id), ...explanations[id], undefined, CELESTIA_BUTTON_KEYS[id]);
         byId(id).addEventListener("click", () => {
             const action = getAction();
             if (action) dispatch(action);
@@ -449,7 +540,7 @@
         byId("Tooltip").hidden = true;
     }
     function showTooltip(target, temporary = false) {
-        if (explaining || !target?.dataset.celestiaTooltip) return;
+        if (celestiaExplainWidget?.isActive() || celestiaHelpWidget?.isOpen() || !target?.dataset.celestiaTooltip) return;
         hideTooltip();
         const tooltip = byId("Tooltip");
         tooltip.textContent = target.dataset.celestiaTooltip;
@@ -459,14 +550,6 @@
         tooltip.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - box.width - 8))}px`;
         tooltip.style.top = `${rect.bottom + box.height + 12 < innerHeight ? rect.bottom + 6 : Math.max(8, rect.top - box.height - 6)}px`;
         if (temporary) tooltipTimer = setTimeout(hideTooltip, 3000);
-    }
-    function setExplain(enabled) {
-        explaining = enabled;
-        hideTooltip();
-        document.body.classList.toggle("celestia-explain-mode", enabled);
-        byId("ExplainBtn").classList.toggle("active", enabled);
-        byId("ExplainBtn").setAttribute("aria-pressed", String(enabled));
-        panel.querySelectorAll("[data-celestia-explain-text]").forEach(node => node.classList.toggle("has-explanation", enabled));
     }
     function openModal(id) {
         hideTooltip();
@@ -479,21 +562,9 @@
         if (modalReturnFocus?.isConnected) modalReturnFocus.focus({preventScroll: true});
         modalReturnFocus = null;
     }
-    function explain(target) {
-        if (!target?.dataset.celestiaExplainText) return;
-        byId("ExplainContent").replaceChildren(element("h4", "", target.dataset.celestiaExplainTitle), element("p", "", target.dataset.celestiaExplainText));
-        setExplain(false);
-        openModal("ExplainModal");
-    }
     panel.querySelectorAll("[data-celestia-tooltip]").forEach(node => {
-        if (!node.dataset.celestiaExplainText) describe(node, node.textContent.trim().replace(/\s+/g, " "), node.dataset.celestiaTooltip);
+        if (!node.dataset.celestiaExplain) describe(node, node.textContent.trim().replace(/\s+/g, " "), node.dataset.celestiaTooltip);
     });
-    byId("HelpBtn").addEventListener("click", () => {
-        setExplain(false);
-        byId("HelpContent").innerHTML = help;
-        openModal("HelpModal");
-    });
-    byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
     for (const id of ["HelpModal", "ExplainModal"]) {
         const modal = byId(id);
         modal.setAttribute("role", "dialog");
@@ -502,38 +573,18 @@
         byId(`${id}CloseBtn`).addEventListener("click", () => closeModal(id));
         modal.addEventListener("click", event => { if (event.target === modal) closeModal(id); });
     }
-    // Capture also covers disabled buttons, which do not dispatch normal clicks.
-    document.addEventListener("pointerdown", event => {
-        if (!explaining || currentGameType !== "celestia") return;
-        if (event.target.closest("#celestiaExplainBtn, #celestiaHelpBtn, #celestiaHelpModal, #celestiaExplainModal")) return;
-        let target = event.target.closest("[data-celestia-explain-text]");
-        if (!target) target = [...panel.querySelectorAll("[data-celestia-explain-text]")].find(node => {
-            const rect = node.getBoundingClientRect();
-            return rect.width && rect.height && event.clientX >= rect.left && event.clientX <= rect.right
-                && event.clientY >= rect.top && event.clientY <= rect.bottom;
-        });
-        event.preventDefault();
-        event.stopPropagation();
-        suppressClickUntil = Date.now() + 500;
-        explain(target);
-    }, true);
     document.addEventListener("click", event => {
         if (currentGameType !== "celestia") return;
         if (Date.now() < suppressClickUntil && !event.target.closest("#celestiaHelpModal, #celestiaExplainModal")) {
             suppressClickUntil = 0;
             event.preventDefault();
             event.stopPropagation();
-            return;
         }
-        if (!explaining || event.target.closest("#celestiaExplainBtn, #celestiaHelpBtn, #celestiaHelpModal, #celestiaExplainModal")) return;
-        event.preventDefault();
-        event.stopPropagation();
-        explain(event.target.closest("[data-celestia-explain-text]"));
     }, true);
     panel.addEventListener("click", event => {
         const target = event.target.closest("[data-celestia-tooltip]");
         if (target && !target.matches("button")) showTooltip(target, true);
-        else if (!event.target.closest("button, summary, a, input, [data-celestia-explain-text]")) {
+        else if (!event.target.closest("button, summary, a, input, [data-celestia-explain]")) {
             hideTooltip();
             cancelSelection();
         }
@@ -554,7 +605,7 @@
         const modalId = ["ExplainModal", "HelpModal"].find(id => !byId(id).classList.contains("hidden"));
         if (event.key === "Escape") {
             if (modalId) closeModal(modalId);
-            else if (explaining) setExplain(false);
+            else if (celestiaExplainWidget?.isActive()) celestiaExplainWidget.exit();
             else cancelSelection();
             hideTooltip();
         } else if (event.key === "Tab" && modalId) {
@@ -563,8 +614,8 @@
             if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
             else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
         } else if (["Enter", " "].includes(event.key) && panel.contains(event.target) && !event.target.matches("button, summary")) {
-            const target = event.target.closest("[data-celestia-explain-text]");
-            if (target) { event.preventDefault(); explaining ? explain(target) : showTooltip(target, true); }
+            const target = event.target.closest("[data-celestia-explain]");
+            if (target) { event.preventDefault(); showTooltip(target, true); }
         }
     });
 
@@ -572,7 +623,7 @@
     window.showCelestiaHeaderActions = show => {
         byId("HeaderActions").style.display = show ? "flex" : "none";
         if (!show) {
-            setExplain(false);
+            celestiaExplainWidget?.exit();
             hideTooltip();
             for (const id of ["HelpModal", "ExplainModal"]) setModalVisible(byId(id), false);
             document.body.classList.remove("celestia-needs-action");
@@ -582,11 +633,12 @@
         view = null;
         selectionContext = null;
         resetSelection();
-        setExplain(false);
+        celestiaExplainWidget?.exit();
         for (const id of ["Route", "Dice", "Hand", "Treasures", "Players", "SummaryRewards"]) byId(id).replaceChildren();
         for (const id of ["Summary", "PowerPrompt"]) byId(id).classList.add("hidden");
         for (const id of Object.keys(actions)) byId(id).classList.add("hidden");
         byId("TreasuresDetails").open = false;
         document.body.classList.remove("celestia-needs-action");
     };
+    initCelestiaHelpExplain();
 })();
