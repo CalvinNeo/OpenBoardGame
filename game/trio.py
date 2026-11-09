@@ -99,6 +99,9 @@ def build_deck() -> List[str]:
     ]
 
 
+DECK = frozenset(build_deck())
+
+
 def card_number(card_id: str) -> int:
     return int(str(card_id)[1:].split("-", 1)[0])
 
@@ -152,6 +155,19 @@ def _current_player(state: Dict) -> Optional[str]:
     if state["stage"] != STAGE_PLAY:
         return None
     return state["turn_order"][state["turn_index"]]
+
+
+def _rematch_target(state: Dict) -> int:
+    """How many seats must press Play again.
+
+    Only human seats count. The room only drives bots while a game is running,
+    so a bot could never answer a rematch prompt and the table would deadlock.
+    """
+    humans = [
+        pid for pid in state["turn_order"]
+        if not state["player_meta"].get(pid, {}).get("is_bot", False)
+    ]
+    return max(1, len(humans))
 
 
 def _claimed_numbers(state: Dict) -> List[int]:
@@ -299,6 +315,7 @@ def _finish_turn(state: Dict, player_id: str, success: bool) -> None:
         "success": success,
         "number": number,
         "cards": [entry["number"] for entry in state["revealed"]],
+        "turn": state["turn"],
         "seq": state["seq"],
     }
     state["seq"] += 1
@@ -369,7 +386,7 @@ def _deal(state: Dict) -> None:
 # face down table card from the state; everything else it knows is rebuilt by
 # replaying reveals that every human at the table also saw.
 
-def _replay_knowledge(state: Dict) -> Dict:
+def _replay_knowledge(state: Dict, bot_id: Optional[str] = None) -> Dict:
     """Rebuild what a perfect memory would retain from the public reveal log."""
     order = state["turn_order"]
     size = HAND_SIZE[state["player_count"]]
@@ -404,6 +421,13 @@ def _replay_knowledge(state: Dict) -> Dict:
     # The cards face up right now are public too, and temporarily off both ends.
     for entry in state["revealed"]:
         observe(entry, low, high)
+
+    if bot_id in known:
+        # A player reads their own hand, so every one of its slots is known. The
+        # current hand is the original one with both ends trimmed, which pins
+        # each card to its original position.
+        for offset, card in enumerate(state["players"][bot_id]["hand"]):
+            known[bot_id][low[bot_id] + offset] = card
 
     return {"known": known, "table": table_known, "low": low, "high": high, "size": size}
 
@@ -466,7 +490,9 @@ def _point_forecast(state: Dict, bot_id: str, knowledge: Dict, point: Dict, pool
             card = hand[0] if point["end"] == "low" else hand[-1]
             return {"card": card, "number": card_number(card), "certain": True, "odds": {}}
         lower, upper = _hand_bounds(state, pid, position, knowledge)
-        candidates = [item for item in pool if lower < card_number(item) < upper]
+        # A sorted hand may hold duplicates, so the neighbours only clamp the
+        # range inclusively.
+        candidates = [item for item in pool if lower <= card_number(item) <= upper]
     if not candidates:
         candidates = pool
     odds: Dict[int, float] = {}
@@ -484,48 +510,48 @@ def _apply_temp(point: Dict, temp: Dict) -> None:
     temp["low" if point["end"] == "low" else "high"][pid] += 1
 
 
-def _point_still_legal(state: Dict, point: Dict, temp: Dict) -> bool:
-    if point["source"] == "table":
-        index = point["index"]
-        return state["table"][index] is not None and index not in temp["table"]
-    pid = point["player"]
-    size = HAND_SIZE[state["player_count"]]
-    remaining = size - temp["low"][pid] - temp["high"][pid]
-    if remaining <= 0:
-        return False
-    if point["end"] == "high":
-        return remaining >= 2
-    return True
+def _known_options(state: Dict, knowledge: Dict, number: int, temp: Dict) -> List[Dict]:
+    """Points that memory says will show `number`, given the reveals so far.
 
-
-def _known_chain(state: Dict, knowledge: Dict, number: int, length: int) -> Optional[List[Dict]]:
-    """Three reveals of the same number that memory can guarantee, in order."""
+    Positions are recomputed every step because asking a player for their low
+    card twice walks one slot deeper into that hand.
+    """
     size = knowledge["size"]
     options: List[Dict] = []
     for index, card in enumerate(state["table"]):
-        if card is not None and knowledge["table"].get(index) == card and card_number(card) == number:
+        if card is None or index in temp["table"]:
+            continue
+        remembered = knowledge["table"].get(index)
+        if remembered == card and card_number(card) == number:
             options.append({"source": "table", "index": index})
     for pid in state["turn_order"]:
+        low_position = temp["low"][pid]
+        high_position = size - 1 - temp["high"][pid]
+        remaining = high_position - low_position + 1
+        if remaining <= 0:
+            continue
         known = knowledge["known"][pid]
-        low_position = knowledge["low"][pid]
-        high_position = size - 1 - knowledge["high"][pid]
         card = known.get(low_position)
         if card and card_number(card) == number:
             options.append({"source": "hand", "player": pid, "end": "low"})
         card = known.get(high_position)
-        if card and card_number(card) == number and high_position != low_position:
+        if remaining >= 2 and card and card_number(card) == number:
             options.append({"source": "hand", "player": pid, "end": "high"})
-    if len(options) < length:
-        return None
+    return options
+
+
+def _known_chain(state: Dict, knowledge: Dict, number: int, length: int) -> Optional[List[Dict]]:
+    """A sequence of reveals of one number that memory can guarantee."""
+    start = {
+        "table": set(_revealed_table_indices(state)),
+        "low": {pid: knowledge["low"][pid] for pid in state["turn_order"]},
+        "high": {pid: knowledge["high"][pid] for pid in state["turn_order"]},
+    }
 
     def search(chosen: List[Dict], temp: Dict) -> Optional[List[Dict]]:
         if len(chosen) == length:
             return list(chosen)
-        for option in options:
-            if any(_point_key(option) == _point_key(used) for used in chosen):
-                continue
-            if not _point_still_legal(state, option, temp):
-                continue
+        for option in _known_options(state, knowledge, number, temp):
             chosen.append(option)
             nested = {
                 "table": set(temp["table"]),
@@ -539,18 +565,11 @@ def _known_chain(state: Dict, knowledge: Dict, number: int, length: int) -> Opti
                 return found
         return None
 
-    # The counters already include this turn's reveals, and the table cards
-    # that are face up right now cannot be flipped a second time.
-    start = {
-        "table": set(_revealed_table_indices(state)),
-        "low": {pid: knowledge["low"][pid] for pid in state["turn_order"]},
-        "high": {pid: knowledge["high"][pid] for pid in state["turn_order"]},
-    }
     return search([], start)
 
 
 def _bot_reveal(state: Dict, bot_id: str) -> Optional[Dict]:
-    knowledge = _replay_knowledge(state)
+    knowledge = _replay_knowledge(state, bot_id)
     pool = _free_pool(state, bot_id, knowledge)
     points = reveal_points(state)
     if not points:
@@ -610,8 +629,10 @@ def _bot_reveal(state: Dict, bot_id: str) -> Optional[Dict]:
         if not forecast["certain"]:
             continue
         number = forecast["number"]
+        # A copy whose slot is still unknown might turn up at an end, while a
+        # copy already pinned inside a hand never will. Prefer the loose ones.
         loose = sum(1 for card in pool if card_number(card) == number)
-        key = (certain_counts[number], -loose)
+        key = (certain_counts[number], loose)
         if best is None or key > best[0]:
             best = (key, point)
     if best:
@@ -699,6 +720,7 @@ def _validate_saved_state(state: Dict) -> None:
             seen.append(entry["card"])
         require(len(seen) + gone == DECK_SIZE)
         require(len(set(seen)) == len(seen))
+        require(all(card in DECK for card in seen))
         rng = random.Random()
         rng.setstate(_as_tuple(state["rng_state"]))
     except (KeyError, TypeError, IndexError, AttributeError, OverflowError, ValueError) as error:
@@ -759,7 +781,9 @@ class TrioGame:
         if player_id not in state["players"]:
             return []
         if state["stage"] == STAGE_GAME_OVER:
-            return [] if player_id in state["rematch_ready"] else ["play_again"]
+            if player_id in state["rematch_ready"]:
+                return []
+            return [] if state["player_meta"].get(player_id, {}).get("is_bot", False) else ["play_again"]
         if state["stage"] == STAGE_REVEAL:
             return [] if player_id in state["continue_ready"] else ["continue"]
         if _current_player(state) != player_id:
@@ -780,7 +804,7 @@ class TrioGame:
 
         if action_type == "play_again":
             state["rematch_ready"].append(player_id)
-            if len(state["rematch_ready"]) == len(state["turn_order"]):
+            if len(state["rematch_ready"]) >= _rematch_target(state):
                 _reset_for_rematch(state)
             return [], None
 

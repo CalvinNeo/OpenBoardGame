@@ -178,6 +178,11 @@ from game.dadada import (
     ACTION_SCHEMA as DADADA_ACTION_SCHEMA,
     CONFIG_SCHEMA as DADADA_CONFIG_SCHEMA,
 )
+from game.trio import (
+    TrioGame,
+    ACTION_SCHEMA as TRIO_ACTION_SCHEMA,
+    CONFIG_SCHEMA as TRIO_CONFIG_SCHEMA,
+)
 
 register_game(
     GameDefinition(
@@ -6432,5 +6437,21 @@ register_game(
         module=DareWordsGame,
         serialize=DareWordsGame.serialize,
         deserialize=DareWordsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TrioGame.game_id,
+        name="Trio",
+        name_zh="回忆三重奏",
+        min_players=TrioGame.min_players,
+        max_players=TrioGame.max_players,
+        turn_mode="turn",
+        action_schema=TRIO_ACTION_SCHEMA,
+        config_schema=TRIO_CONFIG_SCHEMA,
+        module=TrioGame,
+        serialize=TrioGame.serialize,
+        deserialize=TrioGame.deserialize,
     )
 )

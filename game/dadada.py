@@ -7,7 +7,7 @@ lays out six fresh pictures, the communicator secretly picks one and names it us
 nothing but the invented syllables, and the rest of the table has to agree on which
 picture was meant.
 
-Rules source and confidence table: designs/task191.md.
+Rules source and confidence table: designs/task192.md.
 """
 import copy
 import random
@@ -169,6 +169,7 @@ def _reset_for_rematch(state: Dict) -> None:
     state["guesses"] = {}
     state["result"] = None
     state["pending"] = None
+    state["attempts"] = {}
     state["placed"] = {}
     state["unnamed"] = []
     state["defined"] = []
@@ -201,31 +202,35 @@ def _deal(state: Dict) -> None:
 def _resolve_proposal(state: Dict) -> None:
     """Called once every other player has voted on the pending placement."""
     pending = state["pending"]
-    voters = _others(state, state["turn_order"][state["turn_index"]])
+    proposer = state["turn_order"][state["turn_index"]]
+    voters = _others(state, proposer)
     approvals = sum(1 for pid in voters if pending["votes"].get(pid))
     accepted = approvals * 2 > len(voters)
+    image = pending["image"]
+    state["pending"] = None
 
     if accepted:
         sound_id = pending["sound"]
         if sound_id == NEW_SOUND:
             sound_id = state["reserve"].pop(0)
             state["sounds"].append({"id": sound_id, "images": []})
-        _sound_entry(state, sound_id)["images"].append(pending["image"])
-        state["placed"][pending["image"]] = sound_id
-        _log(state, f"{_name(state, state['turn_order'][state['turn_index']])} 把 "
-                    f"{PICTURE_BY_ID[pending['image']]['zh']} 归到 {_syllable(sound_id)}。")
-        state["pending"] = None
-        _advance_turn(state)
-    elif pending["attempts"] + 1 >= MAX_PROPOSAL_ATTEMPTS:
-        state["unnamed"].append(pending["image"])
-        _log(state, f"{PICTURE_BY_ID[pending['image']]['zh']} 始终没人认同，留在无名区。")
-        state["pending"] = None
+        _sound_entry(state, sound_id)["images"].append(image)
+        state["placed"][image] = sound_id
+        state["attempts"].pop(image, None)
+        _log(state, f"{_name(state, proposer)} 把 {PICTURE_BY_ID[image]['zh']} 归到 {_syllable(sound_id)}。")
         _advance_turn(state)
     else:
-        pending["attempts"] += 1
-        pending["votes"] = {}
-        _log(state, f"大家不同意把 {PICTURE_BY_ID[pending['image']]['zh']} 这样归类，再试一次。")
-        return
+        attempts = state["attempts"].get(image, 0) + 1
+        if attempts >= MAX_PROPOSAL_ATTEMPTS:
+            state["unnamed"].append(image)
+            state["attempts"].pop(image, None)
+            _log(state, f"{PICTURE_BY_ID[image]['zh']} 始终没人认同，留在无名区。")
+            _advance_turn(state)
+        else:
+            # Same player, same picture, same turn: they simply propose again.
+            state["attempts"][image] = attempts
+            _log(state, f"大家不同意把 {PICTURE_BY_ID[image]['zh']} 这样归类，再试一次。")
+            return
 
     if not _unassigned(state):
         _finish_creation(state)
@@ -316,7 +321,14 @@ def _bot_choose_action(state: Dict, bot_id: str) -> Optional[Dict]:
                 "word": [rng.choice(sounds) for _ in range(rng.randint(1, 2))]}
 
     if stage == STAGE_GUESS:
-        if state["communicator"] == bot_id or not state["candidates"]:
+        # A human may change their pick, so get_legal_actions still offers
+        # "guess" after they have chosen. The bot must not: the room's bot
+        # runner takes the first bot with a legal action each pass, so a bot
+        # that keeps re-guessing would starve every other guesser and never
+        # let the round resolve.
+        if state["communicator"] == bot_id or bot_id in state["guesses"]:
+            return None
+        if not state["candidates"]:
             return None
         return {"type": "guess", "turn": turn, "image": rng.choice(state["candidates"])}
 
@@ -389,20 +401,28 @@ def _validate_saved_state(state: Dict) -> None:
         require(all(image in PICTURE_BY_ID for image in state["defined"] + state["say_what"]))
         require(not set(state["defined"]) & set(state["say_what"]))
 
+        attempts = state["attempts"]
+        require(isinstance(attempts, dict) and set(attempts) <= set(state["table"]))
+        require(not set(attempts) & (set(state["placed"]) | set(state["unnamed"])))
+        require(all(type(count) is int and 0 < count < MAX_PROPOSAL_ATTEMPTS
+                    for count in attempts.values()))
+
         pending = state["pending"]
         if pending is not None:
             require(state["stage"] == STAGE_CREATE)
-            require(set(pending) == {"image", "sound", "votes", "attempts"})
+            require(set(pending) == {"image", "sound", "votes"})
             require(pending["image"] in _unassigned(state))
             require(pending["sound"] == NEW_SOUND or pending["sound"] in sound_ids)
             require(pending["sound"] != NEW_SOUND or bool(state["reserve"]))
             require(isinstance(pending["votes"], dict) and set(pending["votes"]) <= set(order))
-            require(0 <= pending["attempts"] < MAX_PROPOSAL_ATTEMPTS)
 
+        speaks = 0
         for pid in order:
             player = state["players"][pid]
             require(set(player) == {"speaks", "rounds"})
-            require(type(player["speaks"]) is int and player["speaks"] >= 0)
+            require(type(player["speaks"]) is int and 0 <= player["speaks"] <= state["round"])
+            speaks += player["speaks"]
+        require(speaks == state["round"])
         rng = random.Random()
         rng.setstate(_as_tuple(state["rng_state"]))
     except (KeyError, TypeError, IndexError, AttributeError, OverflowError, ValueError) as error:
@@ -448,6 +468,7 @@ class DadadaGame:
             "placed": {},
             "unnamed": [],
             "pending": None,
+            "attempts": {},
             "round": 0,
             "communicator": None,
             "candidates": [],
@@ -520,7 +541,7 @@ class DadadaGame:
                     return [], "no sound card left to flip"
             elif _sound_entry(state, sound) is None:
                 return [], "unknown sound card"
-            state["pending"] = {"image": image, "sound": sound, "votes": {}, "attempts": 0}
+            state["pending"] = {"image": image, "sound": sound, "votes": {}}
             _log(state, f"{_name(state, player_id)} 提议把 {PICTURE_BY_ID[image]['zh']} 叫作 "
                         f"{'新音节' if sound == NEW_SOUND else _syllable(sound)}。")
             return [], None
@@ -587,7 +608,7 @@ class DadadaGame:
                 "sound": pending["sound"],
                 "syllable": "?" if pending["sound"] == NEW_SOUND else _syllable(pending["sound"]),
                 "by": _current_player(state),
-                "attempts": pending["attempts"],
+                "attempts": state["attempts"].get(pending["image"], 0),
                 "votes": dict(pending["votes"]),
                 "waiting": [pid for pid in _others(state, _current_player(state))
                             if pid not in pending["votes"]],

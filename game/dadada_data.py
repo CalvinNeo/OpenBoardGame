@@ -3,10 +3,10 @@
 Two decks stand in for the physical components: 40 one-syllable Sound cards and a
 bank of Image cards. The published Image deck is 200 hand-drawn pictographs whose
 artwork is not redistributable, so the online build ships its own picture bank
-built from emoji (see designs/task191.md §3.2), which also keeps the client free
+built from emoji (see designs/task192.md §3.2), which also keeps the client free
 of commercial art assets.
 
-Rules source and confidence table: designs/task191.md.
+Rules source and confidence table: designs/task192.md.
 """
 
 from typing import Dict, List
@@ -319,7 +319,7 @@ IMAGE_IDS: List[str] = [picture["id"] for picture in PICTURES]
 
 # --- Setup constants -----------------------------------------------------
 # Setup deals five Sound cards and reveals two, keeping three in reserve
-# (whatsericplaying.com, designs/task191.md §2). Creation sorts thirteen Image
+# (whatsericplaying.com, designs/task192.md §2). Creation sorts thirteen Image
 # cards. Each Communication round lays out six fresh Image cards.
 
 SOUNDS_DEALT = 5

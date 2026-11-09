@@ -1522,6 +1522,8 @@ const GAME_WEIGHT = {
   witch_cauldron: null,
   // Chinese party game; rules reconstructed from Bilibili play-throughs, see designs/task190.md.
   give_me_or_him: null,
+  // BGG averageweight for Trio (2021, Cocktail Games reissue of nana).
+  trio: 1.07,
   dadada: 1.10,
 };
 

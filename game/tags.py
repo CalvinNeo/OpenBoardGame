@@ -158,6 +158,8 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "wriggle_roulette": ("filler", "push_your_luck", "bluffing"),
     "word_decode": ("filler", "puzzle", "creative"),
     "yahtzee": ("filler", "push_your_luck"),
+    "give_me_or_him": ("filler", "cooperative", "creative"),
+    "trio": ("filler", "puzzle"),
 }
 
 

@@ -1,6 +1,6 @@
 // 哒哒哒 / DADADA — browser client.
 // Help & Explain follow designs/task40.md via the shared widgets.
-// Rules: designs/task191.md
+// Rules: designs/task192.md
 
 const dadadaPanel = document.getElementById("dadadaPanel");
 const dadadaHeader = document.getElementById("dadadaHeaderActions");
@@ -16,7 +16,7 @@ const DADADA_HELP_CONFIG = {
       en: "This is a fully cooperative game. First you invent a language only your table speaks, then you use it to name picture cards, and the more rounds the team guesses right the better. Two Say What cards(🤔) end the game early."
     },
     turn: {
-      zh: "造词期轮到你时，点一张图卡再点一个音节，把它归进那个音节名下，其他人用同意(👍)和不同意(👎)表态。试词期轮到的那个人 secretly 挑一张图，只用这门语言说出它的名字，其他人各自点一张图指出自己猜的是哪张。",
+      zh: "造词期轮到你时，点一张图卡再点一个音节，把它归进那个音节名下，其他人用同意(👍)和不同意(👎)表态。试词期轮到的那个人悄悄挑一张图，只用这门语言说出它的名字，其他人各自点一张图指出自己猜的是哪张。",
       en: "During Creation your turn is to tap a picture and then a syllable to file it under that sound, and everyone else answers with agree(👍) or disagree(👎). During Communication the player on turn secretly picks a picture and names it using nothing but your new language, and everyone else taps the picture they think was meant."
     },
     key: {
@@ -690,15 +690,19 @@ function clearDadadaState() {
 window.renderDadadaGameState = (data) => {
   const next = data?.view || data;
   if (!next?.players || next.game_id !== "dadada") return;
+  // Every broadcast means the server has processed something, so the submit lock
+  // can always be released. Holding it until a "signature" changed used to strand
+  // the player for 8s whenever their own action left turn and stage untouched,
+  // which is exactly what changing a guess or re-proposing after a veto does.
+  dadaPending = false;
+  window.clearTimeout(dadaPendingTimer);
   const signature = JSON.stringify([data?.room_id, next.turn, next.stage,
     next.current_player, next.communicator, next.round]);
   if (signature !== dadaSignature) {
     dadaSelected = null;
     dadaTarget = null;
     dadaWord = [];
-    dadaPending = false;
     dadaHideTip();
-    window.clearTimeout(dadaPendingTimer);
   }
   dadaSignature = signature;
   dadaView = next;

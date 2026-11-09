@@ -1,0 +1,46 @@
+<template data-game-target="trioPanel" data-game-mode="contents">
+              <div class="trio-root">
+                <div class="trio-status">
+                  <span class="trio-chip trio-mode" id="trioMode" data-trio-explain="mode">—</span>
+                  <span class="trio-chip trio-goal" id="trioGoal" data-trio-explain="goal">—</span>
+                  <span class="trio-chip trio-turn" id="trioTurn" data-trio-explain="turn">—</span>
+                </div>
+
+                <div id="trioBanner" class="trio-banner" data-trio-explain="banner"></div>
+
+                <div class="trio-columns">
+                  <div class="trio-left">
+                    <div class="trio-block">
+                      <div class="trio-block-head">
+                        <span class="trio-block-title" data-trio-explain="table">Table</span>
+                        <span class="trio-block-note" id="trioTableNote"></span>
+                      </div>
+                      <div id="trioTable" class="trio-table" data-trio-cols="3"></div>
+                    </div>
+
+                    <div class="trio-block trio-reveal-block" data-trio-explain="reveal">
+                      <div class="trio-block-head">
+                        <span class="trio-block-title">This turn</span>
+                        <span class="trio-block-note" id="trioRevealNote"></span>
+                      </div>
+                      <div id="trioReveal" class="trio-reveal"></div>
+                    </div>
+                  </div>
+
+                  <div class="trio-right">
+                    <div class="trio-block">
+                      <div class="trio-block-head">
+                        <span class="trio-block-title" data-trio-explain="players">Players</span>
+                        <span class="trio-block-note" id="trioPlayersNote"></span>
+                      </div>
+                      <div id="trioPlayers" class="trio-players"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <details class="trio-logbox" data-trio-explain="log">
+                  <summary>Log</summary>
+                  <div id="trioLog" class="trio-log"></div>
+                </details>
+              </div>
+            </template>

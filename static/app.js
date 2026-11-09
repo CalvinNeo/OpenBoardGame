@@ -603,6 +603,10 @@ function renderGameState(data) {
     if (typeof renderDadadaGameState === "function") renderDadadaGameState(data);
     return;
   }
+  if (gameType === "trio") {
+    if (typeof renderTrioGameState === "function") renderTrioGameState(data);
+    return;
+  }
   if (gameType === "in_a_grove") {
     renderInAGroveGameState(data);
     return;

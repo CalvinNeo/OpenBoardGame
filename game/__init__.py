@@ -112,6 +112,7 @@ from game.give_me_or_him import GiveMeOrHimGame
 from game.ticket_to_ride import TicketToRideGame
 from game.twelve_rivers import TwelveRiversGame
 from game.dadada import DadadaGame
+from game.trio import TrioGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -227,6 +228,7 @@ __all__ = [
     "TicketToRideGame",
     "TwelveRiversGame",
     "DadadaGame",
+    "TrioGame",
     "GameDefinition",
     "get_game",
     "list_games",

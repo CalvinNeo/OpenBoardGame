@@ -1214,12 +1214,20 @@ const GAME_ASSETS = {
     "header": "showGiveMeOrHimHeaderActions"
   },
   "dadada": {
-    "scripts": ["/static/games/dadada.js?v=1"],
+    "scripts": ["/static/games/dadada.js?v=3"],
     "styles": ["/static/games/dadada.css?v=1"],
     "markup": "/static/games/dadada.html?v=1",
     "panel": "dadadaPanel",
     "panelTitle": "🗣️ 哒哒哒",
     "header": "showDadadaHeaderActions"
+  },
+  "trio": {
+    "scripts": ["/static/games/trio.js?v=1"],
+    "styles": ["/static/games/trio.css?v=1"],
+    "markup": "/static/games/trio.html?v=1",
+    "panel": "trioPanel",
+    "panelTitle": "🎴 回忆三重奏",
+    "header": "showTrioHeaderActions"
   }
 };
 

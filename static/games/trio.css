@@ -1,0 +1,551 @@
+/* 回忆三重奏 / Trio — game styles.
+ * Registered standalone through GAME_ASSETS, so these rules load after the
+ * shared stylesheet and never need a reserved cascade group in style.css.
+ */
+
+.trio-root {
+  --trio-ink: #f6efe4;
+  --trio-dim: #b9a894;
+  --trio-line: rgba(246, 239, 228, 0.16);
+  --trio-panel: rgba(38, 26, 44, 0.72);
+  --trio-accent: #ffb347;
+  --trio-good: #6fcf97;
+  --trio-bad: #eb5757;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: var(--trio-ink);
+}
+
+/* --- status chips ----------------------------------------------------- */
+
+.trio-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.trio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--trio-line);
+  /* The status row sits on the room background, which is light on desktop, so
+     these chips carry their own dark plate instead of a translucent one. */
+  background: #2a1c33;
+  color: var(--trio-ink);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.trio-chip.trio-turn {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+}
+
+.trio-chip.is-you {
+  border-color: var(--trio-accent);
+  color: var(--trio-accent);
+  font-weight: 600;
+}
+
+/* --- banner ----------------------------------------------------------- */
+
+.trio-banner {
+  display: none;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--trio-line);
+  background: var(--trio-panel);
+  font-size: 13px;
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trio-banner.is-shown {
+  display: block;
+}
+
+/* Solid tinted plates rather than translucent ones: the banner sits on the room
+   background, which is light on desktop, and the ink is near white. */
+.trio-banner.is-good {
+  border-color: rgba(111, 207, 151, 0.65);
+  background: #24402f;
+}
+
+.trio-banner.is-bad {
+  border-color: rgba(235, 87, 87, 0.6);
+  background: #43222a;
+}
+
+.trio-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.trio-banner-actions button {
+  flex: 1 1 120px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--trio-accent);
+  background: rgba(255, 179, 71, 0.18);
+  color: var(--trio-ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trio-banner-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.trio-banner-actions .trio-primary {
+  background: var(--trio-accent);
+  color: #2a1a10;
+}
+
+/* --- layout ----------------------------------------------------------- */
+
+.trio-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.trio-left,
+.trio-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.trio-block {
+  border: 1px solid var(--trio-line);
+  border-radius: 12px;
+  background: var(--trio-panel);
+  padding: 8px;
+  min-width: 0;
+}
+
+.trio-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+
+.trio-block-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--trio-dim);
+}
+
+.trio-block-note {
+  font-size: 11px;
+  color: var(--trio-dim);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* --- cards ------------------------------------------------------------ */
+
+.trio-card {
+  --trio-hue: 280;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  background: hsl(var(--trio-hue) 52% 42%);
+  color: #fff;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  user-select: none;
+}
+
+.trio-card.is-back {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.07) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #4b2a63, #2d1a3d);
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 600;
+}
+
+.trio-card.is-empty {
+  background: rgba(255, 255, 255, 0.04);
+  border-style: dashed;
+  border-color: var(--trio-line);
+  color: transparent;
+  box-shadow: none;
+}
+
+.trio-card.is-face {
+  outline: 2px solid var(--trio-accent);
+  outline-offset: 1px;
+}
+
+/* --- table ------------------------------------------------------------ */
+
+.trio-table {
+  display: grid;
+  grid-template-columns: repeat(var(--trio-cols, 3), minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+  max-width: 460px;
+}
+
+.trio-slot {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+}
+
+.trio-slot .trio-card {
+  width: 100%;
+  height: 100%;
+  font-size: clamp(15px, 5.2vw, 26px);
+}
+
+.trio-slot.is-open {
+  cursor: pointer;
+}
+
+.trio-slot.is-open:hover .trio-card {
+  filter: brightness(1.12);
+}
+
+.trio-slot.is-picked .trio-card {
+  outline: 2px solid var(--trio-accent);
+  outline-offset: 1px;
+}
+
+.trio-slot.is-dimmed .trio-card {
+  opacity: 0.42;
+}
+
+/* --- reveal strip ----------------------------------------------------- */
+
+.trio-reveal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 54px;
+  min-width: 0;
+}
+
+.trio-reveal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.trio-reveal-card .trio-card {
+  width: 38px;
+  height: 50px;
+  font-size: 19px;
+}
+
+.trio-reveal-from {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--trio-dim);
+  max-width: 58px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trio-reveal-empty {
+  font-size: 12px;
+  color: var(--trio-dim);
+}
+
+/* --- players ---------------------------------------------------------- */
+
+.trio-players {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.trio-player {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--trio-line);
+  background: rgba(255, 255, 255, 0.04);
+  min-width: 0;
+}
+
+.trio-player.is-current {
+  border-color: var(--trio-accent);
+  background: rgba(255, 179, 71, 0.12);
+}
+
+.trio-player.is-you {
+  box-shadow: inset 3px 0 0 var(--trio-accent);
+}
+
+.trio-player.is-out {
+  opacity: 0.55;
+}
+
+.trio-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 72px;
+  min-width: 0;
+}
+
+.trio-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.trio-trios {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  min-height: 15px;
+}
+
+.trio-trio-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: hsl(var(--trio-hue) 52% 42%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.trio-trio-none {
+  font-size: 10px;
+  color: var(--trio-dim);
+}
+
+.trio-hand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.trio-hand .trio-card {
+  flex: 0 1 auto;
+  width: 19px;
+  height: 26px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+
+.trio-hand .trio-card.is-end {
+  width: 25px;
+  height: 34px;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+.trio-hand .trio-card.is-open {
+  cursor: pointer;
+}
+
+.trio-hand .trio-card.is-open:hover {
+  filter: brightness(1.15);
+}
+
+.trio-hand .trio-card.is-picked {
+  outline: 2px solid var(--trio-accent);
+  outline-offset: 1px;
+}
+
+.trio-hand-arrow {
+  font-size: 9px;
+  color: var(--trio-dim);
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.trio-hand-count {
+  font-size: 10px;
+  color: var(--trio-dim);
+  flex: 0 0 auto;
+}
+
+/* --- confirmation mask ------------------------------------------------ */
+
+.trio-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: inherit;
+  background: rgba(16, 10, 22, 0.78);
+  backdrop-filter: blur(1px);
+}
+
+.trio-mask button {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 26px;
+  padding: 2px 4px;
+  border-radius: 6px;
+  border: 1px solid var(--trio-line);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--trio-ink);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trio-mask button.trio-go {
+  background: var(--trio-accent);
+  border-color: var(--trio-accent);
+  color: #2a1a10;
+}
+
+/* --- log -------------------------------------------------------------- */
+
+.trio-logbox {
+  border: 1px solid var(--trio-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 8px;
+  min-width: 0;
+}
+
+.trio-logbox summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--trio-dim);
+  list-style: revert;
+}
+
+.trio-log {
+  max-height: 132px;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--trio-dim);
+  overflow-wrap: anywhere;
+}
+
+/* --- wider screens ---------------------------------------------------- */
+
+@media (min-width: 860px) {
+  .trio-columns {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  /* Cap both columns so the table stays a readable board instead of a wall of
+     giant cards on a wide desktop window. */
+  .trio-left {
+    flex: 0 1 480px;
+  }
+
+  .trio-right {
+    flex: 1 1 380px;
+    max-width: 620px;
+  }
+
+  .trio-slot .trio-card {
+    font-size: clamp(20px, 2.4vw, 34px);
+  }
+
+  .trio-who {
+    flex-basis: 96px;
+  }
+
+  .trio-hand .trio-card {
+    width: 22px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .trio-hand .trio-card.is-end {
+    width: 30px;
+    height: 40px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 359px) {
+  .trio-who {
+    flex-basis: 58px;
+  }
+
+  .trio-hand .trio-card {
+    width: 16px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .trio-hand .trio-card.is-end {
+    width: 21px;
+    height: 29px;
+    font-size: 11px;
+  }
+
+  .trio-reveal-card .trio-card {
+    width: 33px;
+    height: 44px;
+    font-size: 17px;
+  }
+}
