@@ -1,0 +1,14 @@
+<!--
+  Love Letter renders its whole panel from static/games/love_letter.js into
+  #loveLetterPanel and has no markup entry in static/game_assets.js, so this
+  file only records the static Explain anchors the script uses. It is what
+  tests/test_help_contract.py reads when checking that explained keys exist.
+-->
+<template data-game-target="loveLetterPanel" data-game-mode="contents">
+  <div class="ll-surface">
+    <div class="ll-stats" data-ll-explain="deck"></div>
+    <div class="ll-player" data-ll-explain="player"></div>
+    <div class="ll-discards" data-ll-explain="discarded"></div>
+    <div class="ll-reference-row" data-ll-explain="card_1"></div>
+  </div>
+</template>

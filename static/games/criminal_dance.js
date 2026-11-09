@@ -30,7 +30,6 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
     let targetId = "";
     let tradeId = "";
     let selectionContext = "";
-    let explaining = false;
     let suppressClick = false;
     let tooltipAnchor = null;
     let tooltipTimer = null;
@@ -53,8 +52,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         return el;
     }
     function explain(el, key) {
-        el.dataset.criminalDanceExplainKey = key;
-        el.classList.toggle("has-explanation", explaining);
+        el.dataset.criminalDanceExplain = key;
         return el;
     }
     function tip(el, message) {
@@ -160,7 +158,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         for (const card of hand()) {
             const [icon, title, tag, tone] = cards[card.type] || ["🃏", "Unknown card", "Card", "slate"];
             const reason = blockedReason(card);
-            const btn = explain(node("button", "criminal-dance-card"), `card:${card.type}`);
+            const btn = explain(node("button", "criminal-dance-card"), `card_${card.type}`);
             btn.type = "button";
             btn.dataset.cardId = card.id;
             btn.dataset.tone = tone;
@@ -259,7 +257,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         text("PlayedCount", String(entries.length));
         if (!entries.length) list.append(node("p", "hint", "No cards played yet."));
         for (const entry of [...entries].reverse()) {
-            const row = explain(node("div", "criminal-dance-public"), `card:${entry.card.type}`);
+            const row = explain(node("div", "criminal-dance-public"), `card_${entry.card.type}`);
             tip(row, `${cardLabel(entry.card.type)}: ${cardInfo(entry.card.type).split(". ")[0]}.`);
             row.append(node("div", "criminal-dance-entry-heading", `${name(entry.player_id)} · ${cardLabel(entry.card.type)}`));
             if (entry.result) row.append(node("div", "criminal-dance-entry-result", entry.result));
@@ -301,7 +299,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         tooltipAnchor = null;
     }
     function showTip(anchor, autoHide = true) {
-        if (explaining || !anchor?.dataset.criminalDanceTip) return;
+        if (criminalDanceExplainWidget?.isActive() || criminalDanceHelpWidget?.isOpen() || !anchor?.dataset.criminalDanceTip) return;
         hideTip();
         const tooltip = get("Tooltip");
         tooltipAnchor = anchor;
@@ -316,14 +314,6 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         tooltip.style.top = `${Math.max(8, Math.min(top, window.innerHeight - height - 8))}px`;
         if (autoHide) tooltipTimer = window.setTimeout(hideTip, 3000);
     }
-    function setExplain(enabled) {
-        explaining = enabled;
-        document.body.classList.toggle("criminal-dance-explain-mode", enabled);
-        get("ExplainBtn")?.classList.toggle("active", enabled);
-        get("ExplainBtn")?.setAttribute("aria-pressed", String(enabled));
-        document.querySelectorAll("[data-criminal-dance-explain-key]").forEach(el => el.classList.toggle("has-explanation", enabled));
-        hideTip();
-    }
     function closeDialog(modal, restoreFocus = true) {
         if (modal.classList.contains("hidden")) return;
         setModalVisible(modal, false);
@@ -337,7 +327,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         modal.querySelector("button")?.focus({ preventScroll: true });
     }
     function explanation(key) {
-        if (key.startsWith("card:")) {
+        if (key.startsWith("card_")) {
             const type = key.slice(5);
             const card = hand().find(c => c.id === selectedId && c.type === type) || hand().find(c => c.type === type);
             return [cardLabel(type), `${cardInfo(type)}${card && blockedReason(card) ? ` Currently unavailable: ${blockedReason(card)}` : ""}`];
@@ -356,66 +346,158 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         };
         return map[key] || null;
     }
-    function showExplanation(el) {
-        const item = explanation(el.dataset.criminalDanceExplainKey);
-        if (!item) return;
-        get("ExplainContent").replaceChildren(node("h3", "", item[0]), node("p", "", item[1]));
-        setExplain(false);
-        openDialog(get("ExplainModal"));
-    }
-    function openHelp() {
-        setExplain(false);
-        const content = get("HelpContent");
-        content.replaceChildren();
-        const section = (title, description) => content.append(node("h3", "", title), node("p", "", description));
-        section("Goal", "Catch Criminal (🕵️) with Detective (🔍) or Dog (🐶), or escape by playing Criminal (🕵️) as your last card. Anyone who has played Accomplice (😈) wins with an escape.");
-        section("Your turn", "Each player starts with 4 cards. First Finder (🥇) opens the round. Play one card on your turn; players with empty hands are skipped. Cards moving between players also move the criminal identity.");
-        section("Controls", "Select a hand card, choose a target or exchange card when prompted, then press Play Card. Click the card again or a blank area to cancel. Explain lets you inspect any highlighted item without taking an action; press Esc to leave it. Hover over status symbols or tap them for a 3-second hint.");
-        section("Records", "Expand Played Cards (🗂️) or Private Notes (🔒) to review information without clearing your selected card. Scroll inside a list for earlier entries. The new badge on Private Notes (🔒) marks unread clues.");
-        section("Current settings", `${detectiveRule()} Dog (🐶) on a miss: ${settings().dog_fail_behavior === "give_to_target" ? "give to target" : "discard"}. Boy (🧒): ${settings().enable_boy === false ? "off" : "on"}. Chief (👮): ${settings().enable_chief ? "on" : "off"}.`);
+    const CRIMINAL_DANCE_EXPLAIN = {
+        status: { zh: "轮次与回合：Round 标示当前这一副牌，Current Turn (▶) 显示下一个出牌的人，手牌已空的玩家会被跳过。", en: "Round identifies the current deal. Current Turn (▶) shows who plays next, and empty hands are skipped." },
+        players: { zh: "玩家(👥)：手牌(🃏)张数公开但牌面保密。Score (⭐) 是累计分。Accomplice (😈) 标记犯罪阵营的玩家，Ready (✓) 表示已确认下一副牌。", en: "Hand (🃏) counts are public while card identities stay private. Score (⭐) is the running total. Accomplice (😈) marks a player on the criminal team, and Ready (✓) means they have confirmed the next deal." },
+        hand: { zh: "你的手牌(🃏)：选一张牌，需要时选目标，再按 Play Card。再次点击已选中的牌或点空白处可以取消。不可用的牌会说明为什么打不出。", en: "Select a card, choose a target if needed, then press Play Card. Click the selected card or a blank area to cancel, and unavailable cards explain why they cannot be played." },
+        played: { zh: "已打出的牌(🗂️)：展开这一区可以按时间倒序复盘公开的牌和结果。在列表内滚动可以看更早的回合，用 Explain 点某张牌可以读它的效果。", en: "Expand this section to review public cards and their outcomes, newest first. Scroll inside the list for earlier turns, and use Explain on a card to read its effect." },
+        private: { zh: "私有笔记(🔒)：展开这一区可以看你的私有线索。new 标记未读线索，包括 Boy (🧒) 的信息和 Witness (👀) 看到的手牌。它们描述的是当时的情况，牌之后可能已经换过。", en: "Expand this section to see your private clues. The new badge marks unread clues, including Boy (🧒) information and hands seen by Witness (👀). They describe what was known then and cards may have moved since." },
+        results: { zh: "结果(🏆)：已完成的结果会一直显示到所有真人玩家确认。机器人自动准备。分数(⭐)带入下一轮，新的一局则重置。", en: "The completed result remains visible until every human player confirms. Bots are ready automatically. Scores (⭐) carry into the next round and reset for a new match." },
+        play_card: { zh: "Play Card：打出选中的牌并结算效果。请先选好必需的目标和交换牌。在选中一张可打出的牌之前，这个按钮不可用。", en: "Play the selected card and resolve its effect. Choose any required target and exchange card first. This button is unavailable until a playable card is selected." },
+        pick_target: { zh: "目标：选择另一位玩家。Dog (🐶)、Witness (👀) 和生效中的 Trade (🤝) 需要选一位有手牌的玩家，只有合法目标会出现。如果其他人都没有手牌，这些牌会被弃掉且无效果。", en: "Choose another player. Dog (🐶), Witness (👀) and an active Trade (🤝) need a player with cards, and only eligible targets appear. If everyone else has no cards, these cards are discarded with no effect." },
+        trade_card: { zh: "Give：选择用 Trade (🤝) 交换时给出剩下的哪张牌。你会从目标手牌中随机获得一张。", en: "Choose which remaining card to give with Trade (🤝). You receive a random card from the target's hand." },
+        play_again: { zh: "确认你已复盘结果。下一副牌要等所有真人玩家确认，机器人会自动确认。开新一局会重置分数，进入下一轮则保留分数。", en: "Confirm that you have reviewed the result. The next deal waits for every human player and bots confirm automatically. Starting a new match resets scores while starting the next round keeps them." },
+        card_first_finder: { zh: "First Finder (🥇)：持有者先手。如果你手里有 First Finder (🥇) 且本轮还没出过牌，必须先打它。", en: "The holder takes the opening turn. If you hold First Finder (🥇) and have not played this round, you must play it first." },
+        card_criminal: { zh: "Criminal (🕵️)：谁持有 Criminal (🕵️) 谁就是当前罪犯。只有把它作为最后一张手牌打出才能逃脱，并与所有打过 Accomplice (😈) 的人一起获胜。", en: "Whoever holds Criminal (🕵️) is the current criminal. Play it only as your last hand card to escape and win with everyone who has played Accomplice (😈)." },
+        card_detective: { zh: "Detective (🔍)：选择另一位玩家指控。抓到 Criminal (🕵️) 即赢得本轮，除非对方持有 Alibi (🧾) 会自动挡下。未激活的 Detective (🔍) 仍可打出，但没有指控效果。", en: "Choose another player to accuse. Catching Criminal (🕵️) wins the round unless they hold Alibi (🧾), which blocks automatically. An inactive Detective (🔍) can still be played with no accusation effect." },
+        card_alibi: { zh: "Alibi (🧾)：持有时自动挡下 Detective (🔍)。打出它就会失去这层保护。它不能抵挡 Dog (🐶)。", en: "While held, Alibi (🧾) automatically blocks Detective (🔍). Playing it discards that protection, and it does not protect against Dog (🐶)." },
+        card_dog: { zh: "Dog (🐶)：选择另一位有手牌的玩家并随机翻一张。翻到 Criminal (🕵️) 立即获胜，即使对方有 Alibi (🧾)。没翻到时按房间设置处理。如果其他人都没有手牌，则弃掉且无效果。", en: "Choose another player with cards and reveal a random hand card. Revealing Criminal (🕵️) wins immediately, even with Alibi (🧾). On a miss the room setting decides what happens to the Dog (🐶). If everyone else has no cards, discard it with no effect." },
+        card_accomplice: { zh: "Accomplice (😈)：打出后你在本轮加入犯罪阵营。如果 Criminal (🕵️) 逃脱你就一起获胜，即使你的手牌之后发生变化。", en: "Playing Accomplice (😈) joins the criminal team for the rest of this round. You win with Criminal (🕵️) if they escape, even if your hand changes." },
+        card_witness: { zh: "Witness (👀)：选择另一位有手牌的玩家。只有你能在私有笔记(🔒)里看到对方当前手牌。牌之后可能换动，所以这个信息可能过时。如果其他人都没有手牌，则弃掉且无效果。", en: "Choose another player with cards. Only you see their current hand in Private Notes (🔒). Cards can move afterward so this information may become outdated, and if everyone else has no cards it is discarded with no effect." },
+        card_info_control: { zh: "Info Control (↩️)：打出后，每位有手牌的玩家同时把一张随机牌传给左手边的下一位。", en: "After playing Info Control (↩️), each player with cards passes a randomly chosen card to the next seat on the left, simultaneously." },
+        card_rumor: { zh: "Rumor (🗣️)：打出后，每个人都从右手边下一位玩家手里随机抽一张，前提是对方有手牌。", en: "After playing Rumor (🗣️), everyone draws a random card from the next seat on their right if that player has cards." },
+        card_trade: { zh: "Trade (🤝)：选择另一位有手牌的玩家，再选自己剩下的一张牌换取对方手中一张随机牌。如果 Trade (🤝) 是你的最后一张牌，或其他人都没有手牌，则没有交换效果。", en: "Choose another player with cards, then choose one of your remaining cards to exchange for a random card from their hand. If Trade (🤝) is your last card or everyone else has no cards, it has no exchange effect." },
+        card_boy: { zh: "Boy (🧒)：每轮开始时，Boy (🧒) 私下得知谁持有 Criminal (🕵️)。是否同时告知罪犯则取决于房间设置。打出这张牌没有额外效果。", en: "At the start of the round, Boy (🧒) privately learns who holds Criminal (🕵️), and whether the criminal is also told depends on the room setting. Playing the card has no further effect." },
+        card_civilian: { zh: "Civilian (🙂)：没有任何效果，打出它只是为了减少手牌。", en: "Civilian (🙂) has no effect. Play it to reduce your hand." },
+        card_chief: { zh: "Chief (👮)：选择另一位玩家用 Chief (👮) 标记。当没有任何合法行动时，服务器检查被标记者是否持有 Criminal (🕵️)，若是则判定抓捕获胜。", en: "Choose another player to mark with Chief (👮). When no legal turns remain, the server checks whether the marked player holds Criminal (🕵️) and awards a catch win if they do." },
+        dialog_close: { zh: "关闭当前对话框并回到牌桌。", en: "Close the current dialog and return to the table." }
+    };
+
+    const CD_HELP_CONFIG = {
+        gameId: "criminal_dance",
+        title: { zh: "犯罪之舞 · Criminal Dance", en: "Criminal Dance" },
+        basic: {
+            win: {
+                zh: "用 Detective (🔍) 或 Dog (🐶) 抓到 Criminal (🕵️)，或者把 Criminal (🕵️) 作为最后一张牌打出逃脱。任何打过 Accomplice (😈) 的人都会随逃脱一起获胜。",
+                en: "Catch Criminal (🕵️) with Detective (🔍) or Dog (🐶), or escape by playing Criminal (🕵️) as your last card. Anyone who has played Accomplice (😈) wins with an escape."
+            },
+            turn: {
+                zh: "每人开局四张牌，First Finder (🥇) 先手。轮到你时打出一张牌，手牌已空的玩家会被跳过。牌在玩家之间流动时，罪犯身份也跟着流动。",
+                en: "Each player starts with 4 cards and First Finder (🥇) opens the round. Play one card on your turn, players with empty hands are skipped, and cards moving between players also move the criminal identity."
+            },
+            key: {
+                zh: "你永远不知道 Criminal (🕵️) 在谁手里，只能靠别人打出的牌和私有笔记推断，所以真正的技巧是控制信息而不是追求某一张牌。",
+                en: "You never know who holds Criminal (🕵️) and can only deduce it from what others play and from your private notes, so the real skill is controlling information rather than chasing one particular card."
+            }
+        },
+        sections: [
+            {
+                id: "goal",
+                label: { zh: "目标", en: "Goal" },
+                html: {
+                    zh: "<p>用 Detective (🔍) 或 Dog (🐶) 抓到 Criminal (🕵️)，或者把 Criminal (🕵️) 作为最后一张牌打出逃脱。任何打过 Accomplice (😈) 的人都会随逃脱一起获胜。</p>",
+                    en: "<p>Catch Criminal (🕵️) with Detective (🔍) or Dog (🐶), or escape by playing Criminal (🕵️) as your last card. Anyone who has played Accomplice (😈) wins with an escape.</p>"
+                }
+            },
+            {
+                id: "turn",
+                label: { zh: "你的回合", en: "Your turn" },
+                html: {
+                    zh: "<p>每人开局四张牌，First Finder (🥇) 先手。轮到你时打出一张牌，手牌已空的玩家会被跳过。牌在玩家之间流动时，罪犯身份也跟着流动。</p>",
+                    en: "<p>Each player starts with 4 cards and First Finder (🥇) opens the round. Play one card on your turn, players with empty hands are skipped, and cards moving between players also move the criminal identity.</p>"
+                }
+            },
+            {
+                id: "controls",
+                label: { zh: "操作", en: "Controls" },
+                html: {
+                    zh: "<p>选一张手牌，按提示选目标或交换牌，再按 Play Card。再次点击该牌或点空白处可以取消。Explain 可以查看任何高亮元素而不触发动作，按 Esc 退出。状态类符号可悬停或轻点查看提示，轻点提示 3 秒后消失。</p>",
+                    en: "<p>Select a hand card, choose a target or exchange card when prompted, then press Play Card. Click the card again or a blank area to cancel. Explain lets you inspect any highlighted item without taking an action, and Esc leaves it. Hover over status symbols or tap them for a 3-second hint.</p>"
+                }
+            },
+            {
+                id: "records",
+                label: { zh: "记录", en: "Records" },
+                html: {
+                    zh: "<p>展开 Played Cards (🗂️) 或 Private Notes (🔒) 可以在不清除已选手牌的情况下复盘信息。在列表内滚动可以看更早的条目，Private Notes (🔒) 上的 new 标记表示有未读线索。</p>",
+                    en: "<p>Expand Played Cards (🗂️) or Private Notes (🔒) to review information without clearing your selected card. Scroll inside a list for earlier entries, and the new badge on Private Notes (🔒) marks unread clues.</p>"
+                }
+            },
+            {
+                id: "settings",
+                label: { zh: "当前设置", en: "Current settings" },
+                html: { zh: "<p>开始游戏后在此显示本房间的设置。</p>", en: "<p>The room settings appear here once the game starts.</p>" }
+            },
+            {
+                id: "scoring",
+                label: { zh: "计分与下一副", en: "Scoring and next deal" },
+                html: { zh: "<p>开始游戏后在此显示计分规则。</p>", en: "<p>The scoring rules appear here once the game starts.</p>" }
+            },
+            {
+                id: "symbols",
+                label: { zh: "符号与信息", en: "Symbols and information" },
+                html: {
+                    zh: "<p>Players (👥)、Hand (🃏) 张数和 Played Cards (🗂️) 是公开的。Private Notes (🔒) 只属于你。Current Turn (▶) 标记当前行动者，Ready (✓) 记录谁已确认下一副牌。颜色用于区分卡牌角色，每张牌也都有名字和符号。</p>",
+                    en: "<p>Players (👥), Hand (🃏) counts and Played Cards (🗂️) are public. Private Notes (🔒) belong only to you. Current Turn (▶) marks the active player and Ready (✓) tracks who has confirmed the next deal. Colours group card roles, and every card also has a name and symbol.</p>"
+                }
+            },
+            {
+                id: "cards",
+                label: { zh: "卡牌一览", en: "Card reference" },
+                html: { zh: "<p>开始游戏后在此显示全部卡牌说明。</p>", en: "<p>The full card reference appears here once the game starts.</p>" }
+            }
+        ]
+    };
+
+    function refreshCriminalDanceHelp() {
+        const set = (id, zh, en) => {
+            const section = CD_HELP_CONFIG.sections.find(item => item.id === id);
+            if (section) { section.html.zh = zh; section.html.en = en; }
+        };
+        set("settings",
+            `<p>${detectiveRule()} Dog (🐶) 未命中时：${settings().dog_fail_behavior === "give_to_target" ? "交给目标" : "弃掉"}。Boy (🧒)：${settings().enable_boy === false ? "关闭" : "开启"}。Chief (👮)：${settings().enable_chief ? "开启" : "关闭"}。</p>`,
+            `<p>${detectiveRule()} Dog (🐶) on a miss: ${settings().dog_fail_behavior === "give_to_target" ? "give to target" : "discard"}. Boy (🧒): ${settings().enable_boy === false ? "off" : "on"}. Chief (👮): ${settings().enable_chief ? "on" : "off"}.</p>`);
         const scoring = settings().scoring_enabled !== false;
         const count = view?.players?.length || 3;
         const target = settings().target_score_by_player_count?.[count] || ({3: 5, 4: 5, 5: 7, 6: 10, 7: 10, 8: 10})[count];
-        section("Scoring & next deal", scoring
-            ? `Score (⭐): a Detective (🔍) catch awards 2 to the catcher, 0 to the criminal, and 1 to each other player. Dog (🐶) or Chief (👮) awards 3 to the catcher instead. An escape awards 2 to each criminal-team winner and 0 to others. This match ends when someone reaches ${target} points. Review Results (🏆), then everyone presses Next Round; use New Match after the match ends. Bots are ready automatically.`
-            : "Scoring is off: each round is a complete match. Review Results (🏆), then everyone presses New Match. Bots are ready automatically.");
-        section("Symbols & information", "Players (👥), Hand (🃏) counts and Played Cards (🗂️) are public. Private Notes (🔒) belong only to you. Current Turn (▶) marks the active player. Ready (✓) tracks who has confirmed the next deal. Colors group card roles; every card also has a name and symbol.");
-        content.append(node("h3", "", "Card reference"));
-        for (const type of Object.keys(cards)) section(cardLabel(type), cardInfo(type));
-        openDialog(get("HelpModal"));
+        set("scoring", scoring
+            ? `<p>Score (⭐)：Detective (🔍) 抓捕成功时，抓捕者得 2 分，罪犯得 0 分，其余每人 1 分。Dog (🐶) 或 Chief (👮) 抓捕则抓捕者得 3 分。逃脱时犯罪阵营每人得 2 分，其他人 0 分。本局在有人达到 ${target} 分时结束。复盘 Results (🏆) 后所有人按 Next Round，整局结束后用 New Match。机器人自动准备。</p>`
+            : "<p>计分已关闭：每一轮就是完整一局。复盘 Results (🏆) 后所有人按 New Match。机器人自动准备。</p>",
+            scoring
+            ? `<p>Score (⭐): a Detective (🔍) catch awards 2 to the catcher, 0 to the criminal and 1 to each other player. Dog (🐶) or Chief (👮) awards 3 to the catcher instead. An escape awards 2 to each criminal-team winner and 0 to others. This match ends when someone reaches ${target} points. Review Results (🏆), then everyone presses Next Round, and use New Match after the match ends. Bots are ready automatically.</p>`
+            : "<p>Scoring is off: each round is a complete match. Review Results (🏆), then everyone presses New Match. Bots are ready automatically.</p>");
+        const list = Object.keys(cards).map(type => `<p><strong>${cardLabel(type)}</strong>：${cardInfo(type)}</p>`).join("");
+        set("cards", list || CD_HELP_CONFIG.sections.find(i => i.id === "cards").html.zh, list || CD_HELP_CONFIG.sections.find(i => i.id === "cards").html.en);
+    }
+
+    let criminalDanceHelpWidget = null;
+    let criminalDanceExplainWidget = null;
+
+    function initCriminalDanceHelpExplain() {
+        if (criminalDanceHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        criminalDanceHelpWidget = window.obgCreateHelp(CD_HELP_CONFIG);
+        criminalDanceExplainWidget = window.obgCreateExplain({
+            gameId: "criminal_dance",
+            attribute: "data-criminal-dance-explain",
+            explanations: CRIMINAL_DANCE_EXPLAIN,
+            button: get("ExplainBtn"),
+            root: () => panel,
+            bypass: ["#criminalDanceHelpBtn", "#criminalDanceExplainBtn", "#criminalDanceExplainModalCloseBtn"]
+        });
+        get("HelpBtn")?.addEventListener("click", () => {
+            criminalDanceExplainWidget?.exit();
+            refreshCriminalDanceHelp();
+            criminalDanceHelpWidget.open();
+        });
+        get("ExplainBtn")?.addEventListener("click", () => criminalDanceExplainWidget?.toggle());
     }
     function active() { return typeof currentGameType !== "undefined" && currentGameType === "criminal_dance"; }
-    function exempt(target) {
-        return Boolean(target.closest("#criminalDanceHelpBtn, #criminalDanceExplainBtn, #criminalDanceHelpModal, #criminalDanceExplainModal"));
-    }
-    function explainAt(event) {
-        const control = event.target.closest("button, input, select, a, label, summary");
-        if (control) return control.dataset.criminalDanceExplainKey ? control : null;
-        const disabled = [...panel.querySelectorAll("button:disabled[data-criminal-dance-explain-key]")].find(el => {
-            const r = el.getBoundingClientRect();
-            return r.width && r.height && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
-        });
-        if (disabled) return disabled;
-        const direct = event.target.closest("[data-criminal-dance-explain-key]");
-        if (direct) return direct;
-        // Native disabled buttons may retarget pointer events to their parent.
-        return [...document.querySelectorAll("[data-criminal-dance-explain-key]")].reverse().find(el => {
-            const r = el.getBoundingClientRect();
-            return r.width && r.height && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
-        });
-    }
     function stop(event) { event.preventDefault(); event.stopImmediatePropagation(); }
     document.addEventListener("pointerdown", event => {
         if (!active()) return;
         suppressClick = false;
         touchMoved = false;
         touchStart = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
-        if (!explaining || exempt(event.target)) return;
-        // A touch must finish as a tap before Explain opens a dialog.
-        if (touchStart) return;
-        stop(event);
-        const el = explainAt(event);
-        if (el) { suppressClick = true; showExplanation(el); }
     }, true);
     document.addEventListener("pointermove", event => {
         if (touchStart && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 10) touchMoved = true;
@@ -427,20 +509,11 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
     document.addEventListener("pointerup", event => {
         if (!active() || !touchStart) return;
         touchStart = null;
-        if (touchMoved || !explaining || exempt(event.target)) return;
-        const el = explainAt(event);
-        if (el) { stop(event); suppressClick = true; showExplanation(el); }
     }, true);
     document.addEventListener("click", event => {
         if (!active()) return;
         if (touchMoved && event.detail !== 0) { touchMoved = false; stop(event); return; }
         if (suppressClick) { suppressClick = false; stop(event); return; }
-        if (explaining && !exempt(event.target)) {
-            stop(event);
-            const el = explainAt(event);
-            if (el) showExplanation(el);
-            return;
-        }
         if (!panel.contains(event.target)) return;
         const anchor = event.target.closest("[data-criminal-dance-tip]");
         if (anchor && !anchor.matches("button:not([aria-disabled='true'])")) showTip(anchor);
@@ -465,7 +538,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         const modal = [get("HelpModal"), get("ExplainModal")].find(el => !el.classList.contains("hidden"));
         if (event.key === "Escape") {
             suppressClick = false;
-            setExplain(false);
+            criminalDanceExplainWidget?.exit();
             if (modal) closeDialog(modal);
             else if (selectedId) { resetSelection(); renderHand(); renderControls(); }
         } else if (modal && event.key === "Tab") {
@@ -473,16 +546,10 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
             const first = items[0], last = items[items.length - 1];
             if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
             else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
-        } else if (explaining && !exempt(event.target) && ["Enter", " ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
-            stop(event);
-            if (["Enter", " "].includes(event.key)) {
-                const el = explainAt(event);
-                if (el) showExplanation(el);
-            }
         }
     }, true);
     function clear() {
-        setExplain(false);
+        criminalDanceExplainWidget?.exit();
         suppressClick = false;
         resetSelection();
         selectionContext = "";
@@ -513,7 +580,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
     function showHeader(show) {
         if (get("HeaderActions")) get("HeaderActions").style.display = show ? "flex" : "none";
         if (!show) {
-            setExplain(false);
+            criminalDanceExplainWidget?.exit();
             closeDialog(get("HelpModal"), false);
             closeDialog(get("ExplainModal"), false);
         }
@@ -539,8 +606,6 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
         if (typeof logGameEvents === "function") logGameEvents(data);
     }
     function init() {
-        get("HelpBtn")?.addEventListener("click", openHelp);
-        get("ExplainBtn")?.addEventListener("click", () => setExplain(!explaining));
         get("ExplainBtn")?.setAttribute("aria-pressed", "false");
         get("PrivateDetails").addEventListener("toggle", () => {
             if (get("PrivateDetails").open) {
@@ -567,6 +632,7 @@ const criminalDanceBoyVisibilitySelect = document.getElementById("criminalDanceB
     window.updateCriminalDanceConfigRow = updateConfig;
     window.showCriminalDanceHeaderActions = showHeader;
     window.renderCriminalDanceRoomState = renderRoom;
+    initCriminalDanceHelpExplain();
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
     else init();
 })();

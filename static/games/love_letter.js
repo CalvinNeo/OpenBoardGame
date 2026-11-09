@@ -32,14 +32,14 @@
         log: "公开记录仅记出牌、目标、猜测和公开结果，不包含秘密看到的手牌。可在此区域滚动查看。",
     };
     let view = null, selected = null, target = null, guess = null, signature = null;
-    let pending = false, pendingTimer = null, explaining = false, tipTimer = null;
+    let pending = false, pendingTimer = null, tipTimer = null;
     let suppressUntil = 0, returnFocus = null;
     const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
     const name = id => view?.players.find(player => player.player_id === id)?.name || "—";
     const label = rank => `${cards[rank][2]} ${cards[rank][0]} ${rank}`;
-    const explanation = key => key?.startsWith("card-") ? `${label(key.slice(5))}：${cards[key.slice(5)][5]}` : explanations[key];
+    const explanation = key => key?.startsWith("card_") ? `${label(key.slice(5))}：${cards[key.slice(5)][5]}` : explanations[key];
     const info = (text, detail, key = "") => `<span tabindex="0" data-ll-tip="${esc(detail)}" ${key ? `data-ll-explain="${key}"` : ""}>${text}</span>`;
-    const chip = rank => info(esc(label(rank)), cards[rank][5], `card-${rank}`);
+    const chip = rank => info(esc(label(rank)), cards[rank][5], `card_${rank}`);
     const allowed = type => !pending && view?.legal_actions.includes(type);
 
     const dialog = document.createElement("dialog");
@@ -61,7 +61,7 @@
     }
 
     function showTip(anchor, temporary = false) {
-        if (explaining || !anchor?.dataset.llTip) return;
+        if (loveLetterExplainWidget?.isActive() || loveLetterHelpWidget?.isOpen() || !anchor?.dataset.llTip) return;
         hideTip();
         tip.textContent = anchor.dataset.llTip;
         tip.hidden = false;
@@ -71,32 +71,120 @@
         if (temporary) tipTimer = setTimeout(hideTip, 3000);
     }
 
-    function setExplain(enabled) {
-        explaining = enabled;
-        panel.classList.toggle("ll-explaining", enabled);
-        explainButton.setAttribute("aria-pressed", String(enabled));
-        hideTip();
-    }
+    const LOVE_LETTER_EXPLAIN = {
+        deck: { zh: explanations.deck, en: "The deck (🂠) deals one card automatically at the start of your turn. After the last card is taken you still finish this turn's effect and then the round is compared." },
+        reserve: { zh: explanations.reserve, en: "Reserve (✉️): one card is set aside face down each round and nobody knows it. It is only used when the Prince (🤴) makes you draw and the deck is empty." },
+        tokens: { zh: explanations.tokens, en: "Favour (❤️): the winner of each round gains one. A 2, 3 or 4 player game needs 7, 5 or 4 of them, and reaching the goal wins the match." },
+        discarded: { zh: explanations.discarded, en: "Discards are public from left to right. When hands tie at the end of a round you compare the total value of these discards, and a card discarded on elimination has no effect." },
+        player: { zh: explanations.player, en: "The player seat shows favour (❤️), protection (🛡️), elimination (💔) and the cards already played. Other players' hands stay hidden during the round." },
+        target: { zh: explanations.target, en: "Choose the target for this card. A player protected by the Handmaid (🛡️) or already eliminated cannot be chosen by others, and only the Prince (🤴) may target yourself." },
+        guess: { zh: explanations.guess, en: "The Guard (💂) may only guess a rank from 2 to 8. The guess names a character, and the target is eliminated only if it matches their remaining hand." },
+        play: { zh: explanations.play, en: "Play Card submits the selected hand card together with any required target or guess. You can only submit once the options are complete, and you cannot play outside your turn, while sending, or a card blocked by the Countess (🌹)." },
+        next: { zh: explanations.next, en: "Next Round means you have read the result. The next round begins only after every seat confirms separately, including players eliminated this round. Bots confirm only for themselves and a disconnected human must come back to confirm." },
+        notes: { zh: explanations.notes, en: "Private Intel (🔒) is visible only to you. It records cards you have seen, compared or swapped, and once the target acts again or swaps the note is marked as a past observation that may no longer match their hand." },
+        reference: { zh: explanations.reference, en: "The court reference shows each rank and how many copies exist in the 16 card deck (×). Colours and emoji help tell the characters apart, and Explain shows the full effect." },
+        removed: { zh: explanations.removed, en: "In a two player game three extra cards are placed face up each round and stay out of the deck. They are separate from the face down reserve (✉️) and belong to nobody's discards." },
+        result: { zh: explanations.result, en: "A single surviving player wins outright. When the deck runs out you compare the survivors' hands, break a tie on the discard total, and if that also ties the round is shared and each winner gains favour (❤️)." },
+        log: { zh: explanations.log, en: "The public log records only played cards, targets, guesses and public results, and never a hand you saw in secret. The area scrolls on its own." },
+        card_1: { zh: cards[1][5], en: "Guard (💂): choose another unprotected player and guess that their hand is a rank from 2 to 8. A correct guess eliminates them, and you may not guess Guard." },
+        card_2: { zh: cards[2][5], en: "Priest (🔍): secretly look at another unprotected player's hand. The result appears only in your private intel." },
+        card_3: { zh: cards[3][5], en: "Baron (⚔️): secretly compare your remaining hand with another unprotected player. The lower rank is eliminated, equal ranks eliminate nobody, and only the two of you see the compared cards." },
+        card_4: { zh: cards[4][5], en: "Handmaid (🛡️): until the start of your next turn no other player may target you with a character effect. The protection does not stop the end of round comparison." },
+        card_5: { zh: cards[5][5], en: "Prince (🤴): choose any eligible player, including yourself, to discard their hand and draw again. Discarding the Princess (👸) eliminates them at once with no draw. With an empty deck you draw the face down reserve, and if everyone else is protected you must choose yourself." },
+        card_6: { zh: cards[6][5], en: "King (👑): swap your remaining hand with another unprotected player. The swap is not revealed." },
+        card_7: { zh: cards[7][5], en: "Countess (🌹): you must play her while you also hold the Prince (🤴) or the King (👑). You may also play her voluntarily, and nobody learns whether you were forced." },
+        card_8: { zh: cards[8][5], en: "Princess (👸): playing her or being forced to discard her eliminates you immediately. Keeping her until the end of the round lets you compare with the highest rank of 8." },
+        dialog_close: { zh: "关闭当前对话框并回到牌桌。", en: "Close the current dialog and return to the table." }
+    };
 
-    function openDialog(title, html) {
-        hideTip();
-        returnFocus = document.activeElement;
-        dialog.querySelector("h2").textContent = title;
-        dialog.querySelector(".ll-dialog-body").innerHTML = html;
-        if (!dialog.open) dialog.showModal();
-        dialogClose.focus();
-    }
+    const LOVE_LETTER_HELP_CONFIG = {
+        gameId: "love_letter",
+        title: { zh: "情书 · Love Letter", en: "Love Letter" },
+        basic: {
+            win: {
+                zh: "让你的情书(💌)在轮末由地位最高的人保管，或者成为唯一没有被淘汰的玩家。每轮胜者获得一个好感(❤️)，达到目标数量即赢得整局。",
+                en: "Make sure your love letter (💌) is held by the highest ranking player at the end of the round, or be the only player left standing. Each round winner gains a favour (❤️) and reaching the target number wins the match."
+            },
+            turn: {
+                zh: "轮到你时自动摸一张牌，从两张手牌中打出一张并完整执行它的效果，需要时还要选目标和猜测。",
+                en: "On your turn you automatically draw a card, then play one of your two hand cards and resolve its effect in full, choosing a target and a guess when the card asks for them."
+            },
+            key: {
+                zh: "所有信息都是私有的，而且你永远只能看到自己的一张牌加刚摸的那张，所以真正的技巧在于从别人打出的牌反推他们手里剩下什么。",
+                en: "All information is private and you only ever see your own card plus the one you just drew, so the real skill is working backwards from what others played to deduce what they are still holding."
+            }
+        },
+        sections: [
+            {
+                id: "round",
+                label: { zh: "每轮准备与回合", en: "Round setup and turns" },
+                html: {
+                    zh: "<p>洗牌后暗置一张备用牌(✉️)，双人局额外明置三张。每人一张手牌，轮到你时自动摸一张，从两张中打出一张并完整执行效果。弃牌始终公开且保留顺序。首轮随机先手，以后由上轮胜者先手，并列胜者中随机选择。</p>",
+                    en: "<p>After shuffling, one card is set aside face down as the reserve (✉️), and a two player game also places three cards face up. Everyone holds one card, and on your turn you draw one and play one of the two, resolving its effect in full. Discards are always public and keep their order. The first round starts with a random player and later rounds start with the previous winner, chosen at random among tied winners.</p>"
+                }
+            },
+            {
+                id: "cards",
+                label: { zh: "角色一览", en: "The court" },
+                html: {
+                    zh: `<div class="ll-help-cards">${Object.entries(cards).map(([rank, card]) => `<div><strong>${esc(label(rank))} · ${card[1]} ×${card[3]}</strong><p>${card[5]}</p></div>`).join("")}</div>`,
+                    en: `<div class="ll-help-cards">${Object.entries(cards).map(([rank, card]) => `<div><strong>${esc(label(rank))} · ${card[1]} ×${card[3]}</strong><p>${LOVE_LETTER_EXPLAIN["card_" + rank].en}</p></div>`).join("")}</div>`
+                }
+            },
+            {
+                id: "elimination",
+                label: { zh: "目标与淘汰", en: "Targets and elimination" },
+                html: {
+                    zh: "<p>已淘汰的玩家不再行动，也不能被选为目标。卫兵(💂)、牧师(🔍)、男爵(⚔️)、国王(👑)没有可选目标时空放，王子(🤴)仍须选择自己。淘汰时剩余手牌公开弃掉且不发动效果。</p>",
+                    en: "<p>An eliminated player no longer acts and cannot be chosen as a target. The Guard (💂), Priest (🔍), Baron (⚔️) and King (👑) simply fizzle with no eligible target, while the Prince (🤴) must still choose yourself. On elimination your remaining hand is discarded face up without triggering any effect.</p>"
+                }
+            },
+            {
+                id: "scoring",
+                label: { zh: "轮末与胜利", en: "Round end and victory" },
+                html: {
+                    zh: `<p>${esc(explanations.result)} 轮末会公开存活者手牌，保留结算供所有人查看。</p><p>${esc(explanations.tokens)} 多人同时达到目标则共同获胜。</p>`,
+                    en: `<p>${esc(LOVE_LETTER_EXPLAIN.result.en)} The survivors' hands are revealed at the end of the round and the result stays on screen for everyone.</p><p>${esc(LOVE_LETTER_EXPLAIN.tokens.en)} Several players reaching the goal together share the win.</p>`
+                }
+            },
+            {
+                id: "controls",
+                label: { zh: "线上操作", en: "Controls" },
+                html: {
+                    zh: `<p>点选手牌，选择目标，卫兵(💂)还需要选择猜测，最后点击 Play Card。点击空白处或按 Esc 取消未提交的选择，已提交的行动不能撤回。</p><p>${esc(explanations.next)}</p>`,
+                    en: `<p>Click a hand card, choose a target, pick a guess as well when playing the Guard (💂), then press Play Card. Click blank space or press Esc to drop an unsubmitted choice, and a submitted action cannot be taken back.</p><p>${esc(LOVE_LETTER_EXPLAIN.next.en)}</p>`
+                }
+            },
+            {
+                id: "icons",
+                label: { zh: "私有情报与图标", en: "Private intel and icons" },
+                html: {
+                    zh: `<p>${esc(explanations.notes)}</p><p>${esc(explanations.deck)} 保护(🛡️)持续到本人下次回合开始，淘汰(💔)持续到本轮结束，胜者用奖杯(🏆)标记。非操作图标支持鼠标悬停或触屏点击提示，触屏提示三秒后消失。</p>`,
+                    en: `<p>${esc(LOVE_LETTER_EXPLAIN.notes.en)}</p><p>${esc(LOVE_LETTER_EXPLAIN.deck.en)} Protection (🛡️) lasts until the start of your next turn, elimination (💔) lasts until the end of the round, and the winner is marked with a trophy (🏆). Non-interactive icons can be hovered or tapped for a tip, and a tip on a touch screen disappears after three seconds.</p>`
+                }
+            }
+        ]
+    };
 
-    function help() {
-        setExplain(false);
-        openDialog("Help · 情书", `
-            <p>经典 16 张、2–4 人版本。让你的情书(💌)在轮末由地位最高的人保管，或成为唯一未淘汰的玩家。</p>
-            <h3>每轮准备与回合</h3><p>洗牌后暗置一张备用牌(✉️)；双人局额外明置三张。每人一张手牌，轮到你时自动摸一张，从两张中打出一张并完整执行效果。弃牌始终公开且保留顺序。首轮随机先手，以后由上轮胜者先手；并列胜者中随机选择。</p>
-            <div class="ll-help-cards">${Object.entries(cards).map(([rank, card]) => `<div><strong>${esc(label(rank))} · ${card[1]} ×${card[3]}</strong><p>${card[5]}</p></div>`).join("")}</div>
-            <h3>目标与淘汰</h3><p>已淘汰的玩家不再行动，也不能被选为目标。卫兵(💂)、牧师(🔍)、男爵(⚔️)、国王(👑)没有可选目标时空放。王子(🤴)仍须选择自己。淘汰时剩余手牌公开弃掉且不发动效果。</p>
-            <h3>轮末与胜利</h3><p>${explanations.result} 轮末会公开存活者手牌，保留结算供所有人查看。${explanations.tokens} 多人同时达到目标则共同获胜。</p>
-            <h3>线上操作</h3><p>点选手牌，选择目标，卫兵(💂)还需要选择猜测，最后点击 Play Card。空白处或 Esc 取消未提交的选择；已提交的行动不能撤回。${explanations.next}</p>
-            <h3>私有情报与图标</h3><p>${explanations.notes} ${explanations.deck} 保护(🛡️)持续到本人下次回合开始，淘汰(💔)持续到本轮结束，胜者用奖杯(🏆)标记。非操作图标支持鼠标悬停或触屏点击提示，触屏提示三秒后消失。</p>`);
+    let loveLetterHelpWidget = null;
+    let loveLetterExplainWidget = null;
+
+    function initLoveLetterHelpExplain() {
+        if (loveLetterHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        loveLetterHelpWidget = window.obgCreateHelp(LOVE_LETTER_HELP_CONFIG);
+        loveLetterExplainWidget = window.obgCreateExplain({
+            gameId: "love_letter",
+            attribute: "data-ll-explain",
+            explanations: LOVE_LETTER_EXPLAIN,
+            button: explainButton,
+            root: () => panel,
+            bypass: ["#loveLetterHelpBtn", "#loveLetterExplainBtn", "#loveLetterDialog button"]
+        });
+        helpButton?.addEventListener("click", () => {
+            loveLetterExplainWidget?.exit();
+            loveLetterHelpWidget.open();
+        });
+        explainButton?.addEventListener("click", () => loveLetterExplainWidget?.toggle());
     }
 
     function resetSelection() {
@@ -111,7 +199,7 @@
             const active = player.player_id === view.current_turn;
             const revealed = player.revealed_hand.map(chip).join("");
             const status = !player.alive ? info("💔 Out", player.eliminated_by, "player")
-                : player.protected ? info("🛡️ Protected", cards[4][5], "card-4")
+                : player.protected ? info("🛡️ Protected", cards[4][5], "card_4")
                 : info(`${player.hand_count} 🂠`, "当前持有的手牌数量；其他人的手牌保密。", "player");
             return `<article class="ll-player ${active ? "is-current" : ""} ${!player.alive ? "is-out" : ""}" data-ll-explain="player">
                 <div class="ll-player-heading"><strong>${esc(player.name)}${own ? ' <small>You</small>' : ""}</strong>${info(`❤️ ${player.tokens}`, explanations.tokens, "tokens")}</div>
@@ -126,7 +214,7 @@
         if (!view.your_hand.length) return '<p class="ll-muted">本轮已淘汰，下一轮重新加入。</p>';
         return `<div class="ll-hand">${view.your_hand.map((rank, index) => {
             const card = cards[rank], enabled = allowed("play_card") && view.playable_cards.includes(rank);
-            return `<button type="button" class="ll-card ll-rank-${rank} ${selected === rank ? "is-selected" : ""}" data-ll-card="${rank}" data-ll-explain="card-${rank}" aria-pressed="${selected === rank}" ${!enabled ? "disabled" : ""}>
+            return `<button type="button" class="ll-card ll-rank-${rank} ${selected === rank ? "is-selected" : ""}" data-ll-card="${rank}" data-ll-explain="card_${rank}" aria-pressed="${selected === rank}" ${!enabled ? "disabled" : ""}>
                 <span class="ll-card-top"><b>${rank}</b><small>${index === 1 ? "Drawn" : "Held"} · ×${card[3]}</small></span>
                 <span class="ll-card-icon" aria-hidden="true">${card[2]}</span><strong>${card[0]}</strong><span class="ll-card-en">${card[1]}</span><span class="ll-card-caption">${card[4]}</span>
             </button>`;
@@ -144,7 +232,7 @@
         } else if ([1, 2, 3, 6].includes(selected)) {
             html += '<p class="ll-muted">其他玩家均受保护，本张牌将空放。</p>';
         }
-        if (needsGuess) html += `<div class="ll-option-label">Guess</div><div class="ll-guesses">${Object.keys(cards).slice(1).map(rank => `<button type="button" data-ll-guess="${rank}" data-ll-explain="card-${rank}" aria-pressed="${guess === Number(rank)}" ${pending ? "disabled" : ""}>${esc(label(rank))}</button>`).join("")}</div>`;
+        if (needsGuess) html += `<div class="ll-option-label">Guess</div><div class="ll-guesses">${Object.keys(cards).slice(1).map(rank => `<button type="button" data-ll-guess="${rank}" data-ll-explain="card_${rank}" aria-pressed="${guess === Number(rank)}" ${pending ? "disabled" : ""}>${esc(label(rank))}</button>`).join("")}</div>`;
         html += `<div class="ll-confirm"><span>${selected ? esc(label(selected)) : "选择一张手牌"}</span><button type="button" class="ll-primary" data-ll-action="play" data-ll-explain="play" ${!ready || pending ? "disabled" : ""}>${pending ? "Sending…" : "Play Card"}</button></div></div>`;
         return html;
     }
@@ -169,11 +257,11 @@
         if (view.playable_cards.length === 1 && view.playable_cards[0] === 7) status = "必须打出伯爵夫人 🌹";
         panel.innerHTML = `<div class="ll-surface">
             <div class="ll-stats"><span class="ll-round">Round <b>${view.round}</b></span>${info(`🂠 ${view.deck_count} Deck`, explanations.deck, "deck")}${info(`✉️ ${view.reserve_count} Reserve`, explanations.reserve, "reserve")}${info(`❤️ ${view.token_goal} to win`, explanations.tokens, "tokens")}</div>
-            <div class="ll-status" role="status" aria-live="polite">${status.includes("伯爵夫人") ? info(esc(status), cards[7][5], "card-7") : esc(status)}</div>
+            <div class="ll-status" role="status" aria-live="polite">${status.includes("伯爵夫人") ? info(esc(status), cards[7][5], "card_7") : esc(status)}</div>
             <div class="ll-layout"><main class="ll-main"><div class="ll-players">${renderPlayers()}</div>${renderResult()}
                 ${view.phase === "play" ? `<section class="ll-box"><div class="ll-section-title"><h3>Your Letter</h3><span>${own?.alive ? "Private hand" : "Out this round"}</span></div>${renderHand()}${renderChoice()}</section>` : ""}
                 ${notes.length ? `<section class="ll-box ll-notes" data-ll-explain="notes"><h3>${info("🔒", explanations.notes, "notes")} Private Intel</h3><div class="ll-notes-list">${notes.map(note => `<div><span>${esc(name(note.target))} · ${chip(note.card)}</span><small>Turn ${note.turn} · ${note.current ? "未发生换牌行动" : "历史观察，可能已换牌"}</small></div>`).join("")}</div></section>` : ""}
-            </main><aside class="ll-sidebar"><section class="ll-box"><div class="ll-section-title"><h3>Court Reference</h3>${info("16 cards", explanations.reference, "reference")}</div><div class="ll-reference">${Object.entries(cards).map(([rank, card]) => `<div class="ll-reference-row ll-rank-${rank}" tabindex="0" data-ll-explain="card-${rank}" data-ll-tip="${esc(card[5])}"><b>${rank}</b><span>${card[2]} ${card[0]}</span><small>×${card[3]}</small></div>`).join("")}</div>
+            </main><aside class="ll-sidebar"><section class="ll-box"><div class="ll-section-title"><h3>Court Reference</h3>${info("16 cards", explanations.reference, "reference")}</div><div class="ll-reference">${Object.entries(cards).map(([rank, card]) => `<div class="ll-reference-row ll-rank-${rank}" tabindex="0" data-ll-explain="card_${rank}" data-ll-tip="${esc(card[5])}"><b>${rank}</b><span>${card[2]} ${card[0]}</span><small>×${card[3]}</small></div>`).join("")}</div>
                 ${view.removed.length ? `<div class="ll-removed" data-ll-explain="removed"><small>Set Aside · Face Up</small><div class="ll-discards">${view.removed.map(chip).join("")}</div></div>` : ""}</section>
                 <section class="ll-box" data-ll-explain="log"><h3>Round Log</h3><div class="ll-log">${view.log.slice().reverse().map(entry => `<p><small>R${entry.round} · T${entry.turn}</small>${esc(entry.text)}</p>`).join("")}</div></section>
             </aside></div></div>`;
@@ -190,7 +278,7 @@
     }
 
     panel.addEventListener("click", event => {
-        if (explaining || !view) return;
+        if (loveLetterExplainWidget?.isActive() || !view) return;
         const button = event.target.closest("button");
         if (button && !button.disabled) {
             if (button.dataset.llCard && allowed("play_card")) {
@@ -216,36 +304,11 @@
         else if (!button && selected !== null && !pending) { resetSelection(); render(); }
     });
 
-    function explainAt(event) {
-        let element = event.target.closest("[data-ll-explain]");
-        if (!element && event.type === "pointerdown") {
-            element = [...panel.querySelectorAll("button:disabled[data-ll-explain]")].find(button => {
-                const rect = button.getBoundingClientRect();
-                return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-            });
-        }
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        if (element) {
-            const text = explanation(element.dataset.llExplain);
-            setExplain(false);
-            if (event.type === "pointerdown") suppressUntil = performance.now() + 700;
-            openDialog("Explain", `<p>${esc(text)}</p>`);
-        }
-    }
-
-    document.addEventListener("pointerdown", event => {
-        if (!explaining || event.target.closest("#loveLetterHelpBtn, #loveLetterExplainBtn, .ll-dialog")) return;
-        explainAt(event);
-    }, true);
     document.addEventListener("click", event => {
         if (performance.now() < suppressUntil) {
             suppressUntil = 0;
             event.preventDefault(); event.stopImmediatePropagation();
-            return;
         }
-        if (!explaining || event.target.closest("#loveLetterHelpBtn, #loveLetterExplainBtn, .ll-dialog")) return;
-        explainAt(event);
     }, true);
     panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-ll-tip]")); });
     panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
@@ -254,17 +317,14 @@
     panel.addEventListener("keydown", event => {
         if ((event.key === "Enter" || event.key === " ") && event.target.matches("[data-ll-tip]")) {
             event.preventDefault();
-            if (explaining) explainAt(event);
-            else showTip(event.target, true);
+            showTip(event.target, true);
         }
     });
     document.addEventListener("keydown", event => {
         if (event.key !== "Escape") return;
-        setExplain(false); hideTip();
-        if (!dialog.open && selected !== null && !pending) { resetSelection(); render(); }
+        loveLetterExplainWidget?.exit(); hideTip();
+        if (selected !== null && !pending) { resetSelection(); render(); }
     });
-    helpButton.addEventListener("click", help);
-    explainButton.addEventListener("click", () => setExplain(!explaining));
     dialogClose.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => {
         if (event.target !== dialog) return;
@@ -291,7 +351,7 @@
         header.style.display = visible ? "flex" : "none";
         if (!visible) {
             view = null; signature = null; pending = false;
-            resetSelection(); setExplain(false); hideTip();
+            resetSelection(); loveLetterExplainWidget?.exit(); hideTip();
             clearTimeout(pendingTimer);
             if (dialog.open) dialog.close();
             panel.innerHTML = "";
@@ -300,6 +360,7 @@
     function connectEvents() {
         socket.on("system:error", () => { if (pending) { pending = false; clearTimeout(pendingTimer); render(); } });
     }
+    initLoveLetterHelpExplain();
     if (document.readyState === "loading" || typeof socket === "undefined") {
         window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
     } else {

@@ -1,6 +1,6 @@
 <template data-game-target="criminalDancePanel" data-game-mode="contents">
   <div class="criminal-dance-surface">
-    <section class="criminal-dance-status" data-criminal-dance-explain-key="status" aria-label="Round status">
+    <section class="criminal-dance-status" data-criminal-dance-explain="status" aria-label="Round status">
       <div class="criminal-dance-round-meta">
         <span id="criminalDanceStatus" class="criminal-dance-status-chip">Waiting</span>
         <span>Round <strong id="criminalDanceRound">—</strong></span>
@@ -8,14 +8,14 @@
       </div>
       <div id="criminalDanceSummary" class="criminal-dance-summary" aria-live="polite">Waiting for the game to start.</div>
     </section>
-    <section id="criminalDanceResults" class="criminal-dance-results hidden" data-criminal-dance-explain-key="results" aria-labelledby="criminalDanceResultsTitle">
+    <section id="criminalDanceResults" class="criminal-dance-results hidden" data-criminal-dance-explain="results" aria-labelledby="criminalDanceResultsTitle">
       <h3 id="criminalDanceResultsTitle" data-criminal-dance-tip="Round Results (🏆): review the outcome before everyone confirms the next deal." tabindex="0">🏆 Round Results</h3>
       <div id="criminalDanceResultSummary"></div>
       <div id="criminalDanceReady" class="criminal-dance-ready" aria-live="polite"></div>
       <div id="criminalDanceResultControls" class="criminal-dance-controls"></div>
     </section>
     <div class="criminal-dance-layout">
-      <section id="criminalDanceHandSection" class="criminal-dance-section criminal-dance-hand-section" data-criminal-dance-explain-key="hand" aria-labelledby="criminalDanceHandTitle">
+      <section id="criminalDanceHandSection" class="criminal-dance-section criminal-dance-hand-section" data-criminal-dance-explain="hand" aria-labelledby="criminalDanceHandTitle">
         <div class="criminal-dance-section-heading">
           <h3 id="criminalDanceHandTitle" data-criminal-dance-tip="Your Hand (🃏): only you can see these cards. Select one to take an action." tabindex="0">🃏 Your Hand</h3>
           <span id="criminalDanceHandCount" class="criminal-dance-count" data-criminal-dance-tip="The number of cards in your hand." tabindex="0">0</span>
@@ -23,7 +23,7 @@
         <div id="criminalDanceHand" class="criminal-dance-hand"></div>
         <div id="criminalDanceControls" class="criminal-dance-controls"></div>
       </section>
-      <section class="criminal-dance-section criminal-dance-players-section" data-criminal-dance-explain-key="players" aria-labelledby="criminalDancePlayersTitle">
+      <section class="criminal-dance-section criminal-dance-players-section" data-criminal-dance-explain="players" aria-labelledby="criminalDancePlayersTitle">
         <div class="criminal-dance-section-heading">
           <h3 id="criminalDancePlayersTitle" data-criminal-dance-tip="Players (👥): hand counts and public status. The active player is highlighted." tabindex="0">👥 Players</h3>
         </div>
@@ -32,14 +32,14 @@
     </div>
     <div class="criminal-dance-records">
       <details id="criminalDancePlayedDetails" class="criminal-dance-section criminal-dance-record" aria-labelledby="criminalDancePlayedTitle">
-        <summary class="criminal-dance-section-heading" data-criminal-dance-explain-key="played">
+        <summary class="criminal-dance-section-heading" data-criminal-dance-explain="played">
           <span id="criminalDancePlayedTitle">🗂️ Played Cards</span>
           <span id="criminalDancePlayedCount" class="criminal-dance-count">0</span>
         </summary>
         <div id="criminalDancePlayed" class="criminal-dance-public-list" role="log" aria-label="Played cards"></div>
       </details>
       <details id="criminalDancePrivateDetails" class="criminal-dance-section criminal-dance-record criminal-dance-notes-section" aria-labelledby="criminalDancePrivateTitle">
-        <summary class="criminal-dance-section-heading" data-criminal-dance-explain-key="private">
+        <summary class="criminal-dance-section-heading" data-criminal-dance-explain="private">
           <span id="criminalDancePrivateTitle">🔒 Private Notes</span>
           <span id="criminalDancePrivateNew" class="criminal-dance-new hidden" aria-live="polite"></span>
           <span id="criminalDancePrivateCount" class="criminal-dance-count">0</span>
