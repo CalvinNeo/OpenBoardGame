@@ -123,6 +123,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "manila": ("push_your_luck", "euro", "auction"),
     "nine_upper": ("filler", "bluffing", "creative"),
     "no_thanks": ("filler", "push_your_luck", "auction"),
+    "not_a_hat": ("filler", "bluffing"),
     "patchwork": ("euro", "abstract"),
     "perfect_mismatch": ("filler", "creative"),
     "point_salad": ("filler", "euro"),

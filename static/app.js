@@ -591,6 +591,10 @@ function renderGameState(data) {
     renderCoyoteGameState(data);
     return;
   }
+  if (gameType === "not_a_hat") {
+    renderNotAHatGameState(data);
+    return;
+  }
   if (gameType === "in_a_grove") {
     renderInAGroveGameState(data);
     return;

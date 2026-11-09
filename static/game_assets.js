@@ -459,15 +459,15 @@ const GAME_ASSETS = {
   },
   "aidixit": {
     "scripts": [
-      "/static/games/aidixit.js?v=app_v4_h3"
+      "/static/games/aidixit.js?v=app_v4_h6"
     ],
     "styles": [
-      "/static/games/aidixit.css?v=3"
+      "/static/games/aidixit.css?v=6"
     ],
     "panel": "aidixitPanel",
     "panelTitle": "🖼️ AI 画物语",
     "header": "showAidixitHeaderActions",
-    "markup": "/static/games/aidixit.html?v=2_h3"
+    "markup": "/static/games/aidixit.html?v=2_h5"
   },
   "hanabi": {
     "scripts": [
@@ -1196,6 +1196,14 @@ const GAME_ASSETS = {
     "panel": "dareWordsPanel",
     "panelTitle": "🀄 胆敢造词",
     "header": "showDareWordsHeaderActions"
+  },
+  "not_a_hat": {
+    "scripts": ["/static/games/not_a_hat.js?v=1"],
+    "styles": ["/static/games/not_a_hat.css?v=1"],
+    "markup": "/static/games/not_a_hat.html?v=1",
+    "panel": "notAHatPanel",
+    "panelTitle": "🎩 似帽非帽",
+    "header": "showNotAHatHeaderActions"
   }
 };
 

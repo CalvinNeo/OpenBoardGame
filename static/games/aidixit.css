@@ -268,12 +268,33 @@
 
 /* The hand folds away while voting, where the pool owns the screen. */
 .aidixit-fold {
+  position: relative;
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding-right: 26px;
   cursor: default;
 }
 
-.aidixit-fold-chevron {
-  display: none;
+.aidixit-fold .aidixit-stage-title {
   flex: 0 0 auto;
+}
+
+.aidixit-fold .aidixit-stage-note {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Taken out of the flex line so a long note can never push it off screen. */
+.aidixit-fold-chevron {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: none;
+  transform: translateY(-50%);
   transition: transform 0.15s ease;
 }
 
@@ -286,7 +307,7 @@
 }
 
 .aidixit-fold[aria-expanded="false"] .aidixit-fold-chevron {
-  transform: rotate(-90deg);
+  transform: translateY(-50%) rotate(-90deg);
 }
 
 .aidixit-block.is-folded #aidixitHand,
@@ -360,13 +381,27 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
+.aidixit-grid,
+.aidixit-grid * {
+  box-sizing: border-box;
+}
+
 .aidixit-grid:empty {
   display: none;
 }
 
+/* The result cards are not height fitted, so they need a tighter track to keep
+   two columns on the narrowest phones. */
+.aidixit-round-cards {
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+}
+
 .aidixit-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  height: 100%;
   min-width: 0;
   padding: 4px;
   border: 2px solid var(--adx-line);
@@ -402,10 +437,26 @@
   border-color: #7dd3fc;
 }
 
+/* Badges and the magnifier are anchored to the picture frame, so nothing can
+   ever sit on top of the voter list underneath it. */
+.aidixit-card-frame {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* The 4:3 box is the starting size. fitAidixitStage() sets the row height, and
+   the picture then grows into whatever room the screen has left, so the board
+   fills the display instead of leaving a band of empty background. */
 .aidixit-card-img {
   display: block;
+  flex: 1 1 auto;
   width: 100%;
   height: auto;
+  min-height: 0;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: 6px;
@@ -435,7 +486,7 @@
 }
 
 .aidixit-card-story {
-  bottom: 8px;
+  top: 8px;
   left: 8px;
   color: #2b1c05;
   background: var(--adx-gold);
@@ -446,6 +497,11 @@
   left: 8px;
   color: #06283a;
   background: #7dd3fc;
+}
+
+/* Defensive: a card should never carry both marks, but never stack them. */
+.aidixit-card-story ~ .aidixit-card-mine {
+  top: 34px;
 }
 
 .aidixit-zoom-btn {
@@ -471,18 +527,46 @@
 
 .aidixit-votes {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 5px;
-  padding: 0 2px;
+  padding: 0 1px;
 }
 
-.aidixit-vote-dot {
-  width: 11px;
-  height: 11px;
+.aidixit-voter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 1px 7px 1px 5px;
+  border: 1px solid #00000026;
+  border-radius: 999px;
+  background: #241c3c;
+  color: var(--adx-ink);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.aidixit-voter.is-you {
+  border-color: var(--adx-gold);
+}
+
+.aidixit-voter-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  border: 1px solid #00000055;
+  border: 1px solid #ffffff4d;
   background: #9ca3af;
+}
+
+.aidixit-voter-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* --------------------------------------------------- in-place confirmation */
@@ -572,6 +656,27 @@
 
 .aidixit-result-toggle:hover {
   background: #372c5d;
+}
+
+.aidixit-result-toggle-label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.aidixit-result-peek {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--adx-muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aidixit-result-toggle[aria-expanded="true"] .aidixit-result-peek {
+  visibility: hidden;
 }
 
 .aidixit-result-chevron {
@@ -783,7 +888,15 @@
 
   .aidixit-prompt,
   .aidixit-cluebar {
-    padding: 9px 11px;
+    padding: 8px 11px;
+  }
+
+  .aidixit-composer {
+    padding: 7px 9px;
+  }
+
+  .aidixit-composer input {
+    padding: 7px 10px;
   }
 
   .aidixit-stage {
@@ -805,8 +918,9 @@
   }
 
   .aidixit-card-votes { top: 6px; right: 6px; }
-  .aidixit-card-story { bottom: 6px; left: 6px; }
+  .aidixit-card-story { top: 6px; left: 6px; }
   .aidixit-card-mine { top: 6px; left: 6px; }
+  .aidixit-card-story ~ .aidixit-card-mine { top: 28px; }
 
   .aidixit-zoom-btn {
     right: 6px;

@@ -71,6 +71,7 @@ from game.love_letter import LoveLetterGame
 from game.manila import ManilaGame
 from game.nine_upper import NineUpperGame
 from game.no_thanks import NoThanksGame
+from game.not_a_hat import NotAHatGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.compress import CompressGame
@@ -184,6 +185,7 @@ __all__ = [
     "ManilaGame",
     "NineUpperGame",
     "NoThanksGame",
+    "NotAHatGame",
     "PatchworkGame",
     "PerfectMismatchGame",
     "CompressGame",

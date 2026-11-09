@@ -82,6 +82,7 @@ GAME_URLS = {
     "dune_imperium": "https://boardgamegeek.com/boardgame/316554/dune-imperium",
     "mind_the_lines": "https://boardgamegeek.com/boardgame/419639/mind-the-lines",
     "no_thanks": "https://boardgamegeek.com/boardgame/12942/no-thanks",
+    "not_a_hat": "https://boardgamegeek.com/boardgame/375651/thats-not-a-hat",
     "power_grid": "https://boardgamegeek.com/boardgame/2651/power-grid",
     # dnd_starter_set is intentionally omitted: no matching BGG boardgame entry
     # found for Heroes of the Borderlands (2025) as of 2026-10-21.

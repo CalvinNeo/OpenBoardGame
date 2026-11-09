@@ -91,6 +91,7 @@ from game.love_letter import (
 from game.manila import ManilaGame
 from game.nine_upper import NineUpperGame
 from game.no_thanks import NoThanksGame, ACTION_SCHEMA as NO_THANKS_ACTION_SCHEMA, CONFIG_SCHEMA as NO_THANKS_CONFIG_SCHEMA
+from game.not_a_hat import NotAHatGame, ACTION_SCHEMA as NOT_A_HAT_ACTION_SCHEMA, CONFIG_SCHEMA as NOT_A_HAT_CONFIG_SCHEMA
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.compress import CompressGame, ACTION_SCHEMA as COMPRESS_ACTION_SCHEMA, CONFIG_SCHEMA as COMPRESS_CONFIG_SCHEMA
@@ -356,6 +357,16 @@ register_game(
         turn_mode="turn", action_schema=NO_THANKS_ACTION_SCHEMA,
         config_schema=NO_THANKS_CONFIG_SCHEMA, module=NoThanksGame,
         serialize=NoThanksGame.serialize, deserialize=NoThanksGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=NotAHatGame.game_id, name="That's Not a Hat", name_zh="似帽非帽",
+        min_players=NotAHatGame.min_players, max_players=NotAHatGame.max_players,
+        turn_mode="turn", action_schema=NOT_A_HAT_ACTION_SCHEMA,
+        config_schema=NOT_A_HAT_CONFIG_SCHEMA, module=NotAHatGame,
+        serialize=NotAHatGame.serialize, deserialize=NotAHatGame.deserialize,
     )
 )
 

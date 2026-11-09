@@ -63,6 +63,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "natsumemo",
     "night_of_the_ninja",
     "no_thanks",
+    "not_a_hat",
     "orloj",
     "patchwork",
     "point_salad",

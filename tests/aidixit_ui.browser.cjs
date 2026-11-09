@@ -68,7 +68,13 @@ async function auditLayout(page, width, label) {
       hand: rect('#aidixitHand'),
       meta: rect('.aidixit-meta'),
       handBottom: rect('#aidixitHand') ? rect('#aidixitHand').bottom : 0,
-      poolTop: rect('#aidixitPool') ? rect('#aidixitPool').y : 0,
+      poolTop: rect('#aidixitPoolBlock') ? rect('#aidixitPoolBlock').y : 0,
+      handBlockTop: rect('#aidixitHandBlock') ? rect('#aidixitHandBlock').y : 0,
+      handHidden: !document.getElementById('aidixitHand').getClientRects().length,
+      stage: rect('#aidixitStage'),
+      rootBottom: Math.round(document.getElementById('aidixitRoot').getBoundingClientRect().bottom),
+      viewport: window.innerHeight,
+      docHeight: document.documentElement.scrollHeight,
     };
   }, { width, label });
 }
@@ -273,6 +279,44 @@ async function auditLayout(page, width, label) {
       };
     });
 
+    // Last Round detail: the Story mark must never sit on the voter list, and
+    // the voters have to be readable names rather than bare colour dots.
+    await page.evaluate(data => renderAidixitGameState(data), phases.result);
+    for (const [width, height] of WIDTHS) {
+      await page.setViewportSize({ width, height });
+      await settle(page);
+      await page.evaluate(() => setAidixitResultOpen(true));
+      await settle(page);
+      const detail = await page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll('#aidixitRoundNoticeCards .aidixit-card'));
+        return cards.map(card => {
+          const story = card.querySelector('.aidixit-card-story');
+          const voters = card.querySelector('.aidixit-votes');
+          const names = Array.from(card.querySelectorAll('.aidixit-voter-name')).map(node => node.textContent.trim());
+          const overlaps = (() => {
+            if (!story || !voters) return false;
+            const a = story.getBoundingClientRect();
+            const b = voters.getBoundingClientRect();
+            return a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+          })();
+          const spills = voters
+            ? voters.getBoundingClientRect().right > card.getBoundingClientRect().right + 1
+            : false;
+          return { isStory: !!story, names, overlaps, spills };
+        });
+      });
+      assert(detail.length > 0, `no result cards at ${width}px`);
+      assert(detail.some(card => card.isStory), `no Story mark on the result cards at ${width}px`);
+      detail.forEach((card, index) => {
+        assert.equal(card.overlaps, false, `Story mark covers the voters on card ${index} at ${width}px`);
+        assert.equal(card.spills, false, `voter list spills out of card ${index} at ${width}px`);
+      });
+      const named = detail.flatMap(card => card.names);
+      assert(named.length > 0 && named.every(name => name.length > 0),
+        `voters are not named at ${width}px: ${JSON.stringify(named)}`);
+      await page.screenshot({ path: `${output}/lastround-${width}px.png`, fullPage: true });
+    }
+
     const reports = [];
     for (const [name, payload] of Object.entries(phases)) {
       await page.evaluate(data => renderAidixitGameState(data), payload);
@@ -293,7 +337,18 @@ async function auditLayout(page, width, label) {
         const helpMid = report.help.y + report.help.height / 2;
         const reconnectMid = report.reconnect.y + report.reconnect.height / 2;
         assert(Math.abs(helpMid - reconnectMid) <= 4, `${name}: Help left the title row at ${width}px`);
-        assert(report.smallestCard === 0 || report.smallestCard >= 88, `${name}: card only ${report.smallestCard}px wide at ${width}px`);
+        const minCard = width <= 360 ? 120 : 150;
+        assert(report.smallestCard === 0 || report.smallestCard >= minCard,
+          `${name}: card only ${report.smallestCard}px wide at ${width}px, expected >= ${minCard}`);
+        // The board has to use the screen rather than shrink into a corner.
+        assert(report.rootBottom >= report.viewport * 0.88,
+          `${name}: board stops at ${report.rootBottom}px of a ${report.viewport}px screen at ${width}px`);
+        assert(report.docHeight <= report.viewport * 1.08,
+          `${name}: page scrolls to ${report.docHeight}px on a ${report.viewport}px screen at ${width}px`);
+        if (width >= 1080) {
+          assert(report.scores.x >= report.stage.right - 1,
+            `${name}: scoreboard is not in the side rail at ${width}px`);
+        }
         assert.equal(report.title, '🖼️ AI 画物语', `${name}: panel title lost at ${width}px`);
         await page.screenshot({ path: `${output}/${name}-${width}px.png`, fullPage: true });
       }
@@ -303,11 +358,25 @@ async function auditLayout(page, width, label) {
     const vote320 = reports.find(item => item.label === 'vote' && item.width === 320);
     assert(vote320.scores.bottom <= vote320.prompt.bottom + 260, 'scoreboard drifted far from the prompt at 320px');
 
-    // While voting the pool is the subject, so it must sit above the hand.
+    // While voting the pool is the subject, so it sits on top and the hand
+    // starts folded until the player asks for it.
     for (const width of WIDTHS.map(item => item[0])) {
       const report = reports.find(item => item.label === 'vote' && item.width === width);
-      assert(report.poolTop < report.hand.y, `pool is not above the hand during voting at ${width}px`);
+      assert(report.poolTop < report.handBlockTop, `pool is not above the hand during voting at ${width}px`);
+      assert.equal(report.handHidden, true, `hand is not folded during voting at ${width}px`);
     }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await settle(page);
+    await page.evaluate(data => renderAidixitGameState(data), phases.vote);
+    assert.equal(await page.locator('#aidixitHand').isVisible(), false, 'hand should start folded while voting');
+    await page.locator('#aidixitHandToggle').click();
+    assert.equal(await page.locator('#aidixitHand').isVisible(), true, 'tapping the hand header did not open it');
+    assert.equal(await page.locator('#aidixitHandToggle').getAttribute('aria-expanded'), 'true');
+    await page.locator('#aidixitHandToggle').click();
+    assert.equal(await page.locator('#aidixitHand').isVisible(), false, 'tapping again did not fold the hand');
+    await page.setViewportSize({ width: 1440, height: 950 });
+    await settle(page);
 
     fs.writeFileSync(`${output}/report.json`, JSON.stringify(reports, null, 2));
     assert.deepEqual(errors, [], `page errors: ${errors.join(' | ')}`);

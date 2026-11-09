@@ -611,6 +611,7 @@
                     <option value="dumb_questions">Dumb Questions</option>
                     <option value="nine_upper">9UPPER · 瞎掰王</option>
                     <option value="skull">Skull</option>
+                    <option value="not_a_hat">That's Not a Hat · 似帽非帽</option>
                     <option value="rebel_princess">Rebel Princess</option>
                     <option value="cat_in_box">Cat in the Box</option>
                     <option value="hanabi">Hanabi</option>
@@ -1390,6 +1391,10 @@
               <button id="emeraldSkullsHelpBtn" class="emerald-skulls-header-btn" type="button">Help</button>
               <button id="emeraldSkullsExplainBtn" class="emerald-skulls-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="notAHatHeaderActions" style="display: none;">
+              <button id="notAHatHelpBtn" class="not-a-hat-header-btn" type="button">Help</button>
+              <button id="notAHatExplainBtn" class="not-a-hat-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="wriggleRouletteHeaderActions" style="display: none;">
               <button id="wriggleRouletteHelpBtn" class="wriggle-roulette-header-btn" type="button">Help</button>
               <button id="wriggleRouletteExplainBtn" class="wriggle-roulette-header-btn" type="button" aria-pressed="false">Explain</button>
@@ -1621,6 +1626,8 @@
 
             <div id="coyotePanel" class="hidden"></div>
 
+            <div id="notAHatPanel" class="hidden"></div>
+
             <div id="inAGrovePanel" class="hidden"></div>
 
             <div id="citadelsPanel" class="hidden"></div>
@@ -1772,7 +1779,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=231" defer></script>
+  <script src="/static/game_assets.js?v=233" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v44" defer></script>
   <script src="/static/games/shared_help.js?v=1" defer></script>
@@ -1813,7 +1820,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v66" defer></script>
-  <script src="/static/room.js?v=app_v104" defer></script>
+  <script src="/static/app.js?v=app_v67" defer></script>
+  <script src="/static/room.js?v=app_v105" defer></script>
 </body>
 </html>

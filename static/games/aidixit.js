@@ -68,11 +68,11 @@ const AIDIXIT_HELP_CONFIG = {
       html: {
         zh: "<p>投票阶段所有人都能看到打乱后的牌面，讲述者(🗣️)不参与投票，其他每个人都必须投出一票。</p>"
           + "<p>你不能投给自己交上去的那张牌，那张牌会带着 Yours(🔹) 标记，系统会直接拒绝这样的投票。</p>"
-          + "<p>投票是公开的，牌下方的彩色圆点是投给它的玩家，所以你能看着别人的选择再决定自己要投谁。</p>"
+          + "<p>投票是公开的，每张牌下方会直接列出投给它的玩家名字，所以你能看着别人的选择再决定自己要投谁。</p>"
           + "<p>票投出去之后不能更改，等最后一个人投完，本轮立刻结算并把结果展示在 Last Round(📜) 里。</p>",
         en: "<p>During voting everyone sees the shuffled cards. The Storyteller(🗣️) does not vote, while every other player has to cast exactly one vote.</p>"
           + "<p>You may not vote for the card you submitted yourself. That card carries the Yours(🔹) mark and the system rejects such a vote outright.</p>"
-          + "<p>Votes are public. The colour dots under a card are the players who voted for it, so you can watch other choices before making your own.</p>"
+          + "<p>Votes are public. The names listed under each card are the players who voted for it, so you can watch other choices before making your own.</p>"
           + "<p>A vote cannot be changed once it is cast, and the round settles the moment the last player votes, with the result shown under Last Round(📜).</p>"
       }
     },
@@ -116,8 +116,8 @@ const AIDIXIT_EXPLAIN = {
   vote_count: { zh: "这张牌收到的票数。", en: "How many votes this card received." },
   story_badge: { zh: "Story 标记，表示这张牌就是讲述者(🗣️)出的那张。", en: "The Story badge marks the card the Storyteller(🗣️) actually played." },
   own_card: { zh: "Yours(🔹) 标记，表示这张牌是你自己交上去的，你不能投它。", en: "The Yours(🔹) mark shows this is the card you submitted yourself, and you may not vote for it." },
-  result_card: { zh: "上一轮的一张牌，右上角的数字是它得到的票数，下方的彩色圆点是投给它的玩家。", en: "One card from last round. The number at the top right is its vote count and the colour dots below are the players who voted for it." },
-  vote_dots: { zh: "投给这张牌的玩家，用他们各自的颜色圆点表示。", en: "The players who voted for this card, shown as colour dots in their own colours." },
+  result_card: { zh: "上一轮的一张牌，右上角的数字是它得到的票数，左上角的 Story(👑) 表示它就是讲述者的牌，下方列出投给它的玩家。", en: "One card from last round. The number at the top right is its vote count, the Story(👑) mark at the top left means it was the storyteller's card, and the voters are listed underneath." },
+  voters: { zh: "投给这张牌的玩家，直接写出名字，名字前面的圆点是他专属的颜色。", en: "The players who voted for this card, listed by name. The dot in front of a name is that player's own colour." },
   round_notice: { zh: "上一轮的结算记录，点标题可以折叠或者展开，会一直保留到本轮结束。", en: "The scoring summary of the previous round. Tap the header to collapse or expand it. It is kept until the current round ends." },
   round_result: { zh: "上一轮的结果，包括结算类型、讲述者、线索以及猜中的人。", en: "Last round's outcome, including the scoring case, the storyteller, the clue, and who guessed correctly." },
   score_delta: { zh: "上一轮每个人的分数变化，绿色数字是本轮拿到的分数。", en: "How every player's score changed last round. The green number is what they earned." },
@@ -168,6 +168,7 @@ let aidixitDeckSelections = new Set();
 let aidixitSelectedHandCardId = null;
 let aidixitSelectedVoteCardId = null;
 let aidixitSelectedCardEl = null;
+let aidixitLastPhase = null;
 let currentAidixitView = null;
 
 const aidixitConfigBox = document.getElementById("aidixitConfigBox");
@@ -183,6 +184,8 @@ const aidixitClueLabel = document.getElementById("aidixitClue");
 const aidixitClueBy = document.getElementById("aidixitClueBy");
 const aidixitPlayers = document.getElementById("aidixitPlayers");
 const aidixitStage = document.getElementById("aidixitStage");
+const aidixitHandBlock = document.getElementById("aidixitHandBlock");
+const aidixitHandToggle = document.getElementById("aidixitHandToggle");
 const aidixitComposer = document.getElementById("aidixitComposer");
 const aidixitClueInput = document.getElementById("aidixitClueInput");
 const aidixitHand = document.getElementById("aidixitHand");
@@ -196,6 +199,7 @@ const aidixitResultBody = document.getElementById("aidixitResultBody");
 const aidixitRoundNoticeBody = document.getElementById("aidixitRoundNoticeBody");
 const aidixitResultDeltas = document.getElementById("aidixitResultDeltas");
 const aidixitRoundNoticeCards = document.getElementById("aidixitRoundNoticeCards");
+const aidixitResultPeek = document.getElementById("aidixitResultPeek");
 const aidixitGameOver = document.getElementById("aidixitGameOver");
 const aidixitWinnerLabel = document.getElementById("aidixitWinner");
 const aidixitPhaseLabel = document.getElementById("aidixitPhase");
@@ -203,6 +207,7 @@ const aidixitRoundLabel = document.getElementById("aidixitRound");
 const aidixitStorytellerLabel = document.getElementById("aidixitStoryteller");
 const aidixitTargetScoreLabel = document.getElementById("aidixitTargetScore");
 const aidixitDeckCountLabel = document.getElementById("aidixitDeckCount");
+const aidixitMeta = document.querySelector("#aidixitPanel .aidixit-meta");
 const aidixitDiscardCountLabel = document.getElementById("aidixitDiscardCount");
 const aidixitZoomModal = document.getElementById("aidixitZoomModal");
 const aidixitZoomCloseBtn = document.getElementById("aidixitZoomCloseBtn");
@@ -498,16 +503,19 @@ function createAidixitCardElement(card, options = {}) {
     img.dataset.aidixitExplain = options.explain;
   }
 
-  // Overlays are appended before the image so Explain mode resolves the
-  // smallest element under the pointer instead of the whole card.
+  // Badges live inside the picture frame, never over the voter list below it.
+  // They are appended before the image so Explain mode resolves the smallest
+  // element under the pointer instead of the whole card.
+  const frame = document.createElement("div");
+  frame.className = "aidixit-card-frame";
+  if (options.story) {
+    frame.appendChild(buildAidixitBadge("aidixit-card-story", "story_badge", "👑 Story"));
+  }
   if (options.mine) {
-    wrapper.appendChild(buildAidixitBadge("aidixit-card-mine", "own_card", "🔹 Yours"));
+    frame.appendChild(buildAidixitBadge("aidixit-card-mine", "own_card", "🔹 Yours"));
   }
   if (options.count !== undefined) {
-    wrapper.appendChild(buildAidixitBadge("aidixit-card-votes", "vote_count", `🗳️ ${options.count}`));
-  }
-  if (options.story) {
-    wrapper.appendChild(buildAidixitBadge("aidixit-card-story", "story_badge", "👑 Story"));
+    frame.appendChild(buildAidixitBadge("aidixit-card-votes", "vote_count", `🗳️ ${options.count}`));
   }
   if (options.zoomable) {
     const zoomBtn = document.createElement("button");
@@ -522,12 +530,13 @@ function createAidixitCardElement(card, options = {}) {
       event.stopPropagation();
       openAidixitZoom(img.src, img.alt);
     });
-    wrapper.appendChild(zoomBtn);
+    frame.appendChild(zoomBtn);
   }
-  wrapper.appendChild(img);
+  frame.appendChild(img);
+  wrapper.appendChild(frame);
 
   if (Array.isArray(options.votes) && options.votes.length) {
-    wrapper.appendChild(buildAidixitVoteDots(options.votes));
+    wrapper.appendChild(buildAidixitVoters(options.votes));
   }
   if (options.onSelect) {
     wrapper.addEventListener("click", () => options.onSelect(wrapper, cardId));
@@ -543,20 +552,29 @@ function buildAidixitBadge(className, explainKey, text) {
   return badge;
 }
 
-function buildAidixitVoteDots(votes) {
+// Colour dots alone do not say who voted, so every voter is named.
+function buildAidixitVoters(votes) {
   const row = document.createElement("div");
   row.className = "aidixit-votes";
-  row.dataset.aidixitExplain = "vote_dots";
+  row.dataset.aidixitExplain = "voters";
+  const you = currentAidixitView ? currentAidixitView.you : null;
   votes.forEach((vote) => {
+    const chip = document.createElement("span");
+    chip.className = "aidixit-voter";
+    if (vote && vote.player_id && vote.player_id === you) {
+      chip.classList.add("is-you");
+    }
     const dot = document.createElement("span");
-    dot.className = "aidixit-vote-dot";
+    dot.className = "aidixit-voter-dot";
     if (vote && vote.color) {
       dot.style.backgroundColor = vote.color;
     }
-    if (vote && vote.name) {
-      dot.title = vote.name;
-    }
-    row.appendChild(dot);
+    const name = document.createElement("span");
+    name.className = "aidixit-voter-name";
+    name.textContent = (vote && vote.name) || "Someone";
+    chip.appendChild(dot);
+    chip.appendChild(name);
+    row.appendChild(chip);
   });
   return row;
 }
@@ -680,8 +698,12 @@ function renderAidixitHand(view) {
   aidixitHand.innerHTML = "";
   const hand = Array.isArray(view.hand) ? view.hand : [];
   if (aidixitHandNote) {
+    const foldable = aidixitHandFoldable(view);
+    const folded = foldable && (aidixitHandFoldOverride === null ? true : aidixitHandFoldOverride);
     let note = `${hand.length} cards`;
-    if (view.phase === "submit" && !aidixitIsStoryteller(view)) {
+    if (foldable) {
+      note = folded ? `${hand.length} cards · tap to open` : `${hand.length} cards · tap to fold`;
+    } else if (view.phase === "submit" && !aidixitIsStoryteller(view)) {
       note = view.submitted ? "✅ Submitted" : "⏳ Not submitted yet";
     } else if (view.phase === "story" && aidixitIsStoryteller(view)) {
       note = "Pick one, it stays hidden";
@@ -757,6 +779,7 @@ function renderAidixitResult(view) {
   }
   const result = view.last_result;
   if (!result) {
+    aidixitResultKey = null;
     aidixitRoundNotice.classList.add("hidden");
     aidixitRoundNoticeBody.innerHTML = "";
     if (aidixitResultDeltas) aidixitResultDeltas.innerHTML = "";
@@ -770,6 +793,7 @@ function renderAidixitResult(view) {
     partial: { text: "Some guessed", fail: false },
   };
   const info = caseMap[result.case] || { text: result.case || "Round", fail: false };
+  syncAidixitResultFold(view);
   const correctNames = Array.isArray(result.correct_voters) && result.correct_voters.length
     ? result.correct_voters.map((pid) => findPlayerName(view, pid)).join(", ")
     : "nobody";
@@ -790,6 +814,10 @@ function renderAidixitResult(view) {
   aidixitRoundNoticeBody.appendChild(
     aidixitResultChunk("🎯 Correct", correctNames)
   );
+  if (aidixitResultPeek) {
+    const wide = window.matchMedia("(min-width: 1080px)").matches;
+    aidixitResultPeek.textContent = wide ? `${info.text} · 🗣️ ${storytellerName}` : info.text;
+  }
 
   if (aidixitResultDeltas) {
     aidixitResultDeltas.innerHTML = "";
@@ -890,6 +918,200 @@ function renderAidixitComposer(view) {
   }
 }
 
+// --- Screen fitting ----------------------------------------------------
+// DEV_GUIDE asks the layout to fill the screen instead of shrinking into a
+// clump, so the column count is derived from the height that is actually
+// left over. Fewer columns mean bigger cards, so the search walks upwards
+// and keeps the first layout that both fits and stays under the size cap.
+
+const AIDIXIT_MIN_CARD = 112;
+const AIDIXIT_MAX_CARD = 420;
+const AIDIXIT_CARD_RATIO = 0.75;
+const AIDIXIT_STRETCH = 1.5;
+// A layout that overshoots by a few pixels still beats dropping a whole
+// column, which on a phone halves the size of every picture.
+const AIDIXIT_FIT_SLACK = 1.06;
+const AIDIXIT_FIT_SLACK_PX = 18;
+
+function aidixitGridGap(grid) {
+  const gap = parseFloat(getComputedStyle(grid).columnGap);
+  return Number.isFinite(gap) ? gap : 8;
+}
+
+// Pick the column count that puts the largest possible picture on screen:
+// every candidate is measured at its natural 4:3 size, then stretched into
+// whatever height is left, and the widest resulting card area wins.
+function aidixitBestColumns(count, width, height, gap, chrome) {
+  if (!count || width <= 0) {
+    return null;
+  }
+  let best = null;
+  let fallback = null;
+  for (let cols = 1; cols <= count; cols += 1) {
+    const cardW = (width - gap * (cols - 1)) / cols;
+    if (cardW < AIDIXIT_MIN_CARD) {
+      break;
+    }
+    const rows = Math.ceil(count / cols);
+    const naturalRow = cardW * AIDIXIT_CARD_RATIO + chrome;
+    const natural = rows * naturalRow + gap * (rows - 1);
+    const roomRow = (height - gap * (rows - 1)) / rows;
+    const finalRow = Math.max(naturalRow, Math.min(naturalRow * AIDIXIT_STRETCH, roomRow));
+    const entry = { cols, cardW, rows, naturalRow, natural, finalRow, area: cardW * finalRow };
+    if (!fallback || entry.natural < fallback.natural) {
+      fallback = entry;
+    }
+    if (natural > height * AIDIXIT_FIT_SLACK + AIDIXIT_FIT_SLACK_PX || cardW > AIDIXIT_MAX_CARD) {
+      continue;
+    }
+    if (!best || entry.area > best.area) {
+      best = entry;
+    }
+  }
+  return best || fallback;
+}
+
+function fitAidixitStage() {
+  const view = currentAidixitView;
+  if (!aidixitStage || !view || currentGameType !== "aidixit") {
+    return;
+  }
+  const poolCount = aidixitPool ? aidixitPool.childElementCount : 0;
+  const handCount = aidixitHand ? aidixitHand.childElementCount : 0;
+  const handFolded = !!aidixitHandBlock?.classList.contains("is-folded");
+  const grids = [];
+  if (view.phase === "vote" && !view.game_over && poolCount > 0) {
+    grids.push({ el: aidixitPool, count: poolCount, chrome: 48 });
+  }
+  if (!handFolded && handCount > 0) {
+    grids.push({ el: aidixitHand, count: handCount, chrome: 14 });
+  }
+  if (!grids.length) {
+    return;
+  }
+
+  // Measure the real chrome instead of guessing: everything above the stage,
+  // every block header, and whatever still sits below it on this screen.
+  const wide = window.matchMedia("(min-width: 1080px)").matches;
+  const rootGap = parseFloat(getComputedStyle(aidixitRoot).rowGap) || 9;
+  const stageGap = parseFloat(getComputedStyle(aidixitStage).rowGap) || 11;
+  const stageBox = aidixitStage.getBoundingClientRect();
+  const panel = aidixitStage.closest(".game-panel");
+  const panelPad = panel ? parseFloat(getComputedStyle(panel).paddingBottom) || 0 : 0;
+
+  let below = 0;
+  const resultVisible = !!aidixitRoundNotice && !aidixitRoundNotice.classList.contains("hidden");
+  if (resultVisible) {
+    below += aidixitRoundNotice.offsetHeight + stageGap;
+  }
+  if (!wide && aidixitMeta) {
+    below += aidixitMeta.offsetHeight + rootGap;
+  }
+
+  let overhead = (grids.length - 1) * stageGap;
+  grids.forEach((grid) => {
+    const block = grid.el.closest(".aidixit-block");
+    const blockBox = block?.getBoundingClientRect();
+    grid.overhead = blockBox ? Math.max(0, grid.el.getBoundingClientRect().top - blockBox.top) : 0;
+    overhead += grid.overhead;
+  });
+
+  const available = window.innerHeight - stageBox.top - below - panelPad - overhead - 16;
+  layoutAidixitGrids(grids, Math.max(200, available));
+}
+
+// Columns come first, then the leftover height is shared out so the rows can
+// grow past their 4:3 starting size without turning into tall slivers.
+function layoutAidixitGrids(grids, budget) {
+  const totalCards = grids.reduce((sum, grid) => sum + grid.count, 0);
+  grids.forEach((grid) => {
+    const width = grid.el.clientWidth;
+    if (!width) {
+      grid.skip = true;
+      return;
+    }
+    const gap = aidixitGridGap(grid.el);
+    const plan = aidixitBestColumns(grid.count, width, (budget * grid.count) / totalCards, gap, grid.chrome);
+    if (!plan) {
+      grid.skip = true;
+      return;
+    }
+    Object.assign(grid, plan, { gap });
+  });
+
+  const live = grids.filter((grid) => !grid.skip);
+  const leftover = budget - live.reduce((sum, grid) => sum + grid.natural, 0);
+  if (leftover > 20) {
+    const headroom = (grid) => Math.max(0, grid.rows * grid.naturalRow * AIDIXIT_STRETCH - grid.natural);
+    const room = live.reduce((sum, grid) => sum + headroom(grid), 0);
+    if (room > 0) {
+      const take = Math.min(leftover, room);
+      live.forEach((grid) => {
+        const grown = grid.natural + (take * headroom(grid)) / room;
+        grid.finalRow = Math.max(grid.naturalRow, (grown - grid.gap * (grid.rows - 1)) / grid.rows);
+      });
+    }
+  }
+
+  live.forEach((grid) => {
+    grid.el.style.gridTemplateColumns = `repeat(${grid.cols}, minmax(0, 1fr))`;
+    grid.el.style.gridAutoRows = `${Math.round(grid.finalRow)}px`;
+    centerAidixitLastRow(grid);
+  });
+}
+
+// A half filled last row looks like a mistake, so the leftovers are centred
+// under the full rows instead of hugging the left edge.
+function centerAidixitLastRow(grid) {
+  const items = Array.from(grid.el.children);
+  items.forEach((item) => {
+    item.style.gridColumnStart = "";
+  });
+  const remainder = grid.count % grid.cols;
+  if (!remainder || grid.cols < 2 || items.length !== grid.count) {
+    return;
+  }
+  const firstOfLastRow = grid.count - remainder;
+  const start = Math.floor((grid.cols - remainder) / 2) + 1;
+  for (let index = firstOfLastRow; index < grid.count; index += 1) {
+    items[index].style.gridColumnStart = String(start + (index - firstOfLastRow));
+  }
+}
+
+let aidixitFitPending = false;
+
+function scheduleAidixitFit() {
+  if (aidixitFitPending) {
+    return;
+  }
+  aidixitFitPending = true;
+  requestAnimationFrame(() => {
+    aidixitFitPending = false;
+    syncAidixitResultFold(currentAidixitView);
+    fitAidixitStage();
+  });
+}
+
+// --- Hand folding ------------------------------------------------------
+// Voting is about the pool, so the hand starts folded and the player can
+// open it with one tap. Any other phase always shows the hand.
+
+let aidixitHandFoldOverride = null;
+
+function aidixitHandFoldable(view) {
+  return !!view && view.phase === "vote" && !view.game_over;
+}
+
+function applyAidixitHandFold(view) {
+  if (!aidixitHandBlock || !aidixitHandToggle) {
+    return;
+  }
+  const foldable = aidixitHandFoldable(view);
+  const folded = foldable && (aidixitHandFoldOverride === null ? true : aidixitHandFoldOverride);
+  aidixitHandBlock.classList.toggle("is-folded", folded);
+  aidixitHandToggle.setAttribute("aria-expanded", String(!folded));
+}
+
 function renderAidixitView() {
   const view = currentAidixitView;
   if (!view) {
@@ -904,8 +1126,10 @@ function renderAidixitView() {
   renderAidixitResult(view);
   renderAidixitGameOver(view);
   renderAidixitMeta(view);
+  applyAidixitHandFold(view);
   syncAidixitComposer();
   syncAidixitOverlay();
+  fitAidixitStage();
   aidixitExplainWidget?.refresh();
 }
 
@@ -927,8 +1151,14 @@ function clearAidixitState() {
   if (aidixitPool) aidixitPool.innerHTML = "";
   if (aidixitPoolHead) aidixitPoolHead.classList.add("hidden");
   if (aidixitStage) aidixitStage.classList.remove("is-voting");
+  if (aidixitHandBlock) aidixitHandBlock.classList.remove("is-folded");
+  aidixitHandFoldOverride = null;
+  aidixitLastPhase = null;
   if (aidixitPoolNote) aidixitPoolNote.textContent = "";
   if (aidixitRoundNotice) aidixitRoundNotice.classList.add("hidden");
+  if (aidixitResultPeek) aidixitResultPeek.textContent = "";
+  aidixitResultKey = null;
+  aidixitResultWide = null;
   if (aidixitRoundNoticeBody) aidixitRoundNoticeBody.innerHTML = "";
   if (aidixitResultDeltas) aidixitResultDeltas.innerHTML = "";
   if (aidixitRoundNoticeCards) aidixitRoundNoticeCards.innerHTML = "";
@@ -951,6 +1181,10 @@ function renderAidixitGameState(data) {
   }
   const handIds = new Set((view.hand || []).map((card) => card.card_id));
   const poolIds = new Set((view.pool_cards || []).map((card) => card.card_id));
+  if (view.phase !== aidixitLastPhase) {
+    aidixitLastPhase = view.phase;
+    aidixitHandFoldOverride = null;
+  }
   const selectionLost = (aidixitSelectedHandCardId && !handIds.has(aidixitSelectedHandCardId))
     || (aidixitSelectedVoteCardId && !poolIds.has(aidixitSelectedVoteCardId))
     || (aidixitSelectedVoteCardId && view.phase !== "vote");
@@ -975,13 +1209,56 @@ if (aidixitZoomModal) {
   });
 }
 
-if (aidixitResultToggle && aidixitResultBody) {
-  aidixitResultToggle.addEventListener("click", () => {
-    const open = aidixitResultToggle.getAttribute("aria-expanded") === "true";
-    aidixitResultToggle.setAttribute("aria-expanded", String(!open));
-    aidixitResultBody.hidden = open;
+if (aidixitHandToggle) {
+  aidixitHandToggle.addEventListener("click", () => {
+    if (!aidixitHandFoldable(currentAidixitView)) {
+      return;
+    }
+    const folded = !!aidixitHandBlock?.classList.contains("is-folded");
+    aidixitHandFoldOverride = !folded;
+    applyAidixitHandFold(currentAidixitView);
+    renderAidixitHand(currentAidixitView);
+    fitAidixitStage();
   });
 }
+
+let aidixitResultKey = null;
+let aidixitResultWide = null;
+
+// A phone has no room for the previous round on top of the live board, so the
+// summary stays on the header and the cards wait behind one tap. Rotating the
+// device across the breakpoint re-applies the default, an explicit tap does not.
+function syncAidixitResultFold(view) {
+  if (!aidixitResultToggle || !aidixitResultBody || !view || !view.last_result) {
+    return;
+  }
+  const wide = window.matchMedia("(min-width: 1080px)").matches;
+  const key = `${view.round}|${view.last_result.story_card || ""}`;
+  if (key === aidixitResultKey && wide === aidixitResultWide) {
+    return;
+  }
+  aidixitResultKey = key;
+  aidixitResultWide = wide;
+  setAidixitResultOpen(wide);
+}
+
+function setAidixitResultOpen(open) {
+  if (!aidixitResultToggle || !aidixitResultBody) {
+    return;
+  }
+  aidixitResultToggle.setAttribute("aria-expanded", String(open));
+  aidixitResultBody.hidden = !open;
+}
+
+if (aidixitResultToggle && aidixitResultBody) {
+  aidixitResultToggle.addEventListener("click", () => {
+    setAidixitResultOpen(aidixitResultToggle.getAttribute("aria-expanded") !== "true");
+    scheduleAidixitFit();
+  });
+}
+
+window.addEventListener("resize", scheduleAidixitFit);
+window.addEventListener("orientationchange", scheduleAidixitFit);
 
 if (aidixitClueInput) {
   aidixitClueInput.addEventListener("input", () => {

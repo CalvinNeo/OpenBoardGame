@@ -1,0 +1,471 @@
+/* 似帽非帽 / That's Not a Hat — independent game stylesheet. */
+
+.nah-root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Draw attention on the collapsed Room Control dock while a move is waiting. */
+#roomControlsPanel.collapsed.not-a-hat-turn {
+  border-color: #c2443c;
+  box-shadow: 0 0 0 2px rgba(194, 68, 60, 0.2);
+}
+
+/* --- panel header buttons ----------------------------------------------- */
+.not-a-hat-header-btn {
+  white-space: nowrap;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #cfd4dc;
+  background: #fff;
+  color: #222;
+  cursor: pointer;
+}
+.not-a-hat-header-btn[aria-pressed="true"] {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
+/* --- status chips ------------------------------------------------------- */
+.nah-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.nah-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid #e3e3e3;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  color: #555;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nah-chip b { color: #222; font-weight: 700; }
+
+/* --- banner ------------------------------------------------------------- */
+.nah-banner {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #eef4ff;
+  border: 1px solid #cfe0fb;
+  color: #1b3a63;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.nah-banner.is-hidden { display: none; }
+
+/* --- board -------------------------------------------------------------- */
+.nah-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+.nah-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  background: #fff;
+  min-width: 0;
+}
+.nah-seat.is-giver {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.16);
+}
+.nah-seat.is-receiver {
+  border-color: #d98324;
+  background: #fff8ef;
+  box-shadow: 0 0 0 2px rgba(217, 131, 36, 0.16);
+}
+.nah-seat-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.nah-seat-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.nah-seat.is-you .nah-seat-name { color: #1f6feb; }
+.nah-seat-tag {
+  flex: 0 0 auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #eef1f6;
+  color: #5a6270;
+  font-size: 10px;
+  line-height: 15px;
+}
+.nah-seat-tag.is-bot { background: #f0e9fb; color: #6b4fa8; }
+
+.nah-seat-cards {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.nah-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  min-height: 50px;
+  border-radius: 6px;
+  border: 1px solid #d8d8d8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px;
+  background: #fff;
+  overflow: hidden;
+}
+.nah-card.is-oldest { border-left: 3px solid #d9a441; }
+.nah-card-emoji { font-size: 20px; line-height: 1; }
+.nah-card-name {
+  font-size: 9px;
+  line-height: 1.1;
+  color: #444;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nah-card.is-down { justify-content: center; }
+.nah-card.back-light {
+  background: repeating-linear-gradient(135deg, #fdf6e6, #fdf6e6 5px, #f4ead3 5px, #f4ead3 10px);
+  border-color: #ddcfa8;
+}
+.nah-card.back-dark {
+  background: repeating-linear-gradient(135deg, #3b3f4a, #3b3f4a 5px, #33363f 5px, #33363f 10px);
+  border-color: #2b2e36;
+}
+.nah-card-arrow { font-size: 18px; line-height: 1; }
+
+.nah-seat-pen {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  min-height: 16px;
+  font-size: 10px;
+  color: #8a8f98;
+}
+.nah-seat-pen.is-clean { font-style: italic; }
+.nah-pen-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  border: 1px solid #e6c9c9;
+  background: #fdf1f1;
+  font-size: 11px;
+  line-height: 1;
+}
+.nah-pen-count { font-weight: 700; color: #b23b3b; }
+
+/* --- action area -------------------------------------------------------- */
+.nah-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  background: #fff;
+  min-width: 0;
+}
+.nah-note {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #333;
+}
+.nah-note.is-muted { color: #7a808a; }
+
+.nah-ready-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nah-ready-count { font-size: 12px; color: #7a808a; }
+
+.nah-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cfd4dc;
+  background: #f4f6f9;
+  color: #222;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 40px;
+}
+.nah-btn.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.nah-btn.accept { flex: 1 1 130px; background: #2f9e5f; border-color: #2f9e5f; color: #fff; }
+.nah-btn.refuse { flex: 1 1 130px; background: #c2443c; border-color: #c2443c; color: #fff; }
+.nah-choice { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.nah-claim {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.nah-claim-from { font-size: 12px; color: #7a808a; }
+.nah-claim-item { font-size: 18px; font-weight: 700; color: #1b3a63; }
+
+/* --- gift picker -------------------------------------------------------- */
+.nah-give { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.nah-give-head { font-size: 13px; line-height: 1.4; color: #333; }
+.nah-picker-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid #cfd4dc;
+  border-radius: 8px;
+  font-size: 14px;
+  min-height: 34px;
+}
+.nah-picker-cats { display: flex; flex-wrap: wrap; gap: 4px; }
+.nah-cat {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #dfe3ea;
+  background: #f6f7fa;
+  color: #4a5060;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nah-cat.is-active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+.nah-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 4px;
+  max-height: min(38vh, 240px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+  border: 1px solid #eef0f4;
+  border-radius: 8px;
+  background: #fafbfd;
+}
+.nah-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 2px;
+  border: 1px solid #e3e6ec;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  min-width: 0;
+}
+.nah-item.is-filtered { display: none; }
+.nah-item.is-picked {
+  border-color: #1f6feb;
+  background: #e8f0fe;
+  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.25);
+}
+.nah-item-emoji { font-size: 19px; line-height: 1.1; }
+.nah-item-name {
+  font-size: 10px;
+  line-height: 1.15;
+  color: #444;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nah-give-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nah-picked {
+  flex: 1 1 120px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1b3a63;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nah-picked.is-empty { font-weight: 400; font-size: 12px; color: #8a8f98; }
+.nah-give-btn {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #cfd4dc;
+  background: #f4f6f9;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 40px;
+  cursor: pointer;
+}
+.nah-give-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* --- refusal review ----------------------------------------------------- */
+.nah-review {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e3e3e3;
+  background: #fafbfd;
+  min-width: 0;
+}
+.nah-review.is-honest { border-color: #bcd9c4; background: #f2faf5; }
+.nah-review.is-bluff { border-color: #e6c0bd; background: #fdf4f3; }
+.nah-review-card {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 62px;
+  border-radius: 8px;
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+.nah-review-text { font-size: 13px; line-height: 1.45; color: #333; min-width: 0; }
+
+/* --- game over ---------------------------------------------------------- */
+.nah-over { display: flex; flex-direction: column; gap: 8px; }
+.nah-over-title { font-size: 16px; font-weight: 700; color: #1b3a63; }
+.nah-over-list { display: flex; flex-direction: column; gap: 3px; }
+.nah-over-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f6f7fa;
+  font-size: 13px;
+}
+.nah-over-row.is-winner { background: #eaf7ee; font-weight: 700; }
+.nah-over-score { color: #7a808a; white-space: nowrap; }
+.nah-over-row.is-winner .nah-over-score { color: #2f9e5f; }
+
+/* --- log ---------------------------------------------------------------- */
+.nah-logbox {
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px 8px;
+  min-width: 0;
+}
+.nah-logbox > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #5a6270;
+  padding: 2px 0;
+  list-style-position: inside;
+}
+.nah-log {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0 2px;
+}
+.nah-log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #333;
+  min-width: 0;
+}
+.nah-log-row.is-muted { color: #8a8f98; font-style: italic; }
+.nah-log-badge {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 16px;
+  background: #eef1f6;
+  color: #5a6270;
+}
+.nah-log-badge.is-accepted { background: #eaf7ee; color: #2f7a4d; }
+.nah-log-badge.is-refused { background: #fdeceb; color: #b23b3b; }
+.nah-log-badge.is-pending { background: #fff4e2; color: #96631c; }
+
+/* --- wide screens ------------------------------------------------------- */
+@media (min-width: 560px) {
+  .nah-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 900px) {
+  .nah-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+    gap: 10px 14px;
+    align-items: start;
+  }
+  .nah-status,
+  .nah-banner,
+  .nah-logbox { grid-column: 1 / -1; }
+  .nah-board {
+    grid-column: 1;
+    grid-row: 3 / span 2;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 10px;
+    align-content: start;
+  }
+  .nah-action {
+    grid-column: 2;
+    grid-row: 3;
+    position: sticky;
+    top: 8px;
+  }
+  .nah-logbox { grid-row: 5; }
+  .nah-picker-grid { max-height: min(52vh, 420px); }
+  .nah-card { width: 50px; min-height: 66px; }
+  .nah-card-emoji { font-size: 25px; }
+  .nah-card-name { font-size: 10px; }
+  .nah-card-arrow { font-size: 21px; }
+  .nah-seat-name { font-size: 14px; }
+}
+
+@media (min-width: 1280px) {
+  .nah-board { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+  .nah-card { width: 56px; min-height: 74px; }
+  .nah-card-emoji { font-size: 28px; }
+  .nah-card-arrow { font-size: 23px; }
+  .nah-pen-chip { width: 20px; height: 20px; font-size: 13px; }
+}

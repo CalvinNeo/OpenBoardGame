@@ -1442,6 +1442,7 @@ const GAME_WEIGHT = {
   project_l: 1.53,
   six_nimmt: 1.19,
   skull: 1.12,
+  not_a_hat: 1.06,
   splendor: 1.78,
   splendor_pokemon: 1.851063829787234,
   texas_holdem: 2.430830039525692,
