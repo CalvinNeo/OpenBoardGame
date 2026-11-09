@@ -11,67 +11,72 @@
   </section></template>
 <template data-game-target="aidixitPanel" data-game-mode="contents">
               <div class="aidixit-root" id="aidixitRoot">
-                <div class="aidixit-prompt" id="aidixitPromptBox" data-aidixit-explain="prompt">
-                  <span class="aidixit-prompt-icon" id="aidixitPromptIcon" aria-hidden="true">🎭</span>
-                  <span class="aidixit-prompt-text" id="aidixitPrompt">-</span>
-                </div>
-
-                <div class="aidixit-cluebar hidden" id="aidixitClueBar" data-aidixit-explain="clue">
-                  <span class="aidixit-cluebar-tag">💬 Clue</span>
-                  <span class="aidixit-cluebar-text" id="aidixitClue">-</span>
-                  <span class="aidixit-cluebar-by" id="aidixitClueBy"></span>
-                </div>
-
-                <div class="aidixit-scores" id="aidixitPlayers" data-aidixit-explain="players"></div>
-
-                <section class="aidixit-stage" id="aidixitStage">
-                  <div class="aidixit-block" id="aidixitPoolBlock">
-                    <div class="aidixit-stage-head hidden" id="aidixitPoolHead">
-                      <h3 class="aidixit-stage-title" data-aidixit-explain="pool">🎴 Pool</h3>
-                      <span class="aidixit-stage-note" id="aidixitPoolNote" data-aidixit-explain="voted"></span>
-                    </div>
-                    <div id="aidixitPool" class="aidixit-grid aidixit-pool"></div>
+                <div class="aidixit-main">
+                  <div class="aidixit-gameover hidden" id="aidixitGameOver" data-aidixit-explain="winner">
+                    <span class="aidixit-gameover-icon" aria-hidden="true">🏆</span>
+                    <span class="aidixit-gameover-text" id="aidixitWinner">-</span>
                   </div>
 
-                  <div class="aidixit-block" id="aidixitHandBlock">
-                    <div class="aidixit-stage-head">
-                      <h3 class="aidixit-stage-title" data-aidixit-explain="hand">🖐️ Your Hand</h3>
-                      <span class="aidixit-stage-note" id="aidixitHandNote" data-aidixit-explain="submitted"></span>
-                    </div>
-                    <div class="aidixit-composer hidden" id="aidixitComposer">
-                      <label class="aidixit-composer-label" for="aidixitClueInput" data-aidixit-explain="clue_input">✍️ Your Clue</label>
-                      <input id="aidixitClueInput" type="text" maxlength="80" autocomplete="off"
-                             placeholder="A word, a sentence, or an inside joke" data-aidixit-explain="clue_input" />
-                    </div>
-                    <div id="aidixitHand" class="aidixit-grid aidixit-hand"></div>
+                  <div class="aidixit-prompt" id="aidixitPromptBox" data-aidixit-explain="prompt">
+                    <span class="aidixit-prompt-icon" id="aidixitPromptIcon" aria-hidden="true">🎭</span>
+                    <span class="aidixit-prompt-text" id="aidixitPrompt">-</span>
                   </div>
-                </section>
 
-                <section class="aidixit-result hidden" id="aidixitRoundNotice">
-                  <button class="aidixit-result-toggle" id="aidixitResultToggle" type="button"
-                          aria-expanded="true" aria-controls="aidixitResultBody" data-aidixit-explain="round_notice">
-                    <span class="aidixit-result-toggle-label">📜 Last Round</span>
-                    <span class="aidixit-result-chevron" aria-hidden="true">▾</span>
-                  </button>
-                  <div class="aidixit-result-body" id="aidixitResultBody">
-                    <div class="aidixit-result-line" id="aidixitRoundNoticeBody" data-aidixit-explain="round_result"></div>
-                    <div class="aidixit-result-deltas" id="aidixitResultDeltas" data-aidixit-explain="score_delta"></div>
-                    <div id="aidixitRoundNoticeCards" class="aidixit-grid aidixit-round-cards"></div>
+                  <div class="aidixit-cluebar hidden" id="aidixitClueBar" data-aidixit-explain="clue">
+                    <span class="aidixit-cluebar-tag">💬 Clue</span>
+                    <span class="aidixit-cluebar-text" id="aidixitClue">-</span>
+                    <span class="aidixit-cluebar-by" id="aidixitClueBy"></span>
                   </div>
-                </section>
 
-                <div class="aidixit-gameover hidden" id="aidixitGameOver" data-aidixit-explain="winner">
-                  <span class="aidixit-gameover-icon" aria-hidden="true">🏆</span>
-                  <span class="aidixit-gameover-text" id="aidixitWinner">-</span>
+                  <section class="aidixit-stage" id="aidixitStage">
+                    <div class="aidixit-block" id="aidixitPoolBlock">
+                      <div class="aidixit-stage-head hidden" id="aidixitPoolHead">
+                        <h3 class="aidixit-stage-title" data-aidixit-explain="pool">🎴 Pool</h3>
+                        <span class="aidixit-stage-note" id="aidixitPoolNote" data-aidixit-explain="voted"></span>
+                      </div>
+                      <div id="aidixitPool" class="aidixit-grid aidixit-pool"></div>
+                    </div>
+
+                    <div class="aidixit-block" id="aidixitHandBlock">
+                      <button class="aidixit-stage-head aidixit-fold" id="aidixitHandToggle" type="button"
+                              aria-expanded="true" aria-controls="aidixitHand">
+                        <h3 class="aidixit-stage-title" data-aidixit-explain="hand">🖐️ Your Hand</h3>
+                        <span class="aidixit-stage-note" id="aidixitHandNote" data-aidixit-explain="submitted"></span>
+                        <span class="aidixit-fold-chevron" aria-hidden="true">▾</span>
+                      </button>
+                      <div class="aidixit-composer hidden" id="aidixitComposer">
+                        <label class="aidixit-composer-label" for="aidixitClueInput" data-aidixit-explain="clue_input">✍️ Your Clue</label>
+                        <input id="aidixitClueInput" type="text" maxlength="80" autocomplete="off"
+                               placeholder="A word, a sentence, or an inside joke" data-aidixit-explain="clue_input" />
+                      </div>
+                      <div id="aidixitHand" class="aidixit-grid aidixit-hand"></div>
+                    </div>
+                  </section>
+
+                  <section class="aidixit-result hidden" id="aidixitRoundNotice">
+                    <button class="aidixit-result-toggle" id="aidixitResultToggle" type="button"
+                            aria-expanded="true" aria-controls="aidixitResultBody" data-aidixit-explain="round_notice">
+                      <span class="aidixit-result-toggle-label">📜 Last Round</span>
+                      <span class="aidixit-result-chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="aidixit-result-body" id="aidixitResultBody">
+                      <div class="aidixit-result-line" id="aidixitRoundNoticeBody" data-aidixit-explain="round_result"></div>
+                      <div class="aidixit-result-deltas" id="aidixitResultDeltas" data-aidixit-explain="score_delta"></div>
+                      <div id="aidixitRoundNoticeCards" class="aidixit-grid aidixit-round-cards"></div>
+                    </div>
+                  </section>
                 </div>
 
-                <div class="aidixit-meta">
-                  <span class="aidixit-meta-item" data-aidixit-explain="round">🔁 Round <b id="aidixitRound">-</b></span>
-                  <span class="aidixit-meta-item" data-aidixit-explain="phase">🎭 <b id="aidixitPhase">-</b></span>
-                  <span class="aidixit-meta-item" data-aidixit-explain="storyteller">🗣️ <b id="aidixitStoryteller">-</b></span>
-                  <span class="aidixit-meta-item" data-aidixit-explain="target">🎯 Target <b id="aidixitTargetScore">-</b></span>
-                  <span class="aidixit-meta-item" data-aidixit-explain="deck">🃏 Deck <b id="aidixitDeckCount">-</b></span>
-                  <span class="aidixit-meta-item" data-aidixit-explain="discard">🗑️ Discard <b id="aidixitDiscardCount">-</b></span>
-                </div>
+                <aside class="aidixit-side">
+                  <div class="aidixit-scores" id="aidixitPlayers" data-aidixit-explain="players"></div>
+                  <div class="aidixit-meta">
+                    <span class="aidixit-meta-item" data-aidixit-explain="round">🔁 Round <b id="aidixitRound">-</b></span>
+                    <span class="aidixit-meta-item" data-aidixit-explain="phase">🎭 <b id="aidixitPhase">-</b></span>
+                    <span class="aidixit-meta-item" data-aidixit-explain="storyteller">🗣️ <b id="aidixitStoryteller">-</b></span>
+                    <span class="aidixit-meta-item" data-aidixit-explain="target">🎯 Target <b id="aidixitTargetScore">-</b></span>
+                    <span class="aidixit-meta-item" data-aidixit-explain="deck">🃏 Deck <b id="aidixitDeckCount">-</b></span>
+                    <span class="aidixit-meta-item" data-aidixit-explain="discard">🗑️ Discard <b id="aidixitDiscardCount">-</b></span>
+                  </div>
+                </aside>
               </div>
             </template>

@@ -1,4 +1,6 @@
-/* AI Dixit (aidixit) — standalone game stylesheet, loaded via GAME_ASSETS.styles. */
+/* AI Dixit (aidixit) — standalone game stylesheet, loaded via GAME_ASSETS.styles.
+   Card sizes are fitted to the viewport at runtime by fitAidixitStage(); the CSS
+   below only provides the pre-script fallback and the desktop two column frame. */
 
 .game-panel[data-game-theme="aidixit"] {
   --adx-bg: #1d1730;
@@ -65,16 +67,32 @@
   border-color: var(--adx-gold);
 }
 
-/* ---------------------------------------------------------------- root */
+/* ---------------------------------------------------------------- root
+   Phone first: one column. The two wrappers dissolve so every block takes
+   part in the root flex and can be ordered by importance. */
 
 .aidixit-root {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   min-width: 0;
 }
 
-.aidixit-root > * {
+.aidixit-main,
+.aidixit-side {
+  display: contents;
+}
+
+.aidixit-gameover { order: 1; }
+.aidixit-prompt { order: 2; }
+.aidixit-cluebar { order: 3; }
+.aidixit-scores { order: 4; }
+.aidixit-stage { order: 5; }
+.aidixit-result { order: 6; }
+.aidixit-meta { order: 7; }
+
+.aidixit-root > *,
+.aidixit-block {
   min-width: 0;
 }
 
@@ -83,8 +101,8 @@
 .aidixit-prompt {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
+  gap: 9px;
+  padding: 10px 13px;
   border: 1px solid var(--adx-line);
   border-radius: 12px;
   background: linear-gradient(90deg, #3a2b5e, #2b2245);
@@ -97,13 +115,14 @@
 
 .aidixit-prompt-icon {
   flex: 0 0 auto;
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
 }
 
 .aidixit-prompt-text {
   flex: 1 1 auto;
   min-width: 0;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -131,7 +150,7 @@
 .aidixit-cluebar-text {
   flex: 1 1 160px;
   min-width: 0;
-  font-size: clamp(16px, 2.4vw, 22px);
+  font-size: clamp(17px, 2.6vw, 24px);
   font-weight: 700;
   font-style: italic;
   color: #ffe9b8;
@@ -154,12 +173,13 @@
 .aidixit-seat {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
-  padding: 5px 9px;
+  padding: 6px 11px;
   border: 1px solid var(--adx-line);
   border-radius: 999px;
   background: var(--adx-panel);
+  font-size: 14px;
 }
 
 .aidixit-seat.is-storyteller {
@@ -173,8 +193,8 @@
 
 .aidixit-seat-dot {
   flex: 0 0 auto;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   border: 1px solid #00000055;
   background: #9ca3af;
@@ -182,7 +202,7 @@
 
 .aidixit-seat-name {
   min-width: 0;
-  max-width: 11ch;
+  max-width: 12ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -197,54 +217,48 @@
 
 .aidixit-seat-tag {
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
 }
 
-/* ---------------------------------------------------------------- stage */
+/* ---------------------------------------------------------------- stage
+   The stage is the game board itself, so it carries no extra frame. */
 
 .aidixit-stage {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--adx-line);
-  border-radius: 14px;
-  background: #241c3c;
+  gap: 11px;
 }
 
 .aidixit-block {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* Voting is about the pool, so it takes the top slot while the hand steps aside. */
-.aidixit-stage.is-voting #aidixitPoolBlock {
-  order: -1;
-}
-
-.aidixit-stage.is-voting #aidixitHandBlock .aidixit-card-img {
-  opacity: 0.72;
+  gap: 7px;
 }
 
 .aidixit-stage-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
   gap: 4px 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .aidixit-stage-title {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .aidixit-stage-note {
-  font-size: 12px;
+  flex: 1 1 auto;
+  font-size: 12.5px;
   color: var(--adx-muted);
 }
 
@@ -252,8 +266,36 @@
   display: none;
 }
 
+/* The hand folds away while voting, where the pool owns the screen. */
+.aidixit-fold {
+  cursor: default;
+}
+
+.aidixit-fold-chevron {
+  display: none;
+  flex: 0 0 auto;
+  transition: transform 0.15s ease;
+}
+
+.aidixit-stage.is-voting .aidixit-fold {
+  cursor: pointer;
+}
+
+.aidixit-stage.is-voting .aidixit-fold-chevron {
+  display: inline;
+}
+
+.aidixit-fold[aria-expanded="false"] .aidixit-fold-chevron {
+  transform: rotate(-90deg);
+}
+
+.aidixit-block.is-folded #aidixitHand,
+.aidixit-block.is-folded .aidixit-composer {
+  display: none;
+}
+
 .aidixit-empty {
-  padding: 10px;
+  padding: 12px;
   border: 1px dashed var(--adx-line);
   border-radius: 10px;
   color: var(--adx-muted);
@@ -267,8 +309,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
-  padding: 8px 10px;
+  gap: 7px 10px;
+  padding: 9px 11px;
   border: 1px solid var(--adx-gold);
   border-radius: 10px;
   background: #3a2c1a55;
@@ -285,7 +327,7 @@
 
 .aidixit-composer-label {
   flex: 0 0 auto;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--adx-gold);
 }
@@ -293,7 +335,7 @@
 .aidixit-composer input {
   flex: 1 1 180px;
   min-width: 0;
-  padding: 7px 10px;
+  padding: 9px 11px;
   border: 1px solid var(--adx-line);
   border-radius: 8px;
   background: #191330;
@@ -314,9 +356,8 @@
 
 .aidixit-grid {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
-  justify-content: center;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .aidixit-grid:empty {
@@ -325,9 +366,7 @@
 
 .aidixit-card {
   position: relative;
-  justify-self: center;
   width: 100%;
-  max-width: 340px;
   min-width: 0;
   padding: 4px;
   border: 2px solid var(--adx-line);
@@ -414,14 +453,14 @@
   right: 8px;
   bottom: 8px;
   z-index: 2;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 1px solid #ffffff66;
   border-radius: 999px;
   background: #14102acc;
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
   cursor: zoom-in;
 }
@@ -477,9 +516,9 @@
 .aidixit-overlay-btn {
   flex: 1 1 0;
   min-width: 0;
-  padding: 7px 4px;
+  padding: 8px 4px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
@@ -520,7 +559,7 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 10px 13px;
   border: 0;
   border-radius: 0;
   background: #2f2550;
@@ -547,8 +586,8 @@
 .aidixit-result-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  gap: 9px;
+  padding: 11px;
 }
 
 .aidixit-result-body[hidden] {
@@ -560,7 +599,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--adx-muted);
 }
 
@@ -571,7 +610,7 @@
 .aidixit-result-case {
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #2b1c05;
   background: var(--adx-gold);
@@ -592,11 +631,11 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border: 1px solid var(--adx-line);
   border-radius: 999px;
   background: var(--adx-panel);
-  font-size: 12px;
+  font-size: 12.5px;
 }
 
 .aidixit-delta.is-you {
@@ -618,20 +657,20 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 13px 15px;
   border: 1px solid var(--adx-gold);
   border-radius: 14px;
   background: linear-gradient(90deg, #4a3a1c, #2b2245);
 }
 
 .aidixit-gameover-icon {
-  font-size: 24px;
+  font-size: 26px;
   line-height: 1;
 }
 
 .aidixit-gameover-text {
   min-width: 0;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: #ffe9b8;
 }
@@ -642,8 +681,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
-  padding-top: 2px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--adx-muted);
 }
 
@@ -673,11 +711,63 @@
   object-fit: contain;
 }
 
-/* ----------------------------------------------------------- responsive */
+/* ------------------------------------------------------ desktop two columns
+   Wide screens put the scoreboard and the reference numbers in a sticky side
+   rail, so the whole height and width is left to the cards. */
 
-@media (max-width: 900px) {
+@media (min-width: 1080px) {
+  .aidixit-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(220px, 20vw, 310px);
+    gap: 14px;
+    align-items: start;
+  }
+
+  .aidixit-main {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .aidixit-side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    top: 10px;
+  }
+
+  .aidixit-gameover,
+  .aidixit-prompt,
+  .aidixit-cluebar,
+  .aidixit-scores,
+  .aidixit-stage,
+  .aidixit-result,
+  .aidixit-meta {
+    order: 0;
+  }
+
+  .aidixit-scores {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .aidixit-seat {
+    border-radius: 10px;
+  }
+
   .aidixit-seat-name {
-    max-width: 8ch;
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .aidixit-seat-score {
+    margin-left: auto;
+  }
+
+  .aidixit-meta {
+    padding-top: 8px;
+    border-top: 1px solid var(--adx-line);
   }
 }
 
@@ -693,22 +783,15 @@
 
   .aidixit-prompt,
   .aidixit-cluebar {
-    padding: 8px 10px;
+    padding: 9px 11px;
   }
 
-  .aidixit-stage,
-  .aidixit-result-body {
-    padding: 8px;
+  .aidixit-stage {
+    gap: 9px;
   }
 
   .aidixit-grid {
     gap: 6px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .aidixit-pool,
-  .aidixit-round-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .aidixit-card {
@@ -728,9 +811,9 @@
   .aidixit-zoom-btn {
     right: 6px;
     bottom: 6px;
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
   }
 
   .aidixit-overlay-actions {
@@ -738,30 +821,23 @@
   }
 
   .aidixit-seat {
-    padding: 4px 8px;
-    gap: 5px;
-    font-size: 13px;
-  }
-
-  .aidixit-meta {
-    gap: 3px 10px;
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 360px) {
-  .aidixit-hand {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 5px 9px;
+    gap: 6px;
   }
 
   .aidixit-seat-name {
-    max-width: 7ch;
+    max-width: 9ch;
+  }
+
+  .aidixit-result-body {
+    padding: 9px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .aidixit-card,
-  .aidixit-result-chevron {
+  .aidixit-result-chevron,
+  .aidixit-fold-chevron {
     transition: none;
   }
 

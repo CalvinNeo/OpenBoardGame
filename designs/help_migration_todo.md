@@ -19,7 +19,7 @@
 node --check static/games/<game>.js          # 语法
 python3 -m unittest tests.test_help_contract # 六条 Help 要求 + Explain 契约
 python3 tmp/verify_batch<N>.py               # 本批 section/key 统计
-node tmp/smoke_load.cjs <game>               # 真正加载，暴露模块初始化错误
+node scripts/smoke_load.cjs <game>               # 真正加载，暴露模块初始化错误
 ```
 
 **每批收尾时必须对全部已迁移游戏跑一遍冒烟测试**，而不只是新做的那几个：
@@ -33,7 +33,7 @@ for g in re.findall(r'^\s{2}"([a-z0-9_]+)":\s*\{', assets, re.M):
     if os.path.exists(p) and 'obgCreateHelp' in open(p, encoding='utf-8', errors='ignore').read():
         print(g)
 PY
-while read g; do node tmp/smoke_load.cjs "$g"; done < tmp/migrated_list.txt
+while read g; do node scripts/smoke_load.cjs "$g"; done < tmp/migrated_list.txt
 ```
 
 再加一条廉价的 grep，用于抓"删了变量但调用点还在"：
