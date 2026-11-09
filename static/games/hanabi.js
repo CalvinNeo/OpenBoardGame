@@ -561,7 +561,7 @@ const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle")
   });
   function initialize() {
     clearState();
-    updateHanabiConfigRow();
+    window.updateHanabiConfigRow();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
   else initialize();

@@ -31,10 +31,126 @@
         log: "公开记录只包含竞拍、提交状态和已经公开的成交结果，不会揭露未公开的售房选择或私牌。该区域可单独滚动。",
         private: "私有资产(🔒)只有你能查看。保留的地产(🏠)用于售房；支票(💵)和剩余现金(🪙)在终局合计为总财富。",
     };
+    const FOR_SALE_EXPLAIN = {
+        property: { zh: explanations.property, en: "There are 30 properties (🏠) valued 1 to 30. In the buy stage players who drop out take the lowest remaining property in turn and the last one standing takes the highest, while in the sell stage a higher property earns a higher check. The card colour and building icon only mark the value band." },
+        check: { zh: explanations.check, en: "Checks (💵) come as two each of 0 and 2K to 15K. In the sell stage everyone reveals their property (🏠) at once and this round's checks are handed out from the lowest property upward, where equal check values make no difference. K means a thousand." },
+        cash: { zh: explanations.cash, en: "Cash (🪙) is the money you have not yet committed to this auction. You start with 18K in a 3 or 4 player game and 14K with 5 or 6. Other players' cash stays secret until the end and your remaining cash counts toward your final wealth. K means a thousand." },
+        bid: { zh: explanations.bid, en: "Bid offers the total price you selected, which must exceed the current high bid. Money already committed is not paid again and you only cover the difference, and your maximum total is your remaining cash (🪙) plus what you have already committed this round." },
+        amount: { zh: explanations.amount, en: "Choose this round's total bid in thousands (K), not an extra amount to add. The − and + buttons step by 1K, and the total must beat the current high bid without exceeding what you can pay." },
+        auction: { zh: explanations.auction, en: "Still Bidding lists the players still in this auction, including those who have not bid yet. You marks yourself, To act is the current player, Highest is the current high bidder and committed (🪙) is each player's public total. Passed lists players who dropped out, took a property and can no longer raise this round." },
+        pass: { zh: explanations.pass, en: "Pass leaves the round and takes the current lowest property (🏠). Half of what you committed is refunded, rounded down, and the rest is paid, so committing 5K refunds 2K and costs 3K, while dropping out before bidding takes the property for free. The last player standing pays their whole bid." },
+        sell: { zh: explanations.sell, en: "Select one of your own properties (🏠) and press Confirm Sale to submit in secret. Everything is revealed once all players submit and checks (💵) are handed out by property value. A submission is locked and cannot be changed, and a sold property leaves your hand." },
+        next: { zh: explanations.next, en: "Next Round means you have read this round's result. Play continues only after every seat confirms, including the switch between the buy and sell stages and the final ranking. Bots confirm only for themselves and a disconnected human must reconnect to confirm." },
+        player: { zh: explanations.player, en: "The player bar shows this round's public bids, who has dropped out or submitted, and how many properties (🏠) and checks (💵) each player holds. Other players' cash, private properties, checks and unrevealed sale choices stay secret until the end." },
+        bot: { zh: explanations.bot, en: "Bots (🤖) decide only from information they can see and never read another player's private cards, secret choices or the future deck, and they confirm only their own seat at the end of a round." },
+        held: { zh: explanations.held, en: "Committed (🪙) is what you have put into this round's auction. Raising only covers the difference, dropping out refunds half rounded down, and the last player standing pays it all." },
+        total: { zh: explanations.total, en: "Total wealth is your checks (💵) plus your remaining cash (🪙). The highest total wealth wins, ties go to whoever holds more cash, and a remaining tie is a shared win. The trophy (🏆) marks the winner." },
+        market: { zh: explanations.market, en: "Each round reveals as many cards as there are players. All property (🏠) auctions finish before the check (💵) selling stage begins. During buying only the unallocated properties are shown here, and the full results appear at the end of the round." },
+        result: { zh: explanations.result, en: "This keeps every deal from the round. Buying shows the property (🏠) taken, the total bid, what was actually paid and any refund, while selling shows the revealed properties and their checks (💵). Play continues only after everyone confirms." },
+        log: { zh: explanations.log, en: "The public log contains only bids, submission states and results that are already public, and never reveals an unrevealed sale choice or a private card. The area scrolls on its own." },
+        private: { zh: explanations.private, en: "Private assets (🔒) are visible only to you. Properties (🏠) you keep are used for selling, and your checks (💵) plus remaining cash (🪙) add up to your total wealth at the end." },
+        dialog_close: { zh: "关闭当前对话框并回到牌桌。", en: "Close the current dialog and return to the table." }
+    };
     let view = null, selected = null, bidAmount = 1, signature = null;
-    let pending = false, pendingTimer = null, explaining = false, tipTimer = null;
+    let pending = false, pendingTimer = null, tipTimer = null;
     let returnFocus = null, suppressUntil = 0;
     const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
+
+    const FOR_SALE_HELP_CONFIG = {
+        gameId: "for_sale",
+        title: { zh: "地产达人 · For Sale", en: "For Sale" },
+        basic: {
+            win: {
+                zh: "以低价买下地产(🏠)，再把它卖成支票(💵)。最终支票加现金(🪙)最多者获胜，同分时现金多者胜，再同分则并列。",
+                en: "Buy properties (🏠) cheaply and sell them for checks (💵). Whoever ends with the most checks plus cash (🪙) wins, ties go to more cash, and a remaining tie is shared."
+            },
+            turn: {
+                zh: "买房阶段轮到你时报一个本轮总价或者 Pass 退出，售房阶段则秘密选一张自己的地产提交。所有人提交后同时揭示。",
+                en: "In the buy stage you either name a total price for the round or Pass out of it, and in the sell stage you secretly choose one of your own properties to submit. Everything is revealed at once once all players have submitted."
+            },
+            key: {
+                zh: "出价是本轮总价而不是追加额，退出只退回一半并向下取整，所以真正的算计在于你愿意为最高的那张地产押上多少，以及什么时候止损。",
+                en: "A bid is the round's total rather than an increment, and dropping out refunds only half, rounded down, so the real calculation is how much you are willing to commit for the top property and when to cut your losses."
+            }
+        },
+        sections: [
+            {
+                id: "goal",
+                label: { zh: "目标", en: "Goal" },
+                html: {
+                    zh: "<p>以低价买下地产(🏠)，再把它卖成支票(💵)。最终支票加现金(🪙)最多者获胜。本实现采用 Eagle-Gryphon 基础版，支持 3 到 6 人，不含顾问扩充。</p>",
+                    en: "<p>Buy properties (🏠) cheaply and sell them for checks (💵). Whoever ends with the most checks plus cash (🪙) wins. This build uses the Eagle-Gryphon base game for 3 to 6 players without the advisor expansion.</p>"
+                }
+            },
+            {
+                id: "setup",
+                label: { zh: "准备", en: "Setup" },
+                html: {
+                    zh: "<p>地产为 1 到 30 各一张，支票为 0 与 2K 到 15K 各两张，没有 1K 支票。3 或 4 人每人起始现金 18K，5 或 6 人为 14K。3 人局随机暗移除各 6 张地产和支票，4 人局各 2 张，5 或 6 人全部使用。两种牌分别洗混，首轮先手随机。K 表示千元。</p>",
+                    en: "<p>There is one property for each value from 1 to 30, and two each of the checks 0 and 2K to 15K with no 1K check. You start with 18K cash in a 3 or 4 player game and 14K with 5 or 6. A 3 player game secretly removes 6 properties and 6 checks, a 4 player game removes 2 of each, and 5 or 6 players use everything. The two decks are shuffled separately and the first lead is random. K means a thousand.</p>"
+                }
+            },
+            {
+                id: "buy",
+                label: { zh: "第一阶段 · 买房", en: "Stage one: buying" },
+                html: {
+                    zh: `<p>每轮翻开与人数相同的地产。从先手开始依座位轮流出价或退出。出价是本轮总价，必须超过当前最高价且不能超过自己的剩余现金与已押金额之和，之前押过的部分不再重复支付。</p><p>${esc(explanations.auction)}</p><p>${esc(explanations.pass)} 最后留下的人取得本轮最高地产，并成为下一轮先手。所有地产分配完后进入售房。</p>`,
+                    en: `<p>Each round reveals as many properties as there are players. Starting from the lead, players bid or drop out in seat order. A bid is the round's total, must beat the current high bid, and cannot exceed your remaining cash plus what you have already committed, while previously committed money is not paid again.</p><p>${esc(FOR_SALE_EXPLAIN.auction.en)}</p><p>${esc(FOR_SALE_EXPLAIN.pass.en)} The last player standing takes the highest property of the round and leads the next one. Selling begins once every property is allocated.</p>`
+                }
+            },
+            {
+                id: "sell",
+                label: { zh: "第二阶段 · 售房", en: "Stage two: selling" },
+                html: {
+                    zh: "<p>每轮翻开与人数相同的支票。每位玩家秘密选择一张自己的地产，提交后不能更改。所有人提交后同时揭示，最低地产取得最低支票，依此类推，相同金额的支票效果相同。用过的地产移出手牌，得到的支票保留到终局。</p>",
+                    en: "<p>Each round reveals as many checks as there are players. Every player secretly picks one of their own properties and cannot change it after submitting. Everything is revealed at once once all players submit, the lowest property takes the lowest check and so on, and equal check values work the same. A used property leaves your hand while the checks you gain are kept until the end.</p>"
+                }
+            },
+            {
+                id: "scoring",
+                label: { zh: "结算与胜利", en: "Scoring" },
+                html: {
+                    zh: `<p>${esc(explanations.next)} 所有地产售完后展示最终排名。</p><p>${esc(explanations.total)}</p>`,
+                    en: `<p>${esc(FOR_SALE_EXPLAIN.next.en)} The final ranking appears once every property has been sold.</p><p>${esc(FOR_SALE_EXPLAIN.total.en)}</p>`
+                }
+            },
+            {
+                id: "privacy",
+                label: { zh: "隐私与图标", en: "Privacy and icons" },
+                html: {
+                    zh: `<p>${esc(explanations.player)} 私有资产(🔒)只显示给自己。</p><p>${esc(explanations.property)} 卡面建筑图标为起步居所(⛺)、邻里小屋(🏡)、宜居街区(🏘️)、城市地标(🏢)、典雅庄园(🏛️)、梦想豪宅(🏰)，它们没有独立能力。机器人(🤖)仅使用自己可见的信息。</p>`,
+                    en: `<p>${esc(FOR_SALE_EXPLAIN.player.en)} Private assets (🔒) are shown only to you.</p><p>${esc(FOR_SALE_EXPLAIN.property.en)} The building icons are starter shelter (⛺), neighbourhood cottage (🏡), livable block (🏘️), city landmark (🏢), elegant manor (🏛️) and dream mansion (🏰), and none of them has an ability of its own. Bots (🤖) use only the information they can see.</p>`
+                }
+            },
+            {
+                id: "controls",
+                label: { zh: "操作", en: "Controls" },
+                html: {
+                    zh: "<p>买房用 −／＋ 或数字框选择总价，再点击 Bid，Pass 退出竞拍。售房点选地产，再点击 Confirm Sale。点击空白处或按 Esc 取消未提交的选择，提交后锁定。</p><p>Explain 之后点选任意高亮元素查看说明，包括禁用按钮。非操作图标可用鼠标悬停、键盘聚焦或触屏点击查看提示，触屏提示三秒后消失。按 Esc 或点击对话框外侧可关闭对话框。</p>",
+                    en: "<p>To buy, set the total with − and + or the number box, then press Bid, and press Pass to leave the auction. To sell, select a property and press Confirm Sale. Click blank space or press Esc to drop an unsubmitted choice, and a submission is locked.</p><p>In Explain mode you tap any highlighted element for a description, disabled buttons included. Non-interactive icons can be hovered, focused or tapped for a tip, and a tip on a touch screen disappears after three seconds. Esc or a click outside the dialog closes it.</p>"
+                }
+            }
+        ]
+    };
+    let forSaleHelpWidget = null;
+    let forSaleExplainWidget = null;
+    function initForSaleHelpExplain() {
+        if (forSaleHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        forSaleHelpWidget = window.obgCreateHelp(FOR_SALE_HELP_CONFIG);
+        forSaleExplainWidget = window.obgCreateExplain({
+            gameId: "for_sale",
+            attribute: "data-fs-explain",
+            explanations: FOR_SALE_EXPLAIN,
+            button: explainButton,
+            root: () => panel,
+            bypass: ["#forSaleHelpBtn", "#forSaleExplainBtn", ".fs-dialog"]
+        });
+        helpButton?.addEventListener("click", () => {
+            forSaleExplainWidget?.exit();
+            forSaleHelpWidget.open();
+        });
+        explainButton?.addEventListener("click", () => forSaleExplainWidget?.toggle());
+    }
     const money = value => `${Number(value) || 0}K`;
     const playerName = id => view?.players.find(player => player.player_id === id)?.name || "—";
     const allowed = action => !pending && view?.legal_actions.includes(action);
@@ -66,7 +182,7 @@
     }
 
     function showTip(anchor, temporary = false) {
-        if (explaining || !anchor?.dataset.fsTip) return;
+        if (forSaleExplainWidget?.isActive() || forSaleHelpWidget?.isOpen() || !anchor?.dataset.fsTip) return;
         hideTip();
         tip.textContent = anchor.dataset.fsTip;
         tip.hidden = false;
@@ -77,44 +193,14 @@
         if (temporary) tipTimer = setTimeout(hideTip, 3000);
     }
 
-    function setExplain(enabled) {
-        explaining = enabled;
-        panel.classList.toggle("fs-explaining", enabled);
-        explainButton.setAttribute("aria-pressed", String(enabled));
-        explainButton.title = enabled ? "Choose an item to explain · Esc to exit" : "Explain";
-        hideTip();
-    }
-
-    function openDialog(title, html) {
-        hideTip();
-        returnFocus = document.activeElement;
-        dialog.querySelector("h2").textContent = title;
-        dialog.querySelector(".fs-dialog-body").innerHTML = html;
-        if (!dialog.open) dialog.showModal();
-        closeButton.focus();
-    }
-
-    function openHelp() {
-        setExplain(false);
-        openDialog("Help · 地产达人", `
-            <p>以低价买下地产(🏠)，再把它卖成支票(💵)。最终支票加现金(🪙)最多者获胜。本实现采用 Eagle-Gryphon 基础版，支持 3–6 人，不含顾问扩充。</p>
-            <h3>准备</h3><p>地产为 1–30 各一张；支票为 0、2–15K 各两张，没有 1K 支票。3／4 人每人起始现金 18K，5／6 人为 14K。3 人局随机暗移除各 6 张地产和支票，4 人局各 2 张，5／6 人全部使用。两种牌分别洗混，首轮先手随机。K 表示千元。</p>
-            <h3>第一阶段 · 买房</h3><p>每轮翻开人数张地产。从先手开始依座位轮流出价或退出。出价是本轮总价，必须超过当前最高价且不能超过自己的剩余现金与已押金额之和；之前押过的部分不再重复支付。</p>
-            <p>${explanations.auction}</p>
-            <p>${explanations.pass} 最后留下的人取得本轮最高地产，并成为下一轮先手。所有地产分配完后进入售房。</p>
-            <h3>第二阶段 · 售房</h3><p>每轮翻开人数张支票。每位玩家秘密选择一张自己的地产，提交后不能更改。所有人提交后同时揭示，最低地产取得最低支票，依此类推；相同金额的支票效果相同。用过的地产移出手牌，得到的支票保留到终局。</p>
-            <h3>结算与胜利</h3><p>${explanations.next} 所有地产售完后展示最终排名。${explanations.total}</p>
-            <h3>隐私与图标</h3><p>${explanations.player} 私有资产(🔒)只显示给自己。${explanations.property} 卡面建筑图标为起步居所(⛺)、邻里小屋(🏡)、宜居街区(🏘️)、城市地标(🏢)、典雅庄园(🏛️)、梦想豪宅(🏰)；它们没有独立能力。机器人(🤖)仅使用自己可见的信息。</p>
-            <h3>Controls</h3><p>买房用 −／＋或数字框选择总价，再点击 Bid；Pass 退出竞拍。售房点选地产，再点击 Confirm Sale。点击空白处或按 Esc 取消未提交的选择；提交后锁定。Explain 后点选任意高亮元素查看说明，包括禁用按钮。非操作图标可用鼠标悬停、键盘聚焦或触屏点击查看提示；触屏提示三秒后消失。Esc 或点击对话框外侧可关闭对话框。</p>`);
-    }
 
     function propertyCard(value, selectable = false) {
         const tier = Math.max(0, Math.min(5, Math.floor((value - 1) / 5)));
         const [icon, title] = tiers[tier];
         const body = `<span class="fs-card-top"><b>${value}</b><small>PROPERTY</small></span><span class="fs-building" aria-hidden="true">${icon}</span><span class="fs-card-name">${title}</span><span class="fs-card-foot">${String(value).padStart(2, "0")} / 30</span>`;
         return selectable
-            ? `<button type="button" class="fs-property fs-tier-${tier} ${selected === value ? "is-selected" : view.your_selection === value ? "is-submitted" : ""}" data-fs-property="${value}" data-fs-explain="property-${value}" aria-label="地产 ${value}，${title}" aria-pressed="${selected === value}" ${!allowed("sell") ? "disabled" : ""}>${body}</button>`
-            : `<div class="fs-property fs-tier-${tier}" tabindex="0" data-fs-explain="property-${value}" data-fs-tip="${esc(`地产(🏠) ${value}：${title}(${icon})。${explanations.property}`)}" aria-label="地产 ${value}，${title}">${body}</div>`;
+            ? `<button type="button" class="fs-property fs-tier-${tier} ${selected === value ? "is-selected" : view.your_selection === value ? "is-submitted" : ""}" data-fs-property="${value}" data-fs-explain="property" data-fs-tip="${esc(`地产(🏠) ${value}：${title}(${icon})。${explanations.property}`)}" aria-label="地产 ${value}，${title}" aria-pressed="${selected === value}" ${!allowed("sell") ? "disabled" : ""}>${body}</button>`
+            : `<div class="fs-property fs-tier-${tier}" tabindex="0" data-fs-explain="property" data-fs-tip="${esc(`地产(🏠) ${value}：${title}(${icon})。${explanations.property}`)}" aria-label="地产 ${value}，${title}">${body}</div>`;
     }
 
     function renderMarket() {
@@ -239,7 +325,7 @@
 
     panel.addEventListener("input", updateBidInput);
     panel.addEventListener("click", event => {
-        if (explaining || !view) return;
+        if (!view) return;
         const button = event.target.closest("button");
         if (button && !button.disabled) {
             const action = button.dataset.fsAction;
@@ -264,37 +350,6 @@
         else if (!event.target.closest("button, input, label") && selected !== null && !pending) { selected = null; hideTip(); render(); }
     });
 
-    function explainAt(event) {
-        const button = event.target.closest("button, input");
-        let element = button ? (button.matches("[data-fs-explain]") ? button : null) : event.target.closest("[data-fs-explain]");
-        if (event.type === "pointerdown") {
-            const disabled = [...panel.querySelectorAll(":disabled[data-fs-explain]")].find(item => {
-                const rect = item.getBoundingClientRect();
-                return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-            });
-            if (disabled) element = disabled;
-        }
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        if (element && detailFor(element.dataset.fsExplain)) {
-            const detail = detailFor(element.dataset.fsExplain);
-            setExplain(false);
-            if (event.type === "pointerdown") suppressUntil = performance.now() + 700;
-            openDialog("Explain", `<p>${esc(detail)}</p>`);
-        }
-    }
-
-    document.addEventListener("pointerdown", event => {
-        if (!explaining || event.target.closest("#forSaleHelpBtn, #forSaleExplainBtn, .fs-dialog")) return;
-        explainAt(event);
-    }, true);
-    document.addEventListener("click", event => {
-        if (performance.now() < suppressUntil) {
-            suppressUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return;
-        }
-        if (!explaining || event.target.closest("#forSaleHelpBtn, #forSaleExplainBtn, .fs-dialog")) return;
-        explainAt(event);
-    }, true);
     panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-fs-tip]")); });
     panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
     panel.addEventListener("focusin", event => showTip(event.target.closest("[data-fs-tip]")));
@@ -302,17 +357,14 @@
     panel.addEventListener("keydown", event => {
         if ((event.key === "Enter" || event.key === " ") && event.target.matches("[data-fs-tip]")) {
             event.preventDefault();
-            if (explaining) explainAt(event);
-            else showTip(event.target, true);
+            showTip(event.target, true);
         }
     });
     document.addEventListener("keydown", event => {
         if (event.key !== "Escape") return;
-        setExplain(false); hideTip();
+        forSaleExplainWidget?.exit(); hideTip();
         if (!dialog.open && selected !== null && !pending) { selected = null; render(); }
     });
-    helpButton.addEventListener("click", openHelp);
-    explainButton.addEventListener("click", () => setExplain(!explaining));
     closeButton.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => {
         if (event.target !== dialog) return;
@@ -342,7 +394,7 @@
         if (!visible) {
             view = null; signature = null; selected = null; pending = false; suppressUntil = 0;
             clearTimeout(pendingTimer);
-            setExplain(false); hideTip();
+            forSaleExplainWidget?.exit(); hideTip();
             if (dialog.open) dialog.close();
             panel.innerHTML = "";
         }
@@ -352,6 +404,7 @@
             if (pending) { pending = false; clearTimeout(pendingTimer); render(); }
         });
     }
+    initForSaleHelpExplain();
     if (document.readyState === "loading" || typeof socket === "undefined") window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
     else connectEvents();
 })();

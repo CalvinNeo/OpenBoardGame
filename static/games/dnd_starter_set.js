@@ -4,7 +4,7 @@
   const header = document.getElementById("dndStarterSetHeaderActions"), helpButton = document.getElementById("dndStarterSetHelpBtn");
   const explainButton = document.getElementById("dndStarterSetExplainBtn"), dialog = document.getElementById("dndStarterSetDialog"), tooltip = document.getElementById("dndTooltip");
   let view = null, signature = null, selection = null, selectedClass = null, busy = false, busyTimer = null;
-  let explaining = false, tipTimer = null, suppress = 0, drafts = {}, returnFocus = null;
+  let tipTimer = null, drafts = {}, returnFocus = null;
   const phaseNames = {setup:"组建冒险队伍",exploration:"自由探索",combat:"战斗",round_review:"战斗轮回顾",encounter_review:"遭遇回顾",final_review:"冒险结算",game_over:"冒险结束"};
   const details = {
     edition:"边陲英雄（2025）中文线上适配。3–5 人：一名地下城主（DM）与 2–4 位冒险者，1–3 级。使用自编场景摘要与自制地图，完整盒内特殊能力请由 DM 配合所用角色板裁定。",
@@ -41,18 +41,63 @@
     finish:"冒险结算：完成至少一个任务并返回安全据点后，DM 写下结语，所有人确认后结束。队伍全部失去战斗能力则进入失败回顾。",
     map:"紧凑战术地图：蓝底是冒险者，红底是敌人，金边表示当前行动者。点击可达格再 Confirm 移动。这里使用原创地图，不使用官方商业素材。",
   };
-  const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  const DND_EXPLAIN = {
+    edition: { zh: details.edition, en: "Heroes of the Borderlands (2025), a Chinese online adaptation for 3 to 5 players: one Dungeon Master and 2 to 4 adventurers at levels 1 to 3. It uses original scene summaries and maps, and any box set special abilities are ruled by the DM together with the character boards in use." },
+    dm: { zh: details.dm, en: "The Dungeon Master (📖 DM) describes scenes, controls monsters, calls for checks and rules on free actions. The first seat is always the DM, and private prompts and notes are never sent to the adventurers." },
+    hp: { zh: details.hp, en: "Hit points (❤️ HP): dropping to 0 knocks you unconscious. You make death saves at the start of your turn, where 3 successes stabilise you and 3 failures kill you. A natural 20 restores 1 HP and a natural 1 counts as two failures, and ordinary healing cannot revive the dead." },
+    ac: { zh: details.ac, en: "Armor class (🛡️ AC): an attack hits when the total roll reaches your AC. A natural 1 always misses and a natural 20 always hits with doubled damage dice, while ability modifiers are not doubled." },
+    gold: { zh: details.gold, en: "Gold (💰) is a shared party resource. The first time a quest is resolved you gain a one off reward, and a healing potion costs 50 gold at the market." },
+    movement: { zh: details.movement, en: "Movement (👣): each square is 5 feet and a diagonal also counts as one square, while difficult terrain (🟫) costs an extra square. You cannot pass through walls (⬛) or other standing creatures, leaving an enemy's reach may trigger one automatic opportunity attack, and disengaging avoids it." },
+    initiative: { zh: details.initiative, en: "Initiative (🎲): d20 plus Dexterity, highest acts first and ties follow entry order. Your character or the DM's monster is highlighted when its turn starts, and everyone presses Next Round after each full combat round." },
+    action: { zh: details.action, en: "Each turn you have one action (⚡), one bonus action (✦) and movement (👣), and you regain one reaction at the start of your turn. Action Surge grants an extra action, and you may still attack after splitting your movement." },
+    attack: { zh: details.attack, en: "Weapon attacks (⚔️ or 🏹): choose a weapon and a target, then Confirm in place. Ranged attacks have disadvantage with an enemy adjacent to you and beyond normal range, walls block line of sight, and a qualifying Rogue sneak attack resolves automatically once per turn." },
+    spell: { zh: details.spell, en: "Casting (✨): cantrips cost no spell slot. You may spend only one spell slot per turn (2024). Spells marked for DM ruling only deduct resources and record concentration while the DM applies the effect, and taking damage triggers a concentration save automatically." },
+    slots: { zh: details.slots, en: "Spell slots (🔹): a cleric or wizard has 2 first level slots at level 1, 3 at level 2, and 4 first level plus 2 second level slots at level 3. A long rest restores them and cantrips are unlimited." },
+    potion: { zh: details.potion, en: "Healing potion (🧪): spend one to restore 2d4+2 HP. In combat it takes a bonus action and may be given to yourself or an ally within reach (2024)." },
+    stabilize: { zh: details.stabilize, en: "Stabilising a fallen ally (🩹): spend an action and make a DC10 Medicine check on a target you can touch. Success stabilises a character at 0 HP so they stop making death saves, and healing wakes them but they must still stand up." },
+    dodge: { zh: details.dodge, en: "Dodge (🛡️): spend an action and until the start of your next turn attacks against you have disadvantage while your Dexterity saves have advantage. It fails while restrained or incapacitated." },
+    dash: { zh: details.dash, en: "Dash (👣): spend an action to gain extra movement equal to your speed. A level 2 Rogue may also dash as a bonus action." },
+    disengage: { zh: details.disengage, en: "Disengage (↗️): spend an action so your movement this turn provokes no opportunity attacks. A level 2 Rogue may also disengage as a bonus action." },
+    stand: { zh: details.stand, en: "Stand up (🧍): spend half your speed as movement to stop being prone, which you cannot do while restrained." },
+    second_wind: { zh: details.second_wind, en: "Second Wind (💨): a fighter spends a bonus action to restore 1d10 plus level HP. You start with two uses, regain one on a short rest and all of them on a long rest." },
+    action_surge: { zh: details.action_surge, en: "Action Surge (⚡⚡): a level 2 fighter may use it once between short or long rests to gain one extra action immediately." },
+    check: { zh: details.check, en: "d20 tests (🎲): the DM sets the ability or skill, the DC and advantage or disadvantage, and the player presses a button to roll. Skill proficiency adds 2 and a Rogue adds 4 to Stealth and Sleight of Hand. A natural 1 or 20 never means automatic failure or success on ability checks and ordinary saves, and the DC is visible only to the DM until the result is revealed." },
+    rest: { zh: details.rest, en: "Short rest (⛺): during exploration spend one hit die to heal, and a fighter recovers some class resources. Long rest (🌙): the DM calls one at a safe haven to restore the hit points and resources of every surviving party member, and it becomes available again after you leave the safe area. The durations are an online adaptation." },
+    ready: { zh: details.ready, en: "Ready: lock in your character board, after which you cannot swap again. The adventure begins once every seat is ready." },
+    review: { zh: details.review, en: "Result review: the map, every action and every roll are kept, with entries about you highlighted. Play continues only after everyone presses Next Round, bots confirm on their own and there is no countdown." },
+    travel: { zh: details.travel, en: "Exploration routes (🧭): the party discusses a destination and the DM clicks an adjacent location to confirm. You may move freely between the keep, the wilds and the caves, and gold is rewarded only the first time a quest is resolved." },
+    encounter: { zh: details.encounter, en: "Encounters (⚔️): the DM starts combat for the current scene, which generates a compact map and initiative automatically. Ordinary monster attacks resolve automatically while special abilities are ruled by the DM, and with fewer adventurers you may want to adjust difficulty by ruling." },
+    ruling: { zh: details.ruling, en: "DM ruling: you may resolve a scene peacefully, retreat or declare victory, and adjust hit points and conditions for rules that are not automated. Every hit point adjustment and every resolved encounter needs a written reason that enters the public log, and rewards are never granted twice." },
+    condition: { zh: details.condition, en: "Conditions: poison gives disadvantage on attacks, restrained stops movement and affects attacks, prone affects attacks, movement and standing up, and stunned skips your action while Strength and Dexterity saves fail. Other complex effects are ruled by the DM." },
+    level: { zh: details.level, en: "Level (⭐): the DM grants milestones during exploration up to level 3, which adds hit points, hit dice, spell slots and the matching base abilities. Level 3 subclasses, full ancestry features and background feats are ruled by the DM together with the character boards in use." },
+    character: { zh: details.character, en: "Character boards: the four classes are never duplicated. Ancestry and background provide the character's story and some automated abilities, and this build is not a line by line copy of the box set cards. Check Help for anything left and let the DM rule." },
+    note: { zh: details.note, en: "DM private note (🔒): only the current DM receives this and it is saved with the room. Narration (📖) is shown to the whole party." },
+    end_turn: { zh: details.end_turn, en: "End turn: pass play to the next character in initiative. The round goes to review once every creature has acted rather than starting the next round immediately." },
+    finish: { zh: details.finish, en: "Adventure finish: after resolving at least one quest and returning to a safe haven, the DM writes a closing note and everyone confirms to end. If the whole party is incapacitated you enter a defeat review instead." },
+    map: { zh: details.map, en: "Compact tactical map: blue tiles are adventurers, red are enemies and a gold border marks the current actor. Click a reachable square and Confirm to move. The map is original artwork and uses no official commercial assets." },
+    dialog_close: { zh: "关闭当前对话框并回到冒险。", en: "Close the current dialog and return to the adventure." }
+  };
   const explainAliases = {cast:"spell",move:"movement",resolve:"ruling",level_up:"level",cunning_dash:"dash",cunning_disengage:"disengage"};
   const explainText = key => details[explainAliases[key] || key] || view?.spells?.[key]?.text || view?.species?.[key]?.text || view?.classes?.[key]?.description || "";
-  const info = (label, key) => `<span tabindex="0" data-dnd-tip="${esc(explainText(key))}" data-dnd-explain="${key}">${esc(label)}</span>`;
+  const detailKey = key => {
+    const alias = explainAliases[key] || key;
+    if (details[alias]) return alias;
+    if (view?.spells?.[key]) return "spell";
+    return "character";
+  };
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
+  const explainAttrs = key => detailKey(key) === (explainAliases[key] || key)
+    ? `data-dnd-explain="${detailKey(key)}"`
+    : `data-dnd-explain="${detailKey(key)}" data-dnd-tip="${esc(explainText(key))}"`;
+  const info = (label, key) => `<span tabindex="0" data-dnd-tip="${esc(explainText(key))}" data-dnd-explain="${detailKey(key)}">${esc(label)}</span>`;
   const connected = () => typeof socket !== "undefined" && socket.connected;
   const allowed = kind => view?.legal_actions.includes(kind) && !busy && connected();
   const hero = () => view?.heroes.find(h => h.id === view.you);
   const units = () => [...(view?.heroes || []), ...(view?.monsters || [])];
   const unit = id => units().find(u => u.id === id);
   const name = id => unit(id)?.name || view?.players.find(p => p.player_id === id)?.name || id;
-  const button = (label, command, key, enabled = true, cls = "") => `<button type="button" class="${cls}" data-dnd-command="${esc(JSON.stringify(command))}" data-dnd-explain="${key}" ${!enabled || busy || !connected() ? "disabled" : ""}>${esc(label)}</button>`;
-  const pickButton = (label, pick, key, enabled = true) => `<button type="button" data-dnd-pick="${esc(JSON.stringify(pick))}" data-dnd-explain="${key}" ${!enabled || busy || !connected() ? "disabled" : ""}>${esc(label)}</button>`;
+  const button = (label, command, key, enabled = true, cls = "") => `<button type="button" class="${cls}" data-dnd-command="${esc(JSON.stringify(command))}" ${explainAttrs(key)} ${!enabled || busy || !connected() ? "disabled" : ""}>${esc(label)}</button>`;
+  const pickButton = (label, pick, key, enabled = true) => `<button type="button" data-dnd-pick="${esc(JSON.stringify(pick))}" ${explainAttrs(key)} ${!enabled || busy || !connected() ? "disabled" : ""}>${esc(label)}</button>`;
   const option = (id, label, selected) => `<option value="${esc(id)}" ${String(id) === String(selected) ? "selected" : ""}>${esc(label)}</option>`;
   function field(id, label, options, value, key = "ruling") {
     const chosen = drafts[id] ?? value;
@@ -64,28 +109,104 @@
   function textArea(id, placeholder, value = "", max = 1200) {
     return `<textarea id="${id}" rows="2" maxlength="${max}" data-dnd-draft aria-label="${esc(placeholder)}" placeholder="${esc(placeholder)}">${esc(drafts[id] ?? value)}</textarea>`;
   }
-  function openDialog(title, html) {
-    hideTip(); returnFocus = document.activeElement;
-    document.getElementById("dndDialogTitle").textContent = title;
-    document.getElementById("dndDialogBody").innerHTML = html;
-    if (!dialog.open) dialog.showModal();
+  const DND_CORE_KEYS = ["dm","check","action","attack","hp","movement","spell","slots","potion","rest","review"];
+  const dndParas = lang => DND_CORE_KEYS.map(k => `<p>${esc(lang === "en" ? DND_EXPLAIN[k].en : details[k])}</p>`).join("");
+  const DND_HELP_CONFIG = {
+    gameId: "dnd_starter_set",
+    title: { zh: "边陲英雄 · Heroes of the Borderlands", en: "Heroes of the Borderlands" },
+    basic: {
+      win: {
+        zh: "这是一场合作叙事冒险而不是分数竞赛。DM 描述世界，冒险者决定故事走向，完成至少一个任务并回到安全据点后由 DM 写下结语结束冒险。",
+        en: "This is a cooperative storytelling adventure rather than a race for points. The DM describes the world, the adventurers decide where the story goes, and the adventure ends once at least one quest is resolved and the party returns to a safe haven for the DM's closing note."
+      },
+      turn: {
+        zh: "战斗中每个回合有一个动作(⚡)、一个附赠动作(✦)和移动(👣)，选择行动与目标后 Confirm，用完就结束回合。每个完整战斗轮结束后所有人 Next Round 才继续。",
+        en: "In combat each turn gives you one action (⚡), one bonus action (✦) and movement (👣), where you pick an action and a target, Confirm, and end your turn when you are done. Play continues past a full combat round only after everyone presses Next Round."
+      },
+      key: {
+        zh: "规则只自动化了普通攻击、移动、法术位这些骨架，对话、躲藏、怪物特殊能力和复杂法术效果仍然由 DM 裁定，所以推进故事靠的是把意图说清楚，而不是找按钮。",
+        en: "Only the skeleton is automated, such as ordinary attacks, movement and spell slots, while dialogue, hiding, monster special abilities and complex spell effects remain DM rulings, so the story moves forward by saying clearly what you intend rather than by hunting for a button."
+      }
+    },
+    sections: [
+      {
+        id: "start",
+        label: { zh: "从哪里开始", en: "Where to start" },
+        html: {
+          zh: `<p>${esc(details.edition)}</p><ol><li>第一席是地下城主(📖)，冒险者选择职业板、族裔和背景，点击选择角色，再 Ready。</li><li>通过房间聊天描述想做的事。DM 描述环境，发起检定(🎲)，决定何时进入战斗。</li><li>战斗中选择行动与目标，或点击地图移动。用完行动后结束回合。每轮所有人 Next Round 才继续。</li><li>从要塞(🏰)前往荒野(🌲)和洞窟(⛰️)，可以交涉、战斗或撤退。DM 授予最高 3 级里程碑，回到据点后可结算冒险。</li></ol>`,
+          en: `<p>${esc(DND_EXPLAIN.edition.en)}</p><ol><li>The first seat is the Dungeon Master (📖). Adventurers pick a class board, an ancestry and a background, choose their character, then press Ready.</li><li>Describe what you want to do in the room chat. The DM describes the environment, calls for checks (🎲) and decides when combat begins.</li><li>In combat choose an action and a target, or click the map to move. End your turn once you are done, and play continues only after everyone presses Next Round.</li><li>Travel from the keep (🏰) to the wilds (🌲) and the caves (⛰️), where you may negotiate, fight or retreat. The DM grants milestones up to level 3, and the adventure can be finished once you are back at the haven.</li></ol>`
+        }
+      },
+      {
+        id: "core",
+        label: { zh: "核心规则", en: "Core rules" },
+        html: { zh: dndParas("zh"), en: dndParas("en") }
+      },
+      {
+        id: "automation",
+        label: { zh: "自动化边界", en: "What is automated" },
+        html: {
+          zh: "<p>已自动处理普通攻击、视线墙体、攻击优势与劣势、偷袭、基本状态、移动、一次反应借机攻击、死亡豁免、治疗、法术位和专注伤害豁免。借机攻击自动使用反应，穿越友方空间和精细掩体没有自动化。</p><p>对话、躲藏、隐形、光照、购物道具、怪物特殊能力、完整族裔特性、背景专长和子职业能力由 DM 裁定。法术的 DM 裁定标识意味着只记录资源与专注，未自动应用法术效果。</p><p>本版职业与遭遇为可玩线上适配。魔法飞弹与灼热射线在界面中集中同一目标，复杂的分配目标请由 DM 裁定。地图、中文描述与角色板均为重建内容，不代表官方授权译文或盒内全部卡牌。</p>",
+          en: "<p>Ordinary attacks, line of sight and walls, attack advantage and disadvantage, sneak attacks, basic conditions, movement, one reaction opportunity attack, death saves, healing, spell slots and concentration saves are all automated. Opportunity attacks spend your reaction automatically, while moving through allies and fine cover are not automated.</p><p>Dialogue, hiding, invisibility, lighting, shopping, monster special abilities, full ancestry traits, background feats and subclass abilities are ruled by the DM. A spell marked for DM ruling only records resources and concentration without applying its effect automatically.</p><p>The classes and encounters here are a playable online adaptation. Magic Missile and Scorching Ray focus a single target in the interface, so ask the DM to rule on complicated target splits. The map, the Chinese text and the character boards are rebuilt content and are neither an official licensed translation nor the complete set of box cards.</p>"
+        }
+      },
+      {
+        id: "classes",
+        label: { zh: "职业与族裔", en: "Classes and ancestry" },
+        html: { zh: "<p>开始后在此显示职业与族裔说明。</p>", en: "<p>Class and ancestry descriptions appear here once the game starts.</p>" }
+      },
+      {
+        id: "spells",
+        label: { zh: "法术卡", en: "Spell cards" },
+        html: { zh: "<p>开始后在此显示法术卡说明。</p>", en: "<p>Spell card descriptions appear here once the game starts.</p>" }
+      },
+      {
+        id: "controls",
+        label: { zh: "界面操作", en: "Controls" },
+        html: {
+          zh: "<p>Help 查看规则，Explain 之后点选元素查看解释，按 Esc 关闭。点击空白处或按 Esc 取消选择。图标可以悬停查看，手机点击后显示 3 秒提示。存档和刷新重连会保留角色资源与进度。</p>",
+          en: "<p>Help shows the rules, Explain lets you tap any element for a description, and Esc closes either one. Click blank space or press Esc to cancel a selection. Icons can be hovered for a tip, a tap on a phone shows one for 3 seconds, and saving or refreshing keeps your character resources and progress.</p>"
+        }
+      }
+    ]
+  };
+  function refreshDndCatalogue() {
+    const classes = DND_HELP_CONFIG.sections.find(s => s.id === "classes");
+    const spells = DND_HELP_CONFIG.sections.find(s => s.id === "spells");
+    if (classes) {
+      const list = Object.values(view?.classes || {}).map(c => `<p><strong>${esc(c.emoji + " " + c.name)}</strong>：${esc(c.description)}</p>`).join("");
+      const species = Object.values(view?.species || {}).map(s => `<p><strong>${esc(s.emoji + " " + s.name)}</strong>：${esc(s.text)}</p>`).join("");
+      classes.html.zh = (list + species) || classes.html.zh;
+      classes.html.en = classes.html.en;
+    }
+    if (spells) {
+      const list = Object.values(view?.spells || {}).map(s => `<p><strong>${esc(s.emoji + " " + s.name)} · ${s.level} 环</strong>：${esc(s.text)}</p>`).join("");
+      if (list) spells.html.zh = list;
+    }
   }
-  function help() {
-    setExplain(false);
-    openDialog("Help · 边陲英雄", `<p>${esc(details.edition)}</p>
-      <h3>从哪里开始</h3><ol><li>第一席是 DM（📖）；冒险者选择职业板、族裔和背景，点击选择角色，再 Ready。</li><li>通过房间聊天描述想做的事。DM 描述环境，发起检定（🎲），决定何时进入战斗。</li><li>战斗中选择行动与目标，或点击地图移动。用完行动后结束回合。每轮所有人 Next Round 才继续。</li><li>从要塞（🏰）前往荒野（🌲）和洞窟（⛰️），可以交涉、战斗或撤退。DM 授予最高 3 级里程碑，回到据点后可结算冒险。</li></ol>
-      ${["dm","check","action","attack","hp","movement","spell","slots","potion","rest","review"].map(k => `<p>${esc(details[k])}</p>`).join("")}
-      <h3>自动化边界</h3><p>已自动处理普通攻击、视线墙体、攻击优势／劣势、偷袭、基本状态、移动、一次反应借机攻击、死亡豁免、治疗、法术位和专注伤害豁免。借机攻击自动使用反应；穿越友方空间和精细掩体没有自动化。对话、躲藏、隐形、光照、购物道具、怪物特殊能力、完整族裔特性、背景专长和子职业能力由 DM 裁定。法术的 DM 裁定标识意味着只记录资源与专注，未自动应用法术效果。</p>
-      <p>本版职业与遭遇为可玩线上适配。魔法飞弹／灼热射线在界面中集中同一目标；复杂的分配目标请由 DM 裁定。地图、中文描述与角色板均为重建内容，不代表官方授权译文或盒内全部卡牌。</p>
-      <h3>职业与族裔</h3>${Object.values(view?.classes || {}).map(c => `<p><strong>${esc(c.emoji + " " + c.name)}</strong>：${esc(c.description)}</p>`).join("")}
-      ${Object.values(view?.species || {}).map(s => `<p><strong>${esc(s.emoji + " " + s.name)}</strong>：${esc(s.text)}</p>`).join("")}
-      <h3>法术卡</h3>${Object.values(view?.spells || {}).map(s => `<p><strong>${esc(s.emoji + " " + s.name)} · ${s.level} 环</strong>：${esc(s.text)}</p>`).join("")}
-      <p>Help 查看规则，Explain 后点选元素查看解释，Esc 关闭；空白处或 Esc 取消选择。图标可悬停，手机点击后显示 3 秒提示。存档和刷新重连保留角色资源与进度。</p>`);
+  let dndHelpWidget = null;
+  let dndExplainWidget = null;
+  function initDndHelpExplain() {
+    if (dndHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    dndHelpWidget = window.obgCreateHelp(DND_HELP_CONFIG);
+    dndExplainWidget = window.obgCreateExplain({
+      gameId: "dnd_starter_set",
+      attribute: "data-dnd-explain",
+      explanations: DND_EXPLAIN,
+      button: explainButton,
+      root: () => panel,
+      bypass: ["#dndStarterSetHelpBtn", "#dndStarterSetExplainBtn", "#dndDialogClose"]
+    });
+    helpButton?.addEventListener("click", () => {
+      dndExplainWidget?.exit();
+      refreshDndCatalogue();
+      dndHelpWidget.open();
+    });
+    explainButton?.addEventListener("click", () => dndExplainWidget?.toggle());
   }
-  function setExplain(value) { explaining = value; panel.classList.toggle("dnd-explaining", value); explainButton.setAttribute("aria-pressed", String(value)); hideTip(); }
   function hideTip() { tooltip.hidden = true; clearTimeout(tipTimer); }
   function showTip(el) {
-    if (!el?.dataset.dndTip || explaining || dialog.open) return;
+    if (!el?.dataset.dndTip || dndExplainWidget?.isActive() || dndHelpWidget?.isOpen() || dialog.open) return;
     tooltip.textContent = el.dataset.dndTip; tooltip.hidden = false;
     const r = el.getBoundingClientRect(), t = tooltip.getBoundingClientRect();
     tooltip.style.left = `${Math.max(12, Math.min(innerWidth - t.width - 12, r.left))}px`;
@@ -100,7 +221,7 @@
     if (view.is_dm) html += `<p class="dnd-scene-copy">你将主持这场边陲冒险。准备好描述场景、扮演住民，让同伴决定故事如何展开。</p>${button("Ready",{type:"ready"},"ready",allowed("ready"),"dnd-primary")}`;
     else if (!view.players.some(p => p.player_id === view.you)) html += `<p class="dnd-muted">Spectator · 等待冒险者准备。</p>`;
     else {
-      html += `<div class="dnd-cards">${Object.entries(view.classes).map(([id,c]) => `<button type="button" class="dnd-class" data-dnd-class="${id}" aria-pressed="${selected === id}" data-dnd-explain="${id}" ${taken.includes(id) || !allowed("choose") ? "disabled" : ""}><span class="dnd-icon">${c.emoji}</span><strong>${c.name}</strong><small>${c.role}</small><span>❤️ ${c.hp} · 🛡️ ${c.ac}</span><small>${taken.includes(id) ? "已被选择" : c.description}</small></button>`).join("")}</div>`;
+      html += `<div class="dnd-cards">${Object.entries(view.classes).map(([id,c]) => `<button type="button" class="dnd-class" data-dnd-class="${id}" aria-pressed="${selected === id}" ${explainAttrs(id)} ${taken.includes(id) || !allowed("choose") ? "disabled" : ""}><span class="dnd-icon">${c.emoji}</span><strong>${c.name}</strong><small>${c.role}</small><span>❤️ ${c.hp} · 🛡️ ${c.ac}</span><small>${taken.includes(id) ? "已被选择" : c.description}</small></button>`).join("")}</div>`;
       html += `<div class="dnd-fields">${field("dndSpecies","族裔",Object.entries(view.species).map(([k,s]) => [k,`${s.emoji} ${s.name}`]),mine?.species || "human","character")}${field("dndBackground","背景",Object.entries(view.backgrounds).map(([k,s]) => [k,`${s.emoji} ${s.name}`]),mine?.background || "soldier","character")}</div>`;
       html += `<div class="dnd-actions">${button("选择角色",{type:"choose_form"},"character",!!selected && allowed("choose"),"dnd-primary")}${button(view.ready.includes(view.you) ? "Ready ✓" : "Ready",{type:"ready"},"ready",!!mine && allowed("ready"))}</div>`;
     }
@@ -136,7 +257,7 @@
       if(selection.type==="cast"&&view.spells[selection.spell].kind==="armor") targets=targets.filter(t=>t.id===active?.id);
       if(selection.type==="stabilize") targets=targets.filter(t=>t.hp===0&&!t.stable);
     }
-    return `<div class="dnd-selection"><strong>${esc(selection.label||"")}</strong>${selection.type==="cast"?`<p class="dnd-muted">${esc(view.spells[selection.spell].text)}</p>`:""}${needsTarget?`<div class="dnd-targets">${targets.map(t=>`<button type="button" data-dnd-target="${esc(t.id)}" aria-pressed="${selection.target===t.id}" data-dnd-explain="${selection.type==="cast"?selection.spell:selection.type}">${esc(t.emoji+" "+t.name)}${t.health?` · ${t.health}`:""}</button>`).join("")}</div>`:""}<div class="dnd-actions">${button("Confirm",{type:"confirm"},selection.type,(!needsTarget||!!selection.target)&&allowed(selection.type),"dnd-primary")}${button("Cancel",{type:"cancel"},selection.type)}</div></div>`;
+    return `<div class="dnd-selection"><strong>${esc(selection.label||"")}</strong>${selection.type==="cast"?`<p class="dnd-muted">${esc(view.spells[selection.spell].text)}</p>`:""}${needsTarget?`<div class="dnd-targets">${targets.map(t=>`<button type="button" data-dnd-target="${esc(t.id)}" aria-pressed="${selection.target===t.id}" ${explainAttrs(selection.type==="cast"?selection.spell:selection.type)}>${esc(t.emoji+" "+t.name)}${t.health?` · ${t.health}`:""}</button>`).join("")}</div>`:""}<div class="dnd-actions">${button("Confirm",{type:"confirm"},selection.type,(!needsTarget||!!selection.target)&&allowed(selection.type),"dnd-primary")}${button("Cancel",{type:"cancel"},selection.type)}</div></div>`;
   }
   function spells(h, combat) {
     const list=view.classes[h.class_id].spells;
@@ -236,7 +357,7 @@
   surface.addEventListener("input",e=>{if(e.target.matches("[data-dnd-draft]"))drafts[e.target.id]=e.target.value;});
   surface.addEventListener("change",e=>{if(e.target.matches("[data-dnd-draft]"))drafts[e.target.id]=e.target.value;});
   surface.addEventListener("click",event=>{
-    if(explaining||busy) return;
+    if(busy) return;
     const command=event.target.closest("[data-dnd-command]"), pick=event.target.closest("[data-dnd-pick]"), cls=event.target.closest("[data-dnd-class]"), target=event.target.closest("[data-dnd-target]"), cell=event.target.closest("[data-dnd-cell]");
     if(command){handleCommand(JSON.parse(command.dataset.dndCommand));return;}
     if(pick){selection=JSON.parse(pick.dataset.dndPick);render();return;}
@@ -246,35 +367,19 @@
     const tip=event.target.closest("[data-dnd-tip]");if(tip){showTip(tip);return;}
     if(!event.target.closest("button,input,textarea,select,label,summary,details")){selection=null;hideTip();render();}
   });
-  const exempt = el => el.closest("#dndStarterSetHelpBtn,#dndStarterSetExplainBtn,#dndStarterSetDialog");
-  function explain(el){if(!el)return;const text=explainText(el.dataset.dndExplain);if(!text)return;setExplain(false);openDialog("Explain",`<p>${esc(text)}</p>`);}
-  document.addEventListener("pointerdown",event=>{
-    if(!explaining||exempt(event.target))return;
-    event.preventDefault();event.stopImmediatePropagation();
-    let el=event.target.closest("[data-dnd-explain]");
-    if(!el)el=[...surface.querySelectorAll("button:disabled[data-dnd-explain]")].find(b=>{const r=b.getBoundingClientRect();return event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom;});
-    if(el){suppress=performance.now()+700;explain(el);}
-  },true);
-  document.addEventListener("click",event=>{
-    if(performance.now()<suppress&&!exempt(event.target)){suppress=0;event.preventDefault();event.stopImmediatePropagation();return;}
-    if(!explaining||exempt(event.target))return;
-    event.preventDefault();event.stopImmediatePropagation();explain(event.target.closest("[data-dnd-explain]"));
-  },true);
   document.addEventListener("keydown",event=>{
     if(panel.classList.contains("hidden"))return;
-    if(event.key==="Escape"){setExplain(false);hideTip();if(!dialog.open){selection=null;render();}return;}
-    if(explaining&&!exempt(event.target)&&["Enter"," "].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();explain(event.target.closest("[data-dnd-explain]"));}
+    if(event.key==="Escape"){dndExplainWidget?.exit();hideTip();if(!dialog.open){selection=null;render();}}
   },true);
   surface.addEventListener("pointerover",e=>{if(e.pointerType==="mouse")showTip(e.target.closest("[data-dnd-tip]"));});
   surface.addEventListener("pointerout",e=>{if(e.pointerType==="mouse")hideTip();});
   surface.addEventListener("focusin",e=>showTip(e.target.closest("[data-dnd-tip]")));
   surface.addEventListener("focusout",hideTip);
-  helpButton.addEventListener("click",help); explainButton.addEventListener("click",()=>setExplain(!explaining));
   document.getElementById("dndDialogClose").addEventListener("click",()=>dialog.close());
   dialog.addEventListener("close",()=>{if(returnFocus?.isConnected)returnFocus.focus();});
   dialog.addEventListener("click",event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();});
   window.addEventListener("resize",hideTip);window.addEventListener("blur",hideTip);document.addEventListener("scroll",hideTip,true);
-  function clear(){view=null;signature=null;selection=null;selectedClass=null;drafts={};busy=false;clearTimeout(busyTimer);setExplain(false);hideTip();document.body.classList.remove("dnd-needs-action");if(dialog.open)dialog.close();surface.innerHTML='<div class="dnd-wait">Waiting to start · 第一席担任地下城主</div>';}
+  function clear(){view=null;signature=null;selection=null;selectedClass=null;drafts={};busy=false;clearTimeout(busyTimer);dndExplainWidget?.exit();hideTip();document.body.classList.remove("dnd-needs-action");if(dialog.open)dialog.close();surface.innerHTML='<div class="dnd-wait">Waiting to start · 第一席担任地下城主</div>';}
   window.renderDndStarterSetGameState = data => {
     if(data?.view?.game_id!=="dnd_starter_set"||currentGameType!=="dnd_starter_set")return;
     if(data.room_id&&currentRoomState?.room_id!==data.room_id)return;
@@ -287,5 +392,6 @@
   window.showDndStarterSetHeaderActions = visible => {header.style.display=visible?"flex":"none";if(!visible)clear();};
   function roomSync(state){if(state?.game_type!=="dnd_starter_set"||state.status==="lobby")clear();}
   function sync(){socket.on("room:state",roomSync);socket.on("system:error",()=>{busy=false;clearTimeout(busyTimer);render();});socket.on("disconnect",()=>{busy=false;clearTimeout(busyTimer);render();});socket.on("connect",render);if(typeof currentRoomState!=="undefined")roomSync(currentRoomState);if(typeof lastGameStatePayload!=="undefined"&&lastGameStatePayload?.game_type==="dnd_starter_set")window.renderDndStarterSetGameState(lastGameStatePayload);}
+  initDndHelpExplain();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",sync,{once:true});else sync();
 })();

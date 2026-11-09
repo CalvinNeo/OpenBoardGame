@@ -35,11 +35,131 @@
     reward:"完成当前奖励选择后才能继续回合。多个奖励可自行选择处理顺序。Skip 放弃当前可选奖励；抽三选一的剩余员工须按自己选择的次序放回牌库底。",
     inspect:"查看这个玩家的公开酒店、资源、咖啡厅和已雇用员工；对手员工手牌始终隐藏。",
   };
+  const GAH_EXPLAIN = {
+    dice: { zh: explanations.dice, en: "Dice (🎲): the number of dice showing that face left when you take one sets the strength, and you only remove a single die. ① strudel (🥐) at least as many as cake (🍰), ② wine (🍷) at least as many as coffee (☕), ③ prepare rooms (🛏️), ④ split kroner (💰) and emperor progress (👑), ⑤ hire one staff (🧑‍🍳) at a discount equal to the strength, ⑥ pay 1 kroner to copy another action with the strength read from the six group. Each main action may also be boosted once for 1 kroner." },
+    guest: { zh: explanations.guest, en: "Guests: before your main action each turn you may recruit one, and the cafe holds at most three. Market slots cost 3, 2, 1, 0 and 0 kroner (💰) from left to right. Click a card to see its order, reward and cost in the translucent overlay of that area, then press Recruit. Red (🔴), blue (🔵) and yellow (🟡) guests need a vacant room of their colour while green (🟢) tourists accept any colour. Click a guest with a completed order, then a room, to check in." },
+    room: { zh: explanations.room, en: "Hotel rooms (🛏️): a dashed outline is unprepared, a key (🔑) is vacant and luggage (🧳) is occupied. A new room must touch an existing one orthogonally and the first starts from the bottom left corner. Floors 1 to 4 cost 0, 1, 2 and 3 kroner (💰), and rooms in the top right corner carry a preparation bonus (⭐). Checking in needs a completed order and a matching colour, and filling every room of one group triggers its bonus." },
+    serve: { zh: explanations.serve, en: "Serving: newly gained food may be handed to guests for free and the rest goes to the kitchen. Food already in the kitchen costs 1 kroner (💰) per action to serve up to three portions, which may go to different guests, and the Chief Waiter makes kitchen serving free. Served food can never be taken back, and a finished order still needs you to click the guest and a vacant room to check in." },
+    staff: { zh: explanations.staff, en: "Staff (🧑‍🍳): your hand is secret and a hired card becomes public. The four timings, once per round (🔁), immediately once (⚡), permanent (∞) and end game scoring (🏁), are printed on the card label. A five point action hires only one staff member, a discount larger than the cost never refunds kroner (💰), and a once per round ability can be used the same round you hire it." },
+    objective: { zh: explanations.objective, en: "Objectives (🎯): claim one on your own turn once its condition is met. The first three claimants score 15, 10 and 5 points (⭐), each player may claim a given objective once, and no objective may be claimed during emperor scoring." },
+    emperor: { zh: explanations.emperor, en: "Prestige and the emperor track (👑): in rounds 3, 5 and 7 you first score the points (⭐) printed under your track space, then retreat 3, 5 and 7 spaces. After retreating a position of 3 or more earns a reward (🎁), 1 or 2 is neutral (➖) and 0 triggers a penalty (⚠️). The numbered tokens on the track are the players. During business the background predicts the outcome after retreating from your current position, while the round review shows the settled zone. A physical penalty must be paid in full first and only costs points if it cannot be performed, and the Conference Manager lets you pay 1 kroner (💰) to avoid it. Past space 13 each extra step scores 1 point, and the round review lists the track points and the actual reward or penalty separately." },
+    pass: { zh: explanations.pass, en: "Pass: available only while you have done nothing at all this turn. You keep your unused turn and, once everyone else has finished or passed, discard one die and reroll. Running out of dice ends the round, and Pass is not the same as End Turn." },
+    end: { zh: explanations.end, en: "End Turn: finish this dice main action and end the turn once every reward is resolved. Before ending you may still check guests in, serve food, use staff and claim objectives." },
+    next: { zh: explanations.next, en: "Next Round: every settlement for this round is done and pressing it confirms you have read the result with no second confirmation. Every seat must confirm before the next round begins, including a disconnected player who must reconnect, while bots confirm on their own. The game ends after round seven is confirmed." },
+    confirm: { zh: explanations.confirm, en: "Submit the current choice in the overlay. Costs, counts, room colours and rewards are all validated by the server, and clicking blank space, pressing Cancel or Esc cancels the selection." },
+    cancel: { zh: explanations.cancel, en: "Cancel drops the current selection without performing any game action, and you can also click the blank area around the overlay or press Esc." },
+    reward: { zh: explanations.reward, en: "You can only continue your turn once the current reward choice is resolved. Several rewards may be handled in any order you like, Skip gives up the current optional reward, and the staff you did not pick from a draw of three go back to the bottom of the deck in the order you choose." },
+    inspect: { zh: explanations.inspect, en: "Look at this player's public hotel, resources, cafe and hired staff, while an opponent's staff hand always stays hidden." },
+    tip: { zh: "这是一个说明标记，它标出界面上的一个数值或图例。鼠标悬停或轻点可以查看该元素此刻的具体含义。", en: "This is an information marker pointing at a figure or a legend on the board. Hover or tap it to see what that element means right now." },
+    dialog_close: { zh: "关闭当前对话框并回到酒店。", en: "Close the current dialog and return to the hotel." }
+  };
+  const gahKeyByText = Object.fromEntries(Object.entries(explanations).map(([key, value]) => [value, key]));
+  const gahPassiveKey = description => gahKeyByText[description] || "tip";
   let view = null, selected = null, selectedGuest = null, selectedFace = null, inspected = null;
   let selectionContext = null;
   let dieTarget = 1, dieBoost = false, dieSplit = 0, dieTiming = "after";
-  let pendingSend = false, pendingTimer, tipTimer, suppressedUntil = 0, explaining = false, returnFocus;
+  let pendingSend = false, pendingTimer, tipTimer, suppressedUntil = 0, returnFocus;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[c]));
+
+  const GAH_HELP_CONFIG = {
+    gameId: "grand_austria_hotel",
+    title: { zh: "奥地利大饭店 · Grand Austria Hotel", en: "Grand Austria Hotel" },
+    basic: {
+      win: {
+        zh: "经营七轮酒店。第七轮皇帝事件后按已入住房楼层、终局员工、剩余克朗与厨房餐点计分，扣掉未入住客人的罚分，最高分获胜。",
+        en: "Run a hotel for seven rounds. After the round seven emperor event you score occupied rooms by floor, end game staff, remaining kroner and kitchen food, subtract the penalty for guests who never checked in, and the highest score wins."
+      },
+      turn: {
+        zh: "轮到你时先取一颗行动骰(🎲)执行主行动，可以在主行动前招揽一位客人，行动后处理奖励、入住、送餐、使用员工和认领目标，最后 End Turn。",
+        en: "On your turn you take one action die (🎲) for your main action, you may recruit a guest before it, and afterwards you resolve rewards, check guests in, serve food, use staff and claim objectives before pressing End Turn."
+      },
+      key: {
+        zh: "骰子数量就是行动强度而且每轮只有那么多，所以真正的规划在于用有限的强点数去滚出房间组连锁、皇帝轨位置和员工折扣的组合。",
+        en: "The dice count is the action strength and there are only so many each round, so real planning means spending those limited strong results on room group chains, emperor track position and staff discounts at the same time."
+      }
+    },
+    sections: [
+      {
+        id: "overview",
+        label: { zh: "经营七轮", en: "Seven rounds" },
+        html: {
+          zh: "<p>2 到 4 位玩家。起手 10 克朗(💰)、苹果卷(🥐)、蛋糕(🍰)、葡萄酒(🍷)、咖啡(☕)各一份和六张员工。逆顺序免费选客，再从左下角开始准备三房。每轮两次回合，顺序如 A→B→B→A，轮末起始玩家顺移。</p>",
+          en: "<p>For 2 to 4 players. You start with 10 kroner (💰), one each of strudel (🥐), cake (🍰), wine (🍷) and coffee (☕), and six staff cards. Guests are picked free in reverse order and then you prepare three rooms starting from the bottom left corner. Each round gives two turns in an order like A, B, B, A, and the starting player rotates at the end of the round.</p>"
+        }
+      },
+      {
+        id: "actions",
+        label: { zh: "招客与主行动", en: "Guests and actions" },
+        html: { zh: `<p>${esc(explanations.guest)}</p><p>${esc(explanations.dice)}</p>`, en: `<p>${esc(GAH_EXPLAIN.guest.en)}</p><p>${esc(GAH_EXPLAIN.dice.en)}</p>` }
+      },
+      {
+        id: "kitchen",
+        label: { zh: "厨房、房间与奖励", en: "Kitchen, rooms and rewards" },
+        html: { zh: `<p>${esc(explanations.serve)}</p><p>${esc(explanations.room)}</p><p>${esc(explanations.reward)}</p>`, en: `<p>${esc(GAH_EXPLAIN.serve.en)}</p><p>${esc(GAH_EXPLAIN.room.en)}</p><p>${esc(GAH_EXPLAIN.reward.en)}</p>` }
+      },
+      {
+        id: "groups",
+        label: { zh: "房间组与员工", en: "Room groups and staff" },
+        html: {
+          zh: `<p>房间组号 A 到 J 表示分组。整组全部入住时，蓝(🔵)得 2／5／9／15 分(⭐)，红(🔴)得 1／3／6／10 克朗(💰)，黄(🟡)得 1／3／6／10 皇帝进度(👑)，分别对应一组 1 到 4 间。</p><p>${esc(explanations.staff)}</p>`,
+          en: `<p>The room letters A to J mark the groups. Filling a whole group scores 2, 5, 9 or 15 points (⭐) for blue (🔵), 1, 3, 6 or 10 kroner (💰) for red (🔴) and 1, 3, 6 or 10 emperor progress (👑) for yellow (🟡), matching groups of 1 to 4 rooms.</p><p>${esc(GAH_EXPLAIN.staff.en)}</p>`
+        }
+      },
+      {
+        id: "timings",
+        label: { zh: "员工的四种时机", en: "The four staff timings" },
+        html: { zh: `<p>${esc(Object.values(staffTimings).map(t => t.text).join(" "))}</p>`, en: "<p>Once per round (🔁): hire it and use it on your own turn the same round, at most once per round, refreshed next round.</p><p>Immediately once (⚡): it resolves once at the moment you hire it and never triggers again.</p><p>Permanent (∞): it stays in effect and triggers every time the condition written on the card is met.</p><p>End game scoring (🏁): after the round seven emperor event it adds points (⭐) according to the condition on the card.</p>" }
+      },
+      {
+        id: "emperor",
+        label: { zh: "目标与皇帝", en: "Objectives and emperor" },
+        html: {
+          zh: `<p>${esc(explanations.objective)}</p><p>${esc(explanations.emperor)} 克朗(💰)上限 20，溢出丢弃。皇帝轨各位置的结算分依次为 0／1／2／3／3／4／4／5／6／6／7／7／8／9。</p>`,
+          en: `<p>${esc(GAH_EXPLAIN.objective.en)}</p><p>${esc(GAH_EXPLAIN.emperor.en)} Kroner (💰) are capped at 20 and anything above that is discarded, and the scoring values along the emperor track are 0, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8 and 9.</p>`
+        }
+      },
+      {
+        id: "turns",
+        label: { zh: "通过与轮末", en: "Passing and round end" },
+        html: { zh: `<p>${esc(explanations.pass)}</p><p>${esc(explanations.end)}</p><p>${esc(explanations.next)}</p>`, en: `<p>${esc(GAH_EXPLAIN.pass.en)}</p><p>${esc(GAH_EXPLAIN.end.en)}</p><p>${esc(GAH_EXPLAIN.next.en)}</p>` }
+      },
+      {
+        id: "final",
+        label: { zh: "终局", en: "Final scoring" },
+        html: {
+          zh: "<p>第七轮皇帝事件后：已入住房按楼层得 1／2／3／4 分，计算终局员工，剩余每克朗及每份厨房餐点各得 1 分，每位未入住客人扣 5 分。最高分获胜，同分比剩余克朗与厨房餐点总数，再同分共同获胜。</p>",
+          en: "<p>After the round seven emperor event, each occupied room scores 1, 2, 3 or 4 points by floor, end game staff are counted, every remaining kroner and every kitchen food scores 1 point, and every guest who never checked in costs 5 points. The highest score wins, ties go to the larger total of remaining kroner and kitchen food, and a remaining tie is shared.</p>"
+        }
+      },
+      {
+        id: "version",
+        label: { zh: "版本与操作", en: "Version and controls" },
+        html: {
+          zh: "<p>采用 2021 修订基础版和标准酒店，随机员工起手。无扩展、非对称酒店或员工轮抽。机器人只看公开信息和自己的员工手牌。</p><p>点选卡牌、房间或骰子后，在原区域的半透明蒙版内确认行动，点击空白、Cancel 或 Esc 取消。Next Round、Pass、End Turn、送餐、Skip、收入厨房、Claim 和工具栏的每轮员工按钮都是点击直接执行。Help 打开规则，Explain 之后点选控件查看解释，禁用控件也可查看。</p>",
+          en: "<p>This uses the 2021 revised base game with the standard hotel and a random starting staff hand, without expansions, asymmetric hotels or a staff draft. Bots read only public information and their own staff hand.</p><p>After clicking a card, a room or a die you confirm the action inside the translucent overlay of that same area, and blank space, Cancel or Esc cancels it. Next Round, Pass, End Turn, serving, Skip, storing to the kitchen, Claim and the per round staff buttons in the toolbar all execute immediately when clicked. Help opens the rules and Explain lets you tap any control, disabled ones included, for a description.</p>"
+        }
+      }
+    ]
+  };
+  let gahHelpWidget = null;
+  let gahExplainWidget = null;
+  function initGahHelpExplain() {
+    if (gahHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    gahHelpWidget = window.obgCreateHelp(GAH_HELP_CONFIG);
+    gahExplainWidget = window.obgCreateExplain({
+      gameId: "grand_austria_hotel",
+      attribute: "data-gah-explain",
+      explanations: GAH_EXPLAIN,
+      button: explainBtn,
+      root: () => root,
+      bypass: ["#grandAustriaHelpBtn", "#grandAustriaExplainBtn", "#grandAustriaClose"]
+    });
+    helpBtn?.addEventListener("click", () => {
+      gahExplainWidget?.exit();
+      gahHelpWidget.open();
+    });
+    explainBtn?.addEventListener("click", () => gahExplainWidget?.toggle());
+  }
   const own = () => view?.players.find(p => p.player_id === view.you);
   const name = pid => view?.players.find(p => p.player_id === pid)?.name || "Spectator";
   const card = gid => view.catalog.guests[gid];
@@ -47,7 +167,7 @@
   const moveIndex = move => view.moves.indexOf(move);
   const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
   const btn = (text, action, why, disabled=false, attrs="") => `<button type="button" data-gah-action="${action}" data-gah-explain="${why}" ${disabled ? "disabled" : ""} ${attrs}>${text}</button>`;
-  const passive = (text, description, cls="") => `<span class="${cls}" tabindex="0" title="${esc(description)}" data-gah-tip="${esc(description)}" data-gah-explain="tip">${text}</span>`;
+  const passive = (text, description, cls="") => `<span class="${cls}" tabindex="0" title="${esc(description)}" data-gah-tip="${esc(description)}" data-gah-explain="${gahPassiveKey(description)}">${text}</span>`;
   const foodText = items => Object.entries(items || {}).filter(([,n]) => n).map(([key,n]) => `${icons[key]} ${n}`).join(" · ");
 
   function effectText(e) {
@@ -296,19 +416,12 @@
       }).join("")}</div>
       <details class="gah-log" id="grandAustriaLog"><summary>Activity log · ${view.log.length}</summary><ol>${view.log.slice().reverse().map(line=>`<li>${esc(line)}</li>`).join("")}</ol></details>`;
     root.innerHTML=html;
-    root.classList.toggle("gah-explaining",explaining);
     opened.forEach(id=>{const el=document.getElementById(id);if(el)el.open=true;});
     scrolled.forEach(([key,top])=>{const el=root.querySelector(`[data-gah-scroll="${key}"]`);if(el)el.scrollTop=top;});
     if (focusId) document.getElementById(focusId)?.focus({preventScroll:true});
   }
 
   function resetSelection() { selected=null; selectedGuest=null; selectedFace=null; selectionContext=null; hideTip(); }
-  function setExplain(value) {
-    explaining=value; root.classList.toggle("gah-explaining",value);
-    explainBtn.setAttribute("aria-pressed",String(value));
-    explainBtn.classList.toggle("active",value);
-    hideTip();
-  }
   function openDialog(title,content,html=false) {
     returnFocus=document.activeElement;
     document.getElementById("grandAustriaDialogTitle").textContent=title;
@@ -332,7 +445,7 @@
   root.addEventListener("click",event=>{
     const button=event.target.closest("[data-gah-action]");
     if(!button){const t=event.target.closest("[data-gah-tip]");if(t)showTip(t);return;}
-    if(button.disabled||explaining||pendingSend)return;
+    if(button.disabled||pendingSend)return;
     const action=button.dataset.gahAction;
     if(action==="confirm"){submit();return;}
     if(action==="direct"){
@@ -381,69 +494,23 @@
     if(event.target.id==="grandAustriaTiming")dieTiming=event.target.value;
     render();
   });
-  root.addEventListener("pointerover",e=>{if(e.pointerType!=="touch"&&!explaining)showTip(e.target.closest("[data-gah-tip]"));});
+  root.addEventListener("pointerover",e=>{if(e.pointerType!=="touch"&&!gahExplainWidget?.isActive())showTip(e.target.closest("[data-gah-tip]"));});
   root.addEventListener("pointerout",hideTip);
-  root.addEventListener("focusin",e=>{if(!explaining)showTip(e.target.closest("[data-gah-tip]"));});
+  root.addEventListener("focusin",e=>{if(!gahExplainWidget?.isActive())showTip(e.target.closest("[data-gah-tip]"));});
   document.addEventListener("scroll",hideTip,true);window.addEventListener("resize",hideTip);
   root.addEventListener("pointerdown",e=>{
-    if(explaining||e.target.closest("button,input,select,summary,a,[data-gah-tip],.gah-selection-sheet")||(!selected&&!selectedGuest&&selectedFace===null))return;
+    if(e.target.closest("button,input,select,summary,a,[data-gah-tip],.gah-selection-sheet")||(!selected&&!selectedGuest&&selectedFace===null))return;
     resetSelection();render();
   });
-  helpBtn.addEventListener("click",()=>{
-    setExplain(false);
-    const sections=[
-      ["经营七轮", "2–4 位玩家。起手 10 克朗(💰)、苹果卷(🥐)、蛋糕(🍰)、葡萄酒(🍷)、咖啡(☕)各一份和六张员工。逆顺序免费选客，再从左下角开始准备三房。每轮两次回合，顺序如 A→B→B→A；轮末起始玩家顺移。"],
-      ["招客与主行动",explanations.guest+" "+explanations.dice],
-      ["厨房、房间与连锁奖励",explanations.serve+" "+explanations.room+" "+explanations.reward],
-      ["房间组与员工", "房间组号 A–J 表示分组。整组全部入住时，蓝(🔵)得 2／5／9／15 分(⭐)，红(🔴)得 1／3／6／10 克朗(💰)，黄(🟡)得 1／3／6／10 皇帝进度(👑)，分别对应 1–4 间一组。"+explanations.staff],
-      ["员工的四种时机",Object.values(staffTimings).map(t=>t.text).join(" ")],
-      ["目标与皇帝",explanations.objective+" "+explanations.emperor+" 克朗(💰)上限 20，溢出丢弃。皇帝轨各位置的结算分依次为 0／1／2／3／3／4／4／5／6／6／7／7／8／9。"],
-      ["通过与轮末",explanations.pass+" "+explanations.end+" "+explanations.next],
-      ["终局", "第七轮皇帝事件后：已入住房按楼层得 1／2／3／4 分，计算终局员工，剩余每克朗及每份厨房餐点各得 1 分，每位未入住客人扣 5 分。最高分获胜，同分比剩余克朗与厨房餐点总数，再同分共同获胜。"],
-      ["版本与操作", "采用 2021 修订基础版和标准酒店，随机员工起手。无扩展、非对称酒店或员工轮抽。机器人只看公开信息和自己的员工手牌。点选卡牌、房间或骰子后，在原区域的半透明蒙版内确认行动；空白／Cancel／Esc 取消。Next Round、Pass、End Turn、送餐、Skip、收入厨房、Claim 和工具栏的每轮员工按钮均点击直接执行。Help(?) 打开规则；Explain(🔍) 后点选控件查看解释，禁用控件也可查看。"],
-    ];
-    openDialog("Help · 奥地利大饭店",sections.map(([title,text])=>`<h3>${esc(title)}</h3><p>${esc(text)}</p>`).join(""),true);
-  });
-  explainBtn.addEventListener("click",()=>setExplain(!explaining));
   document.getElementById("grandAustriaClose").addEventListener("click",()=>dialog.close());
   dialog.addEventListener("close",()=>{suppressedUntil=0;hideTip();if(returnFocus?.isConnected)returnFocus.focus();});
   dialog.addEventListener("click",e=>{const r=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))dialog.close();});
   const active=()=>!!view&&!panel.classList.contains("hidden");
-  const explainExempt=target=>helpBtn.contains(target)||explainBtn.contains(target)||dialog.contains(target);
-  function explainTarget(target) {
-    if(!target)return;
-    let text=explanations[target.dataset.gahExplain], title="Explain";
-    if(target.dataset.gahExplain==="tip")text=target.dataset.gahTip;
-    else if(target.dataset.staff) {
-      const s=view.catalog.staff[target.dataset.staff];
-      title=`Explain · ${s.name}`;
-      text=`${staffTimings[s.timing].text} ${s.text} 雇用原价：${s.cost} 克朗(💰)。`;
-    } else if(target.dataset.guest) {
-      const g=card(target.dataset.guest);
-      title=`Explain · ${g.name}`;
-      text=`${colorNames[g.color]}(${icons[g.color]}) · ${foodText(g.order)} · ${g.vp} 分(⭐)。${rewardText(g)}。${explanations.guest}`;
-    }
-    if(text){setExplain(false);openDialog(title,text);}
-  }
-  document.addEventListener("pointerdown",e=>{
-    if(!explaining||!active()||explainExempt(e.target))return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const target=document.elementsFromPoint(e.clientX,e.clientY).map(el=>el.closest("[data-gah-explain]")).find(el=>el&&root.contains(el)&&!el.closest("[inert]"));
-    suppressedUntil=Date.now()+650;explainTarget(target);
-  },true);
-  document.addEventListener("click",e=>{
-    if(!active()||explainExempt(e.target))return;
-    if(Date.now()<suppressedUntil){e.preventDefault();e.stopImmediatePropagation();return;}
-    if(explaining){e.preventDefault();e.stopImmediatePropagation();explainTarget(e.target.closest("[data-gah-explain]"));}
-  },true);
   document.addEventListener("keydown",e=>{
     if(!active())return;
-    if(e.key==="Escape"){hideTip();setExplain(false);if(!dialog.open){resetSelection();render();}return;}
-    if(explaining&&!explainExempt(e.target)&&[" ","Enter","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)){
-      e.preventDefault();e.stopImmediatePropagation();if(e.key==="Enter"||e.key===" ")explainTarget(e.target.closest("[data-gah-explain]"));
-    }
+    if(e.key==="Escape"){hideTip();gahExplainWidget?.exit();if(!dialog.open){resetSelection();render();}}
   },true);
-  function clearState(){view=null;inspected=null;pendingSend=false;clearTimeout(pendingTimer);resetSelection();setExplain(false);root.innerHTML="";if(dialog.open)dialog.close();}
+  function clearState(){view=null;inspected=null;pendingSend=false;clearTimeout(pendingTimer);resetSelection();gahExplainWidget?.exit();root.innerHTML="";if(dialog.open)dialog.close();}
   window.renderGrandAustriaGameState=data=>{
     const next=data?.view;if(!next||next.game_id!=="grand_austria_hotel")return;
     if(view?.revision!==next.revision){resetSelection();pendingSend=false;clearTimeout(pendingTimer);}
@@ -465,5 +532,6 @@
       if(typeof lastGameStatePayload!=="undefined"&&lastGameStatePayload?.game_type==="grand_austria_hotel")window.renderGrandAustriaGameState(lastGameStatePayload);
     }
   }
+  initGahHelpExplain();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",connect,{once:true});else connect();
 })();

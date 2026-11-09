@@ -28,7 +28,6 @@
     let researchOrder = [];
     let pending = false;
     let pendingTimer = null;
-    let explaining = false;
     let suppressClick = false;
     let suppressTimer = null;
     let tooltipTarget = null;
@@ -47,31 +46,123 @@
     const energyName = color => energy[color] ? `${energy[color][1]}（${energy[color][0]} ${energy[color][2]}）` : color;
     const icons = list => (list || colors).map(color => energy[color]?.[0] || "").join(" / ");
     const allCards = () => [...Object.values(view?.display || {}).flat().filter(Boolean), ...(self()?.archive || []), ...(view?.prompt?.research?.cards || [])];
-    const attributes = tip => `data-gizmos-tip="${esc(tip)}" data-gizmos-explain="${esc(tip)}"`;
-    const info = (label, tip, className = "") => `<button type="button" class="gizmos-info ${className}" data-ui="tip" ${attributes(tip)} aria-label="${esc(tip)}">${label}</button>`;
+    const attributes = (tip, key) => `data-gizmos-tip="${esc(tip)}" data-gizmos-explain="${esc(key || gizmosKey(tip))}"`;
+    const info = (label, tip, className = "", key) => `<button type="button" class="gizmos-info ${className}" data-ui="tip" ${attributes(tip, key)} aria-label="${esc(tip)}">${label}</button>`;
     const control = (label, ui, { disabled = false, tip = "", extra = "", className = "", key = ui } = {}) =>
         `<button type="button" class="gizmos-control ${className}" data-ui="${ui}" data-focus="${esc(key)}" ${tip ? attributes(tip) : ""} ${extra} ${disabled ? "disabled" : ""}>${label}</button>`;
 
-    const helpHTML = `
-        <h3>从第一回合开始</h3>
-        <ol><li>每回合先做 <strong>1 个基础行动</strong>：Pick（🫳 取能量）、File（🗂️ 归档）、Build（🛠️ 建造）或 Research（🔍 研究）。先点行动入口，再选能量／卡牌，最后确认。</li>
-        <li>没有能量时，可以先取能量；也可以归档一张想建的卡，触发初始装置，抽取随机能量。</li>
-        <li>例如：归档卡牌 → 初始装置触发 → 点击 Resolve → 抽 1 颗随机能量。联动结束后自动轮到下一位。</li></ol>
-        <h3>四个行动</h3>
-        <ul>${Object.values(actionTips).map(tip => `<li>${tip}</li>`).join("")}</ul>
-        <h3>能量与费用</h3>
-        <p>${colors.map(energyName).join("、")}。Any（🌈）表示任意颜色。Storage（📦）是储能上限；满了就不能再取能量。卡上的 Cost 是印刷费用；升级折扣和 Converter（🔁 转换器）在确认建造时自动结算。以卡上的「可建造」为准。</p>
-        <h3>连锁怎么结算</h3>
-        <p>触发后，主界面会列出本次可结算的装置。可以决定结算顺序；同一装置每回合最多使用一次。灰色效果当前无法执行，可在 Explain 中查看原因。额外取能量、归档、研究或免费建造不是新的基础行动。End chain 会放弃剩余可选效果。</p>
-        <p>「联动参考」只列出与所选行动相关的装置，未扣除本回合已经使用的装置；实际能触发哪些，以结算区为准。</p>
-        <h3>研究与归档</h3>
-        <p>Research（🔍 研究）先选等级，再保留 1 张：Build 建造需能支付费用；File 归档需有空位且未被装置禁用。Return all 可以全不留。用 Earlier / Later 调整放回顺序：第 1 张放到牌库最底部。研究选牌只对当前研究者可见。档案和储存的能量在此版本中公开。</p>
-        <h3>计分与结束</h3>
-        <p>Points（⭐）是卡牌分数与 VP tokens（🏅 分数标记）之和；Projected（🏁）还包括当前可见的终局奖励。有人拥有 16 个装置（含初始装置），或 4 个 Level 3（三级）装置，触发最后一轮。补完该轮后比较最终分数，结果会保留供查看。</p>
-        <h3>查看与操作</h3>
-        <p>卡面上方是费用与分数，中间依次是「什么时候触发 → 得到什么」。Your machine 显示已建装置；Table 展开后可看对手的公开装置和档案。🤖 表示 AI。Activity 保留最近的行动记录。</p>
-        <p>鼠标悬停图标可查看说明；手机点击图标或 ⓘ，浮动说明会在 3 秒后消失。再次点击其他说明会替换内容。点击空白或按 Esc 取消选择。Explain 模式下，点击灰色按钮也可查看说明，不会执行行动；Esc 退出。对话框同样支持 Esc。</p>
-        <p class="gizmos-note">此版本使用近似官方的卡池，并非官方卡牌的逐张复刻。</p>`;
+    const GIZMOS_EXPLAIN = {
+        pick: { zh: actionTips.pick, en: "Pick (🫳): take 1 energy from the common supply into your own storage. Gizmos that trigger on picking matching energy fire now." },
+        file: { zh: actionTips.file, en: "File (🗂️): keep a market card in your own archive without paying its build cost, then start it later with a build action." },
+        build: { zh: actionTips.build, en: "Build (🛠️): pay energy to start a gizmo from the market or your archive. A green marker means you can build it right now, and costs and converters settle automatically." },
+        research: { zh: actionTips.research, en: "Research (🔍): choose a level and look at up to as many cards as your research power. Build or file one of them, or return them all." },
+        card: { zh: "装置卡：卡面上方是费用(💠)与分数(⭐)，中间依次是「什么时候触发 → 得到什么」。等级越高越强，建造费用也越高。", en: "Gizmo card: the top shows its cost and points (⭐), and the middle reads as when it triggers followed by what you gain. A higher level is stronger and costs more to build." },
+        cost: { zh: "Cost（费用）：卡面上的印刷费用。实际支付会计算升级折扣和可用转换器，以「可建造」标记为准。", en: "Cost: the printed cost on the card. What you actually pay accounts for upgrade discounts and available converters, and the buildable marker is the final word." },
+        vp: { zh: "Points（⭐ 分数）：建造此装置获得的卡牌分数。", en: "Points (⭐): the card points you score for building this gizmo." },
+        archive: { zh: "Archive（🗂️ 档案）：你保留的卡，仍需支付费用建造才会生效。档案有上限，满了就不能再归档。", en: "Archive (🗂️): the cards you have kept, which still need a build action and their cost to take effect. The archive has a limit and you cannot file once it is full." },
+        market: { zh: "Market：所有玩家共享的公开装置卡，按等级分栏展示。", en: "Market: the public gizmo cards shared by every player, shown one level at a time." },
+        level: { zh: "Level（等级）：点击切换查看该等级的公开市场。等级越高的装置越强也越贵。", en: "Level: switch the public market to this level. Higher level gizmos are stronger and more expensive." },
+        chain: { zh: "连锁结算：触发后主界面会列出本次可结算的装置，你可以决定顺序，同一装置每回合最多使用一次。额外取能量、归档、研究或免费建造都不算新的基础行动。", en: "Chain resolution: once triggered the main panel lists the gizmos you may resolve now, you choose the order, and each gizmo may be used at most once per turn. Extra picks, filing, research and free builds are not new base actions." },
+        tip: { zh: "这是一个说明标记，指向界面上的一个数值或控件。鼠标悬停或轻点可以查看它此刻的具体含义。", en: "This is an information marker pointing at a figure or a control on the board. Hover or tap it to see what it means right now." },
+        dialog_close: { zh: "关闭当前对话框并回到工作台。", en: "Close the current dialog and return to the workshop." }
+    };
+    const gizmosTipKeys = new Map([[actionTips.pick, "pick"], [actionTips.file, "file"], [actionTips.build, "build"], [actionTips.research, "research"]]);
+    const gizmosKey = tip => gizmosTipKeys.get(tip) || "tip";
+    const GIZMOS_HELP_CONFIG = {
+        gameId: "gizmos",
+        title: { zh: "发明工坊 · Gizmos", en: "Gizmos" },
+        basic: {
+            win: {
+                zh: "用能量建造装置，把卡牌分数(⭐)和分数标记(🏅)加起来最高者获胜。有人拥有 16 个装置或 4 个三级装置时触发最后一轮。",
+                en: "Spend energy to build gizmos, and whoever has the highest total of card points (⭐) and VP tokens (🏅) wins. The final round triggers once someone owns 16 gizmos or 4 level 3 gizmos."
+            },
+            turn: {
+                zh: "每回合做 1 个基础行动：取能量(🫳)、归档(🗂️)、建造(🛠️)或研究(🔍)。先点行动入口，再选能量或卡牌，最后确认，触发的连锁结算完后自动轮到下一位。",
+                en: "Each turn you take 1 base action: pick energy (🫳), file (🗂️), build (🛠️) or research (🔍). Click the action entry, choose the energy or the card, then confirm, and play passes on automatically once the triggered chain resolves."
+            },
+            key: {
+                zh: "每个装置都在为你之后每一次取能量、归档和建造铺路，所以真正的效率不在于这一回合做了什么，而在于让连锁越滚越长。",
+                en: "Every gizmo paves the way for each later pick, file and build, so real efficiency is not what you do this turn but how long you can make the chain run."
+            }
+        },
+        sections: [
+            {
+                id: "start",
+                label: { zh: "从第一回合开始", en: "Your first turn" },
+                html: {
+                    zh: "<ol><li>每回合先做 <strong>1 个基础行动</strong>：取能量(🫳)、归档(🗂️)、建造(🛠️)或研究(🔍)。先点行动入口，再选能量或卡牌，最后确认。</li><li>没有能量时可以先取能量，也可以归档一张想建的卡，触发初始装置抽取随机能量。</li><li>例如：归档卡牌 → 初始装置触发 → 点击 Resolve → 抽 1 颗随机能量。联动结束后自动轮到下一位。</li></ol>",
+                    en: "<ol><li>Each turn you take <strong>1 base action</strong>: pick energy (🫳), file (🗂️), build (🛠️) or research (🔍). Click the action entry, choose the energy or the card, then confirm.</li><li>With no energy you can pick some first, or file a card you want to build later, which triggers your starting gizmo to draw random energy.</li><li>For example: file a card, the starting gizmo triggers, press Resolve, and you draw 1 random energy. Play passes to the next player once the chain ends.</li></ol>"
+                }
+            },
+            {
+                id: "actions",
+                label: { zh: "四个行动", en: "The four actions" },
+                html: {
+                    zh: `<ul>${Object.values(actionTips).map(tip => `<li>${tip}</li>`).join("")}</ul>`,
+                    en: `<ul>${["pick","file","build","research"].map(k => `<li>${GIZMOS_EXPLAIN[k].en}</li>`).join("")}</ul>`
+                }
+            },
+            {
+                id: "energy",
+                label: { zh: "能量与费用", en: "Energy and cost" },
+                html: {
+                    zh: `<p>${colors.map(energyName).join("、")}。Any（🌈）表示任意颜色。Storage（📦）是储能上限，满了就不能再取能量。卡上的 Cost 是印刷费用，升级折扣和 Converter（🔁 转换器）在确认建造时自动结算，以卡上的「可建造」为准。</p>`,
+                    en: "<p>Energy comes in the colours listed on the board, and Any (🌈) means any colour you like. Storage (📦) is your energy cap and you cannot pick once it is full. The Cost on a card is the printed cost, while upgrade discounts and Converters (🔁) settle automatically when you confirm a build, and the buildable marker on the card is the final word.</p>"
+                }
+            },
+            {
+                id: "chain",
+                label: { zh: "连锁怎么结算", en: "Resolving chains" },
+                html: {
+                    zh: "<p>触发后主界面会列出本次可结算的装置，你可以决定结算顺序，同一装置每回合最多使用一次。灰色效果当前无法执行，可在 Explain 中查看原因。额外取能量、归档、研究或免费建造不是新的基础行动，End chain 会放弃剩余可选效果。</p><p>「联动参考」只列出与所选行动相关的装置，未扣除本回合已经使用的装置，实际能触发哪些以结算区为准。</p>",
+                    en: "<p>Once triggered the main panel lists the gizmos you may resolve, you choose the order, and each gizmo may be used at most once per turn. A greyed effect cannot be performed right now and Explain will tell you why. Extra picks, filing, research and free builds are not new base actions, and End chain discards the remaining optional effects.</p><p>The chain reference only lists gizmos related to the action you picked and does not subtract the ones you already used this turn, so the resolution area is the authority on what actually triggers.</p>"
+                }
+            },
+            {
+                id: "research",
+                label: { zh: "研究与归档", en: "Research and archive" },
+                html: {
+                    zh: "<p>研究(🔍)先选等级，再保留 1 张：建造需能支付费用，归档需有空位且未被装置禁用，Return all 可以全不留。用 Earlier 与 Later 调整放回顺序，第 1 张放到牌库最底部。研究选牌只对当前研究者可见。档案和储存的能量在此版本中公开。</p>",
+                    en: "<p>Research (🔍) picks a level first and then you keep 1 card: building needs you to be able to pay, filing needs a free slot that no gizmo has disabled, and Return all keeps nothing. Earlier and Later adjust the return order, where the first card goes to the very bottom of the deck. Research choices are visible only to the current researcher, while archives and stored energy are public in this build.</p>"
+                }
+            },
+            {
+                id: "scoring",
+                label: { zh: "计分与结束", en: "Scoring and the end" },
+                html: {
+                    zh: "<p>Points（⭐）是卡牌分数与分数标记(🏅)之和，Projected（🏁）还包括当前可见的终局奖励。有人拥有 16 个装置（含初始装置），或 4 个三级装置时触发最后一轮。补完该轮后比较最终分数，结果会保留供查看。</p>",
+                    en: "<p>Points (⭐) is the sum of your card points and VP tokens (🏅), while Projected (🏁) also includes the end game rewards currently visible. The final round triggers once someone owns 16 gizmos including their starting one, or 4 level 3 gizmos. Finish that round, compare the final scores, and the result stays on screen for review.</p>"
+                }
+            },
+            {
+                id: "ui",
+                label: { zh: "查看与操作", en: "Reading the board" },
+                html: {
+                    zh: "<p>卡面上方是费用与分数，中间依次是「什么时候触发 → 得到什么」。Your machine 显示已建装置，Table 展开后可看对手的公开装置和档案，🤖 表示 AI，Activity 保留最近的行动记录。</p><p>鼠标悬停图标可查看说明，手机点击图标或 ⓘ 后浮动说明会在 3 秒后消失，再次点击其他说明会替换内容。点击空白或按 Esc 取消选择。Explain 模式下点击灰色按钮也可查看说明而不会执行行动，按 Esc 退出，对话框同样支持 Esc。</p><p class='gizmos-note'>此版本使用近似官方的卡池，并非官方卡牌的逐张复刻。</p>",
+                    en: "<p>The top of a card shows its cost and points, and the middle reads as when it triggers followed by what you gain. Your machine lists what you have built, Table expands to show opponents' public gizmos and archives, 🤖 marks an AI, and Activity keeps the recent moves.</p><p>Hover an icon for a description, and on a phone tapping an icon or ⓘ shows a floating tip that disappears after 3 seconds, with the next tap replacing it. Click blank space or press Esc to cancel a selection. In Explain mode even a greyed button shows its description instead of acting, Esc leaves the mode, and dialogs close with Esc too.</p><p class='gizmos-note'>This build uses a card pool that approximates the official one rather than reproducing every official card.</p>"
+                }
+            }
+        ]
+    };
+    let gizmosHelpWidget = null;
+    let gizmosExplainWidget = null;
+    function initGizmosHelpExplain() {
+        if (gizmosHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        gizmosHelpWidget = window.obgCreateHelp(GIZMOS_HELP_CONFIG);
+        gizmosExplainWidget = window.obgCreateExplain({
+            gameId: "gizmos",
+            attribute: "data-gizmos-explain",
+            explanations: GIZMOS_EXPLAIN,
+            button: byId("ExplainBtn"),
+            root: () => panel,
+            bypass: ["#gizmosHelpBtn", "#gizmosExplainBtn", "#gizmosHelpModalCloseBtn", "#gizmosExplainModalCloseBtn"]
+        });
+        byId("HelpBtn")?.addEventListener("click", () => {
+            gizmosExplainWidget?.exit();
+            gizmosHelpWidget.open();
+        });
+        byId("ExplainBtn")?.addEventListener("click", () => gizmosExplainWidget?.toggle());
+    }
 
     function effectText(effect, fallback = "") {
         if (!effect) return fallback;
@@ -278,8 +369,8 @@
         }
         const order = source === "research" ? `<div class="gizmos-order-controls"><small>Return #${researchOrder.indexOf(card.id) + 1}</small>${control("Earlier", "order", { disabled: pending || researchOrder[0] === card.id, key: `earlier:${card.id}`, extra: `data-card="${esc(card.id)}" data-delta="-1"`, tip: "Earlier：向前调整放回顺序。第 1 张放在牌库最底部。" })}${control("Later", "order", { disabled: pending || researchOrder.at(-1) === card.id, key: `later:${card.id}`, extra: `data-card="${esc(card.id)}" data-delta="1"`, tip: "Later：向后调整放回顺序。在放回的卡中，越靠后的卡越靠近牌库顶部。" })}</div>` : "";
         return `<article class="gizmos-tile level-${card.level} ${selected ? "is-selected" : ""} ${buildable ? "is-buildable" : ""}">
-            <div class="gizmos-tile-meta">${info(`${energy[card.energy_type]?.[0] || "🌈"} <strong>${card.cost}</strong>`, costTip)}${info(`⭐ <strong>${card.vp}</strong>`, `Points（⭐ 分数）：建造此装置获得 ${card.vp} 点卡牌分数。`)}${info("ⓘ", cardDescription(card), "gizmos-card-info")}</div>
-            <button type="button" class="gizmos-tile-select" data-ui="card" data-card="${esc(card.id)}" data-source="${source}" data-focus="card:${source}:${esc(card.id)}" data-gizmos-explain="${esc(cardDescription(card))}" aria-expanded="${selected}" aria-label="${esc(`Level ${card.level} · ${triggerText(card)}：${effectText(card.effect, card.text)} · ${state}`)}">
+            <div class="gizmos-tile-meta">${info(`${energy[card.energy_type]?.[0] || "🌈"} <strong>${card.cost}</strong>`, costTip, "", "cost")}${info(`⭐ <strong>${card.vp}</strong>`, `Points（⭐ 分数）：建造此装置获得 ${card.vp} 点卡牌分数。`, "", "vp")}${info("ⓘ", cardDescription(card), "gizmos-card-info", "card")}</div>
+            <button type="button" class="gizmos-tile-select" data-ui="card" data-card="${esc(card.id)}" data-source="${source}" data-focus="card:${source}:${esc(card.id)}" data-gizmos-explain="card" data-gizmos-tip="${esc(cardDescription(card))}" aria-expanded="${selected}" aria-label="${esc(`Level ${card.level} · ${triggerText(card)}：${effectText(card.effect, card.text)} · ${state}`)}">
                 <span class="gizmos-tile-category">${panels[card.panel] || esc(card.panel)} <small>LEVEL ${card.level}</small></span>
                 <span class="gizmos-trigger">${esc(triggerText(card))}</span><strong class="gizmos-benefit">${esc(effectText(card.effect, card.text))}</strong>
                 <span class="gizmos-tile-state">${buildable ? "✓ " : ""}${state}<span>${selected ? "−" : "+"}</span></span>
@@ -356,13 +447,6 @@
         byId("Recent").textContent = lastBotAction ? `🤖 最近 AI 行动 · ${lastBotAction}` : "";
     }
 
-    function updateExplain() {
-        panel.classList.toggle("gizmos-is-explaining", explaining);
-        panel.querySelectorAll("[data-gizmos-explain]").forEach(node => node.classList.toggle("has-explanation", explaining));
-        byId("ExplainBtn")?.classList.toggle("active", explaining);
-        byId("ExplainBtn")?.setAttribute("aria-pressed", String(explaining));
-    }
-
     function render() {
         if (!view) return;
         const focus = panel.contains(document.activeElement) ? document.activeElement.dataset.focus : null;
@@ -377,7 +461,6 @@
         const researching = isTurn() && view.phase === "research";
         panel.querySelector(".gizmos-energy-section").hidden = researching;
         panel.querySelector(".gizmos-market-section").hidden = researching;
-        updateExplain();
         if (focus) Array.from(panel.querySelectorAll("[data-focus]")).find(node => node.dataset.focus === focus)?.focus({ preventScroll: true });
     }
 
@@ -444,8 +527,7 @@
         lastBotAction = "";
         cardCatalog = new Map();
         openPlayers.clear();
-        explaining = false;
-        updateExplain();
+        gizmosExplainWidget?.exit();
         ["Standing", "Resources", "Actions", "Steps", "Display", "You", "Players", "MarketNav", "MarketHint", "EnergyRow", "Activity"].forEach(id => { byId(id).innerHTML = ""; });
         ["Recent", "Context", "PickPreview"].forEach(id => { byId(id).hidden = true; });
         byId("Prompt").textContent = "Waiting for game…";
@@ -457,8 +539,7 @@
         byId("HeaderActions").style.display = show ? "flex" : "none";
         if (!show) {
             hideTip();
-            explaining = false;
-            updateExplain();
+            gizmosExplainWidget?.exit();
             ["HelpModal", "ExplainModal"].forEach(id => setModalVisible(byId(id), false));
         }
     };
@@ -513,7 +594,7 @@
     }
 
     function showTip(target, timed = false) {
-        if (!target?.dataset.gizmosTip || explaining || !panel.contains(target)) return;
+        if (!target?.dataset.gizmosTip || gizmosExplainWidget?.isActive() || !panel.contains(target)) return;
         hideTip();
         tooltipTarget = target;
         tooltip.textContent = target.dataset.gizmosTip;
@@ -542,60 +623,9 @@
         target?.focus({ preventScroll: true });
     }
 
-    function openDialog(kind, text = "") {
-        hideTip();
-        returnFocus = document.activeElement;
-        explaining = false;
-        updateExplain();
-        byId(`${kind}Content`).innerHTML = kind === "Help" ? helpHTML : `<p>${esc(text)}</p>`;
-        setModalVisible(byId(`${kind}Modal`), true);
-        byId(`${kind}ModalCloseBtn`).focus();
-    }
-
-    function explainTarget(event) {
-        const direct = event.target.closest?.("button, summary, [data-gizmos-explain]");
-        if (direct?.dataset.gizmosExplain && panel.contains(direct)) return direct;
-        if (event.type !== "pointerdown") return null;
-        // Native disabled buttons may not be the event target. Inspect only
-        // visible explained controls at this pointer position.
-        return Array.from(panel.querySelectorAll("[data-gizmos-explain]")).reverse().find(node => {
-            if (!node.getClientRects().length) return false;
-            const rect = node.getBoundingClientRect();
-            return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-        });
-    }
-
-    function inspectClick(event) {
-        if (currentGameType !== "gizmos") return;
-        if (event.type === "click" && suppressClick) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            suppressClick = false;
-            clearTimeout(suppressTimer);
-            return;
-        }
-        const ignored = [byId("HelpBtn"), byId("ExplainBtn"), byId("HelpModalCloseBtn"), byId("ExplainModalCloseBtn")];
-        const button = event.target.closest?.("button");
-        if (ignored.includes(button)) return;
-        if (!explaining) return;
-        const target = explainTarget(event);
-        // Explain mode blocks every ordinary action, including controls outside
-        // this game and controls which have no explanation.
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        if (target) {
-            suppressClick = event.type === "pointerdown";
-            clearTimeout(suppressTimer);
-            suppressTimer = setTimeout(() => { suppressClick = false; }, 600);
-            openDialog("Explain", target.dataset.gizmosExplain);
-        }
-    }
-    document.addEventListener("pointerdown", inspectClick, true);
-    document.addEventListener("click", inspectClick, true);
-
     panel.addEventListener("click", event => {
         const button = event.target.closest("[data-ui]");
-        if (!button || button.disabled || explaining) return;
+        if (!button || button.disabled || gizmosExplainWidget?.isActive()) return;
         const action = button.dataset.ui;
         if (action === "tip") { showTip(button, true); return; }
         if (pending && !["source", "level", "card"].includes(action)) return;
@@ -660,13 +690,11 @@
     document.addEventListener("scroll", hideTip, true);
     window.addEventListener("resize", hideTip);
     document.addEventListener("click", event => {
-        if (!view || currentGameType !== "gizmos" || explaining || suppressClick) return;
+        if (!view || currentGameType !== "gizmos" || gizmosExplainWidget?.isActive() || suppressClick) return;
         if (event.target.closest("button, input, select, textarea, summary, a, .modal, .gizmos-tile, .gizmos-context")) return;
         hideTip();
         if (selection || pickedColor) { selection = null; pickedColor = null; render(); }
     });
-    byId("HelpBtn").addEventListener("click", () => openDialog("Help"));
-    byId("ExplainBtn").addEventListener("click", () => { hideTip(); explaining = !explaining; updateExplain(); });
     ["Help", "Explain"].forEach(kind => {
         const modal = byId(`${kind}Modal`);
         byId(`${kind}ModalCloseBtn`).addEventListener("click", () => closeDialog(modal));
@@ -685,8 +713,9 @@
         if (event.key !== "Escape") return;
         hideTip();
         if (modal) { event.preventDefault(); closeDialog(modal); return; }
-        if (explaining) { explaining = false; updateExplain(); return; }
+        if (gizmosExplainWidget?.isActive()) { gizmosExplainWidget.exit(); return; }
         if (selection || pickedColor) { selection = null; pickedColor = null; render(); }
     });
     byId("MachineDetails").open = window.matchMedia("(min-width: 900px)").matches;
+    initGizmosHelpExplain();
 })();

@@ -464,25 +464,10 @@
     tip.style.top = `${Math.max(12, Math.min(window.innerHeight - height - 12, box.bottom + 7))}px`;
     tipTimer = window.setTimeout(hideTip, 3000);
   }
-  function __REMOVED_HELP_START__() {
-    const cards = view ? Object.values(view.catalog) : [];
-    openDialog("Help · 冠军挑战者", `<p>用不断优化的牌组争夺旗帜(🚩)，通过粉丝(⭐)晋级，成为冠军！支持 1–8 名玩家；Add Bot 添加的是会组牌的 AI，奇数人数另有固定牌组的 Robot(🤖) 补位。</p>
-      <h3>🃏 组牌与赛程</h3><p>每人以三张新人、一张天才、一张狗和一张冠军开始。城市必选，其他六个系列选五个。每轮选择等级，查看五张候选，逐张选择。每轮可以 Redraw 一次全部剩余候选，已选第一张后也可以重抽。选完后可移除任意数量牌，再 Ready。不同公园独立进行；配对表轮转，八席前七轮会遇到所有对手，较少席位循环配对。</p>
-      <table><tr><th>轮次</th><th>可选等级 / 张数</th></tr>${["A × 2", "A × 2", "A × 2 或 B × 1", "A × 2 或 B × 2", "B × 2", "B × 2 或 C × 1", "C × 2"].map((t, i) => `<tr><td>${i + 1}</td><td>${t}</td></tr>`).join("")}</table>
-      <h3>⚔️ 夺旗对战</h3><p>开局洗牌。第一轮随机决定先持旗者，之后由最高轮次奖杯的持有者先持旗，相同则随机。首张牌也执行效果。攻击方 Reveal 逐张翻牌，累计战力(⚔️)一旦达到防守战力立即夺旗。只有最后翻出的牌负责防守，之前的攻击牌压在下面，不再有战力或效果。</p>
-      <p>对手为 Bot / Robot 时，由你点击红色 Reveal for Bot 逐张替对手翻牌，Bot 先手的首张牌也由你推进。Bot 的组牌由 AI 自动选择，战斗技能目标在当前翻牌中立即由 AI 处理；如果能力要求你选择目标，先 Confirm 再继续翻牌。两个 Bot 之间的比赛自动进行。</p>
-      <p>失旗时整叠牌进入六格替补席(🪑)，同名牌叠在同一格，等级 S/A/B/C 不影响同名判定。需要第七格，或者攻击方用尽牌库仍无法夺旗，便输掉比赛。疲劳区(💤)不限卡数，下一轮收回；永久移除的牌不会收回。S 起始牌移出游戏，其他移除牌进入相应等级的弃牌；等级牌堆耗尽时重洗弃牌。</p>
-      <h3>✨ 效果时机</h3><p>普通效果翻出时处理；立即获得的战力奖励保留到这张牌失旗。攻击中能力只在本次攻击生效；持旗能力只在最上方牌持旗时生效。替补席能力持续生效，同名多张逐张叠加。失旗效果先于新持旗者的能力。选中时能力只在本轮选中那一次处理。必须执行的选择不能 Skip，可选能力能 Skip；排序编号从牌顶向下排列。</p>
-      <h3>🏆 奖杯、粉丝与决赛</h3><p>每个公园每轮胜者获得奖杯(🏆)，其粉丝(⭐)价值逐轮增加。多人局奖杯分数仅本人可见，粉丝标记公开。第七轮结束公开全部分数，前二进入决赛；同分先比奖杯数量，再比最高轮次奖杯。决赛不选新牌，可以删牌，最终胜者成为冠军。其他人可观战。</p>
-      <p>单人及双人不进行决赛。轮末领先至少 11 粉丝立即获胜，否则七轮后总分较高者胜出，同分使用上述奖杯规则。每轮结算保留场面，所有席位 Next Round 才继续；真人断线不会被自动跳过。</p>
-      <h3>🤖 Robot</h3><p>单人和奇数人数自动加入 Robot，固定牌组不选新牌，赛博格基础战力等于当前轮数。等级 2/3/4 依次替换阿尔法、贝塔、好机器人，等级 5 再将机甲冠军替换成两张升级牌。Solo special challenge 会在单人升级池中加入三种挑战牌。多人补位 Robot 不积累奖杯、不参与决赛，单人 Robot 正常计分并可提前获胜。全息影像加入 Robot 的普通牌会保留到后续轮次，但 Robot 忽略这些牌的全部能力，只使用基础战力、名称与系列。</p>
-      <h3>Controls</h3><p>点击卡牌进行选择，再点 Pick / Confirm / Ready。点空白处或按 Esc 取消选择。Explain 后点卡片、区域或按钮查看说明，禁用按钮也可以解释。图标可悬停或点击查看提示，3 秒消失。比赛牌序与对手候选保密。</p>
-      ${cards.length ? `<details><summary>Card reference · 卡牌目录</summary><div class="ch-catalog">${cards.map(c => `<article style="--set-color:${view.set_info[c.set].color}"><strong>${c.icon} ${esc(c.name_zh)} · ${c.power || "轮数"} ⚔️</strong><p>${esc(c.name)} · ${view.set_info[c.set].name} · ${c.level}${c.copies ? ` ×${c.copies}` : ""}</p><p>${esc(c.description)}</p></article>`).join("")}</div></details>` : ""}`);
-  }
 
   content.addEventListener("pointerdown", event => { lastPointerType = event.pointerType || "mouse"; });
   content.addEventListener("click", event => {
-    if (!view || explaining) return;
+    if (!view) return;
     const card = event.target.closest("[data-ch-card]");
     if (card && !card.disabled) {
       const id = card.dataset.chCard;
@@ -518,12 +503,12 @@
   }, true);
   content.addEventListener("pointerover", event => {
     const target = event.target.closest("[data-ch-tip]");
-    if (target && event.pointerType !== "touch" && !explaining) showTip(target.dataset.chTip, target);
+    if (target && event.pointerType !== "touch" && !challengersExplainWidget?.isActive()) showTip(target.dataset.chTip, target);
   });
   content.addEventListener("pointerout", event => { if (event.pointerType !== "touch") hideTip(); });
   content.addEventListener("focusin", event => {
     const target = event.target.closest("[data-ch-tip]");
-    if (target && lastPointerType !== "touch" && !explaining) showTip(target.dataset.chTip, target);
+    if (target && lastPointerType !== "touch" && !challengersExplainWidget?.isActive()) showTip(target.dataset.chTip, target);
   });
   content.addEventListener("focusout", hideTip);
   content.addEventListener("keydown", event => {
@@ -532,52 +517,14 @@
     }
   });
 
-  const exempt = target => [helpButton, explainButton, dialogClose].some(element => element === target || element.contains(target));
-  function showExplanation(target) {
-    const text = target.dataset.chDescription || explain[target.dataset.chExplain] || target.dataset.chTip || "查看当前游戏信息。";
-    setExplain(false);
-    openDialog("Explain", `<p>${esc(text)}</p>${target.disabled ? "<p>This action is not available yet.</p>" : ""}`);
-  }
-  document.addEventListener("pointerdown", event => {
-    if (!explaining || exempt(event.target)) return;
-    let target = event.target.closest("[data-ch-explain]");
-    if (!target) target = [...content.querySelectorAll("[data-ch-explain]")].find(element => {
-      const rect = element.getBoundingClientRect();
-      return rect.width > 0 && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-    });
-    event.preventDefault(); event.stopImmediatePropagation();
-    suppressed = {x: event.clientX, y: event.clientY, until: Date.now() + 900};
-    if (target) showExplanation(target);
-  }, true);
-  document.addEventListener("click", event => {
-    if (suppressed && Date.now() < suppressed.until && Math.abs(event.clientX - suppressed.x) < 6 && Math.abs(event.clientY - suppressed.y) < 6) {
-      event.preventDefault(); event.stopImmediatePropagation(); suppressed = null; return;
-    }
-    if (!explaining || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const target = event.target.closest("[data-ch-explain]");
-    if (target) showExplanation(target);
-  }, true);
   document.addEventListener("keydown", event => {
     if (panel.classList.contains("hidden")) return;
     if (event.key === "Escape") {
       hideTip();
-      if (explaining) { event.preventDefault(); setExplain(false); }
-      else if (!dialog.open && selected.length) { selected = []; updateSelection(); }
-    } else if (explaining && ["Enter", " "].includes(event.key) && !exempt(event.target)) {
-      event.preventDefault(); event.stopImmediatePropagation();
-      const target = event.target.closest("[data-ch-explain]");
-      if (target) showExplanation(target);
+      if (challengersExplainWidget?.isActive()) { event.preventDefault(); challengersExplainWidget.exit(); }
+      else if (selected.length) { selected = []; updateSelection(); }
     }
   }, true);
-  helpButton.addEventListener("click", showHelp);
-  explainButton.addEventListener("click", () => setExplain(!explaining));
-  dialogClose.addEventListener("click", () => dialog.close());
-  dialog.addEventListener("click", event => {
-    const box = dialog.getBoundingClientRect();
-    if (event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) dialog.close();
-  });
-  dialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus(); });
   window.addEventListener("resize", hideTip);
   window.addEventListener("blur", hideTip);
   document.addEventListener("scroll", hideTip, true);
@@ -585,8 +532,7 @@
   function clearState() {
     view = null; selected = []; park = null; signature = null; renderedContext = null; pending = false; pendingRevision = null;
     suppressed = null; openLogs.clear(); window.clearTimeout(pendingTimer);
-    setExplain(false); hideTip(); content.replaceChildren();
-    if (dialog.open) dialog.close();
+    challengersExplainWidget?.exit(); hideTip(); content.replaceChildren();
   }
   function syncConfig(state) {
     const visible = state?.game_type === "challengers" && state.status === "lobby";

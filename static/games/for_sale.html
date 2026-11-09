@@ -1,0 +1,15 @@
+<!--
+  For Sale renders its whole panel from static/games/for_sale.js into #forSalePanel,
+  so it has no markup entry in static/game_assets.js. This file records the static
+  Explain anchors the script uses, which is what tests/test_help_contract.py reads
+  when it checks that every explained key is documented.
+-->
+<template data-game-target="forSalePanel" data-game-mode="contents">
+  <div class="fs-surface">
+    <div class="fs-property" tabindex="0" data-fs-explain="property"></div>
+    <div class="fs-check" tabindex="0" data-fs-explain="check"></div>
+    <div class="fs-dialog">
+      <button type="button" data-fs-explain="dialog_close">Close</button>
+    </div>
+  </div>
+</template>
