@@ -1214,8 +1214,8 @@ const GAME_ASSETS = {
     "header": "showGiveMeOrHimHeaderActions"
   },
   "dadada": {
-    "scripts": ["/static/games/dadada.js?v=3"],
-    "styles": ["/static/games/dadada.css?v=1"],
+    "scripts": ["/static/games/dadada.js?v=6"],
+    "styles": ["/static/games/dadada.css?v=2"],
     "markup": "/static/games/dadada.html?v=1",
     "panel": "dadadaPanel",
     "panelTitle": "🗣️ 哒哒哒",

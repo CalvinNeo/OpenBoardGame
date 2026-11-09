@@ -1,13 +1,12 @@
 """哒哒哒 / DADADA (The Op Games, 2024): a cooperative language-invention game.
 
 The table invents a brand-new language out of five nonsense syllables, then proves
-whether it actually works. Creation sorts thirteen picture cards into sound groups,
-one picture per turn, and every placement has to survive a vote. Communication then
-lays out six fresh pictures, the communicator secretly picks one and names it using
-nothing but the invented syllables, and the rest of the table has to agree on which
-picture was meant.
+whether it actually works. Creation sorts thirteen picture cards into the five
+sounds, one picture per turn. Communication then lays out six fresh pictures, the
+communicator secretly picks one and names it using nothing but the invented
+syllables, and the rest of the table has to agree on which picture was meant.
 
-Rules source and confidence table: designs/task192.md.
+Rules source, online deviations and confidence table: designs/task192.md.
 """
 import copy
 import random
@@ -21,14 +20,12 @@ from game.dadada_data import (
     CONFIG_VALIDATOR,
     CREATION_IMAGES,
     IMAGE_IDS,
-    MAX_PROPOSAL_ATTEMPTS,
     MAX_WORD_LENGTH,
     PICTURE_BY_ID,
     SAY_WHAT_LIMIT,
     SOUND_BY_ID,
     SOUND_IDS,
-    SOUNDS_DEALT,
-    SOUNDS_REVEALED,
+    SOUNDS_IN_PLAY,
 )
 
 STAGE_CREATE = "create"
@@ -37,7 +34,6 @@ STAGE_GUESS = "guess"
 STAGE_REVEAL = "reveal"
 STAGE_GAME_OVER = "game_over"
 
-NEW_SOUND = "new"
 MAX_LOG_ENTRIES = 60
 
 
@@ -110,9 +106,7 @@ def _revealed_sound_ids(state: Dict) -> List[str]:
 
 
 def _unassigned(state: Dict) -> List[str]:
-    """Creation pictures still waiting for a sound. Named or abandoned, they are done."""
-    settled = set(state["placed"]) | set(state["unnamed"])
-    return [image for image in state["table"] if image not in settled]
+    return [image for image in state["table"] if image not in state["placed"]]
 
 
 def _draw(state: Dict, count: int) -> List[str]:
@@ -147,13 +141,11 @@ def _start_round(state: Dict) -> None:
     state["result"] = None
     state["continue_ready"] = []
     state["stage"] = STAGE_SPEAK
-    state["players"][state["communicator"]]["rounds"] = state["round"]
 
 
 def _finish_creation(state: Dict) -> None:
-    _log(state, f"造词完成，{len(state['sounds'])} 个音节构成了你们的语言。")
-    state["pending"] = None
-    _advance_turn(state)
+    used = sum(1 for entry in state["sounds"] if entry["images"])
+    _log(state, f"造词完成，{used} 个音节撑起了你们的语言。")
     _start_round(state)
 
 
@@ -168,10 +160,7 @@ def _reset_for_rematch(state: Dict) -> None:
     state["word"] = []
     state["guesses"] = {}
     state["result"] = None
-    state["pending"] = None
-    state["attempts"] = {}
     state["placed"] = {}
-    state["unnamed"] = []
     state["defined"] = []
     state["say_what"] = []
     state["score"] = 0
@@ -187,53 +176,14 @@ def _reset_for_rematch(state: Dict) -> None:
 def _deal(state: Dict) -> None:
     sounds = list(SOUND_IDS)
     _shuffle(state, sounds)
-    dealt = sounds[:SOUNDS_DEALT]
-    state["sounds"] = [{"id": sound_id, "images": []} for sound_id in dealt[:SOUNDS_REVEALED]]
-    state["reserve"] = dealt[SOUNDS_REVEALED:]
+    state["sounds"] = [{"id": sound_id, "images": []} for sound_id in sounds[:SOUNDS_IN_PLAY]]
 
     deck = list(IMAGE_IDS)
     _shuffle(state, deck)
     state["image_deck"] = deck
     state["discard"] = []
     state["table"] = [state["image_deck"].pop() for _ in range(CREATION_IMAGES)]
-    _log(state, f"翻开 {CREATION_IMAGES} 张图卡和 {SOUNDS_REVEALED} 个音节，造词开始。")
-
-
-def _resolve_proposal(state: Dict) -> None:
-    """Called once every other player has voted on the pending placement."""
-    pending = state["pending"]
-    proposer = state["turn_order"][state["turn_index"]]
-    voters = _others(state, proposer)
-    approvals = sum(1 for pid in voters if pending["votes"].get(pid))
-    accepted = approvals * 2 > len(voters)
-    image = pending["image"]
-    state["pending"] = None
-
-    if accepted:
-        sound_id = pending["sound"]
-        if sound_id == NEW_SOUND:
-            sound_id = state["reserve"].pop(0)
-            state["sounds"].append({"id": sound_id, "images": []})
-        _sound_entry(state, sound_id)["images"].append(image)
-        state["placed"][image] = sound_id
-        state["attempts"].pop(image, None)
-        _log(state, f"{_name(state, proposer)} 把 {PICTURE_BY_ID[image]['zh']} 归到 {_syllable(sound_id)}。")
-        _advance_turn(state)
-    else:
-        attempts = state["attempts"].get(image, 0) + 1
-        if attempts >= MAX_PROPOSAL_ATTEMPTS:
-            state["unnamed"].append(image)
-            state["attempts"].pop(image, None)
-            _log(state, f"{PICTURE_BY_ID[image]['zh']} 始终没人认同，留在无名区。")
-            _advance_turn(state)
-        else:
-            # Same player, same picture, same turn: they simply propose again.
-            state["attempts"][image] = attempts
-            _log(state, f"大家不同意把 {PICTURE_BY_ID[image]['zh']} 这样归类，再试一次。")
-            return
-
-    if not _unassigned(state):
-        _finish_creation(state)
+    _log(state, f"翻开 {SOUNDS_IN_PLAY} 个音节和 {CREATION_IMAGES} 张图卡，造词开始。")
 
 
 def _resolve_guesses(state: Dict) -> None:
@@ -263,7 +213,7 @@ def _resolve_guesses(state: Dict) -> None:
                     f"{PICTURE_BY_ID[state['target']]['zh']}。")
     else:
         state["say_what"].append(state["target"])
-        _log(state, f"大家没听懂，{PICTURE_BY_ID[state['target']]['zh']} 进了Say What。")
+        _log(state, f"大家没听懂，{PICTURE_BY_ID[state['target']]['zh']} 进了 Say What。")
     state["stage"] = STAGE_REVEAL
     state["continue_ready"] = []
 
@@ -279,9 +229,9 @@ def _check_game_end(state: Dict) -> bool:
 
 # --- Bot -----------------------------------------------------------------
 # A deliberately shallow policy, so this game is **not** listed in
-# game/ai_metadata.py and Select Game shows no 🤖. It proposes a random legal
-# grouping, approves whatever it is shown, names a random candidate with a random
-# legal word, and guesses at random. Inventing a language needs a human.
+# game/ai_metadata.py and Select Game shows no 🤖. It files a picture under a
+# random sound, names a random candidate with a random legal word, and guesses at
+# random. Inventing a language needs a human.
 
 def _bot_choose_action(state: Dict, bot_id: str) -> Optional[Dict]:
     rng = random.Random()
@@ -295,21 +245,14 @@ def _bot_choose_action(state: Dict, bot_id: str) -> Optional[Dict]:
         return {"type": "continue", "turn": turn}
 
     if stage == STAGE_CREATE:
-        pending = state["pending"]
-        if pending is None:
-            if state["turn_order"][state["turn_index"]] != bot_id:
-                return None
-            images = _unassigned(state)
-            if not images:
-                return None
-            choices = _revealed_sound_ids(state)
-            if state["reserve"]:
-                choices = choices + [NEW_SOUND]
-            return {"type": "propose", "turn": turn,
-                    "image": rng.choice(images), "sound": rng.choice(choices)}
-        if bot_id not in pending["votes"] and bot_id != state["turn_order"][state["turn_index"]]:
-            return {"type": "vote", "turn": turn, "approve": rng.random() < 0.75}
-        return None
+        if state["turn_order"][state["turn_index"]] != bot_id:
+            return None
+        images = _unassigned(state)
+        sounds = _revealed_sound_ids(state)
+        if not images or not sounds:
+            return None
+        return {"type": "propose", "turn": turn,
+                "image": rng.choice(images), "sound": rng.choice(sounds)}
 
     if stage == STAGE_SPEAK:
         if state["communicator"] != bot_id:
@@ -361,22 +304,15 @@ def _validate_saved_state(state: Dict) -> None:
         require(isinstance(state["log"], list) and all(isinstance(line, str) for line in state["log"]))
         require(isinstance(state["continue_ready"], list) and set(state["continue_ready"]) <= set(order))
         require(isinstance(state["rematch_ready"], list) and set(state["rematch_ready"]) <= set(order))
-        require(isinstance(state["sounds"], list) and 1 <= len(state["sounds"]) <= SOUNDS_DEALT)
-        require(isinstance(state["reserve"], list))
-        require(len(state["sounds"]) + len(state["reserve"]) <= SOUNDS_DEALT)
 
+        require(isinstance(state["sounds"], list) and len(state["sounds"]) == SOUNDS_IN_PLAY)
         sound_ids = [entry["id"] for entry in state["sounds"]]
         require(len(set(sound_ids)) == len(sound_ids))
         require(all(sound_id in SOUND_BY_ID for sound_id in sound_ids))
-        require(all(sound_id in SOUND_BY_ID for sound_id in state["reserve"]))
-        require(not set(sound_ids) & set(state["reserve"]))
 
         require(isinstance(state["table"], list) and len(state["table"]) == CREATION_IMAGES)
         require(all(image in PICTURE_BY_ID for image in state["table"]))
-        require(isinstance(state["placed"], dict))
-        require(set(state["placed"]) <= set(state["table"]))
-        require(not set(state["placed"]) & set(state["unnamed"]))
-        require(set(state["placed"]) | set(state["unnamed"]) <= set(state["table"]))
+        require(isinstance(state["placed"], dict) and set(state["placed"]) <= set(state["table"]))
         require(all(sound in sound_ids for sound in state["placed"].values()))
 
         grouped = [image for entry in state["sounds"] for image in entry["images"]]
@@ -401,25 +337,10 @@ def _validate_saved_state(state: Dict) -> None:
         require(all(image in PICTURE_BY_ID for image in state["defined"] + state["say_what"]))
         require(not set(state["defined"]) & set(state["say_what"]))
 
-        attempts = state["attempts"]
-        require(isinstance(attempts, dict) and set(attempts) <= set(state["table"]))
-        require(not set(attempts) & (set(state["placed"]) | set(state["unnamed"])))
-        require(all(type(count) is int and 0 < count < MAX_PROPOSAL_ATTEMPTS
-                    for count in attempts.values()))
-
-        pending = state["pending"]
-        if pending is not None:
-            require(state["stage"] == STAGE_CREATE)
-            require(set(pending) == {"image", "sound", "votes"})
-            require(pending["image"] in _unassigned(state))
-            require(pending["sound"] == NEW_SOUND or pending["sound"] in sound_ids)
-            require(pending["sound"] != NEW_SOUND or bool(state["reserve"]))
-            require(isinstance(pending["votes"], dict) and set(pending["votes"]) <= set(order))
-
         speaks = 0
         for pid in order:
             player = state["players"][pid]
-            require(set(player) == {"speaks", "rounds"})
+            require(set(player) == {"speaks"})
             require(type(player["speaks"]) is int and 0 <= player["speaks"] <= state["round"])
             speaks += player["speaks"]
         require(speaks == state["round"])
@@ -459,16 +380,12 @@ class DadadaGame:
             "player_count": len(ids),
             "rounds_total": len(ids),
             "player_meta": {player["player_id"]: copy.deepcopy(player) for player in ordered},
-            "players": {pid: {"speaks": 0, "rounds": 0} for pid in ids},
+            "players": {pid: {"speaks": 0} for pid in ids},
             "sounds": [],
-            "reserve": [],
             "image_deck": [],
             "discard": [],
             "table": [],
             "placed": {},
-            "unnamed": [],
-            "pending": None,
-            "attempts": {},
             "round": 0,
             "communicator": None,
             "candidates": [],
@@ -501,12 +418,7 @@ class DadadaGame:
         if stage == STAGE_REVEAL:
             return [] if player_id in state["continue_ready"] else ["continue"]
         if stage == STAGE_CREATE:
-            pending = state["pending"]
-            if pending is None:
-                return ["propose"] if _current_player(state) == player_id else []
-            if _current_player(state) == player_id:
-                return []
-            return [] if player_id in pending["votes"] else ["vote"]
+            return ["propose"] if _current_player(state) == player_id else []
         if stage == STAGE_SPEAK:
             return ["speak"] if state["communicator"] == player_id else []
         if stage == STAGE_GUESS:
@@ -536,21 +448,14 @@ class DadadaGame:
             if image not in _unassigned(state):
                 return [], "that picture is already sorted"
             sound = action["sound"]
-            if sound == NEW_SOUND:
-                if not state["reserve"]:
-                    return [], "no sound card left to flip"
-            elif _sound_entry(state, sound) is None:
+            if _sound_entry(state, sound) is None:
                 return [], "unknown sound card"
-            state["pending"] = {"image": image, "sound": sound, "votes": {}}
-            _log(state, f"{_name(state, player_id)} 提议把 {PICTURE_BY_ID[image]['zh']} 叫作 "
-                        f"{'新音节' if sound == NEW_SOUND else _syllable(sound)}。")
-            return [], None
-
-        if action_type == "vote":
-            state["pending"]["votes"][player_id] = bool(action["approve"])
-            voters = _others(state, _current_player(state))
-            if all(pid in state["pending"]["votes"] for pid in voters):
-                _resolve_proposal(state)
+            _sound_entry(state, sound)["images"].append(image)
+            state["placed"][image] = sound
+            _log(state, f"{_name(state, player_id)} 把 {PICTURE_BY_ID[image]['zh']} 归到 {_syllable(sound)}。")
+            _advance_turn(state)
+            if not _unassigned(state):
+                _finish_creation(state)
             return [], None
 
         if action_type == "speak":
@@ -593,26 +498,12 @@ class DadadaGame:
         stage = state["stage"]
         reveal_all = stage in (STAGE_REVEAL, STAGE_GAME_OVER)
         is_communicator = viewer_id == state["communicator"]
-        pending = state["pending"]
 
         sounds_view = [{
             "id": entry["id"],
             "syllable": _syllable(entry["id"]),
             "images": [_picture(image) for image in entry["images"]],
         } for entry in state["sounds"]]
-
-        pending_view = None
-        if pending is not None:
-            pending_view = {
-                "image": _picture(pending["image"]),
-                "sound": pending["sound"],
-                "syllable": "?" if pending["sound"] == NEW_SOUND else _syllable(pending["sound"]),
-                "by": _current_player(state),
-                "attempts": state["attempts"].get(pending["image"], 0),
-                "votes": dict(pending["votes"]),
-                "waiting": [pid for pid in _others(state, _current_player(state))
-                            if pid not in pending["votes"]],
-            }
 
         guessers = _others(state, state["communicator"]) if state["communicator"] else []
         guesses_view = dict(state["guesses"]) if reveal_all else {}
@@ -652,12 +543,9 @@ class DadadaGame:
             "communicator": state["communicator"],
             "players": players_view,
             "sounds": sounds_view,
-            "reserve_count": len(state["reserve"]),
             "table": [_picture(image) for image in _unassigned(state)],
-            "unnamed": [_picture(image) for image in state["unnamed"]],
             "placed_count": len(state["placed"]),
             "table_total": CREATION_IMAGES,
-            "pending": pending_view,
             "candidates": [_picture(image) for image in state["candidates"]],
             # Only the communicator knows which picture they meant, and only
             # until the round is scored.
@@ -700,7 +588,6 @@ __all__ = [
     "ACTION_SCHEMA",
     "CONFIG_SCHEMA",
     "DadadaGame",
-    "NEW_SOUND",
     "STAGE_CREATE",
     "STAGE_GAME_OVER",
     "STAGE_GUESS",

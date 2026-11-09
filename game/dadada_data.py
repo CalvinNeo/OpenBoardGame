@@ -6,7 +6,7 @@ artwork is not redistributable, so the online build ships its own picture bank
 built from emoji (see designs/task192.md §3.2), which also keeps the client free
 of commercial art assets.
 
-Rules source and confidence table: designs/task192.md.
+Rules source, online deviations and confidence table: designs/task192.md.
 """
 
 from typing import Dict, List
@@ -318,18 +318,17 @@ PICTURE_BY_ID: Dict[str, Dict[str, str]] = {picture["id"]: picture for picture i
 IMAGE_IDS: List[str] = [picture["id"] for picture in PICTURES]
 
 # --- Setup constants -----------------------------------------------------
-# Setup deals five Sound cards and reveals two, keeping three in reserve
-# (whatsericplaying.com, designs/task192.md §2). Creation sorts thirteen Image
-# cards. Each Communication round lays out six fresh Image cards.
+# The physical setup deals five Sound cards and reveals only two, keeping three
+# face down. The online build reveals all five up front (designs/task192.md §4.2),
+# so the table can see its whole alphabet before sorting a single picture.
+# Creation sorts thirteen Image cards, and each Communication round lays out six
+# fresh Image cards.
 
-SOUNDS_DEALT = 5
-SOUNDS_REVEALED = 2
-MAX_SOUNDS = SOUNDS_DEALT
+SOUNDS_IN_PLAY = 5
 CREATION_IMAGES = 13
 CANDIDATES = 6
 SAY_WHAT_LIMIT = 2
 MAX_WORD_LENGTH = 5
-MAX_PROPOSAL_ATTEMPTS = 2
 
 IMAGE_PATTERN = r"^img-\d{3}$"
 SOUND_PATTERN = r"^snd-\d{2}$"
@@ -345,19 +344,9 @@ ACTION_SCHEMA = {
                 "type": {"const": "propose"},
                 "turn": {"type": "integer", "minimum": 1},
                 "image": {"type": "string", "pattern": IMAGE_PATTERN},
-                "sound": {"type": "string", "pattern": r"^(snd-\d{2}|new)$"},
+                "sound": {"type": "string", "pattern": SOUND_PATTERN},
             },
             "required": ["type", "turn", "image", "sound"],
-            "additionalProperties": False,
-        },
-        {
-            "type": "object",
-            "properties": {
-                "type": {"const": "vote"},
-                "turn": {"type": "integer", "minimum": 1},
-                "approve": {"type": "boolean"},
-            },
-            "required": ["type", "turn", "approve"],
             "additionalProperties": False,
         },
         {

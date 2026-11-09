@@ -16,8 +16,8 @@ const DADADA_HELP_CONFIG = {
       en: "This is a fully cooperative game. First you invent a language only your table speaks, then you use it to name picture cards, and the more rounds the team guesses right the better. Two Say What cards(🤔) end the game early."
     },
     turn: {
-      zh: "造词期轮到你时，点一张图卡再点一个音节，把它归进那个音节名下，其他人用同意(👍)和不同意(👎)表态。试词期轮到的那个人悄悄挑一张图，只用这门语言说出它的名字，其他人各自点一张图指出自己猜的是哪张。",
-      en: "During Creation your turn is to tap a picture and then a syllable to file it under that sound, and everyone else answers with agree(👍) or disagree(👎). During Communication the player on turn secretly picks a picture and names it using nothing but your new language, and everyone else taps the picture they think was meant."
+      zh: "造词期轮到你时，点一张图卡再点一个音节，把它归进那个音节名下，不需要任何人批准。试词期轮到的那个人悄悄挑一张图，只用这门语言说出它的名字，其他人各自点一张图指出自己猜的是哪张。",
+      en: "During Creation your turn is to tap a picture and then a syllable to file it under that sound, and nobody has to approve it. During Communication the player on turn secretly picks a picture and names it using nothing but your new language, and everyone else taps the picture they think was meant."
     },
     key: {
       zh: "这门语言没有词典，音节的含义完全由你们当场约定，所以真正要赢的是让全桌对同一个音节的理解保持一致，而不是把词造得多漂亮。",
@@ -30,23 +30,39 @@ const DADADA_HELP_CONFIG = {
       label: { zh: "开局", en: "Setup" },
       html: {
         zh: "<p>牌堆有两副，一副是音节(🗣️)牌，每张只有一个没有意义的音节，例如PU、PEH、BONG，另一副是图卡(🃏)，画的都是看得见的具体东西。</p>"
-          + "<p>开局洗匀音节牌并抽出五张，其中两张正面朝上进入语言区，剩下三张扣着当储备。音节最多只能翻到五张，翻完就没有了。</p>"
+          + "<p>开局洗匀音节牌并抽出五张，<strong>五张全部正面朝上</strong>摆在语言区，这就是你们这一局能用的全部发音，一个字都不会再多。</p>"
           + "<p>同时翻开十三张图卡摊在图卡池里，造词期要处理的就是这十三张。</p>",
         en: "<p>There are two decks. The sound(🗣️) deck holds single nonsense syllables such as PU, PEH and BONG, and the picture(🃏) deck holds concrete everyday things.</p>"
-          + "<p>Shuffle the sound deck and deal five cards. Two start face up in the language area and the other three stay face down as the reserve. Five is the hard ceiling, so once every card is flipped there are no more.</p>"
+          + "<p>Shuffle the sound deck and deal five cards. <strong>All five start face up</strong> in the language area, and that is every sound your table gets this game, not one more.</p>"
           + "<p>Thirteen picture cards are laid out at the same time, and those thirteen are what Creation has to sort.</p>"
+      }
+    },
+    {
+      id: "example",
+      label: { zh: "举个例子", en: "Worked example" },
+      html: {
+        zh: "<p>一个音节不是<strong>一个词</strong>，而是一个<strong>类别</strong>。造词期结束时，13 张图会被塞进最多 5 个音节里，每个音节背上两三个成员。</p>"
+          + "<p>假设造词期结束后你们的语言长这样：OO(🍎苹果 🍌香蕉 🍇葡萄 🥑牛油果) 是食物，RUE(🦊狐狸 🐯老虎 🐛毛毛虫) 是动物，BONG(🖍️蜡笔 🔭望远镜 🚪门) 是家里的大件，TEP(👟运动鞋 🥾靴子 🧦袜子) 是穿戴的衣物。</p>"
+          + "<p>试词期翻出的 6 张图是从没命名过的。碰到 🍓草莓 只要说 OO，碰到 🦁狮子 说 RUE，都很省事。</p>"
+          + "<p>但碰到 🏪便利店 或者 🚕出租车，这四个音节里根本没有对应的类别，你只能硬凑成 TEP-BONG-TEP 或者 OO-RUE-BONG，然后全桌开始吵这到底算什么意思。</p>"
+          + "<p>这就是这个游戏的全部内容：5 个音节要覆盖整个世界，所以你必须把类别定得又宽又歪，而每个人对同一个音节的宽窄理解都不一样。</p>",
+        en: "<p>One syllable is not <strong>a word</strong>, it is a <strong>category</strong>. By the end of Creation all thirteen pictures have been crammed into at most five syllables, and each syllable carries two or three members.</p>"
+          + "<p>Say your language ends up like this. OO(🍎apple 🍌banana 🍇grapes 🥑avocado) is food, RUE(🦊fox 🐯tiger 🐛caterpillar) is animals, BONG(🖍️crayon 🔭telescope 🚪door) is hard household things, and TEP(👟sneaker 🥾boot 🧦sock) is things you wear.</p>"
+          + "<p>The six pictures in Communication have never been named. 🍓strawberry only needs OO and 🦁lion only needs RUE, so those are cheap.</p>"
+          + "<p>Then 🏪convenience store or 🚕taxi shows up and none of your four syllables covers it, so you have to invent TEP-BONG-TEP or OO-RUE-BONG and the whole table starts arguing about what that could possibly mean.</p>"
+          + "<p>That is the entire game. Five syllables have to cover the whole world, so your categories end up broad and lopsided, and nobody reads a broad category quite the same way.</p>"
       }
     },
     {
       id: "create",
       label: { zh: "造词期", en: "Creation" },
       html: {
-        zh: "<p>按座位顺时针轮流。轮到你时先点图卡池里的一张图，再点语言区的一个音节，就等于提议这张图归到这个音节名下。也可以点那张扣着的储备牌，这样会翻开一个全新音节并直接归给它。</p>"
-          + "<p>提议之后其他人逐个表态。超过半数同意，这张图就正式归入该音节名下，轮到下一位。超过半数不同意，则由你重新提议一次。</p>"
-          + "<p>同一张图连续两次提议都没通过，它就进入无名区，本局不再参与归类。十三张图全部处理完，造词期结束。</p>",
-        en: "<p>Play passes clockwise. On your turn you tap a picture in the pool and then a syllable in the language area, which proposes filing that picture under that sound. You may instead tap the face down reserve card, which flips a brand new syllable and files the picture there straight away.</p>"
-          + "<p>Everyone else then votes. If more than half agree, the picture officially joins that syllable and play passes on. If more than half disagree, you propose again for the same picture.</p>"
-          + "<p>A picture that fails twice in a row drops into the unnamed area and never gets sorted this game. Creation ends once all thirteen pictures have been dealt with.</p>"
+        zh: "<p>按座位顺时针轮流，每人回合处理<strong>一张</strong>图。轮到你时先点图卡池里的一张图，再点语言区的一个音节，这张图就立刻归到那个音节名下，然后轮到下一位。</p>"
+          + "<p>归类不需要任何人批准，你说是哪个类别就是哪个类别。别人如果不同意，可以在语音里直接跟你吵，但游戏不会替你们仲裁。</p>"
+          + "<p>十三张图全部归完，造词期结束。注意每张图只能归<strong>一个</strong>音节，因为音节在这里代表类别而不是词。</p>",
+        en: "<p>Play passes clockwise and each turn handles <strong>one</strong> picture. On your turn you tap a picture in the pool and then a syllable in the language area, that picture immediately joins that sound, and play passes on.</p>"
+          + "<p>No approval is needed. Whatever category you pick is the category, and anyone who disagrees can argue with you out loud while the game stays out of it.</p>"
+          + "<p>Creation ends once all thirteen pictures are filed. Note that each picture takes <strong>exactly one</strong> syllable, because a syllable stands for a category here rather than a word.</p>"
       }
     },
     {
@@ -71,6 +87,32 @@ const DADADA_HELP_CONFIG = {
         en: "<p>The round only counts when the single most voted picture really is the target. A hit scores a point and the picture joins the understood(✅) pile. A tied top vote means the table never agreed, and that round simply fails.</p>"
           + "<p>A failed round sends the target into the Say What(🤔) pile, and two Say What cards(🤔) end the game immediately.</p>"
           + "<p>The game also ends normally once every player has been communicator once, and the ending shows your whole language together with a rating.</p>"
+      }
+    },
+    {
+      id: "why",
+      label: { zh: "我知道你想说啥", en: "I know what you are thinking" },
+      html: {
+        zh: "<p><strong>造词期为什么一张图只能点一个音节？</strong>因为音节(🗣️)在这里是类别而不是词。造词期真正在做的事，是把十三张图分成最多五堆，每一堆共享同一个发音，所以一张图当然只能落在一堆里。</p>"
+          + "<p><strong>那多音节的词什么时候才用得上？</strong>在试词期。命名者面对一张从没出现过的图，只能靠拼接已有类别去逼近它，于是才有了 PU-PEH-PEH 这种说法。</p>"
+          + "<p><strong>为什么只有五个音节，不能多翻几张？</strong>因为音节够用就没有笑点了。五个音节要覆盖整个世界，你必须把类别定得又宽又歪，而每个人对宽窄的理解都不一样，误会才是这个游戏真正要制造的东西。</p>"
+          + "<p><strong>为什么试词期的六张图我从没见过？</strong>因为要考的不是背词典，而是你们的类别能不能延伸出去。如果六张图都是造词期见过的，这个游戏就退化成记忆比赛了。</p>"
+          + "<p><strong>为什么最高票并列就算猜错？</strong>因为现实里你们也得真的谈到一起才算数。三个人指了三张不同的图，说明这门语言在你们之间根本没有统一，那当然不能算对。</p>"
+          + "<p><strong>为什么猜的时候互相看不见？</strong>为了防止抄答案。看不见别人指哪张，每个人才必须自己去理解那个音节，而这正是这个游戏想测的东西。</p>"
+          + "<p><strong>为什么我不能打字解释？</strong>实体版的规则是造词期禁止说母语，只能发出那几个音节。线上版既没有语音也没有输入框，你能表达的只有点哪张图和点哪个音节，这条禁令由界面本身保证。</p>"
+          + "<p><strong>为什么造词要点两次，先图后音节？</strong>因为你要表达的是两者之间的关系，也就是这张图属于这个类别。先点图是选出主语，再点音节是给它归类。</p>"
+          + "<p><strong>为什么一开始就把五个音节全亮出来？</strong>因为你们需要先看见自己的全部家底，才知道该把类别切多宽。藏起来只会让人误以为音节还能再增加，反而做错决策。</p>"
+          + "<p><strong>为什么归类不用别人同意？</strong>因为真正的分歧应该在试词期暴露，而不是在造词期用投票压下去。如果一张图的归属全桌都看不顺眼，那这门语言后面自然会卡住，那才是你们要的信号。</p>",
+        en: "<p><strong>Why can a picture only take one syllable during Creation?</strong> Because a syllable(🗣️) is a category here, not a word. What Creation really does is sort thirteen pictures into at most five piles where every pile shares one sound, so a picture can obviously only land in one pile.</p>"
+          + "<p><strong>So when do multi-syllable words come in?</strong> During Communication. The communicator faces a picture that has never appeared before and can only approach it by chaining categories together, which is where PU-PEH-PEH comes from.</p>"
+          + "<p><strong>Why only five syllables, why not flip more?</strong> Because the game stops being funny the moment you have enough. Five syllables have to cover the whole world, so your categories end up broad and lopsided, everyone reads that breadth differently, and the misunderstanding is the point.</p>"
+          + "<p><strong>Why have I never seen these six pictures before?</strong> Because the test is not memorising a dictionary, it is whether your categories stretch. If all six pictures were ones you sorted earlier the game would collapse into a memory contest.</p>"
+          + "<p><strong>Why does a tied top vote count as a miss?</strong> Because in real life you also have to actually agree. Three people pointing at three different pictures means the language was never shared, and that cannot count as a hit.</p>"
+          + "<p><strong>Why can I not see what the others picked?</strong> To stop people copying. Not seeing where anyone else points forces everyone to interpret the syllable themselves, which is exactly what the game is measuring.</p>"
+          + "<p><strong>Why can I not type an explanation?</strong> The physical rule bans your native tongue during Creation and allows only those syllables. The online build has no voice and no text box, so all you can express is which picture you tapped and which sound you tapped, and the interface enforces the ban for you.</p>"
+          + "<p><strong>Why does naming a picture take two taps?</strong> Because what you are expressing is a relationship, namely that this picture belongs to this category. The first tap picks the subject and the second files it.</p>"
+          + "<p><strong>Why are all five syllables face up from the start?</strong> Because you need to see your whole alphabet before deciding how wide to cut your categories. Hiding them only makes people assume more sounds are still coming and plan badly.</p>"
+          + "<p><strong>Why does filing a picture need nobody's approval?</strong> Because real disagreement should surface during Communication rather than be voted away during Creation. If the whole table hates where a picture landed, the language will jam later, and that is exactly the signal you want.</p>"
       }
     },
     {
@@ -118,10 +160,6 @@ const DADADA_EXPLAIN = {
   sound: {
     zh: "一个音节。造词期点它可以把你选中的图归到它名下，试词期点它可以把音节加进正在拼的词里。",
     en: "One syllable. During Creation tapping it files your selected picture under it, and during Communication tapping it appends the syllable to the word you are building."
-  },
-  reserve: {
-    zh: "扣着的储备音节。点它会翻开一个全新音节，最多只能翻到第五张，翻完就固定了。",
-    en: "A face down reserve syllable. Tapping it flips a brand new sound into the language, and five is the hard ceiling."
   },
   stagearea: {
     zh: "主操作区。造词期显示待归类的图卡池，试词期显示六张候选图，结算时显示答案和所有人的选择。",
@@ -186,7 +224,7 @@ function dadaLegal(action) {
 }
 
 function dadaIsMyCreateTurn() {
-  return dadaView?.stage === "create" && dadaView.current_player === dadaView.you && !dadaView.pending;
+  return dadaView?.stage === "create" && dadaView.current_player === dadaView.you;
 }
 
 function dadaIsNaming() {
@@ -286,7 +324,6 @@ function dadaCancelSelection() {
 function dadaTileHTML(picture, options = {}) {
   const classes = ["dada-tile"];
   if (options.selected) classes.push("is-selected");
-  if (options.pending) classes.push("is-pending");
   if (options.target) classes.push("is-target");
   if (options.mine) classes.push("is-mine");
   const badge = options.badge ? '<span class="dada-tile-badge">' + options.badge + "</span>" : "";
@@ -304,12 +341,9 @@ function dadaTileHTML(picture, options = {}) {
 function dadaSoundsHTML() {
   const view = dadaView;
   const armed = dadaArmed();
-  const canFlip = armed && view.stage === "create" && view.reserve_count > 0;
-  let html = view.sounds.map((sound) => {
-    const proposed = view.pending && view.pending.sound === sound.id;
+  return view.sounds.map((sound) => {
     const classes = ["dada-sound"];
     if (armed) classes.push("is-armed");
-    if (proposed) classes.push("is-proposed");
     const images = sound.images.length
       ? sound.images.map((picture) => "<span>" + picture.emoji + "</span>").join("")
       : '<span class="dada-sound-empty">还没有词</span>';
@@ -320,18 +354,6 @@ function dadaSoundsHTML() {
       ? '<button type="button" class="' + classes.join(" ") + '" data-dada-sound="' + dadaEsc(sound.id) + '"' + attrs + ">" + inner + "</button>"
       : '<div class="' + classes.join(" ") + '"' + attrs + ">" + inner + "</div>";
   }).join("");
-  if (view.reserve_count > 0) {
-    const classes = ["dada-sound", "is-new"];
-    if (canFlip) classes.push("is-armed");
-    const inner = '<span class="dada-syllable">?</span>'
-      + '<span class="dada-sound-images"><span class="dada-sound-empty">翻开新音节 ×'
-      + view.reserve_count + "</span></span>";
-    const attrs = ' data-dada-explain="reserve" data-dada-tip="' + dadaTip("reserve") + '"';
-    html += canFlip
-      ? '<button type="button" class="' + classes.join(" ") + '" data-dada-sound="new"' + attrs + ">" + inner + "</button>"
-      : '<div class="' + classes.join(" ") + '"' + attrs + ">" + inner + "</div>";
-  }
-  return html;
 }
 
 function dadaWordHTML(parts, placeholder) {
@@ -347,11 +369,11 @@ function dadaWordHTML(parts, placeholder) {
 function dadaBannerHTML() {
   const view = dadaView;
   if (!view || view.game_over) return "";
-  if (view.pending) {
-    const mine = view.pending.by === view.you;
-    return "<b>" + dadaEsc(dadaName(view.pending.by)) + "</b> 提议把 " + view.pending.image.emoji
-      + " " + dadaEsc(view.pending.image.zh) + " 叫作 <b>" + dadaEsc(view.pending.syllable) + "</b>"
-      + (mine ? "，等待大家表态。" : "，同意吗？");
+  if (view.stage === "create") {
+    const name = dadaName(view.current_player);
+    return view.current_player === view.you
+      ? "轮到你造词，先点一张图卡。"
+      : "<b>" + dadaEsc(name) + "</b> 正在给一张图归类。";
   }
   if (view.stage === "speak") {
     return "<b>" + dadaEsc(dadaName(view.communicator)) + "</b> 正在选目标并拼词"
@@ -374,23 +396,13 @@ function dadaAreaHTML() {
   const view = dadaView;
 
   if (view.stage === "create") {
-    const pool = view.table.map((picture) => {
-      const isPending = view.pending?.image.id === picture.id;
-      const selectable = dadaIsMyCreateTurn() || isPending;
-      return dadaTileHTML(picture, {
-        role: "pool",
-        selected: dadaSelected === picture.id,
-        pending: isPending,
-        disabled: !selectable
-      });
-    }).join("");
-    const unnamed = view.unnamed.length
-      ? '<div class="dada-unnamed"><span>无名区</span>'
-        + view.unnamed.map((picture) => '<span class="dada-unnamed-emoji">' + picture.emoji + "</span>").join("")
-        + "</div>"
-      : "";
+    const pool = view.table.map((picture) => dadaTileHTML(picture, {
+      role: "pool",
+      selected: dadaSelected === picture.id,
+      disabled: !dadaIsMyCreateTurn()
+    })).join("");
     return '<div class="dada-grid" data-dada-explain="pool" data-dada-tip="' + dadaTip("pool") + '">'
-      + (pool || '<div class="dada-empty">图卡池已经空了。</div>') + "</div>" + unnamed;
+      + (pool || '<div class="dada-empty">图卡池已经空了。</div>') + "</div>";
   }
 
   if (view.stage === "speak" || view.stage === "guess" || view.stage === "reveal") {
@@ -493,21 +505,6 @@ function dadaTrayHTML() {
   }
 
   // Creation
-  if (view.pending) {
-    if (view.pending.by === view.you) {
-      return '<div class="dada-tray-line">等待其他人表决，已表态 ' + Object.keys(view.pending.votes).length
-        + "/" + (view.player_count - 1) + "。</div>";
-    }
-    if (view.you in view.pending.votes) {
-      return '<div class="dada-tray-line">你已经表态，等待其他人。</div>';
-    }
-    return '<div class="dada-tray-line">把 ' + view.pending.image.emoji + " " + dadaEsc(view.pending.image.zh)
-      + " 叫作 <b>" + dadaEsc(view.pending.syllable) + "</b>，你同意吗？</div>"
-      + '<div class="dada-actions">'
-      + '<button type="button" class="dada-btn is-yes" data-dada-vote="1">👍 同意</button>'
-      + '<button type="button" class="dada-btn is-no" data-dada-vote="0">👎 不同意</button>'
-      + "</div>";
-  }
   if (view.current_player !== view.you) {
     return '<div class="dada-tray-line">等待 <b>' + dadaEsc(dadaName(view.current_player)) + "</b> 给一张图命名。</div>";
   }
@@ -552,12 +549,11 @@ function dadaRender() {
   set("dadadaScore", view.score);
   set("dadadaSayWhat", view.say_what.length);
   set("dadadaSayWhatLimit", view.say_what_limit);
-  set("dadadaReserve", view.reserve_count > 0 ? "还有 " + view.reserve_count + " 张音节扣着" : "五个音节全部翻开");
 
   const banner = document.getElementById("dadadaBanner");
   if (banner) {
     banner.innerHTML = dadaBannerHTML();
-    banner.classList.toggle("is-warn", view.stage === "guess" || !!view.pending);
+    banner.classList.toggle("is-warn", view.stage === "guess");
   }
 
   const sounds = document.getElementById("dadadaSounds");
@@ -597,11 +593,6 @@ function dadaBindPanel() {
     if (!dadaView) return;
     const view = dadaView;
 
-    const vote = event.target.closest("[data-dada-vote]");
-    if (vote && dadaLegal("vote")) {
-      dadaSend({ type: "vote", turn: view.turn, approve: vote.getAttribute("data-dada-vote") === "1" });
-      return;
-    }
     if (event.target.closest("[data-dada-continue]") && dadaLegal("continue")) {
       dadaSend({ type: "continue", turn: view.turn });
       return;

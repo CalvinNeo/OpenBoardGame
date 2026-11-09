@@ -9,7 +9,6 @@ import game.definitions  # noqa: F401  (registers every game)
 from game.registry import get_game
 from game.dadada import (
     ACTION_SCHEMA,
-    NEW_SOUND,
     STAGE_CREATE,
     STAGE_GAME_OVER,
     STAGE_GUESS,
@@ -28,8 +27,7 @@ from game.dadada_data import (
     MAX_WORD_LENGTH,
     PICTURES,
     SAY_WHAT_LIMIT,
-    SOUNDS_DEALT,
-    SOUNDS_REVEALED,
+    SOUNDS_IN_PLAY,
     SYLLABLES,
 )
 
@@ -57,23 +55,15 @@ def act(state, player_id, action):
     return events
 
 
-def sort_creation(state, approve=True):
-    """Drive the whole Creation phase, approving or rejecting every proposal."""
+def sort_creation(state):
+    """Drive the whole Creation phase, one picture per seat."""
     guard = 0
-    while state["stage"] == STAGE_CREATE and guard < 500:
+    while state["stage"] == STAGE_CREATE and guard < 200:
         guard += 1
         current = state["turn_order"][state["turn_index"]]
-        if state["pending"] is None:
-            images = _unassigned(state)
-            choices = _revealed_sound_ids(state)
-            if state["reserve"]:
-                choices = choices + [NEW_SOUND]
-            act(state, current, {"type": "propose", "turn": state["turn"],
-                                 "image": images[0], "sound": choices[0]})
-            continue
-        for pid in ids(state):
-            if pid != current and "vote" in legal(state, pid):
-                act(state, pid, {"type": "vote", "turn": state["turn"], "approve": approve})
+        images = _unassigned(state)
+        act(state, current, {"type": "propose", "turn": state["turn"],
+                             "image": images[0], "sound": _revealed_sound_ids(state)[0]})
     assert state["stage"] != STAGE_CREATE, "creation never finished"
 
 
@@ -116,8 +106,6 @@ class DadadaRegistrationTests(unittest.TestCase):
         sounds = _revealed_sound_ids(state)
         payloads = [
             {"type": "propose", "turn": 1, "image": state["table"][0], "sound": sounds[0]},
-            {"type": "propose", "turn": 1, "image": state["table"][0], "sound": NEW_SOUND},
-            {"type": "vote", "turn": 1, "approve": True},
             {"type": "speak", "turn": 1, "target": state["table"][0], "word": sounds},
             {"type": "guess", "turn": 1, "image": state["table"][0]},
             {"type": "continue", "turn": 1},
@@ -132,8 +120,8 @@ class DadadaRegistrationTests(unittest.TestCase):
         bad = [
             {"type": "propose", "turn": 1, "image": "img-001", "sound": "snd-01", "x": 1},
             {"type": "propose", "turn": 1, "image": "img-001"},
-            {"type": "vote", "turn": 1},
-            {"type": "vote", "turn": 1, "approve": "yes"},
+            {"type": "propose", "turn": 1, "image": "img-001", "sound": "new"},
+            {"type": "vote", "turn": 1, "approve": True},
             {"type": "speak", "turn": 1, "target": "img-001", "word": []},
             {"type": "speak", "turn": 1, "target": "nope", "word": ["snd-01"]},
             {"type": "guess", "turn": 0, "image": "img-001"},
@@ -165,12 +153,20 @@ class DadadaRegistrationTests(unittest.TestCase):
 
 
 class DadadaSetupTests(unittest.TestCase):
-    def test_setup_matches_the_published_component_counts(self):
+    def test_every_sound_is_face_up_from_the_start(self):
+        """Online deviation: no face-down reserve, the whole alphabet is visible."""
+        state = new_game()
+        self.assertEqual(len(state["sounds"]), SOUNDS_IN_PLAY)
+        self.assertNotIn("reserve", state)
+        view = DadadaGame.get_public_view(state, ids(state)[0])
+        self.assertEqual(len(view["sounds"]), SOUNDS_IN_PLAY)
+        self.assertTrue(all(sound["syllable"] for sound in view["sounds"]))
+        self.assertEqual(len({sound["syllable"] for sound in view["sounds"]}), SOUNDS_IN_PLAY)
+
+    def test_setup_matches_the_published_picture_count(self):
         state = new_game()
         self.assertEqual(state["stage"], STAGE_CREATE)
         self.assertEqual(len(state["table"]), CREATION_IMAGES)
-        self.assertEqual(len(state["sounds"]), SOUNDS_REVEALED)
-        self.assertEqual(len(state["reserve"]), SOUNDS_DEALT - SOUNDS_REVEALED)
         self.assertEqual(len(set(state["table"])), CREATION_IMAGES)
         self.assertEqual(len(state["placed"]), 0)
         self.assertEqual(state["round"], 0)
@@ -181,7 +177,6 @@ class DadadaSetupTests(unittest.TestCase):
         second = new_game(seed=99)
         self.assertEqual(first["table"], second["table"])
         self.assertEqual(first["sounds"], second["sounds"])
-        self.assertEqual(first["reserve"], second["reserve"])
 
     def test_only_the_current_player_may_propose(self):
         state = new_game()
@@ -190,105 +185,69 @@ class DadadaSetupTests(unittest.TestCase):
             expected = ["propose"] if pid == current else []
             self.assertEqual(legal(state, pid), expected)
 
-    def test_a_proposal_locks_the_table_until_everyone_votes(self):
-        state = new_game()
-        current = state["turn_order"][state["turn_index"]]
-        act(state, current, {"type": "propose", "turn": state["turn"],
-                             "image": state["table"][0], "sound": _revealed_sound_ids(state)[0]})
-        self.assertEqual(legal(state, current), [])
-        voters = [pid for pid in ids(state) if pid != current]
-        for pid in voters[:-1]:
-            self.assertEqual(legal(state, pid), ["vote"])
-            act(state, pid, {"type": "vote", "turn": state["turn"], "approve": True})
-        act(state, voters[-1], {"type": "vote", "turn": state["turn"], "approve": True})
-        self.assertIsNone(state["pending"])
-        self.assertNotEqual(state["turn_order"][state["turn_index"]], current)
-
 
 class DadadaCreationTests(unittest.TestCase):
-    def test_an_approved_proposal_files_the_picture(self):
+    def test_a_proposal_files_the_picture_immediately(self):
         state = new_game()
         current = state["turn_order"][state["turn_index"]]
         image = state["table"][0]
         sound = _revealed_sound_ids(state)[0]
-        act(state, current, {"type": "propose", "turn": state["turn"], "image": image, "sound": sound})
-        for pid in ids(state):
-            if pid != current:
-                act(state, pid, {"type": "vote", "turn": state["turn"], "approve": True})
+        act(state, current, {"type": "propose", "turn": state["turn"],
+                             "image": image, "sound": sound})
         self.assertEqual(state["placed"][image], sound)
-        self.assertEqual([entry for entry in state["sounds"] if entry["id"] == sound][0]["images"], [image])
+        self.assertEqual(
+            [entry for entry in state["sounds"] if entry["id"] == sound][0]["images"], [image])
         self.assertNotIn(image, _unassigned(state))
+        self.assertNotEqual(state["turn_order"][state["turn_index"]], current)
 
-    def test_flipping_a_new_sound_consumes_the_reserve(self):
+    def test_nobody_has_to_approve(self):
+        """Online deviation: filing a picture needs no vote from anyone."""
         state = new_game()
         current = state["turn_order"][state["turn_index"]]
-        before = len(state["reserve"])
-        act(state, current, {"type": "propose", "turn": state["turn"],
-                             "image": state["table"][0], "sound": NEW_SOUND})
         for pid in ids(state):
             if pid != current:
-                act(state, pid, {"type": "vote", "turn": state["turn"], "approve": True})
-        self.assertEqual(len(state["reserve"]), before - 1)
-        self.assertEqual(len(state["sounds"]), SOUNDS_REVEALED + 1)
-
-    def test_a_rejected_proposal_lets_the_same_player_try_again(self):
-        state = new_game()
-        current = state["turn_order"][state["turn_index"]]
-        image = state["table"][0]
+                self.assertEqual(legal(state, pid), [], "a non-turn player must have nothing to do")
         act(state, current, {"type": "propose", "turn": state["turn"],
-                             "image": image, "sound": _revealed_sound_ids(state)[0]})
-        for pid in ids(state):
-            if pid != current:
-                act(state, pid, {"type": "vote", "turn": state["turn"], "approve": False})
-        self.assertEqual(state["turn_order"][state["turn_index"]], current)
-        self.assertIsNone(state["pending"])
-        self.assertIn(image, _unassigned(state))
-        self.assertEqual(legal(state, current), ["propose"])
+                             "image": state["table"][0], "sound": _revealed_sound_ids(state)[0]})
+        self.assertEqual(len(state["placed"]), 1)
 
-    def test_a_picture_rejected_twice_becomes_unnamed(self):
+    def test_every_sound_can_be_used_from_turn_one(self):
         state = new_game()
-        current = state["turn_order"][state["turn_index"]]
-        image = state["table"][0]
-        for _ in range(2):
+        sounds = _revealed_sound_ids(state)
+        for index, sound in enumerate(sounds):
+            current = state["turn_order"][state["turn_index"]]
             act(state, current, {"type": "propose", "turn": state["turn"],
-                                 "image": image, "sound": _revealed_sound_ids(state)[0]})
-            for pid in ids(state):
-                if pid != current:
-                    act(state, pid, {"type": "vote", "turn": state["turn"], "approve": False})
-        self.assertIn(image, state["unnamed"])
-        self.assertNotIn(image, state["placed"])
-        self.assertNotIn(image, _unassigned(state))
+                                 "image": state["table"][index], "sound": sound})
+        self.assertEqual(len(set(state["placed"].values())), SOUNDS_IN_PLAY)
 
     def test_an_already_sorted_picture_cannot_be_proposed_again(self):
         state = new_game()
         current = state["turn_order"][state["turn_index"]]
         image = state["table"][0]
+        sound = _revealed_sound_ids(state)[0]
         act(state, current, {"type": "propose", "turn": state["turn"],
-                             "image": image, "sound": _revealed_sound_ids(state)[0]})
-        for pid in ids(state):
-            if pid != current:
-                act(state, pid, {"type": "vote", "turn": state["turn"], "approve": True})
+                             "image": image, "sound": sound})
         nxt = state["turn_order"][state["turn_index"]]
         _, error = DadadaGame.apply_action(state, nxt, {
-            "type": "propose", "turn": state["turn"], "image": image,
-            "sound": _revealed_sound_ids(state)[0]})
+            "type": "propose", "turn": state["turn"], "image": image, "sound": sound})
         self.assertEqual(error, "that picture is already sorted")
 
-    def test_creation_ends_after_every_picture_is_settled(self):
+    def test_creation_ends_after_every_picture_is_sorted(self):
         state = new_game()
         sort_creation(state)
         self.assertEqual(state["stage"], STAGE_SPEAK)
-        self.assertEqual(len(state["placed"]) + len(state["unnamed"]), CREATION_IMAGES)
+        self.assertEqual(len(state["placed"]), CREATION_IMAGES)
+        self.assertEqual(len(_unassigned(state)), 0)
         self.assertEqual(state["round"], 1)
         self.assertEqual(len(state["candidates"]), CANDIDATES)
         self.assertIsNotNone(state["communicator"])
 
-    def test_rejecting_everything_still_finishes_creation(self):
+    def test_creation_takes_one_turn_per_picture(self):
         state = new_game()
-        sort_creation(state, approve=False)
-        self.assertEqual(state["stage"], STAGE_SPEAK)
-        self.assertEqual(len(state["unnamed"]), CREATION_IMAGES)
-        self.assertEqual(len(state["placed"]), 0)
+        start = state["turn"]
+        sort_creation(state)
+        # Thirteen pictures, each advancing the seat once.
+        self.assertEqual(state["turn"], start + CREATION_IMAGES)
 
 
 class DadadaCommunicationTests(unittest.TestCase):
@@ -304,10 +263,28 @@ class DadadaCommunicationTests(unittest.TestCase):
 
     def test_a_word_may_only_use_sounds_from_the_language(self):
         state = self.state
+        unused = next(sound for sound in ("snd-40", "snd-39", "snd-38")
+                      if sound not in _revealed_sound_ids(state))
         _, error = DadadaGame.apply_action(state, state["communicator"], {
             "type": "speak", "turn": state["turn"], "target": state["candidates"][0],
-            "word": ["snd-40"] if "snd-40" not in _revealed_sound_ids(state) else ["snd-39"]})
+            "word": [unused]})
         self.assertEqual(error, "you may only use sounds from your language")
+
+    def test_a_word_can_chain_several_syllables(self):
+        state = self.state
+        sounds = _revealed_sound_ids(state)
+        word = [sounds[0], sounds[1], sounds[0]]
+        act(state, state["communicator"], {"type": "speak", "turn": state["turn"],
+                                           "target": state["candidates"][0], "word": word})
+        self.assertEqual(state["word"], word)
+        view = DadadaGame.get_public_view(state, ids(state)[0])
+        syllables = {sound["id"]: sound["syllable"] for sound in view["sounds"]}
+        expected = "-".join(syllables[sound] for sound in word)
+        for pid in ids(state):
+            view = DadadaGame.get_public_view(state, pid)
+            self.assertEqual(view["word"], word)
+            self.assertEqual(view["word_label"], expected)
+            self.assertEqual(len(view["word_label"].split("-")), 3)
 
     def test_a_word_longer_than_the_limit_is_refused(self):
         state = self.state
@@ -330,8 +307,8 @@ class DadadaCommunicationTests(unittest.TestCase):
             "type": "speak", "turn": state["turn"], "target": state["candidates"][0],
             "word": [_revealed_sound_ids(state)[0]]})
         self.assertEqual(legal(state, state["communicator"]), [])
-        self.assertEqual(legal(state, ids(state)[0] if ids(state)[0] != state["communicator"]
-                               else ids(state)[1]), ["guess"])
+        other = next(pid for pid in ids(state) if pid != state["communicator"])
+        self.assertEqual(legal(state, other), ["guess"])
 
     def test_a_correct_guess_scores_and_files_the_picture(self):
         state = self.state
@@ -353,12 +330,10 @@ class DadadaCommunicationTests(unittest.TestCase):
         state = new_game(count=4, seed=3)
         sort_creation(state)
         communicator = state["communicator"]
-        sounds = _revealed_sound_ids(state)
         target = state["candidates"][0]
         act(state, communicator, {"type": "speak", "turn": state["turn"],
-                                  "target": target, "word": [sounds[0]]})
+                                  "target": target, "word": [_revealed_sound_ids(state)[0]]})
         others = [pid for pid in ids(state) if pid != communicator]
-        # Three voters, three different pictures: nobody agrees on anything.
         picks = [image for image in state["candidates"] if image != target][:3]
         for pid, pick in zip(others, picks):
             act(state, pid, {"type": "guess", "turn": state["turn"], "image": pick})
@@ -377,7 +352,6 @@ class DadadaCommunicationTests(unittest.TestCase):
         act(state, others[0], {"type": "guess", "turn": state["turn"], "image": target})
         act(state, others[1], {"type": "guess", "turn": state["turn"], "image": decoy})
         act(state, others[2], {"type": "guess", "turn": state["turn"], "image": decoy})
-        # target 1 vote, decoy 2 votes -> decoy wins outright and is wrong
         self.assertFalse(state["result"]["correct"])
 
     def test_a_guess_may_be_changed_before_everyone_locks_in(self):
@@ -415,7 +389,7 @@ class DadadaCommunicationTests(unittest.TestCase):
     def test_two_say_what_cards_end_the_game_early(self):
         state = new_game(count=6, seed=11)
         sort_creation(state)
-        for index in range(SAY_WHAT_LIMIT):
+        for _ in range(SAY_WHAT_LIMIT):
             play_round(state, guess_target=False)
             finish_round(state)
         self.assertTrue(state["game_over"])
@@ -435,6 +409,7 @@ class DadadaCommunicationTests(unittest.TestCase):
         self.assertEqual(state["stage"], STAGE_CREATE)
         self.assertEqual(state["score"], 0)
         self.assertEqual(len(state["table"]), CREATION_IMAGES)
+        self.assertEqual(len(state["sounds"]), SOUNDS_IN_PLAY)
 
 
 class DadadaPrivacyTests(unittest.TestCase):
@@ -526,22 +501,14 @@ class DadadaRejectionTests(unittest.TestCase):
         _, error = DadadaGame.apply_action(state, current, "not a dict")
         self.assertEqual(error, "invalid action schema")
 
-    def test_voting_without_a_proposal_is_rejected(self):
+    def test_an_unknown_sound_is_rejected(self):
         state = new_game()
         current = state["turn_order"][state["turn_index"]]
-        other = next(pid for pid in ids(state) if pid != current)
-        _, error = DadadaGame.apply_action(state, other, {
-            "type": "vote", "turn": state["turn"], "approve": True})
-        self.assertEqual(error, "action unavailable in this stage")
-
-    def test_flipping_a_new_sound_with_an_empty_reserve_is_rejected(self):
-        state = new_game()
-        state["reserve"] = []
-        current = state["turn_order"][state["turn_index"]]
+        unused = next(sound for sound in ("snd-40", "snd-39", "snd-38")
+                      if sound not in _revealed_sound_ids(state))
         _, error = DadadaGame.apply_action(state, current, {
-            "type": "propose", "turn": state["turn"], "image": state["table"][0],
-            "sound": NEW_SOUND})
-        self.assertEqual(error, "no sound card left to flip")
+            "type": "propose", "turn": state["turn"], "image": state["table"][0], "sound": unused})
+        self.assertEqual(error, "unknown sound card")
 
 
 class DadadaSaveTests(unittest.TestCase):
@@ -662,7 +629,7 @@ class DadadaBotTests(unittest.TestCase):
         guesser = next(pid for pid in ids(state) if pid != communicator)
         view = DadadaGame.get_public_view(state, guesser)
         self.assertIsNone(view["target"])
-        self.assertNotIn(state["candidates"][0], [picture["id"] for picture in view["candidates"][:0]])
+        self.assertEqual(view["guesses"], {})
 
     def test_all_bot_games_finish_for_every_player_count(self):
         for count in range(2, 7):
@@ -695,14 +662,9 @@ class DadadaRandomGameTests(unittest.TestCase):
                         kind = rng.choice(legal(state, pid))
                         turn = state["turn"]
                         if kind == "propose":
-                            choices = _revealed_sound_ids(state)
-                            if state["reserve"]:
-                                choices = choices + [NEW_SOUND]
                             move = {"type": "propose", "turn": turn,
                                     "image": rng.choice(_unassigned(state)),
-                                    "sound": rng.choice(choices)}
-                        elif kind == "vote":
-                            move = {"type": "vote", "turn": turn, "approve": rng.random() < 0.7}
+                                    "sound": rng.choice(_revealed_sound_ids(state))}
                         elif kind == "speak":
                             sounds = _revealed_sound_ids(state)
                             move = {"type": "speak", "turn": turn,
@@ -726,12 +688,10 @@ class DadadaRandomGameTests(unittest.TestCase):
         for _ in range(state["rounds_total"]):
             play_round(state)
             finish_round(state)
-        # table is fully covered by placed + unnamed, and the last round's target
-        # is still listed in candidates, so account for those overlaps once.
-        settled = list(state["placed"]) + list(state["unnamed"])
         scored = state["defined"] + state["say_what"]
         leftover = [image for image in state["candidates"] if image not in scored]
-        seen = list(state["image_deck"]) + list(state["discard"]) + settled + scored + leftover
+        seen = (list(state["image_deck"]) + list(state["discard"])
+                + list(state["placed"]) + scored + leftover)
         self.assertEqual(sorted(seen), sorted(IMAGE_IDS))
         self.assertEqual(len(seen), len(set(seen)))
 
@@ -750,7 +710,6 @@ class DadadaRandomGameTests(unittest.TestCase):
         play_round(state)
         for pid in ids(state):
             json.dumps(DadadaGame.get_public_view(state, pid))
-        # A spectator sees the scored round like everyone else, and must not crash.
         spectator = DadadaGame.get_public_view(state, "ghost")
         json.dumps(spectator)
         self.assertEqual(spectator["you"], "ghost")

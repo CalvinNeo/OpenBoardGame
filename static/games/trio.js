@@ -217,25 +217,37 @@ function trioOpenTargets() {
   return open;
 }
 
-function trioMaskHTML(key, label) {
-  return '<div class="trio-mask">'
-    + '<button type="button" class="trio-go" data-trio-go="' + trioEsc(key) + '">' + label + "</button>"
-    + '<button type="button" data-trio-cancel="1">Cancel</button>'
-    + "</div>";
-}
-
 function trioPickLabel(key) {
   const parts = key.split(":");
   if (parts[0] === "table") return "Reveal";
   return parts[2] === "low" ? "Lowest" : "Highest";
 }
 
+// A single card is far too small to hold two buttons on a phone, so the mask
+// covers a container that is big enough (DEV_GUIDE) and leaves the picked item
+// itself uncovered and outlined.
+function trioMaskHTML(key, variant) {
+  return '<div class="trio-mask ' + variant + '">'
+    + '<button type="button" class="trio-go" data-trio-go="' + trioEsc(key) + '">'
+    + trioPickLabel(key) + "</button>"
+    + '<button type="button" data-trio-cancel="1">Cancel</button>'
+    + "</div>";
+}
+
+function trioTableCols() {
+  return (trioView.table || []).length === 8 ? 4 : 3;
+}
+
 /* --- renderers -------------------------------------------------------- */
 
 function trioTableHTML(open) {
   const slots = trioView.table || [];
+  const cols = trioTableCols();
   const picking = trioPicked !== null;
-  return slots.map((slot) => {
+  const pickedIndex = trioPicked && trioPicked.startsWith("table:")
+    ? Number(trioPicked.split(":")[1])
+    : null;
+  const cells = slots.map((slot) => {
     const key = "table:" + slot.index;
     const canOpen = open.has(key);
     const picked = trioPicked === key;
@@ -249,10 +261,15 @@ function trioTableHTML(open) {
       card = trioCardHTML(slot.number, slot.face_up ? "is-face" : "");
     } else card = trioBackHTML();
     const attrs = canOpen ? ' data-trio-pick="' + key + '"' : "";
-    const tip = ' data-trio-explain="table_card"';
-    return '<div class="' + classes.join(" ") + '"' + attrs + tip + ">" + card
-      + (picked ? trioMaskHTML(key, trioPickLabel(key)) : "") + "</div>";
+    return '<div class="' + classes.join(" ") + '"' + attrs
+      + ' data-trio-explain="table_card">' + card + "</div>";
   }).join("");
+  if (pickedIndex === null) return cells;
+  // Park the confirmation band in a row the picked card does not sit in, so the
+  // card stays readable above the mask instead of hiding behind the buttons.
+  const rows = Math.ceil(slots.length / cols);
+  const band = Math.floor(pickedIndex / cols) >= rows - 1 ? "is-top" : "is-bottom";
+  return cells + trioMaskHTML(trioPicked, "trio-mask--table " + band);
 }
 
 function trioRevealNote() {
@@ -306,12 +323,10 @@ function trioHandHTML(player, open) {
   for (let index = 0; index < count; index += 1) {
     cells.push(trioHandCellHTML(player, index, count, known, open));
   }
-  const pickedHere = trioPicked && trioPicked.startsWith("hand:" + player.player_id + ":");
   return '<div class="trio-hand">'
     + '<span class="trio-hand-arrow">◀</span>'
     + cells.join("")
     + '<span class="trio-hand-arrow">▶</span>'
-    + (pickedHere ? trioMaskHTML(trioPicked, trioPickLabel(trioPicked)) : "")
     + "</div>";
 }
 
@@ -326,11 +341,16 @@ function trioPlayersHTML(open) {
         + trioHue(number) + '">' + trioEsc(number) + "</span>"
       )).join("")
       : '<span class="trio-trio-none">—</span>';
+    const pickedHere = trioPicked && trioPicked.startsWith("hand:" + player.player_id + ":");
+    const mask = pickedHere
+      ? trioMaskHTML(trioPicked, "trio-mask--row " + (trioPicked.endsWith(":low") ? "is-low" : "is-high"))
+      : "";
     return '<div class="' + classes.join(" ") + '" data-trio-explain="players">'
       + '<div class="trio-who"><span class="trio-name">' + trioEsc(player.name)
       + (player.is_you ? " (你)" : "") + "</span>"
       + '<div class="trio-trios">' + trios + "</div></div>"
       + trioHandHTML(player, open)
+      + mask
       + "</div>";
   }).join("");
 }
@@ -412,7 +432,7 @@ function trioRender() {
   }
   const table = document.getElementById("trioTable");
   if (table) {
-    table.style.setProperty("--trio-cols", (trioView.table || []).length === 8 ? "4" : "3");
+    table.style.setProperty("--trio-cols", String(trioTableCols()));
     table.innerHTML = trioTableHTML(open);
   }
   const revealNote = document.getElementById("trioRevealNote");
@@ -431,6 +451,28 @@ function trioRender() {
     log.innerHTML = (trioView.log || []).slice(-30)
       .map((line) => "<div>" + trioEsc(line) + "</div>").join("");
     log.scrollTop = log.scrollHeight;
+  }
+  trioPlaceRowMask();
+}
+
+// The row mask has to stop short of the picked end tile, and that tile sits
+// after the name column, whose width changes per breakpoint. Measure it instead
+// of hard coding an offset, so the two never overlap at any width.
+function trioPlaceRowMask() {
+  const mask = trioPanel?.querySelector(".trio-mask--row");
+  if (!mask) return;
+  const row = mask.parentElement;
+  const tile = row?.querySelector(".trio-hand .trio-card.is-picked");
+  if (!row || !tile) return;
+  const rowRect = row.getBoundingClientRect();
+  const tileRect = tile.getBoundingClientRect();
+  const gap = 6;
+  if (mask.classList.contains("is-low")) {
+    mask.style.left = Math.max(0, Math.round(tileRect.right - rowRect.left + gap)) + "px";
+    mask.style.right = "0px";
+  } else {
+    mask.style.right = Math.max(0, Math.round(rowRect.right - tileRect.left + gap)) + "px";
+    mask.style.left = "0px";
   }
 }
 
@@ -556,6 +598,11 @@ document.addEventListener("keydown", (event) => {
   trioPicked = null;
   trioRender();
 }, true);
+
+// A rotation or a window resize moves the end tiles, so re-measure the mask.
+window.addEventListener("resize", () => {
+  if (trioView) trioPlaceRowMask();
+});
 
 function connectTrioEvents() {
   if (typeof socket === "undefined") return;

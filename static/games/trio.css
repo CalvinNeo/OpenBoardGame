@@ -213,6 +213,7 @@
 /* --- table ------------------------------------------------------------ */
 
 .trio-table {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(var(--trio-cols, 3), minmax(0, 1fr));
   gap: 6px;
@@ -238,6 +239,11 @@
 
 .trio-slot.is-open:hover .trio-card {
   filter: brightness(1.12);
+}
+
+.trio-slot.is-picked {
+  /* Above the confirmation mask, so the card you picked stays readable. */
+  z-index: 3;
 }
 
 .trio-slot.is-picked .trio-card {
@@ -443,8 +449,9 @@
   min-height: 26px;
   padding: 2px 4px;
   border-radius: 6px;
-  border: 1px solid var(--trio-line);
-  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(246, 239, 228, 0.3);
+  /* Opaque so nothing dimmed underneath shows through the label. */
+  background: #3a2b45;
   color: var(--trio-ink);
   font-size: 11px;
   font-weight: 700;
@@ -458,6 +465,50 @@
   background: var(--trio-accent);
   border-color: var(--trio-accent);
   color: #2a1a10;
+}
+
+/* A single card cannot hold two buttons on a phone, so the confirmation mask
+   covers the whole table instead and keeps the buttons in a band that sits in
+   a row the picked card does not occupy. */
+.trio-mask--table {
+  inset: -6px;
+  z-index: 2;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(13, 8, 19, 0.76);
+}
+
+.trio-mask--table.is-bottom {
+  align-items: flex-end;
+}
+
+.trio-mask--table.is-top {
+  align-items: flex-start;
+}
+
+.trio-mask--table button {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 168px;
+  min-height: 46px;
+  font-size: 15px;
+  border-radius: 10px;
+}
+
+/* The hand end is just as small, so its mask covers the whole player row and
+   stops short of the picked end tile. */
+.trio-mask--row {
+  z-index: 4;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(13, 8, 19, 0.85);
+}
+
+.trio-mask--row button {
+  min-height: 40px;
+  font-size: 13px;
 }
 
 /* --- log -------------------------------------------------------------- */
