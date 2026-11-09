@@ -1,0 +1,35 @@
+<template data-game-target="dadadaPanel" data-game-mode="contents">
+              <div class="dada-root">
+                <div class="dada-status">
+                  <span class="dada-chip dada-chip-stage" id="dadadaStage" data-dada-explain="stage">—</span>
+                  <span class="dada-chip" data-dada-explain="round">🔁 <b id="dadadaRound">0</b>/<b id="dadadaRounds">0</b></span>
+                  <span class="dada-chip" data-dada-explain="score">✅ <b id="dadadaScore">0</b></span>
+                  <span class="dada-chip" data-dada-explain="say_what">🤔 <b id="dadadaSayWhat">0</b>/<b id="dadadaSayWhatLimit">2</b></span>
+                </div>
+
+                <div id="dadadaBanner" class="dada-banner" data-dada-explain="banner"></div>
+
+                <section class="dada-language" data-dada-explain="language">
+                  <header class="dada-head">
+                    <span class="dada-head-title">🗣️ 你们的语言</span>
+                    <span class="dada-head-note" id="dadadaReserve"></span>
+                  </header>
+                  <div id="dadadaSounds" class="dada-sounds"></div>
+                </section>
+
+                <section class="dada-stagearea" data-dada-explain="stagearea">
+                  <header class="dada-head">
+                    <span class="dada-head-title" id="dadadaAreaTitle">—</span>
+                    <span class="dada-head-note" id="dadadaAreaNote"></span>
+                  </header>
+                  <div id="dadadaArea"></div>
+                </section>
+
+                <div id="dadadaTray" class="dada-tray" data-dada-explain="tray"></div>
+
+                <details class="dada-logbox" data-dada-explain="log">
+                  <summary>Log</summary>
+                  <div id="dadadaLog" class="dada-log"></div>
+                </details>
+              </div>
+            </template>

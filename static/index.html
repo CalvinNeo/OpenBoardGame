@@ -77,6 +77,7 @@
                 <option value="8">8 players</option>
                 <option value="9">9 players</option>
                 <option value="10">10 players</option>
+                <option value="11+">11+ players</option>
               </select>
             </div>
             <div class="create-room-filter-control">
@@ -84,6 +85,7 @@
               <select id="gameSortSelect">
                 <option value="alpha" selected>Alphabet</option>
                 <option value="recent">Recently Played</option>
+                <option value="updated">Recently Updated</option>
                 <option value="dev_order">Development Order</option>
                 <option value="difficulty_asc">Weight Asc</option>
                 <option value="difficulty_desc">Weight Desc</option>
@@ -1461,6 +1463,14 @@
               <button id="witchCauldronHelpBtn" type="button">Help</button>
               <button id="witchCauldronExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="giveMeOrHimHeaderActions" style="display: none;">
+              <button id="giveMeOrHimHelpBtn" class="give-me-or-him-header-btn" type="button">Help</button>
+              <button id="giveMeOrHimExplainBtn" class="give-me-or-him-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="dadadaHeaderActions" style="display: none;">
+              <button id="dadadaHelpBtn" type="button">Help</button>
+              <button id="dadadaExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="spiritIslandHeaderActions" style="display: none;">
               <button id="spiritIslandHelpBtn" type="button">Help</button>
               <button id="spiritIslandExplainBtn" type="button" aria-pressed="false">Explain</button>
@@ -1563,6 +1573,10 @@
             <div id="challengersPanel" class="hidden"></div>
             <div id="boomerangAustraliaPanel" class="hidden"></div>
             <div id="witchCauldronPanel" class="hidden witch-cauldron-panel"></div>
+            <div id="giveMeOrHimPanel" class="hidden"></div>
+
+            <div id="dadadaPanel" class="hidden"></div>
+            <div id="giveMeOrHimDialogs"></div>
             <div id="lasVegasPanel" class="hidden"></div>
             <div id="forSalePanel" class="hidden"></div>
             <div id="cheatyMagesPanel" class="hidden"></div>
@@ -1779,7 +1793,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=233" defer></script>
+  <script src="/static/game_assets.js?v=235" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v44" defer></script>
   <script src="/static/games/shared_help.js?v=1" defer></script>
@@ -1820,7 +1834,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v67" defer></script>
-  <script src="/static/room.js?v=app_v105" defer></script>
+  <script src="/static/app.js?v=app_v68" defer></script>
+  <script src="/static/room.js?v=app_v106" defer></script>
 </body>
 </html>

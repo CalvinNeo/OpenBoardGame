@@ -41,6 +41,7 @@ fastapi_app = FastAPI()
 # Socket.IO wraps this app, so polling and WebSocket traffic are unaffected.
 fastapi_app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 DEV_ORDER_PATH = Path(__file__).resolve().parent / "game" / "dev_order.json"
+UPDATED_AT_PATH = Path(__file__).resolve().parent / "game" / "updated_at.json"
 CYBER_PICTURES_DIR = ".cyber_pictures"
 GUANDAN_CHECKPOINT_DIR = Path(__file__).resolve().parent / "assets" / "guandan" / "checkpoints"
 GUANDAN_CHECKPOINT_SUFFIXES = {".pt", ".pth", ".ckpt", ".bin"}
@@ -66,23 +67,24 @@ fastapi_app.mount(
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-def load_game_dev_order(path: Path) -> Dict[str, int]:
+def load_game_int_map(path: Path, label: str) -> Dict[str, int]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
-        logger.warning("failed to load game dev order from %s: %s", path, exc)
+        logger.warning("failed to load %s from %s: %s", label, path, exc)
         return {}
     if not isinstance(raw, dict):
-        logger.warning("invalid game dev order format at %s: expected object", path)
+        logger.warning("invalid %s format at %s: expected object", label, path)
         return {}
-    dev_order: Dict[str, int] = {}
-    for game_id, order in raw.items():
-        if isinstance(game_id, str) and isinstance(order, int):
-            dev_order[game_id] = order
-    return dev_order
+    return {
+        game_id: value
+        for game_id, value in raw.items()
+        if isinstance(game_id, str) and isinstance(value, int) and not isinstance(value, bool)
+    }
 
 
-GAME_DEV_ORDER = load_game_dev_order(DEV_ORDER_PATH)
+GAME_DEV_ORDER = load_game_int_map(DEV_ORDER_PATH, "game dev order")
+GAME_UPDATED_AT = load_game_int_map(UPDATED_AT_PATH, "game updated timestamps")
 
 
 @fastapi_app.get("/")
@@ -103,6 +105,7 @@ async def api_list_games():
             **({"player_counts": list(g.module.supported_player_counts)}
                if hasattr(g.module, "supported_player_counts") else {}),
             "dev_order": GAME_DEV_ORDER.get(g.game_id),
+            "updated_at": GAME_UPDATED_AT.get(g.game_id),
             "tags": serialize_game_tags(g.game_id),
         }
         for g in list_games()

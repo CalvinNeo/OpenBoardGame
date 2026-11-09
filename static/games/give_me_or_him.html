@@ -1,0 +1,38 @@
+<template data-game-target="giveMeOrHimPanel" data-game-mode="contents">
+              <div class="gmoh-root">
+                <div class="gmoh-status">
+                  <span class="gmoh-chip gmoh-lives" data-gmoh-explain="lives">❓ <b id="giveMeOrHimLives">3</b></span>
+                  <span class="gmoh-chip gmoh-stage" id="giveMeOrHimStage" data-gmoh-explain="stage">—</span>
+                </div>
+
+                <div id="giveMeOrHimBanner" class="gmoh-banner" data-gmoh-explain="banner"></div>
+
+                <div id="giveMeOrHimBoard" class="gmoh-board" data-gmoh-explain="board"></div>
+
+                <div id="giveMeOrHimTable" class="gmoh-table" data-gmoh-explain="table"></div>
+
+                <div id="giveMeOrHimTray" class="gmoh-tray" data-gmoh-explain="tray"></div>
+
+                <details class="gmoh-logbox" data-gmoh-explain="log">
+                  <summary>Log</summary>
+                  <div id="giveMeOrHimLog" class="gmoh-log"></div>
+                </details>
+              </div>
+            </template>
+
+            <template data-game-target="giveMeOrHimDialogs" data-game-mode="contents">
+              <dialog id="giveMeOrHimGuessDialog" class="gmoh-dialog" aria-labelledby="giveMeOrHimGuessTitle">
+                <div class="gmoh-dialog-head">
+                  <h2 id="giveMeOrHimGuessTitle">Guess your word</h2>
+                  <div class="gmoh-dialog-tools">
+                    <button type="button" id="giveMeOrHimGuessDock" class="gmoh-dock-btn">Dock</button>
+                  </div>
+                </div>
+                <p id="giveMeOrHimGuessHint" class="gmoh-dialog-note"></p>
+                <div id="giveMeOrHimGuessHints" class="gmoh-dialog-hints"></div>
+                <form id="giveMeOrHimGuessForm" class="gmoh-dialog-form">
+                  <input id="giveMeOrHimGuessInput" type="text" maxlength="12" autocomplete="off" placeholder="Your word" aria-label="Your word">
+                  <button type="submit" class="gmoh-primary">Guess</button>
+                </form>
+              </dialog>
+            </template>

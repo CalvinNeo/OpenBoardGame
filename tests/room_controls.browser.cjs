@@ -116,6 +116,27 @@ const viewport = { width: 393, height: 852 };
     assert.equal(attempts, 2);
     console.log('Game list: recovers from failed request; filters reuse one cached response.');
 
+    // The 11+ option keeps only tables that still fit 11 or more players.
+    const catalog = await (await picker.request.get(`${base}/api/games`)).json();
+    const supportedCounts = game => Array.isArray(game.player_counts) && game.player_counts.length
+      ? game.player_counts
+      : Array.from({length: Math.max(0, game.max_players - game.min_players + 1)}, (_, index) => game.min_players + index);
+    const expectedBigTable = catalog.filter(game => supportedCounts(game).some(count => count >= 11)).map(game => game.game_id).sort();
+    assert(expectedBigTable.length > 0, 'catalog has no game for 11 or more players');
+    await picker.locator('#gameSearchInput').fill('');
+    await picker.locator('#playerCountFilter').selectOption('11+');
+    await picker.waitForFunction(count => document.getElementById('gameListCount').textContent === `Showing ${count} games`, expectedBigTable.length);
+    const bigTable = await picker.$$eval('#gameList .game-item', items => items.map(item => item.dataset.gameId));
+    assert.deepEqual(bigTable.slice().sort(), expectedBigTable);
+
+    // Recently Updated leads with the newest game the catalog reports.
+    const newest = catalog.filter(game => game.updated_at).sort((a, b) => b.updated_at - a.updated_at)[0];
+    assert(newest, 'catalog has no updated_at values');
+    await picker.locator('#playerCountFilter').selectOption('');
+    await picker.locator('#gameSortSelect').selectOption('updated');
+    await picker.waitForFunction(gameId => document.querySelector('#gameList .game-item')?.dataset.gameId === gameId, newest.game_id);
+    console.log('Game list: 11+ player filter and Recently Updated sort match the catalog.');
+
     const privatePage = await newPage(p => p.addInitScript(() => {
       Storage.prototype.setItem = () => { throw new DOMException('Unavailable', 'QuotaExceededError'); };
     }));

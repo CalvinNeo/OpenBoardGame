@@ -92,6 +92,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "compress": ("filler", "puzzle"),
     "criminal_dance": ("filler", "bluffing"),
     "cyber_pictures": ("filler", "creative"),
+    "dadada": ("filler", "cooperative", "creative"),
     "davinci_code": ("filler", "puzzle"),
     "decrypto": ("puzzle", "creative"),
     "draw_guess": ("filler", "creative"),

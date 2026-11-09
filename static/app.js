@@ -595,6 +595,14 @@ function renderGameState(data) {
     renderNotAHatGameState(data);
     return;
   }
+  if (gameType === "give_me_or_him") {
+    if (typeof renderGiveMeOrHimGameState === "function") renderGiveMeOrHimGameState(data);
+    return;
+  }
+  if (gameType === "dadada") {
+    if (typeof renderDadadaGameState === "function") renderDadadaGameState(data);
+    return;
+  }
   if (gameType === "in_a_grove") {
     renderInAGroveGameState(data);
     return;

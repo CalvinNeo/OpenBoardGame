@@ -173,7 +173,7 @@ const DISABLE_DOUBLE_TAP_ZOOM_KEY = "openboardgame:disable_double_tap_zoom";
 const TURN_SOUND_KEY = "openboardgame:turn_sound";
 const RECENT_GAMES_LIMIT = 50;
 const PLAYER_ACCESS_KEY_MAX_LENGTH = 1048576;
-const GAME_SORT_KEYS = new Set(["alpha", "recent", "dev_order", "difficulty_asc", "difficulty_desc"]);
+const GAME_SORT_KEYS = new Set(["alpha", "recent", "updated", "dev_order", "difficulty_asc", "difficulty_desc"]);
 
 // Private browsing or a storage quota must not interrupt a live room session.
 function readRoomStorage(key) {
@@ -1260,7 +1260,37 @@ function getGameTags(game) {
     : [];
 }
 
-function filterGames(games, searchText, playerCount, selectedTagIds = []) {
+// "11+" asks for tables that still fit 11 or more players, not for exactly 11.
+function parsePlayerCountFilter(rawValue) {
+  const raw = typeof rawValue === "string" ? rawValue.trim() : "";
+  if (!raw) return null;
+  const isMinimum = raw.endsWith("+");
+  const count = parseInt(isMinimum ? raw.slice(0, -1) : raw, 10);
+  return Number.isFinite(count) && count > 0 ? { count, isMinimum } : null;
+}
+
+function getGamePlayerCounts(game) {
+  if (game && Array.isArray(game.player_counts) && game.player_counts.length) {
+    return game.player_counts.map(Number).filter((count) => Number.isFinite(count));
+  }
+  const min = Number(game && game.min_players);
+  const max = Number(game && game.max_players);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) return [];
+  const counts = [];
+  for (let count = min; count <= max && counts.length <= 100; count += 1) counts.push(count);
+  return counts;
+}
+
+function matchesPlayerCountFilter(game, playerFilter) {
+  if (!playerFilter) return true;
+  const counts = getGamePlayerCounts(game);
+  if (!counts.length) return false;
+  return playerFilter.isMinimum
+    ? counts.some((count) => count >= playerFilter.count)
+    : counts.includes(playerFilter.count);
+}
+
+function filterGames(games, searchText, playerFilter, selectedTagIds = []) {
   const normalizedSearch = searchText.toLowerCase();
   const selectedTags =
     selectedTagIds instanceof Set ? selectedTagIds : new Set(selectedTagIds || []);
@@ -1276,10 +1306,7 @@ function filterGames(games, searchText, playerCount, selectedTagIds = []) {
       (g.name_zh || "").toLowerCase().includes(normalizedSearch) ||
       g.game_id.toLowerCase().includes(normalizedSearch) ||
       tagSearchText.includes(normalizedSearch);
-    const matchesPlayers =
-      !playerCount || (Array.isArray(g.player_counts)
-        ? g.player_counts.includes(playerCount)
-        : (g.min_players <= playerCount && playerCount <= g.max_players));
+    const matchesPlayers = matchesPlayerCountFilter(g, playerFilter);
     const matchesType = [...selectedTags].every((tagId) =>
       tags.some((tag) => tag.id === tagId)
     );
@@ -1493,6 +1520,9 @@ const GAME_WEIGHT = {
   twelve_rivers: 2.00,
   // Chinese original (2026 Modian crowdfunding); no BoardGameGeek entry yet.
   witch_cauldron: null,
+  // Chinese party game; rules reconstructed from Bilibili play-throughs, see designs/task190.md.
+  give_me_or_him: null,
+  dadada: 1.10,
 };
 
 function getGameWeight(gameId) {
@@ -1530,6 +1560,11 @@ function getGameDevOrder(game) {
   return Number.isFinite(order) ? order : null;
 }
 
+function getGameUpdatedAt(game) {
+  const updatedAt = Number(game && game.updated_at);
+  return Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : null;
+}
+
 function sortGames(games, sortKey) {
   const ordered = [...games];
   if (sortKey === "recent") {
@@ -1542,6 +1577,22 @@ function sortGames(games, sortKey) {
       } else if (aRank !== undefined) {
         return -1;
       } else if (bRank !== undefined) {
+        return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return ordered;
+  }
+  if (sortKey === "updated") {
+    ordered.sort((a, b) => {
+      const aUpdated = getGameUpdatedAt(a);
+      const bUpdated = getGameUpdatedAt(b);
+      if (Number.isFinite(aUpdated) && Number.isFinite(bUpdated)) {
+        const diff = bUpdated - aUpdated;
+        if (diff !== 0) return diff;
+      } else if (Number.isFinite(aUpdated)) {
+        return -1;
+      } else if (Number.isFinite(bUpdated)) {
         return 1;
       }
       return a.name.localeCompare(b.name);
@@ -1894,8 +1945,8 @@ async function applyGameFilters() {
     renderGameTypeFilters(games);
   }
   const searchText = gameSearchInput ? gameSearchInput.value.trim() : "";
-  const playerCount = playerCountFilter ? parseInt(playerCountFilter.value, 10) || 0 : 0;
-  const filtered = filterGames(games, searchText, playerCount, selectedGameTagIds);
+  const playerFilter = parsePlayerCountFilter(playerCountFilter ? playerCountFilter.value : "");
+  const filtered = filterGames(games, searchText, playerFilter, selectedGameTagIds);
   const sortKey = getGameSortKey();
   const sorted = sortGames(filtered, sortKey);
   updateGameListCount(sorted.length);

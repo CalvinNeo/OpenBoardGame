@@ -163,10 +163,52 @@ from game.ticket_to_ride import (
     ACTION_SCHEMA as TICKET_TO_RIDE_ACTION_SCHEMA,
     CONFIG_SCHEMA as TICKET_TO_RIDE_CONFIG_SCHEMA,
 )
+from game.give_me_or_him import (
+    GiveMeOrHimGame,
+    ACTION_SCHEMA as GIVE_ME_OR_HIM_ACTION_SCHEMA,
+    CONFIG_SCHEMA as GIVE_ME_OR_HIM_CONFIG_SCHEMA,
+)
 from game.twelve_rivers import (
     TwelveRiversGame,
     ACTION_SCHEMA as TWELVE_RIVERS_ACTION_SCHEMA,
     CONFIG_SCHEMA as TWELVE_RIVERS_CONFIG_SCHEMA,
+)
+from game.dadada import (
+    DadadaGame,
+    ACTION_SCHEMA as DADADA_ACTION_SCHEMA,
+    CONFIG_SCHEMA as DADADA_CONFIG_SCHEMA,
+)
+
+register_game(
+    GameDefinition(
+        game_id=GiveMeOrHimGame.game_id,
+        name="Give Me! Or Him?",
+        name_zh="给我！还是他？",
+        min_players=GiveMeOrHimGame.min_players,
+        max_players=GiveMeOrHimGame.max_players,
+        turn_mode="turn",
+        action_schema=GIVE_ME_OR_HIM_ACTION_SCHEMA,
+        config_schema=GIVE_ME_OR_HIM_CONFIG_SCHEMA,
+        module=GiveMeOrHimGame,
+        serialize=GiveMeOrHimGame.serialize,
+        deserialize=GiveMeOrHimGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DadadaGame.game_id,
+        name="DADADA",
+        name_zh="哒哒哒",
+        min_players=DadadaGame.min_players,
+        max_players=DadadaGame.max_players,
+        turn_mode="turn",
+        action_schema=DADADA_ACTION_SCHEMA,
+        config_schema=DADADA_CONFIG_SCHEMA,
+        module=DadadaGame,
+        serialize=DadadaGame.serialize,
+        deserialize=DadadaGame.deserialize,
+    )
 )
 
 register_game(

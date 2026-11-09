@@ -1204,6 +1204,22 @@ const GAME_ASSETS = {
     "panel": "notAHatPanel",
     "panelTitle": "🎩 似帽非帽",
     "header": "showNotAHatHeaderActions"
+  },
+  "give_me_or_him": {
+    "scripts": ["/static/games/give_me_or_him.js?v=2"],
+    "styles": ["/static/games/give_me_or_him.css?v=1"],
+    "markup": "/static/games/give_me_or_him.html?v=1",
+    "panel": "giveMeOrHimPanel",
+    "panelTitle": "🃏 给我！还是他？",
+    "header": "showGiveMeOrHimHeaderActions"
+  },
+  "dadada": {
+    "scripts": ["/static/games/dadada.js?v=1"],
+    "styles": ["/static/games/dadada.css?v=1"],
+    "markup": "/static/games/dadada.html?v=1",
+    "panel": "dadadaPanel",
+    "panelTitle": "🗣️ 哒哒哒",
+    "header": "showDadadaHeaderActions"
   }
 };
 
