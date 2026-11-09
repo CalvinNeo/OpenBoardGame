@@ -404,9 +404,11 @@ def _special_result(state: Dict) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def _finish_attempt(state: Dict, success: bool, reason: str) -> None:
+def _finish_attempt(state: Dict, success: bool, reason: str, culprit: Optional[str] = None) -> None:
+    # culprit is public information (everyone watched the same trick) and only
+    # names who to blame for a failed attempt; it never carries hidden cards.
     state["result"] = {"success": success, "reason": reason, "mission": state["mission"], "attempt": state["attempt"],
-                       "counted_attempts": state["attempt"] + int(state["distress_active"])}
+                       "counted_attempts": state["attempt"] + int(state["distress_active"]), "culprit_id": culprit}
     state["journal"].append(copy.deepcopy(state["result"]))
     _transition(state, "mission_review")
 
@@ -426,11 +428,11 @@ def _finish_trick(state: Dict) -> None:
     special_ok, special_error = _special_result(state)
     error = error or special_error
     if error:
-        _finish_attempt(state, False, error)
+        _finish_attempt(state, False, error, winner)
     elif all(t["status"] == "complete" for t in state["tasks"]) and special_ok:
         _finish_attempt(state, True, "全部任务完成。")
     elif len(state["tricks"]) == state["total_tricks"]:
-        _finish_attempt(state, False, "手牌已打完，仍有任务未完成。")
+        _finish_attempt(state, False, "手牌已打完，仍有任务未完成。", winner)
     else:
         _transition(state, "trick_review")
 
@@ -624,7 +626,7 @@ def _apply(state: Dict, pid: str, action: Dict) -> Optional[str]:
             nxt = state["draft_order"][state["draft_index"] % len(state["draft_order"])]
             _transition(state, "draft", nxt)
             if not free and not _eligible_tasks(state, nxt) and not _can_pass(state):
-                _finish_attempt(state, False, "剩余任务无法由当前成员领取；本次分配失败。")
+                _finish_attempt(state, False, "剩余任务无法由当前成员领取；本次分配失败。", nxt)
     elif kind == "respond":
         actor = action["actor"]
         if type(action["yes"]) is not bool or actor not in state["seats"] or _controller(state, actor) != pid: return "invalid response"
@@ -634,7 +636,7 @@ def _apply(state: Dict, pid: str, action: Dict) -> Optional[str]:
             need = (2 if special == "two_volunteers" else 1) - len(state["volunteers"])
             if not action["yes"] and remaining <= need: return "the remaining crew must volunteer"
             if action["yes"] and special == "volunteer" and actor == state["captain"] and any(not t.get("captainMaySelect", True) for t in state["tasks"]):
-                _finish_attempt(state, False, "指挥官无法领取比较指挥官赢墩数的任务；需重新尝试。")
+                _finish_attempt(state, False, "指挥官无法领取比较指挥官赢墩数的任务；需重新尝试。", actor)
                 return None
             if action["yes"]: state["volunteers"].append(actor)
             state["volunteer_queue"].pop(0)

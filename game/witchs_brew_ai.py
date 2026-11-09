@@ -254,13 +254,20 @@ def survival_probability(view: Dict, role: str, responders: Optional[Sequence[st
     return chance
 
 
+ALL_ROLES = (
+    "wolf_keeper", "snake_hunter", "herb_collector", "alchemist", "fortune_teller",
+    "assistant", "wizard", "witch", "druid", "warlock", "cutpurse", "begging_monk",
+)
+
+
 def choose_roles(view: Dict, count: int = 5) -> List[str]:
     """Keep the roles with the best full action, breaking ties on the favor."""
     player = _player(view, view.get("you"))
     prices = resource_prices(view, player)
     disabled = set(view.get("disabled_roles") or [])
+    known = list(view.get("role_defs") or ALL_ROLES)
     scored = []
-    for role in (view.get("role_defs") or {}):
+    for role in known:
         if role in disabled:
             continue
         full = role_value(view, player, role, "full", prices)
@@ -269,7 +276,16 @@ def choose_roles(view: Dict, count: int = 5) -> List[str]:
         # between roles whose full action looks equally good right now.
         scored.append((full + 0.35 * favor, role))
     scored.sort(key=lambda item: (-item[0], item[1]))
-    return [role for _, role in scored[:count]]
+    chosen = [role for _, role in scored[:count]]
+    # The server insists on exactly five legal roles, so top the pick up from
+    # whatever is left if the view ever hands us a short list.
+    if len(chosen) < count:
+        for role in ALL_ROLES:
+            if len(chosen) >= count:
+                break
+            if role not in disabled and role not in chosen:
+                chosen.append(role)
+    return chosen
 
 
 def choose_lead(view: Dict) -> Optional[str]:

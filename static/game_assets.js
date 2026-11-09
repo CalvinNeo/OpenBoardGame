@@ -94,7 +94,7 @@ const GAME_ASSETS = {
     "header": "showMallOfHorrorHeaderActions"
   },
   "the_crew": {
-    "scripts": ["/static/games/the_crew.js?v=3"],
+    "scripts": ["/static/games/the_crew.js?v=4"],
     "styles": ["/static/games/the_crew.css?v=4"],
     "markup": "/static/games/the_crew.html?v=3",
     "panel": "theCrewPanel",

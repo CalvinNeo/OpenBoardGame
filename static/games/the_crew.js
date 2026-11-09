@@ -29,6 +29,7 @@
   };
   const help = `<h3>共同航行</h3><p>宇航员是限制交流的合作吃墩游戏。1 代《第九行星任务》共 50 关；2 代《深海任务》共 32 关、96 张不同条件的任务。所有目标达成才全队成功，任意目标失败则重试。游戏中不能自由谈论自己的牌，只能用规则允许的通讯和 Yes / No。</p><h3>牌与吃墩</h3><p>蓝（🔵◆）、绿（🟢▲）、黄（🟡●）、粉（🩷✦）各 1–9；1 代火箭（🚀）、2 代潜艇（⚓）是王牌 1–4。持王牌 4 的指挥官（👑 Captain）领出第一墩。必须跟随领出的花色，无该色才可垫牌或出王牌。王牌最大，否则领出色最大者赢墩、收取所有牌并领出下一墩。三席打 13 墩，多的一张不出。</p><h3>领取任务（📋 Tasks）</h3><p>通常从指挥官起轮流取一张。1 代必须由目标负责人收取指定牌；数字标记规定所有任务中的完成名次，箭头 &gt;、&gt;&gt; 等只限制相互次序，Ω 要最后完成。同墩完成多个任务时自动判断是否存在合法次序。2 代按人数精确凑齐总难度，目标涉及牌、墩数、比较、顺序和预测。初始任务少于席位时才可以 Pass，且一圈内必须分完。比较指挥官的任务禁止指挥官领取。特殊关卡会提供对应分配操作。</p><h3>通讯（📡 Communication）</h3><p>任务分完后、两墩之间，每人通常可公开一张彩色牌，标记当前该色最高（↑ Highest）、最低（↓ Lowest）或唯一（＝ Only）。只有一张时必须选 Only；不能通讯王牌。牌仍属于手牌，标记不会因后来手牌变化而更新。Hidden 只展示牌不展示标记，Shared 共用剩余次数。已打出的通讯牌会变淡。任务卡的秘密预测只能自己查看。</p><h3>双人助手（🂠 Helper）</h3><p>两位真人加 JARVIS／Tonoja，按三席计算难度。助手有七列牌，每列一暗一明；王牌 4 始终发给真人。指挥官代选任务及出牌，只看明牌跟色，整墩结束后才翻开下方牌。助手不能通讯，自己不需点击 Ready。</p><h3>求救（🆘 Distress）</h3><p>任务分配后、通讯和出牌前，可以提议统一向左或右交换一张非王牌。全员同意后秘密提交，同时结算。助手由指挥官选择明牌。每次尝试最多一次；本关后续重试仍保留求救标记，成功计次额外加 1。1 代五人第 25 关起另可转交一张任务。</p><h3>回顾与操作</h3><p>每墩和每关结束都等全员点击 Next Round／Continue／Retry；断线成员需重连。只提供最近一墩供回顾；尚未完成任务相关的收牌可以公开计数。点牌后再 Play，点空白或 Esc 取消。Help 集中规则；Explain 可点选查看说明，Esc 退出。静态图标悬停或手机点击显示提示。</p><h3>线上约定</h3><p>深海 14–16、26 关采用官方不限时替代条件。失败后重新洗手牌和任务牌；编号战役与 Custom 自由任务分开。机器人只看自己的手牌和公共信息，是练习队友，不保证最优合作。</p>`;
   let view = null, selected = null, signature = null, pending = false, pendingTimer, tipTimer, suppressTimer;
+  let effectToken = null;
   let explaining = false, suppressClick = false, focusBeforeDialog = null, choices = {}, edition = 1;
   let missionContext = null, focusBeforeMission = null;
   const missionHelp = "<h3>选关与 Restart</h3><p>建房先选 1 / 2。全员准备后，房主点击 Start Game 选择战役关卡或自定义任务，再点击 Start Mission 发牌。游戏中房主可用 Restart 重新选关；确认后清空本局进度并重新发牌，成员和座位保留。取消或 Esc 不影响当前游戏。版本固定，切换版本需另建房间。</p>";
@@ -224,6 +225,19 @@
     if (view.phase === "responses" && Object.keys(view.responses).length) box.append(el("p", "", Object.entries(view.responses).map(([pid, yes]) => `${name(pid)}: ${view.spec.special === "sick" ? yes ? "Good" : "Bad" : yes ? "Yes" : "No"}`).join(" · ")));
     if (view.distress_active) box.append(tip(el("span", "", "🆘 Active · +1 counted attempt"), explanations.distress[1], "distress"));
   }
+  // A failed attempt splats the shared poop effect on whoever took the fatal
+  // trick. The server names that player in result.culprit_id, so every seat
+  // sees the same name without exposing any hidden card.
+  function playFailEffect() {
+    if (typeof window.obgPlayPoopSplash !== "function") return;
+    const result = view && view.result;
+    if (!result || result.success || !result.culprit_id) return;
+    // Late asset loading replays the same payload, so fire once per attempt.
+    const token = `${view.game_token}:${view.attempt_id}:${result.reason}`;
+    if (token === effectToken) return;
+    effectToken = token;
+    window.obgPlayPoopSplash({name: name(result.culprit_id), caption: "💥 Mission failed!"});
+  }
   function render() {
     if (!view) return;
     panel.dataset.edition = view.config.edition;
@@ -379,7 +393,7 @@
     byId("SetupStep").classList.remove("hidden"); byId("SetupStep").setAttribute("aria-hidden", "false"); updateSetup(); document.querySelector(`[data-the-crew-edition="${edition}"]`).focus();
   };
   function clearState() {
-    view = null; signature = null; selected = null; choices = {}; pending = false; suppressClick = false;
+    view = null; signature = null; selected = null; choices = {}; pending = false; suppressClick = false; effectToken = null;
     clearTimeout(pendingTimer); clearTimeout(suppressTimer); setExplain(false); hideTip(); if (dialog.open) dialog.close();
     ["Players", "Hand", "Helper", "Trick", "Tasks", "Controls", "Signals", "Log"].forEach(suffix => byId(suffix).replaceChildren());
     ["Review", "Selection", "HelperArea"].forEach(suffix => byId(suffix).classList.add("hidden")); text("Status", "Waiting to start");
@@ -390,6 +404,7 @@
     if (signature !== incoming) { selected = null; choices = {}; hideTip(); }
     if (signature !== incoming || view?.revision !== data.view.revision) { pending = false; clearTimeout(pendingTimer); }
     signature = incoming; view = data.view;
+    playFailEffect();
     if (missionDialog.open && missionContext?.kind === "restart" && missionContext.gameToken !== view.game_token) missionDialog.close();
     render(); syncRoomControls();
   };

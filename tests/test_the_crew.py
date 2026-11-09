@@ -341,6 +341,35 @@ class TheCrewTests(unittest.TestCase):
         for pid in s["humans"]: self.apply(s,pid,"next_mission")
         self.assertEqual((s["mission"],s["attempt"],s["distress_active"]),(17,1,False))
 
+    def test_finish_attempt_records_optional_culprit(self):
+        s = make_state()
+        _finish_attempt(s,True,"complete")
+        self.assertIsNone(s["result"]["culprit_id"])
+        _finish_attempt(s,False,"blew it","p1")
+        self.assertEqual(s["result"]["culprit_id"],"p1")
+        # The blame target is public, so it reaches every seat and the journal.
+        self.assertEqual(Game.get_public_view(s,"p2")["result"]["culprit_id"],"p1")
+        self.assertEqual(s["journal"][-1]["culprit_id"],"p1")
+
+    def test_failed_attempt_blames_the_fatal_trick_winner(self):
+        failed = 0
+        for count in (3,4):
+            for edition, missions in ((1,(1,3,9,17)),(2,(1,4,11,20))):
+                for mission in missions:
+                    with self.subTest(count=count,edition=edition,mission=mission):
+                        s = make_state(count,edition=edition,mission=mission,seed=21)
+                        to_phase(s,"mission_review")
+                        result = s["result"]
+                        if result["success"]:
+                            self.assertIsNone(result["culprit_id"])
+                            continue
+                        failed += 1
+                        self.assertIn(result["culprit_id"],s["seats"])
+                        # Every trick-driven failure blames whoever took that trick.
+                        if s["tricks"]:
+                            self.assertEqual(result["culprit_id"],s["trick_result"]["winner"])
+        self.assertGreater(failed,0)
+
 
 class DeepSeaTaskTests(unittest.TestCase):
     def result(self, key, tricks, total=4, prediction=None, owner="p0"):

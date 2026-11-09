@@ -5,7 +5,6 @@
   let view = null;
   let selectedMoney = [];
   let selectedLuxury = null;
-  let explaining = false;
   let pending = false;
   let pendingTimer = null;
   let tooltipTimer = null;
@@ -23,29 +22,148 @@
   const can = (action) => active() && !pending && connected() && !!view?.legal_actions?.includes(action);
   const name = (playerId) => view?.players?.find((player) => player.player_id === playerId)?.name || playerId || "—";
   const cardName = (card) => card?.type === "luxury" ? `Luxury ${card.value}` : card?.type === "prestige" ? "Prestige" : ({ faux_pas: "Faux Pas", passe: "Passé", scandale: "Scandale" }[card?.id] || "—");
-  const explanations = {
-    BidBtn: "Bid with selected Money (💰). Add these cards to your committed table money; the new total must exceed the high bid. Money already on the table cannot be exchanged or withdrawn while bidding.",
-    PassBtn: "In a normal auction, Pass returns your table money and removes you from this auction. In a Disgrace (⚠️) auction, Pass immediately takes the bad card and returns your money; everyone else pays their table money.",
-    NextBtn: "Confirm you have reviewed the result. The next auction begins only after every player is ready. No additional confirmation is needed.",
-    DiscardBtn: "Permanently discard the selected Luxury (💎) to satisfy Faux Pas (⚠️). Prestige and other Disgrace cards cannot be discarded.",
-    CancelBtn: "Cancel this discard selection without changing your collection.",
+  const HIGH_SOCIETY_EXPLAIN = {
+    bid: {
+      zh: "Bid 用选中的钱币(💰)出价，把这些牌加到已押在桌上的金额里，新的总价必须高于当前最高出价。 bidding 期间已经押上桌的钱不能换回也不能取回。",
+      en: "Bid with selected Money (💰). Add these cards to your committed table money, and the new total must exceed the high bid. Money already on the table cannot be exchanged or withdrawn while bidding."
+    },
+    pass: {
+      zh: "Pass 在普通拍卖中退回你押在桌上的钱并退出本次拍卖。在耻辱(⚠️)拍卖中，Pass 立刻拿走这张坏牌并退回你的钱，其余所有人都要支付自己押在桌上的金额。",
+      en: "In a normal auction, Pass returns your table money and removes you from this auction. In a Disgrace (⚠️) auction, Pass immediately takes the bad card and returns your money while everyone else pays their table money."
+    },
+    next_round: {
+      zh: "Next Round 确认你已经看过本轮结果。所有玩家都确认后下一场拍卖才开始，不会再弹第二次确认。",
+      en: "Confirm you have reviewed the result. The next auction begins only after every player is ready, with no additional confirmation."
+    },
+    discard: {
+      zh: "Discard 永久弃掉选中的奢侈品(💎)来抵消失礼(⚠️)。声望和其他耻辱牌都不能弃掉。",
+      en: "Permanently discard the selected Luxury (💎) to satisfy Faux Pas (⚠️). Prestige and other Disgrace cards cannot be discarded."
+    },
+    cancel: {
+      zh: "Cancel 取消这次弃牌选择，不会改变你的收藏。",
+      en: "Cancel this discard selection without changing your collection."
+    },
+    deck: {
+      zh: "牌库：状态牌堆里还剩多少张牌。",
+      en: "Deck: how many cards remain in the status deck."
+    },
+    timer: {
+      zh: "计时(⏳)：第四张声望(👑)或丑闻(⚠️)会立刻结束游戏，那第四张牌不会被拍卖。",
+      en: "Timer (⏳): the fourth Prestige (👑) or Scandale (⚠️) ends the game immediately, and that card is not auctioned."
+    },
+    high_bid: {
+      zh: "最高出价(💰)：你的总价必须超过它。已经押出去的钱币不能换回。",
+      en: "Money (💰): your total bid must exceed the highest bid, and previously committed cards cannot be exchanged."
+    },
+    cash: {
+      zh: "你的现金(💰)：包括本次拍卖已押出的部分在内的未花完金额，其他玩家看不到这个总数。",
+      en: "Your unspent money (💰), including any cards committed to this auction. Other players cannot see this total."
+    },
+    dialog_close: {
+      zh: "关闭当前对话框并回到牌桌。",
+      en: "Close the current dialog and return to the table."
+    }
   };
-  const help = `
-    <h3>Win with status, not an empty wallet</h3>
-    <p>Collect Luxury (💎) and Prestige (👑) while avoiding Disgrace (⚠️). At the end, everyone tied for the least remaining Money (💰) is cast out before scoring.</p>
-    <h3>💰 Money &amp; bidding</h3>
-    <p>Choose money cards, then Bid. Your new table total must exceed the high bid. Add cards to raise; never exchange cards already committed. There is no change, and spent cards are gone for the game. Click unused space to deselect. Only your own remaining cash is visible during play.</p>
-    <h3>💎 Normal auction</h3>
-    <p>Raise or Pass. Passing returns your table money and removes you from this auction. The last remaining player gains the card and pays their table money, possibly zero.</p>
-    <h3>⚠️ Disgrace auction</h3>
-    <p>Bid to avoid the card. The first player to Pass takes it and gets their table money back. Everyone else pays their table money.</p>
-    <p><strong>Faux Pas:</strong> discard one Luxury, or lose your next Luxury if you have none. Choose a card and confirm Discard; Cancel changes your selection. <strong>Passé (−5):</strong> subtract five status. <strong>Scandale (÷2):</strong> halve your score.</p>
-    <h3>👑 Prestige &amp; ⏳ Timer</h3>
-    <p>Each Prestige doubles status. The three Prestige cards and Scandale are timer cards. Revealing the fourth ends the game immediately; that fourth card is not auctioned.</p>
-    <h3>Review &amp; scoring</h3>
-    <p>Every auction pauses for review. All players choose Next Round before play continues. After casting out the poorest players, add Luxury values, subtract Passé, double for each Prestige, then halve for Scandale. Highest score wins; ties use remaining cash, then highest single Luxury.</p>
-    <h3>Reading the table</h3>
-    <p>💰 is a public table bid, Cards is the count of unspent money cards in hand, and Status is the collection's current score before the final cash check. Turn, Leading, Passed, Ready and Cast out badges show each player's state. Hover or tap non-interactive symbols for a short tip. Explain lets you inspect controls, including disabled ones, without taking an action. Esc closes a dialog or exits Explain.</p>`;
+
+  const HS_BUTTON_KEYS = { BidBtn: "bid", PassBtn: "pass", NextBtn: "next_round", DiscardBtn: "discard", CancelBtn: "cancel" };
+
+  const HIGH_SOCIETY_HELP_CONFIG = {
+    gameId: "high_society",
+    title: { zh: "上流社会 · High Society", en: "High Society" },
+    basic: {
+      win: {
+        zh: "靠身份而不是靠没花完的钱取胜。收集奢侈品(💎)和声望(👑)，避开耻辱(⚠️)，终局时剩余钱币(💰)最少的玩家会先被逐出再计分。",
+        en: "Win with status rather than an untouched wallet. Collect Luxury (💎) and Prestige (👑) while avoiding Disgrace (⚠️), and at the end everyone tied for the least remaining Money (💰) is cast out before scoring."
+      },
+      turn: {
+        zh: "轮到你时选钱币(💰)加价或者 Pass。普通拍卖里最后留下的人拿走牌并支付，耻辱(⚠️)拍卖里第一个 Pass 的人拿走坏牌。",
+        en: "On your turn you either select Money (💰) to raise or you Pass. In a normal auction the last player left takes the card and pays, while in a Disgrace (⚠️) auction the first player to pass takes the bad card."
+      },
+      key: {
+        zh: "钱花出去就没了，而终局还要按剩余现金逐出最穷的人，所以真正的取舍在于这一张牌值不值得你押上多少身家。",
+        en: "Money spent is gone forever, yet the poorest players are cast out on remaining cash at the end, so the real decision is how much of your fortune this one card is actually worth."
+      }
+    },
+    sections: [
+      {
+        id: "goal",
+        label: { zh: "靠身份取胜", en: "Win with status" },
+        html: {
+          zh: "<p>收集奢侈品(💎)与声望(👑)，同时避开耻辱(⚠️)。终局时剩余钱币(💰)最少的玩家会先被逐出，然后才计分。</p>",
+          en: "<p>Collect Luxury (💎) and Prestige (👑) while avoiding Disgrace (⚠️). At the end everyone tied for the least remaining Money (💰) is cast out before scoring.</p>"
+        }
+      },
+      {
+        id: "money",
+        label: { zh: "钱币与出价", en: "Money and bidding" },
+        html: {
+          zh: "<p>先选钱币(💰)再按 Bid，你押在桌上的新总价必须超过当前最高出价。想加价就继续加牌，已经押出去的牌绝不能换回。这里没有找零，花掉的牌整局都不再回来。点击空白处可以取消选择。游戏进行中只有你自己看得到剩余现金。</p>",
+          en: "<p>Choose money cards, then Bid. Your new table total must exceed the high bid, and you raise by adding more cards while never exchanging cards already committed. There is no change and spent cards are gone for the whole game. Click unused space to deselect. Only your own remaining cash is visible during play.</p>"
+        }
+      },
+      {
+        id: "normal",
+        label: { zh: "普通拍卖", en: "Normal auction" },
+        html: {
+          zh: "<p>不断加价或者 Pass。Pass 会退回你押在桌上的钱并让你退出本次拍卖。最后留下的玩家获得这张牌并支付自己押在桌上的金额，可能是零。</p>",
+          en: "<p>Raise or Pass. Passing returns your table money and removes you from this auction, and the last remaining player gains the card and pays their table money, possibly zero.</p>"
+        }
+      },
+      {
+        id: "disgrace",
+        label: { zh: "耻辱拍卖", en: "Disgrace auction" },
+        html: {
+          zh: "<p>出价是为了避开这张牌。第一个 Pass 的玩家拿走它并退回自己的钱，其余所有人都要支付自己押在桌上的金额。</p><p><strong>失礼(⚠️)：</strong>弃掉一张奢侈品，没有的话就失去下一张奢侈品。选一张牌后确认 Discard，Cancel 可以改选。<strong>过气(−5)：</strong>扣五点身份。<strong>丑闻(÷2)：</strong>分数减半。</p>",
+          en: "<p>Bid to avoid the card. The first player to Pass takes it and gets their table money back, while everyone else pays their table money.</p><p><strong>Faux Pas:</strong> discard one Luxury, or lose your next Luxury if you have none. Choose a card and confirm Discard, and Cancel changes your selection. <strong>Passé (−5):</strong> subtract five status. <strong>Scandale (÷2):</strong> halve your score.</p>"
+        }
+      },
+      {
+        id: "prestige",
+        label: { zh: "声望与计时", en: "Prestige and timer" },
+        html: {
+          zh: "<p>每张声望(👑)让身份翻倍。三张声望和丑闻都是计时(⏳)牌，翻开第四张会立刻结束游戏，这第四张牌不会被拍卖。</p>",
+          en: "<p>Each Prestige (👑) doubles status. The three Prestige cards and Scandale are Timer (⏳) cards, and revealing the fourth ends the game immediately without that card being auctioned.</p>"
+        }
+      },
+      {
+        id: "scoring",
+        label: { zh: "回顾与计分", en: "Review and scoring" },
+        html: {
+          zh: "<p>每场拍卖结束后都会暂停回顾，所有玩家选择 Next Round 后才继续。逐出最穷的玩家之后，把奢侈品数值相加，减去过气(−5)，按每张声望(👑)翻倍，再因丑闻(÷2)减半。分数最高者获胜，平分时先比剩余现金，再比单张最高的奢侈品。</p>",
+          en: "<p>Every auction pauses for review and all players choose Next Round before play continues. After casting out the poorest players, add Luxury values, subtract Passé, double for each Prestige, then halve for Scandale. The highest score wins, and ties use remaining cash, then the highest single Luxury.</p>"
+        }
+      },
+      {
+        id: "table",
+        label: { zh: "读懂牌桌", en: "Reading the table" },
+        html: {
+          zh: "<p>钱币(💰)是公开的桌面出价，Cards 是手上未花掉的钱币张数，Status 是收藏在最终现金检查前的当前分数。Turn、Leading、Passed、Ready 和 Cast out 标记显示每位玩家的状态。</p><p>把鼠标悬停在非交互符号上或轻点它可以看到简短提示。Explain 可以查看控件说明，包括已禁用的控件，而且不会触发任何操作。按 Esc 关闭对话框或退出 Explain。</p>",
+          en: "<p>Money (💰) is a public table bid, Cards is the count of unspent money cards in hand, and Status is the collection's current score before the final cash check. Turn, Leading, Passed, Ready and Cast out badges show each player's state.</p><p>Hover or tap non-interactive symbols for a short tip. Explain lets you inspect controls, including disabled ones, without taking an action. Esc closes a dialog or exits Explain.</p>"
+        }
+      }
+    ]
+  };
+
+  let highSocietyHelpWidget = null;
+  let highSocietyExplainWidget = null;
+
+  function initHighSocietyHelpExplain() {
+    if (highSocietyHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    highSocietyHelpWidget = window.obgCreateHelp(HIGH_SOCIETY_HELP_CONFIG);
+    highSocietyExplainWidget = window.obgCreateExplain({
+      gameId: "high_society",
+      attribute: "data-high-society-explain",
+      explanations: HIGH_SOCIETY_EXPLAIN,
+      button: byId("ExplainBtn"),
+      root: () => root,
+      bypass: ["#highSocietyHelpBtn", "#highSocietyExplainBtn"]
+    });
+    byId("HelpBtn")?.addEventListener("click", () => {
+      highSocietyExplainWidget?.exit();
+      highSocietyHelpWidget.open();
+    });
+    byId("ExplainBtn")?.addEventListener("click", () => highSocietyExplainWidget?.toggle());
+  }
 
   function element(tag, className, content) {
     const node = document.createElement(tag);
@@ -142,7 +260,6 @@
     const needsAction = active() && connected() && !pending && !!view?.legal_actions?.length;
     byId("ActionHint").classList.toggle("is-active", needsAction);
     document.body.classList.toggle("high-society-needs-action", needsAction);
-    root.querySelectorAll("[data-high-society-tip], [data-high-society-explain]").forEach((node) => node.classList.toggle("has-explanation", explaining));
   }
 
   function renderHand() {
@@ -283,7 +400,7 @@
   }
 
   function submit(action) {
-    if (!can(action.type) || explaining) return;
+    if (!can(action.type)) return;
     if (action.type === "bid" && byId("BidBtn").disabled) return;
     pending = true;
     hideTip();
@@ -301,7 +418,7 @@
   }
 
   function showTip(target) {
-    if (!target || explaining || target.closest("button") || !active()) return;
+    if (!target || highSocietyExplainWidget?.isActive() || highSocietyHelpWidget?.isOpen() || target.closest("button") || !active()) return;
     hideTip();
     const tooltip = byId("Tooltip");
     tooltip.textContent = target.dataset.highSocietyTip;
@@ -312,36 +429,6 @@
     tooltip.style.left = `${Math.max(12, Math.min(anchor.left, innerWidth - bounds.width - 12))}px`;
     tooltip.style.top = `${Math.max(12, Math.min(anchor.top > bounds.height + 18 ? anchor.top - bounds.height - 6 : anchor.bottom + 6, innerHeight - bounds.height - 12))}px`;
     tooltipTimer = setTimeout(hideTip, 3000);
-  }
-
-  function setExplain(value) {
-    explaining = value;
-    hideTip();
-    byId("ExplainBtn").setAttribute("aria-pressed", String(value));
-    updateControls();
-  }
-
-  function closeModal(modal) {
-    if (modal.classList.contains("hidden")) return;
-    modal.classList.add("hidden");
-    modal.setAttribute("aria-hidden", "true");
-    if (focusBeforeModal?.isConnected && active()) focusBeforeModal.focus({ preventScroll: true });
-  }
-
-  function openModal(modal) {
-    hideTip();
-    focusBeforeModal = document.activeElement;
-    modal.classList.remove("hidden");
-    modal.setAttribute("aria-hidden", "false");
-    modal.querySelector("button").focus({ preventScroll: true });
-  }
-
-  function explain(target) {
-    const explanation = target?.dataset.highSocietyExplain || target?.dataset.highSocietyTip;
-    if (!explanation) return;
-    text("ExplainContent", explanation);
-    setExplain(false);
-    openModal(byId("ExplainModal"));
   }
 
   function clearSelection() {
@@ -358,9 +445,7 @@
     selectedLuxury = null;
     gesture = null;
     clearTimeout(pendingTimer);
-    setExplain(false);
-    closeModal(byId("HelpModal"));
-    closeModal(byId("ExplainModal"));
+    highSocietyExplainWidget?.exit();
     render();
   }
 
@@ -388,7 +473,7 @@
     else updateControls();
   };
 
-  Object.entries(explanations).forEach(([suffix, content]) => { byId(suffix).dataset.highSocietyExplain = content; });
+  Object.entries(HS_BUTTON_KEYS).forEach(([suffix, key]) => { byId(suffix).dataset.highSocietyExplain = key; });
   byId("BidBtn").addEventListener("click", () => submit({ type: "bid", money_values: [...selectedMoney] }));
   byId("PassBtn").addEventListener("click", () => submit({ type: "pass" }));
   byId("NextBtn").addEventListener("click", () => submit({ type: "next_round" }));
@@ -396,21 +481,11 @@
   byId("CancelBtn").addEventListener("click", clearSelection);
   byId("HelpBtn").setAttribute("aria-label", "Help");
   byId("ExplainBtn").setAttribute("aria-label", "Explain");
-  byId("HelpBtn").addEventListener("click", () => {
-    setExplain(false);
-    root.ownerDocument.querySelector(".high-society-help-content").innerHTML = help;
-    openModal(byId("HelpModal"));
-  });
-  byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
-  ["Help", "Explain"].forEach((kind) => {
-    byId(`${kind}CloseBtn`).addEventListener("click", () => closeModal(byId(`${kind}Modal`)));
-    byId(`${kind}Modal`).addEventListener("click", (event) => { if (event.target === byId(`${kind}Modal`)) closeModal(byId(`${kind}Modal`)); });
-  });
 
   document.addEventListener("pointerdown", (event) => {
     if (!active()) return;
     suppressClickUntil = 0;
-    gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, down: true, target: event.target.closest("[data-high-society-explain], [data-high-society-tip]") };
+    gesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, down: true };
     hideTip();
   }, true);
   document.addEventListener("pointermove", (event) => {
@@ -422,31 +497,16 @@
   document.addEventListener("pointerup", (event) => {
     if (!active() || !gesture || gesture.pointerId !== event.pointerId) return;
     gesture.down = false;
-    if (gesture.moved) { suppressClickUntil = Date.now() + 500; return; }
-    const target = event.target.closest("[data-high-society-explain], [data-high-society-tip]");
-    if (explaining && target && target === gesture.target && root.contains(target)) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      suppressClickUntil = Date.now() + 500;
-      explain(target);
-    }
+    if (gesture.moved) suppressClickUntil = Date.now() + 500;
   }, true);
   document.addEventListener("click", (event) => {
     if (!active()) return;
     if (Date.now() < suppressClickUntil && root.contains(event.target)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      return;
-    }
-    if (!explaining || event.target.closest("#highSocietyHelpBtn, #highSocietyExplainBtn, #highSocietyHelpModal, #highSocietyExplainModal")) return;
-    if (event.target.closest("button, summary, a, input, select, [data-high-society-tip]")) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      explain(event.target.closest("#highSocietyPanel [data-high-society-explain], #highSocietyPanel [data-high-society-tip]"));
     }
   }, true);
   root.addEventListener("click", (event) => {
-    if (explaining) return;
     const target = event.target.closest("[data-high-society-tip]");
     if (target) showTip(target);
     else if (!event.target.closest("button, a, input, summary") && !event.target.closest(".high-society-player-card, #highSocietyNotice")) clearSelection();
@@ -460,15 +520,8 @@
   document.addEventListener("keydown", (event) => {
     if (!active()) return;
     if (event.key === "Escape") {
-      setExplain(false);
-      closeModal(byId("HelpModal"));
-      closeModal(byId("ExplainModal"));
+      highSocietyExplainWidget?.exit();
       clearSelection();
-    }
-    const modal = [byId("HelpModal"), byId("ExplainModal")].find((node) => !node.classList.contains("hidden"));
-    if (event.key === "Tab" && modal) {
-      event.preventDefault();
-      modal.querySelector("button").focus();
     }
   });
 
@@ -489,6 +542,7 @@
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "high_society") window.renderHighSocietyGameState(lastGameStatePayload);
   }
   render();
+  initHighSocietyHelpExplain();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
   else initialize();
 })();

@@ -31,16 +31,131 @@
     ready:["Next Round", "确认已看完本轮结果。每位玩家（含淘汰玩家）都确认后开始下一轮，不会额外弹出确认框。其他人未确认时仍保留当前棋盘和结果。"],
     revenge:["Revenge · 复仇 🧟", "仅在淘汰后的下一轮、所有幸存玩家锁定目的地后，放一只僵尸到任意未关闭地点。这次机会用完即结束；以后仍可参加平票重投。"],
   };
-  const help = `<h3>在商场里活下来</h3><p>3–6 人各自保护自己的队伍，可以谈判、许诺和诈唬。手牌和秘密骰子只可口头描述，不得出示；除货车分牌外不可交易。初始队长为第一座位，每人一张行动牌；按座位轮流掷两骰放一个角色。全部放好后投四骰放初始僵尸。</p>
-    <h3>角色与胜利（⭐ Score）</h3><p>模特（👱）7 分／1 防御／1 票；壮汉（💪）5 分／2 防御／1 票；枪手（🔫）3 分／1 防御／2 票。三人局加小女孩（👧）1 分／1 防御／1 票，采用英文基础版数值，没有额外免死能力。轮末只剩 4 个角色（六人局为 6），或所有幸存角色同处一个非停车场地点时结束。生存分最高者胜；同分比较剩余行动牌，再同分则并列。</p>
-    <h3>商场地图</h3><p>① 洗手间（🚻）3 格，② 服装店（👕）4 格、3／4 人时关闭，③ 玩具店（🧸）4 格，④ 停车场（🚗）不限，⑤ 保安室（📹）3 格，⑥ 超市（🛒）6 格。每个角色占一格。空地点在僵尸到达阶段达到 8 只即关闭并清走僵尸；停车场永不关闭。</p>
-    <h3>一轮的流程</h3><p>停车场先投票选人搜索货车（🚚）：取三张、留一张、送另一玩家一张、第三张放牌库底。牌不足三张则按留一、送一的顺序处理。保安室随后投票选保安队长（🛡️）。秘密投四枚僵尸骰子，仅当轮当选队长能免费看，其他玩家可按序用监控（📹）。当选队长先公开目的地（📍），其余玩家同时秘密选择。所有人锁定后，满足条件的淘汰者放复仇僵尸，再同时揭晓骰子与目的地。</p><p>从队长起，每人选自己的一个角色移动到锁定地点，原地点必须不同。若目的地满员或刚关闭则转去停车场；冲刺（🏃）可改去任意有空位的地点，也可留在原处。移动后，人群最多的唯一地点和模特最多的唯一地点各吸引一只额外僵尸，平手不吸引。</p>
-    <h3>攻击与投票（🧟 / 🗳️）</h3><p>依序检查 1–6 号地点。普通地点僵尸数 ≥ 防御时突破；停车场一只就突破；超市四只就突破，无论防御多少。先从队长起依次出牌，每人可出多张再 Pass，窗口结束后再检查突破。若仍突破，地点内玩家秘密投票选哪位玩家失去一个角色，可投自己。被选玩家自己挑一个未躲藏角色牺牲。</p><p>票数等于自己的未躲藏角色票数，加威胁（✊）加票。所有票投同一人。首次平票仅最高票者重投，地点外玩家（含淘汰者）各有一票，威胁延续，不可再出牌。第二次平票：货车无人分牌、队长留任、牺牲在并列玩家中等概率抽签。</p><p>普通地点牺牲一个角色后清走全部僵尸；没吃到人则留在门外。停车场每只僵尸吃一个人，逐次投票与出牌，最后清走残余僵尸。躲藏保护整个攻击阶段。角色全部淘汰后，仍能参与平票重投，并且仅在下一轮获得一次放置复仇僵尸的机会。</p>
-    <h3>行动牌（🃏）</h3><p>七种各三张，共 21 张，用后不回洗。威胁（✊）给本次投票和重投 +1 票；监控（📹）秘密看骰；冲刺（🏃）在移动时改地点；加固（🪵）防御 +1，停车场和超市四只以上僵尸不适用；单杀（🔪）消灭一只、双杀（🪓）至多两只；躲藏（🫥）使自己的一个角色不能被牺牲、也不能投票，但仍提供防御。</p>
-    <h3>操作与回顾</h3><p>点选角色、地点或牌，再点击对应确认按钮；空白或 Esc 取消。每轮全部攻击结算后，全员点击 Next Round 才继续。淘汰者也需要确认，断线真人须重连。Help 汇总规则，Explain 点选解释，禁用按钮也可查看，Esc 退出。静态信息可悬停、聚焦或手机点击查看，点击提示 3 秒后消失。机器人只用自己的手牌和公共信息，适合练习。</p>`;
+  const MOH_EXPLAIN = {
+    round: { zh: explanations.round[1], en: "Round: each round runs through searching the truck, electing the chief, surveillance, choosing destinations, moving and attacking. Once every attack is resolved the game waits on the review page until everyone presses Next Round, where a disconnected player must reconnect and eliminated players still confirm." },
+    chief: { zh: explanations.chief[1], en: "Chief (🛡️): the characters in the security room (📹) vote for the chief. Play and movement start from the chief and go clockwise. Only the chief elected this round may read the dice for free and must announce a destination first, while a chief who kept the seat through a tie or was not elected has neither privilege." },
+    forecast: { zh: explanations.forecast[1], en: "Surveillance (📹): four secret dice decide where this round's new zombies (🧟) appear. The chief elected this round and anyone playing the camera (📹) may look. Everything is revealed to the table only after all destinations are locked, and dice pointing at a closed location are ignored. Setup instead uses two public dice." },
+    location: { zh: explanations.location[1], en: "Location: capacity counts characters, and the tough guy (💪) still takes only one slot. Moving into a full or newly closed location sends you to the parking lot (🚗). An empty location that reaches eight zombies (🧟) during the arrival phase closes permanently, except the parking lot." },
+    character: { zh: explanations.character[1], en: "Survivor: the model (👱) is worth 7 points with 1 defense and 1 vote, the tough guy (💪) 5 points with 2 defense and 1 vote, and the gunner (🔫) 3 points with 1 defense and 2 votes, while a three player game adds the little girl (👧) at 1 point, 1 defense and 1 vote. Confirm your pick in the action area, and click blank space or press Esc to cancel." },
+    stats: { zh: explanations.stats[1], en: "Location stats: 🧟 zombies, 🛡️ defense and 👥 occupants against capacity. A normal location is breached when zombies are at least equal to defense, the parking lot is breached by a single zombie, and the supermarket always breaks at four. Danger is shown from the current board, and the secret dice and later noise may still change the outcome." },
+    score: { zh: explanations.score[1], en: "Score (⭐): at the end the points of each player's surviving characters are added up, ties are broken by remaining action cards and a remaining tie is shared. Rescue arrives at the end of a round once at most 4 characters remain, 6 in a six player game, or once every survivor shares one non parking location." },
+    cards: { zh: explanations.cards[1], en: "Action cards (🃏): 21 cards in total, three of each kind, and they are never reshuffled. Threat (✊) adds a vote, camera (📹) reads the dice, sprint (🏃) changes your destination, hardware (🪵) adds defense, single kill (🔪) and double kill (🪓) destroy zombies, and hidden (🫥) protects one of your own characters. A greyed card cannot be used right now." },
+    vote: { zh: explanations.vote[1], en: "Vote (🗳️): each character in the location that is not hidden provides votes and the gunner (🔫) gives two. Pick one candidate player and all of your votes go to them, including voting for yourself, and everything is revealed once all votes are in. A tie is rerun among the top candidates only, where every player outside the location including the eliminated gains one vote and no more cards may be played." },
+    threat: { zh: explanations.threat[1], en: "Threat (✊): adds one extra vote to this vote and it still counts in a runoff. On the first vote only players with an unhidden character in the location may vote, and players outside the location can only use this extra vote in a tie runoff. You cannot play cards between the first vote and the runoff." },
+    camera: { zh: explanations.camera[1], en: "Camera (📹): play it on your turn during the surveillance phase to look at this round's four dice in secret. You may claim anything out loud but the interface never reveals it for you, and you press Pass afterwards to let the next player act." },
+    sprint: { zh: explanations.sprint[1], en: "Sprint (🏃): play one during movement to head for any open location with a free slot, including staying where you are. Confirm the sprint card, the character and the destination together, and without a sprint you must move a character from a different location to your locked destination." },
+    hardware: { zh: explanations.hardware[1], en: "Hardware (🪵): adds one defense to the location under attack this time. It cannot be used in the parking lot (🚗), nor in the supermarket (🛒) once four or more zombies are there, and the effect ends when that location's attack is resolved." },
+    weapon1: { zh: explanations.weapon1[1], en: "Weapon (🔪): destroy one zombie (🧟) immediately in the location currently under attack. You must have a character there, and whether a sacrifice vote is still needed is rechecked once the card window closes." },
+    weapon2: { zh: explanations.weapon2[1], en: "Weapon (🪓): destroy up to two zombies (🧟) immediately in the location currently under attack. You must have a character there, and whether a sacrifice vote is still needed is rechecked once the card window closes." },
+    hide: { zh: explanations.hide[1], en: "Hidden (🫥): choose one of your own characters in the location under attack. For this round that character cannot be sacrificed and cannot vote but still provides defense, and it stays protected through every later vote in the parking lot. If only hidden characters remain then nobody is eaten, and zombies that ate nobody at a normal location stay outside." },
+    place: { zh: explanations.place[1], en: "Place: choose one of your unplaced characters, then one of the available locations matching the two public dice. If both are full or closed you may pick any location with a free slot. Players take turns in seat order placing one character each, and the four starting zombie dice are rolled once everyone is placed." },
+    destination: { zh: explanations.destination[1], en: "Destination (📍): decide where to go first and which character moves only after the dice are revealed. The chief elected this round announces first and everyone else only shows a submitted state once locked. You may pick a full location, in which case you end up in the parking lot (🚗), and if all of your characters are already at the destination you must hold a sprint." },
+    move: { zh: explanations.move[1], en: "Move: starting from the chief, each player moves one character from a different location to the destination chosen earlier, and capacity is judged at the moment your turn comes. A sprint (🏃) may change the destination or keep you in place. After movement the single location with the most people and the single location with the most models (👱) each attract one extra zombie." },
+    sacrifice: { zh: explanations.sacrifice[1], en: "Sacrifice: once a vote picks your colour you decide which unhidden character you lose in that location. At a normal location one sacrifice clears every zombie, while in the parking lot (🚗) each zombie eats one character through its own vote. Eliminated players still join tie runoffs and place a single revenge zombie in the next round only." },
+    distribute: { zh: explanations.distribute[1], en: "Truck (🚚): the chosen player secretly looks at three action cards, keeps one, gives one to another player and puts the third on the bottom of the deck. The receiver sees only their own card and nobody else sees any of them, and when fewer than three cards remain you keep one and give one in that order, returning a card only if one is left." },
+    pass: { zh: explanations.pass[1], en: "Pass: end your card window and let the next player act. You may play several legal cards in one window, and once you pass you cannot come back. A tie runoff never opens a new card window." },
+    ready: { zh: explanations.ready[1], en: "Next Round: confirm that you have read the round result. The next round starts once every player including the eliminated has confirmed, with no extra confirmation dialog, and the board and result stay on screen while others are still deciding." },
+    revenge: { zh: explanations.revenge[1], en: "Revenge (🧟): only in the round right after your elimination and only once every surviving player has locked a destination, you place one zombie in any location that is not closed. That single chance is all you get, though you may still join tie runoffs afterwards." },
+    dialog_close: { zh: "关闭当前对话框并回到商场。", en: "Close the current dialog and return to the mall." }
+  };
+  const MOH_HELP_CONFIG = {
+    gameId: "mall_of_horror",
+    title: { zh: "僵尸商场 · Mall of Horror", en: "Mall of Horror" },
+    basic: {
+      win: {
+        zh: "各自保护自己的队伍并活到最后。终局把每位玩家幸存角色的分数相加，最高者获胜，同分比较剩余行动牌，再同分则并列。",
+        en: "Protect your own team and survive. At the end the points of each player's surviving characters are added up, the highest wins, ties are broken by remaining action cards and a remaining tie is shared."
+      },
+      turn: {
+        zh: "每轮先在停车场投票选人搜索货车(🚚)、在保安室投票选队长(🛡️)，然后秘密选目的地(📍)、移动角色、依次出牌，最后对突破的地点投票决定谁失去角色。",
+        en: "Each round the parking lot votes someone to search the truck (🚚), the security room votes for the chief (🛡️), then everyone secretly picks a destination (📍), moves a character, plays cards in turn, and finally votes at any breached location over who loses a character."
+      },
+      key: {
+        zh: "手牌和秘密骰子只能口头描述而不能出示，所以真正的博弈在于用投票和承诺把僵尸(🧟)引到别人的地点，同时保住自己分数最高的角色。",
+        en: "Hands and secret dice may only be described out loud and never shown, so the real game is using votes and promises to steer zombies (🧟) onto someone else's location while keeping your own highest scoring characters alive."
+      }
+    },
+    sections: [
+      {
+        id: "survive",
+        label: { zh: "在商场里活下来", en: "Survive the mall" },
+        html: {
+          zh: "<p>3 到 6 人各自保护自己的队伍，可以谈判、许诺和诈唬。手牌和秘密骰子只可口头描述，不得出示，除货车分牌外不可交易。</p><p>初始队长为第一座位，每人一张行动牌。按座位轮流掷两骰放一个角色，全部放好后投四骰放初始僵尸(🧟)。</p>",
+          en: "<p>For 3 to 6 players, each protecting their own team while negotiating, promising and bluffing. Hands and secret dice may only be described out loud, never shown, and nothing may be traded except the cards from the truck.</p><p>The first seat starts as chief and everyone gets one action card. In seat order each player rolls two dice to place one character, and once everyone is placed four dice are rolled for the starting zombies (🧟).</p>"
+        }
+      },
+      {
+        id: "characters",
+        label: { zh: "角色与胜利", en: "Characters and victory" },
+        html: {
+          zh: "<p>模特(👱)7 分 1 防御 1 票，壮汉(💪)5 分 2 防御 1 票，枪手(🔫)3 分 1 防御 2 票。三人局加小女孩(👧)1 分 1 防御 1 票，采用英文基础版数值，没有额外免死能力。</p><p>轮末只剩 4 个角色（六人局为 6），或所有幸存角色同处一个非停车场地点时结束。生存分最高者胜，同分比较剩余行动牌，再同分则并列。</p>",
+          en: "<p>The model (👱) is worth 7 points with 1 defense and 1 vote, the tough guy (💪) 5 points with 2 defense and 1 vote, and the gunner (🔫) 3 points with 1 defense and 2 votes. A three player game adds the little girl (👧) at 1 point, 1 defense and 1 vote, using the English base game values with no extra immunity.</p><p>The round ends when at most 4 characters remain, 6 in a six player game, or when every survivor shares one non parking location. The highest survival score wins, ties are broken by remaining action cards and a remaining tie is shared.</p>"
+        }
+      },
+      {
+        id: "map",
+        label: { zh: "商场地图", en: "The mall map" },
+        html: {
+          zh: "<p>① 洗手间(🚻)3 格，② 服装店(👕)4 格且 3 或 4 人时关闭，③ 玩具店(🧸)4 格，④ 停车场(🚗)不限，⑤ 保安室(📹)3 格，⑥ 超市(🛒)6 格。每个角色占一格。</p><p>空地点在僵尸到达阶段达到 8 只即关闭并清走僵尸，停车场永不关闭。</p>",
+          en: "<p>① Restroom (🚻) with 3 slots, ② Clothing store (👕) with 4 slots and closed in 3 or 4 player games, ③ Toy store (🧸) with 4 slots, ④ Parking lot (🚗) with no limit, ⑤ Security room (📹) with 3 slots and ⑥ Supermarket (🛒) with 6 slots. Each character takes one slot.</p><p>An empty location that reaches 8 zombies during the arrival phase closes and its zombies are cleared, while the parking lot never closes.</p>"
+        }
+      },
+      {
+        id: "round",
+        label: { zh: "一轮的流程", en: "A round" },
+        html: {
+          zh: "<p>停车场先投票选人搜索货车(🚚)：取三张、留一张、送另一玩家一张、第三张放牌库底，牌不足三张则按留一、送一的顺序处理。保安室随后投票选保安队长(🛡️)。</p><p>秘密投四枚僵尸骰子，仅当轮当选队长能免费看，其他玩家可按序用监控(📹)。当选队长先公开目的地(📍)，其余玩家同时秘密选择。所有人锁定后，满足条件的淘汰者放复仇僵尸，再同时揭晓骰子与目的地。</p><p>从队长起，每人选自己的一个角色移动到锁定地点，原地点必须不同。若目的地满员或刚关闭则转去停车场，冲刺(🏃)可改去任意有空位的地点，也可留在原处。移动后，人群最多的唯一地点和模特最多的唯一地点各吸引一只额外僵尸，平手不吸引。</p>",
+          en: "<p>The parking lot first votes for someone to search the truck (🚚): draw three, keep one, give one to another player and put the third on the bottom of the deck, or when fewer than three remain just keep one and give one. The security room then votes for the chief (🛡️).</p><p>Four zombie dice are rolled in secret. Only the chief elected this round reads them for free while other players may use the camera (📹) in turn. The chief announces a destination (📍) first and everyone else chooses in secret at the same time. Once all are locked, an eligible eliminated player places a revenge zombie, and then the dice and destinations are revealed together.</p><p>Starting from the chief, each player moves one of their characters to the locked destination from a different location. A full or newly closed destination sends you to the parking lot, and a sprint (🏃) may redirect you to any location with a free slot or keep you in place. After movement the single location with the most people and the single location with the most models each attract one extra zombie, with no attraction on a tie.</p>"
+        }
+      },
+      {
+        id: "attack",
+        label: { zh: "攻击与投票", en: "Attacks and votes" },
+        html: {
+          zh: "<p>依序检查 1 到 6 号地点。普通地点僵尸数不少于防御时突破，停车场一只就突破，超市四只就突破且无论防御多少。</p><p>先从队长起依次出牌，每人可出多张再 Pass，窗口结束后再检查突破。若仍突破，地点内玩家秘密投票选哪位玩家失去一个角色，可投自己，被选玩家自己挑一个未躲藏角色牺牲。</p><p>票数等于自己的未躲藏角色票数加威胁(✊)加票，所有票投同一人。首次平票仅最高票者重投，地点外玩家含淘汰者各有一票，威胁延续且不可再出牌。第二次平票则货车无人分牌、队长留任、牺牲在并列玩家中等概率抽签。</p><p>普通地点牺牲一个角色后清走全部僵尸，没吃到人则留在门外。停车场每只僵尸吃一个人，逐次投票与出牌，最后清走残余僵尸。躲藏保护整个攻击阶段。角色全部淘汰后仍能参与平票重投，并且仅在下一轮获得一次放置复仇僵尸的机会。</p>",
+          en: "<p>Locations 1 to 6 are checked in order. A normal location is breached when zombies are at least equal to defense, the parking lot is breached by a single zombie, and the supermarket breaks at four regardless of defense.</p><p>Cards are played first, starting from the chief, where each player may play several and then pass, and the breach is rechecked once the window closes. If it still breaks, the players in that location secretly vote for which player loses a character, including voting for themselves, and the chosen player picks which of their unhidden characters to sacrifice.</p><p>Your votes equal the votes of your unhidden characters plus any threat (✊) bonus, and all of them go to one player. A first tie is rerun among the top candidates only, where every player outside the location including the eliminated gets one vote, threats carry over and no more cards may be played. A second tie means nobody distributes from the truck, the chief keeps the seat and the sacrifice is drawn at random among the tied players.</p><p>At a normal location one sacrifice clears every zombie, while zombies that ate nobody stay outside. In the parking lot each zombie eats one person through its own vote and card window, and the leftovers are cleared at the end. Hidden protects a character for the whole attack phase. Once all of your characters are gone you can still join tie runoffs and you gain a single revenge zombie placement in the next round only.</p>"
+        }
+      },
+      {
+        id: "cards",
+        label: { zh: "行动牌", en: "Action cards" },
+        html: {
+          zh: "<p>七种各三张，共 21 张，用后不回洗。</p><p>威胁(✊)给本次投票和重投加一票，监控(📹)秘密看骰，冲刺(🏃)在移动时改地点，加固(🪵)防御加一且停车场和超市四只以上僵尸时不适用，单杀(🔪)消灭一只、双杀(🪓)至多两只，躲藏(🫥)使自己的一个角色不能被牺牲也不能投票但仍提供防御。</p>",
+          en: "<p>Three of each of seven kinds for 21 cards, and they are never reshuffled.</p><p>Threat (✊) adds one vote to this vote and its runoff, camera (📹) reads the dice in secret, sprint (🏃) changes your location during movement, hardware (🪵) adds one defense but not in the parking lot or a supermarket with four or more zombies, single kill (🔪) destroys one zombie and double kill (🪓) up to two, and hidden (🫥) makes one of your characters unable to be sacrificed or to vote while still providing defense.</p>"
+        }
+      },
+      {
+        id: "controls",
+        label: { zh: "操作与回顾", en: "Controls and review" },
+        html: {
+          zh: "<p>点选角色、地点或牌，再点击对应确认按钮，空白处或 Esc 取消。每轮全部攻击结算后，全员点击 Next Round 才继续，淘汰者也需要确认，断线真人须重连。</p><p>Help 汇总规则，Explain 点选解释且禁用按钮也可查看，按 Esc 退出。静态信息可悬停、聚焦或手机点击查看，点击提示 3 秒后消失。机器人只用自己的手牌和公共信息，适合练习。</p>",
+          en: "<p>Select a character, a location or a card, then press the matching confirm button, and click blank space or press Esc to cancel. After every attack in a round is resolved, play continues only once everyone presses Next Round, where eliminated players must confirm too and a disconnected human must reconnect.</p><p>Help gathers the rules while Explain describes anything you tap including disabled buttons, and Esc leaves it. Static information can be hovered, focused or tapped on a phone, and a tapped tip disappears after 3 seconds. Bots use only their own hand and public information, which makes them good practice.</p>"
+        }
+      }
+    ]
+  };
+  let mallOfHorrorHelpWidget = null;
+  let mallOfHorrorExplainWidget = null;
+  function initMallOfHorrorHelpExplain() {
+    if (mallOfHorrorHelpWidget || typeof window.obgCreateHelp !== "function") return;
+    mallOfHorrorHelpWidget = window.obgCreateHelp(MOH_HELP_CONFIG);
+    mallOfHorrorExplainWidget = window.obgCreateExplain({
+      gameId: "mall_of_horror",
+      attribute: "data-moh-explain",
+      explanations: MOH_EXPLAIN,
+      button: byId("ExplainBtn"),
+      root: () => panel,
+      bypass: ["#mallOfHorrorHelpBtn", "#mallOfHorrorExplainBtn", "#mallOfHorrorDialogClose"]
+    });
+    byId("HelpBtn")?.addEventListener("click", () => {
+      mallOfHorrorExplainWidget?.exit();
+      mallOfHorrorHelpWidget.open();
+    });
+    byId("ExplainBtn")?.addEventListener("click", () => mallOfHorrorExplainWidget?.toggle());
+  }
 
   let view = null, selected = {}, signature = null, pending = false, pendingTimer, tipTimer, wasUrgent = false;
-  let explaining = false, suppressClick = false, suppressTimer, returnFocus;
+  let returnFocus;
   const el = (tag, cls = "", value = "") => { const node = document.createElement(tag); node.className = cls; node.textContent = value; return node; };
   const text = (suffix, value) => { byId(suffix).textContent = value; };
   const player = pid => view?.players.find(p => p.player_id === pid);
@@ -62,7 +177,7 @@
     node.classList.toggle("is-selected", selected[field] === value); node.setAttribute("aria-pressed", String(selected[field] === value)); return node;
   }
   function dispatch(kind, fields = {}) {
-    if (explaining || !can(kind)) return;
+    if (!can(kind)) return;
     pending = true; hideTip(); clearTimeout(pendingTimer);
     pendingTimer = setTimeout(() => { pending = false; render(); }, 5000);
     sendAction({type:kind, game_token:view.game_token, step:view.step, ...fields}); render();
@@ -283,7 +398,7 @@
   }
   function hideTip() { clearTimeout(tipTimer); tooltip.classList.add("hidden"); }
   function showTip(target, autoHide = false) {
-    if (!target || explaining || dialog.open) return;
+    if (!target || mallOfHorrorExplainWidget?.isActive() || mallOfHorrorHelpWidget?.isOpen() || dialog.open) return;
     clearTimeout(tipTimer); tooltip.textContent = target.dataset.mohTip; tooltip.classList.remove("hidden");
     const r = target.getBoundingClientRect(), box = tooltip.getBoundingClientRect();
     tooltip.style.left = `${Math.max(12, Math.min(r.left, innerWidth - box.width - 12))}px`;
@@ -295,43 +410,13 @@
     byId("DockToggle").setAttribute("aria-expanded", String(!value));
     text("DockToggle", value ? "Show" : "Hide");
   }
-  function setExplain(value) { explaining = value; panel.classList.toggle("moh-explaining", value); byId("ExplainBtn").setAttribute("aria-pressed", String(value)); hideTip(); }
-  function showDialog(title, body, html = false) {
-    hideTip(); returnFocus = document.activeElement; text("DialogTitle", title);
-    if (html) byId("DialogBody").innerHTML = body; else byId("DialogBody").replaceChildren(el("p", "", body));
-    if (!dialog.open) dialog.showModal(); byId("DialogClose").focus();
-  }
-  function explain(target) {
-    if (!target) return;
-    const entry = explanations[target.dataset.mohExplain]; if (!entry) return;
-    setExplain(false); showDialog(entry[0], target.dataset.mohDetail || entry[1]);
-  }
-  byId("HelpBtn").addEventListener("click", () => { setExplain(false); showDialog("Mall of Horror · Game Rules", help, true); });
-  byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
   byId("DockToggle").addEventListener("click", () => setDockCollapsed(!byId("Command").classList.contains("is-collapsed")));
   byId("DialogClose").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
   dialog.addEventListener("click", event => { const r = dialog.getBoundingClientRect(); if (event.target === dialog && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) dialog.close(); });
-  const exempt = target => target.closest("#mallOfHorrorHelpBtn, #mallOfHorrorExplainBtn, #mallOfHorrorDialog");
-  document.addEventListener("pointerdown", event => {
-    suppressClick = false;
-    if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-    const target = event.target.closest("[data-moh-explain]") || [...panel.querySelectorAll("[data-moh-explain]")].find(node => {
-      const r = node.getBoundingClientRect(); return r.width && r.height && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
-    });
-    suppressClick = true; clearTimeout(suppressTimer); suppressTimer = setTimeout(() => { suppressClick = false; }, 700); explain(target);
-  }, true);
-  document.addEventListener("click", event => {
-    if (suppressClick) { suppressClick = false; event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-    event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-moh-explain]"));
-  }, true);
   document.addEventListener("keydown", event => {
     if (panel.classList.contains("hidden")) return;
-    if (event.key === "Escape") { setExplain(false); hideTip(); selected = {}; render(); }
-    if (!explaining || exempt(event.target) || !["Enter", " "].includes(event.key)) return;
-    event.preventDefault(); event.stopImmediatePropagation(); explain(event.target.closest("[data-moh-explain]"));
+    if (event.key === "Escape") { mallOfHorrorExplainWidget?.exit(); hideTip(); selected = {}; render(); }
   }, true);
   panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-moh-tip]")); });
   panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
@@ -343,8 +428,8 @@
   });
   document.addEventListener("scroll", hideTip, true); window.addEventListener("resize", hideTip); window.addEventListener("blur", hideTip);
   function clearState() {
-    view = null; signature = null; selected = {}; pending = false; suppressClick = false; wasUrgent = false;
-    clearTimeout(pendingTimer); clearTimeout(suppressTimer); setExplain(false); hideTip(); if (dialog.open) dialog.close();
+    view = null; signature = null; selected = {}; pending = false; wasUrgent = false;
+    clearTimeout(pendingTimer); mallOfHorrorExplainWidget?.exit(); hideTip(); if (dialog.open) dialog.close();
     ["Players", "Map", "Controls", "Dice", "Destinations", "Hand", "Review", "Log", "VoteResult"].forEach(s => byId(s).replaceChildren());
     byId("Review").classList.add("hidden"); text("Status", "Waiting to start");
   }
@@ -365,5 +450,6 @@
     if (typeof currentRoomState !== "undefined") syncRoom(currentRoomState);
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "mall_of_horror") window.renderMallOfHorrorGameState(lastGameStatePayload);
   }
+  initMallOfHorrorHelpExplain();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sync, {once:true}); else sync();
 })();

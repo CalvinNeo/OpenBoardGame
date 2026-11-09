@@ -1,31 +1,9 @@
-<template data-game-target="highSocietyHelpModal" data-game-mode="replace">
-  <section id="highSocietyHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="highSocietyHelpTitle">
-    <div class="modal-content high-society-modal">
-      <div class="modal-header">
-        <h2 id="highSocietyHelpTitle">High Society · Rules</h2>
-        <button id="highSocietyHelpCloseBtn" type="button">Close</button>
-      </div>
-      <div class="modal-body high-society-help-content"></div>
-    </div>
-  </section>
-</template>
-<template data-game-target="highSocietyExplainModal" data-game-mode="replace">
-  <section id="highSocietyExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="highSocietyExplainTitle">
-    <div class="modal-content high-society-modal">
-      <div class="modal-header">
-        <h2 id="highSocietyExplainTitle">Explanation</h2>
-        <button id="highSocietyExplainCloseBtn" type="button">Close</button>
-      </div>
-      <div class="modal-body" id="highSocietyExplainContent"></div>
-    </div>
-  </section>
-</template>
 <template data-game-target="highSocietyPanel" data-game-mode="contents">
   <div class="high-society-topbar">
     <div class="high-society-round">Round <strong id="highSocietyRound">—</strong><span id="highSocietyPhase">Waiting to start</span></div>
     <div class="high-society-deck">
-      <span data-high-society-tip="Cards remaining in the status deck." tabindex="0">Deck <strong id="highSocietyDeckCount">—</strong></span>
-      <span id="highSocietyTimerTrack" data-high-society-tip="Timer (⏳): the fourth Prestige or Scandale ends the game immediately, without being auctioned." tabindex="0">⏳ <strong id="highSocietyTimer">0</strong>/4 <span id="highSocietyTimerDots" aria-hidden="true"></span></span>
+      <span data-high-society-explain="deck" data-high-society-tip="Cards remaining in the status deck." tabindex="0">Deck <strong id="highSocietyDeckCount">—</strong></span>
+      <span id="highSocietyTimerTrack" data-high-society-explain="timer" data-high-society-tip="Timer (⏳): the fourth Prestige or Scandale ends the game immediately, without being auctioned." tabindex="0">⏳ <strong id="highSocietyTimer">0</strong>/4 <span id="highSocietyTimerDots" aria-hidden="true"></span></span>
     </div>
   </div>
   <div id="highSocietyNotice" class="high-society-notice hidden" role="status" aria-live="polite">
@@ -43,14 +21,14 @@
       <div class="high-society-auction-stage">
         <div id="highSocietyCurrentCard" class="high-society-status-card"></div>
         <div class="high-society-auction-meta">
-          <div class="high-society-high-bid" data-high-society-tip="Money (💰): your total bid must exceed the highest bid. Previously committed cards cannot be exchanged." tabindex="0"><span>💰 High bid</span><strong id="highSocietyHighBid">—</strong><span id="highSocietyHighBidder">No bids yet</span></div>
+          <div class="high-society-high-bid" data-high-society-explain="high_bid" data-high-society-tip="Money (💰): your total bid must exceed the highest bid. Previously committed cards cannot be exchanged." tabindex="0"><span>💰 High bid</span><strong id="highSocietyHighBid">—</strong><span id="highSocietyHighBidder">No bids yet</span></div>
           <div class="high-society-turn"><span>Turn</span><strong id="highSocietyTurn">—</strong></div>
           <div class="high-society-start">Opener <span id="highSocietyStart">—</span></div>
         </div>
       </div>
     </section>
     <section class="high-society-actions" aria-label="Your money and actions">
-      <div class="high-society-section-heading"><h3 id="highSocietyMoneyTitle">💰 Your money</h3><strong id="highSocietyCash" data-high-society-tip="Your unspent money, including any cards committed to this auction. Other players cannot see this total." tabindex="0">—</strong></div>
+      <div class="high-society-section-heading"><h3 id="highSocietyMoneyTitle">💰 Your money</h3><strong id="highSocietyCash" data-high-society-explain="cash" data-high-society-tip="Your unspent money, including any cards committed to this auction. Other players cannot see this total." tabindex="0">—</strong></div>
       <div id="highSocietyActionHint" class="high-society-action-hint" role="status" aria-live="polite">Waiting to start</div>
       <div id="highSocietyHand" class="high-society-money-row" role="group" aria-label="Choose money cards to add to your bid"></div>
       <div id="highSocietyBidControls">

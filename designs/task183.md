@@ -145,3 +145,52 @@
 - 模式只能在开局前选择，这是所有带 Game Options 游戏的既有行为；已开局房间不提供中途切换。
 - 全量测试的 11 项失败属于其他模块的既有失败，未在本次修复，也不宣称全库通过。
 
+## 禁用已公开词（2026-11-08）
+
+### 需求与规则
+
+- 之前轮次里**任何人**公开过的词进入全场禁用表，从下一轮开始谁都不能再写，不分队伍或个人维度，组队模式和大乱斗规则一致。
+- 同一轮内写相同的词仍然照常配对：组队模式的 Match 和大乱斗的撞词获胜完全不受影响，禁用只针对**已经亮过**的轮次。
+- 比较沿用既有的归一化（NFKC、去首尾空白、合并中间空白、大小写折叠），所以 `Red`、`RED`、`  Red `、`ＡＰＰＬＥ` 视为同一个词。
+- 服务端拒绝时不改变任何状态并回 `system:error`，`skip_validation` 也无法绕过。
+
+### 服务端
+
+- `game/word_sync.py` 新增 `_revealed_words()` / `_used_words()` / `_used_word_list()`，按（轮次, 队伍座位, 词序）排序，保证展示顺序稳定且同队两词不被打乱。
+- `apply_action` 在 `submit_word` 归一化之后查禁用表，命中返回 `USED_WORD_MESSAGE`，不写入 `pending`。
+- `get_public_view` 增加 `used_words`（按公开顺序去重）。它只由已亮词推导，不包含任何 `pending`，旁观者与对手看到的内容一致。
+- 存档版本升到 2。`deserialize` 同时接受 1 和 2，只对版本 2 校验「同一个词只能出现在一个轮次」以及「pending 不得命中历史词」，因此改动前存档（可能含重复词）仍可加载；版本 2 的篡改存档会被拒绝。
+- 练习机器人改为按 `BOT_WORDS` 取第一个尚未公开的词（候选用尽时回退到 `词N`），不再复用上一轮的词；全机器人局仍然最迟第 2 轮结束。
+
+### 界面
+
+- 输入框下方新增 `Used words · N` 一行：带删除线的胶囊标签，超出高度后限高滚动（桌面 80px / 手机 68px）。
+- 输入到禁用词时立刻禁用 Lock word、把对应胶囊标红、并显示 `already used` 提示；客户端只做即时提示，服务端仍是权威。
+- 猜词阶段和亮词阶段都显示，终局隐藏；第一轮没有已用词时整行隐藏。
+- Help 的「什么算同一个词」「锁定与公开」「操作与练习」与 Explain 的 `word` 文案同步改写，新增 `used_words` 解释项。
+- 顺带修复：离开游戏（切走或回到大厅）时关闭仍然打开的 Help 弹窗。
+
+### 本次文件清单
+
+- 规则：`game/word_sync.py`。
+- 界面：`static/games/word_sync.js`、`static/games/word_sync.css`、`static/games/word_sync.html`。
+- 前端接入：`static/game_assets.js`（资源版本）、`static/index.html`（加载器版本）。
+- 测试：`tests/test_word_sync.py`、`tests/test_word_sync_integration.py`、`tests/word_sync.browser.cjs`。
+- 文档：`designs/task183.md`（本节）。
+
+### 实际检查结果
+
+- `python3 -m unittest tests.test_word_sync tests.test_word_sync_integration`：35 项通过（新增禁用词跨队拦截、归一化变体、同轮重复仍可配对、`used_words` 视图顺序、版本 1 / 2 存档差异、房间层 `skip_validation` 仍被拒）。
+- `python3 -m unittest tests.test_frontend_style_assets tests.test_frontend_script_names tests.test_game_dev_order tests.test_game_tags tests.test_ai_metadata`：12 项通过。
+- 本机 Chrome headless + Playwright 运行 `tests/word_sync.browser.cjs` 全量通过：320 / 390 / 1024 / 1440px 下团队与大乱斗的全部 fixture 无横向溢出与组件重叠；新增断言覆盖 `Used words` 在第一轮隐藏、亮词与第二轮显示、终局隐藏、7 / 11 / 70 个标签、限高滚动、输入 `Red` / `RED` / `red` / `  Red  ` / `月亮` / `树` 均禁用提交且高亮唯一命中、禁用态点击不发送动作、换新词后恢复可提交。
+- 真实 4 客户端联机（团队模式 2 轮结束、大乱斗撞词、房间切换、模式切换、断线重连、真人 + 机器人）全部通过。
+- 截图：`tmp/word-sync-ui/used-words-320.png`、`used-blocked-desktop.png`、`used-blocked-mobile.png`、`used-ffa-mobile.png`。
+- `node --check` 覆盖改动的 JS 与浏览器测试；`git diff --check` 通过。
+
+### 未检查与例外
+
+- 未使用实体 iOS / Android、Safari / Firefox、系统中文输入法与读屏验证；触摸与 IME 仍用浏览器事件模拟。
+- 客户端的大小写提示用 `toLowerCase()`，与服务端 `casefold()` 在 `ß` / `ẞ` 这类字符上可能不一致；服务端始终是权威，误判只会多一次服务端拒绝。
+- 版本 1 的旧存档不做跨轮唯一性校验（否则改动前的存档无法加载），只有版本 2 起才强制该不变量。
+- `tests/word_sync.browser.cjs` 里 `#wordSyncDialog` 等选择器在共享帮助组件重构后已经失效，本次一并改为 `dialog.obg-help-dialog` / `dialog.obg-explain-dialog`；共享组件本身未改动。
+

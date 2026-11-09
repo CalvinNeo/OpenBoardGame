@@ -89,3 +89,29 @@ python3 -m unittest tests.test_the_crew tests.test_the_crew_integration \
   tests.test_frontend_style_assets tests.test_frontend_script_names
 node tests/the_crew.browser.cjs
 ```
+
+### 任务失败的砸屎特效实施记录（2026-11-09）
+
+本节新增任务失败时的公共特效，不改动规则、状态机和私密信息边界。
+
+- 复用首页公共组件 `static/games/shared_effects.js` 的 `window.obgPlayPoopSplash`，与炸弹克星共用同一实现；组件契约见 `designs/task88.md` 第 22 节。宇航员不新增任何特效代码或样式。
+- 责任人口径：**任务失败时，砸赢下这致命一墩的玩家**。`_finish_trick` 在结算该墩后判定失败，因此 culprit 就是该墩胜者；1 代「目标牌被别人赢走」、深海多数失败条件都指向同一口径。
+- 服务端 `_finish_attempt` 增加可选参数 `culprit`，写入 `result["culprit_id"]`。它随 `result` 进入公开视图和 journal，是所有观众都看得到的公开信息（大家都看着同一墩），不携带任何隐藏牌、秘密预测或暗牌。
+- 另外两条非墩结算的失败分支也指认了当事人：领取阶段「剩余任务无法由当前成员领取」记当前领取者，志愿者阶段「指挥官无法领取比较任务」记该指挥官。成功结果 `culprit_id` 为 `None`。
+- `apply_action` 仍然不广播任何事件，私密约定不变；前端改为从公开视图的 `result.culprit_id` 取名，用 `name()` 从 `view.players` 解析，因此双人的 JARVIS／Tonoja 助手赢下致命一墩时也会被点名。
+- `static/games/the_crew.js` 新增 `playFailEffect()`，在 `renderTheCrewGameState` 里紧跟 `view = data.view` 之后调用，早于 DOM 渲染。用 `game_token + attempt_id + reason` 组成 token 去重，避免资源延迟加载重放同一 payload 时重复播放；`clearState` 清空该 token。未加载公共组件时静默跳过。
+- `static/game_assets.js` 中 `the_crew.js` 版本号升到 `v=4`。
+
+验证结果：
+
+```sh
+python3 -m unittest tests.test_the_crew tests.test_the_crew_integration \
+  tests.test_frontend_style_assets tests.test_frontend_script_names \
+  tests.test_help_contract tests.test_game_dev_order
+```
+
+全部通过。新增两条回归测试：`test_finish_attempt_records_optional_culprit` 锁定 `culprit_id` 的默认值、公开视图可见性和 journal 记录；`test_failed_attempt_blames_the_fatal_trick_winner` 用机器人实跑 1 代 4 关 × 深海 4 关 × 3／4 人，断言每次墩结算导致的失败其 `culprit_id` 都等于 `trick_result["winner"]`，且成功局为 `None`。
+
+浏览器验证使用 `build/poop-effect-qa/crew.html`（`build/` 已 gitignore）：以真实 `static/games/the_crew.js` 接收 `mission_review` 公开视图，实测失败局播放一次且名牌显示 payload 指定玩家的名字、同一 payload 重放不重复播放、`result.success` 为真时不播放、换一个 `culprit_id` 则指认对应玩家。特效本体在 320／390／1024／1440px 的布局验收见 `designs/task88.md` 第 22.3 节。
+
+未执行：真机 iOS Safari / Android 触控验收；本机未安装 Playwright，`tests/the_crew.browser.cjs` 未运行。
