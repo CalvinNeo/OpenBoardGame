@@ -18,7 +18,7 @@
                 </ol>
                 <div class="texas-pot" data-texas-explain="pot"><span id="texasPotCaption">TOTAL POT</span><strong>💰 <span id="texasPot">0</span></strong></div>
                 <div id="texasCommunityCards" class="texas-cards texas-community" aria-label="Community cards" data-texas-explain="community"></div>
-                <div class="texas-table-footer"><span id="texasPhase">Waiting to deal</span><span data-texas-explain="currentBet">Table bet <strong id="texasCurrentBet">–</strong></span></div>
+                <div class="texas-table-footer"><span id="texasPhase">Waiting to deal</span><span data-texas-explain="current_bet">Table bet <strong id="texasCurrentBet">–</strong></span></div>
             </section>
             <section id="texasSummary" class="texas-summary" aria-label="Hand result" hidden>
                 <div class="texas-section-heading"><h3>🏆 Hand result</h3><span id="texasSummaryBody"></span></div>
@@ -30,7 +30,7 @@
                 <div id="texasOwnSection" class="texas-own-section">
                     <div class="texas-own-hand"><div class="texas-eyebrow" data-texas-explain="hole">YOUR HAND</div><div id="texasYourHand" class="texas-cards" aria-label="Your hole cards"></div></div>
                     <div class="texas-balance"><span class="texas-eyebrow" data-texas-explain="chips">YOUR CHIPS</span><strong id="texasYourChips">–</strong><span id="texasYourStatus" class="texas-muted"></span></div>
-                    <div class="texas-call-info" data-texas-explain="toCall"><span class="texas-eyebrow">TO CALL</span><strong id="texasToCall">–</strong></div>
+                    <div class="texas-call-info" data-texas-explain="to_call"><span class="texas-eyebrow">TO CALL</span><strong id="texasToCall">–</strong></div>
                 </div>
                 <div id="texasBettingControls">
                     <div class="texas-main-actions">
@@ -42,7 +42,7 @@
                     <div id="texasBetEditor" class="texas-bet-editor" data-texas-explain="amount">
                         <div class="texas-bet-row"><label id="texasBetLabel" for="texasBetInput">Raise to</label><input id="texasBetInput" type="number" min="1" step="1" inputmode="numeric" aria-describedby="texasBetHint" disabled /><button id="texasBetBtn" class="texas-raise" type="button" data-texas-explain="bet" hidden disabled>Bet</button><button id="texasRaiseBtn" class="texas-raise" type="button" data-texas-explain="raise" disabled>Raise to</button></div>
                         <input id="texasBetRange" class="texas-bet-range" type="range" min="1" max="1000" value="1" aria-label="Bet or raise total" disabled />
-                        <div class="texas-presets" aria-label="Quick bet sizes"><button type="button" data-texas-preset="min" data-texas-explain="minimum" disabled>Min</button><button type="button" data-texas-preset="half" data-texas-explain="halfPot" disabled>½ Pot</button><button type="button" data-texas-preset="pot" data-texas-explain="potBet" disabled>Pot</button><button type="button" data-texas-preset="max" data-texas-explain="maximum" disabled>Max</button></div>
+                        <div class="texas-presets" aria-label="Quick bet sizes"><button type="button" data-texas-preset="min" data-texas-explain="minimum" disabled>Min</button><button type="button" data-texas-preset="half" data-texas-explain="half_pot" disabled>½ Pot</button><button type="button" data-texas-preset="pot" data-texas-explain="pot_bet" disabled>Pot</button><button type="button" data-texas-preset="max" data-texas-explain="maximum" disabled>Max</button></div>
                         <p id="texasBetHint" class="texas-bet-hint" aria-live="polite"></p>
                     </div>
                 </div>

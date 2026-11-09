@@ -3,28 +3,135 @@
 
     const byId = suffix => document.getElementById(`patchwork${suffix}`);
     const panel = byId("Panel");
-    const dialogs = [byId("HelpModal"), byId("ExplainModal"), byId("QuiltModal")];
+    const quiltDialog = byId("QuiltModal");
     const tooltip = byId("Tooltip");
     const escape = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[char]);
     const label = patchId => `布块 ${Number(String(patchId).split("_").at(-1))}`;
     const tip = message => `data-patchwork-tip="${escape(message)}" tabindex="0"`;
-    const explanations = {
-        market: ["布块市场", "只可购买中立标记之后的三块布。上方为价格（🔘）与时间成本（⏳），下方为新增收入（↑🔘）与覆盖面积（⬜）。选定后在拼布上预览，Confirm 才购买。后续布块按市场顺序展示，购买后标记移动到所购布块之后。"],
-        quilt: ["拼布与旋转中心", "点击格子，把布块靠近重心的一格（✚）放到该位置；旋转和翻转保持这格固定。绿色预览可放置，红色表示重叠或越界。预览旁仍显示完整形状。点击空白处或按 Esc 取消。皮革补丁（🟫）也先预览再 Confirm。"],
-        rotate: ["Rotate · 顺时针旋转", "每次顺时针旋转 90°，围绕标有 ✚ 的实格旋转。四次旋转回到原位。可以先旋转，再在拼布上选择位置。"],
-        flip: ["Flip · 水平翻转", "把屏幕上的布块左右镜像，保持 ✚ 中心格固定。两次翻转回到原位。"],
-        move: ["Move · 移动预览", "点击 ↑ ↓ ← → 让已选布块或皮革补丁沿棋盘移动一格；固定中心格和当前旋转、翻转保持不变。移动到越界或重叠的位置时，Confirm 会保持禁用。"],
-        confirm: ["Confirm · 确认摆放", "布块必须完全在棋盘内且不能覆盖已有布块，纽扣（🔘）也须足够。确认才提交购买或皮革补丁（🟫）摆放。等待服务器响应时不能重复操作。"],
-        advance: ["⏩ 前进", "不买布块，前进到对手前方一格，最多到终点。每前进一格得到一枚纽扣（🔘）；经过收入标记时还会获得当前收入。遇到未领取的皮革补丁（🟫）会先暂停，摆放补丁后再完成剩余移动。"],
-        track: ["⏳ 时间轨道", "按数字沿蛇形轨道从 0 前进到 53。落后者行动，同格时后到者先行动。经过纽扣（🔘）标记获得收入，首个经过未领取皮革（🟫）的人获得一格补丁。灰色皮革格表示已领取。两人均到终点后结算。"],
-        players: ["双方进度与得分", "纽扣（🔘）是货币，收入（↑🔘）是每次经过收入点所得纽扣，时间（⏳）是当前位置。空格（⬜）每格扣 2 分，首个填满 7×7 方形的人获得奖励（⭐）。得分（🏁）= 纽扣 − 空格×2 + 奖励。同分时先到终点者获胜。Quilt 可查看对方拼布。"],
+    const PATCHWORK_EXPLAIN = {
+        market: {
+            zh: "布块市场：只可购买中立标记之后的三块布。上方为价格（🔘）与时间成本（⏳），下方为新增收入（↑🔘）与覆盖面积（⬜）。选定后在拼布上预览，Confirm 才购买。后续布块按市场顺序展示，购买后标记移动到所购布块之后。",
+            en: "Patch market: you may only buy the three patches after the neutral marker. The top shows the price in buttons (🔘) and the time cost (⏳), and the bottom shows the added income (↑🔘) and the area covered (⬜). Select one, preview it on your quilt, and Confirm to buy. Later patches appear in market order and the marker moves past whatever you buy."
+        },
+        quilt: {
+            zh: "拼布与旋转中心：点击格子，把布块靠近重心的一格（✚）放到该位置，旋转和翻转保持这格固定。绿色预览可放置，红色表示重叠或越界。预览旁仍显示完整形状。点击空白处或按 Esc 取消。皮革补丁（🟫）也先预览再 Confirm。",
+            en: "Quilt and pivot: click a square to put the patch cell nearest its centre of mass (✚) there, and rotation and flipping keep that cell fixed. A green preview can be placed while red means overlap or out of bounds, and the full shape stays visible beside the preview. Click blank space or press Esc to cancel. Leather patches (🟫) are also previewed before you Confirm."
+        },
+        rotate: {
+            zh: "Rotate · 顺时针旋转：每次顺时针旋转 90 度，围绕标有 ✚ 的实格旋转。四次旋转回到原位。可以先旋转，再在拼布上选择位置。",
+            en: "Rotate: turn the patch 90° clockwise around the solid cell marked ✚. Four rotations return it to the start, and you may rotate first and pick the position on the quilt afterwards."
+        },
+        flip: {
+            zh: "Flip · 水平翻转：把屏幕上的布块左右镜像，保持 ✚ 中心格固定。两次翻转回到原位。",
+            en: "Flip: mirror the patch on screen left to right while keeping the ✚ centre cell fixed. Two flips return it to the start."
+        },
+        move: {
+            zh: "Move · 移动预览：点击 ↑ ↓ ← → 让已选布块或皮革补丁沿棋盘移动一格，固定中心格和当前旋转、翻转保持不变。移动到越界或重叠的位置时，Confirm 会保持禁用。",
+            en: "Move: press ↑ ↓ ← → to shift the selected patch or leather patch one square across the board, keeping the pivot cell and the current rotation and flip unchanged. Confirm stays disabled while the position overlaps or leaves the board."
+        },
+        confirm: {
+            zh: "Confirm · 确认摆放：布块必须完全在棋盘内且不能覆盖已有布块，纽扣（🔘）也须足够。确认才提交购买或皮革补丁（🟫）摆放。等待服务器响应时不能重复操作。",
+            en: "Confirm: the patch must sit entirely inside the board without covering an existing patch, and you need enough buttons (🔘). Confirming submits the purchase or the leather patch (🟫) placement, and you cannot act again while the server responds."
+        },
+        advance: {
+            zh: "⏩ 前进：不买布块，前进到对手前方一格，最多到终点。每前进一格得到一枚纽扣（🔘），经过收入标记时还会获得当前收入。遇到未领取的皮革补丁（🟫）会先暂停，摆放补丁后再完成剩余移动。",
+            en: "Advance (⏩): skip buying and move to the square just ahead of your opponent, up to the finish. Each square advanced earns one button (🔘), and passing an income marker also pays your current income. Reaching an unclaimed leather patch (🟫) pauses you so you can place it before finishing the move."
+        },
+        track: {
+            zh: "⏳ 时间轨道：按数字沿蛇形轨道从 0 前进到 53。落后者行动，同格时后到者先行动。经过纽扣（🔘）标记获得收入，首个经过未领取皮革（🟫）的人获得一格补丁。灰色皮革格表示已领取。两人均到终点后结算。",
+            en: "Time track (⏳): follow the numbers along the snake shaped track from 0 to 53. Whoever is behind acts, and on the same square the later arrival goes first. Passing a button marker (🔘) pays your income, and the first player past an unclaimed leather patch (🟫) takes it. A grey leather square is already claimed, and scoring happens once both players reach the end."
+        },
+        players: {
+            zh: "双方进度与得分：纽扣（🔘）是货币，收入（↑🔘）是每次经过收入点所得纽扣，时间（⏳）是当前位置。空格（⬜）每格扣 2 分，首个填满 7×7 方形的人获得奖励（⭐）。得分（🏁）= 纽扣 − 空格×2 + 奖励。同分时先到终点者获胜。Quilt 可查看对方拼布。",
+            en: "Progress and score: buttons (🔘) are your currency, income (↑🔘) is what each income space pays, and time (⏳) is your position. Every empty square (⬜) costs 2 points, and the first player to fill any 7×7 square earns the bonus (⭐). Score (🏁) is buttons minus empty squares times two plus the bonus, ties go to whoever reached the end first, and Quilt shows the opponent's quilt."
+        },
+        dialog_close: {
+            zh: "关闭当前对话框并回到拼布。",
+            en: "Close the current dialog and return to the quilt."
+        }
     };
-    const help = `
-        <h3>目标</h3><p>在 9×9 拼布上拼出尽量完整的被子。两人到时间轨道终点后结算：纽扣（🔘）− 空格（⬜）×2 + 7×7 奖励（⭐）。同分时先到终点者获胜。</p>
-        <h3>谁行动</h3><p>时间（⏳）落后者行动；同格时后到者先行动，因此一人可能连续行动。本游戏没有独立轮次结算，终局结果保留在界面供双方查看。</p>
-        <h3>两种行动</h3><ul><li>⏩ 前进：移动到对手前一格，最多到 53；每步获得 🔘1，经过收入点还会收取收入。</li><li>购买：选市场前三块之一，支付上方价格（🔘），把整块放入空白处，再支付时间（⏳）。下方 ↑🔘 是新增收入，⬜ 是覆盖面积；所购布块之后成为新的市场起点。</li></ul>
-        <h3>轨道奖励</h3><ul><li>纽扣标记（🔘）：每次到达或经过，收取当前纽扣收入（↑🔘），包含刚买布块的收入。</li><li>皮革补丁（🟫）：首个经过者免费放置一个 1×1 补丁，再继续移动。没有空格时不领取。</li><li>7×7 奖励（⭐）：首个填满任意 7×7 方形的人获得 +7 分。</li></ul>
-        <h3>摆放与查看</h3><p>选布块 → 点击棋盘 → 用 ↑ ↓ ← → 微调位置 → Rotate / Flip → Confirm。✚ 是靠近布块重心的固定实格。绿色表示可以摆放，红色表示重叠或越界；皮革补丁也要 Confirm。点击空白处或按 Esc 取消预览。</p><p>Quilt 查看对方棋盘；展开后续布块可以看完整形状和顺序。Help 显示规则；Explain 后点击区域或按钮查看解释。静态图标悬停或轻点显示说明，手机说明 3 秒消失。Esc 关闭对话框。</p>`;
+
+    const PATCHWORK_HELP_CONFIG = {
+        gameId: "patchwork",
+        title: { zh: "拼布艺术 · Patchwork", en: "Patchwork" },
+        basic: {
+            win: {
+                zh: "在 9×9 拼布上拼出尽量完整的被子。两人到时间轨道终点后结算：纽扣(🔘)减去空格(⬜)乘 2，再加上 7×7 奖励(⭐)，同分时先到终点者获胜。",
+                en: "Build the most complete quilt you can on a 9×9 board. Once both players reach the end of the time track you score buttons (🔘) minus empty squares (⬜) times two plus the 7×7 bonus (⭐), and a tie goes to whoever finished first."
+            },
+            turn: {
+                zh: "轮到你时二选一：花纽扣(🔘)和时间(⏳)买一块布块并摆到拼布上，或者前进到对手前方一格并沿途收取纽扣。",
+                en: "On your turn you either spend buttons (🔘) and time (⏳) to buy a patch and place it on your quilt, or advance to the square just ahead of your opponent and collect buttons along the way."
+            },
+            key: {
+                zh: "时间是唯一真正的资源：买大布块能少留空格但会让你在轨道上被对手甩开，所以要算的是这块布值多少格时间。",
+                en: "Time is the only real resource: a big patch leaves fewer empty squares but lets your opponent run ahead of you on the track, so what you are really pricing is how many squares of time that patch is worth."
+            }
+        },
+        sections: [
+            {
+                id: "goal",
+                label: { zh: "目标", en: "Goal" },
+                html: {
+                    zh: "<p>在 9×9 拼布上拼出尽量完整的被子。两人到时间轨道终点后结算：纽扣(🔘)减去空格(⬜)乘 2，再加上 7×7 奖励(⭐)。同分时先到终点者获胜。</p>",
+                    en: "<p>Build the most complete quilt you can on a 9×9 board. Once both players reach the end of the time track you score buttons (🔘) minus empty squares (⬜) times two plus the 7×7 bonus (⭐), and a tie goes to whoever reached the end first.</p>"
+                }
+            },
+            {
+                id: "turn",
+                label: { zh: "谁行动", en: "Whose turn" },
+                html: {
+                    zh: "<p>时间(⏳)落后者行动，同格时后到者先行动，因此一人可能连续行动。本游戏没有独立轮次结算，终局结果保留在界面供双方查看。</p>",
+                    en: "<p>Whoever is behind on time (⏳) acts, and on the same square the later arrival goes first, so one player may act several times in a row. There is no separate round scoring and the final result stays on screen for both players.</p>"
+                }
+            },
+            {
+                id: "actions",
+                label: { zh: "两种行动", en: "Two actions" },
+                html: {
+                    zh: "<ul><li>⏩ 前进：移动到对手前一格，最多到 53，每步获得一枚纽扣(🔘)，经过收入点还会收取收入。</li><li>购买：选市场前三块之一，支付上方价格(🔘)，把整块放入空白处，再支付时间(⏳)。下方 ↑🔘 是新增收入，⬜ 是覆盖面积，所购布块之后成为新的市场起点。</li></ul>",
+                    en: "<ul><li>Advance (⏩): move to the square just ahead of your opponent, up to 53, earning one button (🔘) per step and collecting income when you pass an income space.</li><li>Buy: pick one of the first three market patches, pay the price (🔘) shown on top, fit the whole piece into empty squares, then pay its time (⏳). The ↑🔘 below is the added income and ⬜ is the area covered, and the patch you buy becomes the new market starting point.</li></ul>"
+                }
+            },
+            {
+                id: "rewards",
+                label: { zh: "轨道奖励", en: "Track rewards" },
+                html: {
+                    zh: "<ul><li>纽扣标记(🔘)：每次到达或经过，收取当前纽扣收入(↑🔘)，包含刚买布块的收入。</li><li>皮革补丁(🟫)：首个经过者免费放置一个 1×1 补丁，再继续移动。没有空格时不领取。</li><li>7×7 奖励(⭐)：首个填满任意 7×7 方形的人获得 +7 分。</li></ul>",
+                    en: "<ul><li>Button markers (🔘): reaching or passing one pays your current button income (↑🔘), including the income of a patch you just bought.</li><li>Leather patch (🟫): the first player to pass one places a free 1×1 patch and then continues moving, and it is skipped when you have no empty square.</li><li>7×7 bonus (⭐): the first player to fill any 7×7 square gains 7 points.</li></ul>"
+                }
+            },
+            {
+                id: "placing",
+                label: { zh: "摆放与查看", en: "Placing and viewing" },
+                html: {
+                    zh: "<p>选布块，点击棋盘，用 ↑ ↓ ← → 微调位置，再用 Rotate 或 Flip，最后 Confirm。✚ 是靠近布块重心的固定实格。绿色表示可以摆放，红色表示重叠或越界，皮革补丁也要 Confirm。点击空白处或按 Esc 取消预览。</p><p>Quilt 查看对方棋盘，展开后续布块可以看完整形状和顺序。Help 显示规则，Explain 之后点击区域或按钮查看解释。静态图标悬停或轻点显示说明，手机说明 3 秒消失，按 Esc 关闭对话框。</p>",
+                    en: "<p>Select a patch, click the board, nudge it with ↑ ↓ ← →, use Rotate or Flip, then Confirm. The ✚ marks the solid cell nearest the patch's centre of mass. Green means it fits, red means overlap or out of bounds, and leather patches need Confirm too. Click blank space or press Esc to cancel a preview.</p><p>Quilt shows the opponent's board and expanding the upcoming patches reveals their full shapes and order. Help shows the rules and Explain lets you tap an area or a button for a description. Static icons can be hovered or tapped for a tip, a tip on a phone disappears after 3 seconds, and Esc closes a dialog.</p>"
+                }
+            }
+        ]
+    };
+
+    let patchworkHelpWidget = null;
+    let patchworkExplainWidget = null;
+
+    function initPatchworkHelpExplain() {
+        if (patchworkHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        patchworkHelpWidget = window.obgCreateHelp(PATCHWORK_HELP_CONFIG);
+        patchworkExplainWidget = window.obgCreateExplain({
+            gameId: "patchwork",
+            attribute: "data-patchwork-explain",
+            explanations: PATCHWORK_EXPLAIN,
+            button: byId("ExplainBtn"),
+            root: () => panel,
+            bypass: ["#patchworkHelpBtn", "#patchworkExplainBtn", "#patchworkQuiltClose"]
+        });
+        byId("HelpBtn")?.addEventListener("click", () => {
+            patchworkExplainWidget?.exit();
+            patchworkHelpWidget.open();
+        });
+        byId("ExplainBtn")?.addEventListener("click", () => patchworkExplainWidget?.toggle());
+    }
 
     let view = null;
     let roomKey = null;
@@ -35,7 +142,6 @@
     let pivot = null;
     let pending = false;
     let awaitingResync = false;
-    let explaining = false;
     let pointer = null;
     let suppressClickUntil = 0;
     let tipTarget = null;
@@ -253,11 +359,11 @@
         byId("Notice").hidden = !view.game_over && !view.pending_special_patch;
         byId("Notice").textContent = view.game_over ? `Game over · 获胜：${view.winner.map(playerName).join("、")} · ${view.players.map(player => `${playerName(player.player_id)} ${score(player)} 分`).join(" / ")}` : view.pending_special_patch ? `${playerName(view.pending_special_patch.player_id)} 获得 🟫 皮革补丁，摆放后继续前进。` : "";
         renderDraft();
-        if (dialogs[2].open) renderInspectedQuilt();
+        if (quiltDialog.open) renderInspectedQuilt();
     }
 
     function dispatch(action) {
-        if (explaining || !can(action.type)) return;
+        if (!can(action.type)) return;
         pending = true;
         hideTip();
         setError();
@@ -281,7 +387,7 @@
     }
 
     function showTip(target, autoHide = false) {
-        if (!target || explaining || dialogs.some(dialog => dialog.open) || target.closest("button, summary, input, a, select")) return;
+        if (!target || patchworkExplainWidget?.isActive() || patchworkHelpWidget?.isOpen() || quiltDialog.open || target.closest("button, summary, input, a, select")) return;
         hideTip();
         tipTarget = target;
         tooltip.textContent = target.dataset.patchworkTip;
@@ -294,13 +400,6 @@
         if (autoHide) tipTimer = setTimeout(hideTip, 3000);
     }
 
-    function setExplain(enabled) {
-        explaining = enabled;
-        document.body.classList.toggle("patchwork-explaining", enabled);
-        byId("ExplainBtn").setAttribute("aria-pressed", String(enabled));
-        hideTip();
-    }
-
     function openDialog(dialog) {
         hideTip();
         focusBeforeDialog = document.activeElement;
@@ -308,18 +407,9 @@
         dialog.querySelector("button").focus({preventScroll: true});
     }
 
-    function explain(target) {
-        const explanation = explanations[target?.dataset.patchworkExplain];
-        if (!explanation) return;
-        setExplain(false);
-        byId("ExplainTitle").textContent = explanation[0];
-        byId("ExplainContent").textContent = explanation[1];
-        openDialog(dialogs[1]);
-    }
-
     function renderInspectedQuilt() {
         const player = view.players.find(entry => entry.player_id === inspectedPlayer);
-        if (!player) { dialogs[2].close(); return; }
+        if (!player) { quiltDialog.close(); return; }
         byId("QuiltModalTitle").textContent = `${playerName(player.player_id)} · 拼布`;
         byId("QuiltModalMeta").textContent = `纽扣 🔘${player.buttons} · 收入 ↑🔘${player.button_income} · 空格 ⬜${player.empty_spaces} · 奖励 ⭐${player.has_special_tile ? view.special_tile_bonus : 0} · 得分 🏁${score(player)}`;
         renderBoard(byId("QuiltModalBoard"), player, false);
@@ -352,10 +442,10 @@
         activity = "";
         inspectedPlayer = null;
         clearDraft();
-        setExplain(false);
+        patchworkExplainWidget?.exit();
         setError();
         hideTip();
-        dialogs.forEach(dialog => { if (dialog.open) dialog.close(); });
+        if (quiltDialog.open) quiltDialog.close();
         document.body.classList.remove("patchwork-turn-active");
         ["Market", "Players", "Wallet", "Rewards", "Track", "YourBoard", "UpcomingMarket", "Activity", "Preview"].forEach(suffix => byId(suffix).replaceChildren());
         byId("PlacementActions").hidden = true;
@@ -391,7 +481,7 @@
     };
 
     panel.addEventListener("click", event => {
-        if (explaining || event.defaultPrevented || !view) return;
+        if (patchworkExplainWidget?.isActive() || event.defaultPrevented || !view) return;
         const patch = event.target.closest("button[data-patch-id]");
         const cell = event.target.closest("#patchworkYourBoard button[data-column]");
         const player = event.target.closest("[data-player-id]");
@@ -410,7 +500,7 @@
         } else if (player) {
             inspectedPlayer = player.dataset.playerId;
             renderInspectedQuilt();
-            openDialog(dialogs[2]);
+            openDialog(quiltDialog);
         } else if (!event.target.closest("button, summary, details, a, [data-patchwork-tip], .patchwork-placement-actions, .patchwork-board")) {
             clearDraft();
             renderDraft();
@@ -429,7 +519,7 @@
     });
     byId("NudgeActions").addEventListener("click", event => {
         const button = event.target.closest("button[data-dx]");
-        if (explaining || !button || !(selected || bonus()) || !pivot || !isTurn() || !connected() || pending) return;
+        if (patchworkExplainWidget?.isActive() || !button || !(selected || bonus()) || !pivot || !isTurn() || !connected() || pending) return;
         pivot = [
             Math.max(0, Math.min(view.board_size - 1, pivot[0] + Number(button.dataset.dx))),
             Math.max(0, Math.min(view.board_size - 1, pivot[1] + Number(button.dataset.dy))),
@@ -438,23 +528,17 @@
     });
     byId("ConfirmBuyBtn").addEventListener("click", confirm);
     byId("AdvanceBtn").addEventListener("click", () => dispatch({type: "advance"}));
-    byId("HelpContent").innerHTML = help;
-    byId("HelpBtn").addEventListener("click", () => { setExplain(false); openDialog(dialogs[0]); });
-    byId("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
-    ["Help", "Explain", "Quilt"].forEach((suffix, index) => byId(`${suffix}Close`).addEventListener("click", () => dialogs[index].close()));
-    dialogs.forEach(dialog => {
-        dialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus({preventScroll: true}); });
-        dialog.addEventListener("click", event => {
-            const rect = dialog.getBoundingClientRect();
-            if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
-        });
+    byId("QuiltClose").addEventListener("click", () => quiltDialog.close());
+    quiltDialog.addEventListener("close", () => { if (focusBeforeDialog?.isConnected) focusBeforeDialog.focus({preventScroll: true}); });
+    quiltDialog.addEventListener("click", event => {
+        const rect = quiltDialog.getBoundingClientRect();
+        if (event.target === quiltDialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) quiltDialog.close();
     });
 
     const exempt = target => !!target.closest("#patchworkHelpBtn, #patchworkExplainBtn, .patchwork-dialog, #roomControlsToggleBtn, #roomControlsCollapseBtn");
     document.addEventListener("pointerdown", event => {
-        if (!active() || exempt(event.target) || dialogs.some(dialog => dialog.open)) return;
-        const hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-patchwork-explain]");
-        pointer = {id: event.pointerId, column: event.clientX, row: event.clientY, moved: false, explaining, target: event.target, explainTarget: hit && panel.contains(hit) ? hit : null, type: event.pointerType};
+        if (!active() || exempt(event.target) || quiltDialog.open) return;
+        pointer = {id: event.pointerId, column: event.clientX, row: event.clientY, moved: false, target: event.target, type: event.pointerType};
     }, true);
     document.addEventListener("pointermove", event => {
         if (pointer?.id === event.pointerId && Math.hypot(event.clientX - pointer.column, event.clientY - pointer.row) > 8) {
@@ -467,34 +551,24 @@
         const gesture = pointer;
         pointer = null;
         if (gesture.moved) { suppressClickUntil = performance.now() + 600; return; }
-        if (gesture.explaining) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            suppressClickUntil = performance.now() + 600;
-            explain(gesture.explainTarget);
-        } else if (gesture.type !== "mouse") showTip(gesture.target.closest("[data-patchwork-tip]"), true);
+        if (gesture.type !== "mouse") showTip(gesture.target.closest("[data-patchwork-tip]"), true);
     }, true);
     document.addEventListener("pointercancel", event => {
         if (pointer?.id === event.pointerId) { pointer = null; suppressClickUntil = performance.now() + 600; hideTip(); }
     }, true);
     document.addEventListener("click", event => {
         if (!active() || exempt(event.target)) return;
-        if (explaining || performance.now() < suppressClickUntil) {
+        if (performance.now() < suppressClickUntil) {
             event.preventDefault();
             event.stopImmediatePropagation();
-            if (explaining && event.detail === 0) explain(event.target.closest("[data-patchwork-explain]"));
         }
     }, true);
     document.addEventListener("keydown", event => {
-        if (!active() || dialogs.some(dialog => dialog.open)) return;
+        if (!active() || quiltDialog.open) return;
         if (event.key === "Escape") {
             hideTip();
-            if (explaining) setExplain(false);
+            if (patchworkExplainWidget?.isActive()) patchworkExplainWidget.exit();
             else { clearDraft(); renderDraft(); }
-        } else if (explaining && ["Enter", " "].includes(event.key) && !exempt(event.target)) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            explain(event.target.closest("[data-patchwork-explain]"));
         }
     }, true);
     panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-patchwork-tip]")); });
@@ -510,7 +584,7 @@
 
     function initialize() {
         byId("TimeDetails").open = matchMedia("(min-width: 901px)").matches;
-        setExplain(false);
+        initPatchworkHelpExplain();
         socket.on("room:state", syncRoom);
         socket.on("system:error", data => {
             if (!active() || !view) return;

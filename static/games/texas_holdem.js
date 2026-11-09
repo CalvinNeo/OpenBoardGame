@@ -10,7 +10,6 @@
     let betContext = "";
     let pending = false;
     let pendingTimer;
-    let explaining = false;
     let suppressClick = false;
     let suppressTimer;
     let tipTimer;
@@ -45,16 +44,143 @@
         bb: ["Big Blind (BB)", "This player posted the larger forced bet before the deal."],
         ready: ["Ready (✓)", "This player has chosen Next Hand. The current result remains until everyone is ready."],
     };
-    const helpHTML = '<p><strong>Win the pot (💰)</strong><br>Make the best five-card poker hand using any combination of your two hole cards and the five community cards, or be the last player who has not folded.</p>' +
-        '<p><strong>The deal and streets</strong><br>Dealer (D) moves each hand. Small Blind (SB) and Big Blind (BB) post forced bets. Preflop betting starts after BB; with two players, the dealer is SB and acts first. Flop reveals three cards, Turn one, and River one. Later streets start with the first eligible player after the dealer.</p>' +
-        '<p><strong>Your turn</strong><br>Check when nothing is owed. Call (💰) pays the amount displayed. Fold gives up this hand. Bet opens a street; Raise to sets your total bet for that street, including any chips already posted. All-in (💰) commits your entire remaining stack immediately. Actions are available only when legal.</p>' +
-        '<p><strong>Choose a bet</strong><br>Use the number field, slider, Min, ½ Pot, Pot, or Max. Selecting a size does not submit. The preview shows what you add and what remains. Facing a bet, pot presets include the call before calculating the raise. The minimum full raise equals the previous full raise; a short all-in does not necessarily reopen raising.</p>' +
-        '<p><strong>Cards and symbols</strong><br>Spades (♠️), Hearts (♥️), Diamonds (♦️), Clubs (♣️). A is Ace, K King, Q Queen, J Jack. Suits have equal strength. Card backs (🂠) conceal opponents’ hole cards. Chips (💰) are your stack; Pot (💰) contains committed chips. Turn marks the acting player; Ready (✓) marks a player who has reviewed the result.</p>' +
-        '<p><strong>Hand rankings · strongest first</strong></p><ol><li>Straight Flush — five consecutive cards of one suit; A–K–Q–J–10 is a Royal Flush.</li><li>Four of a Kind</li><li>Full House — three of one rank and two of another.</li><li>Flush — five cards of one suit.</li><li>Straight — five consecutive ranks; A–2–3–4–5 is the lowest.</li><li>Three of a Kind</li><li>Two Pair</li><li>One Pair</li><li>High Card</li></ol>' +
-        '<p><strong>Showdown and side pots</strong><br>Compare the best five cards; kickers break ties. Equal hands split each eligible pot. All-in players cannot win chips above their contribution level. Result shows payouts received, net change after contributions, and the evaluated hands. Folded opponents’ cards stay hidden.</p>' +
-        '<p><strong>Between hands</strong><br>Review the Hand result (🏆), then select Next Hand. Every seated player must be ready before cards are dealt, including zero-chip players who sit out. Bots ready automatically. A player with zero chips may Rebuy (💰) a starting stack. At least two players need chips to continue.</p>' +
-        '<p><strong>Help &amp; Explain</strong><br>Explain (🔎) highlights items you can inspect, including disabled buttons. While explaining, game controls do not act. Choose an item to read its explanation, or press Esc to exit. Esc also closes dialogs. Hover over informational symbols for a tip; on mobile, tap for a tip that disappears after three seconds.</p>';
 
+    const TEXAS_EXPLAIN = {
+        hand: { zh: "手牌：每一手给每位有筹码的玩家发两张底牌。庄家按钮(D)每手向下一位移动。", en: explanations.hand[1] },
+        blinds: { zh: "盲注 · 小盲(SB)与大盲(BB)：小盲和大盲是发牌前的强制下注。两人局由庄家下小盲。盲注计入每位玩家本街的下注额。", en: explanations.blinds[1] },
+        streets: { zh: "进程：翻牌前两张底牌，翻牌(Flop)三张公共牌，转牌(Turn)第四张，河牌(River)第五张。每条街都有一轮下注。结果会暂停牌桌供所有人复盘。", en: explanations.streets[1] },
+        pot: { zh: "底池(💰)：本手所有已投入的筹码，包含当前这条街。摊牌时每个底池归给最有资格的牌型，平手则平分，全下玩家只能赢自己投入过的底池。", en: explanations.pot[1] },
+        community: { zh: "公共牌：这五张共享牌与你的两张底牌组合成最好的五张牌型，你可以用零张、一张或两张底牌。空位表示尚未发出的牌。", en: explanations.community[1] },
+        hole: { zh: "你的底牌：你的两张私有牌，其他玩家在摊牌前只看到牌背(🂠)。你自己弃牌后仍能看到自己的牌，其他玩家弃掉的牌始终隐藏。", en: explanations.hole[1] },
+        chips: { zh: "筹码(💰)：你剩余的筹码量，已经投入底池的部分不计入其中。本游戏不涉及真实金钱。", en: explanations.chips[1] },
+        current_bet: { zh: "桌面下注：当前这条街的最高下注总额。Call 跟到该额，Raise to 设定新的总额。下一轮公共牌发出后各街下注重置。", en: explanations.currentBet[1] },
+        to_call: { zh: "需跟注(💰)：跟平桌面下注还需要的筹码。如果你的筹码不足，Call 只投入剩余筹码并让你全下。为零表示轮到你时可以过牌。", en: explanations.toCall[1] },
+        fold: { zh: "Fold 弃牌：放弃本手以及已投入的筹码，不再有任何下注动作，也无法赢取本手的底池。仅在你的回合可用。", en: explanations.fold[1] },
+        check: { zh: "Check 过牌：不加筹码继续。仅在轮到你且不欠筹码时可用，点击立即生效。", en: explanations.check[1] },
+        call: { zh: "Call 跟注(💰)：按显示金额跟平当前下注。如果你的筹码不够，只投入剩余筹码并全下。", en: explanations.call[1] },
+        all_in: { zh: "All-in 全下(💰)：立即投入全部剩余筹码，你留在本手但已无筹码可再行动。边池处理筹码不均的情况，额度不足的全下不一定重新开放加注。", en: explanations.all_in[1] },
+        bet: { zh: "Bet 下注(💰)：在本街开启下注。选择一个不小于最小值的总额，上限是你的可用筹码。预览会显示这次动作花掉多少筹码。", en: explanations.bet[1] },
+        raise: { zh: "Raise to 加注到(💰)：设定你本街的下注总额，包含已经投入的筹码。例如已下 10 时加注到 40，只需再花 30。一次完整加注必须让桌面下注至少增加上一次完整加注的幅度。", en: explanations.raise[1] },
+        amount: { zh: "下注／加注总额：用滑块、数字框或快捷额度选择本街的总额。选择金额本身不会提交，要按 Bet 或 Raise 才生效。预览会显示额外花费和剩余筹码。", en: explanations.amount[1] },
+        minimum: { zh: "Min 最小：选择最小的合法开池下注或完整加注。这只是选定金额，不会提交。", en: explanations.minimum[1] },
+        half_pot: { zh: "½ Pot 半池：无人下注时选择底池的一半。面对下注时先算上跟注所需筹码，再按由此得到的底池加注一半。总额会被限制在合法最小值与你的筹码之间。", en: explanations.halfPot[1] },
+        pot_bet: { zh: "Pot 底池：无人下注时选择底池大小。面对下注时先算上跟注，再按由此得到的底池加注。总额会被限制在合法最小值与你的筹码之间。", en: explanations.potBet[1] },
+        maximum: { zh: "Max 最大：选择你能负担的最大总额，即本街已下注额加剩余筹码(💰)。按 Bet 或 Raise 提交，也可以直接用 All-in 投入。", en: explanations.maximum[1] },
+        next_hand: { zh: "Next Hand 下一手：复盘结果后标记自己已准备。只有所有在座玩家都选择 Next Hand 之后下一手才开始，包括筹码为零而暂离的玩家。机器人会自动准备，至少需要两位有筹码的玩家，不会再弹额外确认。", en: explanations.next_hand[1] },
+        rebuy: { zh: "Rebuy 补码(💰)：两手之间，筹码为零的玩家可以重新拿一份等同于设定起始筹码的新筹码。补码不会把你标记为已准备，复盘完仍需选择 Next Hand。", en: explanations.rebuy[1] },
+        dealer: { zh: "庄家(D)：庄家按钮决定盲注位置和行动顺序，每手向下一位有筹码的玩家移动。", en: explanations.dealer[1] },
+        sb: { zh: "小盲(SB)：该玩家在发牌前下了较小的强制注。", en: explanations.sb[1] },
+        bb: { zh: "大盲(BB)：该玩家在发牌前下了较大的强制注。", en: explanations.bb[1] },
+        ready: { zh: "已准备(✓)：该玩家已选择 Next Hand，当前结果会保留到所有人准备完毕。", en: explanations.ready[1] },
+        detail: { zh: "这是一个牌桌状态标记，鼠标悬停或轻点可以查看该玩家此刻的具体状态。", en: "A table status marker. Hover or tap it to see this player's current state." },
+        dialog_close: { zh: "关闭当前对话框并回到牌桌。", en: "Close the current dialog and return to the table." }
+    };
+
+    const TEXAS_HELP_CONFIG = {
+        gameId: "texas_holdem",
+        title: { zh: "德州扑克 · Texas Hold'em", en: "Texas Hold'em" },
+        basic: {
+            win: {
+                zh: "赢下底池(💰)。用你的两张底牌和五张公共牌任意组合出最好的五张牌型，或者成为唯一没有弃牌的玩家。",
+                en: "Win the pot (💰). Make the best five-card poker hand using any combination of your two hole cards and the five community cards, or be the last player who has not folded."
+            },
+            turn: {
+                zh: "轮到你且不欠筹码时可以过牌，否则跟注、加注到某个总额或者弃牌，也可以直接全下。所有动作只在合法时可用。",
+                en: "On your turn you check when nothing is owed, otherwise you call, raise to a total, or fold, and you may always go all-in. Actions are available only when legal."
+            },
+            key: {
+                zh: "下注总额包含本街已投入的筹码，所以面对下注时要先算清跟注成本，再决定加注幅度，而底池大小的快捷键已经替你算好了这一层。",
+                en: "A raise total includes the chips you already posted this street, so facing a bet you must price the call before deciding how much to raise, and the pot sized presets already do that arithmetic for you."
+            }
+        },
+        sections: [
+            {
+                id: "deal",
+                label: { zh: "发牌与各街", en: "The deal and streets" },
+                html: {
+                    zh: "<p>庄家(D)每手移动。小盲(SB)与大盲(BB)下强制注。翻牌前由大盲之后开始下注，两人局里庄家即小盲并最先行动。翻牌(Flop)发三张，转牌(Turn)一张，河牌(River)一张。之后的各街由庄家之后第一位有资格行动的玩家开始。</p>",
+                    en: "<p>Dealer (D) moves each hand. Small Blind (SB) and Big Blind (BB) post forced bets. Preflop betting starts after BB, and with two players the dealer is SB and acts first. Flop reveals three cards, Turn one, and River one. Later streets start with the first eligible player after the dealer.</p>"
+                }
+            },
+            {
+                id: "turn",
+                label: { zh: "你的回合", en: "Your turn" },
+                html: {
+                    zh: "<p>不欠筹码时过牌。跟注(💰)按显示金额支付。弃牌放弃本手。下注(Bet)开启一条街，加注到(Raise to)设定你本街的下注总额，包含已投入的筹码。全下(💰)立即投入全部剩余筹码。所有动作只在合法时可用。</p>",
+                    en: "<p>Check when nothing is owed. Call (💰) pays the amount displayed. Fold gives up this hand. Bet opens a street, and Raise to sets your total bet for that street including any chips already posted. All-in (💰) commits your entire remaining stack immediately. Actions are available only when legal.</p>"
+                }
+            },
+            {
+                id: "betsize",
+                label: { zh: "选择下注额", en: "Choose a bet" },
+                html: {
+                    zh: "<p>使用数字框、滑块、Min、½ Pot、Pot 或 Max。选择额度本身不会提交。预览会显示你追加多少以及还剩多少。面对下注时，底池快捷键会先算上跟注再计算加注。最小完整加注等于上一次完整加注的幅度，额度不足的全下不一定重新开放加注。</p>",
+                    en: "<p>Use the number field, slider, Min, ½ Pot, Pot, or Max. Selecting a size does not submit. The preview shows what you add and what remains. Facing a bet, pot presets include the call before calculating the raise. The minimum full raise equals the previous full raise, and a short all-in does not necessarily reopen raising.</p>"
+                }
+            },
+            {
+                id: "cards",
+                label: { zh: "牌面与符号", en: "Cards and symbols" },
+                html: {
+                    zh: "<p>黑桃(♠️)、红桃(♥️)、方块(♦️)、梅花(♣️)。A 是 A，K 是 K，Q 是 Q，J 是 J。花色强度相同。牌背(🂠)隐藏对手的底牌。筹码(💰)是你的筹码量，底池(💰)装着已投入的筹码。Turn 标记当前行动者，Ready(✓)标记已复盘结果的玩家。</p>",
+                    en: "<p>Spades (♠️), Hearts (♥️), Diamonds (♦️), Clubs (♣️). A is Ace, K King, Q Queen, J Jack. Suits have equal strength. Card backs (🂠) conceal opponents' hole cards. Chips (💰) are your stack and Pot (💰) contains committed chips. Turn marks the acting player and Ready (✓) marks a player who has reviewed the result.</p>"
+                }
+            },
+            {
+                id: "rankings",
+                label: { zh: "牌型大小", en: "Hand rankings" },
+                html: {
+                    zh: "<p>由强到弱：</p><ol><li>同花顺 — 五张同花色的连续牌，A-K-Q-J-10 为皇家同花顺。</li><li>四条</li><li>葫芦 — 三张同点数加一对。</li><li>同花 — 五张同花色。</li><li>顺子 — 五张连续点数，A-2-3-4-5 为最小。</li><li>三条</li><li>两对</li><li>一对</li><li>高牌</li></ol>",
+                    en: "<p>Strongest first:</p><ol><li>Straight Flush — five consecutive cards of one suit, where A-K-Q-J-10 is a Royal Flush.</li><li>Four of a Kind</li><li>Full House — three of one rank and two of another.</li><li>Flush — five cards of one suit.</li><li>Straight — five consecutive ranks, where A-2-3-4-5 is the lowest.</li><li>Three of a Kind</li><li>Two Pair</li><li>One Pair</li><li>High Card</li></ol>"
+                }
+            },
+            {
+                id: "showdown",
+                label: { zh: "摊牌与边池", en: "Showdown and side pots" },
+                html: {
+                    zh: "<p>比较最好的五张牌，踢脚牌决定平手。相同牌型平分各自有资格的底池。全下玩家无法赢得超过自己投入层级的筹码。结果会显示收到的赔付、扣除投入后的净变化以及评出的牌型，已弃牌对手的牌保持隐藏。</p>",
+                    en: "<p>Compare the best five cards and let kickers break ties. Equal hands split each eligible pot. All-in players cannot win chips above their contribution level. Result shows payouts received, net change after contributions, and the evaluated hands, while folded opponents' cards stay hidden.</p>"
+                }
+            },
+            {
+                id: "between",
+                label: { zh: "两手之间", en: "Between hands" },
+                html: {
+                    zh: "<p>复盘手牌结果(🏆)后选择 Next Hand。所有在座玩家都必须准备就绪才会发牌，包括筹码为零而暂离的玩家。机器人会自动准备。筹码为零的玩家可以补码(💰)拿一份起始筹码。至少需要两位有筹码的玩家才能继续。</p>",
+                    en: "<p>Review the Hand result (🏆), then select Next Hand. Every seated player must be ready before cards are dealt, including zero-chip players who sit out. Bots ready automatically. A player with zero chips may Rebuy (💰) a starting stack. At least two players need chips to continue.</p>"
+                }
+            },
+            {
+                id: "controls",
+                label: { zh: "帮助与解释", en: "Help and Explain" },
+                html: {
+                    zh: "<p>Explain(🔎)会高亮可以查看的元素，包括已禁用的按钮。解释模式下游戏控件不会执行动作，点选元素即可阅读说明，按 Esc 退出。Esc 同样关闭对话框。信息类符号可悬停查看提示，手机轻点后提示三秒消失。</p>",
+                    en: "<p>Explain (🔎) highlights items you can inspect, including disabled buttons. While explaining, game controls do not act. Choose an item to read its explanation, or press Esc to exit. Esc also closes dialogs. Hover over informational symbols for a tip, and on mobile a tap shows a tip that disappears after three seconds.</p>"
+                }
+            }
+        ]
+    };
+
+    let texasHelpWidget = null;
+    let texasExplainWidget = null;
+
+    function initTexasHelpExplain() {
+        if (texasHelpWidget || typeof window.obgCreateHelp !== "function") return;
+        texasHelpWidget = window.obgCreateHelp(TEXAS_HELP_CONFIG);
+        texasExplainWidget = window.obgCreateExplain({
+            gameId: "texas_holdem",
+            attribute: "data-texas-explain",
+            explanations: TEXAS_EXPLAIN,
+            button: $("ExplainBtn"),
+            root: () => panel,
+            bypass: ["#texasHelpBtn", "#texasExplainBtn", "#texasDialogClose"]
+        });
+        $("HelpBtn")?.addEventListener("click", () => {
+            texasExplainWidget?.exit();
+            texasHelpWidget.open();
+        });
+        $("ExplainBtn")?.addEventListener("click", () => texasExplainWidget?.toggle());
+    }
     function element(tag, className, text) {
         const node = document.createElement(tag);
         if (className) node.className = className;
@@ -303,7 +429,7 @@
         $("Feedback").hidden = !message;
     }
     function submit(action) {
-        if (explaining || !legal(action.type)) return;
+        if (!legal(action.type)) return;
         if (["bet", "raise"].includes(action.type) && !validAmount()) return;
         if (typeof ensureRoomConnection === "function" && !ensureRoomConnection()) {
             feedback("");
@@ -327,7 +453,7 @@
         tipTarget = null;
     }
     function showTip(target, timed = false) {
-        if (explaining || dialog.open || !target?.dataset.texasTip) return;
+        if (texasExplainWidget?.isActive() || texasHelpWidget?.isOpen() || dialog.open || !target?.dataset.texasTip) return;
         hideTip();
         tooltip.textContent = target.dataset.texasTip;
         tooltip.hidden = false;
@@ -340,31 +466,6 @@
         tooltip.style.top = Math.max(12, Math.min(innerHeight - height - 12, rect.bottom + height + 20 < innerHeight ? rect.bottom + 8 : rect.top - height - 8)) + "px";
         if (timed) tipTimer = window.setTimeout(hideTip, 3000);
     }
-    function setExplain(enabled) {
-        explaining = enabled;
-        hideTip();
-        panel.classList.toggle("texas-explaining", enabled);
-        $("ExplainBtn").setAttribute("aria-pressed", String(enabled));
-        $("ExplainHint").hidden = !enabled;
-    }
-    function openDialog(title, content, html = false) {
-        hideTip();
-        returnFocus = document.activeElement;
-        $("DialogTitle").textContent = title;
-        if (html) $("DialogBody").innerHTML = content;
-        else $("DialogBody").textContent = content;
-        if (!dialog.open) dialog.showModal();
-        dialog.scrollTop = 0;
-        $("DialogClose").focus({ preventScroll: true });
-    }
-    function explainTarget(target) {
-        if (!target) return;
-        const description = explanations[target.dataset.texasExplain] || [target.dataset.texasTitle || "Table detail", target.dataset.texasTip];
-        if (!description[1]) return;
-        setExplain(false);
-        openDialog(description[0], description[1]);
-    }
-    function exempt(target) { return target.closest("#texasHelpBtn, #texasExplainBtn, #texasDialog"); }
     function clearState() {
         view = null;
         betContext = "";
@@ -372,7 +473,7 @@
         suppressClick = false;
         window.clearTimeout(pendingTimer);
         window.clearTimeout(suppressTimer);
-        setExplain(false);
+        texasExplainWidget?.exit();
         if (dialog.open) dialog.close();
         ["Hand", "Blinds", "CurrentBet", "YourChips", "ToCall"].forEach((id) => { $(id).textContent = "–"; });
         $("Pot").textContent = "0";
@@ -415,8 +516,6 @@
         $("BetRange").value = $("BetInput").value;
         updateActions();
     }));
-    $("HelpBtn").addEventListener("click", () => { setExplain(false); openDialog("Texas Hold’em · Help", helpHTML, true); });
-    $("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
     $("DialogClose").addEventListener("click", () => dialog.close());
     dialog.addEventListener("close", () => {
         if (returnFocus?.isConnected && !panel.classList.contains("hidden")) returnFocus.focus({ preventScroll: true });
@@ -425,43 +524,9 @@
         const rect = dialog.getBoundingClientRect();
         if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
     });
-    document.addEventListener("pointerdown", (event) => {
-        if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const target = document.elementsFromPoint(event.clientX, event.clientY)
-            .map((node) => node.closest("#texasHoldemPanel [data-texas-explain]")).find(Boolean);
-        if (target) {
-            suppressClick = true;
-            window.clearTimeout(suppressTimer);
-            suppressTimer = window.setTimeout(() => { suppressClick = false; }, 600);
-            explainTarget(target);
-        }
-    }, true);
-    document.addEventListener("click", (event) => {
-        if (suppressClick) {
-            suppressClick = false;
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            return;
-        }
-        if (!explaining || panel.classList.contains("hidden") || exempt(event.target)) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        explainTarget(event.target.closest("#texasHoldemPanel [data-texas-explain]"));
-    }, true);
     document.addEventListener("keydown", (event) => {
         if (panel.classList.contains("hidden")) return;
-        if (event.key === "Escape") {
-            setExplain(false);
-            return;
-        }
-        if (!explaining || exempt(event.target)) return;
-        if ([" ", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            if (event.key === " " || event.key === "Enter") explainTarget(event.target.closest("[data-texas-explain]"));
-        }
+        if (event.key === "Escape") texasExplainWidget?.exit();
     }, true);
     panel.addEventListener("pointerover", (event) => {
         const target = event.target.closest("[data-texas-tip]");
@@ -487,7 +552,7 @@
     window.showTexasHoldemHeaderActions = (visible) => {
         $("HeaderActions").hidden = !visible;
         if (!visible) {
-            setExplain(false);
+            texasExplainWidget?.exit();
             if (dialog.open) dialog.close();
         }
     };

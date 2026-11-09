@@ -132,6 +132,13 @@ const sandbox = Object.assign(Object.create(null), win, {
   innerHeight: 900,
 });
 
+// In a browser `window` IS the global object, so `window.foo = ...` creates a
+// real global. Mirror that here, otherwise bare calls to window-assigned
+// functions are reported as false positives.
+sandbox.window = sandbox;
+sandbox.self = sandbox;
+sandbox.globalThis = sandbox;
+
 try {
   vm.createContext(sandbox);
   vm.runInContext(src, sandbox, { filename: file });
