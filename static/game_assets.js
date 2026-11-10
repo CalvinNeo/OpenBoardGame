@@ -610,7 +610,7 @@ const GAME_ASSETS = {
     "panelTitle": "🔥 Hot Streak",
     "header": "showHotStreakHeaderActions",
     "markup": "/static/games/hot_streak.html?v=6",
-    "styleFragments": "/static/games/hot_streak.css?v=6"
+    "styleFragments": "/static/games/hot_streak.css?v=7"
   },
   "acquire": {
     "scripts": [

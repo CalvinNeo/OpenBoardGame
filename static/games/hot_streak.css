@@ -196,6 +196,8 @@ details[open] > .hot-streak-disclosure::after,
 .hot-streak-track-panel {
   grid-area: track;
   order: 40;
+  container-type: inline-size;
+  container-name: hstrack;
 }
 .hot-streak-players-section {
   grid-area: players;
@@ -625,16 +627,35 @@ details[open] > .hot-streak-disclosure::after,
 }
 
 .hot-streak-track-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0 8px;
+  gap: 6px;
 }
 .hot-streak-track-controls > .hot-streak-disclosure {
-  flex: 1 1 170px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 1px 4px;
   width: auto;
+  padding: 2px 0;
 }
-.hot-streak-track-tools {
+.hot-streak-track-controls > .hot-streak-disclosure > :first-child {
+  grid-column: 1;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.hot-streak-track-controls > .hot-streak-disclosure::after {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+}
+#hotStreakTrackStatus {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 11px;
+}
+.hot-streak-track-controls .hot-streak-track-tools {
   display: flex;
   gap: 4px;
 }
@@ -648,7 +669,7 @@ details[open] > .hot-streak-disclosure::after,
   font-size: 12px;
 }
 .hot-streak-track-caption {
-  margin: 2px 0 6px;
+  margin: 0 0 2px;
   color: var(--hot-streak-muted);
   font-size: 11px;
   font-weight: 700;
@@ -999,12 +1020,6 @@ summary.hot-streak-payout-head {
   .hot-streak-ticket-count {
     font-size: 10px;
   }
-  .hot-streak-track-controls > .hot-streak-disclosure {
-    flex-basis: 100%;
-  }
-  .hot-streak-track-tools {
-    margin-left: auto;
-  }
 }
 
 @container hsroot (min-width: 560px) {
@@ -1039,7 +1054,14 @@ summary.hot-streak-payout-head {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .hot-streak-track-viewport {
-    --hs-track-height: clamp(240px, 30cqw, 340px);
+    --hs-track-height: clamp(168px, calc(100cqw * 4 / 14), 240px);
+  }
+  .hot-streak-track-controls > .hot-streak-disclosure {
+    display: flex;
+    gap: 8px;
+  }
+  .hot-streak-track-controls > .hot-streak-disclosure > :first-child {
+    font-size: 14px;
   }
   .hot-streak-track {
     grid-template-columns: repeat(var(--hs-positions, 14), minmax(0, 1fr));
@@ -1103,8 +1125,13 @@ summary.hot-streak-payout-head {
   .hot-streak-players {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .hot-streak-track-viewport {
-    --hs-track-height: 330px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hot-streak-track-panel:has(#hotStreakTrackBody[hidden]) #hotStreakTrackToggle {
+    display: flex;
+    gap: 8px;
+    min-height: 28px;
   }
 }
 
