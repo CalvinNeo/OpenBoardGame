@@ -17,7 +17,7 @@ from game.trio import (
     MODE_SPICY,
     STAGE_GAME_OVER,
     STAGE_PLAY,
-    STAGE_REVEAL,
+    STAGE_RESULT,
     TABLE_SIZE,
     TRIOS_TO_WIN,
     TrioGame,
@@ -258,12 +258,64 @@ class TrioRevealTests(unittest.TestCase):
         self.assertEqual(self.state["table"], table_before)
         for pid in self.state["turn_order"]:
             self.assertEqual(self.state["players"][pid]["hand"], before[pid])
-        self.assertNotEqual(actor(self.state), self.me)
         self.assertFalse(self.state["last_result"]["success"])
+        # The turn settles first, and only the shared Continue moves play on.
+        self.assertEqual(self.state["stage"], STAGE_RESULT)
+        self.assertEqual(actor(self.state), self.me)
+        continue_all(self.state)
+        self.assertEqual(self.state["stage"], STAGE_PLAY)
+        self.assertNotEqual(actor(self.state), self.me)
+
+    def test_the_settlement_names_the_reveal_that_broke_the_chain(self):
+        first = card_number(self.state["table"][0])
+        mismatch = next(
+            index for index, card in enumerate(self.state["table"])
+            if card_number(card) != first
+        )
+        reveal_table(self.state, self.me, 0)
+        reveal_table(self.state, self.me, mismatch)
+        result = self.state["last_result"]
+        self.assertFalse(result["success"])
+        self.assertEqual(result["number"], first)
+        self.assertEqual(result["failed_at"], 1)
+        self.assertEqual(len(result["reveals"]), 2)
+        self.assertEqual(result["reveals"][0]["number"], first)
+        self.assertEqual(result["reveals"][0]["source"], "table")
+        self.assertEqual(result["reveals"][0]["index"], 0)
+        self.assertEqual(result["reveals"][1]["number"], card_number(self.state["table"][mismatch]))
+        self.assertEqual(result["reveals"][1]["index"], mismatch)
+        view = TrioGame.get_public_view(self.state, self.me)
+        self.assertEqual(view["last_result"]["failed_at"], 1)
+        self.assertEqual(len(view["last_result"]["reveals"]), 2)
+
+    def test_the_settlement_records_a_hand_reveal_source(self):
+        target = self.state["turn_order"][1]
+        hand = list(self.state["players"][target]["hand"])
+        low = card_number(hand[0])
+        mismatch = next(
+            index for index, card in enumerate(self.state["table"])
+            if card_number(card) != low
+        )
+        reveal_hand(self.state, self.me, target, "low")
+        reveal_table(self.state, self.me, mismatch)
+        result = self.state["last_result"]
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failed_at"], 1)
+        self.assertEqual(result["reveals"][0]["source"], "hand")
+        self.assertEqual(result["reveals"][0]["player"], target)
+        self.assertEqual(result["reveals"][0]["end"], "low")
+        self.assertEqual(result["reveals"][0]["number"], card_number(hand[0]))
+
+    def test_a_successful_settlement_has_no_failure_marker(self):
+        claim_table_trio(self.state, self.me, 8)
+        result = self.state["last_result"]
+        self.assertTrue(result["success"])
+        self.assertIsNone(result["failed_at"])
+        self.assertEqual([entry["number"] for entry in result["reveals"]], [8, 8, 8])
 
     def test_three_matching_table_cards_claim_a_trio(self):
         slots = claim_table_trio(self.state, self.me, 8)
-        self.assertEqual(self.state["stage"], STAGE_REVEAL)
+        self.assertEqual(self.state["stage"], STAGE_RESULT)
         self.assertEqual(self.state["players"][self.me]["trios"], [8])
         self.assertEqual(self.state["revealed"], [])
         for slot in slots:
@@ -276,7 +328,7 @@ class TrioRevealTests(unittest.TestCase):
         for slot in slots[:2]:
             reveal_table(self.state, self.me, slot)
         reveal_table(self.state, self.me, slots[2])
-        self.assertEqual(self.state["stage"], STAGE_REVEAL)
+        self.assertEqual(self.state["stage"], STAGE_RESULT)
         _, error = reveal_table(self.state, self.me, 0)
         self.assertIsNotNone(error)
 
@@ -329,6 +381,7 @@ class TrioRevealTests(unittest.TestCase):
         reveal_hand(self.state, self.me, target, "high")
         reveal_table(self.state, self.me, 0)
         self.assertFalse(self.state["last_result"]["success"])
+        self.assertEqual(self.state["stage"], STAGE_RESULT)
         self.assertEqual(self.state["players"][target]["hand"], before)
         self.assertEqual(self.state["table"], table_before)
         self.assertEqual(len(all_cards(self.state)), DECK_SIZE)
@@ -384,7 +437,7 @@ class TrioWinTests(unittest.TestCase):
         seed_trio(state, pid, 2)
         claim_table_trio(state, pid, 8)
         self.assertFalse(state["game_over"])
-        self.assertEqual(state["stage"], STAGE_REVEAL)
+        self.assertEqual(state["stage"], STAGE_RESULT)
 
     def test_the_trio_of_sevens_wins_immediately(self):
         state = new_game(4, seed=5, mode=MODE_SIMPLE)
@@ -428,11 +481,11 @@ class TrioPauseTests(unittest.TestCase):
         state = new_game(3, seed=11)
         pid = actor(state)
         claim_table_trio(state, pid, 8)
-        self.assertEqual(state["stage"], STAGE_REVEAL)
+        self.assertEqual(state["stage"], STAGE_RESULT)
         self.assertEqual(state["turn"], 1)
         press_continue(state, state["turn_order"][0])
         press_continue(state, state["turn_order"][1])
-        self.assertEqual(state["stage"], STAGE_REVEAL)
+        self.assertEqual(state["stage"], STAGE_RESULT)
         press_continue(state, state["turn_order"][2])
         self.assertEqual(state["stage"], STAGE_PLAY)
         self.assertEqual(state["turn"], 2)
@@ -650,7 +703,7 @@ class TrioBotTests(unittest.TestCase):
     def test_bot_presses_continue_during_the_pause(self):
         state = new_game(3, seed=11)
         claim_table_trio(state, actor(state), 8)
-        self.assertEqual(state["stage"], STAGE_REVEAL)
+        self.assertEqual(state["stage"], STAGE_RESULT)
         for pid in state["turn_order"]:
             self.assertEqual(TrioGame.bot_move(state, pid), {"type": "continue", "turn": state["turn"]})
 

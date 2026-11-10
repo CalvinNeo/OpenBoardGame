@@ -35,7 +35,9 @@ LINK_DIFFERENCE = 7
 LUCKY_NUMBER = 7
 
 STAGE_PLAY = "play"
-STAGE_REVEAL = "reveal"
+# Every finished turn lands here so the table can read what happened before the
+# next player starts. designs/task191.md §6.3.
+STAGE_RESULT = "result"
 STAGE_GAME_OVER = "game_over"
 
 MAX_LOG_ENTRIES = 60
@@ -310,11 +312,25 @@ def _finish_turn(state: Dict, player_id: str, success: bool) -> None:
     else:
         _restore(state, state["revealed"])
         _log(state, f"{_name(state, player_id)} 翻牌失败，牌全部复原。")
+    reveals = [
+        {
+            "number": entry["number"],
+            "source": entry["source"],
+            "player": entry["player"],
+            "end": entry["end"],
+            "index": entry["index"],
+        }
+        for entry in state["revealed"]
+    ]
     state["last_result"] = {
         "player": player_id,
         "success": success,
         "number": number,
         "cards": [entry["number"] for entry in state["revealed"]],
+        # The full trail of the turn, so the settlement can name the exact
+        # reveal that broke the chain instead of only saying "it failed".
+        "reveals": reveals,
+        "failed_at": None if success or len(reveals) < 2 else len(reveals) - 1,
         "turn": state["turn"],
         "seq": state["seq"],
     }
@@ -338,11 +354,10 @@ def _finish_turn(state: Dict, player_id: str, success: bool) -> None:
         state["winner"] = player_id
         _log(state, f"{_name(state, player_id)} 达成胜利条件，赢得比赛！")
         return
-    if success:
-        state["stage"] = STAGE_REVEAL
-        state["continue_ready"] = []
-        return
-    _start_turn(state)
+    # Both outcomes settle here: a claimed trio and a broken chain each get a
+    # settlement the whole table reads before play moves on.
+    state["stage"] = STAGE_RESULT
+    state["continue_ready"] = []
 
 
 def _reset_for_rematch(state: Dict) -> None:
@@ -648,7 +663,7 @@ def _bot_reveal(state: Dict, bot_id: str) -> Optional[Dict]:
 def _bot_choose_action(state: Dict, bot_id: str) -> Optional[Dict]:
     if state["stage"] == STAGE_GAME_OVER:
         return {"type": "play_again"}
-    if state["stage"] == STAGE_REVEAL:
+    if state["stage"] == STAGE_RESULT:
         return {"type": "continue", "turn": state["turn"]}
     if _current_player(state) != bot_id:
         return None
@@ -679,7 +694,7 @@ def _validate_saved_state(state: Dict) -> None:
         require(set(state["players"]) == set(order) and set(state["player_meta"]) == set(order))
         require(state["player_count"] == len(order))
         require(state["config"]["mode"] in MODES)
-        require(state["stage"] in (STAGE_PLAY, STAGE_REVEAL, STAGE_GAME_OVER))
+        require(state["stage"] in (STAGE_PLAY, STAGE_RESULT, STAGE_GAME_OVER))
         require(type(state["game_over"]) is bool and state["game_over"] == (state["stage"] == STAGE_GAME_OVER))
         require(type(state["turn"]) is int and state["turn"] >= 1)
         require(type(state["turn_index"]) is int and 0 <= state["turn_index"] < len(order))
@@ -784,7 +799,7 @@ class TrioGame:
             if player_id in state["rematch_ready"]:
                 return []
             return [] if state["player_meta"].get(player_id, {}).get("is_bot", False) else ["play_again"]
-        if state["stage"] == STAGE_REVEAL:
+        if state["stage"] == STAGE_RESULT:
             return [] if player_id in state["continue_ready"] else ["continue"]
         if _current_player(state) != player_id:
             return []
@@ -949,7 +964,7 @@ __all__ = [
     "MODES",
     "STAGE_GAME_OVER",
     "STAGE_PLAY",
-    "STAGE_REVEAL",
+    "STAGE_RESULT",
     "TABLE_SIZE",
     "TRIOS_TO_WIN",
     "TrioGame",

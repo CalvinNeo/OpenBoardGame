@@ -296,6 +296,53 @@
   color: var(--trio-dim);
 }
 
+.trio-reveal-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--trio-dim);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.trio-reveal-card.is-bad .trio-reveal-mark {
+  background: var(--trio-bad);
+  color: #fff;
+}
+
+.trio-reveal-card.is-bad .trio-card {
+  outline: 2px solid var(--trio-bad);
+  outline-offset: 1px;
+}
+
+/* The settlement explanation gets its own full width line so it is never
+   truncated by the single line note in the block header. */
+.trio-reveal-why {
+  flex: 1 0 100%;
+  margin-top: 2px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--trio-ink);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.trio-reveal-why.is-good {
+  background: rgba(111, 207, 151, 0.18);
+}
+
+.trio-reveal-why.is-bad {
+  background: rgba(235, 87, 87, 0.18);
+}
+
 /* --- players ---------------------------------------------------------- */
 
 .trio-players {

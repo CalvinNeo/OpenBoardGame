@@ -88,12 +88,14 @@ const TRIO_HELP_CONFIG = {
         zh: "<p>轮到你时，可以点的目标会亮起来，桌面上的暗牌(🎴)和每位玩家手牌(✋)两端都可以点。</p>"
           + "<p>点中之后目标上会盖一层蒙版，在蒙版里按 Reveal 才会真的翻牌，按 Cancel 或者点面板空白处取消选择。</p>"
           + "<p>你只看得到自己的手牌数字，别人手上只显示张数，翻开的牌在这一回合里对所有人明牌。</p>"
-          + "<p>收成三重奏(🌟)之后会暂停，所有人按 Continue 才继续。分出胜负之后按 Play again 可以原班人马再来一局。</p>"
+          + "<p>每个回合结束都会结算并暂停：面板会按顺序列出这一回合翻开的每一张牌和它的来源，翻错的那一张标成红色叉号，并写清楚是第几张、数字和第几张对不上。所有人按 Continue 才进入下一位玩家的回合。</p>"
+          + "<p>分出胜负之后按 Play again 可以原班人马再来一局。</p>"
           + "<p>按 Explain 之后再点任意控件可以查看它的说明，Explain 模式下不会执行任何游戏操作，再按一次 Explain 或按 Esc 退出。</p>",
         en: "<p>On your turn every legal target lights up. Table cards (🎴) and both ends of each hand (✋) can be tapped.</p>"
           + "<p>Tapping a target lays a layer over it. Press Reveal inside that layer to actually flip, or press Cancel or tap empty space to drop the selection.</p>"
           + "<p>You see the numbers in your own hand only. Other hands show a card count, and anything revealed this turn is face up for everybody.</p>"
-          + "<p>Claiming a trio (🌟) pauses the game until everyone presses Continue. After a result, Play again restarts with the same table.</p>"
+          + "<p>Every turn ends with a settlement that pauses the game. It lists each card you revealed in order with where it came from, marks the one that broke the chain with a red cross, and spells out which reveal stopped matching which. Everybody presses Continue before the next player starts.</p>"
+          + "<p>After a result, Play again restarts with the same table.</p>"
           + "<p>Press Explain and then any control to read its description. Explain never performs a game action, and a second press or Esc leaves the mode.</p>"
       }
     }
@@ -126,8 +128,8 @@ const TRIO_EXPLAIN = {
     en: "One face down card (🎴). Tapping it lays a layer over it, and only confirming inside that layer flips it. A slot emptied by a claimed trio stays blank."
   },
   reveal: {
-    zh: "本回合已经翻开的牌。最多三张，数字全部相同就能收成一套三重奏(🌟)，出现不同数字则立刻失败并全部复原。",
-    en: "The cards revealed so far this turn. Three matching numbers become a trio (🌟), and a single different number ends the turn and puts everything back."
+    zh: "本回合翻开的牌。最多三张，数字全部相同就能收成一套三重奏(🌟)，出现不同数字则立刻失败并全部复原。回合结束后这里会变成结算，多出一句说明。",
+    en: "The cards revealed this turn. Three matching numbers become a trio (🌟), and a single different number ends the turn and puts everything back. Once the turn ends this strip becomes the settlement and adds an explanation."
   },
   players: {
     zh: "每位玩家一行。左边是名字和已经收成的三重奏(🌟)，右边是手牌(✋)。你只看得到自己的数字，别人只显示张数。",
@@ -142,8 +144,12 @@ const TRIO_EXPLAIN = {
     en: "One trio (🌟) already collected, labelled with its number. The trio of 7s wins the game outright."
   },
   continue: {
-    zh: "结算暂停。收成三重奏(🌟)之后所有人按下 Continue，才会进入下一位玩家的回合。",
-    en: "The pause after a result. Play only moves to the next player once everybody has pressed Continue."
+    zh: "回合结算暂停。每个回合结束后所有人按下 Continue，才会进入下一位玩家的回合。",
+    en: "The settlement pause. Every turn ends here, and play only moves to the next player once everybody has pressed Continue."
+  },
+  settle: {
+    zh: "本回合的结算。按顺序列出翻开的每一张牌和它的来源，翻错的那一张标成红色叉号，下面那句话写清楚是第几张和第几张对不上。",
+    en: "This turn's settlement. It lists every revealed card in order with where it came from, marks the one that broke the chain with a red cross, and the line below spells out which reveal stopped matching which."
   },
   again: {
     zh: "再来一局。所有人按下 Play again 之后，会用同样的座位和玩法重新洗牌开局。",
@@ -272,27 +278,64 @@ function trioTableHTML(open) {
   return cells + trioMaskHTML(trioPicked, "trio-mask--table " + band);
 }
 
+function trioSettlement() {
+  return trioView.stage === "result" ? (trioView.last_result || null) : null;
+}
+
+function trioRevealFrom(entry) {
+  return entry.source === "table"
+    ? "桌面"
+    : trioName(entry.player) + (entry.end === "low" ? " 最小" : " 最大");
+}
+
+// The settlement has to answer "where did it go wrong", so it names the exact
+// reveal that broke the chain instead of only reporting a failure.
+function trioSettlementWhy(settled) {
+  if (!settled) return "";
+  if (settled.success) {
+    return "三张都是 " + settled.number + "，收成一套三重奏(🌟)。";
+  }
+  if (settled.failed_at === null || settled.failed_at === undefined) {
+    return "这一回合没有翻出第二张牌，回合直接结束。";
+  }
+  const bad = settled.reveals[settled.failed_at];
+  const first = settled.reveals[0];
+  return "第 1 张定下数字 " + first.number + "，第 " + (settled.failed_at + 1)
+    + " 张从" + trioRevealFrom(bad) + "翻出 " + bad.number
+    + "，数字不同，回合就此结束，翻开的牌全部复原。";
+}
+
 function trioRevealNote() {
+  if (trioSettlement()) return "回合结算";
   const revealed = trioView.revealed || [];
   if (!revealed.length) {
     return trioView.current_player === trioView.you ? "选择一张暗牌或某人手上的一端" : "";
   }
-  const need = 3 - revealed.length;
-  return "还需 " + need + " 张 " + revealed[0].number;
+  return "还需 " + (3 - revealed.length) + " 张 " + revealed[0].number;
 }
 
 function trioRevealHTML() {
-  const revealed = trioView.revealed || [];
-  if (!revealed.length) {
-    return '<span class="trio-reveal-empty">本回合还没有翻牌</span>';
+  const settled = trioSettlement();
+  const entries = settled ? (settled.reveals || []) : (trioView.revealed || []);
+  const failedAt = settled && settled.failed_at !== undefined ? settled.failed_at : null;
+  let html;
+  if (!entries.length) {
+    html = '<span class="trio-reveal-empty">'
+      + (settled ? "这一回合没有翻牌" : "本回合还没有翻牌") + "</span>";
+  } else {
+    html = entries.map((entry, index) => {
+      const bad = failedAt === index;
+      const mark = bad ? "✘" : String(index + 1);
+      return '<div class="trio-reveal-card' + (bad ? " is-bad" : "") + '">'
+        + '<span class="trio-reveal-mark">' + mark + "</span>"
+        + trioCardHTML(entry.number, "is-face")
+        + '<span class="trio-reveal-from">' + trioEsc(trioRevealFrom(entry)) + "</span></div>";
+    }).join("");
   }
-  return revealed.map((entry) => {
-    const from = entry.source === "table"
-      ? "桌面"
-      : trioName(entry.player) + (entry.end === "low" ? " 最小" : " 最大");
-    return '<div class="trio-reveal-card">' + trioCardHTML(entry.number, "is-face")
-      + '<span class="trio-reveal-from">' + trioEsc(from) + "</span></div>";
-  }).join("");
+  const why = trioSettlementWhy(settled);
+  if (!why) return html;
+  return html + '<div class="trio-reveal-why ' + (settled.success ? "is-good" : "is-bad")
+    + '" data-trio-explain="settle">' + trioEsc(why) + "</div>";
 }
 
 function trioHandCellHTML(player, index, count, known, open) {
@@ -368,23 +411,22 @@ function trioBannerHTML() {
       + '<button type="button" class="trio-primary" data-trio-again="1" data-trio-explain="again"'
       + (ready ? " disabled" : "") + ">" + (ready ? "等待其他玩家" : "Play again") + "</button></div>" };
   }
-  if (view.stage === "reveal") {
-    const result = view.last_result;
-    const who = result ? trioEsc(trioName(result.player)) : "";
+  if (view.stage === "result") {
+    const result = view.last_result || {};
+    const who = trioEsc(trioName(result.player));
     const ready = (view.continue_ready || []).includes(view.you);
-    return { cls: "is-shown is-good", html: "🌟 " + who + " 收走了 " + trioEsc(result?.number)
-      + " 的三重奏"
-      + '<div class="trio-banner-actions">'
-      + '<button type="button" class="trio-primary" data-trio-continue="1" data-trio-explain="continue"'
-      + (ready ? " disabled" : "") + ">" + (ready ? "等待其他玩家" : "Continue") + "</button></div>" };
+    const head = result.success
+      ? "🌟 " + who + " 收走了 " + trioEsc(result.number) + " 的三重奏"
+      : "✘ " + who + " 翻牌失败";
+    return {
+      cls: "is-shown " + (result.success ? "is-good" : "is-bad"),
+      html: head + '<div class="trio-banner-actions">'
+        + '<button type="button" class="trio-primary" data-trio-continue="1" data-trio-explain="continue"'
+        + (ready ? " disabled" : "") + ">" + (ready ? "等待其他玩家" : "Continue") + "</button></div>",
+    };
   }
   const revealed = view.revealed || [];
-  const result = view.last_result;
   const mine = view.current_player === view.you;
-  if (!revealed.length && result && !result.success && result.turn === view.turn - 1) {
-    return { cls: "is-shown is-bad", html: "✘ " + trioEsc(trioName(result.player))
-      + " 翻出 " + trioEsc((result.cards || []).join(" · ")) + "，数字不同，回合结束" };
-  }
   if (revealed.length) {
     const who = mine ? "你" : trioEsc(trioName(view.current_player));
     return { cls: "is-shown", html: who + "正在翻第 " + (revealed.length + 1)
@@ -414,7 +456,7 @@ function trioRender() {
     const mine = trioView.current_player === trioView.you;
     let who;
     if (trioView.game_over) who = "本局结束";
-    else if (trioView.stage === "reveal") who = trioName(trioView.last_result?.player) + " 收牌";
+    else if (trioView.stage === "result") who = "回合结算";
     else who = mine ? "轮到你" : trioName(trioView.current_player);
     turn.textContent = "第 " + trioView.turn + " 回合 · " + who;
     turn.classList.toggle("is-you", mine && !trioView.game_over);
