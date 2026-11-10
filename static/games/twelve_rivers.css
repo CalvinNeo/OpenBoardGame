@@ -289,8 +289,29 @@
 
 /* ------------------------------------------------------------------ mobile */
 @media (max-width: 900px) {
-  .tr12-main { flex-direction: column; }
-  .tr12-map-frame { height: 58vh; min-height: 340px; }
+  /* align-items: flex-start would shrink the column children to their content
+     width, which capped the board at 234px on a 390px phone. */
+  .tr12-main { flex-direction: column; align-items: stretch; }
+  .tr12-board-section { position: relative; width: 100%; }
+  /* The valley is the game: bleed it past the panel padding to the screen edges
+     so a phone spends its whole width on the rivers, not on gutters. */
+  .tr12-map-frame {
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    border-radius: 0;
+    height: 52vh;
+    min-height: 320px;
+  }
+  /* Map tools sit in a thin strip above the board: floating them over the map
+     would cover the first row of pearls. */
+  .tr12-board-section > .tr12-section-heading {
+    justify-content: flex-end;
+    margin: 2px 0;
+  }
+  .tr12-board-section > .tr12-section-heading h3 { display: none; }
+  .tr12-heading { gap: 6px; margin-bottom: 4px; }
+  .tr12-track { border-radius: 0; margin-top: 0; }
   .tr12-dock {
     position: fixed;
     right: 0;
@@ -311,7 +332,7 @@
 }
 
 @media (max-width: 420px) {
-  .tr12-map-frame { height: 54vh; min-height: 300px; }
+  .tr12-map-frame { height: 50vh; min-height: 290px; }
   .tr12-track { gap: 2px; }
   .tr12-track-slot { width: 17px; height: 17px; font-size: 9px; }
   .tr12-map-controls button { padding: 3px 6px; font-size: 11px; min-width: 26px; }

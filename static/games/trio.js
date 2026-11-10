@@ -240,20 +240,24 @@ function trioMaskHTML(key, variant) {
     + "</div>";
 }
 
+// The column count is solved by the fit pass, which tries every sensible row
+// count and keeps whichever shape fills the screen best. This is the starting
+// point used for the very first paint.
+let trioTableColsCache = 0;
+
 function trioTableCols() {
-  return (trioView.table || []).length === 8 ? 4 : 3;
+  const count = (trioView.table || []).length;
+  if (!count) return 3;
+  if (trioTableColsCache) return trioTableColsCache;
+  return count <= 6 ? count : Math.ceil(count / 2);
 }
 
 /* --- renderers -------------------------------------------------------- */
 
 function trioTableHTML(open) {
   const slots = trioView.table || [];
-  const cols = trioTableCols();
   const picking = trioPicked !== null;
-  const pickedIndex = trioPicked && trioPicked.startsWith("table:")
-    ? Number(trioPicked.split(":")[1])
-    : null;
-  const cells = slots.map((slot) => {
+  return slots.map((slot) => {
     const key = "table:" + slot.index;
     const canOpen = open.has(key);
     const picked = trioPicked === key;
@@ -270,12 +274,6 @@ function trioTableHTML(open) {
     return '<div class="' + classes.join(" ") + '"' + attrs
       + ' data-trio-explain="table_card">' + card + "</div>";
   }).join("");
-  if (pickedIndex === null) return cells;
-  // Park the confirmation band in a row the picked card does not sit in, so the
-  // card stays readable above the mask instead of hiding behind the buttons.
-  const rows = Math.ceil(slots.length / cols);
-  const band = Math.floor(pickedIndex / cols) >= rows - 1 ? "is-top" : "is-bottom";
-  return cells + trioMaskHTML(trioPicked, "trio-mask--table " + band);
 }
 
 function trioSettlement() {
@@ -480,6 +478,14 @@ function trioRender() {
     table.style.setProperty("--trio-cols", String(trioTableCols()));
     table.innerHTML = trioTableHTML(open);
   }
+  // The grid is only one or two rows tall, far too short to hold the buttons,
+  // so the mask grows past it and parks the buttons underneath the cards.
+  if (table) {
+    table.querySelector(".trio-mask--table")?.remove();
+    if (trioPicked && trioPicked.startsWith("table:")) {
+      table.insertAdjacentHTML("beforeend", trioMaskHTML(trioPicked, "trio-mask--table"));
+    }
+  }
   const revealNote = document.getElementById("trioRevealNote");
   if (revealNote) revealNote.textContent = trioRevealNote();
   const turnStrip = trioPanel.querySelector(".trio-turn");
@@ -500,6 +506,118 @@ function trioRender() {
     log.scrollTop = log.scrollHeight;
   }
   trioPlaceRowMask();
+  trioFitToScreen();
+}
+
+// Grow every element until the board fills exactly one screen. The bases in the
+// stylesheet are sized for the tightest case, so on a taller phone or with
+// fewer players there is slack to spend; this hands it back to the elements.
+//
+// Height alone is not enough: a nine card hand is bound by width. Both the
+// natural width and the free width of a row scale linearly with the factor, so
+// the largest factor a row survives is width / (natural + chrome), measured once
+// at scale 1. The final factor is the smaller of the height fit and that
+// ceiling.
+const TRIO_MAX_SCALE = 3;
+const TRIO_SCREEN_MARGIN = 8;
+
+function trioRowCeiling(root) {
+  const style = getComputedStyle(root);
+  const inner = root.clientWidth
+    - parseFloat(style.paddingLeft || "0") - parseFloat(style.paddingRight || "0");
+  if (inner <= 0) return TRIO_MAX_SCALE;
+  const rows = [root.querySelector(".trio-status")].concat(
+    Array.from(root.querySelectorAll(".trio-hand"))
+  );
+  let ceiling = TRIO_MAX_SCALE;
+  rows.forEach((row) => {
+    if (!row || row.clientWidth <= 0) return;
+    row.classList.add("trio-measure");
+    const natural = row.scrollWidth;
+    const free = row.clientWidth;
+    row.classList.remove("trio-measure");
+    const chrome = inner - free;
+    const limit = inner / (natural + chrome);
+    if (limit > 0) ceiling = Math.min(ceiling, limit);
+  });
+  return Math.max(1, ceiling);
+}
+
+// Solve the scale for one table shape and report how tall the board ends up.
+function trioSolveScale(root, room, wcap) {
+  const set = (value) => {
+    const rounded = Math.round(value * 1000) / 1000;
+    root.style.setProperty("--trio-scale", String(rounded));
+    root.style.setProperty("--trio-wcap", String(Math.round(Math.min(value, wcap) * 1000) / 1000));
+  };
+  set(1);
+  let scale = 1;
+  for (let pass = 0; pass < 6; pass += 1) {
+    const height = root.getBoundingClientRect().height;
+    if (height <= 0) break;
+    const ratio = room / height;
+    // Stop once the board sits within a couple of percent of the screen.
+    if (ratio > 0.99 && ratio < 1.03) break;
+    const next = Math.min(TRIO_MAX_SCALE, Math.max(1, scale * ratio));
+    if (Math.abs(next - scale) < 0.006) break;
+    scale = next;
+    set(scale);
+  }
+  // Never trade the fit for the last pixel: shrink back if it overshot.
+  for (let pass = 0; pass < 4; pass += 1) {
+    const height = root.getBoundingClientRect().height;
+    if (height <= room) break;
+    scale = Math.max(1, scale * (room / height) - 0.004);
+    set(scale);
+    if (scale <= 1) break;
+  }
+  // Belt and braces: if a row still clips, give the factor back.
+  for (let pass = 0; pass < 4; pass += 1) {
+    const clipped = Array.from(root.querySelectorAll(".trio-hand, .trio-status"))
+      .some((row) => row.scrollWidth > row.clientWidth + 1);
+    if (!clipped || scale <= 1) break;
+    scale = Math.max(1, scale * 0.96);
+    set(scale);
+  }
+  return { scale, height: root.getBoundingClientRect().height };
+}
+
+// Candidate row counts for the centre cards. Fewer rows keeps the table short,
+// more rows buys bigger cards, so the shape is picked by what actually fills
+// the screen instead of being fixed.
+function trioTableRowOptions(count) {
+  const options = [];
+  for (let rows = 1; rows <= Math.min(3, count); rows += 1) {
+    const cols = Math.ceil(count / rows);
+    if (cols < 2 || (options.length && cols === options[options.length - 1].cols)) continue;
+    options.push({ rows, cols });
+  }
+  return options.length ? options : [{ rows: 1, cols: Math.max(2, count) }];
+}
+
+function trioFitToScreen() {
+  const root = trioPanel?.querySelector(".trio-root");
+  const table = document.getElementById("trioTable");
+  if (!root || !table) return;
+  const docTop = root.getBoundingClientRect().top + window.scrollY;
+  const room = window.innerHeight - docTop - TRIO_SCREEN_MARGIN;
+  if (room < 220) return;
+
+  const count = (trioView.table || []).length;
+  const options = trioTableRowOptions(count);
+  let best = null;
+  options.forEach((option) => {
+    table.style.setProperty("--trio-cols", String(option.cols));
+    const wcap = trioRowCeiling(root);
+    const solved = trioSolveScale(root, room, wcap);
+    const fits = solved.height <= room + 1;
+    const gap = fits ? room - solved.height : (solved.height - room) * 4;
+    if (!best || gap < best.gap) best = { ...option, ...solved, gap };
+  });
+  if (!best) return;
+  table.style.setProperty("--trio-cols", String(best.cols));
+  trioSolveScale(root, room, trioRowCeiling(root));
+  trioTableColsCache = best.cols;
 }
 
 // The row mask has to stop short of the picked end tile, and that tile sits
@@ -646,9 +764,12 @@ document.addEventListener("keydown", (event) => {
   trioRender();
 }, true);
 
-// A rotation or a window resize moves the end tiles, so re-measure the mask.
+// A rotation or a window resize changes both the end tile positions and how
+// much room the board has, so re-measure the mask and re-fit the scale.
 window.addEventListener("resize", () => {
-  if (trioView) trioPlaceRowMask();
+  if (!trioView) return;
+  trioPlaceRowMask();
+  trioFitToScreen();
 });
 
 function connectTrioEvents() {

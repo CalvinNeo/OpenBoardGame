@@ -8,7 +8,7 @@
 
   // ------------------------------------------------------------ board layout
   const W = 1000, H = 646;
-  const RIVER_X0 = 96, RIVER_W = 71;
+  const RIVER_X0 = 70, RIVER_W = 73;
   const ROW_Y = {1: 40, 2: 118, 3: 196, 4: 274, 5: 352};
   const BAND_H = 62;
   const PEARL_Y = 16, SLOT_Y = 44;
@@ -245,12 +245,12 @@
       const stretch = board.stretches.find(s => s.row === row);
       if (!stretch) return;
       const label = stretch.cost > 0 ? "−" + stretch.cost : (stretch.cost < 0 ? "+1" : "0");
-      const node = el("text", {x: 46, y: ROW_Y[row] + 38, class: "tr12-cost", "text-anchor": "middle"});
+      const node = el("text", {x: 30, y: ROW_Y[row] + 38, class: "tr12-cost", "text-anchor": "middle"});
       node.textContent = label;
       map.appendChild(node);
     });
     const riverLabel = el("text", {x: 500, y: 24, class: "tr12-area-label", "text-anchor": "middle"});
-    riverLabel.textContent = "RIVER AREA · " + view.active_rivers + " ACTIVE RIVERS";
+    riverLabel.textContent = "RIVER AREA · " + view.active_rivers + " RIVERS";
     map.appendChild(riverLabel);
 
     // stretches, pearls and slots
@@ -289,15 +289,15 @@
       for (let slot = 1; slot <= stretch.slots; slot += 1) {
         const pos = slotPos(stretch, slot);
         const spaceId = stretch.id + "#" + slot;
-        drawSlot(spaceId, pos.x, pos.y, stretch.active, 13);
+        drawSlot(spaceId, pos.x, pos.y, stretch.active, 14);
       }
       // fairy bank for this stretch
       (board.fairy_spots || []).forEach(spot => {
         if (spot.stretch !== stretch.id) return;
         const stack = view.fairy_spots[spot.id] || [];
-        const fx = box.x - 15;
+        const fx = box.x - 13;
         const dot = el("circle", {
-          cx: fx, cy: box.y + 30, r: 11,
+          cx: fx, cy: box.y + 30, r: 10,
           class: "tr12-fairy-dot",
           fill: stack.length ? "#ffe08a" : "rgba(255,255,255,0.14)",
         });
@@ -327,7 +327,7 @@
       fill: "rgba(120,190,235,0.22)", stroke: "rgba(255,255,255,0.4)",
     }));
     const seaLabel = el("text", {x: SEA.x, y: SEA.y - SEA.ry - 12, class: "tr12-area-label", "text-anchor": "middle"});
-    seaLabel.textContent = "SEA · cost 0 · take any number";
+    seaLabel.textContent = "SEA";
     map.appendChild(seaLabel);
     (view.sea || []).forEach((color, index) => {
       const row = Math.floor(index / 10), col = index % 10;
@@ -350,7 +350,7 @@
 
     // village
     const villageLabel = el("text", {x: 500, y: VILLAGE_Y - 8, class: "tr12-area-label", "text-anchor": "middle"});
-    villageLabel.textContent = "VILLAGE · befriend a Markaya";
+    villageLabel.textContent = "VILLAGE";
     map.appendChild(villageLabel);
     board.village.forEach((cost, index) => {
       const pos = villagePos(index);

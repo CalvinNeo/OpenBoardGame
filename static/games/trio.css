@@ -2,14 +2,18 @@
  * Registered standalone through GAME_ASSETS, so these rules load after the
  * shared stylesheet and never need a reserved cascade group in style.css.
  *
- * Phone first: the whole board has to fit one screen, so sections are flat
- * (no nested panel boxes) and the card grid is capped instead of stretched.
+ * Phone first. Every size below is a base value multiplied by --trio-scale,
+ * which the client solves after each render so the board fills exactly one
+ * screen whatever the player count or the viewport is.
  */
 
-/* The room background is light on most themes, so the game brings its own dark
-   surface. One plate for the whole game, never a box inside a box: every
-   section below is flat. */
 .trio-root {
+  --trio-scale: 1;
+  /* Widths cannot grow as far as heights: a nine card hand would clip. The fit
+     pass measures that ceiling and parks it here, so horizontal sizes stop at
+     min(scale, wcap) while everything vertical keeps filling the screen. */
+  --trio-wcap: 99;
+  --trio-w: min(var(--trio-scale), var(--trio-wcap));
   --trio-ink: #f6efe4;
   --trio-dim: #b9a894;
   --trio-line: rgba(246, 239, 228, 0.16);
@@ -17,15 +21,47 @@
   --trio-accent: #ffb347;
   --trio-good: #6fcf97;
   --trio-bad: #eb5757;
-  --trio-card-w: 70px;
-  --trio-gap: 5px;
+
+  --trio-pad: calc(6px * var(--trio-w));
+  --trio-stack: calc(5px * var(--trio-scale));
+  /* Anything that has a shape or holds text follows the width factor, so cards
+     keep their proportions and nothing wraps or clips. Only pure vertical
+     spacing follows the height factor and soaks up the leftover room. */
+  --trio-card-w: calc(70px * var(--trio-w));
+  --trio-gap: calc(5px * var(--trio-w));
+  --trio-row-pad-x: calc(8px * var(--trio-w));
+  --trio-row-gap: calc(8px * var(--trio-w));
+  --trio-who-w: calc(76px * var(--trio-w));
+  --trio-name-size: calc(12px * var(--trio-w));
+  --trio-hand-w: calc(21px * var(--trio-w));
+  --trio-hand-h: calc(28px * var(--trio-w));
+  --trio-hand-end-w: calc(29px * var(--trio-w));
+  --trio-hand-end-h: calc(38px * var(--trio-w));
+  --trio-hand-gap: calc(3px * var(--trio-w));
+  --trio-trio-h: calc(18px * var(--trio-w));
+  --trio-trio-size: calc(11px * var(--trio-w));
+  --trio-chip-size: calc(11px * var(--trio-w));
+  --trio-reveal-w: calc(28px * var(--trio-w));
+  --trio-reveal-h: calc(36px * var(--trio-w));
+  --trio-label-size: calc(10px * var(--trio-w));
+  --trio-note-size: calc(11px * var(--trio-w));
+
+  --trio-pad-y: calc(6px * var(--trio-scale));
+  --trio-row-pad-y: calc(5px * var(--trio-scale));
+  --trio-list-gap: calc(4px * var(--trio-scale));
+  /* Fixed, not scaled: an empty turn strip must never become a pocket of dead
+     space. The leftover room is spread across row padding and gaps instead. */
+  --trio-reveal-min: 40px;
+
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--trio-stack);
   min-width: 0;
-  padding: 6px;
+  padding: var(--trio-pad);
   border: 1px solid rgba(246, 239, 228, 0.12);
   border-radius: 12px;
+  /* The room background is light on most themes, so the game brings its own
+     dark surface. One plate for the whole game, never a box inside a box. */
   background: linear-gradient(180deg, #2c2039 0%, #231a2d 100%);
   color: var(--trio-ink);
 }
@@ -34,8 +70,9 @@
 
 .trio-status {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  /* Never wrap: a second chip row would eat the height the board just gained. */
+  flex-wrap: nowrap;
+  gap: calc(5px * var(--trio-scale));
   min-width: 0;
 }
 
@@ -43,17 +80,18 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 8px;
+  padding: calc(1px * var(--trio-scale)) calc(6px * var(--trio-scale));
   border-radius: 999px;
   border: 1px solid var(--trio-line);
   background: var(--trio-surface);
   color: var(--trio-ink);
-  font-size: 11px;
+  font-size: var(--trio-chip-size);
   line-height: 1.5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  min-width: 0;
 }
 
 .trio-chip.trio-turn-chip {
@@ -61,7 +99,7 @@
   justify-content: center;
   min-width: 0;
   /* Never let this chip stretch across a whole desktop window. */
-  max-width: 340px;
+  max-width: calc(340px * var(--trio-w));
 }
 
 .trio-chip.is-you {
@@ -74,11 +112,11 @@
 
 .trio-banner {
   display: none;
-  padding: 5px 9px;
+  padding: calc(5px * var(--trio-scale)) calc(9px * var(--trio-scale));
   border-radius: 9px;
   border: 1px solid var(--trio-line);
   background: var(--trio-surface);
-  font-size: 12px;
+  font-size: calc(12px * var(--trio-scale));
   line-height: 1.45;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -133,7 +171,7 @@
 .trio-columns {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--trio-stack);
   min-width: 0;
 }
 
@@ -141,7 +179,7 @@
 .trio-right {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--trio-stack);
   min-width: 0;
 }
 
@@ -155,12 +193,12 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: calc(3px * var(--trio-scale));
   min-width: 0;
 }
 
 .trio-block-title {
-  font-size: 10px;
+  font-size: var(--trio-label-size);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -168,7 +206,7 @@
 }
 
 .trio-block-note {
-  font-size: 11px;
+  font-size: var(--trio-note-size);
   color: var(--trio-dim);
   text-align: right;
   overflow: hidden;
@@ -182,8 +220,8 @@
 .trio-turn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 5px;
+  gap: calc(8px * var(--trio-scale));
+  margin-top: calc(5px * var(--trio-scale));
   min-width: 0;
 }
 
@@ -200,7 +238,7 @@
 .trio-turn-note {
   flex: 0 1 auto;
   min-width: 0;
-  font-size: 11px;
+  font-size: var(--trio-note-size);
   color: var(--trio-dim);
   text-align: right;
   overflow: hidden;
@@ -216,7 +254,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--trio-scale));
   border: 1px solid rgba(0, 0, 0, 0.35);
   background: hsl(var(--trio-hue) 52% 42%);
   color: #fff;
@@ -224,7 +262,15 @@
   font-variant-numeric: tabular-nums;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  overflow: hidden;
   user-select: none;
+}
+
+/* A hand card can be squeezed to a dozen pixels on a small phone, which is far
+   too narrow for the card-back emoji. The striped pattern already reads as a
+   face-down card, so the glyph is dropped rather than clipped. */
+.trio-hand .trio-card.is-back {
+  font-size: 0;
 }
 
 .trio-card.is-back {
@@ -272,7 +318,7 @@
 .trio-slot .trio-card {
   width: 100%;
   height: 100%;
-  font-size: clamp(14px, 4.4vw, 22px);
+  font-size: clamp(14px, calc(18px * var(--trio-scale)), 40px);
 }
 
 .trio-slot.is-open {
@@ -302,10 +348,10 @@
 .trio-reveal {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: calc(5px * var(--trio-w));
   flex-wrap: wrap;
   flex: 1 1 auto;
-  min-height: 40px;
+  min-height: var(--trio-reveal-min);
   min-width: 0;
 }
 
@@ -318,16 +364,16 @@
 }
 
 .trio-reveal-card .trio-card {
-  width: 28px;
-  height: 36px;
-  font-size: 15px;
+  width: var(--trio-reveal-w);
+  height: var(--trio-reveal-h);
+  font-size: calc(15px * var(--trio-scale));
 }
 
 .trio-reveal-from {
-  font-size: 9px;
+  font-size: calc(9px * var(--trio-scale));
   line-height: 1.2;
   color: var(--trio-dim);
-  max-width: 52px;
+  max-width: calc(52px * var(--trio-scale));
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -335,7 +381,7 @@
 }
 
 .trio-reveal-empty {
-  font-size: 11px;
+  font-size: var(--trio-note-size);
   color: var(--trio-dim);
 }
 
@@ -343,13 +389,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 15px;
-  height: 15px;
+  min-width: calc(15px * var(--trio-scale));
+  height: calc(15px * var(--trio-scale));
   padding: 0 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   color: var(--trio-dim);
-  font-size: 9px;
+  font-size: calc(9px * var(--trio-scale));
   font-weight: 700;
   line-height: 1;
 }
@@ -369,11 +415,11 @@
 .trio-reveal-why {
   flex: 1 0 100%;
   margin-top: 2px;
-  padding: 5px 8px;
+  padding: calc(5px * var(--trio-scale)) calc(8px * var(--trio-scale));
   border-radius: 7px;
   background: var(--trio-surface);
   color: var(--trio-ink);
-  font-size: 11px;
+  font-size: var(--trio-note-size);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -391,7 +437,7 @@
 .trio-players {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--trio-list-gap);
   min-width: 0;
 }
 
@@ -399,9 +445,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 5px;
-  border-radius: 8px;
+  gap: var(--trio-row-gap);
+  padding: var(--trio-row-pad-y) var(--trio-row-pad-x);
+  border-radius: calc(9px * var(--trio-scale));
   border: 1px solid var(--trio-line);
   background: rgba(255, 255, 255, 0.05);
   min-width: 0;
@@ -419,15 +465,15 @@
 .trio-who {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  flex: 0 0 62px;
+  gap: 2px;
+  flex: 0 0 var(--trio-who-w);
   min-width: 0;
 }
 
 .trio-name {
-  font-size: 11px;
+  font-size: var(--trio-name-size);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -439,26 +485,26 @@
   display: flex;
   gap: 3px;
   flex-wrap: wrap;
-  min-height: 14px;
+  min-height: var(--trio-trio-h);
 }
 
 .trio-trio-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 14px;
-  padding: 0 3px;
-  border-radius: 4px;
+  min-width: calc(20px * var(--trio-scale));
+  height: var(--trio-trio-h);
+  padding: 0 4px;
+  border-radius: 5px;
   background: hsl(var(--trio-hue) 52% 42%);
   color: #fff;
-  font-size: 9px;
+  font-size: var(--trio-trio-size);
   font-weight: 800;
   line-height: 1;
 }
 
 .trio-trio-none {
-  font-size: 9px;
+  font-size: calc(10px * var(--trio-scale));
   color: var(--trio-dim);
 }
 
@@ -466,7 +512,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--trio-hand-gap);
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -474,17 +520,20 @@
 
 .trio-hand .trio-card {
   flex: 0 1 auto;
-  width: 17px;
-  height: 23px;
-  font-size: 10px;
+  /* A nine card hand has to survive a narrow row, so the cards are allowed to
+     compress instead of being clipped by the strip. */
+  min-width: 0;
+  width: var(--trio-hand-w);
+  height: var(--trio-hand-h);
+  font-size: calc(11px * var(--trio-w));
   border-radius: 4px;
 }
 
 .trio-hand .trio-card.is-end {
-  width: 21px;
-  height: 28px;
-  font-size: 12px;
-  flex: 0 0 auto;
+  width: var(--trio-hand-end-w);
+  height: var(--trio-hand-end-h);
+  font-size: calc(15px * var(--trio-w));
+  flex: 0 1 auto;
 }
 
 .trio-hand .trio-card.is-open {
@@ -501,16 +550,21 @@
 }
 
 .trio-hand-arrow {
-  font-size: 8px;
+  font-size: calc(9px * var(--trio-scale));
   color: var(--trio-dim);
   line-height: 1;
   flex: 0 0 auto;
 }
 
 .trio-hand-count {
-  font-size: 10px;
+  font-size: var(--trio-note-size);
   color: var(--trio-dim);
   flex: 0 0 auto;
+}
+
+/* Measurement hook: the fit pass reads each row's unshrunk width. */
+.trio-measure > * {
+  flex-shrink: 0 !important;
 }
 
 /* --- confirmation mask ------------------------------------------------ */
@@ -553,24 +607,24 @@
   color: #2a1a10;
 }
 
-/* A single card cannot hold two buttons on a phone, so the confirmation mask
-   covers the whole table instead and keeps the buttons in a band that sits in
-   a row the picked card does not occupy. */
+/* The card grid is only one or two rows tall, far too short to hold two
+   buttons, so the mask grows past the grid and parks its button band just
+   below the cards. The picked card sits above the mask and never collides. */
+.trio-table-block {
+  position: relative;
+}
+
 .trio-mask--table {
-  inset: -6px;
+  top: calc(-16px * var(--trio-scale));
+  bottom: calc(-52px * var(--trio-scale));
+  left: -5px;
+  right: -5px;
   z-index: 2;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(13, 8, 19, 0.76);
-}
-
-.trio-mask--table.is-bottom {
   align-items: flex-end;
-}
-
-.trio-mask--table.is-top {
-  align-items: flex-start;
+  gap: 10px;
+  padding: 0 8px 5px;
+  border-radius: 12px;
+  background: rgba(13, 8, 19, 0.76);
 }
 
 .trio-mask--table button {
@@ -601,13 +655,13 @@
 
 .trio-logbox {
   border-top: 1px solid var(--trio-line);
-  padding: 2px 2px 0;
+  padding: calc(2px * var(--trio-scale)) 2px 0;
   min-width: 0;
 }
 
 .trio-logbox summary {
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--trio-note-size);
   color: var(--trio-dim);
   list-style: revert;
 }
@@ -615,25 +669,33 @@
 .trio-log {
   max-height: 120px;
   overflow-y: auto;
-  font-size: 11px;
+  font-size: var(--trio-note-size);
   line-height: 1.5;
   color: var(--trio-dim);
   overflow-wrap: anywhere;
+}
+
+/* --- narrow phones ---------------------------------------------------- */
+
+@media (max-width: 859px) {
+  /* No room for a section label beside the turn strip on a phone. */
+  .trio-turn-label {
+    display: none;
+  }
 }
 
 /* --- wider screens ---------------------------------------------------- */
 
 @media (min-width: 860px) {
   .trio-root {
-    --trio-card-w: 118px;
-    --trio-gap: 7px;
-    gap: 10px;
+    --trio-card-w: calc(96px * var(--trio-scale));
+    --trio-gap: calc(7px * var(--trio-scale));
   }
 
   .trio-columns {
     flex-direction: row;
     align-items: flex-start;
-    gap: 14px;
+    gap: calc(14px * var(--trio-scale));
   }
 
   .trio-left {
@@ -645,110 +707,29 @@
     max-width: 620px;
   }
 
+  .trio-table {
+    max-width: 560px;
+  }
+
   .trio-block-head {
-    margin-bottom: 6px;
+    margin-bottom: calc(6px * var(--trio-scale));
   }
 
   .trio-block-title {
-    font-size: 11px;
-  }
-
-  .trio-slot .trio-card {
-    font-size: clamp(20px, 2.2vw, 32px);
-  }
-
-  .trio-who {
-    flex-basis: 96px;
-  }
-
-  .trio-name {
-    font-size: 12px;
-  }
-
-  .trio-hand .trio-card {
-    width: 22px;
-    height: 30px;
-    font-size: 12px;
-  }
-
-  .trio-hand .trio-card.is-end {
-    width: 30px;
-    height: 40px;
-    font-size: 15px;
-  }
-
-  .trio-reveal-card .trio-card {
-    width: 38px;
-    height: 48px;
-    font-size: 19px;
+    font-size: calc(11px * var(--trio-scale));
   }
 
   .trio-reveal {
-    min-height: 56px;
+    min-height: calc(56px * var(--trio-scale));
+  }
+
+  .trio-reveal-card .trio-card {
+    width: calc(38px * var(--trio-scale));
+    height: calc(48px * var(--trio-scale));
+    font-size: calc(19px * var(--trio-scale));
   }
 
   .trio-reveal-why {
-    font-size: 12px;
-  }
-
-  .trio-chip {
-    font-size: 12px;
-    padding: 3px 9px;
-  }
-
-  .trio-banner {
-    font-size: 13px;
-    padding: 7px 10px;
-  }
-
-  .trio-player {
-    padding: 5px 7px;
-    gap: 8px;
-  }
-
-  .trio-players {
-    gap: 6px;
-  }
-}
-
-@media (max-width: 859px) {
-  /* No room for a section label beside the turn strip on a phone. */
-  .trio-turn-label {
-    display: none;
-  }
-}
-
-@media (max-width: 359px) {
-  .trio-root {
-    --trio-card-w: 63px;
-    --trio-gap: 4px;
-    gap: 4px;
-    padding: 5px;
-  }
-
-  .trio-columns,
-  .trio-left,
-  .trio-right {
-    gap: 4px;
-  }
-
-  .trio-turn {
-    margin-top: 4px;
-  }
-
-  .trio-who {
-    flex-basis: 54px;
-  }
-
-  .trio-hand .trio-card {
-    width: 15px;
-    height: 21px;
-    font-size: 9px;
-  }
-
-  .trio-hand .trio-card.is-end {
-    width: 20px;
-    height: 27px;
-    font-size: 11px;
+    font-size: calc(12px * var(--trio-scale));
   }
 }

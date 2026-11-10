@@ -154,8 +154,8 @@ const GAME_ASSETS = {
     "header": "showTicketToRideHeaderActions"
   },
   "twelve_rivers": {
-    "scripts": ["/static/games/twelve_rivers.js?v=6"],
-    "styles": ["/static/games/twelve_rivers.css?v=2"],
+    "scripts": ["/static/games/twelve_rivers.js?v=7"],
+    "styles": ["/static/games/twelve_rivers.css?v=5"],
     "markup": "/static/games/twelve_rivers.html?v=1",
     "panel": "twelveRiversPanel",
     "panelTitle": "🏞️ 十二河谷",
