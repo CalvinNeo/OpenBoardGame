@@ -1,141 +1,117 @@
 <template data-game-target="hotStreakPanel" data-game-mode="contents">
-              <div class="hot-streak-status" role="status" aria-label="Race status">
-                <span class="hot-streak-status-item" data-hot-streak-explain="race" data-hot-streak-tip="race">
-                  <span class="hot-streak-status-icon" aria-hidden="true">🔥</span>
-                  <strong id="hotStreakRaceLabel">Race 1 of 3</strong>
-                </span>
-                <span class="hot-streak-status-item" data-hot-streak-explain="phase" data-hot-streak-tip="phase">
-                  <span class="hot-streak-status-icon" aria-hidden="true">🏁</span>
-                  <strong id="hotStreakPhaseLabel">Betting</strong>
-                </span>
-                <span class="hot-streak-status-item hot-streak-status-turn" data-hot-streak-explain="turn" data-hot-streak-tip="turn">
-                  <span class="hot-streak-status-icon" aria-hidden="true">👉</span>
-                  <strong id="hotStreakTurnLabel">-</strong>
-                </span>
-                <button id="hotStreakNoticeToggle" class="hot-streak-notice-chip" type="button"
-                        aria-expanded="false" aria-controls="hotStreakDataNotice"
-                        data-hot-streak-explain="notice">ⓘ Data</button>
-              </div>
-              <p id="hotStreakDataNotice" class="hot-streak-data-notice" hidden>
-                Star rows and Swerve directions match the second-printing rulebook · remaining component values are prototype-compatible.
-              </p>
+  <div class="hot-streak-status" role="status" aria-label="Race status">
+    <strong id="hotStreakRaceLabel" data-hot-streak-explain="race" data-hot-streak-tip="race">Race 1 of 3</strong>
+    <span id="hotStreakPhaseLabel" class="hot-streak-phase" data-hot-streak-explain="phase" data-hot-streak-tip="phase">Betting</span>
+    <strong id="hotStreakBalance" data-hot-streak-explain="players" data-hot-streak-tip="" data-hot-streak-tip-text="Your cash (💵). Most cash after three races wins.">💵 10</strong>
+    <span id="hotStreakTurnLabel" class="hot-streak-turn" data-hot-streak-explain="turn" data-hot-streak-tip="turn">Choose a ticket</span>
+  </div>
 
-              <section id="hotStreakPlayersSection" class="hot-streak-panel hot-streak-players-panel" data-hot-streak-explain="players">
-                <div class="hot-streak-panel-head">
-                  <h3>👥 Players</h3>
-                  <span id="hotStreakPlayersSummary" class="hot-streak-mini-status">-</span>
-                </div>
-                <div id="hotStreakPlayers" class="hot-streak-players"></div>
-              </section>
+  <div class="hot-streak-layout">
+    <section id="hotStreakTicketSection" class="hot-streak-section hot-streak-ticket-panel" aria-labelledby="hotStreakTicketTitle">
+      <div class="hot-streak-section-head">
+        <h3 id="hotStreakTicketTitle" data-hot-streak-explain="betting">🎟️ Place your bets</h3>
+        <span id="hotStreakDraftProgress" class="hot-streak-mini-status">0/0</span>
+      </div>
+      <p id="hotStreakTicketHint" class="hot-streak-hint">Choose a ticket, then Safe or Risky.</p>
+      <div class="hot-streak-ticket-stage">
+        <div id="hotStreakTickets" class="hot-streak-ticket-grid" aria-label="Racer ticket stacks"></div>
+        <div id="hotStreakTicketSideBet" class="hot-streak-side-brief" data-hot-streak-explain="side"></div>
+        <div id="hotStreakSideTickets" class="hot-streak-ticket-grid" aria-label="Side bet ticket stacks"></div>
+        <div id="hotStreakTicketMask" class="hot-streak-ticket-confirm" role="group" aria-labelledby="hotStreakConfirmTitle" hidden>
+          <div class="hot-streak-section-head">
+            <strong id="hotStreakConfirmTitle">Confirm ticket</strong>
+            <button id="hotStreakConfirmCancel" class="hot-streak-text-button" type="button" data-hot-streak-explain="cancel">Cancel</button>
+          </div>
+          <fieldset id="hotStreakDoubleChoices" class="hot-streak-double-box" data-hot-streak-explain="double" hidden>
+            <legend>Race 3 · double one ticket</legend>
+            <div id="hotStreakDoubleOptions"></div>
+          </fieldset>
+          <div id="hotStreakConfirmModes" class="hot-streak-mode-actions"></div>
+        </div>
+      </div>
+    </section>
 
-              <div class="hot-streak-layout">
-                <div class="hot-streak-main-column">
-                  <section id="hotStreakTicketSection" class="hot-streak-panel hot-streak-ticket-panel" data-hot-streak-explain="betting">
-                    <div class="hot-streak-panel-head">
-                      <h3>🎟️ Betting Tickets</h3>
-                      <span id="hotStreakDraftProgress" class="hot-streak-mini-status">-</span>
-                    </div>
-                    <p id="hotStreakTicketHint" class="hot-streak-hint">Take a ticket, then choose Safe or Risky.</p>
-                    <div class="hot-streak-ticket-stage">
-                      <div id="hotStreakTickets" class="hot-streak-ticket-grid" role="list" aria-label="Ticket stacks"></div>
-                      <div id="hotStreakTicketMask" class="hot-streak-ticket-mask" hidden>
-                        <div class="hot-streak-confirm" role="group" aria-label="Confirm ticket">
-                          <strong id="hotStreakConfirmTitle" class="hot-streak-confirm-title">-</strong>
-                          <div id="hotStreakConfirmModes" class="hot-streak-mode-actions"></div>
-                          <button id="hotStreakConfirmCancel" class="hot-streak-confirm-cancel" type="button"
-                                  data-hot-streak-explain="cancel">✕ Cancel</button>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
+    <section id="hotStreakYourBetsSection" class="hot-streak-section hot-streak-your-bets" data-hot-streak-explain="players" hidden>
+      <div class="hot-streak-section-head"><h3>🎟️ Your tickets</h3></div>
+      <div id="hotStreakYourBets" class="hot-streak-player-bets"></div>
+    </section>
 
-                  <section id="hotStreakHandSection" class="hot-streak-panel hot-streak-hand-panel" data-hot-streak-explain="hand">
-                    <div class="hot-streak-panel-head">
-                      <h3>🃏 Your Race Cards</h3>
-                      <span id="hotStreakSubmissionProgress" class="hot-streak-mini-status">-</span>
-                    </div>
-                    <p id="hotStreakHandHint" class="hot-streak-hint">Choose a race card.</p>
-                    <div id="hotStreakHand" class="hot-streak-hand"></div>
-                    <button id="hotStreakSubmitBtn" type="button" data-hot-streak-explain="submit">Submit Card</button>
-                  </section>
+    <section id="hotStreakHandSection" class="hot-streak-section hot-streak-hand-panel" aria-labelledby="hotStreakHandTitle">
+      <div class="hot-streak-section-head">
+        <h3 id="hotStreakHandTitle" data-hot-streak-explain="hand">🃏 Your race cards</h3>
+        <span id="hotStreakSubmissionProgress" class="hot-streak-mini-status">0/0</span>
+      </div>
+      <p id="hotStreakHandHint" class="hot-streak-hint">Your private cards</p>
+      <div id="hotStreakHand" class="hot-streak-hand" aria-label="Your race cards"></div>
+      <button id="hotStreakSubmitBtn" class="hot-streak-primary" type="button" data-hot-streak-explain="submit">Submit Card</button>
+    </section>
 
-                  <section id="hotStreakTrackSection" class="hot-streak-panel hot-streak-track-panel" data-hot-streak-explain="track">
-                    <div class="hot-streak-panel-head">
-                      <button id="hotStreakTrackToggle" class="hot-streak-log-toggle" type="button"
-                              aria-expanded="true" aria-controls="hotStreakTrackBody" data-hot-streak-explain="track_toggle">
-                        <span>🏁 Race Track</span>
-                        <span id="hotStreakTrackStatus" class="hot-streak-mini-status">-</span>
-                      </button>
-                    </div>
-                    <div id="hotStreakTrackBody">
-                      <div id="hotStreakSwerveKey" class="hot-streak-swerve-key" data-hot-streak-explain="swerve"></div>
-                      <div class="hot-streak-track-frame">
-                        <div class="hot-streak-track-caption hot-streak-caption-top">
-                          <span class="hot-streak-cap-wide">◀ Folded edge</span>
-                          <span class="hot-streak-cap-narrow">Finish 🏁 ▲</span>
-                          <span class="hot-streak-cap-wide">Finish 🏁 ▶</span>
-                        </div>
-                        <div id="hotStreakTrack" class="hot-streak-track" role="grid" aria-label="Four lane race track"></div>
-                        <div class="hot-streak-track-caption hot-streak-caption-bottom">
-                          <span class="hot-streak-cap-narrow">Folded edge ▼</span>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
+    <section id="hotStreakTrackSection" class="hot-streak-section hot-streak-track-panel" aria-label="Race track">
+      <div class="hot-streak-track-controls">
+        <button id="hotStreakTrackToggle" class="hot-streak-disclosure" type="button" aria-expanded="true" aria-controls="hotStreakTrackBody" data-hot-streak-explain="track_toggle">
+          <span>🏁 Race track</span><span id="hotStreakTrackStatus" class="hot-streak-mini-status">Cycle 1</span>
+        </button>
+        <div id="hotStreakTrackTools" class="hot-streak-track-tools" role="group" aria-label="Track zoom">
+          <button type="button" data-hot-streak-zoom="out" data-hot-streak-explain="zoom" aria-label="Zoom out">−</button>
+          <button type="button" data-hot-streak-zoom="in" data-hot-streak-explain="zoom" aria-label="Zoom in">+</button>
+          <button type="button" data-hot-streak-zoom="fit" data-hot-streak-explain="zoom">Fit</button>
+          <button type="button" data-hot-streak-zoom="origin" data-hot-streak-explain="zoom">Origin</button>
+        </div>
+      </div>
+      <div id="hotStreakTrackBody">
+        <div class="hot-streak-track-caption" aria-hidden="true"><span class="hot-streak-cap-wide">Start → Finish 🏁</span><span class="hot-streak-cap-narrow">↑ Finish 🏁</span></div>
+        <div id="hotStreakTrackViewport" class="hot-streak-track-viewport" tabindex="0" aria-label="Race track. Zoom to pan, or use arrow keys.">
+          <div id="hotStreakTrack" class="hot-streak-track" role="grid" aria-label="Four lane race track" data-hot-streak-explain="track"></div>
+        </div>
+        <div id="hotStreakSwerveKey" class="hot-streak-swerve-key" data-hot-streak-explain="swerve"></div>
+      </div>
+    </section>
 
-                  <div id="hotStreakCurrentCard" class="hot-streak-current-card" aria-live="polite" hidden></div>
+    <div id="hotStreakCurrentCard" class="hot-streak-current-card" aria-live="polite" hidden></div>
 
-                  <section id="hotStreakStandings" class="hot-streak-panel hot-streak-standings-panel" data-hot-streak-explain="standings" hidden>
-                    <div class="hot-streak-panel-head">
-                      <h3>🏆 Standings</h3>
-                    </div>
-                    <div id="hotStreakStandingsList" class="hot-streak-standings-list"></div>
-                  </section>
+    <section id="hotStreakStandings" class="hot-streak-section hot-streak-standings-panel" data-hot-streak-explain="standings" hidden>
+      <div class="hot-streak-section-head"><h3>🏆 Race order</h3></div>
+      <div id="hotStreakStandingsList" class="hot-streak-standings-list"></div>
+    </section>
 
-                  <section id="hotStreakResult" class="hot-streak-panel hot-streak-result-panel" aria-live="polite" hidden>
-                    <div class="hot-streak-panel-head">
-                      <h3 id="hotStreakResultTitle">Race Results</h3>
-                      <span id="hotStreakReadyProgress" class="hot-streak-mini-status"></span>
-                    </div>
-                    <div id="hotStreakResultBody"></div>
-                    <div class="hot-streak-result-actions">
-                      <button id="hotStreakNextRaceBtn" type="button" data-hot-streak-explain="next" hidden>Next Race</button>
-                      <button id="hotStreakPlayAgainBtn" type="button" data-hot-streak-explain="again" hidden>Play Again</button>
-                    </div>
-                  </section>
+    <section id="hotStreakResult" class="hot-streak-section hot-streak-result-panel" aria-live="polite" hidden>
+      <div class="hot-streak-section-head">
+        <h3 id="hotStreakResultTitle">Race results</h3>
+        <span id="hotStreakReadyProgress" class="hot-streak-mini-status"></span>
+      </div>
+      <div id="hotStreakResultBody"></div>
+      <div class="hot-streak-result-actions">
+        <button id="hotStreakNextRaceBtn" class="hot-streak-primary" type="button" data-hot-streak-explain="next" hidden>Next Race</button>
+        <button id="hotStreakPlayAgainBtn" class="hot-streak-primary" type="button" data-hot-streak-explain="again" hidden>Play Again</button>
+      </div>
+    </section>
 
-                  <div id="hotStreakRaceActions" class="hot-streak-action-row">
-                    <button id="hotStreakContinueBtn" type="button" data-hot-streak-explain="continue" hidden>▶ Continue Race</button>
-                  </div>
-                </div>
+    <button id="hotStreakContinueBtn" class="hot-streak-text-button" type="button" data-hot-streak-explain="continue" hidden>▶ Continue Race</button>
 
-                <aside class="hot-streak-side-column">
-                  <section id="hotStreakSideBetSection" class="hot-streak-panel" data-hot-streak-explain="side">
-                    <div class="hot-streak-panel-head">
-                      <h3>🎲 Side Bet</h3>
-                      <span id="hotStreakSideResult" class="hot-streak-side-result">Pending</span>
-                    </div>
-                    <p id="hotStreakSideBet" class="hot-streak-side-bet">-</p>
-                    <p id="hotStreakSideEvidence" class="hot-streak-side-evidence" hidden></p>
-                  </section>
+    <section id="hotStreakSideBetSection" class="hot-streak-section hot-streak-side-section" data-hot-streak-explain="side">
+      <div class="hot-streak-section-head"><h3>🎲 Side bet</h3><span id="hotStreakSideResult" class="hot-streak-side-result">Pending</span></div>
+      <p id="hotStreakSideBet" class="hot-streak-side-bet">-</p>
+      <p id="hotStreakSideEvidence" class="hot-streak-hint" hidden></p>
+    </section>
 
-                  <section id="hotStreakPoolSection" class="hot-streak-panel" data-hot-streak-explain="pool" hidden>
-                    <div class="hot-streak-panel-head">
-                      <h3>🗂️ Public Race Pool</h3>
-                      <span id="hotStreakPoolCount" class="hot-streak-mini-status">0 cards</span>
-                    </div>
-                    <p class="hot-streak-hint">Known cards before the secret additions</p>
-                    <div id="hotStreakPool" class="hot-streak-pool" role="list" aria-label="Public race card pool"></div>
-                  </section>
+    <details id="hotStreakPoolSection" class="hot-streak-section hot-streak-pool-section" open>
+      <summary class="hot-streak-disclosure" data-hot-streak-explain="pool"><span>🗂️ Public race pool</span><span id="hotStreakPoolCount" class="hot-streak-mini-status">0 cards</span></summary>
+      <div id="hotStreakPool" class="hot-streak-pool" role="list" aria-label="Public race card pool" tabindex="0"></div>
+    </details>
 
-                  <section id="hotStreakLogPanel" class="hot-streak-panel hot-streak-log-panel" hidden>
-                    <button id="hotStreakLogToggle" class="hot-streak-log-toggle" type="button"
-                            aria-expanded="false" aria-controls="hotStreakLog" data-hot-streak-explain="log">
-                      <span>📜 Race Log</span>
-                      <span id="hotStreakLogCount" class="hot-streak-mini-status">0</span>
-                    </button>
-                    <div id="hotStreakLog" class="hot-streak-log" tabindex="0" hidden></div>
-                  </section>
-                </aside>
-              </div>
-            </template>
+    <details id="hotStreakPlayersSection" class="hot-streak-section hot-streak-players-section">
+      <summary class="hot-streak-disclosure" data-hot-streak-explain="players"><span>👥 Players</span><span id="hotStreakPlayersSummary" class="hot-streak-mini-status">-</span></summary>
+      <div id="hotStreakPlayers" class="hot-streak-players"></div>
+    </details>
+
+    <section id="hotStreakLogPanel" class="hot-streak-section hot-streak-log-panel" hidden>
+      <button id="hotStreakLogToggle" class="hot-streak-disclosure" type="button" aria-expanded="false" aria-controls="hotStreakLog" data-hot-streak-explain="log"><span>📜 Race log</span><span id="hotStreakLogCount" class="hot-streak-mini-status">0</span></button>
+      <div id="hotStreakLog" class="hot-streak-log" tabindex="0" hidden></div>
+    </section>
+  </div>
+
+  <footer class="hot-streak-footer">
+    <button id="hotStreakNoticeToggle" class="hot-streak-text-button" type="button" aria-expanded="false" aria-controls="hotStreakDataNotice" data-hot-streak-explain="notice">ⓘ Prototype-compatible data</button>
+    <p id="hotStreakDataNotice" class="hot-streak-hint" hidden>Star rows and Swerve directions match the second-printing rulebook. Other component values use prototype-compatible data.</p>
+  </footer>
+</template>

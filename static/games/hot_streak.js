@@ -10,7 +10,16 @@
   let hotStreakScheduledStep = null;
   let hotStreakHelpWidget = null;
   let hotStreakExplainWidget = null;
-  let hotStreakDoubleDialog = null;
+  let hotStreakConfirmTrigger = null;
+  let hotStreakHandKey = null;
+  let hotStreakTicketsKey = null;
+  let hotStreakPoolKey = null;
+  let hotStreakResultsKey = null;
+  let hotStreakLogKey = null;
+  let hotStreakSelectionContext = null;
+  let hotStreakTrackZoom = 1;
+  let hotStreakTrackGesture = null;
+  let hotStreakSuppressTrackClick = false;
   let hotStreakTipNode = null;
   let hotStreakTipTimer = null;
   let hotStreakPointerType = "mouse";
@@ -27,18 +36,25 @@
   const hotStreakRaceLabel = byId("hotStreakRaceLabel");
   const hotStreakPhaseLabel = byId("hotStreakPhaseLabel");
   const hotStreakTurnLabel = byId("hotStreakTurnLabel");
+  const hotStreakBalance = byId("hotStreakBalance");
   const hotStreakNoticeToggle = byId("hotStreakNoticeToggle");
   const hotStreakDataNotice = byId("hotStreakDataNotice");
   const hotStreakPlayersSection = byId("hotStreakPlayersSection");
   const hotStreakPlayers = byId("hotStreakPlayers");
   const hotStreakPlayersSummary = byId("hotStreakPlayersSummary");
+  const hotStreakYourBetsSection = byId("hotStreakYourBetsSection");
+  const hotStreakYourBets = byId("hotStreakYourBets");
   const hotStreakTicketSection = byId("hotStreakTicketSection");
   const hotStreakTicketHint = byId("hotStreakTicketHint");
   const hotStreakTickets = byId("hotStreakTickets");
+  const hotStreakSideTickets = byId("hotStreakSideTickets");
+  const hotStreakTicketSideBet = byId("hotStreakTicketSideBet");
   const hotStreakTicketMask = byId("hotStreakTicketMask");
   const hotStreakConfirmTitle = byId("hotStreakConfirmTitle");
   const hotStreakConfirmModes = byId("hotStreakConfirmModes");
   const hotStreakConfirmCancel = byId("hotStreakConfirmCancel");
+  const hotStreakDoubleChoices = byId("hotStreakDoubleChoices");
+  const hotStreakDoubleOptions = byId("hotStreakDoubleOptions");
   const hotStreakDraftProgress = byId("hotStreakDraftProgress");
   const hotStreakHandSection = byId("hotStreakHandSection");
   const hotStreakHand = byId("hotStreakHand");
@@ -49,6 +65,8 @@
   const hotStreakTrackToggle = byId("hotStreakTrackToggle");
   const hotStreakTrackBody = byId("hotStreakTrackBody");
   const hotStreakTrackStatus = byId("hotStreakTrackStatus");
+  const hotStreakTrackTools = byId("hotStreakTrackTools");
+  const hotStreakTrackViewport = byId("hotStreakTrackViewport");
   const hotStreakSwerveKey = byId("hotStreakSwerveKey");
   const hotStreakTrack = byId("hotStreakTrack");
   const hotStreakCurrentCard = byId("hotStreakCurrentCard");
@@ -119,11 +137,11 @@
           zh: `<p>可选的票堆共 6 个：4 个角色，加上当前边注(🎲)的成立(✅ YES)与不成立(❌ NO)。每个票堆有 3 层，只有拿走顶层才会露出下一层。</p>
 <p>拿票时必须同时决定安全(🛡️)还是冒险(🔥)。安全(🛡️)回报较低但输钱少，冒险(🔥)回报更高，猜错时可能倒扣现金(💵)。</p>
 <p>角色票按最终名次(🥇🥈🥉)赔付，边注票则看这场比赛的边注(🎲)是否成立。</p>
-<p>第三场拿到自己的第二张票时，必须指定本场的一张票加倍，收益与罚款都会翻倍。</p>`,
+<p>第三场拿到自己的第二张票时，必须指定本场的一张票加倍，可以选择已有的票，也可以选择正在拿的新票。收益与罚款都会翻倍。</p>`,
           en: `<p>There are six ticket stacks: the four racers, plus YES (✅) and NO (❌) for the current side bet (🎲). Each stack has three layers and the next one only shows after the top ticket is taken.</p>
 <p>Taking a ticket locks in Safe (🛡️) or Risky (🔥) at the same moment. Safe (🛡️) pays less but rarely costs you, while Risky (🔥) pays more and can take cash (💵) away when you guess wrong.</p>
 <p>Racer tickets pay by finishing place (🥇🥈🥉), and side tickets pay on whether the side bet (🎲) comes true.</p>
-<p>In race three, the moment you take your second ticket you must double one of your tickets, which doubles both the reward and the penalty.</p>`,
+<p>In race three, the moment you take your second ticket you must double either your existing ticket or the new ticket you are taking. This doubles both the reward and the penalty.</p>`,
         },
       },
       {
@@ -226,6 +244,10 @@
       zh: "展开或收起赛道。下注阶段赛道暂时用不上，收起可以留出空间给下注票(🎟️)。",
       en: "Expand or collapse the track. During betting the track is not needed yet, so collapsing it leaves room for the betting tickets (🎟️).",
     },
+    zoom: {
+      zh: "用加减按钮缩放赛道。Fit 显示全图，Origin 恢复适合查看棋子的原始尺寸。放大后可拖动赛道，或聚焦赛道后按方向键平移，赛道以外仍可滚动页面。",
+      en: "Zoom the track with + and −. Fit shows the entire track, and Origin restores a readable cell size. Drag or use arrow keys on the focused track to pan after zooming. The page still scrolls outside the track.",
+    },
     swerve: {
       zh: "每个角色的固定侧滑方向，以角色自身朝向为准。背向跑的角色在画面上会朝相反方向换道。",
       en: "Each racer's fixed swerve direction, measured against its own facing. A backward racer changes lanes the opposite way on screen.",
@@ -233,6 +255,10 @@
     standings: {
       zh: "四个角色当前的状态：已冲线的名次(🥇🥈🥉)、还在跑的位置，以及出局(🚫)的原因。",
       en: "The state of all four racers: the places already claimed (🥇🥈🥉), where the rest are still running, and why any racer is out (🚫).",
+    },
+    result: {
+      zh: "本场逐票结算。展开可查看每张票是否命中、现金(💵)变化以及加倍(×2)。自己的明细默认展开，所有玩家确认 Next Race 前不会开始下一场。",
+      en: "This race's ticket-by-ticket payout. Expand to see hits, cash (💵) changes and doubles (×2). Your own breakdown opens automatically. The next race waits until every player confirms Next Race.",
     },
     side: {
       zh: "本场的公开边注(🎲)。成立(✅ YES)与不成立(❌ NO)的票都在这里结算，结果会在条件达成或比赛结束时锁定。",
@@ -309,6 +335,7 @@
       { label: "🥇", value: payout["1"] },
       { label: "🥈", value: payout["2"] },
       { label: "🥉", value: payout["3"] },
+      { label: "4th", value: payout["4"] },
     ];
   }
 
@@ -363,6 +390,7 @@
     if (!hotStreakTipNode) {
       hotStreakTipNode = document.createElement("div");
       hotStreakTipNode.className = "hot-streak-tip";
+      hotStreakTipNode.setAttribute("role", "tooltip");
       hotStreakTipNode.hidden = true;
       document.body.appendChild(hotStreakTipNode);
     }
@@ -375,6 +403,7 @@
     left = Math.max(6, Math.min(left, window.innerWidth - size.width - 6));
     let top = box.top - size.height - 8;
     if (top < 6) top = box.bottom + 8;
+    top = Math.max(6, Math.min(top, window.innerHeight - size.height - 6));
     hotStreakTipNode.style.left = `${Math.round(left)}px`;
     hotStreakTipNode.style.top = `${Math.round(top)}px`;
     if (autoHide) hotStreakTipTimer = window.setTimeout(hotStreakHideTip, 3000);
@@ -395,6 +424,7 @@
 
   document.addEventListener("pointerdown", (event) => {
     hotStreakPointerType = event.pointerType || "mouse";
+    if (event.isPrimary) hotStreakSuppressTrackClick = false;
   }, true);
 
   document.addEventListener("pointerover", (event) => {
@@ -412,6 +442,10 @@
 
   document.addEventListener("click", (event) => {
     if (hotStreakPointerType === "mouse") return;
+    if (hotStreakTrackGesture?.moved || hotStreakSuppressTrackClick) {
+      hotStreakHideTip();
+      return;
+    }
     const node = event.target.closest?.("[data-hot-streak-tip]");
     if (!node || !hotStreakPanel?.contains(node)) {
       hotStreakHideTip();
@@ -435,7 +469,7 @@
     if (hotStreakTurnLabel) {
       const submission = view.submission_progress || {};
       const text = view.phase === "betting"
-        ? `${hotStreakPlayerName(view, view.current_drafter)}'s pick`
+        ? view.current_drafter === view.you ? "Your turn · choose a ticket" : `${hotStreakPlayerName(view, view.current_drafter)}'s pick`
         : view.phase === "card_selection"
           ? `${submission.done || 0}/${submission.total || 0} submitted`
           : view.phase === "racing" || view.phase === "race_countdown"
@@ -444,7 +478,14 @@
               ? "Review the results"
               : "Game over";
       hotStreakTurnLabel.textContent = text;
+      hotStreakTurnLabel.dataset.hotStreakTipText = text;
     }
+    const me = hotStreakFindPlayer(view, view.you);
+    if (hotStreakBalance) hotStreakBalance.textContent = me ? `💵 ${me.money}` : "Spectating";
+    if (hotStreakPanel) hotStreakPanel.dataset.yourTurn = String(
+      hotStreakHasAction("draft_ticket") || hotStreakHasAction("submit_race_cards")
+        || hotStreakHasAction("next_round")
+    );
     const prototype = view.catalog_status === "prototype";
     hotStreakSetHidden(hotStreakNoticeToggle, !prototype);
     if (!prototype) hotStreakSetHidden(hotStreakDataNotice, true);
@@ -453,6 +494,7 @@
   function hotStreakRenderPlayers(view) {
     if (!hotStreakPlayers) return;
     hotStreakPlayers.innerHTML = "";
+    hotStreakYourBets?.replaceChildren();
     (view.players || []).forEach((player) => {
       const card = document.createElement("article");
       card.className = "hot-streak-player";
@@ -463,6 +505,8 @@
       heading.className = "hot-streak-player-heading";
       const name = document.createElement("strong");
       name.textContent = player.name || player.player_id;
+      name.dataset.hotStreakTip = "";
+      name.dataset.hotStreakTipText = `${player.name}${player.player_id === view.you ? " (you)" : ""}`;
       const money = document.createElement("span");
       money.textContent = `💵 ${player.money}`;
       heading.append(name, money);
@@ -476,8 +520,9 @@
         chip.textContent = `${hotStreakTargetLabel(view, bet.target)} ${bet.mode === "risky" ? "🔥" : "🛡️"}${bet.doubled ? " ×2" : ""}`;
         chip.setAttribute("data-hot-streak-tip", "");
         chip.setAttribute("data-hot-streak-tip-text",
-          `${player.name}: ${hotStreakTargetLabel(view, bet.target)} · ${bet.mode === "risky" ? "Risky" : "Safe"}${bet.doubled ? " · doubled x2" : ""}`);
+          `${player.name}: ${hotStreakTargetLabel(view, bet.target)} · ${bet.mode === "risky" ? "Risky" : "Safe"}${bet.doubled ? " · doubled x2" : ""} · ${hotStreakPayoutText(bet.payout)}`);
         bets.appendChild(chip);
+        if (player.player_id === view.you) hotStreakYourBets?.appendChild(chip.cloneNode(true));
       });
       if (!betList.length) {
         const empty = document.createElement("span");
@@ -505,81 +550,114 @@
         (best, player) => (Number(player.money) > Number(best?.money ?? -1) ? player : best),
         null
       );
-      hotStreakPlayersSummary.textContent = richest ? `Lead 💵${richest.money}` : "-";
+      hotStreakPlayersSummary.textContent = richest ? `${view.players.length} players · Lead 💵${richest.money}` : "-";
     }
+    hotStreakSetHidden(hotStreakYourBetsSection, !hotStreakYourBets?.childElementCount
+      || view.phase === "race_result" || view.phase === "game_over");
   }
 
   function hotStreakRenderTickets(view) {
-    if (!hotStreakTickets) return;
+    if (!hotStreakTickets || !hotStreakSideTickets) return;
     const canDraft = hotStreakHasAction("draft_ticket") && view.current_drafter === view.you;
-    hotStreakTickets.innerHTML = "";
-    (view.ticket_stacks || []).forEach((stack) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "hot-streak-ticket";
-      if (stack.stack_id === "yes" || stack.stack_id === "no") {
-        button.classList.add("is-side-ticket", `is-${stack.stack_id}`);
-      }
-      if (!stack.top) button.classList.add("is-empty");
-      button.dataset.hotStreakExplain = "ticket";
-      button.disabled = !canDraft || !stack.top;
-      button.setAttribute("role", "listitem");
-      button.setAttribute("aria-label",
-        `${stack.label} ticket stack, ${stack.remaining} left${stack.top ? "" : ", empty"}`);
+    const key = JSON.stringify([view.game_index, view.race_number, view.you, canDraft, view.ticket_stacks]);
+    if (hotStreakTicketSideBet) hotStreakTicketSideBet.textContent = `🎲 Side bet · ${view.current_side_bet?.label || "—"}`;
+    if (hotStreakTicketsKey !== key) {
+      hotStreakCloseConfirm(false);
+      hotStreakTicketsKey = key;
+      hotStreakTickets.replaceChildren();
+      hotStreakSideTickets.replaceChildren();
+      (view.ticket_stacks || []).forEach((stack) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "hot-streak-ticket";
+        button.dataset.target = stack.stack_id;
+        button.dataset.stackId = stack.stack_id;
+        if (stack.stack_id === "yes" || stack.stack_id === "no") {
+          button.classList.add("is-side-ticket", `is-${stack.stack_id}`);
+        }
+        if (!stack.top) button.classList.add("is-empty");
+        const explanationKey = `ticket_${stack.stack_id}`;
+        const payouts = stack.top ? `Safe (🛡️): ${hotStreakPayoutText(stack.top.safe)}. Risky (🔥): ${hotStreakPayoutText(stack.top.risky)}.` : "Stack empty.";
+        HOT_STREAK_EXPLAIN[explanationKey] = {
+          zh: `${stack.label} (${stack.icon}). ${payouts} ${HOT_STREAK_EXPLAIN.ticket.zh}`,
+          en: `${stack.label} (${stack.icon}). ${payouts} ${HOT_STREAK_EXPLAIN.ticket.en}`,
+        };
+        button.dataset.hotStreakExplain = explanationKey;
+        button.disabled = !canDraft || !stack.top;
+        button.setAttribute("aria-pressed", "false");
+        button.setAttribute("aria-label",
+          `${stack.label} ticket stack, ${stack.remaining} left${stack.top
+            ? `. Safe ${hotStreakPayoutText(stack.top.safe)}. Risky ${hotStreakPayoutText(stack.top.risky)}` : ", empty"}`);
 
-      const head = document.createElement("span");
-      head.className = "hot-streak-ticket-head";
-      const name = document.createElement("span");
-      name.className = "hot-streak-ticket-name";
-      name.textContent = `${stack.icon} ${stack.label}`;
-      const count = document.createElement("span");
-      count.className = "hot-streak-ticket-count";
-      count.textContent = `${stack.remaining} left`;
-      head.append(name, count);
-      button.appendChild(head);
+        const head = document.createElement("span");
+        head.className = "hot-streak-ticket-head";
+        const name = document.createElement("span");
+        name.className = "hot-streak-ticket-name";
+        name.textContent = `${stack.icon} ${stack.label}`;
+        const count = document.createElement("span");
+        count.className = "hot-streak-ticket-count";
+        count.textContent = `${stack.remaining} left`;
+        head.append(name, count);
+        button.appendChild(head);
 
-      if (stack.top) {
-        const binary = Object.prototype.hasOwnProperty.call(stack.top.safe || {}, "correct");
-        const pays = document.createElement("span");
-        pays.className = `hot-streak-ticket-pays${binary ? " is-binary" : ""}`;
-        [["safe", "🛡️"], ["risky", "🔥"]].forEach(([mode, icon]) => {
-          const label = document.createElement("span");
-          label.className = `hot-streak-pay-label is-${mode}`;
-          label.textContent = icon;
-          pays.appendChild(label);
-          hotStreakPayoutCells(stack.top[mode]).forEach((cell) => {
-            const value = document.createElement("span");
-            value.className = `hot-streak-pay${Number(cell.value) < 0 ? " is-loss" : ""}`;
-            value.textContent = `${cell.label}${hotStreakMoney(cell.value)}`;
-            pays.appendChild(value);
+        if (stack.top) {
+          const binary = Object.prototype.hasOwnProperty.call(stack.top.safe || {}, "correct");
+          const pays = document.createElement("span");
+          pays.className = `hot-streak-ticket-pays${binary ? " is-binary" : ""}`;
+          const currency = document.createElement("span");
+          currency.className = "hot-streak-pay-heading";
+          currency.textContent = "💵";
+          pays.appendChild(currency);
+          hotStreakPayoutCells(stack.top.safe).forEach((cell) => {
+            const rank = document.createElement("span");
+            rank.className = "hot-streak-pay-heading";
+            rank.textContent = cell.label;
+            pays.appendChild(rank);
           });
-        });
-        button.appendChild(pays);
-      } else {
-        const empty = document.createElement("span");
-        empty.className = "hot-streak-player-status";
-        empty.textContent = "Stack empty";
-        button.appendChild(empty);
-      }
+          [["safe", "🛡️"], ["risky", "🔥"]].forEach(([mode, icon]) => {
+            const label = document.createElement("span");
+            label.className = `hot-streak-pay-label is-${mode}`;
+            label.textContent = icon;
+            const word = document.createElement("span");
+            word.className = "hot-streak-mode-word";
+            word.textContent = mode === "safe" ? " Safe" : " Risky";
+            label.appendChild(word);
+            pays.appendChild(label);
+            hotStreakPayoutCells(stack.top[mode]).forEach((cell) => {
+              const value = document.createElement("span");
+              value.className = `hot-streak-pay${Number(cell.value) < 0 ? " is-loss" : ""}`;
+              value.textContent = String(Number(cell.value || 0)).replace("-", "−");
+              pays.appendChild(value);
+            });
+          });
+          button.appendChild(pays);
+        } else {
+          const empty = document.createElement("span");
+          empty.className = "hot-streak-player-status";
+          empty.textContent = "Stack empty";
+          button.appendChild(empty);
+        }
 
-      button.addEventListener("click", () => hotStreakOpenTicketConfirm(stack));
-      hotStreakTickets.appendChild(button);
-    });
+        button.addEventListener("click", () => hotStreakOpenTicketConfirm(stack, button));
+        (stack.stack_id === "yes" || stack.stack_id === "no" ? hotStreakSideTickets : hotStreakTickets).appendChild(button);
+      });
+    }
 
     if (hotStreakDraftProgress) {
       const progress = view.draft_progress || {};
       hotStreakDraftProgress.textContent = `${progress.done || 0}/${progress.total || 0}`;
     }
     if (hotStreakTicketHint) {
-      hotStreakTicketHint.textContent = canDraft
-        ? "Take a ticket, then choose Safe or Risky."
-        : `Waiting for ${hotStreakPlayerName(view, view.current_drafter)} to pick a ticket…`;
+      hotStreakTicketHint.textContent = "💵 Payout by place · 🛡️ Safe / 🔥 Risky";
     }
   }
 
   function hotStreakRenderPool(view) {
     if (!hotStreakPool) return;
     const cards = Array.isArray(view.base_race_cards) ? view.base_race_cards : [];
+    const key = JSON.stringify(cards);
+    if (hotStreakPoolKey === key) return;
+    hotStreakPoolKey = key;
     const groups = new Map();
     cards.forEach((card) => {
       const key = card.template_id || card.instance_id;
@@ -609,13 +687,14 @@
       target.className = "hot-streak-pool-target";
       target.textContent = `${card.target_icon} ${card.target_name}`;
       const label = document.createElement("strong");
-      label.textContent = card.label;
+      label.textContent = hotStreakCardEffect(card);
       const meta = document.createElement("span");
       meta.className = "hot-streak-pool-meta";
       const details = [];
       if (card.starting) details.push("Starter");
       if (count > 1) details.push(`×${count}`);
-      meta.textContent = details.join(" · ") || "Public";
+      meta.textContent = details.join(" · ");
+      item.dataset.hotStreakExplain = hotStreakCardExplanation(card, false);
       item.setAttribute("data-hot-streak-tip", "");
       item.setAttribute("data-hot-streak-tip-text",
         `${card.target_name}: ${card.label}${count > 1 ? ` (${count} copies)` : ""}`);
@@ -624,56 +703,100 @@
     });
   }
 
+  function hotStreakCardEffect(card) {
+    const prefix = `${card.target_name} `;
+    const label = String(card.label || "");
+    const effect = label.startsWith(prefix) ? label.slice(prefix.length) : label;
+    return effect ? effect[0].toUpperCase() + effect.slice(1) : "Race card";
+  }
+
+  function hotStreakCardExplanation(card, privateCard) {
+    const key = `${privateCard ? "hand" : "pool"}_${card.instance_id || card.template_id}`;
+    const description = `${card.target_name} (${card.target_icon}): ${card.label}.`;
+    HOT_STREAK_EXPLAIN[key] = {
+      zh: `${description} ${privateCard ? HOT_STREAK_EXPLAIN.hand.zh : HOT_STREAK_EXPLAIN.pool.zh}`,
+      en: `${description} ${privateCard ? HOT_STREAK_EXPLAIN.hand.en : HOT_STREAK_EXPLAIN.pool.en}`,
+    };
+    return key;
+  }
+
+  function hotStreakSyncHandSelection() {
+    hotStreakHand?.querySelectorAll("[data-card-id]").forEach((button) => {
+      const selected = hotStreakSelectedCards.has(button.dataset.cardId);
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    if (!hotStreakSubmitBtn || !hotStreakView) return;
+    const required = Number(hotStreakView.submission_progress?.required_per_player || 1);
+    hotStreakSubmitBtn.disabled = !hotStreakHasAction("submit_race_cards") || hotStreakSelectedCards.size !== required;
+  }
+
   function hotStreakRenderHand(view) {
     if (!hotStreakHand) return;
-    const hand = Array.isArray(view.your_hand) ? view.your_hand : [];
+    const me = hotStreakFindPlayer(view, view.you);
+    const submitted = Boolean(me?.submitted && view.phase === "card_selection");
+    const hand = submitted ? view.your_submitted_cards || [] : view.your_hand || [];
     const available = new Set(hand.map((card) => card.instance_id));
     hotStreakSelectedCards = new Set(
       Array.from(hotStreakSelectedCards).filter((cardId) => available.has(cardId))
     );
     const canSubmit = hotStreakHasAction("submit_race_cards");
     const required = Number((view.submission_progress || {}).required_per_player || 1);
-
-    hotStreakHand.innerHTML = "";
-    hand.forEach((card) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "hot-streak-race-card";
-      button.dataset.hotStreakExplain = "hand";
-      button.disabled = !canSubmit;
-      if (hotStreakSelectedCards.has(card.instance_id)) button.classList.add("selected");
-      const target = document.createElement("span");
-      target.className = "hot-streak-race-card-target";
-      target.textContent = `${card.target_icon} ${card.target_name}`;
-      const effect = document.createElement("strong");
-      effect.textContent = card.label;
-      button.append(target, effect);
-      button.addEventListener("click", () => {
-        if (hotStreakSelectedCards.has(card.instance_id)) {
-          hotStreakSelectedCards.delete(card.instance_id);
-        } else {
-          if (hotStreakSelectedCards.size >= required) hotStreakSelectedCards.clear();
-          hotStreakSelectedCards.add(card.instance_id);
+    const key = JSON.stringify([hand, canSubmit, submitted, view.phase]);
+    hotStreakHand.dataset.count = String(hand.length);
+    if (hotStreakHandKey !== key) {
+      hotStreakHandKey = key;
+      hotStreakHand.replaceChildren();
+      hand.forEach((card) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "hot-streak-race-card";
+        button.dataset.hotStreakExplain = hotStreakCardExplanation(card, true);
+        button.dataset.cardId = card.instance_id;
+        button.setAttribute("aria-label", `${card.label}${submitted ? ", submitted and locked" : ""}`);
+        button.disabled = !canSubmit;
+        const target = document.createElement("span");
+        target.className = "hot-streak-race-card-target";
+        target.textContent = `${card.target_icon} ${card.target_name}`;
+        const effect = document.createElement("strong");
+        effect.textContent = hotStreakCardEffect(card);
+        button.append(target, effect);
+        if (submitted) {
+          const locked = document.createElement("span");
+          locked.className = "hot-streak-race-card-status";
+          locked.textContent = "Submitted ✓";
+          button.appendChild(locked);
         }
-        hotStreakRenderHand(hotStreakView);
+        button.addEventListener("click", () => {
+          if (!hotStreakHasAction("submit_race_cards")) return;
+          if (hotStreakSelectedCards.has(card.instance_id)) {
+            hotStreakSelectedCards.delete(card.instance_id);
+          } else {
+            if (hotStreakSelectedCards.size >= required) hotStreakSelectedCards.clear();
+            hotStreakSelectedCards.add(card.instance_id);
+          }
+          hotStreakSyncHandSelection();
+        });
+        hotStreakHand.appendChild(button);
       });
-      hotStreakHand.appendChild(button);
-    });
+    }
 
-    const me = hotStreakFindPlayer(view, view.you);
     if (hotStreakHandHint) {
-      hotStreakHandHint.textContent = me && me.submitted
+      hotStreakHandHint.textContent = submitted
         ? "Submitted. Your choice is locked."
-        : `Choose ${required} race card${required === 1 ? "" : "s"}. Tap the empty area to deselect.`;
+        : view.phase === "betting" ? "Private preview · add cards after betting."
+          : `Choose ${required} card${required === 1 ? "" : "s"} to add secretly.`;
     }
     if (hotStreakSubmissionProgress) {
       const progress = view.submission_progress || {};
-      hotStreakSubmissionProgress.textContent = `${progress.done || 0}/${progress.total || 0}`;
+      hotStreakSubmissionProgress.textContent = view.phase === "betting"
+        ? `${hand.length} cards` : `${progress.done || 0}/${progress.total || 0} submitted`;
     }
     if (hotStreakSubmitBtn) {
       hotStreakSubmitBtn.textContent = required === 1 ? "Submit Card" : `Submit ${required} Cards`;
-      hotStreakSubmitBtn.disabled = !canSubmit || hotStreakSelectedCards.size !== required;
+      hotStreakSubmitBtn.hidden = view.phase !== "card_selection" || submitted;
     }
+    hotStreakSyncHandSelection();
   }
 
   function hotStreakRenderSwerveKey(view) {
@@ -756,7 +879,10 @@
           marker.className = `hot-streak-racer is-${racer.pattern || "plain"}`;
           if (racer.fallen) marker.classList.add("fallen");
           if (racer.facing === "backward") marker.classList.add("backward");
-          marker.textContent = racer.icon;
+          const icon = document.createElement("span");
+          icon.className = "hot-streak-racer-icon";
+          icon.textContent = racer.icon;
+          marker.appendChild(icon);
           const tip = `${racer.name} · ${label}`
             + `${racer.fallen ? " · fallen 💫" : ""}`
             + `${racer.facing === "backward" ? " · facing backward ↩️" : ""}`
@@ -772,7 +898,7 @@
     hotStreakTrack.appendChild(fragment);
 
     if (hotStreakTrackStatus) {
-      const folded = backEdge > 0 ? ` · folded to ${backEdge}` : "";
+      const folded = backEdge > 0 ? ` · Fold ${backEdge}` : "";
       hotStreakTrackStatus.textContent = `Cycle ${view.race_cycle || 1}${folded}`;
     }
   }
@@ -814,7 +940,11 @@
       detail.className = "hot-streak-mini-status";
       if (racer.status === "finished") detail.textContent = "Finished";
       else if (racer.status === "dq") detail.textContent = String(racer.dq_reason || "out").replaceAll("_", " ");
-      else detail.textContent = `L${Number(racer.lane) + 1}·${Number(racer.position) + 1}`;
+      else detail.textContent = `L${Number(racer.lane) + 1}·${Number(racer.position) + 1}${racer.facing === "backward" ? " ↩️" : ""}`;
+      item.dataset.hotStreakTip = "";
+      item.dataset.hotStreakTipText = `${racer.name}: ${racer.status === "active"
+        ? `lane ${Number(racer.lane) + 1}, space ${Number(racer.position) + 1}${racer.fallen ? ", fallen 💫" : ""}${racer.facing === "backward" ? ", facing backward ↩️" : ""}`
+        : detail.textContent}`;
 
       item.append(rank, name, detail);
       hotStreakStandingsList.appendChild(item);
@@ -925,12 +1055,19 @@
 
   function hotStreakRenderLog(view) {
     if (!hotStreakLog) return;
+    hotStreakLog.hidden = !hotStreakLogOpen;
+    hotStreakLogToggle?.setAttribute("aria-expanded", String(hotStreakLogOpen));
     const messages = (view.race_log || [])
       .map((entry) => hotStreakLogMessage(view, entry))
       .filter(Boolean)
       .slice(-80);
     if (hotStreakLogCount) hotStreakLogCount.textContent = String(messages.length);
-    hotStreakLog.innerHTML = "";
+    const key = JSON.stringify(messages);
+    if (hotStreakLogKey === key) return;
+    hotStreakLogKey = key;
+    const previousScroll = hotStreakLog.scrollTop;
+    const atBottom = previousScroll + hotStreakLog.clientHeight >= hotStreakLog.scrollHeight - 12;
+    hotStreakLog.replaceChildren();
     if (!messages.length) {
       hotStreakLog.textContent = "The race log will appear here.";
       return;
@@ -941,15 +1078,18 @@
       line.textContent = message;
       hotStreakLog.appendChild(line);
     });
-    hotStreakLog.scrollTop = hotStreakLog.scrollHeight;
+    hotStreakLog.scrollTop = atBottom ? hotStreakLog.scrollHeight : previousScroll;
   }
 
   function hotStreakRenderResults(view) {
     if (!hotStreakResult || !hotStreakResultBody) return;
     const visible = view.phase === "race_result" || view.phase === "game_over";
     hotStreakSetHidden(hotStreakResult, !visible);
-    hotStreakResultBody.innerHTML = "";
     if (!visible) return;
+    const key = JSON.stringify([view.last_race_summary, view.you, view.game_over, view.winner_ids]);
+    if (hotStreakResultsKey === key) return;
+    hotStreakResultsKey = key;
+    hotStreakResultBody.replaceChildren();
 
     const summary = view.last_race_summary;
     if (hotStreakResultTitle) {
@@ -980,24 +1120,32 @@
     const side = document.createElement("div");
     side.className = "hot-streak-result-side";
     const hit = summary.side_bet_result && summary.side_bet_result.result;
-    side.textContent = `🎲 Side Bet: ${hit ? "YES ✓" : "NO ✕"}`;
+    side.textContent = `🎲 ${view.current_side_bet?.label || "Side bet"} · ${hit ? "YES ✓" : "NO ✕"}`;
     hotStreakResultBody.appendChild(side);
 
     const payouts = document.createElement("div");
     payouts.className = "hot-streak-payouts";
-    (view.players || []).forEach((player) => {
+    const players = (view.players || []).slice().sort((left, right) => view.game_over
+      ? Number(right.money) - Number(left.money)
+      : Number(right.player_id === view.you) - Number(left.player_id === view.you));
+    players.forEach((player) => {
       const result = (summary.payouts || {})[player.player_id];
       if (!result) return;
-      const row = document.createElement("div");
+      const row = document.createElement("details");
       row.className = "hot-streak-payout-player";
-      if (player.player_id === view.you) row.classList.add("is-self");
+      if (player.player_id === view.you) {
+        row.classList.add("is-self");
+        row.open = true;
+      }
 
-      const head = document.createElement("div");
+      const head = document.createElement("summary");
       head.className = "hot-streak-payout-head";
+      head.dataset.hotStreakExplain = "result";
       const name = document.createElement("strong");
       name.textContent = player.player_id === view.you ? `${player.name} (you)` : player.name;
+      name.title = name.textContent;
       const delta = document.createElement("span");
-      delta.textContent = `${hotStreakMoney(result.money_before)} ${result.net >= 0 ? "＋" : "−"} ${hotStreakMoney(Math.abs(result.net))} → ${hotStreakMoney(result.money_after)}`;
+      delta.textContent = `${result.net >= 0 ? "+" : "−"}${Math.abs(result.net)} → ${hotStreakMoney(result.money_after)}`;
       head.append(name, delta);
       row.appendChild(head);
 
@@ -1016,7 +1164,7 @@
       winners.className = "hot-streak-winners";
       const names = (view.winner_ids || []).map((playerId) => hotStreakPlayerName(view, playerId));
       winners.textContent = `${names.length > 1 ? "Joint Winners" : "Winner"}: ${names.join(" & ")} 🏆`;
-      hotStreakResultBody.appendChild(winners);
+      hotStreakResultBody.prepend(winners);
     }
   }
 
@@ -1055,28 +1203,55 @@
       hotStreakTrackOpen = null;
     }
     if (hotStreakTrackOpen === null) {
-      const wide = (hotStreakPanel?.clientWidth || 0) >= 560;
       const racing = phase === "racing" || phase === "race_countdown";
-      const drafting = phase === "betting" || phase === "card_selection";
-      hotStreakTrackOpen = racing || (drafting && wide);
+      hotStreakTrackOpen = racing;
     }
     hotStreakTrackBody.hidden = !hotStreakTrackOpen;
+    hotStreakSetHidden(hotStreakTrackTools, !hotStreakTrackOpen);
     hotStreakTrackToggle.setAttribute("aria-expanded", String(hotStreakTrackOpen));
   }
 
   function hotStreakUpdateVisibility(view) {
     const phase = view.phase;
     hotStreakSetHidden(hotStreakTicketSection, phase !== "betting");
-    hotStreakSetHidden(hotStreakHandSection, phase !== "card_selection");
+    hotStreakSetHidden(hotStreakHandSection, (phase !== "card_selection" && phase !== "betting")
+      || !hotStreakFindPlayer(view, view.you));
     hotStreakSetHidden(hotStreakPoolSection, phase !== "betting" && phase !== "card_selection");
-    hotStreakSetHidden(hotStreakStandings, !(phase === "racing" || phase === "race_countdown"
-      || phase === "race_result" || phase === "game_over"));
+    hotStreakSetHidden(hotStreakStandings, phase !== "racing" && phase !== "race_countdown");
     const logVisible = phase === "racing" || phase === "race_countdown"
       || phase === "race_result" || phase === "game_over";
     hotStreakSetHidden(hotStreakLogPanel, !logVisible);
     hotStreakApplyTrackOpen(view);
     if (hotStreakSideBetSection) {
-      hotStreakSideBetSection.hidden = phase === "game_over";
+      hotStreakSideBetSection.hidden = phase === "game_over" || phase === "race_result" || phase === "betting";
+    }
+  }
+
+  function hotStreakSetTrackZoom(zoom, reset = false) {
+    if (!hotStreakTrackViewport || !hotStreakTrack) return;
+    const previous = hotStreakTrackZoom;
+    hotStreakTrackZoom = Math.max(1, Math.min(3, zoom));
+    const centerLeft = hotStreakTrackViewport.scrollLeft + hotStreakTrackViewport.clientWidth / 2;
+    const centerTop = hotStreakTrackViewport.scrollTop + hotStreakTrackViewport.clientHeight / 2;
+    hotStreakTrack.style.setProperty("--hs-zoom", String(hotStreakTrackZoom));
+    hotStreakTrackViewport.classList.toggle("is-zoomed", hotStreakTrackZoom > 1);
+    hotStreakTrackViewport.scrollLeft = reset ? 0 : centerLeft * hotStreakTrackZoom / previous - hotStreakTrackViewport.clientWidth / 2;
+    hotStreakTrackViewport.scrollTop = reset ? 0 : centerTop * hotStreakTrackZoom / previous - hotStreakTrackViewport.clientHeight / 2;
+    hotStreakTrackTools?.querySelectorAll("[data-hot-streak-zoom]").forEach((button) => {
+      const action = button.dataset.hotStreakZoom;
+      button.disabled = (action === "out" && hotStreakTrackZoom <= 1) || (action === "in" && hotStreakTrackZoom >= 3);
+    });
+    hotStreakHideTip();
+  }
+
+  function hotStreakEndTrackGesture(event) {
+    if (!hotStreakTrackGesture || hotStreakTrackGesture.id !== event.pointerId) return;
+    if (event.type === "lostpointercapture" && event.target !== hotStreakTrackViewport) return;
+    hotStreakSuppressTrackClick = hotStreakTrackGesture.moved;
+    hotStreakTrackGesture = null;
+    hotStreakTrackViewport?.classList.remove("is-dragging");
+    if (hotStreakTrackViewport?.hasPointerCapture(event.pointerId)) {
+      hotStreakTrackViewport.releasePointerCapture(event.pointerId);
     }
   }
 
@@ -1093,41 +1268,97 @@
     );
   }
 
-  function hotStreakCloseConfirm() {
+  function hotStreakCloseConfirm(restoreFocus = true) {
+    const trigger = hotStreakConfirmTrigger;
+    hotStreakConfirmTrigger = null;
     hotStreakPendingStack = null;
-    if (hotStreakTicketMask) hotStreakTicketMask.hidden = true;
+    hotStreakPendingDouble = null;
+    trigger?.setAttribute("aria-pressed", "false");
+    if (hotStreakTicketMask) {
+      hotStreakTicketMask.hidden = true;
+      hotStreakTicketSection?.querySelector(".hot-streak-ticket-stage")?.appendChild(hotStreakTicketMask);
+    }
+    if (restoreFocus && trigger?.isConnected) trigger.focus({ preventScroll: true });
   }
 
-  function hotStreakOpenTicketConfirm(stack) {
+  function hotStreakOpenTicketConfirm(stack, trigger) {
     if (!hotStreakView || !hotStreakHasAction("draft_ticket") || !stack || !stack.top) return;
-    hotStreakPendingStack = stack;
-    hotStreakPendingDouble = null;
-    if (hotStreakNeedsDouble(hotStreakView)) {
-      hotStreakOpenDoubleDialog();
+    if (hotStreakPendingStack?.stack_id === stack.stack_id) {
+      hotStreakCloseConfirm();
       return;
     }
+    hotStreakCloseConfirm(false);
+    hotStreakPendingStack = stack;
+    hotStreakConfirmTrigger = trigger;
     if (!hotStreakConfirmTitle || !hotStreakConfirmModes || !hotStreakTicketMask) return;
-    hotStreakConfirmTitle.textContent = `${stack.icon} ${stack.label} · Tier ${stack.top.tier}`;
+    trigger?.setAttribute("aria-pressed", "true");
+    hotStreakConfirmTitle.textContent = `${stack.icon} ${stack.label} · choose your bet`;
     hotStreakConfirmModes.innerHTML = "";
+    const needsDouble = hotStreakNeedsDouble(hotStreakView);
+    hotStreakDoubleChoices.hidden = !needsDouble;
+    hotStreakDoubleOptions.replaceChildren();
+    if (needsDouble) {
+      const me = hotStreakFindPlayer(hotStreakView, hotStreakView.you);
+      const choices = (me?.bets || []).map((bet) => ({
+        id: bet.bet_id,
+        label: `${hotStreakTargetLabel(hotStreakView, bet.target)} · ${bet.mode === "risky" ? "🔥 Risky" : "🛡️ Safe"}`,
+      }));
+      choices.push({ id: "new", label: `${stack.icon} ${stack.label} · this new ticket` });
+      choices.forEach((choice) => {
+        const label = document.createElement("label");
+        label.className = "hot-streak-radio-label";
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = "hot-streak-double";
+        input.value = choice.id;
+        input.addEventListener("change", () => {
+          hotStreakPendingDouble = choice.id;
+          hotStreakConfirmModes.querySelectorAll("button").forEach((button) => { button.disabled = false; });
+        });
+        label.append(input, document.createTextNode(choice.label));
+        hotStreakDoubleOptions.appendChild(label);
+      });
+    }
     [["safe", "🛡️ Safe"], ["risky", "🔥 Risky"]].forEach(([mode, text]) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `hot-streak-mode-button is-${mode}`;
       button.dataset.hotStreakExplain = "mode";
+      button.disabled = needsDouble;
       const title = document.createElement("strong");
-      title.textContent = text;
+      title.textContent = `Take · ${text}`;
+      button.setAttribute("aria-label", `Take ${stack.label} · ${text}`);
       const payout = document.createElement("span");
-      payout.textContent = hotStreakPayoutText(stack.top[mode]);
+      payout.className = "hot-streak-mode-pays";
+      const cells = hotStreakPayoutCells(stack.top[mode]);
+      payout.style.setProperty("--hs-payout-count", String(cells.length));
+      payout.setAttribute("aria-label", `Cash payouts: ${hotStreakPayoutText(stack.top[mode])}`);
+      cells.forEach((cell) => {
+        const value = document.createElement("span");
+        const rank = document.createElement("span");
+        rank.className = "hot-streak-pay-heading";
+        rank.textContent = cell.label;
+        const amount = document.createElement("strong");
+        amount.className = Number(cell.value) < 0 ? "is-loss" : "";
+        amount.textContent = String(Number(cell.value || 0)).replace("-", "−");
+        value.append(rank, amount);
+        payout.appendChild(value);
+      });
       button.append(title, payout);
       button.addEventListener("click", () => hotStreakTakeTicket(mode));
       hotStreakConfirmModes.appendChild(button);
     });
+    const grid = trigger.parentElement;
+    const tickets = Array.from(grid.querySelectorAll(":scope > .hot-streak-ticket"));
+    const rowEnd = Math.min(tickets.length - 1, Math.floor(tickets.indexOf(trigger) / 2) * 2 + 1);
+    tickets[rowEnd].after(hotStreakTicketMask);
     hotStreakTicketMask.hidden = false;
-    hotStreakConfirmModes.querySelector("button")?.focus();
+    hotStreakTicketMask.querySelector(needsDouble ? "input" : ".hot-streak-mode-button")?.focus({ preventScroll: true });
+    hotStreakExplainWidget?.refresh();
   }
 
   function hotStreakTakeTicket(mode) {
-    if (!hotStreakPendingStack || !hotStreakView) return;
+    if (!hotStreakPendingStack || !hotStreakView || !hotStreakHasAction("draft_ticket")) return;
     const action = {
       type: "draft_ticket",
       stack_id: hotStreakPendingStack.stack_id,
@@ -1139,101 +1370,6 @@
     }
     sendAction(action);
     hotStreakCloseConfirm();
-    hotStreakCloseDoubleDialog();
-    hotStreakPendingDouble = null;
-  }
-
-  function hotStreakBuildDoubleDialog() {
-    if (hotStreakDoubleDialog) return hotStreakDoubleDialog;
-    const dialog = document.createElement("dialog");
-    dialog.className = "hot-streak-dialog";
-    dialog.innerHTML = '<div class="hot-streak-dialog-body"></div>';
-    document.body.appendChild(dialog);
-    hotStreakDoubleDialog = dialog;
-    return dialog;
-  }
-
-  function hotStreakCloseDoubleDialog() {
-    if (hotStreakDoubleDialog?.open) hotStreakDoubleDialog.close();
-  }
-
-  function hotStreakOpenDoubleDialog() {
-    const stack = hotStreakPendingStack;
-    if (!stack || !hotStreakView) return;
-    const dialog = hotStreakBuildDoubleDialog();
-    const body = dialog.querySelector(".hot-streak-dialog-body");
-    body.innerHTML = "";
-
-    const heading = document.createElement("h3");
-    heading.textContent = `${stack.icon} ${stack.label} · Tier ${stack.top.tier}`;
-    body.appendChild(heading);
-
-    const box = document.createElement("fieldset");
-    box.className = "hot-streak-double-box";
-    box.dataset.hotStreakExplain = "double";
-    const legend = document.createElement("legend");
-    legend.textContent = "Race 3 · choose the ticket to double";
-    box.appendChild(legend);
-
-    const me = hotStreakFindPlayer(hotStreakView, hotStreakView.you);
-    const choices = (me?.bets || []).map((bet) => ({
-      id: bet.bet_id,
-      label: `${hotStreakTargetLabel(hotStreakView, bet.target)} · ${bet.mode === "risky" ? "🔥 Risky" : "🛡️ Safe"}`,
-    }));
-    choices.forEach((choice) => {
-      const label = document.createElement("label");
-      label.className = "hot-streak-radio-label";
-      const input = document.createElement("input");
-      input.type = "radio";
-      input.name = "hot-streak-double";
-      input.value = choice.id;
-      input.addEventListener("change", () => {
-        hotStreakPendingDouble = choice.id;
-      });
-      label.append(input, document.createTextNode(choice.label));
-      box.appendChild(label);
-    });
-    body.appendChild(box);
-
-    const modes = document.createElement("div");
-    modes.className = "hot-streak-mode-actions";
-    [["safe", "🛡️ Safe"], ["risky", "🔥 Risky"]].forEach(([mode, text]) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `hot-streak-mode-button is-${mode}`;
-      button.dataset.hotStreakExplain = "mode";
-      const title = document.createElement("strong");
-      title.textContent = text;
-      const payout = document.createElement("span");
-      payout.textContent = hotStreakPayoutText(stack.top[mode]);
-      button.append(title, payout);
-      button.addEventListener("click", () => {
-        if (!hotStreakPendingDouble) {
-          const error = document.createElement("p");
-          error.className = "hot-streak-modal-error";
-          error.textContent = "Choose which ticket to double first.";
-          body.insertBefore(error, modes);
-          return;
-        }
-        hotStreakTakeTicket(mode);
-      });
-      modes.appendChild(button);
-    });
-    body.appendChild(modes);
-
-    const cancel = document.createElement("button");
-    cancel.type = "button";
-    cancel.className = "hot-streak-confirm-cancel";
-    cancel.dataset.hotStreakExplain = "cancel";
-    cancel.textContent = "✕ Cancel";
-    cancel.addEventListener("click", () => {
-      hotStreakCloseDoubleDialog();
-      hotStreakPendingStack = null;
-      hotStreakPendingDouble = null;
-    });
-    body.appendChild(cancel);
-
-    dialog.showModal();
   }
 
   /* ------------------------------------------------------------------ *
@@ -1276,6 +1412,13 @@
   function hotStreakRenderGameState(data) {
     const view = data && data.view;
     if (!view) return;
+    const selectionContext = `${view.game_index}:${view.race_number}:${view.you}`;
+    if (hotStreakSelectionContext !== selectionContext) {
+      hotStreakSelectionContext = selectionContext;
+      hotStreakSelectedCards.clear();
+      hotStreakCloseConfirm(false);
+      hotStreakSetTrackZoom(1, true);
+    }
     hotStreakView = view;
     if (typeof currentGameType !== "undefined" && currentGameType !== "hot_streak") {
       currentGameType = "hot_streak";
@@ -1308,18 +1451,29 @@
     hotStreakScheduledStep = null;
     hotStreakTrackOpen = null;
     hotStreakTrackPhase = null;
+    hotStreakSelectionContext = null;
+    hotStreakHandKey = null;
+    hotStreakTicketsKey = null;
+    hotStreakPoolKey = null;
+    hotStreakResultsKey = null;
+    hotStreakLogKey = null;
+    hotStreakLogOpen = false;
+    if (hotStreakTrackGesture) hotStreakEndTrackGesture({ pointerId: hotStreakTrackGesture.id });
+    hotStreakSuppressTrackClick = false;
+    hotStreakCloseConfirm(false);
+    hotStreakSetTrackZoom(1, true);
+    if (hotStreakPlayersSection) hotStreakPlayersSection.open = false;
+    if (hotStreakPoolSection) hotStreakPoolSection.open = true;
     if (hotStreakAdvanceTimer) window.clearTimeout(hotStreakAdvanceTimer);
     if (hotStreakFallbackTimer) window.clearTimeout(hotStreakFallbackTimer);
     hotStreakAdvanceTimer = null;
     hotStreakFallbackTimer = null;
-    [hotStreakPlayers, hotStreakSwerveKey, hotStreakTrack, hotStreakPool,
-      hotStreakTickets, hotStreakHand, hotStreakLog, hotStreakStandingsList,
+    [hotStreakPlayers, hotStreakYourBets, hotStreakSwerveKey, hotStreakTrack, hotStreakPool,
+      hotStreakTickets, hotStreakSideTickets, hotStreakHand, hotStreakLog, hotStreakStandingsList,
       hotStreakResultBody].forEach((element) => {
       if (element) element.innerHTML = "";
     });
     if (hotStreakCurrentCard) hotStreakCurrentCard.innerHTML = "";
-    hotStreakCloseConfirm();
-    hotStreakCloseDoubleDialog();
     hotStreakHideTip();
     hotStreakExplainWidget?.exit();
     hotStreakHelpWidget?.close();
@@ -1345,7 +1499,65 @@
   hotStreakTrackToggle?.addEventListener("click", () => {
     hotStreakTrackOpen = hotStreakTrackBody.hidden;
     hotStreakTrackBody.hidden = !hotStreakTrackOpen;
+    hotStreakSetHidden(hotStreakTrackTools, !hotStreakTrackOpen);
     hotStreakTrackToggle.setAttribute("aria-expanded", String(hotStreakTrackOpen));
+  });
+
+  hotStreakTrackTools?.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-hot-streak-zoom]")?.dataset.hotStreakZoom;
+    if (!action) return;
+    if (action === "fit") hotStreakSetTrackZoom(1, true);
+    else if (action === "origin") {
+      const positions = Number(hotStreakView?.track?.finish_position || 13) + 1;
+      const lanes = Number(hotStreakView?.track?.lane_count || 4);
+      const wide = hotStreakPanel.clientWidth >= 560;
+      const cellSize = Math.min(hotStreakTrackViewport.clientWidth / (wide ? positions : lanes),
+        hotStreakTrackViewport.clientHeight / (wide ? lanes : positions));
+      hotStreakSetTrackZoom(44 / Math.max(1, cellSize), true);
+    } else hotStreakSetTrackZoom(hotStreakTrackZoom + (action === "in" ? 0.5 : -0.5));
+  });
+
+  hotStreakTrackViewport?.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || !event.isPrimary || hotStreakExplainWidget?.isActive()) return;
+    hotStreakSuppressTrackClick = false;
+    hotStreakTrackGesture = {
+      id: event.pointerId, startX: event.clientX, startY: event.clientY,
+      left: hotStreakTrackViewport.scrollLeft, top: hotStreakTrackViewport.scrollTop, moved: false,
+    };
+  });
+  window.addEventListener("pointermove", (event) => {
+    const gesture = hotStreakTrackGesture;
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const deltaX = event.clientX - gesture.startX;
+    const deltaY = event.clientY - gesture.startY;
+    if (Math.hypot(deltaX, deltaY) > 8) gesture.moved = true;
+    if (!gesture.moved) return;
+    if (!hotStreakTrackViewport.hasPointerCapture(event.pointerId)) {
+      hotStreakTrackViewport.setPointerCapture(event.pointerId);
+    }
+    hotStreakTrackViewport.classList.add("is-dragging");
+    hotStreakTrackViewport.scrollLeft = gesture.left - deltaX;
+    hotStreakTrackViewport.scrollTop = gesture.top - deltaY;
+    hotStreakHideTip();
+  });
+  ["pointerup", "pointercancel"].forEach((type) => {
+    window.addEventListener(type, hotStreakEndTrackGesture);
+  });
+  hotStreakTrackViewport?.addEventListener("lostpointercapture", hotStreakEndTrackGesture);
+  hotStreakTrackViewport?.addEventListener("click", (event) => {
+    if (!hotStreakSuppressTrackClick) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    hotStreakSuppressTrackClick = false;
+    hotStreakHideTip();
+  }, true);
+  hotStreakTrackViewport?.addEventListener("keydown", (event) => {
+    if (hotStreakExplainWidget?.isActive()) return;
+    const offsets = { ArrowLeft: [-60, 0], ArrowRight: [60, 0], ArrowUp: [0, -60], ArrowDown: [0, 60] };
+    const offset = offsets[event.key];
+    if (!offset) return;
+    event.preventDefault();
+    hotStreakTrackViewport.scrollBy(offset[0], offset[1]);
   });
 
   hotStreakLogToggle?.addEventListener("click", () => {
@@ -1356,7 +1568,8 @@
   });
 
   hotStreakSubmitBtn?.addEventListener("click", () => {
-    if (!hotStreakHasAction("submit_race_cards")) return;
+    const required = Number(hotStreakView?.submission_progress?.required_per_player || 1);
+    if (!hotStreakHasAction("submit_race_cards") || hotStreakSelectedCards.size !== required) return;
     sendAction({ type: "submit_race_cards", card_ids: Array.from(hotStreakSelectedCards) });
   });
 
@@ -1365,19 +1578,24 @@
     sendAction({ type: "advance_race", expected_step_index: Number(hotStreakView.step_index || 0) });
   });
 
-  hotStreakNextRaceBtn?.addEventListener("click", () => sendAction({ type: "next_round" }));
-  hotStreakPlayAgainBtn?.addEventListener("click", () => sendAction({ type: "play_again" }));
+  hotStreakNextRaceBtn?.addEventListener("click", () => {
+    if (hotStreakHasAction("next_round")) sendAction({ type: "next_round" });
+  });
+  hotStreakPlayAgainBtn?.addEventListener("click", () => {
+    if (hotStreakHasAction("play_again")) sendAction({ type: "play_again" });
+  });
 
-  hotStreakConfirmCancel?.addEventListener("click", hotStreakCloseConfirm);
-  hotStreakTicketMask?.addEventListener("click", (event) => {
-    if (event.target === hotStreakTicketMask) hotStreakCloseConfirm();
+  hotStreakConfirmCancel?.addEventListener("click", () => hotStreakCloseConfirm());
+  hotStreakPanel?.addEventListener("click", (event) => {
+    if (hotStreakExplainWidget?.isActive() || event.target.closest("button, input, label, summary, #hotStreakTicketMask")) return;
+    if (hotStreakPendingStack) hotStreakCloseConfirm(false);
   });
 
   hotStreakHandSection?.addEventListener("click", (event) => {
     if (event.target === hotStreakHandSection || event.target === hotStreakHand
       || event.target === hotStreakHandHint) {
       hotStreakSelectedCards.clear();
-      if (hotStreakView) hotStreakRenderHand(hotStreakView);
+      hotStreakSyncHandSelection();
     }
   });
 

@@ -306,11 +306,11 @@ function trioSettlementWhy(settled) {
 }
 
 function trioRevealNote() {
-  if (trioSettlement()) return "回合结算";
+  // During a settlement the banner and the explanation already say everything,
+  // so the side note stays empty instead of being squeezed to an ellipsis.
+  if (trioSettlement()) return "";
   const revealed = trioView.revealed || [];
-  if (!revealed.length) {
-    return trioView.current_player === trioView.you ? "选择一张暗牌或某人手上的一端" : "";
-  }
+  if (!revealed.length) return "";
   return "还需 " + (3 - revealed.length) + " 张 " + revealed[0].number;
 }
 
@@ -320,8 +320,11 @@ function trioRevealHTML() {
   const failedAt = settled && settled.failed_at !== undefined ? settled.failed_at : null;
   let html;
   if (!entries.length) {
+    // Nothing revealed yet, so the strip itself carries the prompt instead of
+    // leaving an empty row with a lonely hint pushed to the far right.
+    const idle = trioView.current_player === trioView.you ? "点暗牌或手牌两端翻牌" : "等待对手行动";
     html = '<span class="trio-reveal-empty">'
-      + (settled ? "这一回合没有翻牌" : "本回合还没有翻牌") + "</span>";
+      + (settled ? "这一回合没有翻牌" : idle) + "</span>";
   } else {
     html = entries.map((entry, index) => {
       const bad = failedAt === index;
@@ -432,10 +435,9 @@ function trioBannerHTML() {
     return { cls: "is-shown", html: who + "正在翻第 " + (revealed.length + 1)
       + " 张，需要数字 " + trioEsc(revealed[0].number) };
   }
-  if (mine) {
-    return { cls: "is-shown", html: "轮到你行动，翻三张相同数字的牌" };
-  }
-  return { cls: "is-shown", html: "等待 " + trioEsc(trioName(view.current_player)) + " 行动" };
+  // Whose turn it is already lives in the status chip, so the banner stays
+  // collapsed on a phone instead of spending a whole row repeating it.
+  return { cls: "", html: "" };
 }
 
 function trioRender() {
@@ -460,6 +462,7 @@ function trioRender() {
     else who = mine ? "轮到你" : trioName(trioView.current_player);
     turn.textContent = "第 " + trioView.turn + " 回合 · " + who;
     turn.classList.toggle("is-you", mine && !trioView.game_over);
+    turn.title = mine ? "轮到你翻三张相同数字的牌" : "";
   }
   const banner = document.getElementById("trioBanner");
   if (banner) {
@@ -479,6 +482,8 @@ function trioRender() {
   }
   const revealNote = document.getElementById("trioRevealNote");
   if (revealNote) revealNote.textContent = trioRevealNote();
+  const turnStrip = trioPanel.querySelector(".trio-turn");
+  if (turnStrip) turnStrip.classList.toggle("is-settled", !!trioSettlement());
   const reveal = document.getElementById("trioReveal");
   if (reveal) reveal.innerHTML = trioRevealHTML();
   const playersNote = document.getElementById("trioPlayersNote");

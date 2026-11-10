@@ -3,7 +3,7 @@
                 <div class="trio-status">
                   <span class="trio-chip trio-mode" id="trioMode" data-trio-explain="mode">—</span>
                   <span class="trio-chip trio-goal" id="trioGoal" data-trio-explain="goal">—</span>
-                  <span class="trio-chip trio-turn" id="trioTurn" data-trio-explain="turn">—</span>
+                  <span class="trio-chip trio-turn-chip" id="trioTurn" data-trio-explain="turn">—</span>
                 </div>
 
                 <div id="trioBanner" class="trio-banner" data-trio-explain="banner"></div>
@@ -16,14 +16,12 @@
                         <span class="trio-block-note" id="trioTableNote"></span>
                       </div>
                       <div id="trioTable" class="trio-table" data-trio-cols="3"></div>
-                    </div>
 
-                    <div class="trio-block trio-reveal-block" data-trio-explain="reveal">
-                      <div class="trio-block-head">
-                        <span class="trio-block-title">This turn</span>
-                        <span class="trio-block-note" id="trioRevealNote"></span>
+                      <div class="trio-turn" data-trio-explain="reveal">
+                        <span class="trio-block-title trio-turn-label">This turn</span>
+                        <div id="trioReveal" class="trio-reveal"></div>
+                        <span class="trio-turn-note" id="trioRevealNote"></span>
                       </div>
-                      <div id="trioReveal" class="trio-reveal"></div>
                     </div>
                   </div>
 
