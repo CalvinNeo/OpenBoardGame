@@ -21,11 +21,22 @@ from typing import Dict, List, Optional, Tuple
 
 from jsonschema import Draft7Validator
 
+try:  # Pillow is a runtime dependency for this game: rounds are composited live.
+    from PIL import Image
+except ImportError:  # pragma: no cover - surfaced as a clear error at deal time
+    Image = None
+
 
 GAME_ID = "find_diff"
 IMAGE_DIR = Path(__file__).resolve().parent.parent / ".find_diff"
 MANIFEST_PATH = IMAGE_DIR / "manifest.json"
 IMAGE_URL_PREFIX = "/static/find_diff/"
+ROUNDS_DIRNAME = "rounds"
+ROUND_JPEG_QUALITY = 92
+# Ground-truth boxes come from the alpha placement, so anti-aliased edges can sit
+# a pixel or two outside. A few pixels of slack costs nothing: A and B are
+# identical outside the boxes, so the extra area copies pixels that already match.
+ROUND_PASTE_PAD = 3
 
 # How many differences each generated picture carries. A race uses a subset.
 DIFFS_PER_LEVEL = 5
@@ -137,6 +148,62 @@ def load_levels(force: bool = False) -> List[Dict]:
     return levels
 
 
+def round_image_key(level_id: str, slots: List[int]) -> str:
+    return f"{level_id}_s" + "".join(str(slot) for slot in sorted(slots))
+
+
+def build_round_images(level: Dict, slots: List[int]) -> Dict[str, str]:
+    """Return URLs for a matched pair that shows ONLY the selected differences.
+
+    The generated <scene>_b.jpg carries every difference the pipeline found, five
+    of them. Showing it untouched would put differences on screen that the round
+    does not count, and a player who taps one would be punished for correctly
+    spotting a real difference. So the B picture for a round is rebuilt here: take
+    the clean A and paste in only the boxes this round actually uses.
+
+    Both files are re-encoded from the same decoded base at the same quality, so
+    everywhere outside the pasted boxes the two pictures are byte-identical and
+    no re-encoding noise can masquerade as a difference.
+    """
+    if Image is None:
+        raise ValueError("find_diff needs Pillow to compose round pictures: pip install Pillow")
+    rounds = IMAGE_DIR / ROUNDS_DIRNAME
+    key = round_image_key(level["id"], slots)
+    a_name = f"{level['id']}_a.jpg"
+    b_name = f"{key}_b.jpg"
+    urls = {
+        "a_url": f"{IMAGE_URL_PREFIX}{ROUNDS_DIRNAME}/{a_name}",
+        "b_url": f"{IMAGE_URL_PREFIX}{ROUNDS_DIRNAME}/{b_name}",
+    }
+    if (rounds / a_name).exists() and (rounds / b_name).exists():
+        return urls
+
+    base = Image.open(IMAGE_DIR / level["a"]).convert("RGB")
+    edited = Image.open(IMAGE_DIR / level["b"]).convert("RGB")
+    if base.size != edited.size:
+        raise ValueError(f"find_diff level {level['id']} has mismatched picture sizes")
+
+    rounds.mkdir(parents=True, exist_ok=True)
+    if not (rounds / a_name).exists():
+        base.save(rounds / a_name, quality=ROUND_JPEG_QUALITY, subsampling=0)
+
+    composed = base.copy()
+    width, height = base.size
+    for slot in slots:
+        x0, y0, x1, y1 = level["diffs"][slot]["box"]
+        box = (
+            max(0, int(x0 * width) - ROUND_PASTE_PAD),
+            max(0, int(y0 * height) - ROUND_PASTE_PAD),
+            min(width, int(x1 * width) + ROUND_PASTE_PAD),
+            min(height, int(y1 * height) + ROUND_PASTE_PAD),
+        )
+        if box[2] <= box[0] or box[3] <= box[1]:
+            continue
+        composed.paste(edited.crop(box), box[:2])
+    composed.save(rounds / b_name, quality=ROUND_JPEG_QUALITY, subsampling=0)
+    return urls
+
+
 def _name(state: Dict, player_id: str) -> str:
     return state.get("player_meta", {}).get(player_id, {}).get("name", player_id)
 
@@ -233,8 +300,8 @@ def _review(state: Dict) -> List[Dict]:
             "index": index,
             "id": level["id"],
             "title": level["title"],
-            "a_url": IMAGE_URL_PREFIX + level["a"],
-            "b_url": IMAGE_URL_PREFIX + level["b"],
+            "a_url": state["images"][level_id]["a_url"],
+            "b_url": state["images"][level_id]["b_url"],
             "diffs": [
                 {
                     "slot": slot_index,
@@ -279,6 +346,10 @@ def _deal_race(state: Dict) -> None:
         plan[level_id] = sorted(random.sample(range(len(level["diffs"])), want))
     state["run"] = run
     state["plan"] = plan
+    state["images"] = {
+        level_id: build_round_images(state["levels"][level_id], plan[level_id])
+        for level_id in run
+    }
     state["players"] = {pid: _new_runner() for pid in state["turn_order"]}
     now = _now_ms()
     state["started_ms"] = now
@@ -535,8 +606,8 @@ class FindDiffGame:
                 "level": None if not level else {
                     "id": level["id"],
                     "title": level["title"],
-                    "a_url": IMAGE_URL_PREFIX + level["a"],
-                    "b_url": IMAGE_URL_PREFIX + level["b"],
+                    "a_url": state["images"][level["id"]]["a_url"],
+                    "b_url": state["images"][level["id"]]["b_url"],
                     "total": len(slots),
                 },
             },
@@ -598,7 +669,8 @@ class FindDiffGame:
         if not isinstance(payload, dict) or payload.get("game_id") != GAME_ID:
             raise ValueError("invalid find_diff save")
         state = copy.deepcopy(payload)
-        for key in ("turn_order", "players", "player_meta", "levels", "level_pool", "run", "plan"):
+        for key in ("turn_order", "players", "player_meta", "levels", "level_pool",
+                    "run", "plan", "images"):
             if key not in state:
                 raise ValueError(f"find_diff save missing {key}")
         state.setdefault("ranking", [])
