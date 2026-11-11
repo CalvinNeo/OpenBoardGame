@@ -36,7 +36,7 @@
 
 - 后端：`game/dare_words.py`；注册在 `game/definitions.py`、`game/__init__.py`、`game/tags.py`、`game/dev_order.json`；`app.py` 补 Bot 动作公开与重连跑 Bot 的名单。
 - 前端：`static/games/dare_words.{html,css,js}`，接入 `static/game_assets.js`、`static/index.html`、`static/app.js`、`static/room.js`、`static/games/shared.js`。
-- 界面主体是桌面字列；点字卡即可拼词句（手机不需要打字），也保留可编辑输入框并实时提示用字是否合法；点击空白处清空选择，不提供 Clear Selection 按钮。
+- 界面主体是桌面字列；词句**只能靠点字卡拼出来**，没有任何输入框：点一次字卡接到词句末尾，再点一次同一张卡取回，已选字卡区里的字也能点掉，点击面板空白处清空全部，不提供 Clear Selection 按钮。已选区实时显示顺序号与字数校验，3–24 字之间抢答按钮才亮起。
 - 房间设置：牌堆规模 `Full 100 / Short 60`，默认 Full。
 - 图标：🀄 字卡、🗣 抢答、✅ 认可、❌ 不认可、🏆 获胜。Help 与 Explain 中同时给出符号与文字。
 
@@ -50,3 +50,14 @@
 - 交互检查：Help 弹窗、Explain 模式（点击后自动退出）、Esc 关闭、桌面悬停提示、点击空白清空选择、连点字卡（已修复原先整行重建导致连点失效与焦点丢失的问题）。
 - 未检查：iOS / Android 真机；本机未安装 Playwright，多视口通过同源 iframe + 注入脚本测量完成，未生成 `tests/*.browser.cjs` 脚本。
 - 保留例外：Room Controls 收起后的 Dock 悬浮在左侧边缘，可能盖住「翻牌」按钮左侧约 36px，这是全局 Dock 行为（`designs/room_control.md` 允许 dock 与其他板块重叠），按钮仍有可点区域。
+
+## 去掉输入框，改为纯点选拼词（2026-11-11）
+
+- 需求：抢答词句不再提供任何打字入口，点桌面字卡出什么就是什么。
+- 界面：`dareWordsInput` 输入框删除，改为 `#dareWordsPhrase` 已选字卡区，按顺序显示选中的字和序号徽标；空时显示「点字卡拼出至少 3 个字」占位。凑够 3 字且不超过 24 字时整个区域转为绿色就绪态。
+- 交互：点桌面字卡追加到末尾；再点同一张卡、或点已选区里的字都能取回；点面板空白处清空全部；超过 24 字时给出「最多 24 个字。」提示并且不再追加。没有 Clear Selection 按钮。
+- 逻辑：`selection`（字卡 id 数组）成为词句的唯一来源，`phraseText()` 负责拼接；客户端只保留长度校验，用字合法性由「只能点桌面卡」天然保证，服务端仍做完整校验。
+- 文案：Help 的「抢答与用字」与 Explain 的 `phrase` 条目同步改写，明确说明没有输入框；`data-dw-explain="input"` 改名为 `phrase`。
+- 资源版本：`dare_words.js?v=3`、`dare_words.css?v=2`、`dare_words.html?v=2`，首页 `game_assets.js?v=253`。
+- 验证：真实服务端跑通翻牌 → 点选拼词 → 抢答 → 表决；点 2 张卡时提示「至少 3 个字。」且按钮禁用，点第 3 张后按钮亮起并显示「✓ 3 个字，全部来自桌面」，点已选区的字可取回并重新编号，点空白处清空全部，抢答提交后服务端收到的词句与界面一致。
+- 视口 320 / 390 / 1024 / 1440 px：均无横向溢出、无板块重叠；已选字卡在四档下都单行显示，手机端 36×36、桌面端 40×40；320px 页面高度由 833px 降到 780px（刚好一屏）。控制台与网络无错误。

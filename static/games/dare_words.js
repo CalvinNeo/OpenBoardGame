@@ -45,12 +45,14 @@ const DARE_WORDS_HELP_CONFIG = {
       html: {
         zh: "<p>一次合法的抢答至少要用 3 个字，最多 24 个字，而且只能使用汉字，标点、字母和数字都不行。</p>"
           + "<p>词句里的每一个字都必须来自桌面字列，同一个字卡在一次词句里只能用一次，桌上有两张同样的字才可以用两次。</p>"
-          + "<p>桌面字卡(🀄)可以直接点选来拼词，手机上完全不需要打字。点面板空白处可以清空当前选择。</p>"
-          + "<p>输入框会实时告诉你用字是否合法，只有合法时抢答按钮才会亮起。</p>",
+          + "<p>词句只能靠点桌面字卡(🀄)拼出来，没有任何输入框，手机和电脑都不需要打字。</p>"
+          + "<p>点一次字卡就把它接到词句末尾，再点一次同一张卡可以取回；点已选字卡区里的字同样可以取回，点面板空白处清空全部。</p>"
+          + "<p>凑够 3 个字且不超过 24 个字时，抢答按钮才会亮起。</p>",
         en: "<p>A legal claim uses at least three characters and at most twenty four, and every one of them must be a Chinese character. Punctuation, letters and digits are rejected.</p>"
           + "<p>Each character in the phrase must come from the table row, and one card can only be spent once per phrase, so using the same character twice needs two copies of it on the table.</p>"
-          + "<p>You can tap the character cards (🀄) on the table to build the phrase, so a phone never needs the keyboard. Tapping empty space on the panel clears the current selection.</p>"
-          + "<p>The input box reports in real time whether your characters are legal, and the claim button only lights up once they are.</p>"
+          + "<p>The phrase is built only by tapping the character cards (🀄) on the table. There is no input box, so neither a phone nor a desktop ever needs the keyboard.</p>"
+          + "<p>One tap appends a card to the end of the phrase and a second tap on the same card returns it. Tapping a character in the picked area also returns it, and tapping empty space on the panel clears everything.</p>"
+          + "<p>The claim button lights up once the phrase has at least three characters and no more than twenty four.</p>"
       }
     },
     {
@@ -115,9 +117,9 @@ const DARE_WORDS_EXPLAIN = {
     zh: "凑出至少 3 个字、只用桌面上的字的词语、短语或短句，就可以抢答。是否通顺由其他玩家投票决定。",
     en: "Claim with a word, phrase or short sentence of at least three characters taken only from the table. The other players vote on whether it reads well."
   },
-  input: {
-    zh: "词句输入框。点桌面字卡拼词，或者直接输入，输入框会实时告诉你用字是否合法。点击面板空白处可以清空。",
-    en: "The phrase input. Tap table cards to build a phrase or type it directly, and the box reports in real time whether your characters are legal. Tapping empty space clears it."
+  phrase: {
+    zh: "已选字卡区。点桌面字卡按顺序拼词，这里按顺序显示你选的字和序号；再点一次桌面上的同一张卡、或点这里的字都能取回，点面板空白处清空全部。",
+    en: "Your picked cards. Tap table cards to build the phrase in order; this area shows the picked characters with their order. Tap the same table card again or tap a character here to return it, and tap empty space to clear everything."
   },
   claim_btn: {
     zh: "抢答按钮。词句合法时才能按下，抢答之后其他人会投票，认可票更多才算成功。",
@@ -208,13 +210,23 @@ if (document.readyState === "loading") {
   const rowCards = () => view?.row || [];
   const cardById = (cardId) => rowCards().find((card) => card.card_id === cardId);
   const minChars = () => view?.min_chars || 3;
+  const maxChars = () => view?.max_chars || 24;
   const isHan = (character) => /[\u3400-\u4DBF\u4E00-\u9FFF]/.test(character);
+  let phraseEmptyNode = null;
+  const phraseEmpty = () => {
+    if (!phraseEmptyNode) phraseEmptyNode = id("PhraseEmpty");
+    return phraseEmptyNode;
+  };
+  // The phrase is built by tapping table cards only, so the characters are always
+  // legal by construction and only the length limits remain as client checks.
+  const phraseText = () => selection.map((cardId) => cardById(cardId)?.char || "").join("");
 
   // Help and Explain now live in the shared widgets above.
   function checkPhrase(text) {
     const characters = (text || "").replace(/\s+/g, "");
     if (!characters.length) return { ok: false, message: "" };
     if (characters.length < minChars()) return { ok: false, message: `至少 ${minChars()} 个字。` };
+    if (characters.length > maxChars()) return { ok: false, message: `最多 ${maxChars()} 个字。` };
     for (const character of characters) {
       if (!isHan(character)) return { ok: false, message: "只能用汉字，不能加标点、字母或数字。" };
     }
@@ -325,15 +337,41 @@ if (document.readyState === "loading") {
     setText("FlipHint", hint);
   }
 
+  function renderPhrase(check, claimable) {
+    const container = id("Phrase");
+    const empty = phraseEmpty();
+    container.replaceChildren();
+    container.classList.toggle("is-ready", Boolean(check.ok));
+    container.classList.toggle("is-locked", !claimable);
+    if (!selection.length) {
+      empty.hidden = false;
+      container.append(empty);
+      return;
+    }
+    empty.hidden = true;
+    selection.forEach((cardId, index) => {
+      const card = cardById(cardId);
+      if (!card) return;
+      const pick = node("button", "dare-words-pick", card.char);
+      pick.type = "button";
+      pick.dataset.cardId = String(cardId);
+      pick.dataset.order = String(index + 1);
+      pick.setAttribute("aria-label", `移除第 ${index + 1} 个字 ${card.char}`);
+      container.append(pick);
+    });
+  }
+
   function renderClaim() {
-    const input = id("Input");
     const button = id("ClaimBtn");
     const feedback = id("Feedback");
     const claimable = can("claim");
-    const check = checkPhrase(input.value);
-    input.disabled = !claimable;
+    const check = checkPhrase(phraseText());
+    renderPhrase(check, claimable);
     button.disabled = !claimable || !check.ok;
     button.textContent = pending ? "…" : "🗣 抢答";
+    setText("ClaimHint", selection.length
+      ? `已选 ${selection.length} 个字 · 点已选的字可以取回`
+      : "点桌面字卡，按顺序拼词");
     if (view && !view.legal_actions?.includes("claim") && view.phase === "flipping") {
       const me = view.players?.find((player) => player.player_id === ownId());
       feedback.classList.remove("is-ok");
@@ -462,7 +500,6 @@ if (document.readyState === "loading") {
 
   function clearSelection() {
     selection = [];
-    id("Input").value = "";
     id("Feedback").dataset.error = "";
     id("Feedback").textContent = "";
   }
@@ -476,7 +513,7 @@ if (document.readyState === "loading") {
   }
 
   function submitClaim() {
-    const phrase = id("Input").value.replace(/\s+/g, "");
+    const phrase = phraseText();
     if (!checkPhrase(phrase).ok) return;
     send("claim", { phrase });
   }
@@ -500,26 +537,34 @@ if (document.readyState === "loading") {
 
   id("Row").addEventListener("click", (event) => {
     const button = event.target.closest(".dare-words-card");
-    if (!button) return;
+    if (!button || !can("claim")) return;
     const cardId = Number(button.dataset.cardId);
-    if (!can("claim")) return;
     const index = selection.indexOf(cardId);
-    if (index >= 0) selection.splice(index, 1);
-    else if (cardById(cardId)) selection.push(cardId);
-    id("Input").value = selection.map((value) => cardById(value)?.char || "").join("");
-    id("Feedback").dataset.error = "";
+    const feedback = id("Feedback");
+    feedback.dataset.error = "";
+    if (index >= 0) {
+      selection.splice(index, 1);
+    } else if (cardById(cardId)) {
+      if (selection.length >= maxChars()) {
+        feedback.classList.remove("is-ok");
+        feedback.textContent = `最多 ${maxChars()} 个字。`;
+        return;
+      }
+      selection.push(cardId);
+    }
     renderRow();
     renderClaim();
   });
 
-  id("Input").addEventListener("input", () => {
-    selection = [];
+  id("Phrase").addEventListener("click", (event) => {
+    const pick = event.target.closest(".dare-words-pick");
+    if (!pick || !can("claim")) return;
+    const index = selection.indexOf(Number(pick.dataset.cardId));
+    if (index < 0) return;
+    selection.splice(index, 1);
     id("Feedback").dataset.error = "";
     renderRow();
     renderClaim();
-  });
-  id("Input").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") { event.preventDefault(); submitClaim(); }
   });
   id("FlipBtn").addEventListener("click", () => send("flip"));
   id("FinishBtn").addEventListener("click", () => send("finish_game"));
@@ -532,8 +577,8 @@ if (document.readyState === "loading") {
   });
 
   panel.addEventListener("click", (event) => {
-    if (event.target.closest("button, input, label, summary, details, a")) return;
-    if (!selection.length && !id("Input").value) return;
+    if (event.target.closest("button, label, summary, details, a")) return;
+    if (!selection.length) return;
     clearSelection();
     renderRow();
     renderClaim();
@@ -586,7 +631,6 @@ if (document.readyState === "loading") {
     pending = false;
     if (previousPhase !== view.phase) clearSelection();
     selection = selection.filter((cardId) => Boolean(cardById(cardId)));
-    if (selection.length) id("Input").value = selection.map((value) => cardById(value).char).join("");
     render();
   };
   window.showDareWordsHeaderActions = (visible) => {

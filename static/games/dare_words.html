@@ -33,11 +33,13 @@
   </div>
   <section class="dare-words-claim" aria-labelledby="dareWordsClaimTitle" data-dw-explain="claim">
     <div class="dare-words-claim-head">
-      <label id="dareWordsClaimTitle" for="dareWordsInput">🗣 你的词句</label>
-      <span id="dareWordsInputHint">点字卡拼词，或直接输入</span>
+      <span id="dareWordsClaimTitle" class="dare-words-claim-label">🗣 你的词句</span>
+      <span id="dareWordsClaimHint" class="dare-words-muted">点桌面字卡，按顺序拼词</span>
     </div>
     <div class="dare-words-claim-row">
-      <input id="dareWordsInput" type="text" maxlength="24" placeholder="至少 3 个字…" autocomplete="off" spellcheck="false" enterkeyhint="send" data-dw-explain="input" aria-describedby="dareWordsInputHint dareWordsFeedback" disabled>
+      <div id="dareWordsPhrase" class="dare-words-phrase" role="group" aria-label="已选字卡" data-dw-explain="phrase">
+        <span id="dareWordsPhraseEmpty" class="dare-words-phrase-empty">点字卡拼出至少 3 个字</span>
+      </div>
       <button id="dareWordsClaimBtn" class="dare-words-primary" type="button" data-dw-explain="claim_btn" disabled>🗣 抢答</button>
     </div>
     <div id="dareWordsFeedback" class="dare-words-feedback" role="status" aria-live="polite"></div>
