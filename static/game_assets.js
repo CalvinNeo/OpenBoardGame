@@ -664,7 +664,7 @@ const GAME_ASSETS = {
   },
   "bubble_shooter": {
     "scripts": [
-      "/static/games/bubble_shooter.js?v=9"
+      "/static/games/bubble_shooter.js?v=10"
     ],
     "styles": ["/static/games/bubble_shooter.css?v=7"],
     "panel": "bubbleShooterPanel",

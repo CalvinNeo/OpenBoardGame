@@ -154,11 +154,19 @@
     };
   }
 
+  // Always take the source explicitly. Reading the module-level `view` here
+  // would hand back the *previous* state while a new one is being applied,
+  // which made the board and the replayed shot lag one update behind and fired
+  // a different bubble than the shooter was showing.
+  function boardOf(source, pid) {
+    if (!source) return null;
+    const boards = source.boards;
+    if (boards && pid && boards[pid]) return boards[pid];
+    return fallbackBoard(source);
+  }
+
   function activeBoard() {
-    if (!view) return null;
-    const boards = view.boards;
-    if (boards && activeId && boards[activeId]) return boards[activeId];
-    return fallbackBoard(view);
+    return boardOf(view, activeId);
   }
 
   const isMine = () => Boolean(view) && activeId === view.you;
@@ -837,7 +845,8 @@
       loadPainted();
     }
 
-    const snapshot = activeBoard();
+    // Read the incoming state, not whatever was last painted.
+    const snapshot = boardOf(next, activeId);
     const shot = snapshot ? snapshot.last_shot : null;
     const shotId = snapshot ? snapshot.shot_id || 0 : 0;
 
