@@ -208,6 +208,31 @@ class FindDiffTestCase(unittest.TestCase):
                 "a difference that is not in play must not be shipped",
             )
 
+    def test_next_base_url_is_shipped_for_preloading(self):
+        """The next picture's clean base carries no answers, so it ships early.
+
+        Warming it up shortens the blackout between pictures, and because the
+        base is the untouched original it cannot spoil anything.
+        """
+        state = self.new_state()
+        view = FindDiffGame.get_public_view(state, "p1")
+        runner = state["players"]["p1"]
+        self.assertEqual(runner["index"], 0)
+        expected = "/static/find_diff/" + state["levels"][state["run"][1]]["a"]
+        self.assertEqual(view["you"]["level"]["next_base_url"], expected)
+        # it is a base picture, never a patch
+        self.assertTrue(view["you"]["level"]["next_base_url"].endswith("_a.jpg"))
+        for entry in view["you"]["level"]["patches"]:
+            self.assertNotEqual(entry["url"], view["you"]["level"]["next_base_url"])
+
+    def test_next_base_url_is_absent_on_the_last_picture(self):
+        state = self.new_state()
+        runner = state["players"]["p1"]
+        runner["index"] = len(state["run"]) - 1
+        runner["found"] = []
+        view = FindDiffGame.get_public_view(state, "p1")
+        self.assertIsNone(view["you"]["level"]["next_base_url"])
+
     def test_patch_geometry_covers_its_difference_box(self):
         """A patch must fully contain the box it stands for.
 

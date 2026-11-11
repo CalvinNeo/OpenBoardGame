@@ -107,6 +107,7 @@
 }
 
 .find-diff-stage {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -115,6 +116,41 @@
 }
 
 .find-diff-stage.is-stacked { grid-template-columns: 1fr; }
+
+/* While a picture is still arriving nothing may be visible: patches popping in
+   one at a time walk the player straight to the answers. */
+.find-diff-stage.is-loading .find-diff-frame {
+  visibility: hidden;
+}
+
+.find-diff-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.find-diff-loading[hidden] {
+  display: none;
+}
+
+.find-diff-loading-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: find-diff-spin 800ms linear infinite;
+}
+
+@keyframes find-diff-spin {
+  to { transform: rotate(360deg); }
+}
 
 .find-diff-frame {
   position: relative;

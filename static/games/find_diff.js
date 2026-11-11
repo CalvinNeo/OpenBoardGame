@@ -131,6 +131,8 @@ let findDiffLoadedLevel = null;
 let findDiffLayout = null;
 let findDiffLastStage = null;
 let findDiffReadySent = false;
+let findDiffLoading = false;
+let findDiffLoadToken = 0;
 
 function findDiffEl(id) {
   return document.getElementById(id);
@@ -216,6 +218,9 @@ function findDiffTick() {
     if (view.stage !== "racing") {
       hint.textContent = "";
       hint.classList.remove("is-locked");
+    } else if (findDiffLoading) {
+      hint.textContent = "Loading the next picture...";
+      hint.classList.remove("is-locked");
     } else if (you.finished) {
       hint.textContent = "You finished. Waiting for the other players to catch up.";
       hint.classList.remove("is-locked");
@@ -248,6 +253,82 @@ function findDiffPatchNode(patch, baseSize) {
   node.style.width = (patch.size[0] / width * 100) + "%";
   node.style.height = (patch.size[1] / height * 100) + "%";
   return node;
+}
+
+function findDiffReady(img) {
+  if (!img) return Promise.resolve();
+  if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+  if (typeof img.decode === "function") {
+    return img.decode().catch(() => new Promise((resolve) => {
+      img.onload = img.onerror = () => resolve();
+    }));
+  }
+  return new Promise((resolve) => { img.onload = img.onerror = () => resolve(); });
+}
+
+function findDiffSetBusy(busy) {
+  findDiffLoading = busy;
+  const stage = findDiffEl("findDiffStage");
+  const note = findDiffEl("findDiffLoading");
+  if (stage) stage.classList.toggle("is-loading", busy);
+  if (note) note.hidden = !busy;
+}
+
+function findDiffClearBoard() {
+  ["findDiffImageA", "findDiffImageB"].forEach((id) => {
+    const img = findDiffEl(id);
+    if (img) img.removeAttribute("src");
+  });
+  ["findDiffPatchesB", "findDiffMarksA", "findDiffMarksB"].forEach((id) => {
+    const host = findDiffEl(id);
+    if (host) host.innerHTML = "";
+  });
+}
+
+function findDiffPreloadNext(level) {
+  if (!level || !level.next_base_url) return;
+  const img = new Image();
+  img.src = level.next_base_url;
+  if (typeof img.decode === "function") img.decode().catch(() => {});
+}
+
+// Fetch and decode the whole picture before showing any of it. The base is the
+// big file and the patches are small, so without this the patches land one by
+// one on top of an already visible base and give away every difference.
+async function findDiffShowLevel(level) {
+  const token = ++findDiffLoadToken;
+  findDiffSetBusy(true);
+  findDiffClearBoard();
+
+  const base = new Image();
+  base.src = level.a_url;
+  const patches = level.patches || [];
+  const sources = patches.map((patch) => {
+    const img = new Image();
+    img.src = patch.url;
+    return img;
+  });
+  await Promise.all([base].concat(sources).map(findDiffReady));
+  if (token !== findDiffLoadToken) return;
+
+  const imageA = findDiffEl("findDiffImageA");
+  const imageB = findDiffEl("findDiffImageB");
+  if (imageA) imageA.src = level.a_url;
+  if (imageB) imageB.src = level.a_url;
+  const host = findDiffEl("findDiffPatchesB");
+  if (host) {
+    host.innerHTML = "";
+    patches.forEach((patch) => {
+      host.appendChild(findDiffPatchNode(patch, level.base_size || [1600, 1200]));
+    });
+  }
+  await Promise.all([imageA, imageB].filter(Boolean).map(findDiffReady));
+  if (token !== findDiffLoadToken) return;
+
+  findDiffRenderMarks();
+  if (host) findDiffClampTags(host);
+  findDiffSetBusy(false);
+  findDiffPreloadNext(level);
 }
 
 function findDiffRenderPatches(level) {
@@ -461,6 +542,7 @@ function findDiffSend(action) {
 function findDiffGuess(frame, clientX, clientY) {
   const view = findDiffView;
   if (!view || view.stage !== "racing") return;
+  if (findDiffLoading) return;
   const you = view.you;
   if (you.finished) return;
   if (findDiffExplainWidget?.isActive()) return;
@@ -540,10 +622,7 @@ function findDiffRender() {
   const imageB = findDiffEl("findDiffImageB");
   if (you.level && findDiffLoadedLevel !== you.level.id) {
     findDiffLoadedLevel = you.level.id;
-    // Both frames show the same clean base; B gets the patches stacked on top.
-    if (imageA) imageA.src = you.level.a_url;
-    if (imageB) imageB.src = you.level.a_url;
-    findDiffRenderPatches(you.level);
+    findDiffShowLevel(you.level);
   }
 
   findDiffRenderScores();
@@ -574,6 +653,8 @@ function clearFindDiffState() {
   findDiffLoadedLevel = null;
   findDiffLastStage = null;
   findDiffReadySent = false;
+  findDiffLoadToken += 1;
+  findDiffSetBusy(false);
   window.clearInterval(findDiffTicker);
   findDiffTicker = null;
   ["findDiffMarksA", "findDiffMarksB", "findDiffPatchesB"].forEach((id) => {

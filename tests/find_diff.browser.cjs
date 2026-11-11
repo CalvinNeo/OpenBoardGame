@@ -244,6 +244,87 @@ async function audit(page) {
   });
 }
 
+// A cold cache with staggered responses is where a patch-by-patch reveal would
+// show up. Nothing about the picture may be visible until every piece is in.
+async function slowLoadCheck(browser, failures) {
+  const context = await browser.newContext({
+    viewport: { width: 1024, height: 768 },
+    deviceScaleFactor: 1,
+  });
+  const page = await context.newPage();
+  let patchHits = 0;
+  await page.route('**/static/find_diff/*_p*.png', async (route) => {
+    patchHits += 1;
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await route.continue();
+  });
+  await page.route('**/static/find_diff/*_a.jpg', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await route.continue();
+  });
+
+  await page.goto(base, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof ensureGameAssets === 'function' && typeof socket !== 'undefined', { timeout: 20000 });
+  await page.evaluate(() => ensureGameAssets('find_diff'));
+  await page.waitForFunction(() => document.getElementById('findDiffImageA') !== null, { timeout: 15000 });
+  await page.evaluate(() => {
+    document.getElementById('findDiffPanel').classList.remove('hidden');
+    if (typeof setRoomControlsCollapsed === 'function') setRoomControlsCollapsed(true);
+  });
+
+  // Deliberately not render(): that helper waits for the pictures to finish,
+  // which is exactly the window this probe needs to observe.
+  await page.evaluate((view) => {
+    clearFindDiffState();
+    renderFindDiffGameState({ game_type: 'find_diff', view });
+  }, makeView('racing'));
+
+  const samples = [];
+  for (let i = 0; i < 10; i += 1) {
+    samples.push(await page.evaluate(() => {
+      const stage = document.getElementById('findDiffStage');
+      const a = document.getElementById('findDiffImageA');
+      const b = document.getElementById('findDiffImageB');
+      return {
+        loading: stage.classList.contains('is-loading'),
+        patches: document.querySelectorAll('#findDiffPatchesB img').length,
+        baseSrc: a.getAttribute('src'),
+        bSrc: b.getAttribute('src'),
+        noteShown: !document.getElementById('findDiffLoading').hidden,
+        framesVisible: getComputedStyle(a.closest('.find-diff-frame')).visibility,
+      };
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+
+  const midFlight = samples.filter((s) => s.loading);
+  const partial = midFlight.filter((s) => s.patches > 0 || s.baseSrc || s.bSrc);
+  const notHidden = midFlight.filter((s) => s.framesVisible !== 'hidden');
+  const noNote = midFlight.filter((s) => !s.noteShown);
+
+  console.log('=== slow-load probe ===');
+  console.log('patch responses served: ' + patchHits);
+  console.log('samples: ' + samples.length + ', mid-flight: ' + midFlight.length);
+  console.log(JSON.stringify(samples, null, 1));
+
+  if (patchHits < 3) failures.push('slow-load: patches were served from cache, probe is meaningless');
+  if (!midFlight.length) failures.push('slow-load: never caught the loading state');
+  if (partial.length) {
+    failures.push('slow-load: ' + partial.length + ' mid-flight sample(s) already showed part of the picture');
+  }
+  if (notHidden.length) failures.push('slow-load: frames were visible while loading');
+  if (noNote.length) failures.push('slow-load: loading note was hidden while loading');
+
+  const settled = await page.waitForFunction(() => {
+    const stage = document.getElementById('findDiffStage');
+    return !stage.classList.contains('is-loading')
+      && document.querySelectorAll('#findDiffPatchesB img').length === 3;
+  }, { timeout: 20000 }).then(() => true).catch(() => false);
+  if (!settled) failures.push('slow-load: never settled into the fully loaded state');
+  await page.screenshot({ path: path.join(output, 'slow-load-settled.png') });
+  await context.close();
+}
+
 (async () => {
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -313,6 +394,7 @@ async function audit(page) {
     if (errors.length) failures.push(size.name + ': console/page errors ' + errors.slice(0, 3).join(' | '));
     await context.close();
   }
+  await slowLoadCheck(browser, failures);
   await browser.close();
   if (failures.length) {
     console.error('\nFAILURES:\n' + failures.map((f) => ' - ' + f).join('\n'));

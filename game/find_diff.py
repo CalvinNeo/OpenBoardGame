@@ -232,6 +232,12 @@ def _rank_rows(state: Dict) -> List[Dict]:
     return rows
 
 
+def _next_base_url(state: Dict, index: int) -> Optional[str]:
+    if index + 1 >= len(state["run"]):
+        return None
+    return IMAGE_URL_PREFIX + state["levels"][state["run"][index + 1]]["a"]
+
+
 def _patch_payload(level: Dict, slots: List[int]) -> List[Dict]:
     """The rectangles the browser stacks on the clean base to build this round."""
     return [
@@ -562,6 +568,10 @@ class FindDiffGame:
                     "base_size": level["base_size"],
                     "patches": _patch_payload(level, slots),
                     "total": len(slots),
+                    # The clean base of the next picture carries no answers, so
+                    # shipping it early lets the browser warm it up and shortens
+                    # the blackout between pictures.
+                    "next_base_url": _next_base_url(state, runner["index"]),
                 },
             },
             "players": players,
