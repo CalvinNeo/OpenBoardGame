@@ -89,6 +89,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "century_spice_road": ("euro",),
     "citadels": ("euro", "bluffing"),
     "coyote": ("filler", "push_your_luck", "bluffing"),
+    "bubble_shooter": ("filler", "puzzle"),
     "compress": ("filler", "puzzle"),
     "criminal_dance": ("filler", "bluffing"),
     "cyber_pictures": ("filler", "creative"),
@@ -160,6 +161,8 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "yahtzee": ("filler", "push_your_luck"),
     "give_me_or_him": ("filler", "cooperative", "creative"),
     "trio": ("filler", "puzzle"),
+    "mushroom_picking": ("filler", "euro"),
+    "find_diff": ("filler", "puzzle"),
 }
 
 

@@ -662,6 +662,15 @@ const GAME_ASSETS = {
     "markup": "/static/games/compress.html?v=1_h3",
     "styleFragments": "/static/games/compress.css?v=1"
   },
+  "bubble_shooter": {
+    "scripts": [
+      "/static/games/bubble_shooter.js?v=8"
+    ],
+    "styles": ["/static/games/bubble_shooter.css?v=6"],
+    "panel": "bubbleShooterPanel",
+    "header": "showBubbleShooterHeaderActions",
+    "markup": "/static/games/bubble_shooter.html?v=5"
+  },
   "coyote": {
     "scripts": [
       "/static/games/coyote.js?v=app_v4_h1"
@@ -832,14 +841,14 @@ const GAME_ASSETS = {
   },
   "incan_gold": {
     "scripts": [
-      "/static/games/incan_gold.js?v=app_v5_h2"
+      "/static/games/incan_gold.js?v=app_v6"
     ],
     "styles": [],
     "panel": "incanGoldPanel",
     "panelTitle": "🏺 印加宝藏",
     "header": "showIncanGoldHeaderActions",
-    "markup": "/static/games/incan_gold.html?v=2_h2",
-    "styleFragments": "/static/games/incan_gold.css?v=2"
+    "markup": "/static/games/incan_gold.html?v=3",
+    "styleFragments": "/static/games/incan_gold.css?v=3"
   },
   "celestia": {
     "scripts": [
@@ -1222,12 +1231,28 @@ const GAME_ASSETS = {
     "header": "showDadadaHeaderActions"
   },
   "trio": {
-    "scripts": ["/static/games/trio.js?v=1"],
-    "styles": ["/static/games/trio.css?v=1"],
-    "markup": "/static/games/trio.html?v=1",
+    "scripts": ["/static/games/trio.js?v=2"],
+    "styles": ["/static/games/trio.css?v=2"],
+    "markup": "/static/games/trio.html?v=2",
     "panel": "trioPanel",
     "panelTitle": "🎴 回忆三重奏",
     "header": "showTrioHeaderActions"
+  },
+  "mushroom_picking": {
+    "scripts": ["/static/games/mushroom_picking.js?v=2"],
+    "styles": ["/static/games/mushroom_picking.css?v=2"],
+    "markup": "/static/games/mushroom_picking.html?v=1",
+    "panel": "mushroomPickingPanel",
+    "panelTitle": "🍄 上山捡菌",
+    "header": "showMushroomPickingHeaderActions"
+  },
+  "find_diff": {
+    "scripts": ["/static/games/find_diff.js?v=1"],
+    "styles": ["/static/games/find_diff.css?v=1"],
+    "markup": "/static/games/find_diff.html?v=1",
+    "panel": "findDiffPanel",
+    "panelTitle": "🔍 大家来找茬",
+    "header": "showFindDiffHeaderActions"
   }
 };
 

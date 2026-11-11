@@ -1397,6 +1397,12 @@ function renderGameTypeFilters(games) {
 
 const GAME_WEIGHT = {
   word_sync: null,
+  // No BGG entry exists yet: 上山捡菌 is an unreleased Chinese original, still in
+  // crowdfunding as of 2026-11-10. 1.40 follows the publisher's own 2/10
+  // difficulty rating quoted in the Bilibili tutorial (designs/task193.md §2).
+  mushroom_picking: 1.40,
+  // No BGG entry: 大家来找茬 is a generated picture puzzle, not a published board game.
+  find_diff: 1.00,
   pokemon_adventure: 1.17,
   chromino: 1.24,
   skull_king: 1.73,

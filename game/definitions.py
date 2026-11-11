@@ -124,6 +124,11 @@ from game.pokemon_adventure import (
 )
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
+from game.bubble_shooter import (
+    BubbleShooterGame,
+    ACTION_SCHEMA as BUBBLE_SHOOTER_ACTION_SCHEMA,
+    CONFIG_SCHEMA as BUBBLE_SHOOTER_CONFIG_SCHEMA,
+)
 from game.carcassonne import CarcassonneGame
 from game.catan_starfarers import CatanStarfarersGame
 from game.skull import SkullGame
@@ -182,6 +187,16 @@ from game.trio import (
     TrioGame,
     ACTION_SCHEMA as TRIO_ACTION_SCHEMA,
     CONFIG_SCHEMA as TRIO_CONFIG_SCHEMA,
+)
+from game.find_diff import (
+    FindDiffGame,
+    ACTION_SCHEMA as FIND_DIFF_ACTION_SCHEMA,
+    CONFIG_SCHEMA as FIND_DIFF_CONFIG_SCHEMA,
+)
+from game.mushroom_picking import (
+    MushroomPickingGame,
+    ACTION_SCHEMA as MUSHROOM_PICKING_ACTION_SCHEMA,
+    CONFIG_SCHEMA as MUSHROOM_PICKING_CONFIG_SCHEMA,
 )
 
 register_game(
@@ -6453,5 +6468,53 @@ register_game(
         module=TrioGame,
         serialize=TrioGame.serialize,
         deserialize=TrioGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=BubbleShooterGame.game_id,
+        name="Bubble Shooter",
+        name_zh="泡泡龙",
+        min_players=BubbleShooterGame.min_players,
+        max_players=BubbleShooterGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=BUBBLE_SHOOTER_ACTION_SCHEMA,
+        config_schema=BUBBLE_SHOOTER_CONFIG_SCHEMA,
+        module=BubbleShooterGame,
+        serialize=BubbleShooterGame.serialize,
+        deserialize=BubbleShooterGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=MushroomPickingGame.game_id,
+        name="Mushroom Picking",
+        name_zh="上山捡菌",
+        min_players=MushroomPickingGame.min_players,
+        max_players=MushroomPickingGame.max_players,
+        turn_mode="turn",
+        action_schema=MUSHROOM_PICKING_ACTION_SCHEMA,
+        config_schema=MUSHROOM_PICKING_CONFIG_SCHEMA,
+        module=MushroomPickingGame,
+        serialize=MushroomPickingGame.serialize,
+        deserialize=MushroomPickingGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=FindDiffGame.game_id,
+        name="Spot the Difference",
+        name_zh="大家来找茬",
+        min_players=FindDiffGame.min_players,
+        max_players=FindDiffGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=FIND_DIFF_ACTION_SCHEMA,
+        config_schema=FIND_DIFF_CONFIG_SCHEMA,
+        module=FindDiffGame,
+        serialize=FindDiffGame.serialize,
+        deserialize=FindDiffGame.deserialize,
     )
 )

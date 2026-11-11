@@ -1,0 +1,71 @@
+<template data-game-target="bubbleShooterHeaderActions" data-game-mode="contents">
+  <button id="bubbleShooterHelpBtn" type="button" title="Read the rules">Help</button>
+  <button id="bubbleShooterExplainBtn" type="button" aria-pressed="false" title="Explain an item">Explain</button>
+</template>
+
+<template data-game-target="bubbleShooterPanel" data-game-mode="contents">
+  <div class="bs-game">
+    <div class="bs-edge" data-bs-explain="scoreboard">
+      <span class="bs-edge-label">Race</span>
+      <div id="bsScores" class="bs-scores"></div>
+    </div>
+
+    <div class="bs-layout">
+      <div class="bs-stage">
+        <div id="bsBoard" class="bs-board" data-bs-explain="board" tabindex="0" role="application"
+             aria-label="Bubble board. Move the pointer to aim, click to shoot.">
+          <div class="bs-backdrop" aria-hidden="true"></div>
+          <div id="bsLayer" class="bs-layer" aria-hidden="true"></div>
+          <svg id="bsAimSvg" class="bs-aim-svg" viewBox="0 0 11 14" preserveAspectRatio="none" aria-hidden="true">
+            <polyline id="bsAimPath" class="bs-aim-path" points=""></polyline>
+          </svg>
+          <div id="bsGhost" class="bs-ghost" hidden aria-hidden="true"></div>
+          <div class="bs-death-line" data-bs-explain="death_line" aria-hidden="true"><span>⚠️ LINE</span></div>
+          <div id="bsShooter" class="bs-shooter" data-bs-explain="shooter" aria-hidden="true"></div>
+          <div class="bs-board-items" data-bs-explain="items">
+            <button id="bsHammerBtn" type="button" class="bs-chip" data-bs-explain="hammer">
+              <span class="bs-chip-icon" aria-hidden="true">🔨</span>
+              <span id="bsHammerCount" class="bs-chip-count">0</span>
+              <span class="bs-chip-name">Hammer</span>
+            </button>
+            <button id="bsAimBtn" type="button" class="bs-chip" data-bs-explain="aim">
+              <span class="bs-chip-icon" aria-hidden="true">🎯</span>
+              <span id="bsAimCount" class="bs-chip-count">0</span>
+              <span class="bs-chip-name">Aim line</span>
+            </button>
+          </div>
+          <div id="bsFly" class="bs-fly" hidden aria-hidden="true"></div>
+          <div id="bsOverlay" class="bs-overlay" hidden></div>
+        </div>
+      </div>
+
+      <aside class="bs-side">
+        <div class="bs-side-card">
+          <span class="bs-side-label" data-bs-explain="mine">Your run</span>
+          <div id="bsStats" class="bs-stats" aria-live="polite"></div>
+        </div>
+
+        <div class="bs-side-card">
+          <span class="bs-side-label" data-bs-explain="queue">Queue</span>
+          <div id="bsQueue" class="bs-queue"></div>
+        </div>
+
+        <div class="bs-side-card">
+          <span class="bs-side-label" data-bs-explain="angle">Aim</span>
+          <div class="bs-aim-readout">
+            <span id="bsAngleValue" class="bs-angle">0°</span>
+            <span class="bs-aim-hint">Move the pointer to aim · click to shoot</span>
+          </div>
+          <button id="bsRestartBtn" type="button" class="bs-ghost-btn" data-bs-explain="restart">↺ Restart</button>
+        </div>
+
+        <div id="bsStatus" class="bs-status" role="status" aria-live="polite"></div>
+        <div id="bsLastShot" class="bs-last" data-bs-explain="last_shot"></div>
+      </aside>
+    </div>
+  </div>
+</template>
+
+<template data-game-target="bubbleShooterDialog" data-game-mode="contents">
+  <div id="bsTip" class="bs-tip" role="status" hidden></div>
+</template>

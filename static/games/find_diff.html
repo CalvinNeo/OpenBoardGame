@@ -1,0 +1,33 @@
+<template data-game-target="findDiffPanel" data-game-mode="contents">
+              <div class="find-diff-status">
+                <span class="find-diff-chip" data-find-diff-explain="round">🔍 <b id="findDiffRound">1</b>/<b id="findDiffRounds">1</b></span>
+                <span class="find-diff-chip" data-find-diff-explain="timer">⏱️ <b id="findDiffTimer">--:--</b></span>
+                <span class="find-diff-chip" data-find-diff-explain="remaining">🎯 <b id="findDiffRemaining">5</b> left</span>
+                <span class="find-diff-chip find-diff-chip-scene" id="findDiffScene" data-find-diff-explain="scene">—</span>
+                <button type="button" class="find-diff-layout-btn" id="findDiffLayoutBtn" title="Switch between stacked and side-by-side pictures">⬍ Stack</button>
+              </div>
+
+              <div class="find-diff-scores" id="findDiffScores" data-find-diff-explain="scores"></div>
+
+              <div class="find-diff-stage" id="findDiffStage">
+                <figure class="find-diff-frame" data-find-diff-explain="picture">
+                  <img id="findDiffImageA" alt="Picture A" draggable="false">
+                  <div class="find-diff-marks" id="findDiffMarksA"></div>
+                  <figcaption>A</figcaption>
+                </figure>
+                <figure class="find-diff-frame" data-find-diff-explain="picture">
+                  <img id="findDiffImageB" alt="Picture B" draggable="false">
+                  <div class="find-diff-marks" id="findDiffMarksB"></div>
+                  <figcaption>B</figcaption>
+                </figure>
+              </div>
+
+              <div class="find-diff-hint" id="findDiffHint" data-find-diff-explain="hint"></div>
+
+              <div class="find-diff-result" id="findDiffResult" hidden></div>
+
+              <details class="find-diff-logbox" data-find-diff-explain="log">
+                <summary>Log</summary>
+                <div id="findDiffLog" class="find-diff-log"></div>
+              </details>
+            </template>

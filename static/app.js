@@ -587,6 +587,10 @@ function renderGameState(data) {
     renderCompressGameState(data);
     return;
   }
+  if (gameType === "bubble_shooter") {
+    if (typeof renderBubbleShooterGameState === "function") renderBubbleShooterGameState(data);
+    return;
+  }
   if (gameType === "coyote") {
     renderCoyoteGameState(data);
     return;
@@ -605,6 +609,14 @@ function renderGameState(data) {
   }
   if (gameType === "trio") {
     if (typeof renderTrioGameState === "function") renderTrioGameState(data);
+    return;
+  }
+  if (gameType === "mushroom_picking") {
+    if (typeof renderMushroomPickingGameState === "function") renderMushroomPickingGameState(data);
+    return;
+  }
+  if (gameType === "find_diff") {
+    if (typeof renderFindDiffGameState === "function") renderFindDiffGameState(data);
     return;
   }
   if (gameType === "in_a_grove") {

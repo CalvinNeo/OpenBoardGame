@@ -458,9 +458,11 @@ function trioRender() {
     if (trioView.game_over) who = "本局结束";
     else if (trioView.stage === "result") who = "回合结算";
     else who = mine ? "轮到你" : trioName(trioView.current_player);
-    turn.textContent = "第 " + trioView.turn + " 回合 · " + who;
+    // The turn counter lives in the table header, so this chip only has to say
+    // whose move it is and stays short enough for a 320px screen.
+    turn.textContent = who;
     turn.classList.toggle("is-you", mine && !trioView.game_over);
-    turn.title = mine ? "轮到你翻三张相同数字的牌" : "";
+    turn.title = "第 " + trioView.turn + " 回合";
   }
   const banner = document.getElementById("trioBanner");
   if (banner) {
@@ -471,7 +473,7 @@ function trioRender() {
   const tableNote = document.getElementById("trioTableNote");
   if (tableNote) {
     const left = (trioView.table || []).filter((slot) => !slot.empty).length;
-    tableNote.textContent = left + " 张暗牌";
+    tableNote.textContent = "第 " + trioView.turn + " 回合 · " + left + " 张暗牌";
   }
   const table = document.getElementById("trioTable");
   if (table) {
@@ -596,7 +598,7 @@ function trioTableRowOptions(count) {
 }
 
 function trioFitToScreen() {
-  const root = trioPanel?.querySelector(".trio-root");
+  const root = trioPanel;
   const table = document.getElementById("trioTable");
   if (!root || !table) return;
   const docTop = root.getBoundingClientRect().top + window.scrollY;
@@ -771,6 +773,23 @@ window.addEventListener("resize", () => {
   trioPlaceRowMask();
   trioFitToScreen();
 });
+
+// Text metrics settle after the web font arrives, and a late reflow would
+// otherwise leave the board fitted to stale measurements.
+document.fonts?.ready?.then(() => {
+  if (trioView) trioFitToScreen();
+});
+
+if (typeof ResizeObserver === "function" && trioPanel) {
+  let lastWidth = 0;
+  const observer = new ResizeObserver(() => {
+    const width = trioPanel.clientWidth;
+    if (!trioView || width === lastWidth) return;
+    lastWidth = width;
+    trioFitToScreen();
+  });
+  observer.observe(trioPanel);
+}
 
 function connectTrioEvents() {
   if (typeof socket === "undefined") return;

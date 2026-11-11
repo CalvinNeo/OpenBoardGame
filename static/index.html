@@ -653,6 +653,7 @@
                     <option value="dice_throne">Dice Throne · 王权骰铸</option>
 
                     <option value="fang_niao">Square Bird</option>
+                    <option value="bubble_shooter">Bubble Shooter · 泡泡龙</option>
                   </select>
                 </div>
                 <div id="roomList" class="room-list"></div>
@@ -1210,6 +1211,7 @@
             </div>
             <div class="panel-header-actions" id="incanGoldHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="sixNimmtHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="bubbleShooterHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="felixHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="chrominoHeaderActions" style="display: none;">
               <button id="chrominoHelpBtn" type="button" aria-label="Help">Help</button>
@@ -1475,6 +1477,14 @@
               <button id="dadadaHelpBtn" type="button">Help</button>
               <button id="dadadaExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="findDiffHeaderActions" style="display: none;">
+              <button id="findDiffHelpBtn" type="button">Help</button>
+              <button id="findDiffExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="mushroomPickingHeaderActions" style="display: none;">
+              <button id="mushroomPickingHelpBtn" type="button">Help</button>
+              <button id="mushroomPickingExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="spiritIslandHeaderActions" style="display: none;">
               <button id="spiritIslandHelpBtn" type="button">Help</button>
               <button id="spiritIslandExplainBtn" type="button" aria-pressed="false">Explain</button>
@@ -1581,6 +1591,8 @@
 
             <div id="dadadaPanel" class="hidden"></div>
             <div id="trioPanel" class="hidden"></div>
+            <div id="mushroomPickingPanel" class="hidden"></div>
+            <div id="findDiffPanel" class="hidden"></div>
             <div id="giveMeOrHimDialogs"></div>
             <div id="lasVegasPanel" class="hidden"></div>
             <div id="forSalePanel" class="hidden"></div>
@@ -1602,6 +1614,7 @@
             <div id="deceptionPanel" class="hidden deception-panel"></div>
             <div id="mindTheLinesPanel" class="hidden mind-the-lines-panel"></div>
             <div id="compressPanel" class="hidden"></div>
+            <div id="bubbleShooterPanel" class="hidden"></div>
             <div id="powerGridPanel" class="hidden power-grid-panel"></div>
             <div id="ticketToRidePanel" class="hidden ticket-to-ride-panel"></div>
             <div id="twelveRiversPanel" class="hidden twelve-rivers-panel"></div>
@@ -1798,7 +1811,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=238" defer></script>
+  <script src="/static/game_assets.js?v=250" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v44" defer></script>
   <script src="/static/games/shared_help.js?v=1" defer></script>
@@ -1816,6 +1829,7 @@
   <template id="deceptionDialog"></template>
   <div id="mindTheLinesDialog"></div>
   <div id="compressDialog"></div>
+  <div id="bubbleShooterDialog"></div>
   <template id="powerGridDialog"></template>
   <template id="semanticGuessDialog"></template>
   <template id="dareWordsDialog"></template>

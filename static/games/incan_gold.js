@@ -30,6 +30,11 @@ const incanGoldGamePanel = document.getElementById("incanGoldPanel");
 const incanGoldStatus = document.getElementById("incanGoldStatus");
 const incanGoldHelpBtn = document.getElementById("incanGoldHelpBtn");
 const incanGoldExplainBtn = document.getElementById("incanGoldExplainBtn");
+const incanGoldScoreboard = document.getElementById("incanGoldScoreboard");
+const incanGoldScoreboardRows = document.getElementById("incanGoldScoreboardRows");
+const incanGoldScoreboardNote = document.getElementById("incanGoldScoreboardNote");
+const incanGoldScoreboardCloseBtn = document.getElementById("incanGoldScoreboardClose");
+let incanGoldScoreboardDismissed = false;
 const incanGoldTooltip = document.createElement("div");
 incanGoldTooltip.className = "incan-gold-tooltip";
 incanGoldTooltip.id = "incanGoldTooltip";
@@ -136,6 +141,7 @@ const INCAN_GOLD_EXPLAIN = {
   path: { zh: "本次探险已经翻开的牌。宝石(💎) 会当场平分给洞里的人，余数留在牌上，神器(🏺) 要等到有人回营才结算。", en: "The cards revealed so far in this expedition. Treasure (💎) is split at once among the explorers in the cave with the remainder staying on the card, while artifacts (🏺) only settle when somebody leaves." },
   players: { zh: "所有探险者的状态，包括存好的宝石(💎)、手上的宝石(💎)、神器(🏺) 数量和总分。", en: "Every explorer with their banked gems (💎), gems in hand, artifact (🏺) count and total score." },
   hazards: { zh: "被永久移除的危险牌。每种危险初始各有 3 张，每爆发一次就永久移除 1 张。", en: "The permanently removed hazard cards. Each hazard starts with 3 copies and every bust removes 1 of them forever." },
+  scoreboard: { zh: "五次探险全部结束后弹出的最终得分板。名次先比总分，总分相同再比神器(🏺) 数量，仍然相同就并列。每行列出存进营地的宝石(💎)、神器(🏺) 的数量与分数，以及两者相加的总分。", en: "The final scoreboard that pops up once all five expeditions are over. Ranking compares the total score first, then the artifact (🏺) count, and a remaining tie is shared. Each row lists banked gems (💎), the artifact (🏺) count with its points, and the total of the two." },
   continue: { zh: "继续深入。你会和还在洞里的人平分下一张宝石(💎)，但同一种危险出现第二次时，手上的宝石(💎) 会全部清零，存好的和神器(🏺) 不受影响。", en: "Keep exploring. You share the next treasure (💎) with the explorers still in the cave, and if a second matching hazard appears you lose every gem (💎) in hand while your banked gems and artifacts (🏺) stay safe." },
   leave: { zh: "回营并把宝石(💎) 存起来。一起回营的人会逐张平分每张宝石(💎) 牌上剩下的余数。如果你独自回营，还能拿走路径上所有神器(🏺)，多个人一起走则神器(🏺) 全部作废。", en: "Return to camp and bank your gems (💎). The returning explorers divide the remainder on each treasure card separately, and if you leave alone you also collect every artifact (🏺) on the path while several returners discard them." },
   next: { zh: "确认你已经看完本次探险的结果。所有玩家都确认后下一次探险才开始，你的确认不会跳过别人的回顾。", en: "Confirm that you have reviewed the expedition. The next one begins only after every player confirms, and your own confirmation never skips anyone else's review." },
@@ -154,7 +160,7 @@ function initIncanGoldHelpExplain() {
     explanations: INCAN_GOLD_EXPLAIN,
     button: incanGoldExplainBtn,
     root: () => incanGoldGamePanel,
-    bypass: ["#incanGoldHelpBtn", "#incanGoldExplainBtn"]
+    bypass: ["#incanGoldHelpBtn", "#incanGoldExplainBtn", "#incanGoldScoreboardClose"]
   });
   incanGoldHelpBtn?.addEventListener("click", () => {
     incanGoldExplainWidget?.exit();
@@ -296,6 +302,116 @@ function renderIncanGoldHazards(view) {
   });
 }
 
+function rankIncanGoldPlayers(view) {
+  const players = Array.isArray(view && view.players) ? view.players.slice() : [];
+  players.sort((a, b) => (b.total_score ?? 0) - (a.total_score ?? 0)
+    || (b.artifact_count ?? 0) - (a.artifact_count ?? 0)
+    || (a.seat ?? 0) - (b.seat ?? 0));
+  let rank = 0;
+  let previousKey = null;
+  return players.map((player, index) => {
+    const key = `${player.total_score ?? 0}/${player.artifact_count ?? 0}`;
+    if (key !== previousKey) {
+      rank = index + 1;
+      previousKey = key;
+    }
+    return { player, rank };
+  });
+}
+
+function renderIncanGoldScoreboard(view) {
+  if (!incanGoldScoreboard || !incanGoldScoreboardRows) {
+    return;
+  }
+  if (!view || !view.game_over) {
+    incanGoldScoreboardDismissed = false;
+    if (incanGoldScoreboard.open) incanGoldScoreboard.close();
+    incanGoldScoreboardRows.innerHTML = "";
+    if (incanGoldScoreboardNote) incanGoldScoreboardNote.textContent = "";
+    return;
+  }
+
+  const winners = new Set(Array.isArray(view.winner) ? view.winner : []);
+  const ranked = rankIncanGoldPlayers(view);
+  incanGoldScoreboardRows.innerHTML = "";
+  ranked.forEach(({ player, rank }) => {
+    const isWinner = winners.has(player.player_id);
+    const row = document.createElement("li");
+    row.className = "incan-gold-score-row";
+    row.classList.toggle("is-winner", isWinner);
+    row.classList.toggle("is-you", player.player_id === view.you);
+
+    const rankEl = document.createElement("span");
+    rankEl.className = "incan-gold-score-rank";
+    rankEl.textContent = String(rank);
+    row.appendChild(rankEl);
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "incan-gold-score-name";
+    const nameText = document.createElement("span");
+    nameText.className = "incan-gold-score-name-text";
+    nameText.textContent = `${player.name || player.player_id}${player.player_id === view.you ? " · You" : ""}${player.is_bot ? " · AI" : ""}`;
+    nameEl.appendChild(nameText);
+    if (isWinner) {
+      const badge = document.createElement("span");
+      badge.className = "incan-gold-score-badge";
+      badge.textContent = "🏆";
+      nameEl.appendChild(badge);
+    }
+    row.appendChild(nameEl);
+
+    const totalEl = document.createElement("span");
+    totalEl.className = "incan-gold-score-total";
+    totalEl.textContent = String(player.total_score ?? 0);
+    row.appendChild(totalEl);
+
+    const detailEl = document.createElement("span");
+    detailEl.className = "incan-gold-score-detail";
+    detailEl.textContent = `💎 ${player.banked_gems ?? 0} banked · 🏺 ${player.artifact_count ?? 0} (+${player.artifact_points ?? 0})`;
+    row.appendChild(detailEl);
+
+    incanGoldScoreboardRows.appendChild(row);
+  });
+
+  if (incanGoldScoreboardNote) {
+    const names = ranked
+      .filter(({ player }) => winners.has(player.player_id))
+      .map(({ player }) => player.name || player.player_id);
+    incanGoldScoreboardNote.textContent = names.length > 1
+      ? `🏆 Shared win: ${names.join(", ")}`
+      : names.length === 1 ? `🏆 ${names[0]} wins` : "";
+  }
+
+  const panelHidden = incanGoldGamePanel?.classList.contains("hidden");
+  if (!incanGoldScoreboardDismissed && !incanGoldScoreboard.open && !panelHidden) {
+    incanGoldScoreboard.showModal();
+  }
+}
+
+function dismissIncanGoldScoreboard() {
+  incanGoldScoreboardDismissed = true;
+  if (incanGoldScoreboard?.open) {
+    incanGoldScoreboard.close();
+  }
+}
+
+if (incanGoldScoreboardCloseBtn) {
+  incanGoldScoreboardCloseBtn.addEventListener("click", dismissIncanGoldScoreboard);
+}
+
+if (incanGoldScoreboard) {
+  incanGoldScoreboard.addEventListener("click", (event) => {
+    if (event.target === incanGoldScoreboard) {
+      dismissIncanGoldScoreboard();
+    }
+  });
+  // Esc must dismiss for good, so handle it instead of letting the dialog close itself.
+  incanGoldScoreboard.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    dismissIncanGoldScoreboard();
+  });
+}
+
 function renderIncanGoldRoundNotice(view) {
   if (!incanGoldRoundNotice || !incanGoldRoundNoticeBody || !incanGoldRoundNoticeTitle) {
     return;
@@ -357,6 +473,16 @@ function clearIncanGoldState() {
   currentIncanGoldView = null;
   incanGoldExplainWidget?.exit();
   hideIncanGoldTooltip();
+  incanGoldScoreboardDismissed = false;
+  if (incanGoldScoreboard?.open) {
+    incanGoldScoreboard.close();
+  }
+  if (incanGoldScoreboardRows) {
+    incanGoldScoreboardRows.innerHTML = "";
+  }
+  if (incanGoldScoreboardNote) {
+    incanGoldScoreboardNote.textContent = "";
+  }
   ["incanGoldBanked", "incanGoldHand", "incanGoldArtifacts", "incanGoldLoot"].forEach((id) => {
     document.getElementById(id).textContent = "-";
   });
@@ -444,6 +570,7 @@ function renderIncanGoldGameState(data) {
   renderIncanGoldSummary(view);
   logGameEvents(data);
   updateIncanGoldActionButtons();
+  renderIncanGoldScoreboard(view);
 }
 
 if (incanGoldContinueBtn) {
@@ -523,6 +650,10 @@ function showIncanGoldHeaderActions(show) {
   if (!show) {
     incanGoldExplainWidget?.exit();
     hideIncanGoldTooltip();
+    // Closing here is not a dismissal, so the board reappears if the player returns.
+    if (incanGoldScoreboard?.open) {
+      incanGoldScoreboard.close();
+    }
   }
 }
 

@@ -91,7 +91,12 @@ async function checkBounds(page, label) {
           }
         }
         assert.equal(await page.locator('#incanGoldPlayAgainBtn').isVisible(), true);
+        assert.equal(await page.locator('#incanGoldScoreboard').isVisible(), true);
+        assert.equal(await page.locator('#incanGoldScoreboardRows .incan-gold-score-row').count(), 3);
         await page.evaluate(() => hideIncanGoldTooltip());
+        await page.locator('#incanGoldScoreboard').screenshot({ path: `${output}/390-live-scoreboard.png` });
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#incanGoldScoreboard').isVisible(), false);
         await page.locator('.game-panel').screenshot({ path: `${output}/390-live-game-over.png` });
         await page.locator('#incanGoldPlayAgainBtn').click();
         await page.waitForFunction(() => currentIncanGoldView.round === 1 && currentIncanGoldView.phase === 'decision');
@@ -141,9 +146,35 @@ async function checkBounds(page, label) {
       assert.equal(await page.locator('#incanGoldNextRoundBtn').isVisible(), false);
       assert.match(await page.locator('#incanGoldStatus').innerText(), /Waiting for other/);
 
-      await render(page, { ...roundEnd, phase: 'game_over', game_over: true, round: 5, legal_actions: ['play_again'], winner: ['p0', 'p1'] });
+      const gameOver = { ...roundEnd, phase: 'game_over', game_over: true, round: 5, legal_actions: ['play_again'], winner: ['p0', 'p1'] };
+      await render(page, gameOver);
       assert.equal(await page.locator('#incanGoldNextRoundBtn').isVisible(), false);
       assert.equal(await page.locator('#incanGoldPlayAgainBtn').isVisible(), true);
+
+      // The final scoreboard opens itself once the whole game is over.
+      const scoreboard = page.locator('#incanGoldScoreboard');
+      assert.equal(await scoreboard.isVisible(), true);
+      assert.equal(await page.locator('#incanGoldScoreboardRows .incan-gold-score-row').count(), view.players.length);
+      const ranked = await page.$$eval('#incanGoldScoreboardRows .incan-gold-score-row', rows => rows.map(row => ({
+        rank: Number(row.querySelector('.incan-gold-score-rank').textContent),
+        total: Number(row.querySelector('.incan-gold-score-total').textContent),
+      })));
+      ranked.forEach((entry, index) => {
+        assert.ok(entry.total >= 0, 'negative total');
+        if (index) assert.ok(ranked[index - 1].total >= entry.total, 'scoreboard is not sorted by total');
+        assert.equal(entry.rank, 1, 'tied players must share rank 1');
+      });
+      assert.equal(await page.locator('#incanGoldScoreboardRows .incan-gold-score-row.is-winner').count(), 2);
+      assert.equal(await page.locator('#incanGoldScoreboardRows .incan-gold-score-row.is-you').count(), 1);
+      assert.match(await page.locator('#incanGoldScoreboardNote').innerText(), /Shared win/);
+      await checkBounds(page, `${width} scoreboard`);
+      await scoreboard.screenshot({ path: `${output}/${width}-scoreboard.png` });
+
+      // Esc dismisses it, and a dismissed board never comes back for that game.
+      await page.keyboard.press('Escape');
+      assert.equal(await scoreboard.isVisible(), false);
+      await render(page, gameOver);
+      assert.equal(await scoreboard.isVisible(), false);
       await page.locator('#incanGoldPlayAgainBtn').click();
       assert.deepEqual(await page.evaluate(() => incanTestActions.pop()), { type: 'play_again' });
       await checkBounds(page, `${width} game over`);
@@ -151,14 +182,18 @@ async function checkBounds(page, label) {
       await render(page);
       assert.equal(await page.locator('#incanGoldPlayAgainBtn').isVisible(), false);
 
+      // The shared widgets render real <dialog> elements, not the legacy #incanGoldGuide template.
+      const helpDialog = page.locator('dialog.obg-help-dialog[data-obg-help-game="incan_gold"]');
+      const explainDialog = page.locator('dialog.obg-explain-dialog');
+
       await page.locator('#incanGoldHelpBtn').click();
-      assert.equal(await page.locator('#incanGoldGuide').isVisible(), true);
-      await page.locator('#incanGoldGuide').screenshot({ path: `${output}/${width}-help.png` });
+      assert.equal(await helpDialog.isVisible(), true);
+      await helpDialog.screenshot({ path: `${output}/${width}-help.png` });
       await page.keyboard.press('Escape');
-      assert.equal(await page.locator('#incanGoldGuide').isVisible(), false);
+      assert.equal(await helpDialog.isVisible(), false);
       await page.locator('#incanGoldExplainBtn').click();
       await page.locator('#incanGoldLeaveBtn').click();
-      assert.equal(await page.locator('#incanGoldGuide').isVisible(), true);
+      assert.equal(await explainDialog.isVisible(), true);
       assert.equal(await page.evaluate(() => incanTestActions.length), 0);
       await page.keyboard.press('Escape');
 
@@ -166,12 +201,12 @@ async function checkBounds(page, label) {
       await page.locator('#incanGoldExplainBtn').click();
       const disabledBounds = await page.locator('#incanGoldLeaveBtn').boundingBox();
       await page.mouse.click(disabledBounds.x + disabledBounds.width / 2, disabledBounds.y + disabledBounds.height / 2);
-      assert.equal(await page.locator('#incanGoldGuide').isVisible(), true);
+      assert.equal(await explainDialog.isVisible(), true);
       await page.keyboard.press('Escape');
       await render(page);
       await page.locator('#incanGoldExplainBtn').click();
       await page.locator('#incanGoldPath .incan-gold-card').first().click();
-      assert.equal(await page.locator('#incanGoldGuide').isVisible(), true);
+      assert.equal(await explainDialog.isVisible(), true);
       await page.keyboard.press('Escape');
 
       await page.locator('#incanGoldPath .incan-gold-card').first().click();

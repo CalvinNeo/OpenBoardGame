@@ -137,7 +137,118 @@
     outline-offset: 1px;
     cursor: help;
   }
+
+  .incan-gold-scoreboard {
+    box-sizing: border-box;
+    width: min(520px, calc(100vw - 24px));
+    max-width: none;
+    max-height: min(86vh, 720px);
+    padding: 0;
+    border: 1px solid #d9b271;
+    border-radius: 12px;
+    background: #fffdf7;
+    color: #334155;
+    font-size: 13px;
+    overflow: hidden;
+  }
+  .incan-gold-scoreboard::backdrop { background: rgba(15, 23, 42, 0.62); }
+  .incan-gold-scoreboard-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #8c541c, #bf7b21);
+    color: #fff;
+  }
+  .incan-gold-scoreboard-head h2 {
+    margin: 0;
+    min-width: 0;
+    font-size: 16px;
+    color: #fff;
+    overflow-wrap: anywhere;
+  }
+  .incan-gold-scoreboard-head button {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    white-space: nowrap;
+  }
+  .incan-gold-scoreboard-rows {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: min(58vh, 440px);
+    overflow-y: auto;
+  }
+  .incan-gold-score-row {
+    display: grid;
+    grid-template-columns: 2em minmax(0, 1fr) auto;
+    grid-template-areas: "rank name total" "rank detail detail";
+    align-items: center;
+    gap: 2px 8px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .incan-gold-score-row.is-you { border-color: #bf7b21; }
+  .incan-gold-score-row.is-winner { border-color: #d9a441; background: #fff5df; }
+  .incan-gold-score-rank {
+    grid-area: rank;
+    align-self: center;
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: #8c541c;
+  }
+  .incan-gold-score-name {
+    grid-area: name;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .incan-gold-score-name-text { min-width: 0; overflow-wrap: anywhere; }
+  .incan-gold-score-badge { flex-shrink: 0; }
+  .incan-gold-score-total {
+    grid-area: total;
+    justify-self: end;
+    font-weight: 700;
+    font-size: 16px;
+    color: #8c541c;
+    white-space: nowrap;
+  }
+  .incan-gold-score-detail {
+    grid-area: detail;
+    min-width: 0;
+    font-size: 12px;
+    color: #64748b;
+    overflow-wrap: anywhere;
+  }
+  .incan-gold-scoreboard-note {
+    margin: 0;
+    padding: 0 14px 12px;
+    font-weight: 700;
+    color: #6b411b;
+    overflow-wrap: anywhere;
+  }
+  .incan-gold-scoreboard-note:empty { padding: 0; }
   @media (max-width: 600px) {
+    .incan-gold-scoreboard { width: calc(100vw - 16px); font-size: 12px; }
+    .incan-gold-scoreboard-head { padding: 10px 12px; }
+    .incan-gold-scoreboard-head h2 { font-size: 15px; }
+    .incan-gold-score-row { padding: 7px 8px; }
+    .incan-gold-score-detail { font-size: 11px; }
     .game-panel[data-game-theme="incan_gold"] { padding: 12px; }
     .game-panel[data-game-theme="incan_gold"] .game-panel-title h2 { font-size: 16px; }
     #incanGoldHeaderActions button,

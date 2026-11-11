@@ -204,10 +204,22 @@
 - 路径限高滚动，玩家区在手机双列排布，永久移除灾难默认折叠；说明放在 Help 中。
 - Help / Explain 接入既有标题与 RC；解释模式阻止误操作，支持 disabled 控件解释和 Esc 退出。卡牌/数值支持悬停和点击提示，3 秒消失，滚动隐藏提示。
 
+### 终局得分板（2026-11-10）
+
+- 五轮全部结束后自动弹出 `#incanGoldScoreboard` 模态框，不需要玩家点任何按钮触发。弹窗标记放在 `static/games/incan_gold.html` 的面板模板内，不改动 `static/index.html`。
+- 每位探险者一行，按「总分降序 → 神器(🏺) 数量降序 → 座位升序」排列，与 `_maybe_finish_game` 的胜负判定保持一致。总分和神器数量都相同的玩家共享同一名次（例如 1、2、3、3）。
+- 行内展示名次、名字（带 `· You` / `· AI` 后缀）、存进营地的宝石(💎)、神器(🏺) 数量与分数，以及两者相加的总分。赢家行加 🏆 徽章并高亮，底部汇总单人或并列获胜。
+- 关闭方式为 Close 按钮、点击遮罩或 Esc。**关闭后不再自动出现**：同一局内后续状态广播不会重新弹出。
+- 不算作「主动关闭」的情况：切换到其他游戏面板时静默关闭但保留状态；`clearIncanGoldState()` 和任意一次 `game_over` 为 false 的渲染会重置标记，因此 Play Again 之后的下一局结束仍会正常弹出。
+- Close 按钮加入 Explain 的 `bypass` 列表，保证解释模式下也能随时关闭；得分板本体通过 `data-incan-explain="scoreboard"` 提供中英文解释。
+- 得分板是纯展示层，不改动任何游戏规则、后端状态或公开视图字段。
+
 ## 8. 验证
 
 - `python3 -m unittest tests.test_incan_gold_ai tests.test_incan_gold_integration tests.test_frontend_style_assets tests.test_game_tags tests.test_bot_threading tests.test_room_session tests.test_game_dev_order`。
 - `tests/incan_gold.browser.cjs`：320、390、1024、1440px，验证决策/等待/回营/旁观/结算/结束/重开状态、按钮显隐、Help/Explain/Esc、提示和长名字/长路径溢出。
+- 得分板断言（2026-11-10 新增）：整局结束后自动弹出、行数等于玩家数、按总分降序、并列共享名次、赢家与本人高亮、并列获胜文案、Esc 关闭后再次渲染不重弹、Play Again 后的下一局重新弹出、弹窗内无横向溢出。
+- 同批修正：`#incanGoldGuide` 是迁移共享模块后遗留的空 `<template>`，原断言恒为不可见。已改为共享模块真实产出的 `dialog.obg-help-dialog[data-obg-help-game="incan_gold"]`（Help）与 `dialog.obg-explain-dialog`（Explain）。
 - 实际 Socket.IO 对局：1 位真人 + 2 位 AI 完成五轮，确认机器人不跳过真人复盘，并验证 Play Again 重置。
 - 浏览器截图输出到 `build/incan-gold-ui/`；浏览器测试支持 `ROOM_TEST_URL`、`PLAYWRIGHT_MODULE`、`PYTHON` 环境变量。
 - 手机检查使用 Chromium 触摸模拟，不等同于 iOS Safari / Windows 真机验收。

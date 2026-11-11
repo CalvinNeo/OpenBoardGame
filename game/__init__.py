@@ -28,6 +28,7 @@ from game.sagrada import SagradaGame
 from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
+from game.bubble_shooter import BubbleShooterGame
 from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
 from game.boomerang_australia import BoomerangAustraliaGame
@@ -113,6 +114,8 @@ from game.ticket_to_ride import TicketToRideGame
 from game.twelve_rivers import TwelveRiversGame
 from game.dadada import DadadaGame
 from game.trio import TrioGame
+from game.mushroom_picking import MushroomPickingGame
+from game.find_diff import FindDiffGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -146,6 +149,7 @@ __all__ = [
     "AiDixitGame",
     "BlokusGame",
     "BlitzSketchGame",
+    "BubbleShooterGame",
     "BohnanzaDiceGame",
     "BombBustersGame",
     "BoomerangAustraliaGame",
@@ -229,6 +233,8 @@ __all__ = [
     "TwelveRiversGame",
     "DadadaGame",
     "TrioGame",
+    "MushroomPickingGame",
+    "FindDiffGame",
     "GameDefinition",
     "get_game",
     "list_games",

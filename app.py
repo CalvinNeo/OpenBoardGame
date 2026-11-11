@@ -43,11 +43,14 @@ fastapi_app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 DEV_ORDER_PATH = Path(__file__).resolve().parent / "game" / "dev_order.json"
 UPDATED_AT_PATH = Path(__file__).resolve().parent / "game" / "updated_at.json"
 CYBER_PICTURES_DIR = ".cyber_pictures"
+FIND_DIFF_DIR = ".find_diff"
 GUANDAN_CHECKPOINT_DIR = Path(__file__).resolve().parent / "assets" / "guandan" / "checkpoints"
 GUANDAN_CHECKPOINT_SUFFIXES = {".pt", ".pth", ".ckpt", ".bin"}
 os.makedirs(CYBER_PICTURES_DIR, exist_ok=True)
+os.makedirs(FIND_DIFF_DIR, exist_ok=True)
 os.makedirs(GUANDAN_CHECKPOINT_DIR, exist_ok=True)
 fastapi_app.mount("/static/cards", StaticFiles(directory=CYBER_PICTURES_DIR), name="cyber_pictures")
+fastapi_app.mount("/static/find_diff", StaticFiles(directory=FIND_DIFF_DIR), name="find_diff_assets")
 fastapi_app.mount(
     "/static/carcassonne",
     StaticFiles(directory="assets/task36_tiles_svg"),
@@ -262,6 +265,7 @@ class Room:
     game_state: Optional[Dict] = None
     halli_flip_wait_at_ms: Optional[int] = None
     six_nimmt_timeout_at_ms: Optional[int] = None
+    find_diff_timeout_at_ms: Optional[int] = None
     fake_artist_timeout_at_ms: Optional[int] = None
     word_decode_timeout_at_ms: Optional[int] = None
     mind_the_lines_timeout_key: Optional[tuple] = None
@@ -614,7 +618,7 @@ async def _emit_room_state(room: Room) -> None:
         "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
         "supports_memories": _game_supports_memories(game_def),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin", "ticket_to_ride", "witch_cauldron") or key != "seed"},
+                        if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin", "ticket_to_ride", "witch_cauldron", "bubble_shooter") or key != "seed"},
         "auto_save": room.auto_save,
         "initialization": dict(room.initialization) if room.initialization else None,
         "source_room_id": room.source_room_id,
@@ -709,6 +713,7 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
     if not game_def:
         return
     _schedule_six_nimmt_timeout(room)
+    _schedule_find_diff_timeout(room)
     _schedule_fake_artist_timeout(room)
     _schedule_word_decode_timeout(room)
     _schedule_mind_the_lines_timeout(room)
@@ -979,6 +984,64 @@ def _schedule_six_nimmt_timeout(room: Room) -> None:
         from game.six_nimmt import SixNimmtGame
 
         events = SixNimmtGame.resolve_timeout(state_now, int(time.time() * 1000))
+        if not events:
+            return
+        room.state_version += 1
+        if state_now.get("game_over"):
+            if room.status != "game_over":
+                room.status = "game_over"
+                await _emit_room_state(room)
+                await _emit_room_list_update()
+        elif room.status == "game_over":
+            room.status = "in_game"
+            await _emit_room_state(room)
+            await _emit_room_list_update()
+        _save_room_state(room)
+        await _emit_game_state(room, events)
+        await _maybe_run_bots(room)
+
+    asyncio.create_task(_resolve(at_ms))
+
+
+def _schedule_find_diff_timeout(room: Room) -> None:
+    if room.game_type != "find_diff" or room.status != "in_game" or not room.game_state:
+        room.find_diff_timeout_at_ms = None
+        return
+    state = room.game_state
+    pending = state.get("pending_timeout")
+    if not isinstance(pending, dict):
+        room.find_diff_timeout_at_ms = None
+        return
+    try:
+        at_ms = int(pending.get("at_ms", 0))
+    except (TypeError, ValueError):
+        room.find_diff_timeout_at_ms = None
+        return
+    if at_ms <= 0:
+        room.find_diff_timeout_at_ms = None
+        return
+    if room.find_diff_timeout_at_ms == at_ms:
+        return
+    room.find_diff_timeout_at_ms = at_ms
+    delay_s = max(0.0, (at_ms - int(time.time() * 1000)) / 1000.0)
+
+    async def _resolve(expected_at: int) -> None:
+        await asyncio.sleep(delay_s)
+        if room.game_type != "find_diff" or room.status != "in_game" or not room.game_state:
+            return
+        state_now = room.game_state
+        pending_now = state_now.get("pending_timeout")
+        if not isinstance(pending_now, dict):
+            return
+        try:
+            current_at = int(pending_now.get("at_ms", 0))
+        except (TypeError, ValueError):
+            return
+        if current_at != expected_at:
+            return
+        from game.find_diff import FindDiffGame
+
+        events = FindDiffGame.resolve_timeout(state_now, int(time.time() * 1000))
         if not events:
             return
         room.state_version += 1

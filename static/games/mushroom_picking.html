@@ -1,0 +1,60 @@
+<template data-game-target="mushroomPickingPanel" data-game-mode="contents">
+  <div class="mushroom-root">
+    <div class="mushroom-status">
+      <span class="mushroom-chip" id="mushroomMode" data-mpick-explain="mode">—</span>
+      <span class="mushroom-chip" id="mushroomTurn" data-mpick-explain="turn">—</span>
+      <button type="button" class="mushroom-chip mushroom-pass" id="mushroomPass"
+              data-mpick-explain="pass" hidden>Pass</button>
+    </div>
+
+    <div id="mushroomBanner" class="mushroom-banner" data-mpick-explain="banner"></div>
+
+    <div class="mushroom-board">
+      <button type="button" class="mushroom-nest" id="mushroomNest" data-mpick-explain="nest">
+        <span class="mushroom-nest-emoji">🍄</span>
+        <span class="mushroom-nest-count" id="mushroomNestCount">0</span>
+        <span class="mushroom-nest-label">菌窝</span>
+      </button>
+      <div class="mushroom-mid">
+        <div class="mushroom-block">
+          <div class="mushroom-block-head">
+            <span class="mushroom-block-title" data-mpick-explain="public">公共牌区</span>
+            <span class="mushroom-block-note" id="mushroomPublicNote"></span>
+          </div>
+          <div id="mushroomPublic" class="mushroom-row"></div>
+        </div>
+        <div class="mushroom-block" id="mushroomOrderBlock" hidden>
+          <div class="mushroom-block-head">
+            <span class="mushroom-block-title" data-mpick-explain="orders">中央订单</span>
+            <span class="mushroom-block-note" id="mushroomOrderNote"></span>
+          </div>
+          <div id="mushroomOrders" class="mushroom-row mushroom-row--orders"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mushroom-block">
+      <div class="mushroom-block-head">
+        <span class="mushroom-block-title" data-mpick-explain="players">玩家</span>
+        <span class="mushroom-block-note" id="mushroomPlayersNote"></span>
+      </div>
+      <div id="mushroomPlayers" class="mushroom-players"></div>
+    </div>
+
+    <div class="mushroom-block mushroom-handblock">
+      <div class="mushroom-block-head">
+        <span class="mushroom-block-title" id="mushroomHandTitle" data-mpick-explain="hand">你的手牌</span>
+        <span class="mushroom-block-note" id="mushroomHandNote"></span>
+      </div>
+      <div id="mushroomHand" class="mushroom-row"></div>
+      <div id="mushroomActionBar" class="mushroom-actionbar"></div>
+    </div>
+
+    <div id="mushroomSettle" class="mushroom-settle" data-mpick-explain="settle"></div>
+
+    <details class="mushroom-logbox" data-mpick-explain="log">
+      <summary>Log</summary>
+      <div id="mushroomLog" class="mushroom-log"></div>
+    </details>
+  </div>
+</template>

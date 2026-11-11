@@ -1,0 +1,724 @@
+/* 上山捡菌 / Mushroom Picking — game styles.
+   Registered standalone through GAME_ASSETS.styles, so it lands after the
+   shared rules in static/style.css. Layout rules: DEV_GUIDE.md. */
+
+.mushroom-root {
+  --mpick-card-w: clamp(42px, 12.5vw, 64px);
+  --mpick-order-w: clamp(112px, 31vw, 158px);
+  --mpick-ink: #f4ead6;
+  --mpick-dim: #b9a887;
+  --mpick-line: rgba(244, 234, 214, 0.16);
+  --mpick-panel: rgba(38, 46, 33, 0.72);
+  --mpick-panel-2: rgba(28, 35, 25, 0.82);
+  --mpick-gold: #f0c04a;
+  --mpick-good: #7fd18a;
+  --mpick-bad: #ef7d6b;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  color: var(--mpick-ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* Several blocks below set an explicit display, which would otherwise beat the
+   UA rule behind the hidden attribute. */
+.mushroom-root [hidden] {
+  display: none !important;
+}
+
+/* --- status row ------------------------------------------------------- */
+
+.mushroom-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mushroom-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 999px;
+  background: var(--mpick-panel);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mushroom-chip.is-you {
+  border-color: var(--mpick-gold);
+  color: var(--mpick-gold);
+  font-weight: 600;
+}
+
+button.mushroom-chip {
+  cursor: pointer;
+  color: var(--mpick-ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+button.mushroom-chip:hover {
+  border-color: var(--mpick-gold);
+}
+
+/* --- banner ----------------------------------------------------------- */
+
+.mushroom-banner {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 8px;
+  background: var(--mpick-panel-2);
+  font-size: 12.5px;
+}
+
+.mushroom-banner.is-shown {
+  display: flex;
+}
+
+.mushroom-banner.is-you {
+  border-color: var(--mpick-gold);
+  box-shadow: inset 0 0 0 1px rgba(240, 192, 74, 0.35);
+}
+
+.mushroom-banner.is-good {
+  border-color: var(--mpick-good);
+}
+
+.mushroom-banner-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* --- board ------------------------------------------------------------ */
+
+.mushroom-board {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+}
+
+.mushroom-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mushroom-nest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: calc(var(--mpick-card-w) + 14px);
+  min-height: calc(var(--mpick-card-w) * 1.7);
+  padding: 6px 4px;
+  border: 1px dashed var(--mpick-line);
+  border-radius: 8px;
+  background: var(--mpick-panel);
+  color: var(--mpick-ink);
+  font: inherit;
+  cursor: default;
+}
+
+.mushroom-nest.is-open {
+  border-style: solid;
+  border-color: var(--mpick-gold);
+  cursor: pointer;
+}
+
+.mushroom-nest.is-open:hover {
+  background: rgba(58, 70, 48, 0.9);
+}
+
+.mushroom-nest-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.mushroom-nest-count {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--mpick-gold);
+}
+
+.mushroom-nest-label {
+  font-size: 10.5px;
+  color: var(--mpick-dim);
+}
+
+.mushroom-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 5px 7px 7px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 8px;
+  background: var(--mpick-panel);
+}
+
+.mushroom-block-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mushroom-block-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.mushroom-block-note {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--mpick-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mushroom-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  min-height: calc(var(--mpick-card-w) * 1.38 + 4px);
+}
+
+/* An empty row must not reserve a whole card of height, or a phone wastes a
+   third of the screen on two placeholder lines. */
+.mushroom-row.is-empty {
+  min-height: 0;
+}
+
+.mushroom-empty {
+  align-self: center;
+  padding: 1px 0;
+  font-size: 11.5px;
+  color: var(--mpick-dim);
+}
+
+/* --- cards ------------------------------------------------------------ */
+
+.mushroom-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  width: var(--mpick-card-w);
+  height: calc(var(--mpick-card-w) * 1.38);
+  padding: 3px 2px 2px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+  background: linear-gradient(170deg, #6b5a3a 0%, #4a3d27 62%, #382e1d 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  text-align: center;
+}
+
+.mushroom-card.is-mushroom {
+  background: linear-gradient(170deg, #6f5f3c 0%, #4c3f28 62%, #392f1e 100%);
+}
+
+.mushroom-card.is-garlic {
+  background: linear-gradient(170deg, #6a5f6e 0%, #473f52 62%, #362f3e 100%);
+}
+
+.mushroom-card.is-fire {
+  background: linear-gradient(170deg, #7a4a30 0%, #542f1f 62%, #3d2216 100%);
+}
+
+.mushroom-card.is-hay {
+  background: linear-gradient(170deg, #6f6330 0%, #4b421f 62%, #383117 100%);
+}
+
+.mushroom-card.is-boar {
+  background: linear-gradient(170deg, #6b4436 0%, #48291f 62%, #351e17 100%);
+}
+
+.mushroom-card-badge {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--mpick-gold);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.mushroom-card-emoji {
+  margin-top: 9px;
+  font-size: calc(var(--mpick-card-w) * 0.42);
+  line-height: 1;
+}
+
+.mushroom-card-name {
+  margin-top: auto;
+  font-size: 9.5px;
+  line-height: 1.1;
+  word-break: keep-all;
+}
+
+.mushroom-card-stars {
+  font-size: 8px;
+  letter-spacing: -0.5px;
+  color: var(--mpick-gold);
+  line-height: 1.1;
+}
+
+.mushroom-card.is-open {
+  cursor: pointer;
+  border-color: var(--mpick-gold);
+}
+
+.mushroom-card.is-selected {
+  outline: 2px solid var(--mpick-gold);
+  outline-offset: -2px;
+  transform: translateY(-3px);
+}
+
+.mushroom-card.is-picked {
+  z-index: 6;
+  outline: 2px solid var(--mpick-gold);
+  outline-offset: -2px;
+}
+
+.mushroom-card.is-dim {
+  opacity: 0.42;
+}
+
+/* --- orders ----------------------------------------------------------- */
+
+.mushroom-row--orders {
+  min-height: calc(var(--mpick-card-w) * 1.5);
+}
+
+.mushroom-order {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: var(--mpick-order-w);
+  padding: 4px 5px 5px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  border-radius: 7px;
+  background: linear-gradient(165deg, #55492f 0%, #3b3220 70%, #2d2618 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
+}
+
+.mushroom-order.is-spicy {
+  border-color: rgba(239, 125, 107, 0.6);
+}
+
+.mushroom-order-badge {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--mpick-gold);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.mushroom-order-emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.mushroom-order-name {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-right: 22px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.mushroom-order-spicy {
+  font-size: 10px;
+}
+
+.mushroom-order-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.mushroom-slot {
+  padding: 0 4px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.mushroom-slot.is-free {
+  color: var(--mpick-good);
+}
+
+.mushroom-order-text {
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--mpick-dim);
+}
+
+.mushroom-order.is-mini {
+  width: auto;
+  min-width: 74px;
+  max-width: 132px;
+  padding: 3px 4px 4px;
+}
+
+.mushroom-order.is-mini .mushroom-order-text {
+  display: none;
+}
+
+.mushroom-order.is-ready {
+  border-color: var(--mpick-good);
+}
+
+.mushroom-order.is-target {
+  outline: 2px solid var(--mpick-gold);
+  outline-offset: -2px;
+}
+
+.mushroom-order.is-open {
+  cursor: pointer;
+  border-color: var(--mpick-gold);
+}
+
+.mushroom-order.is-picked {
+  z-index: 6;
+  outline: 2px solid var(--mpick-gold);
+  outline-offset: -2px;
+}
+
+/* --- confirm mask ----------------------------------------------------- */
+
+.mushroom-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 6px;
+  background: rgba(12, 16, 10, 0.68);
+}
+
+/* --- players ---------------------------------------------------------- */
+
+.mushroom-players {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mushroom-player {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 6px 5px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 7px;
+  background: rgba(24, 30, 21, 0.55);
+}
+
+.mushroom-player.is-current {
+  border-color: var(--mpick-gold);
+  box-shadow: inset 0 0 0 1px rgba(240, 192, 74, 0.28);
+}
+
+.mushroom-player-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mushroom-player-name {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mushroom-player-score {
+  color: var(--mpick-gold);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mushroom-player-hand {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--mpick-dim);
+  white-space: nowrap;
+}
+
+.mushroom-player-groups,
+.mushroom-player-orders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.mushroom-group {
+  padding: 0 5px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.mushroom-player-done {
+  font-size: 10.5px;
+  color: var(--mpick-dim);
+}
+
+/* --- hand and action bar ---------------------------------------------- */
+
+.mushroom-handblock {
+  border-color: rgba(240, 192, 74, 0.28);
+}
+
+.mushroom-swapbtn {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--mpick-ink);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mushroom-swapbtn.is-active {
+  border-color: var(--mpick-gold);
+  color: var(--mpick-gold);
+}
+
+.mushroom-actionbar:empty {
+  display: none;
+}
+
+.mushroom-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 5px 6px;
+  border: 1px solid var(--mpick-gold);
+  border-radius: 7px;
+  background: rgba(48, 40, 20, 0.85);
+}
+
+.mushroom-bar-note {
+  flex: 1 1 120px;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--mpick-dim);
+}
+
+.mushroom-bar-note.is-bad {
+  color: var(--mpick-bad);
+}
+
+.mushroom-go,
+.mushroom-bar button,
+.mushroom-mask button,
+.mushroom-swapbtn {
+  font: inherit;
+}
+
+.mushroom-go {
+  padding: 4px 12px;
+  border: 1px solid var(--mpick-gold);
+  border-radius: 6px;
+  background: var(--mpick-gold);
+  color: #241d0c;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mushroom-go:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mushroom-bar > button:not(.mushroom-go),
+.mushroom-mask > button:not(.mushroom-go) {
+  padding: 4px 10px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--mpick-ink);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* --- settlement ------------------------------------------------------- */
+
+.mushroom-settle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px 8px;
+  border: 1px solid var(--mpick-gold);
+  border-radius: 8px;
+  background: var(--mpick-panel-2);
+}
+
+.mushroom-settle-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--mpick-gold);
+}
+
+.mushroom-settle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 6px;
+  border: 1px solid var(--mpick-line);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.mushroom-settle-row.is-winner {
+  border-color: var(--mpick-good);
+}
+
+.mushroom-settle-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.mushroom-settle-head strong {
+  margin-left: auto;
+  color: var(--mpick-gold);
+}
+
+.mushroom-settle-line {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--mpick-dim);
+}
+
+.mushroom-settle-line span:last-child {
+  margin-left: auto;
+}
+
+.mushroom-settle-line .is-bad {
+  color: var(--mpick-bad);
+}
+
+/* --- log -------------------------------------------------------------- */
+
+.mushroom-logbox {
+  border: 1px solid var(--mpick-line);
+  border-radius: 7px;
+  background: rgba(20, 25, 17, 0.5);
+  font-size: 11.5px;
+}
+
+.mushroom-logbox > summary {
+  padding: 3px 8px;
+  cursor: pointer;
+  color: var(--mpick-dim);
+}
+
+.mushroom-log {
+  max-height: 132px;
+  overflow-y: auto;
+  padding: 0 8px 6px;
+  color: var(--mpick-dim);
+}
+
+.mushroom-log > div {
+  padding: 1px 0;
+}
+
+/* --- wider screens ---------------------------------------------------- */
+
+@media (min-width: 560px) {
+  .mushroom-root {
+    gap: 8px;
+    padding: 8px;
+    font-size: 13.5px;
+  }
+
+  .mushroom-board {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 0.9fr);
+  }
+
+  .mushroom-mid {
+    display: contents;
+  }
+
+  .mushroom-block {
+    padding: 6px 9px 8px;
+  }
+
+  .mushroom-row {
+    gap: 5px;
+  }
+}
+
+@media (min-width: 900px) {
+  .mushroom-root {
+    --mpick-card-w: 62px;
+    --mpick-order-w: 168px;
+  }
+
+  .mushroom-players {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+}
+
+/* --- explain mode ----------------------------------------------------- */
+
+body.explain-mode .mushroom-root [data-mpick-explain] {
+  cursor: help;
+}

@@ -1,37 +1,36 @@
-/* 回忆三重奏 / Trio — game styles.
- * Registered standalone through GAME_ASSETS, so these rules load after the
- * shared stylesheet and never need a reserved cascade group in style.css.
+/* 回忆三重奏 / Trio — independent game stylesheet.
  *
- * Phone first. Every size below is a base value multiplied by --trio-scale,
- * which the client solves after each render so the board fills exactly one
- * screen whatever the player count or the viewport is.
+ * House style: the room panel is already a white card, so the game drops
+ * straight into it with no plate of its own. Every surface below is light with
+ * dark text, matching the other games in static/games/.
+ *
+ * Sizes are a base value multiplied by --trio-scale, which the client solves
+ * after each render so the board fills exactly one screen whatever the player
+ * count or the viewport is.
  */
 
-.trio-root {
+#trioPanel {
   --trio-scale: 1;
   /* Widths cannot grow as far as heights: a nine card hand would clip. The fit
      pass measures that ceiling and parks it here, so horizontal sizes stop at
      min(scale, wcap) while everything vertical keeps filling the screen. */
   --trio-wcap: 99;
   --trio-w: min(var(--trio-scale), var(--trio-wcap));
-  --trio-ink: #f6efe4;
-  --trio-dim: #b9a894;
-  --trio-line: rgba(246, 239, 228, 0.16);
-  --trio-surface: rgba(255, 255, 255, 0.07);
-  --trio-accent: #ffb347;
-  --trio-good: #6fcf97;
-  --trio-bad: #eb5757;
 
-  --trio-pad: calc(6px * var(--trio-w));
-  --trio-stack: calc(5px * var(--trio-scale));
-  /* Anything that has a shape or holds text follows the width factor, so cards
-     keep their proportions and nothing wraps or clips. Only pure vertical
-     spacing follows the height factor and soaks up the leftover room. */
+  --trio-ink: #1b1b1b;
+  --trio-dim: #6b7280;
+  --trio-faint: #8a8f98;
+  --trio-line: #e3e3e3;
+  --trio-surface: #fff;
+  --trio-accent: #1f6feb;
+  --trio-good: #1a7f37;
+  --trio-bad: #c2443c;
+
   --trio-card-w: calc(70px * var(--trio-w));
   --trio-gap: calc(5px * var(--trio-w));
   --trio-row-pad-x: calc(8px * var(--trio-w));
   --trio-row-gap: calc(8px * var(--trio-w));
-  --trio-who-w: calc(76px * var(--trio-w));
+  --trio-who-w: calc(70px * var(--trio-w));
   --trio-name-size: calc(12px * var(--trio-w));
   --trio-hand-w: calc(21px * var(--trio-w));
   --trio-hand-h: calc(28px * var(--trio-w));
@@ -55,14 +54,8 @@
 
   display: flex;
   flex-direction: column;
-  gap: var(--trio-stack);
+  gap: calc(5px * var(--trio-scale));
   min-width: 0;
-  padding: var(--trio-pad);
-  border: 1px solid rgba(246, 239, 228, 0.12);
-  border-radius: 12px;
-  /* The room background is light on most themes, so the game brings its own
-     dark surface. One plate for the whole game, never a box inside a box. */
-  background: linear-gradient(180deg, #2c2039 0%, #231a2d 100%);
   color: var(--trio-ink);
 }
 
@@ -72,7 +65,7 @@
   display: flex;
   /* Never wrap: a second chip row would eat the height the board just gained. */
   flex-wrap: nowrap;
-  gap: calc(5px * var(--trio-scale));
+  gap: calc(5px * var(--trio-w));
   min-width: 0;
 }
 
@@ -80,11 +73,11 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: calc(1px * var(--trio-scale)) calc(6px * var(--trio-scale));
+  padding: calc(1px * var(--trio-scale)) calc(6px * var(--trio-w));
   border-radius: 999px;
   border: 1px solid var(--trio-line);
   background: var(--trio-surface);
-  color: var(--trio-ink);
+  color: var(--trio-dim);
   font-size: var(--trio-chip-size);
   line-height: 1.5;
   white-space: nowrap;
@@ -92,6 +85,12 @@
   text-overflow: ellipsis;
   max-width: 100%;
   min-width: 0;
+}
+
+.trio-chip.trio-mode,
+.trio-chip.trio-goal {
+  /* These two must never lose their label to an ellipsis. */
+  flex: 0 0 auto;
 }
 
 .trio-chip.trio-turn-chip {
@@ -112,11 +111,12 @@
 
 .trio-banner {
   display: none;
-  padding: calc(5px * var(--trio-scale)) calc(9px * var(--trio-scale));
-  border-radius: 9px;
+  padding: calc(5px * var(--trio-scale)) calc(9px * var(--trio-w));
+  border-radius: 8px;
   border: 1px solid var(--trio-line);
-  background: var(--trio-surface);
-  font-size: calc(12px * var(--trio-scale));
+  background: #f6f7f9;
+  color: var(--trio-ink);
+  font-size: calc(12px * var(--trio-w));
   line-height: 1.45;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -127,13 +127,13 @@
 }
 
 .trio-banner.is-good {
-  border-color: rgba(111, 207, 151, 0.65);
-  background: #24402f;
+  border-color: #9ed6a6;
+  background: #f2fbf3;
 }
 
 .trio-banner.is-bad {
-  border-color: rgba(235, 87, 87, 0.6);
-  background: #43222a;
+  border-color: #e2a6a6;
+  background: #fdf2f2;
 }
 
 .trio-banner-actions {
@@ -149,8 +149,8 @@
   padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid var(--trio-accent);
-  background: rgba(255, 179, 71, 0.18);
-  color: var(--trio-ink);
+  background: #fff;
+  color: var(--trio-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -163,7 +163,7 @@
 
 .trio-banner-actions .trio-primary {
   background: var(--trio-accent);
-  color: #2a1a10;
+  color: #fff;
 }
 
 /* --- layout ----------------------------------------------------------- */
@@ -171,7 +171,7 @@
 .trio-columns {
   display: flex;
   flex-direction: column;
-  gap: var(--trio-stack);
+  gap: calc(5px * var(--trio-scale));
   min-width: 0;
 }
 
@@ -179,7 +179,7 @@
 .trio-right {
   display: flex;
   flex-direction: column;
-  gap: var(--trio-stack);
+  gap: calc(5px * var(--trio-scale));
   min-width: 0;
 }
 
@@ -193,7 +193,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: calc(3px * var(--trio-scale));
+  margin-bottom: calc(3px * var(--trio-w));
   min-width: 0;
 }
 
@@ -202,12 +202,12 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--trio-dim);
+  color: var(--trio-faint);
 }
 
 .trio-block-note {
   font-size: var(--trio-note-size);
-  color: var(--trio-dim);
+  color: var(--trio-faint);
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -220,7 +220,7 @@
 .trio-turn {
   display: flex;
   align-items: center;
-  gap: calc(8px * var(--trio-scale));
+  gap: calc(8px * var(--trio-w));
   margin-top: calc(5px * var(--trio-scale));
   min-width: 0;
 }
@@ -254,37 +254,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: calc(7px * var(--trio-scale));
-  border: 1px solid rgba(0, 0, 0, 0.35);
-  background: hsl(var(--trio-hue) 52% 42%);
+  border-radius: calc(7px * var(--trio-w));
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: hsl(var(--trio-hue) 52% 45%);
   color: #fff;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
   overflow: hidden;
   user-select: none;
+}
+
+.trio-card.is-back {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg, #5b3a76, #3a2450);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
 }
 
 /* A hand card can be squeezed to a dozen pixels on a small phone, which is far
    too narrow for the card-back emoji. The striped pattern already reads as a
    face-down card, so the glyph is dropped rather than clipped. */
-.trio-hand .trio-card.is-back {
+.trio-hand .trio-card.is-back,
+.trio-hand .trio-card.is-back.is-end {
   font-size: 0;
 }
 
-.trio-card.is-back {
-  background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.07) 0 4px, transparent 4px 8px),
-    linear-gradient(160deg, #4b2a63, #2d1a3d);
-  color: rgba(255, 255, 255, 0.82);
-  font-weight: 600;
-}
-
 .trio-card.is-empty {
-  background: rgba(255, 255, 255, 0.04);
-  border-style: dashed;
-  border-color: var(--trio-line);
+  background: #fafbfc;
+  border: 1px dashed #d8dce2;
   color: transparent;
   box-shadow: none;
 }
@@ -318,7 +318,7 @@
 .trio-slot .trio-card {
   width: 100%;
   height: 100%;
-  font-size: clamp(14px, calc(18px * var(--trio-scale)), 40px);
+  font-size: clamp(14px, calc(18px * var(--trio-w)), 40px);
 }
 
 .trio-slot.is-open {
@@ -326,7 +326,7 @@
 }
 
 .trio-slot.is-open:hover .trio-card {
-  filter: brightness(1.12);
+  filter: brightness(1.08);
 }
 
 .trio-slot.is-picked {
@@ -340,7 +340,7 @@
 }
 
 .trio-slot.is-dimmed .trio-card {
-  opacity: 0.42;
+  opacity: 0.45;
 }
 
 /* --- reveal strip ----------------------------------------------------- */
@@ -366,14 +366,14 @@
 .trio-reveal-card .trio-card {
   width: var(--trio-reveal-w);
   height: var(--trio-reveal-h);
-  font-size: calc(15px * var(--trio-scale));
+  font-size: calc(15px * var(--trio-w));
 }
 
 .trio-reveal-from {
-  font-size: calc(9px * var(--trio-scale));
+  font-size: calc(9px * var(--trio-w));
   line-height: 1.2;
-  color: var(--trio-dim);
-  max-width: calc(52px * var(--trio-scale));
+  color: var(--trio-faint);
+  max-width: calc(52px * var(--trio-w));
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -389,13 +389,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: calc(15px * var(--trio-scale));
-  height: calc(15px * var(--trio-scale));
+  min-width: calc(15px * var(--trio-w));
+  height: calc(15px * var(--trio-w));
   padding: 0 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: #eef0f3;
   color: var(--trio-dim);
-  font-size: calc(9px * var(--trio-scale));
+  font-size: calc(9px * var(--trio-w));
   font-weight: 700;
   line-height: 1;
 }
@@ -415,9 +415,9 @@
 .trio-reveal-why {
   flex: 1 0 100%;
   margin-top: 2px;
-  padding: calc(5px * var(--trio-scale)) calc(8px * var(--trio-scale));
+  padding: calc(5px * var(--trio-scale)) calc(8px * var(--trio-w));
   border-radius: 7px;
-  background: var(--trio-surface);
+  background: #f6f7f9;
   color: var(--trio-ink);
   font-size: var(--trio-note-size);
   line-height: 1.5;
@@ -425,11 +425,11 @@
 }
 
 .trio-reveal-why.is-good {
-  background: rgba(111, 207, 151, 0.18);
+  background: #e6f6e9;
 }
 
 .trio-reveal-why.is-bad {
-  background: rgba(235, 87, 87, 0.18);
+  background: #fdecec;
 }
 
 /* --- players ---------------------------------------------------------- */
@@ -447,15 +447,15 @@
   align-items: center;
   gap: var(--trio-row-gap);
   padding: var(--trio-row-pad-y) var(--trio-row-pad-x);
-  border-radius: calc(9px * var(--trio-scale));
+  border-radius: calc(9px * var(--trio-w));
   border: 1px solid var(--trio-line);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--trio-surface);
   min-width: 0;
 }
 
 .trio-player.is-current {
   border-color: var(--trio-accent);
-  background: rgba(255, 179, 71, 0.12);
+  background: #f3f7ff;
 }
 
 .trio-player.is-you {
@@ -474,6 +474,7 @@
   font-size: var(--trio-name-size);
   font-weight: 700;
   line-height: 1.25;
+  color: var(--trio-ink);
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -492,11 +493,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: calc(20px * var(--trio-scale));
+  min-width: calc(20px * var(--trio-w));
   height: var(--trio-trio-h);
   padding: 0 4px;
   border-radius: 5px;
-  background: hsl(var(--trio-hue) 52% 42%);
+  background: hsl(var(--trio-hue) 52% 45%);
   color: #fff;
   font-size: var(--trio-trio-size);
   font-weight: 800;
@@ -504,8 +505,8 @@
 }
 
 .trio-trio-none {
-  font-size: calc(10px * var(--trio-scale));
-  color: var(--trio-dim);
+  font-size: calc(10px * var(--trio-w));
+  color: var(--trio-faint);
 }
 
 .trio-hand {
@@ -541,7 +542,7 @@
 }
 
 .trio-hand .trio-card.is-open:hover {
-  filter: brightness(1.15);
+  filter: brightness(1.08);
 }
 
 .trio-hand .trio-card.is-picked {
@@ -550,8 +551,8 @@
 }
 
 .trio-hand-arrow {
-  font-size: calc(9px * var(--trio-scale));
-  color: var(--trio-dim);
+  font-size: calc(9px * var(--trio-w));
+  color: #9aa1ab;
   line-height: 1;
   flex: 0 0 auto;
 }
@@ -579,8 +580,7 @@
   gap: 4px;
   padding: 3px;
   border-radius: inherit;
-  background: rgba(16, 10, 22, 0.78);
-  backdrop-filter: blur(1px);
+  background: rgba(20, 22, 28, 0.72);
 }
 
 .trio-mask button {
@@ -589,9 +589,8 @@
   min-height: 26px;
   padding: 2px 4px;
   border-radius: 6px;
-  border: 1px solid rgba(246, 239, 228, 0.3);
-  /* Opaque so nothing dimmed underneath shows through the label. */
-  background: #3a2b45;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: #fff;
   color: var(--trio-ink);
   font-size: 11px;
   font-weight: 700;
@@ -604,7 +603,7 @@
 .trio-mask button.trio-go {
   background: var(--trio-accent);
   border-color: var(--trio-accent);
-  color: #2a1a10;
+  color: #fff;
 }
 
 /* The card grid is only one or two rows tall, far too short to hold two
@@ -615,8 +614,8 @@
 }
 
 .trio-mask--table {
-  top: calc(-16px * var(--trio-scale));
-  bottom: calc(-52px * var(--trio-scale));
+  top: calc(-16px * var(--trio-w));
+  bottom: calc(-52px * var(--trio-w));
   left: -5px;
   right: -5px;
   z-index: 2;
@@ -624,7 +623,6 @@
   gap: 10px;
   padding: 0 8px 5px;
   border-radius: 12px;
-  background: rgba(13, 8, 19, 0.76);
 }
 
 .trio-mask--table button {
@@ -643,7 +641,6 @@
   gap: 8px;
   padding: 4px 8px;
   border-radius: 12px;
-  background: rgba(13, 8, 19, 0.85);
 }
 
 .trio-mask--row button {
@@ -662,7 +659,7 @@
 .trio-logbox summary {
   cursor: pointer;
   font-size: var(--trio-note-size);
-  color: var(--trio-dim);
+  color: var(--trio-faint);
   list-style: revert;
 }
 
@@ -687,9 +684,9 @@
 /* --- wider screens ---------------------------------------------------- */
 
 @media (min-width: 860px) {
-  .trio-root {
-    --trio-card-w: calc(96px * var(--trio-scale));
-    --trio-gap: calc(7px * var(--trio-scale));
+  #trioPanel {
+    --trio-card-w: calc(96px * var(--trio-w));
+    --trio-gap: calc(7px * var(--trio-w));
   }
 
   .trio-columns {
@@ -712,11 +709,11 @@
   }
 
   .trio-block-head {
-    margin-bottom: calc(6px * var(--trio-scale));
+    margin-bottom: calc(6px * var(--trio-w));
   }
 
   .trio-block-title {
-    font-size: calc(11px * var(--trio-scale));
+    font-size: calc(11px * var(--trio-w));
   }
 
   .trio-reveal {
@@ -724,12 +721,12 @@
   }
 
   .trio-reveal-card .trio-card {
-    width: calc(38px * var(--trio-scale));
-    height: calc(48px * var(--trio-scale));
-    font-size: calc(19px * var(--trio-scale));
+    width: calc(38px * var(--trio-w));
+    height: calc(48px * var(--trio-w));
+    font-size: calc(19px * var(--trio-w));
   }
 
   .trio-reveal-why {
-    font-size: calc(12px * var(--trio-scale));
+    font-size: calc(12px * var(--trio-w));
   }
 }

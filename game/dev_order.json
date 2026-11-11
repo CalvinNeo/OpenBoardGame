@@ -124,5 +124,8 @@
   "not_a_hat": 123,
   "dadada": 124,
   "give_me_or_him": 125,
-  "trio": 126
+  "trio": 126,
+  "mushroom_picking": 127,
+  "find_diff": 128,
+  "bubble_shooter": 129
 }

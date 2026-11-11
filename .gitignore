@@ -5,6 +5,7 @@
 .aidixit/
 .ai/
 .cyber_pictures/
+.find_diff/
 backup
 package-lock.json
 package.json
