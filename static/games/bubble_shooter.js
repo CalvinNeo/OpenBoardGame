@@ -7,8 +7,10 @@
  *   3. sends `shoot` / `use_item` / `new_game` / `play_again` actions.
  *
  * Everybody plays their own board at the same time, so the layout gives the
- * whole centre to the viewer's board and keeps every score, including the
- * viewer's own rank, in the thin strip along the top edge.
+ * whole centre to one board and keeps every score in the thin strip along the
+ * top edge. Those score chips are also the spectator controls: click anyone and
+ * the centre switches to their board, replaying their shots as they happen.
+ * Click your own chip, or the back button, to return.
  *
  * Board coordinates are bubble diameters, exactly like the server: the board
  * element keeps an 11 / 14 aspect ratio, so x / 11 and y / 14 are percentages.
@@ -37,6 +39,10 @@
   const SNAP_SEARCH_ROWS = 3;
   const SHORT_AIM_UNITS = 2.4;
   const FLY_MS_PER_UNIT = 58;
+  // A fast opponent can fire several shots between two renders. Replaying a
+  // backlog would leave the spectator permanently behind, so past this gap we
+  // snap straight to the authoritative board instead.
+  const MAX_REPLAY_GAP = 2;
 
   const SYMBOLS = {
     red: "✕",
@@ -72,10 +78,13 @@
   const aimPath = el("bsAimPath");
   const ghost = el("bsGhost");
   const shooter = el("bsShooter");
+  const watchTag = el("bsWatchTag");
   const flyEl = el("bsFly");
   const overlay = el("bsOverlay");
   const scoresBox = el("bsScores");
+  const statsLabel = el("bsStatsLabel");
   const statsBox = el("bsStats");
+  const backBtn = el("bsBackBtn");
   const queueBox = el("bsQueue");
   const hammerBtn = el("bsHammerBtn");
   const hammerCount = el("bsHammerCount");
@@ -92,7 +101,8 @@
    * ------------------------------------------------------------------ */
 
   let view = null;
-  let displayGrid = null;
+  let activeId = null;          // whose board is on screen
+  let displayGrid = null;       // what the layer currently paints for activeId
   let displayParity = 0;
   let lastShotId = 0;
   let animating = false;
@@ -106,6 +116,9 @@
   let helpWidget = null;
   let explainWidget = null;
 
+  // Each board keeps its own painted snapshot, so switching between players
+  // does not throw away what was already on screen for them.
+  const painted = new Map();
   const cellEls = new Map();
   const cellKey = (row, col) => row + "," + col;
 
@@ -113,6 +126,82 @@
 
   function wait(ms) {
     return new Promise((resolve) => window.setTimeout(resolve, reduceMotion.matches ? 0 : ms));
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Whose board is on screen
+   * ------------------------------------------------------------------ */
+
+  function fallbackBoard(source) {
+    return {
+      grid: source.grid || [],
+      top_parity: source.top_parity || 0,
+      queue: source.queue || [],
+      items: source.items || {},
+      aim_left: source.aim_left || 0,
+      score: source.score || 0,
+      combo: source.combo || 0,
+      best_combo: source.best_combo || 0,
+      shots: source.shots || 0,
+      wave: source.wave || 0,
+      push_countdown: source.push_countdown || 0,
+      push_interval: source.push_interval || 0,
+      popped_total: source.popped_total || 0,
+      dropped_total: source.dropped_total || 0,
+      last_shot: source.last_shot || null,
+      shot_id: source.shot_id || 0,
+      board_out: Boolean(source.board_out),
+    };
+  }
+
+  function activeBoard() {
+    if (!view) return null;
+    const boards = view.boards;
+    if (boards && activeId && boards[activeId]) return boards[activeId];
+    return fallbackBoard(view);
+  }
+
+  const isMine = () => Boolean(view) && activeId === view.you;
+
+  function playerLabel(pid) {
+    const row = (view?.ranking || []).find((entry) => entry.player_id === pid);
+    if (!row) return "Player";
+    if (row.name) return row.name;
+    if (row.seat != null) return "Seat " + (row.seat + 1);
+    return "Player";
+  }
+
+  function loadPainted() {
+    const entry = painted.get(activeId);
+    displayGrid = entry ? entry.grid : null;
+    displayParity = entry ? entry.parity : 0;
+    lastShotId = entry ? entry.shotId : 0;
+  }
+
+  function savePainted() {
+    if (!activeId) return;
+    painted.set(activeId, { grid: displayGrid, parity: displayParity, shotId: lastShotId });
+  }
+
+  function switchTo(pid) {
+    if (!view || !pid || pid === activeId) return;
+    const boards = view.boards || {};
+    if (!boards[pid]) return;
+    activeId = pid;
+    hammerArmed = false;
+    animating = false;
+    pendingView = null;
+    pointerActive = false;
+    activePointerId = null;
+    pendingAim = null;
+    if (flyEl) flyEl.hidden = true;
+    if (board) board.classList.remove("is-shake");
+    loadPainted();
+    renderChrome(view);
+    const snapshot = activeBoard();
+    paintGrid(snapshot ? snapshot.grid : [], snapshot ? snapshot.top_parity : 0);
+    savePainted();
+    renderAim();
   }
 
   /* ------------------------------------------------------------------ *
@@ -345,16 +434,26 @@
    * Shot replay
    * ------------------------------------------------------------------ */
 
-  async function replay(next, shot) {
+  async function replay(next, snapshot, shot) {
     animating = true;
     renderChrome(next);
+    const startedFor = activeId;
 
     if (shot.kind === "shoot") {
       await fly(shot.path, shot.color);
+      if (activeId !== startedFor) {
+        animating = false;
+        return;
+      }
       if (shot.cell) {
         addBubble(shot.cell[0], shot.cell[1], shot.color, displayParity, "is-landing");
       }
       await wait(130);
+    }
+
+    if (activeId !== startedFor) {
+      animating = false;
+      return;
     }
 
     const popped = (shot.popped || []).concat(shot.exploded || []);
@@ -365,13 +464,19 @@
 
     await wait(shot.pushed ? 520 : 470);
 
+    if (activeId !== startedFor) {
+      animating = false;
+      return;
+    }
+
     if (shot.pushed && board) {
       board.classList.add("is-shake");
       window.setTimeout(() => board.classList.remove("is-shake"), 300);
     }
 
     lastShotId = shot.id;
-    paintGrid(next.grid, next.top_parity);
+    paintGrid(snapshot.grid, snapshot.top_parity);
+    savePainted();
     animating = false;
     renderChrome(next);
     renderAim();
@@ -389,16 +494,16 @@
 
   function renderAim() {
     if (!view || !aimPath) return;
-    const playable = can("shoot") && !animating;
-    if (!playable || !displayGrid || !displayGrid.length) {
+    if (shooter) shooter.style.setProperty("--bs-angle", angle - 90 + "deg");
+    if (!canAct() || !displayGrid || !displayGrid.length) {
       aimPath.setAttribute("points", "");
       if (ghost) ghost.hidden = true;
-      if (shooter) shooter.style.setProperty("--bs-angle", angle - 90 + "deg");
       return;
     }
 
     const trace = simulate(occupied(displayGrid, displayParity), angle);
-    const full = (view.aim_left || 0) > 0;
+    const mine = activeBoard();
+    const full = ((mine && mine.aim_left) || 0) > 0;
 
     let points = trace.path;
     if (!full) {
@@ -433,8 +538,6 @@
         ghost.hidden = true;
       }
     }
-
-    if (shooter) shooter.style.setProperty("--bs-angle", angle - 90 + "deg");
   }
 
   /* ------------------------------------------------------------------ *
@@ -445,6 +548,11 @@
     return Boolean(view && Array.isArray(view.legal_actions) && view.legal_actions.includes(action));
   }
 
+  // You can only aim, shoot and spend items on your own board.
+  function canAct() {
+    return isMine() && can("shoot") && !animating;
+  }
+
   function span(className, text) {
     const node = document.createElement("span");
     node.className = className;
@@ -452,13 +560,8 @@
     return node;
   }
 
-  function playerLabel(row) {
-    if (row.name) return row.name;
-    if (row.seat != null) return "Seat " + (row.seat + 1);
-    return "Player";
-  }
-
-  /* The edge strip is the only place other people's numbers appear. */
+  /* The edge strip is the only place other people's numbers appear, and each
+     chip doubles as the button that puts that player's board on screen. */
   function renderScores() {
     if (!scoresBox || !view) return;
     const ranking = Array.isArray(view.ranking) ? view.ranking : [];
@@ -467,19 +570,24 @@
       return;
     }
     const nodes = ranking.map((row) => {
-      const chip = document.createElement("div");
+      const chip = document.createElement("button");
       const mine = row.player_id === view.you;
+      const watching = row.player_id === activeId;
+      chip.type = "button";
       chip.className = "bs-score"
         + (mine ? " is-you" : "")
+        + (watching ? " is-watching" : "")
         + (row.out ? " is-out" : "")
         + (row.rank === 1 ? " is-leader" : "");
-      const label = mine ? "You" : playerLabel(row);
+      chip.setAttribute("aria-pressed", String(watching));
+      const label = mine ? "You" : playerLabel(row.player_id);
       chip.append(
         span("bs-score-rank", "#" + row.rank),
         span("bs-score-name", row.is_bot ? "🤖 " + label : label),
         span("bs-score-value", String(row.score)),
         span("bs-score-meta", row.out ? "OUT" : "W" + row.wave)
       );
+      chip.addEventListener("click", () => switchTo(row.player_id));
       return chip;
     });
     if ((view.player_count || ranking.length) < 2) {
@@ -490,29 +598,35 @@
 
   function renderStats() {
     if (!statsBox || !view) return;
-    const nodes = [span("bs-stat", "♾️ Wave " + view.wave)];
-    nodes.push(span("bs-stat is-big", "⭐ " + view.score));
-    if (view.combo > 1) nodes.push(span("bs-stat is-hot", "🔥 x" + Math.min(view.combo, 5)));
-    if (view.push_interval > 0) {
-      const left = view.push_countdown;
+    const snapshot = activeBoard();
+    if (!snapshot) return;
+    if (statsLabel) statsLabel.textContent = isMine() ? "Your run" : "Watching " + playerLabel(activeId);
+    const nodes = [span("bs-stat", "♾️ Wave " + snapshot.wave)];
+    nodes.push(span("bs-stat is-big", "⭐ " + snapshot.score));
+    if (snapshot.combo > 1) nodes.push(span("bs-stat is-hot", "🔥 x" + Math.min(snapshot.combo, 5)));
+    if (snapshot.push_interval > 0) {
+      const left = snapshot.push_countdown;
       nodes.push(span("bs-stat" + (left <= 2 ? " is-alert" : ""), "⬇️ Push in " + left));
     }
-    nodes.push(span("bs-stat", "🎯 " + view.shots + " shots"));
+    nodes.push(span("bs-stat", "🎯 " + snapshot.shots + " shots"));
     statsBox.replaceChildren(...nodes);
   }
 
   function renderShooter() {
     if (!shooter || !view) return;
-    const value = view.queue && view.queue[0];
+    const snapshot = activeBoard();
+    const value = snapshot && snapshot.queue ? snapshot.queue[0] : null;
     shooter.className = "bs-shooter" + (value ? " " + colorClass(value) : "");
     shooter.textContent = value ? SYMBOLS[value] || "" : "";
   }
 
   function renderQueue() {
     if (!queueBox || !view) return;
+    const snapshot = activeBoard();
+    const queue = (snapshot && snapshot.queue) || [];
     const nodes = [];
     for (let i = 0; i < 3; i += 1) {
-      const value = (view.queue || [])[i];
+      const value = queue[i];
       const node = document.createElement("div");
       if (value == null) {
         node.className = "bs-queue-slot is-empty";
@@ -528,8 +642,9 @@
 
   function renderItems() {
     if (!view) return;
-    const items = view.items || {};
-    const playable = can("shoot") && !animating;
+    const snapshot = activeBoard();
+    const items = (snapshot && snapshot.items) || {};
+    const playable = canAct();
     if (hammerCount) hammerCount.textContent = String(items.hammer || 0);
     if (aimCount) aimCount.textContent = String(items.aim || 0);
     if (hammerBtn) {
@@ -538,36 +653,51 @@
     }
     if (aimBtn) {
       aimBtn.disabled = !playable || (items.aim || 0) <= 0;
-      aimBtn.classList.toggle("is-active", (view.aim_left || 0) > 0);
+      aimBtn.classList.toggle("is-active", ((snapshot && snapshot.aim_left) || 0) > 0);
     }
     if (board) {
       board.classList.toggle("is-hammer", hammerArmed);
-      board.classList.toggle("is-locked", !playable && !hammerArmed);
+      board.classList.toggle("is-watching", !isMine());
+      board.classList.toggle("is-locked", isMine() && !playable && !hammerArmed);
     }
+    if (watchTag) {
+      watchTag.hidden = isMine();
+      if (!isMine()) watchTag.textContent = "👁 " + playerLabel(activeId);
+    }
+    if (backBtn) backBtn.hidden = isMine();
   }
 
   function renderControls() {
-    if (angleValue) angleValue.textContent = (angle > 0 ? "+" : "") + angle.toFixed(0) + "°";
+    if (angleValue) {
+      angleValue.textContent = isMine()
+        ? (angle > 0 ? "+" : "") + angle.toFixed(0) + "°"
+        : "—";
+    }
     if (restartBtn) restartBtn.disabled = false;
   }
 
   function renderStatus() {
     if (!statusBox || !view) return;
+    const snapshot = activeBoard();
     let text;
     if (view.game_over) {
-      text = view.winner_ids && view.winner_ids.includes(view.you)
+      text = (view.winner_ids || []).includes(view.you)
         ? "🏆 Race over — you finished on top."
         : "🏁 Race over. The final standings are on the board.";
-    } else if (view.board_out) {
-      text = "💥 Your stack crossed the line. Watch the others finish, or restart the match.";
+    } else if (!isMine()) {
+      text = snapshot && snapshot.board_out
+        ? "👁 " + playerLabel(activeId) + " is out. Pick someone else from the strip above."
+        : "👁 Watching " + playerLabel(activeId) + ". Their shots replay here as they happen.";
+    } else if (snapshot && snapshot.board_out) {
+      text = "💥 Your stack crossed the line. Tap anyone above to watch them, or restart the match.";
     } else if (animating) {
       text = "…";
     } else if (hammerArmed) {
       text = "🔨 Hammer armed — tap a bubble to smash it.";
-    } else if ((view.aim_left || 0) > 0) {
-      text = "🎯 Full trajectory on for " + view.aim_left + " more shot(s).";
-    } else if (view.push_interval > 0) {
-      text = "Ceiling drops in " + view.push_countdown + " shot(s). Move to aim, click to shoot.";
+    } else if (snapshot && snapshot.aim_left > 0) {
+      text = "🎯 Full trajectory on for " + snapshot.aim_left + " more shot(s).";
+    } else if (snapshot && snapshot.push_interval > 0) {
+      text = "Ceiling drops in " + snapshot.push_countdown + " shot(s). Move to aim, click to shoot.";
     } else {
       text = "Move the pointer over the board to aim, click to shoot.";
     }
@@ -576,7 +706,8 @@
 
   function renderLastShot() {
     if (!lastShotBox || !view) return;
-    const shot = view.last_shot;
+    const snapshot = activeBoard();
+    const shot = snapshot ? snapshot.last_shot : null;
     if (!shot) {
       lastShotBox.textContent = "No shot yet.";
       return;
@@ -624,7 +755,7 @@
         + (winners.has(row.player_id) ? " is-winner" : "");
       item.append(
         span("bs-overlay-rank", "#" + row.rank),
-        span("bs-overlay-name", mine ? "You" : playerLabel(row)),
+        span("bs-overlay-name", mine ? "You" : playerLabel(row.player_id)),
         span("bs-overlay-tag", row.out ? "OUT" : "Wave " + row.wave),
         span("bs-overlay-score", String(row.score))
       );
@@ -635,7 +766,10 @@
 
   function renderOverlay() {
     if (!overlay || !view) return;
-    const show = Boolean(view.game_over || view.board_out);
+    const snapshot = activeBoard();
+    const out = Boolean(snapshot && snapshot.board_out);
+    // Never cover somebody else's board with your own result panel.
+    const show = Boolean(view.game_over || (isMine() && out));
     overlay.hidden = !show;
     if (!show) {
       overlay.replaceChildren();
@@ -666,7 +800,7 @@
       emoji.textContent = "💥";
       title.textContent = "Your board is out";
       body.textContent = "You reached wave " + view.wave + " with " + view.score
-        + " points. The others are still going.";
+        + " points. Tap anyone in the strip above to watch them finish.";
       actions.append(
         overlayButton("↺ Restart match", true, () => sendAction({ type: "new_game" }))
       );
@@ -694,14 +828,35 @@
    * ------------------------------------------------------------------ */
 
   function applyView(next) {
-    const shot = next.last_shot;
-    const fresh = Boolean(shot && displayGrid && shot.id > lastShotId);
+    const boards = next.boards || {};
+    if (!activeId || !boards[activeId]) {
+      const fallback = next.you && boards[next.you]
+        ? next.you
+        : (next.ranking && next.ranking[0] ? next.ranking[0].player_id : next.you);
+      activeId = fallback;
+      loadPainted();
+    }
+
+    const snapshot = activeBoard();
+    const shot = snapshot ? snapshot.last_shot : null;
+    const shotId = snapshot ? snapshot.shot_id || 0 : 0;
+
+    if (shotId < lastShotId) {
+      // A restart rewound the counter for this board.
+      displayGrid = null;
+      lastShotId = 0;
+    }
+
+    const gap = shot ? shot.id - lastShotId : 0;
+    const fresh = Boolean(shot && displayGrid && gap > 0 && gap <= MAX_REPLAY_GAP);
 
     if (!fresh) {
-      lastShotId = next.shot_id || 0;
+      lastShotId = shotId;
       pendingView = null;
+      animating = false;
       renderChrome(next);
-      paintGrid(next.grid, next.top_parity);
+      paintGrid(snapshot ? snapshot.grid : [], snapshot ? snapshot.top_parity : 0);
+      savePainted();
       renderAim();
       return;
     }
@@ -715,12 +870,13 @@
     if (shot.kind === "aim") {
       lastShotId = shot.id;
       renderChrome(next);
-      paintGrid(next.grid, next.top_parity);
+      paintGrid(snapshot.grid, snapshot.top_parity);
+      savePainted();
       renderAim();
       return;
     }
 
-    replay(next, shot);
+    replay(next, snapshot, shot);
   }
 
   function renderGameState(data) {
@@ -729,10 +885,6 @@
     if (typeof currentGameType !== "undefined" && currentGameType !== GAME_ID) {
       currentGameType = GAME_ID;
       setGamePanelVisibility(GAME_ID);
-    }
-    if ((next.shot_id || 0) < lastShotId) {
-      displayGrid = null;
-      lastShotId = 0;
     }
     applyView(next);
   }
@@ -786,8 +938,6 @@
     renderAim();
   }
 
-  // A pointer can move far more often than the screen refreshes, so keep only
-  // the latest position and recompute the trajectory once per frame.
   function scheduleAim(event) {
     const rect = board.getBoundingClientRect();
     const g = geo();
@@ -814,7 +964,6 @@
     pendingAim = null;
   }
 
-  // The item chips sit inside the board, so board gestures must ignore them.
   function onBoardChrome(event) {
     const target = event.target;
     return target instanceof Element && Boolean(target.closest(".bs-board-items"));
@@ -828,7 +977,8 @@
 
   function cellAt(px, py) {
     const g = geo();
-    const parity = view ? view.top_parity : 0;
+    const snapshot = activeBoard();
+    const parity = snapshot ? snapshot.top_parity : 0;
     let best = null;
     let bestDistance = null;
     for (let row = 0; row < g.max_rows; row += 1) {
@@ -846,7 +996,7 @@
   }
 
   function shoot() {
-    if (!can("shoot") || animating) return;
+    if (!canAct()) return;
     sendAction({ type: "shoot", angle: Math.round(angle * 100) / 100 });
   }
 
@@ -858,7 +1008,8 @@
       return;
     }
     const [row, col] = target;
-    const grid = view && view.grid;
+    const snapshot = activeBoard();
+    const grid = snapshot && snapshot.grid;
     if (!grid || !grid[row] || grid[row][col] == null) {
       toast("That cell is empty.");
       return;
@@ -876,6 +1027,7 @@
     board.addEventListener("pointermove", (event) => {
       if (!view || onBoardChrome(event)) return;
       if (event.pointerType !== "mouse" && !pointerActive) return;
+      if (!canAct()) return;
       scheduleAim(event);
     });
 
@@ -883,6 +1035,7 @@
       if (!view || !event.isPrimary) return;
       if (event.button !== undefined && event.button !== 0) return;
       if (onBoardChrome(event)) return;
+      if (!isMine()) return;
       pointerActive = true;
       activePointerId = event.pointerId;
       board.setPointerCapture?.(event.pointerId);
@@ -892,7 +1045,7 @@
         useHammerAt(event);
         return;
       }
-      if (can("shoot") && !animating) scheduleAim(event);
+      if (canAct()) scheduleAim(event);
       event.preventDefault();
     });
 
@@ -902,7 +1055,7 @@
       pointerActive = false;
       activePointerId = null;
       board.releasePointerCapture?.(event.pointerId);
-      if (hammerArmed || !insideBoard(event)) return;
+      if (hammerArmed || !insideBoard(event) || !canAct()) return;
       scheduleAim(event);
       flushAim();
       shoot();
@@ -915,6 +1068,7 @@
 
     board.addEventListener("keydown", (event) => {
       if (!view) return;
+      if (!canAct()) return;
       const step = event.shiftKey ? 0.5 : 2;
       if (event.key === "ArrowLeft") {
         angle = clampAngle(angle - step);
@@ -938,8 +1092,9 @@
   }
 
   hammerBtn?.addEventListener("click", () => {
-    if (!can("shoot") || animating) return;
-    if ((view?.items?.hammer || 0) <= 0) {
+    if (!canAct()) return;
+    const snapshot = activeBoard();
+    if (((snapshot && snapshot.items) || {}).hammer <= 0) {
       toast("No hammer charges left.");
       return;
     }
@@ -949,13 +1104,16 @@
   });
 
   aimBtn?.addEventListener("click", () => {
-    if (!can("shoot") || animating) return;
-    if ((view?.items?.aim || 0) <= 0) {
+    if (!canAct()) return;
+    const snapshot = activeBoard();
+    if (((snapshot && snapshot.items) || {}).aim <= 0) {
       toast("No aim charges left.");
       return;
     }
     sendAction({ type: "use_item", item: "aim" });
   });
+
+  backBtn?.addEventListener("click", () => switchTo(view?.you));
 
   restartBtn?.addEventListener("click", () => {
     sendAction({ type: "new_game" });
@@ -1005,11 +1163,15 @@
         html: {
           zh: "<p>每个人有自己的棋盘、自己的队列和自己的道具次数，谁也挡不住谁，所有板同时推进。</p>"
             + "<p>同一个种子决定了每一波的布局、泡泡序列和天花板下压，因此所有人面对的地图完全相同。</p>"
-            + "<p>顶部边缘的细条是唯一的记分板，按名次排列所有人的分数，你自己的那条会高亮。</p>"
+            + "<p>顶部边缘的细条是唯一的记分板，按名次排列所有人，你自己的那条会高亮。</p>"
+            + "<p>点一下细条里任何一个人的名字，中央就会切换成他的棋盘，他的每一发都会照样播出来。点自己的名字或按返回键就回到自己的板。</p>"
+            + "<p>观战时不能瞄准也不能用道具，那块板完全属于正在打的人。</p>"
             + "<p>你的板压线之后你就出局了，但比赛继续，直到最后一个人也出局才结算。</p>",
           en: "<p>Every player has their own board, queue and item charges. Nobody can block anybody, and all boards advance at once.</p>"
             + "<p>One seed decides every wave, the bubble queue and the ceiling pushes, so everybody faces exactly the same map.</p>"
             + "<p>The thin strip along the top edge is the only scoreboard. It lists everyone by rank, with your own entry highlighted.</p>"
+            + "<p>Tap anyone in that strip and the centre switches to their board, replaying their shots as they happen. Tap your own name, or the back button, to return.</p>"
+            + "<p>While watching you cannot aim or spend items, because that board belongs to whoever is playing it.</p>"
             + "<p>When your stack crosses the line you are out, but the race continues until the last board falls.</p>"
         }
       },
@@ -1045,10 +1207,10 @@
         html: {
           zh: "<p>棋盘上有一条红色警戒线。任何一颗泡泡越过这条线，你的这一局立刻结束。</p>"
             + "<p>每若干发之后天花板会整体下压一行，右上角会提示还剩几发。间隔可以在开局设置里调整，也可以关掉。</p>"
-            + "<p>出局之后棋盘会停住并盖上结算面板，你可以看别人的进度，也可以重开整场比赛。</p>",
+            + "<p>出局之后棋盘会停住并盖上结算面板，你可以点别人继续观战，也可以重开整场比赛。</p>",
           en: "<p>A red warning line runs across the board. As soon as any bubble sits below it, your run ends immediately.</p>"
             + "<p>Every few shots the ceiling pushes down a row, and the counter shows how many shots are left. The interval is configurable at setup and can be switched off.</p>"
-            + "<p>After you are out your board freezes behind a summary panel, so you can watch the others or restart the whole match.</p>"
+            + "<p>After you are out your board freezes behind a summary panel, so you can tap someone else to keep watching, or restart the whole match.</p>"
         }
       }
     ]
@@ -1056,24 +1218,24 @@
 
   const EXPLAIN = {
     scoreboard: {
-      zh: "边缘记分板。所有人的分数只在这里出现，按名次排列，你自己的那条高亮。",
-      en: "The edge scoreboard. Every score appears here and nowhere else, ordered by rank, with your own entry highlighted."
+      zh: "边缘记分板，也是观战入口。所有人的分数只在这里出现，按名次排列。点任何一个人的名字，中央就切换成他的棋盘并实时播放他的操作。",
+      en: "The edge scoreboard, and the way in to spectating. Every score appears here and nowhere else, ordered by rank. Tap anyone's name to put their board in the centre and watch their moves live."
     },
     board: {
-      zh: "你的棋盘。鼠标移上去就跟着瞄准，点击发射。触摸时按住拖动瞄准，松手发射，在棋盘外松手取消。泡泡会在左右墙上反弹。",
-      en: "Your board. A mouse aims as it moves and fires on click. On touch, press and drag to aim, release to fire, or release outside the board to cancel. Bubbles bounce off the side walls."
+      zh: "当前显示的棋盘。是你自己的板时可以瞄准发射；观战时只播放别人的操作，不能操作。泡泡会在左右墙上反弹。",
+      en: "The board on screen. On your own board you can aim and fire, while spectating it only replays someone else's moves. Bubbles bounce off the side walls."
     },
     death_line: {
-      zh: "警戒线。任何一颗泡泡越过这条线，你的这一局就结束了。",
-      en: "The warning line. As soon as any bubble crosses it, your run is over."
+      zh: "警戒线。任何一颗泡泡越过这条线，这一局就结束了。",
+      en: "The warning line. As soon as any bubble crosses it, that run is over."
     },
     shooter: {
-      zh: "发射器。炮管指向当前角度，射出的泡泡就是右侧队列里的第一颗。",
+      zh: "发射器。炮管指向当前角度，射出的泡泡就是队列里的第一颗。",
       en: "The shooter. The barrel points at the current angle, and it fires the first bubble shown in the queue."
     },
     items: {
-      zh: "道具按钮，就在棋盘左下角，和目标泡泡在同一屏内。",
-      en: "The item chips, in the bottom left of the board so they share the screen with their targets."
+      zh: "道具按钮，就在棋盘左下角，和目标泡泡在同一屏内。观战时会显示被观看者的剩余次数但不能点击。",
+      en: "The item chips, in the bottom left of the board so they share the screen with their targets. While spectating they show the watched player's charges but cannot be pressed."
     },
     hammer: {
       zh: "锤子(🔨)。按一下进入待发状态，再点棋盘上任意一颗泡泡把它直接敲掉，上方失去连接的泡泡会跟着掉落。",
@@ -1084,24 +1246,28 @@
       en: "Aim line(🎯). Press it and the next three shots show the full bouncing trajectory plus a dashed circle on the landing cell."
     },
     mine: {
-      zh: "你自己这一局的数据：波数、总分、连击倍率、距离天花板下压还有几发、已经打了多少发。",
-      en: "Your own run: the wave, your total score, the combo multiplier, how many shots until the ceiling pushes, and how many shots you have fired."
+      zh: "当前这块板的数据：波数、总分、连击倍率、距离天花板下压还有几发、已经打了多少发。看自己的板时标题是 Your run，观战时会变成 Watching 加对方名字。",
+      en: "The numbers for the board on screen: the wave, the score, the combo multiplier, how many shots until the ceiling pushes, and how many shots have been fired. The heading reads Your run on your own board and Watching plus a name while spectating."
+    },
+    back: {
+      zh: "回到自己的棋盘。观战时随时可以点这个，或者直接点记分板里自己的名字。",
+      en: "Return to your own board. Press this any time while spectating, or just tap your own name in the scoreboard."
     },
     queue: {
       zh: "发射队列。最大的一颗是当前要射的，后面两颗是接下来两颗，其中可能混有炸弹(💣)和彩虹(🌈)。",
       en: "The firing queue. The large one is loaded now and the two smaller ones come next, and they may include bombs(💣) and rainbows(🌈)."
     },
     angle: {
-      zh: "当前角度读数。0° 是正上方，正数偏右，负数偏左。角度完全由指针在棋盘上的位置决定，这里只是显示。",
-      en: "The current angle readout. 0° is straight up, positive angles lean right and negative angles lean left. The angle follows the pointer on the board, so this is display only."
+      zh: "当前角度读数。0° 是正上方，正数偏右，负数偏左。角度完全由指针在棋盘上的位置决定，观战时显示为一条横线。",
+      en: "The current angle readout. 0° is straight up, positive angles lean right and negative angles lean left. The angle follows the pointer on the board, and shows a dash while spectating."
     },
     restart: {
       zh: "重开整场比赛。所有人的棋盘都会用同一个种子重新开始。",
       en: "Restart the whole match. Every board starts over from the same seed."
     },
     last_shot: {
-      zh: "上一发的结果：角度、消掉几颗、掉落几颗、得了多少分，以及天花板有没有下压。",
-      en: "The result of the previous shot: the angle, how many popped, how many dropped, the points gained, and whether the ceiling pushed down."
+      zh: "当前这块板上一发的结果：角度、消掉几颗、掉落几颗、得了多少分，以及天花板有没有下压。观战时这里就是对方最近一发的战报。",
+      en: "The result of the previous shot on the board on screen: the angle, how many popped, how many dropped, the points gained, and whether the ceiling pushed. While spectating this is the other player's latest shot."
     }
   };
 

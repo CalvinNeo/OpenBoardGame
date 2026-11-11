@@ -1,16 +1,16 @@
-"""大家来找茬 (Spot the Difference): a real-time race over generated photo pairs.
+"""大家来找茬 (Spot the Difference): an independent-progress time trial.
 
-Every level is a pair of photographs that differ in exactly five places. The
-pictures and the five ground-truth boxes are produced by
-scripts/gen_find_diff.py and read from .find_diff/manifest.json.
+One game draws a random set of pictures from the generated pool and picks a
+random subset of the differences on each. Every player races through exactly
+the same set in the same order, but each player has their own board, their own
+clock and their own marks: nobody can take a difference away from anybody else.
+The ranking is by completion time, so the only thing that matters is how fast
+you clear your own five pictures.
 
-All players look at the same pair at the same time and click what they spot.
-The first player to click inside an unfound difference claims it; a click that
-lands nowhere costs a point and locks that player out for a short moment. A round
-ends when all five differences are claimed or when the round timer expires, and
-then the table pauses so everybody can read the result before the next picture.
+There is no way to skip a picture. If the overall deadline arrives first, whoever
+has not finished is ranked behind the finishers, ordered by how much they found.
 
-Rules source: designs/task194.md.
+Assets and the asset pipeline: scripts/gen_find_diff.py, designs/task194.md.
 """
 import copy
 import json
@@ -27,20 +27,22 @@ IMAGE_DIR = Path(__file__).resolve().parent.parent / ".find_diff"
 MANIFEST_PATH = IMAGE_DIR / "manifest.json"
 IMAGE_URL_PREFIX = "/static/find_diff/"
 
+# How many differences each generated picture carries. A race uses a subset.
 DIFFS_PER_LEVEL = 5
-DEFAULT_ROUNDS = 4
-DEFAULT_ROUND_SECONDS = 120
-MIN_ROUND_SECONDS = 45
-MAX_ROUND_SECONDS = 600
+DEFAULT_LEVELS = 5
+DEFAULT_DIFFS = 3
+DEFAULT_TOTAL_SECONDS = 600
+MIN_TOTAL_SECONDS = 120
+MAX_TOTAL_SECONDS = 3600
+MAX_LEVELS = 12
 
-POINTS_PER_FIND = 3
-MISS_PENALTY = 1
+# A miss only costs the player their own time: the lockout is the penalty.
 MISS_COOLDOWN_MS = 2000
 # Clicks may land slightly outside a tight object box without feeling unfair.
 HIT_PADDING = 0.012
 
-STAGE_PLAYING = "playing"
-STAGE_ROUND_RESULT = "round_result"
+STAGE_RACING = "racing"
+STAGE_RESULTS = "results"
 STAGE_GAME_OVER = "game_over"
 
 MAX_LOG_ENTRIES = 80
@@ -53,20 +55,17 @@ ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "guess"},
-                "round": {"type": "integer", "minimum": 1},
+                "level": {"type": "integer", "minimum": 1, "maximum": MAX_LEVELS},
                 "x": {"type": "number", "minimum": 0, "maximum": 1},
                 "y": {"type": "number", "minimum": 0, "maximum": 1},
             },
-            "required": ["type", "round", "x", "y"],
+            "required": ["type", "level", "x", "y"],
             "additionalProperties": False,
         },
         {
             "type": "object",
-            "properties": {
-                "type": {"const": "continue"},
-                "round": {"type": "integer", "minimum": 1},
-            },
-            "required": ["type", "round"],
+            "properties": {"type": {"const": "continue"}},
+            "required": ["type"],
             "additionalProperties": False,
         },
         {
@@ -81,11 +80,12 @@ ACTION_SCHEMA = {
 CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
-        "rounds": {"type": "integer", "minimum": 1, "maximum": 12},
-        "round_seconds": {
+        "levels": {"type": "integer", "minimum": 1, "maximum": MAX_LEVELS},
+        "diffs": {"type": "integer", "minimum": 1, "maximum": DIFFS_PER_LEVEL},
+        "total_seconds": {
             "type": "integer",
-            "minimum": MIN_ROUND_SECONDS,
-            "maximum": MAX_ROUND_SECONDS,
+            "minimum": MIN_TOTAL_SECONDS,
+            "maximum": MAX_TOTAL_SECONDS,
         },
     },
     "additionalProperties": False,
@@ -113,7 +113,7 @@ def load_levels(force: bool = False) -> List[Dict]:
             raw = {}
         for entry in raw.get("levels", []):
             diffs = entry.get("diffs") or []
-            if len(diffs) != DIFFS_PER_LEVEL:
+            if not diffs:
                 continue
             if not (IMAGE_DIR / entry.get("a", "")).exists():
                 continue
@@ -138,8 +138,7 @@ def load_levels(force: bool = False) -> List[Dict]:
 
 
 def _name(state: Dict, player_id: str) -> str:
-    meta = state.get("player_meta", {}).get(player_id, {})
-    return meta.get("name", player_id)
+    return state.get("player_meta", {}).get(player_id, {}).get("name", player_id)
 
 
 def _log(state: Dict, message: str) -> None:
@@ -156,89 +155,142 @@ def _hit(box: List[float], x: float, y: float) -> bool:
     )
 
 
-def _found_indices(state: Dict) -> List[int]:
-    return [entry["index"] for entry in state.get("found", [])]
+def _clamp(value: int, low: int, high: int) -> int:
+    return max(low, min(high, value))
 
 
-def _start_round(state: Dict) -> None:
-    # level_pool holds ids, levels maps an id to the full server-side truth.
-    pool = state["level_pool"]
-    if not pool:
-        raise ValueError("no find_diff levels available")
-    if not state["level_queue"]:
-        queue = list(pool)
-        random.shuffle(queue)
-        # Never show the same picture twice in a row across a queue refill.
-        last = state.get("last_level_id")
-        if len(queue) > 1 and queue[0] == last:
-            queue[0], queue[1] = queue[1], queue[0]
-        state["level_queue"] = queue
-    level_id = state["level_queue"].pop(0)
-    level = state["levels"][level_id]
-    state["level"] = copy.deepcopy(level)
-    state["last_level_id"] = level_id
-    state["found"] = []
-    state["cooldown_until"] = {}
-    state["round_started_ms"] = _now_ms()
-    seconds = int(state["config"].get("round_seconds", DEFAULT_ROUND_SECONDS))
-    state["deadline_ms"] = state["round_started_ms"] + seconds * 1000
-    state["pending_timeout"] = {"at_ms": state["deadline_ms"]}
-    state["stage"] = STAGE_PLAYING
-    state["continue_ready"] = []
-    state["round_summary"] = None
-    _log(state, f"第 {state['round_index'] + 1} 轮：{level['title']}")
-
-
-def _finish_round(state: Dict, reason: str) -> List[Dict]:
-    level = state["level"]
-    found = state["found"]
-    claimed = {entry["index"] for entry in found}
-    missed = [
-        {"index": i, "box": d["box"], "name": d["name"], "kind": d["kind"]}
-        for i, d in enumerate(level["diffs"])
-        if i not in claimed
-    ]
-    per_player: Dict[str, int] = {}
-    for entry in found:
-        per_player[entry["player_id"]] = per_player.get(entry["player_id"], 0) + 1
-    state["round_summary"] = {
-        "round": state["round_index"] + 1,
-        "level_id": level["id"],
-        "title": level["title"],
-        "reason": reason,
-        "found": copy.deepcopy(found),
-        "missed": missed,
-        "per_player": per_player,
+def _new_runner() -> Dict:
+    return {
+        "index": 0,
+        "found": [],
+        "misses": 0,
+        "splits": [],
+        "finished_ms": None,
+        "cooldown_until": 0,
     }
-    state["stage"] = STAGE_ROUND_RESULT
+
+
+def _runner_level(state: Dict, runner: Dict) -> Optional[Dict]:
+    if runner["index"] >= len(state["run"]):
+        return None
+    return state["levels"][state["run"][runner["index"]]]
+
+
+def _slots(state: Dict, level_id: str) -> List[int]:
+    return state["plan"][level_id]
+
+
+def _found_total(state: Dict, runner: Dict) -> int:
+    per = state["config"]["diffs"]
+    if runner["finished_ms"] is not None:
+        return len(state["run"]) * per
+    return runner["index"] * per + len(runner["found"])
+
+
+def _rank_rows(state: Dict) -> List[Dict]:
+    per = state["config"]["diffs"]
+    total = len(state["run"]) * per
+    rows = []
+    for pid in state["turn_order"]:
+        runner = state["players"][pid]
+        done = runner["finished_ms"] is not None
+        rows.append({
+            "player_id": pid,
+            "name": _name(state, pid),
+            "is_bot": bool(state["player_meta"].get(pid, {}).get("is_bot", False)),
+            "finished": done,
+            "elapsed_ms": (runner["finished_ms"] - state["started_ms"]) if done else None,
+            "levels_done": runner["index"] if not done else len(state["run"]),
+            "found": _found_total(state, runner),
+            "total": total,
+            "misses": runner["misses"],
+            "splits": [s - state["started_ms"] for s in runner["splits"]],
+        })
+    rows.sort(key=lambda row: (
+        0 if row["finished"] else 1,
+        row["elapsed_ms"] if row["finished"] else 0,
+        -row["found"],
+        row["name"],
+    ))
+    place = 0
+    previous = None
+    for index, row in enumerate(rows):
+        key = (row["finished"], row["elapsed_ms"], -row["found"])
+        if key != previous:
+            place = index + 1
+            previous = key
+        row["place"] = place
+    return rows
+
+
+def _review(state: Dict) -> List[Dict]:
+    """Every picture of this race with the differences that were in play."""
+    out = []
+    for index, level_id in enumerate(state["run"]):
+        level = state["levels"][level_id]
+        slots = _slots(state, level_id)
+        out.append({
+            "index": index,
+            "id": level["id"],
+            "title": level["title"],
+            "a_url": IMAGE_URL_PREFIX + level["a"],
+            "b_url": IMAGE_URL_PREFIX + level["b"],
+            "diffs": [
+                {
+                    "slot": slot_index,
+                    "box": level["diffs"][slot]["box"],
+                    "name": level["diffs"][slot]["name"],
+                    "kind": level["diffs"][slot]["kind"],
+                }
+                for slot_index, slot in enumerate(slots)
+            ],
+        })
+    return out
+
+
+def _finish_race(state: Dict, reason: str) -> List[Dict]:
+    state["stage"] = STAGE_RESULTS
     state["pending_timeout"] = None
     state["continue_ready"] = []
+    state["ranking"] = _rank_rows(state)
     if reason == "timeout":
-        _log(state, f"时间到，本轮找到 {len(found)}/{DIFFS_PER_LEVEL} 处")
+        _log(state, "时间到，按完成进度排名")
     else:
-        _log(state, f"本轮全部 {DIFFS_PER_LEVEL} 处差异都已找到")
-    return [{"type": "find_diff:round_end", "reason": reason}]
-
-
-def _advance_after_result(state: Dict) -> None:
-    if state["round_index"] + 1 >= int(state["config"].get("rounds", DEFAULT_ROUNDS)):
-        state["stage"] = STAGE_GAME_OVER
-        state["game_over"] = True
-        best = max(state["scores"].values()) if state["scores"] else 0
-        state["winners"] = sorted(
-            pid for pid, score in state["scores"].items() if score == best and best > 0
-        )
-        _log(state, "游戏结束")
-        return
-    state["round_index"] += 1
-    _start_round(state)
+        _log(state, "所有人都跑完了")
+    return [{"type": "find_diff:race_end", "reason": reason}]
 
 
 def _continue_target(state: Dict) -> int:
-    return len([
+    humans = [
         pid for pid in state["turn_order"]
         if not state["player_meta"].get(pid, {}).get("is_bot", False)
-    ]) or len(state["turn_order"])
+    ]
+    return len(humans) or len(state["turn_order"])
+
+
+def _deal_race(state: Dict) -> None:
+    pool = list(state["level_pool"])
+    count = min(state["config"]["levels"], len(pool))
+    run = random.sample(pool, count)
+    plan = {}
+    for level_id in run:
+        level = state["levels"][level_id]
+        want = min(state["config"]["diffs"], len(level["diffs"]))
+        plan[level_id] = sorted(random.sample(range(len(level["diffs"])), want))
+    state["run"] = run
+    state["plan"] = plan
+    state["players"] = {pid: _new_runner() for pid in state["turn_order"]}
+    now = _now_ms()
+    state["started_ms"] = now
+    state["deadline_ms"] = now + state["config"]["total_seconds"] * 1000
+    state["pending_timeout"] = {"at_ms": state["deadline_ms"]}
+    state["stage"] = STAGE_RACING
+    state["continue_ready"] = []
+    state["rematch_ready"] = []
+    state["ranking"] = []
+    state["game_over"] = False
+    state["winners"] = []
+    _log(state, f"开跑：{count} 张图，每张 {state['config']['diffs']} 处差异")
 
 
 class FindDiffGame:
@@ -254,57 +306,62 @@ class FindDiffGame:
                 "find_diff assets are missing: run python3 scripts/gen_find_diff.py all"
             )
         cfg = dict(config or {})
-        rounds = int(cfg.get("rounds", DEFAULT_ROUNDS))
-        rounds = max(1, min(12, rounds))
-        seconds = int(cfg.get("round_seconds", DEFAULT_ROUND_SECONDS))
-        seconds = max(MIN_ROUND_SECONDS, min(MAX_ROUND_SECONDS, seconds))
+        level_count = _clamp(int(cfg.get("levels", DEFAULT_LEVELS)), 1, MAX_LEVELS)
+        level_count = min(level_count, len(levels))
+        diff_count = _clamp(int(cfg.get("diffs", DEFAULT_DIFFS)), 1, DIFFS_PER_LEVEL)
+        total_seconds = _clamp(
+            int(cfg.get("total_seconds", DEFAULT_TOTAL_SECONDS)),
+            MIN_TOTAL_SECONDS, MAX_TOTAL_SECONDS,
+        )
         ordered = sorted(players, key=lambda player: player.get("seat", 0))
         ids = [player["player_id"] for player in ordered]
         if len(set(ids)) != len(ids) or any(not isinstance(pid, str) or not pid for pid in ids):
             raise ValueError("player IDs must be unique nonempty strings")
         state = {
             "game_id": GAME_ID,
-            "version": 1,
-            "config": {"rounds": rounds, "round_seconds": seconds},
+            "version": 2,
+            "config": {
+                "levels": level_count,
+                "diffs": diff_count,
+                "total_seconds": total_seconds,
+            },
             "turn_order": ids,
-            "player_meta": {p["player_id"]: copy.deepcopy(p) for p in ordered},
             "player_count": len(ids),
-            "scores": {pid: 0 for pid in ids},
-            "misses": {pid: 0 for pid in ids},
+            "player_meta": {p["player_id"]: copy.deepcopy(p) for p in ordered},
             "level_pool": [lv["id"] for lv in levels],
             "levels": {lv["id"]: lv for lv in levels},
-            "level_queue": [],
-            "last_level_id": None,
-            "level": None,
-            "found": [],
-            "cooldown_until": {},
-            "round_index": 0,
-            "round_started_ms": 0,
+            "run": [],
+            "plan": {},
+            "players": {},
+            "started_ms": 0,
             "deadline_ms": 0,
             "pending_timeout": None,
-            "round_summary": None,
+            "stage": STAGE_RACING,
             "continue_ready": [],
             "rematch_ready": [],
-            "stage": STAGE_PLAYING,
+            "ranking": [],
             "game_over": False,
             "winners": [],
             "seq": 0,
             "log": [],
         }
-        _start_round(state)
+        _deal_race(state)
         return state
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
-        if player_id not in state.get("scores", {}):
+        if player_id not in state.get("players", {}):
             return []
         if state["stage"] == STAGE_GAME_OVER:
             if state["player_meta"].get(player_id, {}).get("is_bot", False):
                 return []
             return [] if player_id in state["rematch_ready"] else ["play_again"]
-        if state["stage"] == STAGE_ROUND_RESULT:
+        if state["stage"] == STAGE_RESULTS:
             return [] if player_id in state["continue_ready"] else ["continue"]
-        if state["cooldown_until"].get(player_id, 0) > _now_ms():
+        runner = state["players"][player_id]
+        if runner["finished_ms"] is not None:
+            return []
+        if runner.get("cooldown_until", 0) > _now_ms():
             return []
         return ["guess"]
 
@@ -312,202 +369,225 @@ class FindDiffGame:
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
         if not isinstance(action, dict) or not ACTION_VALIDATOR.is_valid(action):
             return [], "invalid action schema"
-        if player_id not in state.get("scores", {}):
+        if player_id not in state.get("players", {}):
             return [], "player not found"
         action_type = action["type"]
 
         if action_type == "play_again":
             if state["stage"] != STAGE_GAME_OVER:
-                return [], "game is not over"
+                return [], "race is not over"
             if player_id in state["rematch_ready"]:
                 return [], "already ready"
             state["rematch_ready"].append(player_id)
             if len(state["rematch_ready"]) >= _continue_target(state):
-                FindDiffGame._reset_for_rematch(state)
+                state["log"] = []
+                _deal_race(state)
             return [], None
 
-        if action.get("round") != state["round_index"] + 1:
-            return [], "stale round"
-
         if action_type == "continue":
-            if state["stage"] != STAGE_ROUND_RESULT:
-                return [], "round is not finished"
+            if state["stage"] != STAGE_RESULTS:
+                return [], "race is not at the results stage"
             if player_id in state["continue_ready"]:
                 return [], "already ready"
             state["continue_ready"].append(player_id)
             if len(state["continue_ready"]) >= _continue_target(state):
-                _advance_after_result(state)
+                state["stage"] = STAGE_GAME_OVER
+                state["game_over"] = True
+                ranking = state.get("ranking") or _rank_rows(state)
+                state["ranking"] = ranking
+                best = ranking[0]["place"] if ranking else None
+                state["winners"] = [row["player_id"] for row in ranking if row["place"] == best]
+                _log(state, "本局结束")
             return [], None
 
-        if state["stage"] != STAGE_PLAYING:
-            return [], "round is not running"
+        if state["stage"] != STAGE_RACING:
+            return [], "race is not running"
+        runner = state["players"][player_id]
+        if runner["finished_ms"] is not None:
+            return [], "already finished"
+        if action["level"] != runner["index"] + 1:
+            return [], "stale level"
         now = _now_ms()
-        if state["cooldown_until"].get(player_id, 0) > now:
+        if now >= state["deadline_ms"]:
+            return _finish_race(state, "timeout"), None
+        if runner.get("cooldown_until", 0) > now:
             return [], "locked out after a miss"
-        if now > state.get("deadline_ms", 0):
-            return _finish_round(state, "timeout"), None
 
         x = float(action["x"])
         y = float(action["y"])
-        level = state["level"]
-        found_indices = set(_found_indices(state))
+        level = _runner_level(state, runner)
+        if level is None:
+            return [], "no level in play"
+        slots = _slots(state, level["id"])
 
-        for index, diff in enumerate(level["diffs"]):
-            if index in found_indices:
-                if _hit(diff["box"], x, y):
-                    return [], None
-        for index, diff in enumerate(level["diffs"]):
-            if index in found_indices:
+        for slot_index in runner["found"]:
+            if _hit(level["diffs"][slots[slot_index]]["box"], x, y):
+                return [], None
+
+        for slot_index, slot in enumerate(slots):
+            if slot_index in runner["found"]:
                 continue
-            if _hit(diff["box"], x, y):
-                state["found"].append({
-                    "index": index,
-                    "player_id": player_id,
-                    "player_name": _name(state, player_id),
-                    "at_ms": now,
-                    "box": diff["box"],
-                    "name": diff["name"],
-                    "kind": diff["kind"],
-                })
-                state["found"].sort(key=lambda entry: entry["at_ms"])
-                state["scores"][player_id] += POINTS_PER_FIND
-                state["seq"] += 1
-                _log(state, f"{_name(state, player_id)} 找到第 {index + 1} 处差异 (+{POINTS_PER_FIND})")
-                events = [{
-                    "type": "find_diff:found",
-                    "player_id": player_id,
-                    "index": index,
-                }]
-                if len(state["found"]) >= len(level["diffs"]):
-                    events.extend(_finish_round(state, "complete"))
+            if not _hit(level["diffs"][slot]["box"], x, y):
+                continue
+            runner["found"].append(slot_index)
+            runner["found"].sort()
+            state["seq"] += 1
+            events = [{
+                "type": "find_diff:found",
+                "player_id": player_id,
+                "slot": slot_index,
+                "level": runner["index"] + 1,
+            }]
+            if len(runner["found"]) < len(slots):
                 return events, None
+            runner["splits"].append(now)
+            runner["index"] += 1
+            runner["found"] = []
+            if runner["index"] >= len(state["run"]):
+                runner["finished_ms"] = now
+                elapsed = now - state["started_ms"]
+                _log(state, f"{_name(state, player_id)} 全部完成，用时 {elapsed / 1000:.1f} 秒")
+                events.append({"type": "find_diff:player_finished", "player_id": player_id})
+                if all(
+                    state["players"][pid]["finished_ms"] is not None
+                    for pid in state["turn_order"]
+                ):
+                    events.extend(_finish_race(state, "complete"))
+            else:
+                events.append({"type": "find_diff:level_cleared", "player_id": player_id})
+            return events, None
 
-        state["misses"][player_id] = state["misses"].get(player_id, 0) + 1
-        state["scores"][player_id] = max(0, state["scores"][player_id] - MISS_PENALTY)
-        state["cooldown_until"][player_id] = now + MISS_COOLDOWN_MS
+        runner["misses"] += 1
+        runner["cooldown_until"] = now + MISS_COOLDOWN_MS
         state["seq"] += 1
-        _log(state, f"{_name(state, player_id)} 点错了 (-{MISS_PENALTY})")
+        _log(state, f"{_name(state, player_id)} 点错了，锁定 2 秒")
         return [{
             "type": "find_diff:miss",
             "player_id": player_id,
-            "cooldown_until_ms": state["cooldown_until"][player_id],
+            "cooldown_until_ms": runner["cooldown_until"],
         }], None
 
     @staticmethod
     def resolve_timeout(state: Dict, now_ms: int) -> List[Dict]:
         pending = state.get("pending_timeout")
-        if not isinstance(pending, dict) or state.get("stage") != STAGE_PLAYING:
+        if not isinstance(pending, dict) or state.get("stage") != STAGE_RACING:
             return []
         if now_ms < int(pending.get("at_ms", 0)):
             return []
-        return _finish_round(state, "timeout")
-
-    @staticmethod
-    def _reset_for_rematch(state: Dict) -> None:
-        ids = state["turn_order"]
-        state["scores"] = {pid: 0 for pid in ids}
-        state["misses"] = {pid: 0 for pid in ids}
-        state["level_queue"] = []
-        state["last_level_id"] = None
-        state["round_index"] = 0
-        state["rematch_ready"] = []
-        state["game_over"] = False
-        state["winners"] = []
-        state["log"] = []
-        _start_round(state)
+        return _finish_race(state, "timeout")
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
-        level = state.get("level") or {}
-        stage = state["stage"]
-        found = [
-            {
-                "index": entry["index"],
-                "player_id": entry["player_id"],
-                "player_name": entry["player_name"],
-                "box": entry["box"],
-                "at_ms": entry["at_ms"],
-            }
-            for entry in state.get("found", [])
-        ]
-        players = [
-            {
+        runner = state["players"].get(viewer_id) or _new_runner()
+        level = _runner_level(state, runner)
+        per = state["config"]["diffs"]
+        finished = runner["finished_ms"] is not None
+        slots = _slots(state, level["id"]) if level else []
+
+        # Only the viewer's own marks carry boxes. Another player's marks would
+        # hand their opponent the answer, because everybody races the same plan.
+        own_found = []
+        if level:
+            for slot_index in runner["found"]:
+                diff = level["diffs"][slots[slot_index]]
+                own_found.append({
+                    "slot": slot_index,
+                    "box": diff["box"],
+                    "name": diff["name"],
+                    "kind": diff["kind"],
+                })
+
+        players = []
+        for pid in state["turn_order"]:
+            other = state["players"][pid]
+            done = other["finished_ms"] is not None
+            players.append({
                 "player_id": pid,
                 "name": _name(state, pid),
-                "score": state["scores"].get(pid, 0),
-                "misses": state["misses"].get(pid, 0),
                 "is_bot": bool(state["player_meta"].get(pid, {}).get("is_bot", False)),
-            }
-            for pid in state["turn_order"]
-        ]
+                "levels_done": len(state["run"]) if done else other["index"],
+                "found": _found_total(state, other),
+                "total": len(state["run"]) * per,
+                "level_found": 0 if done else len(other["found"]),
+                "misses": other["misses"],
+                "finished": done,
+                "elapsed_ms": (other["finished_ms"] - state["started_ms"]) if done else None,
+            })
+
         view = {
             "game_id": GAME_ID,
-            "stage": stage,
-            "round": state["round_index"] + 1,
-            "rounds": int(state["config"].get("rounds", DEFAULT_ROUNDS)),
-            "round_seconds": int(state["config"].get("round_seconds", DEFAULT_ROUND_SECONDS)),
-            "level": {
-                "id": level.get("id"),
-                "title": level.get("title"),
-                "a_url": IMAGE_URL_PREFIX + level.get("a", ""),
-                "b_url": IMAGE_URL_PREFIX + level.get("b", ""),
-                "total": len(level.get("diffs", [])),
-            },
-            "found": found,
-            "remaining": max(0, len(level.get("diffs", [])) - len(found)),
-            "players": players,
-            "scores": dict(state["scores"]),
-            "deadline_ms": state.get("deadline_ms", 0),
+            "stage": state["stage"],
+            "config": dict(state["config"]),
+            "levels_total": len(state["run"]),
+            "diffs_per_level": per,
+            "started_ms": state["started_ms"],
+            "deadline_ms": state["deadline_ms"],
             "server_now_ms": _now_ms(),
-            "cooldown_until_ms": state.get("cooldown_until", {}).get(viewer_id, 0),
+            "you": {
+                "level_index": runner["index"],
+                "finished": finished,
+                "elapsed_ms": (runner["finished_ms"] - state["started_ms"]) if finished else None,
+                "misses": runner["misses"],
+                "splits": [s - state["started_ms"] for s in runner["splits"]],
+                "cooldown_until_ms": runner.get("cooldown_until", 0),
+                "found": own_found,
+                "remaining": 0 if finished else len(slots) - len(runner["found"]),
+                "level": None if not level else {
+                    "id": level["id"],
+                    "title": level["title"],
+                    "a_url": IMAGE_URL_PREFIX + level["a"],
+                    "b_url": IMAGE_URL_PREFIX + level["b"],
+                    "total": len(slots),
+                },
+            },
+            "players": players,
             "legal_actions": FindDiffGame.get_legal_actions(state, viewer_id),
-            "game_over": bool(state.get("game_over")),
-            "winners": list(state.get("winners", [])),
             "continue_ready": list(state.get("continue_ready", [])),
             "rematch_ready": list(state.get("rematch_ready", [])),
             "continue_target": _continue_target(state),
+            "game_over": bool(state.get("game_over")),
+            "winners": list(state.get("winners", [])),
             "log": list(state.get("log", []))[-30:],
-            "points_per_find": POINTS_PER_FIND,
-            "miss_penalty": MISS_PENALTY,
+            "miss_cooldown_ms": MISS_COOLDOWN_MS,
         }
-        if stage in (STAGE_ROUND_RESULT, STAGE_GAME_OVER) and state.get("round_summary"):
-            summary = copy.deepcopy(state["round_summary"])
-            view["round_summary"] = summary
+        if state["stage"] in (STAGE_RESULTS, STAGE_GAME_OVER):
+            view["ranking"] = state.get("ranking") or _rank_rows(state)
+            view["review"] = _review(state)
         return view
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if bot_id not in state.get("scores", {}):
+        if bot_id not in state.get("players", {}):
             return None
-        if state["stage"] == STAGE_ROUND_RESULT:
+        if state["stage"] == STAGE_RESULTS:
             if bot_id in state["continue_ready"]:
                 return None
-            return {"type": "continue", "round": state["round_index"] + 1}
-        if state["stage"] != STAGE_PLAYING:
+            return {"type": "continue"}
+        if state["stage"] != STAGE_RACING:
             return None
-        if state["cooldown_until"].get(bot_id, 0) > _now_ms():
+        runner = state["players"][bot_id]
+        if runner["finished_ms"] is not None:
             return None
-        level = state.get("level") or {}
-        diffs = level.get("diffs") or []
-        open_indices = [i for i in range(len(diffs)) if i not in set(_found_indices(state))]
-        if not open_indices:
+        if runner.get("cooldown_until", 0) > _now_ms():
+            return None
+        level = _runner_level(state, runner)
+        if level is None:
+            return None
+        slots = _slots(state, level["id"])
+        open_slots = [i for i in range(len(slots)) if i not in runner["found"]]
+        if not open_slots:
             return None
         # A plain random hunter: no evaluation, no planning, so this stays out of
         # the strategic-AI catalog.
-        if random.random() < 0.25:
-            return {
-                "type": "guess",
-                "round": state["round_index"] + 1,
-                "x": round(random.random(), 4),
-                "y": round(random.random(), 4),
-            }
-        target = diffs[random.choice(open_indices)]["box"]
-        return {
-            "type": "guess",
-            "round": state["round_index"] + 1,
-            "x": round(random.uniform(target[0], target[2]), 4),
-            "y": round(random.uniform(target[1], target[3]), 4),
-        }
+        payload = {"type": "guess", "level": runner["index"] + 1}
+        if random.random() < 0.2:
+            payload["x"] = round(random.random(), 4)
+            payload["y"] = round(random.random(), 4)
+            return payload
+        box = level["diffs"][slots[random.choice(open_slots)]]["box"]
+        payload["x"] = round(random.uniform(box[0], box[2]), 4)
+        payload["y"] = round(random.uniform(box[1], box[3]), 4)
+        return payload
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
@@ -518,13 +598,13 @@ class FindDiffGame:
         if not isinstance(payload, dict) or payload.get("game_id") != GAME_ID:
             raise ValueError("invalid find_diff save")
         state = copy.deepcopy(payload)
-        for key in ("turn_order", "scores", "player_meta", "level", "levels", "level_pool"):
+        for key in ("turn_order", "players", "player_meta", "levels", "level_pool", "run", "plan"):
             if key not in state:
                 raise ValueError(f"find_diff save missing {key}")
-        state.setdefault("found", [])
-        state.setdefault("cooldown_until", {})
-        state.setdefault("misses", {pid: 0 for pid in state["turn_order"]})
-        state.setdefault("log", [])
-        state.setdefault("rematch_ready", [])
+        state.setdefault("ranking", [])
         state.setdefault("continue_ready", [])
+        state.setdefault("rematch_ready", [])
+        state.setdefault("log", [])
+        for pid in state["turn_order"]:
+            state["players"].setdefault(pid, _new_runner())
         return state

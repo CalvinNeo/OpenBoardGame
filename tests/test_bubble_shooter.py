@@ -538,12 +538,30 @@ class MultiplayerTest(unittest.TestCase):
         self.assertTrue(flags["p1"])
         self.assertFalse(flags["p0"])
 
-    def test_a_view_only_carries_the_viewers_board(self):
+    def test_the_viewers_own_board_is_the_top_level_one(self):
         BubbleShooterGame.apply_action(self.state, "p0", {"type": "shoot", "angle": 0})
         view = BubbleShooterGame.get_public_view(self.state, "p1")
         self.assertEqual(view["grid"], self.state["boards"]["p1"]["grid"])
-        self.assertNotIn("boards", view)
         self.assertEqual(view["player_count"], 3)
+
+    def test_every_board_is_exposed_for_spectating(self):
+        BubbleShooterGame.apply_action(self.state, "p0", {"type": "shoot", "angle": 0})
+        view = BubbleShooterGame.get_public_view(self.state, "p1")
+        self.assertEqual(set(view["boards"]), {"p0", "p1", "p2"})
+        self.assertEqual(view["boards"]["p0"]["grid"], self.state["boards"]["p0"]["grid"])
+        self.assertEqual(view["boards"]["p0"]["shots"], 1)
+        self.assertEqual(view["boards"]["p2"]["shots"], 0)
+
+    def test_a_spectated_board_carries_its_last_shot(self):
+        BubbleShooterGame.apply_action(self.state, "p0", {"type": "shoot", "angle": 30})
+        view = BubbleShooterGame.get_public_view(self.state, "p1")
+        shot = view["boards"]["p0"]["last_shot"]
+        self.assertEqual(shot["kind"], "shoot")
+        self.assertGreater(len(shot["path"]), 1)
+
+    def test_a_spectated_board_carries_its_queue(self):
+        view = BubbleShooterGame.get_public_view(self.state, "p1")
+        self.assertEqual(view["boards"]["p0"]["queue"], self.state["boards"]["p0"]["queue"])
 
     def test_legal_actions_are_per_player(self):
         blank(self.state["boards"]["p1"], {(DEATH_ROW, 0): "red"})

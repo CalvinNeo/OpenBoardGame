@@ -22,6 +22,7 @@
           <div id="bsGhost" class="bs-ghost" hidden aria-hidden="true"></div>
           <div class="bs-death-line" data-bs-explain="death_line" aria-hidden="true"><span>⚠️ LINE</span></div>
           <div id="bsShooter" class="bs-shooter" data-bs-explain="shooter" aria-hidden="true"></div>
+          <div id="bsWatchTag" class="bs-watch-tag" hidden aria-hidden="true"></div>
           <div class="bs-board-items" data-bs-explain="items">
             <button id="bsHammerBtn" type="button" class="bs-chip" data-bs-explain="hammer">
               <span class="bs-chip-icon" aria-hidden="true">🔨</span>
@@ -41,8 +42,9 @@
 
       <aside class="bs-side">
         <div class="bs-side-card">
-          <span class="bs-side-label" data-bs-explain="mine">Your run</span>
+          <span class="bs-side-label" id="bsStatsLabel" data-bs-explain="mine">Your run</span>
           <div id="bsStats" class="bs-stats" aria-live="polite"></div>
+          <button id="bsBackBtn" type="button" class="bs-ghost-btn bs-back-btn" data-bs-explain="back" hidden>← Back to my board</button>
         </div>
 
         <div class="bs-side-card">

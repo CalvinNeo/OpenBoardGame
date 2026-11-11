@@ -568,33 +568,24 @@ def build_level(scene: Dict[str, str], force: bool = False) -> Optional[Dict]:
             "alpha": alpha_local,
             "stats": stats,
         })
-        if len(candidates) >= 9:
+        if len(candidates) >= 12:
             break
     if len(candidates) < DIFFS_PER_LEVEL:
         log(f"build {scene_id}: only {len(candidates)} usable cutouts")
         return None
 
-    # choose five well separated objects
-    chosen: List[Dict] = []
-    for cand in sorted(candidates, key=lambda c: abs(
+    # Choose five well separated objects. Some scenes (a pegboard wall, a packed
+    # greenhouse shelf) simply have everything sitting close together, so the
+    # spread requirement relaxes in steps rather than failing the whole level.
+    ordered = sorted(candidates, key=lambda c: abs(
         (c["box"][2] - c["box"][0]) * (c["box"][3] - c["box"][1]) / float(w * h) - 0.018
-    )):
-        if any(overlaps(cand["box"], c["box"], pad=int(0.010 * w)) for c in chosen):
-            continue
-        cx = (cand["box"][0] + cand["box"][2]) / 2.0
-        cy = (cand["box"][1] + cand["box"][3]) / 2.0
-        too_close = False
-        for c in chosen:
-            ox = (c["box"][0] + c["box"][2]) / 2.0
-            oy = (c["box"][1] + c["box"][3]) / 2.0
-            if ((cx - ox) ** 2 + (cy - oy) ** 2) ** 0.5 < MIN_SEPARATION * w:
-                too_close = True
-                break
-        if too_close:
-            continue
-        chosen.append(cand)
+    ))
+    chosen: List[Dict] = []
+    for separation, pad_ratio in ((MIN_SEPARATION, 0.010), (0.075, 0.006), (0.045, 0.003)):
+        chosen = _select_spread(ordered, w, separation * w, int(pad_ratio * w))
         if len(chosen) == DIFFS_PER_LEVEL:
             break
+        log(f"build {scene_id}: only {len(chosen)} objects at separation {separation}")
     if len(chosen) < DIFFS_PER_LEVEL:
         log(f"build {scene_id}: could not separate {DIFFS_PER_LEVEL} objects")
         return None
@@ -667,6 +658,29 @@ def build_level(scene: Dict[str, str], force: bool = False) -> Optional[Dict]:
         "diffs": diffs,
         "ops": used_ops,
     }
+
+
+def _select_spread(candidates: List[Dict], w: int, min_gap: float, pad: int) -> List[Dict]:
+    """Greedily pick up to five objects that neither overlap nor crowd each other."""
+    chosen: List[Dict] = []
+    for cand in candidates:
+        if any(overlaps(cand["box"], c["box"], pad=pad) for c in chosen):
+            continue
+        cx = (cand["box"][0] + cand["box"][2]) / 2.0
+        cy = (cand["box"][1] + cand["box"][3]) / 2.0
+        crowded = False
+        for c in chosen:
+            ox = (c["box"][0] + c["box"][2]) / 2.0
+            oy = (c["box"][1] + c["box"][3]) / 2.0
+            if ((cx - ox) ** 2 + (cy - oy) ** 2) ** 0.5 < min_gap:
+                crowded = True
+                break
+        if crowded:
+            continue
+        chosen.append(cand)
+        if len(chosen) == DIFFS_PER_LEVEL:
+            break
+    return chosen
 
 
 def try_op(op, cand, base, current, base_arr, edges, occupied, w, h, used_hues):
@@ -773,20 +787,46 @@ def stage_verify() -> None:
             if a.shape != b.shape:
                 problems.append(f"size mismatch {a.shape} vs {b.shape}")
             else:
+                height, width = a.shape[:2]
                 diff = np.abs(a - b).max(axis=2)
                 mask = diff > 26
-                labels, count = label_components(mask)
-                sizes = np.array([int((labels == i).sum()) for i in range(1, count + 1)])
-                thresh = MIN_DIFF_PIXELS * a.shape[0] * a.shape[1]
-                big = int((sizes > thresh).sum()) if count else 0
-                if big != len(lv["diffs"]):
-                    problems.append(f"{big} visible regions, expected {len(lv['diffs'])}")
+                boxes = []
                 for d in lv["diffs"]:
                     x0, y0, x1, y1 = d["box"]
-                    sub = mask[int(y0 * a.shape[0]):int(y1 * a.shape[0]),
-                               int(x0 * a.shape[1]):int(x1 * a.shape[1])]
+                    boxes.append((
+                        max(0, int(x0 * width)), max(0, int(y0 * height)),
+                        min(width, int(x1 * width)), min(height, int(y1 * height)),
+                    ))
+                allowed = np.zeros(mask.shape, bool)
+                for x0, y0, x1, y1 in boxes:
+                    allowed[y0:y1, x0:x1] = True
+
+                # A single difference can break into several blobs (a long thin
+                # object scaled up often does), so the real question is not "how
+                # many blobs" but "is anything visible outside the recorded
+                # boxes, and does every recorded box actually change".
+                labels, count = label_components(mask)
+                thresh = MIN_DIFF_PIXELS * width * height
+                stray = []
+                for i in range(1, count + 1):
+                    sel = labels == i
+                    area = int(sel.sum())
+                    if area <= thresh:
+                        continue
+                    inside = float((sel & allowed).sum()) / float(area)
+                    if inside < 0.8:
+                        ys, xs = np.nonzero(sel)
+                        stray.append(
+                            f"{area}px at ({int(xs.min())},{int(ys.min())})"
+                            f"-({int(xs.max())},{int(ys.max())}) only {inside:.0%} inside"
+                        )
+                if stray:
+                    problems.append(f"{len(stray)} visible region(s) outside the recorded boxes: "
+                                    + "; ".join(stray[:3]))
+                for index, (x0, y0, x1, y1) in enumerate(boxes):
+                    sub = mask[y0:y1, x0:x1]
                     if sub.size == 0 or sub.mean() < 0.05:
-                        problems.append(f"diff {d['name']} barely changed")
+                        problems.append(f"diff {index} ({lv['diffs'][index]['name']}) barely changed")
         if problems:
             bad += 1
             log(f"  FAIL {lv['id']}: {'; '.join(problems)}")

@@ -1,5 +1,5 @@
-/* 大家来找茬 / Spot the Difference — game styles.
-   Layout goal: the two pictures own the screen, chrome stays on one line. */
+/* 大家来找茬 / Spot the Difference — time-trial layout.
+   Goal: your own clock and your own picture pair own the screen. */
 
 #findDiffPanel {
   display: flex;
@@ -30,6 +30,20 @@
 
 .find-diff-chip b { font-variant-numeric: tabular-nums; }
 
+/* The clock is the score in this game, so it gets the loudest treatment. */
+.find-diff-chip-clock {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 5px 13px;
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.find-diff-chip-clock.is-done {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.55);
+}
+
 .find-diff-chip-scene {
   flex: 0 1 auto;
   min-width: 0;
@@ -41,7 +55,7 @@
 .find-diff-chip.is-urgent {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.55);
-  color: #fecaca;
+  color: #b91c1c;
 }
 
 .find-diff-layout-btn {
@@ -50,7 +64,7 @@
   padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(30, 41, 59, 0.6);
+  background: rgba(30, 41, 59, 0.08);
   color: inherit;
   font-size: 13px;
   line-height: 1.3;
@@ -58,7 +72,7 @@
   white-space: nowrap;
 }
 
-.find-diff-layout-btn:hover { background: rgba(51, 65, 85, 0.8); }
+.find-diff-layout-btn:hover { background: rgba(100, 116, 139, 0.22); }
 
 .find-diff-scores {
   display: flex;
@@ -69,19 +83,28 @@
 .find-diff-score {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 3px 9px;
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(100, 116, 139, 0.14);
   border-left: 4px solid var(--fd-color, #64748b);
   font-size: 13px;
   line-height: 1.35;
   white-space: nowrap;
 }
 
-.find-diff-score.is-me { box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.7) inset; }
+.find-diff-score.is-me { box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.8) inset; }
+.find-diff-score.is-done { background: rgba(34, 197, 94, 0.16); }
 .find-diff-score b { font-variant-numeric: tabular-nums; }
-.find-diff-score .find-diff-miss { opacity: 0.65; font-size: 12px; }
+.find-diff-score .find-diff-note { opacity: 0.7; font-size: 12px; }
+.find-diff-score .find-diff-time { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* A class-level `display` beats the UA rule for [hidden], so both blocks that
+   get toggled with the hidden attribute need to opt back out explicitly. */
+.find-diff-stage[hidden],
+.find-diff-result[hidden] {
+  display: none;
+}
 
 .find-diff-stage {
   display: grid;
@@ -107,9 +130,7 @@
   cursor: crosshair;
 }
 
-.find-diff-stage.is-stacked .find-diff-frame {
-  max-width: 100%;
-}
+.find-diff-stage.is-stacked .find-diff-frame { max-width: 100%; }
 
 .find-diff-frame img {
   display: block;
@@ -148,11 +169,6 @@
   animation: find-diff-pop 220ms ease-out;
 }
 
-.find-diff-mark.is-missed {
-  border-style: dashed;
-  border-color: #f87171;
-}
-
 /* The finder label is a sibling of the box, not a child: a narrow box would
    otherwise report horizontal overflow, and a label outside the box is what
    actually stays readable on small marks. */
@@ -170,14 +186,25 @@
   transform: translateY(-2px);
 }
 
-.find-diff-tag.is-missed {
-  background: #f87171;
-  color: #2b0606;
+.find-diff-tap {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.6);
+  animation: find-diff-tap 620ms ease-out forwards;
 }
 
 @keyframes find-diff-pop {
   from { transform: scale(1.5); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes find-diff-tap {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1.8); opacity: 0; }
 }
 
 .find-diff-hint {
@@ -187,28 +214,96 @@
   opacity: 0.85;
 }
 
-.find-diff-hint.is-locked { color: #fca5a5; opacity: 1; }
+.find-diff-hint.is-locked { color: #dc2626; opacity: 1; }
 
 .find-diff-result {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(15, 23, 42, 0.82);
+  background: rgba(100, 116, 139, 0.12);
   border: 1px solid rgba(148, 163, 184, 0.32);
 }
 
-.find-diff-result h3 {
-  margin: 0;
-  font-size: 15px;
-}
+.find-diff-result h3 { margin: 0; font-size: 15px; }
 
-.find-diff-result ul {
+.find-diff-result p {
   margin: 0;
-  padding-left: 18px;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.find-diff-rank {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.find-diff-rank li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(100, 116, 139, 0.12);
+  border-left: 4px solid var(--fd-color, #64748b);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.find-diff-rank li.is-me { box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.8) inset; }
+
+.find-diff-rank .find-diff-place {
+  min-width: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.find-diff-rank .find-diff-who { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.find-diff-rank .find-diff-result-time { font-weight: 700; font-variant-numeric: tabular-nums; }
+.find-diff-rank .find-diff-note { opacity: 0.7; font-size: 12px; }
+
+.find-diff-review {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.find-diff-review-item { margin: 0; }
+
+.find-diff-review-pic {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0b1220;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.find-diff-review-pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.find-diff-review-box {
+  position: absolute;
+  border: 2px solid #f87171;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(2, 6, 23, 0.6);
+}
+
+.find-diff-review-item figcaption {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.45;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
 }
 
 .find-diff-result-actions {
@@ -251,8 +346,9 @@
      be ~210px wide, and differences are simply not findable at that size. */
   .find-diff-frame { max-width: 100%; }
   .find-diff-chip { font-size: 12px; padding: 3px 8px; }
-  .find-diff-chip-scene { order: 5; flex-basis: 100%; text-align: left; }
-  .find-diff-layout-btn { font-size: 12px; padding: 3px 9px; }
+  .find-diff-chip-clock { font-size: 15px; padding: 4px 11px; }
+  .find-diff-chip-scene { order: 5; flex-basis: 100%; }
+  .find-diff-layout-btn { font-size: 12px; padding: 4px 10px; }
 }
 
 @media (min-width: 761px) {

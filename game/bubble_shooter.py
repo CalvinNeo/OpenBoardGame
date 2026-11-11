@@ -850,6 +850,10 @@ class BubbleShooterGame:
             "game_over": bool(state.get("game_over")),
             "winner_ids": list(state.get("winner_ids", [])),
             "ranking": _ranking(state),
+            "boards": {
+                pid: BubbleShooterGame._own_view(other, config)
+                for pid, other in state.get("boards", {}).items()
+            },
             "player_count": len(state.get("turn_order", [])),
             "current_turn": state.get("current_turn"),
             "config": dict(config),

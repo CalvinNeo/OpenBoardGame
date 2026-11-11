@@ -664,12 +664,12 @@ const GAME_ASSETS = {
   },
   "bubble_shooter": {
     "scripts": [
-      "/static/games/bubble_shooter.js?v=8"
+      "/static/games/bubble_shooter.js?v=9"
     ],
-    "styles": ["/static/games/bubble_shooter.css?v=6"],
+    "styles": ["/static/games/bubble_shooter.css?v=7"],
     "panel": "bubbleShooterPanel",
     "header": "showBubbleShooterHeaderActions",
-    "markup": "/static/games/bubble_shooter.html?v=5"
+    "markup": "/static/games/bubble_shooter.html?v=6"
   },
   "coyote": {
     "scripts": [

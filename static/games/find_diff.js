@@ -1,4 +1,4 @@
-// 大家来找茬 / Spot the Difference — browser client.
+// 大家来找茬 / Spot the Difference — browser client (independent time trial).
 // Help & Explain follow designs/task40.md via the shared widgets.
 // Rules: designs/task194.md
 
@@ -17,16 +17,16 @@ const FIND_DIFF_HELP_CONFIG = {
   title: { zh: "大家来找茬", en: "Spot the Difference" },
   basic: {
     win: {
-      zh: "每一轮所有人同时看同一对照片，两张图只有 5 处不一样，谁先点中一处就归谁，轮末分数最高的人赢。",
-      en: "Every round everyone looks at the same pair of photos that differ in exactly five places, and whoever taps a difference first claims it. The highest score at the end wins."
+      zh: "这是一场计时赛。一局随机抽 5 张图，每张随机抽 3 处差异，所有人跑的是同一套题，谁用最短时间找完全部 15 处谁赢。",
+      en: "This is a time trial. One game draws five random pictures and three random differences on each, everybody races the exact same set, and whoever clears all fifteen differences fastest wins."
     },
     turn: {
-      zh: "没有回合顺序，任何时候你都可以在任意一张图上点一下你认为不同的地方，点中记分，点错扣分并被锁住两秒。",
-      en: "There is no turn order. At any moment you may tap the spot you think differs on either picture: a hit scores, a miss costs a point and locks you out for two seconds."
+      zh: "没有回合顺序，任何时候你都可以在自己的题板上点一下。找齐当前这张图的 3 处之后会自动换到下一张，全程不用等任何人。",
+      en: "There is no turn order. Tap your own board whenever you like, and the moment you clear the three differences on the current picture it rolls straight on to the next one without waiting for anybody."
     },
     key: {
-      zh: "两张图内容完全一致，只有被改动的物件不一样，所以与其逐块扫描，不如先扫一遍整张图的轮廓和颜色块，那里最容易藏差异。",
-      en: "The two pictures are identical apart from the edited objects, so instead of scanning block by block it pays to sweep the whole frame for odd silhouettes and colour patches, which is where differences hide."
+      zh: "每个人有自己的一份题板和一只自己的表，别人点中的地方不会从你这里消失，所以这里没有抢、没有运气，纯粹比谁看得快。",
+      en: "Everyone has their own board and their own clock, and a spot somebody else found never disappears from yours, so there is no racing for the same click and no luck involved, only who spots things faster."
     }
   },
   sections: [
@@ -34,36 +34,38 @@ const FIND_DIFF_HELP_CONFIG = {
       id: "play",
       label: { zh: "怎么玩", en: "How to play" },
       html: {
-        zh: "<p>每轮开始时两边各出现一张照片，左边是原图(🅰️)，右边是被改过的图(🅱️)，两张尺寸和构图完全相同，只有 <strong>5 处</strong>物件不一样。</p>"
-          + "<p>在<strong>任意一张</strong>图上点你认为是差异的位置都可以，点 A 或点 B 效果一样。点中之后那个位置会在两边同时框出来，并标上是谁找到的。</p>"
-          + "<p>已经被别人找到的差异会一直显示在图上，所以你只需要找还没被框住的地方。已经找到的位置再点一次不会有惩罚。</p>",
-        en: "<p>Each round shows two photos side by side: the original(🅰️) on the left and the edited one(🅱️) on the right. They share the same size and framing and differ in exactly <strong>five</strong> objects.</p>"
-          + "<p>Tap the spot you believe differs on <strong>either</strong> picture, because A and B are equivalent. A hit frames that spot on both pictures at once and labels who found it.</p>"
-          + "<p>A difference somebody else already claimed stays marked, so keep hunting the unmarked areas. Tapping an already claimed spot costs nothing.</p>"
+        zh: "<p>每张图左右并排两张照片，左边是原图(🅰️)，右边是被改过的图(🅱️)，两张构图完全一致，只有 <strong>3 处</strong>物件不一样。</p>"
+          + "<p>在<strong>任意一张</strong>图上点你认为是差异的位置都可以，点 A 或点 B 效果一样。点中之后那个位置会在两边同时框出来。</p>"
+          + "<p>找齐这张图的 3 处就立刻换下一张。一局一共 5 张图，也就是 15 处差异。</p>"
+          + "<p>手机上两张图默认<strong>上下排列</strong>，右上角的按钮可以切换成<strong>左右并排</strong>。</p>",
+        en: "<p>Each picture shows two photos: the original(🅰️) on the left and the edited one(🅱️) on the right, identical apart from <strong>three</strong> objects.</p>"
+          + "<p>Tap the spot you believe differs on <strong>either</strong> picture, because A and B are equivalent. A hit frames that spot on both at once.</p>"
+          + "<p>Clearing all three rolls you straight on to the next picture. A game is five pictures, so fifteen differences in total.</p>"
+          + "<p>On phones the two photos are <strong>stacked</strong> by default and the button at the top right switches to <strong>side by side</strong>.</p>"
       }
     },
     {
-      id: "score",
-      label: { zh: "计分", en: "Scoring" },
+      id: "timing",
+      label: { zh: "计时与排名", en: "Clock and ranking" },
       html: {
-        zh: "<p>每<strong>第一个</strong>点中一处差异的人得 <strong>3 分</strong>。一处差异只有一次分，后来的人点同一个地方不会得分。</p>"
-          + "<p>点错（点在不是差异的地方）<strong>扣 1 分</strong>，分数不会低于 0，并且你会被<strong>锁住 2 秒</strong>不能继续点，界面下方会显示剩余锁定时间。</p>"
-          + "<p>所以乱扫整张图并不是好策略：每错一次就要停两秒，而别人可以继续找。</p>",
-        en: "<p>The <strong>first</strong> player to tap a difference scores <strong>3 points</strong>. Each difference pays out once, so tapping a spot someone already claimed earns nothing.</p>"
-          + "<p>A miss (tapping somewhere that is not a difference) costs <strong>1 point</strong>, never dropping below zero, and locks you out for <strong>2 seconds</strong>. The remaining lock time is shown under the pictures.</p>"
-          + "<p>Spraying taps across the picture is therefore a bad plan: every miss costs you two seconds while everyone else keeps hunting.</p>"
+        zh: "<p>你的计时器从开跑那一刻起就走，一直走到你找完第 5 张图的最后一处为止，中间不暂停，所以犹豫和点错都在算在你的时间里。</p>"
+          + "<p>点错一次会被<strong>锁住 2 秒</strong>不能继续点，这 2 秒照常计入你的用时，所以乱扫整张图反而更慢。</p>"
+          + "<p>排名只看时间：先完成的排在前面，用时越短越靠前。没跑完的人排在所有完赛者之后，按已经找到的处数从多到少排。</p>",
+        en: "<p>Your clock starts the moment the race begins and runs until you find the last difference on the fifth picture. It never pauses, so hesitating and missing both count against you.</p>"
+          + "<p>A miss locks you out for <strong>two seconds</strong>, and those two seconds still count towards your time, which is why spraying taps everywhere is slower rather than faster.</p>"
+          + "<p>Ranking is purely by time: finishers come first, shortest time at the top. Anyone who has not finished sits behind every finisher, ordered by how many differences they found.</p>"
       }
     },
     {
-      id: "rounds",
-      label: { zh: "回合与结束", en: "Rounds and ending" },
+      id: "deadline",
+      label: { zh: "时限与结束", en: "Deadline and ending" },
       html: {
-        zh: "<p>一轮在<strong>5 处全部被找到</strong>时立刻结束。如果时间先到（默认每轮 120 秒），本轮同样会结束，并公布剩下没被找到的位置。</p>"
-          + "<p>本轮结束后画面会<strong>停下来</strong>，图上会补齐全部 5 处位置（没被找到的用红色虚线框标出），下方列出每个人找到了几处。</p>"
-          + "<p>所有人点了 <strong>Next Round</strong> 之后才会进入下一轮。跑完设定的轮数后按总分排名，第一名为赢家，同分则并列。</p>",
-        en: "<p>A round ends the moment <strong>all five</strong> differences are claimed. If the clock runs out first (120 seconds by default) the round also ends and the unfound spots are revealed.</p>"
-          + "<p>When the round ends the table <strong>pauses</strong>: all five spots appear on the pictures (anything nobody found gets a red dashed frame) and a summary below lists how many each player claimed.</p>"
-          + "<p>The next round only starts once everybody has pressed <strong>Next Round</strong>. After the configured number of rounds the highest total score wins, and ties share the win.</p>"
+        zh: "<p>一局有<strong>总时限</strong>（默认 10 分钟）。时限之内<strong>不能跳过</strong>任何一张图，找不到就只能继续找。</p>"
+          + "<p>所有人跑完，或者总时限到，这局就结束，画面会<strong>停下来</strong>公布每个人的成绩和每张图的答案。</p>"
+          + "<p>所有人点了 <strong>Continue</strong> 之后才进入最终结算。结算后可以点 Play Again 重开一局，会重新随机抽 5 张图和各自的 3 处差异。</p>",
+        en: "<p>A game has an <strong>overall deadline</strong>, ten minutes by default. You <strong>cannot skip</strong> a picture inside it, so if you cannot find something you simply keep looking.</p>"
+          + "<p>The game ends once everybody finishes or the deadline arrives, and the table then <strong>pauses</strong> to show every result along with the answers for each picture.</p>"
+          + "<p>It moves on to the final standings only after everybody presses <strong>Continue</strong>, and Play Again then deals a fresh random set of five pictures and their differences.</p>"
       }
     },
     {
@@ -71,48 +73,52 @@ const FIND_DIFF_HELP_CONFIG = {
       label: { zh: "找茬技巧", en: "Tips" },
       html: {
         zh: "<p>差异只会有四种形态：某个东西<strong>多了一个</strong>（复制到旁边）、<strong>颜色变了</strong>、<strong>镜像翻转</strong>了、或者<strong>变大</strong>了。知道只有这四种之后，扫描时会更快锁定。</p>"
-          + "<p>颜色变化最容易发现，可以先扫一遍大面积的色块。镜像和变大比较隐蔽，通常藏在有明显朝向或明显大小的物件上。</p>"
-          + "<p>手机上两张图默认<strong>上下排列</strong>，可以用右上角的按钮切换成<strong>左右并排</strong>，哪种更容易对比就用哪种。</p>",
+          + "<p>颜色变化最容易发现，可以先扫一遍大面积的色块；镜像和变大比较隐蔽，通常藏在有明显朝向或明显大小的物件上。</p>"
+          + "<p>因为不能跳过一整张图，卡在某一张上时与其死盯一处，不如把整张图重新扫一遍，漏掉的往往在余光区域。</p>",
         en: "<p>There are only four kinds of difference: something <strong>duplicated</strong> next to the original, something <strong>recoloured</strong>, something <strong>mirrored</strong>, and something <strong>made bigger</strong>. Knowing that shortens the search a lot.</p>"
           + "<p>Colour changes are the easiest to catch, so sweep large colour blocks first. Mirrors and size changes are sneakier and usually sit on objects with an obvious facing or an obvious size.</p>"
-          + "<p>On phones the two pictures are <strong>stacked</strong> by default, and the button at the top right switches to <strong>side by side</strong>, so use whichever is easier for you to compare.</p>"
+          + "<p>Because you cannot skip a picture, staring harder at one corner rarely helps. Sweeping the whole frame again usually works better, since what you missed tends to sit where you were not looking.</p>"
       }
     }
   ]
 };
 
 const FIND_DIFF_EXPLAIN = {
-  round: {
-    zh: "当前是第几轮 / 本局一共几轮。每轮一对新照片。",
-    en: "The current round out of the total. Every round brings a new pair of photos."
+  clock: {
+    zh: "你自己用掉的真实时间，从开跑算起一直走到你找完最后一处，中途不会暂停。找完后这个数字就是你的成绩。",
+    en: "Your own elapsed time, running from the start until you find the final difference and never pausing. Once you finish, this number is your result."
   },
-  timer: {
-    zh: "本轮剩余时间。时间归零时本轮结束，没找到的差异会被公布。",
-    en: "Time left in this round. At zero the round ends and anything unfound is revealed."
+  progress: {
+    zh: "你已经进行到第几张图，以及这一局一共有几张图。",
+    en: "Which picture you are on, out of the total in this game."
   },
   remaining: {
-    zh: "还剩几处差异没被找到。归零时本轮立刻结束。",
-    en: "How many differences are still unclaimed. At zero the round ends immediately."
+    zh: "当前这张图上还剩几处差异没被你找到。归零就会自动换到下一张。",
+    en: "How many differences are still unfound on the current picture. At zero you roll on to the next one."
+  },
+  deadline: {
+    zh: "这一局剩下的总时限。时间到时还没跑完的人按已找到的处数排在所有完赛者之后。",
+    en: "Time left in this game overall. Whoever has not finished by zero is ranked behind every finisher by how much they found."
   },
   scene: {
-    zh: "本轮照片的主题，仅作说明，不影响玩法。",
-    en: "The theme of this round's photo. It is descriptive only and does not affect play."
+    zh: "当前这张图的主题，仅作说明，不影响玩法。",
+    en: "The theme of the current picture. It is descriptive only and does not affect play."
   },
   scores: {
-    zh: "所有玩家的当前总分与各自的点错次数。左侧色条对应图上标记框的颜色。",
-    en: "Every player's total score and miss count. The colour bar matches that player's marker colour on the pictures."
+    zh: "所有玩家的实时进度：完成了第几张图、当前图上找到几处。别人找到的地方不会从你这里消失，所以这里只是给你看谁快谁慢。",
+    en: "Live progress for every player: which picture they are on and how many differences they found there. What somebody else found never disappears from your board, so this is purely so you can see who is ahead."
   },
   picture: {
-    zh: "本轮的照片对。A(🅰️) 是原图，B(🅱️) 是被改过的图，两张只有 5 处不同。在任意一张上点你认为是差异的位置即可。",
-    en: "This round's pair of photos. A(🅰️) is the original and B(🅱️) is the edited one, and they differ in exactly five places. Tap the spot you think differs on either picture."
+    zh: "你当前的题板。A(🅰️) 是原图，B(🅱️) 是被改过的图，两张只有 3 处不同。在任意一张上点你认为是差异的位置即可。这是你自己的一份，别人动不到。",
+    en: "Your own board. A(🅰️) is the original and B(🅱️) the edited one, and they differ in exactly three places. Tap the spot you think differs on either picture. This board is yours alone and nobody else can touch it."
   },
   hint: {
-    zh: "状态提示：告诉你现在能不能点、被锁住还剩几秒、或者本轮已经结束。",
-    en: "Status line: whether you can tap right now, how much of a lockout is left, or whether the round has ended."
+    zh: "状态提示：现在能不能点、被锁住还剩几秒、或者你已经跑完在等别人。",
+    en: "Status line: whether you can tap right now, how much of a lockout is left, or whether you have finished and are waiting for the others."
   },
   log: {
-    zh: "本局的文字记录，按时间列出谁找到了什么、谁点错了。",
-    en: "A text record of the game: who found what, and who missed, in order."
+    zh: "本局的文字记录，按时间列出谁跑完了、谁点错了。",
+    en: "A text record of the game: who finished and who missed, in order."
   }
 };
 
@@ -124,7 +130,6 @@ let findDiffClockSkew = 0;
 let findDiffLoadedLevel = null;
 let findDiffLayout = null;
 let findDiffLastStage = null;
-// Optimistic lock so a double tap cannot queue two continue/play_again actions.
 let findDiffReadySent = false;
 
 function findDiffEl(id) {
@@ -140,6 +145,15 @@ function findDiffColorFor(playerId) {
   if (!view) return FIND_DIFF_COLORS[0];
   const index = view.players.findIndex((p) => p.player_id === playerId);
   return FIND_DIFF_COLORS[(index < 0 ? 0 : index) % FIND_DIFF_COLORS.length];
+}
+
+function findDiffFormat(ms, tenths) {
+  const total = Math.max(0, ms);
+  const minutes = Math.floor(total / 60000);
+  const seconds = Math.floor((total % 60000) / 1000);
+  const base = minutes + ":" + String(seconds).padStart(2, "0");
+  if (!tenths) return base;
+  return base + "." + Math.floor((total % 1000) / 100);
 }
 
 function findDiffInitHelpExplain() {
@@ -171,60 +185,70 @@ function findDiffApplyLayout() {
   if (button) {
     // Label what the click does, not the current mode.
     button.textContent = stacked ? "⬌ Side by side" : "⬍ Stack";
-    button.title = stacked
-      ? "Switch to side-by-side pictures"
-      : "Switch to stacked pictures";
+    button.title = stacked ? "Switch to side-by-side pictures" : "Switch to stacked pictures";
   }
-}
-
-function findDiffFormatClock(ms) {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return m + ":" + String(s).padStart(2, "0");
 }
 
 function findDiffTick() {
   const view = findDiffView;
   if (!view) return;
-  const timer = findDiffEl("findDiffTimer");
-  const hint = findDiffEl("findDiffHint");
-  if (timer) {
-    const left = view.stage === "playing" ? view.deadline_ms - findDiffServerNow() : 0;
-    timer.textContent = findDiffFormatClock(left);
-    const chip = timer.closest(".find-diff-chip");
-    if (chip) chip.classList.toggle("is-urgent", view.stage === "playing" && left <= 15000);
+  const you = view.you;
+  const clock = findDiffEl("findDiffClock");
+  if (clock) {
+    const elapsed = you.finished
+      ? you.elapsed_ms
+      : findDiffServerNow() - view.started_ms;
+    clock.textContent = findDiffFormat(elapsed, true);
+    const chip = clock.closest(".find-diff-chip");
+    if (chip) chip.classList.toggle("is-done", !!you.finished);
   }
-  if (hint && view.stage === "playing") {
-    const lock = view.cooldown_until_ms - findDiffServerNow();
-    if (lock > 0) {
-      hint.textContent = "Missed — locked for " + (lock / 1000).toFixed(1) + "s";
-      hint.classList.add("is-locked");
-    } else {
-      hint.textContent = "Tap a difference on either picture. First to tap it scores "
-        + view.points_per_find + ".";
+  const deadline = findDiffEl("findDiffDeadline");
+  if (deadline) {
+    const left = view.deadline_ms - findDiffServerNow();
+    deadline.textContent = findDiffFormat(Math.max(0, left), false);
+    const chip = deadline.closest(".find-diff-chip");
+    if (chip) {
+      chip.classList.toggle("is-urgent", view.stage === "racing" && left <= 60000);
+    }
+  }
+  const hint = findDiffEl("findDiffHint");
+  if (hint) {
+    if (view.stage !== "racing") {
+      hint.textContent = "";
       hint.classList.remove("is-locked");
+    } else if (you.finished) {
+      hint.textContent = "You finished. Waiting for the other players to catch up.";
+      hint.classList.remove("is-locked");
+    } else {
+      const lock = you.cooldown_until_ms - findDiffServerNow();
+      if (lock > 0) {
+        hint.textContent = "Missed — locked for " + (lock / 1000).toFixed(1) + "s";
+        hint.classList.add("is-locked");
+      } else {
+        hint.textContent = "Tap a difference on either picture. Clear all "
+          + view.diffs_per_level + " to move on.";
+        hint.classList.remove("is-locked");
+      }
     }
   }
 }
 
-function findDiffAppendMark(host, entry, missed) {
-  const color = missed ? null : findDiffColorFor(entry.player_id);
+function findDiffAppendMark(host, entry, color, label) {
   const box = document.createElement("div");
-  box.className = "find-diff-mark" + (missed ? " is-missed" : "");
+  box.className = "find-diff-mark";
   box.style.left = (entry.box[0] * 100) + "%";
   box.style.top = (entry.box[1] * 100) + "%";
   box.style.width = ((entry.box[2] - entry.box[0]) * 100) + "%";
   box.style.height = ((entry.box[3] - entry.box[1]) * 100) + "%";
-  if (color) box.style.setProperty("--fd-color", color);
+  box.style.setProperty("--fd-color", color);
   host.appendChild(box);
 
   const tag = document.createElement("span");
-  tag.className = "find-diff-tag" + (missed ? " is-missed" : "");
-  tag.textContent = missed ? "missed" : entry.player_name;
+  tag.className = "find-diff-tag";
+  tag.textContent = label;
   tag.style.left = (entry.box[0] * 100) + "%";
   tag.style.top = (entry.box[1] * 100) + "%";
-  if (color) tag.style.setProperty("--fd-color", color);
+  tag.style.setProperty("--fd-color", color);
   host.appendChild(tag);
 }
 
@@ -251,11 +275,11 @@ function findDiffRenderMarks() {
   if (!marksA || !marksB) return;
   marksA.innerHTML = "";
   marksB.innerHTML = "";
-  const summary = view.round_summary;
-  const missed = summary && summary.missed ? summary.missed : [];
+  const color = findDiffColorFor(findDiffMyId());
   [marksA, marksB].forEach((host) => {
-    view.found.forEach((entry) => findDiffAppendMark(host, entry, false));
-    missed.forEach((entry) => findDiffAppendMark(host, entry, true));
+    view.you.found.forEach((entry, index) => {
+      findDiffAppendMark(host, entry, color, "#" + (index + 1));
+    });
     findDiffClampTags(host);
   });
 }
@@ -264,67 +288,119 @@ function findDiffRenderScores() {
   const view = findDiffView;
   const box = findDiffEl("findDiffScores");
   if (!box) return;
+  const me = findDiffMyId();
   box.innerHTML = "";
   view.players.forEach((player, index) => {
     const node = document.createElement("span");
-    node.className = "find-diff-score";
+    node.className = "find-diff-score"
+      + (player.player_id === me ? " is-me" : "")
+      + (player.finished ? " is-done" : "");
     node.style.setProperty("--fd-color", FIND_DIFF_COLORS[index % FIND_DIFF_COLORS.length]);
-    node.innerHTML = "<span>" + player.name + "</span><b>" + player.score + "</b>"
-      + '<span class="find-diff-miss">✗' + player.misses + "</span>";
+    const right = player.finished
+      ? '<span class="find-diff-time">' + findDiffFormat(player.elapsed_ms, true) + "</span>"
+      : '<span class="find-diff-note">📷' + player.levels_done + "/" + view.levels_total
+        + " 🎯" + player.level_found + "/" + view.diffs_per_level + "</span>";
+    node.innerHTML = "<span>" + player.name + "</span>" + right;
     box.appendChild(node);
   });
+}
+
+function findDiffRankList(ranking) {
+  const me = findDiffMyId();
+  const items = ranking.map((row, index) => {
+    const right = row.finished
+      ? '<span class="find-diff-result-time">' + findDiffFormat(row.elapsed_ms, true) + "</span>"
+      : '<span class="find-diff-note">found ' + row.found + "/" + row.total + "</span>";
+    return '<li class="' + (row.player_id === me ? "is-me" : "") + '"'
+      + ' style="--fd-color:' + FIND_DIFF_COLORS[index % FIND_DIFF_COLORS.length] + '">'
+      + '<span class="find-diff-place">#' + row.place + "</span>"
+      + '<span class="find-diff-who">' + row.name + "</span>"
+      + right
+      + '<span class="find-diff-note">✗' + row.misses + "</span>"
+      + "</li>";
+  });
+  return '<ul class="find-diff-rank">' + items.join("") + "</ul>";
+}
+
+// The point of the pause is being able to see what you missed, so the review is
+// a picture gallery with the answers boxed rather than a list of names.
+function findDiffReviewGallery(review) {
+  if (!review || !review.length) return "";
+  const items = review.map((entry) => {
+    const marks = entry.diffs.map((d) =>
+      '<span class="find-diff-review-box" style="left:' + (d.box[0] * 100)
+      + "%;top:" + (d.box[1] * 100)
+      + "%;width:" + ((d.box[2] - d.box[0]) * 100)
+      + "%;height:" + ((d.box[3] - d.box[1]) * 100) + '%"></span>').join("");
+    return '<figure class="find-diff-review-item">'
+      + '<div class="find-diff-review-pic"><img src="' + entry.b_url + '" alt="'
+      + entry.title + '" loading="lazy">' + marks + "</div>"
+      + "<figcaption>" + (entry.index + 1) + ". " + entry.title + " — "
+      + entry.diffs.map((d) => d.name + "(" + d.kind + ")").join(", ")
+      + "</figcaption></figure>";
+  });
+  return '<div class="find-diff-review">' + items.join("") + "</div>";
 }
 
 function findDiffRenderResult() {
   const view = findDiffView;
   const panel = findDiffEl("findDiffResult");
+  const stage = findDiffEl("findDiffStage");
   if (!panel) return;
-  if (view.stage === "playing") {
+  const you = view.you;
+
+  if (view.stage === "racing" && !you.finished) {
     panel.hidden = true;
     panel.innerHTML = "";
+    if (stage) stage.hidden = false;
     return;
   }
+
   panel.hidden = false;
-  const summary = view.round_summary;
-  const parts = [];
+  // Once the result panel is up the board has no context left (the player's
+  // level is null), so the gallery inside the panel takes over the space.
+  if (stage) stage.hidden = true;
+
+  if (view.stage === "racing") {
+    const waiting = view.players.filter((p) => !p.finished).length;
+    panel.innerHTML = "<h3>🏁 You finished in " + findDiffFormat(you.elapsed_ms, true) + "</h3>"
+      + "<p>Waiting for " + waiting + " more player" + (waiting === 1 ? "" : "s")
+      + " to finish. The standings appear once everybody is done or the deadline hits.</p>";
+    return;
+  }
+
+  const ranking = view.ranking || [];
+  const parts = ["<h3>" + (view.stage === "game_over" ? "Final standings" : "Race results") + "</h3>"];
+  parts.push(findDiffRankList(ranking));
+  if (view.review) {
+    parts.push("<p>The answers for this race:</p>");
+    parts.push(findDiffReviewGallery(view.review));
+  }
+  const me = findDiffMyId();
   if (view.stage === "game_over") {
-    const ranked = view.players.slice().sort((a, b) => b.score - a.score);
-    parts.push("<h3>Game Over</h3>");
-    parts.push("<ul>" + ranked.map((p, i) =>
-      "<li>" + (i + 1) + ". " + p.name + " — " + p.score + " pts ("
-      + p.misses + " misses)</li>").join("") + "</ul>");
-    const ready = view.rematch_ready.includes(findDiffMyId()) || findDiffReadySent;
+    const ready = view.rematch_ready.includes(me) || findDiffReadySent;
     parts.push('<div class="find-diff-result-actions">'
       + '<button type="button" class="find-diff-btn" id="findDiffPlayAgain"'
       + (ready ? " disabled" : "") + ">Play Again</button>"
       + '<span class="find-diff-waiting">Ready ' + view.rematch_ready.length
       + "/" + view.continue_target + "</span></div>");
   } else {
-    const found = summary ? summary.found : [];
-    const missed = summary ? summary.missed : [];
-    parts.push("<h3>Round " + summary.round + " — " + summary.title + "</h3>");
-    const lines = found.map((entry) =>
-      "<li>" + entry.player_name + " found #" + (entry.index + 1) + "</li>");
-    missed.forEach((entry) => {
-      lines.push("<li>Nobody found #" + (entry.index + 1) + "</li>");
-    });
-    parts.push("<ul>" + (lines.join("") || "<li>No differences were found.</li>") + "</ul>");
-    const ready = view.continue_ready.includes(findDiffMyId()) || findDiffReadySent;
+    const ready = view.continue_ready.includes(me) || findDiffReadySent;
     parts.push('<div class="find-diff-result-actions">'
-      + '<button type="button" class="find-diff-btn" id="findDiffNextRound"'
-      + (ready ? " disabled" : "") + ">"
-      + (view.round >= view.rounds ? "Finish" : "Next Round") + "</button>"
+      + '<button type="button" class="find-diff-btn" id="findDiffContinue"'
+      + (ready ? " disabled" : "") + ">Continue</button>"
       + '<span class="find-diff-waiting">Ready ' + view.continue_ready.length
       + "/" + view.continue_target + "</span></div>");
   }
   panel.innerHTML = parts.join("");
-  const next = findDiffEl("findDiffNextRound");
-  if (next) {
-    next.addEventListener("click", () => {
+
+  const cont = findDiffEl("findDiffContinue");
+  if (cont) {
+    cont.addEventListener("click", () => {
       if (findDiffReadySent) return;
       findDiffReadySent = true;
-      next.disabled = true;
-      findDiffSend({ type: "continue", round: view.round });
+      cont.disabled = true;
+      findDiffSend({ type: "continue" });
     });
   }
   const again = findDiffEl("findDiffPlayAgain");
@@ -351,9 +427,11 @@ function findDiffSend(action) {
 
 function findDiffGuess(frame, clientX, clientY) {
   const view = findDiffView;
-  if (!view || view.stage !== "playing") return;
+  if (!view || view.stage !== "racing") return;
+  const you = view.you;
+  if (you.finished) return;
   if (findDiffExplainWidget?.isActive()) return;
-  if (view.cooldown_until_ms > findDiffServerNow()) return;
+  if (you.cooldown_until_ms > findDiffServerNow()) return;
   const img = frame.querySelector("img");
   if (!img) return;
   const rect = img.getBoundingClientRect();
@@ -364,7 +442,7 @@ function findDiffGuess(frame, clientX, clientY) {
   findDiffShowTap(frame, x, y);
   findDiffSend({
     type: "guess",
-    round: view.round,
+    level: you.level_index + 1,
     x: Math.round(x * 10000) / 10000,
     y: Math.round(y * 10000) / 10000
   });
@@ -378,7 +456,7 @@ function findDiffShowTap(frame, x, y) {
   dot.style.left = (x * 100) + "%";
   dot.style.top = (y * 100) + "%";
   host.appendChild(dot);
-  window.setTimeout(() => dot.remove(), 650);
+  window.setTimeout(() => dot.remove(), 660);
 }
 
 function findDiffBindStage() {
@@ -414,22 +492,23 @@ function findDiffRender() {
   const view = findDiffView;
   if (!view || !findDiffEl("findDiffPanel")) return;
   findDiffClockSkew = Date.now() - view.server_now_ms;
+  const you = view.you;
 
-  const round = findDiffEl("findDiffRound");
-  const rounds = findDiffEl("findDiffRounds");
+  const image = findDiffEl("findDiffImage");
+  const images = findDiffEl("findDiffImages");
   const remaining = findDiffEl("findDiffRemaining");
   const scene = findDiffEl("findDiffScene");
-  if (round) round.textContent = view.round;
-  if (rounds) rounds.textContent = view.rounds;
-  if (remaining) remaining.textContent = view.remaining;
-  if (scene) scene.textContent = view.level.title || "";
+  if (image) image.textContent = Math.min(you.level_index + 1, view.levels_total);
+  if (images) images.textContent = view.levels_total;
+  if (remaining) remaining.textContent = you.finished ? 0 : you.remaining;
+  if (scene) scene.textContent = you.level ? you.level.title : "All pictures cleared";
 
   const imageA = findDiffEl("findDiffImageA");
   const imageB = findDiffEl("findDiffImageB");
-  if (view.level.id && findDiffLoadedLevel !== view.level.id) {
-    findDiffLoadedLevel = view.level.id;
-    if (imageA) imageA.src = view.level.a_url;
-    if (imageB) imageB.src = view.level.b_url;
+  if (you.level && findDiffLoadedLevel !== you.level.id) {
+    findDiffLoadedLevel = you.level.id;
+    if (imageA) imageA.src = you.level.a_url;
+    if (imageB) imageB.src = you.level.b_url;
   }
 
   findDiffRenderScores();
@@ -446,13 +525,13 @@ function findDiffRender() {
 
   if (findDiffLastStage !== view.stage) {
     findDiffLastStage = view.stage;
-    if (view.stage !== "playing") {
+    if (view.stage !== "racing") {
       const panel = findDiffEl("findDiffResult");
       if (panel) panel.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   }
 
-  if (!findDiffTicker) findDiffTicker = window.setInterval(findDiffTick, 250);
+  if (!findDiffTicker) findDiffTicker = window.setInterval(findDiffTick, 100);
 }
 
 function clearFindDiffState() {
@@ -462,13 +541,10 @@ function clearFindDiffState() {
   findDiffReadySent = false;
   window.clearInterval(findDiffTicker);
   findDiffTicker = null;
-  const panel = findDiffEl("findDiffPanel");
-  if (panel) {
-    const marksA = findDiffEl("findDiffMarksA");
-    const marksB = findDiffEl("findDiffMarksB");
-    if (marksA) marksA.innerHTML = "";
-    if (marksB) marksB.innerHTML = "";
-  }
+  ["findDiffMarksA", "findDiffMarksB"].forEach((id) => {
+    const host = findDiffEl(id);
+    if (host) host.innerHTML = "";
+  });
 }
 
 window.renderFindDiffGameState = (data) => {
