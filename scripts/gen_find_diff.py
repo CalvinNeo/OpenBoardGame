@@ -46,6 +46,19 @@ from find_diff_scenes import SCENES, build_prompt  # noqa: E402
 FINAL_SIZE = (1600, 1200)
 DIFFS_PER_LEVEL = 5
 JPEG_QUALITY = 92
+# A patch is the rectangle of the edited picture that carries one difference.
+# Padded a little because the ground-truth box comes from the alpha placement and
+# anti-aliased edges can sit a pixel or two outside it.
+PATCH_PAD = 3
+
+
+def patch_geometry(box, width, height):
+    x0, y0, x1, y1 = box
+    px0 = max(0, int(x0 * width) - PATCH_PAD)
+    py0 = max(0, int(y0 * height) - PATCH_PAD)
+    px1 = min(width, int(x1 * width) + PATCH_PAD)
+    py1 = min(height, int(y1 * height) + PATCH_PAD)
+    return px0, py0, max(px0 + 1, px1), max(py0 + 1, py1)
 
 # Selection limits, expressed as a fraction of the whole frame.
 MIN_OBJ_AREA = 0.004
@@ -518,6 +531,23 @@ def measure(before: np.ndarray, after: np.ndarray, footprint: np.ndarray, pos: T
     }
 
 
+def write_patches(scene_id: str, edited: Image.Image, diffs: List[Dict]) -> None:
+    """Cut one lossless PNG per difference out of the edited picture.
+
+    Shipping the clean base plus these rectangles instead of a second full
+    picture keeps a ready-made answer key off the disk, and lets the browser
+    compose any subset by simply stacking the patches it is given.
+    """
+    width, height = edited.size
+    for index, diff in enumerate(diffs):
+        px0, py0, px1, py1 = patch_geometry(diff["box"], width, height)
+        name = f"{scene_id}_p{index}.png"
+        edited.crop((px0, py0, px1, py1)).save(OUT_DIR / name)
+        diff["patch"] = name
+        diff["at"] = [px0, py0]
+        diff["size"] = [px1 - px0, py1 - py0]
+
+
 def build_level(scene: Dict[str, str], force: bool = False) -> Optional[Dict]:
     scene_id = scene["id"]
     base_path = WORK_DIR / f"{scene_id}_base.png"
@@ -643,18 +673,13 @@ def build_level(scene: Dict[str, str], force: bool = False) -> Optional[Dict]:
     a_img = base.resize(FINAL_SIZE, Image.LANCZOS)
     b_img = result.resize(FINAL_SIZE, Image.LANCZOS)
     a_img.save(OUT_DIR / f"{scene_id}_a.jpg", quality=JPEG_QUALITY, subsampling=0)
-    b_img.save(OUT_DIR / f"{scene_id}_b.jpg", quality=JPEG_QUALITY, subsampling=0)
-    preview = Image.new("RGB", (FINAL_SIZE[0], FINAL_SIZE[1] * 2 + 8), (18, 18, 18))
-    preview.paste(a_img, (0, 0))
-    preview.paste(b_img, (0, FINAL_SIZE[1] + 8))
-    preview.resize((FINAL_SIZE[0] // 2, (FINAL_SIZE[1] * 2 + 8) // 2), Image.LANCZOS).save(
-        WORK_DIR / f"{scene_id}_preview.jpg", quality=88
-    )
+    write_patches(scene_id, b_img, diffs)
+    a_img.save(WORK_DIR / f"{scene_id}_preview_a.jpg", quality=88)
+    b_img.save(WORK_DIR / f"{scene_id}_preview_b.jpg", quality=88)
     return {
         "id": scene_id,
         "title": scene["title"],
         "a": f"{scene_id}_a.jpg",
-        "b": f"{scene_id}_b.jpg",
         "diffs": diffs,
         "ops": used_ops,
     }
@@ -770,6 +795,53 @@ def stage_build(only: Optional[str] = None, force: bool = False) -> None:
 # stage: verify
 # --------------------------------------------------------------------------
 
+def compose_edited(level: Dict) -> Image.Image:
+    """Rebuild the fully edited picture from the clean base plus every patch."""
+    base = Image.open(OUT_DIR / level["a"]).convert("RGB")
+    for diff in level["diffs"]:
+        patch = Image.open(OUT_DIR / diff["patch"]).convert("RGB")
+        base.paste(patch, tuple(diff["at"]))
+    return base
+
+
+def stage_patches() -> None:
+    """Migrate an existing base+edited pair to base+patch assets."""
+    manifest = load_manifest()
+    levels = manifest.get("levels", [])
+    if not levels:
+        log("patches: manifest is empty")
+        return
+    migrated = 0
+    for level in levels:
+        if all("patch" in d for d in level["diffs"]):
+            log(f"patches {level['id']}: already migrated")
+            continue
+        edited_name = level.get("b")
+        if not edited_name or not (OUT_DIR / edited_name).exists():
+            log(f"patches {level['id']}: no edited picture to cut from, skip")
+            continue
+        edited = Image.open(OUT_DIR / edited_name).convert("RGB")
+        write_patches(level["id"], edited, level["diffs"])
+        level.pop("b", None)
+        migrated += 1
+        log(f"patches {level['id']}: wrote {len(level['diffs'])} patches")
+    if migrated:
+        manifest["version"] = 2
+        save_manifest(manifest)
+        log(f"patches: migrated {migrated} levels, manifest now version 2")
+
+    removed = 0
+    freed = 0
+    for level in levels:
+        edited_name = f"{level['id']}_b.jpg"
+        path = OUT_DIR / edited_name
+        if path.exists():
+            freed += path.stat().st_size
+            path.unlink()
+            removed += 1
+    log(f"patches: removed {removed} answer pictures, freed {freed / 1048576:.1f} MB")
+
+
 def stage_verify() -> None:
     manifest = load_manifest()
     levels = manifest.get("levels", [])
@@ -777,13 +849,15 @@ def stage_verify() -> None:
     bad = 0
     for lv in levels:
         a_path = OUT_DIR / lv["a"]
-        b_path = OUT_DIR / lv["b"]
         problems = []
-        if not a_path.exists() or not b_path.exists():
-            problems.append("missing image file")
+        missing = [d["patch"] for d in lv["diffs"] if not (OUT_DIR / d["patch"]).exists()]
+        if not a_path.exists():
+            problems.append("missing base picture")
+        elif missing:
+            problems.append(f"missing patches: {', '.join(missing[:3])}")
         else:
             a = to_array(Image.open(a_path))
-            b = to_array(Image.open(b_path))
+            b = to_array(compose_edited(lv))
             if a.shape != b.shape:
                 problems.append(f"size mismatch {a.shape} vs {b.shape}")
             else:
@@ -837,7 +911,7 @@ def stage_verify() -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["base", "propose", "build", "verify", "all"])
+    ap.add_argument("stage", choices=["base", "propose", "build", "patches", "verify", "all"])
     ap.add_argument("--only", default=None)
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
@@ -850,6 +924,8 @@ def main() -> None:
         stage_propose(args.only, args.force)
     if args.stage in ("build", "all"):
         stage_build(args.only, args.force)
+    if args.stage in ("patches", "all"):
+        stage_patches()
     if args.stage in ("verify", "all"):
         stage_verify()
 

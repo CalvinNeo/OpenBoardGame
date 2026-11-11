@@ -233,6 +233,33 @@ function findDiffTick() {
   }
 }
 
+// One difference, expressed as a rectangle of the clean base replaced by a
+// small lossless patch. Positioned in percent so it tracks the frame exactly
+// however the picture is scaled.
+function findDiffPatchNode(patch, baseSize) {
+  const node = document.createElement("img");
+  node.src = patch.url;
+  node.alt = "";
+  node.draggable = false;
+  const width = baseSize[0] || 1;
+  const height = baseSize[1] || 1;
+  node.style.left = (patch.at[0] / width * 100) + "%";
+  node.style.top = (patch.at[1] / height * 100) + "%";
+  node.style.width = (patch.size[0] / width * 100) + "%";
+  node.style.height = (patch.size[1] / height * 100) + "%";
+  return node;
+}
+
+function findDiffRenderPatches(level) {
+  const host = findDiffEl("findDiffPatchesB");
+  if (!host) return;
+  host.innerHTML = "";
+  if (!level || !level.patches) return;
+  level.patches.forEach((patch) => {
+    host.appendChild(findDiffPatchNode(patch, level.base_size || [1600, 1200]));
+  });
+}
+
 function findDiffAppendMark(host, entry, color, label) {
   const box = document.createElement("div");
   box.className = "find-diff-mark";
@@ -332,9 +359,15 @@ function findDiffReviewGallery(review) {
       + "%;top:" + (d.box[1] * 100)
       + "%;width:" + ((d.box[2] - d.box[0]) * 100)
       + "%;height:" + ((d.box[3] - d.box[1]) * 100) + '%"></span>').join("");
+    const base = entry.base_size || [1600, 1200];
+    const patches = (entry.patches || []).map((p) =>
+      '<img src="' + p.url + '" alt="" style="position:absolute;left:'
+      + (p.at[0] / base[0] * 100) + "%;top:" + (p.at[1] / base[1] * 100)
+      + "%;width:" + (p.size[0] / base[0] * 100)
+      + "%;height:" + (p.size[1] / base[1] * 100) + '%">').join("");
     return '<figure class="find-diff-review-item">'
-      + '<div class="find-diff-review-pic"><img src="' + entry.b_url + '" alt="'
-      + entry.title + '" loading="lazy">' + marks + "</div>"
+      + '<div class="find-diff-review-pic"><img src="' + entry.a_url + '" alt="'
+      + entry.title + '" loading="lazy">' + patches + marks + "</div>"
       + "<figcaption>" + (entry.index + 1) + ". " + entry.title + " — "
       + entry.diffs.map((d) => d.name + "(" + d.kind + ")").join(", ")
       + "</figcaption></figure>";
@@ -507,8 +540,10 @@ function findDiffRender() {
   const imageB = findDiffEl("findDiffImageB");
   if (you.level && findDiffLoadedLevel !== you.level.id) {
     findDiffLoadedLevel = you.level.id;
+    // Both frames show the same clean base; B gets the patches stacked on top.
     if (imageA) imageA.src = you.level.a_url;
-    if (imageB) imageB.src = you.level.b_url;
+    if (imageB) imageB.src = you.level.a_url;
+    findDiffRenderPatches(you.level);
   }
 
   findDiffRenderScores();
@@ -541,7 +576,7 @@ function clearFindDiffState() {
   findDiffReadySent = false;
   window.clearInterval(findDiffTicker);
   findDiffTicker = null;
-  ["findDiffMarksA", "findDiffMarksB"].forEach((id) => {
+  ["findDiffMarksA", "findDiffMarksB", "findDiffPatchesB"].forEach((id) => {
     const host = findDiffEl(id);
     if (host) host.innerHTML = "";
   });

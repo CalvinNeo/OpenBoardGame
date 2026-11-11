@@ -11,6 +11,30 @@ const root = path.resolve(__dirname, '..');
 const base = process.env.ROOM_TEST_URL || 'http://127.0.0.1:8766';
 const output = path.join(root, 'tmp/find_diff_ui');
 
+// Build the synthetic round out of a real level so the browser composes real
+// patches: the whole point of the client-side composition is that it lines up.
+const MANIFEST = JSON.parse(fs.readFileSync(
+  path.join(root, '.find_diff/manifest.json'), 'utf8'));
+const REAL = MANIFEST.levels[0];
+const REAL_SLOTS = [0, 1, 2];
+const PREFIX = '/static/find_diff/';
+
+function levelPayload(slots) {
+  return {
+    id: REAL.id,
+    title: REAL.title,
+    a_url: PREFIX + REAL.a,
+    base_size: MANIFEST.size,
+    patches: slots.map((slot, index) => ({
+      slot: index,
+      url: PREFIX + REAL.diffs[slot].patch,
+      at: REAL.diffs[slot].at,
+      size: REAL.diffs[slot].size,
+    })),
+    total: slots.length,
+  };
+}
+
 const WIDTHS = [
   { name: 'desktop-1440', width: 1440, height: 900 },
   { name: 'desktop-1024', width: 1024, height: 768 },
@@ -18,12 +42,7 @@ const WIDTHS = [
   { name: 'phone-320', width: 320, height: 568 },
 ];
 
-// Three of the five differences the grocery picture actually carries.
-const BOXES = [
-  [0.121, 0.306, 0.202, 0.496],
-  [0.676, 0.442, 0.756, 0.631],
-  [0.329, 0.013, 0.377, 0.267],
-];
+const BOXES = REAL_SLOTS.map((slot) => REAL.diffs[slot].box);
 
 const PLAYERS = [
   { player_id: 'p1', name: 'Ann', is_bot: false },
@@ -58,13 +77,7 @@ function makeView(caseName) {
       cooldown_until_ms: 0,
       found: finishedMe || done ? [] : found,
       remaining: finishedMe || done ? 0 : 1,
-      level: finishedMe || done ? null : {
-        id: 'grocery',
-        title: '复古杂货铺',
-        a_url: '/static/find_diff/grocery_a.jpg',
-        b_url: '/static/find_diff/grocery_b.jpg',
-        total: 3,
-      },
+      level: finishedMe || done ? null : levelPayload(REAL_SLOTS),
     },
     players: PLAYERS.map((p, index) => ({
       player_id: p.player_id,
@@ -107,24 +120,24 @@ function makeView(caseName) {
       }))
       .sort((a, b) => a.elapsed_ms - b.elapsed_ms)
       .map((row, index) => ({ ...row, place: index + 1 }));
-    view.review = [
-      {
-        index: 0,
-        id: 'grocery',
-        title: '复古杂货铺',
-        a_url: '/static/find_diff/grocery_a.jpg',
-        b_url: '/static/find_diff/grocery_b.jpg',
-        diffs: BOXES.map((box, i) => ({ slot: i, box, name: 'obj' + i, kind: 'flip' })),
-      },
-      {
-        index: 1,
-        id: 'market',
-        title: '农贸市场',
-        a_url: '/static/find_diff/market_a.jpg',
-        b_url: '/static/find_diff/market_b.jpg',
-        diffs: BOXES.map((box, i) => ({ slot: i, box, name: 'obj' + i, kind: 'recolor' })),
-      },
-    ];
+    const second = MANIFEST.levels[1];
+    view.review = [REAL, second].map((lv, index) => ({
+      index,
+      id: lv.id,
+      title: lv.title,
+      a_url: PREFIX + lv.a,
+      base_size: MANIFEST.size,
+      patches: REAL_SLOTS.map((slot, i) => ({
+        slot: i,
+        url: PREFIX + lv.diffs[slot].patch,
+        at: lv.diffs[slot].at,
+        size: lv.diffs[slot].size,
+      })),
+      diffs: REAL_SLOTS.map((slot, i) => ({
+        slot: i, box: lv.diffs[slot].box,
+        name: lv.diffs[slot].name, kind: lv.diffs[slot].kind,
+      })),
+    }));
   }
   return view;
 }
@@ -211,6 +224,17 @@ async function audit(page) {
       stageShown,
       letterbox,
       marks: document.querySelectorAll('#findDiffMarksA .find-diff-mark').length,
+      patches: Array.from(document.querySelectorAll('#findDiffPatchesB img')).map((img) => {
+        const host = document.getElementById('findDiffPatchesB').getBoundingClientRect();
+        const box = img.getBoundingClientRect();
+        return {
+          loaded: img.complete && img.naturalWidth > 0,
+          insideFrame: box.left >= host.left - 1 && box.right <= host.right + 1
+            && box.top >= host.top - 1 && box.bottom <= host.bottom + 1,
+          w: Math.round(box.width), h: Math.round(box.height),
+        };
+      }),
+      patchesOnA: document.querySelectorAll('.find-diff-frame:first-child .find-diff-patches img').length,
       tags: document.querySelectorAll('#findDiffMarksA .find-diff-tag').length,
       rankRows: document.querySelectorAll('.find-diff-rank li').length,
       resultShown: visible(document.getElementById('findDiffResult')),
@@ -266,6 +290,17 @@ async function audit(page) {
         if (!report.stageShown) failures.push(tag + ': board hidden while racing');
         if (report.marks !== 2) failures.push(tag + ': expected 2 marks, got ' + report.marks);
         if (report.tags !== 2) failures.push(tag + ': expected 2 tags, got ' + report.tags);
+        if (report.patches.length !== 3) {
+          failures.push(tag + ': expected 3 stacked patches, got ' + report.patches.length);
+        }
+        if (report.patches.some((p) => !p.loaded)) failures.push(tag + ': a patch failed to load');
+        if (report.patches.some((p) => !p.insideFrame)) {
+          failures.push(tag + ': a patch sits outside its frame');
+        }
+        if (report.patches.some((p) => p.w < 2 || p.h < 2)) {
+          failures.push(tag + ': a patch collapsed to nothing');
+        }
+        if (report.patchesOnA !== 0) failures.push(tag + ': the clean frame must carry no patches');
         if (report.resultShown) failures.push(tag + ': result panel should stay hidden');
       } else {
         if (report.stageShown) failures.push(tag + ': board should be hidden');

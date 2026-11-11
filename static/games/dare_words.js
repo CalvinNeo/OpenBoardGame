@@ -523,6 +523,17 @@ if (document.readyState === "loading") {
     id("Tooltip").hidden = true;
   }
 
+  const INTERACTIVE_SELECTOR = "button, a, input, select, textarea, label, [role='button']";
+
+  // Interactive elements explain themselves when used, so they never raise a
+  // floating tip; only the surrounding static labels do.
+  function tipAnchor(target) {
+    if (!target || typeof target.closest !== "function") return null;
+    if (target.closest(INTERACTIVE_SELECTOR)) return null;
+    const anchor = target.closest("[data-dw-tip]");
+    return anchor && !anchor.matches(INTERACTIVE_SELECTOR) ? anchor : null;
+  }
+
   function showTip(target) {
     hideTip();
     if (!target?.dataset.dwTip) return;
@@ -530,8 +541,32 @@ if (document.readyState === "loading") {
     tip.textContent = target.dataset.dwTip;
     tip.hidden = false;
     const rect = target.getBoundingClientRect();
-    tip.style.left = `${Math.max(12, Math.min(innerWidth - tip.offsetWidth - 12, rect.left))}px`;
-    tip.style.top = `${Math.max(12, Math.min(innerHeight - tip.offsetHeight - 12, rect.bottom + 8))}px`;
+    const margin = 12;
+    const left = Math.max(margin, Math.min(innerWidth - tip.offsetWidth - margin, rect.left));
+    const coversControl = (top) => {
+      const right = left + tip.offsetWidth;
+      const bottom = top + tip.offsetHeight;
+      return [...panel.querySelectorAll("button")].some((button) => {
+        if (button.contains(target)) return false;
+        const other = button.getBoundingClientRect();
+        if (!other.width || !other.height) return false;
+        return left < other.right && right > other.left && top < other.bottom && bottom > other.top;
+      });
+    };
+    // Prefer below the anchor, then above, then the viewport edge. A tip that
+    // would still land on a button is dropped instead of covering it.
+    const candidates = [
+      rect.bottom + 8,
+      rect.top - tip.offsetHeight - 8,
+      Math.max(margin, innerHeight - tip.offsetHeight - margin),
+    ];
+    const top = candidates.find((value) => value >= margin && !coversControl(value));
+    if (top == null) {
+      tip.hidden = true;
+      return;
+    }
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
     tipTimer = setTimeout(hideTip, 3000);
   }
 
@@ -585,13 +620,13 @@ if (document.readyState === "loading") {
   });
 
   panel.addEventListener("pointerover", (event) => {
-    if (event.pointerType === "mouse") showTip(event.target.closest("[data-dw-tip]"));
+    if (event.pointerType === "mouse") showTip(tipAnchor(event.target));
   });
   panel.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "mouse") return;
     touchTipGesture = {
       pointerId: event.pointerId, x: event.clientX, y: event.clientY,
-      target: event.target.closest("[data-dw-tip]"), started: performance.now(), moved: false,
+      target: tipAnchor(event.target), started: performance.now(), moved: false,
     };
     hideTip();
   });
@@ -607,13 +642,13 @@ if (document.readyState === "loading") {
     if (event.pointerType === "mouse" || !gesture || gesture.pointerId !== event.pointerId) return;
     const moved = Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y);
     if (!gesture.moved && moved <= 8 && performance.now() - gesture.started <= 600
-        && gesture.target && gesture.target === event.target.closest("[data-dw-tip]")) {
+        && gesture.target && gesture.target === tipAnchor(event.target)) {
       showTip(gesture.target);
     }
   });
   document.addEventListener("pointercancel", () => { touchTipGesture = null; });
   panel.addEventListener("pointerout", (event) => { if (event.pointerType === "mouse") hideTip(); });
-  panel.addEventListener("focusin", (event) => { if (!touchTipGesture) showTip(event.target.closest("[data-dw-tip]")); });
+  panel.addEventListener("focusin", (event) => { if (!touchTipGesture) showTip(tipAnchor(event.target)); });
   panel.addEventListener("focusout", hideTip);
   document.addEventListener("scroll", () => {
     if (touchTipGesture) touchTipGesture.moved = true;

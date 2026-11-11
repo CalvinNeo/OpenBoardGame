@@ -155,6 +155,20 @@
   pointer-events: none;
 }
 
+/* The differences are composed here, not on the server: the round ships the
+   clean base plus one small lossless rectangle per difference in play, and this
+   layer simply stacks them. Both frames load the same base picture. */
+.find-diff-patches {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.find-diff-patches img {
+  position: absolute;
+  display: block;
+}
+
 .find-diff-marks {
   position: absolute;
   inset: 0;

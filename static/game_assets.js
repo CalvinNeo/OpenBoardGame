@@ -1199,7 +1199,7 @@ const GAME_ASSETS = {
     "header": "showSemanticGuessHeaderActions"
   },
   "dare_words": {
-    "scripts": ["/static/games/dare_words.js?v=3"],
+    "scripts": ["/static/games/dare_words.js?v=4"],
     "styles": ["/static/games/dare_words.css?v=2"],
     "markup": "/static/games/dare_words.html?v=2",
     "panel": "dareWordsPanel",

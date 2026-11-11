@@ -25,42 +25,51 @@ PATCH_W, PATCH_H = 26, 20
 
 
 def write_scene(directory: Path, scene_id: str, diffs: int):
-    """A clean picture plus an edited one, and the boxes that differ.
+    """A clean base picture plus one lossless patch per difference.
 
-    Real files are required: a round picture is composited from them, and the
-    whole point of the regression test below is to inspect the result.
+    This mirrors the shipped asset shape: no second full picture exists, the
+    edited view is something the browser assembles from these rectangles.
     """
     base = Image.new("RGB", (SCENE_W, SCENE_H), (30, 60, 90))
     ImageDraw.Draw(base).rectangle([4, 150, 40, 176], fill=(200, 120, 40))
     edited = base.copy()
     pen = ImageDraw.Draw(edited)
-    boxes = []
+    rects = []
     for j in range(diffs):
         x0 = 8 + 44 * j
         y0 = 8 + 32 * j
         x1 = x0 + PATCH_W
         y1 = y0 + PATCH_H
         pen.rectangle([x0, y0, x1, y1], fill=(20, 200, 120))
-        boxes.append([x0 / SCENE_W, y0 / SCENE_H, (x1 + 1) / SCENE_W, (y1 + 1) / SCENE_H])
+        rects.append((x0, y0, x1, y1))
     base.save(directory / f"{scene_id}_a.jpg", quality=95, subsampling=0)
-    edited.save(directory / f"{scene_id}_b.jpg", quality=95, subsampling=0)
-    return boxes
+
+    entries = []
+    for j, (x0, y0, x1, y1) in enumerate(rects):
+        name = f"{scene_id}_p{j}.png"
+        edited.crop((x0, y0, x1, y1)).save(directory / name)
+        entries.append({
+            "name": f"obj{j}",
+            "kind": "flip",
+            "box": [x0 / SCENE_W, y0 / SCENE_H, x1 / SCENE_W, y1 / SCENE_H],
+            "patch": name,
+            "at": [x0, y0],
+            "size": [x1 - x0, y1 - y0],
+        })
+    return entries
 
 
 def fake_levels(directory: Path, count=8, diffs=5):
     levels = []
     for i in range(count):
         scene_id = f"scene{i}"
-        boxes = write_scene(directory, scene_id, diffs)
+        entries = write_scene(directory, scene_id, diffs)
         levels.append({
             "id": scene_id,
             "title": f"Scene {i}",
             "a": f"{scene_id}_a.jpg",
-            "b": f"{scene_id}_b.jpg",
-            "diffs": [
-                {"name": f"obj{j}", "kind": "flip", "box": boxes[j]}
-                for j in range(diffs)
-            ],
+            "base_size": [SCENE_W, SCENE_H],
+            "diffs": entries,
         })
     return levels
 
@@ -148,18 +157,6 @@ class FindDiffTestCase(unittest.TestCase):
 
     # ---- privacy -------------------------------------------------------
 
-    def test_view_never_leaks_the_plan(self):
-        state = self.new_state()
-        view = FindDiffGame.get_public_view(state, "p1")
-        blob = repr(view)
-        level = find_diff._runner_level(state, state["players"]["p1"])
-        for slot in state["plan"][level["id"]]:
-            self.assertNotIn(repr(level["diffs"][slot]["box"]), blob)
-        self.assertNotIn("plan", view)
-        self.assertNotIn("diffs", view["you"]["level"])
-        self.assertEqual(view["you"]["found"], [])
-        self.assertEqual(view["you"]["remaining"], 3)
-
     def test_other_players_marks_are_not_exposed(self):
         state = self.new_state()
         self.hit_slot(state, "p1", 0)
@@ -172,103 +169,106 @@ class FindDiffTestCase(unittest.TestCase):
         self.assertEqual(ann["found"], 1)
         self.assertEqual(ann["level_found"], 1)
         self.assertNotIn("box", repr(ann))
+        self.assertNotIn("patches", repr(ann))
 
 
-    # ---- round pictures ------------------------------------------------
+    # ---- what the browser is handed -----------------------------------
 
-    def _round_pair(self, level_id, slots):
-        urls = find_diff.build_round_images(
-            next(lv for lv in find_diff._LEVEL_CACHE if lv["id"] == level_id), slots)
-        rounds = self.tmp / find_diff.ROUNDS_DIRNAME
-        a = Image.open(rounds / urls["a_url"].rsplit("/", 1)[1]).convert("RGB")
-        b = Image.open(rounds / urls["b_url"].rsplit("/", 1)[1]).convert("RGB")
-        return a, b
+    def test_view_ships_the_base_plus_only_the_selected_patches(self):
+        """The browser composes the edited picture itself.
 
-    def test_round_picture_shows_only_the_selected_differences(self):
-        """Regression: the source B carries all five differences.
-
-        Showing it untouched put differences on screen that the round does not
-        count, so tapping a real, visible difference was punished.
+        It needs the clean base, the base size, and one rectangle per difference
+        actually in play. Nothing is composited server-side any more.
         """
-        level = find_diff._LEVEL_CACHE[0]
-        slots = [0, 2, 4]
-        a, b = self._round_pair(level["id"], slots)
-        self.assertEqual(a.size, b.size)
-        unused = [i for i in range(len(level["diffs"])) if i not in slots]
-        self.assertTrue(unused, "this test needs some differences left out")
-
-        for index in unused:
-            x0, y0, x1, y1 = level["diffs"][index]["box"]
-            box = (int(x0 * SCENE_W), int(y0 * SCENE_H),
-                   int(x1 * SCENE_W), int(y1 * SCENE_H))
-            self.assertEqual(
-                a.crop(box).tobytes(), b.crop(box).tobytes(),
-                f"unused difference {index} is still visible on the round picture",
-            )
-
-        for index in slots:
-            x0, y0, x1, y1 = level["diffs"][index]["box"]
-            box = (int(x0 * SCENE_W), int(y0 * SCENE_H),
-                   int(x1 * SCENE_W), int(y1 * SCENE_H))
-            self.assertNotEqual(
-                a.crop(box).tobytes(), b.crop(box).tobytes(),
-                f"selected difference {index} did not make it into the round picture",
-            )
-
-    def test_round_pictures_are_identical_outside_the_selected_boxes(self):
-        level = find_diff._LEVEL_CACHE[1]
-        slots = [1, 3]
-        a, b = self._round_pair(level["id"], slots)
-        # Black out the boxes themselves, then the rest of the pair must match.
-        mask = Image.new("L", a.size, 0)
-        pen = ImageDraw.Draw(mask)
-        for index in slots:
-            x0, y0, x1, y1 = level["diffs"][index]["box"]
-            pen.rectangle([
-                int(x0 * SCENE_W) - find_diff.ROUND_PASTE_PAD - 2,
-                int(y0 * SCENE_H) - find_diff.ROUND_PASTE_PAD - 2,
-                int(x1 * SCENE_W) + find_diff.ROUND_PASTE_PAD + 2,
-                int(y1 * SCENE_H) + find_diff.ROUND_PASTE_PAD + 2,
-            ], fill=255)
-        blank = Image.new("RGB", a.size, (0, 0, 0))
-        clean_a = a.copy()
-        clean_b = b.copy()
-        clean_a.paste(blank, (0, 0), mask)
-        clean_b.paste(blank, (0, 0), mask)
-        self.assertEqual(clean_a.tobytes(), clean_b.tobytes())
-
-    def test_round_pictures_are_reused_across_races(self):
-        level = find_diff._LEVEL_CACHE[0]
-        first = find_diff.build_round_images(level, [0, 1, 2])
-        stamp = (self.tmp / find_diff.ROUNDS_DIRNAME / first["b_url"].rsplit("/", 1)[1]).stat().st_mtime_ns
-        second = find_diff.build_round_images(level, [0, 1, 2])
-        self.assertEqual(first, second)
-        again = (self.tmp / find_diff.ROUNDS_DIRNAME / second["b_url"].rsplit("/", 1)[1]).stat().st_mtime_ns
-        self.assertEqual(stamp, again, "a cached round picture should not be rebuilt")
-
-    def test_view_uses_the_round_pictures_not_the_source_pair(self):
         state = self.new_state()
         view = FindDiffGame.get_public_view(state, "p1")
-        urls = view["you"]["level"]
-        self.assertIn("/rounds/", urls["a_url"])
-        self.assertIn("/rounds/", urls["b_url"])
-        self.assertNotEqual(urls["b_url"], "/static/find_diff/" + state["level"]["b"]
-                            if "level" in state else "")
         level = find_diff._runner_level(state, state["players"]["p1"])
-        self.assertEqual(urls["a_url"], state["images"][level["id"]]["a_url"])
-        self.assertEqual(urls["b_url"], state["images"][level["id"]]["b_url"])
-        self.assertEqual(len(state["plan"][level["id"]]), 3)
+        slots = state["plan"][level["id"]]
 
-    def test_review_uses_the_round_pictures(self):
+        shipped = view["you"]["level"]
+        self.assertEqual(shipped["a_url"], "/static/find_diff/" + level["a"])
+        self.assertEqual(shipped["base_size"], [SCENE_W, SCENE_H])
+        self.assertEqual(len(shipped["patches"]), len(slots))
+        self.assertEqual(shipped["total"], len(slots))
+        self.assertNotIn("b_url", shipped)
+
+        for entry, slot_index in zip(shipped["patches"], range(len(slots))):
+            source = level["diffs"][slots[slot_index]]
+            self.assertEqual(entry["url"], "/static/find_diff/" + source["patch"])
+            self.assertEqual(entry["at"], source["at"])
+            self.assertEqual(entry["size"], source["size"])
+            self.assertEqual(entry["slot"], slot_index)
+
+        shipped_urls = {entry["url"] for entry in shipped["patches"]}
+        for index, diff in enumerate(level["diffs"]):
+            if index in slots:
+                continue
+            self.assertNotIn(
+                "/static/find_diff/" + diff["patch"], shipped_urls,
+                "a difference that is not in play must not be shipped",
+            )
+
+    def test_patch_geometry_covers_its_difference_box(self):
+        """A patch must fully contain the box it stands for.
+
+        One pixel of slack because normalising to a fraction and multiplying back
+        truncates: 104/180*180 lands on 103.999... The real pipeline pads patches
+        outward anyway, so this only guards the degenerate exact-fit case.
+        """
+        state = self.new_state()
+        for level_id in state["run"]:
+            level = state["levels"][level_id]
+            for diff in level["diffs"]:
+                x0, y0, x1, y1 = diff["box"]
+                self.assertLessEqual(diff["at"][0], int(x0 * SCENE_W) + 1)
+                self.assertLessEqual(diff["at"][1], int(y0 * SCENE_H) + 1)
+                self.assertGreaterEqual(diff["at"][0] + diff["size"][0], int(x1 * SCENE_W) - 1)
+                self.assertGreaterEqual(diff["at"][1] + diff["size"][1], int(y1 * SCENE_H) - 1)
+
+    def test_the_server_writes_no_files_and_needs_no_imaging_library(self):
+        before = sorted(p.name for p in self.tmp.rglob("*"))
+        self.new_state()
+        after = sorted(p.name for p in self.tmp.rglob("*"))
+        self.assertEqual(before, after, "dealing a race must not touch the asset folder")
+        source = Path(find_diff.__file__).read_text()
+        self.assertNotIn("from PIL", source)
+        self.assertNotIn("import PIL", source)
+        self.assertFalse(hasattr(find_diff, "build_round_images"))
+
+    def test_review_ships_the_same_patch_set(self):
         state = self.new_state()
         self.finish_player(state, "p1")
         self.finish_player(state, "p2")
         view = FindDiffGame.get_public_view(state, "p1")
-        for entry in view["review"]:
-            self.assertIn("/rounds/", entry["a_url"])
-            self.assertIn("/rounds/", entry["b_url"])
-            self.assertEqual(len(entry["diffs"]), 3)
+        self.assertEqual(len(view["review"]), len(state["run"]))
+        for entry, level_id in zip(view["review"], state["run"]):
+            level = state["levels"][level_id]
+            self.assertEqual(entry["a_url"], "/static/find_diff/" + level["a"])
+            self.assertEqual(entry["base_size"], [SCENE_W, SCENE_H])
+            self.assertEqual(len(entry["patches"]), len(state["plan"][level_id]))
+            self.assertEqual(len(entry["diffs"]), len(state["plan"][level_id]))
 
+    def test_patch_positions_are_deliberately_public(self):
+        """Accepted trade-off: the browser needs the geometry to compose.
+
+        This game is casual, so shipping the answer geometry to the client is a
+        conscious choice rather than a leak. The server still validates every
+        guess against the same boxes, so a hand-crafted request cannot score
+        outside the round.
+        """
+        state = self.new_state()
+        view = FindDiffGame.get_public_view(state, "p1")
+        level = find_diff._runner_level(state, state["players"]["p1"])
+        first = view["you"]["level"]["patches"][0]
+        source = level["diffs"][state["plan"][level["id"]][0]]
+        self.assertEqual(first["at"], source["at"])
+        # a guess far outside every box is still rejected
+        _, error = FindDiffGame.apply_action(state, "p1", {
+            "type": "guess", "level": 1, "x": 0.995, "y": 0.995,
+        })
+        self.assertIsNone(error)
+        self.assertEqual(state["players"]["p1"]["misses"], 1)
+        self.assertEqual(state["players"]["p1"]["found"], [])
 
     # ---- racing --------------------------------------------------------
 
