@@ -649,7 +649,11 @@ def build_level(scene: Dict[str, str], force: bool = False) -> Optional[Dict]:
         (c["box"][2] - c["box"][0]) * (c["box"][3] - c["box"][1]) / float(w * h) - 0.018
     ))
     chosen: List[Dict] = []
-    for separation, pad_ratio in ((MIN_SEPARATION, 0.010), (0.075, 0.006), (0.045, 0.003)):
+    # A level may end up with several differences close together: a round only
+    # ever uses a well separated subset (see _pick_spread_diffs in the game
+    # module), so the asset just needs five distinct, non-overlapping objects.
+    for separation, pad_ratio in ((MIN_SEPARATION, 0.010), (0.075, 0.006),
+                                  (0.045, 0.003), (0.02, 0.002), (0.0, 0.001)):
         chosen = _select_spread(ordered, w, separation * w, int(pad_ratio * w))
         if len(chosen) == DIFFS_PER_LEVEL:
             break

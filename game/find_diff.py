@@ -187,8 +187,13 @@ def _pick_spread_diffs(level: Dict, want: int) -> List[int]:
     # A plain random sample happily picks two neighbouring differences, and the
     # player then sees one place to look instead of two. About a quarter of
     # unconstrained triples were like that, which is exactly the only-two-differences
-    # complaint. Every level can satisfy a 100 px gap, so the fallback below only
-    # ever loosens the rule, it never fails.
+    # complaint.
+    #
+    # When a level simply cannot reach the full gap (one of the sixty-four tops out
+    # at 90 px against a 100 px target) do not fall back to some arbitrary looser
+    # tier, which might pick a 65 px triple while a 90 px one was sitting there.
+    # Take the best the level can offer and choose randomly among the combinations
+    # close to it, so variety survives without giving up separation.
     diffs = level["diffs"]
     indices = list(range(len(diffs)))
     if want >= len(indices):
@@ -199,12 +204,13 @@ def _pick_spread_diffs(level: Dict, want: int) -> List[int]:
     for combo in itertools.combinations(indices, want):
         gaps = [_box_gap(diffs[i], diffs[j]) for i, j in itertools.combinations(combo, 2)]
         scored.append((min(gaps) if gaps else width, combo))
-    for factor in (1.0, 0.6, 0.3, 0.0):
-        need = ROUND_MIN_GAP * factor * width
-        good = [combo for gap, combo in scored if gap >= need]
-        if good:
-            return sorted(random.choice(good))
-    return sorted(max(scored)[1])
+    target = ROUND_MIN_GAP * width
+    good = [combo for gap, combo in scored if gap >= target]
+    if good:
+        return sorted(random.choice(good))
+    best = max(gap for gap, _ in scored)
+    near = [combo for gap, combo in scored if gap >= best * 0.9]
+    return sorted(random.choice(near or [max(scored)[1]]))
 
 
 def _new_runner() -> Dict:
