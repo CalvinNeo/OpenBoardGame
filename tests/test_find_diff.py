@@ -53,6 +53,8 @@ def write_scene(directory: Path, scene_id: str, diffs: int):
             "kind": "flip",
             "box": [x0 / SCENE_W, y0 / SCENE_H, x1 / SCENE_W, y1 / SCENE_H],
             "patch": name,
+            "ref_px": 900,
+            "ref_mean": 45.0,
             "at": [x0, y0],
             "size": [x1 - x0, y1 - y0],
         })
@@ -250,6 +252,42 @@ class FindDiffTestCase(unittest.TestCase):
                             gap, find_diff.ROUND_MIN_GAP * SCENE_W,
                             '%s: differences %s and %s only %dpx apart'
                             % (level_id, slots[i], slots[j], gap))
+
+    def test_rounds_only_use_differences_that_survive_play_size(self):
+        # Regression for the there-is-no-third-difference report. A mirrored spoon
+        # or a 1.24x scale is obvious across a 1600 px picture and can be a
+        # two-hundred-pixel smudge on a phone, so every dealt difference has to
+        # clear the bar measured at play size.
+        for _ in range(20):
+            state = self.new_state()
+            for level_id in state['run']:
+                level = state['levels'][level_id]
+                for slot in state['plan'][level_id]:
+                    self.assertGreaterEqual(
+                        find_diff._diff_strength(level['diffs'][slot]), 1.0,
+                        '%s slot %s is too faint at play size' % (level_id, slot))
+
+    def test_a_level_that_cannot_field_a_clean_round_is_never_drawn(self):
+        levels = find_diff._LEVEL_CACHE
+        weak_index = 4
+        levels[0]['diffs'][weak_index].update({'ref_px': 40, 'ref_mean': 3.0})
+        self.assertLess(find_diff._diff_strength(levels[0]['diffs'][weak_index]), 1.0)
+        self.assertFalse(find_diff._level_can_field_round(levels[0], 5))
+        # it can still field three strong ones, so it stays in the pool for that
+        self.assertTrue(find_diff._level_can_field_round(levels[0], 3))
+        drawn = set()
+        for _ in range(40):
+            state = self.new_state()
+            drawn.update(state['run'])
+            if levels[0]['id'] in state['run']:
+                self.assertNotIn(weak_index, state['plan'][levels[0]['id']])
+        self.assertIn(levels[0]['id'], drawn, 'the level should still be usable')
+
+    def test_missing_scores_do_not_empty_the_pool(self):
+        # manifests written before the measurement existed carry no numbers
+        diff = {'name': 'x', 'kind': 'flip', 'box': [0, 0, 0.1, 0.1],
+                'patch': 'x.png', 'at': [0, 0], 'size': [10, 10]}
+        self.assertGreaterEqual(find_diff._diff_strength(diff), 1.0)
 
     def test_pick_spread_never_takes_two_touching_differences(self):
         def box(name, x, y):

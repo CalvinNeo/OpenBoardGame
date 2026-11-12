@@ -45,6 +45,13 @@ HIT_PADDING = 0.012
 # so a round only picks differences at least this far apart (fraction of width).
 # 0.0625 of 1600 px is 100 px, unambiguous at any sensible display size.
 ROUND_MIN_GAP = 0.0625
+# A difference also has to survive being scaled down to the size people actually
+# play at. A 1.24x scale or a mirrored near-symmetric object is obvious across a
+# 1600 px picture and can be a two-hundred-pixel smudge on a phone, which reads as
+# nothing being different rather than as a difference. Both numbers are measured
+# by the asset pipeline on a reference render and stored per difference.
+ROUND_MIN_CHANGED_PX = 250
+ROUND_MIN_MEAN_DIFF = 20.0
 
 STAGE_RACING = "racing"
 STAGE_RESULTS = "results"
@@ -137,6 +144,8 @@ def load_levels(force: bool = False) -> List[Dict]:
                     "patch": patch,
                     "at": [int(v) for v in d["at"]],
                     "size": [int(v) for v in d["size"]],
+                    "ref_px": int(d.get("ref_px", 0)),
+                    "ref_mean": float(d.get("ref_mean", 0.0)),
                 })
             if broken:
                 continue
@@ -181,19 +190,23 @@ def _box_gap(a: Dict, b: Dict) -> int:
     return max(max(0, ax0 - bx1, bx0 - ax1), max(0, ay0 - by1, by0 - ay1))
 
 
+def _diff_strength(diff: Dict) -> float:
+    # 1.0 means the difference sits exactly on the visibility bar. Manifests
+    # written before the measurement existed carry no numbers, and excluding
+    # those would empty the pool, so treat a missing score as comfortably fine.
+    px = float(diff.get("ref_px", ROUND_MIN_CHANGED_PX * 10))
+    mean = float(diff.get("ref_mean", ROUND_MIN_MEAN_DIFF * 10))
+    return min(px / ROUND_MIN_CHANGED_PX, mean / ROUND_MIN_MEAN_DIFF)
+
+
 def _pick_spread_diffs(level: Dict, want: int) -> List[int]:
-    # Choose which differences this round uses, keeping them visually apart.
+    # Choose which differences this round uses, keeping them both far apart and
+    # clearly visible at play size.
     #
-    # A plain random sample happily picks two neighbouring differences, and the
-    # player then sees one place to look instead of two. About a quarter of
-    # unconstrained triples were like that, which is exactly the only-two-differences
-    # complaint.
-    #
-    # When a level simply cannot reach the full gap (one of the sixty-four tops out
-    # at 90 px against a 100 px target) do not fall back to some arbitrary looser
-    # tier, which might pick a 65 px triple while a 90 px one was sitting there.
-    # Take the best the level can offer and choose randomly among the combinations
-    # close to it, so variety survives without giving up separation.
+    # A plain random sample fails on both counts: about a quarter of unconstrained
+    # triples put two differences almost on top of each other, and it happily picks
+    # a mirrored spoon that survives full resolution but not a phone screen. That is
+    # what only-two-differences and there-is-no-third-difference both were.
     diffs = level["diffs"]
     indices = list(range(len(diffs)))
     if want >= len(indices):
@@ -203,14 +216,30 @@ def _pick_spread_diffs(level: Dict, want: int) -> List[int]:
     scored = []
     for combo in itertools.combinations(indices, want):
         gaps = [_box_gap(diffs[i], diffs[j]) for i, j in itertools.combinations(combo, 2)]
-        scored.append((min(gaps) if gaps else width, combo))
+        scored.append((
+            min(gaps) if gaps else width,
+            min(_diff_strength(diffs[i]) for i in combo),
+            combo,
+        ))
     target = ROUND_MIN_GAP * width
-    good = [combo for gap, combo in scored if gap >= target]
+
+    # separated, and every difference clears the visibility bar
+    good = [combo for sep, strength, combo in scored if sep >= target and strength >= 1.0]
     if good:
         return sorted(random.choice(good))
-    best = max(gap for gap, _ in scored)
-    near = [combo for gap, combo in scored if gap >= best * 0.9]
-    return sorted(random.choice(near or [max(scored)[1]]))
+
+    # no such triple: keep the separation and take the strongest on offer, rather
+    # than dropping to some arbitrary looser tier that might be worse still
+    separated = [(strength, combo) for sep, strength, combo in scored if sep >= target]
+    if separated:
+        best = max(strength for strength, _ in separated)
+        near = [combo for strength, combo in separated if strength >= best * 0.9]
+        return sorted(random.choice(near))
+
+    # nothing is well separated either, so take the most separated combination
+    best_sep = max(sep for sep, _, _ in scored)
+    near = [combo for sep, _, combo in scored if sep >= best_sep * 0.9]
+    return sorted(random.choice(near or [max(scored)[2]]))
 
 
 def _new_runner() -> Dict:
@@ -342,15 +371,43 @@ def _continue_target(state: Dict) -> int:
     return len(humans) or len(state["turn_order"])
 
 
+def _level_can_field_round(level: Dict, want: int) -> bool:
+    # Whether this picture can always supply a round that is both well spread and
+    # clearly visible. A picture that cannot is kept in the manifest but never drawn,
+    # because a round that has to fall back to a smudge is exactly the round where a
+    # player rightly says there is no third difference.
+    diffs = level["diffs"]
+    if not diffs:
+        return False
+    strong = [i for i in range(len(diffs)) if _diff_strength(diffs[i]) >= 1.0]
+    if want >= len(diffs):
+        return len(strong) == len(diffs)
+    base = level.get("base_size") or [1600, 1200]
+    width = base[0] or 1600
+    target = ROUND_MIN_GAP * width
+    for combo in itertools.combinations(strong, want):
+        gaps = [_box_gap(diffs[combo[a]], diffs[combo[b]])
+                for a, b in itertools.combinations(range(want), 2)]
+        if not gaps or min(gaps) >= target:
+            return True
+    return False
+
+
 def _deal_race(state: Dict) -> None:
-    pool = list(state["level_pool"])
+    want = state["config"]["diffs"]
+    pool = [level_id for level_id in state["level_pool"]
+            if _level_can_field_round(state["levels"][level_id], want)]
+    if not pool:
+        raise ValueError(
+            "no find_diff level can field a round with %d clearly visible differences" % want
+        )
     count = min(state["config"]["levels"], len(pool))
     run = random.sample(pool, count)
     plan = {}
     for level_id in run:
         level = state["levels"][level_id]
-        want = min(state["config"]["diffs"], len(level["diffs"]))
-        plan[level_id] = _pick_spread_diffs(level, want)
+        take = min(state["config"]["diffs"], len(level["diffs"]))
+        plan[level_id] = _pick_spread_diffs(level, take)
     state["run"] = run
     state["plan"] = plan
     state["players"] = {pid: _new_runner() for pid in state["turn_order"]}
