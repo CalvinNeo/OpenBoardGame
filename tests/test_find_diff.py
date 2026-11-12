@@ -21,7 +21,7 @@ from game.find_diff import (
 )
 
 SCENE_W, SCENE_H = 240, 180
-PATCH_W, PATCH_H = 26, 20
+PATCH_W, PATCH_H = 22, 16
 
 
 def write_scene(directory: Path, scene_id: str, diffs: int):
@@ -36,8 +36,8 @@ def write_scene(directory: Path, scene_id: str, diffs: int):
     pen = ImageDraw.Draw(edited)
     rects = []
     for j in range(diffs):
-        x0 = 8 + 44 * j
-        y0 = 8 + 32 * j
+        x0 = 6 + 46 * j
+        y0 = 6 + 34 * j
         x1 = x0 + PATCH_W
         y1 = y0 + PATCH_H
         pen.rectangle([x0, y0, x1, y1], fill=(20, 200, 120))
@@ -232,6 +232,56 @@ class FindDiffTestCase(unittest.TestCase):
         runner["found"] = []
         view = FindDiffGame.get_public_view(state, "p1")
         self.assertIsNone(view["you"]["level"]["next_base_url"])
+
+    def test_round_differences_are_far_enough_apart_to_read_as_separate(self):
+        # Regression for the only-two-differences complaint: two differences
+        # sitting next to each other look like one place to look, and an
+        # unconstrained random triple produced that about a quarter of the time.
+        for _ in range(25):
+            state = self.new_state()
+            for level_id in state['run']:
+                level = state['levels'][level_id]
+                slots = state['plan'][level_id]
+                for i in range(len(slots)):
+                    for j in range(i + 1, len(slots)):
+                        gap = find_diff._box_gap(
+                            level['diffs'][slots[i]], level['diffs'][slots[j]])
+                        self.assertGreaterEqual(
+                            gap, find_diff.ROUND_MIN_GAP * SCENE_W,
+                            '%s: differences %s and %s only %dpx apart'
+                            % (level_id, slots[i], slots[j], gap))
+
+    def test_pick_spread_never_takes_two_touching_differences(self):
+        def box(name, x, y):
+            return {'name': name, 'kind': 'flip', 'box': [0.0, 0.0, 0.08, 0.08],
+                    'patch': name + '.png', 'at': [x, y], 'size': [80, 80]}
+
+        level = {
+            'id': 'tight', 'title': 'T', 'a': 'x.jpg', 'base_size': [1000, 750],
+            'diffs': [
+                box('a', 100, 100),
+                box('b', 180, 100),
+                box('c', 600, 100),
+                box('d', 100, 500),
+                box('e', 600, 500),
+            ],
+        }
+        # a and b touch, so a round must never take both
+        self.assertEqual(find_diff._box_gap(level['diffs'][0], level['diffs'][1]), 0)
+        seen = set()
+        for _ in range(60):
+            picked = find_diff._pick_spread_diffs(level, 3)
+            self.assertEqual(len(picked), 3)
+            self.assertEqual(len(set(picked)), 3)
+            self.assertFalse({0, 1}.issubset(set(picked)),
+                             'picked both of the two touching differences')
+            for i in range(3):
+                for j in range(i + 1, 3):
+                    gap = find_diff._box_gap(level['diffs'][picked[i]],
+                                             level['diffs'][picked[j]])
+                    self.assertGreaterEqual(gap, find_diff.ROUND_MIN_GAP * 1000)
+            seen.add(tuple(picked))
+        self.assertGreater(len(seen), 1, 'the constrained pick should still vary')
 
     def test_patch_geometry_covers_its_difference_box(self):
         """A patch must fully contain the box it stands for.

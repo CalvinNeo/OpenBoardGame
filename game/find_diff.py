@@ -13,6 +13,7 @@ has not finished is ranked behind the finishers, ordered by how much they found.
 Assets and the asset pipeline: scripts/gen_find_diff.py, designs/task194.md.
 """
 import copy
+import itertools
 import json
 import random
 import time
@@ -40,6 +41,10 @@ MAX_LEVELS = 12
 MISS_COOLDOWN_MS = 2000
 # Clicks may land slightly outside a tight object box without feeling unfair.
 HIT_PADDING = 0.012
+# Two differences sitting almost on top of each other read as one place to look,
+# so a round only picks differences at least this far apart (fraction of width).
+# 0.0625 of 1600 px is 100 px, unambiguous at any sensible display size.
+ROUND_MIN_GAP = 0.0625
 
 STAGE_RACING = "racing"
 STAGE_RESULTS = "results"
@@ -166,6 +171,40 @@ def _hit(box: List[float], x: float, y: float) -> bool:
 
 def _clamp(value: int, low: int, high: int) -> int:
     return max(low, min(high, value))
+
+
+def _box_gap(a: Dict, b: Dict) -> int:
+    ax0, ay0 = a["at"]
+    ax1, ay1 = ax0 + a["size"][0], ay0 + a["size"][1]
+    bx0, by0 = b["at"]
+    bx1, by1 = bx0 + b["size"][0], by0 + b["size"][1]
+    return max(max(0, ax0 - bx1, bx0 - ax1), max(0, ay0 - by1, by0 - ay1))
+
+
+def _pick_spread_diffs(level: Dict, want: int) -> List[int]:
+    # Choose which differences this round uses, keeping them visually apart.
+    #
+    # A plain random sample happily picks two neighbouring differences, and the
+    # player then sees one place to look instead of two. About a quarter of
+    # unconstrained triples were like that, which is exactly the only-two-differences
+    # complaint. Every level can satisfy a 100 px gap, so the fallback below only
+    # ever loosens the rule, it never fails.
+    diffs = level["diffs"]
+    indices = list(range(len(diffs)))
+    if want >= len(indices):
+        return sorted(indices)
+    base = level.get("base_size") or [1600, 1200]
+    width = base[0] or 1600
+    scored = []
+    for combo in itertools.combinations(indices, want):
+        gaps = [_box_gap(diffs[i], diffs[j]) for i, j in itertools.combinations(combo, 2)]
+        scored.append((min(gaps) if gaps else width, combo))
+    for factor in (1.0, 0.6, 0.3, 0.0):
+        need = ROUND_MIN_GAP * factor * width
+        good = [combo for gap, combo in scored if gap >= need]
+        if good:
+            return sorted(random.choice(good))
+    return sorted(max(scored)[1])
 
 
 def _new_runner() -> Dict:
@@ -305,7 +344,7 @@ def _deal_race(state: Dict) -> None:
     for level_id in run:
         level = state["levels"][level_id]
         want = min(state["config"]["diffs"], len(level["diffs"]))
-        plan[level_id] = sorted(random.sample(range(len(level["diffs"])), want))
+        plan[level_id] = _pick_spread_diffs(level, want)
     state["run"] = run
     state["plan"] = plan
     state["players"] = {pid: _new_runner() for pid in state["turn_order"]}

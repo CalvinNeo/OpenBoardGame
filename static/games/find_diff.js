@@ -446,12 +446,19 @@ function findDiffReviewGallery(review) {
       + (p.at[0] / base[0] * 100) + "%;top:" + (p.at[1] / base[1] * 100)
       + "%;width:" + (p.size[0] / base[0] * 100)
       + "%;height:" + (p.size[1] / base[1] * 100) + '%">').join("");
+    // Both pictures, because a review that only shows the edited side does not
+    // let anyone see what the difference actually was.
     return '<figure class="find-diff-review-item">'
-      + '<div class="find-diff-review-pic"><img src="' + entry.a_url + '" alt="'
-      + entry.title + '" loading="lazy">' + patches + marks + "</div>"
       + "<figcaption>" + (entry.index + 1) + ". " + entry.title + " — "
       + entry.diffs.map((d) => d.name + "(" + d.kind + ")").join(", ")
-      + "</figcaption></figure>";
+      + "</figcaption>"
+      + '<div class="find-diff-review-pair">'
+      + '<div class="find-diff-review-pic"><img src="' + entry.a_url + '" alt="'
+      + entry.title + ' A" loading="lazy"><span class="find-diff-review-tag">A</span></div>'
+      + '<div class="find-diff-review-pic"><img src="' + entry.a_url + '" alt="'
+      + entry.title + ' B" loading="lazy">' + patches + marks
+      + '<span class="find-diff-review-tag">B</span></div>'
+      + "</div></figure>";
   });
   return '<div class="find-diff-review">' + items.join("") + "</div>";
 }

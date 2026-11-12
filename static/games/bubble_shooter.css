@@ -4,9 +4,12 @@
   --bs-line: #d3e0ea;
   --bs-paper: #f6fafe;
   --bs-accent: #2563eb;
-  --bs-chrome: 290px;
+  /* Everything that shares the viewport with the board: the shared room panel
+     padding, its header, and the edge scoreboard. The board is height-capped
+     by this, so keeping it honest is what lets the board grow. */
+  --bs-chrome: 150px;
   color: var(--bs-ink);
-  max-width: 1180px;
+  max-width: 1360px;
   margin: 0 auto;
   min-width: 0;
 }
@@ -590,8 +593,21 @@
 
 /* ---------- responsive ---------- */
 
-@media (max-width: 880px) {
-  .bs-game { --bs-chrome: 330px; }
+@media (min-width: 901px) {
+  /* On desktop the board is capped by height, not width, so a wide stage only
+     adds dead space beside it. Cap the whole block to the board's natural
+     width plus the sidebar and let the page centre it. */
+  .bs-game {
+    max-width: calc((100dvh - var(--bs-chrome)) * 11 / 14 + 300px);
+  }
+}
+
+@media (max-width: 900px) {
+  /* Single column: the board takes the full width and the cards stack below
+     it, so only the header and the scoreboard need reserving. The shared
+     stylesheet already drops its own padding to about 10px per side here,
+     which leaves the board nearly flush with the phone. */
+  .bs-game { --bs-chrome: 170px; }
   .bs-layout { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .bs-side { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .bs-side-card:nth-child(3) { grid-column: 1 / -1; }
@@ -600,7 +616,6 @@
 }
 
 @media (max-width: 420px) {
-  .bs-game { --bs-chrome: 310px; }
   .bs-side-card { padding: 9px 10px; }
   .bs-queue-slot { width: 34px; height: 34px; font-size: 15px; }
   .bs-queue-slot.is-soon { width: 27px; height: 27px; font-size: 12px; }

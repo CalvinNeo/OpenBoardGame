@@ -69,15 +69,36 @@ MAX_DIFF_PIXELS = 0.055
 MIN_VISIBLE_DIFF = 20.0
 
 
+BASE_FAILURES: List[str] = []
+PROPOSE_FAILURES: List[str] = []
+
+
 def log(msg: str) -> None:
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
-def run_json(cmd: List[str]) -> Dict:
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"command failed: {' '.join(cmd[:3])}...\n{proc.stdout}\n{proc.stderr}")
-    return json.loads(proc.stdout)
+def run_json(cmd: List[str], attempts: int = 4) -> Dict:
+    # The connector API occasionally drops a request. A flaky call must not take
+    # a thirty-image run down with it, so retry with a widening gap first.
+    last = ""
+    for attempt in range(attempts):
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode == 0:
+            try:
+                return json.loads(proc.stdout)
+            except json.JSONDecodeError as exc:
+                last = "bad JSON: %s" % exc
+        else:
+            last = proc.stdout + chr(10) + proc.stderr
+        if attempt + 1 < attempts:
+            pause = 2.0 * (attempt + 1)
+            tail = last.strip().splitlines()[-1] if last.strip() else "?"
+            log("  retry %d/%d in %.0fs: %s" % (attempt + 1, attempts - 1, pause, tail))
+            time.sleep(pause)
+    raise RuntimeError(
+        "command failed after %d attempts: %s%s%s"
+        % (attempts, " ".join(str(part) for part in cmd[:3]), chr(10), last)
+    )
 
 
 def connector_call(tool: str, args: Dict) -> Dict:
@@ -202,25 +223,34 @@ def stage_base(only: Optional[str] = None, force: bool = False) -> None:
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     scenes = [s for s in SCENES if not only or s["id"] == only]
     for scene in scenes:
-        dest = WORK_DIR / f"{scene['id']}_base.png"
+        dest = WORK_DIR / (scene["id"] + "_base.png")
         if dest.exists() and not force:
-            log(f"base {scene['id']}: cached")
+            log("base %s: cached" % scene["id"])
             continue
-        log(f"base {scene['id']}: generating")
-        res = connector_call("connector__matrix__generate_image", {
-            "requests": [{
-                "prompt": build_prompt(scene),
-                "aspect_ratio": "4:3",
-                "area": "2K",
-                "output_format": "png",
-                "output_file": f"{scene['id']}_base",
-            }]
-        })
-        items = res.get("success_items") or []
-        if not items:
-            raise RuntimeError(f"base {scene['id']} failed: {res}")
-        download(items[0]["node_id"], dest)
-        log(f"base {scene['id']}: {Image.open(dest).size}")
+        log("base %s: generating" % scene["id"])
+        try:
+            res = connector_call("connector__matrix__generate_image", {
+                "requests": [{
+                    "prompt": build_prompt(scene),
+                    "aspect_ratio": "4:3",
+                    "area": "2K",
+                    "output_format": "png",
+                    "output_file": scene["id"] + "_base",
+                }]
+            })
+            items = res.get("success_items") or []
+            if not items:
+                raise RuntimeError("base %s failed: %s" % (scene["id"], res))
+            download(items[0]["node_id"], dest)
+        except Exception as exc:
+            # One flaky scene must not abandon the rest of the batch.
+            BASE_FAILURES.append(scene["id"])
+            log("base %s: FAILED %s" % (scene["id"], exc))
+            continue
+        log("base %s: %s" % (scene["id"], Image.open(dest).size))
+    if BASE_FAILURES:
+        log("base: %d scene(s) failed, rerun to retry: %s"
+            % (len(BASE_FAILURES), ", ".join(BASE_FAILURES)))
 
 
 # --------------------------------------------------------------------------
@@ -269,29 +299,37 @@ def stage_propose(only: Optional[str] = None, force: bool = False) -> None:
     MASK_DIR.mkdir(parents=True, exist_ok=True)
     scenes = [s for s in SCENES if not only or s["id"] == only]
     for scene in scenes:
-        dest = WORK_DIR / f"{scene['id']}_objects.json"
-        base = WORK_DIR / f"{scene['id']}_base.png"
+        dest = WORK_DIR / (scene["id"] + "_objects.json")
+        base = WORK_DIR / (scene["id"] + "_base.png")
         if not base.exists():
-            log(f"propose {scene['id']}: no base, skip")
+            log("propose %s: no base, skip" % scene["id"])
             continue
         if dest.exists() and not force:
-            log(f"propose {scene['id']}: cached")
+            log("propose %s: cached" % scene["id"])
             continue
-        log(f"propose {scene['id']}: asking vision")
-        url = upload(base)
-        res = connector_call("connector__matrix__describe_images", {
-            "image_info": [{"url": url, "prompt": PROPOSE_PROMPT}]
-        })
-        text = ""
-        for item in res.get("results", []):
-            if item.get("success"):
-                text = item.get("description", "")
-                break
-        items = parse_proposals(text)
-        if len(items) < 6:
-            raise RuntimeError(f"propose {scene['id']}: only {len(items)} usable boxes")
+        log("propose %s: asking vision" % scene["id"])
+        try:
+            url = upload(base)
+            res = connector_call("connector__matrix__describe_images", {
+                "image_info": [{"url": url, "prompt": PROPOSE_PROMPT}]
+            })
+            text = ""
+            for item in res.get("results", []):
+                if item.get("success"):
+                    text = item.get("description", "")
+                    break
+            items = parse_proposals(text)
+            if len(items) < 6:
+                raise RuntimeError("propose %s: only %d usable boxes" % (scene["id"], len(items)))
+        except Exception as exc:
+            PROPOSE_FAILURES.append(scene["id"])
+            log("propose %s: FAILED %s" % (scene["id"], exc))
+            continue
         dest.write_text(json.dumps(items, ensure_ascii=False, indent=2))
-        log(f"propose {scene['id']}: {len(items)} candidates")
+        log("propose %s: %d candidates" % (scene["id"], len(items)))
+    if PROPOSE_FAILURES:
+        log("propose: %d scene(s) failed, rerun to retry: %s"
+            % (len(PROPOSE_FAILURES), ", ".join(PROPOSE_FAILURES)))
 
 
 # --------------------------------------------------------------------------

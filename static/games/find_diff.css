@@ -319,11 +319,33 @@
 
 .find-diff-review {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 8px;
+  /* min() keeps the track from outgrowing a 320px phone, where a plain 300px
+     minimum would force the whole panel into horizontal scroll. */
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 10px;
 }
 
 .find-diff-review-item { margin: 0; }
+
+.find-diff-review-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.find-diff-review-tag {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.72);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  pointer-events: none;
+}
 
 .find-diff-review-pic {
   position: relative;

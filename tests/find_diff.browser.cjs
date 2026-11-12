@@ -237,6 +237,12 @@ async function audit(page) {
       patchesOnA: document.querySelectorAll('.find-diff-frame:first-child .find-diff-patches img').length,
       tags: document.querySelectorAll('#findDiffMarksA .find-diff-tag').length,
       rankRows: document.querySelectorAll('.find-diff-rank li').length,
+      reviewItems: document.querySelectorAll('.find-diff-review-item').length,
+      reviewPics: document.querySelectorAll('.find-diff-review-item .find-diff-review-pic').length,
+      reviewPatched: document.querySelectorAll(
+        '.find-diff-review-pair > .find-diff-review-pic:last-child img[style*="position:absolute"]').length,
+      reviewTags: Array.from(document.querySelectorAll('.find-diff-review-tag'))
+        .map((n) => n.textContent),
       resultShown: visible(document.getElementById('findDiffResult')),
       docHeight: document.documentElement.scrollHeight,
       viewportHeight: window.innerHeight,
@@ -389,6 +395,22 @@ async function slowLoadCheck(browser, failures) {
       }
       if ((caseName === 'results' || caseName === 'game_over') && report.rankRows !== 3) {
         failures.push(tag + ': expected 3 ranking rows, got ' + report.rankRows);
+      }
+      if (caseName === 'results' || caseName === 'game_over') {
+        if (report.reviewItems !== 2) {
+          failures.push(tag + ': expected 2 review entries, got ' + report.reviewItems);
+        }
+        // both A and B must be shown for every entry
+        if (report.reviewPics !== report.reviewItems * 2) {
+          failures.push(tag + ': review shows ' + report.reviewPics + ' pictures for '
+            + report.reviewItems + ' entries, expected A and B for each');
+        }
+        if (report.reviewPatched !== report.reviewItems * 3) {
+          failures.push(tag + ': B side of the review is missing its patches ('
+            + report.reviewPatched + ')');
+        }
+        const tags = report.reviewTags.join(',');
+        if (tags !== 'A,B,A,B') failures.push(tag + ': review labels were ' + tags);
       }
     }
     if (errors.length) failures.push(size.name + ': console/page errors ' + errors.slice(0, 3).join(' | '));
