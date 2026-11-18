@@ -693,13 +693,14 @@ const GAME_ASSETS = {
   },
   "citadels": {
     "scripts": [
-      "/static/games/citadels.js?v=app_v7"
+      "/static/games/citadels.js?v=app_v8"
     ],
     "styles": [],
     "panel": "citadelsPanel",
+    "panelTitle": "👑 Citadels",
     "header": "showCitadelsHeaderActions",
-    "markup": "/static/games/citadels.html?v=1",
-    "styleFragments": "/static/games/citadels.css?v=1"
+    "markup": "/static/games/citadels.html?v=2",
+    "styleFragments": "/static/games/citadels.css?v=2"
   },
   "tagiron": {
     "scripts": [
@@ -1138,13 +1139,14 @@ const GAME_ASSETS = {
   },
   "scout": {
     "scripts": [
-      "/static/games/scout.js?v=app_v4"
+      "/static/games/scout.js?v=app_v5"
     ],
     "styles": [],
     "panel": "scoutPanel",
+    "panelTitle": "🎪 Scout",
     "header": "showScoutHeaderActions",
-    "markup": "/static/games/scout.html?v=1",
-    "styleFragments": "/static/games/scout.css?v=1"
+    "markup": "/static/games/scout.html?v=2",
+    "styleFragments": "/static/games/scout.css?v=2"
   },
   "ark_nova": {
     "scripts": [
@@ -1199,9 +1201,9 @@ const GAME_ASSETS = {
     "header": "showSemanticGuessHeaderActions"
   },
   "dare_words": {
-    "scripts": ["/static/games/dare_words.js?v=4"],
+    "scripts": ["/static/games/dare_words.js?v=5"],
     "styles": ["/static/games/dare_words.css?v=2"],
-    "markup": "/static/games/dare_words.html?v=2",
+    "markup": "/static/games/dare_words.html?v=3",
     "panel": "dareWordsPanel",
     "panelTitle": "🀄 胆敢造词",
     "header": "showDareWordsHeaderActions"
@@ -1253,6 +1255,14 @@ const GAME_ASSETS = {
     "panel": "findDiffPanel",
     "panelTitle": "🔍 大家来找茬",
     "header": "showFindDiffHeaderActions"
+  },
+  "factory_funner": {
+    "scripts": ["/static/games/factory_funner.js?v=4"],
+    "styles": ["/static/games/factory_funner.css?v=3"],
+    "markup": "/static/games/factory_funner.html?v=3",
+    "panel": "factoryFunnerPanel",
+    "panelTitle": "🏭 工厂乐翻天",
+    "header": "showFactoryFunnerHeaderActions"
   }
 };
 

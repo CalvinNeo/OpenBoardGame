@@ -116,6 +116,7 @@ from game.dadada import DadadaGame
 from game.trio import TrioGame
 from game.mushroom_picking import MushroomPickingGame
 from game.find_diff import FindDiffGame
+from game.factory_funner import FactoryFunnerGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -235,6 +236,7 @@ __all__ = [
     "TrioGame",
     "MushroomPickingGame",
     "FindDiffGame",
+    "FactoryFunnerGame",
     "GameDefinition",
     "get_game",
     "list_games",

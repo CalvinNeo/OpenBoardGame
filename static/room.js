@@ -1403,6 +1403,8 @@ const GAME_WEIGHT = {
   mushroom_picking: 1.40,
   // No BGG entry: 大家来找茬 is a generated picture puzzle, not a published board game.
   find_diff: 1.00,
+  // BGG boardgame/183284 (Factory Funner, Corné van Moorsel / Cwali).
+  factory_funner: 2.40,
   pokemon_adventure: 1.17,
   chromino: 1.24,
   skull_king: 1.73,

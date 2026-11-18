@@ -644,7 +644,30 @@ function beats(candidate, active): boolean {
 
 ---
 
-## 12. 参考来源
+## 12. 2026-11-18 UI 优化
+
+- 主体直接使用现有 Game 容器，并以 `🎪 Scout` 为标题。上方只保留轮次、当前行动者和人数变体，起始玩家及中心标记移入可折叠的 Table details。
+- 台面采用浅绿色舞台，手牌采用不重叠的双数值卡面。桌面宽屏把玩家计分放在右侧，窄屏移到手牌之后。手机手牌每行六张，避免整体横向滚动。
+- 移除独立行动区，Show、Scout 和 Scout + Show 的确认放在手牌旁，按当前选择显示。点击台面边牌上、下半部决定挖角数值，再通过手牌下方 Before 或 After last card 选择插入位置。可选的插牌预览默认折叠，点空白取消选择，不设 Clear Selection。
+- 修正台面中间牌及等待期间手牌误带交互的问题，只有当前合法动作的实际目标可点击。相邻选牌、Hint 循环、Scout + Show 后继续 Show 或 Finish Turn 保持原协议。服务器状态变化后清除过期选择，重绘恢复键盘焦点而不跳动滚动位置。
+- 开局两种朝向采用紧凑预览。从第二轮起，先查看上一轮计分、选择朝向，再在朝向预览旁按 Next Round 提交 `ready_hand`。复用现有服务端所有玩家锁定朝向的屏障，不新增后端动作，也不改变发牌和计分规则。Bot 沿用现有自动准备逻辑。
+- Help 迁移到共享中英双语组件，提供基本规则、开局与演出、挖角与加演、计分与界面四个页签。Explain 使用共享捕获与命中测试，覆盖禁用按钮、卡牌当前及反面数值、插牌位置和计分含义，解释一次自动退出，支持 Escape。
+- 非交互卡牌与计分图标支持悬停、键盘聚焦或手机轻触提示，三秒自动关闭，连续触摸替换内容。操作按钮和可点击卡牌不额外弹出提示。手势位移超过阈值时不选牌，手牌保留正常页面纵向滚动。
+- 资源继续通过 `GAME_ASSETS` 延迟加载，保留 `obg-game-scout-1` 样式占位组，更新 Scout 脚本、模板、CSS 及首页 manifest 缓存版本，删除旧 Help/Explain 模板占位。
+
+### 验收记录
+
+- `tests/scout.browser.cjs` 使用真实 Chrome 检查 320、390、1024、1440px，覆盖开局、演出、等待、两人变体、轮间结算、终局、旁观和长名字，并保存截图到忽略目录 `tmp/scout-ui/`。
+- 四种宽度均检查页面及组件无横向溢出，验证相邻选牌、空白取消、边牌上下数值选择、插牌、预览、Scout、Scout + Show、Finish Turn、Help 页签、禁用按钮 Explain、无说明控件拦截、Escape 和滚动防误触。
+- 触摸模式验证提示替换、三秒消失、动作不触发提示，以及真实触摸滑动可滚动页面且不会选牌。
+- 真实 Socket.IO 双人对局从创建房间、加入、准备、开局和多次行动推进到第二轮，验证一个玩家确认后仍等待另一玩家，双方 Next Round 后才继续，并验证刷新重连和首帧重放。
+- 配套检查为 `python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`、`node --check static/games/scout.js`、`node --check tests/scout.browser.cjs`、`node scripts/smoke_load.cjs scout` 和 `git diff --check`。
+- 通用 `tests/game_assets.browser.cjs` 在首个资源断言失败：旧断言只允许 `shared.js`，而首页现已常驻加载 `shared_help.js` 和 `shared_effects.js`，尚未执行到游戏用例。本次不修改无关断言，Scout 专项测试已另行验证真实懒加载、刷新重连及各尺寸布局，整体交付不宣称全部验收通过。
+- 浏览器验收环境为 Chrome 桌面与移动触摸模拟，未在实体 iOS、Android 或 Windows 设备上复测。本次没有使用外部美术资源，没有修改游戏规则或根 README。
+
+---
+
+## 13. 参考来源
 
 以下是本整理使用到的公开来源：
 

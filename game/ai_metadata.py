@@ -37,6 +37,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "emerald_skulls",
     "eternal_decks",
     "exploding_kittens",
+    "factory_funner",
     "felix",
     "for_sale",
     "gaia_project",

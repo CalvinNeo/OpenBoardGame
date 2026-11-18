@@ -62,6 +62,25 @@
 - 验证：真实服务端跑通翻牌 → 点选拼词 → 抢答 → 表决；点 2 张卡时提示「至少 3 个字。」且按钮禁用，点第 3 张后按钮亮起并显示「✓ 3 个字，全部来自桌面」，点已选区的字可取回并重新编号，点空白处清空全部，抢答提交后服务端收到的词句与界面一致。
 - 视口 320 / 390 / 1024 / 1440 px：均无横向溢出、无板块重叠；已选字卡在四档下都单行显示，手机端 36×36、桌面端 40×40；320px 页面高度由 833px 降到 780px（刚好一屏）。控制台与网络无错误。
 
+## 开局可选最短词句 3 / 4 / 5 字（2026-11-18）
+
+- 需求：原规则把「至少 3 个字」写死在代码里，现在改为开局可选 3、4、5 个字。
+- 后端 `game/dare_words.py`：`MIN_PHRASE_CHARS` 常量换成 `MIN_PHRASE_CHOICES = (3, 4, 5)` 与 `DEFAULT_MIN_PHRASE_CHARS = 3`；`CONFIG_SCHEMA` 增加 `min_chars` 枚举；`init_game` 把 `config` 归一化为 `{deck_size, min_chars}` 并写入 `state["min_chars"]`，非整数或越界值直接抛错（挡住 JSON Schema 里 `3.0` 与 `true` 这类相等但类型不对的值）。
+- 所有下限判定改为读状态：`validate_phrase`（报错文案「至少要用 N 个字。」）、`get_legal_actions`（桌面不足 N 张不能抢答）、`_is_game_over`（牌堆空且桌面不足 N 张才自动结束）、`get_public_view` 的 `min_chars`。
+- 存档：`deserialize` 接受旧档（既无 `config.min_chars` 也无 `state.min_chars`）并归一化为 3；`config` 与 `state.min_chars` 不一致视为篡改。
+- Bot：新增 `BOT_PHRASES_LONG`（10 条 5 字词组，仅在最短 5 字时启用，3 / 4 字局节奏不变），并给 `BOT_PATTERNS` 补 15 条 4–5 槽模板。补的模板里有一半不含动词槽，因此 60 张短牌堆（没有任何动作字）也能凑出 4 / 5 字词。词库与模板按 `len(phrase) >= min_chars` 过滤。
+- 前端：房间设置新增「最短词句 Min chars」下拉（3 个字 · 经典 / 4 个字 / 5 个字 · 最难），`getDareWordsConfig()` 一并提交 `min_chars`；已选字卡区的占位文案改为按当前下限动态生成；Help 的流程与抢答章节、Explain 的 `claim` 条目改写为「房间设置选定的字数」。资源版本 `dare_words.js?v=5`、`dare_words.html?v=3`，首页 `game_assets.js?v=258`。
+- 测试：`tests/test_dare_words.py` 新增下限门槛、结束阈值随下限变化、存档保下限与旧档归一化、3 / 4 / 5 × 全副 / 短副 Bot 对局不卡死且每次抢答都不短于下限；`tests/test_dare_words_integration.py` 新增开局下发 `min_chars=5` 后 4 字抢答被拒、5 字抢答进入表决、`min_chars=6` 开局失败。
+
+### 验收记录（2026-11-18）
+
+- 修改文件：`game/dare_words.py`、`static/games/dare_words.{html,js}`、`static/game_assets.js`、`static/index.html`、`tests/test_dare_words.py`、`tests/test_dare_words_integration.py` 和本文件。
+- 定向回归：`python3 -m unittest tests.test_dare_words tests.test_dare_words_integration tests.test_prepared_game_initialization tests.test_frontend_script_names tests.test_frontend_style_assets tests.test_game_dev_order tests.test_game_names tests.test_game_tags tests.test_ai_metadata tests.test_bot_threading` 共 61 项通过；`node --check static/games/dare_words.js`、`node scripts/smoke_load.cjs dare_words`、`git diff --check` 通过。
+- 真实服务端浏览器验收（Chrome + playwright-core，脚本 `tmp/dw_viewport_check.cjs`）：320 / 390 / 1024 / 1440 px 四档各开一局**真实双人局**（无 Bot 干扰），逐档走完 开局设置 → 开始 → 交替翻 6 张 → 选 4 张被锁并提示「至少 5 个字。」→ 选第 5 张解锁 → 抢答 → 表决 → 结算暂停。四档均：面板真实可见、无横向溢出、翻牌与抢答按钮不重叠、桌面字列不压翻牌按钮、记分板与状态栏尺寸正常、结算显示 +5 张且暂停等 Next；52 项断言全通过，0 条 console / page 错误。
+- 交互与文案：房间设置下拉真实提交 `min_chars`（`getDareWordsConfig()` 返回 `{deck_size,min_chars}`），开局后下拉锁定为所选值；已选字卡区占位文案随下限变为「点字卡拼出至少 5 个字」；点已选区的字可取回。
+- 未检查：iOS / Android 真机；桌面宽度下 Room Control 默认收起为 Dock（`#roomControlsPanel.collapsed`，既有共享行为，牌堆下拉同样如此），验收时按玩家操作点开 Dock 后测量。
+- 本机验收产生的房间只存在于运行中的服务内存里，`.data/` 未新增目录。
+
 ## 提示遮挡翻牌按钮修复（2026-11-11）
 
 - 问题：桌面字列外层带 `data-dw-tip`，悬停字卡时事件冒泡到外层，提示被定位到整个字列区块的下方，正好压住「翻牌」按钮。

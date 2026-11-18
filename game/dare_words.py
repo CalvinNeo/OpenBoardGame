@@ -9,7 +9,10 @@ from typing import Dict, List, Optional, Tuple
 from jsonschema import Draft7Validator
 
 
-MIN_PHRASE_CHARS = 3
+# Room setup picks the phrase-length floor: three keeps the classic rules while
+# four and five make every claim harder to reach.
+MIN_PHRASE_CHOICES: Tuple[int, ...] = (3, 4, 5)
+DEFAULT_MIN_PHRASE_CHARS = 3
 MAX_PHRASE_CHARS = 24
 DECK_SIZES = {"short": 60, "full": 100}
 DEFAULT_DECK_SIZE = "full"
@@ -47,6 +50,14 @@ BOT_PHRASES: Tuple[str, ...] = (
     "鸡在吃米", "鱼在水中", "鸟在天上", "人在城里", "我在家里",
 )
 
+# Longer bot vocabulary, only consulted when the room asks for five-character
+# phrases. The three and four character games keep using BOT_PHRASES alone so
+# their pace does not change.
+BOT_PHRASES_LONG: Tuple[str, ...] = (
+    "猫吃大米饭", "猫在吃大米", "老牛在吃草", "老虎在吃人", "大鱼在水中",
+    "小鸟在天上", "老王家有猫", "我在家里吃", "有钱人不少", "大猫在树上",
+)
+
 # Fallback grammar. When no dictionary word fits, a bot still builds a readable
 # phrase by filling simple Chinese sentence patterns from the cards on the table.
 ROLE_CHARACTERS: Dict[str, Tuple[str, ...]] = {
@@ -79,11 +90,41 @@ BOT_PATTERNS: Tuple[Tuple[str, ...], ...] = (
     ("noun", "要", "verb"),
     ("pron", "会", "verb"),
     ("noun", "会", "verb"),
+    # Longer patterns. They only matter once the room raises the phrase minimum,
+    # and the ones without a verb slot also work on the short deck, which carries
+    # no action characters at all.
+    ("noun", "在", "noun", "上"),
+    ("noun", "在", "noun", "里"),
+    ("noun", "在", "noun", "中"),
+    ("noun", "在", "noun", "下"),
+    ("pron", "是", "adj", "的"),
+    ("noun", "是", "adj", "的"),
+    ("pron", "不", "是", "noun"),
+    ("noun", "不", "是", "noun"),
+    ("noun", "太", "adj", "了"),
+    ("noun", "verb", "了", "noun"),
+    ("pron", "不", "verb", "noun"),
+    ("noun", "不", "verb", "noun"),
+    ("pron", "要", "verb", "noun"),
+    ("pron", "会", "verb", "noun"),
+    ("adj", "的", "noun", "在", "noun"),
+    ("pron", "的", "noun", "在", "noun"),
+    ("pron", "是", "adj", "的", "noun"),
+    ("pron", "不", "是", "adj", "的"),
+    ("noun", "不", "是", "adj", "的"),
+    ("adj", "的", "adj", "的", "noun"),
+    ("pron", "有", "adj", "的", "noun"),
+    ("adj", "的", "noun", "verb", "noun"),
+    ("pron", "的", "noun", "verb", "noun"),
+    ("noun", "在", "noun", "上", "verb"),
 )
 
 CONFIG_SCHEMA = {
     "type": "object",
-    "properties": {"deck_size": {"enum": sorted(DECK_SIZES)}},
+    "properties": {
+        "deck_size": {"enum": sorted(DECK_SIZES)},
+        "min_chars": {"enum": list(MIN_PHRASE_CHOICES)},
+    },
     "additionalProperties": False,
 }
 ACTION_SCHEMA = {
@@ -124,6 +165,12 @@ def _row_characters(state: Dict) -> List[str]:
     return [card["char"] for card in state["row"]]
 
 
+def _min_chars(state: Dict) -> int:
+    """The phrase-length floor chosen when the room started."""
+    value = state.get("min_chars", DEFAULT_MIN_PHRASE_CHARS)
+    return value if type(value) is int and value in MIN_PHRASE_CHOICES else DEFAULT_MIN_PHRASE_CHARS
+
+
 def _blocked(state: Dict, player_id: str) -> bool:
     """A failed claim only unlocks after one more card reaches the table."""
     return state["blocked"].get(player_id) == state["flips"]
@@ -132,8 +179,9 @@ def _blocked(state: Dict, player_id: str) -> bool:
 def validate_phrase(state: Dict, phrase: str) -> Tuple[Optional[List[int]], Optional[str]]:
     """Return the card ids a phrase consumes, or the reason it is illegal."""
     characters = normalize_phrase(phrase)
-    if len(characters) < MIN_PHRASE_CHARS:
-        return None, f"至少要用 {MIN_PHRASE_CHARS} 个字。"
+    minimum = _min_chars(state)
+    if len(characters) < minimum:
+        return None, f"至少要用 {minimum} 个字。"
     if len(characters) > MAX_PHRASE_CHARS:
         return None, f"最多 {MAX_PHRASE_CHARS} 个字。"
     for character in characters:
@@ -156,7 +204,7 @@ def _voter_ids(state: Dict, claimer_id: str) -> List[str]:
 
 
 def _is_game_over(state: Dict) -> bool:
-    return not state["deck"] and len(state["row"]) < MIN_PHRASE_CHARS
+    return not state["deck"] and len(state["row"]) < _min_chars(state)
 
 
 def _finish(state: Dict) -> None:
@@ -210,11 +258,15 @@ def _resolve_claim(state: Dict) -> None:
 
 def _bot_phrase(state: Dict) -> Optional[str]:
     """Prefer a real word, then fall back to function-character grammar."""
+    minimum = _min_chars(state)
+    vocabulary = BOT_PHRASES + BOT_PHRASES_LONG if minimum >= 5 else BOT_PHRASES
     available: Dict[str, int] = {}
     for character in _row_characters(state):
         available[character] = available.get(character, 0) + 1
     best: Optional[str] = None
-    for phrase in BOT_PHRASES:
+    for phrase in vocabulary:
+        if len(phrase) < minimum:
+            continue
         needed: Dict[str, int] = {}
         for character in phrase:
             needed[character] = needed.get(character, 0) + 1
@@ -228,7 +280,10 @@ def _bot_phrase(state: Dict) -> Optional[str]:
 
 def _compose_phrase(state: Dict, available: Dict[str, int]) -> Optional[str]:
     """Fill a sentence pattern with table cards, keeping every slot in its role."""
+    minimum = _min_chars(state)
     for pattern in BOT_PATTERNS:
+        if len(pattern) < minimum:
+            continue
         used: Dict[str, int] = {}
         picked: List[str] = []
         for slot in pattern:
@@ -265,8 +320,12 @@ class DareWordsGame:
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         config = config if isinstance(config, dict) else {}
         if not _CONFIG_VALIDATOR.is_valid(config):
-            raise ValueError("Dare to Make Words only accepts a full or short deck.")
+            raise ValueError("Dare to Make Words only accepts a full or short deck "
+                             "and a 3, 4 or 5 character phrase minimum.")
         deck_size = config.get("deck_size", DEFAULT_DECK_SIZE)
+        min_chars = config.get("min_chars", DEFAULT_MIN_PHRASE_CHARS)
+        if type(min_chars) is not int or min_chars not in MIN_PHRASE_CHOICES:
+            raise ValueError("The phrase minimum must be 3, 4 or 5 characters.")
         metadata = []
         for index, player in enumerate(players):
             if not isinstance(player, dict) or not isinstance(player.get("player_id"), str) or not player["player_id"]:
@@ -287,7 +346,8 @@ class DareWordsGame:
             raise ValueError("Player IDs and seats must be unique.")
         return {
             "game_id": DareWordsGame.game_id, "version": 1,
-            "config": {"deck_size": deck_size}, "deck_size": deck_size,
+            "config": {"deck_size": deck_size, "min_chars": min_chars},
+            "deck_size": deck_size, "min_chars": min_chars,
             "game_token": secrets.token_hex(16), "window_id": 0, "revision": 0,
             "turn_order": ids, "players": {player["player_id"]: player for player in metadata},
             "phase": "flipping", "round": 1,
@@ -308,7 +368,7 @@ class DareWordsGame:
             actions: List[str] = []
             if player_id == state["flipper"] and state["deck"]:
                 actions.append("flip")
-            if len(state["row"]) >= MIN_PHRASE_CHARS and not _blocked(state, player_id):
+            if len(state["row"]) >= _min_chars(state) and not _blocked(state, player_id):
                 actions.append("claim")
             if not state["deck"]:
                 actions.append("finish_game")
@@ -440,7 +500,7 @@ class DareWordsGame:
             "deck_remaining": len(state["deck"]), "deck_total": DECK_SIZES[state["deck_size"]],
             "row": [dict(card) for card in state["row"]],
             "flipper": state["flipper"], "current_turn": state["flipper"],
-            "min_chars": MIN_PHRASE_CHARS, "max_chars": MAX_PHRASE_CHARS,
+            "min_chars": _min_chars(state), "max_chars": MAX_PHRASE_CHARS,
             "flips": state["flips"], "claim": claim_view,
             "last_result": copy.deepcopy(state["last_result"]),
             "history": copy.deepcopy(state["history"]),
@@ -485,9 +545,18 @@ class DareWordsGame:
             if (not isinstance(state, dict) or state.get("game_id") != DareWordsGame.game_id
                     or type(state.get("version")) is not int or state["version"] != 1):
                 raise ValueError("Invalid Dare to Make Words save.")
-            deck_size = state.get("deck_size")
-            if deck_size not in DECK_SIZES or state["config"] != {"deck_size": deck_size}:
+            saved_config = state.get("config")
+            if not isinstance(saved_config, dict) or not _CONFIG_VALIDATOR.is_valid(saved_config):
+                raise ValueError("Invalid saved config.")
+            deck_size = saved_config.get("deck_size", DEFAULT_DECK_SIZE)
+            min_chars = saved_config.get("min_chars", DEFAULT_MIN_PHRASE_CHARS)
+            if (state.get("deck_size") != deck_size
+                    or state.get("min_chars", min_chars) != min_chars):
                 raise ValueError("Invalid saved deck size.")
+            # Saves written before the phrase minimum became configurable carry
+            # neither key, so both are normalized to the classic three.
+            state["config"] = {"deck_size": deck_size, "min_chars": min_chars}
+            state["min_chars"] = min_chars
             players = [state["players"][player_id] for player_id in state["turn_order"]]
             baseline = DareWordsGame.init_game(state["config"], players)
             if state["turn_order"] != baseline["turn_order"]:

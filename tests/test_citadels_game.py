@@ -1,8 +1,12 @@
 import unittest
+import random
+from copy import deepcopy
 
 from game.citadels import (
     CitadelsGame,
     _advance_turn_sequence,
+    _best_build_plan,
+    _best_magician_action,
     _finish_round,
     _public_possible_role_holders,
     _resolve_assassin,
@@ -26,7 +30,129 @@ def _players(count):
     ]
 
 
+def _district(card_id, cost=2, color="green", name=None):
+    return {
+        "id": card_id, "name_cn": name or card_id, "name_en": card_id,
+        "color": color, "cost": cost, "text": "", "score_bonus": 0,
+        "protect_from_warlord": False, "counts_as_any_color": False,
+    }
+
+
 class CitadelsGameTests(unittest.TestCase):
+    def bot_state(self, rank=7, gold=6):
+        state = CitadelsGame.init_game({}, _players(4))
+        for player in state["players"].values():
+            player.update(hand=[], city=[], chosen_ranks=[], revealed_ranks=[])
+        state["phase"] = "turn"
+        state["players"]["p1"]["gold"] = gold
+        state["players"]["p1"]["chosen_ranks"] = [rank]
+        state["active_turn"] = {
+            "player_id": "p1", "rank": rank, "step": "main",
+            "collected_tax": True, "ability_used": False,
+            "builds_used": 0, "build_limit": 3 if rank == 7 else 1,
+            "draw_offer": [],
+        }
+        return state
+
+    def test_architect_plans_three_builds_instead_of_one_expensive_district(self):
+        state = self.bot_state()
+        state["players"]["p1"]["hand"] = [_district("expensive", 6)] + [
+            _district(f"cheap_{index}", 2) for index in range(3)
+        ]
+        original = deepcopy(state)
+        plan = _best_build_plan(state, "p1", 7)
+        self.assertEqual({card["id"] for card in plan}, {"cheap_0", "cheap_1", "cheap_2"})
+        self.assertEqual(state, original)
+        for unused in range(3):
+            action = CitadelsGame.bot_move(state, "p1")
+            self.assertEqual(action["type"], "build")
+            self.assertIsNone(CitadelsGame.apply_action(state, "p1", action)[1])
+        self.assertEqual(len(state["players"]["p1"]["city"]), 3)
+
+    def test_build_plan_respects_duplicates_and_remaining_slots(self):
+        state = self.bot_state()
+        state["players"]["p1"]["city"] = [_district("built", name="duplicate")]
+        state["players"]["p1"]["hand"] = [
+            _district("old", name="duplicate"), _district("first", name="same"),
+            _district("second", name="same"), _district("unique"),
+        ]
+        self.assertEqual(len(_best_build_plan(state, "p1", 7)), 2)
+        state["active_turn"]["builds_used"] = 2
+        self.assertEqual(len(_best_build_plan(state, "p1", 7)), 1)
+        state["active_turn"]["builds_used"] = 3
+        self.assertEqual(_best_build_plan(state, "p1", 7), [])
+
+    def test_architect_takes_gold_to_unlock_last_hand_card(self):
+        state = self.bot_state(gold=2)
+        state["active_turn"]["step"] = "choose_income"
+        state["players"]["p1"]["hand"] = [_district("castle", 4)]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1")["choice"], "gold")
+
+    def test_bot_saves_toward_unaffordable_hand_instead_of_drawing_forever(self):
+        state = self.bot_state(rank=4, gold=0)
+        state["active_turn"]["step"] = "choose_income"
+        state["players"]["p1"]["hand"] = [_district("palace", 5)]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1")["choice"], "gold")
+
+    def test_income_accounts_for_merchant_bonus_and_tax(self):
+        state = self.bot_state(rank=6, gold=1)
+        state["active_turn"]["step"] = "choose_income"
+        state["players"]["p1"]["city"] = [_district("tax", 2)]
+        state["players"]["p1"]["hand"] = [_district("build", 3)]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1")["choice"], "cards")
+
+    def test_duplicate_only_hand_draws_instead_of_hoarding_gold(self):
+        state = self.bot_state(rank=4)
+        state["active_turn"]["step"] = "choose_income"
+        state["players"]["p1"]["city"] = [_district("built", name="same")]
+        state["players"]["p1"]["hand"] = [_district("duplicate", name="same")]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1")["choice"], "cards")
+
+    def test_warlord_never_destroys_own_city(self):
+        state = self.bot_state(rank=8)
+        state["players"]["p1"]["city"] = [_district("own", 5)]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1"), {"type": "end_turn"})
+
+    def test_warlord_reserves_gold_for_building(self):
+        state = self.bot_state(rank=8, gold=4)
+        state["players"]["p1"]["hand"] = [_district("own_build", 4)]
+        state["players"]["p2"]["city"] = [_district("target", 4)]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1"), {"type": "build", "card_id": "own_build"})
+
+    def test_magician_redraws_duplicates_without_throwing_away_useful_card(self):
+        state = self.bot_state(rank=3, gold=2)
+        state["players"]["p1"]["city"] = [_district("built", name="same")]
+        state["players"]["p1"]["hand"] = [_district("duplicate", name="same"), _district("useful")]
+        self.assertEqual(_best_magician_action(state, "p1"), {"type": "magician_redraw", "card_ids": ["duplicate"]})
+
+    def test_bot_decision_does_not_depend_on_opponent_hand_contents(self):
+        state = self.bot_state(rank=3, gold=2)
+        state["players"]["p1"]["hand"] = [_district("useful")]
+        state["players"]["p2"]["hand"] = [_district("hidden_cheap", 1)]
+        action = CitadelsGame.bot_move(state, "p1")
+        state["players"]["p2"]["hand"] = [_district("hidden_expensive", 6)]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1"), action)
+
+    def test_seeded_bot_games_finish_with_legal_actions_for_all_player_counts(self):
+        random_state = random.getstate()
+        try:
+            for player_count in range(2, 7):
+                with self.subTest(players=player_count):
+                    random.seed(5300 + player_count)
+                    state = CitadelsGame.init_game({"winning_city_size": 7}, _players(player_count))
+                    for unused in range(2500):
+                        if state["game_over"]:
+                            break
+                        acting = next(player_id for player_id in state["turn_order"]
+                                      if CitadelsGame.get_legal_actions(state, player_id))
+                        action = CitadelsGame.bot_move(state, acting)
+                        self.assertIsNotNone(action)
+                        self.assertIsNone(CitadelsGame.apply_action(state, acting, action)[1], action)
+                    self.assertTrue(state["game_over"])
+                    self.assertTrue(state["winner_ids"])
+        finally:
+            random.setstate(random_state)
+
     def test_five_player_game_uses_queen_mode(self):
         state = CitadelsGame.init_game({}, _players(5))
         self.assertEqual(state["character_mode"], "queen9")
@@ -193,6 +319,7 @@ class CitadelsGameTests(unittest.TestCase):
 
     def test_bot_keeps_higher_value_card_from_draw_offer(self):
         state = CitadelsGame.init_game({}, _players(4))
+        state["players"]["p1"]["hand"] = []
         state["phase"] = "turn"
         state["active_turn"] = {
             "player_id": "p1",
@@ -229,6 +356,14 @@ class CitadelsGameTests(unittest.TestCase):
         }
         action = CitadelsGame.bot_move(state, "p1")
         self.assertEqual(action, {"type": "choose_draw", "card_id": "expensive"})
+
+    def test_bot_prefers_new_district_over_duplicate_in_draw_offer(self):
+        state = self.bot_state(rank=4)
+        state["active_turn"].update(step="choose_draw", draw_offer=[
+            _district("duplicate", 5, name="palace"), _district("new", 3, "blue"),
+        ])
+        state["players"]["p1"]["hand"] = [_district("existing", 5, name="palace")]
+        self.assertEqual(CitadelsGame.bot_move(state, "p1"), {"type": "choose_draw", "card_id": "new"})
 
     def test_bot_builds_matching_tax_color_before_collecting_tax(self):
         state = CitadelsGame.init_game({}, _players(4))

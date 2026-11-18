@@ -198,6 +198,11 @@ from game.mushroom_picking import (
     ACTION_SCHEMA as MUSHROOM_PICKING_ACTION_SCHEMA,
     CONFIG_SCHEMA as MUSHROOM_PICKING_CONFIG_SCHEMA,
 )
+from game.factory_funner import (
+    FactoryFunnerGame,
+    ACTION_SCHEMA as FACTORY_FUNNER_ACTION_SCHEMA,
+    CONFIG_SCHEMA as FACTORY_FUNNER_CONFIG_SCHEMA,
+)
 
 register_game(
     GameDefinition(
@@ -6516,5 +6521,21 @@ register_game(
         module=FindDiffGame,
         serialize=FindDiffGame.serialize,
         deserialize=FindDiffGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=FactoryFunnerGame.game_id,
+        name="Factory Funner",
+        name_zh="工厂乐翻天",
+        min_players=FactoryFunnerGame.min_players,
+        max_players=FactoryFunnerGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=FACTORY_FUNNER_ACTION_SCHEMA,
+        config_schema=FACTORY_FUNNER_CONFIG_SCHEMA,
+        module=FactoryFunnerGame,
+        serialize=FactoryFunnerGame.serialize,
+        deserialize=FactoryFunnerGame.deserialize,
     )
 )

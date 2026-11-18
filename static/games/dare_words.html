@@ -11,7 +11,16 @@
       <option value="short">Short · 60 张</option>
     </select>
   </div>
-  <div class="hint" id="dareWordsDeckHint">字卡越少，一局越短。两种牌堆都要求词句至少 3 个字。</div>
+  <div class="hint" id="dareWordsDeckHint">字卡越少，一局越短。</div>
+  <div class="row">
+    <label for="dareWordsMinCharsSelect">最短词句 Min chars</label>
+    <select id="dareWordsMinCharsSelect" aria-describedby="dareWordsMinCharsHint">
+      <option value="3" selected>3 个字 · 经典</option>
+      <option value="4">4 个字</option>
+      <option value="5">5 个字 · 最难</option>
+    </select>
+  </div>
+  <div class="hint" id="dareWordsMinCharsHint">抢答词句至少要有这么多个字，下限越高越难凑。</div>
 </template>
 <template data-game-target="dareWordsPanel" data-game-mode="contents">
   <div class="dare-words-status" role="status" aria-live="polite" data-dw-explain="turn">

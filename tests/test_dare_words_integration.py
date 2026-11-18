@@ -54,15 +54,54 @@ class DareWordsRoomTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_start_applies_deck_config(self):
         room = await self.make_room(config={"deck_size": "short"})
-        self.assertEqual(room.game_state["config"], {"deck_size": "short"})
+        self.assertEqual(room.game_state["config"], {"deck_size": "short", "min_chars": 3})
         self.assertEqual(len(room.game_state["deck"]), 60)
         await app._emit_room_state(room)
         payload = app.sio.emits[-1]["payload"]
-        self.assertEqual(payload["game_config"], {"deck_size": "short"})
+        self.assertEqual(payload["game_config"], {"deck_size": "short", "min_chars": 3})
         self.assertEqual(list(payload["player_counts"]), list(range(2, 9)))
 
         room = await self.make_room(start=False, config=None)
         await app.on_room_start("s0", {"config": {"deck_size": "huge"}})
+        self.assertEqual(room.status, "lobby")
+        self.assertIsNone(room.game_state)
+        self.assertEqual(app.sio.emits[-1]["event"], "system:error")
+
+    async def test_start_applies_the_phrase_minimum(self):
+        room = await self.make_room(config={"min_chars": 5})
+        self.assertEqual(room.game_state["min_chars"], 5)
+        self.assertEqual(room.game_state["config"], {"deck_size": "full", "min_chars": 5})
+
+        def flipper_session():
+            seat = next(index for index, player in enumerate(room.players)
+                        if player.player_id == room.game_state["flipper"])
+            return f"s{seat}"
+
+        for _ in range(4):
+            await app.on_game_action(flipper_session(), {"action": action(room, "flip")})
+        self.assertEqual(len(room.game_state["row"]), 4)
+        for view in self.views()[-3:]:
+            self.assertEqual(view["min_chars"], 5)
+            self.assertNotIn("claim", view["legal_actions"])
+
+        await app.on_game_action(flipper_session(), {"action": action(room, "flip")})
+        self.assertEqual(len(room.game_state["row"]), 5)
+        for view in self.views()[-3:]:
+            self.assertIn("claim", view["legal_actions"])
+
+        short_phrase = "".join(card["char"] for card in room.game_state["row"][:4])
+        app.sio.emits.clear()
+        await app.on_game_action("s0", {"action": action(room, "claim", phrase=short_phrase)})
+        self.assertEqual(app.sio.emits[-1]["event"], "system:error")
+        self.assertEqual(room.game_state["phase"], "flipping")
+
+        phrase = "".join(card["char"] for card in room.game_state["row"])
+        await app.on_game_action("s0", {"action": action(room, "claim", phrase=phrase)})
+        self.assertEqual(room.game_state["phase"], "voting")
+        self.assertEqual(len(room.game_state["claim"]["card_ids"]), 5)
+
+        room = await self.make_room(start=False, config=None)
+        await app.on_room_start("s0", {"config": {"min_chars": 6}})
         self.assertEqual(room.status, "lobby")
         self.assertIsNone(room.game_state)
         self.assertEqual(app.sio.emits[-1]["event"], "system:error")

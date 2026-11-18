@@ -12,6 +12,115 @@
   --citadels-gold-soft: #fff7df;
 }
 
+.game-panel[data-game-theme="citadels"] > .panel-header,
+.game-panel[data-game-theme="citadels"] .game-panel-title {
+  flex-wrap: nowrap;
+}
+
+.game-panel[data-game-theme="citadels"] .game-panel-title h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#citadelsHeaderActions {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+#citadelsHand {
+  max-height: min(48vh, 480px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.citadels-role-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+  gap: 5px;
+  margin: 12px 0;
+}
+
+.citadels-track-role {
+  min-width: 0;
+  padding: 7px 3px;
+  border-bottom: 3px solid #cbd5e1;
+  border-radius: 5px;
+  background: #f1f5f9;
+  text-align: center;
+  color: #475569;
+}
+
+.citadels-track-role small {
+  display: block;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citadels-track-role.current {
+  background: #fff1c2;
+  border-color: #b7791f;
+  color: #7c4a08;
+}
+
+.citadels-track-role.removed {
+  opacity: 0.55;
+  border-bottom-style: dashed;
+}
+
+.citadels-track-role.revealed:not(.current) {
+  background: #e9f7ef;
+  border-color: #6aa482;
+}
+
+.citadels-card,
+.citadels-player-card,
+.citadels-action-section {
+  position: relative;
+}
+
+.citadels-confirmation {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #b7791f;
+  border-radius: inherit;
+  background: rgba(255, 250, 232, 0.96);
+  color: #7c4a08;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.citadels-confirmation strong {
+  font-size: 13px;
+}
+
+.citadels-tooltip {
+  position: fixed;
+  z-index: 2000;
+  max-width: min(290px, calc(100vw - 16px));
+  box-sizing: border-box;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #172033;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
 #citadelsPanel > .row {
   gap: 6px;
   margin-bottom: 6px;
@@ -87,25 +196,6 @@
   color: var(--citadels-muted);
   font-size: 13px;
   line-height: 1.45;
-}
-
-#citadelsPanel .citadels-summary-pass-btn {
-  flex: 0 0 auto;
-  border-color: #936716;
-  background: linear-gradient(180deg, #c98d27, #a96f13);
-  padding: 5px 11px;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 850;
-  line-height: 1.2;
-  box-shadow: 0 3px 8px rgba(126, 78, 10, 0.18);
-}
-
-#citadelsPanel .citadels-summary-pass-btn:disabled {
-  border-color: #c7bdac;
-  background: #d8d2c8;
-  box-shadow: none;
-  color: #756f66;
 }
 
 .citadels-summary-status {
@@ -437,10 +527,8 @@
 }
 
 .citadels-action-section {
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 10px;
+  padding: 6px 0;
+  min-height: 68px;
 }
 
 .citadels-action-title {
@@ -626,7 +714,9 @@
 }
 
 .citadels-player-name {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 14px;
   font-weight: 800;
 }
@@ -787,11 +877,6 @@
   .citadels-summary-header {
     gap: 9px;
     padding: 13px 12px 10px;
-  }
-
-  #citadelsPanel .citadels-summary-pass-btn {
-    padding: 5px 9px;
-    font-size: 10px;
   }
 
   .citadels-summary-header h3 {

@@ -1,0 +1,59 @@
+<template data-game-target="factoryFunnerPanel" data-game-mode="contents">
+    <div class="ff-status" aria-live="polite">
+        <span class="ff-pill" data-factory-funner-explain="round" data-factory-funner-tip="Round counter: one machine is revealed per round and every player installs it." tabindex="0">Round <span id="factoryFunnerRound">–</span>/<span id="factoryFunnerTotalRounds">–</span></span>
+        <span class="ff-pill ff-pill-money" data-factory-funner-explain="money" data-factory-funner-tip="Your money: the sum of what every machine in your factory currently produces." tabindex="0">💰 <span id="factoryFunnerMoney">0</span></span>
+        <span class="ff-pill ff-pill-phase" id="factoryFunnerPhase" data-factory-funner-explain="phase" data-factory-funner-tip="Current phase of the round." tabindex="0">Waiting</span>
+    </div>
+
+    <div id="factoryFunnerResult" class="ff-result hidden" role="status"></div>
+
+    <div class="ff-layout">
+        <section class="ff-machine" aria-label="This round's machine">
+            <div class="ff-heading">
+                <h3>This round</h3>
+                <span id="factoryFunnerMachineId" class="ff-muted"></span>
+            </div>
+            <div class="ff-machine-body">
+                <div id="factoryFunnerMachineTile" class="ff-tile ff-tile-lg" data-factory-funner-explain="machine" tabindex="0"></div>
+                <div class="ff-machine-info">
+                    <div class="ff-machine-value" data-factory-funner-explain="machine_value" data-factory-funner-tip="Base money this machine earns before port adjustments." tabindex="0">💰 <span id="factoryFunnerMachineValue">–</span> base</div>
+                    <ul id="factoryFunnerMachinePorts" class="ff-port-list"></ul>
+                </div>
+            </div>
+            <div class="ff-machine-actions">
+                <button id="factoryFunnerPassBtn" type="button" data-factory-funner-explain="pass">Pass</button>
+            </div>
+        </section>
+
+        <section class="ff-factory" aria-label="Your factory">
+            <div id="factoryFunnerBoard" class="ff-board" role="group" aria-label="Factory floor"></div>
+            <div id="factoryFunnerConfirm" class="ff-confirm hidden">
+                <span id="factoryFunnerConfirmHint" class="ff-confirm-hint" role="status"></span>
+                <div class="ff-confirm-actions">
+                    <button id="factoryFunnerRotateLeftBtn" type="button" aria-label="Rotate left 90 degrees" data-factory-funner-explain="rotate_left">↺</button>
+                    <button id="factoryFunnerRotateRightBtn" type="button" aria-label="Rotate right 90 degrees" data-factory-funner-explain="rotate_right">↻</button>
+                    <button id="factoryFunnerPlaceBtn" type="button" class="ff-primary" data-factory-funner-explain="place">Place</button>
+                    <button id="factoryFunnerCancelBtn" type="button" data-factory-funner-explain="cancel">Cancel</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="ff-side">
+            <section id="factoryFunnerSummary" class="ff-summary hidden" aria-label="Round results">
+                <div class="ff-heading">
+                    <h3>Round <span id="factoryFunnerSummaryRound"></span></h3>
+                    <span id="factoryFunnerSummaryWait" class="ff-muted"></span>
+                </div>
+                <div id="factoryFunnerSummaryList" class="ff-summary-list"></div>
+                <button id="factoryFunnerNextRoundBtn" type="button" class="ff-primary" data-factory-funner-explain="next_round">Next Round</button>
+            </section>
+
+            <details class="ff-details" open>
+                <summary>Players <span id="factoryFunnerPlayerCount"></span></summary>
+                <div id="factoryFunnerPlayers" class="ff-players"></div>
+            </details>
+        </div>
+    </div>
+
+    <div id="factoryFunnerTooltip" class="ff-tooltip hidden" role="tooltip"></div>
+</template>

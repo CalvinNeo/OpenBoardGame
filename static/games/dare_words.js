@@ -28,7 +28,8 @@ const DARE_WORDS_HELP_CONFIG = {
           + "<li>抢答者以外的所有玩家投票，认可(✅)或不认可(❌)。</li>"
           + "<li>结算(📣)之后所有人点 Next 才进入下一轮。</li>"
           + "</ol>"
-          + "<p>牌堆可以选择 Full 共 100 张，或者 Short 共 60 张。字卡越少，一局结束得越快。</p>",
+          + "<p>牌堆可以选择 Full 共 100 张，或者 Short 共 60 张。字卡越少，一局结束得越快。</p>"
+          + "<p>房间设置里还能选择抢答词句的最短字数：3 个字是经典规则，4 个字和 5 个字明显更难凑。</p>",
         en: "<p>The deck holds nothing but single-character cards. Characters reach the table one at a time, and the first player to build a readable phrase out of them takes those cards.</p>"
           + "<ol>"
           + "<li>The flipping duty rotates clockwise, and the player on duty flips one character card (🀄) onto the end of the table row.</li>"
@@ -37,22 +38,23 @@ const DARE_WORDS_HELP_CONFIG = {
           + "<li>After the result (📣) everyone presses Next before the next round begins.</li>"
           + "</ol>"
           + "<p>The deck comes in Full with 100 cards or Short with 60 cards. A smaller deck simply makes the game shorter.</p>"
+          + "<p>The room settings also pick the shortest legal phrase: three characters is the classic rule, while four and five are noticeably harder to reach.</p>"
       }
     },
     {
       id: "claim",
       label: { zh: "抢答与用字", en: "Claiming" },
       html: {
-        zh: "<p>一次合法的抢答至少要用 3 个字，最多 24 个字，而且只能使用汉字，标点、字母和数字都不行。</p>"
+        zh: "<p>一次合法的抢答至少要用房间设置里选定的字数（3、4 或 5 个字，默认 3 个字），最多 24 个字，而且只能使用汉字，标点、字母和数字都不行。</p>"
           + "<p>词句里的每一个字都必须来自桌面字列，同一个字卡在一次词句里只能用一次，桌上有两张同样的字才可以用两次。</p>"
           + "<p>词句只能靠点桌面字卡(🀄)拼出来，没有任何输入框，手机和电脑都不需要打字。</p>"
           + "<p>点一次字卡就把它接到词句末尾，再点一次同一张卡可以取回；点已选字卡区里的字同样可以取回，点面板空白处清空全部。</p>"
-          + "<p>凑够 3 个字且不超过 24 个字时，抢答按钮才会亮起。</p>",
-        en: "<p>A legal claim uses at least three characters and at most twenty four, and every one of them must be a Chinese character. Punctuation, letters and digits are rejected.</p>"
+          + "<p>凑够房间设置要求的字数且不超过 24 个字时，抢答按钮才会亮起。</p>",
+        en: "<p>A legal claim uses at least the number of characters chosen in the room settings (three, four or five, three by default) and at most twenty four, and every one of them must be a Chinese character. Punctuation, letters and digits are rejected.</p>"
           + "<p>Each character in the phrase must come from the table row, and one card can only be spent once per phrase, so using the same character twice needs two copies of it on the table.</p>"
           + "<p>The phrase is built only by tapping the character cards (🀄) on the table. There is no input box, so neither a phone nor a desktop ever needs the keyboard.</p>"
           + "<p>One tap appends a card to the end of the phrase and a second tap on the same card returns it. Tapping a character in the picked area also returns it, and tapping empty space on the panel clears everything.</p>"
-          + "<p>The claim button lights up once the phrase has at least three characters and no more than twenty four.</p>"
+          + "<p>The claim button lights up once the phrase reaches the length the room settings ask for and stays within twenty four characters.</p>"
       }
     },
     {
@@ -114,8 +116,8 @@ const DARE_WORDS_EXPLAIN = {
     en: "Once the deck is empty and the table can no longer form a legal phrase, end the game and score it."
   },
   claim: {
-    zh: "凑出至少 3 个字、只用桌面上的字的词语、短语或短句，就可以抢答。是否通顺由其他玩家投票决定。",
-    en: "Claim with a word, phrase or short sentence of at least three characters taken only from the table. The other players vote on whether it reads well."
+    zh: "凑出房间设置要求的最少字数（3、4 或 5 个字）、只用桌面上的字的词语、短语或短句，就可以抢答。是否通顺由其他玩家投票决定。",
+    en: "Claim with a word, phrase or short sentence that reaches the minimum length chosen in the room settings (three, four or five characters) and uses only characters from the table. The other players vote on whether it reads well."
   },
   phrase: {
     zh: "已选字卡区。点桌面字卡按顺序拼词，这里按顺序显示你选的字和序号；再点一次桌面上的同一张卡、或点这里的字都能取回，点面板空白处清空全部。",
@@ -211,6 +213,14 @@ if (document.readyState === "loading") {
   const cardById = (cardId) => rowCards().find((card) => card.card_id === cardId);
   const minChars = () => view?.min_chars || 3;
   const maxChars = () => view?.max_chars || 24;
+  const MIN_CHOICES = ["3", "4", "5"];
+  // Room settings and the live view must agree on the phrase minimum, so both
+  // go through the same whitelist instead of trusting a raw payload.
+  const minCharsValue = (config) => {
+    const value = String(config?.min_chars ?? "");
+    return MIN_CHOICES.includes(value) ? value : "3";
+  };
+  const selectedMinChars = () => Number(minCharsValue({ min_chars: id("MinCharsSelect")?.value }));
   const isHan = (character) => /[\u3400-\u4DBF\u4E00-\u9FFF]/.test(character);
   let phraseEmptyNode = null;
   const phraseEmpty = () => {
@@ -245,7 +255,8 @@ if (document.readyState === "loading") {
 
   function updateConfig(state) {
     const box = id("ConfigBox");
-    const select = id("DeckSelect");
+    const deckSelect = id("DeckSelect");
+    const minSelect = id("MinCharsSelect");
     const visible = state?.game_type === GAME_ID;
     box.classList.toggle("hidden", !visible);
     box.setAttribute("aria-hidden", String(!visible));
@@ -254,12 +265,16 @@ if (document.readyState === "loading") {
       return;
     }
     const config = state.status !== "lobby" && view ? view.config || {} : state.game_config || {};
-    const signature = JSON.stringify([state.room_id, config.deck_size || "full"]);
+    const minValue = minCharsValue(config);
+    const signature = JSON.stringify([state.room_id, config.deck_size || "full", minValue]);
     if (signature !== configSignature) {
-      select.value = config.deck_size === "short" ? "short" : "full";
+      deckSelect.value = config.deck_size === "short" ? "short" : "full";
+      minSelect.value = minValue;
       configSignature = signature;
     }
-    select.disabled = !connected() || state.status !== "lobby";
+    const locked = !connected() || state.status !== "lobby";
+    deckSelect.disabled = locked;
+    minSelect.disabled = locked;
   }
 
   function renderRow() {
@@ -340,6 +355,7 @@ if (document.readyState === "loading") {
   function renderPhrase(check, claimable) {
     const container = id("Phrase");
     const empty = phraseEmpty();
+    empty.textContent = `点字卡拼出至少 ${minChars()} 个字`;
     container.replaceChildren();
     container.classList.toggle("is-ready", Boolean(check.ok));
     container.classList.toggle("is-locked", !claimable);
@@ -607,8 +623,10 @@ if (document.readyState === "loading") {
   id("AcceptBtn").addEventListener("click", () => send("vote", { accept: true }));
   id("RejectBtn").addEventListener("click", () => send("vote", { accept: false }));
   id("NextBtn").addEventListener("click", () => send(view?.phase === "game_over" ? "play_again" : "next_round"));
-  id("DeckSelect").addEventListener("change", () => {
-    if (typeof updateRoomActionButtons === "function") updateRoomActionButtons();
+  [id("DeckSelect"), id("MinCharsSelect")].forEach((select) => {
+    select.addEventListener("change", () => {
+      if (typeof updateRoomActionButtons === "function") updateRoomActionButtons();
+    });
   });
 
   panel.addEventListener("click", (event) => {
@@ -654,7 +672,10 @@ if (document.readyState === "loading") {
     if (touchTipGesture) touchTipGesture.moved = true;
     hideTip();
   }, true);
-  window.getDareWordsConfig = () => ({ deck_size: id("DeckSelect").value === "short" ? "short" : "full" });
+  window.getDareWordsConfig = () => ({
+    deck_size: id("DeckSelect").value === "short" ? "short" : "full",
+    min_chars: selectedMinChars(),
+  });
   window.renderDareWordsGameState = (data) => {
     if (!active()) return;
     if (data?.game_type && data.game_type !== GAME_ID) return;

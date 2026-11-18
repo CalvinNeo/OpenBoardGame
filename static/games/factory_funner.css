@@ -1,0 +1,611 @@
+/* Factory Funner — standalone game styles (registered through GAME_ASSETS.styles). */
+
+.ff-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ff-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.ff-pill-money {
+  border-color: #facc15;
+  background: #fefce8;
+}
+
+.ff-pill-phase {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.ff-muted {
+  color: #64748b;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.ff-layout {
+  display: grid;
+  gap: 10px;
+  grid-template-areas: "machine" "factory" "side";
+  align-items: start;
+}
+
+.ff-machine { grid-area: machine; }
+.ff-factory { grid-area: factory; min-width: 0; }
+.ff-side {
+  grid-area: side;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+}
+
+.ff-machine,
+.ff-summary,
+.ff-details {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 9px 10px;
+}
+
+.ff-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ff-heading h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.ff-machine-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ff-machine-info {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.ff-machine-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ff-port-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.ff-port-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.ff-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--c, #64748b);
+  flex: 0 0 auto;
+}
+
+.ff-swatch.ff-hollow {
+  background: #ffffff;
+  border: 2px solid var(--c, #64748b);
+}
+
+.ff-machine-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------- board */
+
+/* Board, machine card and confirmation bar share one screen, so the board is
+   capped by viewport height as well as width. */
+.ff-board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 3px;
+  width: min(100%, 520px, calc(100vh - 300px));
+  min-width: 220px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  touch-action: manipulation;
+}
+
+.ff-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #eef2f7;
+  font: inherit;
+  color: inherit;
+}
+
+button.ff-cell {
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+button.ff-cell:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #60a5fa;
+}
+
+button.ff-cell:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.ff-cell.ff-filled {
+  background: linear-gradient(160deg, #f8fafc 0%, #e2e8f0 100%);
+  border-color: #94a3b8;
+}
+
+.ff-cell.ff-preview {
+  border-color: #2563eb;
+  border-style: dashed;
+  background: #dbeafe;
+}
+
+.ff-cell.ff-selected {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.ff-score {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: clamp(10px, 3.1vw, 17px);
+  line-height: 1;
+  color: #0f172a;
+  pointer-events: none;
+}
+
+.ff-score.ff-neg { color: #b91c1c; }
+.ff-score.ff-pos { color: #15803d; }
+
+.ff-port {
+  position: absolute;
+  --c: #64748b;
+  border-radius: 3px;
+  background: var(--c);
+  pointer-events: none;
+}
+
+.ff-port[data-edge="0"] { top: -1px; left: 50%; transform: translateX(-50%); width: 44%; height: 20%; }
+.ff-port[data-edge="1"] { right: -1px; top: 50%; transform: translateY(-50%); height: 44%; width: 20%; }
+.ff-port[data-edge="2"] { bottom: -1px; left: 50%; transform: translateX(-50%); width: 44%; height: 20%; }
+.ff-port[data-edge="3"] { left: -1px; top: 50%; transform: translateY(-50%); height: 44%; width: 20%; }
+
+.ff-port.ff-in {
+  background: #ffffff;
+  border: 2px solid var(--c);
+}
+
+.ff-port.ff-linked {
+  box-shadow: 0 0 0 2px rgba(21, 128, 61, 0.55);
+}
+
+/* Large machine preview next to the board. */
+.ff-tile {
+  position: relative;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background: linear-gradient(160deg, #f8fafc 0%, #e2e8f0 100%);
+  flex: 0 0 auto;
+}
+
+.ff-tile-lg {
+  width: 78px;
+  height: 78px;
+}
+
+.ff-tile-lg .ff-score {
+  font-size: 20px;
+}
+
+/* ------------------------------------------------------------- controls */
+
+.ff-confirm {
+  margin: 8px auto 0;
+  width: min(100%, 520px, calc(100vh - 300px));
+  min-width: 220px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.ff-confirm-hint {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.ff-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ff-layout button {
+  min-height: 34px;
+  padding: 5px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ff-layout button:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.ff-layout button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ff-layout button.ff-primary {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.ff-layout button.ff-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+/* -------------------------------------------------------- round summary */
+
+.ff-summary-list {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.ff-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 13px;
+}
+
+.ff-summary-row.ff-you {
+  border-color: #2563eb;
+  background: #eff6ff;
+  font-weight: 700;
+}
+
+.ff-delta {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ff-delta.ff-pos { color: #15803d; }
+.ff-delta.ff-neg { color: #b91c1c; }
+.ff-delta.ff-zero { color: #64748b; }
+
+/* -------------------------------------------------------------- players */
+
+.ff-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.ff-players {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ff-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.ff-player.ff-you {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.ff-player-main {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 2px;
+}
+
+.ff-player-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ff-player-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.ff-mini {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 1px;
+  width: 66px;
+  height: 66px;
+  flex: 0 0 auto;
+}
+
+.ff-mini-cell {
+  border-radius: 2px;
+  background: #e2e8f0;
+}
+
+.ff-mini-cell.ff-on { background: #94a3b8; }
+.ff-mini-cell.ff-on.ff-pos { background: #4ade80; }
+.ff-mini-cell.ff-on.ff-neg { background: #fca5a5; }
+
+/* --------------------------------------------------------------- result */
+
+.ff-result {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #facc15;
+  border-radius: 10px;
+  background: #fefce8;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.ff-result h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.ff-result ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 2px;
+}
+
+/* -------------------------------------------------------------- tooltip */
+
+.ff-tooltip {
+  position: fixed;
+  z-index: 60;
+  max-width: min(280px, 82vw);
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.28);
+  pointer-events: none;
+}
+
+.ff-tooltip.hidden { display: none; }
+
+/* Your turn: highlight the Room Control dock when it is collapsed. */
+body.ff-turn-active .room-dock,
+body.ff-turn-active .room-panel-dock {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------- narrow phone */
+
+@media (max-width: 560px) {
+  .game-panel[data-game-theme="factory_funner"] {
+    padding: 10px 8px;
+  }
+
+  /* Keep the machine card short so the board still fits on one screen. */
+  .ff-machine {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .ff-machine .ff-heading {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  .ff-machine-body {
+    grid-column: 1;
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .ff-machine-actions {
+    grid-column: 2;
+    margin-top: 0;
+  }
+
+  .ff-tile-lg {
+    width: 60px;
+    height: 60px;
+  }
+
+  .ff-tile-lg .ff-score {
+    font-size: 17px;
+  }
+
+  .ff-port-list {
+    font-size: 11px;
+  }
+
+  .ff-summary,
+  .ff-details {
+    padding: 8px;
+  }
+}
+
+
+/* Very narrow phones: keep status, machine, board and confirmation on one
+   screen even at 320x568. */
+@media (max-width: 420px) {
+  .ff-status {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .ff-pill {
+    padding: 2px 7px;
+    font-size: 12px;
+  }
+
+  .ff-machine {
+    padding: 7px;
+    gap: 6px;
+  }
+
+  .ff-heading h3 {
+    font-size: 13px;
+  }
+
+  .ff-tile-lg {
+    width: 52px;
+    height: 52px;
+  }
+
+  .ff-tile-lg .ff-score {
+    font-size: 15px;
+  }
+
+  .ff-machine-value {
+    font-size: 13px;
+  }
+
+  .ff-port-list {
+    font-size: 10px;
+    gap: 2px;
+  }
+
+  .ff-swatch {
+    width: 11px;
+    height: 11px;
+  }
+
+  .ff-confirm {
+    margin-top: 6px;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .ff-confirm-hint {
+    font-size: 12px;
+  }
+
+  .ff-confirm-actions {
+    gap: 5px;
+  }
+
+  .ff-layout button {
+    min-height: 30px;
+    padding: 4px 9px;
+    font-size: 12px;
+  }
+}
+
+/* -------------------------------------------------------------- desktop */
+
+@media (min-width: 900px) {
+  .ff-layout {
+    grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
+    grid-template-areas:
+      "factory machine"
+      "factory side";
+    gap: 14px;
+  }
+
+  .ff-board {
+    width: min(100%, 620px, calc(100vh - 190px));
+  }
+
+  .ff-confirm {
+    width: min(100%, 620px, calc(100vh - 190px));
+  }
+
+  .ff-score {
+    font-size: clamp(14px, 1.5vw, 20px);
+  }
+}

@@ -731,6 +731,10 @@ function renderGameState(data) {
     renderProjectLGameState(data);
     return;
   }
+  if (gameType === "factory_funner") {
+    if (typeof renderFactoryFunnerGameState === "function") renderFactoryFunnerGameState(data);
+    return;
+  }
   if (gameType === "carcassonne") {
     renderCarcassonneGameState(data);
     return;

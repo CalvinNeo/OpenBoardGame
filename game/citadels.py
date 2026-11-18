@@ -1,4 +1,5 @@
 import random
+from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
 DEFAULT_CONFIG = {
@@ -1240,6 +1241,8 @@ def _is_city_color_complete_with_card(state: Dict, player_id: str, card: Dict) -
 def _district_keep_score(state: Dict, player_id: str, card: Dict, rank: Optional[int] = None) -> int:
     player = state["players"][player_id]
     city = player["city"]
+    if any(district["name_cn"] == card["name_cn"] for district in city):
+        return -40
     score = int(card["cost"]) * 4
     score += int(card.get("score_bonus", 0)) * 8
     if card.get("counts_as_any_color"):
@@ -1280,18 +1283,44 @@ def _district_build_score(state: Dict, player_id: str, card: Dict, rank: Optiona
 
 
 def _best_buildable_card(state: Dict, player_id: str, rank: Optional[int] = None) -> Optional[Dict]:
+    plan = _best_build_plan(state, player_id, rank)
+    return plan[0] if plan else None
+
+
+def _best_build_plan(
+    state: Dict, player_id: str, rank: Optional[int] = None,
+    gold: Optional[int] = None, build_limit: Optional[int] = None,
+) -> List[Dict]:
     player = state["players"][player_id]
-    buildable = [card for card in player["hand"] if _can_build_card(player, card)]
-    if not buildable:
-        return None
-    return max(
-        buildable,
-        key=lambda card: (
-            _district_build_score(state, player_id, card, rank),
-            int(card["cost"]),
-            card["name_cn"],
-        ),
+    budget = int(player["gold"]) if gold is None else gold
+    active_turn = state.get("active_turn") or {}
+    limit = build_limit if build_limit is not None else max(
+        0, int(active_turn.get("build_limit", 3 if rank == 7 else 1))
+        - int(active_turn.get("builds_used", 0)),
     )
+    built_names = {card["name_cn"] for card in player["city"]}
+    unique_cards = {}
+    for card in player["hand"]:
+        if card["name_cn"] not in built_names and int(card["cost"]) <= budget:
+            unique_cards.setdefault(card["name_cn"], card)
+    best_plan: List[Dict] = []
+    best_score = -1
+    for count in range(1, min(limit, 3, len(unique_cards)) + 1):
+        for plan in combinations(unique_cards.values(), count):
+            if sum(int(card["cost"]) for card in plan) > budget:
+                continue
+            score = sum(int(card["cost"]) + int(card.get("score_bonus", 0)) for card in plan) * 4
+            score += count * 12
+            city = player["city"] + list(plan)
+            colors = {card["color"] for card in city}
+            if len(colors) >= 5 or (len(colors) >= 4 and any(card.get("counts_as_any_color") for card in city)):
+                score += 12
+            if len(city) >= int(state["config"]["winning_city_size"]):
+                score += 28 if not state.get("first_completed_city_player_id") else 12
+            if score > best_score:
+                best_score = score
+                best_plan = list(plan)
+    return sorted(best_plan, key=lambda card: (-_district_build_score(state, player_id, card, rank), card["id"]))
 
 
 def _best_tax_matching_build(state: Dict, player_id: str, rank: int) -> Optional[Dict]:
@@ -1322,7 +1351,8 @@ def _best_draw_choice(state: Dict, player_id: str, offered_cards: List[Dict], ra
     return max(
         offered_cards,
         key=lambda card: (
-            _district_keep_score(state, player_id, card, rank),
+            _district_keep_score(state, player_id, card, rank)
+            - (24 if any(entry["name_cn"] == card["name_cn"] for entry in state["players"][player_id]["hand"]) else 0),
             int(card["cost"]),
             card["name_cn"],
         ),
@@ -1378,7 +1408,10 @@ def _draft_role_score(state: Dict, player_id: str, rank: int) -> int:
         if affordable_count > 0:
             score += 4
     if rank == 7:
-        score += affordable_count * 5
+        plan = _best_build_plan(state, player_id, rank, gold=gold + 2, build_limit=3)
+        score += len(plan) * 8
+        if len(plan) > 1:
+            score += 12
         if len(hand) <= 3:
             score += 8
         if city_count >= winning_city_size - 2:
@@ -1578,27 +1611,33 @@ def _best_magician_action(state: Dict, player_id: str) -> Optional[Dict]:
             card["name_cn"],
         ),
     )
-    if redraw_candidates and (not buildable_cards or len(hand) >= 4):
-        redraw_count = 0
+    if redraw_candidates:
         redraw_ids: List[str] = []
+        kept_names = {card["name_cn"] for card in player["city"]}
         for card in redraw_candidates:
-            if redraw_count >= 3:
-                break
-            is_unbuildable = card["cost"] > int(player["gold"])
+            duplicate = card["name_cn"] in kept_names
+            kept_names.add(card["name_cn"])
+            is_unbuildable = card["cost"] > int(player["gold"]) + 2
             low_value = _district_keep_score(state, player_id, card) <= 18
-            if is_unbuildable or low_value or not buildable_cards:
+            if duplicate or is_unbuildable or (low_value and not _can_build_card(player, card)):
                 redraw_ids.append(card["id"])
-                redraw_count += 1
         if redraw_ids:
             return {"type": "magician_redraw", "card_ids": redraw_ids}
     return None
 
 
 def _best_destroy_target(state: Dict, player_id: str) -> Optional[Dict]:
-    targets = _warlord_destroy_targets(state, player_id)
+    plan = _best_build_plan(state, player_id, 8)
+    spare_gold = int(state["players"][player_id]["gold"]) - sum(int(card["cost"]) for card in plan)
+    winning_city_size = int(state["config"]["winning_city_size"])
+    targets = [
+        target for target in _warlord_destroy_targets(state, player_id)
+        if target["player_id"] != player_id
+        and (int(target["destroy_cost"]) <= spare_gold
+             or len(state["players"][target["player_id"]]["city"]) >= winning_city_size - 1)
+    ]
     if not targets:
         return None
-    winning_city_size = int(state["config"]["winning_city_size"])
 
     def target_score(target: Dict) -> int:
         target_player_id = target["player_id"]
@@ -1629,21 +1668,23 @@ def _best_destroy_target(state: Dict, player_id: str) -> Optional[Dict]:
 
 def _choose_income_for_bot(state: Dict, player_id: str, rank: int) -> str:
     player = state["players"][player_id]
-    hand = player["hand"]
-    buildable_now = [card for card in hand if _can_build_card(player, card)]
-    if rank == 7:
-        if buildable_now and len(hand) >= 2:
-            return "gold"
+    built_names = {card["name_cn"] for card in player["city"]}
+    useful_hand = [card for card in player["hand"] if card["name_cn"] not in built_names]
+    if not useful_hand:
         return "cards"
-    if len(hand) <= 1:
-        return "cards"
-    if any(int(card["cost"]) <= int(player["gold"]) + 2 for card in hand):
+    tax_color = ROLE_TAX_COLORS.get(rank)
+    bonus = (1 if rank == 6 else 0) + sum(card["color"] == tax_color for card in player["city"])
+    budget = int(player["gold"]) + bonus
+    limit = 3 if rank == 7 else 1
+    without_gold = _best_build_plan(state, player_id, rank, gold=budget, build_limit=limit)
+    with_gold = _best_build_plan(state, player_id, rank, gold=budget + 2, build_limit=limit)
+    if len(with_gold) > len(without_gold):
         return "gold"
-    if not buildable_now and len(hand) >= 3:
-        return "cards"
-    if buildable_now and len(player["city"]) >= int(state["config"]["winning_city_size"]) - 2:
+    if sum(int(card["cost"]) for card in with_gold) > sum(int(card["cost"]) for card in without_gold):
         return "gold"
-    return "cards" if len(hand) <= 2 else "gold"
+    if not without_gold:
+        return "gold"
+    return "cards" if len(useful_hand) <= limit else "gold"
 
 
 class CitadelsGame:

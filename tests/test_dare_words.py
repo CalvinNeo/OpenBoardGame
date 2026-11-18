@@ -4,8 +4,11 @@ from collections import Counter
 from unittest.mock import patch
 
 from game.dare_words import (
+    BOT_PATTERNS,
     BOT_PHRASES,
+    BOT_PHRASES_LONG,
     DECK_CHARACTERS,
+    MIN_PHRASE_CHOICES,
     SHORT_DECK_CHARACTERS,
     DareWordsGame as Game,
     validate_phrase,
@@ -72,7 +75,17 @@ class DareWordsTests(unittest.TestCase):
                 Game.init_game({}, players(count))
         short = Game.init_game({"deck_size": "short"}, players(2))
         self.assertEqual(len(short["deck"]), 60)
-        self.assertEqual(short["config"], {"deck_size": "short"})
+        self.assertEqual(short["config"], {"deck_size": "short", "min_chars": 3})
+        self.assertEqual(short["min_chars"], 3)
+        for minimum in MIN_PHRASE_CHOICES:
+            with self.subTest(min_chars=minimum):
+                state = Game.init_game({"min_chars": minimum}, players(2))
+                self.assertEqual(state["min_chars"], minimum)
+                self.assertEqual(state["config"], {"deck_size": "full", "min_chars": minimum})
+                self.assertEqual(Game.get_public_view(state, "p0")["min_chars"], minimum)
+        for bad in (2, 6, "3", 3.0, None, True):
+            with self.subTest(min_chars=bad), self.assertRaises(ValueError):
+                Game.init_game({"min_chars": bad}, players(2))
         with self.assertRaises(ValueError):
             Game.init_game({"deck_size": "tiny"}, players(2))
         with self.assertRaises(ValueError):
@@ -89,6 +102,23 @@ class DareWordsTests(unittest.TestCase):
                 self.assertGreaterEqual(len(phrase), 3)
                 for char, needed in Counter(phrase).items():
                     self.assertGreaterEqual(counts[char], needed)
+        for phrase in BOT_PHRASES_LONG:
+            with self.subTest(phrase=phrase):
+                self.assertGreaterEqual(len(phrase), 5)
+                for char, needed in Counter(phrase).items():
+                    self.assertGreaterEqual(counts[char], needed)
+        # Every configurable minimum needs grammar a bot can actually fill, and
+        # the raised minimums also need patterns that survive the short deck,
+        # which carries no action characters at all.
+        for minimum in MIN_PHRASE_CHOICES:
+            with self.subTest(min_chars=minimum):
+                self.assertTrue(any(len(pattern) >= minimum for pattern in BOT_PATTERNS))
+        for minimum in (4, 5):
+            with self.subTest(short_deck_min_chars=minimum):
+                usable = [pattern for pattern in BOT_PATTERNS
+                          if len(pattern) >= minimum and "verb" not in pattern
+                          and all(len(slot) > 1 or short_counts[slot] >= 1 for slot in pattern)]
+                self.assertTrue(usable)
 
     # --- flipping ----------------------------------------------------------
 
@@ -159,6 +189,43 @@ class DareWordsTests(unittest.TestCase):
         card_ids, error = validate_phrase(self.state, "的了的")
         self.assertIsNone(error)
         self.assertEqual(len(set(card_ids)), 3)
+
+    def test_min_chars_option_gates_every_claim(self):
+        for minimum in (4, 5):
+            with self.subTest(min_chars=minimum):
+                state = Game.init_game({"min_chars": minimum}, players(3))
+                for _ in range(minimum - 1):
+                    Game.apply_action(state, state["flipper"], action(state, "flip"))
+                self.assertEqual(len(state["row"]), minimum - 1)
+                self.assertNotIn("claim", Game.get_legal_actions(state, "p0"))
+                Game.apply_action(state, state["flipper"], action(state, "flip"))
+                self.assertIn("claim", Game.get_legal_actions(state, "p0"))
+                short_phrase = "".join(card["char"] for card in state["row"][:minimum - 1])
+                before = copy.deepcopy(state)
+                events, error = Game.apply_action(state, "p0", action(state, "claim", phrase=short_phrase))
+                self.assertEqual(events, [])
+                self.assertEqual(error, f"至少要用 {minimum} 个字。")
+                self.assertEqual(before, state)
+                phrase = "".join(card["char"] for card in state["row"][:minimum])
+                events, error = Game.apply_action(state, "p0", action(state, "claim", phrase=phrase))
+                self.assertIsNone(error, error)
+                self.assertEqual(state["phase"], "voting")
+                self.assertEqual(len(state["claim"]["card_ids"]), minimum)
+
+    def test_the_ending_threshold_follows_the_configured_minimum(self):
+        # Both games end the round with three cards left on an empty deck, but
+        # only the four character game can no longer form a legal phrase.
+        for minimum, flips, phrase, over in ((3, 6, "的的了", False), (4, 7, "的的了了", True)):
+            with self.subTest(min_chars=minimum):
+                state = Game.init_game({"min_chars": minimum}, players(2))
+                for _ in range(flips):
+                    Game.apply_action(state, state["flipper"], action(state, "flip"))
+                state["deck"] = []
+                Game.apply_action(state, "p0", action(state, "claim", phrase=phrase))
+                Game.apply_action(state, "p1", action(state, "vote", accept=True))
+                self.assertEqual(len(state["row"]), 3)
+                self.assertEqual(state["game_over"], over)
+                self.assertEqual(state["phase"], "game_over" if over else "reveal")
 
     # --- voting ------------------------------------------------------------
 
@@ -252,13 +319,15 @@ class DareWordsTests(unittest.TestCase):
         self.assertEqual(Game.get_legal_actions(self.state, "p0"), ["play_again"])
 
     def test_play_again_keeps_config_and_resets_scores(self):
-        state = Game.init_game({"deck_size": "short"}, players(3))
+        state = Game.init_game({"deck_size": "short", "min_chars": 5}, players(3))
         state["deck"] = []
         state["row"] = []
         Game.apply_action(state, "p0", action(state, "finish_game"))
         Game.apply_action(state, "p0", action(state, "play_again"))
         self.assertFalse(state["game_over"])
-        self.assertEqual(state["config"], {"deck_size": "short"})
+        self.assertEqual(state["config"], {"deck_size": "short", "min_chars": 5})
+        self.assertEqual(state["min_chars"], 5)
+        self.assertEqual(Game.get_public_view(state, "p0")["min_chars"], 5)
         self.assertEqual(len(state["deck"]), 60)
         self.assertEqual([player["score"] for player in state["players"].values()], [0, 0, 0])
         self.assertEqual(state["phase"], "flipping")
@@ -321,6 +390,37 @@ class DareWordsTests(unittest.TestCase):
         self.assertTrue(state["winner"])
         self.assertTrue(all(len(entry["phrase"]) >= 3 for entry in state["history"]))
 
+    def test_bots_keep_claiming_with_a_longer_minimum(self):
+        for minimum in (4, 5):
+            for deck_size in ("full", "short"):
+                with self.subTest(min_chars=minimum, deck_size=deck_size):
+                    state = Game.init_game({"deck_size": deck_size, "min_chars": minimum}, [
+                        {"player_id": f"p{index}", "name": f"Bot {index}", "seat": index, "is_bot": True}
+                        for index in range(3)
+                    ])
+                    for _ in range(1500):
+                        if state["game_over"]:
+                            break
+                        moved = False
+                        for player_id in state["turn_order"]:
+                            move = Game.bot_move(state, player_id)
+                            if not move:
+                                continue
+                            payload = {key: value for key, value in move.items() if key != "delay_ms"}
+                            self.assertIn(payload["type"], Game.get_legal_actions(state, player_id))
+                            if payload["type"] == "claim":
+                                self.assertGreaterEqual(len(payload["phrase"]), minimum)
+                                self.assertIsNone(validate_phrase(state, payload["phrase"])[1])
+                            events, error = Game.apply_action(state, player_id, payload)
+                            self.assertIsNone(error, error)
+                            moved = True
+                            break
+                        self.assertTrue(moved, "bots stalled")
+                    self.assertTrue(state["game_over"])
+                    self.assertTrue(state["winner"])
+                    self.assertTrue(state["history"], "bots never claimed a phrase")
+                    self.assertTrue(all(len(entry["phrase"]) >= minimum for entry in state["history"]))
+
     def test_bot_does_not_answer_after_the_game(self):
         self.state["deck"] = []
         self.state["row"] = []
@@ -352,6 +452,32 @@ class DareWordsTests(unittest.TestCase):
                 mutate(payload)
                 with self.assertRaises(ValueError):
                     Game.deserialize(payload)
+
+    def test_save_roundtrip_keeps_the_phrase_minimum(self):
+        state = Game.init_game({"deck_size": "short", "min_chars": 5}, players(3))
+        for _ in range(5):
+            Game.apply_action(state, state["flipper"], action(state, "flip"))
+        blob = Game.serialize(state)
+        restored = Game.deserialize(blob)
+        self.assertEqual(restored, state)
+        self.assertEqual(restored["min_chars"], 5)
+        self.assertEqual(Game.get_public_view(restored, "p0")["min_chars"], 5)
+
+        payload = copy.deepcopy(blob)
+        payload["min_chars"] = 3
+        with self.assertRaises(ValueError):
+            Game.deserialize(payload)
+
+        payload = copy.deepcopy(blob)
+        payload["config"] = {"deck_size": "short", "min_chars": 4}
+        with self.assertRaises(ValueError):
+            Game.deserialize(payload)
+
+        # Saves written before the option existed carry neither key.
+        legacy = copy.deepcopy(blob)
+        legacy["config"] = {"deck_size": "short"}
+        legacy.pop("min_chars")
+        self.assertEqual(Game.deserialize(legacy)["min_chars"], 3)
 
     def test_deserialize_rejects_foreign_payloads(self):
         with self.assertRaises(ValueError):
