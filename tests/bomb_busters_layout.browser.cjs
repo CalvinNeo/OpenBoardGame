@@ -94,7 +94,7 @@ function makeView(playerCount, preset, viewer, phase = 'playing') {
         page.on('dialog', async dialog => { dialogCount += 1; await dialog.accept(); });
         await page.route('https://fonts.googleapis.com/**', route => route.abort());
         await page.goto(base);
-        await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+        await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList, null, {timeout: 60000});
         await page.evaluate(() => socket.emit('room:create', {name: 'Bomb Busters UI QA', game_type: 'bomb_busters'}));
         await page.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('bomb_busters'));
         await page.evaluate(() => {
@@ -112,6 +112,24 @@ function makeView(playerCount, preset, viewer, phase = 'playing') {
             renderBombBustersGameState({view, state_version: ++window.bombBustersTestVersion});
         }, view);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    }
+
+    async function swipe(page, locator) {
+        await locator.scrollIntoViewIfNeeded();
+        const bounds = await locator.boundingBox();
+        const horizontal = bounds.x + bounds.width / 2;
+        const vertical = Math.min(700, bounds.y + bounds.height / 2);
+        const session = await page.context().newCDPSession(page);
+        try {
+            await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: horizontal, y: vertical, id: 1}]});
+            for (let step = 1; step <= 6; step += 1) {
+                await session.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: horizontal, y: vertical - step * 20, id: 1}]});
+            }
+            await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+            await page.waitForTimeout(300);
+        } finally {
+            await session.detach();
+        }
     }
 
     async function measure(page, label, width) {
@@ -234,6 +252,10 @@ function makeView(playerCount, preset, viewer, phase = 'playing') {
         assert.equal(await selectedOwn.count(), 0);
 
         await ownWire.tap();
+        await swipe(mobile, mobile.locator('#bombBustersStatus'));
+        assert.equal(await selectedOwn.count(), 1, 'Scrolling from noninteractive space preserves the declaration');
+        await swipe(mobile, ownWire);
+        assert.equal(await selectedOwn.count(), 1, 'Scrolling from a selected wire does not toggle it');
         await targetWire.scrollIntoViewIfNeeded();
         const scrollBefore = await mobile.evaluate(() => scrollY);
         await targetWire.tap();
@@ -247,17 +269,43 @@ function makeView(playerCount, preset, viewer, phase = 'playing') {
         await confirm.tap();
         assert.deepEqual(await mobile.evaluate(() => window.bombBustersTestActions.at(-1)), expectedDuo);
 
-        await render(mobile, view);
-        await mobile.locator('#bombBustersDetectorBtn').tap();
-        await ownWire.tap();
-        const targetRack = mobile.locator('.bomb-busters-player-card:not(.is-self) .bomb-busters-rack').first();
-        await targetRack.locator('.bomb-busters-wire-button').nth(0).tap();
-        assert.equal(await confirm.isEnabled(), false);
-        await targetRack.locator('.bomb-busters-wire-button').nth(1).tap();
-        assert.equal(await confirm.isEnabled(), true);
-        assert.equal(await mobile.locator('.is-selected-target').count(), 2);
-        await confirm.tap();
-        assert.equal(await mobile.evaluate(() => window.bombBustersTestActions.at(-1).type), 'double_detector_cut');
+        for (const width of [320, 390]) {
+            await mobile.setViewportSize({width, height: 844});
+            await render(mobile, view);
+            const actionsBeforeDetector = await mobile.evaluate(() => window.bombBustersTestActions.length);
+            await mobile.locator('#bombBustersDetectorBtn').tap();
+            await ownWire.tap();
+            const targetRack = mobile.locator('.bomb-busters-player-card:not(.is-self) .bomb-busters-rack').first();
+            await targetRack.locator('.bomb-busters-wire-button').nth(0).tap();
+            assert.equal(await confirm.isEnabled(), false);
+            await swipe(mobile, mobile.locator('#bombBustersStatus'));
+            assert.equal(await selectedOwn.count(), 1, 'Detector scrolling preserves the declaration');
+            assert.equal(await mobile.locator('.is-selected-target').count(), 1, 'Detector scrolling preserves the first target');
+            assert.equal(await mobile.locator('#bombBustersActionMode').textContent(), 'Double Detector');
+            const secondTarget = targetRack.locator('.bomb-busters-wire-button').last();
+            await targetRack.locator('.bomb-busters-wire-button').first().tap();
+            await secondTarget.tap();
+            assert.equal(await mobile.locator('#bombBustersWirePopover').isVisible(), false, 'Incomplete detector selection leaves all candidate wires unobstructed');
+            await mobile.screenshot({path: `${output}/detector-first-target-${width}.png`, fullPage: true});
+            const firstTarget = targetRack.locator('.bomb-busters-wire-button').nth(3);
+            await firstTarget.tap();
+            assert.equal(await confirm.isEnabled(), true);
+            assert.equal(await mobile.locator('.is-selected-target').count(), 2);
+            const expectedDetector = {
+                type: 'double_detector_cut',
+                own_wire_id: await ownWire.getAttribute('data-wire-id'),
+                target_wire_ids: [await secondTarget.getAttribute('data-wire-id'), await firstTarget.getAttribute('data-wire-id')],
+            };
+            await firstTarget.tap();
+            assert.equal(await mobile.locator('.is-selected-target').count(), 1, 'Tapping a detector target deselects only that wire');
+            assert.equal(await confirm.isEnabled(), false);
+            await firstTarget.tap();
+            await mobile.screenshot({path: `${output}/detector-confirm-${width}.png`, fullPage: true});
+            assert.equal(await mobile.evaluate(() => window.bombBustersTestActions.length), actionsBeforeDetector, 'Detector selection and scrolling never submit an action');
+            await confirm.tap();
+            assert.deepEqual(await mobile.evaluate(() => window.bombBustersTestActions.at(-1)), expectedDetector);
+            assert.equal(await mobile.evaluate(() => window.bombBustersTestActions.length), actionsBeforeDetector + 1);
+        }
 
         for (const phase of ['initial_info', 'awaiting_detector_choice', 'mission_result']) {
             const phaseView = makeView(3, 'standard', viewer, phase);
@@ -306,6 +354,20 @@ function makeView(playerCount, preset, viewer, phase = 'playing') {
         assert.equal(await mobile.evaluate(() => window.bombBustersTestActions.length), actionsBeforeExplain, 'Explain works on disabled wires and their Info tokens without sending actions');
 
         const desktopViewer = await desktop.evaluate(() => playerId);
+        for (const width of [1024, 1440]) {
+            await desktop.setViewportSize({width, height: 950});
+            await render(desktop, makeView(3, 'standard', desktopViewer));
+            await desktop.locator('#bombBustersDetectorBtn').click();
+            await desktop.locator('.is-self .bomb-busters-wire-button.is-blue').first().click();
+            const targetRack = desktop.locator('.bomb-busters-player-card:not(.is-self) .bomb-busters-rack').first();
+            await targetRack.locator('.bomb-busters-wire-button').first().click();
+            await targetRack.locator('.bomb-busters-wire-button').last().click();
+            assert.equal(await desktop.locator('.is-selected-target').count(), 2);
+            assert.equal(await desktop.locator('#bombBustersConfirmDetectorBtn').isEnabled(), true);
+            await desktop.evaluate(() => window.scrollTo(0, 0));
+            await desktop.locator('#bombBustersStatus').click({position: {x: 12, y: 12}});
+            assert.equal(await desktop.locator('.is-selected-own, .is-selected-target').count(), 0, 'Desktop blank clicks still clear the selection');
+        }
         await render(desktop, makeView(2, 'standard', desktopViewer));
         await desktop.locator('#bombBustersDetonator').hover();
         await desktop.locator('#bombBustersTooltip:not(.hidden)').waitFor();

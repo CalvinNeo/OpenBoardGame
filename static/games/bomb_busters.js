@@ -410,6 +410,10 @@
         selection ? selection.label : "Confirm unavailable until the selection is complete"
       );
     }
+    if (bombBustersActionMode === "detector" && !selection) {
+      bombBustersHideWirePopover();
+      return;
+    }
     bombBustersWirePopoverEl.classList.add("is-open");
     bombBustersWirePopoverEl.setAttribute("aria-hidden", "false");
     bombBustersWirePopoverEl.style.visibility = "hidden";
@@ -1235,7 +1239,7 @@
     true
   );
 
-  document.addEventListener("pointerdown", (event) => {
+  document.addEventListener("click", (event) => {
     if (
       bombBustersExplainMode ||
       !bombBustersView ||

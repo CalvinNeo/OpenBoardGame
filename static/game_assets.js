@@ -1063,7 +1063,7 @@ const GAME_ASSETS = {
   },
   "bomb_busters": {
     "scripts": [
-      "/static/games/bomb_busters.js?v=app_v4"
+      "/static/games/bomb_busters.js?v=app_v5"
     ],
     "styles": [],
     "panel": "bombBustersPanel",

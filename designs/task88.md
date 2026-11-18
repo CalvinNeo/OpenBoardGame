@@ -1685,3 +1685,13 @@ python -m unittest
 - reduced-motion 模拟：`is-reduced` 生效，飞行与飞溅隐藏，污渍、名牌和 caption 直接可见。
 - 检查命令：`node --check static/games/shared_effects.js`、`node --check static/games/bomb_busters.js`、`python3 -m unittest tests.test_frontend_style_assets tests.test_frontend_script_names tests.test_help_contract`、`git diff --check`。本次只改前端，未改动 `game/bomb_busters.py`，因此不运行游戏逻辑单测。
 - 未执行：真机 iOS Safari / Android 触控验收；本机未安装 Playwright，`tests/*.browser.cjs` 未运行。
+
+## 23. 2026-11-18：滑动保留选线与 Double Detector 双选修复
+
+- 根因之一是空白取消选择绑定在 `pointerdown`：手机为了滚动按下非交互区域时，尚未判断滑动就清空声明线、目标线，并把 Double Detector 切回 Duo Cut。改为浏览器确认点击后才通过 `click` 取消，正常滚动及 `pointercancel` 不再改变选择；空白点按、Cancel 和 Esc 仍可取消。
+- Double Detector 只选一根目标线时，原地确认浮层可能覆盖另一行的候选线。探测器选择未完成时隐藏浮层，选齐自己的蓝线和同一队友线架的两根不同目标线后再显示 Confirm / Cancel。普通 Duo、初始线索、私密响应与桌面确认流程不变，不改服务端规则和隐私边界。
+- 修改文件：`static/games/bomb_busters.js`、`tests/bomb_busters_layout.browser.cjs`、`static/game_assets.js`、`static/index.html` 和本设计文档。游戏脚本版本升为 `app_v5`，首页资源清单版本升为 `257`。
+- 浏览器回归覆盖 320 / 390 / 1024 / 1440px、2 / 3 / 5 人共 20 个布局场景，以及滑动空白和已选线保留选择、探测器跨行双选与取消单根、未选齐不遮挡候选线、确认只发送一次正确动作、空白 / Cancel / Esc、Help / Explain、结果暂停与长姓名。截图及测量保留在忽略目录 `build/bomb-busters-ui/after/`。
+- 检查：`node --check static/games/bomb_busters.js`、`node --check tests/bomb_busters_layout.browser.cjs`、`node scripts/smoke_load.cjs bomb_busters`，以及 `python3 -m unittest tests.test_frontend_style_assets tests.test_frontend_script_names tests.test_help_contract`（14 项通过）。本次仅修改 UI，不运行游戏逻辑单测。
+- 额外运行 `tests/game_assets.browser.cjs`，在既有公共脚本断言处失败：第 50 行只允许 `shared.js`，首页已同时加载 `shared_help.js` 与 `shared_effects.js`。该断言与本次炸弹克星修复无关，不修改公共测试；本游戏实际房间的按需加载由上述专用浏览器回归覆盖。
+- 遵循 `DEV_GUIDE.md` 的局部修改、触摸与点击区分、版本更新及多宽度验收要求；公共按需加载测试尚有既有失败，且未进行 iOS Safari / Android 真机验证，因此不声明全部验收无缺项。

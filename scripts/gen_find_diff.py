@@ -67,6 +67,11 @@ MIN_SEPARATION = 0.105
 MIN_DIFF_PIXELS = 0.0007
 MAX_DIFF_PIXELS = 0.055
 MIN_VISIBLE_DIFF = 20.0
+# Everything above is measured on the 1600x1200 original. Nobody plays at that size,
+# so an edit also has to clear these bars on a reference render at REF_WIDTH px wide.
+REF_WIDTH = 320
+MIN_REF_PX = 250
+MIN_REF_MEAN = 20.0
 
 
 BASE_FAILURES: List[str] = []
@@ -569,6 +574,31 @@ def measure(before: np.ndarray, after: np.ndarray, footprint: np.ndarray, pos: T
     }
 
 
+def measure_at_reference(before: Image.Image, after: Image.Image, box) -> Dict:
+    """How much of this edit survives being scaled down to play size.
+
+    Everything upstream measures on the 1600x1200 original, where a thin ring from
+    a 1.24x scale is plainly there. A phone frame is about 320 px wide, and at that
+    scale the same edit can come down to a couple of hundred changed pixels, which
+    reads as nothing being different rather than as a difference.
+    """
+    width, height = before.size
+    ref_h = int(round(height * REF_WIDTH / width))
+    scale = REF_WIDTH / width
+    small_a = np.asarray(before.resize((REF_WIDTH, ref_h), Image.LANCZOS)).astype(np.int16)
+    small_b = np.asarray(after.resize((REF_WIDTH, ref_h), Image.LANCZOS)).astype(np.int16)
+    x0 = max(0, int(box[0] * scale))
+    y0 = max(0, int(box[1] * scale))
+    x1 = min(REF_WIDTH, int(box[2] * scale))
+    y1 = min(ref_h, int(box[3] * scale))
+    if x1 <= x0 or y1 <= y0:
+        return {"px": 0, "mean": 0.0}
+    delta = np.abs(small_a[y0:y1, x0:x1] - small_b[y0:y1, x0:x1]).max(axis=2)
+    return {"px": int((delta > 16).sum()), "mean": float(delta.mean())}
+
+
+
+
 def write_patches(scene_id: str, edited: Image.Image, diffs: List[Dict]) -> None:
     """Cut one lossless PNG per difference out of the edited picture.
 
@@ -682,25 +712,43 @@ def build_level(scene: Dict[str, str], force: bool = False) -> Optional[Dict]:
             wanted = [op for op in wanted if op != "recolor"] + ["recolor"]
         if cand["note"] == "duplicable" and "duplicate" not in wanted:
             wanted = ["duplicate"] + wanted
+
         placed = None
+        stats = None
+        shown = None
         for op in wanted:
             attempt = try_op(op, cand, base, result, base_arr, edges, occupied, w, h, used_hues)
-            if attempt:
-                placed = attempt
-                break
+            if not attempt:
+                continue
+            trial = attempt[0]
+            full = measure(base_arr, to_array(trial), attempt[1], attempt[2])
+            if full["area"] < MIN_DIFF_PIXELS * w * h or full["mean"] < MIN_VISIBLE_DIFF:
+                log("  %s %s: too subtle at full size (area=%d mean=%.1f)"
+                    % (cand["name"], attempt[3], full["area"], full["mean"]))
+                continue
+            # Full resolution is not how anyone plays. A 1.24x scale or a mirrored
+            # near-symmetric object is obvious across 1600 px and can be a smudge on
+            # a phone, so an edit also has to survive the reference downscale.
+            small = measure_at_reference(base, trial, full["box"])
+            if small["px"] < MIN_REF_PX or small["mean"] < MIN_REF_MEAN:
+                log("  %s %s: too subtle at %dpx (px=%d mean=%.1f)"
+                    % (cand["name"], attempt[3], REF_WIDTH, small["px"], small["mean"]))
+                continue
+            placed = attempt
+            stats = full
+            shown = small
+            break
+
         if not placed:
-            log(f"build {scene_id}: no valid op for {cand['name']}")
+            log("build %s: no usable op for %s" % (scene_id, cand["name"]))
             return None
+
         placed_box = placed[4]
         if len(placed) > 5:
             used_hues.append(placed[5])
         result, footprint, pos, kind = placed[0], placed[1], placed[2], placed[3]
         occupied.append(placed_box)
-        stats = measure(base_arr, to_array(result), footprint, pos)
-        if stats["area"] < MIN_DIFF_PIXELS * w * h or stats["mean"] < MIN_VISIBLE_DIFF:
-            log(f"build {scene_id}: {cand['name']} {kind} too subtle "
-                f"(area={stats['area']} mean={stats['mean']:.1f})")
-            return None
+
         bx0, by0, bx1, by1 = stats["box"]
         diffs.append({
             "name": cand["name"],
@@ -708,9 +756,13 @@ def build_level(scene: Dict[str, str], force: bool = False) -> Optional[Dict]:
             "box": [
                 round(bx0 / w, 5), round(by0 / h, 5), round(bx1 / w, 5), round(by1 / h, 5),
             ],
+            "ref_px": shown["px"],
+            "ref_mean": round(shown["mean"], 2),
         })
         used_ops.append(kind)
-        log(f"build {scene_id}: {cand['name']} -> {kind} area={stats['area']} mean={stats['mean']:.1f}")
+        log("build %s: %s -> %s area=%d mean=%.1f | at %dpx px=%d mean=%.1f"
+            % (scene_id, cand["name"], kind, stats["area"], stats["mean"],
+               REF_WIDTH, shown["px"], shown["mean"]))
 
     a_img = base.resize(FINAL_SIZE, Image.LANCZOS)
     b_img = result.resize(FINAL_SIZE, Image.LANCZOS)
@@ -771,7 +823,7 @@ def try_op(op, cand, base, current, base_arr, edges, occupied, w, h, used_hues):
         return out, fp, pos, "recolor", box, hue
 
     if op == "scale":
-        factor = 1.24
+        factor = 1.42
         nw, nh = int(ow * factor), int(oh * factor)
         if nw < 8 or nh < 8:
             return None
