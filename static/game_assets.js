@@ -1257,9 +1257,9 @@ const GAME_ASSETS = {
     "header": "showFindDiffHeaderActions"
   },
   "factory_funner": {
-    "scripts": ["/static/games/factory_funner.js?v=4"],
-    "styles": ["/static/games/factory_funner.css?v=3"],
-    "markup": "/static/games/factory_funner.html?v=3",
+    "scripts": ["/static/games/factory_funner.js?v=5"],
+    "styles": ["/static/games/factory_funner.css?v=4"],
+    "markup": "/static/games/factory_funner.html?v=4",
     "panel": "factoryFunnerPanel",
     "panelTitle": "🏭 工厂乐翻天",
     "header": "showFactoryFunnerHeaderActions"

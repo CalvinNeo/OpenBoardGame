@@ -586,6 +586,16 @@ body.ff-turn-active .room-panel-dock {
   }
 }
 
+
+/* Short viewports (landscape phones, 320x568) need a smaller board so the
+   machine card and the confirmation bar stay on the same screen. */
+@media (max-height: 640px) {
+  .ff-board,
+  .ff-confirm {
+    width: min(100%, 520px, calc(100vh - 340px));
+  }
+}
+
 /* -------------------------------------------------------------- desktop */
 
 @media (min-width: 900px) {
