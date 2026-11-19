@@ -1,6 +1,120 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-bomb_busters-1 {
 
+.bomb-busters-mission-picker {
+  box-sizing: border-box;
+  width: min(600px, calc(100vw - 16px));
+  max-height: calc(100dvh - 24px);
+  padding: 16px;
+  border: 1px solid #36637b;
+  border-radius: 14px;
+  background: #0b2035;
+  color: #e4f1ff;
+}
+
+.bomb-busters-mission-picker::backdrop {
+  background: rgba(2, 8, 23, 0.7);
+}
+
+.bomb-busters-mission-picker[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bomb-busters-mission-picker-heading,
+.bomb-busters-mission-picker-toolbar,
+.bomb-busters-mission-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bomb-busters-mission-picker-heading h2 {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+  font-size: 18px;
+}
+
+.bomb-busters-mission-picker#bombBustersMissionPicker button,
+.bomb-busters-mission-picker#bombBustersMissionPicker select {
+  min-height: 44px;
+  border: 1px solid #426581;
+  border-radius: 7px;
+  padding: 6px 10px;
+  color: #e4f1ff;
+  background: #173c5d;
+  font-size: 13px;
+}
+
+.bomb-busters-mission-picker button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.bomb-busters-mission-picker-toolbar select {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+}
+
+.bomb-busters-mission-picker-toolbar label {
+  font-size: 12px;
+}
+
+.bomb-busters-mission-picker-preview {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.bomb-busters-mission-picker-preview h3,
+.bomb-busters-mission-picker-preview p {
+  margin: 0 0 10px;
+}
+
+.bomb-busters-mission-picker-notice,
+.bomb-busters-mission-picker-error {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.bomb-busters-mission-picker-error {
+  color: #fda4af;
+}
+
+.bomb-busters-mission-picker-error:empty {
+  display: none;
+}
+
+.bomb-busters-mission-picker-actions {
+  justify-content: flex-end;
+}
+
+.game-panel[data-game-theme="bomb_busters"] .game-panel-title {
+  flex: 1;
+}
+
+.game-panel[data-game-theme="bomb_busters"] .game-panel-title h2 {
+  min-width: 0;
+}
+
+.game-panel[data-game-theme="bomb_busters"] .game-panel-title button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.game-panel[data-game-theme="bomb_busters"] #bombBustersMissionPickerBtn {
+  min-height: 32px;
+}
+
 .obg-help-dialog[data-obg-help-game="bomb_busters"] .bomb-busters-help-browser {
   margin-bottom: 12px;
   padding-bottom: 10px;

@@ -756,5 +756,18 @@ def get_mission_help(number: int, player_count: int = 3) -> Dict:
     }
 
 
+def get_mission_catalog(player_count: int = 3) -> Dict:
+    missions = []
+    for number in range(1, MISSION_COUNT + 1):
+        detail = get_mission_help(number, player_count)
+        sections = {section["id"]: section["text"] for section in detail["sections"]}
+        missions.append({
+            "id": number, "title": detail["title"], "supported": detail["supported"],
+            "min_players": detail["min_players"], "audio_companion": detail["audio_companion"],
+            "summary": sections["play"], "rules": sections["difference"],
+        })
+    return {"player_count": player_count, "missions": missions}
+
+
 if set(MISSION_HELP) != set(range(1, MISSION_COUNT + 1)):
     raise ValueError("Bomb Busters mission Help is incomplete")

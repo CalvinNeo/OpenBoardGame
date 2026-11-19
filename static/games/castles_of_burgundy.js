@@ -2,298 +2,321 @@
   "use strict";
   const panel = document.getElementById("burgundyPanel");
   if (!panel) return;
+  const content = document.getElementById("burgundyContent");
+  const phaseLabel = document.getElementById("burgundyPhase");
+  const helpButton = document.getElementById("burgundyHelpBtn");
+  const explainButton = document.getElementById("burgundyExplainBtn");
+  const tooltip = document.getElementById("burgundyTooltip");
   const dice = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
   const colours = ["🟫", "🟥", "🟧", "🟩", "🟦", "🟪"];
   const kinds = {castle: ["🏰", "Castle"], ship: ["⛵", "Ship"], mine: ["⛏️", "Mine"],
     knowledge: ["📜", "Knowledge"], building: ["🏘️", "City"], animal: ["🐑", "Pasture"]};
-  const effects = {castle: "🏰 额外执行一个任意点数的行动。", city_hall: "🏛️ 免费放置仓库内的一块板块。",
-    warehouse: "🏚️ 免费出售一种货物。", workshop: "🪚 从任意编号货站拿一个建筑。",
-    church: "⛪ 从编号货站拿城堡、矿山或知识。", market: "🏪 从编号货站拿船只或动物。",
-    ship: "⛵ 选择取货的货站；至多储存三种货物。"};
+  const effects = {castle: "🏰 Choose a bonus action on the estate, at a depot or with your goods.",
+    city_hall: "🏛️ Place a stored tile without using a die.", warehouse: "🏚️ Choose goods to sell without using a die.",
+    workshop: "🪚 Take a building from any numbered depot.", church: "⛪ Take a castle, mine or knowledge tile.",
+    market: "🏪 Take a ship or animal tile.", ship: "⛵ Choose a depot, then collect its goods."};
+  const knowledgeZh = ["相同建筑可以放在同一座城市中。", "每座矿山在阶段末额外生产一名工人。", "每次出售货物获得两枚银币而非一枚。",
+    "每次出售货物额外获得一名工人。", "船只可以从两个相邻货站取货，1 号与 6 号相邻。", "每回合一次的购买可从任意货站拿板块，仍花两枚银币。",
+    "动物计分时，每个参与计分的动物板块额外得一分，包括再次计分的板块。", "每名工人可调整最多两点骰值而非一点。", "放置建筑可免费调整最多一点骰值。",
+    "放置船只或动物可免费调整最多一点骰值。", "放置城堡、矿山或知识可免费调整最多一点骰值。", "从编号货站拿板块可免费调整最多一点骰值。",
+    "取得工人行动额外获得一枚银币，旅馆效果不适用。", "取得工人行动获得四名工人而非两名。", "终局时，每种售出过的货物得三分。",
+    "终局时，领地中每座仓库得四分。", "终局时，领地中每座瞭望塔得四分。", "终局时，领地中每座木工坊得四分。", "终局时，领地中每座教堂得四分。",
+    "终局时，领地中每座市场得四分。", "终局时，领地中每座旅馆得四分。", "终局时，领地中每座银行得四分。", "终局时，领地中每座市政厅得四分。",
+    "终局时，领地中每种动物得四分。", "终局时，每件已售货物得一分。", "终局时，每块颜色奖励板块得两分。"];
+  const helpConfig = {
+    gameId: "castles_of_burgundy",
+    title: {zh: "勃艮第城堡", en: "The Castles of Burgundy"},
+    basic: {
+      win: {zh: "五个阶段结束后，建设领地、出售货物和知识奖励获得的分数(⭐)最高者获胜。", en: "Win by having the most victory points (⭐) after five phases through estate building, goods sales and knowledge bonuses."},
+      turn: {zh: "每回合用两颗骰子(🎲)拿板块、放板块、卖货或取工人，并可额外花两枚银币(🪙)购买一次板块。", en: "Use two dice (🎲) to take or place tiles, sell goods or gain workers, and optionally buy one tile for two silverlings (🪙)."},
+      key: {zh: "尽早完成同色区域赚取阶段奖励，用工人(👷)调整骰值并利用板块效果形成连锁。", en: "Complete colour regions early for phase bonuses, adjust dice with workers (👷), and chain tile effects."}
+    },
+    sections: [
+      {id: "controls", label: {zh: "行动与操作", en: "Turns & controls"}, html: {
+        zh: `<p>先选一颗未使用的骰子(🎲)，再直接点击货站板块、仓储板块或自己的货物。选择仓储板块后点击高亮的领地格。确认区就在所选目标旁，列出所需工人(👷)与银币(🪙)，点击 Confirm 才提交。点击空白或按 Esc 取消未提交的选择。</p><p>货站与领地格需要匹配骰点。每名工人调整一点，1 与 6 相邻，系统按最小费用计算。取得工人行动消耗所选骰子并获得两名工人。仓储有三格，满时必须明确选一块旧板块丢弃。出售一种货物(🟫🟥🟧🟩🟦🟪)的全部货物，获得一枚银币，每件得玩家人数那么多的分数(⭐)。</p><p>黑市购买每回合一次，不使用骰子，花两枚银币。知识 6 允许购买编号货站板块，先打开货站内的 Buy 开关。两颗骰子用完仍可购买，再点 End Turn。即时奖励必须先处理，可跳过的建筑奖励会显示 Skip Bonus。每轮结束暂停，所有玩家点 Next Round 才继续。</p><p>手机通过 Estate / Depots 切换。地图支持缩放、拖动、Fit 全图和 Origin 原始尺寸。拖动不算选择，地图外仍可正常滚动。</p>`,
+        en: `<p>Select an unused die (🎲), then click a depot tile, a stored tile or your own goods. After choosing a stored tile, click a highlighted estate hex. The confirmation beside your target shows the worker (👷) and silverling (🪙) cost. Only Confirm submits it. Click blank space or press Esc to cancel an unsubmitted choice.</p><p>Match the die to a depot or estate hex. Each worker adjusts it by one step, with 1 adjacent to 6, and the server calculates the minimum cost. Gain Workers spends the selected die for two workers. Storage holds three tiles, so choose an old tile to discard when full. Sell every goods tile of one type (🟫🟥🟧🟩🟦🟪) for one silverling and points (⭐) per tile equal to the player count.</p><p>Buy once per turn for two silverlings without a die. Knowledge 6 also permits numbered depots using their Buy toggle. You may buy after using both dice, before End Turn. Resolve immediate bonuses first, or use Skip Bonus when offered. Every round pauses until all players select Next Round.</p><p>On phones, switch Estate / Depots. Zoom and drag the map, use Fit for the full estate or Origin for its original size. Dragging never selects a hex, and the page scrolls normally outside the map.</p>`}},
+      {id: "tiles", label: {zh: "板块效果", en: "Tile effects"}, html: {
+        zh: `<p>板块必须放在同色空格并邻接已建板块。同一城市(🏘️)不能有重复建筑，知识 1 例外。城堡(🏰)提供一个任意骰值的额外行动。船只(⛵)推进下轮顺序并从一个货站取货，同位置后来者优先。货物最多存三种，同种数量不限。矿山(⛏️)在每个阶段末生产一枚银币(🪙)。知识(📜)提供永久能力或终局奖励。</p><p>牧场(🐑)放置动物时，计入本板块及同一牧场已有同类动物，牛(🐄)、羊(🐑)、猪(🐖)、鸡(🐔)分开计算。</p><p>仓库(🏚️)免费卖一种货物，木工坊(🪚)免费拿建筑，教堂(⛪)免费拿城堡、矿山或知识，市场(🏪)免费拿船只或动物，市政厅(🏛️)免费放仓储板块。旅馆(🏡)给四名工人(👷)，银行(🏦)给两枚银币(🪙)，瞭望塔(🗼)给四分(⭐)。免费拿取只限编号货站。连锁效果逐步处理。</p>`,
+        en: `<p>Place on a matching empty hex adjacent to your built estate. A city (🏘️) cannot repeat a building unless you have knowledge 1. A castle (🏰) grants an extra action with any die value. A ship (⛵) advances next round's order and collects goods from a depot, with later arrivals taking priority on tied positions. Store up to three goods types, with unlimited tiles of each. A mine (⛏️) produces one silverling (🪙) at every phase end. Knowledge (📜) grants a permanent ability or end-game bonus.</p><p>A pasture (🐑) scores the new tile plus matching animals already in that pasture. Cows (🐄), sheep (🐑), pigs (🐖) and chickens (🐔) score separately.</p><p>A warehouse (🏚️) sells one goods type, a workshop (🪚) takes a building, a church (⛪) takes a castle, mine or knowledge tile, a market (🏪) takes a ship or animal, and a city hall (🏛️) places a stored tile, all without a die. A boarding house (🏡) grants four workers (👷), a bank (🏦) grants two silverlings (🪙), and a watchtower (🗼) grants four points (⭐). Free tile-taking uses numbered depots only. Resolve chained effects one step at a time.</p>`}},
+      {id: "scoring", label: {zh: "计分与图标", en: "Scoring & icons"}, html: {
+        zh: `<p>完整区域按 1–8 格得 1、3、6、10、15、21、28、36 分，另加阶段 A–E 的 10、8、6、4、2 分。每色首位完成全部格子的玩家得人数加三分，第二位得人数分。</p><p>终局每件未售货物与每枚银币(🪙)各一分，每两工人(👷)一分，再加知识(📜)奖励。仓储板块不计分。同分时空格更多者胜，再同分则最终顺序更靠后者胜。</p><p>分数(⭐)表示胜利点，奖杯(🏆)表示胜者，机器人(🤖)表示自动玩家。公共白骰(🎲)只决定新货物进入哪个货站。货物颜色(🟫🟥🟧🟩🟦🟪)分别代表 1–6，界面同时显示数字。颜色奖励旁数字表示已领取人数，Next goods 是本阶段余下的公开货物。</p><p>本实现为 2011 基础版，2–4 人，标准 1 号领地，无扩展与单人模式。<a href="https://cdn.1j1ju.com/medias/04/f5/f9-the-castles-of-burgundy-rulebook.pdf" target="_blank" rel="noopener noreferrer">原版规则</a>与<a href="https://www.yucata.de/en/Rules/CastlesOfBurgundy" target="_blank" rel="noopener noreferrer">平局勘误</a>。</p>`,
+        en: `<p>Completed regions of 1–8 hexes score 1, 3, 6, 10, 15, 21, 28 or 36 points, plus 10, 8, 6, 4 or 2 points in phases A–E. The first player to complete an entire colour scores the player count plus three, and the second scores the player count.</p><p>At game end, each unsold goods tile and silverling (🪙) scores one point, every two workers (👷) score one, and knowledge (📜) adds its bonuses. Stored tiles score nothing. Ties favour more empty estate hexes, then the player later in the final turn order.</p><p>Points (⭐) are victory points, a trophy (🏆) marks the winner, and a robot (🤖) marks a bot. The white die (🎲) only routes arriving goods. Goods colours (🟫🟥🟧🟩🟦🟪) represent types 1–6 and always include numbers. Colour bonus counters show claims already taken. Next goods lists the remaining public goods for this phase.</p><p>This is the 2011 base game for 2–4 players on estate 1, without expansions or solo mode. See the <a href="https://cdn.1j1ju.com/medias/04/f5/f9-the-castles-of-burgundy-rulebook.pdf" target="_blank" rel="noopener noreferrer">original rules</a> and <a href="https://www.yucata.de/en/Rules/CastlesOfBurgundy" target="_blank" rel="noopener noreferrer">tie-break correction</a>.</p>`}},
+      {id: "knowledge", label: {zh: "知识 1–26", en: "Knowledge 1–26"}, html: {zh: "", en: ""}}
+    ]
+  };
+  const explanations = {
+    phase: "Five phases A–E, each with five rounds. Completing a region earlier earns a larger phase bonus.",
+    estate: "Estate 1: match the tile colour and hex number, adjacent to a built tile. Use zoom, Fit and Origin to inspect it."
+  };
   let view = null;
-  let ui = {};
-  let explain = false;
+  let ui = {zoom: 1, panX: 0, panY: 0};
+  let explanationIndex = 0;
+  let tooltipTimer = null;
+  let gesture = null;
   let suppressClickUntil = 0;
-  let returnFocus = null;
-  const dialog = document.createElement("dialog");
-  dialog.className = "burgundy-dialog";
-  dialog.setAttribute("aria-labelledby", "burgundyDialogTitle");
-  document.body.appendChild(dialog);
-  const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
-  const player = id => view.players.find(p => p.player_id === id);
-  const name = id => player(id)?.name || "Spectator";
-  const self = () => player(view.you);
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
   const attr = (key, value) => ` data-${key}="${esc(value)}"`;
-  function button(label, cmd, description, extra = "", disabled = false, attrs = "") {
-    if (["mode", "die", "player", "tab", "ship-good", "ship-depot", "explain"].includes(cmd)) {
-      attrs += ` aria-pressed="${extra.includes("is-selected")}"`;
-    }
-    return `<button type="button" data-burgundy="${cmd}" class="${extra}" data-explain="${esc(description)}" ${disabled ? "disabled" : ""}${attrs}>${label}</button>`;
+  const player = id => view?.players.find(entry => entry.player_id === id);
+  const self = () => player(view?.you);
+  const name = id => player(id)?.name || "Spectator";
+  const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+  const active = () => view?.current_turn === view?.you && !!self() && view.phase !== "round_end" && !view.game_over;
+  const help = window.obgCreateHelp(helpConfig);
+  const explain = window.obgCreateExplain({
+    gameId: "castles_of_burgundy", attribute: "data-burgundy-explain", explanations: explanations,
+    root: () => panel, button: explainButton,
+    bypass: ["#burgundyHelpBtn", "#burgundyExplainBtn", ".obg-help-dialog"]
+  });
+  function tip(label, description, className = "") {
+    return `<span class="${className}" data-burgundy-tip="${esc(description)}" tabindex="0">${label}</span>`;
+  }
+  function button(label, command, description, className = "", disabled = false, attributes = "") {
+    const key = `control-${++explanationIndex}`;
+    explanations[key] = description;
+    const pressed = ["die", "player", "tab", "buy-mode", "ship-good", "ship-depot"].includes(command)
+      ? ` aria-pressed="${className.includes("is-selected")}"` : "";
+    return `<button type="button" data-burgundy="${command}" data-focus-key="${esc(command + attributes)}" data-burgundy-explain="${key}" class="${className}"${disabled ? ` disabled data-burgundy-tip="${esc(description)}"` : ""}${pressed}${attributes}>${label}</button>`;
   }
   function resetSelection() {
-    ui.tile = null; ui.cell = null; ui.goods = null; ui.depot = null; ui.discard = null;
-    ui.shipDepots = []; ui.shipGoods = [];
-  }
-  function tileMarkup(tile) {
-    return `<span class="burgundy-tile-icon" aria-hidden="true">${tile.emoji}</span><span class="burgundy-tile-name">${esc(tile.name)}</span>`;
-  }
-  function goodsMarkup(goods) {
-    return goods.map((n, i) => n ? `<span class="burgundy-good">${colours[i]} ${i + 1}<strong>×${n}</strong></span>` : "").join("") || '<span class="burgundy-muted">No goods</span>';
+    Object.assign(ui, {tile: null, cell: null, goods: null, depot: null, discard: null, shipDepots: [], shipGoods: []});
+    hideTip();
   }
   function options(type) {
-    return view.options.filter(o => o.action.type === type && (!Object.hasOwn(o.action, "die") || o.action.die === ui.die));
+    return (view?.options || []).filter(option => option.action.type === type &&
+      (!Object.hasOwn(option.action, "die") || option.action.die === ui.die));
   }
   function selectionOptions() {
-    if (view.pending?.kind === "ship") {
-      return options("ship_goods").filter(o => same(o.action.depots, ui.shipDepots) && same(o.action.goods, ui.shipGoods));
-    }
-    return options(ui.mode).filter(({action: a}) =>
-      (ui.mode === "sell" ? a.goods === ui.goods : a.tile === ui.tile)
-      && (ui.mode !== "place" || a.cell === ui.cell)
-      && (!Object.hasOwn(a, "discard") || a.discard === ui.discard));
+    if (view.pending?.kind === "ship") return options("ship_goods").filter(option => same(option.action.depots, ui.shipDepots) && same(option.action.goods, ui.shipGoods));
+    return options(ui.mode).filter(({action}) =>
+      (ui.mode === "sell" ? action.goods === ui.goods : action.tile === ui.tile) &&
+      (ui.mode !== "place" || action.cell === ui.cell) &&
+      (!Object.hasOwn(action, "discard") || action.discard === ui.discard));
   }
   function findTile(id) {
-    return [...view.depots.flatMap(d => d.tiles), ...view.players.flatMap(p => p.storage)].find(t => t.id === id);
+    return [...view.depots.flatMap(depot => depot.tiles), ...view.players.flatMap(entry => entry.storage)].find(tile => tile.id === id);
   }
-  function openDialog(title, html) {
-    returnFocus = panel.querySelector(`[data-burgundy="${title === "Explain" ? "explain" : "help"}"]`) || document.activeElement;
-    dialog.innerHTML = `<header><h2 id="burgundyDialogTitle">${esc(title)}</h2><button type="button" data-burgundy-close>Close</button></header><div class="burgundy-dialog-body">${html}</div>`;
-    if (!dialog.open) dialog.showModal();
-    dialog.querySelector("[data-burgundy-close]").focus();
+  function tileMarkup(tile) {
+    return `<span class="burgundy-tile-icon" aria-hidden="true">${esc(tile.emoji)}</span><span class="burgundy-tile-name">${esc(tile.name)}</span>`;
   }
-  function closeDialog() { dialog.close(); returnFocus?.focus(); }
-  function help() {
-    openDialog("Help · 勃艮第城堡", `<p>2011 基础版 · 2–4 人 · 标准 1 号领地。共五个阶段 A–E，每阶段五轮，每轮每人连续使用两颗骰子。</p>
-      <h3>🎲 How to play</h3><ol><li>选择一颗未使用的骰子，再选行动和目标。系统按最短路径计算工人费用，1 与 6 相邻，每一步花 1 👷。</li>
-      <li><b>Take</b>：按骰点从货站拿一块板块，放入三格仓库；仓库满时必须选一块旧板块丢弃。</li>
-      <li><b>Place</b>：点仓库板块，再点同色、点数相符、邻接已建板块的空格。知识与工人可以调整点数。</li>
-      <li><b>Sell</b>：出售骰点对应种类的全部货物，获得 1 🪙，每件获得玩家人数那么多的 ⭐。</li>
-      <li><b>Workers</b>：任意骰点获得 2 👷。<b>Buy</b>：每回合额外花 2 🪙 买一块黑市板块，无需骰子。</li>
-      <li>奖励步骤即时处理。两颗骰子用完后，可继续购买，再点 <b>End Turn</b>。每轮全员点 <b>Next Round</b> 才继续。</li></ol>
-      <h3>🏰 Tile effects</h3><p>城堡提供一个任意点数的额外行动；船只取一个货站的货物，并推进下轮顺序，同格后来者优先。货物最多三种，同种无限叠放。矿山每阶段末各产 1 🪙。</p>
-      <p>动物按同一牧场的同类动物总数计分。同一城市不能重复建筑（知识 1 例外）。仓库售货、木工坊拿建筑、教堂拿城堡／矿山／知识、市场拿船／动物；旅馆给 4 👷、银行给 2 🪙、瞭望塔给 4 ⭐、市政厅免费放一个仓库板块。</p>
-      <h3>⭐ Scoring</h3><p>每个完整区域得 1 / 3 / 6 / 10 / 15 / 21 / 28 / 36 分（1–8 格），另加本阶段 10 / 8 / 6 / 4 / 2 分。每色第一个完成全部格子的玩家得人数 + 3 分，第二位得人数分。</p>
-      <p>终局每件未售货物、每枚银币各得 1 分，每两工人得 1 分，再加知识分。仓库中的板块不计分。同分时空格更多者获胜，仍相同则最终顺序更靠后者获胜（英文初版勘误）。</p>
-      <h3>📜 Knowledge 1–26</h3><div class="burgundy-knowledge-list">${Object.entries(view.knowledge).sort((a,b) => Number(a[0])-Number(b[0])).map(([n, t]) => `<p><b>${n}.</b> ${esc(t)}</p>`).join("")}</div>
-      <p class="burgundy-muted">本实现采用原版知识 6、15、24：买板块只支付银币；已售货物种类每种 3 分；动物种类每种 4 分。不含扩展和其他领地。</p>
-      <p><a href="https://cdn.1j1ju.com/medias/04/f5/f9-the-castles-of-burgundy-rulebook.pdf" target="_blank" rel="noopener noreferrer">Original rules</a> · <a href="https://www.yucata.de/en/Rules/CastlesOfBurgundy" target="_blank" rel="noopener noreferrer">Tie-break correction</a></p>`);
+  function goodsMarkup(goods) {
+    return goods.map((count, index) => count ? tip(`${colours[index]} ${index + 1}<strong>×${count}</strong>`, `Goods type ${index + 1}: ${count} tiles.`, "burgundy-good") : "").join("") || '<span class="burgundy-muted">No goods</span>';
   }
   function renderPlayers() {
-    return `<div class="burgundy-players">${view.turn_order.map((id, i) => {
-      const p = player(id);
-      return button(`<span class="burgundy-player-name">${p.is_bot ? "🤖 " : ""}${esc(p.name)}${id === view.you ? " · You" : ""}</span><strong>⭐ ${p.score}</strong><small>🪙 ${p.silver} · 👷 ${p.workers} · ⛵ ${p.ships}</small>`,
-        "player", "Inspect this player's estate, storage, goods and knowledge.", `burgundy-player ${id === view.current_turn ? "is-turn" : ""} ${id === ui.viewed ? "is-selected" : ""}`, false, attr("player", id));
+    return `<div class="burgundy-players">${view.turn_order.map(id => {
+      const entry = player(id);
+      return button(`<span class="burgundy-player-name">${entry.is_bot ? "🤖 " : ""}${esc(entry.name)}${id === view.you ? " · You" : ""}</span><strong>⭐ ${entry.score}</strong><small>🪙 ${entry.silver} · 👷 ${entry.workers} · ⛵ ${entry.ships}</small>`,
+        "player", `${entry.name}: ${entry.score} points, ${entry.silver} silverlings, ${entry.workers} workers, ${entry.ships} ships. Inspect this estate.`,
+        `burgundy-player ${id === view.current_turn ? "is-turn" : ""} ${id === ui.viewed ? "is-selected" : ""}`, false, attr("player", id));
     }).join("")}</div>`;
-  }
-  function renderEstate() {
-    const p = player(ui.viewed) || self() || view.players[0];
-    const available = options("place").filter(o => o.action.tile === ui.tile && p.player_id === view.you);
-    const cells = p.estate.map(c => {
-      const legal = available.some(o => o.action.cell === c.id);
-      const title = `Hex ${c.id + 1} · ${kinds[c.kind][1]} · die ${c.number}. ${c.tile ? c.tile.description : "Place a matching tile adjacent to your existing estate."}`;
-      const label = c.tile ? `<span>${c.tile.emoji}</span><small>${c.tile.kind === "animal" ? "×" + c.tile.count : c.tile.kind === "knowledge" ? "#" + c.tile.number : "✓"}</small>`
-        : `<span class="burgundy-hex-number">${dice[c.number - 1]}</span>`;
-      const x = 50 + (c.q + c.r / 2) * 13.75;
-      const y = 50 + c.r * 12.5;
-      return `<div class="burgundy-hex-slot" style="left:${x}%;top:${y}%">${button(label, "cell", title,
-        `burgundy-hex burgundy-${c.kind} ${c.tile ? "is-built" : ""} ${legal ? "is-legal" : ""} ${ui.cell === c.id ? "is-selected" : ""}`,
-        !legal, `${attr("cell", c.id)} aria-label="${esc(title)}" title="${esc(title)}"`)}</div>`;
-    }).join("");
-    return `<section class="burgundy-card burgundy-estate-card"><div class="burgundy-section-heading"><h3>🏰 ${esc(p.name)}’s estate</h3><span>${p.estate.filter(c => c.tile).length} / 37</span></div>
-      <div class="burgundy-estate" aria-label="Standard estate number 1">${cells}</div>
-      <div class="burgundy-legend">${Object.values(kinds).map(([e,n]) => `<span>${e} ${n}</span>`).join("")}</div>
-      <div class="burgundy-section-heading"><h3>Storage</h3><small>${p.storage.length} / 3</small></div>
-      <div class="burgundy-storage">${[0,1,2].map(i => {
-        const t = p.storage[i];
-        if (!t) return '<div class="burgundy-empty-slot">Empty</div>';
-        const available = options("place").some(o => o.action.tile === t.id);
-        return button(tileMarkup(t), "storage", t.description, `burgundy-tile burgundy-${t.kind} ${ui.tile === t.id ? "is-selected" : ""}`, !available || p.player_id !== view.you, attr("tile", t.id));
-      }).join("")}</div>
-      <div class="burgundy-goods">${goodsMarkup(p.goods)}</div>
-      <details class="burgundy-details"><summary>📜 Knowledge (${p.knowledge.length}) & progress</summary>
-      ${p.knowledge.map(n => `<p><b>#${n}</b> ${esc(view.knowledge[n])}</p>`).join("") || '<p>No knowledge tiles yet.</p>'}
-      <p>Sold: ${goodsMarkup(p.sold)}</p><p>Colour bonuses: ${p.bonus_tiles.map(b => `${kinds[b.kind][0]} +${b.points}`).join(" · ") || "None"}</p>
-      <p>Next order: ${view.next_order.map(id => esc(name(id))).join(" → ")}</p></details></section>`;
   }
   function renderConfirmation() {
     const selected = selectionOptions()[0];
     const tile = findTile(ui.tile);
-    const isShip = view.pending?.kind === "ship";
-    let text = isShip ? "Choose a depot to collect its goods." : tile ? `${tile.emoji} ${tile.name}` : "Select a die, an action and a target.";
-    if (!tile && !isShip && view.pending) text = "Choose an immediate bonus action; no die is needed.";
-    if (!tile && !view.pending && self()?.used.every(Boolean)) {
-      text = options("buy").length ? "Both dice used. You may buy a tile, then End Turn." : "Both dice used. Choose End Turn.";
-    }
-    if (ui.mode === "sell" && ui.goods) text = `${colours[ui.goods - 1]} Sell all type ${ui.goods} goods`;
-    if (ui.mode === "place" && tile && ui.cell === null) text += " · choose a highlighted hex";
-    const needDiscard = ["take", "buy"].includes(ui.mode) && tile && self()?.storage.length === 3;
-    const replacement = needDiscard ? `<p class="burgundy-hint">Storage full · choose a tile to discard:</p><div class="burgundy-inline">${self().storage.map(t => button(`${t.emoji} ${esc(t.name)}`, "discard", "Discard this stored tile to make room for the new tile. This cannot be undone.", ui.discard === t.id ? "is-selected" : "", false, attr("tile", t.id))).join("")}</div>` : "";
-    if (selected) {
-      const a = selected.action;
-      const target = a.type === "place" ? self().estate[a.cell].number : a.type === "take" ? a.depot : a.type === "sell" ? a.goods : null;
-      text += a.type === "buy" ? " · 2 🪙" : ` · ${selected.workers} 👷${target ? ` · target ${dice[target - 1]}` : ""}`;
-      if (a.type === "ship_goods") text = `Collect from depot ${a.depots.join(" + ")} · ${a.goods.map(n => colours[n-1] + " " + n).join(", ") || "No compatible goods"}`;
-      if (a.type === "place") text += ` · hex ${a.cell + 1}`;
-    }
-    return `<div class="burgundy-confirm"><p>${esc(text)}</p>${tile ? `<small>${esc(tile.description)}</small>` : ""}${replacement}
-      ${button("Confirm", "confirm", "Submit the selected action and pay the displayed cost.", "burgundy-primary", !selected)}</div>`;
+    let text = tile ? `${tile.emoji} ${tile.name}` : "";
+    if (ui.mode === "place" && tile && ui.cell === null) return `<p class="burgundy-selection-hint" role="status">${esc(text)} · choose a highlighted hex</p>`;
+    if (ui.mode === "sell") text = `${colours[ui.goods - 1]} Sell all type ${ui.goods} goods`;
+    if (view.pending?.kind === "ship") text = `⛵ Collect from depot ${ui.shipDepots.join(" + ")}`;
+    if (selected) text += selected.action.type === "buy" ? " · 2 🪙" : ` · ${selected.workers || 0} 👷`;
+    if (selected?.action.type === "place") text += ` · hex ${selected.action.cell + 1}`;
+    const replacement = ["take", "buy"].includes(ui.mode) && tile && self()?.storage.length === 3
+      ? `<div class="burgundy-replacement"><span>Storage full · replace one tile:</span><div class="burgundy-inline">${self().storage.map(stored => button(`${stored.emoji} ${esc(stored.name)}`, "discard", `Discard ${stored.name} to make room. This cannot be undone.`, ui.discard === stored.id ? "is-selected" : "", false, attr("tile", stored.id))).join("")}</div></div>` : "";
+    return `<div class="burgundy-confirm" role="region" aria-label="Confirm selection"><p role="status">${esc(text)}</p>${tile ? `<small>${esc(tile.description)}</small>` : ""}${replacement}<div class="burgundy-inline">${button("Confirm", "confirm", "Submit this selection and pay the displayed cost.", "burgundy-primary", !selected)}${button("Cancel", "cancel", "Cancel this unsubmitted selection.")}</div></div>`;
   }
-  function renderActions() {
-    const p = self();
-    if (view.game_over) {
-      return `<section class="burgundy-card burgundy-action-card"><h3>🏆 ${view.winner.map(id => esc(name(id))).join(", ")}</h3><p>Game complete · final scoring</p>
-        ${Object.entries(view.final_scores).map(([pid, s]) => `<div class="burgundy-final"><strong>${esc(name(pid))} · ⭐ ${s.total}</strong><p>Play ${s.during_game} · Goods ${s.goods} · 🪙 ${s.silver} · 👷 ${s.workers} · 📜 ${s.knowledge}</p>${Object.keys(s.knowledge_details).length ? `<small>${Object.entries(s.knowledge_details).map(([n,v]) => `#${n}: ${v}`).join(" · ")}</small>` : ""}</div>`).join("")}</section>`;
-    }
-    if (view.phase === "round_end") {
-      return `<section class="burgundy-card burgundy-action-card"><h3>Round complete</h3><p>${view.ready.length} / ${view.players.length} ready</p>
-        ${view.players.map(p => `<div class="burgundy-review"><span>${esc(p.name)} ${view.ready.includes(p.player_id) ? "✓" : ""}</span><b>⭐ +${view.review.delta[p.player_id].score}</b>${view.review.income[p.player_id] ? `<small>Income: 🪙 +${view.review.income[p.player_id].silver} · 👷 +${view.review.income[p.player_id].workers}</small>` : ""}</div>`).join("")}
-        ${button("Next Round", "next", "Confirm you have reviewed this round. Play resumes only after every player is ready.", "burgundy-primary", !options("next_round").length)}</section>`;
-    }
-    if (!p || view.current_turn !== view.you) {
-      return `<section class="burgundy-card burgundy-action-card"><h3>${p ? "Waiting for" : "Spectating"} ${esc(name(view.current_turn))}</h3><p>You can inspect every estate while the current player acts.</p>
-      <div class="burgundy-all-dice">${view.players.map(p => `<div><span>${esc(p.name)}</span><b>${p.dice.map((n,i) => `<span class="${p.used[i] ? "is-used" : ""}">${dice[n-1]}</span>`).join(" ")}</b></div>`).join("")}</div></section>`;
-    }
-    const modes = [["take", "Take"], ["place", "Place"], ["sell", "Sell"], ["buy", "Buy · 2 🪙"]];
-    const descriptions = {take: "Take a tile from a depot matching your die, using workers if needed.", place: "Place a stored tile on a matching, adjacent estate hex.", sell: "Sell all goods of one type: 1 silverling per sale, 2–4 VP per goods tile.", buy: "Once per turn, spend 2 silverlings to buy from the black depot. Knowledge 6 also permits numbered depots."};
-    let controls = `<div class="burgundy-dice">${p.dice.map((n,i) => button(dice[n-1], "die", `Die ${i+1}: value ${n}. Workers adjust the result; 1 and 6 are adjacent.`, `${ui.die === i ? "is-selected" : ""} ${p.used[i] ? "is-used" : ""}`, p.used[i] || !!view.pending, attr("die", i))).join("")}<span>🪙 ${p.silver} · 👷 ${p.workers}</span></div>`;
-    if (view.pending) controls += `<div class="burgundy-bonus">${esc(effects[view.pending.kind])}</div>`;
-    if (view.pending?.kind === "ship") {
-      const available = [...new Set(ui.shipDepots.flatMap(d => view.depots[d].goods))].sort();
-      controls += `<p class="burgundy-hint">Choose ${p.knowledge.includes(5) ? "one depot or two adjacent depots" : "one depot"} below, then select goods if needed.</p><div class="burgundy-inline">${available.map(n => button(`${colours[n-1]} ${n}`, "ship-good", "Take all goods of this type from the selected depots. Your goods storage may contain at most three types.", ui.shipGoods.includes(n) ? "is-selected" : "", false, attr("goods", n))).join("")}</div>`;
-    } else {
-      controls += `<div class="burgundy-modes">${modes.map(([mode, label]) => button(label, "mode", descriptions[mode], ui.mode === mode ? "is-selected" : "", !options(mode).length, attr("mode",mode))).join("")}</div>`;
-      if (ui.mode === "sell") controls += `<div class="burgundy-inline">${p.goods.map((n,i) => n ? button(`${colours[i]} ${i+1} ×${n}`, "sell", descriptions.sell, ui.goods === i+1 ? "is-selected" : "", !options("sell").some(o => o.action.goods === i+1), attr("goods",i+1)) : "").join("")}</div>`;
-    }
-    controls += renderConfirmation();
-    const worker = options("workers")[0];
-    controls += `<div class="burgundy-inline burgundy-turn-buttons">${button(`Workers · +${p.knowledge.includes(14) ? 4 : 2} 👷`, "workers", "Spend the selected die to gain workers. Knowledge 13 adds 1 silverling; knowledge 14 gives 4 workers.", "", !worker)}
-      ${options("skip_bonus").length ? button("Skip Bonus", "skip", "Decline this optional building effect and resume your turn.") : ""}
-      ${button("End Turn", "end", "Finish your turn after using both dice and resolving bonuses. You may buy a tile before ending.", "", !options("end_turn").length)}</div>`;
-    return `<section class="burgundy-card burgundy-action-card"><div class="burgundy-section-heading"><h3>Your turn</h3><small>${p.used.filter(Boolean).length} / 2 dice used</small></div>${controls}</section>`;
+  function renderEstate() {
+    const owner = player(ui.viewed) || self() || view.players[0];
+    const ownEstate = owner.player_id === view.you;
+    const available = ownEstate ? options("place").filter(option => option.action.tile === ui.tile) : [];
+    const cells = owner.estate.map(cell => {
+      const legal = available.some(option => option.action.cell === cell.id);
+      const description = `Hex ${cell.id + 1} · ${kinds[cell.kind].join(" ")} · die ${cell.number}. ${cell.tile ? `${cell.tile.name}: ${cell.tile.description}` : "Place a matching tile adjacent to your built estate."}`;
+      const label = cell.tile ? `<span>${esc(cell.tile.emoji)}</span><small>${cell.tile.kind === "animal" ? "×" + cell.tile.count : cell.tile.kind === "knowledge" ? "#" + cell.tile.number : "✓"}</small>` : `<span class="burgundy-hex-number">${dice[cell.number - 1]}</span>`;
+      return `<div class="burgundy-hex-slot" style="left:${50 + (cell.q + cell.r / 2) * 13.75}%;top:${50 + cell.r * 12.5}%"${!legal ? ` data-burgundy-tip="${esc(description)}"` : ""}>${button(label, "cell", description,
+        `burgundy-hex burgundy-${cell.kind} ${cell.tile ? "is-built" : ""} ${legal ? "is-legal" : ""} ${ui.cell === cell.id ? "is-selected" : ""}`, !legal, `${attr("cell", cell.id)} aria-label="${esc(description)}"`)}</div>`;
+    }).join("");
+    return `<section class="burgundy-estate-section"><div class="burgundy-section-heading"><h3>🏰 ${esc(owner.name)}’s estate</h3>${tip(`${owner.estate.filter(cell => cell.tile).length} / 37`, "Built hexes out of the 37 spaces on estate 1.")}</div>
+      <div class="burgundy-map-tools" role="group" aria-label="Estate zoom">${button("−", "zoom-out", "Zoom out the estate.", "", ui.zoom <= 1)}${tip(`${Math.round(ui.zoom * 100)}%`, "Estate zoom level.")}${button("+", "zoom-in", "Zoom in the estate.", "", ui.zoom >= 3)}${button("Fit", "fit", "Fit the complete estate into the viewport.")}${button("Origin", "origin", "Show the estate at its original 560 pixel size.")}</div>
+      <div class="burgundy-map" data-burgundy-explain="estate" aria-label="Estate map. Drag to pan when zoomed."><div class="burgundy-estate">${cells}</div></div>
+      ${active() && ownEstate && ui.mode === "place" && ui.tile ? renderConfirmation() : ""}
+      <div class="burgundy-legend">${Object.values(kinds).map(([icon, label]) => tip(`${icon} ${label}`, `${label} (${icon}): place tiles of this kind on matching estate hexes.`)).join("")}</div>
+      <div class="burgundy-supplies"><section><div class="burgundy-section-heading"><h3>Storage</h3><small>${owner.storage.length} / 3</small></div><div class="burgundy-storage">${[0, 1, 2].map(index => {
+        const tile = owner.storage[index];
+        if (!tile) return '<div class="burgundy-empty-slot">Empty</div>';
+        return button(tileMarkup(tile), "storage", `${tile.name} (${tile.emoji}): ${tile.description} Select to place on your estate.`, `burgundy-tile burgundy-${tile.kind} ${ui.tile === tile.id ? "is-selected" : ""}`, !ownEstate || !options("place").some(option => option.action.tile === tile.id), attr("tile", tile.id));
+      }).join("")}</div></section><section><div class="burgundy-section-heading"><h3>Goods</h3>${tip("3 types max", "Store up to three different goods types. Each type can hold any number of tiles.")}</div><div class="burgundy-goods">${ownEstate && active() ? owner.goods.map((count, index) => count ? button(`${colours[index]} ${index + 1} <b>×${count}</b>`, "sell", `Sell all ${count} type ${index + 1} goods. Normally gain 1 silverling and ${view.players.length * count} points. Knowledge may add bonuses.`, ui.mode === "sell" && ui.goods === index + 1 ? "is-selected" : "", !options("sell").some(option => option.action.goods === index + 1), attr("goods", index + 1)) : "").join("") || '<span class="burgundy-muted">No goods</span>' : goodsMarkup(owner.goods)}</div>${active() && ownEstate && ui.mode === "sell" && ui.goods ? renderConfirmation() : ""}</section></div>
+      <details class="burgundy-details" data-detail="knowledge"><summary>📜 Knowledge (${owner.knowledge.length}) & progress</summary>${owner.knowledge.map(number => `<p><b>#${number}</b> ${esc(view.knowledge[number])}</p>`).join("") || '<p>No knowledge tiles yet.</p>'}<p>Sold: ${goodsMarkup(owner.sold)}</p><p>Colour bonuses: ${owner.bonus_tiles.map(bonus => `${kinds[bonus.kind][0]} +${bonus.points}`).join(" · ") || "None"}</p><p>Next order: ${view.next_order.map(id => esc(name(id))).join(" → ")}</p></details></section>`;
+  }
+  function renderShipGoods() {
+    const available = [...new Set(ui.shipDepots.flatMap(id => view.depots[id].goods))].sort();
+    return `<div class="burgundy-ship-choice"><p class="burgundy-hint">${self().knowledge.includes(5) ? "Choose one depot or two adjacent depots." : "Choose one depot."} Select goods to keep:</p><div class="burgundy-inline">${available.map(number => button(`${colours[number - 1]} ${number}`, "ship-good", `Collect every type ${number} goods tile from the selected depots. Keep at most three goods types.`, ui.shipGoods.includes(number) ? "is-selected" : "", false, attr("goods", number))).join("") || '<span class="burgundy-muted">No goods in this depot</span>'}</div>${renderConfirmation()}</div>`;
   }
   function renderDepots() {
-    const buying = ui.mode === "buy";
-    const ship = view.pending?.kind === "ship" && view.you === view.current_turn;
-    return `<section class="burgundy-card burgundy-market-card"><div class="burgundy-section-heading"><h3>Trading depots</h3><span>White die ${dice[view.white_die-1]}</span></div>
-      <div class="burgundy-depots">${[...view.depots.slice(1), view.depots[0]].map(d => {
-        const header = d.id ? `${dice[d.id-1]} Depot ${d.id}` : "🪙 Black depot";
-        return `<div class="burgundy-depot ${d.id === 0 ? "burgundy-black-depot" : ""} ${ui.shipDepots.includes(d.id) ? "is-selected" : ""}"><div class="burgundy-depot-heading">${ship && d.id ? button(header, "ship-depot", "Choose this depot's goods. Knowledge 5 permits two adjacent depots.", "", false, attr("depot",d.id)) : `<h4>${header}</h4>`}</div>
-        <div class="burgundy-depot-tiles">${d.tiles.map(t => {
-          const type = d.id === 0 || buying ? "buy" : "take";
-          const legal = !ship && options(type).some(o => o.action.tile === t.id);
-          return button(tileMarkup(t), "tile", t.description, `burgundy-tile burgundy-${t.kind} ${ui.tile === t.id ? "is-selected" : ""}`, !legal,
-            `${attr("tile", t.id)}${attr("depot", d.id)}${attr("mode",type)} title="${esc(t.description)}"`);
-        }).join("") || '<span class="burgundy-muted">Empty</span>'}</div>${d.id ? `<div class="burgundy-depot-goods">${d.goods.map(g => `<span title="Goods ${g}">${colours[g-1]}<b>${g}</b></span>`).join("") || '<small>No goods</small>'}</div>` : ""}</div>`;
+    const ship = view.pending?.kind === "ship" && active();
+    return `<section class="burgundy-market-section"><div class="burgundy-section-heading"><h3>Trading depots</h3>${tip(`White die ${dice[view.white_die - 1]}`, `The white die sends this round's arriving goods to depot ${view.white_die}. It is not an action die.`)}${self()?.knowledge.includes(6) && active() && !view.pending ? button("Buy · 2 🪙", "buy-mode", "Knowledge 6: toggle buying from numbered depots instead of using a die to take a tile.", ui.buyMode ? "is-selected" : "", !options("buy").length) : ""}</div>
+      <div class="burgundy-depots">${[...view.depots.slice(1), view.depots[0]].map(depot => {
+        const header = depot.id ? `${dice[depot.id - 1]} Depot ${depot.id}` : "🪙 Black depot · 2 🪙";
+        const selected = ui.depot === depot.id && ui.tile && ["take", "buy"].includes(ui.mode);
+        return `<section class="burgundy-depot ${depot.id === 0 ? "burgundy-black-depot" : ""} ${ui.shipDepots.includes(depot.id) ? "is-selected" : ""}"><div class="burgundy-depot-heading">${ship && depot.id ? button(header, "ship-depot", "Choose this depot's goods. Knowledge 5 permits two adjacent depots, including 1 and 6.", ui.shipDepots.includes(depot.id) ? "is-selected" : "", false, attr("depot", depot.id)) : `<h4>${header}</h4>`}</div>
+        <div class="burgundy-depot-tiles">${depot.tiles.map(tile => {
+          const type = depot.id === 0 || ui.buyMode ? "buy" : "take";
+          const legal = !ship && options(type).some(option => option.action.tile === tile.id);
+          return button(tileMarkup(tile), "tile", `${tile.name} (${tile.emoji}): ${tile.description} ${type === "buy" ? "Buy once per turn for 2 silverlings." : `Take using a die matching depot ${depot.id}, adjusted with workers if needed.`}`, `burgundy-tile burgundy-${tile.kind} ${ui.tile === tile.id ? "is-selected" : ""}`, !legal, `${attr("tile", tile.id)}${attr("depot", depot.id)}${attr("mode", type)}`);
+        }).join("") || '<span class="burgundy-muted">Empty</span>'}</div>${selected ? renderConfirmation() : ""}${depot.id ? `<div class="burgundy-depot-goods">${depot.goods.map(number => tip(`${colours[number - 1]}<b>${number}</b>`, `Goods type ${number}. Collect using a ship.`, "burgundy-good")).join("") || '<small>No goods</small>'}</div>` : ""}${ship && ui.shipDepots.at(-1) === depot.id ? renderShipGoods() : ""}</section>`;
       }).join("")}</div></section>`;
+  }
+  function renderTurn() {
+    const owner = self();
+    if (!active()) return `<div class="burgundy-turn-bar"><strong>${view.game_over ? "🏆 Game complete" : view.phase === "round_end" ? "Round complete · review below" : `${owner ? "Waiting for" : "Spectating"} ${esc(name(view.current_turn))}`}</strong>${!view.game_over && view.phase !== "round_end" ? `<span class="burgundy-other-dice">${player(view.current_turn)?.dice.map((number, index) => tip(dice[number - 1], `Action die ${index + 1}: ${number}${player(view.current_turn).used[index] ? ", already used" : ", available"}.`, player(view.current_turn).used[index] ? "is-used" : "")).join(" ") || ""}</span>` : ""}</div>`;
+    return `<div class="burgundy-turn-bar"><div class="burgundy-dice"><strong>Your turn</strong>${owner.dice.map((number, index) => button(dice[number - 1], "die", `Die ${index + 1}: ${number}. Workers adjust its value, with 1 adjacent to 6.`, `${ui.die === index ? "is-selected" : ""} ${owner.used[index] ? "is-used" : ""}`, owner.used[index] || !!view.pending, `${attr("die", index)} aria-label="Die ${index + 1}: ${number}"`)).join("")}</div><div class="burgundy-inline burgundy-turn-buttons">${button(`+${owner.knowledge.includes(14) ? 4 : 2} 👷`, "workers", "Workers (👷): spend the selected die to gain 2 workers, or 4 with knowledge 14. Knowledge 13 adds a silverling.", "", !options("workers").length)}${options("skip_bonus").length ? button("Skip Bonus", "skip", "Decline this optional building effect and resume your turn.") : ""}${button("End Turn", "end", "Finish after using both dice and resolving bonuses. You can buy a tile before ending.", "", !options("end_turn").length)}</div></div>${view.pending ? `<p class="burgundy-bonus" role="status">${esc(effects[view.pending.kind])}</p>` : ""}`;
+  }
+  function renderReview() {
+    if (view.game_over) return `<section class="burgundy-review-section"><h3>🏆 ${view.winner.map(id => esc(name(id))).join(", ")}</h3>${Object.entries(view.final_scores).map(([id, score]) => `<div class="burgundy-final"><strong>${esc(name(id))} · ⭐ ${score.total}</strong><p>Play ${score.during_game} · Goods ${score.goods} · 🪙 ${score.silver} · 👷 ${score.workers} · 📜 ${score.knowledge}</p>${Object.keys(score.knowledge_details).length ? `<small>${Object.entries(score.knowledge_details).map(([number, points]) => `#${number}: ${points}`).join(" · ")}</small>` : ""}</div>`).join("")}</section>`;
+    if (view.phase !== "round_end") return "";
+    return `<section class="burgundy-review-section"><div class="burgundy-section-heading"><h3>Round complete</h3><span>${view.ready.length} / ${view.players.length} ready</span></div>${view.players.map(owner => `<div class="burgundy-review ${owner.player_id === view.you ? "is-you" : ""}"><span>${esc(owner.name)}${owner.player_id === view.you ? " · You" : ""} ${view.ready.includes(owner.player_id) ? "✓" : ""}</span><b>⭐ +${view.review.delta[owner.player_id].score}</b>${view.review.income[owner.player_id] ? `<small>Income: 🪙 +${view.review.income[owner.player_id].silver} · 👷 +${view.review.income[owner.player_id].workers}</small>` : ""}</div>`).join("")}${button("Next Round", "next", "Continue only after every player has reviewed this round and confirmed readiness.", "burgundy-primary", !options("next_round").length)}</section>`;
+  }
+  function applyMapTransform() {
+    const map = panel.querySelector(".burgundy-map");
+    const estate = map?.querySelector(".burgundy-estate");
+    if (!map || !estate) return;
+    ui.panX = Math.max(-map.clientWidth * (ui.zoom - 1) / 2, Math.min(map.clientWidth * (ui.zoom - 1) / 2, ui.panX));
+    ui.panY = Math.max(-map.clientHeight * (ui.zoom - 1) / 2, Math.min(map.clientHeight * (ui.zoom - 1) / 2, ui.panY));
+    estate.style.transform = `translate(${ui.panX}px, ${ui.panY}px) scale(${ui.zoom})`;
+    map.classList.toggle("is-zoomed", ui.zoom > 1);
   }
   function render() {
     if (!view) return;
-    const focused = document.activeElement?.getAttribute("data-burgundy");
-    panel.innerHTML = `<header class="burgundy-header"><div class="burgundy-header-right"><div class="burgundy-inline">${button("Help", "help", "Read the game rules.")}${button(explain ? "Explain · On" : "Explain", "explain", "Inspect controls without triggering an action.", explain ? "is-selected" : "")}</div><strong>Phase ${"ABCDE"[view.stage-1]} · Round ${view.round} / 5</strong><small>Region bonus +${12 - view.stage * 2} ⭐</small></div></header>
-      ${renderPlayers()}<nav class="burgundy-mobile-tabs" aria-label="Game panels">${button("🏰 Estate", "tab", "Show the selected player's estate and storage.", ui.tab !== "depots" ? "is-selected" : "", false, attr("tab", "estate"))}${button("⛵ Depots", "tab", "Show the common tile market and goods depots.", ui.tab === "depots" ? "is-selected" : "", false, attr("tab", "depots"))}</nav>
-      <div class="burgundy-layout">${renderEstate()}<div class="burgundy-right">${renderActions()}${renderDepots()}</div></div>
-      <div class="burgundy-footer"><div class="burgundy-bonuses">${Object.entries(view.bonuses).map(([k,ids]) => `<span>${kinds[k][0]} ${ids.length}/2</span>`).join("")}<small>Next goods: ${view.round_goods.map(n => `${colours[n-1]}${n}`).join(" ") || "Phase end"}</small></div>
-      <details class="burgundy-details"><summary>Log · recent actions</summary><div class="burgundy-log">${view.log.slice().reverse().map(t => `<p>${esc(t)}</p>`).join("")}</div></details></div>`;
-    panel.classList.toggle("burgundy-explaining", explain);
+    const focused = document.activeElement?.dataset.focusKey;
+    const opened = [...content.querySelectorAll("details[open]")].map(details => details.dataset.detail);
+    const logScroll = content.querySelector(".burgundy-log")?.scrollTop || 0;
+    Object.keys(explanations).filter(key => key.startsWith("control-")).forEach(key => delete explanations[key]);
+    explanationIndex = 0;
+    phaseLabel.innerHTML = `<strong>Phase ${"ABCDE"[view.stage - 1]} <span>· Round ${view.round} / 5</span></strong>${tip(`Region bonus +${12 - view.stage * 2} ⭐`, "Extra points for completing a region in this phase, in addition to its size bonus.")}`;
+    content.innerHTML = `${renderPlayers()}${renderTurn()}<nav class="burgundy-mobile-tabs" aria-label="Game panels">${button("🏰 Estate", "tab", "Show the selected estate, storage and goods.", ui.tab !== "depots" ? "is-selected" : "", false, attr("tab", "estate"))}${button("⛵ Depots", "tab", "Show shared tile and goods depots.", ui.tab === "depots" ? "is-selected" : "", false, attr("tab", "depots"))}</nav>${renderReview()}<div class="burgundy-layout">${renderEstate()}${renderDepots()}</div><footer class="burgundy-footer"><div class="burgundy-bonuses">${Object.entries(view.bonuses).map(([kind, ids]) => tip(`${kinds[kind][0]} ${ids.length}/2`, `${kinds[kind][1]} colour bonus: ${ids.length} of two claims taken.`)).join("")}${tip(`Next goods: ${view.round_goods.map(number => `${colours[number - 1]}${number}`).join(" ") || "Phase end"}`, "Remaining public goods arriving in this phase.", "burgundy-next-goods")}</div><details class="burgundy-details" data-detail="log"><summary>Log · recent actions</summary><div class="burgundy-log">${view.log.slice().reverse().map(text => `<p>${esc(text)}</p>`).join("")}</div></details></footer>`;
     panel.dataset.mobileTab = ui.tab || "estate";
-    if (focused === "explain") panel.querySelector('[data-burgundy="explain"]')?.focus();
+    opened.forEach(key => content.querySelector(`details[data-detail="${key}"]`)?.setAttribute("open", ""));
+    const log = content.querySelector(".burgundy-log");
+    if (log) log.scrollTop = logScroll;
+    if (focused) [...content.querySelectorAll("[data-focus-key]")].find(element => element.dataset.focusKey === focused)?.focus({preventScroll: true});
+    applyMapTransform();
+    explain.refresh();
   }
   function submit(option) {
     if (!option) return;
     sendAction(option.action);
     resetSelection();
   }
+  helpButton.addEventListener("click", () => {
+    explain.exit(); hideTip();
+    helpConfig.sections.find(section => section.id === "knowledge").html = {
+      zh: knowledgeZh.map((text, index) => `<p><b>知识 ${index + 1} (📜)</b> ${text}</p>`).join(""),
+      en: Object.entries(view?.knowledge || {}).sort((left, right) => Number(left[0]) - Number(right[0])).map(([number, text]) => `<p><b>Knowledge ${number} (📜)</b> ${esc(text)}</p>`).join("")
+    };
+    help.open();
+  });
+  explainButton.addEventListener("click", () => { hideTip(); explain.toggle(); });
   panel.addEventListener("click", event => {
-    const b = event.target.closest("button[data-burgundy]");
-    if (!b) {
-      if (!event.target.closest("summary, details, label, input, a")) { resetSelection(); render(); }
+    if (performance.now() < suppressClickUntil) { event.preventDefault(); return; }
+    const target = event.target.closest("button[data-burgundy]");
+    if (!target) {
+      if (!event.target.closest("button, summary, details, [data-burgundy-tip], .burgundy-map-tools")) { resetSelection(); render(); }
       return;
     }
-    const command = b.dataset.burgundy;
-    if (command === "help") { explain = false; render(); help(); return; }
-    if (command === "explain") { explain = !explain; render(); return; }
-    if (command === "player") { ui.viewed = b.dataset.player; ui.tab = "estate"; }
-    else if (command === "tab") ui.tab = b.dataset.tab;
-    else if (command === "die") { resetSelection(); ui.die = Number(b.dataset.die); }
-    else if (command === "mode") { resetSelection(); ui.mode = b.dataset.mode; ui.tab = ["take", "buy"].includes(ui.mode) ? "depots" : "estate"; }
-    else if (command === "tile") { resetSelection(); ui.tile = b.dataset.tile; ui.depot = Number(b.dataset.depot); ui.mode = b.dataset.mode; }
-    else if (command === "storage") { resetSelection(); ui.tile = b.dataset.tile; ui.mode = "place"; ui.viewed = view.you; }
-    else if (command === "cell") ui.cell = Number(b.dataset.cell);
-    else if (command === "discard") ui.discard = b.dataset.tile;
-    else if (command === "sell") ui.goods = Number(b.dataset.goods);
-    else if (command === "ship-depot") {
-      const d = Number(b.dataset.depot);
-      if (ui.shipDepots.includes(d)) ui.shipDepots = ui.shipDepots.filter(n => n !== d);
-      else if (self().knowledge.includes(5) && ui.shipDepots.length === 1 && [1,5].includes(Math.abs(d-ui.shipDepots[0]))) ui.shipDepots.push(d);
-      else ui.shipDepots = [d];
-      ui.shipDepots.sort((a,b) => a-b);
-      const possible = options("ship_goods").filter(o => same(o.action.depots, ui.shipDepots));
-      ui.shipGoods = possible.length === 1 ? possible[0].action.goods.slice() : [...new Set(ui.shipDepots.flatMap(d => view.depots[d].goods))].filter(n => self().goods[n-1]).sort();
+    if (target.disabled) return;
+    const command = target.dataset.burgundy;
+    if (command === "player") { resetSelection(); ui.viewed = target.dataset.player; ui.tab = "estate"; }
+    else if (command === "tab") ui.tab = target.dataset.tab;
+    else if (command === "die") { resetSelection(); ui.die = Number(target.dataset.die); }
+    else if (command === "buy-mode") { resetSelection(); ui.buyMode = !ui.buyMode; }
+    else if (command === "tile") { resetSelection(); Object.assign(ui, {tile: target.dataset.tile, depot: Number(target.dataset.depot), mode: target.dataset.mode}); }
+    else if (command === "storage") { resetSelection(); Object.assign(ui, {tile: target.dataset.tile, mode: "place", viewed: view.you}); }
+    else if (command === "cell") ui.cell = Number(target.dataset.cell);
+    else if (command === "discard") ui.discard = target.dataset.tile;
+    else if (command === "sell") { resetSelection(); ui.mode = "sell"; ui.goods = Number(target.dataset.goods); }
+    else if (command === "cancel") resetSelection();
+    else if (["zoom-in", "zoom-out", "fit", "origin"].includes(command)) {
+      const width = panel.querySelector(".burgundy-map").clientWidth;
+      ui.zoom = command === "fit" ? 1 : command === "origin" ? Math.min(3, Math.max(1, 560 / width)) : Math.min(3, Math.max(1, ui.zoom * (command === "zoom-in" ? 1.25 : .8)));
+      if (command === "fit" || command === "origin") ui.panX = ui.panY = 0;
+    } else if (command === "ship-depot") {
+      const depot = Number(target.dataset.depot);
+      if (ui.shipDepots.includes(depot)) ui.shipDepots = ui.shipDepots.filter(id => id !== depot);
+      else if (self().knowledge.includes(5) && ui.shipDepots.length === 1 && [1, 5].includes(Math.abs(depot - ui.shipDepots[0]))) ui.shipDepots.push(depot);
+      else ui.shipDepots = [depot];
+      ui.shipDepots.sort((left, right) => left - right);
+      const possible = options("ship_goods").filter(option => same(option.action.depots, ui.shipDepots));
+      ui.shipGoods = possible.length === 1 ? possible[0].action.goods.slice() : [...new Set(ui.shipDepots.flatMap(id => view.depots[id].goods))].filter(number => self().goods[number - 1]).sort();
     } else if (command === "ship-good") {
-      const n = Number(b.dataset.goods);
-      if (!self().goods[n-1]) {
-        ui.shipGoods = ui.shipGoods.includes(n) ? ui.shipGoods.filter(g => g !== n) : [...ui.shipGoods, n].sort();
-      }
+      const number = Number(target.dataset.goods);
+      if (!self().goods[number - 1]) ui.shipGoods = ui.shipGoods.includes(number) ? ui.shipGoods.filter(good => good !== number) : [...ui.shipGoods, number].sort();
     } else if (command === "confirm") { submit(selectionOptions()[0]); return; }
-    else if (["workers", "end", "skip", "next"].includes(command)) {
-      submit(options({workers: "workers", end: "end_turn", skip: "skip_bonus", next: "next_round"}[command])[0]); return;
-    }
-    render();
+    else if (["workers", "end", "skip", "next"].includes(command)) { submit(options({workers: "workers", end: "end_turn", skip: "skip_bonus", next: "next_round"}[command])[0]); return; }
+    hideTip(); render();
   });
-  dialog.addEventListener("click", e => {
-    if (e.target.closest("[data-burgundy-close]")) closeDialog();
-    else if (e.target === dialog) {
-      const r = dialog.getBoundingClientRect();
-      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeDialog();
-    }
+  function hideTip() { clearTimeout(tooltipTimer); tooltip.hidden = true; }
+  function showTip(target) {
+    if (explain.isActive() || !target || target.closest("button:not(:disabled)")) return;
+    clearTimeout(tooltipTimer);
+    tooltip.textContent = target.dataset.burgundyTip;
+    tooltip.hidden = false;
+    const bounds = target.getBoundingClientRect();
+    const box = tooltip.getBoundingClientRect();
+    tooltip.style.left = `${Math.max(8, Math.min(innerWidth - box.width - 8, bounds.left + bounds.width / 2 - box.width / 2))}px`;
+    tooltip.style.top = `${Math.max(8, Math.min(innerHeight - box.height - 8, bounds.bottom + 8))}px`;
+    tooltipTimer = setTimeout(hideTip, 3000);
+  }
+  panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-burgundy-tip]")); });
+  panel.addEventListener("pointerout", hideTip);
+  panel.addEventListener("focusin", event => showTip(event.target.closest("[data-burgundy-tip]")));
+  panel.addEventListener("focusout", hideTip);
+  panel.addEventListener("pointerdown", event => {
+    if (!event.isPrimary || event.button !== 0 || explain.isActive()) return;
+    const map = event.target.closest(".burgundy-map");
+    gesture = {id: event.pointerId, x: event.clientX, y: event.clientY, panX: ui.panX, panY: ui.panY, map, moved: false, tip: event.target.closest("[data-burgundy-tip]")};
   });
-  dialog.addEventListener("cancel", e => { e.preventDefault(); closeDialog(); });
-  document.addEventListener("keydown", e => {
+  document.addEventListener("pointermove", event => {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 9) { gesture.moved = true; hideTip(); }
+    if (!gesture.moved || !gesture.map || ui.zoom <= 1) return;
+    if (!gesture.map.hasPointerCapture(event.pointerId)) gesture.map.setPointerCapture(event.pointerId);
+    ui.panX = gesture.panX + event.clientX - gesture.x;
+    ui.panY = gesture.panY + event.clientY - gesture.y;
+    applyMapTransform();
+  });
+  function endGesture(event) {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const previous = gesture;
+    gesture = null;
+    if (previous.map?.hasPointerCapture(event.pointerId)) previous.map.releasePointerCapture(event.pointerId);
+    if (previous.moved || event.type !== "pointerup") { suppressClickUntil = performance.now() + 400; return; }
+    if (event.pointerType !== "mouse") showTip(previous.tip);
+  }
+  document.addEventListener("pointerup", endGesture);
+  document.addEventListener("pointercancel", endGesture);
+  panel.addEventListener("lostpointercapture", endGesture);
+  document.addEventListener("keydown", event => {
     if (panel.classList.contains("hidden")) return;
-    if (e.key === "Escape" && !dialog.open) { explain = false; resetSelection(); render(); }
+    if (event.key === "Escape") { hideTip(); if (!document.querySelector("dialog[open]")) { explain.exit(); resetSelection(); render(); } }
   });
-  document.addEventListener("pointerdown", e => {
-    suppressClickUntil = 0;
-    if (!explain || panel.classList.contains("hidden") || dialog.open) return;
-    const target = [...panel.querySelectorAll("button[data-explain]")].find(b => {
-      if (["help", "explain"].includes(b.dataset.burgundy)) return false;
-      const r = b.getBoundingClientRect();
-      return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-    });
-    if (!target) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    suppressClickUntil = performance.now() + 450;
-    const text = target.dataset.explain;
-    explain = false; render();
-    openDialog("Explain", `<p>${esc(text)}</p>`);
-  }, true);
-  document.addEventListener("click", e => {
-    if (panel.classList.contains("hidden")) return;
-    if (e.detail && performance.now() < suppressClickUntil) { suppressClickUntil = 0; e.preventDefault(); e.stopImmediatePropagation(); return; }
-    if (e.target.closest("dialog, [data-burgundy='help'], [data-burgundy='explain']")) return;
-    if (!explain) return;
-    const b = e.target.closest("button");
-    if (!b) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    if (b.dataset.explain) { explain = false; render(); openDialog("Explain", `<p>${esc(b.dataset.explain)}</p>`); }
-  }, true);
+  window.addEventListener("resize", () => { hideTip(); applyMapTransform(); });
   window.renderBurgundyGameState = payload => {
-    const oldStored = view ? self()?.storage.length : 0;
+    const oldStored = self()?.storage.length || 0;
     view = payload.view || payload.state || payload;
     resetSelection();
-    const p = self();
-    ui.die = p ? p.used.findIndex(used => !used) : null;
+    const owner = self();
+    ui.die = owner ? owner.used.findIndex(used => !used) : null;
     if (!player(ui.viewed)) ui.viewed = view.you || view.players[0].player_id;
-    ui.mode = view.pending ? ({city_hall:"place",warehouse:"sell"}[view.pending.kind] || "take") : "take";
-    if (p && p.storage.length > oldStored) ui.tab = "estate";
-    if (view.pending && view.current_turn === view.you) {
+    ui.mode = "take";
+    ui.buyMode = false;
+    if (owner && owner.storage.length > oldStored) { ui.tab = "estate"; ui.viewed = view.you; }
+    if (view.pending && active()) {
       ui.tab = ["ship", "workshop", "church", "market"].includes(view.pending.kind) ? "depots" : "estate";
+      ui.viewed = view.you;
     }
     render();
   };
   window.showBurgundyHeaderActions = visible => {
-    if (!visible) { explain = false; if (dialog.open) dialog.close(); }
+    document.getElementById("burgundyHeaderActions").style.display = visible ? "flex" : "none";
+    if (!visible) { explain.exit(); help.close(); hideTip(); }
   };
-  window.clearBurgundyState = () => { view = null; ui = {}; explain = false; panel.replaceChildren(); if (dialog.open) dialog.close(); };
+  window.clearBurgundyState = () => { view = null; ui = {zoom: 1, panX: 0, panY: 0}; explain.exit(); help.close(); hideTip(); content.replaceChildren(); phaseLabel.replaceChildren(); };
+  if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "castles_of_burgundy" && typeof lastGameStatePayload !== "undefined" && lastGameStatePayload) window.renderBurgundyGameState(lastGameStatePayload);
 })();

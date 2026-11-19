@@ -53,3 +53,17 @@
 - 验证截图：[1440px 桌面](../tmp/task97/desktop-1440.png)、[375px 领地](../tmp/task97/mobile-375.png)、[320px 货站](../tmp/task97/mobile-320-depots.png)。
 
 当前交付边界：2011 基础版、2–4 人、标准 1 号领地、全部 26 张知识板块；其他领地、扩展和单人模式不在本次实现范围内。机器人使用合法动作启发式选择，完整对局验证用于检查流程与资源约束，不代表策略强度。
+
+## UI 优化与验收（2026-11-19）
+
+- 按 `DEV_GUIDE.md` 移除独立行动面板及 Take / Place / Sell 模式选择。选择骰子后直接操作货站、仓储与货物，工人和 End Turn 保留在紧凑回合条内，不改变规则或服务端动作校验。
+- 拿取、黑市购买、仓储替换和船只选货在相应货站内确认，放置在领地图下确认，卖货在货物旁确认。展示板块效果及服务端计算的工人／银币费用，未提交的选择可点空白、Cancel 或 Esc 取消。知识 6 的购买开关放在货站标题旁。
+- 领地与货站直接布局，不再套通用卡片边框。桌面双列突出棋盘，手机保留 Estate / Depots 切换。地图支持放缩、Fit、560px Origin 和边界约束拖动，地图内接管触摸、地图外保留页面滚动，拖出边界后释放指针仍正确结束且不误选。
+- 新增懒加载 HTML 模板，Help 位于游戏顶栏，与 Reconnect 保持一行；Explain 交由既有 Room Control dock 规则管理。接入共享双语 Help / Explain，包含快速入门、操作、板块、计分和全部 26 张知识。解释 disabled 按钮不提交动作，Esc 退出，关闭 Help 恢复焦点。
+- 非操作图例和状态支持悬停／触屏点击提示，连续点击替换当前说明，三秒自动消失，功能按钮点击不额外弹提示。知识与日志可折叠并限高滚动，重绘保留展开状态与日志滚动位置。轮末继续保留全员 Next Round 暂停。
+- 修改文件：`static/games/castles_of_burgundy.js`、`static/games/castles_of_burgundy.html`、`static/castles_of_burgundy.css`、`static/game_assets.js`、`static/index.html`、本设计文档及 `tests/castles_of_burgundy_ui.browser.cjs`、`tests/castles_of_burgundy_ui_fixtures.py`。资源版本同步更新，未修改公共 CSS 或规则模块，保留工作区其他游戏的并行改动。
+- 自动验收命令：启动本地服务器后，运行 `PLAYWRIGHT_MODULE=<playwright module> node tests/castles_of_burgundy_ui.browser.cjs`。测试通过 Python UI fixture 生成器构造可重复的公开视图，不将运行数据纳入补丁。
+- 已检查 320px、390px、1024px、1440px 的领地、货站和就地确认截图，未见横向滚动、文本溢出或面板覆盖。截图保存在忽略目录 `tmp/burgundy-ui/`。
+- 已验证真实房间创建、机器人加入、开始游戏、拿板块及刷新重连，以及公开视图驱动的放置／卖货／知识 6 购买／满仓替换／船只选货、轮末确认、旁观、地图拖动并跨边界释放、Fit / Origin、双语分章 Help、禁用按钮 Explain 与触屏提示。
+- 检查：`node --check static/games/castles_of_burgundy.js`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names`（14 项）及 `git diff --check` 通过。按纯 UI 变更范围不运行游戏逻辑测试。
+- 验收范围符合本次涉及的 `DEV_GUIDE.md` 布局与交互要求，无刻意保留的布局例外。真实 iOS / Windows 设备、其他浏览器与完整真人对局未实机验证，触屏交互使用 Chrome 模拟。

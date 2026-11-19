@@ -64,6 +64,10 @@
   const bombBustersTooltipEl = document.getElementById("bombBustersTooltip");
 
   const BOMB_BUSTERS_EXPLANATIONS = {
+    mission_picker: {
+      zh: "浏览 1–66 关的玩法简介。房主确认后在原房间重新发牌并切换关卡，当前尝试的进度会清空。取消或 Esc 不改变游戏。",
+      en: "Preview missions 1–66. Only the host can confirm a mission, redealing in this room and resetting the current attempt. Cancel or Escape leaves the game unchanged.",
+    },
     campaign: {
       zh: "关卡特殊规则优先于普通剪线和装备规则。点选装备后在线架选线并确认。Help 的逐关玩法章节会显示本关差异与例子。",
       en: "Mission-specific rules override normal cutting and equipment. Select equipment to choose its wires on the racks, then confirm. See Missions in Help for this mission's differences and examples.",
@@ -321,8 +325,8 @@
       attribute: "data-bomb-busters-explain",
       explanations: BOMB_BUSTERS_EXPLANATIONS,
       button: bombBustersExplainBtnEl,
-      root: () => bombBustersPanelEl,
-      bypass: ["#bombBustersHelpBtn", "#bombBustersExplainBtn"],
+      root: () => bombBustersPanelEl?.closest(".game-panel"),
+      bypass: ["#bombBustersHelpBtn", "#bombBustersExplainBtn", "#bombBustersMissionPickerClose"],
       onChange: (active) => {
         bombBustersExplainMode = active;
         bombBustersHideTooltip();
@@ -1216,9 +1220,11 @@
     }
     bombBustersRenderInteractive(view);
     bombBustersAnnounceEvents(data.events || []);
+    window.bombBustersMissionPickerUI?.sync(view, data.state_version);
   }
 
   function bombBustersClearState() {
+    window.bombBustersMissionPickerUI?.clear();
     if (window.bombBustersCampaignUI) window.bombBustersCampaignUI.reset();
     bombBustersView = null;
     bombBustersStateVersion = null;
@@ -1244,6 +1250,7 @@
   }
 
   function bombBustersShowHeaderActions(show) {
+    window.bombBustersMissionPickerUI?.show(show);
     if (bombBustersHeaderActionsEl) bombBustersHeaderActionsEl.style.display = show ? "flex" : "none";
     if (!show) {
       bombBustersResetSelection(false);
@@ -1377,7 +1384,7 @@
     ) return;
     const hasSelection = bombBustersSelectedOwnWireId || bombBustersSelectedTargetWireIds.length || bombBustersSelectedSoloWireIds.length;
     if (!hasSelection) return;
-    if (event.target.closest("button, summary, [data-bomb-busters-tip], .bomb-busters-wire-slot, .bomb-busters-wire-popover")) return;
+    if (event.target.closest("button, summary, [data-bomb-busters-tip], .bomb-busters-wire-slot, .bomb-busters-wire-popover, .bomb-busters-mission-picker")) return;
     bombBustersResetSelection(true);
   });
 

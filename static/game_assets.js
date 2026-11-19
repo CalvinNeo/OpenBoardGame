@@ -1068,14 +1068,15 @@ const GAME_ASSETS = {
   "bomb_busters": {
     "scripts": [
       "/static/games/bomb_busters_campaign.js?v=3",
-      "/static/games/bomb_busters.js?v=app_v9"
+      "/static/games/bomb_busters_mission_picker.js?v=1",
+      "/static/games/bomb_busters.js?v=app_v10"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=7",
-    "styleFragments": "/static/games/bomb_busters.css?v=8"
+    "markup": "/static/games/bomb_busters.html?v=8",
+    "styleFragments": "/static/games/bomb_busters.css?v=9"
   },
   "felix": {
     "scripts": [
@@ -1176,11 +1177,12 @@ const GAME_ASSETS = {
   },
   "castles_of_burgundy": {
     "scripts": [
-      "/static/games/castles_of_burgundy.js?v=3"
+      "/static/games/castles_of_burgundy.js?v=4"
     ],
     "styles": [
-      "/static/castles_of_burgundy.css?v=3"
+      "/static/castles_of_burgundy.css?v=4"
     ],
+    "markup": "/static/games/castles_of_burgundy.html?v=1",
     "panel": "burgundyPanel",
     "panelTitle": "🏰 勃艮第城堡",
     "header": "showBurgundyHeaderActions"

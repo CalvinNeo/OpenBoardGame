@@ -29,7 +29,7 @@ from game.ai_dixit import list_decks as list_aidixit_decks
 from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
 from game.ai_metadata import STRATEGIC_AI_GAME_IDS
 from game.ark_nova_events import filter_ark_nova_events
-from game.bomb_busters_help import get_mission_help
+from game.bomb_busters_help import get_mission_catalog, get_mission_help
 from game.carcassonne import get_carcassonne_template_payload
 from game.decrypto import get_decrypto_word_packs
 from game.decrypto_ai import get_bot_strategies
@@ -119,6 +119,14 @@ async def api_list_games():
 @fastapi_app.get("/api/carcassonne/templates")
 async def carcassonne_templates():
     return get_carcassonne_template_payload()
+
+
+@fastapi_app.get("/api/bomb_busters/missions")
+async def bomb_busters_mission_catalog(player_count: int = 3) -> Dict:
+    try:
+        return get_mission_catalog(player_count)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @fastapi_app.get("/api/bomb_busters/missions/{mission_number}/help")
@@ -494,7 +502,7 @@ def _save_room_state(room: Room) -> None:
             )),
             "game_type": room.game_type,
             "room_status": room.status,
-            "host_player_id": _room_host_player_id(room) if room.game_type == "the_crew" else room.host_player_id,
+            "host_player_id": _room_host_player_id(room) if room.game_type in ("the_crew", "bomb_busters") else room.host_player_id,
             "state_version": room.state_version,
             "saved_at": int(time.time()),
             "players": [
@@ -624,7 +632,7 @@ async def _emit_room_state(room: Room) -> None:
         "status": room.status,
         "game_type": room.game_type,
         "min_players": game_def.min_players if game_def else 1,
-        "host_player_id": _room_host_player_id(room) if room.game_type == "the_crew" else None,
+        "host_player_id": _room_host_player_id(room) if room.game_type in ("the_crew", "bomb_busters") else None,
         "max_players": game_def.max_players if game_def else len(room.players),
         "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
         "supports_memories": _game_supports_memories(game_def),
@@ -1421,7 +1429,7 @@ def _detach_room_player(room: Room, player: Player, *, preserve_seat: bool = Fal
         room.players = [p for p in room.players if p.player_id != player.player_id]
         if not room.players:
             ROOMS.pop(room.room_id, None)
-    if not preserve_seat and room.game_type == "the_crew" and room.host_player_id == player.player_id:
+    if not preserve_seat and room.game_type in ("the_crew", "bomb_busters") and room.host_player_id == player.player_id:
         room.host_player_id = next((p.player_id for p in sorted(room.players, key=lambda p: p.seat)
                                     if p.player_id != player.player_id and not p.is_bot and p.connected), None)
         room.state_version += 1
@@ -1833,7 +1841,7 @@ async def on_room_create(sid, data):
         game_type=game_def.game_id,
         game_config=dict(game_config),
         players=[player],
-        host_player_id=player_id if game_def.game_id == "the_crew" else None,
+        host_player_id=player_id if game_def.game_id in ("the_crew", "bomb_busters") else None,
     )
     ROOMS[room_id] = room
     SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
@@ -1967,6 +1975,8 @@ async def on_room_reconnect(sid, data):
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "gloomhaven")
     if room is None:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "the_crew")
+    if room is None:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "bomb_busters")
     if room is None:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "semantic_guess")
     if not room:
@@ -2316,6 +2326,48 @@ async def on_room_start(sid, data):
     await _emit_game_state(room, [])
     await _emit_room_list_update()
     await _maybe_run_bots(room)
+
+
+@sio.on("bomb_busters:select_mission")
+async def on_bomb_busters_select_mission(sid, data):
+    session = SESSIONS.get(sid)
+    room = _get_room(session.get("room_id")) if session else None
+    try:
+        if not room or room.game_type != "bomb_busters":
+            raise ValueError("Bomb Busters room not found.")
+        if session.get("player_id") != _room_host_player_id(room):
+            raise ValueError("Only the host can choose and start a mission.")
+        if room.status not in ("lobby", "in_game", "game_over") or room.game_initializing:
+            raise ValueError("The room is not ready to choose a mission.")
+        if not isinstance(data, dict) or data.get("room_id") != room.room_id or data.get("status") != room.status:
+            raise ValueError("Room changed. Choose the mission again.")
+        if room.status != "lobby" and (type(data.get("state_version")) is not int or data["state_version"] != room.state_version):
+            raise ValueError("Game changed. Choose the mission again.")
+        if not 2 <= len(room.players) <= 5:
+            raise ValueError("Bomb Busters requires 2 to 5 players.")
+        if room.status == "lobby" and not all(player.ready or player.is_bot for player in room.players):
+            raise ValueError("All players must be ready before starting.")
+        config = {"mission_id": data.get("mission_id")}
+        definition = _get_game_definition("bomb_busters")
+        error = _validate_schema_payload(config, definition.config_schema, "config")
+        if error:
+            raise ValueError(error)
+        players = [{"player_id": player.player_id, "name": player.name, "seat": player.seat, "is_bot": player.is_bot}
+                   for player in room.players]
+        fresh_state = definition.module.init_game(config, players)
+    except (ValueError, TypeError) as error:
+        await _send_error(sid, str(error))
+        return {"ok": False, "message": str(error)}
+    room.game_state = fresh_state
+    room.game_config = dict(fresh_state["config"])
+    room.status = "in_game"
+    room.state_version += 1
+    _save_room_state(room)
+    await _emit_room_state(room)
+    await _emit_game_state(room, [])
+    await _emit_room_list_update()
+    await _maybe_run_bots(room)
+    return {"ok": True}
 
 
 @sio.on("the_crew:restart")

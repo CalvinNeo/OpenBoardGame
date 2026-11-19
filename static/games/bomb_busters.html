@@ -1,6 +1,25 @@
 <template data-game-target="bombBustersPanel" data-game-mode="contents">
+              <button id="bombBustersMissionPickerBtn" class="game-reconnect-btn hidden" type="button" data-bomb-busters-explain="mission_picker" aria-haspopup="dialog">Missions</button>
+              <dialog id="bombBustersMissionPicker" class="bomb-busters-mission-picker" aria-labelledby="bombBustersMissionPickerTitle">
+                <div class="bomb-busters-mission-picker-heading">
+                  <h2 id="bombBustersMissionPickerTitle">Choose a mission</h2>
+                  <button id="bombBustersMissionPickerClose" type="button" aria-label="Close mission picker">Close</button>
+                </div>
+                <div class="bomb-busters-mission-picker-toolbar">
+                  <label for="bombBustersMissionPickerSelect">Mission</label>
+                  <select id="bombBustersMissionPickerSelect" aria-describedby="bombBustersMissionPickerPreview"></select>
+                  <button id="bombBustersMissionPickerLanguage" type="button" aria-label="Switch mission description language">中文</button>
+                </div>
+                <div id="bombBustersMissionPickerPreview" class="bomb-busters-mission-picker-preview" aria-live="polite"></div>
+                <p id="bombBustersMissionPickerNotice" class="bomb-busters-mission-picker-notice"></p>
+                <p id="bombBustersMissionPickerError" class="bomb-busters-mission-picker-error" role="alert"></p>
+                <div class="bomb-busters-mission-picker-actions">
+                  <button id="bombBustersMissionPickerRetry" class="hidden" type="button">Retry</button>
+                  <button id="bombBustersMissionPickerStart" type="button" data-bomb-busters-explain="mission_picker" disabled>Start Mission</button>
+                </div>
+              </dialog>
               <div class="bomb-busters-topbar">
-                <div class="bomb-busters-title-block" data-bomb-busters-tip="Choose numbered campaign missions or the original practice setups in Room Control. Mission-specific rules are available in Help.">
+                <div class="bomb-busters-title-block" data-bomb-busters-tip="Use Missions beside Reconnect to preview or choose a numbered mission. Practice setups remain in Room Control. Mission-specific rules are available in Help.">
                   <div class="bomb-busters-subtitle">
                     <span id="bombBustersPresetLabel">Standard Practice</span>
                     <span>· Bomb <span id="bombBustersMissionLabel">1</span></span>

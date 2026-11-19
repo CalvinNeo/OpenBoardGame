@@ -1786,3 +1786,30 @@ python -m unittest
 - 截图及测量保存在忽略目录 `build/bomb-busters-campaign/`，人工查看四档宽度中的手机、桌面、长姓名与选择器场景。现有用户服务 8766 未停止；其进程尚未加载已有逐关 Help 接口而返回 404，完整 Help 验收改用独立 8778 服务完成。
 - `tests/game_assets.browser.cjs` 未通过既有首页断言：测试只允许 `shared.js`，而当前首页还主动加载 `shared_help.js` 和 `shared_effects.js`。本次没有修改这些共享加载行为或放宽断言，失败发生在检查本游戏前；本游戏实际懒加载、CSS 注入及交互由上述三个浏览器回归验证。
 - 满足本次已验证的 `DEV_GUIDE.md` 紧凑布局、触摸尺寸、无横向溢出、Help / Explain 与资源版本要求；不声明全量规范无缺项。未测 iOS / Android 真机、全站完整回归或全部 66 关机制，保留第 25 节的音频与规则来源边界。
+
+## 27. 2026-11-19：Reconnect 右侧选关与玩法简介
+
+### 27.1 操作与权限
+
+- 游戏标题栏在 Reconnect 右侧增加 Missions，同排保留 Help，窄屏允许标题省略而不是按钮换行。按钮来自游戏片段，按需加载后移动到共享标题栏，切换其他游戏时隐藏，不改共享标题结构或其他游戏资源。
+- 弹窗提供 1–66 关原生选择框、中文 / English 玩法简介、规则变化与外部录音提示。只在主动打开时请求公开静态目录，不生成或读取任何本局隐藏线值。两人不能开始第 34 / 65 关，预览仍明确显示人数要求。
+- 所有成员可查阅简介，只有房主可开始或重开。大厅仍要求 2–5 人并且全员 Ready；对局中明确提示会重新发线并清空当前尝试，成员、房间、座位和重连凭证保持不变。取消、Close、Esc、背景关闭或仅浏览不提交切关。
+- Socket.IO `bomb_busters:select_mission` 服务端校验身份、房主、人数、编号、准备状态、房间及当前状态版本。初始化完成才原子替换游戏，版本递增使过期或重复请求失效。服务端忽略客户端随机种子及额外配置，使用新随机种子开局。界面状态更新时关闭旧选择，防止确认过期对局。
+- 为本游戏启用既有稳定房主标识、主动离开转移及存档恢复。暂时断线不转移房主，老房间缺失标识时按座次回退，座位交换不改变已确定房主。新增经原座位凭证认证的冷重连恢复分支，自动存档仍遵守房间已有开关。
+
+### 27.2 修改文件与资源
+
+- `app.py`、`game/bomb_busters_help.py`：公开目录 API、静态简介、选关处理与本游戏房主 / 重连接入。
+- `static/games/bomb_busters_mission_picker.js`：独立选关模块、加载失败 Retry、语言切换、权限提示、提交与焦点恢复。`static/games/bomb_busters.js`：生命周期及 Explain 接入。
+- `static/games/bomb_busters.html`、`static/games/bomb_busters.css`：按钮与原生 dialog，样式仍在原 media 片段内，简介正文独立滚动、关闭与确认保留可见。
+- `static/game_assets.js`：选关依赖脚本 v1、主脚本 app_v10、HTML v8、CSS v9。`static/index.html` 递增清单缓存版本，本次从 286 到 287，保留并行任务后续递增至 288 及其他资源变更，不回退他人修改。
+- `tests/test_bomb_busters_mission_picker.py`、`tests/bomb_busters_mission_picker.browser.cjs` 和本设计记录。未修改 README，也未更改已有未跟踪的其他测试和文档。
+
+### 27.3 验收与限制
+
+- Python 113 项通过：新增 7 项目录 / 房间回归，以及既有炸弹克星练习规则、逐关 Help、Room Session、The Crew 房主选关和前端样式 / 全局命名 / Help 契约。新增测试检查 66 关 × 4 人数、双语文本、非法及两人受限关卡、非房主、未准备、过期 / 重复请求、结果后重开、老房间房主、离开转移、座位与凭证保留、私有广播及冷重连。
+- Chrome / Playwright 新选关测试 8 组双语布局通过：320、390、1024、1440px，按钮位于 Reconnect 右侧且不重叠、不横向溢出，弹窗标题、关闭和确认可见。实际完成准备、开始第 9 关、取消切关、原房间重开第 22 关和刷新重连；非房主只读、两人限制、Explain 拦截、Esc / 焦点、失败 Retry、过期状态关闭和游戏切换隐藏全部通过，无页面异常。
+- 原有浏览器回归通过：20 个游戏布局 / 交互场景，包括触摸滚动、选线和 Double Detector；56 个 Help 布局场景，包括 66 关双语、人数预览、剧透 opt-in、请求取消与 Retry、Help / Explain / Esc。
+- `node --check`、两个游戏模块 `smoke_load` 与 `git diff --check` 通过。截图、测量与测试房间数据分别位于忽略目录 `build/bomb-busters-mission-picker/` 和 `tmp/bomb-busters-mission-picker-data/`。使用独立 8779 测试服务，不改动用户原有服务。
+- 额外运行 `tests.test_bomb_busters_missions` 时，既有第 45 关机器人在 3 / 4 / 5 人准备阶段返回不合法的 `mission_choice: pass`，导致 3 个子用例与累计数量断言失败；本次未改游戏 / 战役规则模块，不顺带修复此问题。未运行全站 314 个模块的完整套件，也未重新运行第 26 节已记录失败的公共懒加载测试。
+- 满足本次已验收的 `DEV_GUIDE.md` 标题栏、弹窗、触摸尺寸、资源版本和 Help / Explain 要求，但不声明全部规范验收无缺项：未做 iOS / Android 真机、全部 66 关通关、外部录音或资料独立复核。功能上线需要重启后端以加载新 API / Socket.IO 处理器，再刷新浏览器。
