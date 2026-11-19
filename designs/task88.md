@@ -1695,3 +1695,62 @@ python -m unittest
 - 检查：`node --check static/games/bomb_busters.js`、`node --check tests/bomb_busters_layout.browser.cjs`、`node scripts/smoke_load.cjs bomb_busters`，以及 `python3 -m unittest tests.test_frontend_style_assets tests.test_frontend_script_names tests.test_help_contract`（14 项通过）。本次仅修改 UI，不运行游戏逻辑单测。
 - 额外运行 `tests/game_assets.browser.cjs`，在既有公共脚本断言处失败：第 50 行只允许 `shared.js`，首页已同时加载 `shared_help.js` 与 `shared_effects.js`。该断言与本次炸弹克星修复无关，不修改公共测试；本游戏实际房间的按需加载由上述专用浏览器回归覆盖。
 - 遵循 `DEV_GUIDE.md` 的局部修改、触摸与点击区分、版本更新及多宽度验收要求；公共按需加载测试尚有既有失败，且未进行 iOS Safari / Android 真机验证，因此不声明全部验收无缺项。
+
+## 24. 2026-11-19：Help 对齐共享组件与最新游戏布局
+
+### 24.1 改动范围
+
+- 参考 `skull.js`、`startups.js`、`scout.js` 以及 `help_explain_guide.md`、`help_migration_guide.md`，使用 `obgCreateHelp` 和 `obgCreateExplain`。删除炸弹克星自建的两套 Help / Explain 弹窗、战役 Help 渲染器和专用样式，不修改共享组件及其他游戏。
+- 顶部统一为标题、中英文切换、关闭按钮。正文采用六个章节：基本规则、电线与线索、剪线与失败、装备与特殊机制、当前关卡、操作与结算。基本规则以三句话分别介绍胜利条件、回合行动和游戏重点，长规则按章节切换，窄屏标签自动换行，正文独立滚动。
+- 当前关卡章节每次打开时读取当前玩家的公开状态，转义后显示本关规则，不向浏览器发送完整未来关卡资料。补齐 66 个关卡摘要的中文文案，并从服务端目录为旧存档补充 `rules_zh`，不改动本阶段的游戏机制。
+- 保留已有 tooltip、触摸滚动、选线与确认行为。Explain 复用共享模式，并刷新动态装备和关卡元素的说明映射，避免只显示笼统区域解释。隐藏游戏或清空状态时关闭 Help 并退出 Explain。
+- 保留转录资料尚未经第二人独立复核、音频关依赖外部官方录音并由队长手动操作的说明。本次仅完成 Help 布局迁移，不表示 66 关规则与机制已经全部验收。
+
+### 24.2 修改文件与资源
+
+- 游戏前端：`static/games/bomb_busters.js`、`static/games/bomb_busters_campaign.js`、`static/games/bomb_busters.html`、`static/games/bomb_busters.css`。
+- 文案与公开视图：`game/bomb_busters_missions.py`、`game/bomb_busters_campaign.py`。后者已有的战役机制修改不属于本节 Help 验收范围。
+- 资源接入：`static/game_assets.js`、`static/index.html`，仅调整炸弹克星条目、移除旧弹窗占位并递增清单版本。保留工作区中其他游戏及共享资源的并行修改。
+- 验证：新增 `tests/bomb_busters_help.browser.cjs`，更新 `tests/bomb_busters_layout.browser.cjs`，在 `tests/test_bomb_busters_missions.py` 增加双语覆盖和旧存档回归。本设计文档记录本次验收。
+- 版本：主脚本 `app_v7`、战役脚本 `2`、HTML 与 CSS 片段 `6`、首页资源清单 `279`。
+
+### 24.3 验收结果与限制
+
+- 本机 Chrome / Playwright 检查 320、390、1024、1440px。六个章节与两种语言共 48 组 Help 布局通过：页面与弹窗无横向溢出，标题、语言按钮与关闭按钮不重叠，弹窗位于视口内，标签正确换行且只选中一项。
+- 验证中英文切换、章节状态、正文滚动、关闭与 Esc、焦点回到 Help、练习说明、19 / 46 / 57 / 66 关动态规则、动态装备 Explain、可见 disabled 按钮解释、解释不发送游戏动作以及切换游戏关闭 Help。控制台无页面异常。
+- 游戏界面回归通过 20 组布局，覆盖 2 / 3 / 5 人、四档宽度、tooltip、触摸滚动与选线区分、原地确认、Double Detector、键盘取消、结果暂停和长姓名。
+- `node --check` 检查两个游戏脚本和两个浏览器脚本，两个 `smoke_load.cjs` 初始化检查均通过。`tests.test_help_contract`、`tests.test_frontend_style_assets`、`tests.test_frontend_script_names` 共 14 项以及本次两项文案 / 旧存档测试全部通过。交付前运行 `git diff --check`。
+- 截图及测量保存在被忽略目录 `build/bomb-busters-help/`（16 张截图及 `measurements.json`）；游戏界面截图在 `build/bomb-busters-ui/after/`。抽查手机中英文基本规则、390px 装备、1024px 中文装备与 1440px 英文装备。
+- 本次符合已检查的共享 Help 结构、移动端布局、资源按需加载和交互要求。未执行 iOS Safari / Android 真机、全部战役机制或全站回归，不声明 `DEV_GUIDE.md` 全部验收无缺项。战役动态装备说明保留服务端现有文案，完整双语装备目录不在本次布局修改范围。公共按需加载脚本的既有断言问题参见第 23 节，本次由游戏专用浏览器测试覆盖实际加载。
+
+## 25. 2026-11-19：逐关解释 1–66 关的具体玩法差异
+
+### 25.1 内容与交互
+
+- 将 Help 的“当前关卡”章节扩展为“逐关玩法 / Missions”，保留共享 Help 的语言、章节、关闭、Esc、焦点与 Explain 行为，不改动共享组件。
+- 每关均有独立中英文标题，以及“准备与配线”“本关与普通规则的差别”“回合怎样进行”“限制与失败条件”“具体例子”五部分。使用自己整理的说明与例子，不复制商业图片、录音或卡面排版。
+- 配线信息按选择的 2 / 3 / 4 / 5 人人数计算，包含蓝线范围、黄红线实际数量与候选池。第 34、65 关选择两人时明确提示不可玩，并以三人准备作预览，不会改变当前房间人数。
+- 特别比较容易混淆的机制：9 / 16 的两条与四条门槛，20 / 35 的乱序线与黄色解锁，31 / 32 / 37 / 57 / 61 的不同约束流转，38 / 56 / 64 的反向线，43 / 53 / 59 的纳诺规则，以及 44 / 49 / 54 / 63 的氧气支付、转交与跳过条件。
+- 使用约束的关卡附 A–E 或 A–L 双语字母速查。55、60 关附十种挑战条件速查，并说明仅实际公开抽到的挑战生效。明确特殊引爆器起点、两人队长初始线索例外、反向线与音频关的重要限制。
+- 默认显示当前关卡，不自动请求未来关卡。逐关选择控件收在“含后续关卡剧透”折叠项内，主动选择才读取对应内容。支持人数预览、回到 Current、失败 Retry、快速切换取消旧请求；切换语言保留预览选择，重新打开默认回到本局。
+- 规则查阅只包含静态说明，不接触本局隐藏电线、角色或未来随机牌。当前关卡文案随公开视图提供，保证不同观察者看到相同规则且旧存档无需迁移。预览不会发送游戏行动。
+
+### 25.2 文件与加载
+
+- 新增 `game/bomb_busters_help.py`，集中保存 66 关双语细节、约束与挑战释义，提供 `get_mission_help(number, player_count)`，返回独立数据副本。
+- `game/bomb_busters_campaign.py` 只在公开视图增加当前关卡的 `help`，不改变本轮任务的规则判定。
+- `app.py` 增加只读 `GET /api/bomb_busters/missions/{mission_number}/help?player_count=3`，只返回指定关卡与人数的静态规则，非法编号或人数返回 400。其他既有接口、保存与重连的并行修改予以保留。
+- `static/games/bomb_busters.js` 接入逐关展示、按需请求、转义、缓存、取消与重试。`static/games/bomb_busters.css` 在原 media 组内加入仅本游戏 Help 使用的紧凑控件与文案样式，320px 下 Mission / Players / Current 同行且无横向溢出。
+- `static/game_assets.js` 版本为主脚本 `app_v8`、CSS 片段 `7`；`static/index.html` 清单版本递增到 `284`，其余并行资源变化不回退。
+- 新增 `tests/test_bomb_busters_help.py`，扩展 `tests/bomb_busters_help.browser.cjs`。本设计文档为本次唯一新增的设计记录，未另建任务文档或修改根 README。
+
+### 25.3 验收记录
+
+- Python：44 项通过，包括 10 项逐关 Help / API 测试、17 项核心练习规则测试、14 项既有 Help / 前端样式 / 全局命名契约、两项中文摘要与旧存档测试、一项 Bot 动作隐私测试。逐关内容与配线参数遍历 66 关 × 4 人数，共 264 种预览，包含两个不可用的两人关卡提示。
+- Chrome / Playwright：实际遍历全部 66 关的中文与英文，检查五部分文字、例子、标题、人数选择、两人不可用提示、按需无剧透加载、Current 复位、语言保留选择、加载失败重试、延迟旧请求取消、Esc / Close / 焦点恢复、动态装备与 disabled Explain、切换游戏收起以及不发送游戏动作。全部通过，控制台无页面异常。
+- 布局：320、390、1024、1440px，共 56 组 Help 检查通过，其中六章节 × 双语 × 四宽度为 48 组，另有八组展开第 66 关预览。标题与按钮无重叠，正文和关卡控件无横向溢出，长文可滚动，关闭按钮保持可见。
+- 原游戏界面回归：20 组通过，覆盖 2 / 3 / 5 人、四档宽度、触摸滑动、选线确认、双重探测器、键盘取消、tooltip、长姓名与结果暂停。
+- 运行 `node --check static/games/bomb_busters.js`、`node --check tests/bomb_busters_help.browser.cjs`、`node scripts/smoke_load.cjs bomb_busters` 及 `git diff --check`。截图和测量在忽略目录 `build/bomb-busters-help/`，人工抽查四档宽度的中英文逐关页。
+- 本次满足已验证的 `DEV_GUIDE.md` 共享布局、无页面横向滚动、触摸尺寸、非游戏控件英文、按需加载与交互要求。未做 iOS / Android 真机、全站回归或全部 66 关机制验收，不声明所有规范验收无缺项。
+- 规则仍是公开资料转录，未完成第二人独立复核。19 / 30 / 42 / 54 / 66 关明确保留外部官方录音与手动伴随边界，不编造未核实的录音事件。本次补充说明不代表先前尚未完结的战役机制已经完成。
+- 后端新增接口与当前公开视图字段需要服务重启后生效。浏览器检查使用独立的本机 `8778` 测试服务，不停止用户原有游戏服务。

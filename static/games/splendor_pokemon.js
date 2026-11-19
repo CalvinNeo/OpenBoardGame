@@ -117,8 +117,8 @@ function pokemonSplendorDescribeCard(card) {
 function pokemonSplendorLegendHtml(language) {
   const symbols = pokemonSplendorColors.map(color => `<span class="pokemon-help-symbol"><svg class="pokemon-color-dot" viewBox="0 0 32 32" aria-hidden="true"><use href="/static/assets/splendor_pokemon/companions.svg?v=1#token-${color}"></use></svg> ${pokemonSplendorColorLabels[color]} (${pokemonSplendorColorSymbols[color]})</span>`).join(" · ");
   return language === "zh"
-    ? `<p>${symbols}</p><p>六边形图标是本项目绘制的代币标记。供应数字后面的斜线表示你持有的数量，不是永久奖励。</p><p>分数(★)在卡牌左侧，永久奖励(∞)在右侧，捕捉费用在底部，进化条件(↗)位于中间。可捕捉标记(✓)表示代币与永久奖励足够，仍需轮到自己才能执行。</p><p>关都先手标记(◆)位于玩家姓名旁，进化数量(↗)用于同分比较。卡牌上的六种元素伙伴是按奖励颜色搭配的原创装饰，不对应具体宝可梦形象，不改变卡牌规则。</p>`
-    : `<p>${symbols}</p><p>The hexagonal token emblems are drawn for this project. A supply count followed by a slash shows your held tokens, not your permanent bonuses.</p><p>Points (★) sit on the left, permanent bonuses (∞) on the right, catch costs along the bottom and evolution requirements (↗) in the middle. A catchable mark (✓) means your tokens and bonuses cover the cost, but you must still wait for your turn.</p><p>The Kanto first-player marker (◆) appears beside a player name. Evolution count (↗) breaks score ties. The six elemental companions are original decorations chosen by bonus color, not portraits of particular Pokemon, and never change a card's rules.</p>`;
+    ? `<p>${symbols}</p><p>六边形图标是本项目绘制的代币标记。供应数字后面的斜线表示你持有的代币数量，永久奖励(∞)后的数字是你的同色费用减免。</p><p>分数(★)在卡牌左侧，永久奖励(∞)在右侧，捕捉费用在底部，进化条件(↗)位于中间。可捕捉标记(✓)表示代币与永久奖励足够，仍需轮到自己才能执行。</p><p>关都先手标记(◆)位于玩家姓名旁，进化数量(↗)用于同分比较。卡牌上的六种元素伙伴是按奖励颜色搭配的原创装饰，不对应具体宝可梦形象，不改变卡牌规则。</p>`
+    : `<p>${symbols}</p><p>The hexagonal token emblems are drawn for this project. A slash after the supply count shows your held tokens. The permanent bonus (∞) count is your matching catch discount.</p><p>Points (★) sit on the left, permanent bonuses (∞) on the right, catch costs along the bottom and evolution requirements (↗) in the middle. A catchable mark (✓) means your tokens and bonuses cover the cost, but you must still wait for your turn.</p><p>The Kanto first-player marker (◆) appears beside a player name. Evolution count (↗) breaks score ties. The six elemental companions are original decorations chosen by bonus color, not portraits of particular Pokemon, and never change a card's rules.</p>`;
 }
 
 const pokemonSplendorHelpConfig = {
@@ -184,6 +184,13 @@ function showPokemonSplendorHelpModal() {
   pokemonSplendorHelp?.open();
   const close = pokemonSplendorHelp?.element()?.querySelector(".obg-help-close");
   if (close) close.textContent = "Close";
+  const dialog = pokemonSplendorHelp?.element();
+  if (dialog && !dialog.dataset.pokemonChromeReady) {
+    dialog.dataset.pokemonChromeReady = "true";
+    dialog.addEventListener("click", () => {
+      dialog.querySelector(".obg-help-close").textContent = "Close";
+    });
+  }
 }
 
 function showPokemonSplendorHeaderActions(show) {
@@ -215,6 +222,8 @@ function clearPokemonSplendorState() {
   });
   const prompt = pokemonSplendorElement("Prompt");
   if (prompt) prompt.textContent = "Waiting for the game state.";
+  const captured = pokemonSplendorElement("CapturedSection");
+  if (captured) captured.open = false;
 }
 
 function getPokemonSplendorSelectedMarketCard(view) {
@@ -468,7 +477,8 @@ function renderPokemonSplendorCardList(container, cards, source, tier) {
     container.appendChild(wrapper);
   });
   if (!container.childElementCount) {
-    container.appendChild(createPokemonSplendorCard(null, false, { emptyLabel: source === "reserved" ? "No reservations" : source === "captured" ? "No captures yet" : "Deck exhausted" }));
+    const emptyLabel = source === "reserved" ? "No reservations" : source === "captured" ? "No captures yet" : cards.length ? "No evolution targets" : "Deck exhausted";
+    container.appendChild(createPokemonSplendorCard(null, false, { emptyLabel }));
   }
   container.scrollTop = scroll.top;
   container.scrollLeft = scroll.left;
@@ -488,9 +498,9 @@ function renderPokemonSplendorSupply(view) {
     const count = document.createElement("strong");
     count.textContent = view.tokens_supply?.[color] || 0;
     const held = document.createElement("small");
-    held.textContent = `/ ${player?.tokens?.[color] || 0}`;
+    held.textContent = `/ ${player?.tokens?.[color] || 0}${color !== "purple" && player ? ` · ∞${player.bonuses?.[color] || 0}` : ""}`;
     token.append(count, held);
-    const hint = `${pokemonSplendorColorLabels[color]} (${pokemonSplendorColorSymbols[color]}): ${count.textContent} in supply / ${player?.tokens?.[color] || 0} held.${color === "purple" ? " Master tokens are wild and gained through reservations." : " Click to choose tokens."}`;
+    const hint = `${pokemonSplendorColorLabels[color]} (${pokemonSplendorColorSymbols[color]}): ${count.textContent} in supply / ${player?.tokens?.[color] || 0} held.${color === "purple" ? " Master tokens are wild and gained through reservations." : ` Permanent bonus (∞): ${player?.bonuses?.[color] || 0}.${interactive ? " Click to choose tokens." : ""}`}`;
     setPokemonSplendorHint(token, hint);
     const key = `supply:${color}`;
     pokemonSplendorExplanations[key] = { zh: `${hint} ${pokemonSplendorExplanations.take.zh}`, en: `${hint} ${pokemonSplendorExplanations.take.en}` };
@@ -503,6 +513,7 @@ function renderPokemonSplendorSupply(view) {
 function updatePokemonSplendorTierFilter() {
   const view = currentPokemonSplendorView;
   const ready = pokemonSplendorIsYourTurn(view) && view.phase === "evolution";
+  pokemonSplendorPanel.dataset.pokemonEvolutionFilter = String(ready);
   pokemonSplendorElement("EvolutionFilter").classList.toggle("hidden", !ready);
   pokemonSplendorPanel.querySelectorAll("[data-pokemon-tier-group]").forEach(group => {
     const tier = group.dataset.pokemonTierGroup;
@@ -529,6 +540,10 @@ function refreshPokemonSplendorSelectionUI(view) {
 
 function renderPokemonSplendorPlayers(view) {
   const container = pokemonSplendorElement("Players");
+  container.querySelectorAll("details[data-pokemon-player]").forEach(details => {
+    if (details.open) pokemonSplendorOpenCollections.add(details.dataset.pokemonPlayer);
+    else pokemonSplendorOpenCollections.delete(details.dataset.pokemonPlayer);
+  });
   const scrollPositions = new Map([...container.querySelectorAll(".pokemon-player-collection")].map(collection => [collection.dataset.player, collection.scrollTop]));
   container.replaceChildren();
   const players = [...(view.players || [])];
@@ -578,8 +593,10 @@ function renderPokemonSplendorPlayers(view) {
     counts.textContent = `${player.reserved_count || 0} reserved · ${player.captured_count || 0} captured · ${player.evolved_count || 0} ↗`;
     setPokemonSplendorHint(counts, `Reserved: ${player.reserved_count || 0}. Captured: ${player.captured_count || 0}. Successful evolutions (↗): ${player.evolved_count || 0}. More evolutions break score ties.`);
     wrapper.appendChild(counts);
+    let capturedCollection = null;
     if (player.player_id !== view.you && player.captured?.length) {
       const details = document.createElement("details");
+      details.dataset.pokemonPlayer = player.player_id;
       details.open = pokemonSplendorOpenCollections.has(player.player_id);
       const summary = document.createElement("summary");
       summary.textContent = `View ${player.captured.length} captures`;
@@ -594,9 +611,10 @@ function renderPokemonSplendorPlayers(view) {
         else pokemonSplendorOpenCollections.delete(player.player_id);
       });
       wrapper.appendChild(details);
-      collection.scrollTop = scrollPositions.get(player.player_id) || 0;
+      capturedCollection = collection;
     }
     container.appendChild(wrapper);
+    if (capturedCollection) capturedCollection.scrollTop = scrollPositions.get(player.player_id) || 0;
   });
 }
 
@@ -985,7 +1003,8 @@ document.addEventListener("click", event => {
   }
   const hint = event.target.closest("[data-pokemon-tooltip]");
   if (event.target.closest("button, summary")) hidePokemonSplendorTooltip();
-  if (hint && !event.target.closest("button, summary") && !hint.querySelector(".pokemon-card-select-trigger") && matchMedia("(pointer: coarse)").matches) {
+  const touchTap = event.pointerType === "touch" || event.sourceCapabilities?.firesTouchEvents || matchMedia("(pointer: coarse)").matches;
+  if (hint && !event.target.closest("button, summary") && !hint.querySelector(".pokemon-card-select-trigger") && touchTap) {
     showPokemonSplendorTooltip(hint, true);
   }
 }, true);
@@ -996,6 +1015,7 @@ document.addEventListener("pointerover", event => {
   }
 });
 document.addEventListener("pointerout", event => {
+  if (event.pointerType !== "mouse") return;
   const hint = event.target.closest("[data-pokemon-tooltip]");
   if (hint && !hint.contains(event.relatedTarget)) hidePokemonSplendorTooltip();
 });

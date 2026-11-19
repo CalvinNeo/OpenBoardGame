@@ -46,16 +46,16 @@
         en: "The ruler always leads. You must follow the statement's suit if possible. Win with a higher card of the same suit, or with a trump against a non-trump statement when you cannot follow suit."
       },
       deck: {
-        zh: "牌库顶牌是下一张领主陈述。每墩翻牌前可使用至多一位未耗竭盟友，然后点击此处翻牌。牌库不会循环，能力与当前回应完整结算后，若牌库或手牌为空，此次出访结束。",
-        en: "The deck's top card is the next ruler statement. Before revealing, you may use at most one ready ally. The deck is never recycled. Once an ability or response is fully resolved, an empty deck or hand ends the visit."
+        zh: "牌库(🌲)顶牌是下一张领主陈述。每墩翻牌前可使用至多一位未耗竭盟友，然后点击此处翻牌。牌库不会循环，能力与当前回应完整结算后，若牌库或手牌为空，此次出访结束。",
+        en: "The deck (🌲) top is the next ruler statement. Before revealing, you may use at most one ready ally. The deck is never recycled. Once an ability or response is fully resolved, an empty deck or hand ends the visit."
       },
       discard: {
-        zh: "弃牌堆包含所有领主陈述和输掉的回应牌。点击可从顶到底查看，但不能改变顺序。部分能力会取用顶牌，因此多张弃牌必须按希望的顺序选择。",
-        en: "The discard pile holds every ruler statement and every losing response. Open it to inspect cards top first, without rearranging. Some abilities use its top card, so select multiple discards in the order you want to place them."
+        zh: "弃牌堆(🍂)包含所有领主陈述和输掉的回应牌。点击可从顶到底查看，但不能改变顺序。部分能力会取用顶牌，因此多张弃牌必须按希望的顺序选择。",
+        en: "The discard pile (🍂) holds every ruler statement and every losing response. Open it to inspect cards top first, without rearranging. Some abilities use its top card, so select multiple discards in the order you want to place them."
       },
       score: {
-        zh: "得分堆的张数就是此次出访的墩数。赢墩只放入你打出的回应牌，领主陈述仍在弃牌堆。能力可以增减得分堆，因此当前墩数不一定等于实际赢过的对话数。",
-        en: "Your score is the number of cards in the score pile. A won trick puts only your response here, not the statement. Abilities can add or remove cards, so score may differ from the number of dialogues actually won."
+        zh: "得分堆(🏆)的张数就是此次出访的墩数。赢墩只放入你打出的回应牌，领主陈述仍在弃牌堆。能力可以增减得分堆，因此当前墩数不一定等于实际赢过的对话数。",
+        en: "Your score is the number of cards in the score pile (🏆). A won trick puts only your response here, not the statement. Abilities can add or remove cards, so score may differ from the number of dialogues actually won."
       },
       allies: {
         zh: "每次出访可使用四位盟友，每位每次出访限用一次，每墩翻牌前至多使用一个能力。耗竭盟友在下一次出访恢复。友好领主可在出访前临时替换盟友，但每位领主整局只能借用一次。",
@@ -91,8 +91,8 @@
         {
           id: "visits", label: { zh: "出访与吃墩", en: "Visits & tricks" },
           html: {
-            zh: "<h3>八个领地</h3><p>三十二张对话牌由利爪(🐾)、繁花(🌸)、慧眼(👁)和枝叶(🍃)四种花色组成，每种点数一到八。每次出访重新洗匀全部牌，先发八张，再选择尚未访问的领地。领地目标从零到七，对应四、三、二、一、一、二、三、四颗星星(⭐)。</p><h3>对话</h3><p>领主的花色是此次王牌。领主始终从牌库翻开陈述，你有同花色就必须跟随。同花色中大点数胜出，无法跟随时可以打任意牌，只有王牌能压过不同花色的陈述。胜出时仅将自己的回应牌放入得分堆，否则回应牌进入弃牌堆。陈述牌始终进入弃牌堆。</p><h3>完整结算与暂停</h3><p>能力或回应完整执行后，若手牌或牌库为空，此次出访立即结算，不再提供额外使用盟友的机会。得分堆张数必须恰好等于领地目标，多一张或少一张都失败。每墩后保留结果，点击 Next Dialogue 继续。出访结束后点击 Next Round 才重新洗牌。最后一次出访也先展示结算，再确认整局结果。</p>" ,
-            en: "<h3>Eight fiefs</h3><p>The 32 dialogue cards have four suits, Claws (🐾), Flowers (🌸), Eyes (👁) and Leaves (🍃), each numbered one through eight. Shuffle all cards for every visit, deal eight, then choose an unvisited fief. Targets zero through seven award 4, 3, 2, 1, 1, 2, 3, 4 stars (⭐).</p><h3>Dialogue</h3><p>The ruler's suit is trump. The ruler always reveals the deck's top card as its statement. Follow suit whenever possible. A higher card of the same suit wins. If you cannot follow suit, play any card, but only trump beats a different suit. Put only a winning response into your score pile. Losing responses and every statement go to the discard pile.</p><h3>Resolution and pauses</h3><p>Fully resolve each ability or response, then end the visit immediately if the hand or deck is empty. There is no extra opportunity to activate an ally. The score pile must exactly equal the target, not one higher or lower. Results pause after each trick for Next Dialogue and after each visit for Next Round. The last visit also pauses before confirming the game result.</p>"
+            zh: "<h3>八个领地</h3><p>三十二张对话牌由利爪(🐾)、繁花(🌸)、慧眼(👁)和枝叶(🍃)四种花色组成，每种点数一到八。每次出访重新洗匀全部牌，先发八张，再选择尚未访问的领地。领地目标从零到七，对应四、三、二、一、一、二、三、四颗星星(⭐)。</p><h3>对话</h3><p>领主的花色是此次王牌。领主始终从牌库(🌲)翻开陈述，你有同花色就必须跟随。同花色中大点数胜出，无法跟随时可以打任意牌，只有王牌能压过不同花色的陈述。胜出时仅将自己的回应牌放入得分堆(🏆)，否则回应牌进入弃牌堆(🍂)。陈述牌始终进入弃牌堆。</p><h3>完整结算与暂停</h3><p>能力或回应完整执行后，若手牌或牌库为空，此次出访立即结算，不再提供额外使用盟友的机会。得分堆张数必须恰好等于领地目标，多一张或少一张都失败。每墩后保留结果，点击 Next Dialogue 继续。出访结束后点击 Next Round 才重新洗牌。最后一次出访也先展示结算，再确认整局结果。</p>" ,
+            en: "<h3>Eight fiefs</h3><p>The 32 dialogue cards have four suits, Claws (🐾), Flowers (🌸), Eyes (👁) and Leaves (🍃), each numbered one through eight. Shuffle all cards for every visit, deal eight, then choose an unvisited fief. Targets zero through seven award 4, 3, 2, 1, 1, 2, 3, 4 stars (⭐).</p><h3>Dialogue</h3><p>The ruler's suit is trump. The ruler always reveals the deck's (🌲) top card as its statement. Follow suit whenever possible. A higher card of the same suit wins. If you cannot follow suit, play any card, but only trump beats a different suit. Put only a winning response into your score pile (🏆). Losing responses and every statement go to the discard pile (🍂).</p><h3>Resolution and pauses</h3><p>Fully resolve each ability or response, then end the visit immediately if the hand or deck is empty. There is no extra opportunity to activate an ally. The score pile must exactly equal the target, not one higher or lower. Results pause after each trick for Next Dialogue and after each visit for Next Round. The last visit also pauses before confirming the game result.</p>"
           }
         },
         {
@@ -105,8 +105,8 @@
         {
           id: "characters", label: { zh: "全部角色能力", en: "24 abilities" },
           html: {
-            zh: "<p>教学配置的利爪侍从将手牌补到八张，繁花侍从弃掉所有王牌，慧眼侍从抽二再弃二，枝叶侍从将当前领主与距离一或二的未访问领主交换。开始游戏后，此页按花色列出全部二十四种角色的精确能力。</p>",
-            en: "<p>The introductory Jacks refill your hand to eight, discard all trumps, draw two then discard two, or swap the current ruler with an unvisited ruler one or two fiefs away. Once the game starts this reference lists all 24 exact abilities by suit.</p>"
+            zh: "<h3>利爪(🐾)</h3><p>侍从将手牌补到八张。王后从牌库、弃牌堆、得分堆各取一张顶牌。国王将手中所有最大点数牌计分。王子至少抽一张，可逐张继续，抽到王牌必须停止。夫人弃一张最小牌，再抽取等同其点数的牌。男爵选择一张手牌，将牌库内同点数牌全部抽出后洗牌。</p><h3>繁花(🌸)</h3><p>侍从弃掉所有当前王牌。王后将得分堆顶放回牌库顶。国王弃掉恰好两张合计九的手牌。王子使每种点数只留一张，弃掉所有重复牌。夫人弃掉一张点数等于当前手牌数量的牌。男爵弃掉所有点数一、二、三的手牌。</p><h3>慧眼(👁)</h3><p>侍从抽二再弃二。王后查看牌库顶三张，不改变顺序。国王先指定任意花色，再抽二并弃掉手中该花色的全部牌。王子弃一抽一，每有另一耗竭盟友就再重复一次，可以弃刚抽的牌。夫人抽二，再弃掉点数总和等于所抽牌总和的任意张牌。男爵使下一张回应在打出后按奇偶触发，偶数抽一，奇数弃一，最后才检查空手。</p><h3>枝叶(🍃)</h3><p>侍从将当前领主与距离一或二的未访问领主交换，不改变当前领地目标，也不首尾环绕。王后完整复制当前领主能力。国王查看牌库顶，必须用一张原有手牌交换。王子移到左侧或右侧最近的未访问领地，目标与王牌随之改变，原领地仍未访问。夫人抽一，然后必须重置另一耗竭盟友，不能重置自己，没有其他目标时只抽牌。男爵可用同点数手牌交换弃牌堆顶，然后可与得分堆顶做相同交换。</p>",
+            en: "<h3>Claws (🐾)</h3><p>Jack refills the hand to eight. Queen draws the top card of the deck, discard and score piles. King scores every highest-valued hand card. Prince draws at least one card, then draws one at a time until drawing trump or choosing to stop. Lady discards one lowest card, then draws its value in cards. Baron chooses a hand card, draws all cards of that value from the deck, then shuffles.</p><h3>Flowers (🌸)</h3><p>Jack discards every current trump. Queen puts the score top on the deck. King discards exactly two cards totalling nine. Prince keeps one card of every value and discards all duplicates. Lady discards a card equal to the current hand size. Baron discards all ones, twos and threes.</p><h3>Eyes (👁)</h3><p>Jack draws two then discards two. Queen views the top three deck cards without changing order. King names any suit before drawing two, then discards every hand card of that suit. Prince discards one and draws one, repeating once for each other exhausted ally, and may discard newly drawn cards. Lady draws two then discards any number of cards totalling their combined values. Baron makes the next response draw a card if even or discard a card if odd, before checking for an empty hand.</p><h3>Leaves (🍃)</h3><p>Jack swaps the current ruler with an unvisited ruler one or two fiefs away, without wrapping or changing target. Queen copies the current ruler's complete ability. King looks at the deck top and must exchange an original hand card for it. Prince moves the visit to the nearest unvisited fief on either side, changing target and trump while leaving the original fief unvisited. Lady draws one then must refresh another exhausted ally if any exist, never herself. Baron may swap a hand card with the discard top of the same value, then do the same with the score top.</p>"
           }
         }
       ]
@@ -281,10 +281,12 @@
         const node = cardNode(card, true);
         const enabled = (can("play") && view.legal_cards.includes(card))
           || (can("ability_cards") && view.pending.eligible.includes(card));
-        node.disabled = !enabled;
+        node.disabled = !enabled && (view.phase === "respond" || Boolean(view.pending?.eligible) || inFlight);
+        if (!enabled) node.setAttribute("aria-disabled", "true");
         node.setAttribute("aria-pressed", "false");
         if (!enabled) node.dataset.nwTip = `card_${card}`;
         node.addEventListener("click", () => {
+          if (!enabled) return;
           const found = selectedCards.indexOf(card);
           if (found >= 0) selectedCards.splice(found, 1);
           else if (can("play") || view.pending?.count === 1) selectedCards = [card];
@@ -304,7 +306,7 @@
       byId("DialogueTitle").textContent = current === null ? "Choose your destination" : `Fief ${current} · Dialogue ${view.trick}`;
       byId("Trump").textContent = view.trump ? `${suitIcon(view.trump)} trump` : "";
       byId("Statement").replaceChildren(cardNode(view.statement));
-      byId("Response").replaceChildren(cardNode(reviewing ? last?.response : selectedCards.length === 1 && view.phase === "respond" ? selectedCards[0] : null));
+      byId("Response").replaceChildren(cardNode(reviewing && view.statement ? last?.response : selectedCards.length === 1 && view.phase === "respond" ? selectedCards[0] : null));
       byId("Target").innerHTML = `<strong>${view.score.length}<span> / </span>${current === null ? "–" : current}</strong><span>score / target</span>`;
       const messages = {
         choose_fief: "Inspect your hand, then choose an unvisited fief.",
@@ -349,7 +351,8 @@
       if (pending.total !== undefined && selectedCards.reduce((total, card) => total + view.cards[card].value, 0) !== pending.total) return false;
       if (pending.kind === "duplicates") {
         const remaining = view.hand.filter((card) => !selectedCards.includes(card));
-        if (new Set(remaining.map((card) => view.cards[card].value)).size !== remaining.length) return false;
+          if (new Set(remaining.map((card) => view.cards[card].value)).size !== remaining.length
+              || new Set(remaining.map((card) => view.cards[card].value)).size !== new Set(view.hand.map((card) => view.cards[card].value)).size) return false;
       }
       return true;
     }
@@ -552,6 +555,8 @@
       resetSelection();
       hideTooltip();
       view = data.view;
+      byId("Setup").value = view.config.setup;
+      byId("Goal").value = String(view.config.goal);
       updateCharacterReference();
       render();
     }

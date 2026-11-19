@@ -472,6 +472,33 @@ class NorthwoodLeavesTests(NorthwoodTestCase):
 
 
 class NorthwoodPersistenceTests(NorthwoodTestCase):
+    def test_seeded_complete_games_with_abilities_and_substitutions(self):
+        for seed in range(24):
+            with self.subTest(seed=seed):
+                random.seed(seed)
+                state = fresh({"setup": "standard"})
+                steps = 0
+                while not state["game_over"]:
+                    if state["phase"] == "before_trick" and "use_ability" in ForNorthwoodGame.get_legal_actions(state, "envoy"):
+                        choices = [index for index, ally in enumerate(state["active_allies"]) if not ally["exhausted"]]
+                        action = {"type": "use_ability", "slot": random.choice(choices)}
+                    elif state["phase"] == "prepare" and not state["borrowed"]:
+                        guests = [index for index, fief in enumerate(state["fiefs"])
+                                  if fief["status"] == "friendly" and not fief["spent"]]
+                        action = {"type": "substitute", "slot": 0, "fief": guests[0]} if guests else {"type": "start_visit"}
+                    else:
+                        action = ForNorthwoodGame.bot_move(state, "envoy")
+                    self.assertIsNotNone(action)
+                    self.act(state, action.pop("type"), **action)
+                    self.assert_cards_conserved(state)
+                    self.assertEqual(len({entry["fief"] for entry in state["history"]}), len(state["history"]))
+                    self.assertLessEqual(len(state["known_top"]), len(state["deck"]))
+                    if state["known_top"]:
+                        self.assertEqual(state["known_top"], list(reversed(state["deck"][-len(state["known_top"]):])))
+                    steps += 1
+                    self.assertLess(steps, 1200)
+                self.assertEqual(len(state["history"]), 8)
+
     def test_substitutes_are_once_only_and_stars_are_retained(self):
         state = fresh()
         state["fiefs"][0].update(status="friendly", ruler="queen_eyes")

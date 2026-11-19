@@ -378,14 +378,14 @@ const GAME_ASSETS = {
   },
   "splendor_pokemon": {
     "scripts": [
-      "/static/games/splendor_pokemon.js?v=app_v7"
+      "/static/games/splendor_pokemon.js?v=app_v8"
     ],
     "styles": [],
     "panel": "pokemonSplendorPanel",
     "panelTitle": "💎 璀璨宝石：宝可梦",
     "header": "showPokemonSplendorHeaderActions",
-    "markup": "/static/games/splendor_pokemon.html?v=2",
-    "styleFragments": "/static/games/splendor_pokemon.css?v=3"
+    "markup": "/static/games/splendor_pokemon.html?v=3",
+    "styleFragments": "/static/games/splendor_pokemon.css?v=4"
   },
   "project_l": {
     "scripts": [
@@ -1068,14 +1068,14 @@ const GAME_ASSETS = {
   "bomb_busters": {
     "scripts": [
       "/static/games/bomb_busters_campaign.js?v=2",
-      "/static/games/bomb_busters.js?v=app_v7"
+      "/static/games/bomb_busters.js?v=app_v8"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
     "markup": "/static/games/bomb_busters.html?v=6",
-    "styleFragments": "/static/games/bomb_busters.css?v=6"
+    "styleFragments": "/static/games/bomb_busters.css?v=7"
   },
   "felix": {
     "scripts": [
@@ -1269,8 +1269,8 @@ const GAME_ASSETS = {
     "header": "showFactoryFunnerHeaderActions"
   },
   "for_northwood": {
-    "scripts": ["/static/games/for_northwood.js?v=1"],
-    "styles": ["/static/games/for_northwood.css?v=1"],
+    "scripts": ["/static/games/for_northwood.js?v=2"],
+    "styles": ["/static/games/for_northwood.css?v=2"],
     "markup": "/static/games/for_northwood.html?v=1",
     "panel": "forNorthwoodPanel",
     "panelTitle": "🌲 For Northwood!",

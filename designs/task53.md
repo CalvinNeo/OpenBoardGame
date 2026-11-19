@@ -494,3 +494,27 @@
 - 通用 `tests/game_assets.browser.cjs` 未通过既有首页资源断言：测试只允许 `shared.js`，实际还正常加载 `shared_help.js` 与 `shared_effects.js`，失败发生在游戏创建前。本次不修改该不相关断言。
 - `git diff --check` 通过。未运行全量 Python 套件，未在实体 iOS/Windows 设备验收；不声称完全满足全部跨平台验收。DEV_GUIDE.md 相关界面要求已实现并通过专项检查，保留上述通用测试失败与设备覆盖限制。
 - 截图、实验临时输出保留在忽略的 `tmp/` 或系统临时目录，不加入补丁。
+
+## 13. 2026-11-19 紧凑布局迭代
+
+### 信息层级与空间
+
+- 两排状态胶囊、独立 Your Roles 标题和高大的 Status 框合并为一行轮次/阶段/本人角色，加一条短回合提示。模式、皇冠和目标建筑数移至可原地展开的 Table，仍可随时查看。
+- 角色顺位条在 320px 也只占一行，按实际角色数等分。手机隐藏重复的 Hidden/Playing 小字，颜色状态保留，悬停/点击提示包含状态与角色能力，不公开额外身份。
+- Your Hand 与 Cities 使用 11px 小标题，收税、整手重抽和 End Turn 放在手牌标题右侧。没有可选目标时不显示空的行动区域，避免固定最小高度制造留白。
+- 手牌名称与金币费用同行，省略逐张重复英文名，完整英文名、颜色和效果仍由提示与 Explain 提供。Build/Redraw 同行并列，选牌按钮保留完整无障碍名称与 aria-pressed。
+- 长手牌滚动高度上限从 48vh/480px 改成 34vh/300px。含动作的卡牌至少 72px，以容纳原地确认；等待/复盘的无动作卡牌自动压缩。卡牌特殊效果保留独立文本，不与费用混在一起。
+- 玩家姓名与金币/手牌/建筑数量同行，换手牌按钮与角色文字共行，城市小卡约 27px 高，手机一排三张。长名字允许换行，桌面城市列保留至少 92px 的卡片宽度，避免过度压缩卡名。
+- 复盘缩小边距、标题和重复装饰文字，保留全部身份、行动、计分以及所有人确认的 Next Round 暂停。
+- 不修改后端规则或 AI，不影响其他游戏已有本地改动。更新 Citadels JS/HTML/CSS 资源版本及首页加载器版本。
+
+### 对比与验收
+
+- 同样的六人、16 张手牌场景：320px 整页截图从 2533px 降为 1335px，减少 47.3%；390px 从 2247px 降为 1319px，减少 41.3%。对比截图在 `tmp/citadels-compact-before/`，当前截图在 `tmp/citadels-ui/`，均不进入补丁。
+- 从游戏内容顶端到手牌起点：320/390px 为 128px，1024/1440px 为 143px；手机城市起点为 467px。浏览器新增高度断言，保证角色条一行、手牌不超过 306px、普通操作卡低于 120px，防止紧凑度回退。
+- `python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`：13 项通过。UI-only 修改不运行游戏逻辑或全量 Python 测试。
+- `node --check static/games/citadels.js`、`node --check tests/citadels.browser.cjs`、`node scripts/smoke_load.cjs citadels`、`git diff --check`：通过。
+- `PLAYWRIGHT_MODULE="$PWD/tmp/guandan-ui-qa/node_modules/playwright" ROOM_TEST_URL=http://127.0.0.1:8773 node tests/citadels.browser.cjs`：320/390/1024/1440px 紧凑度、横向溢出与交互检查通过；复核手机、桌面和复盘截图。
+- 专项覆盖：Table 展开/收起、双角色、长行动玩家名、移到标题旁的收税/重抽/结束回合、原地确认/取消/Esc、禁用按钮 Explain、中英 Help 章节、手牌多选滚动位置、空白取消、滑动不误选、提示替换/超时、轮末无二次确认；320/390px 真实 CDP 触摸模拟和 Socket.IO 开局/刷新重连通过。
+- 本次按 DEV_GUIDE.md 的相关布局、交互与验收要求完成；没有使用商业素材，没有新增规范例外。手机验收使用 Chrome 模拟，不等同于实体 iOS/Windows 设备验收，后者未检查；通用资源浏览器脚本未重跑，沿用上节已记录的限制。
+- 修改文件：`static/games/citadels.html`、`static/games/citadels.js`、`static/games/citadels.css`、`static/game_assets.js`、`static/index.html`、`tests/citadels.browser.cjs`、本文件。

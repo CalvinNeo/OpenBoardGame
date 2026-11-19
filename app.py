@@ -29,6 +29,7 @@ from game.ai_dixit import list_decks as list_aidixit_decks
 from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
 from game.ai_metadata import STRATEGIC_AI_GAME_IDS
 from game.ark_nova_events import filter_ark_nova_events
+from game.bomb_busters_help import get_mission_help
 from game.carcassonne import get_carcassonne_template_payload
 from game.decrypto import get_decrypto_word_packs
 from game.decrypto_ai import get_bot_strategies
@@ -120,6 +121,14 @@ async def carcassonne_templates():
     return get_carcassonne_template_payload()
 
 
+@fastapi_app.get("/api/bomb_busters/missions/{mission_number}/help")
+async def bomb_busters_mission_help(mission_number: int, player_count: int = 3) -> Dict:
+    try:
+        return get_mission_help(mission_number, player_count)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
 @fastapi_app.get("/api/decrypto/word_packs")
 async def decrypto_word_packs():
     return {"packs": get_decrypto_word_packs()}
@@ -169,6 +178,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "for_northwood"):
+        raise HTTPException(status_code=403, detail="This For Northwood! game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "colt_express"):
         raise HTTPException(status_code=403, detail="This game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "dnd_starter_set"):
@@ -1961,6 +1972,8 @@ async def on_room_reconnect(sid, data):
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "word_sync")
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "for_northwood")
+    if not room:
         await _send_error(sid, "room not found")
         return
     player = _find_player(room, player_id)
@@ -2478,6 +2491,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_private_save(source_room_id, "for_northwood")
         or _has_unfinished_private_save(source_room_id, "colt_express")
         or _has_unfinished_private_save(source_room_id, "dnd_starter_set")
         or _has_unfinished_private_save(source_room_id, "moshimo_yusha")

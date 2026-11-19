@@ -60,3 +60,28 @@
 - `tests.test_ark_nova_maps.ArkNovaMapsTests.test_all_map_sources_generate_current_artifacts_and_share_geometry`：`map5a` 的源数据/生成产物规则文案不一致。
 - `tests.test_guandan_reviewed_round.GuandanReviewedRoundRegressionTests.test_bot4_does_not_feed_low_single_to_seven_card_enemy_after_taking_lead`：机器人出牌与预期不一致；工作区同时有其他掼蛋修改，予以保留。
 - `tests.test_halli_galli` 的 `test_flip_wait_allows_flip_after_ready`、`test_flip_wait_blocks_flip`、`test_ring_false_when_no_fruit_total_is_five`、`test_ring_success_when_fruit_total_is_five`：翻牌等待/按铃行为断言失败。
+
+## 2026-11-19 前端优化
+
+按当前 `DEV_GUIDE.md`、`designs/room_control.md` 和 `designs/task40.md` 重新检查前端，不修改规则、AI 或结算计算。
+
+- 使用共享 Game 页头显示 Startups，移除游戏内部重复标题和装饰外框。市场、手牌和投资人直接排在游戏主体，靠留白和分隔线区分区域，不再重复嵌套卡片面板。页头在 320px 起保持标题、Reconnect 和 Help 同行，Explain 延续共享 RC 的 dock 行为。
+- 桌面保留市场/手牌与投资人双栏，放大股份卡和公司图标。手机手牌三张或四张均保持一行，市场内部限高滚动；六家公司使用固定高度的一行索引，反垄断标记显示座位号，完整姓名通过悬停、触屏提示及 Explain 查看，避免七名长姓名玩家撑高公司区。
+- 玩家持股以固定六列对齐，公司图标、股数和反垄断标记分别布局；零持股保持可读而不争抢视觉重点。桌面玩家姓名单行省略，完整姓名仍能通过提示查看，七人长姓名时每行不超过 120px。行动阶段通过状态栏和对应区域标题提示，不新增独立 Action 区。
+- 保留市场/手牌的原地蒙版确认、Cancel、空白取消和 Esc，不增加 Draw/Next Round 二次确认。确认期间移除蒙版后卡牌的 Explain 命中目标，防止说明模式穿透蒙版。
+- Explain 增加当前公司、发行量、收款、标记归属和持股数量的上下文，保留中英文。普通操作按钮不再触发静态浮动提示，指标继续支持桌面悬停和手机三秒提示。
+- 修复共享 Explain 在解释 disabled 按钮后残留点击拦截、导致关闭弹窗后下一次正常点击无效的问题。新指针或键盘操作开始时清除旧的拦截标记，同时保留同一次解释操作不能执行游戏动作的约束。共享 Help 移动端语言/关闭按钮最小高度由 36px 提高到 40px。
+- 更新 Startups 脚本、样式、模板和首页资源版本。保留其他游戏的并行工作区修改，不修改根部 README，也不创建提交。
+
+### 本次验收记录
+
+- `node --check`：Startups、共享 Help、资源清单及浏览器回归脚本语法通过；`node scripts/smoke_load.cjs startups` 通过。
+- `python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`：13 项通过。
+- `tests/startups.browser.cjs`：1440、1024、390、320px 真实 Chrome 布局和截图检查通过，覆盖页头不换行/不重叠、页面无横向溢出、七名长姓名玩家、四张手牌、市场/手牌原地确认、按钮/空白/Esc 取消、Explain 蒙版拦截、disabled Explain、具体公司说明、中英 Help、弹窗视口与触控关闭尺寸、日志折叠限高、桌面悬停、手机提示替换/三秒消失、真实触屏滚动不误选、刷新重连、两名服务器机器人完整单局，以及四局赛三次全员确认停顿。另验证样式加载失败后 Retry 恢复、切换其他游戏再返回，不重复插入 Startups 脚本。
+- `tests/shared_help.browser.cjs`：32/32 项通过，包含 disabled Explain 后下一次正常点击、解释不执行实际行动及 40px 移动关闭按钮回归。使用已有 Chrome，无需下载 Chromium。
+- 截图和报告保存在忽略目录 `tmp/startups-ui-qa/`，包括 `playing-*`、`help-*`、`results-*`、`seven-players-four-cards-*` 和 `result.json`。
+- 通用 `tests/game_assets.browser.cjs` 的首页旧断言仍只允许 `shared.js`，但当前首页本就还加载 `shared_help.js` 与 `shared_effects.js`，因此该脚本提前失败。本次保留该无关旧断言，不将通用资源回归描述为通过。
+- 因共享 Help 点击拦截和样式有必要改动，补跑全量 `python3 -m unittest`：4,672 项，14 项失败，耗时 678 秒。Startups 与前端契约测试通过；失败分布为 Ark Nova 集成 5 项、Ark Nova `map5a` 生成数据 1 项、Bomb Busters mission 45 三种人数及组合数量断言 4 项、Halli Galli 4 项。未修改这些游戏来修复测试，完整日志为 `tmp/startups-ui-qa/unittest-full.log`；工作区同时存在其他游戏的并行修改，不将该全量结果归因于本次前端改动。
+- 桌面和手机均为 Chrome 浏览器/触屏模拟检查，未在实体 iOS/Windows 设备或 Safari 上验证。RC dock 的覆盖属于规范允许的例外；不声称跨平台实体设备验证已完成。
+
+改动文件：`static/games/startups.html`、`static/games/startups.css`、`static/games/startups.js`、`static/game_assets.js`、`static/index.html`、`static/games/shared_help.js`、`static/style.css`、`tests/startups.browser.cjs`、`tests/shared_help.browser.cjs` 和本设计文档。实现与本游戏 Chrome 验收满足本次涉及的前端要求，但通用资源脚本存在上述旧断言失败，不将全部仓库检查描述为通过。

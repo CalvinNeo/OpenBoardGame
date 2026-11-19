@@ -723,6 +723,12 @@ def get_mission_help(number: int, player_count: int = 3) -> Dict:
               f"Yellow wires (🟡): {mission['yellow_count']} from {mission['yellow_pool']} candidates. "
               f"Red wires (🔴): {mission['red_count']} from {mission['red_pool']} candidates.",
     }
+    if setup_players == 2 and number in (11, 13, 27, 29, 40, 46, 51):
+        wire_setup["zh"] += " 两人局队长不放初始线索。"
+        wire_setup["en"] += " The two-player Captain places no initial clue."
+    if setup_players == 2 and number == 43:
+        wire_setup["zh"] += " 两人局队长随机抽取初始线索。"
+        wire_setup["en"] += " The two-player Captain draws a random initial clue."
     sections = []
     for key, label in (
         ("setup", ("准备与配线", "Setup")),

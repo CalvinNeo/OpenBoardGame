@@ -1,6 +1,77 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-bomb_busters-1 {
 
+.obg-help-dialog[data-obg-help-game="bomb_busters"] .bomb-busters-help-browser {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2a3446;
+}
+
+.obg-help-dialog[data-obg-help-game="bomb_busters"] .bomb-busters-help-browser summary,
+.obg-help-dialog[data-obg-help-game="bomb_busters"] .bomb-busters-help-constraints summary,
+.obg-help-dialog[data-obg-help-game="bomb_busters"] .bomb-busters-help-challenges summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  color: #8fb6ef;
+  overflow-wrap: anywhere;
+}
+
+.bomb-busters-help-browser-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.bomb-busters-help-browser-fields label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.bomb-busters-help-browser-fields select {
+  flex: 1 1 50px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bomb-busters-help-browser-fields select,
+.bomb-busters-help-browser-fields button,
+.bomb-busters-help-detail button {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 6px;
+  border: 1px solid #3a4761;
+  border-radius: 6px;
+  background: #1f2a3c;
+  color: #e8edf6;
+  font-size: 13px;
+}
+
+.bomb-busters-help-detail {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bomb-busters-help-detail h4 {
+  margin: 14px 0 4px;
+  color: #8fb6ef;
+  font-size: 13px;
+}
+
+.bomb-busters-help-context,
+.bomb-busters-help-source {
+  font-size: 12px;
+  color: #a9bad0;
+}
+
+.bomb-busters-help-warning {
+  color: #fde68a;
+}
+
 .bomb-busters-campaign {
   display: grid;
   gap: 8px;

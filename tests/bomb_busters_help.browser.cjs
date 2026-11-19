@@ -8,6 +8,7 @@ const output = 'build/bomb-busters-help';
 const views = JSON.parse(execFileSync(process.env.PYTHON || 'python3', ['-c', `
 import json
 from game.bomb_busters import BombBustersGame
+from game.bomb_busters_help import get_mission_help
 from tests.test_bomb_busters_game import make_players
 result = {}
 for mission in (None, 19, 46, 57, 66):
@@ -16,6 +17,7 @@ for mission in (None, 19, 46, 57, 66):
         config["mission_id"] = mission
     state = BombBustersGame.init_game(config, make_players(3))
     result[str(mission)] = BombBustersGame.get_public_view(state, "p0")
+result["help"] = {str(number): get_mission_help(number) for number in range(1, 67)}
 print(json.dumps(result))
 `], {encoding: 'utf8'}));
 
@@ -26,7 +28,11 @@ print(json.dumps(result))
     const page = await context.newPage();
     const errors = [];
     const measurements = [];
+    const missionRequests = [];
     page.on('pageerror', error => errors.push(error.message));
+    page.on('request', request => {
+        if (request.url().includes('/api/bomb_busters/missions/')) missionRequests.push(request.url());
+    });
     page.setDefaultTimeout(12000);
 
     async function render(view) {
@@ -55,11 +61,12 @@ print(json.dumps(result))
                 closeVisible: close.top >= box.top && close.bottom <= box.bottom,
                 activeTabs: tabs.querySelectorAll('[aria-selected="true"]').length,
                 tabOverflow: tabs.scrollWidth > tabs.clientWidth,
+                browserOverflow: [...dialog.querySelectorAll('.bomb-busters-help-browser-fields')].some(element => element.scrollWidth > element.clientWidth),
                 dialogWidth: box.width,
                 dialogHeight: box.height,
             };
         });
-        for (const key of ['pageOverflow', 'dialogOverflow', 'contentOverflow', 'tabOverflow']) {
+        for (const key of ['pageOverflow', 'dialogOverflow', 'contentOverflow', 'tabOverflow', 'browserOverflow']) {
             assert.equal(measurement[key], false, `${width} ${language} ${section}: ${key}`);
         }
         for (const key of ['insideViewport', 'titleBeforeLanguage', 'languageBeforeClose', 'closeVisible']) {
@@ -127,11 +134,98 @@ print(json.dumps(result))
                 const body = await dialog.locator('.obg-help-body').textContent();
                 assert(body.includes(language === 'zh' ? `第 ${number} 关` : `Mission ${number}`));
                 assert(body.includes(views[number].campaign[language === 'zh' ? 'rules_zh' : 'rules']));
+                assert.equal(await dialog.locator('[data-bomb-busters-help-part]').count(), 5);
+                assert(body.includes(views[number].campaign.help.sections[4].text[language]));
                 assert.equal(await dialog.locator('[data-obg-help-tab="mission"]').getAttribute('aria-selected'), 'true');
                 assert.equal(await dialog.locator('[data-obg-help-lang="' + language + '"]').getAttribute('aria-pressed'), 'true');
             }
             await page.keyboard.press('Escape');
         }
+        assert.deepEqual(missionRequests, []);
+
+        await render(views['46']);
+        await page.locator('#bombBustersHelpBtn').click();
+        await dialog.locator('[data-obg-help-tab="mission"]').click();
+        const missionSelect = dialog.locator('[data-bomb-busters-help-mission-select]');
+        const playerSelect = dialog.locator('[data-bomb-busters-help-player-select]');
+        assert.equal(await missionSelect.isVisible(), false);
+        await dialog.locator('.bomb-busters-help-browser > summary').click();
+        assert.equal(await missionSelect.locator('option').count(), 66);
+        assert.equal(await missionSelect.inputValue(), '46');
+
+        for (let number = 1; number <= 66; number += 1) {
+            await missionSelect.selectOption(String(number));
+            await dialog.locator('[data-bomb-busters-help-part="example"]').waitFor({state: 'visible'});
+            for (const language of ['zh', 'en']) {
+                await dialog.locator(`[data-obg-help-lang="${language}"]`).click();
+                assert.equal(await missionSelect.inputValue(), String(number));
+                const detail = await dialog.locator('.bomb-busters-help-detail').textContent();
+                assert(detail.includes(views.help[number].title[language]));
+                for (const section of views.help[number].sections) {
+                    assert(detail.includes(section.text[language]), `Mission ${number} ${language}: missing ${section.id}`);
+                }
+            }
+        }
+
+        for (const width of [320, 390, 1024, 1440]) {
+            await page.setViewportSize({width, height: width < 600 ? 740 : 900});
+            for (const language of ['zh', 'en']) {
+                await dialog.locator(`[data-obg-help-lang="${language}"]`).click();
+                await dialog.locator('.obg-help-content').evaluate(element => { element.scrollTop = 0; });
+                await measure(width, language, 'mission-66-browser');
+                assert.equal(await missionSelect.isVisible(), true);
+                await page.screenshot({path: `${output}/${width}-${language}-mission-66.png`});
+            }
+        }
+
+        await missionSelect.selectOption('34');
+        await playerSelect.selectOption('2');
+        await dialog.locator('.bomb-busters-help-warning').waitFor({state: 'visible'});
+        assert((await dialog.locator('.bomb-busters-help-warning').textContent()).includes('at least 3'));
+        await missionSelect.selectOption('4');
+        await dialog.locator('[data-bomb-busters-help-part="example"]').waitFor({state: 'visible'});
+        assert((await dialog.locator('[data-bomb-busters-help-part="setup"]').textContent()).includes('4 from 4 candidates'));
+        await playerSelect.selectOption('5');
+        await dialog.locator('[data-bomb-busters-help-part="example"]').waitFor({state: 'visible'});
+        assert((await dialog.locator('[data-bomb-busters-help-part="setup"]').textContent()).includes('2 from 2 candidates'));
+        await dialog.locator('[data-bomb-busters-help-current]').click();
+        assert.equal(await missionSelect.inputValue(), '46');
+        assert.equal(await playerSelect.inputValue(), '3');
+        assert((await dialog.locator('.bomb-busters-help-detail').textContent()).includes(views.help['46'].title.en));
+
+        await missionSelect.selectOption('22');
+        await dialog.locator('[data-bomb-busters-help-part="example"]').waitFor({state: 'visible'});
+        const failedUrl = '**/api/bomb_busters/missions/22/help?player_count=4';
+        await page.route(failedUrl, route => route.fulfill({status: 503, body: 'temporarily unavailable'}));
+        await playerSelect.selectOption('4');
+        await dialog.locator('[data-bomb-busters-help-retry]').waitFor({state: 'visible'});
+        await page.unroute(failedUrl);
+        await dialog.locator('[data-bomb-busters-help-retry]').click();
+        await dialog.locator('[data-bomb-busters-help-part="example"]').waitFor({state: 'visible'});
+        assert((await dialog.locator('.bomb-busters-help-detail').textContent()).includes(views.help['22'].title.en));
+
+        const delayedUrl = '**/api/bomb_busters/missions/9/help?player_count=4';
+        let releaseDelayed;
+        let markDelayedStarted;
+        const delayedStarted = new Promise(resolve => { markDelayedStarted = resolve; });
+        await page.route(delayedUrl, async route => {
+            markDelayedStarted();
+            await new Promise(resolve => { releaseDelayed = resolve; });
+            await route.fulfill({json: {...views.help['9'], player_count: 4, setup_players: 4}}).catch(() => {});
+        });
+        await missionSelect.selectOption('9');
+        await delayedStarted;
+        await missionSelect.selectOption('16');
+        await dialog.locator('[data-bomb-busters-help-part="example"]').waitFor({state: 'visible'});
+        releaseDelayed();
+        await page.unroute(delayedUrl);
+        assert.equal(await missionSelect.inputValue(), '16');
+        assert((await dialog.locator('.bomb-busters-help-detail').textContent()).includes(views.help['16'].title.en));
+        await page.keyboard.press('Escape');
+        await page.locator('#bombBustersHelpBtn').click();
+        assert.equal(await missionSelect.isVisible(), false);
+        assert((await dialog.locator('.bomb-busters-help-detail').textContent()).includes(views.help['46'].title.en));
+        await page.keyboard.press('Escape');
 
         await render(views['46']);
         await page.locator('#bombBustersEquipment > summary').click();
@@ -168,7 +262,7 @@ print(json.dumps(result))
         await dialog.waitFor({state: 'hidden'});
         assert.deepEqual(await page.evaluate(() => window.bombBustersHelpTestActions), []);
         assert.deepEqual(errors, []);
-        console.log(`PASS ${measurements.length} Help layouts, 4 widths, 6 tabs, both languages, dynamic mission rules and equipment Explain, Close/Esc/focus, disabled Explain and game switching`);
+        console.log(`PASS ${measurements.length} Help layouts, all 66 bilingual mission guides, 4 widths, player-count previews, spoiler opt-in, retry, current-mission reset, equipment and disabled Explain, Close/Esc/focus and game switching`);
     } finally {
         fs.writeFileSync(`${output}/measurements.json`, JSON.stringify({measurements, errors}, null, 2));
         await context.close();

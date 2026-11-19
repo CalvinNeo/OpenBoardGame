@@ -18,7 +18,7 @@ state['starting_player']='p0'
 state['turn_order']=['p0','p1','p2','p3']
 for tier in ('lv1','lv2','lv3'):
  state['market'][tier]=[_clone_card(card) for card in TIER_DECKS[tier][:4]]
-state['players']['p0']['tokens']={color:(1 if color!='purple' else 0) for color in TOKEN_COLORS}
+state['players']['p0']['tokens']={color:1 for color in TOKEN_COLORS}
 state['players']['p0']['bonuses']={color:5 for color in REGULAR_COLORS}
 state['players']['p0']['reserved']=[_clone_card(TIER_DECKS['lv2'][4])]
 state['players']['p0']['captured']=[_clone_card(card) for card in TIER_DECKS['lv1'][5:9]]
@@ -285,6 +285,8 @@ async function touchGesture(page, locator) {
     const tooltipTarget = page.locator('.pokemon-player-score').first();
     await tooltipTarget.tap();
     assert.equal(await page.locator('#pokemonSplendorTooltip').isVisible(), true);
+    await page.locator('.pokemon-first-player-badge').first().tap();
+    assert.match(await page.locator('#pokemonSplendorTooltip').textContent(), /Kanto/);
     await page.waitForTimeout(3150);
     assert.equal(await page.locator('#pokemonSplendorTooltip').isVisible(), false);
     await page.locator('#pokemonSplendorTakeTokensBtn').tap();
@@ -292,6 +294,7 @@ async function touchGesture(page, locator) {
     await page.keyboard.press('Escape');
 
     await render(page, 'crowded');
+    await page.locator('#pokemonSplendorCapturedSection summary').click();
     await page.locator('#pokemonSplendorCaptured').evaluate(container => { container.scrollTop = 100; });
     const scrollTop = await page.locator('#pokemonSplendorCaptured').evaluate(container => container.scrollTop);
     await (await marketCard(page)).click();
@@ -303,6 +306,7 @@ async function touchGesture(page, locator) {
 
     const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const mousePage = await desktop.newPage();
+    mousePage.on('pageerror', error => errors.push(error.message));
     await mousePage.route('https://fonts.googleapis.com/**', route => route.abort());
     await mousePage.goto(base);
     await mousePage.waitForFunction(() => typeof ensureGameAssets === 'function' && socket.connected);
@@ -311,6 +315,39 @@ async function touchGesture(page, locator) {
     await mousePage.locator('.pokemon-player-score').first().hover();
     assert.equal(await mousePage.locator('#pokemonSplendorTooltip').isVisible(), true);
     await desktop.close();
+
+    const liveContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const live = await liveContext.newPage();
+    live.on('pageerror', error => errors.push(error.message));
+    await live.route('https://fonts.googleapis.com/**', route => route.abort());
+    try {
+      await live.goto(base);
+      await live.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+      await live.evaluate(() => socket.emit('room:create', { name: 'Pokemon Splendor Live QA', game_type: 'splendor_pokemon' }));
+      await live.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('splendor_pokemon'));
+      await live.evaluate(() => socket.emit('room:add_bot', {}));
+      await live.waitForFunction(() => currentRoomState.players.length === 2 && !document.getElementById('startBtn').disabled);
+      await live.locator('#startBtn').click();
+      await live.waitForFunction(() => lastGameStatePayload?.game_type === 'splendor_pokemon' && lastGameStatePayload.view.current_turn === lastGameStatePayload.view.you, null, { timeout: 60000 });
+      const identity = await live.evaluate(() => ({ room: roomId, player: playerId }));
+      const legalCards = await live.locator('.pokemon-market-card').count();
+      assert.equal(legalCards, 14);
+      await live.locator('#pokemonSplendorTakeTokensBtn').click();
+      await live.getByRole('button', { name: 'Add Red token', exact: true }).click();
+      await live.getByRole('button', { name: 'Add Red token', exact: true }).click();
+      await live.locator('#pokemonSplendorConfirmTwoBtn').click();
+      await live.waitForFunction(() => lastGameStatePayload.view.players.find(player => player.player_id === playerId).tokens.red === 2);
+      await live.reload();
+      await live.waitForFunction(() => isGameAssetsLoaded('splendor_pokemon') && lastGameStatePayload?.view?.you === playerId);
+      assert.deepEqual(await live.evaluate(() => ({ room: roomId, player: playerId })), identity);
+      assert.equal(await live.locator('#pokemonSplendorPanel').isVisible(), true);
+      assert.equal(await live.locator('#pokemonSplendorReserved .pokemon-card-empty').evaluate(card => card.getBoundingClientRect().height <= 40), true, 'Empty reservations must not take a full card height');
+      await bounds(live, '390-live-reload');
+      await live.screenshot({ path: `${output}/390-live-reload.png`, fullPage: true });
+    } finally {
+      await live.evaluate(() => socket.emit('room:leave', {})).catch(() => {});
+      await liveContext.close();
+    }
 
     assert.deepEqual(errors, []);
     fs.writeFileSync(`${output}/metrics.json`, JSON.stringify(metrics, null, 2));

@@ -16,6 +16,12 @@
   let bombBustersEffectToken = null;
   let bombBustersHelpWidget = null;
   let bombBustersExplainWidget = null;
+  let bombBustersHelpMissionId = null;
+  let bombBustersHelpPlayerCount = 3;
+  let bombBustersHelpBrowseOpen = false;
+  let bombBustersHelpRequest = null;
+  let bombBustersHelpErrorKey = null;
+  const BOMB_BUSTERS_MISSION_HELP_CACHE = new Map();
   const BOMB_BUSTERS_DYNAMIC_EXPLANATIONS = new Set();
 
   const bombBustersPanelEl = document.getElementById("bombBustersPanel");
@@ -59,8 +65,8 @@
 
   const BOMB_BUSTERS_EXPLANATIONS = {
     campaign: {
-      zh: "关卡特殊规则优先于普通剪线和装备规则。点选装备后在线架选线并确认。Help 的当前关卡章节会显示本关规则。",
-      en: "Mission-specific rules override normal cutting and equipment. Select equipment to choose its wires on the racks, then confirm. See Current Mission in Help for this mission's rule summary.",
+      zh: "关卡特殊规则优先于普通剪线和装备规则。点选装备后在线架选线并确认。Help 的逐关玩法章节会显示本关差异与例子。",
+      en: "Mission-specific rules override normal cutting and equipment. Select equipment to choose its wires on the racks, then confirm. See Missions in Help for this mission's differences and examples.",
     },
     own_wire: {
       zh: "这是自己的可见电线。选择未剪的蓝线(🔵)或黄线(🟡)作为双人剪线的声明。蓝线数字是配对值，黄线和红线的小数只表示排序。红线(🔴)不能作为普通声明。",
@@ -148,8 +154,8 @@
       {
         id: "cuts", label: {zh: "剪线与失败", en: "Cuts & Mistakes"},
         html: {
-          zh: "<p><strong>双人剪线：</strong>选择自己一条未剪蓝线或黄线作为声明，再指定队友的一条目标线。匹配则双方各剪一条。不匹配的非红目标通常消耗一格引爆器(🧨)，并给目标放真实信息标记。允许故意猜错，但声明值必须来自自己的电线。</p><p><strong>单人剪线：</strong>只有当该值全部剩余电线都在自己手里，且数量恰好为两条或四条时才能全部剪断。可以跨自己的两个线架，三条不合法。</p><p><strong>安全揭示红线：</strong>当自己全部未剪电线都是红线时，将它们安全揭示(🛡️)，不会推进引爆器。空手玩家跳过，最后一位有线的玩家可以连续行动。</p><p>普通任务的容错格数等于人数。剪到红线或容错耗尽就失败。特殊关卡可以改变行动、线索、容错和胜负条件，应先查看当前关卡章节。</p>",
-          en: "<p><strong>Duo Cut:</strong> choose your own uncut blue or yellow declaration, then point to one teammate wire. A match cuts one on each side. A non-red miss normally advances the detonator (🧨) one step and marks the target's true value. Intentional misses are allowed, but your declaration must come from your hand.</p><p><strong>Solo Cut:</strong> cut a value only when all its remaining wires are in your hand and exactly two or four remain. Both of your racks count together. Three matching wires are never a normal Solo Cut.</p><p><strong>Secure red:</strong> when all your uncut wires are red, safely reveal them (🛡️) without advancing the detonator. Empty players are skipped, and the last player with wires may act consecutively.</p><p>The normal mistake limit equals the player count. Hitting red or running out of mistakes fails the mission. Mission rules can override actions, clues, mistakes, and victory conditions, so read Current Mission first.</p>"
+          zh: "<p><strong>双人剪线：</strong>选择自己一条未剪蓝线或黄线作为声明，再指定队友的一条目标线。匹配则双方各剪一条。不匹配的非红目标通常消耗一格引爆器(🧨)，并给目标放真实信息标记。允许故意猜错，但声明值必须来自自己的电线。</p><p><strong>单人剪线：</strong>只有当该值全部剩余电线都在自己手里，且数量恰好为两条或四条时才能全部剪断。可以跨自己的两个线架，三条不合法。</p><p><strong>安全揭示红线：</strong>当自己全部未剪电线都是红线时，将它们安全揭示(🛡️)，不会推进引爆器。空手玩家跳过，最后一位有线的玩家可以连续行动。</p><p>普通任务的容错格数等于人数。剪到红线或容错耗尽就失败。特殊关卡可以改变行动、线索、容错和胜负条件，应先在逐关玩法章节查看本关说明。</p>",
+          en: "<p><strong>Duo Cut:</strong> choose your own uncut blue or yellow declaration, then point to one teammate wire. A match cuts one on each side. A non-red miss normally advances the detonator (🧨) one step and marks the target's true value. Intentional misses are allowed, but your declaration must come from your hand.</p><p><strong>Solo Cut:</strong> cut a value only when all its remaining wires are in your hand and exactly two or four remain. Both of your racks count together. Three matching wires are never a normal Solo Cut.</p><p><strong>Secure red:</strong> when all your uncut wires are red, safely reveal them (🛡️) without advancing the detonator. Empty players are skipped, and the last player with wires may act consecutively.</p><p>The normal mistake limit equals the player count. Hitting red or running out of mistakes fails the mission. Mission rules can override actions, clues, mistakes, and victory conditions, so read this mission's guide in Missions first.</p>"
         }
       },
       {
@@ -160,7 +166,7 @@
         }
       },
       {
-        id: "mission", label: {zh: "当前关卡", en: "Current Mission"},
+        id: "mission", label: {zh: "逐关玩法", en: "Missions"},
         get html() { return bombBustersMissionHelp(); }
       },
       {
@@ -173,17 +179,138 @@
     ]
   };
 
-  function bombBustersMissionHelp() {
-    const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
+  function bombBustersEscapeHelp(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (character) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
+  }
+
+  function bombBustersSelectedMissionHelp() {
+    const current = bombBustersView?.campaign?.help;
+    if (current?.id === bombBustersHelpMissionId && current.player_count === bombBustersHelpPlayerCount) return current;
+    return BOMB_BUSTERS_MISSION_HELP_CACHE.get(`${bombBustersHelpMissionId}:${bombBustersHelpPlayerCount}`);
+  }
+
+  function bombBustersMissionHelpDetail(language) {
+    const escape = bombBustersEscapeHelp;
     const mission = bombBustersView?.campaign;
-    if (!mission) return {
-      zh: "<p>原创练习使用 Room Control 中选择的预设，不是数字战役关卡，也不包含共享装备。Short、Standard 与 High Risk 分别调整线数和危险程度。</p>",
-      en: "<p>Original Practice uses the setup chosen in Room Control. These are original practice presets, not numbered campaign missions, and have no shared equipment. Short, Standard, and High Risk vary the wire count and danger.</p>"
-    };
-    return {
-      zh: `<h3>第 ${escape(mission.id)} 关</h3><p>${escape(mission.rules_zh || mission.rules)}</p><p>数字关卡依据公开参考资料转录，尚未经过第二位审核者的独立规则复核。第 34、65 关至少需要三人，两人战役会跳过。</p>${mission.audio_companion ? "<p>音频关(🎧)需要在外部播放官方录音，由队长手动应用指令。目前不是完整自动化音频关，没有内置商业录音或插画。</p>" : ""}`,
-      en: `<h3>Mission ${escape(mission.id)}</h3><p>${escape(mission.rules)}</p><p>Numbered setups were transcribed from public references and have not received an independent second-person rules audit. Missions 34 and 65 require at least three players and are skipped in a two-player campaign.</p>${mission.audio_companion ? "<p>Audio missions (🎧) use the official recording externally, with the Captain applying instructions manually. They are not self-contained automated audio adaptations. No commercial recordings or graphics are bundled.</p>" : ""}`
-    };
+    const number = bombBustersHelpMissionId;
+    if (!number) return language === "zh"
+      ? "<h3>原创练习</h3><p>原创练习使用 Room Control 中选择的预设，不是数字战役关卡，也不包含共享装备。Short、Standard 与 High Risk 分别调整线数和危险程度。展开上方逐关查阅可以主动查看第 1 至 66 关的不同玩法。</p>"
+      : "<h3>Original Practice</h3><p>Original Practice uses the Room Control preset, not a numbered campaign mission, and has no shared equipment. Short, Standard, and High Risk vary wire count and danger. Expand the browser above to choose the rules for any of Missions 1–66.</p>";
+    const detail = bombBustersSelectedMissionHelp();
+    const heading = language === "zh" ? `第 ${number} 关` : `Mission ${number}`;
+    let html = `<h3>${escape(heading)}${detail ? ` · ${escape(detail.title[language])}` : ""}</h3>`;
+    html += `<p class="bomb-busters-help-context">${language === "zh"
+      ? (number === mission?.id && bombBustersHelpPlayerCount === bombBustersView?.players?.length ? "当前关卡。未另行说明的部分仍使用基本规则。" : "规则预览，不会切换当前游戏或公开本局隐藏信息。")
+      : (number === mission?.id && bombBustersHelpPlayerCount === bombBustersView?.players?.length ? "Current mission. Basic rules still apply unless changed below." : "Rules preview only. This does not change the game or reveal hidden state.")}</p>`;
+    if (detail) {
+      if (!detail.supported) html += `<p class="bomb-busters-help-warning">${language === "zh"
+        ? `本关至少需要 ${detail.min_players} 人，当前 ${detail.player_count} 人配置不可玩。以下预览 ${detail.setup_players} 人准备规则。`
+        : `This mission requires at least ${detail.min_players} players and is unavailable for ${detail.player_count}. Showing the ${detail.setup_players}-player setup.`}</p>`;
+      html += detail.sections.map((section) => `<section data-bomb-busters-help-part="${escape(section.id)}"><h4>${escape(section.label[language])}</h4><p>${escape(section.text[language])}</p></section>`).join("");
+      if (detail.constraints?.length) {
+        html += `<details class="bomb-busters-help-constraints"><summary>${language === "zh" ? "约束字母是什么意思？" : "What do the constraint letters mean?"}</summary><ul>${detail.constraints.map((constraint) => `<li><strong>${escape(constraint.id)}</strong> ${escape(constraint.text[language])}</li>`).join("")}</ul></details>`;
+      }
+      if (detail.challenges?.length) {
+        html += `<details class="bomb-busters-help-challenges"><summary>${language === "zh" ? "挑战卡(🏆)条件速查" : "Challenge cards (🏆) reference"}</summary><p>${language === "zh" ? "仅本关公开抽到的卡生效，每张达成后奖励一次。" : "Only the cards drawn publicly for this mission apply, with one reward per completed card."}</p><ol>${detail.challenges.map((challenge) => `<li value="${escape(challenge.id)}">${escape(challenge.text[language])}</li>`).join("")}</ol></details>`;
+      }
+    } else {
+      if (number === mission?.id) html += `<p>${escape(language === "zh" ? mission.rules_zh || mission.rules : mission.rules)}</p>`;
+      const key = `${number}:${bombBustersHelpPlayerCount}`;
+      html += bombBustersHelpErrorKey === key
+        ? `<p role="status">${language === "zh" ? "关卡说明加载失败，请重试。" : "Mission rules could not be loaded. Please retry."}</p><button type="button" data-bomb-busters-help-retry>Retry</button>`
+        : `<p role="status">${language === "zh" ? "正在加载本关具体玩法…" : "Loading this mission's detailed rules…"}</p>`;
+    }
+    html += `<p class="bomb-busters-help-source">${language === "zh"
+      ? "关卡说明依据公开参考资料整理，尚未经第二人独立规则复核。本页说明规则差别，不表示全部线上机制均已完成验收。"
+      : "Rules are transcribed from public references without an independent second-person audit. This guide does not certify every online mission mechanic."}</p>`;
+    if (detail?.audio_companion || number === mission?.id && mission?.audio_companion) html += `<p class="bomb-busters-help-source">${language === "zh"
+      ? "音频关(🎧)需要外部官方录音与队长手动应用指令，没有内置商业录音，也不会自动同步播放进度。"
+      : "Audio missions (🎧) require the external official recording and manual Captain controls. Commercial audio is not bundled or automatically synchronized."}</p>`;
+    return html;
+  }
+
+  function bombBustersMissionHelp() {
+    const options = Array.from({length: 66}, (_, index) => {
+      const number = index + 1;
+      return `<option value="${number}"${number === bombBustersHelpMissionId ? " selected" : ""}>${String(number).padStart(2, "0")}</option>`;
+    }).join("");
+    const players = [2, 3, 4, 5].map((count) => `<option value="${count}"${count === bombBustersHelpPlayerCount ? " selected" : ""}>${count}</option>`).join("");
+    return Object.fromEntries(["zh", "en"].map((language) => [language,
+      `<details class="bomb-busters-help-browser"${bombBustersHelpBrowseOpen ? " open" : ""}><summary>${language === "zh" ? "逐关查阅（含后续关卡剧透）" : "Browse missions (includes spoilers)"}</summary><p>${language === "zh" ? "默认显示当前关卡。主动选择其他关卡后才加载其玩法，切换人数可查看配线差异。" : "The current mission is shown by default. Other rules load only when selected. Change Players to preview setup differences."}</p><div class="bomb-busters-help-browser-fields"><label>Mission <select data-bomb-busters-help-mission-select>${!bombBustersView?.campaign ? `<option value="practice"${bombBustersHelpMissionId === null ? " selected" : ""}>Original Practice</option>` : ""}${options}</select></label><label>Players <select data-bomb-busters-help-player-select>${players}</select></label><button type="button" data-bomb-busters-help-current>Current</button></div></details><div class="bomb-busters-help-detail" data-bomb-busters-help-mission="${bombBustersHelpMissionId || "practice"}">${bombBustersMissionHelpDetail(language)}</div>`
+    ]));
+  }
+
+  function bombBustersRefreshMissionHelp() {
+    const container = bombBustersHelpWidget?.element()?.querySelector(".bomb-busters-help-detail");
+    if (!container) return;
+    container.dataset.bombBustersHelpMission = bombBustersHelpMissionId || "practice";
+    container.innerHTML = bombBustersMissionHelpDetail(window.obgHelpLang?.() || "zh");
+  }
+
+  async function bombBustersLoadMissionHelp() {
+    bombBustersHelpRequest?.controller.abort();
+    bombBustersHelpRequest = null;
+    bombBustersHelpErrorKey = null;
+    if (!bombBustersHelpMissionId || bombBustersSelectedMissionHelp()) {
+      bombBustersRefreshMissionHelp();
+      return;
+    }
+    const number = bombBustersHelpMissionId;
+    const count = bombBustersHelpPlayerCount;
+    const key = `${number}:${count}`;
+    const request = {key, controller: new AbortController()};
+    bombBustersHelpRequest = request;
+    bombBustersRefreshMissionHelp();
+    try {
+      const response = await fetch(`/api/bomb_busters/missions/${number}/help?player_count=${count}`, {signal: request.controller.signal});
+      if (!response.ok) throw new Error("Mission Help request failed");
+      const detail = await response.json();
+      if (detail.id !== number || detail.player_count !== count || !Array.isArray(detail.sections)) throw new Error("Invalid mission Help");
+      BOMB_BUSTERS_MISSION_HELP_CACHE.set(key, detail);
+    } catch (error) {
+      if (bombBustersHelpRequest === request && error.name !== "AbortError") bombBustersHelpErrorKey = key;
+    } finally {
+      if (bombBustersHelpRequest === request) {
+        bombBustersHelpRequest = null;
+        bombBustersRefreshMissionHelp();
+      }
+    }
+  }
+
+  function bombBustersResetMissionHelp() {
+    bombBustersHelpMissionId = bombBustersView?.campaign?.id || null;
+    bombBustersHelpPlayerCount = bombBustersView?.players?.length || 3;
+  }
+
+  function bombBustersBindMissionHelp() {
+    const dialog = bombBustersHelpWidget.element();
+    if (!dialog || dialog.dataset.bombBustersHelpBound) return;
+    dialog.dataset.bombBustersHelpBound = "true";
+    dialog.addEventListener("change", (event) => {
+      if (event.target.matches("[data-bomb-busters-help-mission-select]")) {
+        bombBustersHelpMissionId = event.target.value === "practice" ? null : Number(event.target.value);
+      } else if (event.target.matches("[data-bomb-busters-help-player-select]")) {
+        bombBustersHelpPlayerCount = Number(event.target.value);
+      } else return;
+      bombBustersLoadMissionHelp();
+    });
+    dialog.addEventListener("click", (event) => {
+      if (event.target.closest("[data-bomb-busters-help-current]")) {
+        bombBustersResetMissionHelp();
+        dialog.querySelector("[data-bomb-busters-help-mission-select]").value = bombBustersHelpMissionId || "practice";
+        dialog.querySelector("[data-bomb-busters-help-player-select]").value = bombBustersHelpPlayerCount;
+        bombBustersLoadMissionHelp();
+      } else if (event.target.closest("[data-bomb-busters-help-retry]")) {
+        bombBustersLoadMissionHelp();
+      }
+    });
+    dialog.addEventListener("toggle", (event) => {
+      if (event.target.isConnected && event.target.matches(".bomb-busters-help-browser")) bombBustersHelpBrowseOpen = event.target.open;
+    }, true);
+    dialog.addEventListener("close", () => {
+      bombBustersHelpRequest?.controller.abort();
+      bombBustersHelpRequest = null;
+    });
   }
 
   function initBombBustersHelpExplain() {
@@ -204,7 +331,11 @@
     bombBustersHelpBtnEl?.addEventListener("click", () => {
       bombBustersExplainWidget.exit();
       bombBustersHideTooltip();
+      bombBustersResetMissionHelp();
+      bombBustersHelpBrowseOpen = false;
       bombBustersHelpWidget.open();
+      bombBustersBindMissionHelp();
+      bombBustersLoadMissionHelp();
     });
     bombBustersExplainBtnEl?.addEventListener("click", () => bombBustersExplainWidget.toggle());
   }
