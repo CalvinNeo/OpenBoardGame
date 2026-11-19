@@ -42,3 +42,19 @@
 ## 实施记录
 
 - 已阅读开发规范、Help / Explain 和 RC 约定；按上述顺序实现并验收。
+
+### 2026-11-19：扩大棋盘展示区
+
+- 压缩 Game 标题栏和玩家 caption：玩家名、手牌数、公开末牌改为同行，删除重复的 Playing / Ready / 回合次数文字，当前玩家仍保留高亮和 `aria-current`。长名字省略显示，悬停或轻触可查看全名。
+- 移除每枚手牌下方的 In hand / Ready to place / No fit 等重复小字。保留颜色符号、可出牌的禁用状态、选中高亮、刚抽牌的虚线边框及完整 `aria-label`，不改变游戏规则或行动权限。
+- 桌面侧栏缩至 220–230px，减少外围 padding 和工具栏间距；棋盘按视口高度扩展。1440×950 下棋盘由约 1073×485px 扩至 1140×730px，1024×900 下高度由 459px 增至 680px。
+- 手机手牌改为紧凑三列、最多两行高的纵向滚动区，单枚按钮保持 48px 高；手牌区由 168px 缩至 107px。320×844 / 390×844 下棋盘高度由约 388px 增至 454px，Draw 保持在首屏，图例和日志位于边缘；较短屏幕仍允许页面正常纵向滚动。
+- 修改文件：`static/games/chromino.css`、`static/games/chromino.js`、`static/game_assets.js`、`static/index.html`、`tests/chromino_layout.browser.cjs` 和本文。仅更新 Chromino 资源版本及首页清单版本，保留工作区已有的其他游戏和公共文件改动。
+
+验收记录：
+
+- Chrome 无头浏览器检查并人工查看 320 / 390 / 1024 / 1440px 截图：无页面横向溢出、棋盘与手牌重叠或牌面裁切，Help / Reconnect 同行。另以八人、超长玩家名和公开末牌状态检查同宽度下的容器边界。
+- 通过选牌、预览、旋转、Esc 取消、Confirm 动作载荷、缩放 / Fit、拖出棋盘后松手、手机触摸滚动手牌不误选及轻触选牌、中英文 Help 切换、disabled Confirm 的 Explain、Esc 关闭弹窗、刷新重连与资源不重复加载。Confirm 使用前端动作拦截断言，未用本次回归运行完整对局。
+- 通过 `node --check static/games/chromino.js`、`node --check tests/chromino_layout.browser.cjs`、`node scripts/smoke_load.cjs chromino`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names`（14 项）、`node tests/chromino_layout.browser.cjs`（设置本机 `PLAYWRIGHT_MODULE`）和 `git diff --check`。本次为 UI 改动，未运行游戏逻辑测试。
+- 通用 `tests/game_assets.browser.cjs` 在首页脚本白名单断言失败：测试只允许 `shared.js`，但仓库原有首页同时加载 `shared_help.js` 和 `shared_effects.js`；未修改该无关测试，后续通用懒加载检查未执行。
+- 本次布局与上述交互遵循 `DEV_GUIDE.md`；因通用浏览器检查未全绿，不能宣称完整验收全部通过。尚未实测 iOS Safari / Windows 浏览器和真实触屏设备，也未重新验收完整终局、存档及切换其他游戏。

@@ -39,16 +39,23 @@
 }
 
 .ff-layout {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  grid-template-areas: "machine" "factory" "side";
-  align-items: start;
+  align-items: stretch;
 }
 
-.ff-machine { grid-area: machine; }
-.ff-factory { grid-area: factory; min-width: 0; }
+/* The rail only groups the right-hand column on wide screens. On phones it
+   dissolves so the machine card, the board and the results can be ordered
+   independently. */
+.ff-rail {
+  display: contents;
+}
+
+.ff-machine { order: 1; }
+.ff-factory { order: 2; min-width: 0; }
 .ff-side {
-  grid-area: side;
+  order: 3;
   display: grid;
   gap: 10px;
   align-content: start;
@@ -509,7 +516,11 @@ body.ff-turn-active .room-panel-dock {
     font-size: 17px;
   }
 
+  /* Ports read better as wrapping chips than as a tall list on a phone. */
   .ff-port-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 8px;
     font-size: 11px;
   }
 
@@ -592,7 +603,7 @@ body.ff-turn-active .room-panel-dock {
 @media (max-height: 640px) {
   .ff-board,
   .ff-confirm {
-    width: min(100%, 520px, calc(100vh - 340px));
+    width: min(100%, 520px, calc(100vh - 360px));
   }
 }
 
@@ -600,11 +611,28 @@ body.ff-turn-active .room-panel-dock {
 
 @media (min-width: 900px) {
   .ff-layout {
-    grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
-    grid-template-areas:
-      "factory machine"
-      "factory side";
+    flex-direction: row;
+    align-items: flex-start;
     gap: 14px;
+  }
+
+  .ff-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 0 0 clamp(300px, 32%, 440px);
+    min-width: 0;
+    order: 2;
+  }
+
+  .ff-machine,
+  .ff-side {
+    order: 0;
+  }
+
+  .ff-factory {
+    flex: 1 1 auto;
+    order: 1;
   }
 
   .ff-board {

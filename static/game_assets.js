@@ -18,8 +18,8 @@ const GAME_ASSETS = {
     "header": "showPokemonAdventureHeaderActions"
   },
   "chromino": {
-    "scripts": ["/static/games/chromino.js?v=3_h3"],
-    "styles": ["/static/games/chromino.css?v=3"],
+    "scripts": ["/static/games/chromino.js?v=4_h3"],
+    "styles": ["/static/games/chromino.css?v=4"],
     "markup": "/static/games/chromino.html?v=3_h3",
     "panel": "chrominoPanel",
     "panelTitle": "🟥 Chromino",
@@ -72,10 +72,11 @@ const GAME_ASSETS = {
     "header": "showGloomhavenHeaderActions"
   },
   "natsumemo": {
-    "scripts": ["/static/games/natsumemo.js?v=3_h2"],
-    "styles": ["/static/games/natsumemo.css?v=3"],
-    "markup": "/static/games/natsumemo.html?v=3_h2",
+    "scripts": ["/static/games/natsumemo.js?v=4"],
+    "styles": ["/static/games/natsumemo.css?v=4"],
+    "markup": "/static/games/natsumemo.html?v=4",
     "panel": "natsumemoPanel",
+    "panelTitle": "🌻 暑假日记",
     "header": "showNatsumemoHeaderActions"
   },
   "exploding_kittens": {
@@ -1257,9 +1258,9 @@ const GAME_ASSETS = {
     "header": "showFindDiffHeaderActions"
   },
   "factory_funner": {
-    "scripts": ["/static/games/factory_funner.js?v=5"],
-    "styles": ["/static/games/factory_funner.css?v=4"],
-    "markup": "/static/games/factory_funner.html?v=4",
+    "scripts": ["/static/games/factory_funner.js?v=10"],
+    "styles": ["/static/games/factory_funner.css?v=9"],
+    "markup": "/static/games/factory_funner.html?v=9",
     "panel": "factoryFunnerPanel",
     "panelTitle": "🏭 工厂乐翻天",
     "header": "showFactoryFunnerHeaderActions"

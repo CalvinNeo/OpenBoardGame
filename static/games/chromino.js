@@ -284,7 +284,7 @@
     document.getElementById("chrominoPlayers").innerHTML = view.players.map(player => {
       const isCurrent = player.player_id === view.current_turn;
       const tip = player.finished ? "This player has emptied their hand. Finish the current round to check for joint winners." : `${player.hand_count} tile${player.hand_count === 1 ? "" : "s"} remaining. The last tile is revealed to everyone.`;
-      return `<div class="chromino-player${isCurrent ? " is-current" : ""}${player.player_id === view.you ? " is-you" : ""}"${isCurrent ? ' aria-current="step"' : ""}><span class="chromino-player-name">${escape(player.name)}${player.is_bot ? " · AI" : ""}</span><div class="chromino-player-meta"><span tabindex="0" data-chromino-tip="${escape(tip)}">${player.finished ? "✓ Finished" : `${player.hand_count} tiles`}</span>${player.last_tile ? `<span tabindex="0" data-chromino-tip="${escape(`Revealed last tile: ${describeTile(player.last_tile)}`)}">${tileHtml(player.last_tile)}</span>` : `<span>${isCurrent ? "● Playing" : player.turns ? `${player.turns} turns` : "Ready"}</span>`}</div></div>`;
+      return `<div class="chromino-player${isCurrent ? " is-current" : ""}${player.player_id === view.you ? " is-you" : ""}"${isCurrent ? ' aria-current="step"' : ""}><span class="chromino-player-name" tabindex="0" data-chromino-tip="${escape(player.name)}">${escape(player.name)}${player.is_bot ? " · AI" : ""}</span><div class="chromino-player-meta"><span tabindex="0" data-chromino-tip="${escape(tip)}">${player.finished ? "✓ Finished" : `${player.hand_count} tiles`}</span>${player.last_tile ? `<span tabindex="0" data-chromino-tip="${escape(`Revealed last tile: ${describeTile(player.last_tile)}`)}">${tileHtml(player.last_tile)}</span>` : ""}</div></div>`;
     }).join("");
   }
 
@@ -294,8 +294,8 @@
     hand.innerHTML = view.hand.map(tile => {
       const enabled = available("place") && playable.has(tile.tile_id);
       const isDrawn = tile.tile_id === view.drawn_tile_id;
-      const label = view.game_over ? "Remaining" : isDrawn ? "Just drawn" : view.current_turn !== view.you ? "In hand" : playable.has(tile.tile_id) ? "Ready to place" : tile.chameleon && view.hand.length === 1 ? "Draw first" : "No fit";
-      return `<button type="button" class="chromino-hand-tile${selected === tile.tile_id ? " is-selected" : ""}${isDrawn ? " is-drawn" : ""}" data-chromino-tile="${tile.tile_id}" data-chromino-explain="hand_tile" aria-label="${escape(`${describeTile(tile)}. ${label}`)}" aria-pressed="${selected === tile.tile_id}"${enabled ? "" : " disabled"}>${tileHtml(tile)}<span class="chromino-hand-label">${label}</span></button>`;
+      const label = view.game_over ? "Remaining" : isDrawn ? "Just drawn" : view.current_turn !== view.you ? "" : playable.has(tile.tile_id) ? "Ready to place" : tile.chameleon && view.hand.length === 1 ? "Draw first" : "No fit";
+      return `<button type="button" class="chromino-hand-tile${selected === tile.tile_id ? " is-selected" : ""}${isDrawn ? " is-drawn" : ""}" data-chromino-tile="${tile.tile_id}" data-chromino-explain="hand_tile" aria-label="${escape(`${describeTile(tile)}${label ? `. ${label}` : ""}`)}" aria-pressed="${selected === tile.tile_id}"${enabled ? "" : " disabled"}>${tileHtml(tile)}</button>`;
     }).join("") || `<span class="chromino-hand-label">${view.players.some(player => player.player_id === view.you) ? "All tiles placed" : "Spectating · hands are private"}</span>`;
     hand.scrollTop = scrollTop;
   }

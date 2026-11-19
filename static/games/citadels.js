@@ -258,12 +258,14 @@ function showCitadelsHeaderActions(show) {
     citadelsHeaderActions.style.display = show ? "flex" : "none";
   }
   if (!show) {
+    citadelsCancelConfirmation();
     closeCitadelsHelpModal();
     closeCitadelsExplainModal();
   }
 }
 
 function showCitadelsHelpModal() {
+  citadelsHideTooltip();
   citadelsExplainWidget?.exit();
   citadelsHelpWidget?.open();
 }
@@ -348,7 +350,8 @@ function renderCitadelsRoleTrack(view) {
     const icon = document.createElement("span");
     icon.textContent = `${rank} ${citadelsRoleEmoji(rank)}`;
     const name = document.createElement("small");
-    name.textContent = removed.has(rank) ? "Out" : revealed.get(rank) || "Hidden";
+    name.textContent = removed.has(rank) ? "Out" : view.phase === "turn" && view.current_turn_role?.rank === rank ?
+      "Playing" : revealed.get(rank) || "Hidden";
     role.append(icon, name);
     citadelsDescribe(role, `role-${rank}`, CITADELS_ROLE_DETAILS[rank], true);
     citadelsRoleTrack.appendChild(role);
@@ -401,6 +404,7 @@ function citadelsCreateSummaryHighlight(icon, label, value, wide = false) {
   valueNode.textContent = value;
   copy.append(labelNode, valueNode);
   item.append(iconNode, copy);
+  citadelsDescribe(item, `highlight-${label}`, `${label}: ${value}`, true);
   return item;
 }
 
@@ -416,6 +420,7 @@ function citadelsBuildSummaryRoleBadge(role) {
   if (role.robbed) status += " · robbed";
   badge.textContent = `${citadelsRoleEmoji(role.rank)} ${role.rank}. ${role.name_cn} · ${status}`;
   badge.title = role.name_en || role.name_cn || "Role";
+  citadelsDescribe(badge, `summary-role-${role.rank}-${status}`, `${status}. ${CITADELS_ROLE_DETAILS[role.rank]}`, true);
   return badge;
 }
 
@@ -443,6 +448,7 @@ function citadelsBuildSummaryPlayer(view, summary, player, readyPlayers) {
     const isReady = readyPlayers.has(player.player_id);
     readiness.classList.toggle("ready", isReady);
     readiness.textContent = isReady ? "✅ Ready" : "⏳ Reviewing";
+    citadelsDescribe(readiness, `ready-${isReady}`, isReady ? "Ready: this player confirmed the round recap." : "Reviewing: waiting for this player to confirm the recap.", true);
     header.appendChild(readiness);
   }
 
@@ -466,6 +472,7 @@ function citadelsBuildSummaryPlayer(view, summary, player, readyPlayers) {
   ].forEach((value) => {
     const stat = document.createElement("span");
     stat.textContent = value;
+    citadelsDescribe(stat, `stat-${value}`, value.replace("💰", "Gold:").replace("🏠", "City:").replace("⭐", "District cost total:").replace("🃏", "Hand:"), true);
     stats.appendChild(stat);
   });
 
@@ -476,6 +483,7 @@ function citadelsBuildSummaryPlayer(view, summary, player, readyPlayers) {
     totalScore.className = "citadels-summary-score";
     totalScore.textContent = `🏆 ${score.total_score} points`;
     totalScore.title = `Districts ${score.base_score} + colors ${score.full_color_bonus} + completion ${score.completion_bonus} + special ${score.district_bonus}`;
+    citadelsDescribe(totalScore, `score-${player.player_id}`, totalScore.title, true);
     stats.appendChild(totalScore);
   }
 
@@ -497,6 +505,7 @@ function citadelsBuildSummaryPlayer(view, summary, player, readyPlayers) {
       const icon = document.createElement("span");
       icon.className = "citadels-summary-action-icon";
       icon.textContent = citadelsActionEmoji(action.type);
+      citadelsDescribe(icon, `action-${action.type}`, `Public ${action.type.replaceAll("_", " ")} action. ${action.text}`, true);
       const text = document.createElement("span");
       citadelsAppendEmphasizedText(text, action.text, action.emphasis);
       row.append(icon, text);
@@ -585,6 +594,7 @@ function renderCitadelsRoundSummary(view) {
         const isReady = readyPlayers.has(player.player_id);
         item.className = `citadels-summary-ready-chip${isReady ? " ready" : ""}`;
         item.textContent = `${isReady ? "✅" : "⏳"} ${player.name}`;
+        citadelsDescribe(item, `ready-player-${player.player_id}`, `${player.name}: ${isReady ? "ready for the next round" : "reviewing this round"}.`, true);
         citadelsSummaryReadyList.appendChild(item);
       });
     }
@@ -799,7 +809,8 @@ function renderCitadelsHand(view) {
       const duplicate = selfPlayer?.city.some((district) => district.name_cn === card.name_cn);
       const reason = duplicate ? "Already built: duplicate district names are not allowed." :
         selfPlayer?.gold < card.cost ? `Need ${card.cost - selfPlayer.gold} more gold.` : `Pay ${card.cost} gold to build ${card.name_cn}.`;
-      const buildBtn = citadelsSelectionButton("Build", { type: "build", card_id: card.id }, reason);
+      const buildBtn = citadelsSelectionButton("Build", { type: "build", card_id: card.id },
+        `${reason} ${card.name_cn} (${card.name_en}), ${card.color} district, cost ${card.cost}. ${card.text || "Scores its printed cost."}`);
       buildBtn.disabled = !canCitadelsBuildCard(view, card);
       actionRow.appendChild(buildBtn);
     }

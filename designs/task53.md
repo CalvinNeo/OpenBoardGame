@@ -445,3 +445,52 @@
   - https://www.rulespal.com/citadels/rulebook
 
 若后续拿到更明确的官方中英文版次资料，应以官方版次为准；但在当前开发阶段，本文件已经足够支持状态机和前后端交互设计。
+
+## 12. 2026-11-18 界面与 AI 优化
+
+### 12.1 界面与交互
+
+- 主体仍直接位于 Game 内，把 Citadels 标题、Help 与 Reconnect 合并到共享顶栏，不增加外层游戏框。Explain 按既有 Room Control 行为停靠。
+- 新增 1–8/9 角色顺位条，区分当前、已公开、明置移出角色，不推断或暴露隐藏身份。自己的角色提供技能说明，手牌标题显示已用建造次数。
+- 手牌采用双列手机布局和限制高度的局部滚动，城市保留紧凑的颜色与价格展示。日志默认折叠且内部可滚动，长玩家名主动换行。
+- 建造、选角、收入留牌、刺杀、盗窃、换手牌和摧毁在目标或足够大的所属区域原地确认。取消按钮、空白区域和 Esc 都能退出，Next Round 不重复确认。
+- 魔术师选牌不重置手牌滚动位置，点击已选牌或空白处取消。指针移动超过 10px 或触摸取消后抑制后续误点击。
+- 使用共享 Help/Explain：中英切换，基本三句以及流程、角色、计分紫卡章节。Explain 检查实际目标及当前卡牌效果，禁用按钮可解释，解释时不发送动作，Esc 可退出。
+- 非交互角色、建筑、颜色、数量和复盘图标提供悬停或点击提示，最新提示替换旧提示，3 秒自动消失。点击按钮不触发浮动提示。
+- 保留所有玩家确认的轮末暂停，移除重复的 Pass 按钮。懒加载后按同一房间的 currentRoomState / lastGameStatePayload 同步，刷新重连可立即恢复。
+- 不引入商业素材，不新增紫卡规则。仍仅实现学堂、大学、龙门客栈、城塞的既有特殊效果，其余紫卡按当前卡文提示。
+
+### 12.2 AI 策略
+
+- 枚举剩余建造次数内最多 3 张不同名建筑的组合，综合总分、建造节奏、五色奖励和完工奖励，而非每步贪心买最贵牌。规划不修改真实状态。
+- 建筑师选角价值按收入后能负担的实际组合评估。收入选择计入商人自动金币与现有同色税收，能解锁更好组合时拿钱，资金长期不足时主动积累。
+- 已建同名牌和已有手牌重复牌降低保留价值，魔术师清理重复牌与明显超预算牌，不再强制最多重抽 3 张，同时保留可建的实用牌。
+- 军阀不再摧毁自己的城市，通常预留自己的建造预算，仅对濒临完工对手允许优先花钱阻断。
+- 刺客/盗贼沿用公开信息推断，不查看对手手牌内容。保留既有战略 AI 标记，无额外模型、网络接口或依赖要求。
+
+### 12.3 对比实验
+
+使用 `python3 scripts/benchmark_citadels_ai.py --baseline-ref a717dda --games-per-count 40`。
+每个人数 40 局，一名新 AI 对抗其余旧 AI，新 AI 轮换座位，固定种子 `53000 + 人数 * 100 + 局号`。平局按赢家人数平分胜利份额，所有动作由当前引擎校验。
+
+| 人数 | 7 建筑新 AI 胜利份额 | 8 建筑新 AI 胜利份额 | 等强参考值 |
+| --- | --- | --- | --- |
+| 2 | 85.0% | 87.5% | 50.0% |
+| 3 | 67.5% | 67.5% | 33.3% |
+| 4 | 42.5% | 55.0% | 25.0% |
+| 5 | 32.5% | 57.5% | 20.0% |
+| 6 | 35.0% | 30.0% | 16.7% |
+
+另以 `--city-size 8` 重跑 200 局。两种模式合计 400 局全部合法结束，平均 4.85–14.62 轮。这是固定种子的启发式回归样本，不代表对人类或其他策略的普遍胜率。
+
+### 12.4 验收记录
+
+- 修改文件：`game/citadels.py`、`static/games/citadels.js`、`static/games/citadels.html`、`static/games/citadels.css`、`static/game_assets.js`、`static/index.html`、`tests/test_citadels_game.py`、`tests/citadels.browser.cjs`、`scripts/benchmark_citadels_ai.py`、本文件。共享文件只涉及 Citadels 资源登记/版本，保留其他任务的改动。
+- Python：`python3 -m unittest tests.test_citadels_game tests.test_frontend_style_assets tests.test_help_contract tests.test_room_session.RoomSessionTests.test_citadels_can_start_after_mobile_connection_is_replaced`，42 项通过。包括 2–6 人完整 AI 对局、组合预算/次数/重名约束、收入、抽牌、换牌、军阀保护建造资金和隐藏手牌不影响决策。
+- JavaScript：`node --check static/games/citadels.js`、`node --check tests/citadels.browser.cjs`、`node scripts/smoke_load.cjs citadels`，通过。
+- Chrome 专项：`PLAYWRIGHT_MODULE="$PWD/tmp/guandan-ui-qa/node_modules/playwright" ROOM_TEST_URL=http://127.0.0.1:8773 node tests/citadels.browser.cjs`，320、390、1024、1440px 主界面、Help 各章节、确认区域和复盘的布局/溢出检查通过，已复核桌面及手机截图。
+- 交互覆盖：原地确认/取消/Esc、禁用按钮 Explain 不发送动作、Explain Esc 退出、魔术师连续选牌及滚动位置保留、空白取消、移动手势不触发选择、中英与章节切换、3 秒提示、抽牌保留、摧毁、轮末 Next Round 无二次确认。
+- 320/390px Chrome 移动触摸模拟：tap 选牌、连续提示替换、超时消失、真实 CDP touch swipe 滚动不选牌，均通过。真实 Socket.IO 创建、加 Bot、开始、刷新重连及懒加载恢复通过。
+- 通用 `tests/game_assets.browser.cjs` 未通过既有首页资源断言：测试只允许 `shared.js`，实际还正常加载 `shared_help.js` 与 `shared_effects.js`，失败发生在游戏创建前。本次不修改该不相关断言。
+- `git diff --check` 通过。未运行全量 Python 套件，未在实体 iOS/Windows 设备验收；不声称完全满足全部跨平台验收。DEV_GUIDE.md 相关界面要求已实现并通过专项检查，保留上述通用测试失败与设备覆盖限制。
+- 截图、实验临时输出保留在忽略的 `tmp/` 或系统临时目录，不加入补丁。

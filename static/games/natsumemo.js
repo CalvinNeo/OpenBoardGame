@@ -5,6 +5,7 @@
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const roles = {boy: "👦 男孩", girl: "👧 女孩"};
   let view = null, selectedDay = null, allocations = {}, shownWeek = 1, pending = false;
+  let pointerStart = null, suppressTouchClick = false;
   let tipTimer, pendingTimer;
   let signature = null;
   let natsumemoHelpWidget = null, natsumemoExplainWidget = null;
@@ -22,8 +23,8 @@
         en: "Each week the current speaker proposes an activity on a run of free days, everyone with free time secretly picks Join (🙋) or Skip (🏠), and once all choices are revealed the card is scored and hearts (❤️) are handed out."
       },
       key: {
-        zh: "你要在四周的有限时间里塞进高分活动，同时经营同行关系，好在期末为每位朋友比拼爱心(❤️)时抢下那 10 分。",
-        en: "You have to fit the highest scoring activities into four short weeks while building the friendships that decide who wins the ten point heart (❤️) contest for each friend."
+        zh: "先为至少 25 页作业(✏️)保留时间，再争取高分活动、不同称号(🏅)和朋友的爱心(❤️)领先，避免期末每缺一页扣 10 分。",
+        en: "Reserve enough time for at least 25 homework pages (✏️), then pursue valuable activities, different titles (🏅) and friendship leads (❤️), avoiding the ten point penalty for every missing page."
       }
     },
     sections: [
@@ -115,10 +116,12 @@
         id: "online",
         label: { zh: "线上操作", en: "Playing online" },
         html: {
-          zh: "<p>点击 W1 到 W4 的周标签可以回看以前的日历。日历小格悬停或点击会显示活动详情，手机上的提示三秒后自动消失。</p>"
+          zh: "<p>点击 W1 到 W4 的周标签可以回看以前的日历。自己的日历始终排在最前，手机上点 Other calendars 可以展开其他玩家的安排。选择日期后，直接在自己的日历下确认，同时可以查看这段日期有多少人有空。</p>"
+            + "<p>没有操作功能的日历格和图标支持悬停或点击查看说明，手机提示三秒后自动消失。按钮点击只执行操作，需要了解功能时先开启 Explain。</p>"
             + "<p>每次活动结算和每周结算都会停下来，等所有人按 Next Round 才继续，机器人不会替真人跳过确认。断线后用原来的座位重连就能回到游戏。</p>"
             + "<p><a href=\"http://www.cosaic.co.jp/games/ntmm.html\" target=\"_blank\" rel=\"noopener noreferrer\">Publisher and errata</a> · <a href=\"https://juegosrollandwrite.com/wp-content/uploads/2019/12/Natsumemo_-_Rules_translation_v2.pdf\" target=\"_blank\" rel=\"noopener noreferrer\">Rules reference</a></p>",
-          en: "<p>The W1 to W4 tabs let you look back at earlier calendars. Hovering or tapping a calendar cell shows what happened there, and the hint fades after three seconds on phones.</p>"
+          en: "<p>The W1 to W4 tabs let you look back at earlier calendars. Your calendar always appears first. Tap Other calendars on phones to expand everyone's plans. After selecting a date, confirm directly below your calendar and check how many players are free.</p>"
+            + "<p>Hover or tap non-interactive calendar cells and icons for details. Hints fade after three seconds on phones. Buttons only perform their action. Enter Explain first to learn what they do.</p>"
             + "<p>Play pauses after every activity and every week until everyone presses Next Round, and bots never confirm for a human. If you disconnect, rejoin with your original seat to return to the game.</p>"
             + "<p><a href=\"http://www.cosaic.co.jp/games/ntmm.html\" target=\"_blank\" rel=\"noopener noreferrer\">Publisher and errata</a> · <a href=\"https://juegosrollandwrite.com/wp-content/uploads/2019/12/Natsumemo_-_Rules_translation_v2.pdf\" target=\"_blank\" rel=\"noopener noreferrer\">Rules reference</a></p>"
         }
@@ -229,13 +232,18 @@
   function renderCalendar() {
     const tabs = byId("Weeks"); tabs.replaceChildren();
     for (let week = 1; week <= 4; week++) {
-      const node = button(`W${week}`, "weeks", () => { shownWeek = week; renderCalendar(); }, week <= view.week);
+      const node = button(`W${week}`, "weeks", () => { shownWeek = week; selectedDay = null; renderCalendar(); }, week <= view.week);
+      node.setAttribute("aria-label", `View week ${week}`);
       node.setAttribute("aria-pressed", String(week === shownWeek)); tabs.append(node);
     }
-    const calendar = byId("Calendar"); calendar.replaceChildren();
+    const calendar = byId("Calendar"), others = byId("OtherCalendars"); calendar.replaceChildren(); others.replaceChildren();
+    text("CalendarHint", can("propose") ? shownWeek === view.week ? "Choose a free day in your calendar." : "View the current week to propose a date." : `Week ${shownWeek} · ${shownWeek === view.week ? "Current plans" : "Past memories"}`);
+    text("FriendsLabel", `Other calendars · ${view.players.filter(player => player.player_id !== view.you).length}`);
     const headings = el("div", "nm-day-headings");
-    days.forEach(day => headings.append(el("span", "", day))); calendar.append(headings);
-    for (const player of view.players) {
+    days.forEach((day, index) => headings.append(tip(el("span", "", index === 2 ? "Wed 📚" : day), index === 2 ? "study" : "calendar"))); calendar.append(headings);
+    others.append(headings.cloneNode(true));
+    const ordered = [...view.players].sort((first, second) => Number(second.player_id === view.you) - Number(first.player_id === view.you));
+    for (const player of ordered) {
       const row = el("div", `nm-player${player.player_id === view.you ? " is-you" : ""}`);
       const heading = el("div", "nm-player-heading"), who = el("div", "nm-player-name");
       who.append(el("strong", "", player.name));
@@ -250,16 +258,28 @@
         let node = selectable ? button("", "propose", () => { selectedDay = selectedDay === day ? null : day; renderCalendar(); renderControls(); }, view.legal_days.includes(day)) : el("div", "");
         node.className = `nm-day${cell ? ` is-${cell.kind}` : " is-empty"}`;
         const start = selectedDay ?? view.proposed_day;
-        if (shownWeek === view.week && start != null && view.card && day >= start && day < start + view.card.days && !["week_review", "game_over"].includes(view.phase)) node.classList.add("is-proposed");
-        node.append(el("span", "nm-day-icon", cell?.emoji || (day === 2 ? "·" : "—")), el("small", "", cell ? cell.points == null ? "↔" : `+${cell.points}` : days[day]));
+        if (shownWeek === view.week && start != null && view.card && day >= start && day < start + view.card.days && !["week_review", "game_over"].includes(view.phase)) node.classList.add(cell && ["propose", "respond", "contest"].includes(view.phase) ? "is-conflict" : "is-proposed");
+        if (selectable) node.setAttribute("aria-pressed", String(selectedDay === day));
+        node.append(el("span", "nm-day-icon", cell?.emoji || (day === 2 ? "📚" : "—")), el("small", "", cell ? cell.points == null ? "↔" : `+${cell.points}` : days[day]));
         const detail = cell ? `Week ${shownWeek} · ${range(cell.start, cell.duration)} · ${cell.emoji} ${cell.name}${cell.points != null ? ` · ⭐ ${cell.points}` : ""}` : `${days[day]}：空闲${day === 2 ? "，若保持空闲将参加学习会（📚）" : "，未安排时成为作业日（✏️）"}。`;
         tip(node, selectable ? "propose" : "calendar", detail); node.setAttribute("aria-label", detail); grid.append(node);
       });
-      row.append(grid); calendar.append(row);
+      row.append(grid);
+      if (player.player_id === view.you && can("propose") && shownWeek === view.week && selectedDay != null) {
+        const confirmation = el("div", "nm-plan-confirm");
+        const available = view.players.filter(other => other.calendar[view.week - 1].slice(selectedDay, selectedDay + view.card.days).every(cell => cell === null));
+        confirmation.append(tip(el("span", "", `${range(selectedDay, view.card.days)} · ${available.length} / ${view.players.length} free`), "propose", available.map(other => other.name).join(" · ")),
+          button("Propose", "propose", () => dispatch("propose", {day: selectedDay}), true, true),
+          button("Cancel", "propose", deselect));
+        row.append(confirmation);
+      }
+      (player.player_id === view.you ? calendar : others).append(row);
     }
   }
   function renderControls() {
-    const area = byId("Controls"), scroll = area.scrollTop; area.replaceChildren();
+    const area = byId("Controls"), scroll = area.scrollTop;
+    const focusedLabel = area.contains(document.activeElement) ? document.activeElement.getAttribute("aria-label") : null;
+    area.replaceChildren();
     const hint = value => area.append(el("p", "nm-control-hint", value));
     if (view.phase === "setup") {
       hint("点击锁定游戏角色，所有人选好后开始暑假。");
@@ -268,13 +288,7 @@
       area.append(group);
       if (!can("choose_role")) hint("Waiting for the other players…");
     } else if (view.phase === "propose") {
-      hint(can("propose") ? "Select a start day, then propose." : `${name(view.speaker)} is choosing a date.`);
-      const picker = el("div", "nm-date-picker");
-      for (let day = 0; day < 7; day++) {
-        const node = button(days[day], "propose", () => { selectedDay = selectedDay === day ? null : day; shownWeek = view.week; renderCalendar(); renderControls(); }, can("propose") && view.legal_days.includes(day));
-        node.setAttribute("aria-pressed", String(selectedDay === day)); picker.append(node);
-      }
-      area.append(picker, button(selectedDay == null ? "Propose" : `Propose · ${range(selectedDay, view.card.days)}`, "propose", () => dispatch("propose", {day: selectedDay}), can("propose") && selectedDay != null, true));
+      hint(can("propose") ? "Pick dates directly on your calendar." : `${name(view.speaker)} is choosing a date.`);
     } else if (view.phase === "respond") {
       const pair = el("div", "nm-action-pair");
       pair.append(button("🙋 Join", "respond", () => dispatch("respond", {attend: true}), can("respond"), true), button("🏠 Skip", "respond", () => dispatch("respond", {attend: false}), can("respond")));
@@ -306,13 +320,17 @@
       } else hint("Waiting for private diaries…");
     }
     area.scrollTop = scroll;
+    if (focusedLabel) [...area.querySelectorAll("button[aria-label]")].find(node => node.getAttribute("aria-label") === focusedLabel && !node.disabled)?.focus({preventScroll: true});
   }
   function renderDiary() {
     const data = view.private; byId("Diary").classList.toggle("hidden", !data);
     if (!data) return;
     text("Homework", `✏️ ${data.homework} / 25`);
     const bonus = data.homework < 25 ? -10 * (25 - data.homework) : 2 * (data.homework - 25);
-    text("HomeworkScore", `If summer ended now: ${bonus > 0 ? "+" : ""}${bonus}`);
+    text("HomeworkScore", `${bonus > 0 ? "+" : ""}${bonus} points now`);
+    const weeksLeft = Math.max(0, 5 - view.week - Number(["week_review", "game_over"].includes(view.phase)));
+    text("StudyHint", view.game_over ? `${data.homework < 25 ? `${25 - data.homework} missing pages` : "Homework complete"} · Summer complete` : data.homework < 25 ? `${25 - data.homework} pages to finish · ${weeksLeft} week${weeksLeft === 1 ? "" : "s"} left` : data.homework < 30 ? `${30 - data.homework} pages to 🏅 预习达人` : "30 pages complete · 🏅 预习达人");
+    byId("Diary").classList.toggle("is-complete", data.homework >= 25);
     const pages = byId("Pages"); pages.replaceChildren();
     for (let i = 1; i <= 30; i++) pages.append(el("span", `${i <= data.homework ? "is-filled" : ""}${i > 25 ? " is-bonus" : ""}`, i));
     const hearts = byId("Hearts"); hearts.replaceChildren();
@@ -382,7 +400,9 @@
     text("CardLabel", view.result?.kind === "study" ? "THE QUIET DAYS COUNT, TOO" : `WEEK ${view.week} · SUMMER PLANS`);
     text("Duration", view.card ? `${view.card.days} day${view.card.days > 1 ? "s" : ""}` : "");
     text("Date", view.proposed_day == null || !view.card ? "" : range(view.proposed_day, view.card.days));
-    text("Rule", view.card?.description || "四周的夏天，等我们一起填满。");
+    const description = view.card?.description || "四周的夏天，等我们一起填满。";
+    const rewards = byId("Rewards"); rewards.replaceChildren();
+    description.split("\n").forEach((line, index) => rewards.append(tip(el("div", `nm-reward${index ? " is-secondary" : ""}`, line), "activity", description)));
     renderCalendar(); renderControls(); renderDiary(); renderResult(); renderFinal();
   }
   function deselect() { if (selectedDay == null) return; selectedDay = null; renderCalendar(); renderControls(); }
@@ -429,9 +449,22 @@
   document.addEventListener("click", event => {
     if (view && !panel.classList.contains("hidden") && !event.target.closest("button, input, select, dialog, summary, a, [data-nm-explain]")) deselect();
   });
-  panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-nm-explain]")); });
+  panel.addEventListener("pointerdown", event => {
+    suppressTouchClick = false;
+    if (event.pointerType === "mouse") { pointerStart = null; return; }
+    pointerStart = {x: event.clientX, y: event.clientY}; suppressTouchClick = false;
+  }, {passive: true});
+  panel.addEventListener("pointermove", event => {
+    if (pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 10) suppressTouchClick = true;
+  }, {passive: true});
+  panel.addEventListener("pointercancel", () => { pointerStart = null; suppressTouchClick = true; });
+  panel.addEventListener("click", event => {
+    if (suppressTouchClick && event.detail !== 0) { event.preventDefault(); event.stopImmediatePropagation(); }
+    pointerStart = null; suppressTouchClick = false;
+  }, true);
+  panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse" && !event.target.closest("button, summary")) showTip(event.target.closest("[data-nm-explain]")); });
   panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
-  panel.addEventListener("focusin", event => showTip(event.target.closest("[data-nm-explain]")));
+  panel.addEventListener("focusin", event => { if (!event.target.closest("button, summary")) showTip(event.target.closest("[data-nm-explain]")); });
   panel.addEventListener("focusout", hideTip);
   panel.addEventListener("click", event => { const target = event.target.closest("[data-nm-explain]"); if (target && !target.closest("button")) showTip(target, true); });
   document.addEventListener("scroll", hideTip, true); window.addEventListener("resize", hideTip); window.addEventListener("blur", hideTip);
@@ -440,9 +473,10 @@
     clearTimeout(pendingTimer);
     natsumemoExplainWidget?.exit(); hideTip();
     document.getElementById("roomControlsPanel")?.classList.remove("natsumemo-needs-action");
-    ["Calendar", "Controls", "Result", "Hearts", "Titles", "Pages", "Study", "History", "Scores", "Awards", "Weeks"].forEach(id => byId(id).replaceChildren());
+    ["Calendar", "OtherCalendars", "Controls", "Rewards", "Result", "Hearts", "Titles", "Pages", "Study", "History", "Scores", "Awards", "Weeks"].forEach(id => byId(id).replaceChildren());
+    text("CalendarHint", "");
     ["Review", "Result", "Final", "Diary"].forEach(id => byId(id).classList.add("hidden"));
-    text("Status", "Waiting to start"); text("Progress", "Week —"); text("EventName", "准备放暑假"); text("Rule", ""); text("Date", ""); text("Duration", "");
+    text("Status", "Waiting to start"); text("Progress", "Week —"); text("EventName", "准备放暑假"); text("Date", ""); text("Duration", "");
   }
   window.renderNatsumemoGameState = data => {
     if (data?.view?.game_id !== "natsumemo" || currentGameType !== "natsumemo" || data.room_id && data.room_id !== currentRoomState?.room_id) return;
@@ -464,6 +498,7 @@
     if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "natsumemo" && currentRoomState.status === "lobby") clearState();
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "natsumemo") window.renderNatsumemoGameState(lastGameStatePayload);
   }
+  byId("Friends").open = !window.matchMedia("(max-width: 540px)").matches;
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initNatsumemoHelpExplain, {once: true}); else initNatsumemoHelpExplain();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sync, {once: true}); else sync();
 })();

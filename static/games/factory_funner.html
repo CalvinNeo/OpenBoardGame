@@ -8,23 +8,6 @@
     <div id="factoryFunnerResult" class="ff-result hidden" role="status"></div>
 
     <div class="ff-layout">
-        <section class="ff-machine" aria-label="This round's machine">
-            <div class="ff-heading">
-                <h3>This round</h3>
-                <span id="factoryFunnerMachineId" class="ff-muted"></span>
-            </div>
-            <div class="ff-machine-body">
-                <div id="factoryFunnerMachineTile" class="ff-tile ff-tile-lg" data-factory-funner-explain="machine" tabindex="0"></div>
-                <div class="ff-machine-info">
-                    <div class="ff-machine-value" data-factory-funner-explain="machine_value" data-factory-funner-tip="Base money this machine earns before port adjustments." tabindex="0">💰 <span id="factoryFunnerMachineValue">–</span> base</div>
-                    <ul id="factoryFunnerMachinePorts" class="ff-port-list"></ul>
-                </div>
-            </div>
-            <div class="ff-machine-actions">
-                <button id="factoryFunnerPassBtn" type="button" data-factory-funner-explain="pass">Pass</button>
-            </div>
-        </section>
-
         <section class="ff-factory" aria-label="Your factory">
             <div id="factoryFunnerBoard" class="ff-board" role="group" aria-label="Factory floor"></div>
             <div id="factoryFunnerConfirm" class="ff-confirm hidden">
@@ -38,20 +21,39 @@
             </div>
         </section>
 
-        <div class="ff-side">
-            <section id="factoryFunnerSummary" class="ff-summary hidden" aria-label="Round results">
+        <div class="ff-rail">
+            <section class="ff-machine" aria-label="This round's machine">
                 <div class="ff-heading">
-                    <h3>Round <span id="factoryFunnerSummaryRound"></span></h3>
-                    <span id="factoryFunnerSummaryWait" class="ff-muted"></span>
+                    <h3>This round</h3>
+                    <span id="factoryFunnerMachineId" class="ff-muted"></span>
                 </div>
-                <div id="factoryFunnerSummaryList" class="ff-summary-list"></div>
-                <button id="factoryFunnerNextRoundBtn" type="button" class="ff-primary" data-factory-funner-explain="next_round">Next Round</button>
+                <div class="ff-machine-body">
+                    <div id="factoryFunnerMachineTile" class="ff-tile ff-tile-lg" data-factory-funner-explain="machine" tabindex="0"></div>
+                    <div class="ff-machine-info">
+                        <div class="ff-machine-value" data-factory-funner-explain="machine_value" data-factory-funner-tip="Base money this machine earns before port adjustments." tabindex="0">💰 <span id="factoryFunnerMachineValue">–</span> base</div>
+                        <ul id="factoryFunnerMachinePorts" class="ff-port-list"></ul>
+                    </div>
+                </div>
+                <div class="ff-machine-actions">
+                    <button id="factoryFunnerPassBtn" type="button" data-factory-funner-explain="pass">Pass</button>
+                </div>
             </section>
 
-            <details class="ff-details" open>
-                <summary>Players <span id="factoryFunnerPlayerCount"></span></summary>
-                <div id="factoryFunnerPlayers" class="ff-players"></div>
-            </details>
+            <div class="ff-side">
+                <section id="factoryFunnerSummary" class="ff-summary hidden" aria-label="Round results">
+                    <div class="ff-heading">
+                        <h3>Round <span id="factoryFunnerSummaryRound"></span></h3>
+                        <span id="factoryFunnerSummaryWait" class="ff-muted"></span>
+                    </div>
+                    <div id="factoryFunnerSummaryList" class="ff-summary-list"></div>
+                    <button id="factoryFunnerNextRoundBtn" type="button" class="ff-primary" data-factory-funner-explain="next_round">Next Round</button>
+                </section>
+
+                <details class="ff-details" open>
+                    <summary>Players <span id="factoryFunnerPlayerCount"></span></summary>
+                    <div id="factoryFunnerPlayers" class="ff-players"></div>
+                </details>
+            </div>
         </div>
     </div>
 

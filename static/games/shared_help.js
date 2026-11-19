@@ -228,6 +228,10 @@
     const root = () => (typeof config.root === "function" ? config.root() : config.root) || document;
     let active = false;
     let dialog = null;
+    // A press that explains a control must not also run it. The click event
+    // arrives after pointerup, by which time explain mode is already off, so
+    // remember the press and swallow exactly that one click.
+    let swallowNextClick = false;
 
     function described(node) {
       const key = node?.getAttribute?.(attribute);
@@ -335,6 +339,7 @@
       event.preventDefault();
       event.stopPropagation();
       const description = described(node);
+      swallowNextClick = true;
       setActive(false);
       if (description) show(description);
     }
@@ -345,6 +350,12 @@
 
     // Capture-phase guard: explain mode must never trigger a real action.
     function onClick(event) {
+      if (swallowNextClick) {
+        swallowNextClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (!active) return;
       if (isBypass(event.target)) return;
       event.preventDefault();

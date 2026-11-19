@@ -1,4 +1,8 @@
 .natsumemo-panel { --nm-ink: #244940; --nm-green: #277564; --nm-line: #dedcc8; min-width: 0; color: var(--nm-ink); font-size: 14px; }
+.game-panel[data-game-theme="natsumemo"] { background: linear-gradient(140deg, #fffef7, #ffffff 55%); }
+.game-panel[data-game-theme="natsumemo"] > .panel-header { flex-wrap: nowrap; color: #244940; }
+.game-panel[data-game-theme="natsumemo"] .game-panel-title { flex-wrap: nowrap; }
+.game-panel[data-game-theme="natsumemo"] .game-panel-title h2 { white-space: nowrap; font-size: clamp(16px, 2vw, 24px); }
 #roomControlsPanel.collapsed.natsumemo-needs-action { border-color: #c94c43; box-shadow: 0 0 0 2px #c94c4340; }
 .natsumemo-panel *, .nm-dialog * { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
 .natsumemo-panel h2, .natsumemo-panel h3, .natsumemo-panel p { margin: 0; }
@@ -7,17 +11,14 @@
 .natsumemo-panel .nm-primary { background: #277564; border-color: #277564; color: white; font-weight: 650; }
 .natsumemo-panel .nm-primary:disabled { background: #e0e9e1; color: #66776d; border-color: #c4d4ca; }
 .natsumemo-panel button:focus-visible, .natsumemo-panel [tabindex]:focus-visible { outline: 3px solid #c98932; outline-offset: 2px; }
-.nm-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0 15px; }
+.nm-intro { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0 12px; }
 .nm-eyebrow { font-size: 10px; letter-spacing: .12em; color: #727e63; line-height: 1.5; }
-.nm-heading h2 { font-size: clamp(25px, 4vw, 36px); line-height: 1.3; letter-spacing: .08em; }
-.nm-heading h2 span { display: block; font-size: 10px; letter-spacing: .28em; margin-top: 5px; color: #657c6a; }
-.nm-sun { font-size: 42px; flex-shrink: 0; line-height: 1.2; }
 .nm-statusbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; background: #e9efdb; border-radius: 9px; padding: 11px 13px; margin-bottom: 14px; font-size: 13px; }
 #natsumemoStatus { flex: 1 1 180px; line-height: 1.5; }
 #natsumemoProgress { font-size: 11px; background: #fffdf4; padding: 5px 7px; border-radius: 6px; }
 .nm-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 14px; align-items: start; }
 .nm-calendar-box, .nm-event-box, .nm-diary, .nm-final { border: 1px solid var(--nm-line); border-radius: 13px; background: #fffef7; padding: 15px; }
-.nm-calendar-box { background: repeating-linear-gradient(0deg, transparent, transparent 25px, #74886b08 26px), #fffef7; }
+.nm-calendar-box { border: 0; border-radius: 0; padding: 0; background: repeating-linear-gradient(0deg, transparent, transparent 25px, #74886b08 26px); }
 .nm-sidebar { display: grid; gap: 12px; }
 .nm-event-box { background: linear-gradient(145deg, #fff5d9, #fffdf5 70%); border-top: 4px solid #e7b44b; }
 .nm-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -27,6 +28,13 @@
 .natsumemo-panel .nm-weeks button { min-height: 30px; padding: 4px 9px; font-size: 11px; }
 .natsumemo-panel button[aria-pressed="true"] { border-color: #277564; background: #d8eddb; box-shadow: inset 0 0 0 1px #277564; }
 .nm-calendar { display: grid; gap: 10px; }
+.nm-calendar-hint { color: #64725d; font-size: 12px; line-height: 1.6; margin-bottom: 10px; }
+.nm-friends { margin-top: 12px; }
+.nm-friends > summary { cursor: pointer; color: #526b59; padding: 8px 0; font-size: 12px; }
+.nm-friends[open] > summary { margin-bottom: 4px; }
+.nm-plan-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 9px; }
+.nm-plan-confirm > span { flex: 1 1 100%; font-size: 12px; color: #436b51; }
+.nm-plan-confirm > button { flex: 1 1 90px; }
 .nm-day-headings, .nm-days, .nm-date-picker { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .nm-day-headings { text-align: center; color: #778375; font-size: 10px; }
 .nm-day-headings span:nth-child(3) { color: #2b7966; }
@@ -41,6 +49,7 @@
 .natsumemo-panel button.nm-day { padding: 5px 2px; font-size: 12px; }
 .nm-day.is-empty { border-style: dashed; color: #a1a996; background: #fffef8; }
 .nm-day.is-proposed { background: #f8e5b1; border-color: #d79e34; }
+.nm-day.is-conflict { border-color: #bd625a; box-shadow: inset 0 0 0 1px #bd625a; }
 .nm-day.is-homework { background: #f3eddf; }
 .nm-day.is-study { background: #e6efe7; }
 .nm-day-icon { font-size: 20px; line-height: 1.2; }
@@ -50,7 +59,9 @@
 .nm-event-emoji { font-size: 44px; line-height: 1.25; flex-shrink: 0; }
 .nm-event-identity h3 { font-size: 23px; letter-spacing: .02em; line-height: 1.35; }
 #natsumemoDate, #natsumemoDuration { font-size: 12px; color: #807447; line-height: 1.5; }
-.nm-card-rule { font-size: 12px; line-height: 1.75; color: #666841; white-space: pre-line; }
+.nm-rewards { display: grid; gap: 7px; }
+.nm-reward { border-left: 3px solid #dfa83e; padding: 6px 0 6px 9px; font-size: 13px; line-height: 1.65; }
+.nm-reward.is-secondary { border-color: #bdd0b3; font-size: 12px; color: #5c705c; }
 .nm-controls { display: grid; gap: 9px; margin-top: 14px; }
 .nm-controls:empty { margin: 0; }
 .nm-control-hint { font-size: 12px; line-height: 1.5; color: #6c7866; }
@@ -73,6 +84,8 @@
 .nm-diary > summary { padding: 13px; font-weight: 650; cursor: pointer; font-size: 13px; }
 .nm-diary > summary > span { font-size: 10px; font-weight: normal; margin-left: 6px; }
 .nm-diary-content { padding: 0 13px 13px; }
+.nm-study-hint { color: #93583e; font-size: 12px; line-height: 1.6; margin-bottom: 8px; }
+.nm-diary.is-complete .nm-study-hint { color: #277564; }
 #natsumemoHomework { font-size: 14px; }
 #natsumemoHomeworkScore { font-size: 11px; }
 .nm-pages { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; margin-bottom: 12px; }
@@ -116,17 +129,22 @@ div.nm-history { padding-left: 0; }
   .nm-event-box { order: -1; }
   .nm-calendar-box, .nm-event-box, .nm-diary { width: 100%; }
   .nm-diary { order: 2; }
-  .nm-calendar-box, .nm-event-box, .nm-final { padding: 11px; }
-  .nm-heading { padding-bottom: 10px; }
+  .nm-event-box, .nm-final { padding: 11px; }
+  .nm-calendar-box { padding: 0; }
   .nm-statusbar { padding: 9px 10px; margin-bottom: 10px; }
   .nm-event-identity { margin: 8px 0; }
   .nm-event-emoji { font-size: 34px; }
   .nm-event-identity h3 { font-size: 21px; }
   .nm-player.is-you { padding: 5px; }
   .nm-days, .nm-day-headings, .nm-date-picker { gap: 3px; }
-  .nm-day { min-height: 44px; }
+  .nm-day { min-height: 48px; }
   .nm-day-icon { font-size: 18px; }
   .nm-controls { margin-top: 10px; }
-  .nm-heading h2 { font-size: 27px; }
-  .nm-card-rule { line-height: 1.6; }
+  .nm-eyebrow { font-size: 9px; }
+  .nm-statusbar { gap: 5px; }
+  #natsumemoStatus { flex-basis: 100%; }
+  .nm-player-stats { max-width: 55%; gap: 4px; }
+  .nm-day-headings { font-size: 9px; }
+  .nm-legend { gap: 6px 10px; margin-top: 8px; font-size: 10px; }
+  .nm-diary > summary { padding: 10px 12px; }
 }

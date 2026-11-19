@@ -198,6 +198,32 @@ async function touchChecks(browser, width) {
   console.log(`Citadels ${width}px touch: tap, tooltip and swipe passed`);
 }
 
+async function liveChecks(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await page.goto(base);
+  await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+  await page.evaluate(() => socket.emit('room:create', { name: 'Citadels reconnect QA', game_type: 'citadels' }));
+  await page.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('citadels'));
+  await page.evaluate(() => socket.emit('room:add_bot', { room_id: roomId }));
+  await page.waitForFunction(() => currentRoomState.players.length === 2);
+  await page.evaluate(() => socket.emit('room:ready', { room_id: roomId, ready: true }));
+  await page.waitForFunction(() => !document.getElementById('startBtn').disabled);
+  await page.evaluate(() => socket.emit('room:start', { room_id: roomId }));
+  await page.waitForFunction(() => lastGameStatePayload?.game_type === 'citadels');
+  const originalRoom = await page.evaluate(() => roomId);
+  await page.reload();
+  await page.waitForFunction(() => isGameAssetsLoaded('citadels') && lastGameStatePayload?.game_type === 'citadels');
+  assert.equal(await page.evaluate(() => roomId), originalRoom);
+  assert.equal(await page.locator('#citadelsPanel').isVisible(), true);
+  assert.equal(await page.locator('#citadelsRoleTrack .citadels-track-role').count(), 8);
+  await bounds(page, 'Live start and reconnect');
+  await page.evaluate(() => socket.emit('room:leave', { room_id: roomId }));
+  await context.close();
+  console.log('Citadels live create/start/reload/reconnect passed');
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const errors = [];
@@ -230,6 +256,7 @@ async function touchChecks(browser, width) {
     await page.evaluate(() => socket.emit('room:leave', { room_id: roomId }));
     await touchChecks(browser, 320);
     await touchChecks(browser, 390);
+    await liveChecks(browser);
   } finally {
     await browser.close();
   }

@@ -48,8 +48,15 @@
         return state.view?.machines || {};
     }
 
+    // Rotations are stored and passed around as degrees (0/90/180/270), while
+    // port edges are quarter turns (0-3). Always convert through here: adding a
+    // degree value to an edge index silently turns 90 into 180 and 180 into 0.
+    function quarterTurns(rotation) {
+        return ((Math.round(Number(rotation) / 90) % 4) + 4) % 4;
+    }
+
     function rotationOf(cell) {
-        return (((Number(cell.rotation) / 90) % 4) + 4) % 4;
+        return quarterTurns(cell.rotation);
     }
 
     function portOnEdge(machine, rotation, edge) {
@@ -204,10 +211,11 @@
         });
     }
 
+    // `rotation` is in degrees; see quarterTurns().
     function describeMachine(machine, rotation) {
-        const scoring = state.view.scoring;
+        const turns = quarterTurns(rotation);
         const parts = machine.ports.map((port) => {
-            const edge = (port.edge + rotation) % 4;
+            const edge = (port.edge + turns) % 4;
             const emoji = MATERIAL_EMOJI[port.color] || "";
             const kindZh = port.kind === "in" ? "进料口" : "出料口";
             const kindEn = port.kind === "in" ? "input" : "output";
@@ -222,7 +230,7 @@
         const en = `This round's machine: base value 💰${machine.value}. ` + (parts.length
             ? "Ports: " + parts.map((part) => part.en).join(", ") + "."
             : "This machine has no ports, so any cell works.");
-        return { zh, en, scoring };
+        return { zh, en };
     }
 
     /* ------------------------------------------------------------- help */
@@ -303,9 +311,11 @@
 
     /* ------------------------------------------------------------ render */
 
+    // `rotation` is in degrees; see quarterTurns().
     function renderPorts(container, machine, rotation, linkedEdges) {
+        const turns = quarterTurns(rotation);
         machine.ports.forEach((port) => {
-            const edge = (port.edge + rotation) % 4;
+            const edge = (port.edge + turns) % 4;
             const bar = element("span", `ff-port ff-${port.kind === "in" ? "in" : "out"}`
                 + (linkedEdges && linkedEdges.has(edge) ? " ff-linked" : ""));
             bar.dataset.edge = String(edge);
@@ -336,8 +346,9 @@
         const list = byId("MachinePorts");
         list.replaceChildren();
         const preview = previewInfo();
+        const turns = quarterTurns(state.rotation);
         machine.ports.forEach((port) => {
-            const edge = (port.edge + state.rotation) % 4;
+            const edge = (port.edge + turns) % 4;
             const item = element("li");
             const swatch = element("span", `ff-swatch${port.kind === "in" ? " ff-hollow" : ""}`);
             swatch.style.setProperty("--c", MATERIAL_COLOR[port.color] || "#64748b");
@@ -376,7 +387,7 @@
                     const info = cellInfo(me.board, row, col);
                     const score = element("span", `ff-score ${info.score < 0 ? "ff-neg" : "ff-pos"}`, String(info.score));
                     node.appendChild(score);
-                    renderPorts(node, machineList()[cellData.machine_id], rotationOf(cellData), new Set(info.links));
+                    renderPorts(node, machineList()[cellData.machine_id], cellData.rotation, new Set(info.links));
                     node.setAttribute("aria-label", `Row ${row + 1} column ${col + 1}, machine earning ${info.score}`);
                     setTip(node, `Row ${row + 1}, column ${col + 1}: ${info.score} money — base ${info.value}, `
                         + `${info.matched} linked, ${info.unfed} unfed input, ${info.unused} unused output.`);
