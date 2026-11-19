@@ -764,7 +764,8 @@
     if (!bombBustersRacksEl) return;
     bombBustersRacksEl.innerHTML = "";
     const seatedPlayers = view.players || [];
-    const ownSeat = Math.max(0, seatedPlayers.findIndex((player) => player.player_id === view.you));
+    const viewerSeat = seatedPlayers.findIndex((player) => player.player_id === view.you);
+    const ownSeat = Math.max(0, viewerSeat);
     const players = [...seatedPlayers.slice(ownSeat), ...seatedPlayers.slice(0, ownSeat)];
     players.forEach((player) => {
       const card = document.createElement("article");
@@ -801,6 +802,19 @@
       count.dataset.bombBustersTip = `${player.remaining_count} uncut wires across this player's racks.`;
       heading.append(name, badges, count);
       card.appendChild(heading);
+      if (view.campaign && viewerSeat >= 0 && player.player_id !== view.you) {
+        const isLeft = seatedPlayers[(viewerSeat + 1) % seatedPlayers.length] === player;
+        const isRight = seatedPlayers[(viewerSeat + seatedPlayers.length - 1) % seatedPlayers.length] === player;
+        if (isLeft || isRight) {
+          const direction = document.createElement("span");
+          direction.className = `bomb-busters-rack-neighbor bomb-busters-neighbor-${isLeft ? "left" : "right"}`;
+          direction.textContent = isLeft && isRight ? "← Your left & right →" : isLeft ? "← Your left" : "Your right →";
+          direction.dataset.bombBustersTip = `${player.name || player.player_id} sits ${isLeft && isRight ? "on both sides of you in a two-player game" : isLeft ? "to your left" : "to your right"}. Directions follow table seating, not screen columns.`;
+          direction.dataset.bombBustersExplain = "campaign";
+          direction.dataset.bombBustersExplanation = direction.dataset.bombBustersTip;
+          card.appendChild(direction);
+        }
+      }
 
       (view.racks || []).filter((rack) => rack.owner_id === player.player_id).forEach((rack) => {
         const rackSection = document.createElement("section");
@@ -1074,7 +1088,7 @@
     if (!bombBustersStatusEl) return;
     if (view.phase === "initial_info") {
       bombBustersStatusEl.textContent = view.initial_info_player_id === view.you
-        ? "Choose an initial 🔵 clue."
+        ? view.campaign?.id === 22 ? "Share a value absent from your hand." : "Choose an initial 🔵 clue."
         : `${bombBustersPlayerName(view, view.initial_info_player_id)} is choosing an initial clue…`;
     } else if (view.phase === "awaiting_detector_choice") {
       bombBustersStatusEl.textContent = view.current_responder_id === view.you
@@ -1217,7 +1231,7 @@
     bombBustersHideTooltip();
     if (bombBustersPanelEl) {
       bombBustersPanelEl.querySelectorAll("details").forEach((details) => {
-        details.open = false;
+        details.open = details.id === "bombBustersEquipment";
       });
     }
     bombBustersExplainWidget?.exit();

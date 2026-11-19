@@ -1067,15 +1067,15 @@ const GAME_ASSETS = {
   },
   "bomb_busters": {
     "scripts": [
-      "/static/games/bomb_busters_campaign.js?v=2",
-      "/static/games/bomb_busters.js?v=app_v8"
+      "/static/games/bomb_busters_campaign.js?v=3",
+      "/static/games/bomb_busters.js?v=app_v9"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=6",
-    "styleFragments": "/static/games/bomb_busters.css?v=7"
+    "markup": "/static/games/bomb_busters.html?v=7",
+    "styleFragments": "/static/games/bomb_busters.css?v=8"
   },
   "felix": {
     "scripts": [

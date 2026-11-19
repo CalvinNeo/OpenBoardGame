@@ -228,7 +228,7 @@ print(json.dumps(result))
         await page.keyboard.press('Escape');
 
         await render(views['46']);
-        await page.locator('#bombBustersEquipment > summary').click();
+        assert.equal(await page.locator('#bombBustersEquipment').evaluate(element => element.open), true);
         const equipment = page.locator('#bombBustersEquipmentCards .bomb-busters-equipment-card').first();
         assert.equal(await equipment.isVisible(), true);
         const equipmentDescription = await equipment.getAttribute('data-bomb-busters-explanation');

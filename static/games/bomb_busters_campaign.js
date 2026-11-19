@@ -7,6 +7,7 @@
   let bombBustersCampaignSelection = null;
   let bombBustersCampaignVersion = null;
   let bombBustersCampaignTimer = null;
+  let bombBustersCampaignMission = null;
 
   const bombBustersCampaignElement = (suffix) => document.getElementById(`bombBusters${suffix}`);
   const bombBustersCampaignWires = () => (bombBustersCampaignView?.racks || []).flatMap((rack) => rack.slots.map((wire) => ({...wire, rack})));
@@ -29,6 +30,8 @@
     const caption = document.createElement("span");
     caption.textContent = label;
     const select = document.createElement("select");
+    select.dataset.bombBustersExplain = "campaign";
+    select.dataset.bombBustersExplanation = `${label}: choose an option. This does not submit an action until you confirm.`;
     values.forEach((entry) => {
       const option = document.createElement("option");
       const value = typeof entry === "object" ? entry.value : entry;
@@ -40,6 +43,47 @@
     select.addEventListener("change", () => onChange(select.value));
     wrapper.append(caption, select);
     return wrapper;
+  }
+
+  function bombBustersCampaignChoiceList(root, entries, label, onConfirm, explanation, confirmLabel = "Confirm") {
+    if (entries.length <= 3) {
+      entries.forEach((entry) => root.appendChild(bombBustersCampaignButton(entry.label, () => onConfirm(entry.value), explanation)));
+      return;
+    }
+    let selectedIndex = 0;
+    const field = bombBustersCampaignSelect(label, entries.map((entry, index) => ({value: index, label: entry.label})), 0, (value) => {
+      selectedIndex = Number(value);
+    });
+    field.classList.add("bomb-busters-mission-picker");
+    field.querySelector("select").dataset.bombBustersExplanation = explanation;
+    const answer = document.createElement("div");
+    answer.className = "bomb-busters-mission-answer";
+    answer.append(field, bombBustersCampaignButton(confirmLabel, () => onConfirm(entries[selectedIndex].value), explanation));
+    root.appendChild(answer);
+  }
+
+  function bombBustersCampaignNeighbor(playerId, direction) {
+    const players = bombBustersCampaignView.players;
+    const seat = players.findIndex((player) => player.player_id === playerId);
+    if (seat < 0 || players.length < 2) return null;
+    return players[(seat + direction + players.length) % players.length];
+  }
+
+  function bombBustersCampaignRenderNeighbors() {
+    const root = bombBustersCampaignElement("Neighbors");
+    root.replaceChildren();
+    const left = bombBustersCampaignNeighbor(bombBustersCampaignView.you, 1);
+    const right = bombBustersCampaignNeighbor(bombBustersCampaignView.you, -1);
+    if (!left || !right) return;
+    [["left", `← Left · ${left.name || left.player_id}`], ["self", "You"], ["right", `Right · ${right.name || right.player_id} →`]].forEach(([side, text]) => {
+      const neighbor = document.createElement("span");
+      neighbor.className = `bomb-busters-neighbor-${side}`;
+      neighbor.textContent = text;
+      neighbor.dataset.bombBustersTip = `${text}. Left and right follow table seating, not the columns of racks below. With two players, the same teammate is on both sides.`;
+      neighbor.dataset.bombBustersExplain = "campaign";
+      neighbor.dataset.bombBustersExplanation = neighbor.dataset.bombBustersTip;
+      root.appendChild(neighbor);
+    });
   }
 
   function bombBustersCampaignPopulateMissions() {
@@ -220,12 +264,21 @@
     root.classList.toggle("hidden", !view.campaign);
     if (bombBustersCampaignTimer) window.clearInterval(bombBustersCampaignTimer);
     bombBustersCampaignTimer = null;
-    if (!view.campaign) return;
+    if (!view.campaign) {
+      bombBustersCampaignMission = null;
+      return;
+    }
     if (version !== bombBustersCampaignVersion) {
       bombBustersCampaignSelection = null;
       bombBustersCampaignVersion = version;
     }
     const publicState = view.campaign;
+    const mission = `${publicState.id}:${view.attempt_number || 1}:${view.you}`;
+    if (bombBustersCampaignMission !== mission) {
+      bombBustersCampaignElement("Equipment").open = true;
+      bombBustersCampaignMission = mission;
+    }
+    bombBustersCampaignRenderNeighbors();
     const status = bombBustersCampaignElement("MissionState");
     status.replaceChildren();
     const addStatus = (text, explanation = text) => {
@@ -235,6 +288,18 @@
       badge.dataset.bombBustersExplain = "campaign";
       badge.dataset.bombBustersExplanation = explanation;
       status.appendChild(badge);
+      return badge;
+    };
+    const addPlayerStatus = (playerId, value, explanation) => {
+      const playerName = bombBustersCampaignPlayerName(playerId);
+      const badge = addStatus("", `${playerName}: ${value}. ${explanation}`);
+      badge.className = "bomb-busters-mission-player-stat";
+      const name = document.createElement("span");
+      name.className = "bomb-busters-stat-player";
+      name.textContent = playerId === view.you ? "You" : playerName;
+      const amount = document.createElement("strong");
+      amount.textContent = value;
+      badge.append(name, amount);
     };
     if (publicState.sequence.length) addStatus(`↔ ${publicState.sequence.join(" → ")}`, `Priority line, ${publicState.sequence_side} end active. ${publicState.sequence_threshold} wires required before the next number.`);
     if (publicState.forced_value) addStatus(`🎯 ${publicState.forced_value}`, "This is the current mission number, not a revealed teammate wire.");
@@ -243,11 +308,11 @@
     if (publicState.shared_constraint) addStatus(`📋 ${publicState.shared_constraint}`, publicState.constraint_texts[publicState.shared_constraint]);
     if (publicState.your_constraint) addStatus(`You: ${publicState.your_constraint}${publicState.you_are_weakest_link === false ? " (inactive)" : ""}`, publicState.constraint_texts[publicState.your_constraint]);
     if (publicState.nano) addStatus(`🤖 Nano ${publicState.nano.line ? publicState.nano.line[publicState.nano.position] : publicState.nano.position}${publicState.nano.direction > 0 ? " →" : " ←"}${publicState.reserve_count ? ` · ${publicState.reserve_count} held` : ""}`, "Nano's position, direction and number of hidden reserve wires. See this mission's Help for movement rules.");
-    if (publicState.oxygen && Object.keys(publicState.oxygen).length) Object.entries(publicState.oxygen).forEach(([player, amount]) => addStatus(`🫧 ${bombBustersCampaignPlayerName(player)} ${amount}`, "This player's available oxygen. A cut must pay its mission-specific cost first."));
+    if (publicState.oxygen && Object.keys(publicState.oxygen).length) Object.entries(publicState.oxygen).forEach(([player, amount]) => addPlayerStatus(player, `🫧 ${amount}`, "Available oxygen. A cut must pay its mission-specific cost first."));
     if ([44, 54, 63].includes(publicState.id)) addStatus(`🫧 Reserve ${publicState.oxygen_reserve}`, "Oxygen in the shared reserve.");
     if (publicState.reward_numbers.length) addStatus(`↶ ${publicState.reward_numbers.join(" · ")}`, "Validating one of these values rewinds the detonator one step.");
     if (publicState.number_cards.length) addStatus(`🔢 ${publicState.number_cards.join(" · ")}`, "Currently available Number cards for this mission.");
-    Object.entries(publicState.number_hands).forEach(([player, numbers]) => addStatus(`${bombBustersCampaignPlayerName(player)}: ${numbers.join(" · ")}`, "Mission Number cards. Private hands are only sent to their owner."));
+    Object.entries(publicState.number_hands).forEach(([player, numbers]) => addPlayerStatus(player, `🔢 ${numbers.join(" · ") || "—"}`, "Mission Number cards. Private hands are only sent to their owner."));
     if (publicState.bunker) addStatus(`🏰 Floor ${publicState.bunker.floor + 1} · ${publicState.bunker.position.join(",")}`, "Your position in the bunker. Move after each cut toward a matching constraint. Audio instructions use companion controls.");
     const clock = document.createElement("span");
     if (publicState.clock && view.phase !== "mission_result") {
@@ -263,14 +328,22 @@
     const choices = bombBustersCampaignElement("MissionChoices");
     choices.replaceChildren();
     if (publicState.decision) {
+      const decision = publicState.decision;
       const heading = document.createElement("strong");
-      heading.textContent = `${publicState.decision.kind.replaceAll("_", " ")} · ${bombBustersCampaignPlayerName(publicState.decision.player_id)}`;
+      let title = decision.kind.replaceAll("_", " ");
+      if (decision.kind === "bonus_clue" && publicState.id === 22) {
+        const recipient = bombBustersCampaignNeighbor(decision.player_id, 1);
+        title = `Clue · ← Left: ${recipient?.name || recipient?.player_id || "—"}`;
+      } else if (decision.kind === "predict") {
+        title = `Predict for ${bombBustersCampaignPlayerName(view.current_turn)}`;
+      }
+      heading.textContent = `${title} · ${bombBustersCampaignPlayerName(decision.player_id)}`;
       choices.appendChild(heading);
-      publicState.decision.choices.forEach((entry) => choices.appendChild(bombBustersCampaignButton(entry.label, () => send({type: "mission_choice", choice: entry.value}), "Resolve the mission choice shown here. Your private options are not sent to other players.")));
+      bombBustersCampaignChoiceList(choices, decision.choices, "Choice", (choice) => send({type: "mission_choice", choice}), "Resolve the mission choice shown here. Your private options are not sent to other players.");
     }
     if (publicState.can_claim_turn) choices.appendChild(bombBustersCampaignButton("✂️ Snip! Take Turn", () => send({type: "mission_choice", choice: "claim_turn"}), "Volunteer to act now. Consecutive turns are forbidden with more than two active players."));
     if (view.phase === "initial_info" && view.initial_info_player_id === view.you) {
-      if (publicState.id === 22) publicState.initial_label_choices.forEach((label) => choices.appendChild(bombBustersCampaignButton(`No ${label}`, () => send({type: "place_initial_info", label}), "Announce a value absent from your hand.")));
+      if (publicState.id === 22) bombBustersCampaignChoiceList(choices, publicState.initial_label_choices.map((label) => ({value: label, label: `No ${label}`})), "Absent", (label) => send({type: "place_initial_info", label}), "Announce a value absent from your hand.", "Share Clue");
       else if (publicState.initial_negative) {
         choices.appendChild(bombBustersCampaignSelect("False clue", publicState.initial_label_choices, "1", () => {}));
         choices.lastElementChild.querySelector("select").id = "bombBustersNegativeLabel";
@@ -291,7 +364,12 @@
         });
       }
       if (publicState.id === 49) {
-        const recipients = view.players.filter((player) => player.player_id !== view.you && player.remaining_count).map((player) => ({value: player.player_id, label: player.name || player.player_id}));
+        const left = bombBustersCampaignNeighbor(view.you, 1);
+        const right = bombBustersCampaignNeighbor(view.you, -1);
+        const recipients = view.players.filter((player) => player.player_id !== view.you && player.remaining_count).map((player) => {
+          const sides = [player === left ? "← Left" : "", player === right ? "Right →" : ""].filter(Boolean);
+          return {value: player.player_id, label: `${player.name || player.player_id}${sides.length ? ` · ${sides.join(" / ")}` : ""}`};
+        });
         const field = bombBustersCampaignSelect("Give oxygen to", recipients, recipients[0]?.value, () => {});
         field.querySelector("select").id = "bombBustersOxygenRecipient";
         choices.appendChild(field);

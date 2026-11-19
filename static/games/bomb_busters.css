@@ -74,9 +74,48 @@
 
 .bomb-busters-campaign {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
   min-width: 0;
   margin: 8px 0;
+}
+
+.bomb-busters-neighbors {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 3px 0;
+  color: var(--bomb-muted);
+  font-size: 11px;
+}
+
+.bomb-busters-neighbors > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bomb-busters-neighbor-left {
+  color: #93c5fd;
+}
+
+.bomb-busters-neighbor-right {
+  color: var(--bomb-mint);
+  text-align: right;
+}
+
+.bomb-busters-rack-neighbor {
+  font-size: 10px;
+  text-align: left;
+}
+
+.bomb-busters-neighbors:empty,
+.bomb-busters-mission-state:empty,
+.bomb-busters-mission-choices:empty {
+  display: none;
 }
 
 .bomb-busters-mission-state,
@@ -85,24 +124,61 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
 .bomb-busters-mission-state > span {
   max-width: 100%;
   overflow-wrap: anywhere;
-  padding: 4px 7px;
-  border-radius: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
   background: var(--bomb-raised);
   color: var(--bomb-ink);
   font-size: 12px;
 }
 
+.bomb-busters-mission-state > .bomb-busters-mission-player-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bomb-busters-stat-player {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bomb-busters-mission-player-stat > strong {
+  min-width: 0;
+}
+
 .bomb-busters-mission-choices > strong {
-  flex-basis: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-size: 12px;
   text-transform: capitalize;
+}
+
+.bomb-busters-mission-answer {
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bomb-busters-mission-answer > .bomb-busters-mission-picker {
+  flex: 1 1 140px;
+}
+
+.bomb-busters-mission-picker select {
+  width: 0;
 }
 
 .bomb-busters-mission-choices button,
@@ -156,6 +232,12 @@
   min-width: 0;
   max-width: 100%;
   flex: 1 1 90px;
+  padding: 6px;
+  border: 1px solid var(--bomb-line);
+  border-radius: 6px;
+  background: var(--bomb-raised);
+  color: var(--bomb-ink);
+  font: inherit;
 }
 
 .bomb-busters-mission-choices [aria-pressed="true"],

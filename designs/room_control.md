@@ -20,6 +20,7 @@
 ## Select Game
 
 - 顶部提供搜索（名称 / 中文名 / game_id / 标签）、Players 人数、Sort 排序三类控件，以及 Types 标签多选（取交集）。
+- 游戏列表的 Grid 行顶部对齐；手机端列表仍占满剩余空间并独立滚动，但搜索或筛选后只有少量结果时，不得把条目拉高来填满列表。
 - Players 支持 1-10 的精确人数，另有 `11+`：匹配所有仍能容纳 11 人及以上的游戏，即 `max_players >= 11` 或 `supported_player_counts` 中存在 `>= 11` 的取值，而不是恰好 11 人。精确人数仍按原有语义匹配。
 - Sort 选项：Alphabet、Recently Played（当前浏览器最近开过的房间，来自 localStorage）、Recently Updated（游戏代码最近一次改动）、Development Order、Weight Asc / Weight Desc。所选排序保存在 localStorage。
 - Recently Updated 依赖 `game/updated_at.json`，由 `python scripts/gen_dev_order.py` 与 dev order 一同生成：取该游戏主模块、同前缀的 `_ai` / `_data` 等模块、`static/games/<game_id>.*` 以及 `game/assets`、`assets`、`static/assets` 下同名资源最后一次 git 提交时间；尚未提交的新文件回退到文件修改时间。`/api/games` 通过 `updated_at` 字段下发，缺失该字段的游戏排在最后。

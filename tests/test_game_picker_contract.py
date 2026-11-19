@@ -44,6 +44,12 @@ class GamePickerContractTests(unittest.TestCase):
         self.assertIn('if (sortKey === "updated")', self.room)
         self.assertIn("const diff = bUpdated - aUpdated;", self.room)
 
+    def test_game_list_rows_do_not_stretch_when_filtered(self):
+        styles = self._read("static/style.css")
+        game_list = re.search(r"^\.game-list\s*\{([^}]+)\}", styles, re.M)
+        self.assertIsNotNone(game_list, "static/style.css has no .game-list rule")
+        self.assertRegex(game_list.group(1), r"\balign-content:\s*start\s*;")
+
 
 if __name__ == "__main__":
     unittest.main()
