@@ -3,6 +3,7 @@ import random
 import time
 from typing import Dict, List, Optional, Tuple
 
+from game.bomb_busters_help import get_mission_help
 from game.bomb_busters_missions import (
     AUDIO_MISSIONS, CONSTRAINTS, EQUIPMENT, EQUIPMENT_BANS, MISSION_COUNT, get_mission,
 )
@@ -1875,6 +1876,7 @@ def extend_public_view(state: Dict, viewer_id: str, view: Dict) -> None:
     public = {
         "id": number, "name": mission["name"], "rules": mission["rules"],
         "rules_zh": get_mission(number, len(state["turn_order"]))["rules_zh"],
+        "help": get_mission_help(number, len(state["turn_order"])),
         "total": MISSION_COUNT, "audio_companion": mission["audio_companion"],
         "source_status": "community_transcribed",
         "yellow_count": mission["yellow_count"], "red_count": mission["red_count"],

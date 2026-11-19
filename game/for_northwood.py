@@ -368,6 +368,7 @@ class ForNorthwoodGame:
             "config": config,
             "player_id": owner,
             "player_name": players[0].get("name", "Envoy"),
+            "players": {owner: {"name": players[0].get("name", "Envoy")}},
             "turn_order": [owner],
             "current_player": owner,
             "allies": allies,
@@ -539,6 +540,8 @@ class ForNorthwoodGame:
         )
         view = {key: copy.deepcopy(state[key]) for key in fields}
         view.update({
+            "game_id": ForNorthwoodGame.game_id,
+            "current_player": state["player_id"],
             "you": viewer_id,
             "is_owner": owner,
             "visit": min(8, len(state["history"]) + (state["phase"] not in ("visit_review", "game_over"))),
@@ -594,4 +597,6 @@ class ForNorthwoodGame:
 
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
-        return copy.deepcopy(payload)
+        state = copy.deepcopy(payload)
+        state.setdefault("players", {state["player_id"]: {"name": state.get("player_name", "Envoy")}})
+        return state
