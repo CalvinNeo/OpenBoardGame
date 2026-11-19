@@ -13,7 +13,7 @@
     <div class="bs-layout">
       <div class="bs-stage">
         <div id="bsBoard" class="bs-board" data-bs-explain="board" tabindex="0" role="application"
-             aria-label="Bubble board. Move the pointer to aim, click to shoot.">
+             aria-label="Bubble board. Move to aim and click to fire. Arrow keys aim, Space fires, Escape cancels.">
           <div class="bs-backdrop" aria-hidden="true"></div>
           <div id="bsLayer" class="bs-layer" aria-hidden="true"></div>
           <svg id="bsAimSvg" class="bs-aim-svg" viewBox="0 0 11 14" preserveAspectRatio="none" aria-hidden="true">
@@ -21,48 +21,61 @@
           </svg>
           <div id="bsGhost" class="bs-ghost" hidden aria-hidden="true"></div>
           <div class="bs-death-line" data-bs-explain="death_line" aria-hidden="true"><span>⚠️ LINE</span></div>
+          <div id="bsLauncher" class="bs-launcher" aria-hidden="true"><div class="bs-barrel"></div></div>
           <div id="bsShooter" class="bs-shooter" data-bs-explain="shooter" aria-hidden="true"></div>
           <div id="bsWatchTag" class="bs-watch-tag" hidden aria-hidden="true"></div>
-          <div class="bs-board-items" data-bs-explain="items">
-            <button id="bsHammerBtn" type="button" class="bs-chip" data-bs-explain="hammer">
-              <span class="bs-chip-icon" aria-hidden="true">🔨</span>
-              <span id="bsHammerCount" class="bs-chip-count">0</span>
-              <span class="bs-chip-name">Hammer</span>
-            </button>
-            <button id="bsAimBtn" type="button" class="bs-chip" data-bs-explain="aim">
-              <span class="bs-chip-icon" aria-hidden="true">🎯</span>
-              <span id="bsAimCount" class="bs-chip-count">0</span>
-              <span class="bs-chip-name">Aim line</span>
-            </button>
-          </div>
+          <div id="bsEffects" class="bs-effects" aria-hidden="true"></div>
           <div id="bsFly" class="bs-fly" hidden aria-hidden="true"></div>
           <div id="bsOverlay" class="bs-overlay" hidden></div>
         </div>
       </div>
 
-      <aside class="bs-side">
-        <div class="bs-side-card">
-          <span class="bs-side-label" id="bsStatsLabel" data-bs-explain="mine">Your run</span>
-          <div id="bsStats" class="bs-stats" aria-live="polite"></div>
-          <button id="bsBackBtn" type="button" class="bs-ghost-btn bs-back-btn" data-bs-explain="back" hidden>← Back to my board</button>
-        </div>
+      <div class="bs-run">
+        <span class="bs-side-label" id="bsStatsLabel" data-bs-explain="mine">Your run</span>
+        <div id="bsStats" class="bs-stats" data-bs-explain="mine" aria-live="polite"></div>
+        <button id="bsBackBtn" type="button" class="bs-ghost-btn bs-back-btn" data-bs-explain="back" hidden>← Back to my board</button>
+      </div>
 
-        <div class="bs-side-card">
-          <span class="bs-side-label" data-bs-explain="queue">Queue</span>
-          <div id="bsQueue" class="bs-queue"></div>
-        </div>
-
-        <div class="bs-side-card">
-          <span class="bs-side-label" data-bs-explain="angle">Aim</span>
-          <div class="bs-aim-readout">
-            <span id="bsAngleValue" class="bs-angle">0°</span>
-            <span class="bs-aim-hint">Move the pointer to aim · click to shoot</span>
+      <aside class="bs-side" aria-label="Bubble controls">
+        <div class="bs-loadout">
+          <div class="bs-next" data-bs-explain="queue">
+            <span class="bs-side-label">Now / next</span>
+            <div id="bsQueue" class="bs-queue"></div>
           </div>
+          <div class="bs-board-items" data-bs-explain="items" aria-label="Power-ups">
+            <button id="bsHammerBtn" type="button" class="bs-chip" data-bs-explain="hammer">
+              <span class="bs-chip-icon" aria-hidden="true">🔨</span>
+              <span class="bs-chip-name">Hammer</span>
+              <span id="bsHammerCount" class="bs-chip-count">0</span>
+            </button>
+            <button id="bsAimBtn" type="button" class="bs-chip" data-bs-explain="aim">
+              <span class="bs-chip-icon" aria-hidden="true">🎯</span>
+              <span class="bs-chip-name">Aim line</span>
+              <span id="bsAimCount" class="bs-chip-count">0</span>
+            </button>
+          </div>
+        </div>
+        <div class="bs-controls">
+          <div class="bs-aim-readout" data-bs-explain="angle">
+            <label for="bsAngleInput">Fine aim</label>
+            <output id="bsAngleValue" class="bs-angle" for="bsAngleInput">0°</output>
+          </div>
+          <div class="bs-aim-input">
+            <button id="bsLeftBtn" type="button" class="bs-nudge" data-bs-explain="nudge" aria-label="Aim left">←</button>
+            <input id="bsAngleInput" type="range" min="-82" max="82" step="0.5" value="0" data-bs-explain="angle" aria-label="Firing angle">
+            <button id="bsRightBtn" type="button" class="bs-nudge" data-bs-explain="nudge" aria-label="Aim right">→</button>
+          </div>
+          <button id="bsFireBtn" type="button" class="bs-fire" data-bs-explain="fire"><span>Fire</span><small>Space ↗</small></button>
+        </div>
+        <div class="bs-tools">
+          <button id="bsSoundBtn" type="button" class="bs-ghost-btn" data-bs-explain="sound" aria-pressed="false">Sound off</button>
           <button id="bsRestartBtn" type="button" class="bs-ghost-btn" data-bs-explain="restart">↺ Restart</button>
         </div>
-
         <div id="bsStatus" class="bs-status" role="status" aria-live="polite"></div>
-        <div id="bsLastShot" class="bs-last" data-bs-explain="last_shot"></div>
+        <details class="bs-history">
+          <summary>Last shot</summary>
+          <div id="bsLastShot" class="bs-last" data-bs-explain="last_shot"></div>
+        </details>
       </aside>
     </div>
   </div>

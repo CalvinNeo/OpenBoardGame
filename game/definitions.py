@@ -1274,8 +1274,9 @@ BOMB_BUSTERS_ACTION_SCHEMA = {
             "properties": {
                 "type": {"const": "place_initial_info"},
                 "wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "label": {"type": "string", "maxLength": 8},
             },
-            "required": ["type", "wire_id"],
+            "required": ["type"],
             "additionalProperties": False,
         },
         {
@@ -1284,6 +1285,9 @@ BOMB_BUSTERS_ACTION_SCHEMA = {
                 "type": {"const": "dual_cut"},
                 "own_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
                 "target_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "declaration": {"type": "string", "maxLength": 8},
+                "number_cards": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 12}, "minItems": 2, "maxItems": 2, "uniqueItems": True},
+                "recipient_id": {"type": "string", "maxLength": 100},
             },
             "required": ["type", "own_wire_id", "target_wire_id"],
             "additionalProperties": False,
@@ -1293,6 +1297,8 @@ BOMB_BUSTERS_ACTION_SCHEMA = {
             "properties": {
                 "type": {"const": "double_detector_cut"},
                 "own_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "number_cards": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 12}, "minItems": 2, "maxItems": 2, "uniqueItems": True},
+                "recipient_id": {"type": "string", "maxLength": 100},
                 "target_wire_ids": {
                     "type": "array",
                     "items": BOMB_BUSTERS_WIRE_ID_SCHEMA,
@@ -1317,6 +1323,8 @@ BOMB_BUSTERS_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "solo_cut"},
+                "number_cards": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 12}, "minItems": 2, "maxItems": 2, "uniqueItems": True},
+                "recipient_id": {"type": "string", "maxLength": 100},
                 "wire_ids": {
                     "type": "array",
                     "items": BOMB_BUSTERS_WIRE_ID_SCHEMA,
@@ -1340,6 +1348,31 @@ BOMB_BUSTERS_ACTION_SCHEMA = {
             "required": ["type"],
             "additionalProperties": False,
         },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"enum": ["mission_choice", "special_cut", "use_equipment"]},
+                "choice": {"type": ["string", "integer"]},
+                "equipment_id": {"type": "string", "maxLength": 40},
+                "wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "own_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "target_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "wire_ids": {"type": "array", "items": BOMB_BUSTERS_WIRE_ID_SCHEMA, "maxItems": 70, "uniqueItems": True},
+                "own_wire_ids": {"type": "array", "items": BOMB_BUSTERS_WIRE_ID_SCHEMA, "maxItems": 2, "uniqueItems": True},
+                "target_wire_ids": {"type": "array", "items": BOMB_BUSTERS_WIRE_ID_SCHEMA, "maxItems": 70, "uniqueItems": True},
+                "number_cards": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 12}, "minItems": 2, "maxItems": 2, "uniqueItems": True},
+                "player_id": {"type": "string", "maxLength": 100},
+                "recipient_id": {"type": "string", "maxLength": 100},
+                "player_ids": {"type": "array", "items": {"type": "string", "maxLength": 100}, "maxItems": 2, "uniqueItems": True},
+                "rack_id": {"type": "string", "maxLength": 120},
+                "constraint": {"enum": list("ABCDEFGHIJKL") + ["none"]},
+                "value": {"type": "integer", "minimum": 1, "maximum": 12},
+                "amount": {"type": "integer", "minimum": -3, "maximum": 3},
+                "declaration": {"type": "string", "maxLength": 8},
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
     ],
 }
 
@@ -1349,7 +1382,8 @@ BOMB_BUSTERS_CONFIG_SCHEMA = {
         "practice_preset": {
             "type": "string",
             "enum": ["short_practice", "standard_practice", "high_risk_practice"],
-        }
+        },
+        "mission_id": {"type": "integer", "minimum": 1, "maximum": 66},
     },
     "additionalProperties": False,
 }

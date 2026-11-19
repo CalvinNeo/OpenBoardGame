@@ -115,10 +115,12 @@ function emitRoomStart() {
   } else if (currentGameType === "word_sync") {
     payload.config = { mode: typeof getWordSyncMode === "function" ? getWordSyncMode() : "team" };
   } else if (currentGameType === "bomb_busters") {
+    const missionSelect = document.getElementById("bombBustersMissionSelect");
+    const missionId = missionSelect ? Number.parseInt(missionSelect.value, 10) : NaN;
     const practicePreset = bombBustersPresetSelect
       ? bombBustersPresetSelect.value || "standard_practice"
       : "standard_practice";
-    payload.config = { practice_preset: practicePreset };
+    payload.config = Number.isInteger(missionId) ? { mission_id: missionId } : { practice_preset: practicePreset };
   } else if (currentGameType === "citadels") {
     const rawSize = citadelsWinningCitySizeSelect ? Number.parseInt(citadelsWinningCitySizeSelect.value, 10) : NaN;
     const winningCitySize = rawSize === 7 ? 7 : 8;

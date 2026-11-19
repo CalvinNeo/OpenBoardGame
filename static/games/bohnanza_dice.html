@@ -4,6 +4,11 @@
         <h2 id="bohnanzaDiceHelpModalTitle">Bohnanza: Das Würfelspiel - Game Rules</h2>
         <button id="bohnanzaDiceHelpCloseBtn" type="button">Close</button>
       </div>
+      <div id="bohnanzaDiceHelpLanguages" class="bohnanza-dice-help-languages" role="group" aria-label="Language">
+        <button type="button" data-bohnanza-dice-help-language="zh" aria-pressed="true">中文</button>
+        <button type="button" data-bohnanza-dice-help-language="en" aria-pressed="false">EN</button>
+      </div>
+      <nav id="bohnanzaDiceHelpTabs" class="bohnanza-dice-help-tabs" aria-label="Rules sections"></nav>
       <div id="bohnanzaDiceHelpContent" class="modal-body bohnanza-dice-help-content"></div>
     </div>
   </section></template>
@@ -98,4 +103,5 @@
               </section>
 
               <div id="bohnanzaDiceLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+              <div id="bohnanzaDiceTooltip" class="bohnanza-dice-tooltip" role="tooltip" hidden></div>
             </template>

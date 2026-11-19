@@ -1,6 +1,110 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-bomb_busters-1 {
 
+.bomb-busters-campaign {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 8px 0;
+}
+
+.bomb-busters-mission-state,
+.bomb-busters-mission-choices,
+.bomb-busters-help-tabs,
+.bomb-busters-help-languages,
+.bomb-busters-number-payment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bomb-busters-mission-state > span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: var(--bomb-raised);
+  color: var(--bomb-ink);
+  font-size: 12px;
+}
+
+.bomb-busters-mission-choices > strong {
+  flex-basis: 100%;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.bomb-busters-mission-choices button,
+.bomb-busters-equipment-card,
+.bomb-busters-help-tabs button,
+.bomb-busters-help-languages button,
+.bomb-busters-number-payment button {
+  min-height: 44px;
+  min-width: 44px;
+  max-width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.bomb-busters-equipment-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  gap: 6px;
+  padding: 7px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.bomb-busters-campaign-selection {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+  border-left: 3px solid var(--bomb-mint);
+  background: var(--bomb-raised);
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.bomb-busters-campaign-selection > span {
+  overflow-wrap: anywhere;
+}
+
+.bomb-busters-campaign-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+}
+
+.bomb-busters-campaign-field select {
+  min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 90px;
+}
+
+.bomb-busters-mission-choices [aria-pressed="true"],
+.bomb-busters-number-payment [aria-pressed="true"] {
+  outline: 2px solid var(--bomb-mint);
+}
+
+.bomb-busters-help-tabs,
+.bomb-busters-help-languages {
+  margin-bottom: 8px;
+}
+
+.bomb-busters-wire-button.is-special-wire {
+  border-style: dashed;
+}
+
 .game-panel[data-game-theme="bomb_busters"] {
   --bomb-ink: #eef6ff;
   --bomb-muted: #a9bad0;

@@ -180,3 +180,19 @@ tests/test_twelve_rivers.py：
 - 交付颜色校验、彩虹孔、光仙子。
 - 计分：珍珠分、7 种外向目标、3 种内向目标、并列不得分、羊驼卡 4 分。
 - 完整 5 轮机器人对局跑通并产生合法 winner。
+
+## 13. 2026-11-19 手机河谷布局优化
+
+- 手机竖屏（宽度不超过 900px）将 SVG 河谷逆时针旋转 90°，改为河流从左向右汇流、海洋和村庄在右侧。费用、区域名与族人文字反向旋转，保持正向阅读。横屏与桌面继续使用原布局，不改变河道拓扑、费用、结算顺序或服务端动作。
+- 默认 Fit 展示完整河谷，不再以填满视窗为由裁掉多数河道。手机地图利用整屏宽度，按纵向比例占用高度；桌面按河谷比例计算高度，减少空白。营地仍为右侧可关闭的 dock，辅助信息和日志保留在版图外。
+- 缩放、拖动与原地确认统一使用旋转后的坐标系；确认条在缩放、平移及视窗变化时跟随目标并约束在地图内。1:1 按 SVG 单位与 CSS 像素一一对应显示，而不是重复 Fit。
+- 放大插槽命中区域，保留拖动阈值、版图内接管手势、移出地图结束拖动及取消后不误点。付费选牌和打开/关闭营地不会取消正在选择的插槽，营地重绘保留滚动位置。触摸交互按钮不弹说明，静态费用、顺位和目标提供悬停/三秒轻触提示。
+- Help 增加中英文版图操作页签，并同步 Explain 的竖屏方向说明。更新游戏脚本、样式、片段及首页清单版本。
+
+### 验收记录
+
+- 新增 `tests/twelve_rivers.browser.cjs`，使用真实游戏生成的公开视图，在 Chrome 中检查 320px、390px、1024px、1440px，覆盖 2/4 人布局、全图插槽与标签边界、页面无横向溢出、付费放置、缩放/Fit/1:1、营地开关、Help/Explain/Escape、河道/海上收珠确认和 Next Round 单次发送。手机另检查横竖屏切换、触摸平移、移出区域抬起、pointercancel 和版图外页面滚动。
+- 四档宽度均保存截图并人工复核。输出位于忽略目录 `tmp/twelve-rivers-ui/`，不纳入补丁。
+- 检查命令：`node --check static/games/twelve_rivers.js`、`node --check tests/twelve_rivers.browser.cjs`、`node scripts/smoke_load.cjs twelve_rivers`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`、`node tests/twelve_rivers.browser.cjs`、`git diff --check`。
+- 结果：上述语法、初始化、13 项前端合同检查及游戏浏览器回归均通过。额外运行 `node tests/game_assets.browser.cjs`，在首页资源断言处失败：旧断言只允许 `shared.js`，当前首页还加载 `shared_help.js` 和 `shared_effects.js`，与本次河谷资源改动无关，未扩大范围修复。
+- 验收范围为桌面 Chrome 和移动端触摸仿真，未检查 iOS Safari、Android 真机或 Windows 字体/Emoji；不能将仿真结果表述为跨平台全面验收。UI 改动不运行游戏逻辑测试，浏览器测试中的 Python 只生成场景。

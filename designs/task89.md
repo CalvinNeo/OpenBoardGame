@@ -62,6 +62,16 @@
 
 `task89.md` 是本游戏后续开发、评审和验收的唯一基准。
 
+### 2.4 2026-11-19 条件卡 UI 优化与验收
+
+- 将玩家区、当前卡、订单、方案的多重外框改成单层玩家卡与分隔行，去除重复 padding；保留真正有语义的豆种 token 与任选骰位虚线框。
+- 完全相同的骰位按允许豆种集合归并计数，数量不改变独立骰子占用；保留 `+`、`/`、换行 `OR`，条件、进度和概率分别固定分区。Cover 展开不再压缩当前卡宽度。
+- 补全订单悬停、键盘聚焦、手机轻点三秒提示；Help 提供中英文、Basics / Orders / Dice & Turn / Harvest / Digital Notes 章节，Esc、焦点约束与 Explain 保留可用。
+- Chrome 实际渲染检查 320、390、1024、1440 CSS px，四档均检查全部 55 种订单的内容边界、列间重叠与页面横向溢出；另检查五人布局、已完成状态、长名字、Cover 展开及刷新保留、Help/Reconnect 同行、Help 语言与章节切换、Tab 焦点约束、Esc、Explain 订单与禁用按钮、选骰/留骰/空白取消、手机五骰单行和触屏滚动不误触提示。
+- 自动检查：`node --check static/games/bohnanza_dice.js`、`node --check tests/bohnanza_dice.browser.cjs`、`node scripts/smoke_load.cjs bohnanza_dice`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names`、`PLAYWRIGHT_MODULE=<existing Playwright installation> node tests/bohnanza_dice.browser.cjs`、`git diff --check`。
+- 通用 `tests/game_assets.browser.cjs` 在第 50 行的既有首页脚本断言失败：它仅允许 `shared.js`，但 HEAD 中首页已经同时引用 `shared_help.js` 与 `shared_effects.js`。本次不修改无关测试；本游戏按需加载和四档屏宽专项浏览器检查通过，但通用加载回归仍未全绿，不宣称全部验收项无例外通过。
+- 遵守本次 UI 范围内 `DEV_GUIDE.md` 的布局、交互、文档与按需加载要求，不改游戏规则或共享样式，保留仓库原有未提交改动。真实 iOS Safari、Windows 字体/Emoji 与完整真人联机整局未实测；本次浏览器检查使用服务端生成的确定性公开局面和前端行动捕获，不将其视为完整联机测试。
+
 ## 3. 商业素材边界与卡组数据门槛
 
 ### 3.1 不可直接复用
@@ -863,12 +873,14 @@ showBohnanzaDiceHeaderActions
 - 名字、是否主动、豆币、`3/5` 式进度。
 - 当前卡 5 行，视觉顺序上方最难、下方最容易；但 DOM 和数据层都标明 `bottom_to_top` 以防反向 bug。
 - 每行保持紧凑，只显示 `#1-#5`、豆种 Emoji/缩写、`+`、同一骰位内的 `/`、整组间的 `OR`、`DONE/NEXT/LATER/PRE` 状态与 `🎲5` 首掷概率；不得在卡面重复堆叠规则说明句。
-- `+` 分隔的骰位必须各自有独立边框，整个 alternative 再用外框成组；含多个允许豆种的单骰位用虚线框和 `/` 表示，避免把“一个骰位多选一”和“多颗骰子同时满足”画成同一种关系。
+- 卡面采用扁平条件清单，玩家区只保留一层外框，当前卡、订单和 alternative 不再重复套框。不同订单用细分隔线区分，`#1–#5` 与状态固定在左，概率固定在右，主要宽度留给条件。
+- 同一 alternative 中完全相同的骰位合并为 `2×` / `3×` 等数量，不合并只是部分重叠的允许豆种集合。`+` 表示同时满足、独立占骰，含多个允许豆种的单骰位只保留一层虚线框与 `/`，`OR` 使用独立换行方案与固定左侧标记，续行不会被误读成新方案。
 - 订单里的豆种 token 同时编码骰子模板：只出现在深骰的豆用深底，只出现在浅骰的豆用浅底，两类骰子都会出现的豆用深浅对半底色；完整含义进入 title、aria-label 和 Explain，不在卡面堆说明句。
 - 当前卡 header 用短标签标明检查上下文：非主动玩家显示 `ROLL`，主动玩家显示 `FIELD×5`，cover 显示 `PRE`。Explain 再说明非主动玩家只用当前掷骰，主动玩家只在五骰全部留入豆田后检查。
-- 已完成行使用明显的绿色双层高亮框 + `DONE`，不把下一张卡当作图片真正盖住文本，以保持可访问性。
+- 已完成行使用绿色底色、左侧色条与 `DONE`，下一条使用金色底色与 `NEXT`，保留文字状态而不只靠颜色，不再使用抢占条件宽度的双层边框。
 - 每名玩家的公开 Cover Card 默认折叠为紧凑的 `Cover card · Show` 行，点击在完整卡面与折叠状态间切换；展开状态在局面刷新时保留，不使用水平卡牌跑马灯。
 - 当前收获价值明确显示为 `Harvest for 🪙×1/2/3`。
+- Cover 展开后始终与当前卡上下排列，避免把两张条件卡挤成半宽；状态刷新保留展开状态。订单支持键盘聚焦、桌面悬停与手机轻点查看完整条件，轻点提示三秒消失且连续点击替换，滚动、Esc、弹窗、状态刷新与离开游戏会清理提示。
 
 ### 13.6 收获决策条
 

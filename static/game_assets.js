@@ -111,10 +111,11 @@ const GAME_ASSETS = {
     "header": "showMaskmenHeaderActions"
   },
   "startups": {
-    "scripts": ["/static/games/startups.js?v=3_h3"],
-    "styles": ["/static/games/startups.css?v=4"],
-    "markup": "/static/games/startups.html?v=3_h3",
+    "scripts": ["/static/games/startups.js?v=4"],
+    "styles": ["/static/games/startups.css?v=5"],
+    "markup": "/static/games/startups.html?v=4",
     "panel": "startupsPanel",
+    "panelTitle": "Startups",
     "header": "showStartupsHeaderActions"
   },
   "skull_king": {
@@ -155,9 +156,9 @@ const GAME_ASSETS = {
     "header": "showTicketToRideHeaderActions"
   },
   "twelve_rivers": {
-    "scripts": ["/static/games/twelve_rivers.js?v=7"],
-    "styles": ["/static/games/twelve_rivers.css?v=5"],
-    "markup": "/static/games/twelve_rivers.html?v=1",
+    "scripts": ["/static/games/twelve_rivers.js?v=8"],
+    "styles": ["/static/games/twelve_rivers.css?v=6"],
+    "markup": "/static/games/twelve_rivers.html?v=2",
     "panel": "twelveRiversPanel",
     "panelTitle": "🏞️ 十二河谷",
     "header": "showTwelveRiversHeaderActions"
@@ -665,12 +666,13 @@ const GAME_ASSETS = {
   },
   "bubble_shooter": {
     "scripts": [
-      "/static/games/bubble_shooter.js?v=10"
+      "/static/games/bubble_shooter.js?v=11"
     ],
-    "styles": ["/static/games/bubble_shooter.css?v=9"],
+    "styles": ["/static/games/bubble_shooter.css?v=10"],
     "panel": "bubbleShooterPanel",
+    "panelTitle": "Bubble Shooter",
     "header": "showBubbleShooterHeaderActions",
-    "markup": "/static/games/bubble_shooter.html?v=6"
+    "markup": "/static/games/bubble_shooter.html?v=7"
   },
   "coyote": {
     "scripts": [
@@ -906,14 +908,14 @@ const GAME_ASSETS = {
   },
   "bohnanza_dice": {
     "scripts": [
-      "/static/games/bohnanza_dice.js?v=app_v8"
+      "/static/games/bohnanza_dice.js?v=app_v9"
     ],
     "styles": [],
     "panel": "bohnanzaDicePanel",
     "panelTitle": "🌱 种豆：骰子游戏",
     "header": "showBohnanzaDiceHeaderActions",
-    "markup": "/static/games/bohnanza_dice.html?v=2",
-    "styleFragments": "/static/games/bohnanza_dice.css?v=2"
+    "markup": "/static/games/bohnanza_dice.html?v=3",
+    "styleFragments": "/static/games/bohnanza_dice.css?v=3"
   },
   "emerald_skulls": {
     "scripts": [
@@ -1065,14 +1067,15 @@ const GAME_ASSETS = {
   },
   "bomb_busters": {
     "scripts": [
-      "/static/games/bomb_busters.js?v=app_v5"
+      "/static/games/bomb_busters_campaign.js?v=1",
+      "/static/games/bomb_busters.js?v=app_v6"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=4",
-    "styleFragments": "/static/games/bomb_busters.css?v=4"
+    "markup": "/static/games/bomb_busters.html?v=5",
+    "styleFragments": "/static/games/bomb_busters.css?v=5"
   },
   "felix": {
     "scripts": [

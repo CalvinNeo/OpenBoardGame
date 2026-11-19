@@ -38,7 +38,7 @@
   const COLLIDE_DIST = 0.94;
   const SNAP_SEARCH_ROWS = 3;
   const SHORT_AIM_UNITS = 2.4;
-  const FLY_MS_PER_UNIT = 58;
+  const FLY_MS_PER_UNIT = 34;
   // A fast opponent can fire several shots between two renders. Replaying a
   // backlog would leave the spectator permanently behind, so past this gap we
   // snap straight to the authoritative board instead.
@@ -73,11 +73,14 @@
   const bsHelpBtn = el("bubbleShooterHelpBtn");
   const bsExplainBtn = el("bubbleShooterExplainBtn");
   const headerActions = el("bubbleShooterHeaderActions");
+  const panel = el(PANEL_ID);
   const board = el("bsBoard");
   const layer = el("bsLayer");
   const aimPath = el("bsAimPath");
   const ghost = el("bsGhost");
   const shooter = el("bsShooter");
+  const launcher = el("bsLauncher");
+  const effects = el("bsEffects");
   const watchTag = el("bsWatchTag");
   const flyEl = el("bsFly");
   const overlay = el("bsOverlay");
@@ -91,6 +94,11 @@
   const aimBtn = el("bsAimBtn");
   const aimCount = el("bsAimCount");
   const angleValue = el("bsAngleValue");
+  const angleInput = el("bsAngleInput");
+  const leftBtn = el("bsLeftBtn");
+  const rightBtn = el("bsRightBtn");
+  const fireBtn = el("bsFireBtn");
+  const soundBtn = el("bsSoundBtn");
   const restartBtn = el("bsRestartBtn");
   const statusBox = el("bsStatus");
   const lastShotBox = el("bsLastShot");
@@ -115,6 +123,18 @@
   let aimFrame = 0;
   let helpWidget = null;
   let explainWidget = null;
+  let replayVersion = 0;
+  let flightActive = false;
+  let pendingAction = null;
+  let actionTimer = 0;
+  let pointerStart = null;
+  let activeRoomId = null;
+  let audioContext = null;
+  let soundEnabled = false;
+
+  try {
+    soundEnabled = window.localStorage.getItem("bsSoundEnabled") === "true";
+  } catch {}
 
   // Each board keeps its own painted snapshot, so switching between players
   // does not throw away what was already on screen for them.
@@ -195,18 +215,14 @@
     if (!view || !pid || pid === activeId) return;
     const boards = view.boards || {};
     if (!boards[pid]) return;
+    cancelReplay();
+    cancelPointer();
     activeId = pid;
     hammerArmed = false;
-    animating = false;
-    pendingView = null;
-    pointerActive = false;
-    activePointerId = null;
-    pendingAim = null;
-    if (flyEl) flyEl.hidden = true;
-    if (board) board.classList.remove("is-shake");
     loadPainted();
     renderChrome(view);
     const snapshot = activeBoard();
+    lastShotId = snapshot ? snapshot.shot_id || 0 : 0;
     paintGrid(snapshot ? snapshot.grid : [], snapshot ? snapshot.top_parity : 0);
     savePainted();
     renderAim();
@@ -379,6 +395,10 @@
       const node = cellEls.get(key);
       if (!node) continue;
       cellEls.delete(key);
+      if (className === "is-fall") {
+        node.style.setProperty("--bs-drift", ((col % 3) - 1) * 5 + "cqw");
+        node.style.animationDelay = Math.min(nodes.length * 12, 90) + "ms";
+      }
       node.classList.add(className);
       nodes.push(node);
     }
@@ -389,33 +409,150 @@
     window.setTimeout(() => nodes.forEach((node) => node.remove()), delay);
   }
 
+  function cancelReplay() {
+    replayVersion += 1;
+    animating = false;
+    flightActive = false;
+    pendingView = null;
+    if (flyEl) flyEl.hidden = true;
+    if (shooter) shooter.hidden = false;
+    effects?.replaceChildren();
+    launcher?.classList.remove("is-firing");
+    board?.classList.remove("is-shake");
+  }
+
+  function effect(className, position, value, lifetime) {
+    if (!effects || reduceMotion.matches || effects.childElementCount >= 96) return null;
+    const node = document.createElement("div");
+    node.className = className + " " + colorClass(value || "blue");
+    place(node, position[0], position[1]);
+    effects.appendChild(node);
+    window.setTimeout(() => node.remove(), lifetime);
+    return node;
+  }
+
+  function burst(position, value, count = 8) {
+    for (let index = 0; index < count; index += 1) {
+      const particle = effect("bs-spark", position, value, 470);
+      if (!particle) break;
+      const direction = (index / count) * Math.PI * 2;
+      const distance = 3 + (index % 3) * 1.4;
+      particle.style.setProperty("--bs-dx", Math.cos(direction) * distance + "cqw");
+      particle.style.setProperty("--bs-dy", Math.sin(direction) * distance + "cqw");
+    }
+  }
+
+  function impact(position, value, kind = "") {
+    effect("bs-impact " + kind, position, value, 460);
+    burst(position, value, kind === "is-wall" ? 5 : 8);
+  }
+
+  function bumpNeighbors(cell) {
+    if (reduceMotion.matches) return;
+    const origin = center(cell[0], cell[1], displayParity);
+    for (const [row, col] of neighbors(cell[0], cell[1], displayParity)) {
+      const node = cellEls.get(cellKey(row, col));
+      if (!node) continue;
+      const position = center(row, col, displayParity);
+      node.style.setProperty("--bs-kick-x", (position[0] - origin[0]) * 1.4 + "cqw");
+      node.style.setProperty("--bs-kick-y", (position[1] - origin[1]) * 1.4 + "cqw");
+      node.classList.add("is-bump");
+      window.setTimeout(() => node.classList.remove("is-bump"), 290);
+    }
+  }
+
+  function launchFeedback(shot) {
+    const radians = (shot.angle * Math.PI) / 180;
+    if (launcher) {
+      launcher.style.setProperty("--bs-angle", shot.angle - 90 + "deg");
+      launcher.style.setProperty("--bs-recoil-x", -Math.sin(radians) * 1.5 + "cqw");
+      launcher.style.setProperty("--bs-recoil-y", Math.cos(radians) * 1.5 + "cqw");
+      launcher.classList.add("is-firing");
+    }
+    const origin = geo().shooter;
+    effect("bs-impact is-wall", [origin[0] + Math.sin(radians), origin[1] - Math.cos(radians)], shot.color, 380);
+    playSound("launch");
+  }
+
+  function ensureAudio() {
+    if (!soundEnabled) return false;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return false;
+    try {
+      if (!audioContext) audioContext = new AudioContextClass();
+      if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function playSound(kind, strength = 1) {
+    if (!soundEnabled || !audioContext || audioContext.state !== "running") return;
+    const tones = {
+      launch: [420, 100, .12],
+      wall: [760, 380, .07],
+      impact: [180, 65, .11],
+      pop: [500 + Math.min(strength, 8) * 55, 350, .16],
+      drop: [320, 65, .24]
+    };
+    const [start, end, duration] = tones[kind];
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const now = audioContext.currentTime;
+    oscillator.type = kind === "impact" ? "sine" : "triangle";
+    oscillator.frequency.setValueAtTime(start, now);
+    oscillator.frequency.exponentialRampToValueAtTime(end, now + duration);
+    gain.gain.setValueAtTime(.001, now);
+    gain.gain.linearRampToValueAtTime(.045, now + .008);
+    gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+  }
+
+  function renderSound() {
+    if (!soundBtn) return;
+    soundBtn.textContent = soundEnabled ? "Sound on" : "Sound off";
+    soundBtn.setAttribute("aria-pressed", String(soundEnabled));
+  }
+
   /* ------------------------------------------------------------------ *
    * Flight animation
    * ------------------------------------------------------------------ */
 
-  function fly(path, value) {
+  function fly(path, value, version) {
     return new Promise((resolve) => {
-      if (!flyEl || !path || path.length === 0 || reduceMotion.matches) {
+      if (!flyEl || !path || path.length < 2 || reduceMotion.matches) {
         resolve();
         return;
       }
       flyEl.className = "bs-fly " + colorClass(value);
       flyEl.textContent = SYMBOLS[value] || "";
+      place(flyEl, path[0][0], path[0][1]);
       flyEl.hidden = false;
 
       const segments = [];
       let total = 0;
-      for (let i = 1; i < path.length; i += 1) {
-        const d = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
-        segments.push(d);
-        total += d;
+      for (let index = 1; index < path.length; index += 1) {
+        const distance = Math.hypot(path[index][0] - path[index - 1][0], path[index][1] - path[index - 1][1]);
+        segments.push(distance);
+        total += distance;
       }
-      const duration = Math.max(170, Math.min(700, total * FLY_MS_PER_UNIT));
+      const duration = Math.max(160, Math.min(540, total * FLY_MS_PER_UNIT));
       const started = performance.now();
+      let lastTrailAt = 0;
+      let bounceIndex = 0;
 
       function frame(now) {
-        const t = Math.min(1, (now - started) / duration);
-        const travelled = t * total;
+        if (version !== replayVersion) {
+          resolve();
+          return;
+        }
+        const progress = reduceMotion.matches ? 1 : Math.min(1, (now - started) / duration);
+        const travelled = progress * total;
         let acc = 0;
         let index = 0;
         while (index < segments.length && acc + segments[index] < travelled) {
@@ -426,8 +563,21 @@
         const to = path[Math.min(index + 1, path.length - 1)];
         const span = segments[index] || 0;
         const local = span ? (travelled - acc) / span : 0;
-        place(flyEl, from[0] + (to[0] - from[0]) * local, from[1] + (to[1] - from[1]) * local);
-        if (t < 1) {
+        const position = [from[0] + (to[0] - from[0]) * local, from[1] + (to[1] - from[1]) * local];
+        const direction = Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI + "deg";
+        place(flyEl, position[0], position[1]);
+        flyEl.style.setProperty("--bs-flight-angle", direction);
+        while (bounceIndex < index && bounceIndex < segments.length - 1) {
+          impact(path[bounceIndex + 1], value, "is-wall");
+          playSound("wall");
+          bounceIndex += 1;
+        }
+        if (now - lastTrailAt >= 28 && progress < 1) {
+          const trail = effect("bs-trail", position, value, 200);
+          trail?.style.setProperty("--bs-flight-angle", direction);
+          lastTrailAt = now;
+        }
+        if (progress < 1) {
           requestAnimationFrame(frame);
         } else {
           flyEl.hidden = true;
@@ -443,56 +593,74 @@
    * ------------------------------------------------------------------ */
 
   async function replay(next, snapshot, shot) {
+    const version = ++replayVersion;
     animating = true;
-    renderChrome(next);
-    const startedFor = activeId;
-
-    if (shot.kind === "shoot") {
-      await fly(shot.path, shot.color);
-      if (activeId !== startedFor) {
-        animating = false;
-        return;
-      }
-      if (shot.cell) {
-        addBubble(shot.cell[0], shot.cell[1], shot.color, displayParity, "is-landing");
-      }
-      await wait(130);
-    }
-
-    if (activeId !== startedFor) {
-      animating = false;
-      return;
-    }
-
-    const popped = (shot.popped || []).concat(shot.exploded || []);
-    const poppedNodes = retire(popped, "is-pop");
-    const droppedNodes = retire(shot.dropped || [], "is-fall");
-    dropNodes(poppedNodes, 320);
-    dropNodes(droppedNodes, 600);
-
-    await wait(shot.pushed ? 520 : 470);
-
-    if (activeId !== startedFor) {
-      animating = false;
-      return;
-    }
-
-    if (shot.pushed && board) {
-      board.classList.add("is-shake");
-      window.setTimeout(() => board.classList.remove("is-shake"), 300);
-    }
-
-    lastShotId = shot.id;
-    paintGrid(snapshot.grid, snapshot.top_parity);
-    savePainted();
-    animating = false;
+    flightActive = shot.kind === "shoot";
+    cancelPointer();
     renderChrome(next);
     renderAim();
 
+    if (shot.kind === "shoot") {
+      launchFeedback(shot);
+      await fly(shot.path, shot.color, version);
+      if (version !== replayVersion) return;
+      flightActive = false;
+      renderShooter();
+      if (shot.cell) {
+        addBubble(shot.cell[0], shot.cell[1], shot.color, displayParity, "is-landing");
+        impact(center(shot.cell[0], shot.cell[1], displayParity), shot.color,
+          shot.color === "bomb" ? "is-blast" : "");
+        bumpNeighbors(shot.cell);
+      }
+      playSound("impact");
+      await wait(85);
+    }
+
+    if (version !== replayVersion) return;
+
+    const popped = (shot.popped || []).concat(shot.exploded || []);
+    for (const [row, col] of popped.slice(0, 14)) {
+      const value = displayGrid?.[row]?.[col] || shot.color;
+      burst(center(row, col, displayParity), value, 5);
+    }
+    if (shot.kind === "hammer" && shot.cell) {
+      impact(center(shot.cell[0], shot.cell[1], displayParity), "yellow");
+      bumpNeighbors(shot.cell);
+    }
+    if (popped.length) playSound("pop", popped.length);
+    if (shot.gain) {
+      const badge = effect("bs-score-float", [geo().board_width / 2, geo().death_line_y - 1.2], "green", 900);
+      if (badge) badge.textContent = "+" + shot.gain + (shot.combo > 1 ? " · ×" + Math.min(shot.combo, 5) : "");
+    }
+    const poppedNodes = retire(popped, "is-pop");
+    const droppedNodes = retire(shot.dropped || [], "is-fall");
+    dropNodes(poppedNodes, 320);
+    dropNodes(droppedNodes, 710);
+    if (droppedNodes.length) playSound("drop");
+
+    await wait(droppedNodes.length ? 700 : poppedNodes.length ? 300 : 180);
+
+    if (version !== replayVersion) return;
+
+    if (shot.pushed && board) {
+      board.classList.add("is-shake");
+      window.setTimeout(() => {
+        if (version === replayVersion) board.classList.remove("is-shake");
+      }, 300);
+    }
+
+    lastShotId = shot.id;
+    launcher?.classList.remove("is-firing");
+    paintGrid(snapshot.grid, snapshot.top_parity);
+    savePainted();
+    animating = false;
     if (pendingView) {
       const queued = pendingView;
       pendingView = null;
       applyView(queued);
+    } else {
+      renderChrome(next);
+      renderAim();
     }
   }
 
@@ -502,8 +670,11 @@
 
   function renderAim() {
     if (!view || !aimPath) return;
-    if (shooter) shooter.style.setProperty("--bs-angle", angle - 90 + "deg");
-    if (!canAct() || !displayGrid || !displayGrid.length) {
+    if (launcher && !animating) {
+      const direction = isMine() ? angle : activeBoard()?.last_shot?.angle || 0;
+      launcher.style.setProperty("--bs-angle", direction - 90 + "deg");
+    }
+    if (!canAct() || hammerArmed || !displayGrid || !displayGrid.length) {
       aimPath.setAttribute("points", "");
       if (ghost) ghost.hidden = true;
       return;
@@ -558,7 +729,7 @@
 
   // You can only aim, shoot and spend items on your own board.
   function canAct() {
-    return isMine() && can("shoot") && !animating;
+    return isMine() && can("shoot") && !animating && !pendingAction && !explainWidget?.isActive() && !helpWidget?.isOpen();
   }
 
   function span(className, text) {
@@ -626,6 +797,7 @@
     const value = snapshot && snapshot.queue ? snapshot.queue[0] : null;
     shooter.className = "bs-shooter" + (value ? " " + colorClass(value) : "");
     shooter.textContent = value ? SYMBOLS[value] || "" : "";
+    shooter.hidden = flightActive;
   }
 
   function renderQueue() {
@@ -677,9 +849,25 @@
 
   function renderControls() {
     if (angleValue) {
+      const formatted = Number(angle.toFixed(1));
       angleValue.textContent = isMine()
-        ? (angle > 0 ? "+" : "") + angle.toFixed(0) + "°"
+        ? (angle > 0 ? "+" : "") + formatted + "°"
         : "—";
+    }
+    const playable = canAct() && !hammerArmed;
+    if (angleInput) {
+      angleInput.min = String(-geo().max_angle);
+      angleInput.max = String(geo().max_angle);
+      angleInput.value = String(angle);
+      angleInput.disabled = !playable;
+      angleInput.setAttribute("aria-valuetext", isMine() ? angleValue.textContent : "Watching");
+    }
+    if (leftBtn) leftBtn.disabled = !playable || angle <= -geo().max_angle;
+    if (rightBtn) rightBtn.disabled = !playable || angle >= geo().max_angle;
+    if (fireBtn) {
+      fireBtn.disabled = !playable;
+      const label = fireBtn.querySelector("span");
+      if (label) label.textContent = !isMine() ? "Watching" : hammerArmed ? "Pick target" : animating || pendingAction ? "In flight" : "Fire";
     }
     if (restartBtn) restartBtn.disabled = false;
   }
@@ -698,16 +886,16 @@
         : "👁 Watching " + playerLabel(activeId) + ". Their shots replay here as they happen.";
     } else if (snapshot && snapshot.board_out) {
       text = "💥 Your stack crossed the line. Tap anyone above to watch them, or restart the match.";
-    } else if (animating) {
-      text = "…";
+    } else if (animating || pendingAction) {
+      text = "Resolving shot…";
     } else if (hammerArmed) {
       text = "🔨 Hammer armed — tap a bubble to smash it.";
     } else if (snapshot && snapshot.aim_left > 0) {
       text = "🎯 Full trajectory on for " + snapshot.aim_left + " more shot(s).";
     } else if (snapshot && snapshot.push_interval > 0) {
-      text = "Ceiling drops in " + snapshot.push_countdown + " shot(s). Move to aim, click to shoot.";
+      text = "Ceiling drops in " + snapshot.push_countdown + " shot(s).";
     } else {
-      text = "Move the pointer over the board to aim, click to shoot.";
+      text = "Drag to aim · release or press Fire to shoot.";
     }
     statusBox.textContent = text;
   }
@@ -777,7 +965,7 @@
     const snapshot = activeBoard();
     const out = Boolean(snapshot && snapshot.board_out);
     // Never cover somebody else's board with your own result panel.
-    const show = Boolean(view.game_over || (isMine() && out));
+    const show = !animating && Boolean(view.game_over || (isMine() && out));
     overlay.hidden = !show;
     if (!show) {
       overlay.replaceChildren();
@@ -836,8 +1024,14 @@
    * ------------------------------------------------------------------ */
 
   function applyView(next) {
+    const ownBoard = boardOf(next, next.you);
+    if (pendingAction && ((ownBoard?.shot_id || 0) !== pendingAction.shotId || next.game_over)) {
+      clearPendingAction();
+    }
     const boards = next.boards || {};
     if (!activeId || !boards[activeId]) {
+      cancelReplay();
+      cancelPointer();
       const fallback = next.you && boards[next.you]
         ? next.you
         : (next.ranking && next.ranking[0] ? next.ranking[0].player_id : next.you);
@@ -850,8 +1044,14 @@
     const shot = snapshot ? snapshot.last_shot : null;
     const shotId = snapshot ? snapshot.shot_id || 0 : 0;
 
-    if (shotId < lastShotId) {
+    const previousShotId = activeBoard()?.shot_id || 0;
+    if (shotId < lastShotId || shotId < previousShotId) {
       // A restart rewound the counter for this board.
+      cancelReplay();
+      cancelPointer();
+      clearPendingAction();
+      painted.clear();
+      hammerArmed = false;
       displayGrid = null;
       lastShotId = 0;
     }
@@ -859,7 +1059,14 @@
     const gap = shot ? shot.id - lastShotId : 0;
     const fresh = Boolean(shot && displayGrid && gap > 0 && gap <= MAX_REPLAY_GAP);
 
+    if (animating && gap <= MAX_REPLAY_GAP) {
+      pendingView = next;
+      renderChrome(next);
+      return;
+    }
+
     if (!fresh) {
+      if (animating) cancelReplay();
       lastShotId = shotId;
       pendingView = null;
       animating = false;
@@ -867,12 +1074,6 @@
       paintGrid(snapshot ? snapshot.grid : [], snapshot ? snapshot.top_parity : 0);
       savePainted();
       renderAim();
-      return;
-    }
-
-    if (animating) {
-      pendingView = next;
-      renderChrome(next);
       return;
     }
 
@@ -891,6 +1092,18 @@
   function renderGameState(data) {
     const next = data && data.view;
     if (!next) return;
+    if (activeRoomId && data.room_id && activeRoomId !== data.room_id) {
+      cancelReplay();
+      cancelPointer();
+      clearPendingAction();
+      painted.clear();
+      activeId = null;
+      displayGrid = null;
+      lastShotId = 0;
+      hammerArmed = false;
+      angle = 0;
+    }
+    if (data.room_id) activeRoomId = data.room_id;
     if (typeof currentGameType !== "undefined" && currentGameType !== GAME_ID) {
       currentGameType = GAME_ID;
       setGamePanelVisibility(GAME_ID);
@@ -904,8 +1117,11 @@
       explainWidget?.exit();
       helpWidget?.close();
       hammerArmed = false;
-      pointerActive = false;
-      activePointerId = null;
+      cancelPointer();
+      cancelReplay();
+      clearPendingAction();
+      if (tipBox) tipBox.hidden = true;
+      audioContext?.suspend().catch(() => {});
     }
   }
 
@@ -921,7 +1137,48 @@
     tipBox.style.top = "84px";
     tipBox.style.transform = "translateX(-50%)";
     window.clearTimeout(toast.timer);
-    toast.timer = window.setTimeout(() => { tipBox.hidden = true; }, 2200);
+    toast.timer = window.setTimeout(() => { tipBox.hidden = true; }, 3000);
+  }
+
+  function refreshInput() {
+    renderItems();
+    renderControls();
+    renderStatus();
+    renderAim();
+  }
+
+  function clearPendingAction() {
+    pendingAction = null;
+    window.clearTimeout(actionTimer);
+    actionTimer = 0;
+  }
+
+  function requestBoardAction(action) {
+    if (!canAct()) return;
+    if (typeof ensureRoomConnection === "function" && !ensureRoomConnection()) return;
+    ensureAudio();
+    pendingAction = { shotId: boardOf(view, view.you)?.shot_id || 0 };
+    cancelPointer();
+    refreshInput();
+    actionTimer = window.setTimeout(() => {
+      clearPendingAction();
+      refreshInput();
+      toast("No update yet. Reconnect if the shot did not resolve.");
+    }, 5000);
+    sendAction(action);
+  }
+
+  function cancelPointer() {
+    const pointerId = activePointerId;
+    pointerActive = false;
+    activePointerId = null;
+    pointerStart = null;
+    pendingAim = null;
+    if (aimFrame) cancelAnimationFrame(aimFrame);
+    aimFrame = 0;
+    if (pointerId !== null && board?.hasPointerCapture?.(pointerId)) {
+      board.releasePointerCapture(pointerId);
+    }
   }
 
   function clampAngle(value) {
@@ -942,6 +1199,7 @@
     const g = geo();
     const dx = px - g.shooter[0];
     const dy = py - g.shooter[1];
+    if (py >= g.shooter[1] - .15) return;
     angle = clampAngle((Math.atan2(dx, -dy) * 180) / Math.PI);
     renderControls();
     renderAim();
@@ -957,7 +1215,10 @@
     if (aimFrame) return;
     aimFrame = requestAnimationFrame(() => {
       aimFrame = 0;
-      if (!pendingAim) return;
+      if (!pendingAim || !canAct() || hammerArmed) {
+        pendingAim = null;
+        return;
+      }
       applyAim(pendingAim[0], pendingAim[1]);
       pendingAim = null;
     });
@@ -975,7 +1236,7 @@
 
   function onBoardChrome(event) {
     const target = event.target;
-    return target instanceof Element && Boolean(target.closest(".bs-board-items"));
+    return target instanceof Element && Boolean(target.closest(".bs-overlay"));
   }
 
   function insideBoard(event) {
@@ -1005,8 +1266,9 @@
   }
 
   function shoot() {
-    if (!canAct()) return;
-    sendAction({ type: "shoot", angle: Math.round(angle * 100) / 100 });
+    if (!canAct() || hammerArmed) return;
+    flushAim();
+    requestBoardAction({ type: "shoot", angle: Math.round(angle * 100) / 100 });
   }
 
   function useHammerAt(event) {
@@ -1024,9 +1286,7 @@
       return;
     }
     hammerArmed = false;
-    renderItems();
-    renderStatus();
-    sendAction({ type: "use_item", item: "hammer", row, col });
+    requestBoardAction({ type: "use_item", item: "hammer", row, col });
   }
 
   if (board) {
@@ -1036,7 +1296,11 @@
     board.addEventListener("pointermove", (event) => {
       if (!view || onBoardChrome(event)) return;
       if (event.pointerType !== "mouse" && !pointerActive) return;
-      if (!canAct()) return;
+      if (pointerActive && event.pointerId !== activePointerId) return;
+      if (pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 10) {
+        pointerStart.moved = true;
+      }
+      if (!canAct() || hammerArmed) return;
       scheduleAim(event);
     });
 
@@ -1044,40 +1308,49 @@
       if (!view || !event.isPrimary) return;
       if (event.button !== undefined && event.button !== 0) return;
       if (onBoardChrome(event)) return;
-      if (!isMine()) return;
+      if (!canAct()) return;
+      cancelPointer();
       pointerActive = true;
       activePointerId = event.pointerId;
+      pointerStart = { x: event.clientX, y: event.clientY, moved: false };
       board.setPointerCapture?.(event.pointerId);
-      if (hammerArmed) {
-        pointerActive = false;
-        activePointerId = null;
-        useHammerAt(event);
-        return;
-      }
-      if (canAct()) scheduleAim(event);
+      board.focus({ preventScroll: true });
+      ensureAudio();
+      if (!hammerArmed) scheduleAim(event);
       event.preventDefault();
     });
 
     board.addEventListener("pointerup", (event) => {
       if (!pointerActive || event.pointerId !== activePointerId) return;
-      if (onBoardChrome(event)) return;
-      pointerActive = false;
-      activePointerId = null;
-      board.releasePointerCapture?.(event.pointerId);
-      if (hammerArmed || !insideBoard(event) || !canAct()) return;
+      const wasDragged = pointerStart?.moved
+        || Math.hypot(event.clientX - (pointerStart?.x || 0), event.clientY - (pointerStart?.y || 0)) > 10;
+      const inside = insideBoard(event);
+      cancelPointer();
+      if (onBoardChrome(event) || !inside || !canAct()) return;
+      if (hammerArmed) {
+        if (!wasDragged) useHammerAt(event);
+        return;
+      }
+      if (boardPoint(event)[1] >= geo().shooter[1] - .15) return;
       scheduleAim(event);
       flushAim();
       shoot();
     });
 
-    board.addEventListener("pointercancel", () => {
-      pointerActive = false;
-      activePointerId = null;
-    });
+    board.addEventListener("pointercancel", cancelPointer);
+    board.addEventListener("lostpointercapture", cancelPointer);
 
     board.addEventListener("keydown", (event) => {
       if (!view) return;
+      if (event.key === "Escape") {
+        cancelPointer();
+        hammerArmed = false;
+        refreshInput();
+        return;
+      }
+      if (event.target !== board) return;
       if (!canAct()) return;
+      if (hammerArmed) return;
       const step = event.shiftKey ? 0.5 : 2;
       if (event.key === "ArrowLeft") {
         angle = clampAngle(angle - step);
@@ -1090,12 +1363,8 @@
         renderAim();
         event.preventDefault();
       } else if (event.key === " " || event.key === "Enter") {
-        shoot();
+        if (!event.repeat) shoot();
         event.preventDefault();
-      } else if (event.key === "Escape" && hammerArmed) {
-        hammerArmed = false;
-        renderItems();
-        renderStatus();
       }
     });
   }
@@ -1108,8 +1377,8 @@
       return;
     }
     hammerArmed = !hammerArmed;
-    renderItems();
-    renderStatus();
+    cancelPointer();
+    refreshInput();
   });
 
   aimBtn?.addEventListener("click", () => {
@@ -1119,12 +1388,78 @@
       toast("No aim charges left.");
       return;
     }
-    sendAction({ type: "use_item", item: "aim" });
+    hammerArmed = false;
+    requestBoardAction({ type: "use_item", item: "aim" });
   });
+
+  function nudge(direction) {
+    if (!canAct() || hammerArmed) return;
+    cancelPointer();
+    angle = clampAngle(angle + direction * .5);
+    renderControls();
+    renderAim();
+  }
+
+  leftBtn?.addEventListener("click", () => nudge(-1));
+  rightBtn?.addEventListener("click", () => nudge(1));
+  fireBtn?.addEventListener("click", shoot);
+  angleInput?.addEventListener("input", () => {
+    if (!canAct() || hammerArmed) {
+      renderControls();
+      return;
+    }
+    cancelPointer();
+    angle = clampAngle(Number(angleInput.value));
+    renderControls();
+    renderAim();
+  });
+
+  soundBtn?.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    if (soundEnabled && !ensureAudio()) {
+      soundEnabled = false;
+      toast("Sound is not available in this browser.");
+    }
+    if (!soundEnabled) audioContext?.suspend().catch(() => {});
+    try { window.localStorage.setItem("bsSoundEnabled", String(soundEnabled)); } catch {}
+    renderSound();
+  });
+  launcher?.addEventListener("animationend", () => launcher.classList.remove("is-firing"));
+
+  panel?.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    cancelPointer();
+    hammerArmed = false;
+    refreshInput();
+  });
+  window.addEventListener("blur", cancelPointer);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      cancelPointer();
+      audioContext?.suspend().catch(() => {});
+    }
+  });
+
+  if (typeof socket !== "undefined") {
+    socket.on("system:error", () => {
+      if (!pendingAction) return;
+      clearPendingAction();
+      refreshInput();
+    });
+    socket.on("disconnect", () => {
+      clearPendingAction();
+      cancelPointer();
+      if (view) refreshInput();
+    });
+  }
+
+  renderSound();
 
   backBtn?.addEventListener("click", () => switchTo(view?.you));
 
   restartBtn?.addEventListener("click", () => {
+    cancelPointer();
+    hammerArmed = false;
     sendAction({ type: "new_game" });
   });
 
@@ -1141,8 +1476,8 @@
         en: "Everybody plays their own board at the same time. Once every board is out, the highest score wins and equal scores share the win."
       },
       turn: {
-        zh: "鼠标移到棋盘上就跟着瞄准，点击发射。触摸时按住拖动瞄准，松手发射，在棋盘外松手可以取消。",
-        en: "A mouse aims as it moves over the board and fires on click. On touch, press and drag to aim, release to fire, or release outside the board to cancel."
+        zh: "鼠标移到棋盘上瞄准，点击发射。触摸时拖动瞄准，棋盘内松手发射，移出棋盘松手取消。也可以拖动角度滑杆或点左右微调，再按 Fire 发射。",
+        en: "Move over the board to aim and click to fire. On touch, drag to aim and release inside the board to fire, or outside to cancel. You can also adjust the angle with the slider or arrow buttons, then press Fire."
       },
       key: {
         zh: "所有人用同一个种子，所以地图、泡泡序列和天花板下压完全一致，比的是谁打得更好。关键是把泡泡送到同色堆里凑够三颗，让上方失去连接的泡泡整片掉下来。",
@@ -1150,6 +1485,22 @@
       }
     },
     sections: [
+      {
+        id: "controls",
+        label: { zh: "操作与反馈", en: "Controls" },
+        html: {
+          zh: "<p>Fine aim 滑杆只负责瞄准，不会在松手时发射。左右按钮每次微调 0.5°，适合手机上精确打反弹球。调整后点 Fire 发射。</p>"
+            + "<p>键盘聚焦棋盘后，左右方向键每次调整 2°，按住 Shift 时调整 0.5°，Space 或 Enter 发射。按 Escape 取消拖动或收起待用的锤子(🔨)。</p>"
+            + "<p>飞行、墙面反弹和命中反馈都重放服务器确认的轨迹，不改变命中判定或计分。等待结果时发射与道具会暂时锁定，防止误连发。</p>"
+            + "<p>Sound 可开启合成音效，默认关闭。系统启用减少动态效果时，不播放飞行、震动和粒子动画。</p>"
+            + "<p>统计中的总分(⭐)、波次(♾️)、连击(🔥)、下压倒计时(⬇️)和发射次数(🎯)都对应当前观看的棋盘。普通泡泡的颜色符号是红色(✕)、橙色(▲)、黄色(★)、绿色(✚)、蓝色(●)和紫色(◆)。</p>",
+          en: "<p>The Fine aim slider only aims and never fires on release. Each arrow button adjusts by 0.5°, making bank shots easier on a phone. Press Fire when ready.</p>"
+            + "<p>Focus the board to aim with the left and right keys in 2° steps, or 0.5° while holding Shift. Space or Enter fires. Escape cancels a drag or disarms the hammer(🔨).</p>"
+            + "<p>Flight, wall bounces and impact effects replay the server-confirmed path without changing collisions or scoring. Shooting and items briefly lock while awaiting the result to prevent accidental double shots.</p>"
+            + "<p>Sound enables synthesized effects and is off by default. The system reduced-motion setting skips flight, shake and particle animations.</p>"
+            + "<p>Score(⭐), wave(♾️), combo(🔥), push countdown(⬇️) and shot count(🎯) describe the board you are watching. Bubble symbols identify red(✕), orange(▲), yellow(★), green(✚), blue(●) and purple(◆) without relying on colour alone.</p>"
+        }
+      },
       {
         id: "flow",
         label: { zh: "消除与掉落", en: "Clearing and drops" },
@@ -1202,11 +1553,11 @@
         html: {
           zh: "<p>锤子(🔨)：按一下进入待发状态，再点棋盘上任意一颗泡泡直接敲掉它，上方失去连接的泡泡会跟着掉下来。</p>"
             + "<p>瞄准线(🎯)：按一下之后，接下来三发都会显示完整反弹轨迹和落点虚线圈。</p>"
-            + "<p>道具按钮就在棋盘左下角，和棋盘在同一屏内，所以锤子可以按完立刻点目标。</p>"
+            + "<p>道具按钮在棋盘旁边，手机端紧贴棋盘下方。按锤子后轻点目标，拖动或移出棋盘松手都不会消耗锤子。</p>"
             + "<p>次数在开局时发放，用完不再补充。</p>",
           en: "<p>Hammer(🔨): press it to arm, then tap any bubble on the board to smash it outright, and anything above that loses its anchor falls too.</p>"
             + "<p>Aim line(🎯): press it and the next three shots show the full bouncing trajectory plus a dashed circle on the landing cell.</p>"
-            + "<p>The item chips sit in the bottom left corner of the board, on the same screen as the board, so the hammer is always one tap from its target.</p>"
+            + "<p>Items sit beside the board, or directly below it on phones. After arming the hammer, tap a target. Dragging or releasing outside the board never spends a charge.</p>"
             + "<p>Charges are granted at the start of the match and never come back.</p>"
         }
       },
@@ -1243,8 +1594,8 @@
       en: "The shooter. The barrel points at the current angle, and it fires the first bubble shown in the queue."
     },
     items: {
-      zh: "道具按钮，就在棋盘左下角，和目标泡泡在同一屏内。观战时会显示被观看者的剩余次数但不能点击。",
-      en: "The item chips, in the bottom left of the board so they share the screen with their targets. While spectating they show the watched player's charges but cannot be pressed."
+      zh: "道具在棋盘旁边，手机端紧贴棋盘下方，不遮挡瞄准与发射区域。观战时显示对方剩余次数，但不能使用。",
+      en: "Items sit beside the board, or directly below it on phones, without covering the aiming area. While spectating they show the watched player's charges but cannot be used."
     },
     hammer: {
       zh: "锤子(🔨)。按一下进入待发状态，再点棋盘上任意一颗泡泡把它直接敲掉，上方失去连接的泡泡会跟着掉落。",
@@ -1267,8 +1618,20 @@
       en: "The firing queue. The large one is loaded now and the two smaller ones come next, and they may include bombs(💣) and rainbows(🌈)."
     },
     angle: {
-      zh: "当前角度读数。0° 是正上方，正数偏右，负数偏左。角度完全由指针在棋盘上的位置决定，观战时显示为一条横线。",
-      en: "The current angle readout. 0° is straight up, positive angles lean right and negative angles lean left. The angle follows the pointer on the board, and shows a dash while spectating."
+      zh: "0° 朝正上方，正数偏右，负数偏左。可移动棋盘上的指针瞄准，也可用滑杆设置角度，滑杆松手不会发射。观战时不能调整。",
+      en: "0° aims straight up, positive angles right and negative angles left. Aim on the board or set the angle with the slider, which never fires on release. Aiming is disabled while spectating."
+    },
+    nudge: {
+      zh: "每次向左或向右微调 0.5°，最大角度为 ±82°。微调不会发射，调整完点 Fire。",
+      en: "Adjust left or right by 0.5°, up to ±82°. Fine adjustments never fire a shot. Press Fire when ready."
+    },
+    fire: {
+      zh: "按当前角度发射已装填的泡泡。请求等待或飞行动画期间不能重复发射，观战和锤子待用时也不能发射。",
+      en: "Fire the loaded bubble at the current angle. Repeat shots are blocked while awaiting the server or replaying a shot, while spectating and while the hammer is armed."
+    },
+    sound: {
+      zh: "开启或关闭本机合成的发射、反弹、命中和消球音效，默认关闭。这个设置不会影响其他玩家。",
+      en: "Toggle locally synthesized launch, bounce, impact and pop sounds. Off by default. This setting never changes another player's sound."
     },
     restart: {
       zh: "重开整场比赛。所有人的棋盘都会用同一个种子重新开始。",
@@ -1289,13 +1652,53 @@
       explanations: EXPLAIN,
       button: bsExplainBtn,
       root: () => document.getElementById(PANEL_ID),
-      bypass: ["#bubbleShooterHelpBtn", "#bubbleShooterExplainBtn"]
+      bypass: ["#bubbleShooterHelpBtn", "#bubbleShooterExplainBtn"],
+      onChange: () => {
+        cancelPointer();
+        if (view) refreshInput();
+      }
     });
     bsHelpBtn?.addEventListener("click", () => {
       explainWidget?.exit();
+      cancelPointer();
       helpWidget.open();
+      if (view) refreshInput();
+      helpWidget.element()?.addEventListener("close", () => {
+        if (view) refreshInput();
+      }, { once: true });
     });
     bsExplainBtn?.addEventListener("click", () => explainWidget?.toggle());
+    const description = (node) => {
+      const language = window.obgHelpLang?.() || "en";
+      return EXPLAIN[node.dataset.bsExplain]?.[language] || "";
+    };
+    const passiveTarget = (target) => {
+      if (!(target instanceof Element) || target.closest("button, input, label, summary, #bsBoard")) return null;
+      const node = target.closest("[data-bs-explain]");
+      return node && !node.querySelector("button, input") ? node : null;
+    };
+    panel?.addEventListener("pointerover", (event) => {
+      if (event.pointerType !== "mouse") return;
+      const node = passiveTarget(event.target);
+      if (node) node.title = description(node);
+    });
+    let tipGesture = null;
+    panel?.addEventListener("pointerdown", (event) => {
+      const target = passiveTarget(event.target);
+      tipGesture = event.pointerType !== "mouse" && target
+        ? { target, pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false }
+        : null;
+    });
+    panel?.addEventListener("pointermove", (event) => {
+      if (tipGesture && Math.hypot(event.clientX - tipGesture.x, event.clientY - tipGesture.y) > 10) tipGesture.moved = true;
+    });
+    panel?.addEventListener("pointerup", (event) => {
+      const gesture = tipGesture;
+      tipGesture = null;
+      if (!gesture || gesture.pointerId !== event.pointerId || gesture.moved || explainWidget?.isActive()) return;
+      if (passiveTarget(event.target) === gesture.target) toast(description(gesture.target));
+    });
+    panel?.addEventListener("pointercancel", () => { tipGesture = null; });
   }
 
   if (document.readyState === "loading") {

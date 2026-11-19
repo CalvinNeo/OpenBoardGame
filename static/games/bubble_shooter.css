@@ -3,11 +3,8 @@
   --bs-muted: #5b7288;
   --bs-line: #d3e0ea;
   --bs-paper: #f6fafe;
-  --bs-accent: #2563eb;
-  /* Everything that shares the viewport with the board: the shared room panel
-     padding, its header, and the edge scoreboard. The board is height-capped
-     by this, so keeping it honest is what lets the board grow. */
-  --bs-chrome: 150px;
+  --bs-accent: #087f8c;
+  --bs-chrome: 165px;
   color: var(--bs-ink);
   max-width: 1360px;
   margin: 0 auto;
@@ -18,6 +15,15 @@
 .bs-game [hidden], .bs-game .hidden { display: none !important; }
 .bs-game h2, .bs-game h3, .bs-game p { margin: 0; }
 .bs-game button { font: inherit; min-width: 0; max-width: 100%; line-height: 1.25; }
+.bs-game button:focus-visible, .bs-game input:focus-visible, .bs-game summary:focus-visible {
+  outline: 3px solid #13a6b5;
+  outline-offset: 3px;
+}
+.bs-game button:disabled { cursor: not-allowed; opacity: .48; }
+.game-panel[data-game-theme="bubble_shooter"] > .panel-header { flex-wrap: nowrap; }
+.game-panel[data-game-theme="bubble_shooter"] .game-panel-title { flex: 1; flex-wrap: nowrap; overflow: hidden; }
+.game-panel[data-game-theme="bubble_shooter"] .game-panel-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-panel[data-game-theme="bubble_shooter"] .panel-header-actions { flex-wrap: nowrap; flex-shrink: 0; }
 
 /* ---------- edge scoreboard ----------
    Everyone's score lives here, in the thin strip along the top edge, so the
@@ -27,11 +33,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px;
-  margin-bottom: 10px;
-  border: 1px solid var(--bs-line);
-  border-radius: 10px;
-  background: #eef3f8;
+  padding: 4px 0 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--bs-line);
   min-width: 0;
 }
 
@@ -93,18 +97,21 @@
 .bs-score-name { font-weight: 700; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; }
 .bs-score-value { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--bs-ink); }
 .bs-score-meta { font-size: 10px; opacity: .75; }
-.bs-score-empty { font-size: 12px; color: var(--bs-muted); }
+.bs-score-empty { font-size: 12px; color: var(--bs-muted); align-self: center; white-space: nowrap; }
 
 /* ---------- layout ---------- */
 
 .bs-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 252px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 224px;
+  grid-template-areas: "stage run" "stage controls";
+  grid-template-rows: auto 1fr;
+  gap: 18px;
   align-items: start;
 }
 
-.bs-stage { display: flex; justify-content: center; min-width: 0; }
+.bs-stage { grid-area: stage; display: flex; justify-content: center; min-width: 0; }
+.bs-run { grid-area: run; min-width: 0; padding-bottom: 14px; border-bottom: 1px solid var(--bs-line); }
 
 /* ---------- board ---------- */
 
@@ -112,7 +119,7 @@
   position: relative;
   width: min(100%, calc((100dvh - var(--bs-chrome)) * 11 / 14));
   aspect-ratio: 11 / 14;
-  border-radius: 16px;
+  border-radius: 18px;
   overflow: hidden;
   container-type: size;
   touch-action: none;
@@ -120,7 +127,18 @@
   -webkit-user-select: none;
   cursor: crosshair;
   outline-offset: 3px;
-  box-shadow: 0 14px 34px #0b223a2e, inset 0 0 0 1px #ffffff26;
+  isolation: isolate;
+  box-shadow: 0 12px 30px #0b223a24, inset 0 0 0 1px #8de7f333;
+}
+
+.bs-board::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid #8de7f34d;
+  border-radius: inherit;
+  box-shadow: inset 3px 0 8px #5bd7f226, inset -3px 0 8px #5bd7f226;
+  pointer-events: none;
 }
 
 .bs-board.is-hammer { cursor: cell; }
@@ -149,27 +167,28 @@
   pointer-events: none;
   box-shadow: 0 .3cqw .9cqw #04101f66;
 }
-.bs-board.is-shake { animation: bs-shake 280ms ease-in-out; }
+.bs-board.is-shake .bs-layer { animation: bs-shake 280ms ease-in-out; }
 
 @keyframes bs-shake {
   0%, 100% { transform: translateY(0); }
-  35% { transform: translateY(1.4%); }
+  35% { transform: translateY(.7%); }
   70% { transform: translateY(-0.5%); }
 }
 
 .bs-backdrop {
   position: absolute;
   inset: 0;
-  background: radial-gradient(120% 70% at 50% -10%, #2b5f9e 0%, #16345c 45%, #0d2140 100%);
+  background:
+    radial-gradient(ellipse at 50% 105%, #1b647c99, transparent 45%),
+    radial-gradient(ellipse at 25% 0%, #264e81, transparent 65%),
+    linear-gradient(160deg, #142d51, #081a31 70%, #0c2840);
 }
 
 .bs-backdrop::after {
   content: "";
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(#ffffff0d 1px, transparent 1px),
-    linear-gradient(90deg, #ffffff0d 1px, transparent 1px);
+  background-image: radial-gradient(circle, #a8d5ed26 .15cqw, transparent .2cqw);
   background-size: 9.0909% 6.186%;
 }
 
@@ -192,25 +211,41 @@
   color: #ffffffd9;
   text-shadow: 0 1px 2px #0006;
   box-shadow:
-    inset 0 -0.5cqw 0.9cqw #00000038,
-    inset 0 0.45cqw 0.7cqw #ffffff73,
-    0 0.25cqw 0.6cqw #04102055;
+    inset 0 -.7cqw 1.1cqw #00000048,
+    inset 0 .45cqw .7cqw #ffffffa3,
+    inset 0 0 0 .22cqw #ffffff4d,
+    0 .35cqw .7cqw #020d2066;
+}
+
+.bs-bubble::before, .bs-fly::before, .bs-shooter::before {
+  content: "";
+  position: absolute;
+  left: 20%;
+  top: 12%;
+  width: 31%;
+  height: 16%;
+  border-radius: 50%;
+  background: #ffffff9c;
+  transform: rotate(-32deg);
+  pointer-events: none;
 }
 
 /* One fill per colour, shared by the board bubbles, the queue, the flying
    bubble and the shooter, so a colour can never render without its fill. */
-.bs-game .is-red { --bs-fill: radial-gradient(circle at 32% 28%, #ff9aa8, #ef4056 55%, #b3122c); }
-.bs-game .is-orange { --bs-fill: radial-gradient(circle at 32% 28%, #ffd39a, #fb923c 55%, #c25a08); }
+.bs-game .is-red { --bs-glow: #ff6c8a; --bs-fill: radial-gradient(circle at 32% 28%, #ff9aa8, #ef4056 55%, #b3122c); }
+.bs-game .is-orange { --bs-glow: #ffba70; --bs-fill: radial-gradient(circle at 32% 28%, #ffd39a, #fb923c 55%, #c25a08); }
 .bs-game .is-yellow {
   --bs-fill: radial-gradient(circle at 32% 28%, #fff3b0, #fbbf24 55%, #b07b05);
   --bs-on-fill: #6b4600;
   --bs-on-shadow: #fff9;
+  --bs-glow: #ffe289;
 }
-.bs-game .is-green { --bs-fill: radial-gradient(circle at 32% 28%, #a8f0c0, #34c775 55%, #127a44); }
-.bs-game .is-blue { --bs-fill: radial-gradient(circle at 32% 28%, #a9dcff, #3b9bf5 55%, #1257a8); }
-.bs-game .is-purple { --bs-fill: radial-gradient(circle at 32% 28%, #dcc4ff, #9b6cf0 55%, #5b25ab); }
-.bs-game .is-bomb { --bs-fill: radial-gradient(circle at 32% 28%, #7b8794, #3f4a57 55%, #161c24); }
+.bs-game .is-green { --bs-glow: #78f3b7; --bs-fill: radial-gradient(circle at 32% 28%, #a8f0c0, #34c775 55%, #127a44); }
+.bs-game .is-blue { --bs-glow: #8bd6ff; --bs-fill: radial-gradient(circle at 32% 28%, #a9dcff, #3b9bf5 55%, #1257a8); }
+.bs-game .is-purple { --bs-glow: #d4b7ff; --bs-fill: radial-gradient(circle at 32% 28%, #dcc4ff, #9b6cf0 55%, #5b25ab); }
+.bs-game .is-bomb { --bs-glow: #ffd49b; --bs-fill: radial-gradient(circle at 32% 28%, #7b8794, #3f4a57 55%, #161c24); }
 .bs-game .is-rainbow {
+  --bs-glow: #ddfaff;
   --bs-fill: conic-gradient(#ef4056, #fb923c, #fbbf24, #34c775, #3b9bf5, #9b6cf0, #ef4056);
 }
 
@@ -223,25 +258,33 @@
 
 .bs-bubble.is-bomb, .bs-bubble.is-rainbow { font-size: 4.6cqw; }
 
-.bs-bubble.is-landing { animation: bs-land 200ms ease-out; }
-.bs-bubble.is-pop { animation: bs-pop 300ms ease-out forwards; }
-.bs-bubble.is-fall { animation: bs-fall 560ms cubic-bezier(.4, 0, .8, .6) forwards; }
+.bs-bubble.is-landing { animation: bs-land 260ms ease-out; }
+.bs-bubble.is-bump { animation: bs-bump 280ms ease-out; }
+.bs-bubble.is-pop { animation: bs-pop 260ms ease-out forwards; }
+.bs-bubble.is-fall { animation: bs-fall 600ms cubic-bezier(.4, 0, .85, .6) forwards; }
 
 @keyframes bs-land {
-  0% { transform: translate(-50%, -50%) scale(.72); }
-  70% { transform: translate(-50%, -50%) scale(1.1); }
+  0% { transform: translate(-50%, -50%) scale(1.26, .72); }
+  55% { transform: translate(-50%, -50%) scale(.92, 1.12); }
   100% { transform: translate(-50%, -50%) scale(1); }
 }
 
 @keyframes bs-pop {
   0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  50% { transform: translate(-50%, -50%) scale(1.42); opacity: .95; }
-  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+  35% { transform: translate(-50%, -50%) scale(.86); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
 
 @keyframes bs-fall {
   0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
-  100% { transform: translate(-50%, 300%) rotate(60deg); opacity: 0; }
+  18% { transform: translate(-50%, -75%) rotate(-8deg); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--bs-drift, 0cqw)), 95cqw) rotate(65deg); opacity: 0; }
+}
+
+@keyframes bs-bump {
+  0%, 100% { transform: translate(-50%, -50%); }
+  30% { transform: translate(calc(-50% + var(--bs-kick-x)), calc(-50% + var(--bs-kick-y))) scale(1.06, .94); }
+  65% { transform: translate(-50%, -50%) scale(.98, 1.02); }
 }
 
 /* ---------- aim, ghost, shooter, flying bubble ---------- */
@@ -254,7 +297,7 @@
   stroke-width: .14;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: .34 .3;
+  stroke-dasharray: .04 .36;
   filter: drop-shadow(0 0 .1px #0009);
 }
 
@@ -286,6 +329,7 @@
   font-weight: 800;
   color: #ffffffd9;
   text-shadow: 0 1px 2px #0006;
+  z-index: 3;
   box-shadow:
     inset 0 -0.5cqw 0.9cqw #00000038,
     inset 0 0.45cqw 0.7cqw #ffffff73,
@@ -293,18 +337,41 @@
     0 0.3cqw 0.8cqw #04102066;
 }
 
-.bs-shooter::after {
-  content: "";
+.bs-launcher {
+  position: absolute;
+  left: 50%;
+  top: 92.5%;
+  width: 14%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #203f58 46%, #538eaa 48%, #19374e 62%, #81bbd0 65%, #18344a 68%);
+  box-shadow: 0 .8cqw 1.2cqw #0008, 0 0 3cqw #67defb33;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bs-barrel {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 190%;
-  height: .7cqw;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ffffff00, #ffffff5c);
+  width: 110%;
+  height: 37%;
+  border: .3cqw solid #83b7cc;
+  border-radius: 1cqw;
+  background: linear-gradient(#38637e, #8cbace 35%, #315b76 60%, #17344d);
   transform-origin: 0 50%;
   transform: translate(0, -50%) rotate(var(--bs-angle, -90deg));
-  pointer-events: none;
+  box-shadow: 0 .3cqw .7cqw #02142666;
+}
+
+.bs-barrel::after { content: ""; position: absolute; right: -1%; top: -14%; width: 14%; height: 128%; border: .35cqw solid #aceef4; border-radius: .7cqw; background: #163b56; }
+.bs-launcher.is-firing { animation: bs-recoil 280ms cubic-bezier(.18, .8, .25, 1); }
+
+@keyframes bs-recoil {
+  0%, 100% { transform: translate(-50%, -50%); }
+  20% { transform: translate(calc(-50% + var(--bs-recoil-x)), calc(-50% + var(--bs-recoil-y))) scale(.94); }
+  65% { transform: translate(-50%, -50%) scale(1.03); }
 }
 
 .bs-fly {
@@ -312,7 +379,7 @@
   width: 9.0909%;
   aspect-ratio: 1;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) rotate(var(--bs-flight-angle, 0deg)) scale(1.12, .94);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,7 +392,42 @@
   box-shadow:
     inset 0 -0.5cqw 0.9cqw #00000038,
     inset 0 0.45cqw 0.7cqw #ffffff73,
-    0 0.25cqw 0.6cqw #04102055;
+    0 0 2cqw var(--bs-glow, #9ddfff);
+}
+
+.bs-effects { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.bs-impact, .bs-spark, .bs-trail, .bs-score-float { position: absolute; pointer-events: none; }
+.bs-impact {
+  width: 12%;
+  aspect-ratio: 1;
+  border: .45cqw solid var(--bs-glow, #c6f6ff);
+  border-radius: 50%;
+  box-shadow: 0 0 1.8cqw var(--bs-glow, #c6f6ff), inset 0 0 1cqw #fff6;
+  animation: bs-impact 340ms ease-out forwards;
+}
+.bs-impact.is-wall { width: 7%; }
+.bs-impact.is-blast { width: 24%; animation-duration: 420ms; }
+.bs-spark { width: 1.1%; aspect-ratio: 1; border-radius: 50%; background: var(--bs-glow, #fff); box-shadow: 0 0 1cqw var(--bs-glow, #fff); animation: bs-spark 430ms ease-out forwards; }
+.bs-trail { width: 12%; height: 2.8%; border-radius: 50%; background: linear-gradient(90deg, transparent, var(--bs-glow, #8adfff)); transform-origin: 100% 50%; animation: bs-trail 180ms ease-out forwards; }
+.bs-score-float { max-width: 84%; padding: 1cqw 2cqw; border-radius: 99px; background: #07273bd9; color: #d5fff1; font-size: clamp(14px, 4cqw, 25px); font-weight: 800; white-space: nowrap; text-align: center; text-shadow: 0 1px 5px #000; animation: bs-score-rise 850ms ease-out forwards; }
+
+@keyframes bs-impact {
+  from { transform: translate(-50%, -50%) scale(.35); opacity: 1; }
+  to { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+}
+@keyframes bs-spark {
+  from { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  to { transform: translate(calc(-50% + var(--bs-dx)), calc(-50% + var(--bs-dy))) scale(.2); opacity: 0; }
+}
+@keyframes bs-trail {
+  from { transform: translate(-100%, -50%) rotate(var(--bs-flight-angle)); opacity: .6; }
+  to { transform: translate(-100%, -50%) rotate(var(--bs-flight-angle)) scale(.6); opacity: 0; }
+}
+@keyframes bs-score-rise {
+  0% { transform: translate(-50%, 0) scale(.8); opacity: 0; }
+  20% { transform: translate(-50%, -25%) scale(1); opacity: 1; }
+  75% { opacity: 1; }
+  100% { transform: translate(-50%, -130%); opacity: 0; }
 }
 
 .bs-death-line {
@@ -351,42 +453,34 @@
   white-space: nowrap;
 }
 
-/* ---------- item chips ----------
-   Bottom left is the one band the stack can never reach, because the run ends
-   at the warning line, so the chips never cover a bubble. */
-
 .bs-board-items {
-  position: absolute;
-  left: 2%;
-  bottom: 2%;
-  z-index: 5;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1.4cqw;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
 }
 
 .bs-chip {
   display: flex;
   align-items: center;
-  gap: .9cqw;
-  padding: 1cqw 1.7cqw;
-  border: .25cqw solid #ffffff59;
-  border-radius: 999px;
-  background: #0d2140bd;
-  color: #fff;
+  flex: 1;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 7px;
+  border: 1px solid #ccdfe9;
+  border-radius: 10px;
+  background: #f0f7fb;
+  color: #26475d;
   font-weight: 800;
   cursor: pointer;
-  backdrop-filter: blur(2px);
-  box-shadow: 0 .3cqw .9cqw #04101f66;
 }
 
-.bs-chip-icon { font-size: 3.2cqw; line-height: 1; }
-.bs-chip-count { font-size: 2.9cqw; font-variant-numeric: tabular-nums; min-width: 2.6cqw; text-align: center; }
-.bs-chip-name { font-size: 2.4cqw; font-weight: 700; letter-spacing: .02em; opacity: .85; white-space: nowrap; }
-.bs-chip:disabled { opacity: .4; cursor: not-allowed; }
-.bs-chip.is-armed { border-color: #fbbf24; background: #7c4a03e0; box-shadow: 0 0 0 .35cqw #fbbf2466; }
-.bs-chip.is-active { border-color: #4ade80; background: #14532dc4; }
+.bs-chip-icon { font-size: 17px; line-height: 1; }
+.bs-chip-count { font-size: 12px; font-variant-numeric: tabular-nums; min-width: 17px; text-align: center; padding: 2px; border-radius: 5px; background: #dcebf3; }
+.bs-chip-name { font-size: 11px; }
+.bs-chip.is-armed { border-color: #d99a17; background: #fff2d1; box-shadow: 0 0 0 2px #fbbf2433; }
+.bs-chip.is-active { border-color: #20a47e; background: #e1f8ed; }
 
 /* ---------- overlay ---------- */
 
@@ -403,7 +497,9 @@
 }
 
 .bs-overlay-card {
-  width: min(100%, 38cqw);
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
   min-width: 0;
   padding: 3.4cqw;
   border-radius: 3cqw;
@@ -414,11 +510,13 @@
 }
 
 .bs-overlay-emoji { font-size: 6cqw; line-height: 1.1; }
-.bs-overlay-title { font-size: 3.8cqw; font-weight: 800; margin: .8cqw 0 .6cqw; }
-.bs-overlay-body { font-size: 2.6cqw; line-height: 1.5; color: #3d556c; margin-bottom: 1.8cqw; overflow-wrap: anywhere; }
+.bs-overlay-title { font-size: clamp(16px, 3.8cqw, 25px); font-weight: 800; margin: .8cqw 0 .6cqw; }
+.bs-overlay-body { font-size: clamp(12px, 2.6cqw, 17px); line-height: 1.5; color: #3d556c; margin-bottom: 1.8cqw; overflow-wrap: anywhere; }
 
 .bs-overlay-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: .9cqw;
   margin: 0 0 2cqw;
   text-align: left;
@@ -426,12 +524,13 @@
 
 .bs-overlay-row {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 1.2cqw;
   padding: 1cqw 1.4cqw;
   border-radius: 1.3cqw;
   background: #eef4fa;
-  font-size: 2.5cqw;
+  font-size: clamp(12px, 2.5cqw, 17px);
 }
 
 .bs-overlay-row.is-you { background: #dbeafe; box-shadow: inset 0 0 0 .28cqw #2563eb; }
@@ -439,7 +538,7 @@
 .bs-overlay-rank { font-weight: 800; min-width: 2.6cqw; opacity: .7; }
 .bs-overlay-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .bs-overlay-score { font-weight: 800; font-variant-numeric: tabular-nums; }
-.bs-overlay-tag { font-size: 2.1cqw; color: #5b7288; white-space: nowrap; }
+.bs-overlay-tag { font-size: clamp(10px, 2.1cqw, 14px); color: #5b7288; white-space: nowrap; }
 
 .bs-overlay-actions { display: flex; gap: 1.6cqw; justify-content: center; flex-wrap: wrap; }
 
@@ -447,7 +546,8 @@
   border: 1px solid #b9cfe2;
   border-radius: 1.6cqw;
   padding: 1.7cqw 3cqw;
-  font-size: 2.9cqw;
+  font-size: clamp(13px, 2.9cqw, 18px);
+  min-height: 44px;
   font-weight: 700;
   background: #fff;
   color: #17324a;
@@ -458,15 +558,9 @@
 
 /* ---------- sidebar ---------- */
 
-.bs-side { display: grid; gap: 10px; min-width: 0; }
-
-.bs-side-card {
-  padding: 11px 12px;
-  border: 1px solid var(--bs-line);
-  border-radius: 12px;
-  background: var(--bs-paper);
-  min-width: 0;
-}
+.bs-side { grid-area: controls; display: grid; gap: 14px; min-width: 0; align-content: start; }
+.bs-loadout { display: grid; gap: 14px; min-width: 0; }
+.bs-next { min-width: 0; }
 
 .bs-side-label {
   display: block;
@@ -478,12 +572,12 @@
   margin-bottom: 8px;
 }
 
-.bs-stats { display: flex; gap: 6px; flex-wrap: wrap; }
+.bs-stats { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .bs-stat {
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #eaf2fb;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #eef5f9;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -491,7 +585,7 @@
 
 .bs-stat.is-hot { background: #fff1dc; color: #9a5b06; }
 .bs-stat.is-alert { background: #ffe8e8; color: #a32626; }
-.bs-stat.is-big { font-size: 15px; padding: 7px 12px; }
+.bs-stat.is-big { order: -1; flex-basis: 100%; font-size: 30px; padding: 0 0 4px; background: transparent; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 
 .bs-queue { display: flex; gap: 8px; align-items: center; }
 
@@ -517,24 +611,32 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 9px;
+  justify-content: space-between;
+  margin-bottom: 4px;
   min-width: 0;
 }
+.bs-aim-readout label { font-size: 11px; font-weight: 700; color: var(--bs-muted); }
+.bs-controls { display: grid; gap: 5px; }
+.bs-aim-input { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 6px; }
+.bs-nudge { height: 44px; border: 1px solid #ccdde8; border-radius: 10px; background: #edf5f9; color: #214960; font-size: 19px !important; cursor: pointer; touch-action: manipulation; }
+#bsAngleInput { width: 100%; min-width: 0; height: 44px; margin: 0; padding: 0; accent-color: var(--bs-accent); cursor: ew-resize; touch-action: none; }
+.bs-fire { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 54px; margin-top: 5px; padding: 10px 16px; border: 1px solid #087b8a; border-radius: 12px; color: #fff; background: linear-gradient(145deg, #119aa7, #087487); box-shadow: 0 4px 0 #065665, 0 7px 15px #08748726; cursor: pointer; touch-action: manipulation; }
+.bs-fire span { font-size: 18px; font-weight: 800; }
+.bs-fire small { font-size: 11px; opacity: .8; }
+.bs-fire:hover:not(:disabled) { background: linear-gradient(145deg, #18adba, #078798); }
+.bs-fire:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #065665; }
+.bs-fire:disabled { box-shadow: 0 2px 0 #5b7f85; }
+.bs-tools { display: flex; gap: 8px; margin-top: 3px; }
+.bs-tools .bs-ghost-btn { width: auto; flex: 1; padding: 8px; font-size: 12px; }
+.bs-tools [aria-pressed="true"] { border-color: #14897f; background: #e9faf6; color: #116d65; }
+.bs-history { min-width: 0; border-top: 1px solid var(--bs-line); }
+.bs-history summary { padding: 10px 0; color: var(--bs-muted); font-size: 12px; cursor: pointer; }
 
 .bs-angle {
   flex: 0 0 auto;
   font-size: 19px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-}
-
-.bs-aim-hint {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--bs-muted);
-  overflow-wrap: anywhere;
 }
 
 .bs-back-btn { margin-top: 8px; border-color: #0f766e; color: #0f766e; }
@@ -548,29 +650,26 @@
   color: #3d556c;
   font-weight: 700;
   font-size: 13px;
+  min-height: 40px;
   cursor: pointer;
 }
 
 .bs-status {
-  padding: 9px 11px;
-  border-left: 3px solid var(--bs-accent);
-  border-radius: 0 8px 8px 0;
-  background: #eef5fd;
-  font-size: 12.5px;
+  padding: 0;
+  color: var(--bs-muted);
+  font-size: 12px;
   line-height: 1.5;
-  min-height: 38px;
+  min-height: 18px;
   overflow-wrap: anywhere;
 }
 
 .bs-last {
-  padding: 9px 11px;
-  border: 1px solid var(--bs-line);
-  border-radius: 10px;
-  background: #fff;
+  padding: 0 0 8px;
   font-size: 12px;
   line-height: 1.55;
   color: #3d556c;
-  min-height: 38px;
+  max-height: 110px;
+  overflow-y: auto;
   overflow-wrap: anywhere;
 }
 
@@ -594,38 +693,55 @@
 /* ---------- responsive ---------- */
 
 @media (min-width: 901px) {
-  /* On desktop the board is capped by height, not width, so a wide stage only
-     adds dead space beside it. Cap the whole block to the board's natural
-     width plus the sidebar and let the page centre it. */
   .bs-game {
-    max-width: calc((100dvh - var(--bs-chrome)) * 11 / 14 + 300px);
+    max-width: calc((100dvh - var(--bs-chrome)) * 11 / 14 + 242px);
   }
 }
 
 @media (max-width: 900px) {
-  /* Single column: the board takes the full width and the cards stack below
-     it, so only the header and the scoreboard need reserving. The shared
-     stylesheet already drops its own padding to about 10px per side here,
-     which leaves the board nearly flush with the phone. */
-  .bs-game { --bs-chrome: 170px; }
-  .bs-layout { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .bs-side { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .bs-side-card:nth-child(3) { grid-column: 1 / -1; }
-  .bs-status, .bs-last { grid-column: 1 / -1; }
-  .bs-edge { margin-bottom: 8px; padding: 5px 8px; }
+  .bs-game { --bs-chrome: 320px; max-width: 560px; }
+  .bs-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "run" "stage" "controls"; gap: 8px; }
+  .bs-run { padding: 0; border: 0; }
+  .bs-run > .bs-side-label { display: none; }
+  .bs-stats { gap: 4px; justify-content: space-between; }
+  .bs-stat { font-size: 11px; padding: 3px 4px; }
+  .bs-stat.is-big { flex-basis: auto; font-size: 20px; padding: 0; }
+  .bs-board { border-radius: 13px; }
+  .bs-side { gap: 8px; }
+  .bs-loadout { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; }
+  .bs-next .bs-side-label { margin-bottom: 4px; font-size: 9px; letter-spacing: .08em; }
+  .bs-queue { gap: 5px; }
+  .bs-queue-slot { width: 29px; height: 29px; font-size: 14px; }
+  .bs-queue-slot.is-soon { width: 23px; height: 23px; font-size: 11px; }
+  .bs-controls { grid-template-columns: minmax(0, 1fr) 92px; grid-template-rows: auto 44px; gap: 0 10px; }
+  .bs-aim-readout { grid-column: 1; margin: 0; }
+  .bs-angle { font-size: 14px; }
+  .bs-aim-input { grid-column: 1; gap: 3px; }
+  .bs-fire { grid-column: 2; grid-row: 1 / 3; flex-direction: column; justify-content: center; gap: 2px; margin: 0 0 3px; min-height: 0; padding: 7px; }
+  .bs-fire span { font-size: 15px; }
+  .bs-fire small { font-size: 10px; }
+  .bs-tools { margin: 0; }
+  .bs-tools .bs-ghost-btn { min-height: 34px; padding: 6px; }
+  .bs-status { font-size: 11px; }
+  .bs-edge { margin-bottom: 6px; padding: 2px 0 6px; gap: 6px; }
+  .bs-score-empty { display: none; }
 }
 
 @media (max-width: 420px) {
-  .bs-side-card { padding: 9px 10px; }
-  .bs-queue-slot { width: 34px; height: 34px; font-size: 15px; }
-  .bs-queue-slot.is-soon { width: 27px; height: 27px; font-size: 12px; }
-  .bs-angle { font-size: 17px; }
   .bs-score { font-size: 11px; padding: 3px 8px; }
   .bs-score-name { max-width: 8ch; }
+  .bs-chip { padding: 6px 4px; gap: 3px; }
+  .bs-chip-name { font-size: 10px; }
+  .bs-chip-icon { font-size: 15px; }
+  .bs-chip-count { min-width: 14px; font-size: 11px; }
+  .bs-board-items { gap: 4px; }
+  .bs-loadout { gap: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bs-bubble.is-pop, .bs-bubble.is-fall, .bs-bubble.is-landing { animation-duration: 1ms; }
-  .bs-board.is-shake { animation: none; }
+  .bs-bubble.is-pop, .bs-bubble.is-fall, .bs-bubble.is-landing, .bs-bubble.is-bump { animation-duration: 1ms; }
+  .bs-board.is-shake .bs-layer, .bs-launcher.is-firing { animation: none; }
+  .bs-effects { display: none; }
   .bs-layer { transition: none !important; }
+  .bs-fire:active:not(:disabled) { transform: none; }
 }

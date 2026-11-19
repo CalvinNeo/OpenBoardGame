@@ -7,6 +7,13 @@
   let bohnanzaDicePendingTimer = null;
   let bohnanzaDiceExplainMode = false;
   let bohnanzaDiceLastAnnounced = 0;
+  let bohnanzaDiceTooltipTimer = null;
+  let bohnanzaDiceTooltipTarget = null;
+  let bohnanzaDiceExplainPress = null;
+  let bohnanzaDiceSuppressExplainClick = false;
+  let bohnanzaDiceHelpLanguage = "zh";
+  let bohnanzaDiceHelpSection = "basics";
+  const bohnanzaDiceModalTriggers = new WeakMap();
   const bohnanzaDiceExpandedCoverIds = new Set();
 
   const bohnanzaDicePanel = document.getElementById("bohnanzaDicePanel");
@@ -43,6 +50,9 @@
   const bohnanzaDicePlayAgainBtn = document.getElementById("bohnanzaDicePlayAgainBtn");
   const bohnanzaDiceActivity = document.getElementById("bohnanzaDiceActivity");
   const bohnanzaDiceLiveRegion = document.getElementById("bohnanzaDiceLiveRegion");
+  const bohnanzaDiceTooltip = document.getElementById("bohnanzaDiceTooltip");
+  const bohnanzaDiceHelpLanguages = document.getElementById("bohnanzaDiceHelpLanguages");
+  const bohnanzaDiceHelpTabs = document.getElementById("bohnanzaDiceHelpTabs");
 
   const BOHNANZA_DICE_BEANS = {
     garden: { emoji: "🌱", short: "GA", label: "Garden Bean", dieTemplate: "dark" },
@@ -95,11 +105,11 @@
     },
     card: {
       title: "Harvest Card",
-      body: "Start with Order 1 at the bottom and work upward without skipping. In a row, every tile separated by + needs a different die. ONE OF means one die may show any bean inside that tile; OR means either complete branch works. The same roll may then be reused to check the next order.",
+      body: "Start with Order 1 at the bottom and work upward without skipping. A count such as 2× needs two separate dice. + joins requirements that must all match, / allows one listed bean per die, and OR separates complete alternative branches. The same roll may then be reused to check the next order.",
     },
     order: {
       title: "Order Row",
-      body: "This row is one order. Complete orders from 1 upward. Match every + tile with a different die; ONE OF allows one listed face, while OR separates complete alternative branches.",
+      body: "This row is one order. Complete orders from 1 upward. Counts use separate dice, + means all requirements must match, / allows one listed bean per die, and OR separates complete alternative branches.",
     },
     score: {
       title: "Bean Coins",
@@ -115,48 +125,66 @@
     },
   };
 
-  const BOHNANZA_DICE_HELP_HTML = `
-    <div class="bohnanza-dice-rules">
-      <p class="bohnanza-dice-practice-note"><strong>Edition.</strong> This implementation follows the 2022 Version 2.0 game: five dice, five orders per card, and 10 coins to trigger the final harvest.</p>
-      <h3>Goal &amp; Setup</h3>
-      <p>Earn the most bean coins by completing orders. Every player receives two public harvest cards: the current card and a cover card waiting underneath it. The server shuffles the fixed 55-card catalog and chooses the first player.</p>
-      <h3>The Five Dice</h3>
-      <div class="bohnanza-dice-rule-grid">
-        <div><strong>2 dark dice</strong><span>💧 Blue · 🌱 Garden · 💨 Stink ×2 · 🫘 Soy ×2</span></div>
-        <div><strong>3 light dice</strong><span>💨 Stink · 🔥 Red · 💧 Blue ×2 · 🥬 Green ×2</span></div>
-      </div>
-      <p>Bean colors are always paired with an icon, a name, a two-letter key, and a pattern. “Green Bean” and “Garden Bean” are different bean IDs.</p>
-      <h3>Active Player</h3>
-      <ol>
-        <li>Roll every die not already saved in the bean field.</li>
-        <li>Other players automatically check their current card using <em>only that fresh roll</em>.</li>
-        <li>After all harvest choices are settled, save at least one die. If any dice remain, press Roll to roll them yourself.</li>
-        <li>Once all five dice are saved, check your own card with the complete bean field and pass the turn.</li>
-      </ol>
-      <p>Once per turn, before saving, the active player may repeat the entire current roll. Previously saved dice stay in the field. A turn cannot end early.</p>
-      <h3>Orders</h3>
-      <p>Complete orders from <strong>Order 1 at the bottom</strong> upward and stop at the first one that does not match. On each row, every bean tile separated by <strong>+</strong> needs a different die. A <strong>ONE OF</strong> tile needs one die showing any bean inside that tile. When two complete branches are separated by <strong>OR</strong>, either whole branch works. The same result can then advance several consecutive orders.</p>
-      <p>The status badge says <strong>NEXT</strong>, <strong>LATER</strong>, <strong>DONE</strong>, or <strong>PRE</strong>. The 🎲5 percentage is the exact chance that a fresh roll of all five dice matches that row by itself; it is reference information, not a score.</p>
-      <h3>Harvesting</h3>
-      <p>At 3 / 4 / 5 completed orders, you may harvest 1 / 2 / 3 coins. Your current card becomes the first coin; extra reward cards come from the deck. The cover becomes current, a new cover is drawn, and the new card immediately checks the dice context when the rules allow it.</p>
-      <p>Choose <strong>Keep Growing</strong> to retain progress and skip only the current checkpoint. It never triggers a roll. Harvest choices pause the dice flow and resolve in seat order, so network speed never decides who can use a roll.</p>
-      <h3>Final Harvest</h3>
-      <p>After any harvest reaches 10 coins, the current roll is banked into the field and the active player receives their final full-field check. Every eligible player then gets one final harvest decision. Highest score wins; ties share the win.</p>
-      <h3>Digital Notes</h3>
-      <p>This game uses the fixed <strong>original-compatible-v1</strong> catalog: 55 original compatible cards built for the published dice and rules. It does not reproduce the commercial card faces. Percentages show the exact chance that a fresh five-die roll satisfies an order across all 7,776 face-index outcomes.</p>
-      <p>If the draw deck is short, the server exchanges an eligible player's five single-coin cards for one 5-coin marker, shuffles those cards back, and keeps the score unchanged. Hidden information is limited to deck order and future dice results.</p>
-    </div>
-  `;
+  const BOHNANZA_DICE_HELP_SECTIONS = [
+    {
+      id: "basics", label: "Basics",
+      zh: "<h3>快速上手</h3><p><strong>如何获胜：</strong>完成订单并收获豆币，终局时豆币最多者获胜。</p><p><strong>每回合：</strong>掷出未留下的骰子，每次至少留一颗，直到五颗都进入豆田后检查自己的订单。</p><p><strong>游戏重点：</strong>你掷骰时其他人也能用本次新骰推进订单，因此要权衡继续积累与及时收获。</p><p>本作采用 2022 年修订版规则，支持 2–5 人，每张卡五条订单，任意玩家收获后达到 10 豆币便触发终局。开局随机先手，每人有一张当前卡和一张公开的预备卡。</p>",
+      en: "<h3>Quick start</h3><p><strong>How you win:</strong> Complete orders and harvest bean coins to finish with the highest score.</p><p><strong>Your turn:</strong> Roll unsaved dice and save at least one each time until all five enter the field, then check your orders.</p><p><strong>The key:</strong> Other players use your fresh rolls too, so balance growing your card against harvesting now.</p><p>This is the 2022 revised edition for 2–5 players, with five orders per card and a final phase triggered by harvesting to 10 coins. The first player is random, and each player starts with a current card and a public cover card.</p>",
+    },
+    {
+      id: "orders", label: "Orders",
+      zh: "<h3>读懂条件</h3><p>从底部 #1 向上依次完成，不能跳过。<strong>2×</strong> 代表需要两颗独立骰子，<strong>+</strong> 两边的条件必须全部满足。只有完全相同的骰位会合并计数。</p><p>虚线骰位中的 <strong>/</strong> 表示每颗骰子任选列出的一个豆种，例如 2× 蓝豆/臭豆 可以用两颗蓝豆、两颗臭豆或各一颗。<strong>OR</strong> 换行分隔完整方案，只需满足其中一个方案。任意豆种(🌈 ANY)可由任何一颗骰子满足。</p><p>同一订单不能重复使用一颗骰子，但同一组结果可以继续完成后续订单。DONE 是已完成，NEXT 是下一条，LATER 是尚未解锁，PRE 是预览。绿色行表示已完成，金色行表示下一条，行末的五骰概率(🎲5)不是奖励或分数。</p><p>桌面悬停、键盘聚焦或手机轻点订单可查看完整条件，手机提示三秒后消失。Explain 后点选订单可查看该行的规则、状态与概率。</p>",
+      en: "<h3>Reading conditions</h3><p>Work upward from #1 at the bottom without skipping. <strong>2×</strong> requires two separate dice, and requirements joined by <strong>+</strong> must all match. Only identical die slots are combined into counts.</p><p>A dashed slot with <strong>/</strong> allows one listed bean per die. For example, 2× Blue/Stink accepts two Blue, two Stink, or one of each. <strong>OR</strong> starts another complete branch on a new line, and either whole branch works. Any Bean (🌈 ANY) accepts any one die.</p><p>A die cannot fill two slots in the same order, but the result can be reused for later orders. DONE means complete, NEXT is the next order, LATER is locked, and PRE is a preview. Green rows are complete and the gold row is next. The fresh five-die chance (🎲5) is not a reward or score.</p><p>Hover, focus, or tap an order for its full requirements. Touch tips disappear after three seconds. Explain followed by an order shows its requirements, status, and probability.</p>",
+    },
+    {
+      id: "dice", label: "Dice & Turn",
+      zh: "<h3>骰子与回合</h3><p>两颗深骰的骰面是蓝豆(💧 BL)、花园豆(🌱 GA)、臭豆(💨 ST)两面、大豆(🫘 SO)两面。三颗浅骰的骰面是臭豆(💨 ST)、红豆(🔥 RE)、蓝豆(💧 BL)两面、绿豆(🥬 GR)两面。花园豆和绿豆是不同豆种。</p><p>订单中深底豆种只在深骰出现，浅底豆种只在浅骰出现，深浅对半底色表示两类骰子都可能出现。图标和字母缩写帮助在灰度下辨认。</p><p>其他玩家的 ROLL 卡只检查本次新掷出的骰子，已留下的豆田骰不能帮他们完成订单。掷骰者的 FIELD×5 卡只在五颗骰子全部留下后检查。PRE 卡在收获后成为当前卡之前不会推进。</p><p>每回合可用一次 Reroll 整批重掷本次新骰，不能只重掷其中一部分，豆田骰不受影响。Save 只留骰，不会自动掷骰。点空白处或按 Esc 取消选骰，不能提前结束回合。</p>",
+      en: "<h3>Dice and turns</h3><p>The two dark dice have Blue Bean (💧 BL), Garden Bean (🌱 GA), two Stink Bean (💨 ST), and two Soy Bean (🫘 SO) faces. The three light dice have Stink Bean (💨 ST), Red Bean (🔥 RE), two Blue Bean (💧 BL), and two Green Bean (🥬 GR) faces. Garden and Green are different beans.</p><p>Dark-backed beans occur only on dark dice, light-backed beans only on light dice, and split-backed beans on either type. Icons and letter keys remain identifiable without colour.</p><p>Other players check their ROLL cards using only the fresh roll, never saved field dice. The roller checks their FIELD×5 card only after all five dice are saved. PRE cards cannot advance until a harvest makes them current.</p><p>Once per turn, Reroll repeats all fresh dice together without changing field dice. Save only locks dice and never rolls automatically. Click blank space or press Esc to deselect. You cannot end a turn early.</p>",
+    },
+    {
+      id: "harvest", label: "Harvest",
+      zh: "<h3>收获与终局</h3><p>完成 3/4/5 条订单时可收获 1/2/3 豆币。当前卡成为第一枚豆币(🪙)，额外豆币从牌堆获得，预备卡变为当前卡并补抽新的预备卡，规则允许时立即继续检查当前骰子。</p><p>多人可以收获时按座位顺序逐一决定，轮到本人才能操作。Keep Growing 保留进度，只跳过当前检查点，不触发掷骰。若没有剩余牌可抽，服务器会将符合条件玩家的五张单豆币卡换为一个五豆币标记(🟡 5)，洗回卡牌且不改变分数。</p><p>任意玩家收获至 10 豆币后，本次新骰并入豆田，主动玩家完成最终五骰检查，然后符合条件的玩家依次进行最后收获。豆币最多者获胜，同分并列。Play Again 需要所有真人同意，机器人自动准备。</p>",
+      en: "<h3>Harvesting and the end</h3><p>At 3/4/5 completed orders, harvest 1/2/3 bean coins. The current card becomes the first bean coin (🪙) and extra coins come from the deck. The cover becomes current, a new cover is drawn, and the current dice are checked again when permitted.</p><p>Harvest choices pause the dice flow and resolve in seat order. Only the first queued player can act. Keep Growing retains progress and skips only this checkpoint without rolling. If the deck runs short, five eligible single-coin cards are exchanged for one five-coin marker (🟡 5) and shuffled back without changing the score.</p><p>After any harvest reaches 10 coins, fresh dice enter the field and the roller receives their final five-die check. Eligible players then receive a final harvest choice. The highest score wins, with shared wins for ties. Play Again needs every human to agree, while bots are ready automatically.</p>",
+    },
+    {
+      id: "digital", label: "Digital Notes",
+      zh: "<h3>数字版说明</h3><p>本作使用固定的 original-compatible-v1 自制兼容牌组，共 55 张卡，不复制商业牌面。概率按五颗骰子的全部 7,776 种等可能骰面索引结果精确计算，只代表该条订单独立匹配首掷的机会，不代表整张卡的完成概率。</p><p>只有牌堆顺序和未来骰子结果隐藏，所有玩家的两张收获卡、进度与豆币都公开。新状态会保留预备卡展开状态，失效的选骰自动清除。Esc 先关闭当前弹窗，再退出 Explain，最后取消选骰。</p>",
+      en: "<h3>Digital notes</h3><p>This game uses the fixed original-compatible-v1 catalog of 55 original compatible cards, not commercial card faces. Probabilities count all 7,776 equally likely face-index results for the five dice and describe one order in isolation, not the chance of finishing a whole card.</p><p>Only deck order and future dice results are hidden. Both cards, progress, and scores are public. Updates preserve expanded covers and remove stale die selections. Esc closes the current dialog first, then exits Explain, then clears selection.</p>",
+    },
+  ];
+
+  function bohnanzaDiceRenderHelp() {
+    if (!bohnanzaDiceHelpContent || !bohnanzaDiceHelpTabs) return;
+    bohnanzaDiceHelpTabs.innerHTML = "";
+    BOHNANZA_DICE_HELP_SECTIONS.forEach((section) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.bohnanzaDiceHelpSection = section.id;
+      button.textContent = section.label;
+      button.setAttribute("aria-pressed", String(section.id === bohnanzaDiceHelpSection));
+      bohnanzaDiceHelpTabs.appendChild(button);
+    });
+    const section = BOHNANZA_DICE_HELP_SECTIONS.find((entry) => entry.id === bohnanzaDiceHelpSection);
+    bohnanzaDiceHelpContent.innerHTML = `<div class="bohnanza-dice-rules" lang="${bohnanzaDiceHelpLanguage === "zh" ? "zh-CN" : "en"}">${section[bohnanzaDiceHelpLanguage]}</div>`;
+    bohnanzaDiceHelpContent.scrollTop = 0;
+    bohnanzaDiceHelpLanguages.querySelectorAll("button").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.bohnanzaDiceHelpLanguage === bohnanzaDiceHelpLanguage));
+    });
+  }
 
   function bohnanzaDiceSetModal(modal, visible, returnFocus) {
     if (!modal) return;
+    const wasVisible = !modal.classList.contains("hidden");
+    bohnanzaDiceHideTooltip();
+    if (visible) bohnanzaDiceModalTriggers.set(modal, document.activeElement);
     modal.classList.toggle("hidden", !visible);
     modal.setAttribute("aria-hidden", visible ? "false" : "true");
     if (visible) {
       const focusable = modal.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
       if (focusable) window.setTimeout(() => focusable.focus(), 0);
-    } else if (returnFocus) {
-      returnFocus.focus();
+    } else if (wasVisible) {
+      const trigger = returnFocus || bohnanzaDiceModalTriggers.get(modal);
+      if (trigger && trigger.isConnected) trigger.focus();
     }
   }
 
@@ -270,30 +298,49 @@
     visual.className = "bohnanza-dice-order-visual";
     visual.setAttribute("aria-label", `Match ${bohnanzaDiceOrderText(order)}`);
     (order.alternatives || []).forEach((alternative, alternativeIndex) => {
-      if (alternativeIndex) {
-        const or = document.createElement("span");
-        or.className = "bohnanza-dice-order-or";
-        or.textContent = "OR";
-        or.setAttribute("aria-hidden", "true");
-        visual.appendChild(or);
-      }
       const group = document.createElement("span");
       group.className = "bohnanza-dice-order-group";
       group.setAttribute("aria-hidden", "true");
-      (alternative.slots || []).forEach((slot, slotIndex) => {
-        if (slotIndex) {
+      if (order.alternatives.length > 1) {
+        group.classList.add("has-alternatives");
+        const branch = document.createElement("span");
+        branch.className = "bohnanza-dice-order-or";
+        branch.textContent = alternativeIndex ? "OR" : "";
+        group.appendChild(branch);
+      }
+      const terms = document.createElement("span");
+      terms.className = "bohnanza-dice-order-terms";
+      const requirements = new Map();
+      (alternative.slots || []).forEach((slot) => {
+        const allowed = Array.isArray(slot.allowed) ? slot.allowed : [];
+        const key = [...allowed].sort().join("|");
+        const requirement = requirements.get(key);
+        if (requirement) requirement.count += 1;
+        else requirements.set(key, { allowed, count: 1 });
+      });
+      [...requirements.values()].forEach(({ allowed, count }, requirementIndex) => {
+        const term = document.createElement("span");
+        term.className = "bohnanza-dice-order-term";
+        if (requirementIndex) {
           const plus = document.createElement("span");
           plus.className = "bohnanza-dice-order-plus";
           plus.textContent = "+";
-          group.appendChild(plus);
+          term.appendChild(plus);
         }
         const slotEl = document.createElement("span");
         slotEl.className = "bohnanza-dice-order-slot";
-        const allowed = Array.isArray(slot.allowed) ? slot.allowed : [];
+        slotEl.dataset.count = String(count);
+        if (count > 1) {
+          const quantity = document.createElement("b");
+          quantity.className = "bohnanza-dice-order-quantity";
+          quantity.textContent = `${count}×`;
+          slotEl.appendChild(quantity);
+        }
         if (allowed.length === Object.keys(BOHNANZA_DICE_BEANS).length) {
           slotEl.classList.add("is-any");
-          slotEl.textContent = "🌈 ANY";
-          group.appendChild(slotEl);
+          slotEl.append("🌈 ANY");
+          term.appendChild(slotEl);
+          terms.appendChild(term);
           return;
         }
         if (allowed.length > 1) {
@@ -308,8 +355,10 @@
           }
           slotEl.appendChild(bohnanzaDiceBeanToken(beanId, true, true));
         });
-        group.appendChild(slotEl);
+        term.appendChild(slotEl);
+        terms.appendChild(term);
       });
+      group.appendChild(terms);
       visual.appendChild(group);
     });
     return visual;
@@ -342,7 +391,7 @@
       (alternative.slots || []).some((slot) => Array.isArray(slot.allowed) && slot.allowed.length > 1)
     );
     const hasBranches = (order.alternatives || []).length > 1;
-    const symbols = ["Each + uses a different die."];
+    const symbols = ["A count such as 2× means two separate dice. + means all joined requirements must match using separate dice."];
     if (hasChoices) symbols.push("/ means one listed face.");
     if (hasBranches) symbols.push("OR means either complete group.");
     const chance = Number.isFinite(percent)
@@ -414,7 +463,10 @@
         row.dataset.bohnanzaDiceExplainTitle = `Order ${index + 1} · ${state.label}`;
         row.dataset.bohnanzaDiceExplainBody = bohnanzaDiceOrderExplanation(order, index, state);
         row.setAttribute("aria-label", `Order ${index + 1}, ${state.label}. Match ${bohnanzaDiceOrderText(order)}. Dice types: ${bohnanzaDiceOrderDieText(order)}.`);
+        row.tabIndex = 0;
 
+        const step = document.createElement("span");
+        step.className = "bohnanza-dice-order-step";
         const level = document.createElement("span");
         level.className = "bohnanza-dice-order-level";
         level.textContent = `#${index + 1}`;
@@ -434,8 +486,9 @@
         probabilityLabel.textContent = "🎲5";
         probability.title = "Chance a fresh roll of all five dice satisfies this order";
         probability.append(probabilityValue, probabilityLabel);
-        meta.append(status, probability);
-        row.append(level, visual, meta);
+        step.append(level, status);
+        meta.appendChild(probability);
+        row.append(step, visual, meta);
         orders.appendChild(row);
       });
 
@@ -800,6 +853,8 @@
   }
 
   function bohnanzaDiceSetExplainMode(enabled) {
+    bohnanzaDiceHideTooltip();
+    bohnanzaDiceExplainPress = null;
     bohnanzaDiceExplainMode = Boolean(enabled);
     document.body.classList.toggle("bohnanza-dice-explain-mode", bohnanzaDiceExplainMode);
     if (bohnanzaDiceExplainBtn) bohnanzaDiceExplainBtn.setAttribute("aria-pressed", bohnanzaDiceExplainMode ? "true" : "false");
@@ -851,6 +906,7 @@
   function bohnanzaDiceRenderGameState(data) {
     const view = data && data.view;
     if (!view) return;
+    bohnanzaDiceHideTooltip();
     bohnanzaDiceView = view;
     bohnanzaDicePending = false;
     if (bohnanzaDicePendingTimer) window.clearTimeout(bohnanzaDicePendingTimer);
@@ -877,6 +933,7 @@
   }
 
   function bohnanzaDiceClearState() {
+    bohnanzaDiceHideTooltip();
     bohnanzaDiceView = null;
     bohnanzaDiceSelectedIds.clear();
     bohnanzaDiceExpandedCoverIds.clear();
@@ -899,6 +956,7 @@
   function bohnanzaDiceShowHeaderActions(show) {
     if (bohnanzaDiceHeaderActions) bohnanzaDiceHeaderActions.style.display = show ? "flex" : "none";
     if (!show) {
+      bohnanzaDiceHideTooltip();
       bohnanzaDiceSelectedIds.clear();
       bohnanzaDiceSetExplainMode(false);
       bohnanzaDiceSetModal(bohnanzaDiceHelpModal, false);
@@ -906,7 +964,64 @@
     }
   }
 
-  if (bohnanzaDiceHelpContent) bohnanzaDiceHelpContent.innerHTML = BOHNANZA_DICE_HELP_HTML;
+  function bohnanzaDiceHideTooltip() {
+    if (bohnanzaDiceTooltipTimer) window.clearTimeout(bohnanzaDiceTooltipTimer);
+    bohnanzaDiceTooltipTimer = null;
+    if (bohnanzaDiceTooltipTarget) bohnanzaDiceTooltipTarget.removeAttribute("aria-describedby");
+    bohnanzaDiceTooltipTarget = null;
+    if (bohnanzaDiceTooltip) bohnanzaDiceTooltip.hidden = true;
+  }
+
+  function bohnanzaDiceShowTooltip(target, transient = false) {
+    if (!bohnanzaDiceTooltip || bohnanzaDiceExplainMode || !target) return;
+    bohnanzaDiceHideTooltip();
+    bohnanzaDiceTooltip.textContent = target.dataset.bohnanzaDiceExplainBody;
+    if (!bohnanzaDiceTooltip.textContent) return;
+    bohnanzaDiceTooltipTarget = target;
+    target.setAttribute("aria-describedby", "bohnanzaDiceTooltip");
+    bohnanzaDiceTooltip.hidden = false;
+    const anchor = target.getBoundingClientRect();
+    const bounds = bohnanzaDiceTooltip.getBoundingClientRect();
+    bohnanzaDiceTooltip.style.left = `${Math.max(10, Math.min(anchor.left, window.innerWidth - bounds.width - 10))}px`;
+    bohnanzaDiceTooltip.style.top = `${Math.max(10, Math.min(anchor.bottom + 6, window.innerHeight - bounds.height - 10))}px`;
+    if (transient) bohnanzaDiceTooltipTimer = window.setTimeout(bohnanzaDiceHideTooltip, 3000);
+  }
+
+  if (bohnanzaDicePlayers) {
+    bohnanzaDicePlayers.addEventListener("pointerover", (event) => {
+      if (event.pointerType !== "mouse") return;
+      const row = event.target.closest(".bohnanza-dice-order-row");
+      if (row && !row.contains(event.relatedTarget)) bohnanzaDiceShowTooltip(row);
+    });
+    bohnanzaDicePlayers.addEventListener("pointerout", (event) => {
+      const row = event.target.closest(".bohnanza-dice-order-row");
+      if (event.pointerType === "mouse" && row && !row.contains(event.relatedTarget)) bohnanzaDiceHideTooltip();
+    });
+    bohnanzaDicePlayers.addEventListener("focusin", (event) => {
+      bohnanzaDiceShowTooltip(event.target.closest(".bohnanza-dice-order-row"));
+    });
+    bohnanzaDicePlayers.addEventListener("focusout", bohnanzaDiceHideTooltip);
+    bohnanzaDicePlayers.addEventListener("click", (event) => {
+      if (!event.target.closest("button")) bohnanzaDiceShowTooltip(event.target.closest(".bohnanza-dice-order-row"), true);
+    });
+  }
+  window.addEventListener("scroll", bohnanzaDiceHideTooltip, true);
+  window.addEventListener("resize", bohnanzaDiceHideTooltip);
+
+  bohnanzaDiceRenderHelp();
+  if (bohnanzaDiceHelpLanguages) bohnanzaDiceHelpLanguages.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-bohnanza-dice-help-language]");
+    if (!button) return;
+    bohnanzaDiceHelpLanguage = button.dataset.bohnanzaDiceHelpLanguage;
+    bohnanzaDiceRenderHelp();
+  });
+  if (bohnanzaDiceHelpTabs) bohnanzaDiceHelpTabs.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-bohnanza-dice-help-section]");
+    if (!button) return;
+    bohnanzaDiceHelpSection = button.dataset.bohnanzaDiceHelpSection;
+    bohnanzaDiceRenderHelp();
+    bohnanzaDiceHelpTabs.querySelector(`[data-bohnanza-dice-help-section="${bohnanzaDiceHelpSection}"]`).focus();
+  });
   if (bohnanzaDiceRollBtn) bohnanzaDiceRollBtn.addEventListener("click", () => bohnanzaDiceHasAction("roll") && bohnanzaDiceDispatch({ type: "roll" }));
   if (bohnanzaDiceSaveBtn) {
     bohnanzaDiceSaveBtn.addEventListener("click", () => {
@@ -935,9 +1050,15 @@
   document.addEventListener(
     "click",
     (event) => {
+      if (bohnanzaDiceSuppressExplainClick) {
+        bohnanzaDiceSuppressExplainClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (!bohnanzaDiceExplainMode || typeof currentGameType === "undefined" || currentGameType !== "bohnanza_dice") return;
       const button = event.target.closest("button");
-      if ([bohnanzaDiceHelpBtn, bohnanzaDiceExplainBtn, bohnanzaDiceHelpCloseBtn, bohnanzaDiceExplainCloseBtn].includes(button)) return;
+      if ([bohnanzaDiceHelpBtn, bohnanzaDiceExplainBtn, bohnanzaDiceHelpCloseBtn, bohnanzaDiceExplainCloseBtn].includes(button) || (button && button.closest("#bohnanzaDiceHelpModal, #bohnanzaDiceExplainModal"))) return;
       const target = event.target.closest("[data-bohnanza-dice-explain]");
       if (!button && (!target || !bohnanzaDicePanel || !bohnanzaDicePanel.contains(target))) return;
       event.preventDefault();
@@ -956,13 +1077,30 @@
       if (!bohnanzaDiceExplainMode || typeof currentGameType === "undefined" || currentGameType !== "bohnanza_dice") return;
       const target = bohnanzaDiceFindDisabledExplainTarget(event.clientX, event.clientY);
       if (!target) return;
-      event.preventDefault();
+      bohnanzaDiceExplainPress = { target, id: event.pointerId, x: event.clientX, y: event.clientY };
       event.stopPropagation();
-      bohnanzaDiceShowExplanation(target.dataset.bohnanzaDiceExplain, target);
-      bohnanzaDiceSetExplainMode(false);
     },
     true
   );
+
+  document.addEventListener("pointermove", (event) => {
+    if (bohnanzaDiceExplainPress && Math.hypot(event.clientX - bohnanzaDiceExplainPress.x, event.clientY - bohnanzaDiceExplainPress.y) > 10) {
+      bohnanzaDiceExplainPress = null;
+    }
+  }, true);
+  document.addEventListener("pointercancel", () => { bohnanzaDiceExplainPress = null; }, true);
+  document.addEventListener("pointerup", (event) => {
+    const press = bohnanzaDiceExplainPress;
+    bohnanzaDiceExplainPress = null;
+    if (!press || press.id !== event.pointerId || !bohnanzaDiceExplainMode) return;
+    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) return;
+    event.preventDefault();
+    event.stopPropagation();
+    bohnanzaDiceSuppressExplainClick = true;
+    window.setTimeout(() => { bohnanzaDiceSuppressExplainClick = false; }, 0);
+    bohnanzaDiceShowExplanation(press.target.dataset.bohnanzaDiceExplain, press.target);
+    bohnanzaDiceSetExplainMode(false);
+  }, true);
 
   document.addEventListener("pointerdown", (event) => {
     if (
@@ -981,14 +1119,33 @@
   });
 
   document.addEventListener("keydown", (event) => {
+    const modal = [bohnanzaDiceExplainModal, bohnanzaDiceHelpModal].find((element) => element && !element.classList.contains("hidden"));
+    if (modal && event.key === "Tab") {
+      const controls = [...modal.querySelectorAll("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter((element) => !element.disabled);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
     if (event.key !== "Escape") return;
-    if (bohnanzaDiceExplainMode) bohnanzaDiceSetExplainMode(false);
+    bohnanzaDiceHideTooltip();
+    if (modal) {
+      bohnanzaDiceSetModal(modal, false);
+      return;
+    }
+    if (bohnanzaDiceExplainMode) {
+      bohnanzaDiceSetExplainMode(false);
+      return;
+    }
     if (bohnanzaDiceSelectedIds.size) {
       bohnanzaDiceSelectedIds.clear();
       if (bohnanzaDiceView) bohnanzaDiceRenderInteractive(bohnanzaDiceView);
     }
-    if (bohnanzaDiceHelpModal && !bohnanzaDiceHelpModal.classList.contains("hidden")) bohnanzaDiceSetModal(bohnanzaDiceHelpModal, false, bohnanzaDiceHelpBtn);
-    if (bohnanzaDiceExplainModal && !bohnanzaDiceExplainModal.classList.contains("hidden")) bohnanzaDiceSetModal(bohnanzaDiceExplainModal, false);
   });
 
   window.clearBohnanzaDiceState = bohnanzaDiceClearState;

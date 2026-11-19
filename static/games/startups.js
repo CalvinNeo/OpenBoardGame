@@ -53,8 +53,8 @@
       en: "Send the selected share to the public market with its capital (💰) reset to 0. After taking a share from the market this turn you may not return any hand card of that same company."
     },
     portfolio: {
-      zh: "公开持股(📊)。游戏中只显示已投资的股份，不含隐藏手牌(🃏)。结算时手牌会自动加上，每家公司的唯一最大股东收款。",
-      en: "Public holdings (📊). During play only invested shares are shown, never the hidden hand (🃏). Hands are added at settlement, and the single largest holder of each company collects."
+      zh: "公开持股(📊)。游戏中只显示已投资的股份，不含隐藏手牌(🃏)。每格依次显示公司、股数和反垄断标记(🚫)，结算时手牌会自动加上，每家公司的唯一最大股东收款。",
+      en: "Public holdings (📊). During play only invested shares are shown, never the hidden hand (🃏). Each cell shows the company, share count and anti-monopoly marker (🚫). Hands are added at settlement, and the single largest holder of each company collects."
     },
     wealth: {
       zh: "最终财富(💰)，等于结算前的资本减去付出的筹码数，再加上 3 倍收入筹码数。资本不够可以负债。",
@@ -184,6 +184,10 @@
       root: () => document.getElementById("startupsPanel"),
       bypass: ["#startupsHelpBtn", "#startupsExplainBtn"]
     });
+    const contextualText = node => node.dataset.suTip || "";
+    ["company", "marker", "player", "take", "hand", "portfolio"].forEach(key => {
+      STARTUPS_EXPLAIN[key].zh = STARTUPS_EXPLAIN[key].zh;
+    });
     byId("HelpBtn")?.addEventListener("click", () => {
       startupsExplainWidget?.exit();
       startupsHelpWidget.open();
@@ -247,8 +251,8 @@
       top.append(el("span", "", c.emoji), tip(el("span", "", `${c.supply}×`), "company", `${label(c.id)}：整副牌中有 ${c.supply} 张股份，不是分值。`));
       const holder = view.anti_monopoly[c.id];
       const marker = el("span", "startups-marker-name");
-      marker.append(el("span", "startups-marker-owner", holder ? `🚫 ${name(holder)}` : "— Open"),
-        el("span", "startups-marker-seat", holder ? `🚫#${view.players.findIndex(player => player.player_id === holder) + 1}` : "Open"));
+      marker.append(el("span", "startups-marker-owner", holder ? `🚫 ${name(holder)}` : "Open"),
+        el("span", "startups-marker-seat", holder ? `🚫 #${view.players.findIndex(player => player.player_id === holder) + 1}` : "Open"));
       node.append(top, el("strong", "", c.name), marker);
       container.append(node);
     }
@@ -310,8 +314,10 @@
       const shares = el("div", "startups-shares");
       for (const c of view.companies) {
         const holder = view.anti_monopoly[c.id] === player.player_id;
-        const count = player.shares[c.id], cell = tip(el("div", `startups-share su-${c.id}${count ? "" : " is-zero"}`, `${c.emoji} ${count}`), "portfolio", `${label(c.id)}：${count} 股${view.hands_revealed ? "（含手牌）" : "公开投资"}。${holder ? "持有反垄断标记（🚫）。" : ""}`);
-        cell.append(el("span", "", holder ? " 🚫" : "")); shares.append(cell);
+        const count = player.shares[c.id], cell = tip(el("div", `startups-share su-${c.id}${count ? "" : " is-zero"}`), "portfolio", `${label(c.id)}：${count} 股${view.hands_revealed ? "（含手牌）" : "公开投资"}。${holder ? "持有反垄断标记（🚫）。" : ""}`);
+        cell.setAttribute("aria-label", `${c.name}: ${count} shares${holder ? ", anti-monopoly marker" : ""}`);
+        cell.append(el("span", "startups-share-company", c.emoji), el("strong", "startups-share-count", String(count)), el("span", "startups-share-marker", holder ? "🚫" : ""));
+        shares.append(cell);
       }
       node.append(heading, stats, shares); container.append(node);
     }
@@ -364,6 +370,8 @@
   }
   function render() {
     if (!view) return;
+    panel.dataset.phase = view.phase;
+    panel.classList.toggle("is-your-turn", !view.game_over && view.you === view.current_turn);
     text("Round", `Round ${view.round_number} / ${view.config.rounds}`); text("Deck", `🂠 ${view.deck_count}`);
     let status = view.you === view.current_turn ? `Your turn · ${view.phase === "take" ? "Take a share" : "Invest or send to market"}` : `${name(view.current_turn)} · ${view.phase === "take" ? "Taking a share" : "Placing a share"}`;
     if (view.phase === "round_review") status = "Round complete · Review the settlement";
@@ -454,6 +462,8 @@
   function clearState() {
     view = null; selection = null; pending = false; renderSignature = null; pointerGesture = null;
     document.body.classList.remove("startups-needs-action");
+    panel.classList.remove("is-your-turn");
+    delete panel.dataset.phase;
     ["Market", "Hand"].forEach(suffix => { byId(suffix).inert = false; });
     clearTimeout(pendingTimer);
     hideTip(); startupsExplainWidget?.exit(); startupsHelpWidget?.close();

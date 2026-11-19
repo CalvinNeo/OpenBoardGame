@@ -5,11 +5,14 @@ import secrets
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from game import bomb_busters_campaign as campaign
+from game.bomb_busters_missions import get_mission
+
 
 PRESET_PATH = Path(__file__).resolve().parent / "assets" / "bomb_busters" / "practice_presets.json"
 INFO_LABELS = tuple(str(value) for value in range(1, 13)) + ("yellow",)
 WIRE_STATUSES = {"uncut", "cut", "secured"}
-PHASES = {"initial_info", "playing", "awaiting_detector_choice", "mission_result"}
+PHASES = {"initial_info", "playing", "awaiting_detector_choice", "mission_result", "mission_setup", "mission_decision"}
 PRESET_KEYS = {
     "id",
     "name",
@@ -121,8 +124,12 @@ def _build_wire_pool(preset: Dict, rng: random.Random) -> List[Dict]:
         for _ in range(int(preset["copies_per_blue"])):
             pool.append({"kind": "blue", "blue_value": value, "sort_tick": value * 10})
 
-    yellow_ticks = rng.sample([value * 10 + 1 for value in range(1, 12)], int(preset["yellow_count"]))
-    red_ticks = rng.sample([value * 10 + 5 for value in range(1, 12)], int(preset["red_count"]))
+    yellow_ticks = preset.get("yellow_ticks")
+    if yellow_ticks is None:
+        yellow_ticks = rng.sample([value * 10 + 1 for value in range(1, 12)], int(preset["yellow_count"]))
+    red_ticks = preset.get("red_ticks")
+    if red_ticks is None:
+        red_ticks = rng.sample([value * 10 + 5 for value in range(1, 12)], int(preset["red_count"]))
     pool.extend({"kind": "yellow", "blue_value": None, "sort_tick": tick} for tick in yellow_ticks)
     pool.extend({"kind": "red", "blue_value": None, "sort_tick": tick} for tick in red_ticks)
     rng.shuffle(pool)
@@ -206,9 +213,13 @@ def _deal_and_sort(state: Dict, pool: List[Dict]) -> None:
 
 
 def _start_mission(state: Dict) -> None:
-    preset = PRACTICE_PRESETS[state["practice_preset"]]
     rng = random.Random(f"{state['rng_seed']}:{state['rng_counter']}:mission")
     state["rng_counter"] = int(state.get("rng_counter", 0)) + 1
+    preset = (
+        campaign.prepare_setup(state, rng)
+        if state.get("mode") == "campaign"
+        else PRACTICE_PRESETS[state["practice_preset"]]
+    )
 
     state["players"] = {
         player_id: {
@@ -257,6 +268,8 @@ def _start_mission(state: Dict) -> None:
     state["private_audit"] = []
     state["action_number"] = 0
     state["game_over"] = False
+    if state.get("mode") == "campaign":
+        campaign.setup(state, rng)
     _assert_state_invariants(state)
 
 
@@ -351,7 +364,7 @@ def _return_info_token(state: Dict, wire: Dict) -> None:
 def _cut_wire(state: Dict, wire: Dict, status: str = "cut") -> None:
     if wire.get("status") != "uncut":
         raise AssertionError("wire is already processed")
-    if status == "secured" and wire.get("kind") != "red":
+    if status == "secured" and wire.get("kind") != "red" and not wire.get("danger"):
         raise AssertionError("only red wires can be secured")
     _return_info_token(state, wire)
     wire["status"] = status
@@ -445,6 +458,8 @@ def _use_detonator(state: Dict) -> None:
 
 
 def _legal_solo_sets(state: Dict, player_id: str) -> List[List[str]]:
+    if state.get("mode") == "campaign":
+        return campaign.legal_solo_sets(state, player_id)
     result: List[List[str]] = []
     global_by_key: Dict[str, List[Dict]] = {}
     for wire in _all_uncut_wires(state):
@@ -532,6 +547,13 @@ def _public_wire(state: Dict, wire: Dict, viewer_id: str, reveal_all: bool) -> D
         "public_info": public_info,
     }
     may_reveal = reveal_all or wire.get("owner_id") == viewer_id or wire.get("status") != "uncut"
+    if state.get("mode") == "campaign" and wire.get("reversed") and wire.get("status") == "uncut" and not reveal_all:
+        may_reveal = wire.get("owner_id") != viewer_id
+    if state.get("mode") == "campaign":
+        result["reversed"] = bool(wire.get("reversed"))
+        result["unsorted"] = bool(wire.get("unsorted"))
+        result["clue"] = copy.deepcopy(wire.get("clue"))
+        result["public_info"] = campaign.public_info(wire)
     if may_reveal:
         result.update(
             {
@@ -584,13 +606,14 @@ def _assert_state_invariants(state: Dict) -> None:
         wire = wires[wire_id]
         if wire.get("status") != "uncut" or wire.get("info_token_id") != token_id:
             raise AssertionError("Info token reverse link is invalid")
-        if _wire_label(wire) != token.get("label"):
+        expected_label = wire.get("clue", {}).get("label") if state.get("mode") == "campaign" else _wire_label(wire)
+        if expected_label != token.get("label"):
             raise AssertionError("Info token label does not match wire")
 
     for wire_id, wire in wires.items():
         if wire.get("status") not in WIRE_STATUSES:
             raise AssertionError("invalid wire status")
-        if wire.get("status") == "secured" and wire.get("kind") != "red":
+        if wire.get("status") == "secured" and wire.get("kind") != "red" and not wire.get("danger"):
             raise AssertionError("only red wires may be secured")
         if wire.get("kind") == "red" and wire.get("status") == "cut" and state.get("phase") != "mission_result":
             raise AssertionError("a cut red wire requires a mission result")
@@ -599,7 +622,7 @@ def _assert_state_invariants(state: Dict) -> None:
             raise AssertionError("wire references an unknown Info token")
 
     rack_sizes = [len(rack.get("slots", [])) for rack in racks.values()]
-    if rack_sizes and max(rack_sizes) - min(rack_sizes) > 1:
+    if state.get("mode") != "campaign" and rack_sizes and max(rack_sizes) - min(rack_sizes) > 1:
         raise AssertionError("rack sizes differ by more than one wire")
 
 
@@ -622,6 +645,9 @@ class BombBustersGame:
         preset_id = raw_config.get("practice_preset", "standard_practice")
         if preset_id not in PRACTICE_PRESETS:
             raise ValueError("unknown Bomb Busters practice preset")
+        mission_id = raw_config.get("mission_id")
+        if mission_id is not None:
+            get_mission(mission_id, len(players))
         test_seed = raw_config.get("seed")
         if isinstance(test_seed, bool) or not isinstance(test_seed, (str, int)):
             test_seed = None
@@ -633,13 +659,14 @@ class BombBustersGame:
         state = {
             "version": 1,
             "game_id": BombBustersGame.game_id,
-            "mode": "practice",
+            "mode": "campaign" if mission_id is not None else "practice",
+            "mission_id": mission_id,
             "practice_preset": preset_id,
-            "config": {"practice_preset": preset_id},
+            "config": {"mission_id": mission_id} if mission_id is not None else {"practice_preset": preset_id},
             "player_meta": player_meta,
             "turn_order": turn_order,
             "captain_id": captain_id,
-            "mission_number": 1,
+            "mission_number": mission_id if mission_id is not None else 1,
             "attempt_number": 1,
             "mission_history": [],
             "rng_seed": rng_seed,
@@ -650,6 +677,8 @@ class BombBustersGame:
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
+        if state.get("mode") == "campaign":
+            return campaign.get_legal_actions(state, player_id)
         if player_id not in state.get("players", {}):
             return []
         phase = state.get("phase")
@@ -689,6 +718,8 @@ class BombBustersGame:
 
     @staticmethod
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
+        if state.get("mode") == "campaign":
+            return campaign.apply_action(state, player_id, action)
         if player_id not in state.get("players", {}):
             return [], "unknown player"
         if not isinstance(action, dict) or not isinstance(action.get("type"), str):
@@ -1185,11 +1216,11 @@ class BombBustersGame:
             info_supply[label] = sum(
                 1
                 for token in state.get("info_tokens", {}).values()
-                if token.get("label") == label and token.get("attached_wire_id") is None
+                if token.get("label") == label and token.get("attached_wire_id") is None and not token.get("reserved_for")
             )
 
         preset = PRACTICE_PRESETS[state["practice_preset"]]
-        return {
+        view = {
             "game_id": BombBustersGame.game_id,
             "you": viewer_id,
             "phase": state.get("phase"),
@@ -1242,9 +1273,14 @@ class BombBustersGame:
             "result_ready_ids": list(state.get("result_ready_ids", [])),
             "game_over": False,
         }
+        if state.get("mode") == "campaign":
+            campaign.extend_public_view(state, viewer_id, view)
+        return view
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("mode") == "campaign":
+            return campaign.bot_move(state, bot_id)
         view = BombBustersGame.get_public_view(state, bot_id)
         legal = view.get("legal_actions", [])
         if not legal:

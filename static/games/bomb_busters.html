@@ -18,7 +18,7 @@
   </section></template>
 <template data-game-target="bombBustersPanel" data-game-mode="contents">
               <div class="bomb-busters-topbar">
-                <div class="bomb-busters-title-block" data-bomb-busters-tip="Core Practice uses original practice setups, without shared equipment or the official campaign.">
+                <div class="bomb-busters-title-block" data-bomb-busters-tip="Choose numbered campaign missions or the original practice setups in Room Control. Mission-specific rules are available in Help.">
                   <div class="bomb-busters-subtitle">
                     <span id="bombBustersPresetLabel">Standard Practice</span>
                     <span>· Bomb <span id="bombBustersMissionLabel">1</span></span>
@@ -28,6 +28,32 @@
               </div>
 
               <div id="bombBustersStatus" class="bomb-busters-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <div id="bombBustersCampaign" class="bomb-busters-campaign hidden">
+                <div id="bombBustersMissionState" class="bomb-busters-mission-state" aria-live="polite"></div>
+                <div id="bombBustersMissionChoices" class="bomb-busters-mission-choices"></div>
+                <details id="bombBustersEquipment" class="bomb-busters-details">
+                  <summary>🧰 Equipment <span id="bombBustersEquipmentCount"></span></summary>
+                  <div id="bombBustersEquipmentCards" class="bomb-busters-equipment-cards"></div>
+                </details>
+                <div id="bombBustersCampaignSelection" class="bomb-busters-campaign-selection hidden">
+                  <strong id="bombBustersCampaignSelectionTitle"></strong>
+                  <span id="bombBustersCampaignSelectionSummary" role="status"></span>
+                  <div id="bombBustersCampaignSelectionOptions" class="bomb-busters-mission-choices"></div>
+                  <div class="bomb-busters-mission-choices">
+                    <button id="bombBustersCampaignConfirm" type="button">Confirm</button>
+                    <button id="bombBustersCampaignCancel" type="button">Cancel</button>
+                  </div>
+                </div>
+                <details id="bombBustersCompanion" class="bomb-busters-details hidden">
+                  <summary>🎧 Official Audio Companion</summary>
+                  <div class="bomb-busters-details-body">
+                    <p>Play the official recording externally. The Captain applies its instructions here. This is a manual companion, not an automated audio adaptation.</p>
+                    <a href="https://www.pegasusna.com/bombbusters-en" target="_blank" rel="noopener noreferrer">Open official mission audio</a>
+                    <div id="bombBustersCompanionControls" class="bomb-busters-mission-choices"></div>
+                  </div>
+                </details>
+              </div>
 
               <div class="bomb-busters-instruments">
                 <section id="bombBustersDetonator" class="bomb-busters-detonator" data-bomb-busters-explain="detonator" aria-label="Detonator status"></section>

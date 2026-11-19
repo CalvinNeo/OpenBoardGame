@@ -1125,16 +1125,22 @@
                     <div class="hint">The selected difficulty stays fixed for the whole game.</div>
                   </div>
                   <div class="game-config-card hidden" id="bombBustersConfigBox" aria-hidden="true">
-                    <div class="game-config-title">Bomb Busters · Core Practice</div>
+                    <div class="game-config-title">Bomb Busters · 66 Missions</div>
                     <div class="row compact-row">
-                      <label for="bombBustersPresetSelect">Practice Setup</label>
+                      <label for="bombBustersMissionSelect">Mission</label>
+                      <select id="bombBustersMissionSelect" aria-describedby="bombBustersMissionHint">
+                        <option value="1" selected>01 · Training</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row" id="bombBustersPracticeRow" hidden>
+                      <label for="bombBustersPresetSelect">Practice</label>
                       <select id="bombBustersPresetSelect">
                         <option value="short_practice">Short Practice</option>
                         <option value="standard_practice" selected>Standard Practice</option>
                         <option value="high_risk_practice">High Risk Practice</option>
                       </select>
                     </div>
-                    <div class="hint">Original practice setups. Shared equipment is not included.</div>
+                    <div class="hint" id="bombBustersMissionHint">Missions 1–66, plus the original practice setups. Missions 34 and 65 require 3–5 players. Audio missions use the official external recording.</div>
                   </div>
                   <div class="game-config-card hidden" id="kronologicConfigBox" aria-hidden="true">
                     <div class="game-config-title" data-kronologic-copy="config_title">时空神探 · 原创案件包</div>
@@ -1816,9 +1822,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=270" defer></script>
+  <script src="/static/game_assets.js?v=275" defer></script>
   <template id="incanGoldGuide"></template>
-  <script src="/static/games/shared.js?v=app_v44" defer></script>
+  <script src="/static/games/shared.js?v=app_v45" defer></script>
   <script src="/static/games/shared_help.js?v=2" defer></script>
   <script src="/static/games/shared_effects.js?v=1" defer></script>
   <template id="yahtzeeGuideOverlay"></template>

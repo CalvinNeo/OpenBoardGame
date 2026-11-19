@@ -43,6 +43,7 @@
   let helpWidget = null, explainWidget = null;
   let vb = {x: 0, y: 0, w: W, h: H};
   let drag = null, userZoomed = false;
+  let portrait = false, boardLayer = map;
 
   const active = () => !panel.classList.contains("hidden") && currentGameType === GAME;
   const available = type => !pending && !!view && (view.legal_actions || []).includes(type);
@@ -75,6 +76,7 @@
   }
 
   function toScreen(x, y) {
+    if (portrait) [x, y] = [y, W - x];
     const rect = frame.getBoundingClientRect();
     const s = Math.min(rect.width / vb.w, rect.height / vb.h);
     return {
@@ -86,28 +88,27 @@
   // ------------------------------------------------------------------ zoom
   function applyViewBox() {
     map.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h);
+    positionSlotOverlay();
   }
-  function fitMap() { vb = {x: 0, y: 0, w: W, h: H}; applyViewBox(); }
-  // A phone screen is far taller than the board is wide, so covering the frame
-  // keeps the rivers readable instead of letterboxing them into a thin strip.
-  function fillMap() {
+  const mapSize = () => portrait ? {w: H, h: W} : {w: W, h: H};
+  function fitMap() { vb = {x: 0, y: 0, ...mapSize()}; applyViewBox(); }
+  function originMap() {
     const rect = frame.getBoundingClientRect();
-    if (!rect.width || !rect.height) { fitMap(); return; }
-    const aspect = rect.width / rect.height;
-    let w, h;
-    if (aspect < W / H) { h = H; w = H * aspect; } else { w = W; h = W / aspect; }
-    // Anchor a horizontal crop to the left edge so the cost rail - the reference
-    // every placement decision is made against - is always on screen.
-    vb = {x: aspect < W / H ? 0 : (W - w) / 2, y: (H - h) / 2, w, h};
+    const size = mapSize();
+    vb = {x: (size.w - rect.width) / 2, y: (size.h - rect.height) / 2,
+      w: rect.width || size.w, h: rect.height || size.h};
     applyViewBox();
   }
   function defaultView() {
     userZoomed = false;
-    if (window.innerWidth <= 900) fillMap(); else fitMap();
+    portrait = window.matchMedia("(max-width: 900px) and (orientation: portrait)").matches;
+    frame.dataset.orientation = portrait ? "portrait" : "landscape";
+    fitMap();
   }
   function zoomBy(factor, cx, cy) {
-    const w = Math.min(W * 1.6, Math.max(W * 0.28, vb.w * factor));
-    const h = w * (H / W);
+    const size = mapSize();
+    const w = Math.min(size.w * 1.6, Math.max(size.w * 0.28, vb.w * factor));
+    const h = w * vb.h / vb.w;
     const fx = cx === undefined ? 0.5 : cx;
     const fy = cy === undefined ? 0.5 : cy;
     vb = {
@@ -115,18 +116,15 @@
       y: vb.y + (vb.h - h) * fy,
       w, h,
     };
-    vb.x = Math.max(-40, Math.min(W - vb.w + 40, vb.x));
-    vb.y = Math.max(-40, Math.min(H - vb.h + 40, vb.y));
+    clampViewBox();
     applyViewBox();
   }
-  function pointerToSvg(event) {
-    const rect = frame.getBoundingClientRect();
-    const s = Math.min(rect.width / vb.w, rect.height / vb.h);
-    const ox = (rect.width - vb.w * s) / 2, oy = (rect.height - vb.h * s) / 2;
-    return {
-      x: vb.x + (event.clientX - rect.left - ox) / s,
-      y: vb.y + (event.clientY - rect.top - oy) / s,
-    };
+  function clampViewBox() {
+    const size = mapSize();
+    vb.x = vb.w > size.w ? (size.w - vb.w) / 2
+      : Math.max(-24, Math.min(size.w - vb.w + 24, vb.x));
+    vb.y = vb.h > size.h ? (size.h - vb.h) / 2
+      : Math.max(-24, Math.min(size.h - vb.h + 24, vb.y));
   }
 
   // Pointer capture is taken only once a drag actually starts: capturing on
@@ -135,7 +133,8 @@
   // gesture that leaves the map still ends cleanly.
   let suppressClick = false;
   frame.addEventListener("pointerdown", event => {
-    if (event.target.closest(".tr12-slot-card")) return;
+    if (event.target.closest(".tr12-slot-card") || !event.isPrimary || event.button !== 0) return;
+    suppressClick = false;
     drag = {
       x: event.clientX, y: event.clientY, vb: {...vb},
       moved: false, id: event.pointerId, captured: false,
@@ -153,14 +152,15 @@
     }
     const rect = frame.getBoundingClientRect();
     const s = Math.min(rect.width / drag.vb.w, rect.height / drag.vb.h) || 1;
-    vb.x = Math.max(-40, Math.min(W - vb.w + 40, drag.vb.x - dx / s));
-    vb.y = Math.max(-40, Math.min(H - vb.h + 40, drag.vb.y - dy / s));
+    vb.x = drag.vb.x - dx / s;
+    vb.y = drag.vb.y - dy / s;
+    clampViewBox();
     applyViewBox();
   });
   const endDrag = event => {
     if (!drag) return;
     if (event && event.pointerId !== undefined && event.pointerId !== drag.id) return;
-    if (drag.moved && event && event.type === "pointerup") suppressClick = true;
+    if (drag.moved) suppressClick = true;
     if (drag.captured) {
       try { frame.releasePointerCapture(drag.id); } catch (error) { /* ignore */ }
     }
@@ -170,7 +170,11 @@
   window.addEventListener("pointerup", endDrag);
   window.addEventListener("pointercancel", endDrag);
   frame.addEventListener("click", event => {
-    if (suppressClick) { suppressClick = false; event.stopPropagation(); }
+    if (suppressClick) {
+      suppressClick = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
   }, true);
   frame.addEventListener("wheel", event => {
     event.preventDefault();
@@ -234,11 +238,11 @@
 
   function renderBoard() {
     map.replaceChildren();
+    boardLayer = el("g", portrait ? {transform: "translate(0 " + W + ") rotate(-90)"} : {});
+    map.appendChild(boardLayer);
     const board = view.board;
-    const stretchById = {};
-    board.stretches.forEach(s => { stretchById[s.id] = s; });
 
-    map.appendChild(el("rect", {x: 0, y: 0, width: W, height: H, fill: "transparent"}));
+    boardLayer.appendChild(el("rect", {x: 0, y: 0, width: W, height: H, fill: "transparent"}));
 
     // cost rail
     [1, 2, 3, 4, 5].forEach(row => {
@@ -247,18 +251,21 @@
       const label = stretch.cost > 0 ? "−" + stretch.cost : (stretch.cost < 0 ? "+1" : "0");
       const node = el("text", {x: 30, y: ROW_Y[row] + 38, class: "tr12-cost", "text-anchor": "middle"});
       node.textContent = label;
-      map.appendChild(node);
+      node.dataset.tr12Tip = stretch.cost < 0 ? "Gain 1 camp card when placing here"
+        : "Placement cost: " + stretch.cost + " camp cards";
+      boardLayer.appendChild(node);
     });
-    const riverLabel = el("text", {x: 500, y: 24, class: "tr12-area-label", "text-anchor": "middle"});
+    const riverLabel = el("text", {x: portrait ? W - 22 : 500, y: portrait ? 230 : 24,
+      class: "tr12-area-label", "text-anchor": "middle"});
     riverLabel.textContent = "RIVER AREA · " + view.active_rivers + " RIVERS";
-    map.appendChild(riverLabel);
+    boardLayer.appendChild(riverLabel);
 
     // stretches, pearls and slots
     const collectSpace = myRiverSpace();
     const collectStretch = collectSpace ? collectSpace.split("#")[0] : null;
     board.stretches.forEach(stretch => {
       const box = stretchBox(stretch);
-      map.appendChild(el("rect", {
+      boardLayer.appendChild(el("rect", {
         x: box.x, y: box.y, width: box.width, height: box.height, rx: 10,
         class: "tr12-stretch" + (stretch.active ? "" : " inactive"),
       }));
@@ -283,8 +290,8 @@
             if (suppressClick) return;
             onRiverPearl(color);
           });
-        }
-        map.appendChild(node);
+        } else node.dataset.tr12Tip = catalog().pearls[color].en + " pearl";
+        boardLayer.appendChild(node);
       });
       for (let slot = 1; slot <= stretch.slots; slot += 1) {
         const pos = slotPos(stretch, slot);
@@ -308,7 +315,7 @@
           if (suppressClick) return;
           onFairySpot(spot.id);
         });
-        map.appendChild(dot);
+        boardLayer.appendChild(dot);
         if (stack.length) {
           const glyph = el("text", {
             x: fx, y: box.y + 35, "text-anchor": "middle", "font-size": 13,
@@ -316,19 +323,20 @@
           glyph.textContent = stack.length > 1
             ? FAIRY_EMOJI[stack[0]] + stack.length : FAIRY_EMOJI[stack[0]];
           glyph.style.pointerEvents = "none";
-          map.appendChild(glyph);
+          boardLayer.appendChild(glyph);
         }
       });
     });
 
     // sea
-    map.appendChild(el("ellipse", {
+    boardLayer.appendChild(el("ellipse", {
       cx: SEA.x, cy: SEA.y, rx: SEA.rx, ry: SEA.ry,
       fill: "rgba(120,190,235,0.22)", stroke: "rgba(255,255,255,0.4)",
     }));
-    const seaLabel = el("text", {x: SEA.x, y: SEA.y - SEA.ry - 12, class: "tr12-area-label", "text-anchor": "middle"});
+    const seaLabel = el("text", {x: portrait ? W - 22 : SEA.x,
+      y: portrait ? SEA.y : SEA.y - SEA.ry - 12, class: "tr12-area-label", "text-anchor": "middle"});
     seaLabel.textContent = "SEA";
-    map.appendChild(seaLabel);
+    boardLayer.appendChild(seaLabel);
     (view.sea || []).forEach((color, index) => {
       const row = Math.floor(index / 10), col = index % 10;
       const cx = SEA.x - 130 + col * 28 + (row % 2) * 12;
@@ -344,31 +352,40 @@
         if (suppressClick) return;
         onSeaPearl(color);
       });
-      map.appendChild(pearl);
+      boardLayer.appendChild(pearl);
     });
     drawSlot("sea", SEA.x, SEA.y + 18, true, 15);
 
     // village
-    const villageLabel = el("text", {x: 500, y: VILLAGE_Y - 8, class: "tr12-area-label", "text-anchor": "middle"});
+    const villageLabel = el("text", {x: portrait ? W - 22 : 500,
+      y: portrait ? VILLAGE_Y + 26 : VILLAGE_Y - 8, class: "tr12-area-label", "text-anchor": "middle"});
     villageLabel.textContent = "VILLAGE";
-    map.appendChild(villageLabel);
+    boardLayer.appendChild(villageLabel);
     board.village.forEach((cost, index) => {
       const pos = villagePos(index);
       const costNode = el("text", {
         x: pos.x, y: VILLAGE_Y + 22, class: "tr12-cost", "text-anchor": "middle", "font-size": 13,
       });
       costNode.textContent = cost > 0 ? "−" + cost : "0";
-      map.appendChild(costNode);
+      boardLayer.appendChild(costNode);
       drawSlot("v" + (index + 1), pos.x, pos.y, true, 16);
     });
 
+    if (portrait) {
+      boardLayer.querySelectorAll("text").forEach(node => {
+        node.setAttribute("transform", "rotate(90 " + node.getAttribute("x")
+          + " " + node.getAttribute("y") + ")");
+        if (node.classList.contains("tr12-area-label")) node.style.fontSize = "20px";
+        else if (node.classList.contains("tr12-cost")) node.style.fontSize = "24px";
+      });
+    }
     renderSlotOverlay();
   }
 
   function drawSlot(spaceId, x, y, isActive, radius) {
     const placement = view.placements[spaceId];
     const canPlace = available("place_marker") && !placement && isActive && !selection?.pendingPair;
-    const group = el("g", {});
+    const group = el("g", {class: "tr12-slot-group"});
     const circle = el("circle", {
       cx: x, cy: y, r: radius,
       class: "tr12-slot" + (isActive ? "" : " inactive")
@@ -377,8 +394,11 @@
         + (selection && selection.space === spaceId ? " target" : ""),
     });
     circle.dataset.space = spaceId;
+    group.dataset.space = spaceId;
+    group.appendChild(el("circle", {cx: x, cy: y, r: radius + 9,
+      fill: "transparent", class: "tr12-slot-hit"}));
     if (canPlace) {
-      circle.addEventListener("click", event => {
+      group.addEventListener("click", event => {
         event.stopPropagation();
         if (suppressClick) return;
         onSlotClick(spaceId, x, y);
@@ -386,7 +406,7 @@
     } else if (selection && selection.pendingPair === "supplies-from" && placement
                && placement.pid === view.you) {
       circle.classList.add("target");
-      circle.addEventListener("click", event => {
+      group.addEventListener("click", event => {
         event.stopPropagation();
         if (suppressClick) return;
         selection.pairFrom = spaceId;
@@ -395,7 +415,7 @@
       });
     } else if (selection && selection.pendingPair === "supplies-to" && !placement && isActive) {
       circle.classList.add("target");
-      circle.addEventListener("click", event => {
+      group.addEventListener("click", event => {
         event.stopPropagation();
         if (suppressClick) return;
         selection.pairs.push({kind: "supplies", from: selection.pairFrom, to: spaceId});
@@ -424,7 +444,7 @@
         }));
       }
     }
-    map.appendChild(group);
+    boardLayer.appendChild(group);
   }
 
   // ------------------------------------------------------- current river slot
@@ -557,16 +577,27 @@
     if (!cards.length) return;
     overlay.classList.remove("hidden");
     cards.forEach(card => overlay.appendChild(card));
+    positionSlotOverlay();
   }
 
   function overlayCard(x, y, children) {
-    const point = toScreen(x, y);
     const card = document.createElement("div");
     card.className = "tr12-slot-card";
-    card.style.left = point.x + "px";
-    card.style.top = Math.max(8, point.y - 54) + "px";
+    card.dataset.anchorX = x;
+    card.dataset.anchorY = y;
     children.forEach(child => card.appendChild(child));
     return card;
+  }
+
+  function positionSlotOverlay() {
+    overlay.querySelectorAll(".tr12-slot-card").forEach(card => {
+      const point = toScreen(Number(card.dataset.anchorX), Number(card.dataset.anchorY));
+      const width = card.offsetWidth, height = card.offsetHeight;
+      const top = point.y - height - 18;
+      card.style.left = Math.max(8, Math.min(frame.clientWidth - width - 8, point.x - width / 2)) + "px";
+      card.style.top = Math.max(8, Math.min(frame.clientHeight - height - 8,
+        top < 8 ? point.y + 18 : top)) + "px";
+    });
   }
 
   function button(label, className, handler) {
@@ -662,7 +693,8 @@
         slot.style.background = SEAT_COLORS[player ? player.color : 0];
         slot.textContent = (player ? player.name : "?").slice(0, 1).toUpperCase();
         slot.title = (player ? player.name : "?") + " · position " + (i + 1);
-      }
+      } else slot.title = "Turn order · empty position " + (i + 1);
+      slot.dataset.tr12Tip = slot.title;
       host.appendChild(slot);
     }
   }
@@ -680,6 +712,7 @@
   function renderDock() {
     const player = me();
     if (!player) return;
+    const scrollTop = byId("Dock").scrollTop;
     text("AlpacaCount", player.alpaca.length + " / 6");
     text("HandCount", "(" + player.hand_count + ")");
     renderAlpaca(player);
@@ -687,6 +720,7 @@
     renderHand(player);
     renderFairies(player);
     renderMarkaya(player);
+    byId("Dock").scrollTop = scrollTop;
   }
 
   function renderAlpaca(player) {
@@ -732,6 +766,7 @@
       node.textContent = card.count + "×" + PEARL_EMOJI[card.color] + " = 4";
       node.title = "Hold " + card.count + " " + catalog().pearls[card.color].en
         + " on your alpaca at once";
+      node.dataset.tr12Tip = node.title;
       host.appendChild(node);
     });
   }
@@ -1020,6 +1055,7 @@
   }
 
   panel.addEventListener("pointerover", event => {
+    if (event.pointerType === "touch" || !window.matchMedia("(hover: hover)").matches) return;
     const target = event.target.closest("[data-tr12-tip]");
     if (!target || target === tipTarget) return;
     tipTarget = target;
@@ -1032,7 +1068,7 @@
   });
   panel.addEventListener("click", event => {
     const target = event.target.closest("[data-tr12-tip]");
-    if (!target) return;
+    if (!target || target.closest("button")) return;
     if (window.matchMedia("(hover: none)").matches) {
       event.stopPropagation();
       showTip(target, target.dataset.tr12Tip);
@@ -1046,8 +1082,8 @@
       en: "Five rounds. Each has a preparation, exploration and collection phase, and pauses at the end so everyone can read the table.",
     },
     zoom: {
-      zh: "加减号缩放，Fit 收起全图，1:1 按原始比例。拖动可以平移，手机端由版图自己接管触摸手势。",
-      en: "Plus and minus zoom, Fit frames the whole valley, 1:1 shows native size. Drag to pan; on phones the board claims the touch gesture.",
+      zh: "加减号缩放，Fit 显示完整河谷，1:1 按原始尺寸显示。手机竖屏时河谷自动旋转，河流从左向右汇入海洋，村庄在右侧，文字保持正向。拖动可以平移，版图外仍可正常滚动页面。",
+      en: "Plus and minus zoom, Fit frames the whole valley, and 1:1 shows native size. In phone portrait mode the valley rotates: rivers flow left to right towards the sea, with the village on the right and upright labels. Drag to pan; scroll the page outside the board.",
     },
     dock: {
       zh: "打开你自己的营地：羊驼、营地卡、仙子和玛卡雅。手机端它会从右侧滑出，可以随时关掉去看版图。",
@@ -1074,8 +1110,8 @@
       en: "The Markaya you have befriended. Only pearls delivered into their storage spots score, and rainbow spots accept any colour.",
     },
     village: {
-      zh: "本轮可以结交的玛卡雅，共 6 张。村庄空格越靠左越先挑，左边两格分别要付 2 张和 1 张营地卡。",
-      en: "The six Markaya available this round. Village spaces further left pick first; the two leftmost cost 2 and 1 camp cards.",
+      zh: "本轮可以结交的玛卡雅，共 6 张。村庄按横屏从左到右、手机竖屏从下到上的顺序挑选，最先的两格分别付 2 张和 1 张营地卡。",
+      en: "The six Markaya available this round. Village spaces pick left to right in landscape, or bottom to top in phone portrait mode. The first two cost 2 and 1 camp cards.",
     },
     board: {
       zh: "河谷版图：越靠上游费用越高但越先挑珍珠，最下面一段反而给你 1 张营地卡。每段的格子数就是那一段能挤几个人。",
@@ -1101,6 +1137,16 @@
       },
     },
     sections: [
+      {
+        id: "board",
+        label: {zh: "版图操作", en: "Board controls"},
+        html: {
+          zh: "<p>手机竖屏时，河谷自动逆时针旋转 90°，河流从左往右汇入海洋，村庄在最右侧，文字保持正向。河段费用从左到右为 −3、−2、−1、0、+1。村庄从下往上依次挑选玛卡雅。</p>"
+            + "<p>用 + / − 缩放，Fit 显示全图，1:1 显示原始尺寸。拖动版图可以平移，在版图外滑动可滚动页面。点击空位后在原地确认，点击空白处取消。My camp 打开可关闭的营地抽屉，付费时点选营地卡，再回到版图确认。</p>",
+          en: "<p>In phone portrait mode the valley rotates 90° counterclockwise, with upright labels. Rivers flow left to right towards the sea and the village on the right. River costs run −3, −2, −1, 0, +1 from left to right. Village markers choose Markaya from bottom to top.</p>"
+            + "<p>Use + / − to zoom, Fit for the whole board, or 1:1 for native size. Drag the board to pan and swipe outside it to scroll the page. Tap a space for its confirmation, or blank space to cancel. My camp opens a closable drawer. Choose camp cards there to pay, then return to the board to confirm.</p>",
+        },
+      },
       {
         id: "setup",
         label: {zh: "组件与准备", en: "Setup"},
@@ -1201,12 +1247,24 @@
   byId("ZoomIn").addEventListener("click", () => { userZoomed = true; zoomBy(0.82); });
   byId("ZoomOut").addEventListener("click", () => { userZoomed = true; zoomBy(1.22); });
   byId("Fit").addEventListener("click", () => { userZoomed = true; fitMap(); });
-  byId("Origin").addEventListener("click", () => { userZoomed = true; vb = {x: 0, y: 0, w: W, h: H}; applyViewBox(); });
-  window.addEventListener("resize", () => { if (!userZoomed) defaultView(); });
-  byId("DockBtn").addEventListener("click", () => byId("Dock").classList.toggle("open"));
-  byId("DockClose").addEventListener("click", () => byId("Dock").classList.remove("open"));
+  byId("Origin").addEventListener("click", () => { userZoomed = true; originMap(); });
+  const resizeMap = () => {
+    const nextPortrait = window.matchMedia("(max-width: 900px) and (orientation: portrait)").matches;
+    if (nextPortrait !== portrait || !userZoomed) {
+      defaultView();
+      if (view) renderBoard();
+    } else positionSlotOverlay();
+  };
+  window.addEventListener("resize", resizeMap);
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(resizeMap).observe(frame);
+  function toggleDock(open) {
+    byId("Dock").classList.toggle("open", open);
+    byId("DockBtn").setAttribute("aria-expanded", String(open));
+  }
+  byId("DockBtn").addEventListener("click", () => toggleDock(!byId("Dock").classList.contains("open")));
+  byId("DockClose").addEventListener("click", () => toggleDock(false));
   panel.addEventListener("click", event => {
-    if (selection && !event.target.closest(".tr12-slot-card") && !event.target.closest(".tr12-slot")) {
+    if (selection && !event.target.closest("button, .tr12-slot-card, .tr12-slot-group, .tr12-dock")) {
       if (selection.pendingPair) return;
       cancelSelection();
     }
@@ -1214,7 +1272,7 @@
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && active()) {
       if (selection || chosen) cancelSelection();
-      byId("Dock").classList.remove("open");
+      toggleDock(false);
     }
   });
 
@@ -1234,7 +1292,7 @@
     overlay.classList.add("hidden");
     byId("Review").classList.add("hidden");
     byId("Next").classList.add("hidden");
-    byId("Dock").classList.remove("open");
+    toggleDock(false);
     text("Status", "Waiting to start");
     defaultView();
   }

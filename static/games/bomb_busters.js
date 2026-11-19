@@ -61,6 +61,10 @@
   const bombBustersTooltipEl = document.getElementById("bombBustersTooltip");
 
   const BOMB_BUSTERS_EXPLANATIONS = {
+    campaign: {
+      title: "Mission & Equipment",
+      body: "Mission-specific rules override normal cutting and equipment. Select equipment to choose its wires on the racks, then confirm. See Current Mission in Help for this mission's complete rule summary.",
+    },
     own_wire: {
       title: "Your Wire",
       body: "You can see this wire's face. Select an uncut blue (🔵) or yellow (🟡) wire to make a Duo Cut declaration. Blue numbers are cut values; yellow and red decimals are private sorting positions only. A red (🔴, ⚠️) wire can never be declared.",
@@ -430,7 +434,7 @@
       bombBustersPendingTimer = null;
       if (bombBustersView) bombBustersRenderInteractive(bombBustersView);
     }, 1800);
-    sendAction(action);
+    sendAction(window.bombBustersCampaignUI ? window.bombBustersCampaignUI.decorateAction(action) : action);
     if (bombBustersView) bombBustersRenderInteractive(bombBustersView);
   }
 
@@ -456,14 +460,14 @@
     });
   }
 
-  function bombBustersShowExplanation(key) {
+  function bombBustersShowExplanation(key, target) {
     const explanation = BOMB_BUSTERS_EXPLANATIONS[key];
     if (!explanation || !bombBustersExplainContentEl) return;
     bombBustersExplainContentEl.innerHTML = "";
     const title = document.createElement("h3");
     title.textContent = explanation.title;
     const body = document.createElement("p");
-    body.textContent = explanation.body;
+    body.textContent = target && target.dataset.bombBustersExplanation || explanation.body;
     bombBustersExplainContentEl.append(title, body);
     bombBustersSetModal(bombBustersExplainModalEl, true);
   }
@@ -486,6 +490,9 @@
   }
 
   function bombBustersWireIsSelectable(view, rack, wire) {
+    if (view && view.campaign && window.bombBustersCampaignUI && window.bombBustersCampaignUI.hasSelection()) {
+      return !bombBustersPendingAction && window.bombBustersCampaignUI.selectable(rack, wire);
+    }
     if (!view || !wire || wire.status !== "uncut" || bombBustersPendingAction) return false;
     const isOwn = rack.owner_id === view.you;
     if (view.phase === "initial_info") {
@@ -496,6 +503,8 @@
     }
     if (view.phase !== "playing" || view.current_turn !== view.you) return false;
     if (isOwn) {
+      if (view.campaign && wire.reversed && wire.hidden && bombBustersActionMode !== "detector") return true;
+      if (view.campaign && wire.kind === "blue" && !view.campaign.allowed_values.includes(wire.blue_value)) return false;
       if (bombBustersActionMode === "detector") return wire.kind === "blue";
       return wire.kind === "blue" || wire.kind === "yellow";
     }
@@ -509,6 +518,10 @@
 
   function bombBustersHandleWireClick(rack, wire) {
     if (!bombBustersView || !bombBustersWireIsSelectable(bombBustersView, rack, wire)) return;
+    if (bombBustersView.campaign && window.bombBustersCampaignUI && window.bombBustersCampaignUI.hasSelection()) {
+      window.bombBustersCampaignUI.selectWire(rack, wire);
+      return;
+    }
     const isOwn = rack.owner_id === bombBustersView.you;
     if (bombBustersView.phase === "initial_info") {
       bombBustersSelectedOwnWireId = bombBustersSelectedOwnWireId === wire.wire_id ? null : wire.wire_id;
@@ -559,10 +572,14 @@
     if (bombBustersSelectedOwnWireId === wire.wire_id) button.classList.add("is-selected-own");
     if (bombBustersSelectedTargetWireIds.includes(wire.wire_id)) button.classList.add("is-selected-target");
     if (bombBustersSelectedSoloWireIds.includes(wire.wire_id)) button.classList.add("is-selected-solo");
+    if (window.bombBustersCampaignUI && window.bombBustersCampaignUI.isSelected(wire.wire_id)) button.classList.add("is-selected-target");
+    if (wire.reversed || wire.unsorted) button.classList.add("is-special-wire");
 
     const slotNumber = document.createElement("span");
     slotNumber.className = "bomb-busters-slot-number";
     slotNumber.textContent = `#${Number(wire.slot_index) + 1}`;
+    if (wire.reversed) slotNumber.textContent = `↩ #${Number(wire.slot_index) + 1}`;
+    if (wire.unsorted) slotNumber.textContent = `X #${Number(wire.slot_index) + 1}`;
     const icon = document.createElement("span");
     icon.className = "bomb-busters-wire-icon";
     icon.setAttribute("aria-hidden", "true");
@@ -871,6 +888,14 @@
       all_wires_cleared: "Every wire was processed safely.",
       red_wire: "A 🔴 wire triggered the bomb.",
       detonator: "The detonator ran out of safe steps.",
+      priority_deadlock: "A player was left with only priority-blocked values.",
+      constraint_deadlock: "The whole team was blocked by constraints.",
+      special_cut: "The special identification was incorrect.",
+      fatal_mistake: "This mission makes that failed cut fatal.",
+      nano: "Nano reached the explosion space.",
+      timer: "The mission timer expired.",
+      audio_completed: "The official recording's success was confirmed.",
+      audio_failed: "The official recording's failure was confirmed.",
     };
     if (bombBustersResultDetailEl) {
       const completed = (result.completed_blue_values || []).length
@@ -891,7 +916,7 @@
       });
     }
     if (bombBustersContinueBtnEl) {
-      bombBustersContinueBtnEl.textContent = success ? "Next Bomb" : "Retry Mission";
+      bombBustersContinueBtnEl.textContent = view.campaign_complete ? "Campaign Complete" : success && view.campaign && view.campaign.id === 66 ? "Finish Campaign" : success ? "Next Bomb" : "Retry Mission";
       bombBustersContinueBtnEl.disabled = !bombBustersHasAction("continue_mission") || bombBustersPendingAction;
     }
   }
@@ -917,6 +942,11 @@
         : `Waiting for ${bombBustersPlayerName(view, view.current_responder_id)} to choose a wire…`;
     } else if (view.phase === "mission_result") {
       bombBustersStatusEl.textContent = "Review the final rack layout, then confirm when ready.";
+    } else if (view.phase === "mission_setup" || view.phase === "mission_decision") {
+      const decision = view.campaign && view.campaign.decision;
+      bombBustersStatusEl.textContent = decision && decision.player_id === view.you
+        ? "Choose the mission option shown above the racks."
+        : `Waiting for ${bombBustersPlayerName(view, decision && decision.player_id)} to resolve the mission choice…`;
     } else {
       bombBustersStatusEl.textContent = view.current_turn === view.you
         ? "Your turn · choose a safe action."
@@ -1005,7 +1035,7 @@
     // Start the splash before the DOM work below so the table reacts at once.
     bombBustersPlayMissEffect(data);
 
-    if (bombBustersPresetLabelEl) bombBustersPresetLabelEl.textContent = view.practice && view.practice.name || "Core Practice";
+    if (bombBustersPresetLabelEl) bombBustersPresetLabelEl.textContent = view.campaign ? "Campaign · 66 Missions" : view.practice && view.practice.name || "Core Practice";
     if (bombBustersMissionLabelEl) {
       const attempt = Number(view.attempt_number || 1);
       bombBustersMissionLabelEl.textContent = `${view.mission_number || 1}${attempt > 1 ? ` · Attempt ${attempt}` : ""}`;
@@ -1027,11 +1057,15 @@
     bombBustersRenderValidation(view);
     bombBustersRenderDetectorStatus(view);
     bombBustersRenderActivity(view);
+    if (window.bombBustersCampaignUI) {
+      window.bombBustersCampaignUI.render(view, bombBustersDispatch, () => bombBustersRenderInteractive(bombBustersView), data.state_version);
+    }
     bombBustersRenderInteractive(view);
     bombBustersAnnounceEvents(data.events || []);
   }
 
   function bombBustersClearState() {
+    if (window.bombBustersCampaignUI) window.bombBustersCampaignUI.reset();
     bombBustersView = null;
     bombBustersStateVersion = null;
     bombBustersEffectToken = null;
@@ -1078,7 +1112,10 @@
   if (bombBustersContinueBtnEl) bombBustersContinueBtnEl.dataset.bombBustersExplain = "continue";
 
   if (bombBustersHelpBtnEl) {
-    bombBustersHelpBtnEl.addEventListener("click", () => bombBustersSetModal(bombBustersHelpModalEl, true));
+    bombBustersHelpBtnEl.addEventListener("click", () => {
+      if (window.bombBustersCampaignUI) window.bombBustersCampaignUI.openHelp(bombBustersHelpModalEl);
+      bombBustersSetModal(bombBustersHelpModalEl, true);
+    });
   }
   if (bombBustersExplainBtnEl) {
     bombBustersExplainBtnEl.addEventListener("click", () => bombBustersSetExplainMode(!bombBustersExplainMode));
@@ -1214,7 +1251,7 @@
       const target = event.target.closest("[data-bomb-busters-explain]");
       const key = target && target.dataset.bombBustersExplain;
       if (key && BOMB_BUSTERS_EXPLANATIONS[key]) {
-        bombBustersShowExplanation(key);
+        bombBustersShowExplanation(key, target);
         bombBustersSetExplainMode(false);
       }
     },
@@ -1233,7 +1270,7 @@
       if (!target) return;
       event.preventDefault();
       event.stopPropagation();
-      bombBustersShowExplanation(target.dataset.bombBustersExplain);
+      bombBustersShowExplanation(target.dataset.bombBustersExplain, target);
       bombBustersSetExplainMode(false);
     },
     true
