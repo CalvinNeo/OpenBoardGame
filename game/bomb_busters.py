@@ -548,7 +548,7 @@ def _public_wire(state: Dict, wire: Dict, viewer_id: str, reveal_all: bool) -> D
     }
     may_reveal = reveal_all or wire.get("owner_id") == viewer_id or wire.get("status") != "uncut"
     if state.get("mode") == "campaign" and wire.get("reversed") and wire.get("status") == "uncut" and not reveal_all:
-        may_reveal = wire.get("owner_id") != viewer_id
+        may_reveal = viewer_id in state["players"] and wire.get("owner_id") != viewer_id
     if state.get("mode") == "campaign":
         result["reversed"] = bool(wire.get("reversed"))
         result["unsorted"] = bool(wire.get("unsorted"))

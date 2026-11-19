@@ -193,6 +193,43 @@ class ScoutGameTests(unittest.TestCase):
         self.assertEqual(state["phase"], "choose_orientation")
         self.assertEqual(state["round"], 2)
 
+    def test_duel_round_ends_when_next_player_has_no_tokens_or_show(self):
+        state = ScoutGame.init_game({"seed": "duel-next-turn"}, _players(2))
+        state["phase"] = "playing"
+        state["current_turn"] = "p1"
+        for player in state["players"].values():
+            player["hand_ready"] = True
+        state["players"]["p1"]["hand"] = [_card(2, 8, 1), _card(3, 8, 1), _card(1, 4)]
+        state["players"]["p2"]["hand"] = [_card(1, 3), _card(2, 6)]
+        state["players"]["p2"]["scout_tokens_left"] = 0
+        state["active_set"] = None
+
+        _, error = ScoutGame.apply_action(state, "p1", {"type": "show", "start_index": 0, "end_index": 1})
+
+        self.assertIsNone(error)
+        self.assertEqual(state["last_round_summary"]["winner"], "p2")
+        self.assertEqual(state["last_round_summary"]["reason"], "no_tokens_no_show")
+        self.assertEqual(state["phase"], "choose_orientation")
+        self.assertEqual(state["round"], 2)
+
+    def test_duel_continues_when_next_player_has_show_but_no_tokens(self):
+        state = ScoutGame.init_game({"seed": "duel-can-show"}, _players(2))
+        state["phase"] = "playing"
+        state["current_turn"] = "p1"
+        for player in state["players"].values():
+            player["hand_ready"] = True
+        state["players"]["p1"]["hand"] = [_card(1, 3), _card(2, 7)]
+        state["players"]["p2"]["hand"] = [_card(2, 5), _card(3, 6)]
+        state["players"]["p2"]["scout_tokens_left"] = 0
+        state["active_set"] = None
+
+        _, error = ScoutGame.apply_action(state, "p1", {"type": "show", "start_index": 0, "end_index": 0})
+
+        self.assertIsNone(error)
+        self.assertEqual(state["current_turn"], "p2")
+        self.assertEqual(state["phase"], "playing")
+        self.assertIsNone(state["last_round_summary"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,7 +10,8 @@
     let view = null, signature = null, selectedCard = null, mode = "cast";
     let selectedBets = [], selectedDiscards = [], choices = {};
     let pending = false, pendingTimer = null, explaining = false, suppressUntil = 0;
-    let tipTimer = null, returnFocus = null, historyOpen = false;
+    let tipTimer = null, returnFocus = null, historyOpen = false, touchStart = null, touchMoved = false;
+    let helpLanguage = "zh", helpSection = 0;
     const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
     const same = (left, right) => String(left) === String(right);
     const signed = number => Number(number) > 0 ? `+${number}` : String(number ?? 0);
@@ -108,18 +109,10 @@
         {"name_zh": "狡黠的摩丽雅", "icon": "🦊", "description": "魔力(🔮)超过12时解除该斗士所有法术；禁用支援(✨)。"},
     ];
 
-    const dialog = document.createElement("dialog");
-    dialog.className = "cm-dialog";
-    dialog.id = "cheatyMagesDialog";
-    dialog.setAttribute("aria-labelledby", "cheatyMagesDialogTitle");
-    dialog.innerHTML = '<div class="cm-dialog-heading"><h2 id="cheatyMagesDialogTitle">Help</h2><button type="button">Close</button></div><div class="cm-dialog-body"></div>';
+    const dialog = document.getElementById("cheatyMagesDialog");
     document.body.append(dialog);
     const dialogClose = dialog.querySelector("button");
-    const tooltip = document.createElement("div");
-    tooltip.className = "cm-tooltip";
-    tooltip.id = "cheatyMagesTooltip";
-    tooltip.setAttribute("role", "tooltip");
-    tooltip.hidden = true;
+    const tooltip = document.getElementById("cheatyMagesTooltip");
     document.body.append(tooltip);
 
     function hideTip() { tooltip.hidden = true; clearTimeout(tipTimer); }
@@ -141,7 +134,7 @@
     }
     function openDialog(title, html) {
         hideTip();
-        returnFocus = document.activeElement;
+        if (!dialog.open) returnFocus = document.activeElement;
         dialog.querySelector("h2").textContent = title;
         dialog.querySelector(".cm-dialog-body").innerHTML = html;
         if (!dialog.open) dialog.showModal();
@@ -150,8 +143,8 @@
     }
     function help() {
         setExplain(false);
-        openDialog("Help · 诈赌巫师", `
-            <h3>目标与准备</h3><p>扮演观众席中的巫师，用法术左右斗士(👹)的战果，让自己的秘密押注(🎲)获得赏金(💰)。基础版 3–6 人，36 种法术共 72 张、10 名斗士、8 位裁判。每人以 2 金币(💰)开始。3–4／5／6 人分别持 8／6／5 张手牌(🂠)。每轮随机选出五名斗士(👹)与一位裁判(⚖️)。</p>
+        const chinese = `
+            <h3>快速上手</h3><p>胜利：三轮有效比赛后金币(💰)最多的人获胜，同币时比较剩余手牌数量。</p><p>回合：施放一张法术、弃一张手牌窥探暗牌(🌙)，或永久放弃本轮后续行动。</p><p>重点：秘密押注斗士(👹)，再用法术改变强度(⚔️)，同时避开裁判的魔力(🔮)判罚。</p><h3>目标与准备</h3><p>扮演观众席中的巫师，用法术左右斗士(👹)的战果，让自己的秘密押注(🎲)获得赏金(💰)。基础版 3–6 人，36 种法术共 72 张、10 名斗士、8 位裁判。每人以 2 金币(💰)开始。3–4／5／6 人分别持 8／6／5 张手牌(🂠)。每轮随机选出五名斗士(👹)与一位裁判(⚖️)。</p>
             <h3>秘密押注</h3><p>${descriptions.bet} ${descriptions.prize} 每人完成押注后进入施法。</p>
             <h3>轮流行动</h3><div class="cm-help-grid"><div><strong>施法(🪄)</strong><p>${descriptions.cast} 禁咒(🚫)必须遵守当前裁判的限制；可付费施放时会明确标出费用。</p></div><div><strong>窥探(👁️)</strong><p>${descriptions.peek} 新放置或后来转移到该斗士的暗牌不会自动变成已知。</p></div><div><strong>放弃(✋)</strong><p>${descriptions.pass} 已用完手牌的玩家也停止行动。</p></div><div><strong>信息与魔力(🔮)</strong><p>${descriptions.hidden} ${descriptions.mana}</p></div></div>
             <h3>裁判与结算</h3><p>所有玩家停止行动后，先揭开暗牌，再由裁判(⚖️)处理超限魔力(🔮)：可能移除法术，或令斗士退场。特殊裁判以牌面说明为准。剩余斗士比较最终强度(⚔️)；同值时比较印刷强度。亡灵斗士会反转法术的强度加减，改变赏金法术影响收益。所有斗士都退场则比赛取消，保留结算并追加一轮。</p><p>本桌启用经典可选规则 Foul Play：${descriptions.bribe}</p>
@@ -159,7 +152,56 @@
             <h3>特殊法术参考</h3><div class="cm-help-grid"><div><strong>强度(⚔️)与赏金(💰)</strong><p>强化、削弱、亡灵斗士的强度反转、变形及赏金变化会改变斗士的最终结果。变化以牌面为准，印刷值与已知值分别展示。</p></div><div><strong>驱散与转移(🌀)</strong><p>驱散移除可指定的场上法术；转移需要先选新斗士，再选原法术。反魔法领域(🚫)立刻清除斗士全部法术；明置的反射(🪞)保护斗士及其法术免受新法术影响，反魔法领域例外。</p></div><div><strong>手牌与窥探(👁️)</strong><p>抽牌即时补充手牌。遗忘令指定玩家先完成弃牌后再继续回合。窥探只公开给施法者，弃牌堆始终公开。</p></div><div><strong>押注与裁判(⚖️)</strong><p>换注先选择原押注，再选新的斗士。换裁判和忽略裁判会改变当前判罚条件；界面始终展示生效中的裁判及持续支援。</p></div><div><strong>隐身(🫥)与棱镜(🌈)</strong><p>隐身(🫥)允许本人施放被裁判禁用的法术；棱镜光线(🌈)允许本人将直接法术暗置。被驱散后权限消失。</p></div><div><strong>查看准确牌效(🪄)</strong><p>每张牌的数值、种类、禁咒标记与特殊效果都可用 Explain 查看。未知暗牌只可查看公开信息；结算后所有牌面均可查阅。</p></div></div>
             <h3>完整法术牌表 · 36 种／72 张</h3><div class="cm-help-grid">${spellReference.map(card => `<div><strong>${esc(cardLabel(card))} ×${card.count}</strong><p>${esc(kindNames[card.kind])} · 🔮 ${card.mana}${card.forbidden ? " · 🚫 禁咒" : ""}<br>${esc(card.description)}</p></div>`).join("")}</div>
             <h3>八位裁判(⚖️)</h3><div class="cm-help-grid">${judgeReference.map(judge => `<div><strong>${esc(judge.icon)} ${esc(judge.name_zh)}</strong><p>${esc(judge.description)}</p></div>`).join("")}</div>
-            <h3>线上操作</h3><p>先选择手牌和所需目标，再点 Cast 或 Peek；灰色选项不能提交。点击周围空白或按 Esc 撤销未提交的选择。Help 集中查看规则；Explain 开启后点牌、图标或按钮查看解释，期间不会执行游戏行动。非操作信息支持鼠标悬停、键盘聚焦或触屏点击；触屏浮动提示 3 秒后消失。对话框支持 Esc 和点击背景关闭。</p>`);
+            <h3>线上操作</h3><p>先选择手牌和所需目标，再点 Cast 或 Peek；灰色选项不能提交。点击周围空白或按 Esc 撤销未提交的选择。Help 集中查看规则；Explain 开启后点牌、图标或按钮查看解释，期间不会执行游戏行动。非操作信息支持鼠标悬停、键盘聚焦或触屏点击；触屏浮动提示 3 秒后消失。对话框支持 Esc 和点击背景关闭。</p>`;
+        const englishEffects = [
+            "Give a fighter +2 power(⚔️) at 0 mana(🔮).", "Give a fighter +4 power(⚔️) at 1 mana(🔮).",
+            "Give a fighter +3 power(⚔️) at 3 mana(🔮).", "Give a fighter +6 power(⚔️) at 4 mana(🔮).",
+            "Give a fighter +10 power(⚔️) at 6 mana(🔮).", "Give a fighter −2 power(⚔️) at 0 mana(🔮).",
+            "Give a fighter −4 power(⚔️) at 1 mana(🔮).", "Give a fighter −3 power(⚔️) at 3 mana(🔮).",
+            "Give a fighter −6 power(⚔️) at 4 mana(🔮).", "Give a fighter −10 power(⚔️) at 6 mana(🔮).",
+            "Give a fighter +3 power(⚔️) at 2 mana(🔮).", "Give a fighter +5 power(⚔️) at 4 mana(🔮).",
+            "Give a fighter +4 power(⚔️) at 6 mana(🔮).", "Give a fighter +8 power(⚔️) at 8 mana(🔮).",
+            "Give a fighter +12 power(⚔️) at 10 mana(🔮).", "Give a fighter −3 power(⚔️) at 2 mana(🔮).",
+            "Give a fighter −5 power(⚔️) at 4 mana(🔮).", "Give a fighter −4 power(⚔️) at 6 mana(🔮).",
+            "Give a fighter −8 power(⚔️) at 8 mana(🔮).", "Give a fighter −12 power(⚔️) at 10 mana(🔮).",
+            "Add 5 mana(🔮) without changing power(⚔️).",
+            "Subtract 5 mana(🔮) without changing power(⚔️).",
+            "Double the fighter's prize(💰). Each copy applies separately.",
+            "Privately inspect every currently face-down spell(🌙) on a fighter.",
+            "Discard one spell already in play. It cannot counter an instant spell as it is cast.",
+            "Draw one spell from the deck before discarding Recall itself.",
+            "Choose a player, who must select and discard one card. You may choose yourself if you still have a card after casting.",
+            "Move one of your bets to a different, unbet fighter. You cannot use this with only one bet.",
+            "Discard the current judge(⚖️) and attached spells, then draw another judge.",
+            "Attach to the judge(⚖️) to skip judging. Category bans still apply. Replacing the judge ends this effect.",
+            "You may cast categories banned by the judge until Invisibility(🫥) is removed or the round ends.",
+            "You may cast direct spells(☀️) face down. Their category and mana(🔮) do not change.",
+            "Replace one fighter, retaining that slot's bets and spells. Use the new fighter's attributes.",
+            "Move a spell to another fighter, retaining its face-up or face-down status.",
+            "Discard every spell on a fighter. This bypasses Reflection(🪞).",
+            "Play face up. Protect this fighter and its spells from new spells. Reflection itself can be dispelled or moved, and Anti-Magic Field bypasses it."
+        ];
+        const englishJudges = [
+            "Ardeth: eject fighters above 10 mana(🔮). Ban support spells(✨) and forbidden spells(🚫).",
+            "Tad: no spell bans or mana(🔮) penalties.",
+            "Finlulu: reveal a spell at judging. Direct(☀️) means limit 10 and ejection. Enchantment(🌙) means limit 15 and spell removal. Support(✨) means limit 5 and spell removal.",
+            "Sapp: remove all spells from fighters above 15 mana(🔮). Ban forbidden spells(🚫).",
+            "Laute: remove all spells from fighters above 10 mana(🔮).",
+            "Orel: eject fighters above 12 mana(🔮). Ban direct spells(☀️).",
+            "Rister: eject fighters above 15 mana(🔮) and remove spells from fighters at 4 mana or less.",
+            "Moria: remove all spells from fighters above 12 mana(🔮). Ban support spells(✨)."
+        ];
+        const english = [
+            '<h3>Quick start</h3><p>Win by collecting the most gold(💰) over three valid rounds, breaking ties by remaining cards.</p><p>On your turn, cast one spell, discard one card to peek at hidden spells(🌙), or Pass for the rest of the round.</p><p>The key is to secretly bet on fighters(👹), then change their power(⚔️) without triggering the judge\'s mana(🔮) penalty.</p><h3>Setup and betting</h3><p>There are 3–6 players, 72 spells of 36 types, ten fighters and eight judges. Start with 2 gold. Deal 8 cards to 3–4 players, 6 to five players, or 5 to six players. Each round has five fighters and one judge(⚖️).</p><p>Secretly choose 1–3 different fighter slots without paying a stake. A winning single bet pays twice the prize(💰), two bets pay the printed prize, and three bets pay half, rounded up. Other players cannot see your targets before the review.</p><h3>Taking turns</h3><p>Direct spells(☀️) are face up. Enchantments(🌙) are face down unless specified otherwise. Support spells(✨) resolve as described on the card. Forbidden spells(🚫) follow the current judge\'s bans. Peeking costs a discarded card and reveals only the spells currently on the chosen fighter, only to you. Passing is permanent for this round. Players with no cards also stop acting.</p>',
+            '<h3>Judging and scoring</h3><p>After all players stop, reveal hidden spells(🌙) and apply the judge(⚖️) before comparing power(⚔️). Mana(🔮) strictly above the limit may remove every spell or eject the fighter. Tied power is broken by printed power. Undead fighters reverse spell power changes. Prize-changing spells change payouts. If every fighter is ejected, the race is cancelled and an extra round is added.</p><p>Classic Foul Play is enabled: in the final round, an explicitly priced casting option lets you pay 2 gold(💰) per banned spell.</p><h3>Between rounds</h3><p>Everyone must press Next Round after reviewing the result, including the final round. You may discard any number of cards, including none, then draw up to 4 cards with 3–4 players or 3 cards with 5–6 players, without exceeding the hand limit of 8 or 6 respectively. Fighters are reshuffled and the judge changes. The richest player starts, breaking ties by seat.</p>',
+            `<h3>Spell reference</h3><p>Use Explain on any card for its exact effect. Hidden spells(🌙) only reveal information you are entitled to see. Power(⚔️), mana(🔮), prize(💰), category and forbidden status(🚫) are separate attributes.</p><div class="cm-help-grid">${spellReference.map((card, index) => `<div><strong>${esc(card.name)}(${esc(card.icon)}) ×${card.count}</strong><p>${esc({direct: "Direct(☀️)", enchant: "Enchantment(🌙)", support: "Support(✨)"}[card.kind])} · Mana(🔮) ${card.mana}${card.forbidden ? " · Forbidden(🚫)" : ""}</p><p>${esc(englishEffects[index])}</p></div>`).join("")}</div>`,
+            `<h3>Eight judges</h3><div class="cm-help-grid">${judgeReference.map((judge, index) => `<div><strong>${esc(judge.name_zh)}(${esc(judge.icon)})</strong><p>${esc(englishJudges[index])}</p></div>`).join("")}</div>`,
+            '<h3>Controls and information</h3><p>Select a card and any required targets, then confirm Cast or Peek beside your hand. You may also select a target fighter directly in the arena. Pay 2 gold(💰) appears explicitly when bribing. Clicking empty space or pressing Escape cancels unsubmitted choices.</p><p>Explain highlights supported elements and blocks game actions, including disabled buttons. Click an element to read its meaning and leave Explain, or press Escape to exit. Hover or tap non-action information for a tooltip. Touch tooltips disappear after three seconds and later taps replace them.</p><p>Round Log and Discard Pile are collapsible and independently scrollable. Help and Explain dialogs close with Escape. The Room Control dock stays available for room settings and reconnecting.</p>'
+        ];
+        const headings = [...chinese.matchAll(/<h3>.*?<\/h3>[\s\S]*?(?=<h3>|$)/g)].map(match => match[0]);
+        const chineseSections = [headings.slice(0, 4).join(""), headings.slice(4, 6).join(""), headings.slice(6, 8).join(""), headings[8], headings[9]].map(section => section.replace(/；/g, "。"));
+        const labels = helpLanguage === "zh" ? ["入门", "结算", "法术", "裁判", "操作"] : ["Basics", "Scoring", "Spells", "Judges", "Controls"];
+        openDialog("Help · 诈赌巫师", `<div class="cm-help-language" role="group" aria-label="Language"><button type="button" data-cm-help-lang="zh" aria-pressed="${helpLanguage === "zh"}">中文</button><button type="button" data-cm-help-lang="en" aria-pressed="${helpLanguage === "en"}">EN</button></div><div class="cm-help-tabs" role="tablist" aria-label="Help sections">${labels.map((label, index) => `<button type="button" role="tab" id="cheatyMagesHelpTab${index}" data-cm-help-tab="${index}" aria-controls="cheatyMagesHelpContent" aria-selected="${helpSection === index}">${label}</button>`).join("")}</div><section id="cheatyMagesHelpContent" role="tabpanel" aria-labelledby="cheatyMagesHelpTab${helpSection}">${helpLanguage === "zh" ? chineseSections[helpSection] : english[helpSection]}</section>`);
     }
 
     function resetSelection() {
@@ -201,13 +243,13 @@
     }
     function renderPlayers() {
         return (view.players || []).map(player => `<article class="cm-player ${player.player_id === view.current_turn ? "is-current" : ""}" ${explainAttr("player")}>
-            <div class="cm-player-heading"><strong>${esc(player.name)}${player.player_id === view.you ? " <small>You</small>" : ""}</strong>${info(`💰 ${player.coins}`, descriptions.coins)}</div>
+            <div class="cm-player-heading"><strong ${tipAttrs(`${player.name}${player.player_id === view.you ? " · You" : ""}`)}>${esc(player.name)}${player.player_id === view.you ? " <small>You</small>" : ""}</strong>${info(`💰 ${player.coins}`, descriptions.coins)}</div>
             <div class="cm-badges">${info(`🂠 ${player.hand_count}`, descriptions.hand)}${player.bet_ready ? info(`🎲 ${player.bet_count ?? "✓"}`, descriptions.bet) : "<span>Not bet</span>"}${player.passed ? info("✋ Pass", descriptions.pass) : ""}${player.player_id === view.current_turn && view.phase === "casting" ? "<span>Playing</span>" : ""}${player.invisible ? info("🫥 隐身", "隐身(🫥)：本人可施放被裁判禁用的法术，直到隐身被驱散或本轮结束。") : ""}${player.prismatic ? info("🌈 棱镜", "棱镜(🌈)：本人可以选择将直接法术(☀️)暗置，种类与魔力不变。") : ""}${(view.next_ready || []).includes(player.player_id) ? "<span>Ready</span>" : ""}${player.is_bot ? "<span>Bot</span>" : ""}</div>
         </article>`).join("");
     }
     function spellHtml(spell) {
-        const text = spell.card ? cardDescription(spell.card) : `${descriptions.hidden} 施放者：${playerName(spell.owner)}。`;
         const attachments = (spell.attachments || []).map(attachment => attachment.card ? cardLabel(attachment.card) : cardLabel(attachment)).join(" · ");
+        const text = `${spell.card ? cardDescription(spell.card) : descriptions.hidden} 施放者：${playerName(spell.owner)}。${attachments ? `附属法术：${attachments}。` : ""}`;
         return `<span class="cm-spell ${spell.hidden ? "is-hidden" : ""}" ${tipAttrs(text)}>${spell.card ? esc(cardLabel(spell.card)) : "🌙 暗置法术"}<small>${esc(playerName(spell.owner))}${spell.hidden && spell.card ? " · Known to you" : ""}${attachments ? ` · ${esc(attachments)}` : ""}</small></span>`;
     }
     function renderFighters() {
@@ -222,10 +264,10 @@
             const details = `${fighter.icon || "👹"} ${fighter.name_zh || fighter.name}：${fighter.description || ""} 印刷强度(⚔️) ${fighter.power}，赏金(💰) ${fighter.prize}。${betMode ? descriptions.bet : descriptions.target}`;
             return `<article class="cm-fighter ${ownBet ? "is-bet" : ""} ${winner ? "is-winner" : ""}">
                 <button type="button" class="cm-fighter-select ${selected ? "is-selected" : ""}" data-cm-fighter="${fighter.slot}" data-cm-explain="${esc(details)}" aria-pressed="${Boolean(selected)}" ${enabled ? "" : "disabled"}>
-                    <span class="cm-fighter-top"><b class="cm-fighter-number">${fighter.slot}</b><span class="cm-bet-marker">${winner ? "🏆 Winner" : selected ? "✓ Selected" : ownBet ? "🎲 Your bet" : ""}</span></span>
+                    <span class="cm-fighter-top"><b class="cm-fighter-number">${fighter.slot}</b><span class="cm-bet-marker" aria-label="${winner ? "Winner" : selected ? "Selected" : ownBet ? "Your bet" : ""}">${winner ? "🏆" : selected ? "✓" : ownBet ? "🎲" : ""}</span></span>
                     <span class="cm-fighter-icon" aria-hidden="true">${esc(fighter.icon || "👹")}</span><strong class="cm-fighter-name">${esc(fighter.name_zh || fighter.name)}</strong><span class="cm-fighter-en">${esc(fighter.name)}</span>
-                </button><div class="cm-fighter-stats">${info(`⚔️ ${result?.power ?? fighter.known_power ?? fighter.power}${fighter.hidden_count ? " + ?" : ""}`, `${descriptions.power} 印刷强度：${fighter.power}。`)}${info(`💰 ${result?.prize ?? fighter.prize}`, descriptions.prize)}${info(`🔮 ${result?.mana ?? fighter.known_mana ?? 0}${fighter.hidden_count ? " + ?" : ""}${fighter.reverse ? " · ↔ 反转" : ""}`, `${descriptions.mana}${fighter.reverse ? " 此斗士受到反转强度影响。" : ""}`)}</div>
-                <div class="cm-spells">${(fighter.spells || []).length ? fighter.spells.map(spellHtml).join("") : '<span class="cm-empty-spells">No spells</span>'}</div>
+                </button><div class="cm-fighter-stats">${info(`⚔️ ${result?.power ?? fighter.known_power ?? fighter.power}${fighter.hidden_count ? "+?" : ""}`, `${descriptions.power} 印刷强度：${fighter.power}。`)}${info(`💰 ${result?.prize ?? fighter.prize}`, descriptions.prize)}${info(`🔮 ${result?.mana ?? fighter.known_mana ?? 0}${fighter.hidden_count ? "+?" : ""}${fighter.reverse ? " ↔" : ""}`, `${descriptions.mana}${fighter.reverse ? " 此斗士受到反转强度影响。" : ""}`)}</div>
+                <div class="cm-spells${(fighter.spells || []).length ? "" : " is-empty"}">${(fighter.spells || []).length ? fighter.spells.map(spellHtml).join("") : '<span class="cm-empty-spells">No spells</span>'}</div>
             </article>`;
         }).join("");
     }
@@ -256,26 +298,31 @@
     function matchingBet() {
         return moves("bet").find(move => move.slots.length === selectedBets.length && move.slots.every(slot => selectedBets.includes(slot)));
     }
-    function renderActionBox() {
+    function renderBet() {
         if (view.phase === "betting") {
             const betReady = ownPlayer()?.bet_ready;
             const slots = betReady ? (view.your_bets || []) : selectedBets;
-            return `<section class="cm-box cm-action-box"><div class="cm-section-heading"><h3>Secret Bet</h3>${info("🎲 1–3", descriptions.bet)}</div><div class="cm-selection">${slots.length ? slots.map(slot => `<span>${esc(fighterName(slot))}</span>`).join("") : '<span class="cm-muted">Select fighters in the arena.</span>'}</div><p class="cm-muted">${slots.length ? `Payout ×${slots.length === 1 ? "2" : slots.length === 2 ? "1" : "½ (round up)"}` : "Your choices stay private."}</p><div class="cm-action-footer"><button type="button" class="cm-primary" data-cm-action="bet" ${explainAttr("bet")} ${pending || !matchingBet() ? "disabled" : ""}>${pending ? "Sending…" : betReady ? "Bet Confirmed" : "Confirm Bet"}</button></div></section>`;
+            return `<div class="cm-bet-bar"><div><strong>Secret Bet ${info("🎲 1–3", descriptions.bet)}</strong><p class="cm-muted">${slots.length ? `#${slots.join(" · #")} · Payout ×${slots.length === 1 ? "2" : slots.length === 2 ? "1" : "½ (round up)"}` : "Select fighters above."}</p></div><button type="button" class="cm-primary" data-cm-action="bet" ${explainAttr("bet")} ${pending || !matchingBet() ? "disabled" : ""}>${pending ? "Sending…" : betReady ? "Bet Confirmed" : "Confirm Bet"}</button></div>`;
         }
+        return "";
+    }
+    function renderHandControls() {
+        if (view.phase !== "casting") return "";
+        return `<div class="cm-hand-controls"><div class="cm-mode-tabs" role="group" aria-label="Spell action"><button type="button" data-cm-mode="cast" aria-pressed="${mode === "cast"}" ${explainAttr("cast")} ${available("cast") ? "" : "disabled"}>Cast</button><button type="button" data-cm-mode="peek" aria-pressed="${mode === "peek"}" ${explainAttr("peek")} ${available("peek") ? "" : "disabled"}>Peek</button></div><button type="button" data-cm-action="pass" ${explainAttr("pass")} ${available("pass") ? "" : "disabled"}>Pass</button></div>`;
+    }
+    function renderHandSelection() {
         if (moves("discard").length) {
             const sizes = [...new Set(moves("discard").map(move => move.cards.length))].sort((a, b) => a - b);
             const required = sizes.length === 1 ? `${sizes[0]} card${sizes[0] === 1 ? "" : "s"}` : `${sizes[0]}–${sizes.at(-1)} cards`;
-            return `<section class="cm-box cm-action-box"><div class="cm-section-heading"><h3>${view.phase === "refill" ? "Refresh Hand" : "Discard"}</h3>${info("🗑️", descriptions.discard)}</div><p class="cm-muted">Select ${required}.</p><div class="cm-selection"><span>${selectedDiscards.length} selected</span></div><div class="cm-action-footer"><button type="button" class="cm-primary" data-cm-action="discard" ${explainAttr("discard")} ${pending || !matchingDiscard() ? "disabled" : ""}>${pending ? "Sending…" : selectedDiscards.length ? "Confirm Discard" : "Keep All & Draw"}</button></div></section>`;
+            return `<div class="cm-bet-bar"><div><strong>${view.phase === "refill" ? "Refresh Hand" : "Discard"}</strong><p class="cm-muted">Select ${required} · ${selectedDiscards.length} selected</p></div><button type="button" class="cm-primary" data-cm-action="discard" ${explainAttr("discard")} ${pending || !matchingDiscard() ? "disabled" : ""}>${pending ? "Sending…" : selectedDiscards.length ? "Confirm Discard" : "Keep All & Draw"}</button></div>`;
         }
-        if (view.phase !== "casting") return `<section class="cm-box"><h3>Waiting</h3><p class="cm-muted">${view.game_over ? "The game is complete." : "Waiting for the other players."}</p></section>`;
+        if (view.phase !== "casting") return "";
         const state = choiceState();
         const selected = (view.your_hand || []).find(card => card.id === selectedCard);
+        if (!selected) return "";
         const rowLabels = {target: "Target Fighter", spell_id: "Target Spell", player_id: "Target Player", from_slot: "Move Bet From", to_slot: "Move Bet To", bribe: "Casting Cost", face_down: "Visibility"};
-        return `<section class="cm-box cm-action-box"><div class="cm-section-heading"><h3>Your Move</h3>${info("🪄", descriptions.cast)}</div>
-            <div class="cm-mode-tabs"><button type="button" data-cm-mode="cast" aria-pressed="${mode === "cast"}" ${explainAttr("cast")} ${available("cast") ? "" : "disabled"}>Cast</button><button type="button" data-cm-mode="peek" aria-pressed="${mode === "peek"}" ${explainAttr("peek")} ${available("peek") ? "" : "disabled"}>Peek</button></div>
-            <div class="cm-selected-name">${selected ? esc(cardLabel(selected)) : '<span class="cm-muted">Select a card from your hand.</span>'}</div>
-            ${selected ? state.rows.map(row => `<div class="cm-choice-label">${rowLabels[row.field]}</div><div class="cm-options">${row.values.map(value => `<button type="button" data-cm-choice="${row.field}" data-cm-value="${esc(value)}" aria-pressed="${row.selected !== undefined && same(row.selected, value)}" ${explainAttr(row.field)} ${pending ? "disabled" : ""}>${esc(fieldLabel(row.field, value))}</button>`).join("")}</div>`).join("") : ""}
-            <div class="cm-action-footer"><button type="button" class="cm-primary" data-cm-action="commit" ${explainAttr(mode)} ${pending || !selected || !state.move ? "disabled" : ""}>${pending ? "Sending…" : mode === "peek" ? "Peek" : `Cast${state.move?.bribe ? " · 2 💰" : ""}`}</button><button type="button" data-cm-action="pass" ${explainAttr("pass")} ${available("pass") ? "" : "disabled"}>Pass</button></div></section>`;
+        return `<div class="cm-hand-selection"><div class="cm-section-heading"><strong class="cm-selected-name">${esc(cardLabel(selected))}</strong><button type="button" class="cm-primary" data-cm-action="commit" ${explainAttr(mode)} ${pending || !state.move ? "disabled" : ""}>${pending ? "Sending…" : mode === "peek" ? "Peek" : `Cast${state.move?.bribe ? " · 2 💰" : ""}`}</button></div>
+            ${state.rows.map(row => `<div class="cm-choice-label">${rowLabels[row.field]}</div><div class="cm-options${["target", "from_slot", "to_slot"].includes(row.field) ? " cm-fighter-options" : ""}">${row.values.map(value => `<button type="button" data-cm-choice="${row.field}" data-cm-value="${esc(value)}" aria-label="${esc(fieldLabel(row.field, value))}" aria-pressed="${row.selected !== undefined && same(row.selected, value)}" ${explainAttr(row.field)} ${pending ? "disabled" : ""}>${["target", "from_slot", "to_slot"].includes(row.field) ? `#${esc(value)} ${(view.fighters || []).find(fighter => same(fighter.slot, value))?.icon || "👹"}` : esc(fieldLabel(row.field, value))}</button>`).join("")}</div>`).join("")}</div>`;
     }
     function renderResult() {
         const summary = view.round_summary;
@@ -296,10 +343,10 @@
         if (!view) return;
         const oldScroll = panel.querySelector(".cm-log")?.scrollTop || 0;
         const phaseNames = {betting: view.current_turn === view.you ? "Your turn · Place your secret bet" : `Waiting for ${playerName(view.current_turn)} to bet`, casting: view.current_turn === view.you ? "Your turn · Shape the odds" : `Waiting for ${playerName(view.current_turn)}`, discarding: moves("discard").length ? "Choose a card to discard" : "Waiting for a discard", refill: "Prepare your next hand", round_end: "Review the result · Confirm when ready", game_over: "Game complete"};
-        panel.innerHTML = `<div class="cm-surface">
+        panel.innerHTML = `<div class="cm-surface" data-cm-phase="${esc(view.phase)}">
             <div class="cm-status-row"><div class="cm-round">Round <b>${view.round} <small>/ ${view.total_rounds || 3}</small></b></div><div class="cm-status" role="status" aria-live="polite">${esc(pending ? "Sending…" : phaseNames[view.phase] || view.phase)}</div><div class="cm-stats">${info(`🂠 ${view.deck_count ?? 0} Deck`, descriptions.deck)}${info(`🗑️ ${(view.discard || []).length}`, descriptions.discardPile)}</div></div>
-            <div class="cm-players">${renderPlayers()}</div>${renderResult()}${renderJudge()}${renderEffects()}<div class="cm-arena">${renderFighters()}</div>
-            ${!view.game_over && view.phase !== "round_end" ? `<div class="cm-workspace"><section class="cm-box"><div class="cm-section-heading"><h3>Your Spells</h3>${info("🔒 Private hand", descriptions.hand)}</div>${renderHand()}<p class="cm-hand-caption">${info("☀️ 直接", "直接(☀️)：公开施放在斗士身上。")} · ${info("🌙 赋予", "赋予(🌙)：暗置在斗士身上；施放者及已窥探者可看牌面。")} · ${info("✨ 支援", "支援(✨)：按法术效果即时处理或保持在场。")} · ${info("🚫 禁咒", "禁咒(🚫)：是否允许施放由当前裁判决定。")}</p></section>${renderActionBox()}</div>` : ""}
+            <div class="cm-players" data-cm-count="${(view.players || []).length}">${renderPlayers()}</div>${renderResult()}${renderJudge()}${renderEffects()}<div class="cm-arena">${renderFighters()}</div>${renderBet()}
+            ${!view.game_over && view.phase !== "round_end" ? `<section class="cm-hand-area"><div class="cm-section-heading"><h3>Your Spells ${info(`🂠 ${(view.your_hand || []).length}`, descriptions.hand)}</h3>${renderHandControls()}</div>${renderHand()}${renderHandSelection()}</section>` : ""}
             <details class="cm-history" ${historyOpen ? "open" : ""}><summary>Round Log & Discard Pile</summary><div class="cm-history-content"><section class="cm-box"><div class="cm-section-heading"><h3>Round Log</h3>${info("📜", descriptions.log)}</div><div class="cm-log">${(view.log || []).slice().reverse().map(entry => `<p><small>R${entry.round} · T${entry.turn}</small>${esc(entry.text)}</p>`).join("") || '<p class="cm-muted">No actions yet.</p>'}</div></section><section class="cm-box"><div class="cm-section-heading"><h3>Discard Pile</h3>${info("🗑️", descriptions.discardPile)}</div><div class="cm-discards">${(view.discard || []).map(card => `<span class="cm-discard" ${tipAttrs(cardDescription(card))}>${esc(cardLabel(card))}</span>`).join("") || '<span class="cm-muted">No discarded spells.</span>'}</div></section></div></details></div>`;
         const log = panel.querySelector(".cm-log");
         if (log) log.scrollTop = oldScroll;
@@ -323,8 +370,18 @@
         choices[field] = value;
         render();
     }
+    panel.addEventListener("pointerdown", event => {
+        touchMoved = false;
+        if (event.pointerType === "mouse") return;
+        touchStart = {x: event.clientX, y: event.clientY};
+    }, {passive: true});
+    panel.addEventListener("pointermove", event => {
+        if (touchStart && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 8) touchMoved = true;
+    }, {passive: true});
+    panel.addEventListener("pointercancel", () => { touchMoved = true; touchStart = null; });
+    panel.addEventListener("pointerup", () => { touchStart = null; });
     panel.addEventListener("click", event => {
-        if (explaining || !view) return;
+        if (explaining || !view || (touchMoved && event.detail !== 0)) return;
         const button = event.target.closest("button");
         if (button) {
             if (button.disabled || pending) return;
@@ -379,7 +436,7 @@
         explainAt(event);
     }, true);
     document.addEventListener("click", event => {
-        if (performance.now() < suppressUntil) {
+        if (performance.now() < suppressUntil && event.target.closest("#cheatyMagesPanel")) {
             suppressUntil = 0;
             event.preventDefault();
             event.stopImmediatePropagation();
@@ -408,6 +465,15 @@
     explainButton.addEventListener("click", () => setExplain(!explaining));
     dialogClose.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => {
+        const language = event.target.closest("[data-cm-help-lang]");
+        const section = event.target.closest("[data-cm-help-tab]");
+        if (language || section) {
+            if (language) helpLanguage = language.dataset.cmHelpLang;
+            if (section) helpSection = Number(section.dataset.cmHelpTab);
+            help();
+            dialog.querySelector(language ? `[data-cm-help-lang="${helpLanguage}"]` : `[data-cm-help-tab="${helpSection}"]`).focus();
+            return;
+        }
         if (event.target !== dialog) return;
         const rect = dialog.getBoundingClientRect();
         if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();

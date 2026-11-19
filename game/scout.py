@@ -496,7 +496,10 @@ def _apply_show(state: Dict, player_id: str, start_index: int, end_index: int) -
         return events, None
 
     if state["variant"] == "duel":
-        state["current_turn"] = _next_player_id(state, player_id)
+        next_player_id = _next_player_id(state, player_id)
+        state["current_turn"] = next_player_id
+        if int(state["players"][next_player_id].get("scout_tokens_left", 0)) <= 0 and not _player_can_show(state, next_player_id):
+            _finish_round(state, next_player_id, "no_tokens_no_show")
     else:
         _advance_after_base_action(state, player_id)
     return events, None
@@ -611,67 +614,6 @@ def _apply_finish_scout_and_show(state: Dict, player_id: str) -> Tuple[List[Dict
     _clear_pending_scout_and_show(state)
     _advance_after_base_action(state, player_id)
     return [{"type": "scout:finish_scout_and_show", "payload": {"player_id": player_id}}], None
-
-
-def _base_bot_ready_action(state: Dict, player_id: str) -> Dict:
-    pending_hand = state["players"][player_id].get("pending_hand", [])
-    keep_move = _best_show_move(_copy_cards(pending_hand), None)
-    flip_move = _best_show_move(_flip_pending_hand(pending_hand), None)
-    keep_key = _combo_sort_key(keep_move["combo"]) if keep_move else (0, 0, 0)
-    flip_key = _combo_sort_key(flip_move["combo"]) if flip_move else (0, 0, 0)
-    return {"type": "ready_hand", "flip": flip_key > keep_key}
-
-
-def _best_scout_action_for_bot(state: Dict, player_id: str) -> Optional[Dict]:
-    pdata = state["players"][player_id]
-    active_set = state.get("active_set")
-    best_option = None
-    best_key = None
-    for option in _enumerate_scout_options(pdata.get("hand", []), active_set):
-        next_show = _best_show_move(option["next_hand"], option["next_active_set"])
-        next_key = _combo_sort_key(next_show["combo"]) if next_show else (0, 0, 0)
-        key = (
-            1 if next_show and next_show["remaining_count"] == 0 else 0,
-            1 if next_show else 0,
-            next_key,
-            -len(option["next_hand"]),
-        )
-        if best_key is None or key > best_key:
-            best_key = key
-            best_option = option
-    if not best_option:
-        return None
-    return {
-        "type": "scout",
-        "take_side": best_option["take_side"],
-        "insert_index": best_option["insert_index"],
-        "insert_face": best_option["insert_face"],
-    }
-
-
-def _best_scout_and_show_for_bot(state: Dict, player_id: str) -> Optional[Dict]:
-    pdata = state["players"][player_id]
-    active_set = state.get("active_set")
-    best_action = None
-    best_key = None
-    for option in _enumerate_scout_options(pdata.get("hand", []), active_set):
-        show_move = _best_show_move(option["next_hand"], option["next_active_set"])
-        if not show_move:
-            continue
-        key = (
-            1 if show_move["remaining_count"] == 0 else 0,
-            _combo_sort_key(show_move["combo"]),
-            -show_move["start_index"],
-        )
-        if best_key is None or key > best_key:
-            best_key = key
-            best_action = {
-                "type": "scout_and_show",
-                "take_side": option["take_side"],
-                "insert_index": option["insert_index"],
-                "insert_face": option["insert_face"],
-            }
-    return best_action
 
 
 class ScoutGame:
@@ -882,45 +824,12 @@ class ScoutGame:
         if phase == "choose_orientation":
             if state["players"][bot_id].get("hand_ready"):
                 return None
-            return _base_bot_ready_action(state, bot_id)
-
-        if phase != "playing" or bot_id != state.get("current_turn"):
+        elif phase != "playing" or bot_id != state.get("current_turn"):
             return None
 
-        pdata = state["players"][bot_id]
-        active_set = state.get("active_set")
-        show_move = _best_show_move(pdata.get("hand", []), active_set)
+        from game.scout_ai import choose_action
 
-        if state.get("pending_scout_and_show_player") == bot_id:
-            if show_move:
-                return {"type": "show", "start_index": show_move["start_index"], "end_index": show_move["end_index"]}
-            return {"type": "finish_scout_and_show"}
-
-        if state["variant"] == "base" and pdata.get("scout_and_show_available"):
-            scout_and_show_action = _best_scout_and_show_for_bot(state, bot_id)
-            if scout_and_show_action:
-                if show_move and show_move["remaining_count"] == 0:
-                    return {"type": "show", "start_index": show_move["start_index"], "end_index": show_move["end_index"]}
-                if not show_move:
-                    return scout_and_show_action
-                next_hand, next_active = _simulate_scout(
-                    pdata["hand"],
-                    active_set,
-                    scout_and_show_action["take_side"],
-                    scout_and_show_action["insert_index"],
-                    _face_to_index(scout_and_show_action["insert_face"]),
-                )
-                next_show_move = _best_show_move(next_hand, next_active)
-                if next_show_move and _combo_sort_key(next_show_move["combo"]) > _combo_sort_key(show_move["combo"]):
-                    return scout_and_show_action
-
-        if show_move:
-            return {"type": "show", "start_index": show_move["start_index"], "end_index": show_move["end_index"]}
-
-        scout_action = _best_scout_action_for_bot(state, bot_id)
-        if scout_action:
-            return scout_action
-        return None
+        return choose_action(state, bot_id)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

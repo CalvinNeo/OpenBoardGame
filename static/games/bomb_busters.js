@@ -14,17 +14,14 @@
   let bombBustersPopoverFrame = null;
   let bombBustersTooltipTimer = null;
   let bombBustersEffectToken = null;
+  let bombBustersHelpWidget = null;
+  let bombBustersExplainWidget = null;
+  const BOMB_BUSTERS_DYNAMIC_EXPLANATIONS = new Set();
 
   const bombBustersPanelEl = document.getElementById("bombBustersPanel");
   const bombBustersHeaderActionsEl = document.getElementById("bombBustersHeaderActions");
   const bombBustersHelpBtnEl = document.getElementById("bombBustersHelpBtn");
   const bombBustersExplainBtnEl = document.getElementById("bombBustersExplainBtn");
-  const bombBustersHelpModalEl = document.getElementById("bombBustersHelpModal");
-  const bombBustersHelpCloseBtnEl = document.getElementById("bombBustersHelpCloseBtn");
-  const bombBustersHelpContentEl = document.getElementById("bombBustersHelpContent");
-  const bombBustersExplainModalEl = document.getElementById("bombBustersExplainModal");
-  const bombBustersExplainCloseBtnEl = document.getElementById("bombBustersExplainCloseBtn");
-  const bombBustersExplainContentEl = document.getElementById("bombBustersExplainContent");
   const bombBustersPresetLabelEl = document.getElementById("bombBustersPresetLabel");
   const bombBustersMissionLabelEl = document.getElementById("bombBustersMissionLabel");
   const bombBustersTurnLabelEl = document.getElementById("bombBustersTurnLabel");
@@ -62,104 +59,154 @@
 
   const BOMB_BUSTERS_EXPLANATIONS = {
     campaign: {
-      title: "Mission & Equipment",
-      body: "Mission-specific rules override normal cutting and equipment. Select equipment to choose its wires on the racks, then confirm. See Current Mission in Help for this mission's complete rule summary.",
+      zh: "关卡特殊规则优先于普通剪线和装备规则。点选装备后在线架选线并确认。Help 的当前关卡章节会显示本关规则。",
+      en: "Mission-specific rules override normal cutting and equipment. Select equipment to choose its wires on the racks, then confirm. See Current Mission in Help for this mission's rule summary.",
     },
     own_wire: {
-      title: "Your Wire",
-      body: "You can see this wire's face. Select an uncut blue (🔵) or yellow (🟡) wire to make a Duo Cut declaration. Blue numbers are cut values; yellow and red decimals are private sorting positions only. A red (🔴, ⚠️) wire can never be declared.",
+      zh: "这是自己的可见电线。选择未剪的蓝线(🔵)或黄线(🟡)作为双人剪线的声明。蓝线数字是配对值，黄线和红线的小数只表示排序。红线(🔴)不能作为普通声明。",
+      en: "Select an uncut blue (🔵) or yellow (🟡) wire as your Duo Cut declaration. Blue numbers are cut values. Yellow and red decimals are private sorting positions only. Red (🔴) cannot be declared normally.",
     },
     hidden_wire: {
-      title: "Teammate Wire",
-      body: "This face is hidden from you. Its fixed rack position and any attached Info token are public clues. Select one only after choosing your declaration wire.",
+      zh: "这条电线对你隐藏。线架位置和公开信息标记可用于推理。先选择自己的声明线，再选择队友的目标线。反向电线则对主人隐藏、对队友可见。",
+      en: "This face is hidden from you. Its rack position and attached Info tokens are public clues. Choose your declaration before a teammate target. Reversed wires instead hide their face from their owner.",
     },
     revealed_wire: {
-      title: "Processed Wire",
-      body: "A cut (✂️), safely secured (🛡️), or exploded (💥) wire stays in its original slot with its face visible, preserving the rack's sorting clues.",
+      zh: "已剪电线(✂️)、安全揭示的红线(🛡️)和失败时的电线(💥)保留原位置并公开正面，帮助保留排序线索。",
+      en: "A cut (✂️), safely secured (🛡️), or exploded (💥) wire stays in its original slot with its face visible, preserving the rack's sorting clues.",
     },
     info: {
-      title: "Info Token",
-      body: "This public clue gives the wire's true BLUE number or marks it as YELLOW. Only two tokens of each label exist at a time.",
+      zh: "信息标记通常公开蓝线数字或标记黄线，每种有两枚。特殊关卡可能改用奇偶、负面或同值数量线索，应以当前关卡规则为准。",
+      en: "An Info token normally gives a blue number or marks yellow. Each label has two tokens. Mission rules may replace these with parity, negative, or multiplicity clues.",
     },
     validation: {
-      title: "Validation Tracker",
-      body: "A BLUE number validates after all four copies in the setup have been cut. Values outside this practice setup are marked N/A.",
+      zh: "同一蓝线数字的四条电线全部剪断后完成验证(✅)。未加入本关的数字显示 N/A，记忆关可能隐藏验证进度。",
+      en: "A blue number validates (✅) after all four copies have been cut. Values outside this setup show N/A. Memory missions may hide this tracker.",
     },
     detonator: {
-      title: "Detonator",
-      body: "An incorrect non-red attempt spends one mistake. Reaching zero remaining mistakes explodes the bomb; selecting a RED target explodes it immediately.",
+      zh: "普通非红线剪错通常消耗一格容错。引爆器(🧨)耗尽或普通剪线碰到红线就失败，特殊关卡可能改变失败条件。",
+      en: "A normal non-red miss spends one mistake. The detonator (🧨) reaching zero or a normal red cut explodes the bomb. Mission rules may change these conditions.",
     },
     share: {
-      title: "Share Clue",
-      body: "During setup, attach one numbered Info token to one of your BLUE wires. If both matching tokens are occupied, the clue is announced once instead.",
+      zh: "开局选择自己的可用电线并公开线索。通常是给蓝线放置数字信息标记，同值标记用完则只宣布一次。特殊关卡以当前规则为准。",
+      en: "Share an initial clue on an eligible wire. Normally this attaches a numbered Info token to a blue wire. If both matching tokens are occupied, announce it once instead. Follow mission overrides.",
     },
     duo: {
-      title: "Confirm Duo Cut",
-      body: "Use your selected BLUE number or YELLOW wire as the declaration and test one teammate wire. A match cuts both; a miss advances the detonator.",
+      zh: "用自己选中的蓝线数字或黄线作为声明，尝试与队友的一条目标线配对。匹配则剪断双方电线，不匹配通常推进引爆器。",
+      en: "Use your selected blue number or yellow wire as the declaration and test one teammate wire. A match cuts both. A miss normally advances the detonator.",
     },
     detector: {
-      title: "Use Double Detector",
-      body: "Once per bomb, declare with one of your BLUE wires and test two wires from the same teammate rack. The ability is spent whether it succeeds or misses.",
+      zh: "双重探测器(🔎)通常每关一次，用自己的蓝线声明，同时指定队友同一线架的两条电线。成功或失败都会消耗它，不能声明黄线。",
+      en: "The Double Detector (🔎) normally works once per bomb. Declare one of your blue values and test two wires on the same teammate rack. It is spent on success or failure and cannot declare yellow.",
     },
     detector_confirm: {
-      title: "Confirm Detector Cut",
-      body: "Submit the selected BLUE declaration and exactly two targets from one teammate rack. The targets do not need to be adjacent.",
+      zh: "提交蓝线声明以及队友同一线架的两条不同目标线。目标不必相邻。",
+      en: "Submit the selected blue declaration and exactly two targets from one teammate rack. The targets do not need to be adjacent.",
     },
     solo: {
-      title: "Solo Cut",
-      body: "Cut every remaining wire of one match held by you, but only when exactly two or four remain. Three matching wires can never be Solo Cut.",
+      zh: "只有当某个值剩余的全部电线都在自己手里，而且数量恰好为两条或四条时，才能一次单人剪断。三条不合法，可以跨自己的两个线架。",
+      en: "Solo Cut every remaining wire of one match held by you, but only when exactly two or four remain. Three matching wires are not legal. The set may span both of your racks.",
     },
     secure: {
-      title: "Secure Red Wires",
-      body: "When every uncut wire left in your hand is RED, reveal and secure all of them without using the cutters or advancing the detonator.",
+      zh: "当自己剩余的未剪电线全部是红线时，可以安全揭示(🛡️)，不使用剪刀也不推进引爆器。部分关卡有特殊处理。",
+      en: "When every uncut wire in your hand is red, reveal and secure them (🛡️) without advancing the detonator. Some missions override this action.",
     },
     resolve: {
-      title: "Detector Choice",
-      body: "You own both tested wires, so privately choose one of the allowed slots. The server reveals only the result required by the detector rule.",
+      zh: "由目标线主人私下选择允许的位置。服务端只公开探测器规则要求的结果，不泄露其他候选线。",
+      en: "The target owner privately chooses one of the allowed slots. The server reveals only the result required by the detector rule.",
     },
     continue: {
-      title: "Continue After Review",
-      body: "Confirm after reviewing the final rack layout. The next bomb or retry starts only when every human player is ready; bots are ready automatically.",
+      zh: "查看最终电线后确认继续。所有真人准备好才进入下一关或重试，机器人自动确认。",
+      en: "Confirm after reviewing the final rack layout. The next bomb or retry starts only when every human player is ready. Bots confirm automatically.",
     },
   };
 
-  const BOMB_BUSTERS_HELP_HTML = `
-    <div class="bomb-busters-rules">
-      <p class="bomb-busters-practice-note"><strong>Core Practice · Original practice setup · Shared equipment disabled.</strong> This implementation uses original practice setups, not the commercial game's numbered missions.</p>
-      <h3>Goal and wires</h3>
-      <p>Work together to process every wire before the detonator runs out. Blue (🔵) wires are numbered 1–12 with four copies of each number. Yellow (🟡) wires all match one another. Red (🔴, ⚠️) wires are dangerous and never match a cut declaration. A question mark (?) hides a teammate's wire; corner icons mark cut (✂️), secured (🛡️), or exploded (💥) wires.</p>
-      <p>The decimal shown on your own YELLOW or RED wire is only its private sorting position. For example, 4.1 sorts after BLUE 4, and 4.5 sorts after that. It is not a cut value.</p>
-      <h3>Racks and setup clues</h3>
-      <p>Each rack is sorted independently and slots never move. With two players, everyone has two racks. With three, the Captain has two racks and the others have one. With four or five, everyone has one rack. Two racks still count as one hand.</p>
-      <p>Starting with the Captain, each player shares one Info token on one of their BLUE wires. There are two tokens for every BLUE number and two YELLOW tokens. If both copies are occupied, the clue is announced once and must be remembered.</p>
-      <h3>Your turn</h3>
-      <p><strong>Duo Cut:</strong> choose one of your uncut BLUE or YELLOW wires, then one teammate wire. A matching pair is cut. A non-red miss spends one detonator step and gives the target its true Info token. Targeting RED explodes the bomb immediately.</p>
-      <p><strong>Solo Cut:</strong> if every remaining wire of one BLUE number or YELLOW match is in your hand, you may cut the whole set only when exactly two or four remain. A set of three is never legal, even across two racks.</p>
-      <p><strong>Secure RED:</strong> if all of your remaining wires are RED, reveal and secure all of them safely. Players with empty hands are skipped; the last player with wires may take consecutive turns.</p>
-      <h3>Double Detector</h3>
-      <p>Once per bomb, use one of your BLUE wires to test exactly two different wires on the same teammate rack; they need not be adjacent. YELLOW cannot be declared with the detector.</p>
-      <p>If one target matches, it is cut with your wire. If both match, their owner privately chooses which one is cut. If neither matches, the detonator advances and the owner chooses one non-red target for an Info token. Two RED targets explode immediately; with one RED target, the only non-red target receives the clue without naming the RED slot.</p>
-      <h3>Validation, communication, and results</h3>
-      <p>Cutting all four copies of a BLUE number completes its Validation marker. You may discuss public clues, but do not reveal your private wire faces, hint at their positions, or use a detailed log to replace memory.</p>
-      <p>The mission succeeds when no uncut wires remain. It fails on a RED cut or when the detonator reaches zero. Final faces remain visible until every human chooses Next Bomb or Retry Mission.</p>
-      <h3>Digital Notes</h3>
-      <p>Seats increase clockwise. The first Captain is selected by the server, then the Captain moves one seat after every success or retry. Wires are dealt around the rack order and every rack is sorted separately. Cut wires remain in place; attached Info tokens return to the supply when their wire is cut.</p>
-      <p>The mistake limit equals the number of players. The server derives every declaration from the acting player's selected wire, validates all Solo sets again, and keeps teammate faces and random setup data private. Your racks appear first, followed by teammates in clockwise seat order. The Captain (🧭), Bot (🤖), and Double Detector (🔎 ready / 🔎✓ used) badges describe each player. Open Validation (✅) for cut progress and Team Activity for recent actions.</p>
-      <p>On phones, confirm a wire action in the floating card beside the selected wire. Hover over status labels on desktop, or tap them on a phone, for a short description. Clicking blank board space or pressing Esc cancels an unsubmitted selection.</p>
-    </div>
-  `;
+  const BOMB_BUSTERS_HELP_CONFIG = {
+    gameId: "bomb_busters",
+    title: {zh: "炸弹克星 · Bomb Busters", en: "Bomb Busters"},
+    basic: {
+      win: {
+        zh: "在引爆器耗尽前合作剪完所有蓝线(🔵)与黄线(🟡)，并安全揭示剩余红线(🔴)，全队获胜。",
+        en: "Win together by cutting all blue (🔵) and yellow (🟡) wires and safely securing the red wires (🔴) before the detonator explodes."
+      },
+      turn: {
+        zh: "轮到你时，用自己的线值与队友配对剪线，单人剪掉自己持有的某值全部剩余电线，或在只剩红线时安全揭示。",
+        en: "On your turn, match one of your wire values with a teammate, Solo Cut every remaining wire of one value in your hand, or secure your wires when only red remain."
+      },
+      key: {
+        zh: "结合线架排序和公开线索推理隐藏值，管理容错与装备，并遵守当前关卡的交流限制。",
+        en: "Infer hidden values from sorted racks and public clues, manage mistakes and equipment, and follow the current mission's communication limits."
+      }
+    },
+    sections: [
+      {
+        id: "wires", label: {zh: "电线与线索", en: "Wires & Clues"},
+        html: {
+          zh: "<p>蓝线(🔵)为 1 至 12，各有四条。黄线(🟡)剪线时全部视为同值，红线(🔴)被普通剪线碰到会立即爆炸。黄线与红线上的小数只用于排序，不是剪线数字。</p><p>每个线架独立从小到大排列。两人时每人有两个线架，三人时队长(🧭)有两个，其余人一个。自己的两个线架合称一手牌。通常只能看见自己的未剪电线，队友电线显示问号(?)。</p><p>通常从队长开始，每人给自己一条蓝线放一个信息标记。每个数字及黄色标记各有两枚，同值标记用完时只宣布一次线索。剪断后标记归还供应区。特殊关卡可能改用奇偶、负面(≠)或同值数量(×1、×2、×3)线索。</p><p>已剪电线(✂️)与安全揭示的红线(🛡️)保留在原位置并公开正面。同一蓝线数字的四条全部剪断后完成验证(✅)。公开颜色候选标记只表示可能加入的小数位置，不表示所属玩家。</p>",
+          en: "<p>Blue wires (🔵) have four copies of each number from 1 to 12. All yellow wires (🟡) match one another. A normal cut hitting red (🔴) explodes immediately. Yellow and red decimals are sorting positions, not cut values.</p><p>Each rack is sorted independently. With two players everyone has two racks. With three players the Captain (🧭) has two and everyone else has one. Both of your racks form one hand. Normally you see your own uncut faces while teammates' faces show a question mark (?).</p><p>Starting with the Captain, everyone normally marks one blue wire with an Info token. Each numbered label and yellow have two tokens. If both are occupied, announce the clue once instead. Cutting returns attached tokens to the supply. Missions may use parity, negative (≠), or multiplicity (×1, ×2, ×3) clues instead.</p><p>Cut wires (✂️) and secured red wires (🛡️) stay in their original slots, faceup. Cutting all four copies of a blue number completes its validation (✅). Public color candidates show possible decimal positions, not wire owners.</p>"
+        }
+      },
+      {
+        id: "cuts", label: {zh: "剪线与失败", en: "Cuts & Mistakes"},
+        html: {
+          zh: "<p><strong>双人剪线：</strong>选择自己一条未剪蓝线或黄线作为声明，再指定队友的一条目标线。匹配则双方各剪一条。不匹配的非红目标通常消耗一格引爆器(🧨)，并给目标放真实信息标记。允许故意猜错，但声明值必须来自自己的电线。</p><p><strong>单人剪线：</strong>只有当该值全部剩余电线都在自己手里，且数量恰好为两条或四条时才能全部剪断。可以跨自己的两个线架，三条不合法。</p><p><strong>安全揭示红线：</strong>当自己全部未剪电线都是红线时，将它们安全揭示(🛡️)，不会推进引爆器。空手玩家跳过，最后一位有线的玩家可以连续行动。</p><p>普通任务的容错格数等于人数。剪到红线或容错耗尽就失败。特殊关卡可以改变行动、线索、容错和胜负条件，应先查看当前关卡章节。</p>",
+          en: "<p><strong>Duo Cut:</strong> choose your own uncut blue or yellow declaration, then point to one teammate wire. A match cuts one on each side. A non-red miss normally advances the detonator (🧨) one step and marks the target's true value. Intentional misses are allowed, but your declaration must come from your hand.</p><p><strong>Solo Cut:</strong> cut a value only when all its remaining wires are in your hand and exactly two or four remain. Both of your racks count together. Three matching wires are never a normal Solo Cut.</p><p><strong>Secure red:</strong> when all your uncut wires are red, safely reveal them (🛡️) without advancing the detonator. Empty players are skipped, and the last player with wires may act consecutively.</p><p>The normal mistake limit equals the player count. Hitting red or running out of mistakes fails the mission. Mission rules can override actions, clues, mistakes, and victory conditions, so read Current Mission first.</p>"
+        }
+      },
+      {
+        id: "equipment", label: {zh: "装备与特殊机制", en: "Equipment"},
+        html: {
+          zh: "<p>双重探测器(🔎)通常每关使用一次。用自己的蓝线数字指定队友同一线架的两条不同电线，不必相邻。有匹配就成功，多条匹配时由主人私下选一条。没有匹配时通常消耗一格并选择非红目标给线索，全部是红线则爆炸，不能声明黄线。</p><p>共享装备(🧰)通常在剪掉其数字的两条蓝线后解锁，每张用一次。三重探测器覆盖同架三条，超级探测器覆盖同架全部可用电线。雷达(📡)只报告每架有无某数字，不公开数量和位置。</p><p>对讲机交换电线，便利贴增加线索，相等与不等标签标记相邻电线的关系。回溯器恢复一格，电池恢复个人探测器，稳定器保护本回合剪线，X 或 Y 射线允许声明两个持有值，咖啡杯跳过回合并选择下一位。后期装备有各自的解锁条件，可在 Explain 中查看。</p><p>氧气(🫧)、纳诺机器人(🤖)、挑战(🏆)与约束(📋)按本关规则处理。反向电线对主人隐藏、对队友可见，剪线时需要明确声明。点装备后直接在线架选线，再确认，特殊电线能否使用装备以当前关卡为准。</p>",
+          en: "<p>The Double Detector (🔎) normally works once per mission. Declare your blue number and test two distinct wires on one teammate rack, adjacent or not. A match succeeds, with the owner privately choosing if several match. A miss normally costs one step and clues one non-red target. All-red targets explode. Yellow declarations are not allowed.</p><p>Shared equipment (🧰) normally unlocks after two blue wires of its number are cut and works once. Triple Detector tests three wires on one rack. Super Detector tests all eligible wires on one rack. Radar (📡) reports presence by rack, without revealing quantity or position.</p><p>Walkie-Talkies exchange wires, Post-It adds a clue, and equality labels describe adjacent wires. Rewinder restores a step, Batteries recharge personal detectors, Stabilizer protects a cut this turn, X or Y Ray declares two held values, and Coffee Mug skips to a chosen player. Late equipment has individual unlock conditions shown in Explain.</p><p>Oxygen (🫧), Nano (🤖), challenges (🏆), and constraints (📋) follow mission-specific rules. Reversed wires hide their face from the owner and require an explicit declaration. Select equipment, choose wires on the racks, then confirm. Special wires may ignore equipment.</p>"
+        }
+      },
+      {
+        id: "mission", label: {zh: "当前关卡", en: "Current Mission"},
+        get html() { return bombBustersMissionHelp(); }
+      },
+      {
+        id: "controls", label: {zh: "操作与结算", en: "Controls & Results"},
+        html: {
+          zh: "<p>先选自己的声明线，再选队友目标并确认。手机在所选线附近显示确认卡。点空白处、Cancel 或按 Esc 可取消未提交选择。滑动只滚动，不应触发选线。</p><p>悬停非交互图标可看说明，手机点按时显示三秒。Explain 开启后再点电线、装备或按钮可查看含义，不会提交行动，灰色按钮同样可解释，按 Esc 退出。</p><p>只能讨论规则允许的公开信息，不能透露未公开线值或位置，也不要用日志代替记忆。氧气关等特殊任务还会限制说话。</p><p>结算公开全部电线并暂停。所有真人确认后才进入下一关或重试，机器人自动确认。机器人(🤖)只用自己可见信息，是练习级助手。</p>",
+          en: "<p>Select your declaration, choose teammate targets, then confirm. Phones show a confirmation card near the selected wire. Click blank space, press Cancel, or hit Esc to drop an unsubmitted selection. Swiping scrolls without selecting wires.</p><p>Hover over non-interactive icons for hints, or tap them on a phone for three seconds. Enable Explain and tap a wire, equipment card, or button to inspect it without acting. Disabled buttons remain explainable. Esc leaves explain mode.</p><p>Discuss only information the rules permit. Do not reveal private wire values or locations, or replace memory with a detailed log. Some missions further restrict speech.</p><p>Results reveal all faces and pause. Every human must confirm before the next mission or retry. Bots (🤖) confirm automatically and use only their own visible information as practice-level teammates.</p>"
+        }
+      }
+    ]
+  };
 
-  function bombBustersSetModal(modal, visible, returnFocus) {
-    if (!modal) return;
-    bombBustersHideTooltip();
-    modal.classList.toggle("hidden", !visible);
-    modal.setAttribute("aria-hidden", visible ? "false" : "true");
-    if (visible) {
-      const first = modal.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
-      if (first) window.setTimeout(() => first.focus(), 0);
-    } else if (returnFocus) {
-      returnFocus.focus();
-    }
+  function bombBustersMissionHelp() {
+    const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
+    const mission = bombBustersView?.campaign;
+    if (!mission) return {
+      zh: "<p>原创练习使用 Room Control 中选择的预设，不是数字战役关卡，也不包含共享装备。Short、Standard 与 High Risk 分别调整线数和危险程度。</p>",
+      en: "<p>Original Practice uses the setup chosen in Room Control. These are original practice presets, not numbered campaign missions, and have no shared equipment. Short, Standard, and High Risk vary the wire count and danger.</p>"
+    };
+    return {
+      zh: `<h3>第 ${escape(mission.id)} 关</h3><p>${escape(mission.rules_zh || mission.rules)}</p><p>数字关卡依据公开参考资料转录，尚未经过第二位审核者的独立规则复核。第 34、65 关至少需要三人，两人战役会跳过。</p>${mission.audio_companion ? "<p>音频关(🎧)需要在外部播放官方录音，由队长手动应用指令。目前不是完整自动化音频关，没有内置商业录音或插画。</p>" : ""}`,
+      en: `<h3>Mission ${escape(mission.id)}</h3><p>${escape(mission.rules)}</p><p>Numbered setups were transcribed from public references and have not received an independent second-person rules audit. Missions 34 and 65 require at least three players and are skipped in a two-player campaign.</p>${mission.audio_companion ? "<p>Audio missions (🎧) use the official recording externally, with the Captain applying instructions manually. They are not self-contained automated audio adaptations. No commercial recordings or graphics are bundled.</p>" : ""}`
+    };
+  }
+
+  function initBombBustersHelpExplain() {
+    if (bombBustersHelpWidget || typeof window.obgCreateHelp !== "function" || typeof window.obgCreateExplain !== "function") return;
+    bombBustersHelpWidget = window.obgCreateHelp(BOMB_BUSTERS_HELP_CONFIG);
+    bombBustersExplainWidget = window.obgCreateExplain({
+      gameId: "bomb_busters",
+      attribute: "data-bomb-busters-explain",
+      explanations: BOMB_BUSTERS_EXPLANATIONS,
+      button: bombBustersExplainBtnEl,
+      root: () => bombBustersPanelEl,
+      bypass: ["#bombBustersHelpBtn", "#bombBustersExplainBtn"],
+      onChange: (active) => {
+        bombBustersExplainMode = active;
+        bombBustersHideTooltip();
+      }
+    });
+    bombBustersHelpBtnEl?.addEventListener("click", () => {
+      bombBustersExplainWidget.exit();
+      bombBustersHideTooltip();
+      bombBustersHelpWidget.open();
+    });
+    bombBustersExplainBtnEl?.addEventListener("click", () => bombBustersExplainWidget.toggle());
   }
 
   function bombBustersHideTooltip() {
@@ -438,55 +485,17 @@
     if (bombBustersView) bombBustersRenderInteractive(bombBustersView);
   }
 
-  function bombBustersSetExplainMode(enabled) {
-    bombBustersHideTooltip();
-    bombBustersExplainMode = Boolean(enabled);
-    document.body.classList.toggle("bomb-busters-explain-mode", bombBustersExplainMode);
-    if (bombBustersExplainBtnEl) {
-      bombBustersExplainBtnEl.setAttribute("aria-pressed", bombBustersExplainMode ? "true" : "false");
-    }
-    document.querySelectorAll("[data-bomb-busters-explain]").forEach((element) => {
-      const key = element.dataset.bombBustersExplain;
-      element.classList.toggle("has-explanation", bombBustersExplainMode && Boolean(BOMB_BUSTERS_EXPLANATIONS[key]));
-    });
-  }
-
   function bombBustersRefreshExplainTargets() {
-    if (!bombBustersExplainMode) return;
-    document.querySelectorAll("[data-bomb-busters-explain]").forEach((element) => {
-      if (BOMB_BUSTERS_EXPLANATIONS[element.dataset.bombBustersExplain]) {
-        element.classList.add("has-explanation");
-      }
+    if (!bombBustersPanelEl) return;
+    BOMB_BUSTERS_DYNAMIC_EXPLANATIONS.forEach((key) => { delete BOMB_BUSTERS_EXPLANATIONS[key]; });
+    BOMB_BUSTERS_DYNAMIC_EXPLANATIONS.clear();
+    bombBustersPanelEl.querySelectorAll("[data-bomb-busters-explanation]").forEach((element, index) => {
+      const key = `detail_${index}`;
+      BOMB_BUSTERS_EXPLANATIONS[key] = element.dataset.bombBustersExplanation;
+      BOMB_BUSTERS_DYNAMIC_EXPLANATIONS.add(key);
+      element.dataset.bombBustersExplain = key;
     });
-  }
-
-  function bombBustersShowExplanation(key, target) {
-    const explanation = BOMB_BUSTERS_EXPLANATIONS[key];
-    if (!explanation || !bombBustersExplainContentEl) return;
-    bombBustersExplainContentEl.innerHTML = "";
-    const title = document.createElement("h3");
-    title.textContent = explanation.title;
-    const body = document.createElement("p");
-    body.textContent = target && target.dataset.bombBustersExplanation || explanation.body;
-    bombBustersExplainContentEl.append(title, body);
-    bombBustersSetModal(bombBustersExplainModalEl, true);
-  }
-
-  function bombBustersFindDisabledExplainTargetAtPoint(x, y) {
-    if (!bombBustersPanelEl) return null;
-    const targets = Array.from(bombBustersPanelEl.querySelectorAll(
-      "[data-bomb-busters-explain]:disabled, :disabled [data-bomb-busters-explain]"
-    )).reverse();
-    for (const target of targets) {
-      const rect = target.getBoundingClientRect();
-      if (
-        rect.width > 0 && rect.height > 0 &&
-        x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
-      ) {
-        return target;
-      }
-    }
-    return null;
+    bombBustersExplainWidget?.refresh();
   }
 
   function bombBustersWireIsSelectable(view, rack, wire) {
@@ -1080,9 +1089,8 @@
         details.open = false;
       });
     }
-    bombBustersSetExplainMode(false);
-    bombBustersSetModal(bombBustersHelpModalEl, false);
-    bombBustersSetModal(bombBustersExplainModalEl, false);
+    bombBustersExplainWidget?.exit();
+    bombBustersHelpWidget?.close();
     [bombBustersRacksEl, bombBustersValidationEl, bombBustersActivityEl, bombBustersSoloOptionsEl, bombBustersReadyListEl].forEach((element) => {
       if (element) element.innerHTML = "";
     });
@@ -1095,13 +1103,11 @@
     if (!show) {
       bombBustersResetSelection(false);
       bombBustersHideWirePopover();
-      bombBustersSetExplainMode(false);
-      bombBustersSetModal(bombBustersHelpModalEl, false);
-      bombBustersSetModal(bombBustersExplainModalEl, false);
+      bombBustersExplainWidget?.exit();
+      bombBustersHelpWidget?.close();
     }
   }
 
-  if (bombBustersHelpContentEl) bombBustersHelpContentEl.innerHTML = BOMB_BUSTERS_HELP_HTML;
   if (bombBustersShareClueBtnEl) bombBustersShareClueBtnEl.dataset.bombBustersExplain = "share";
   if (bombBustersConfirmDuoBtnEl) bombBustersConfirmDuoBtnEl.dataset.bombBustersExplain = "duo";
   if (bombBustersDetectorBtnEl) bombBustersDetectorBtnEl.dataset.bombBustersExplain = "detector";
@@ -1111,29 +1117,11 @@
   if (bombBustersSecureRedBtnEl) bombBustersSecureRedBtnEl.dataset.bombBustersExplain = "secure";
   if (bombBustersContinueBtnEl) bombBustersContinueBtnEl.dataset.bombBustersExplain = "continue";
 
-  if (bombBustersHelpBtnEl) {
-    bombBustersHelpBtnEl.addEventListener("click", () => {
-      if (window.bombBustersCampaignUI) window.bombBustersCampaignUI.openHelp(bombBustersHelpModalEl);
-      bombBustersSetModal(bombBustersHelpModalEl, true);
-    });
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initBombBustersHelpExplain);
+  } else {
+    initBombBustersHelpExplain();
   }
-  if (bombBustersExplainBtnEl) {
-    bombBustersExplainBtnEl.addEventListener("click", () => bombBustersSetExplainMode(!bombBustersExplainMode));
-  }
-  if (bombBustersHelpCloseBtnEl) {
-    bombBustersHelpCloseBtnEl.addEventListener("click", () => bombBustersSetModal(bombBustersHelpModalEl, false, bombBustersHelpBtnEl));
-  }
-  if (bombBustersExplainCloseBtnEl) {
-    bombBustersExplainCloseBtnEl.addEventListener("click", () => bombBustersSetModal(bombBustersExplainModalEl, false));
-  }
-  [bombBustersHelpModalEl, bombBustersExplainModalEl].forEach((modal) => {
-    if (!modal) return;
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        bombBustersSetModal(modal, false, modal === bombBustersHelpModalEl ? bombBustersHelpBtnEl : null);
-      }
-    });
-  });
 
   if (bombBustersShareClueBtnEl) {
     bombBustersShareClueBtnEl.addEventListener("click", () => {
@@ -1233,49 +1221,6 @@
     });
   }
 
-  document.addEventListener(
-    "click",
-    (event) => {
-      if (
-        !bombBustersExplainMode ||
-        typeof currentGameType === "undefined" ||
-        currentGameType !== "bomb_busters"
-      ) return;
-      const exceptions = [bombBustersHelpBtnEl, bombBustersExplainBtnEl, bombBustersHelpCloseBtnEl, bombBustersExplainCloseBtnEl];
-      const clickedButton = event.target.closest("button");
-      if (clickedButton && exceptions.includes(clickedButton)) return;
-      const insideGame = bombBustersPanelEl && bombBustersPanelEl.contains(event.target);
-      if (!insideGame) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const target = event.target.closest("[data-bomb-busters-explain]");
-      const key = target && target.dataset.bombBustersExplain;
-      if (key && BOMB_BUSTERS_EXPLANATIONS[key]) {
-        bombBustersShowExplanation(key, target);
-        bombBustersSetExplainMode(false);
-      }
-    },
-    true
-  );
-
-  document.addEventListener(
-    "pointerdown",
-    (event) => {
-      if (
-        !bombBustersExplainMode ||
-        typeof currentGameType === "undefined" ||
-        currentGameType !== "bomb_busters"
-      ) return;
-      const target = bombBustersFindDisabledExplainTargetAtPoint(event.clientX, event.clientY);
-      if (!target) return;
-      event.preventDefault();
-      event.stopPropagation();
-      bombBustersShowExplanation(target.dataset.bombBustersExplain, target);
-      bombBustersSetExplainMode(false);
-    },
-    true
-  );
-
   document.addEventListener("click", (event) => {
     if (
       bombBustersExplainMode ||
@@ -1294,15 +1239,8 @@
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     bombBustersHideTooltip();
-    if (bombBustersExplainMode) bombBustersSetExplainMode(false);
     const hasSelection = bombBustersSelectedOwnWireId || bombBustersSelectedTargetWireIds.length || bombBustersSelectedSoloWireIds.length;
     if (hasSelection) bombBustersResetSelection(true);
-    if (bombBustersHelpModalEl && !bombBustersHelpModalEl.classList.contains("hidden")) {
-      bombBustersSetModal(bombBustersHelpModalEl, false, bombBustersHelpBtnEl);
-    }
-    if (bombBustersExplainModalEl && !bombBustersExplainModalEl.classList.contains("hidden")) {
-      bombBustersSetModal(bombBustersExplainModalEl, false);
-    }
   });
 
   window.clearBombBustersState = bombBustersClearState;

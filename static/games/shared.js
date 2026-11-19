@@ -37,6 +37,8 @@ function emitRoomStart() {
   }
   if (currentGameType === "blokus" && typeof getBlokusRoomConfig === "function") {
     payload.config = getBlokusRoomConfig();
+  } else if (currentGameType === "for_northwood" && typeof getForNorthwoodConfig === "function") {
+    payload.config = getForNorthwoodConfig();
   } else if (currentGameType === "draw_guess") {
     const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";

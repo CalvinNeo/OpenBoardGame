@@ -203,6 +203,11 @@ from game.factory_funner import (
     ACTION_SCHEMA as FACTORY_FUNNER_ACTION_SCHEMA,
     CONFIG_SCHEMA as FACTORY_FUNNER_CONFIG_SCHEMA,
 )
+from game.for_northwood import (
+    ForNorthwoodGame,
+    ACTION_SCHEMA as FOR_NORTHWOOD_ACTION_SCHEMA,
+    CONFIG_SCHEMA as FOR_NORTHWOOD_CONFIG_SCHEMA,
+)
 
 register_game(
     GameDefinition(
@@ -6571,5 +6576,21 @@ register_game(
         module=FactoryFunnerGame,
         serialize=FactoryFunnerGame.serialize,
         deserialize=FactoryFunnerGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ForNorthwoodGame.game_id,
+        name="For Northwood!",
+        name_zh="为了北境森林",
+        min_players=ForNorthwoodGame.min_players,
+        max_players=ForNorthwoodGame.max_players,
+        turn_mode="turn",
+        action_schema=FOR_NORTHWOOD_ACTION_SCHEMA,
+        config_schema=FOR_NORTHWOOD_CONFIG_SCHEMA,
+        module=ForNorthwoodGame,
+        serialize=ForNorthwoodGame.serialize,
+        deserialize=ForNorthwoodGame.deserialize,
     )
 )

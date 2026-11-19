@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="token-red" viewBox="0 0 32 32">
+    <path d="M16 2 28 9v14l-12 7L4 23V9Z" fill="#fff0e8" stroke="#c94f34" stroke-width="2"/>
+    <path d="M17 7c1 6 7 7 5 13-2 7-12 6-12-1 0-3 3-5 4-7 0 4 2 4 2 4s3-4 1-9Z" fill="#e65b3a"/>
+    <path d="M16 18c4 4 3 6 0 6s-4-3 0-6Z" fill="#ffd58c"/>
+  </symbol>
+  <symbol id="token-blue" viewBox="0 0 32 32">
+    <path d="M16 2 28 9v14l-12 7L4 23V9Z" fill="#eaf7ff" stroke="#377fa7" stroke-width="2"/>
+    <path d="M16 7s-7 8-7 13a7 7 0 0 0 14 0c0-5-7-13-7-13Z" fill="#459fca"/>
+    <path d="M12 21c0 3 3 4 5 3" fill="none" stroke="#c9f0ff" stroke-width="2.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="token-yellow" viewBox="0 0 32 32">
+    <path d="M16 2 28 9v14l-12 7L4 23V9Z" fill="#fff9dc" stroke="#b68a25" stroke-width="2"/>
+    <path d="m18 6-9 12h6l-1 9 10-14h-7Z" fill="#dba72b"/>
+  </symbol>
+  <symbol id="token-green" viewBox="0 0 32 32">
+    <path d="M16 2 28 9v14l-12 7L4 23V9Z" fill="#edf8eb" stroke="#50865b" stroke-width="2"/>
+    <path d="M23 8C10 7 6 15 12 21c7 5 12-2 11-13Z" fill="#65a16a"/>
+    <path d="m10 25 10-13m-6 8v-5" stroke="#2e6446" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="token-pink" viewBox="0 0 32 32">
+    <path d="M16 2 28 9v14l-12 7L4 23V9Z" fill="#fff0f6" stroke="#b65c8d" stroke-width="2"/>
+    <path d="M16 9c5-8 10 1 5 5 9-1 6 10-1 8 0 8-10 6-9-1-9 0-8-10-1-9-2-7 6-9 6-3Z" fill="#df8fb4"/>
+    <circle cx="16" cy="17" r="3" fill="#fff3b9"/>
+  </symbol>
+  <symbol id="token-purple" viewBox="0 0 32 32">
+    <path d="M16 2 28 9v14l-12 7L4 23V9Z" fill="#f4eeff" stroke="#8260ac" stroke-width="2"/>
+    <path d="m16 6 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z" fill="#9870ca"/>
+    <circle cx="16" cy="16" r="3" fill="#f8e7ff"/>
+  </symbol>
+  <symbol id="companion-red" viewBox="0 0 80 72">
+    <ellipse cx="40" cy="64" rx="25" ry="4" fill="#b7573d" opacity=".13"/>
+    <path d="M22 40C7 29 12 14 22 12c-3 11 9 11 12 18M58 40c15-11 10-26 0-28 3 11-9 11-12 18" fill="#e8985c" stroke="#814b3e" stroke-width="2"/>
+    <path d="M39 7c-2 12-13 15-13 29h29C55 21 43 19 47 10l-8 7Z" fill="#f2c172" stroke="#814b3e" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M17 44c0-17 46-22 46 0 0 14-11 19-23 19S17 58 17 44Z" fill="#dd7857" stroke="#814b3e" stroke-width="2"/>
+    <path d="M26 48c4-8 24-8 28 0 2 13-31 13-28 0Z" fill="#ffe0ae"/>
+    <circle cx="29" cy="39" r="3" fill="#3d3841"/><circle cx="50" cy="39" r="3" fill="#3d3841"/>
+    <path d="m36 46 4 3 4-3" fill="none" stroke="#814b3e" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="companion-blue" viewBox="0 0 80 72">
+    <ellipse cx="40" cy="64" rx="25" ry="4" fill="#34768f" opacity=".13"/>
+    <path d="M24 36C8 41 7 17 13 12c2 11 13 8 17 18M55 36c16 5 18-19 12-24-2 11-13 8-17 18" fill="#9bd6d8" stroke="#3e7186" stroke-width="2"/>
+    <path d="M19 43c0-19 42-24 42 0 0 14-10 20-21 20S19 57 19 43Z" fill="#78b9d2" stroke="#3e7186" stroke-width="2"/>
+    <path d="M34 23c-2-7 1-12 7-15-1 6 8 7 5 15" fill="#c2ecdf" stroke="#3e7186" stroke-width="2"/>
+    <path d="M27 49c6-7 20-7 26 0v9c-7 6-20 5-26-1Z" fill="#d5f0e6"/>
+    <circle cx="30" cy="39" r="3" fill="#304857"/><circle cx="50" cy="39" r="3" fill="#304857"/>
+    <path d="M36 47q4 5 8 0M22 58l-7 4m43-4 7 4" fill="none" stroke="#3e7186" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="companion-yellow" viewBox="0 0 80 72">
+    <ellipse cx="40" cy="64" rx="25" ry="4" fill="#aa7a26" opacity=".13"/>
+    <path d="m23 34-12-8 7-10 12 12m27 6 12-8-7-10-12 12" fill="#f3cf70" stroke="#90723e" stroke-width="2" stroke-linejoin="round"/>
+    <path d="m32 24 1-13 8 5 7-8 3 17" fill="#e8b654" stroke="#90723e" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M17 44c0-27 46-27 46 0 0 15-12 20-23 20S17 59 17 44Z" fill="#f0d28b" stroke="#90723e" stroke-width="2"/>
+    <path d="m40 29-7 12h7l-2 10 10-15h-8Z" fill="#fff5cf"/>
+    <circle cx="28" cy="43" r="3" fill="#574735"/><circle cx="53" cy="43" r="3" fill="#574735"/>
+    <path d="M36 53q4 4 8 0m-20 7-4 5m36-5 4 5" fill="none" stroke="#90723e" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="companion-green" viewBox="0 0 80 72">
+    <ellipse cx="40" cy="64" rx="25" ry="4" fill="#4d7c50" opacity=".13"/>
+    <path d="M38 30C17 30 12 17 18 9c17 0 25 11 20 21Zm4 0C39 9 51 4 63 10c-1 16-10 23-21 20Z" fill="#a6c583" stroke="#54764e" stroke-width="2"/>
+    <path d="M17 47c0-26 46-26 46 0 0 13-12 17-23 17S17 60 17 47Z" fill="#8fb894" stroke="#54764e" stroke-width="2"/>
+    <path d="M24 48c3-9 29-9 32 0v9c-8 7-24 7-32 0Z" fill="#e5eace"/>
+    <circle cx="29" cy="41" r="3" fill="#344f41"/><circle cx="51" cy="41" r="3" fill="#344f41"/>
+    <path d="m36 49 4 3 4-3M21 28l9-1m21-1 8 3" fill="none" stroke="#54764e" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="companion-pink" viewBox="0 0 80 72">
+    <ellipse cx="40" cy="64" rx="25" ry="4" fill="#a86083" opacity=".13"/>
+    <path d="M25 34C7 33 12 16 24 19c-3-14 17-17 16-3 13-13 27 3 14 10 18 1 11 21-2 16" fill="#e7bdd0" stroke="#996784" stroke-width="2"/>
+    <path d="M18 45c0-24 44-24 44 0 0 13-10 19-22 19S18 58 18 45Z" fill="#d69ab5" stroke="#996784" stroke-width="2"/>
+    <path d="M26 50c3-8 25-8 28 0 0 15-28 15-28 0Z" fill="#fbe6d7"/>
+    <path d="m39 23-4 6 5 5 5-5Z" fill="#f8df8c"/>
+    <circle cx="29" cy="41" r="3" fill="#5c4057"/><circle cx="51" cy="41" r="3" fill="#5c4057"/>
+    <path d="M36 49q4 5 8 0" fill="none" stroke="#996784" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="companion-purple" viewBox="0 0 80 72">
+    <ellipse cx="40" cy="64" rx="25" ry="4" fill="#775b9c" opacity=".13"/>
+    <path d="M25 35 9 19l3 27 16 7m27-18 16-16-3 27-16 7" fill="#bcb3da" stroke="#75628e" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M22 43c0-27 36-27 36 0 0 15-7 21-18 21S22 58 22 43Z" fill="#a39ac9" stroke="#75628e" stroke-width="2"/>
+    <path d="m40 9 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="#f7df9c" stroke="#75628e" stroke-width="1.5"/>
+    <path d="M29 50c2-8 20-8 22 0v8c-8 7-15 6-22 0Z" fill="#e8e0ee"/>
+    <circle cx="30" cy="40" r="3" fill="#443e60"/><circle cx="50" cy="40" r="3" fill="#443e60"/>
+    <path d="M36 49q4 5 8 0" fill="none" stroke="#75628e" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+</svg>

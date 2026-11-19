@@ -334,21 +334,21 @@ function makeView(playerCount, preset, viewer, phase = 'playing') {
         await measure(mobile, 'waiting-long-names', 390);
         assert.equal(await mobile.locator('#bombBustersActionDock').isVisible(), false, 'Waiting does not duplicate a disabled action area');
         await mobile.locator('#bombBustersHelpBtn').tap();
-        await mobile.locator('#bombBustersHelpModal').waitFor({state: 'visible'});
+        await mobile.locator('.obg-help-dialog[data-obg-help-game="bomb_busters"]').waitFor({state: 'visible'});
         await mobile.keyboard.press('Escape');
-        await mobile.locator('#bombBustersHelpModal').waitFor({state: 'hidden'});
+        await mobile.locator('.obg-help-dialog[data-obg-help-game="bomb_busters"]').waitFor({state: 'hidden'});
         const actionsBeforeExplain = await mobile.evaluate(() => window.bombBustersTestActions.length);
-        for (const [selector, title] of [
-            ['.is-self .bomb-busters-wire-button .bomb-busters-wire-label', 'Your Wire'],
-            ['.is-self .bomb-busters-info-token', 'Info Token'],
+        for (const [selector, description] of [
+            ['.is-self .bomb-busters-wire-button .bomb-busters-wire-label', '这是自己的可见电线'],
+            ['.is-self .bomb-busters-info-token', '信息标记通常公开'],
         ]) {
             await mobile.locator('#bombBustersExplainBtn').tap();
             const target = mobile.locator(selector).first();
             await target.scrollIntoViewIfNeeded();
             const bounds = await target.boundingBox();
             await mobile.touchscreen.tap(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
-            await mobile.locator('#bombBustersExplainModal').waitFor({state: 'visible'});
-            assert.equal(await mobile.locator('#bombBustersExplainContent h3').textContent(), title);
+            await mobile.locator('.obg-explain-dialog').waitFor({state: 'visible'});
+            assert((await mobile.locator('.obg-explain-text').textContent()).includes(description));
             await mobile.keyboard.press('Escape');
         }
         assert.equal(await mobile.evaluate(() => window.bombBustersTestActions.length), actionsBeforeExplain, 'Explain works on disabled wires and their Info tokens without sending actions');

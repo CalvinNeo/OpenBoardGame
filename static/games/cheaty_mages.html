@@ -4,4 +4,9 @@
 </template>
 <template data-game-target="cheatyMagesPanel" data-game-mode="contents">
     <div class="cm-loading" role="status">Loading the arena…</div>
+    <dialog id="cheatyMagesDialog" class="cm-dialog" aria-labelledby="cheatyMagesDialogTitle">
+        <div class="cm-dialog-heading"><h2 id="cheatyMagesDialogTitle">Help</h2><button type="button">Close</button></div>
+        <div class="cm-dialog-body"></div>
+    </dialog>
+    <div id="cheatyMagesTooltip" class="cm-tooltip" role="tooltip" hidden></div>
 </template>

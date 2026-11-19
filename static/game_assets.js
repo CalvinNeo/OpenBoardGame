@@ -111,8 +111,8 @@ const GAME_ASSETS = {
     "header": "showMaskmenHeaderActions"
   },
   "startups": {
-    "scripts": ["/static/games/startups.js?v=4"],
-    "styles": ["/static/games/startups.css?v=5"],
+    "scripts": ["/static/games/startups.js?v=5"],
+    "styles": ["/static/games/startups.css?v=6"],
     "markup": "/static/games/startups.html?v=4",
     "panel": "startupsPanel",
     "panelTitle": "Startups",
@@ -219,12 +219,12 @@ const GAME_ASSETS = {
   },
   "cheaty_mages": {
     "scripts": [
-      "/static/games/cheaty_mages.js?v=3"
+      "/static/games/cheaty_mages.js?v=4"
     ],
     "styles": [
-      "/static/cheaty_mages.css?v=2"
+      "/static/cheaty_mages.css?v=3"
     ],
-    "markup": "/static/games/cheaty_mages.html?v=1",
+    "markup": "/static/games/cheaty_mages.html?v=2",
     "panel": "cheatyMagesPanel",
     "panelTitle": "🧙 诈赌巫师",
     "header": "showCheatyMagesHeaderActions"
@@ -378,14 +378,14 @@ const GAME_ASSETS = {
   },
   "splendor_pokemon": {
     "scripts": [
-      "/static/games/splendor_pokemon.js?v=app_v6"
+      "/static/games/splendor_pokemon.js?v=app_v7"
     ],
     "styles": [],
     "panel": "pokemonSplendorPanel",
     "panelTitle": "💎 璀璨宝石：宝可梦",
     "header": "showPokemonSplendorHeaderActions",
-    "markup": "/static/games/splendor_pokemon.html?v=1",
-    "styleFragments": "/static/games/splendor_pokemon.css?v=2"
+    "markup": "/static/games/splendor_pokemon.html?v=2",
+    "styleFragments": "/static/games/splendor_pokemon.css?v=3"
   },
   "project_l": {
     "scripts": [
@@ -696,14 +696,14 @@ const GAME_ASSETS = {
   },
   "citadels": {
     "scripts": [
-      "/static/games/citadels.js?v=app_v8"
+      "/static/games/citadels.js?v=app_v9"
     ],
     "styles": [],
     "panel": "citadelsPanel",
     "panelTitle": "👑 Citadels",
     "header": "showCitadelsHeaderActions",
-    "markup": "/static/games/citadels.html?v=2",
-    "styleFragments": "/static/games/citadels.css?v=2"
+    "markup": "/static/games/citadels.html?v=3",
+    "styleFragments": "/static/games/citadels.css?v=3"
   },
   "tagiron": {
     "scripts": [
@@ -1067,15 +1067,15 @@ const GAME_ASSETS = {
   },
   "bomb_busters": {
     "scripts": [
-      "/static/games/bomb_busters_campaign.js?v=1",
-      "/static/games/bomb_busters.js?v=app_v6"
+      "/static/games/bomb_busters_campaign.js?v=2",
+      "/static/games/bomb_busters.js?v=app_v7"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=5",
-    "styleFragments": "/static/games/bomb_busters.css?v=5"
+    "markup": "/static/games/bomb_busters.html?v=6",
+    "styleFragments": "/static/games/bomb_busters.css?v=6"
   },
   "felix": {
     "scripts": [
@@ -1267,6 +1267,14 @@ const GAME_ASSETS = {
     "panel": "factoryFunnerPanel",
     "panelTitle": "🏭 工厂乐翻天",
     "header": "showFactoryFunnerHeaderActions"
+  },
+  "for_northwood": {
+    "scripts": ["/static/games/for_northwood.js?v=1"],
+    "styles": ["/static/games/for_northwood.css?v=1"],
+    "markup": "/static/games/for_northwood.html?v=1",
+    "panel": "forNorthwoodPanel",
+    "panelTitle": "🌲 For Northwood!",
+    "header": "showForNorthwoodHeaderActions"
   }
 };
 

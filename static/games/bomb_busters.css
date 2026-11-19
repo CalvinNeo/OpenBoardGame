@@ -10,8 +10,6 @@
 
 .bomb-busters-mission-state,
 .bomb-busters-mission-choices,
-.bomb-busters-help-tabs,
-.bomb-busters-help-languages,
 .bomb-busters-number-payment {
   display: flex;
   flex-wrap: wrap;
@@ -38,8 +36,6 @@
 
 .bomb-busters-mission-choices button,
 .bomb-busters-equipment-card,
-.bomb-busters-help-tabs button,
-.bomb-busters-help-languages button,
 .bomb-busters-number-payment button {
   min-height: 44px;
   min-width: 44px;
@@ -94,11 +90,6 @@
 .bomb-busters-mission-choices [aria-pressed="true"],
 .bomb-busters-number-payment [aria-pressed="true"] {
   outline: 2px solid var(--bomb-mint);
-}
-
-.bomb-busters-help-tabs,
-.bomb-busters-help-languages {
-  margin-bottom: 8px;
 }
 
 .bomb-busters-wire-button.is-special-wire {
@@ -188,16 +179,14 @@
   background-size: 92px 92px, 23px 23px;
 }
 
-.bomb-busters-panel *,
-.bomb-busters-modal-content * {
+.bomb-busters-panel * {
   box-sizing: border-box;
   min-width: 0;
 }
 
 .bomb-busters-panel h2,
 .bomb-busters-panel h3,
-.bomb-busters-panel h4,
-.bomb-busters-rules h3 {
+.bomb-busters-panel h4 {
   margin: 0;
 }
 
@@ -914,44 +903,6 @@
   margin-bottom: 2px;
   color: var(--bomb-ink);
   font-size: 12px;
-}
-
-.bomb-busters-modal-content {
-  width: min(780px, calc(100vw - 28px));
-  max-height: min(88vh, 850px);
-  overflow: hidden;
-}
-
-.bomb-busters-modal-content .modal-body {
-  max-height: calc(88vh - 78px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.bomb-busters-help-content {
-  line-height: 1.55;
-}
-
-.bomb-busters-rules {
-  display: grid;
-  gap: 10px;
-}
-
-.bomb-busters-rules p {
-  margin: 0;
-}
-
-.bomb-busters-practice-note {
-  padding: 10px 12px;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 9px;
-  background: rgba(59, 130, 246, 0.08);
-}
-
-body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
-  cursor: help !important;
-  outline: 2px dashed #60a5fa !important;
-  outline-offset: 2px;
 }
 
 @media (max-width: 900px) {

@@ -3,7 +3,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const base = process.env.ROOM_TEST_URL || 'http://127.0.0.1:8767';
-const output = 'tmp/startups-qa';
+const output = 'tmp/startups-ui-qa';
 const viewports = [1440, 1024, 390, 320];
 
 (async () => {
@@ -36,9 +36,16 @@ const viewports = [1440, 1024, 390, 320];
     const view = await state(pages[0]);
     return pages.find((page, index) => view.players[index].player_id === view.current_turn);
   }
+  async function startGame(page) {
+    if (!await page.locator('#startBtn').isVisible()) await page.locator('#roomControlsToggleBtn').click();
+    await page.locator('#startBtn').click();
+  }
   async function layout(page, width, suffix) {
     await page.setViewportSize({width, height: width > 500 ? 1000 : 900});
-    await page.evaluate(() => document.activeElement?.blur());
+    await page.evaluate(() => {
+      setRoomControlsCollapsed(true);
+      document.activeElement?.blur();
+    });
     const bad = await page.evaluate(() => {
       const panel = document.getElementById('startupsPanel'), bounds = panel.getBoundingClientRect();
       return [...panel.querySelectorAll('*')].filter(node => {
@@ -48,7 +55,28 @@ const viewports = [1440, 1024, 390, 320];
     });
     assert.deepEqual(bad, [], `Panel overflow at ${width}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Page overflow at ${width}`);
-    await page.locator('#startupsPanel').screenshot({path: `${output}/${suffix}-${width}.png`});
+    const heading = await page.evaluate(() => {
+      const shell = document.querySelector('.game-panel[data-game-theme="startups"]');
+      const title = shell.querySelector('.game-panel-title h2');
+      const controls = [title, ...shell.querySelectorAll('#gameReconnectBtn, #startupsHelpBtn, #startupsExplainBtn')];
+      const bounds = controls.map(node => node.getBoundingClientRect());
+      return {title: title.textContent, sameLine: bounds.every(rect => Math.abs((rect.top + rect.bottom) / 2 - (bounds[0].top + bounds[0].bottom) / 2) < 2),
+        separate: bounds.every((rect, index) => bounds.every((other, otherIndex) => index === otherIndex || rect.right <= other.left || rect.left >= other.right)),
+        duplicate: !!document.querySelector('#startupsPanel h2')};
+    });
+    assert.equal(heading.title, 'Startups');
+    assert.equal(heading.sameLine, true, `Visible header controls share a row at ${width}`);
+    assert.equal(heading.separate, true, `Header controls do not overlap at ${width}`);
+    assert.equal(heading.duplicate, false);
+    if (width >= 1024) {
+      const players = await page.locator('.startups-player').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+      assert.ok(Math.max(...players) <= 120, `Long names cannot expand desktop investor rows at ${width}`);
+    }
+    if (width <= 390) {
+      const companies = await page.locator('.startups-company').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+      assert.ok(Math.max(...companies) <= 62, `Long marker-holder names cannot expand the mobile company strip at ${width}`);
+    }
+    await page.locator('.game-panel').screenshot({path: `${output}/${suffix}-${width}.png`});
   }
   async function confirmInPlace(page, area, width, cancelMethod, touch = false) {
     await page.setViewportSize({width, height: width > 500 ? 1000 : 900});
@@ -104,7 +132,7 @@ const viewports = [1440, 1024, 390, 320];
       });
       assert.ok(point, `${area} overlay has blank space over a card to test Explain interception`);
       if (touch) await page.touchscreen.tap(point.x, point.y); else await page.mouse.click(point.x, point.y);
-      assert.equal(await page.locator('#startupsDialog').evaluate(node => node.open), false, 'Explain does not reach a covered card');
+      assert.equal(await page.locator('.obg-explain-dialog[open]').count(), 0, 'Explain does not reach a covered card');
       assert.equal(await page.locator('#startupsExplainBtn').getAttribute('aria-pressed'), 'true');
       assert.equal(await selection.isVisible(), true, 'Explain on overlay blank space does not cancel selection');
       assert.equal((await state(page)).revision, before, 'Explain on blank space sends no action');
@@ -161,19 +189,45 @@ const viewports = [1440, 1024, 390, 320];
     for (const page of pages) await page.evaluate(() => socket.emit('room:ready', {ready: true}));
     await host.waitForFunction(() => !document.getElementById('startBtn').disabled);
     assert.equal(await host.locator('#startupsRounds').inputValue(), '4');
-    await host.locator('#startBtn').click();
+    await startGame(host);
     await Promise.all(pages.map(page => page.waitForFunction(() => lastGameStatePayload?.view?.game_id === 'startups')));
     await host.locator('#startupsHelpBtn').click();
-    assert.equal(await host.locator('#startupsDialog').evaluate(node => node.open), true);
-    assert.match(await host.locator('#startupsDialogBody').textContent(), /1 枚资本/);
+    const help = host.locator('[data-obg-help-game="startups"]');
+    assert.equal(await help.evaluate(node => node.open), true);
+    assert.match(await help.locator('.obg-help-body').textContent(), /最终财富/);
+    await help.locator('[data-obg-help-tab="turn"]').click();
+    assert.match(await help.locator('.obg-help-body').textContent(), /1 枚资本/);
+    await help.locator('[data-obg-help-lang="en"]').click();
+    assert.match(await help.locator('.obg-help-body').textContent(), /capital/);
+    await help.locator('[data-obg-help-lang="zh"]').click();
+    for (const width of viewports) {
+      await host.setViewportSize({width, height: width > 500 ? 1000 : 900});
+      const geometry = await help.evaluate(node => {
+        const bounds = node.getBoundingClientRect();
+        return {inside: bounds.left >= 0 && bounds.right <= innerWidth && bounds.top >= 0 && bounds.bottom <= innerHeight,
+          closeHeight: node.querySelector('.obg-help-close').getBoundingClientRect().height,
+          contained: node.scrollWidth <= node.clientWidth + 1};
+      });
+      assert.equal(geometry.inside, true, `Help fits the viewport at ${width}`);
+      assert.equal(geometry.contained, true, `Help has no horizontal overflow at ${width}`);
+      if (width <= 390) assert.ok(geometry.closeHeight >= 40);
+      await host.screenshot({path: `${output}/help-${width}.png`});
+    }
     await host.keyboard.press('Escape');
-    assert.equal(await host.locator('#startupsDialog').evaluate(node => node.open), false);
+    assert.equal(await help.evaluate(node => node.open), false);
+    await host.setViewportSize({width: 1440, height: 1000});
+    await host.locator('#startupsDeck').hover();
+    assert.equal(await host.locator('#startupsTooltip').isVisible(), true);
+    await host.locator('#startupsDraw').hover();
+    assert.equal(await host.locator('#startupsTooltip').isVisible(), false, 'Actionable controls do not show passive tooltips');
     const first = await actor();
     const beforeExplain = (await state(first)).revision;
     await first.locator('#startupsExplainBtn').click();
     const disabled = await first.locator('#startupsHand button').first().boundingBox();
     await first.mouse.click(disabled.x + disabled.width / 2, disabled.y + disabled.height / 2);
-    assert.equal(await first.locator('#startupsDialog').evaluate(node => node.open), true);
+    assert.equal(await first.locator('.obg-explain-dialog').evaluate(node => node.open), true);
+    const explainedCompany = await first.locator('#startupsHand button').first().getAttribute('aria-label');
+    assert.ok((await first.locator('.obg-explain-text').textContent()).includes(explainedCompany.split(',')[0]), 'Explain includes the selected company, not only generic rules');
     assert.equal((await state(first)).revision, beforeExplain);
     await first.keyboard.press('Escape');
     await first.locator('#startupsDraw').click();
@@ -201,9 +255,9 @@ const viewports = [1440, 1024, 390, 320];
     await second.locator('#startupsDiscard').scrollIntoViewIfNeeded();
     const noDiscard = await second.locator('#startupsDiscard').boundingBox();
     await second.mouse.click(noDiscard.x + noDiscard.width / 2, noDiscard.y + noDiscard.height / 2);
-    assert.match(await second.locator('#startupsDialogBody').textContent(), /同公司/);
+    assert.match(await second.locator('.obg-explain-text').textContent(), /同公司的/);
     await second.keyboard.press('Escape');
-    await second.locator(`#startupsHand button[data-card-id="${same.id}"]`).click();
+    if (!await second.locator('#startupsHandSelection').isVisible()) await second.locator(`#startupsHand button[data-card-id="${same.id}"]`).click();
     await second.locator('#startupsInvest').click();
     await second.waitForFunction(() => lastGameStatePayload.view.phase === 'take');
     await waitRevision((await state(second)).revision);
@@ -219,6 +273,11 @@ const viewports = [1440, 1024, 390, 320];
       await waitRevision((await state(page)).revision);
     }
     for (const width of viewports) await layout(host, width, 'playing');
+    await host.locator('.startups-history details').first().locator('summary').click();
+    assert.equal(await host.locator('#startupsHistory').isVisible(), true);
+    assert.ok(await host.locator('#startupsHistory').evaluate(node => node.clientHeight <= 210));
+    await host.locator('.startups-history details').first().locator('summary').click();
+    assert.equal(await host.locator('#startupsHistory').isVisible(), false);
     await host.locator('#startupsDeck').click();
     assert.equal(await host.locator('#startupsTooltip').isVisible(), true);
     await host.locator('#startupsCapital').click();
@@ -270,7 +329,7 @@ const viewports = [1440, 1024, 390, 320];
     }
     await botPage.evaluate(() => socket.emit('room:ready', {ready: true}));
     await botPage.waitForFunction(() => !document.getElementById('startBtn').disabled);
-    await botPage.locator('#startBtn').click();
+    await startGame(botPage);
     await botPage.waitForFunction(() => lastGameStatePayload?.view?.game_id === 'startups');
     for (let i = 0; i < 140; i++) {
       await botPage.waitForFunction(() => lastGameStatePayload.view.game_over || lastGameStatePayload.view.legal_actions.length, null, {timeout: 20000});
@@ -294,7 +353,7 @@ const viewports = [1440, 1024, 390, 320];
     }
     for (const page of dense) await page.evaluate(() => socket.emit('room:ready', {ready: true}));
     await dense[0].waitForFunction(() => !document.getElementById('startBtn').disabled);
-    await dense[0].locator('#startBtn').tap();
+    await startGame(dense[0]);
     await Promise.all(dense.map(page => page.waitForFunction(() => lastGameStatePayload?.view?.game_id === 'startups')));
     const densityView = await state(dense[0]);
     const mobile = dense[densityView.players.findIndex(player => player.player_id === densityView.current_turn)];
@@ -320,14 +379,38 @@ const viewports = [1440, 1024, 390, 320];
     await mobile.locator('#startupsDraw').scrollIntoViewIfNeeded();
     const disabledDraw = await mobile.locator('#startupsDraw').boundingBox();
     await mobile.touchscreen.tap(disabledDraw.x + disabledDraw.width / 2, disabledDraw.y + disabledDraw.height / 2);
-    assert.equal(await mobile.locator('#startupsDialog').evaluate(node => node.open), true);
-    await mobile.locator('#startupsDialogClose').tap();
+    assert.equal(await mobile.locator('.obg-explain-dialog').evaluate(node => node.open), true);
+    await mobile.locator('.obg-explain-dialog .obg-help-close').tap();
     await mobile.locator('#startupsHand button').first().tap();
     await mobile.locator('#startupsHandTitle').tap();
     assert.equal(await mobile.locator('#startupsHandSelection').isVisible(), false);
     console.log('Seven players, long names, four cards and touch confirmation passed at 1440/1024/390/320 px; real swipes preserve selection at 390/320 px; touch tips and disabled Explain passed at 320 px.');
+    const assetsPage = await newPage();
+    let failStyles = true;
+    await assetsPage.route('**/static/games/startups.css?*', route => {
+      if (failStyles) {
+        failStyles = false;
+        return route.abort('failed');
+      }
+      return route.continue();
+    });
+    await assetsPage.evaluate(() => socket.emit('room:create', {name: 'Startup asset retry', game_type: 'startups'}));
+    await assetsPage.locator('#gameAssetsRetryBtn').waitFor({state: 'visible'});
+    await assetsPage.locator('#gameAssetsRetryBtn').click();
+    await assetsPage.waitForFunction(() => isGameAssetsLoaded('startups'));
+    await assetsPage.locator('#startupsHelpBtn').click();
+    assert.equal(await assetsPage.locator('[data-obg-help-game="startups"]').evaluate(node => node.open), true);
+    await assetsPage.keyboard.press('Escape');
+    await assetsPage.evaluate(() => socket.emit('room:create', {name: 'Switch away', game_type: 'skull'}));
+    await assetsPage.waitForFunction(() => currentRoomState.game_type === 'skull' && isGameAssetsLoaded('skull'));
+    assert.equal(await assetsPage.locator('#startupsPanel').isVisible(), false);
+    await assetsPage.evaluate(() => socket.emit('room:create', {name: 'Return to Startup', game_type: 'startups'}));
+    await assetsPage.waitForFunction(() => currentRoomState.game_type === 'startups' && isGameAssetsLoaded('startups'));
+    assert.equal(await assetsPage.locator('script[src*="/startups.js"]').count(), 1);
+    assert.equal(await assetsPage.locator('#startupsHelpBtn').isVisible(), true);
+    console.log('Startup stylesheet failure/retry and game switching passed without duplicate scripts.');
     assert.deepEqual(errors, []);
-    fs.writeFileSync(`${output}/result.json`, JSON.stringify({ok: true, errors, rounds: 4, reviewBarriers: reviewed, viewports, inPlaceConfirmation: true, singleRowMobileHand: true, overlayExplainInterception: true, realTouchScroll: [390, 320], botRoomCompleted: true, sevenPlayerTouch: true}, null, 2));
+    fs.writeFileSync(`${output}/result.json`, JSON.stringify({ok: true, errors, rounds: 4, reviewBarriers: reviewed, viewports, inPlaceConfirmation: true, singleRowMobileHand: true, overlayExplainInterception: true, realTouchScroll: [390, 320], botRoomCompleted: true, sevenPlayerTouch: true, helpViewports: viewports, desktopHover: true, collapsibleLog: true, assetRetryAndSwitch: true}, null, 2));
   } finally {
     for (const context of contexts) await context.close();
     await browser.close();

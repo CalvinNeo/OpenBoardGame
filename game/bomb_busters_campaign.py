@@ -21,6 +21,9 @@ CHALLENGES = {
     10: "One rack has at least seven cut wires while its first and last two wires remain uncut.",
 }
 
+ANYTIME_EQUIPMENT = {"not_equal", "walkie_talkies", "post_it", "rewinder", "batteries",
+                     "radar", "equal", "single_label", "grappling_hook"}
+
 
 def _core():
     from game import bomb_busters
@@ -223,6 +226,8 @@ def setup(state: Dict, rng: random.Random) -> None:
     if number in (23, 39, 46):
         data["special_number"] = 7 if number == 46 else rng.randint(1, 12)
         data["special_countdown"] = 7 if number == 23 else 8
+        if number == 39:
+            data["reward_deck"] = rng.sample([value for value in range(1, 13) if value != data["special_number"]], 8)
     if number in (15, 18, 30, 45, 51):
         data["number_deck"] = rng.sample(list(range(1, 13)), 12)
         if number == 15:
@@ -315,7 +320,7 @@ def setup(state: Dict, rng: random.Random) -> None:
         data["equipment"][0]["unlocked"] = True
         data["equipment"][0]["permanent"] = True
     for player_id in order:
-        disabled = number in (27, 34) or number in (17, 28) and player_id == data.get("special_player")
+        disabled = number in (27, 34) or number == 28 and player_id == data.get("special_player")
         state["players"][player_id]["personal_detector_used"] = disabled
         state["players"][player_id]["personal_detector_disabled"] = disabled
         amount = 2 if number in (22, 52) or number == 17 and player_id == data.get("special_player") else 1
@@ -323,7 +328,9 @@ def setup(state: Dict, rng: random.Random) -> None:
             amount = 0
         data["initial_remaining"][player_id] = amount
         if number in (13, 39, 41) or number == 43 and count == 2 and player_id == state["captain_id"]:
-            data.setdefault("random_initial", {})[player_id] = rng.randint(1, 12)
+            available = [value for value in range(1, 13) for _ in range(2)
+                         if list(data.get("random_initial", {}).values()).count(value) < 2]
+            data.setdefault("random_initial", {})[player_id] = rng.choice(available)
     state["initial_info_order"] = [player_id for player_id in order if data["initial_remaining"][player_id]]
     if data["setup_queue"] or number in AUDIO_MISSIONS:
         if number in AUDIO_MISSIONS:
@@ -407,6 +414,16 @@ def _clue_events(wire: Dict, clue: Optional[Dict], actor_id: Optional[str] = Non
                    label=("≠ " if clue["negative"] else "") + clue["label"])]
 
 
+def _note(state: Dict, player_id: str, label: str, absent: bool = False) -> None:
+    token = next((token for token in state["info_tokens"].values()
+                  if token["label"] == label and token["attached_wire_id"] is None
+                  and not token.get("reserved_for")), None)
+    if token:
+        token["reserved_for"] = player_id
+        _data(state)["clue_notes"].append({"player_id": player_id, "label": label,
+                                        "absent": absent, "token_id": token["token_id"]})
+
+
 def _activity(state: Dict, actor: Optional[str], message: str) -> None:
     _core()._record_activity(state, "campaign", actor, message)
 
@@ -468,7 +485,11 @@ def _prepare_turn(state: Dict) -> None:
         if number == 63:
             data["oxygen"][actor] += data["oxygen_reserve"]
             data["oxygen_reserve"] = 0
-    if number in (18, 45, 51) and not data.get("nominee") and not _only_danger(state, actor):
+    if number == 45 and not data.get("nominee"):
+        data["director"] = state["captain_id"]
+        data["forced_value"] = _draw_number(state)
+        _decision(state, state["captain_id"], "volunteer", [player_id for player_id in _order(state) if _uncut(state, player_id)])
+    if number in (18, 51) and not data.get("nominee") and not _only_danger(state, actor):
         data["director"] = actor
         data["forced_value"] = _draw_number(state)
         if number == 18 and data["forced_value"] is not None:
@@ -578,6 +599,10 @@ def _special_action(state: Dict, player_id: str) -> Optional[Dict]:
 def _equipment_usable(state: Dict, player_id: str, card: Dict) -> bool:
     if card["used"] or not card["unlocked"] or card["hidden"]:
         return False
+    if player_id not in state["players"] or state["phase"] != "playing":
+        return False
+    if state["current_turn"] != player_id and card["kind"] not in ANYTIME_EQUIPMENT:
+        return False
     number = _number(state)
     if _constraint(state, player_id) == "G" or number in (17, 28) and player_id == _data(state).get("special_player"):
         return False
@@ -595,6 +620,8 @@ def get_legal_actions(state: Dict, player_id: str) -> List[str]:
         step = data["setup_queue"][data["setup_cursor"]]
         return ["mission_choice"] if step["player_id"] == player_id else []
     if phase == "mission_decision":
+        if data["decision"]["kind"] == "volunteer" and _uncut(state, player_id):
+            return ["mission_choice"]
         return ["mission_choice"] if data["decision"]["player_id"] == player_id else []
     if phase == "initial_info":
         order = state["initial_info_order"]
@@ -603,8 +630,15 @@ def get_legal_actions(state: Dict, player_id: str) -> List[str]:
         return ["resolve_detector_choice"] if state["current_responder_id"] == player_id else []
     if phase == "mission_result":
         return ["continue_mission"] if player_id not in state["result_ready_ids"] and not state.get("campaign_complete") else []
-    if phase != "playing" or state["current_turn"] != player_id:
+    if phase != "playing":
         return []
+    if state["current_turn"] != player_id:
+        actions = ["use_equipment"] if any(_equipment_usable(state, player_id, card) for card in data["equipment"]) else []
+        if (_number(state) == 10 and _uncut(state, player_id)
+                or _number(state) == 32 and player_id == state["captain_id"]
+                or _number(state) == 61 or _number(state) in AUDIO_MISSIONS and player_id == state["captain_id"]):
+            actions.append("mission_choice")
+        return actions
     actions = []
     if any(not wire.get("reversed") and _wire_allowed(state, player_id, wire) for wire in _uncut(state, player_id)) or any(wire.get("reversed") for wire in _uncut(state, player_id)):
         if any(wire["owner_id"] != player_id for wire in _uncut(state)):
@@ -662,9 +696,10 @@ def _skip(state: Dict, actor_id: str, events: List[Dict]) -> None:
     if number == 59:
         data["nano"]["direction"] *= -1
     if number == 63:
-        recipient = _core()._next_seat(state["turn_order"], actor_id)
-        data["oxygen"][recipient] += data["oxygen"][actor_id]
-        data["oxygen"][actor_id] = 0
+        recipient = _next_actor(state, actor_id)
+        if recipient and recipient != actor_id:
+            data["oxygen"][recipient] += data["oxygen"][actor_id]
+            data["oxygen"][actor_id] = 0
     if state["phase"] != "mission_result":
         if number == 65:
             cards = [card for card in data["number_hands"][actor_id] if not state["validation_complete"].get(str(card))]
@@ -859,10 +894,11 @@ def _apply_inplace(state: Dict, actor_id: str, action: Dict) -> List[Dict]:
         return events
     if phase != "playing":
         raise ValueError("invalid game phase")
-    out_of_turn = kind == "mission_choice" and (
+    out_of_turn = kind == "use_equipment" or kind == "mission_choice" and (
         number == 10 and action.get("choice") in ("claim_turn", "timer_expired")
         or number in AUDIO_MISSIONS and actor_id == state["captain_id"]
-        or number == 32 and actor_id == state["captain_id"] and action.get("choice") == "change_constraint")
+        or number == 32 and actor_id == state["captain_id"] and action.get("choice") == "change_constraint"
+        or number == 61 and action.get("choice") == "replace_constraint")
     if actor_id != state["current_turn"] and not out_of_turn:
         raise ValueError("not your turn")
     if kind == "mission_choice":
@@ -1075,7 +1111,9 @@ def _advance(state: Dict, actor_id: str, events: List[Dict]) -> None:
     data = _data(state)
     number = _number(state)
     anchor = data.get("director") or actor_id
-    next_actor = _next_actor(state, anchor)
+    next_actor = data.pop("next_actor_override", None) or _next_actor(state, anchor)
+    if number == 45:
+        next_actor = state["captain_id"]
     data["director"] = None
     data["nominee"] = None
     if number in (18, 45, 51):
@@ -1096,6 +1134,8 @@ def _advance(state: Dict, actor_id: str, events: List[Dict]) -> None:
             data["special_countdown"] = max(0, data["special_countdown"] - 1)
             if number == 23 and data["equipment"]:
                 data["equipment"].pop()
+            if number == 39 and data["reward_deck"]:
+                data["reward_deck"].pop()
         if number == 61:
             _decision(state, state["captain_id"], "rotate_constraints", ["keep", "clockwise", "counterclockwise"])
             return
@@ -1167,7 +1207,7 @@ def _end_turn(state: Dict, actor_id: str, events: List[Dict], value: Optional[in
         if data["sequence"]:
             _decision(state, actor_id, "sequence_side", ["left", "right"], resume_turn=actor_id)
             return
-    if number == 59:
+    if number == 59 and kind != "coffee":
         _decision(state, actor_id, "nano_direction", ["forward", "reverse"], resume_turn=actor_id)
         return
     if number == 65:
@@ -1190,7 +1230,27 @@ def _end_turn(state: Dict, actor_id: str, events: List[Dict], value: Optional[in
             data["bonus_clues"] = [_rng(state).randint(1, 12) for _ in _order(state)]
         _bonus_clue_decision(state)
         return
+    if number == 39 and data.get("reward_queue"):
+        data["resume_turn"] = actor_id
+        _reward_clue_decision(state)
+        return
     _advance(state, actor_id, events)
+
+
+def _reward_clue_decision(state: Dict) -> None:
+    data = _data(state)
+    while data["reward_queue"]:
+        owner = data["reward_queue"][0]
+        choices = [value for value in data["number_hands"].get(owner, [])
+                   if any(wire["kind"] == "blue" and wire["blue_value"] == value and not wire.get("clue")
+                          for wire in _uncut(state, owner))
+                   and any(token["label"] == str(value) and token["attached_wire_id"] is None
+                           and not token.get("reserved_for") for token in state["info_tokens"].values())]
+        if choices:
+            _decision(state, owner, "reward_number", choices)
+            return
+        data["reward_queue"].pop(0)
+    _advance(state, data.pop("resume_turn"), [])
 
 
 def _bonus_clue_decision(state: Dict) -> None:
@@ -1302,7 +1362,7 @@ def _miss(state: Dict, actor_id: str, targets: List[Dict], label: str, events: L
                     clue = _clue(state, non_red[0], label)
                     if clue:
                         events.extend(_clue_events(non_red[0], clue, actor_id))
-            elif _number(state) != 58:
+            elif _number(state) != 58 and _constraint(state, actor_id) != "H":
                 state["phase"] = "awaiting_detector_choice"
                 state["current_responder_id"] = non_red[0]["owner_id"]
                 state["pending_resolution"] = {"kind": "campaign_info", "actor_id": actor_id,
@@ -1392,7 +1452,7 @@ def _advance_initial(state: Dict) -> None:
         elif actor in data.get("random_initial", {}):
             label = data["random_initial"][actor]
             if not any(wire["kind"] == "blue" and wire["blue_value"] == label and not wire.get("reversed") for wire in _uncut(state, actor)):
-                data["clue_notes"].append({"player_id": actor, "label": str(label), "absent": True})
+                _note(state, actor, str(label), absent=True)
                 data["initial_remaining"][actor] = 0
         elif not any(_initial_candidate(state, wire, actor) for wire in _uncut(state, actor)):
             data["initial_remaining"][actor] = 0
@@ -1427,7 +1487,7 @@ def _initial_clue(state: Dict, actor_id: str, action: Dict, events: List[Dict]) 
             raise ValueError("you have that value in your hand")
         if any(note.get("player_id") == actor_id and note["label"] == label for note in data["clue_notes"]):
             raise ValueError("choose a different absent value")
-        data["clue_notes"].append({"player_id": actor_id, "label": label, "absent": True})
+        _note(state, actor_id, label, absent=True)
     else:
         wire = _select_wire(state, action.get("wire_id"))
         negative = _number(state) == 52 or _number(state) == 17 and actor_id == data.get("special_player")
@@ -1481,16 +1541,23 @@ def _handle_decision(state: Dict, actor_id: str, action: Dict, events: List[Dict
     data = _data(state)
     decision = data["decision"]
     choice = action.get("choice")
-    if decision["player_id"] != actor_id or choice not in decision["choices"]:
+    volunteering = decision["kind"] == "volunteer" and choice == "volunteer" and bool(_uncut(state, actor_id))
+    if not volunteering and (decision["player_id"] != actor_id or choice not in decision["choices"]):
         raise ValueError("choose one of your available mission options")
     kind = decision["kind"]
     data["decision"] = None
     state["phase"] = "playing"
     resume = decision.get("resume_turn")
-    if kind == "nominate":
+    if kind in ("nominate", "volunteer"):
+        if volunteering:
+            choice = actor_id
         data["nominee"] = choice
         state["current_turn"] = choice
         if not any(_value(state, wire) == data["forced_value"] or wire.get("reversed") for wire in _uncut(state, choice)) and not _only_danger(state, choice):
+            if volunteering:
+                _adjust_detonator(state, 1, events)
+                _advance(state, actor_id, events)
+                return
             candidates = [wire["wire_id"] for wire in _uncut(state, choice) if wire["kind"] == "blue" and not wire.get("reversed")]
             _decision(state, choice, "nominee_clue", candidates or ["none"], resume_turn=choice)
         return
@@ -1509,6 +1576,25 @@ def _handle_decision(state: Dict, actor_id: str, action: Dict, events: List[Dict
         wire = data.pop("incoming_wire")
         _move_wire(state, wire, choice)
         resume = data.pop("resume_turn")
+    elif kind == "exchange_wire":
+        incoming = state["wires"][decision["own_wire_id"]]
+        outgoing = state["wires"][choice]
+        first_rack, second_rack = incoming["rack_id"], outgoing["rack_id"]
+        _move_wire(state, incoming, second_rack)
+        _move_wire(state, outgoing, first_rack)
+        events.append(_event("wires_exchanged", player_id=decision["initiator_id"], target_player_id=actor_id))
+        return
+    elif kind == "reward_number":
+        candidates = [wire["wire_id"] for wire in _uncut(state, actor_id)
+                      if wire["kind"] == "blue" and wire["blue_value"] == choice and not wire.get("clue")]
+        _decision(state, actor_id, "reward_wire", candidates)
+        return
+    elif kind == "reward_wire":
+        wire = state["wires"][choice]
+        events.extend(_clue_events(wire, _clue(state, wire), actor_id))
+        data["reward_queue"].pop(0)
+        _reward_clue_decision(state)
+        return
     elif kind == "nano_direction":
         if choice == "reverse":
             data["nano"]["direction"] *= -1
@@ -1535,7 +1621,7 @@ def _handle_decision(state: Dict, actor_id: str, action: Dict, events: List[Dict
         if candidates:
             _decision(state, recipient, "received_clue", candidates, giver_id=actor_id)
             return
-        data["clue_notes"].append({"player_id": recipient, "label": value, "absent": True})
+        _note(state, recipient, value, absent=True)
         data["clue_round"].pop(0)
         if data["clue_round"]:
             _bonus_clue_decision(state)
@@ -1614,12 +1700,12 @@ def _special_cut(state: Dict, actor_id: str, action: Dict, events: List[Dict]) -
         for card in data["equipment"]:
             card.update(hidden=False, unlocked=True)
     if _number(state) == 39:
-        deck = _rng(state).sample(list(range(1, 13)), data["special_countdown"])
-        for index, value in enumerate(deck):
+        data["number_hands"] = {owner: [] for owner in _order(state)}
+        for index, value in enumerate(data["reward_deck"]):
             recipient = _order(state)[index % len(state["turn_order"])]
-            wire = next((wire for wire in _uncut(state, recipient) if wire["blue_value"] == value and not wire.get("reversed")), None)
-            if wire:
-                _clue(state, wire)
+            data["number_hands"][recipient].append(value)
+        data["reward_deck"] = []
+        data["reward_queue"] = list(_order(state))
     events.append(_event("special_cut", player_id=actor_id, cut_wire_ids=wire_ids))
     _end_turn(state, actor_id, events, _value(state, wires[0]), True, "special_cut", wire_ids)
 
@@ -1632,6 +1718,19 @@ def _use_equipment(state: Dict, actor_id: str, action: Dict, events: List[Dict])
     kind = card["kind"]
     if kind in ("false_bottom", "emergency_drop", "disintegrator"):
         raise ValueError("this equipment activates automatically")
+    if kind == "walkie_talkies":
+        own = _select_wire(state, action.get("own_wire_id"))
+        recipient = action.get("recipient_id")
+        if own["owner_id"] != actor_id or own["status"] != "uncut" or own.get("reversed") or own.get("unsorted"):
+            raise ValueError("offer one of your eligible uncut wires")
+        choices = [wire["wire_id"] for wire in _uncut(state, recipient)
+                   if not wire.get("reversed") and not wire.get("unsorted")] if recipient in state["players"] and recipient != actor_id else []
+        if not choices:
+            raise ValueError("choose a teammate with an eligible wire to exchange")
+        card["used"] = True
+        _decision(state, recipient, "exchange_wire", choices, own_wire_id=own["wire_id"], initiator_id=actor_id)
+        events.append(_event("exchange_requested", player_id=actor_id, target_player_id=recipient))
+        return
     if kind in ("triple_detector", "super_detector"):
         _cut_action(state, actor_id, action, events, 3 if kind == "triple_detector" else -1, card)
         return
@@ -1661,7 +1760,7 @@ def _use_equipment(state: Dict, actor_id: str, action: Dict, events: List[Dict])
             if state["phase"] != "mission_result":
                 _end_turn(state, actor_id, events, payment_value, False, "dual_cut")
         return
-    if kind in ("equal", "not_equal", "walkie_talkies", "fast_pass"):
+    if kind in ("equal", "not_equal", "fast_pass"):
         ids = action.get("wire_ids")
         if not isinstance(ids, list) or len(ids) != 2 or len(set(ids)) != 2:
             raise ValueError("choose two distinct wires")
@@ -1676,12 +1775,6 @@ def _use_equipment(state: Dict, actor_id: str, action: Dict, events: List[Dict])
             if (_key(state, wires[0]) == _key(state, wires[1])) != (kind == "equal"):
                 raise ValueError("the wires do not satisfy this label")
             data["links"].append({"wire_ids": ids, "relation": "=" if kind == "equal" else "≠"})
-        elif kind == "walkie_talkies":
-            if any(wire["status"] != "uncut" for wire in wires) or (wires[0]["owner_id"] == actor_id) == (wires[1]["owner_id"] == actor_id):
-                raise ValueError("exchange one of your uncut wires and one teammate wire")
-            first_rack, second_rack = wires[0]["rack_id"], wires[1]["rack_id"]
-            _move_wire(state, wires[0], second_rack)
-            _move_wire(state, wires[1], first_rack)
         else:
             if any(wire["owner_id"] != actor_id or wire["status"] != "uncut" or not _wire_allowed(state, actor_id, wire) for wire in wires) or _key(state, wires[0]) != _key(state, wires[1]) or _constraint(state, actor_id) == "K":
                 raise ValueError("choose two matching legal wires from your hand")
@@ -1732,8 +1825,8 @@ def _use_equipment(state: Dict, actor_id: str, action: Dict, events: List[Dict])
         card["used"] = True
         data["director"] = None
         data["nominee"] = None
-        state["current_turn"] = recipient
-        _prepare_turn(state)
+        data["next_actor_override"] = recipient
+        _end_turn(state, actor_id, events, None, True, "coffee")
         return
     elif kind == "grappling_hook":
         wire = _select_wire(state, action.get("wire_id"))
@@ -1754,9 +1847,9 @@ def _use_equipment(state: Dict, actor_id: str, action: Dict, events: List[Dict])
 def _choice_label(state: Dict, kind: str, choice) -> str:
     if kind == "constraint":
         return f"{choice} · {CONSTRAINTS[choice]}"
-    if kind == "nominate":
+    if kind in ("nominate", "volunteer"):
         return str(state["player_meta"][choice].get("name") or choice)
-    if kind in ("nominee_clue", "received_clue") and choice != "none":
+    if kind in ("nominee_clue", "received_clue", "reward_wire", "exchange_wire") and choice != "none":
         wire = state["wires"][choice]
         return f"Rack {state['racks'][wire['rack_id']]['rack_index'] + 1} · Slot {wire['slot_index'] + 1}"
     if kind == "give_number":
@@ -1781,6 +1874,7 @@ def extend_public_view(state: Dict, viewer_id: str, view: Dict) -> None:
     mission = data["mission"]
     public = {
         "id": number, "name": mission["name"], "rules": mission["rules"],
+        "rules_zh": get_mission(number, len(state["turn_order"]))["rules_zh"],
         "total": MISSION_COUNT, "audio_companion": mission["audio_companion"],
         "source_status": "community_transcribed",
         "yellow_count": mission["yellow_count"], "red_count": mission["red_count"],
@@ -1813,7 +1907,7 @@ def extend_public_view(state: Dict, viewer_id: str, view: Dict) -> None:
             public["equipment"].append({"id": card["id"], "hidden": True, "name": "Hidden equipment", "used": False, "unlocked": False})
         else:
             visible = copy.deepcopy(card)
-            visible["can_use"] = state["phase"] == "playing" and state["current_turn"] == viewer_id and _equipment_usable(state, viewer_id, card)
+            visible["can_use"] = _equipment_usable(state, viewer_id, card)
             public["equipment"].append(visible)
     if number == 34 and not data.get("roles_revealed") and not reveal_all:
         public["your_constraint"] = data["constraints"].get(viewer_id)

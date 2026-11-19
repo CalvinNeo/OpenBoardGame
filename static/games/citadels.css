@@ -1,10 +1,6 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-citadels-1 {
 
-#citadelsPanel .panel-header {
-  margin-bottom: 8px;
-}
-
 #citadelsPanel {
   --citadels-ink: #172033;
   --citadels-muted: #64748b;
@@ -30,7 +26,7 @@
 }
 
 #citadelsHand {
-  max-height: min(48vh, 480px);
+  max-height: min(34vh, 300px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -39,15 +35,15 @@
 
 .citadels-role-track {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
-  gap: 5px;
-  margin: 12px 0;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 3px;
+  margin: 5px 0;
 }
 
 .citadels-track-role {
   min-width: 0;
-  padding: 7px 3px;
-  border-bottom: 3px solid #cbd5e1;
+  padding: 3px 2px;
+  border-bottom: 2px solid #cbd5e1;
   border-radius: 5px;
   background: #f1f5f9;
   text-align: center;
@@ -60,6 +56,55 @@
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.citadels-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--citadels-muted);
+  font-size: 11px;
+}
+
+.citadels-round-label {
+  color: var(--citadels-ink);
+  font-weight: 750;
+}
+
+.citadels-table-details {
+  margin-left: auto;
+}
+
+.citadels-table-details summary {
+  cursor: pointer;
+  padding: 3px 0;
+}
+
+.citadels-table-details[open] {
+  flex-basis: 100%;
+}
+
+.citadels-table-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  padding: 3px 0;
+  overflow-wrap: anywhere;
+}
+
+#citadelsBanner {
+  margin: 4px 0 8px;
+  padding: 4px 7px;
+  border-left: 3px solid var(--citadels-gold);
+  background: var(--citadels-gold-soft);
+  color: #6a511e;
+  overflow-wrap: anywhere;
+}
+
+#citadelsBannerBody {
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .citadels-track-role.current {
@@ -92,8 +137,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px;
+  gap: 4px;
+  padding: 6px;
   border: 2px solid #b7791f;
   border-radius: inherit;
   background: rgba(255, 250, 232, 0.96);
@@ -121,27 +166,8 @@
   pointer-events: none;
 }
 
-#citadelsPanel > .row {
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-#citadelsPanel > .row > div {
-  border: 1px solid #e6eaf0;
-  border-radius: 999px;
-  background: #f8fafc;
-  padding: 4px 9px;
-  font-size: 12px;
-  color: #475569;
-}
-
-#citadelsPanel > .row span {
-  font-weight: 750;
-  color: var(--citadels-ink);
-}
-
 .citadels-round-summary {
-  margin: 14px 0 18px;
+  margin: 8px 0;
   overflow: hidden;
   border: 1px solid #ddbd72;
   border-radius: 16px;
@@ -156,8 +182,8 @@
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
-  padding: 18px 20px 14px;
+  gap: 6px;
+  padding: 9px 10px;
   border-bottom: 1px solid rgba(183, 121, 31, 0.2);
 }
 
@@ -174,27 +200,18 @@
   gap: 8px;
 }
 
-.citadels-summary-eyebrow {
-  margin-bottom: 3px;
-  color: #996515;
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
 .citadels-summary-header h3 {
   margin: 0;
   color: var(--citadels-ink);
-  font-size: clamp(20px, 2.4vw, 28px);
+  font-size: 16px;
   line-height: 1.15;
 }
 
 .citadels-summary-header p {
   max-width: 700px;
-  margin: 6px 0 0;
+  margin: 3px 0 0;
   color: var(--citadels-muted);
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -203,7 +220,7 @@
   border: 1px solid #e1b75d;
   border-radius: 999px;
   background: #fff8e6;
-  padding: 7px 11px;
+  padding: 4px 7px;
   color: #7c5516;
   font-size: 12px;
   font-weight: 800;
@@ -219,8 +236,8 @@
 .citadels-summary-highlights {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 8px;
-  padding: 12px 20px 4px;
+  gap: 5px;
+  padding: 6px 8px 0;
 }
 
 .citadels-summary-highlight {
@@ -262,8 +279,8 @@
 .citadels-summary-players {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 10px;
-  padding: 12px 20px 18px;
+  gap: 6px;
+  padding: 8px;
 }
 
 .citadels-summary-player {
@@ -271,7 +288,7 @@
   border: 1px solid #dfe5ec;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.94);
-  padding: 11px;
+  padding: 7px;
   box-shadow: 0 2px 7px rgba(15, 23, 42, 0.05);
 }
 
@@ -296,7 +313,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--citadels-ink);
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 850;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -328,14 +345,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .citadels-summary-role {
   border: 1px solid #d6dde7;
   border-radius: 999px;
   background: #f4f7fa;
-  padding: 4px 7px;
+  padding: 3px 5px;
   color: #405066;
   font-size: 10px;
   font-weight: 700;
@@ -362,7 +379,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .citadels-summary-player-stats > span,
@@ -382,7 +399,7 @@
 }
 
 .citadels-summary-action-heading {
-  margin-top: 10px;
+  margin-top: 5px;
   color: #7b8798;
   font-size: 9px;
   font-weight: 850;
@@ -488,7 +505,7 @@
 .citadels-layout {
   display: grid;
   grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.35fr);
-  gap: 14px;
+  gap: 10px;
   align-items: start;
 }
 
@@ -499,16 +516,15 @@
 .citadels-role-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 4px;
 }
 
 .citadels-role-pill {
   border: 1px solid #d1d5db;
   background: #f8fafc;
   border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 2px 5px;
+  font-size: 11px;
   font-weight: 600;
   color: #334155;
 }
@@ -522,22 +538,22 @@
 .citadels-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 
 .citadels-action-section {
-  padding: 6px 0;
-  min-height: 68px;
+  padding: 3px 0;
+  min-height: 66px;
 }
 
 .citadels-action-title {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #64748b;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .citadels-button-wrap,
@@ -545,37 +561,62 @@
 .citadels-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
+}
+
+#citadelsPanel button {
+  min-width: 0;
+  min-height: 28px;
+  padding: 3px 7px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.citadels-card-actions > button {
+  flex: 1 1 0;
+}
+
+#citadelsTurnTools {
+  margin-left: auto;
 }
 
 .citadels-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
+  gap: 5px;
 }
 
 .citadels-city-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 3px;
 }
 
 .citadels-card {
   border: 1px solid #dbe4ee;
   border-radius: 10px;
   background: #ffffff;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.citadels-card-with-actions {
+  min-height: 72px;
 }
 
 .citadels-card-title {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  font-size: 13px;
   font-weight: 800;
   color: #0f172a;
 }
@@ -620,26 +661,33 @@
 }
 
 .citadels-card-meta {
-  font-size: 13px;
+  font-size: 11px;
+  white-space: nowrap;
   color: #475569;
 }
 
 .citadels-card-text {
-  font-size: 12px;
+  grid-column: 1 / -1;
+  font-size: 11px;
   line-height: 1.4;
   color: #64748b;
+}
+
+.citadels-card-actions,
+.citadels-card > .citadels-inline-button {
+  grid-column: 1 / -1;
 }
 
 .citadels-city-card {
   display: grid;
   min-width: 0;
-  min-height: 42px;
+  min-height: 27px;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 2px 5px;
   align-items: center;
   border-left-width: 4px;
   border-radius: 7px;
-  padding: 5px 6px;
+  padding: 3px 4px;
   box-shadow: none;
 }
 
@@ -693,15 +741,16 @@
 .citadels-player-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   margin-bottom: 0;
-  padding: 7px;
+  padding: 5px;
 }
 
 .citadels-players {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
-  gap: 6px;
+  gap: 5px;
+  align-items: start;
 }
 
 .citadels-player-header {
@@ -709,7 +758,8 @@
   min-width: 0;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 8px;
+  justify-content: space-between;
+  gap: 2px 5px;
   color: #0f172a;
 }
 
@@ -717,13 +767,17 @@
   flex: 0 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .citadels-player-roles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
   min-width: 0;
-  flex: 1 1 145px;
   color: #64748b;
   font-size: 10px;
   font-weight: 600;
@@ -732,27 +786,36 @@
 }
 
 .citadels-player-meta {
+  flex-shrink: 0;
   font-size: 11px;
   line-height: 1.35;
   color: #475569;
 }
 
 .citadels-log-section {
-  margin-top: 18px;
+  margin-top: 8px;
   border-top: 1px solid #e1e6ed;
-  padding-top: 12px;
+  padding-top: 6px;
+  font-size: 11px;
 }
 
 .citadels-section-heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 7px;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  min-height: 28px;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
 .citadels-section-heading h3 {
   margin: 0;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .citadels-section-heading span {
@@ -842,7 +905,7 @@
 @media (max-width: 900px) {
   .citadels-layout {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 7px;
   }
 
   .citadels-card-grid {
@@ -855,32 +918,27 @@
 }
 
 @media (max-width: 600px) {
-  #citadelsPanel > .row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px;
-    align-items: stretch;
+  .citadels-track-role {
+    padding: 4px 0;
+    font-size: 12px;
   }
 
-  #citadelsPanel > .row > div {
-    min-width: 0;
-    padding: 3px 7px;
-    font-size: 10px;
-    overflow-wrap: anywhere;
+  .citadels-track-role small {
+    display: none;
   }
 
   .citadels-round-summary {
-    margin: 10px 0 14px;
+    margin: 6px 0;
     border-radius: 12px;
   }
 
   .citadels-summary-header {
-    gap: 9px;
-    padding: 13px 12px 10px;
+    gap: 5px;
+    padding: 8px;
   }
 
   .citadels-summary-header h3 {
-    font-size: 19px;
+    font-size: 16px;
   }
 
   .citadels-summary-header p {
@@ -917,12 +975,12 @@
 
   .citadels-summary-players {
     grid-template-columns: 1fr;
-    gap: 7px;
-    padding: 9px 10px 12px;
+    gap: 5px;
+    padding: 6px;
   }
 
   .citadels-summary-player {
-    padding: 9px;
+    padding: 6px;
   }
 
   .citadels-summary-actions {
@@ -940,53 +998,17 @@
     width: 100%;
   }
 
-  .citadels-role-list {
-    gap: 5px;
-  }
-
-  .citadels-role-pill {
-    padding: 4px 7px;
-    font-size: 11px;
-  }
-
-  .citadels-action-section {
-    padding: 8px;
-  }
-
-  .citadels-button-wrap > button {
-    min-width: 0;
-    flex: 1 1 calc(50% - 4px);
-    padding-inline: 7px;
-  }
-
   .citadels-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .citadels-card {
-    padding: 8px;
-  }
-
-  .citadels-card-title {
-    font-size: 13px;
-  }
-
-  .citadels-card-meta {
-    font-size: 11px;
-  }
-
-  .citadels-card-text {
-    font-size: 10px;
-  }
-
-  .citadels-city-grid {
-    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
     gap: 4px;
   }
 
+  .citadels-city-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .citadels-city-card {
-    min-height: 38px;
+    min-height: 27px;
     padding: 4px 5px;
   }
 
@@ -995,7 +1017,7 @@
   }
 
   .citadels-player-card {
-    padding: 7px;
+    padding: 5px;
   }
 
   .citadels-log {

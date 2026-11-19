@@ -52,6 +52,24 @@ async function bounds(page, label) {
   assert.deepEqual(issues, { overflow: false, bad: [] }, label);
 }
 
+async function compactBounds(page, width) {
+  const metrics = await page.evaluate(() => {
+    const panel = document.getElementById('citadelsPanel').getBoundingClientRect();
+    const hand = document.getElementById('citadelsHand').getBoundingClientRect();
+    const cities = document.getElementById('citadelsPlayers').getBoundingClientRect();
+    const roles = [...document.querySelectorAll('#citadelsRoleTrack .citadels-track-role')].map(node => node.getBoundingClientRect().top);
+    const card = document.querySelector('#citadelsHand .citadels-card').getBoundingClientRect();
+    return { handOffset: Math.round(hand.top - panel.top), handHeight: Math.round(hand.height),
+      citiesOffset: Math.round(cities.top - panel.top), roleRows: new Set(roles).size, cardHeight: Math.round(card.height) };
+  });
+  assert.equal(metrics.roleRows, 1, `Role track ${width}`);
+  assert(metrics.handOffset < 165, JSON.stringify(metrics));
+  assert(metrics.handHeight <= 306, JSON.stringify(metrics));
+  assert(metrics.cardHeight < 120, JSON.stringify(metrics));
+  if (width < 600) assert(metrics.citiesOffset < 490, JSON.stringify(metrics));
+  console.log(`Compact ${width}px: ${JSON.stringify(metrics)}`);
+}
+
 async function interactions(page) {
   await page.evaluate(() => { citadelsTestActions.length = 0; });
   const hand = page.locator('#citadelsHand');
@@ -93,6 +111,23 @@ async function interactions(page) {
   await page.locator('#citadelsPanel .citadels-section-heading h3').first().click();
   assert.equal(await hand.getByRole('button', { name: 'Selected', exact: true }).count(), 0);
 
+  await hand.getByRole('button', { name: 'Select for Redraw', exact: true }).first().click();
+  await page.locator('#citadelsTurnTools').getByRole('button', { name: 'Redraw (1)', exact: true }).click();
+  assert.deepEqual(await page.evaluate(() => citadelsTestActions.at(-1)), { type: 'magician_redraw', card_ids: ['district-50'] });
+  await hand.getByRole('button', { name: 'Selected', exact: true }).click();
+  await page.locator('#citadelsTurnTools').getByRole('button', { name: 'End Turn', exact: true }).click();
+  assert.deepEqual(await page.evaluate(() => citadelsTestActions.at(-1)), { type: 'end_turn' });
+  await page.locator('.citadels-table-details summary').click();
+  await bounds(page, 'Expanded table facts');
+  assert.equal(await page.locator('#citadelsWinningCitySize').isVisible(), true);
+  await page.locator('.citadels-table-details summary').click();
+  await render(page, { ...playing, legal_actions: [],
+    your_roles: [{ rank: 3, name_cn: '魔术师', revealed: true }, { rank: 7, name_cn: '建筑师', revealed: false }],
+    current_turn_player: 'p2', current_turn_role: { rank: 4, name_cn: '国王', step: 'choose_income' } });
+  await bounds(page, 'Two roles and long active player name');
+  assert(await hand.locator('.citadels-card').first().evaluate(node => node.getBoundingClientRect().height) < 60);
+  await render(page, { ...playing, players: players.map(player => ({ ...player, city: [], city_count: 0 })) });
+
   const redraw = hand.getByRole('button', { name: 'Select for Redraw', exact: true }).first();
   await redraw.scrollIntoViewIfNeeded();
   const redrawBox = await redraw.boundingBox();
@@ -126,6 +161,10 @@ async function interactions(page) {
   await page.locator('#citadelsTooltip').waitFor({ state: 'visible' });
   await page.waitForTimeout(3100);
   assert.equal(await page.locator('#citadelsTooltip').isVisible(), false);
+
+  await render(page, { ...playing, legal_actions: ['collect_tax', 'end_turn'] });
+  await page.locator('#citadelsTurnTools').getByRole('button', { name: 'Collect Tax', exact: true }).click();
+  assert.deepEqual(await page.evaluate(() => citadelsTestActions.at(-1)), { type: 'collect_tax' });
 
   const draft = { ...playing, phase: 'draft', legal_actions: ['draft_character'], current_turn_role: null, current_drafter: 'p0',
     action_options: { draft_roles: [{ rank: 7, name_cn: '建筑师' }, { rank: 4, name_cn: '国王' }] } };
@@ -246,6 +285,7 @@ async function liveChecks(browser) {
       await page.setViewportSize({ width, height: 900 });
       await render(page, playing);
       await bounds(page, `Main ${width}`);
+      await compactBounds(page, width);
       await page.screenshot({ path: `${output}/main-${width}.png`, fullPage: true });
       await interactions(page);
       await bounds(page, `Recap ${width}`);

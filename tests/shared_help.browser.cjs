@@ -57,7 +57,7 @@ const fixture = `<!DOCTYPE html>
 </body></html>`;
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -224,6 +224,10 @@ const fixture = `<!DOCTYPE html>
   check('Disabled control is explainable', explainOpen && explainText.includes('开口竞价'), explainText);
   check('Explain auto-exits after explaining',
     !(await page.evaluate(() => window.__explain.isActive())));
+  await page.keyboard.press('Escape');
+  await page.click('#skullPlainBtn');
+  check('Disabled Explain does not swallow the next normal click',
+    await page.evaluate(() => window.__plainClicks === 1));
 
   // Real action must not fire while explaining
   await page.click('#skullExplainBtn');

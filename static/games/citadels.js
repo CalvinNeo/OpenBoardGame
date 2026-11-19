@@ -9,12 +9,11 @@ const citadelsPhaseLabel = document.getElementById("citadelsPhase");
 const citadelsRoundLabel = document.getElementById("citadelsRound");
 const citadelsModeLabel = document.getElementById("citadelsMode");
 const citadelsCrownHolderLabel = document.getElementById("citadelsCrownHolder");
-const citadelsCurrentPlayerLabel = document.getElementById("citadelsCurrentPlayer");
-const citadelsCurrentRoleLabel = document.getElementById("citadelsCurrentRole");
 const citadelsWinningCitySizeLabel = document.getElementById("citadelsWinningCitySize");
 const citadelsBannerBody = document.getElementById("citadelsBannerBody");
 const citadelsYourRoles = document.getElementById("citadelsYourRoles");
 const citadelsActions = document.getElementById("citadelsActions");
+const citadelsTurnTools = document.getElementById("citadelsTurnTools");
 const citadelsHand = document.getElementById("citadelsHand");
 const citadelsPlayers = document.getElementById("citadelsPlayers");
 const citadelsLog = document.getElementById("citadelsLog");
@@ -54,8 +53,8 @@ const CITADELS_HELP_CONFIG = {
   },
   sections: [
     { id: "flow", label: { zh: "流程与操作", en: "Flow & controls" }, html: {
-      zh: "<p>皇冠(👑)持有者先选角。2–3 人每人拿两个角色，4–6 人每人拿一个。上方顺位条显示明置移出、已公开及当前角色，不泄露暗置身份。</p><p>收入必须二选一：拿 2 金币(💰)，或抽 2 张建筑牌(🃏)留 1 张，另一张放牌堆底。之后可自由安排收税、技能与建造，通常最多建 1 座，同名建筑不能重复。</p><p>建造、选角、保留牌和摧毁在目标旁确认。魔术师在手牌上选中待换牌，再点 Redraw Selected。点空白处或按 Esc 取消确认，滚动不会选牌。轮末所有人点击 Next Round 后才继续。</p>",
-      en: "<p>The Crown (👑) holder drafts first. Each player takes two roles with 2–3 players, or one with 4–6. The rank track shows face-up removals, revealed roles and the current role without exposing hidden owners.</p><p>Choose mandatory income: take 2 Gold (💰), or draw 2 District cards (🃏), keep 1 and return the other to the deck bottom. Then tax, use powers and build in any legal order. Normally build once and never duplicate a district name.</p><p>Confirm drafting, keeping, building and destruction beside their targets. Magician selects cards in the hand before Redraw Selected. Click blank space or press Escape to dismiss a confirmation, and scrolling never selects cards. Everyone must press Next Round at the recap.</p>",
+      zh: "<p>皇冠(👑)持有者先选角。2–3 人每人拿两个角色，4–6 人每人拿一个。上方顺位条显示明置移出、已公开及当前角色，不泄露暗置身份。点 Table 可展开角色模式、皇冠与完工目标。</p><p>收入必须二选一：拿 2 金币(💰)，或抽 2 张建筑牌(🃏)留 1 张，另一张放牌堆底。之后可自由安排收税、技能与建造，通常最多建 1 座，同名建筑不能重复。</p><p>建造、选角、保留牌和摧毁在目标旁确认。魔术师点击手牌上的 Redraw 选牌，再点 Your Hand 标题旁的 Redraw 执行重抽。收税与 End Turn 也在手牌标题旁。点空白处或按 Esc 取消确认，滚动不会选牌。轮末所有人点击 Next Round 后才继续。</p>",
+      en: "<p>The Crown (👑) holder drafts first. Each player takes two roles with 2–3 players, or one with 4–6. The rank track shows face-up removals, revealed roles and the current role without exposing hidden owners. Expand Table for the role mode, crown and city goal.</p><p>Choose mandatory income: take 2 Gold (💰), or draw 2 District cards (🃏), keep 1 and return the other to the deck bottom. Then tax, use powers and build in any legal order. Normally build once and never duplicate a district name.</p><p>Confirm drafting, keeping, building and destruction beside their targets. Select Magician cards with their Redraw buttons, then use Redraw beside Your Hand to exchange them. Tax and End Turn are beside the hand heading too. Click blank space or press Escape to dismiss a confirmation, and scrolling never selects cards. Everyone must press Next Round at the recap.</p>",
     } },
     { id: "roles", label: { zh: "角色技能", en: "Role powers" }, html: {
       zh: "<p>刺客(💀)让指定后续角色跳过回合。盗贼(🔑)在目标角色亮出时偷走其全部金币，不能选刺客、盗贼或被刺杀角色。魔术师(🎩)交换全部手牌或重抽任意数量的手牌。</p><p>国王(👑)、主教(⛪)、商人(💰)、军阀(⚔)分别按黄色、蓝色、绿色、红色建筑收税，每回合一次。先建同色建筑再收税可以多拿钱。国王拿皇冠，主教保护城市，商人收入后自动多拿 1 金币。</p><p>建筑师(🏠)收入后自动抽 2 张牌，最多建 3 座。军阀(⚔)可付建筑费用减 1 的金币摧毁一座，但不能摧毁完工城市、受主教保护的城市或城塞。皇后(👸)只在 5–6 人出现，与本轮国王相邻可拿 3 金币，国王被刺杀则轮末补发。</p>",
@@ -230,12 +229,11 @@ function clearCitadelsState() {
   if (citadelsRoundLabel) citadelsRoundLabel.textContent = "-";
   if (citadelsModeLabel) citadelsModeLabel.textContent = "-";
   if (citadelsCrownHolderLabel) citadelsCrownHolderLabel.textContent = "-";
-  if (citadelsCurrentPlayerLabel) citadelsCurrentPlayerLabel.textContent = "-";
-  if (citadelsCurrentRoleLabel) citadelsCurrentRoleLabel.textContent = "-";
   if (citadelsWinningCitySizeLabel) citadelsWinningCitySizeLabel.textContent = "-";
   if (citadelsBannerBody) citadelsBannerBody.textContent = "-";
   if (citadelsYourRoles) citadelsYourRoles.innerHTML = "";
   if (citadelsActions) citadelsActions.innerHTML = "";
+  if (citadelsTurnTools) citadelsTurnTools.replaceChildren();
   if (citadelsHand) citadelsHand.innerHTML = "";
   if (citadelsPlayers) citadelsPlayers.innerHTML = "";
   if (citadelsLog) citadelsLog.innerHTML = "";
@@ -338,6 +336,7 @@ function citadelsSelectionButton(label, action, explanation) {
 function renderCitadelsRoleTrack(view) {
   if (!citadelsRoleTrack) return;
   citadelsRoleTrack.replaceChildren();
+  citadelsRoleTrack.style.gridTemplateColumns = `repeat(${view.max_rank || 8}, minmax(0, 1fr))`;
   const removed = new Set((view.draft_face_up_removed || []).map((role) => Number(role.rank)));
   const revealed = new Map((view.players || []).flatMap((player) =>
     (player.revealed_roles || []).map((role) => [Number(role.rank), player.name])));
@@ -353,7 +352,8 @@ function renderCitadelsRoleTrack(view) {
     name.textContent = removed.has(rank) ? "Out" : view.phase === "turn" && view.current_turn_role?.rank === rank ?
       "Playing" : revealed.get(rank) || "Hidden";
     role.append(icon, name);
-    citadelsDescribe(role, `role-${rank}`, CITADELS_ROLE_DETAILS[rank], true);
+    const status = removed.has(rank) ? "Out of play" : revealed.get(rank) || name.textContent;
+    citadelsDescribe(role, `role-${rank}`, `${status}. ${CITADELS_ROLE_DETAILS[rank]}`, true);
     citadelsRoleTrack.appendChild(role);
   }
 }
@@ -370,19 +370,20 @@ function renderCitadelsBanner(view) {
     return;
   }
   if (view.phase === "draft") {
-    const name = view.current_drafter ? findPlayerName(view, view.current_drafter) : "-";
-    citadelsBannerBody.textContent = `Draft phase. ${name} is choosing a role.`;
+    const name = view.current_drafter === view.you ? "You" : view.current_drafter ? findPlayerName(view, view.current_drafter) : "-";
+    citadelsBannerBody.textContent = `${name} ${view.current_drafter === view.you ? "choose" : "chooses"} a role.`;
     return;
   }
   if (view.phase === "round_end") {
     const progress = view.next_round_progress || {};
-    citadelsBannerBody.textContent = `Round ${view.round} complete. Review every role and action below · ${progress.done || 0}/${progress.total || 0} ready.`;
+    citadelsBannerBody.textContent = `Round complete · ${progress.done || 0}/${progress.total || 0} ready`;
     return;
   }
   const role = view.current_turn_role;
   const currentPlayer = view.current_turn_player ? findPlayerName(view, view.current_turn_player) : "-";
   if (role) {
-    citadelsBannerBody.textContent = `${currentPlayer} is playing ${citadelsRoleLabel(role)} · ${citadelsStepLabel(role.step)}.`;
+    const actor = view.current_turn_player === view.you ? "Your turn" : currentPlayer;
+    citadelsBannerBody.textContent = `${actor} · ${citadelsRoleLabel(role)} · ${citadelsStepLabel(role.step)}`;
     return;
   }
   citadelsBannerBody.textContent = "Waiting for the next role.";
@@ -612,10 +613,6 @@ function renderCitadelsYourRoles(view) {
   citadelsYourRoles.innerHTML = "";
   const roles = Array.isArray(view.your_roles) ? view.your_roles : [];
   if (!roles.length) {
-    const empty = document.createElement("div");
-    empty.className = "hint";
-    empty.textContent = "No roles yet.";
-    citadelsYourRoles.appendChild(empty);
     return;
   }
   roles.forEach((role) => {
@@ -624,8 +621,8 @@ function renderCitadelsYourRoles(view) {
     if (role.revealed) {
       pill.classList.add("revealed");
     }
-    pill.textContent = `${citadelsRoleEmoji(role.rank)} ${role.rank}. ${role.name_cn}${role.revealed ? " · revealed" : " · hidden"}`;
-    citadelsDescribe(pill, `role-${role.rank}`, CITADELS_ROLE_DETAILS[role.rank], true);
+    pill.textContent = `${citadelsRoleEmoji(role.rank)} ${role.name_cn}`;
+    citadelsDescribe(pill, `own-role-${role.rank}`, `Your ${role.revealed ? "revealed" : "hidden"} role. ${CITADELS_ROLE_DETAILS[role.rank]}`, true);
     citadelsYourRoles.appendChild(pill);
   });
 }
@@ -644,6 +641,7 @@ function renderCitadelsActionSection(title, builder) {
 function renderCitadelsActions(view) {
   if (!citadelsActions) return;
   citadelsActions.innerHTML = "";
+  citadelsTurnTools?.replaceChildren();
   if (!view) return;
   const legal = new Set(view.legal_actions || []);
   const options = view.action_options || {};
@@ -685,6 +683,7 @@ function renderCitadelsActions(view) {
         grid.className = "citadels-card-grid";
         view.current_turn_role.draw_offer.forEach((card) => {
           const cardNode = buildCitadelsDistrictCard(card);
+          cardNode.classList.add("citadels-card-with-actions");
           const keepButton = citadelsSelectionButton("Keep This", { type: "choose_draw", card_id: card.id },
             `Keep ${card.name_cn} (${card.name_en}), costing ${card.cost} gold. ${card.text || "Scores its printed cost."}`);
           keepButton.classList.add("citadels-inline-button");
@@ -696,38 +695,23 @@ function renderCitadelsActions(view) {
     );
   }
 
-  const hasMainActions =
-    legal.has("collect_tax") ||
-    legal.has("end_turn") ||
-    legal.has("use_assassin") ||
-    legal.has("use_thief") ||
-    legal.has("magician_swap") ||
-    legal.has("magician_redraw") ||
-    legal.has("destroy_district");
-
-  if (hasMainActions) {
-    citadelsActions.appendChild(
-      renderCitadelsActionSection("This Turn", (section) => {
-        const wrap = document.createElement("div");
-        wrap.className = "citadels-button-wrap";
-        if (legal.has("collect_tax")) {
-          wrap.appendChild(createCitadelsButton("Collect Tax", () => sendAction({ type: "collect_tax" })));
-        }
-        if (legal.has("magician_redraw")) {
-          const redrawCount = citadelsRedrawSelection.size;
-          const redrawBtn = createCitadelsButton(`Redraw Selected${redrawCount ? ` (${redrawCount})` : ""}`, () => {
-            if (!citadelsRedrawSelection.size) return;
-            sendAction({ type: "magician_redraw", card_ids: Array.from(citadelsRedrawSelection) });
-          }, "", `Return ${redrawCount} selected cards to the deck bottom and draw that many replacements. This uses Magician's power.`);
-          redrawBtn.disabled = redrawCount === 0;
-          wrap.appendChild(redrawBtn);
-        }
-        if (legal.has("end_turn")) {
-          wrap.appendChild(createCitadelsButton("End Turn", () => sendAction({ type: "end_turn" })));
-        }
-        section.appendChild(wrap);
-      }),
-    );
+  if (citadelsTurnTools) {
+    const wrap = citadelsTurnTools;
+    if (legal.has("collect_tax")) {
+      wrap.appendChild(createCitadelsButton("Collect Tax", () => sendAction({ type: "collect_tax" })));
+    }
+    if (legal.has("magician_redraw")) {
+      const redrawCount = citadelsRedrawSelection.size;
+      const redrawBtn = createCitadelsButton(`Redraw${redrawCount ? ` (${redrawCount})` : ""}`, () => {
+        if (!citadelsRedrawSelection.size) return;
+        sendAction({ type: "magician_redraw", card_ids: Array.from(citadelsRedrawSelection) });
+      }, "", `Return ${redrawCount} selected cards to the deck bottom and draw that many replacements. This uses Magician's power.`);
+      redrawBtn.disabled = redrawCount === 0;
+      wrap.appendChild(redrawBtn);
+    }
+    if (legal.has("end_turn")) {
+      wrap.appendChild(createCitadelsButton("End Turn", () => sendAction({ type: "end_turn" })));
+    }
   }
 
   if (legal.has("use_assassin")) {
@@ -780,7 +764,7 @@ function buildCitadelsDistrictCard(card, compact = false) {
   title.append(citadelsBuildColorDot(card.color), name);
   const cost = document.createElement("div");
   cost.className = "citadels-card-meta";
-  cost.textContent = compact ? `💰 ${card.cost}` : `💰 ${card.cost} · ${card.name_en}`;
+  cost.textContent = `💰 ${card.cost}`;
   node.append(title, cost);
   citadelsDescribe(node, `district-${card.id}`, `${card.name_cn} (${card.name_en}). ${card.color} district. Cost: ${card.cost} gold. ${card.text || "Scores its printed cost."}`, true);
   if (card.text && !compact) {
@@ -816,7 +800,7 @@ function renderCitadelsHand(view) {
     }
     if (legal.has("magician_redraw")) {
       const redrawBtn = createCitadelsButton(
-        citadelsRedrawSelection.has(card.id) ? "Selected" : "Select for Redraw",
+        citadelsRedrawSelection.has(card.id) ? "Selected" : "Redraw",
         () => {
           if (citadelsRedrawSelection.has(card.id)) {
             citadelsRedrawSelection.delete(card.id);
@@ -829,10 +813,13 @@ function renderCitadelsHand(view) {
         },
         "", `Select ${card.name_cn} for Magician's redraw. It costs ${card.cost} gold to build. ${card.text || "Scores its printed cost."}`,
       );
+      redrawBtn.setAttribute("aria-label", citadelsRedrawSelection.has(card.id) ? "Selected" : "Select for Redraw");
+      redrawBtn.setAttribute("aria-pressed", String(citadelsRedrawSelection.has(card.id)));
       redrawBtn.classList.toggle("active", citadelsRedrawSelection.has(card.id));
       actionRow.appendChild(redrawBtn);
     }
     if (actionRow.children.length) {
+      node.classList.add("citadels-card-with-actions");
       node.appendChild(actionRow);
     }
     citadelsHand.appendChild(node);
@@ -895,8 +882,8 @@ function renderCitadelsPlayers(view) {
       roles.textContent = "Roles: -";
     }
 
-    header.append(identity, roles);
-    card.append(header, meta);
+    header.append(identity, meta);
+    card.append(header, roles);
 
     if (legal.has("magician_swap") && player.player_id !== view.you) {
       const swapRow = document.createElement("div");
@@ -905,7 +892,7 @@ function renderCitadelsPlayers(view) {
         citadelsSelectionButton("Swap Hand", { type: "magician_swap", target_player_id: player.player_id },
           `Exchange your entire hand with ${player.name}'s ${player.hand_count} hidden cards.`),
       );
-      card.appendChild(swapRow);
+      roles.appendChild(swapRow);
     }
 
     const city = document.createElement("div");
@@ -976,13 +963,6 @@ function renderCitadelsGameState(data) {
   if (citadelsRoundLabel) citadelsRoundLabel.textContent = view.round ?? "-";
   if (citadelsModeLabel) citadelsModeLabel.textContent = view.character_mode === "queen9" ? "8+Queen" : "Classic 8";
   if (citadelsCrownHolderLabel) citadelsCrownHolderLabel.textContent = view.crown_holder_name || "-";
-  if (citadelsCurrentPlayerLabel) {
-    const currentPlayerId = view.phase === "draft" ? view.current_drafter : view.current_turn_player;
-    citadelsCurrentPlayerLabel.textContent = currentPlayerId ? findPlayerName(view, currentPlayerId) : "-";
-  }
-  if (citadelsCurrentRoleLabel) {
-    citadelsCurrentRoleLabel.textContent = view.current_turn_role ? citadelsRoleLabel(view.current_turn_role) : "-";
-  }
   if (citadelsWinningCitySizeLabel) {
     citadelsWinningCitySizeLabel.textContent = view.winning_city_size ?? "-";
   }

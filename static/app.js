@@ -735,6 +735,10 @@ function renderGameState(data) {
     if (typeof renderFactoryFunnerGameState === "function") renderFactoryFunnerGameState(data);
     return;
   }
+  if (gameType === "for_northwood") {
+    if (typeof renderForNorthwoodGameState === "function") renderForNorthwoodGameState(data);
+    return;
+  }
   if (gameType === "carcassonne") {
     renderCarcassonneGameState(data);
     return;

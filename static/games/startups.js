@@ -184,10 +184,6 @@
       root: () => document.getElementById("startupsPanel"),
       bypass: ["#startupsHelpBtn", "#startupsExplainBtn"]
     });
-    const contextualText = node => node.dataset.suTip || "";
-    ["company", "marker", "player", "take", "hand", "portfolio"].forEach(key => {
-      STARTUPS_EXPLAIN[key].zh = STARTUPS_EXPLAIN[key].zh;
-    });
     byId("HelpBtn")?.addEventListener("click", () => {
       startupsExplainWidget?.exit();
       startupsHelpWidget.open();
@@ -217,8 +213,15 @@
     if (!entry) return "";
     return (window.obgHelpLang?.() === "en" ? entry.en : entry.zh) || entry.zh;
   }
-  function tip(node, key, message) {
-    node.dataset.suExplain = key;
+  function tip(node, key, message, context = "", english = "") {
+    const detailKey = context ? `${key}-${context}` : key;
+    if (context) {
+      STARTUPS_EXPLAIN[detailKey] = {
+        zh: `${message}\n\n${STARTUPS_EXPLAIN[key].zh}`,
+        en: `${english || node.getAttribute("aria-label") || ""}\n\n${STARTUPS_EXPLAIN[key].en}`
+      };
+    }
+    node.dataset.suExplain = detailKey;
     node.dataset.suTip = message || explainText(key);
     if (node.tagName !== "BUTTON") node.tabIndex = 0;
     return node;
@@ -231,7 +234,7 @@
     node.classList.toggle("is-blocked", blocked);
     node.classList.toggle("is-selected", selection?.id === card.id && selection?.area === area);
     node.setAttribute("aria-pressed", String(selection?.id === card.id && selection?.area === area));
-    node.setAttribute("aria-label", `${c.name}, ${c.supply} total shares${area === "market" ? `, ${coins} capital${blocked ? ", blocked by your anti-monopoly marker" : ""}` : ""}`);
+    node.setAttribute("aria-label", `${c.emoji} ${c.name}, ${c.supply} total shares${area === "market" ? `, ${coins} capital${blocked ? ", blocked by your anti-monopoly marker" : ""}` : ""}`);
     const top = el("span", "startups-card-top");
     top.append(el("span", "", `${c.supply}×`), el("span", blocked ? "" : "startups-card-kind", blocked ? "🚫" : "SHARE"));
     const cardName = el("span", "startups-card-name");
@@ -239,17 +242,18 @@
     node.append(top, el("span", "startups-card-icon", c.emoji), cardName);
     if (area === "market") node.append(el("span", "startups-card-coins", `💰 +${coins}`));
     tip(node, area === "market" ? blocked ? "marker" : "take" : "hand",
-      `${label(c.id)}：全牌组 ${c.supply} 股。${area === "market" ? `拿牌可获得 ${coins} 枚资本（💰）。${blocked ? "你的反垄断标记（🚫）阻止拿取。" : ""}` : "你的隐藏股份，结算时也会计入持股。"}`);
+      `${label(c.id)}：全牌组 ${c.supply} 股。${area === "market" ? `拿牌可获得 ${coins} 枚资本（💰）。${blocked ? "你的反垄断标记（🚫）阻止拿取。" : ""}` : "你的隐藏股份，结算时也会计入持股。"}`, `${area}-${card.id}`);
     return node;
   }
   function renderCompanies() {
     const container = byId("Companies"); container.replaceChildren();
     for (const c of view.companies) {
-      const node = tip(el("div", `startups-company su-${c.id}`), "marker",
-        `${label(c.id)}：发行 ${c.supply} 股。反垄断标记（🚫）：${view.anti_monopoly[c.id] ? name(view.anti_monopoly[c.id]) : "无人持有"}。`);
-      const top = el("div", "startups-company-top");
-      top.append(el("span", "", c.emoji), tip(el("span", "", `${c.supply}×`), "company", `${label(c.id)}：整副牌中有 ${c.supply} 张股份，不是分值。`));
       const holder = view.anti_monopoly[c.id];
+      const node = tip(el("div", `startups-company su-${c.id}`), "marker",
+        `${label(c.id)}：发行 ${c.supply} 股。反垄断标记（🚫）：${holder ? name(holder) : "无人持有"}。`, c.id,
+        `${label(c.id)}: ${c.supply} total shares. Anti-monopoly marker (🚫): ${holder ? name(holder) : "unclaimed"}.`);
+      const top = el("div", "startups-company-top");
+      top.append(el("span", "", c.emoji), tip(el("span", "", `${c.supply}×`), "company", `${label(c.id)}：整副牌中有 ${c.supply} 张股份，不是分值。`, c.id, `${label(c.id)}: ${c.supply} shares in the full deck, not points.`));
       const marker = el("span", "startups-marker-name");
       marker.append(el("span", "startups-marker-owner", holder ? `🚫 ${name(holder)}` : "Open"),
         el("span", "startups-marker-seat", holder ? `🚫 #${view.players.findIndex(player => player.player_id === holder) + 1}` : "Open"));
@@ -276,6 +280,7 @@
     const chosen = selection?.area === "market" ? view.market.find(entry => entry.card.id === selection.id) : null;
     byId("MarketSelection").classList.toggle("hidden", !chosen);
     container.inert = !!chosen;
+    if (chosen) container.querySelectorAll("[data-su-explain]").forEach(node => node.removeAttribute("data-su-explain"));
     if (chosen) text("MarketLabel", `${label(chosen.card.company)} · 💰 +${chosen.coins}`);
     byId("Take").disabled = !chosen || !can("take_market");
   }
@@ -292,6 +297,7 @@
     const chosen = selection?.area === "hand" ? view.hand.find(card => card.id === selection.id) : null;
     byId("HandSelection").classList.toggle("hidden", !chosen);
     container.inert = !!chosen;
+    if (chosen) container.querySelectorAll("[data-su-explain]").forEach(node => node.removeAttribute("data-su-explain"));
     if (chosen) text("HandLabel", label(chosen.company));
     byId("Invest").disabled = !chosen || !can("invest");
     byId("Discard").disabled = !chosen || !can("discard") || !view.legal_discard_ids.includes(chosen.id);
@@ -304,7 +310,7 @@
       node.classList.toggle("is-winner", view.winner_ids.includes(player.player_id));
       const heading = el("div", "startups-player-heading");
       const playerName = `#${index + 1} ${player.name || player.player_id}`;
-      heading.append(tip(el("strong", "", playerName), "player", playerName), el("small", "", [player.player_id === view.you ? "You" : "", player.is_bot ? "Bot" : "", view.ready.includes(player.player_id) ? "Ready ✓" : player.player_id === view.current_turn ? "Turn" : ""].filter(Boolean).join(" · ")));
+      heading.append(tip(el("strong", "", playerName), "player", playerName, player.player_id, playerName), el("small", "", [player.player_id === view.you ? "You" : "", player.is_bot ? "Bot" : "", view.ready.includes(player.player_id) ? "Ready ✓" : player.player_id === view.current_turn ? "Turn" : ""].filter(Boolean).join(" · ")));
       const stats = el("div", "startups-player-stats");
       const handCount = tip(el("span", "", `🃏 ${player.hand_count}`), "hand", view.hands_revealed ? `Hand（🃏）：${player.hand.map(card => label(card.company)).join(" · ")}` : explainText("hand"));
       handCount.append(el("span", "startups-hand-visibility", view.hands_revealed ? " revealed" : " hidden"));
@@ -314,8 +320,9 @@
       const shares = el("div", "startups-shares");
       for (const c of view.companies) {
         const holder = view.anti_monopoly[c.id] === player.player_id;
-        const count = player.shares[c.id], cell = tip(el("div", `startups-share su-${c.id}${count ? "" : " is-zero"}`), "portfolio", `${label(c.id)}：${count} 股${view.hands_revealed ? "（含手牌）" : "公开投资"}。${holder ? "持有反垄断标记（🚫）。" : ""}`);
-        cell.setAttribute("aria-label", `${c.name}: ${count} shares${holder ? ", anti-monopoly marker" : ""}`);
+        const count = player.shares[c.id], cell = el("div", `startups-share su-${c.id}${count ? "" : " is-zero"}`);
+        cell.setAttribute("aria-label", `${c.emoji} ${c.name}: ${count} shares${holder ? ", anti-monopoly marker (🚫)" : ""}`);
+        tip(cell, "portfolio", `${label(c.id)}：${count} 股${view.hands_revealed ? "（含手牌）" : "公开投资"}。${holder ? "持有反垄断标记（🚫）。" : ""}`, `${player.player_id}-${c.id}`);
         cell.append(el("span", "startups-share-company", c.emoji), el("strong", "startups-share-count", String(count)), el("span", "startups-share-marker", holder ? "🚫" : ""));
         shares.append(cell);
       }
@@ -440,16 +447,11 @@
     if (event.detail && pointerGesture?.moved) return;
     if (!panel.classList.contains("hidden") && !event.target.closest("button, input, select, dialog, summary, a")) deselect();
   });
-  panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-su-tip]")); });
+  panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse" && !event.target.closest("button")) showTip(event.target.closest("[data-su-tip]")); });
   panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
-  panel.addEventListener("focusin", event => showTip(event.target.closest("[data-su-tip]")));
+  panel.addEventListener("focusin", event => { if (!event.target.closest("button")) showTip(event.target.closest("[data-su-tip]")); });
   panel.addEventListener("focusout", hideTip);
-  panel.addEventListener("pointerdown", event => {
-    const target = event.target.closest("button:disabled[data-su-tip]");
-    if (target && event.pointerType !== "mouse") showTip(target, true);
-  });
   panel.addEventListener("click", event => {
-    // Actionable cards already have a selection panel; static information uses tips.
     const target = event.target.closest("[data-su-tip]");
     if (target && !target.closest("button")) showTip(target, true); else hideTip();
   });

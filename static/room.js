@@ -1405,6 +1405,7 @@ const GAME_WEIGHT = {
   find_diff: 1.00,
   // BGG boardgame/183284 (Factory Funner, Corné van Moorsel / Cwali).
   factory_funner: 2.40,
+  for_northwood: 1.84,
   pokemon_adventure: 1.17,
   chromino: 1.24,
   skull_king: 1.73,

@@ -1,144 +1,111 @@
-<template data-game-target="pokemonSplendorHelpModal" data-game-mode="replace"><section id="pokemonSplendorHelpModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content pokemon-splendor-help-modal">
-      <div class="modal-header">
-        <h2>Splendor: Pokemon - Game Rules</h2>
-        <button id="pokemonSplendorHelpModalCloseBtn" type="button">Close</button>
-      </div>
-      <div class="modal-body pokemon-splendor-help-content" id="pokemonSplendorHelpContent"></div>
-    </div>
-  </section></template>
-<template data-game-target="pokemonSplendorExplainModal" data-game-mode="replace"><section id="pokemonSplendorExplainModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content pokemon-splendor-explain-modal">
-      <div class="modal-header">
-        <h2>Button Explanation</h2>
-        <button id="pokemonSplendorExplainModalCloseBtn" type="button">Close</button>
-      </div>
-      <div class="modal-body">
-        <div id="pokemonSplendorExplainContent"></div>
-      </div>
-    </div>
-  </section></template>
-<template data-game-target="pokemonSplendorTokenModal" data-game-mode="replace"><section id="pokemonSplendorTokenModal" class="modal hidden" aria-hidden="true">
+<template data-game-target="pokemonSplendorTokenModal" data-game-mode="replace">
+  <section id="pokemonSplendorTokenModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pokemonSplendorTokenTitle">
     <div class="modal-content pokemon-splendor-token-modal">
       <div class="modal-header">
-        <h2>Take Tokens</h2>
-        <button id="pokemonSplendorTokenModalCloseBtn" type="button">Close</button>
+        <h2 id="pokemonSplendorTokenTitle">Take Tokens</h2>
+        <div class="pokemon-dialog-controls">
+          <button id="pokemonSplendorTokenDockBtn" type="button" aria-pressed="false">Dock</button>
+          <button id="pokemonSplendorTokenModalCloseBtn" type="button">Close</button>
+        </div>
       </div>
       <div class="modal-body">
-        <p id="pokemonSplendorTokenHint" class="pokemon-token-hint" role="status">
-          Pick three different colors, or pick the same color twice.
-        </p>
-        <div class="pokemon-token-section">
-          <div class="pokemon-token-section-title">Available</div>
-          <div id="pokemonSplendorTokenPool" class="pokemon-token-pool"></div>
-        </div>
-        <div class="pokemon-token-section">
-          <div class="pokemon-token-section-title">Picked</div>
-          <div id="pokemonSplendorTokenPicked" class="pokemon-token-picked"></div>
+        <p id="pokemonSplendorTokenHint" class="pokemon-token-hint" role="status">Pick three different colors, or pick the same color twice.</p>
+        <div id="pokemonSplendorTokenChoices">
+          <div class="pokemon-token-section">
+            <div class="pokemon-token-section-title">Available</div>
+            <div id="pokemonSplendorTokenPool" class="pokemon-token-pool"></div>
+          </div>
+          <div class="pokemon-token-section">
+            <div class="pokemon-token-section-title">Picked · tap to remove</div>
+            <div id="pokemonSplendorTokenPicked" class="pokemon-token-picked"></div>
+          </div>
         </div>
         <div id="pokemonSplendorDiscardSelectionModalRow" class="pokemon-token-section hidden">
-          <div class="pokemon-token-section-title">Discard Selection</div>
+          <div class="pokemon-token-section-title">Return tokens</div>
           <div id="pokemonSplendorDiscardSelectionModal" class="splendor-token-selection"></div>
         </div>
-        <div id="pokemonSplendorDiscardHintModal" class="splendor-discard-hint hidden"></div>
+        <div id="pokemonSplendorDiscardHintModal" class="splendor-discard-hint hidden" role="status"></div>
         <div class="pokemon-token-actions">
-          <button id="pokemonSplendorConfirmThreeBtn" type="button">Take 3 Different</button>
-          <button id="pokemonSplendorConfirmTwoBtn" type="button">Take 2 Same</button>
+          <button id="pokemonSplendorConfirmThreeBtn" type="button">Take Different</button>
+          <button id="pokemonSplendorConfirmTwoBtn" type="button">Take Pair</button>
+          <button id="pokemonSplendorPendingConfirmBtn" class="hidden" type="button">Confirm</button>
         </div>
       </div>
     </div>
-  </section></template>
+  </section>
+</template>
 <template data-game-target="pokemonSplendorPanel" data-game-mode="contents">
-              <div class="pokemon-splendor-status" aria-label="Game status">
-                <div class="pokemon-status-item"><span>Phase</span><strong id="pokemonSplendorPhase">-</strong></div>
-                <div class="pokemon-status-item"><span>Current Turn</span><strong id="pokemonSplendorTurn">-</strong></div>
-                <div class="pokemon-status-item"><span>Final Round</span><strong id="pokemonSplendorFinalRound">-</strong></div>
-                <div class="pokemon-status-item"><span>Kanto Token</span><strong id="pokemonSplendorStart">-</strong></div>
-                <div class="pokemon-status-item"><span>Winner</span><strong id="pokemonSplendorWinner">-</strong></div>
-              </div>
-
-              <div class="pokemon-splendor-workspace">
-                <aside class="pokemon-command-column" aria-label="Your turn controls">
-                  <section class="pokemon-supply-panel">
-                    <h3 class="pokemon-section-heading">Token Supply</h3>
-                    <div id="pokemonSplendorSupply" class="splendor-token-row pokemon-supply"></div>
-                  </section>
-
-                  <div id="pokemonSplendorPrompt" class="pokemon-turn-prompt" role="status" aria-live="polite">
-                    Waiting for the game state.
-                  </div>
-
-                  <section class="pokemon-action-console" aria-label="Turn controls">
-                    <div class="pokemon-action-console-title">
-                      <span>Current choice</span>
-                      <strong>Select a card or take tokens</strong>
-                    </div>
-                    <div class="pokemon-selection-summary">
-                      <div><span>Market</span><strong id="pokemonSplendorSelectedMarket">-</strong></div>
-                      <div><span>Reserved</span><strong id="pokemonSplendorSelectedReserved">-</strong></div>
-                      <div><span>Evolution base</span><strong id="pokemonSplendorSelectedBase">-</strong></div>
-                    </div>
-                    <div id="pokemonSplendorDiscardSelectionRow" class="pokemon-discard-row hidden">
-                      <span>Discard selection</span>
-                      <div id="pokemonSplendorDiscardSelection" class="splendor-token-selection"></div>
-                    </div>
-                    <div id="pokemonSplendorDiscardHint" class="splendor-discard-hint hidden"></div>
-
-                    <div class="pokemon-actions">
-                      <button id="pokemonSplendorTakeTokensBtn" class="pokemon-action-primary" type="button">Take Tokens</button>
-                      <button id="pokemonSplendorReserveDeckBtn" type="button">Reserve from Deck</button>
-                      <button id="pokemonSplendorBuyMarketBtn" class="pokemon-action-primary" type="button">Catch Selected</button>
-                      <button id="pokemonSplendorReserveMarketBtn" type="button">Reserve Selected</button>
-                      <button id="pokemonSplendorBuyReservedBtn" class="pokemon-action-primary" type="button">Catch Reserved</button>
-                      <button id="pokemonSplendorEvolveBtn" class="pokemon-action-primary" type="button">Evolve</button>
-                      <button id="pokemonSplendorSkipEvolveBtn" type="button">Skip Evolution</button>
-                      <button id="pokemonSplendorDiscardBtn" class="pokemon-action-primary" type="button">Discard Tokens</button>
-                    </div>
-                  </section>
-                </aside>
-
-                <section class="pokemon-market-column" aria-label="Pokemon market">
-                  <h3 class="pokemon-section-heading">Market</h3>
-                  <div class="splendor-market pokemon-market">
-                    <div class="pokemon-market-specials">
-                      <div class="splendor-tier pokemon-tier-section pokemon-tier-legendary">
-                        <div class="tier-label">Legendary</div>
-                        <div id="pokemonSplendorMarketLegendary" class="splendor-cards"></div>
-                      </div>
-                      <div class="splendor-tier pokemon-tier-section pokemon-tier-rare">
-                        <div class="tier-label">Rare</div>
-                        <div id="pokemonSplendorMarketRare" class="splendor-cards"></div>
-                      </div>
-                    </div>
-                    <div class="splendor-tier pokemon-tier-section pokemon-tier-lv3">
-                      <div class="tier-label">LV3</div>
-                      <div id="pokemonSplendorMarketLv3" class="splendor-cards"></div>
-                    </div>
-                    <div class="splendor-tier pokemon-tier-section pokemon-tier-lv2">
-                      <div class="tier-label">LV2</div>
-                      <div id="pokemonSplendorMarketLv2" class="splendor-cards"></div>
-                    </div>
-                    <div class="splendor-tier pokemon-tier-section pokemon-tier-lv1">
-                      <div class="tier-label">LV1</div>
-                      <div id="pokemonSplendorMarketLv1" class="splendor-cards"></div>
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              <div class="pokemon-personal-grid">
-                <section class="pokemon-personal-section">
-                  <h3 class="pokemon-section-heading">Your Reserved</h3>
-                  <div id="pokemonSplendorReserved" class="splendor-cards"></div>
-                </section>
-                <section class="pokemon-personal-section">
-                  <h3 class="pokemon-section-heading">Your Captured</h3>
-                  <div id="pokemonSplendorCaptured" class="splendor-cards"></div>
-                </section>
-              </div>
-
-              <section class="pokemon-players-section">
-                <h3 class="pokemon-section-heading">Players</h3>
-                <div id="pokemonSplendorPlayers"></div>
-              </section>
-            </template>
+  <div class="pokemon-splendor-status" aria-label="Game status">
+    <span class="pokemon-status-item"><span>Turn</span><strong id="pokemonSplendorTurn">—</strong></span>
+    <span class="pokemon-status-item"><strong id="pokemonSplendorPhase">—</strong></span>
+    <span id="pokemonSplendorFinalRound" class="pokemon-final-round hidden">Final round</span>
+    <span id="pokemonSplendorWinner" class="pokemon-winner hidden"></span>
+  </div>
+  <div class="pokemon-turn-line">
+    <div id="pokemonSplendorPrompt" class="pokemon-turn-prompt" role="status" aria-live="polite">Waiting for the game state.</div>
+    <button id="pokemonSplendorSkipEvolveBtn" class="pokemon-small-button hidden" type="button" data-pokemon-splendor-explain="skip">Skip Evolution</button>
+    <button id="pokemonSplendorDiscardBtn" class="pokemon-small-button hidden" type="button" data-pokemon-splendor-explain="discard">Return Tokens</button>
+  </div>
+  <section class="pokemon-supply-panel" aria-label="Token supply">
+    <div class="pokemon-section-heading">
+      <h3>Token supply <span class="pokemon-caption-note">/ your tokens</span></h3>
+      <button id="pokemonSplendorTakeTokensBtn" class="pokemon-small-button pokemon-primary" type="button" data-pokemon-splendor-explain="take">Take Tokens</button>
+    </div>
+    <div id="pokemonSplendorSupply" class="pokemon-supply"></div>
+  </section>
+  <div class="pokemon-splendor-workspace">
+    <section class="pokemon-market-column" aria-label="Pokemon market">
+      <div class="pokemon-section-heading">
+        <h3>Market</h3>
+        <button id="pokemonSplendorReserveDeckBtn" class="pokemon-small-button" type="button" data-pokemon-splendor-explain="deck">Reserve Deck</button>
+      </div>
+      <div id="pokemonSplendorMarketTabs" class="pokemon-market-tabs" role="group" aria-label="Market tiers">
+        <button id="pokemonSplendorEvolutionFilter" class="hidden" type="button" data-pokemon-tier="evolution" aria-pressed="false">Ready ↗</button>
+        <button type="button" data-pokemon-tier="all" aria-pressed="true">All</button>
+        <button type="button" data-pokemon-tier="lv1" aria-pressed="false">LV1</button>
+        <button type="button" data-pokemon-tier="lv2" aria-pressed="false">LV2</button>
+        <button type="button" data-pokemon-tier="lv3" aria-pressed="false">LV3</button>
+        <button type="button" data-pokemon-tier="special" aria-pressed="false">Rare +</button>
+      </div>
+      <div class="splendor-market pokemon-market">
+        <div class="pokemon-market-specials" data-pokemon-tier-group="special">
+          <section class="pokemon-tier-section pokemon-tier-legendary" aria-label="Legendary cards">
+            <h4 class="tier-label">Legendary</h4>
+            <div id="pokemonSplendorMarketLegendary" class="splendor-cards"></div>
+          </section>
+          <section class="pokemon-tier-section pokemon-tier-rare" aria-label="Rare cards">
+            <h4 class="tier-label">Rare</h4>
+            <div id="pokemonSplendorMarketRare" class="splendor-cards"></div>
+          </section>
+        </div>
+        <section class="pokemon-tier-section pokemon-tier-lv3" data-pokemon-tier-group="lv3" aria-label="Level 3 cards">
+          <h4 class="tier-label">LV3</h4>
+          <div id="pokemonSplendorMarketLv3" class="splendor-cards"></div>
+        </section>
+        <section class="pokemon-tier-section pokemon-tier-lv2" data-pokemon-tier-group="lv2" aria-label="Level 2 cards">
+          <h4 class="tier-label">LV2</h4>
+          <div id="pokemonSplendorMarketLv2" class="splendor-cards"></div>
+        </section>
+        <section class="pokemon-tier-section pokemon-tier-lv1" data-pokemon-tier-group="lv1" aria-label="Level 1 cards">
+          <h4 class="tier-label">LV1</h4>
+          <div id="pokemonSplendorMarketLv1" class="splendor-cards"></div>
+        </section>
+      </div>
+    </section>
+    <aside class="pokemon-personal-grid" aria-label="Your collection">
+      <section class="pokemon-personal-section">
+        <div class="pokemon-section-heading"><h3>Your Reserved <span id="pokemonSplendorReservedCount" class="pokemon-caption-note">0 / 3</span></h3></div>
+        <div id="pokemonSplendorReserved" class="splendor-cards"></div>
+      </section>
+      <details id="pokemonSplendorCapturedSection" class="pokemon-personal-section" open>
+        <summary class="pokemon-section-heading">Your Captured <span id="pokemonSplendorCapturedCount" class="pokemon-caption-note">0</span></summary>
+        <div id="pokemonSplendorCaptured" class="splendor-cards"></div>
+      </details>
+    </aside>
+  </div>
+  <section class="pokemon-players-section" aria-label="Players">
+    <div class="pokemon-section-heading"><h3>Players</h3><span class="pokemon-caption-note">18 points to trigger the final round</span></div>
+    <div id="pokemonSplendorPlayers"></div>
+  </section>
+  <div id="pokemonSplendorTooltip" class="pokemon-tooltip hidden" role="tooltip"></div>
+</template>

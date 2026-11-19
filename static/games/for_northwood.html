@@ -1,0 +1,65 @@
+<template data-game-target="forNorthwoodHeaderActions" data-game-mode="contents">
+  <button id="forNorthwoodHelpBtn" type="button">Help</button>
+  <button id="forNorthwoodExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="forNorthwoodPanel" data-game-mode="contents">
+  <div id="forNorthwoodLobby" class="nw-lobby">
+    <div class="nw-lobby-art" aria-hidden="true">🌲 🦊 🌲</div>
+    <h3>For Northwood!</h3>
+    <p>One envoy. Eight rulers. A forest to unite.</p>
+    <div class="nw-settings" data-for-northwood-explain="settings">
+      <label>Setup <select id="forNorthwoodSetup"><option value="introductory">Introductory · four Jacks</option><option value="standard">Standard · all 24 characters</option></select></label>
+      <label>Win target <select id="forNorthwoodGoal"><option value="16">16 / 20 stars</option><option value="18">18 / 20 stars</option><option value="20">20 / 20 stars</option></select></label>
+    </div>
+    <p class="nw-muted">Ready up, then use Start in Room Control.</p>
+  </div>
+  <div id="forNorthwoodTable" class="hidden">
+    <div class="nw-status">
+      <span id="forNorthwoodVisit" data-for-northwood-explain="visits" tabindex="0"></span>
+      <span id="forNorthwoodStars" class="nw-stars" data-for-northwood-explain="stars" tabindex="0"></span>
+      <span id="forNorthwoodPhase" class="nw-phase"></span>
+    </div>
+    <section class="nw-fiefs-section" aria-label="The eight fiefs">
+      <div class="nw-caption"><h3>The forest kingdom</h3><span>Exact score to befriend</span></div>
+      <div id="forNorthwoodFiefs" class="nw-fiefs" data-for-northwood-explain="fiefs"></div>
+      <div id="forNorthwoodFiefConfirm" class="nw-local-confirm hidden"></div>
+    </section>
+    <div class="nw-play-area">
+      <section class="nw-dialogue" aria-label="Current dialogue">
+        <div class="nw-caption"><h3 id="forNorthwoodDialogueTitle">Your next visit</h3><span id="forNorthwoodTrump" data-for-northwood-explain="trump" tabindex="0"></span></div>
+        <div id="forNorthwoodMessage" class="nw-message" role="status" aria-live="polite"></div>
+        <div class="nw-dialogue-cards" data-for-northwood-explain="dialogue">
+          <div class="nw-card-position"><span class="nw-caption-label">Ruler's statement</span><div id="forNorthwoodStatement"></div></div>
+          <span class="nw-versus" aria-hidden="true">↔</span>
+          <div class="nw-card-position"><span class="nw-caption-label">Your response</span><div id="forNorthwoodResponse"></div></div>
+          <div id="forNorthwoodTarget" class="nw-target" data-for-northwood-explain="score" tabindex="0"></div>
+        </div>
+        <div class="nw-piles">
+          <button id="forNorthwoodDeckBtn" type="button" data-for-northwood-explain="deck"></button>
+          <button id="forNorthwoodDiscardBtn" type="button" data-for-northwood-explain="discard"></button>
+          <button id="forNorthwoodScoreBtn" type="button" data-for-northwood-explain="score"></button>
+        </div>
+        <div id="forNorthwoodDialogueControls" class="nw-dialogue-controls"></div>
+        <div id="forNorthwoodAbilityChoice" class="nw-ability-choice hidden"></div>
+        <div id="forNorthwoodKnown" class="nw-known hidden" data-for-northwood-explain="known"></div>
+      </section>
+      <section class="nw-allies-section" aria-label="Allies">
+        <div class="nw-caption"><h3>Your allies</h3><span id="forNorthwoodAllyCount" data-for-northwood-explain="allies" tabindex="0"></span></div>
+        <div id="forNorthwoodAllies" class="nw-allies"></div>
+        <div id="forNorthwoodAllyConfirm" class="nw-local-confirm hidden"></div>
+      </section>
+      <section class="nw-hand-section" aria-label="Your hand">
+        <div class="nw-caption"><h3>Your hand <span id="forNorthwoodHandCount"></span></h3><span id="forNorthwoodHandHint" data-for-northwood-explain="hand" tabindex="0"></span></div>
+        <div id="forNorthwoodHand" class="nw-hand" data-for-northwood-explain="hand"></div>
+        <div id="forNorthwoodHandConfirm" class="nw-local-confirm hidden"></div>
+      </section>
+    </div>
+    <details class="nw-journal"><summary>Visit journal <span id="forNorthwoodHistoryCount"></span></summary><div id="forNorthwoodHistory"></div><ol id="forNorthwoodLog"></ol></details>
+  </div>
+  <dialog id="forNorthwoodPileDialog" class="nw-pile-dialog">
+    <div class="nw-dialog-head"><h3 id="forNorthwoodPileTitle">Pile</h3><button id="forNorthwoodPileCloseBtn" type="button">Close</button></div>
+    <p class="nw-muted">Top card first. Pile order cannot be changed.</p>
+    <div id="forNorthwoodPileCards" class="nw-pile-cards"></div>
+  </dialog>
+  <div id="forNorthwoodTooltip" class="nw-tooltip hidden" role="tooltip"></div>
+</template>

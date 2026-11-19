@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v154" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v155" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -219,10 +219,6 @@
   <template id="bohnanzaDiceHelpModal"></template>
 
   <template id="bohnanzaDiceExplainModal"></template>
-
-  <template id="bombBustersHelpModal"></template>
-
-  <template id="bombBustersExplainModal"></template>
 
   <template id="felixHelpModal"></template>
 
@@ -653,6 +649,7 @@
                     <option value="fang_niao">Square Bird</option>
                     <option value="bubble_shooter">Bubble Shooter · 泡泡龙</option>
                     <option value="factory_funner">Factory Funner · 工厂乐翻天 🤖</option>
+                    <option value="for_northwood">For Northwood! · 为了北境森林</option>
                   </select>
                 </div>
                 <div id="roomList" class="room-list"></div>
@@ -1230,6 +1227,7 @@
               <button id="factoryFunnerHelpBtn" type="button">Help</button>
               <button id="factoryFunnerExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="forNorthwoodHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="gaiaProjectHeaderActions" style="display: none;">
               <button id="gaiaProjectHelpBtn" type="button" aria-label="Open Help">? Help</button>
               <button id="gaiaProjectHintBtn" type="button" aria-label="Show available actions">Hint</button>
@@ -1767,6 +1765,7 @@
             <div id="projectLPanel" class="hidden"></div>
 
             <div id="factoryFunnerPanel" class="hidden"></div>
+            <div id="forNorthwoodPanel" class="hidden"></div>
 
             <div id="patchworkPanel" class="hidden"></div>
 
@@ -1822,10 +1821,10 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=275" defer></script>
+  <script src="/static/game_assets.js?v=282" defer></script>
   <template id="incanGoldGuide"></template>
-  <script src="/static/games/shared.js?v=app_v45" defer></script>
-  <script src="/static/games/shared_help.js?v=2" defer></script>
+  <script src="/static/games/shared.js?v=app_v46" defer></script>
+  <script src="/static/games/shared_help.js?v=3" defer></script>
   <script src="/static/games/shared_effects.js?v=1" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1864,7 +1863,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v69" defer></script>
-  <script src="/static/room.js?v=app_v107" defer></script>
+  <script src="/static/app.js?v=app_v70" defer></script>
+  <script src="/static/room.js?v=app_v108" defer></script>
 </body>
 </html>

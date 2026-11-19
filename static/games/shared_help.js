@@ -306,6 +306,7 @@
     let gesture = null;
 
     function onPointerDown(event) {
+      swallowNextClick = false;
       if (!active) return;
       if (isBypass(event.target)) return;
       if (!event.isPrimary || (event.button !== undefined && event.button !== 0)) return;
@@ -363,6 +364,7 @@
     }
 
     function onKeyDown(event) {
+      swallowNextClick = false;
       if (active && event.key === "Escape") {
         event.preventDefault();
         setActive(false);

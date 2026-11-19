@@ -1,0 +1,154 @@
+#forNorthwoodPanel {
+  --nw-ink: #183b31;
+  --nw-muted: #62756b;
+  --nw-green: #285e48;
+  --nw-gold: #af7927;
+  --nw-line: #cbd6c7;
+  color: var(--nw-ink);
+  min-width: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+.game-panel[data-game-theme="for_northwood"] > .panel-header { flex-wrap: nowrap; }
+.game-panel[data-game-theme="for_northwood"] .game-panel-title { flex: 1 1 auto; flex-wrap: nowrap; min-width: 0; }
+.game-panel[data-game-theme="for_northwood"] .game-panel-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-panel[data-game-theme="for_northwood"] #gameReconnectBtn { flex-shrink: 0; }
+.game-panel[data-game-theme="for_northwood"] #forNorthwoodHeaderActions { flex: 0 0 auto; flex-wrap: nowrap; }
+#forNorthwoodPanel *, .nw-pile-dialog * { box-sizing: border-box; }
+#forNorthwoodPanel button, #forNorthwoodPanel select, .nw-pile-dialog button { font: inherit; }
+#forNorthwoodPanel button { touch-action: manipulation; color: inherit; }
+#forNorthwoodPanel button:focus-visible, #forNorthwoodPanel [tabindex]:focus-visible { outline: 3px solid #bc8532; outline-offset: 2px; }
+#forNorthwoodPanel button:disabled { cursor: default; }
+#forNorthwoodPanel .nw-muted, #forNorthwoodPanel .nw-caption, .nw-pile-dialog .nw-muted { color: #62756b; }
+.nw-lobby { padding: 30px 10px; text-align: center; }
+.nw-lobby-art { font-size: 44px; letter-spacing: 8px; }
+.nw-lobby h3 { font-family: Georgia, serif; font-size: 30px; margin: 12px 0; }
+.nw-lobby p { font-size: 13px; }
+.nw-settings { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 20px; margin: 24px 0; }
+.nw-settings label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.nw-settings select { max-width: 100%; min-width: 0; padding: 8px; border: 1px solid #bacabd; border-radius: 7px; background: #fffdf7; color: #183b31; }
+.nw-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 0 12px; font-size: 12px; }
+.nw-stars { color: #8b5c15; font-weight: 700; }
+.nw-phase { margin-left: auto; font-size: 11px; color: #62756b; }
+.nw-caption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 7px; font-size: 11px; }
+.nw-caption h3 { font-size: 12px; margin: 0; font-weight: 600; letter-spacing: .02em; color: #375949; }
+.nw-fiefs { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 7px; }
+#forNorthwoodPanel .nw-fief { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 8px 4px 7px; border: 1px solid var(--nw-line); border-radius: 12px 12px 6px 6px; background: linear-gradient(165deg, #fffdf6, #ecf0df); position: relative; cursor: pointer; transition: border-color .15s, background .15s; }
+#forNorthwoodPanel .nw-fief:disabled { opacity: 1; }
+.nw-fief-top { width: 100%; display: flex; justify-content: space-between; gap: 2px; align-items: center; font-size: 11px; }
+.nw-fief-stars { color: #91651c; white-space: nowrap; font-size: 10px; }
+.nw-animal { display: block; font-size: 30px; line-height: 1.25; padding: 3px 0; }
+.nw-rank { font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.nw-fief-target { display: flex; align-items: baseline; gap: 3px; margin: 3px 0; }
+.nw-fief-target strong { font: 700 25px/1 Georgia, serif; }
+.nw-fief-target small { font-size: 9px; }
+.nw-fief-status { font-size: 9px; line-height: 1.4; }
+#forNorthwoodPanel .nw-fief.nw-current { border: 2px solid #346b52; padding: 7px 3px 6px; background: #e1ebd6; }
+#forNorthwoodPanel .nw-fief.nw-friendly { background: #dcebdc; border-color: #8ab192; }
+#forNorthwoodPanel .nw-fief.nw-lost { background: #eeeae4; color: #7c7972; border-style: dashed; }
+#forNorthwoodPanel .nw-fief.nw-spent .nw-animal { filter: grayscale(1); opacity: .6; }
+#forNorthwoodPanel .nw-selected, #forNorthwoodPanel .nw-fief.nw-selected { outline: 2px solid #af7927; outline-offset: 1px; background: #fff0c9; }
+.nw-play-area { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(210px, 1fr); gap: 16px 22px; margin-top: 16px; }
+.nw-dialogue { min-width: 0; }
+.nw-dialogue-cards { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 4px 0 10px; }
+.nw-card-position { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+.nw-caption-label { font-size: 10px; color: #62756b; text-align: center; }
+.nw-card { display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; width: 68px; height: 94px; padding: 7px 8px; border: 1px solid #ced4c8; border-radius: 7px; background: #fffdf8; box-shadow: 0 2px 2px #243e2510; position: relative; color: var(--card-color, #324c42); }
+#forNorthwoodPanel button.nw-card { color: var(--card-color, #324c42); cursor: pointer; }
+.nw-suit-claws { --card-color: #405275; --card-wash: #e7ecf5; }
+.nw-suit-flowers { --card-color: #a83b6b; --card-wash: #fae8ed; }
+.nw-suit-eyes { --card-color: #207c94; --card-wash: #e3f2f7; }
+.nw-suit-leaves { --card-color: #8b6719; --card-wash: #faf0d3; }
+.nw-card-value { font: 700 25px/1.05 Georgia, serif; text-align: left; }
+.nw-card-icon { display: block; align-self: center; font-size: 25px; line-height: 1.2; }
+.nw-card-suit { font-size: 8px; text-align: right; text-transform: uppercase; letter-spacing: .04em; }
+.nw-card.nw-back { justify-content: center; align-items: center; background: repeating-linear-gradient(45deg, #345d47, #345d47 5px, #3e6951 5px, #3e6951 7px); border: 3px double #d7dfbc; color: #e6ebd2; box-shadow: none; }
+.nw-card.nw-back span { font-size: 27px; }
+.nw-card.nw-empty { justify-content: center; align-items: center; border-style: dashed; background: transparent; box-shadow: none; color: #9eaf9c; }
+.nw-versus { font-size: 22px; color: #8c9b84; }
+.nw-target { min-width: 56px; display: flex; align-items: center; flex-direction: column; gap: 4px; }
+.nw-target strong { font: 700 30px/1.1 Georgia, serif; white-space: nowrap; }
+.nw-target span { font-size: 10px; color: #62756b; }
+.nw-message { font-size: 12px; min-height: 31px; line-height: 1.45; padding-bottom: 7px; overflow-wrap: anywhere; }
+.nw-message.nw-success { color: #20643d; font-weight: 600; }
+.nw-message.nw-failure { color: #92523d; }
+.nw-piles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+#forNorthwoodPanel .nw-piles button { padding: 7px 3px; background: #f2f4ea; border: 1px solid #d6decf; border-radius: 6px; font-size: 11px; }
+.nw-dialogue-controls { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+#forNorthwoodPanel .nw-primary { background: #2d634b; color: #fffdf1; border: 1px solid #285a43; border-radius: 6px; padding: 9px 16px; font-size: 12px; }
+#forNorthwoodPanel .nw-primary:disabled { opacity: .45; cursor: default; }
+.nw-allies-section { min-width: 0; }
+.nw-allies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+#forNorthwoodPanel .nw-ally { display: flex; flex-direction: column; gap: 3px; align-items: center; min-width: 0; border: 1px solid #ccd9c8; border-radius: 7px; padding: 7px 5px; background: #f1f4e8; }
+#forNorthwoodPanel .nw-ally:disabled { opacity: 1; }
+.nw-ally .nw-animal { font-size: 24px; padding: 0; }
+.nw-ally-name { font-size: 11px; line-height: 1.3; text-align: center; overflow-wrap: anywhere; }
+.nw-ally-state { font-size: 9px; color: #52755b; }
+#forNorthwoodPanel .nw-exhausted { background: #eceee7; border-style: dashed; }
+.nw-exhausted .nw-animal { filter: grayscale(1); opacity: .6; }
+.nw-exhausted .nw-ally-state { color: #7b8175; }
+.nw-hand-section { grid-column: 1 / -1; min-width: 0; }
+.nw-hand { display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 7px; padding: 3px 5px 3px 3px; margin: 0 -3px; max-height: 330px; overflow-y: auto; align-content: start; }
+#forNorthwoodPanel .nw-hand .nw-card { width: 100%; max-width: 86px; height: 102px; background: linear-gradient(150deg, #fffdf8 45%, var(--card-wash)); }
+#forNorthwoodPanel .nw-hand .nw-card:disabled { opacity: .48; cursor: default; }
+#forNorthwoodPanel .nw-hand .nw-card.nw-selected { opacity: 1; }
+.nw-card-order { position: absolute; top: 5px; right: 5px; padding: 2px 4px; background: #9b6b21; color: #fff; border-radius: 9px; font-size: 9px; line-height: 1.1; }
+.nw-card-order:empty { display: none; }
+.nw-local-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 9px; margin-top: 8px; border-radius: 6px; background: #e6eddb; font-size: 12px; }
+.nw-local-confirm p { margin: 0; flex: 1 1 160px; line-height: 1.4; }
+.nw-local-confirm button { flex-shrink: 0; }
+#forNorthwoodPanel .nw-cancel, #forNorthwoodPanel .nw-choice { border: 1px solid #bdcdb9; border-radius: 6px; padding: 8px 11px; background: #fffdf7; font-size: 12px; }
+.nw-ability-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
+.nw-ability-choice p { flex: 1 0 100%; margin: 0; line-height: 1.4; }
+.nw-known { padding: 8px 0 0; font-size: 11px; }
+.nw-known strong { font-weight: 500; }
+.nw-journal { margin-top: 18px; border-top: 1px solid #d8dfd1; padding: 10px 0 0; font-size: 11px; color: #62756b; }
+.nw-journal summary { cursor: pointer; }
+#forNorthwoodHistory { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 7px; margin: 9px 0; }
+.nw-history-entry { padding: 6px; background: #f0f3e9; border-radius: 4px; line-height: 1.5; }
+#forNorthwoodLog { max-height: 160px; overflow-y: auto; padding: 0 8px 0 24px; line-height: 1.8; }
+.nw-pile-dialog { width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 40px); border: 1px solid #b4c2ab; border-radius: 12px; background: #f9faf2; color: #183b31; padding: 16px; overflow-y: auto; }
+.nw-pile-dialog::backdrop { background: #102b2490; }
+.nw-dialog-head { display: flex; gap: 10px; justify-content: space-between; align-items: center; }
+.nw-dialog-head h3 { font-size: 16px; margin: 0; }
+.nw-pile-dialog .nw-muted { font-size: 11px; line-height: 1.5; }
+.nw-pile-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 8px; }
+.nw-pile-cards .nw-card { width: 100%; }
+.nw-pile-cards .nw-card:first-child { outline: 2px solid #9e792f; outline-offset: 1px; }
+.nw-tooltip { position: fixed; z-index: 10020; max-width: min(280px, calc(100vw - 20px)); padding: 9px 11px; background: #173e32; color: #fffdf1; border-radius: 7px; box-shadow: 0 4px 15px #0003; font-size: 12px; line-height: 1.5; pointer-events: none; }
+@media (max-width: 760px) {
+  .game-panel[data-game-theme="for_northwood"] .game-panel-title h2 { font-size: 15px; }
+  .game-panel[data-game-theme="for_northwood"] .game-panel-title { gap: 5px; }
+  .game-panel[data-game-theme="for_northwood"] > .panel-header { gap: 5px; }
+  .nw-fiefs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .nw-play-area { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+  .nw-dialogue { grid-row: 1; }
+  .nw-hand-section { grid-row: 2; }
+  .nw-allies-section { grid-row: 3; }
+  .nw-allies { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .nw-fief-top { font-size: 12px; }
+  #forNorthwoodPanel .nw-fief { padding-top: 5px; padding-bottom: 5px; }
+  #forNorthwoodPanel .nw-fief.nw-current { padding-top: 4px; padding-bottom: 4px; }
+  .nw-fief .nw-animal { font-size: 25px; padding: 1px 0; }
+  .nw-fief-target strong { font-size: 23px; }
+  .nw-fief-status { font-size: 9px; }
+  .nw-dialogue-cards { gap: 12px; padding-bottom: 8px; }
+  .nw-dialogue .nw-card { width: 58px; height: 76px; padding: 5px 6px; }
+  .nw-dialogue .nw-card-value { font-size: 22px; }
+  .nw-dialogue .nw-card-icon { font-size: 22px; }
+  .nw-hand { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  #forNorthwoodPanel .nw-hand .nw-card { max-width: none; height: 81px; padding: 5px 7px; }
+  .nw-hand .nw-card-value { font-size: 23px; }
+  .nw-hand .nw-card-icon { font-size: 22px; }
+  .nw-status { padding: 5px 0 10px; gap: 5px 10px; }
+  .nw-phase { font-size: 10px; }
+  .nw-caption { gap: 3px 6px; }
+  .nw-caption h3 { font-size: 11px; }
+  .nw-caption > span { font-size: 10px; }
+  .nw-message { font-size: 11px; min-height: 24px; }
+  .nw-ally-name { font-size: 10px; }
+  .nw-lobby { padding: 24px 2px; }
+  .nw-settings { flex-direction: column; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #forNorthwoodPanel .nw-fief { transition: none; }
+}
