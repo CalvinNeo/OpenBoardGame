@@ -287,6 +287,10 @@ function renderGameState(data) {
     if (typeof renderNightNinjaGameState === "function") renderNightNinjaGameState(data);
     return;
   }
+  if (gameType === "werewolf") {
+    if (typeof renderWerewolfGameState === "function") renderWerewolfGameState(data);
+    return;
+  }
   if (gameType === "mall_of_horror") {
     if (typeof renderMallOfHorrorGameState === "function") renderMallOfHorrorGameState(data);
     return;

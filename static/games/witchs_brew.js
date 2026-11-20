@@ -245,6 +245,167 @@ const WITCHS_BREW_EXPLAIN = {
   log: { zh: "本局已经结束的小轮记录，方便回顾谁在什么时候抢走了什么。", en: "A record of the rounds already played, useful for reviewing who stole what and when." }
 };
 
+const WITCHS_BREW_ROLE_EFFECTS = {
+  wolf_keeper: {
+    zh: ["狼饲养员", "免费获得 3 个狼血(🔴)。", "免费获得 1 个狼血(🔴)。"],
+    en: ["Wolf Keeper", "Gain 3 wolf blood (🔴) for free.", "Gain 1 wolf blood (🔴) for free."]
+  },
+  snake_hunter: {
+    zh: ["捕蛇人", "免费获得 3 个蛇毒(⚪)。", "免费获得 1 个蛇毒(⚪)。"],
+    en: ["Snake Hunter", "Gain 3 snake venom (⚪) for free.", "Gain 1 snake venom (⚪) for free."]
+  },
+  herb_collector: {
+    zh: ["药草采集者", "免费获得 3 个草药(🟢)。", "免费获得 1 个草药(🟢)。"],
+    en: ["Herb Collector", "Gain 3 herbs (🟢) for free.", "Gain 1 herb (🟢) for free."]
+  },
+  alchemist: {
+    zh: ["炼金术士", "支付任意 1 个材料，获得 5 个金块(🟡)。", "支付任意 1 个材料，获得 2 个金块(🟡)。", "材料只能是狼血(🔴)、草药(🟢)或蛇毒(⚪)，不是每种各付 1 个。没有材料就不能兑换。"],
+    en: ["Alchemist", "Pay any 1 ingredient to gain 5 gold (🟡).", "Pay any 1 ingredient to gain 2 gold (🟡).", "Choose just one wolf blood (🔴), herb (🟢) or snake venom (⚪), not one of each. You need an ingredient to trade."]
+  },
+  fortune_teller: {
+    zh: ["占卜师", "支付 1 个金块(🟡)，获得 2 个药水瓶(🧴)。", "支付 1 个金块(🟡)，获得 1 个药水瓶(🧴)。", "每个药水瓶(🧴)在终局计 1 分，没有金块就不能兑换。"],
+    en: ["Fortune Teller", "Pay 1 gold (🟡) to gain 2 vials (🧴).", "Pay 1 gold (🟡) to gain 1 vial (🧴).", "Each vial (🧴) is worth 1 point at game end. You need gold to trade."]
+  },
+  assistant: {
+    zh: ["助手", "支付 1 个金块(🟡)，获得共 3 个任意材料。", "支付 1 个金块(🟡)，获得 1 个任意材料。", "可选狼血(🔴)、草药(🟢)、蛇毒(⚪)，颜色可混搭，也可全选同色。完整行动是总共 3 个，不是每种各 3 个。"],
+    en: ["Assistant", "Pay 1 gold (🟡) to gain any 3 ingredients in total.", "Pay 1 gold (🟡) to gain any 1 ingredient.", "Choose wolf blood (🔴), herbs (🟢) or snake venom (⚪) in any mix, including all the same color. The full action gives 3 total, not 3 of each."]
+  },
+  wizard: {
+    zh: ["巫师", "支付铜锅堆顶所示的材料，获得该药锅及其分数。", "支付铜锅堆顶所示的材料，再额外支付 2 个金块(🟡)，获得该药锅。不是获得 2 个金块。", "两种方式都可额外付任意 1 个材料换 1 个药水瓶(🧴)，最多一次。恩惠先结算，完整行动轮到时以当时堆顶为准。"],
+    en: ["Wizard", "Pay the top copper cauldron's printed ingredients to take it and its points.", "Pay the top copper cauldron's ingredients PLUS 2 gold (🟡) to take it. This costs gold, not a gold reward.", "Either action may pay 1 extra ingredient for 1 vial (🧴), at most once. Favors resolve first, so the full action uses whichever card is on top when it resolves."]
+  },
+  witch: {
+    zh: ["女巫", "支付铁锅堆顶所示的材料，获得该药锅及其分数。", "支付铁锅堆顶所示的材料，再额外支付 2 个金块(🟡)，获得该药锅。不是获得 2 个金块。", "两种方式都可额外付任意 1 个材料换 1 个药水瓶(🧴)，最多一次。恩惠先结算，完整行动轮到时以当时堆顶为准。"],
+    en: ["Witch", "Pay the top iron cauldron's printed ingredients to take it and its points.", "Pay the top iron cauldron's ingredients PLUS 2 gold (🟡) to take it. This costs gold, not a gold reward.", "Either action may pay 1 extra ingredient for 1 vial (🧴), at most once. Favors resolve first, so the full action uses whichever card is on top when it resolves."]
+  },
+  druid: {
+    zh: ["德鲁伊", "支付银锅堆顶所示的材料，获得该药锅及其分数。", "支付银锅堆顶所示的材料，再额外支付 2 个金块(🟡)，获得该药锅。不是获得 2 个金块。", "两种方式都可额外付任意 1 个材料换 1 个药水瓶(🧴)，最多一次。恩惠先结算，完整行动轮到时以当时堆顶为准。"],
+    en: ["Druid", "Pay the top silver cauldron's printed ingredients to take it and its points.", "Pay the top silver cauldron's ingredients PLUS 2 gold (🟡) to take it. This costs gold, not a gold reward.", "Either action may pay 1 extra ingredient for 1 vial (🧴), at most once. Favors resolve first, so the full action uses whichever card is on top when it resolves."]
+  },
+  warlock: {
+    zh: ["术士", "施放当前法术书(📖)堆顶的法术，按该法术支付费用并获得效果。", "免费获得 1 个金块(🟡)，不施放法术。", "法术只在大轮结束时轮转，不会在施放后立刻换牌。法术获得的药锅不能额外支付材料换药水瓶(🧴)。"],
+    en: ["Warlock", "Cast the current top spell (📖), paying its cost and receiving its effect.", "Gain 1 gold (🟡) for free without casting a spell.", "The spell rotates only at the end of a set, not after casting. Cauldrons gained by spells cannot trade an extra ingredient for a vial (🧴)."]
+  },
+  cutpurse: {
+    zh: ["扒手", "向每位其他玩家征收其金块(🟡)数量的三分之一，向下取整，全部放到金块药橱上。你可自愿追加自己的金块，达到门槛就获得药橱牌。", "本小轮被扒手征收时少付 1 个金块(🟡)，最低付 0 个，不是获得 1 个金块。", "例如对方有 8 个金块，通常交 2 个，拿了恩惠则交 1 个。征收物不进入你的钱包，未达门槛的积累留给后续行动，获得药橱时清空积累，超额不保留。"],
+    en: ["Cutpurse", "Tax each other player one third of their gold (🟡), rounded down, onto the gold shelf. You may add your own gold. Reach the threshold to take the shelf card.", "Pay 1 less gold (🟡) to this round's Cutpurse, to a minimum of 0. This does not give you gold.", "For example, 8 gold normally costs 2 gold in tax, or 1 with the favor. Tax goes onto the shelf, not into your wallet. Below-threshold payments stay for later actions. Taking the card clears all payments, including any excess."]
+  },
+  begging_monk: {
+    zh: ["托钵僧", "向每位其他玩家征收其材料总数的四分之一，向下取整。对方自行选择交出哪些颜色，全部放到材料药橱上。你可追加自己的材料，达到门槛就获得药橱牌。", "本小轮被托钵僧征收时少付 1 个材料，最低付 0 个，不是获得 1 个材料。", "材料是狼血(🔴)、草药(🟢)、蛇毒(⚪)。例如对方共有 9 个材料，通常交 2 个，拿了恩惠则交 1 个。药橱只看总数，不分颜色，未达门槛的积累保留，拿牌时全部清空。"],
+    en: ["Begging Monk", "Tax each other player one quarter of their total ingredients, rounded down. They choose the colors lost, which go onto the ingredient shelf. You may add your own ingredients. Reach the threshold to take the card.", "Pay 1 less ingredient to this round's Monk, to a minimum of 0. This does not give you an ingredient.", "Ingredients are wolf blood (🔴), herbs (🟢) and snake venom (⚪). For example, 9 total ingredients normally costs 2 in tax, or 1 with the favor. The shelf counts all colors together. Payments stay below the threshold and are all cleared when the card is taken."]
+  }
+};
+
+const WITCHS_BREW_SPELL_EFFECTS = {
+  copia: {
+    zh: "免费获得共 3 个材料，可从狼血(🔴)、草药(🟢)、蛇毒(⚪)中任意组合，也可以全选同色。",
+    en: "Gain 3 ingredients for free in any mix of wolf blood (🔴), herbs (🟢) and snake venom (⚪), including all the same color."
+  },
+  optio: {
+    zh: "选择铜锅、铁锅、银锅任意一堆的堆顶，支付牌面所示颜色及数量的材料，获得该牌及其分数。",
+    en: "Choose the top copper, iron or silver cauldron. Pay its printed ingredient colors and quantities to take the card and its points."
+  },
+  herba: { zh: "支付 1 个草药(🟢)，获得 2 个药水瓶(🧴)，终局共值 2 分。", en: "Pay 1 herb (🟢) to gain 2 vials (🧴), worth 2 points at game end." },
+  lupus: { zh: "支付 1 个狼血(🔴)，获得 2 个药水瓶(🧴)，终局共值 2 分。", en: "Pay 1 wolf blood (🔴) to gain 2 vials (🧴), worth 2 points at game end." },
+  serpens: { zh: "支付 1 个蛇毒(⚪)，获得 2 个药水瓶(🧴)，终局共值 2 分。", en: "Pay 1 snake venom (⚪) to gain 2 vials (🧴), worth 2 points at game end." },
+  magus: { zh: "获得铜锅堆顶，支付的材料总数等于牌面总成本，但狼血(🔴)、草药(🟢)、蛇毒(⚪)的颜色可任意搭配，不必匹配牌面。", en: "Take the top copper cauldron by paying its total ingredient count in any mix of wolf blood (🔴), herbs (🟢) and snake venom (⚪). Ignore the printed colors." },
+  sanatio: { zh: "获得银锅堆顶，支付的材料总数等于牌面总成本，但狼血(🔴)、草药(🟢)、蛇毒(⚪)的颜色可任意搭配，不必匹配牌面。", en: "Take the top silver cauldron by paying its total ingredient count in any mix of wolf blood (🔴), herbs (🟢) and snake venom (⚪). Ignore the printed colors." },
+  strix: { zh: "获得铁锅堆顶，支付的材料总数等于牌面总成本，但狼血(🔴)、草药(🟢)、蛇毒(⚪)的颜色可任意搭配，不必匹配牌面。", en: "Take the top iron cauldron by paying its total ingredient count in any mix of wolf blood (🔴), herbs (🟢) and snake venom (⚪). Ignore the printed colors." }
+};
+
+function witchsBrewDescribe(node, key, description) {
+  WITCHS_BREW_EXPLAIN[key] = description;
+  node.dataset.wbExplain = key;
+}
+
+function witchsBrewIngredientNames(cost, language) {
+  const names = language === "zh"
+    ? { red: "狼血(🔴)", green: "草药(🟢)", white: "蛇毒(⚪)" }
+    : { red: "wolf blood (🔴)", green: "herbs (🟢)", white: "snake venom (⚪)" };
+  return WITCHS_BREW_INGREDIENTS.filter((key) => witchsBrewAmount(cost?.[key]))
+    .map((key) => names[key] + " × " + witchsBrewAmount(cost[key])).join(" + ") || (language === "zh" ? "无费用" : "free");
+}
+
+function witchsBrewCauldronDescription(view, stack, card, language, top = true) {
+  const chinese = language === "zh";
+  const label = { copper: "铜锅", iron: "铁锅", silver: "银锅" }[stack.key];
+  const role = witchsBrewRoleInfo(view, stack.role);
+  if (!card) return chinese ? label + "牌堆已空，不能再获得药锅。" : stack.label + " stack is empty. No cauldron can be taken.";
+  return chinese
+    ? label + "：支付 " + witchsBrewIngredientNames(card.cost, language) + "，获得此牌，终局计 " + card.vp + " 分。"
+      + (card.raven ? "带乌鸦(🐦‍⬛)，所有玩家已获乌鸦牌共达 4 张时，在大轮结束触发终局。" : "此牌不带乌鸦(🐦‍⬛)。")
+      + "\n获取方式：" + WITCHS_BREW_ROLE_EFFECTS[stack.role]?.zh[0] + "完整行动支付材料，恩惠还要额外支付 2 个金块(🟡)，不是获得金块。两种方式都可再付任意 1 个材料换 1 个药水瓶(🧴)，最多一次。"
+      + (top ? "\n这是当前堆顶。恩惠先结算，完整行动轮到时以当时堆顶为准。" : "\n只有成为堆顶后才能获得，不能越过前面的牌购买。")
+    : stack.label + ": pay " + witchsBrewIngredientNames(card.cost, language) + " to take this card, worth " + card.vp + " points at game end. "
+      + (card.raven ? "It carries a raven (🐦‍⬛). Four collected raven cards across all players trigger game end at the close of a set." : "It has no raven (🐦‍⬛).")
+      + "\nHow to obtain: " + role.name + " pays the ingredients for the full action. The favor costs an EXTRA 2 gold (🟡), not a gold reward. Either may pay 1 more ingredient for 1 vial (🧴), at most once."
+      + (top ? "\nThis is the current top card. Favors resolve first, so the full action uses whichever card is on top when it resolves." : "\nThis card must reach the top before it can be taken. You cannot buy past earlier cards.");
+}
+
+function witchsBrewShelfDescription(view, shelf, card, language, top = true) {
+  const chinese = language === "zh";
+  const gold = shelf.unit === "gold";
+  const label = chinese ? (gold ? "金块药橱" : "材料药橱") : shelf.label;
+  if (!card) return label + (chinese ? "牌堆已空，没有药橱牌可获得。" : " stack is empty. No shelf card can be taken.");
+  const stored = view.shelf_stored?.[shelf.key] || {};
+  const total = gold ? witchsBrewAmount(stored.gold) : witchsBrewCostTotal(stored);
+  const effects = WITCHS_BREW_ROLE_EFFECTS[shelf.role][language];
+  return (chinese
+    ? label + "：累计 " + card.threshold + (gold ? " 个金块(🟡)" : " 个材料，狼血(🔴)、草药(🟢)、蛇毒(⚪)颜色不限") + "即可获得，终局计 " + card.vp + " 分。"
+    : label + ": accumulate " + card.threshold + (gold ? " gold (🟡)" : " ingredients of any colors: wolf blood (🔴), herbs (🟢), snake venom (⚪)") + " to take it, worth " + card.vp + " points at game end.")
+    + (top ? (chinese ? "\n当前已存 " + total + "，还差 " + Math.max(0, card.threshold - total) + "。" : "\nStored: " + total + ". Still needed: " + Math.max(0, card.threshold - total) + ".") : (chinese ? "\n只有轮到堆顶才能获得，当前积累不属于这张牌。" : "\nOnly obtainable when it reaches the top. Current payments do not belong to this card."))
+    + "\n" + effects[0] + (chinese ? "完整行动：" : " full action: ") + effects[1]
+    + "\n" + (chinese ? "恩惠：" : "Favor: ") + effects[2]
+    + (chinese ? "\n未达门槛的积累会保留。拿牌时积累全部清空，超额不保留，不能换药水瓶(🧴)。" : "\nPayments stay below the threshold. Taking the card clears all payments, with no excess carried over and no bonus vial (🧴).")
+    + (card.raven ? (chinese ? "此牌带乌鸦(🐦‍⬛)，计入大轮结束时的 4 张终局门槛。" : " This card carries a raven (🐦‍⬛), counting toward the four-card end-of-set trigger.") : "");
+}
+
+function witchsBrewSpellDescription(view, spell, language) {
+  const info = witchsBrewSpellInfo(view, spell);
+  const chinese = language === "zh";
+  if (!info) return chinese ? "法术书已空，没有可施放的法术。" : "The spell book is empty. No spell can be cast.";
+  let text = info.name + " (📖)\n" + (WITCHS_BREW_SPELL_EFFECTS[spell]?.[language] || info.text);
+  const flexible = { magus: "copper", sanatio: "silver", strix: "iron" }[spell];
+  const stacks = flexible ? WITCHS_BREW_STACKS.filter((stack) => stack.key === flexible) : spell === "optio" ? WITCHS_BREW_STACKS : [];
+  stacks.forEach((stack) => {
+    const card = witchsBrewTopCard(view.cauldrons?.[stack.key]);
+    const label = chinese ? { copper: "铜锅", iron: "铁锅", silver: "银锅" }[stack.key] : stack.label;
+    text += "\n" + label + (card
+      ? (chinese ? "当前堆顶：" : " current top: ") + (flexible ? (chinese ? "任意材料 × " : "any ingredients × ") + witchsBrewCostTotal(card.cost) : witchsBrewIngredientNames(card.cost, language)) + " → " + card.vp + (chinese ? " 分" : " VP")
+      : (chinese ? "牌堆已空。" : " stack is empty."));
+  });
+  return text + (chinese
+    ? "\n仅术士(📖)的完整行动可以施放。支付不起可放弃。法术获得药锅时不能额外付材料换药水瓶(🧴)。法术书只在大轮结束时把堆顶移到底部。"
+    : "\nOnly the Warlock (📖) full action casts this spell. You may decline if you cannot pay. Spell cauldrons cannot trade an extra ingredient for a vial (🧴). The top spell moves to the bottom only at the end of a set.");
+}
+
+function witchsBrewDescribeRole(node, view, role, disabled = false) {
+  const stack = WITCHS_BREW_STACKS.find((entry) => entry.role === role);
+  const description = {};
+  ["zh", "en"].forEach((language) => {
+    const chinese = language === "zh";
+    const info = witchsBrewRoleInfo(view, role);
+    const effects = WITCHS_BREW_ROLE_EFFECTS[role]?.[language];
+    let text = (effects?.[0] || info.name) + " (" + info.emoji + ")"
+      + "\n" + (chinese ? "完整行动 (F)：" : "Full action (F): ") + (effects?.[1] || info.full)
+      + "\n" + (chinese ? "恩惠 (V)：" : "Favor (V): ") + (effects?.[2] || info.favor)
+      + (effects?.[3] ? "\n" + effects[3] : "");
+    if (stack) {
+      const card = witchsBrewTopCard(view.cauldrons?.[stack.key]);
+      text += "\n" + (chinese ? "当前堆顶：" : "Current top: ") + (card
+        ? witchsBrewIngredientNames(card.cost, language) + " → " + card.vp + (chinese ? " 分" : " VP") + (card.raven ? " " + WITCHS_BREW_RAVEN : "")
+        : (chinese ? "牌堆已空，不能获得药锅。" : "the stack is empty. No cauldron can be taken."));
+    }
+    if (role === "warlock") text += "\n\n" + witchsBrewSpellDescription(view, view.spell, language);
+    if (disabled) text += "\n" + WITCHS_BREW_EXPLAIN.role_disabled[language];
+    text += chinese
+      ? "\n争夺规则：只有最后的宣称者执行完整行动，被抢走就无收益。恩惠不会被抢走，并先于完整行动结算。行动可放弃，但不能将赢得的完整行动改为恩惠。"
+      : "\nContest: only the final claimant performs the full action. An outclaimed player gets nothing. Favors cannot be stolen and resolve before the full action. You may decline an action, but cannot switch a won full action to a favor.";
+    description[language] = text;
+  });
+  witchsBrewDescribe(node, "role_" + role + (disabled ? "_disabled" : ""), description);
+}
+
 function initWitchsBrewHelpExplain() {
   if (witchsBrewHelpWidget || typeof window.obgCreateHelp !== "function") return;
   witchsBrewHelpWidget = window.obgCreateHelp(WITCHS_BREW_HELP_CONFIG);
@@ -597,7 +758,7 @@ function renderWitchsBrewNotice(view) {
 function witchsBrewStageRoleCard(view, role, strength) {
   const info = witchsBrewRoleInfo(view, role);
   const card = witchsBrewElement("div", "wb-stage-role kind-" + (WITCHS_BREW_ROLE_KIND[role] || "spell"));
-  card.dataset.wbExplain = "role_card";
+  witchsBrewDescribeRole(card, view, role);
   const emoji = witchsBrewElement("span", "wb-stage-emoji", info.emoji || "❔");
   const body = witchsBrewElement("div", "wb-stage-body");
   const title = witchsBrewElement("div", "wb-stage-name");
@@ -907,7 +1068,7 @@ function witchsBrewRoleCard(view, role, options = {}) {
   const short = WITCHS_BREW_ROLE_SHORT[role] || { full: info.full, favor: info.favor };
   const card = witchsBrewElement("button", "wb-role kind-" + (WITCHS_BREW_ROLE_KIND[role] || "spell"));
   card.type = "button";
-  card.dataset.wbExplain = options.disabled ? "role_disabled" : "role_card";
+  witchsBrewDescribeRole(card, view, role, options.disabled);
   card.dataset.wbTip = info.name + ". Full action: " + info.full + ". Favor: " + info.favor + ".";
   card.appendChild(witchsBrewElement("span", "wb-role-emoji", options.disabled ? "🚫" : info.emoji || "❔"));
   card.appendChild(witchsBrewElement("span", "wb-role-name", info.name || role));
@@ -1097,7 +1258,10 @@ function renderWitchsBrewPublic(view) {
     const cards = (view.cauldrons || {})[stack.key] || [];
     const card = witchsBrewTopCard(cards);
     const node = witchsBrewElement("div", "wb-card wb-cauldron stack-" + stack.key);
-    node.dataset.wbExplain = "cauldron";
+    witchsBrewDescribe(node, "cauldron_" + stack.key, {
+      zh: witchsBrewCauldronDescription(view, stack, card, "zh"),
+      en: witchsBrewCauldronDescription(view, stack, card, "en")
+    });
     const head = witchsBrewElement("div", "wb-card-head");
     head.append(witchsBrewElement("span", "wb-card-icon", stack.icon), witchsBrewElement("strong", null, stack.label));
     node.appendChild(head);
@@ -1122,7 +1286,10 @@ function renderWitchsBrewPublic(view) {
       ? witchsBrewAmount(stored.gold)
       : WITCHS_BREW_INGREDIENTS.reduce((sum, key) => sum + witchsBrewAmount(stored[key]), 0);
     const node = witchsBrewElement("div", "wb-card wb-shelf shelf-" + shelf.key);
-    node.dataset.wbExplain = "shelf";
+    witchsBrewDescribe(node, "shelf_" + shelf.key, {
+      zh: witchsBrewShelfDescription(view, shelf, card, "zh"),
+      en: witchsBrewShelfDescription(view, shelf, card, "en")
+    });
     const head = witchsBrewElement("div", "wb-card-head");
     head.append(witchsBrewElement("span", "wb-card-icon", shelf.icon), witchsBrewElement("strong", null, shelf.label));
     node.appendChild(head);
@@ -1157,7 +1324,10 @@ function renderWitchsBrewSpell(view) {
   witchsBrewSpell.innerHTML = "";
   const info = witchsBrewSpellInfo(view, view.spell);
   const node = witchsBrewElement("div", "wb-spell-card");
-  node.dataset.wbExplain = "spell_card";
+  witchsBrewDescribe(node, "spell_" + (view.spell || "empty"), {
+    zh: witchsBrewSpellDescription(view, view.spell, "zh"),
+    en: witchsBrewSpellDescription(view, view.spell, "en")
+  });
   node.append(
     witchsBrewElement("span", "wb-card-icon", "📖"),
     witchsBrewElement("strong", null, info ? info.name : "No spell"),
@@ -1214,6 +1384,14 @@ function renderWitchsBrewPlayers(view) {
       const row = witchsBrewElement("div", "wb-player-cards");
       won.forEach((card) => {
         const chip = witchsBrewElement("span", "wb-won", card.vp + (card.raven ? WITCHS_BREW_RAVEN : ""));
+        witchsBrewDescribe(chip, "won_" + card.id, {
+          zh: "已获得的药水牌，终局计 " + card.vp + " 分。" + (card.raven
+            ? "带乌鸦(🐦‍⬛)，所有玩家已获乌鸦牌共达 4 张时，在大轮结束触发终局。"
+            : "不带乌鸦(🐦‍⬛)，不计入 4 张终局门槛。"),
+          en: "A collected potion card worth " + card.vp + " points at game end. " + (card.raven
+            ? "It carries a raven (🐦‍⬛). Four collected raven cards across all players trigger game end at the close of a set."
+            : "It has no raven (🐦‍⬛) and does not count toward the four-card trigger.")
+        });
         chip.dataset.wbTip = card.vp + " points" + (card.raven ? " with a raven" : "");
         row.appendChild(chip);
       });
@@ -1235,6 +1413,10 @@ function renderWitchsBrewReference(view) {
     (view.spell_deck || []).forEach((spell, index) => {
       const info = witchsBrewSpellInfo(view, spell);
       const item = witchsBrewElement("li", index === 0 ? "is-current" : null);
+      witchsBrewDescribe(item, "spell_" + spell, {
+        zh: witchsBrewSpellDescription(view, spell, "zh"),
+        en: witchsBrewSpellDescription(view, spell, "en")
+      });
       item.append(
         witchsBrewElement("strong", null, info ? info.name : spell),
         witchsBrewElement("span", null, info ? info.text : "")
@@ -1242,12 +1424,16 @@ function renderWitchsBrewReference(view) {
       witchsBrewSpellList.appendChild(item);
     });
   }
-  const stackBlock = (host, title, entries, describe) => {
+  const stackBlock = (host, title, entries, describe, explain) => {
     const block = witchsBrewElement("div", "wb-stack");
     block.appendChild(witchsBrewElement("strong", null, title));
     const list = witchsBrewElement("ol", "wb-stack-list");
     entries.forEach((card, index) => {
       const item = witchsBrewElement("li", index === 0 ? "is-top" : null);
+      witchsBrewDescribe(item, "reference_" + card.id, {
+        zh: explain(card, "zh", index === 0),
+        en: explain(card, "en", index === 0)
+      });
       const parts = describe(card);
       item.append(witchsBrewElement("span", null, parts[0]), witchsBrewElement("span", null, parts[1]));
       list.appendChild(item);
@@ -1259,14 +1445,16 @@ function renderWitchsBrewReference(view) {
     witchsBrewStackList.innerHTML = "";
     WITCHS_BREW_STACKS.forEach((stack) => {
       stackBlock(witchsBrewStackList, stack.icon + " " + stack.label, (view.cauldrons || {})[stack.key] || [],
-        (card) => [witchsBrewCostText(card.cost), (card.vp + " VP " + (card.raven ? WITCHS_BREW_RAVEN : "")).trim()]);
+        (card) => [witchsBrewCostText(card.cost), (card.vp + " VP " + (card.raven ? WITCHS_BREW_RAVEN : "")).trim()],
+        (card, language, top) => witchsBrewCauldronDescription(view, stack, card, language, top));
     });
   }
   if (witchsBrewShelfList) {
     witchsBrewShelfList.innerHTML = "";
     WITCHS_BREW_SHELVES.forEach((shelf) => {
       stackBlock(witchsBrewShelfList, shelf.icon + " " + shelf.label, (view.shelves || {})[shelf.key] || [],
-        (card) => ["need " + card.threshold, (card.vp + " VP " + (card.raven ? WITCHS_BREW_RAVEN : "")).trim()]);
+        (card) => ["need " + card.threshold, (card.vp + " VP " + (card.raven ? WITCHS_BREW_RAVEN : "")).trim()],
+        (card, language, top) => witchsBrewShelfDescription(view, shelf, card, language, top));
     });
   }
   if (witchsBrewRoleList) {
@@ -1274,6 +1462,7 @@ function renderWitchsBrewReference(view) {
     WITCHS_BREW_ROLE_ORDER.forEach((role) => {
       const info = witchsBrewRoleInfo(view, role);
       const row = witchsBrewElement("div", "wb-role-row kind-" + (WITCHS_BREW_ROLE_KIND[role] || "spell"));
+      witchsBrewDescribeRole(row, view, role, (view.disabled_roles || []).includes(role));
       row.append(
         witchsBrewElement("span", "wb-role-row-icon", info.emoji || "❔"),
         witchsBrewElement("strong", null, info.name || role),

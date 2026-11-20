@@ -677,6 +677,18 @@ cards_taken
   disabled 的角色牌也能查看解释。
 - 图标说明走 data-wb-tip，桌面端悬停显示，手机端点击显示并在 3 秒后消失。
 
+### 2026-11-20：逐牌 Explain 优化与验收
+
+- 原来的手牌、舞台、公共牌使用同一段泛化解释，只说明区域用途，不说明具体牌效。现在按角色、法术、药锅及药橱分别注册双语解释，Reference 中的每张牌也可点选查看。
+- 12 张角色解释列出完整行动 (F)、恩惠 (V)、支付与收益及争夺规则。明确药锅恩惠是额外支付 2 金块而非获得金块，任意材料是总数而非每色数量，扒手与托钵僧的恩惠仅减免征收，并配有向下取整的例子。
+- 术士解释直接附上当前法术。8 张法术逐张说明费用、效果、轮转时机及不能额外换瓶的限制。药锅角色与相关法术同步显示当前堆顶成本、分数或空堆状态，药橱显示已存数量和剩余需求，已获牌显示分数及乌鸦意义。
+- 禁用角色保留完整牌效并追加禁用原因。继续复用共享 Explain 的手势拦截、disabled 命中和 Escape 退出，不增加牌边信息按钮或主板长规则。只对本游戏 Explain 保留分段换行，不修改共享组件或游戏规则。
+- 修改文件：`static/games/witchs_brew.js`、`static/games/witchs_brew.css`、`static/game_assets.js`、`static/index.html`、`tests/witchs_brew_explain.browser.cjs` 和本文。脚本及样式清单版本同步递增，首页更新清单版本，保留其他本地改动。
+- 自动检查：`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names` 共 14 项通过，游戏脚本与浏览器测试的 `node --check`、`node scripts/smoke_load.cjs witchs_brew`、`git diff --check` 通过。
+- 浏览器验收：新增 `tests/witchs_brew_explain.browser.cjs`，无需运行服务，使用真实模板、样式、共享组件和服务端公开视图。覆盖全部双语角色、8 张法术、5 个公共牌堆、Reference、舞台、已获牌、动态成本、空堆、禁用牌触摸、查看后无误选及 Escape。320、390、1024、1440px 各检查中英三种较长说明，共 24 组，无页面或弹窗横向溢出，关闭按钮可见。
+- 另在真实服务器页面验证创建房间、加入两名 Bot、开始游戏、按需加载、刷新重连，以及四档宽度的鼠标 Explain 不误选，Help/Reconnect 保持同行。已人工查看手机与桌面截图，符合本次改动涉及的 `DEV_GUIDE.md` 布局和交互要求。
+- 未覆盖：实体 iOS/Windows 设备及整局玩法回归。Chrome 触摸仿真不替代实体设备验证，本次不涉及规则或后端变更，未运行游戏逻辑全套测试。
+
 ## 机器人策略设计
 
 实现位于 `game/witchs_brew_ai.py`，`WitchsBrewGame.bot_move` 只负责取公开视图再交给

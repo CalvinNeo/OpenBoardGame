@@ -118,6 +118,7 @@ from game.mushroom_picking import MushroomPickingGame
 from game.find_diff import FindDiffGame
 from game.factory_funner import FactoryFunnerGame
 from game.for_northwood import ForNorthwoodGame
+from game.werewolf import WerewolfGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -239,6 +240,7 @@ __all__ = [
     "FindDiffGame",
     "FactoryFunnerGame",
     "ForNorthwoodGame",
+    "WerewolfGame",
     "GameDefinition",
     "get_game",
     "list_games",

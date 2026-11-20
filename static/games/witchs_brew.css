@@ -1,6 +1,11 @@
 /* Loaded into the matching style.css group by loadGameStyleFragments. */
 @media all, obg-game-witchs_brew-1 {
 
+body:has(#witchsBrewPanel:not(.hidden)) .obg-explain-dialog .obg-explain-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .witchs-brew-panel {
   --wb-ink: #2b2440;
   --wb-muted: #6b6480;

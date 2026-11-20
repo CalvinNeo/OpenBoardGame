@@ -186,6 +186,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "werewolf"):
+        raise HTTPException(status_code=403, detail="This Werewolf game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "for_northwood"):
         raise HTTPException(status_code=403, detail="This For Northwood! game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "colt_express"):
@@ -752,7 +754,7 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
                 filter_ark_nova_events(events or [], player.player_id)
                 if room.game_type == "ark_nova" else
                 [event for event in (events or []) if event.get("type") != "bot:action"]
-                if room.game_type == "deception" else events or []
+                if room.game_type in ("deception", "werewolf") else events or []
             ),
             "bot_status": bot_status,
         }
@@ -761,7 +763,7 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
 
 def _bot_status_payload(room: Room) -> Dict:
     # A named bot thinking during secret crime selection would reveal the murderer.
-    if room.game_type == "deception":
+    if room.game_type in ("deception", "werewolf"):
         return {"running": False, "player_id": None, "started_at_ms": None}
     bot_status = {
         "running": bool(room.bot_running and room.bot_player_id),
@@ -794,7 +796,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": action.get("type")}
     if game_type == "compress":
         return {"type": action.get("type")}
-    if game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind"):
+    if game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "werewolf"):
         return {"type": action.get("type")}
     if game_type in ("semantic_guess", "word_sync", "dare_words"):
         return {"type": action.get("type")}
@@ -1944,6 +1946,8 @@ async def on_room_reconnect(sid, data):
         return
     room = _get_room(room_id)
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "werewolf")
+    if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "colt_express")
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "dnd_starter_set")
@@ -2543,6 +2547,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_private_save(source_room_id, "werewolf")
         or _has_unfinished_private_save(source_room_id, "for_northwood")
         or _has_unfinished_private_save(source_room_id, "colt_express")
         or _has_unfinished_private_save(source_room_id, "dnd_starter_set")
@@ -2585,7 +2590,7 @@ async def on_room_load(sid, data):
     if not isinstance(game_state, dict):
         await sio.emit("room:load_result", {"ok": False, "message": "invalid game_state"}, to=sid)
         return
-    if game_type in ("boomerang_australia", "challengers", "dnd_starter_set", "colt_express"):
+    if game_type in ("boomerang_australia", "challengers", "dnd_starter_set", "colt_express", "werewolf"):
         try:
             game_state = _get_game_definition(game_type).deserialize(game_state)
         except (ValueError, TypeError, KeyError):

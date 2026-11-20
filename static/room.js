@@ -1396,6 +1396,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  werewolf: 1.38,
   word_sync: null,
   // No BGG entry exists yet: 上山捡菌 is an unreleased Chinese original, still in
   // crowdfunding as of 2026-11-10. 1.40 follows the publisher's own 2/10

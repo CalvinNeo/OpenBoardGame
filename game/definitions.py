@@ -5,6 +5,7 @@ from game.the_mind import TheMindGame, ACTION_SCHEMA as THE_MIND_ACTION_SCHEMA, 
 from game.word_sync import WordSyncGame, ACTION_SCHEMA as WORD_SYNC_ACTION_SCHEMA, CONFIG_SCHEMA as WORD_SYNC_CONFIG_SCHEMA
 from game.moshimo_yusha import MoshimoYushaGame, ACTION_SCHEMA as MOSHIMO_YUSHA_ACTION_SCHEMA, CONFIG_SCHEMA as MOSHIMO_YUSHA_CONFIG_SCHEMA
 from game.night_of_the_ninja import NightOfTheNinjaGame, ACTION_SCHEMA as NIGHT_NINJA_ACTION_SCHEMA, CONFIG_SCHEMA as NIGHT_NINJA_CONFIG_SCHEMA
+from game.werewolf import WerewolfGame, ACTION_SCHEMA as WEREWOLF_ACTION_SCHEMA, CONFIG_SCHEMA as WEREWOLF_CONFIG_SCHEMA
 from game.gloomhaven import GloomhavenGame, ACTION_SCHEMA as GLOOMHAVEN_ACTION_SCHEMA, CONFIG_SCHEMA as GLOOMHAVEN_CONFIG_SCHEMA
 from game.mall_of_horror import MallOfHorrorGame, ACTION_SCHEMA as MALL_OF_HORROR_ACTION_SCHEMA, CONFIG_SCHEMA as MALL_OF_HORROR_CONFIG_SCHEMA
 from game.exploding_kittens import ExplodingKittensGame, ACTION_SCHEMA as EXPLODING_KITTENS_ACTION_SCHEMA, CONFIG_SCHEMA as EXPLODING_KITTENS_CONFIG_SCHEMA
@@ -207,6 +208,16 @@ from game.for_northwood import (
     ForNorthwoodGame,
     ACTION_SCHEMA as FOR_NORTHWOOD_ACTION_SCHEMA,
     CONFIG_SCHEMA as FOR_NORTHWOOD_CONFIG_SCHEMA,
+)
+
+register_game(
+    GameDefinition(
+        game_id=WerewolfGame.game_id, name="Werewolf", name_zh="狼人杀",
+        min_players=WerewolfGame.min_players, max_players=WerewolfGame.max_players,
+        turn_mode="simultaneous", action_schema=WEREWOLF_ACTION_SCHEMA,
+        config_schema=WEREWOLF_CONFIG_SCHEMA, module=WerewolfGame,
+        serialize=WerewolfGame.serialize, deserialize=WerewolfGame.deserialize,
+    )
 )
 
 register_game(

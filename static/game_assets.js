@@ -56,6 +56,14 @@ const GAME_ASSETS = {
     "panelTitle": "🧠 心意相通",
     "header": "showTheMindHeaderActions"
   },
+  "werewolf": {
+    "scripts": ["/static/games/werewolf.js?v=3"],
+    "styles": ["/static/games/werewolf.css?v=1"],
+    "markup": "/static/games/werewolf.html?v=1",
+    "panel": "werewolfPanel",
+    "panelTitle": "狼人杀",
+    "header": "showWerewolfHeaderActions"
+  },
   "night_of_the_ninja": {
     "scripts": ["/static/games/night_of_the_ninja.js?v=3"],
     "styles": ["/static/games/night_of_the_ninja.css?v=4"],
@@ -156,9 +164,9 @@ const GAME_ASSETS = {
     "header": "showTicketToRideHeaderActions"
   },
   "twelve_rivers": {
-    "scripts": ["/static/games/twelve_rivers.js?v=8"],
-    "styles": ["/static/games/twelve_rivers.css?v=6"],
-    "markup": "/static/games/twelve_rivers.html?v=2",
+    "scripts": ["/static/games/twelve_rivers.js?v=9"],
+    "styles": ["/static/games/twelve_rivers.css?v=7"],
+    "markup": "/static/games/twelve_rivers.html?v=3",
     "panel": "twelveRiversPanel",
     "panelTitle": "🏞️ 十二河谷",
     "header": "showTwelveRiversHeaderActions"
@@ -1100,14 +1108,15 @@ const GAME_ASSETS = {
     "styleFragments": "/static/games/tacta.css?v=1"
   },
   "subtext": {
+    "panelTitle": "Subtext",
     "scripts": [
-      "/static/games/subtext.js?v=app_v1"
+      "/static/games/subtext.js?v=app_v2"
     ],
     "styles": [],
     "panel": "subtextPanel",
     "header": "showSubtextHeaderActions",
-    "markup": "/static/games/subtext.html?v=1",
-    "styleFragments": "/static/games/subtext.css?v=1"
+    "markup": "/static/games/subtext.html?v=2",
+    "styleFragments": "/static/games/subtext.css?v=2"
   },
   "tucano": {
     "panelTitle": "🌴 Tucano",
@@ -1123,14 +1132,14 @@ const GAME_ASSETS = {
   },
   "witchs_brew": {
     "scripts": [
-      "/static/games/witchs_brew.js?v=app_v3"
+      "/static/games/witchs_brew.js?v=app_v4"
     ],
     "styles": [],
     "panel": "witchsBrewPanel",
     "panelTitle": "🧪 女巫的佳酿",
     "header": "showWitchsBrewHeaderActions",
     "markup": "/static/games/witchs_brew.html?v=2",
-    "styleFragments": "/static/games/witchs_brew.css?v=3"
+    "styleFragments": "/static/games/witchs_brew.css?v=4"
   },
   "ra": {
     "scripts": [

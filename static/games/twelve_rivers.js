@@ -6,15 +6,6 @@
   if (!panel) return;
   const map = byId("Map"), frame = byId("MapFrame"), overlay = byId("SlotOverlay");
 
-  // ------------------------------------------------------------ board layout
-  const W = 1000, H = 646;
-  const RIVER_X0 = 70, RIVER_W = 73;
-  const ROW_Y = {1: 40, 2: 118, 3: 196, 4: 274, 5: 352};
-  const BAND_H = 62;
-  const PEARL_Y = 16, SLOT_Y = 44;
-  const SEA = {x: 500, y: 486, rx: 150, ry: 38};
-  const VILLAGE_Y = 556, VILLAGE_X0 = 168, VILLAGE_W = 112;
-
   const SEAT_COLORS = ["#d9534f", "#3f7cc0", "#3f8f5a", "#d9a520"];
   const PEARL_HEX = {
     green: "#5fbf5f", blue: "#4fb6e8", pink: "#f2749f",
@@ -28,10 +19,10 @@
   const FAIRY_EMOJI = {fire: "🔥", earth: "⛰️", wind: "🌬️", light: "💡", water: "💧"};
   const EXPLORE_PAIRS = ["banner", "lantern", "supplies"];
 
-  const NS = "http://www.w3.org/2000/svg";
-  const el = (name, attrs) => {
-    const node = document.createElementNS(NS, name);
-    for (const key in attrs) node.setAttribute(key, attrs[key]);
+  const element = (tag, className, content) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (content !== undefined) node.textContent = content;
     return node;
   };
 
@@ -41,9 +32,6 @@
   let delivery = null;       // {alpaca:index|null}
   let tipTimer = null, tipTarget = null;
   let helpWidget = null, explainWidget = null;
-  let vb = {x: 0, y: 0, w: W, h: H};
-  let drag = null, userZoomed = false;
-  let portrait = false, boardLayer = map;
 
   const active = () => !panel.classList.contains("hidden") && currentGameType === GAME;
   const available = type => !pending && !!view && (view.legal_actions || []).includes(type);
@@ -58,132 +46,29 @@
     if (typeof sendAction === "function") sendAction(action);
   }
 
-  // -------------------------------------------------------------- geometry
-  const riverX = index => RIVER_X0 + (index - 1) * RIVER_W;
-  function stretchBox(stretch) {
-    const first = stretch.rivers[0], last = stretch.rivers[stretch.rivers.length - 1];
-    const x = riverX(first) + 4;
-    const width = (last - first + 1) * RIVER_W - 8;
-    return {x, y: ROW_Y[stretch.row], width, height: BAND_H};
-  }
-  function slotPos(stretch, slot) {
-    const box = stretchBox(stretch);
-    const n = stretch.slots;
-    return {x: box.x + box.width * (slot - 0.5) / n, y: box.y + SLOT_Y};
-  }
-  function villagePos(index) {
-    return {x: VILLAGE_X0 + VILLAGE_W * index + VILLAGE_W / 2, y: VILLAGE_Y + 46};
-  }
-
-  function toScreen(x, y) {
-    if (portrait) [x, y] = [y, W - x];
-    const rect = frame.getBoundingClientRect();
-    const s = Math.min(rect.width / vb.w, rect.height / vb.h);
-    return {
-      x: (rect.width - vb.w * s) / 2 + (x - vb.x) * s,
-      y: (rect.height - vb.h * s) / 2 + (y - vb.y) * s,
-    };
-  }
-
-  // ------------------------------------------------------------------ zoom
-  function applyViewBox() {
-    map.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h);
-    positionSlotOverlay();
-  }
-  const mapSize = () => portrait ? {w: H, h: W} : {w: W, h: H};
-  function fitMap() { vb = {x: 0, y: 0, ...mapSize()}; applyViewBox(); }
-  function originMap() {
-    const rect = frame.getBoundingClientRect();
-    const size = mapSize();
-    vb = {x: (size.w - rect.width) / 2, y: (size.h - rect.height) / 2,
-      w: rect.width || size.w, h: rect.height || size.h};
-    applyViewBox();
-  }
-  function defaultView() {
-    userZoomed = false;
-    portrait = window.matchMedia("(max-width: 900px) and (orientation: portrait)").matches;
-    frame.dataset.orientation = portrait ? "portrait" : "landscape";
-    fitMap();
-  }
-  function zoomBy(factor, cx, cy) {
-    const size = mapSize();
-    const w = Math.min(size.w * 1.6, Math.max(size.w * 0.28, vb.w * factor));
-    const h = w * vb.h / vb.w;
-    const fx = cx === undefined ? 0.5 : cx;
-    const fy = cy === undefined ? 0.5 : cy;
-    vb = {
-      x: vb.x + (vb.w - w) * fx,
-      y: vb.y + (vb.h - h) * fy,
-      w, h,
-    };
-    clampViewBox();
-    applyViewBox();
-  }
-  function clampViewBox() {
-    const size = mapSize();
-    vb.x = vb.w > size.w ? (size.w - vb.w) / 2
-      : Math.max(-24, Math.min(size.w - vb.w + 24, vb.x));
-    vb.y = vb.h > size.h ? (size.h - vb.h) / 2
-      : Math.max(-24, Math.min(size.h - vb.h + 24, vb.y));
-  }
-
-  // Pointer capture is taken only once a drag actually starts: capturing on
-  // pointerdown would retarget the following click to the frame and every board
-  // slot would stop responding. Move and release are tracked on window so a
-  // gesture that leaves the map still ends cleanly.
-  let suppressClick = false;
+  let gesture = null, suppressClick = false;
   frame.addEventListener("pointerdown", event => {
-    if (event.target.closest(".tr12-slot-card") || !event.isPrimary || event.button !== 0) return;
+    if (!event.isPrimary || event.button !== 0) return;
     suppressClick = false;
-    drag = {
-      x: event.clientX, y: event.clientY, vb: {...vb},
-      moved: false, id: event.pointerId, captured: false,
-    };
+    gesture = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
   });
   window.addEventListener("pointermove", event => {
-    if (!drag || event.pointerId !== drag.id) return;
-    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
-    if (!drag.moved) {
-      if (Math.abs(dx) + Math.abs(dy) <= 5) return;
-      drag.moved = true;
-      userZoomed = true;
-      frame.classList.add("dragging");
-      try { frame.setPointerCapture(drag.id); drag.captured = true; } catch (error) { /* ignore */ }
-    }
-    const rect = frame.getBoundingClientRect();
-    const s = Math.min(rect.width / drag.vb.w, rect.height / drag.vb.h) || 1;
-    vb.x = drag.vb.x - dx / s;
-    vb.y = drag.vb.y - dy / s;
-    clampViewBox();
-    applyViewBox();
+    if (!gesture || event.pointerId !== gesture.id) return;
+    if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 8) gesture.moved = true;
   });
-  const endDrag = event => {
-    if (!drag) return;
-    if (event && event.pointerId !== undefined && event.pointerId !== drag.id) return;
-    if (drag.moved) suppressClick = true;
-    if (drag.captured) {
-      try { frame.releasePointerCapture(drag.id); } catch (error) { /* ignore */ }
-    }
-    drag = null;
-    frame.classList.remove("dragging");
+  const endGesture = event => {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    suppressClick = gesture.moved || event.type === "pointercancel";
+    gesture = null;
   };
-  window.addEventListener("pointerup", endDrag);
-  window.addEventListener("pointercancel", endDrag);
+  window.addEventListener("pointerup", endGesture);
+  window.addEventListener("pointercancel", endGesture);
   frame.addEventListener("click", event => {
-    if (suppressClick) {
-      suppressClick = false;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }
-  }, true);
-  frame.addEventListener("wheel", event => {
+    if (!suppressClick) return;
+    suppressClick = false;
     event.preventDefault();
-    userZoomed = true;
-    const rect = frame.getBoundingClientRect();
-    zoomBy(event.deltaY > 0 ? 1.12 : 0.89,
-      (event.clientX - rect.left) / rect.width,
-      (event.clientY - rect.top) / rect.height);
-  }, {passive: false});
+    event.stopImmediatePropagation();
+  }, true);
 
   // ------------------------------------------------------------- rendering
   function text(id, value) {
@@ -238,213 +123,141 @@
 
   function renderBoard() {
     map.replaceChildren();
-    boardLayer = el("g", portrait ? {transform: "translate(0 " + W + ") rotate(-90)"} : {});
-    map.appendChild(boardLayer);
+    map.style.setProperty("--tr12-rivers", view.active_rivers);
     const board = view.board;
-
-    boardLayer.appendChild(el("rect", {x: 0, y: 0, width: W, height: H, fill: "transparent"}));
-
-    // cost rail
-    [1, 2, 3, 4, 5].forEach(row => {
-      const stretch = board.stretches.find(s => s.row === row);
-      if (!stretch) return;
-      const label = stretch.cost > 0 ? "−" + stretch.cost : (stretch.cost < 0 ? "+1" : "0");
-      const node = el("text", {x: 30, y: ROW_Y[row] + 38, class: "tr12-cost", "text-anchor": "middle"});
-      node.textContent = label;
-      node.dataset.tr12Tip = stretch.cost < 0 ? "Gain 1 camp card when placing here"
+    const currentSpace = myRiverSpace();
+    const currentStretch = currentSpace ? currentSpace.split("#")[0] : null;
+    const corner = element("span", "tr12-flow", "→");
+    corner.title = "Rivers flow left to right, from upstream to downstream";
+    corner.dataset.tr12Tip = corner.title;
+    map.appendChild(corner);
+    for (let row = 1; row <= 5; row += 1) {
+      const stretch = board.stretches.find(entry => entry.row === row);
+      const cost = element("span", "tr12-cost", costLabel(stretch.cost));
+      cost.style.gridColumn = row + 1;
+      cost.dataset.tr12Tip = stretch.cost < 0 ? "Gain 1 camp card when placing here"
         : "Placement cost: " + stretch.cost + " camp cards";
-      boardLayer.appendChild(node);
-    });
-    const riverLabel = el("text", {x: portrait ? W - 22 : 500, y: portrait ? 230 : 24,
-      class: "tr12-area-label", "text-anchor": "middle"});
-    riverLabel.textContent = "RIVER AREA · " + view.active_rivers + " RIVERS";
-    boardLayer.appendChild(riverLabel);
-
-    // stretches, pearls and slots
-    const collectSpace = myRiverSpace();
-    const collectStretch = collectSpace ? collectSpace.split("#")[0] : null;
-    board.stretches.forEach(stretch => {
-      const box = stretchBox(stretch);
-      boardLayer.appendChild(el("rect", {
-        x: box.x, y: box.y, width: box.width, height: box.height, rx: 10,
-        class: "tr12-stretch" + (stretch.active ? "" : " inactive"),
-      }));
-      const pearls = view.pools[stretch.id] || [];
-      const pickable = collectStretch === stretch.id && available("take_pearl");
-      pearls.forEach((color, index) => {
-        const cx = box.x + 16 + index * 20;
-        if (cx > box.x + box.width - 10) return;
-        const taken = pickable && chosen && chosen.pearls.includes(color)
-          && chosen.pearls.filter(c => c === color).length
-             > pearls.slice(0, index).filter(c => c === color).length;
-        const node = el("circle", {
-          cx, cy: box.y + PEARL_Y, r: pickable ? 10 : 8,
-          fill: PEARL_HEX[color],
-          stroke: taken ? "#ffd98a" : "rgba(0,0,0,0.3)",
-          "stroke-width": taken ? 3 : 1,
-        });
-        if (pickable) {
-          node.style.cursor = "pointer";
-          node.addEventListener("click", event => {
-            event.stopPropagation();
-            if (suppressClick) return;
-            onRiverPearl(color);
-          });
-        } else node.dataset.tr12Tip = catalog().pearls[color].en + " pearl";
-        boardLayer.appendChild(node);
-      });
-      for (let slot = 1; slot <= stretch.slots; slot += 1) {
-        const pos = slotPos(stretch, slot);
-        const spaceId = stretch.id + "#" + slot;
-        drawSlot(spaceId, pos.x, pos.y, stretch.active, 14);
-      }
-      // fairy bank for this stretch
-      (board.fairy_spots || []).forEach(spot => {
-        if (spot.stretch !== stretch.id) return;
-        const stack = view.fairy_spots[spot.id] || [];
-        const fx = box.x - 13;
-        const dot = el("circle", {
-          cx: fx, cy: box.y + 30, r: 10,
-          class: "tr12-fairy-dot",
-          fill: stack.length ? "#ffe08a" : "rgba(255,255,255,0.14)",
-        });
-        dot.dataset.fairySpot = spot.id;
-        dot.style.cursor = stack.length ? "pointer" : "default";
-        dot.addEventListener("click", event => {
-          event.stopPropagation();
-          if (suppressClick) return;
-          onFairySpot(spot.id);
-        });
-        boardLayer.appendChild(dot);
-        if (stack.length) {
-          const glyph = el("text", {
-            x: fx, y: box.y + 35, "text-anchor": "middle", "font-size": 13,
-          });
-          glyph.textContent = stack.length > 1
-            ? FAIRY_EMOJI[stack[0]] + stack.length : FAIRY_EMOJI[stack[0]];
-          glyph.style.pointerEvents = "none";
-          boardLayer.appendChild(glyph);
-        }
-      });
-    });
-
-    // sea
-    boardLayer.appendChild(el("ellipse", {
-      cx: SEA.x, cy: SEA.y, rx: SEA.rx, ry: SEA.ry,
-      fill: "rgba(120,190,235,0.22)", stroke: "rgba(255,255,255,0.4)",
-    }));
-    const seaLabel = el("text", {x: portrait ? W - 22 : SEA.x,
-      y: portrait ? SEA.y : SEA.y - SEA.ry - 12, class: "tr12-area-label", "text-anchor": "middle"});
-    seaLabel.textContent = "SEA";
-    boardLayer.appendChild(seaLabel);
-    (view.sea || []).forEach((color, index) => {
-      const row = Math.floor(index / 10), col = index % 10;
-      const cx = SEA.x - 130 + col * 28 + (row % 2) * 12;
-      const cy = SEA.y - 14 + row * 20;
-      const pearl = el("circle", {
-        cx, cy, r: 10, fill: PEARL_HEX[color],
-        stroke: "rgba(0,0,0,0.3)", "stroke-width": 1,
-      });
-      pearl.dataset.seaIndex = String(index);
-      pearl.style.cursor = available("take_sea_pearls") ? "pointer" : "default";
-      pearl.addEventListener("click", event => {
-        event.stopPropagation();
-        if (suppressClick) return;
-        onSeaPearl(color);
-      });
-      boardLayer.appendChild(pearl);
-    });
-    drawSlot("sea", SEA.x, SEA.y + 18, true, 15);
-
-    // village
-    const villageLabel = el("text", {x: portrait ? W - 22 : 500,
-      y: portrait ? VILLAGE_Y + 26 : VILLAGE_Y - 8, class: "tr12-area-label", "text-anchor": "middle"});
-    villageLabel.textContent = "VILLAGE";
-    boardLayer.appendChild(villageLabel);
-    board.village.forEach((cost, index) => {
-      const pos = villagePos(index);
-      const costNode = el("text", {
-        x: pos.x, y: VILLAGE_Y + 22, class: "tr12-cost", "text-anchor": "middle", "font-size": 13,
-      });
-      costNode.textContent = cost > 0 ? "−" + cost : "0";
-      boardLayer.appendChild(costNode);
-      drawSlot("v" + (index + 1), pos.x, pos.y, true, 16);
-    });
-
-    if (portrait) {
-      boardLayer.querySelectorAll("text").forEach(node => {
-        node.setAttribute("transform", "rotate(90 " + node.getAttribute("x")
-          + " " + node.getAttribute("y") + ")");
-        if (node.classList.contains("tr12-area-label")) node.style.fontSize = "20px";
-        else if (node.classList.contains("tr12-cost")) node.style.fontSize = "24px";
-      });
+      cost.title = cost.dataset.tr12Tip;
+      map.appendChild(cost);
     }
+    for (let river = 1; river <= view.active_rivers; river += 1) {
+      const label = element("span", "tr12-river-number", river);
+      label.style.gridRow = river + 1;
+      label.title = "River " + river;
+      label.dataset.tr12Tip = label.title;
+      map.appendChild(label);
+    }
+    board.stretches.filter(stretch => stretch.active).forEach(stretch => {
+      const first = stretch.rivers[0];
+      const last = Math.min(view.active_rivers, stretch.rivers[stretch.rivers.length - 1]);
+      const region = element("div", "tr12-stretch");
+      region.dataset.stretch = stretch.id;
+      region.style.gridColumn = stretch.row + 1;
+      region.style.gridRow = (first + 1) + " / span " + (last - first + 1);
+      region.setAttribute("aria-label", "Rivers " + first + " to " + last + ", " + costLabel(stretch.cost));
+      const pool = element("div", "tr12-pool");
+      const pickable = currentStretch === stretch.id && available("take_pearl");
+      region.classList.toggle("collecting", pickable);
+      (view.pools[stretch.id] || []).forEach((color, index, pearls) => {
+        const taken = pickable && chosen && chosen.pearls.filter(entry => entry === color).length
+          > pearls.slice(0, index).filter(entry => entry === color).length;
+        pool.appendChild(boardPearl(color, pickable, taken, () => onRiverPearl(color)));
+      });
+      const slots = element("div", "tr12-slot-list");
+      for (let slot = 1; slot <= stretch.slots; slot += 1) {
+        slots.appendChild(drawSlot(stretch.id + "#" + slot));
+      }
+      region.append(pool, slots);
+      (board.fairy_spots || []).filter(spot => spot.stretch === stretch.id).forEach(spot => {
+        const stack = view.fairy_spots[spot.id] || [];
+        if (!stack.length) return;
+        const fairy = button("",
+          "tr12-fairy-bank", () => onFairySpot(spot.id));
+        fairy.appendChild(element("span", "", FAIRY_EMOJI[stack[0]]));
+        if (stack.length > 1) fairy.appendChild(element("span", "", stack.length));
+        fairy.dataset.fairySpot = spot.id;
+        fairy.setAttribute("aria-label", stack.length + " " + stack[0] + " fairies");
+        fairy.setAttribute("aria-disabled", String(selection?.pendingPair !== "lantern"));
+        pool.appendChild(fairy);
+      });
+      map.appendChild(region);
+    });
+    const sea = byId("SeaPearls");
+    sea.replaceChildren();
+    (view.sea || []).forEach((color, index) => {
+      const taken = chosen && chosen.pearls.filter(entry => entry === color).length
+        > view.sea.slice(0, index).filter(entry => entry === color).length;
+      const pearl = boardPearl(color, available("take_sea_pearls"), taken, () => onSeaPearl(color));
+      pearl.dataset.seaIndex = index;
+      sea.appendChild(pearl);
+    });
+    byId("SeaSlot").replaceChildren(drawSlot("sea"));
+    const village = byId("Village");
+    village.replaceChildren();
+    board.village.forEach((cost, index) => {
+      const space = element("div", "tr12-village-space");
+      const label = element("span", "tr12-cost", costLabel(cost));
+      label.title = "Placement cost: " + cost + " camp cards";
+      label.dataset.tr12Tip = label.title;
+      space.append(label, drawSlot("v" + (index + 1)));
+      village.appendChild(space);
+    });
     renderSlotOverlay();
   }
 
-  function drawSlot(spaceId, x, y, isActive, radius) {
+  function costLabel(cost) {
+    return cost > 0 ? "−" + cost : cost < 0 ? "+1" : "0";
+  }
+
+  function boardPearl(color, pickable, selected, handler) {
+    const node = element(pickable ? "button" : "span", "tr12-board-pearl" + (selected ? " selected" : ""));
+    const label = catalog().pearls[color].en;
+    node.style.setProperty("--tr12-pearl", PEARL_HEX[color]);
+    node.title = label;
+    if (pickable) {
+      node.type = "button";
+      node.setAttribute("aria-label", label);
+      node.setAttribute("aria-pressed", String(!!selected));
+      node.addEventListener("click", event => { event.stopPropagation(); handler(); });
+    } else node.dataset.tr12Tip = label;
+    return node;
+  }
+
+  function drawSlot(spaceId) {
     const placement = view.placements[spaceId];
-    const canPlace = available("place_marker") && !placement && isActive && !selection?.pendingPair;
-    const group = el("g", {class: "tr12-slot-group"});
-    const circle = el("circle", {
-      cx: x, cy: y, r: radius,
-      class: "tr12-slot" + (isActive ? "" : " inactive")
-        + (placement ? " occupied" : "")
-        + (canPlace ? " open" : "")
-        + (selection && selection.space === spaceId ? " target" : ""),
-    });
-    circle.dataset.space = spaceId;
-    group.dataset.space = spaceId;
-    group.appendChild(el("circle", {cx: x, cy: y, r: radius + 9,
-      fill: "transparent", class: "tr12-slot-hit"}));
-    if (canPlace) {
-      group.addEventListener("click", event => {
-        event.stopPropagation();
-        if (suppressClick) return;
-        onSlotClick(spaceId, x, y);
-      });
-    } else if (selection && selection.pendingPair === "supplies-from" && placement
-               && placement.pid === view.you) {
-      circle.classList.add("target");
-      group.addEventListener("click", event => {
-        event.stopPropagation();
-        if (suppressClick) return;
+    const canPlace = available("place_marker") && !placement && !selection?.pendingPair;
+    const movingFrom = selection?.pendingPair === "supplies-from" && placement?.pid === view.you;
+    const movingTo = selection?.pendingPair === "supplies-to" && !placement;
+    const selected = selection?.space === spaceId || movingFrom || movingTo;
+    const node = element("button", "tr12-slot" + (placement ? " occupied" : "")
+      + (canPlace ? " open" : "") + (selected ? " target" : ""));
+    node.type = "button";
+    node.dataset.space = spaceId;
+    node.setAttribute("aria-pressed", String(!!selected));
+    node.setAttribute("aria-disabled", String(!(canPlace || movingFrom || movingTo)));
+    node.title = "Space " + spaceId;
+    if (placement) {
+      const player = view.players.find(entry => entry.player_id === placement.pid);
+      node.style.setProperty("--tr12-seat", SEAT_COLORS[player ? player.color : 0]);
+      node.textContent = (player ? player.name : "?").slice(0, 1).toUpperCase();
+      node.title = (player ? player.name : "?") + " · " + spaceId;
+      if (available("take_pearl") && placement.pid === view.you) node.classList.add("collecting");
+    } else if (spaceId.startsWith("v")) node.textContent = spaceId.slice(1);
+    node.setAttribute("aria-label", node.title);
+    node.addEventListener("click", event => {
+      event.stopPropagation();
+      if (canPlace) onSlotClick(spaceId);
+      else if (movingFrom) {
         selection.pairFrom = spaceId;
         selection.pendingPair = "supplies-to";
         render();
-      });
-    } else if (selection && selection.pendingPair === "supplies-to" && !placement && isActive) {
-      circle.classList.add("target");
-      group.addEventListener("click", event => {
-        event.stopPropagation();
-        if (suppressClick) return;
+      } else if (movingTo) {
         selection.pairs.push({kind: "supplies", from: selection.pairFrom, to: spaceId});
         selection.pendingPair = null;
         render();
-      });
-    }
-    group.appendChild(circle);
-    if (placement) {
-      const player = view.players.find(p => p.player_id === placement.pid);
-      const color = SEAT_COLORS[player ? player.color : 0];
-      group.appendChild(el("circle", {
-        cx: x, cy: y, r: radius - 2, class: "tr12-marker", fill: color,
-      }));
-      const initial = el("text", {
-        x, y: y + 4, "text-anchor": "middle", "font-size": 11,
-        fill: "#fff", "font-weight": 700,
-      });
-      initial.style.pointerEvents = "none";
-      initial.textContent = (player ? player.name : "?").slice(0, 1).toUpperCase();
-      group.appendChild(initial);
-      if (available("take_pearl") && placement.pid === view.you) {
-        group.appendChild(el("circle", {
-          cx: x, cy: y, r: radius + 5, fill: "none",
-          stroke: "#ffd98a", "stroke-width": 3,
-        }));
       }
-    }
-    boardLayer.appendChild(group);
+    });
+    return node;
   }
 
   // ------------------------------------------------------- current river slot
@@ -478,9 +291,9 @@
     return stretch ? stretch.cost : 0;
   }
 
-  function onSlotClick(spaceId, x, y) {
+  function onSlotClick(spaceId) {
     if (!available("place_marker")) return;
-    selection = {space: spaceId, x, y, pay: {}, fire: 0, wind: false, pairs: [], pendingPair: null};
+    selection = {space: spaceId, pay: {}, fire: 0, wind: false, pairs: [], pendingPair: null};
     chosen = null;
     render();
   }
@@ -580,23 +393,29 @@
     positionSlotOverlay();
   }
 
-  function overlayCard(x, y, children) {
+  function overlayCard(spaceId, children) {
     const card = document.createElement("div");
     card.className = "tr12-slot-card";
-    card.dataset.anchorX = x;
-    card.dataset.anchorY = y;
+    card.dataset.anchorSpace = spaceId;
     children.forEach(child => card.appendChild(child));
     return card;
   }
 
   function positionSlotOverlay() {
     overlay.querySelectorAll(".tr12-slot-card").forEach(card => {
-      const point = toScreen(Number(card.dataset.anchorX), Number(card.dataset.anchorY));
+      const anchor = [...frame.querySelectorAll(".tr12-slot")]
+        .find(node => node.dataset.space === card.dataset.anchorSpace);
+      if (!anchor) return;
+      const box = anchor.getBoundingClientRect(), bounds = frame.getBoundingClientRect();
+      const collectionPool = selection ? null : anchor.closest(".tr12-stretch, .tr12-sea-area")
+        ?.querySelector(".tr12-pool");
+      const region = (collectionPool?.children.length ? collectionPool : anchor).getBoundingClientRect();
+      const point = {x: box.left - bounds.left + box.width / 2, y: region.top - bounds.top};
       const width = card.offsetWidth, height = card.offsetHeight;
-      const top = point.y - height - 18;
+      const top = point.y - height - 8;
       card.style.left = Math.max(8, Math.min(frame.clientWidth - width - 8, point.x - width / 2)) + "px";
       card.style.top = Math.max(8, Math.min(frame.clientHeight - height - 8,
-        top < 8 ? point.y + 18 : top)) + "px";
+        top < 8 ? region.bottom - bounds.top + 8 : top)) + "px";
     });
   }
 
@@ -630,7 +449,7 @@
     }
     children.push(button("Place", "", () => { if (ready) confirmPlacement(); }));
     children.push(button("Cancel", "cancel", cancelSelection));
-    const card = overlayCard(selection.x, selection.y, children);
+    const card = overlayCard(selection.space, children);
     if (!ready) card.querySelector("button").disabled = true;
     return card;
   }
@@ -638,8 +457,6 @@
   function riverCard() {
     const spaceId = myRiverSpace();
     const stretchId = spaceId.split("#")[0];
-    const stretch = view.board.stretches.find(s => s.id === stretchId);
-    const pos = slotPos(stretch, Number(spaceId.split("#")[1]));
     const pool = view.pools[stretchId] || [];
     const player = me();
     const children = [];
@@ -660,7 +477,7 @@
       send(action);
     }));
     if (!ready) children[children.length - 1].disabled = true;
-    return overlayCard(pos.x, pos.y, children);
+    return overlayCard(spaceId, children);
   }
 
   function seaCard() {
@@ -677,7 +494,7 @@
       chosen = null;
       send(action);
     }));
-    return overlayCard(SEA.x, SEA.y + 18, children);
+    return overlayCard("sea", children);
   }
 
   // ------------------------------------------------------------------ track
@@ -1081,10 +898,6 @@
       zh: "一共 5 轮。每轮依次是准备、探索、收集三个阶段，结束后会暂停让大家看盘面。",
       en: "Five rounds. Each has a preparation, exploration and collection phase, and pauses at the end so everyone can read the table.",
     },
-    zoom: {
-      zh: "加减号缩放，Fit 显示完整河谷，1:1 按原始尺寸显示。手机竖屏时河谷自动旋转，河流从左向右汇入海洋，村庄在右侧，文字保持正向。拖动可以平移，版图外仍可正常滚动页面。",
-      en: "Plus and minus zoom, Fit frames the whole valley, and 1:1 shows native size. In phone portrait mode the valley rotates: rivers flow left to right towards the sea, with the village on the right and upright labels. Drag to pan; scroll the page outside the board.",
-    },
     dock: {
       zh: "打开你自己的营地：羊驼、营地卡、仙子和玛卡雅。手机端它会从右侧滑出，可以随时关掉去看版图。",
       en: "Open your own camp: alpaca, camp cards, fairies and Markaya. On phones it slides in from the right and can be closed to see the board.",
@@ -1110,11 +923,11 @@
       en: "The Markaya you have befriended. Only pearls delivered into their storage spots score, and rainbow spots accept any colour.",
     },
     village: {
-      zh: "本轮可以结交的玛卡雅，共 6 张。村庄按横屏从左到右、手机竖屏从下到上的顺序挑选，最先的两格分别付 2 张和 1 张营地卡。",
-      en: "The six Markaya available this round. Village spaces pick left to right in landscape, or bottom to top in phone portrait mode. The first two cost 2 and 1 camp cards.",
+      zh: "本轮可以结交的玛卡雅，共 6 张。村庄按从左到右的顺序挑选，最先的两格分别付 2 张和 1 张营地卡。",
+      en: "The six Markaya available this round. Village spaces pick from left to right. The first two cost 2 and 1 camp cards.",
     },
     board: {
-      zh: "河谷版图：越靠上游费用越高但越先挑珍珠，最下面一段反而给你 1 张营地卡。每段的格子数就是那一段能挤几个人。",
+      zh: "河谷版图：越靠上游费用越高但越先挑珍珠，最右侧一段反而给你 1 张营地卡。每段的格子数就是那一段能挤几个人。",
       en: "The valley: the further upstream you camp the more you pay but the earlier you pick, while the last stretch actually hands you a camp card.",
     },
   };
@@ -1141,10 +954,10 @@
         id: "board",
         label: {zh: "版图操作", en: "Board controls"},
         html: {
-          zh: "<p>手机竖屏时，河谷自动逆时针旋转 90°，河流从左往右汇入海洋，村庄在最右侧，文字保持正向。河段费用从左到右为 −3、−2、−1、0、+1。村庄从下往上依次挑选玛卡雅。</p>"
-            + "<p>用 + / − 缩放，Fit 显示全图，1:1 显示原始尺寸。拖动版图可以平移，在版图外滑动可滚动页面。点击空位后在原地确认，点击空白处取消。My camp 打开可关闭的营地抽屉，付费时点选营地卡，再回到版图确认。</p>",
-          en: "<p>In phone portrait mode the valley rotates 90° counterclockwise, with upright labels. Rivers flow left to right towards the sea and the village on the right. River costs run −3, −2, −1, 0, +1 from left to right. Village markers choose Markaya from bottom to top.</p>"
-            + "<p>Use + / − to zoom, Fit for the whole board, or 1:1 for native size. Drag the board to pan and swipe outside it to scroll the page. Tap a space for its confirmation, or blank space to cancel. My camp opens a closable drawer. Choose camp cards there to pay, then return to the board to confirm.</p>",
+          zh: "<p>河谷按屏宽直接排版，不需要缩放或拖动。河流编号从上到下递增，五档河段从左往右汇流，费用依次为 −3、−2、−1、0、+1。同段的族人标记从上往下结算，海洋和村庄位于河谷下方，村庄从左往右挑选玛卡雅。</p>"
+            + "<p>点击空位后在原地确认，点击空白处取消。My camp 打开可关闭的营地抽屉，付费时点选营地卡，再回到版图确认。直接在地图上滑动可正常滚动页面，不会放置标记。</p>",
+          en: "<p>The valley reflows to the available width without zooming or panning. River numbers increase from top to bottom. Five columns merge from left to right, costing −3, −2, −1, 0, +1. Markers in a stretch resolve from top to bottom. The sea and village sit below the rivers, and village markers choose Markaya from left to right.</p>"
+            + "<p>Tap a space for its confirmation, or blank space to cancel. My camp opens a closable drawer. Choose camp cards there to pay, then return to the board to confirm. Swipe on the board to scroll the page without placing a marker.</p>",
         },
       },
       {
@@ -1153,7 +966,7 @@
         html: {
           zh: "<p>2–4 人。每人 3 枚族人标记、一块 6 格的羊驼版图、6 张营地卡和 1 张起始玛卡雅。</p>"
             + "<p>珍珠共 65 颗：🟢 绿 ×17（1 分）、🔵 蓝 ×15（2 分）、🌸 粉 ×13（3 分）、🟣 紫 ×11（4 分）、⚪ 白 ×9（5 分）。</p>"
-            + "<p>每人启用 3 条河：2 人用最左 6 条，3 人 9 条，4 人全部 12 条。</p>",
+            + "<p>每人启用 3 条河：2 人用编号 1–6，3 人用编号 1–9，4 人用全部 12 条。</p>",
           en: "<p>2–4 players. Everyone gets 3 family markers, a 6-slot alpaca board, 6 camp cards and one starting Markaya.</p>"
             + "<p>65 pearls: 17 green (1), 15 blue (2), 13 pink (3), 11 purple (4), 9 white (5).</p>"
             + "<p>Three rivers per player are active: 6 for two players, 9 for three, all 12 for four.</p>",
@@ -1164,11 +977,11 @@
         label: {zh: "一轮流程", en: "A round"},
         html: {
           zh: "<p><b>准备</b>：给每条激活河道补 1 颗珍珠，按人数放仙子（单数轮放树桩、双数轮放狐像），再换 6 张玛卡雅。</p>"
-            + "<p><b>探索</b>：按顺位轨依次放置标记。河段费用从上到下是 −3 / −2 / −1 / 0 / +1（+1 表示白拿 1 张营地卡），海是 0，村庄从左到右是 −2 / −1 / 0 / 0 / 0 / 0。</p>"
-            + "<p><b>收集</b>：开闸后珍珠滚下，按从上到下、从左到右结算，同段内靠上的格子先挑。每人每次拿 1 颗，拿完收回标记放到顺位轨最后。之后在海的人可以任意多拿，在村庄的人从左到右各挑 1 张玛卡雅，最后所有人同时把羊驼上的珍珠交付给玛卡雅。</p>",
+            + "<p><b>探索</b>：按顺位轨依次放置标记。河段费用从左到右是 −3 / −2 / −1 / 0 / +1（+1 表示白拿 1 张营地卡），海是 0，村庄从左到右是 −2 / −1 / 0 / 0 / 0 / 0。</p>"
+            + "<p><b>收集</b>：珍珠从左往右汇流，按河段列从左到右、同列从上到下结算，同段内靠上的格子先挑。每人每次拿 1 颗，拿完收回标记放到顺位轨最后。之后在海的人可以任意多拿，在村庄的人从左到右各挑 1 张玛卡雅，最后所有人同时把羊驼上的珍珠交付给玛卡雅。</p>",
           en: "<p><b>Preparation</b>: refill one pearl per active river, place fairies (stumps on odd rounds, fox statues on even), refresh six Markaya.</p>"
-            + "<p><b>Exploration</b>: place markers in track order. River costs run −3 / −2 / −1 / 0 / +1 top to bottom, the sea is free, and the village is −2 / −1 / 0 / 0 / 0 / 0.</p>"
-            + "<p><b>Collection</b>: pearls roll, resolving top to bottom and left to right, with the upper slot in a stretch picking first. Each marker takes one pearl and returns to the back of the track. Then the sea, then the village left to right, then everyone delivers simultaneously.</p>",
+            + "<p><b>Exploration</b>: place markers in track order. River costs run −3 / −2 / −1 / 0 / +1 left to right, the sea is free, and the village is −2 / −1 / 0 / 0 / 0 / 0.</p>"
+            + "<p><b>Collection</b>: pearls flow left to right. Resolve columns from left to right and stretches within each column from top to bottom, with the upper slot in a stretch picking first. Each marker takes one pearl and returns to the back of the track. Then the sea, then the village left to right, then everyone delivers simultaneously.</p>",
         },
       },
       {
@@ -1244,19 +1057,8 @@
 
   // ------------------------------------------------------------------ wiring
   byId("Next").addEventListener("click", () => send({type: "next_round"}));
-  byId("ZoomIn").addEventListener("click", () => { userZoomed = true; zoomBy(0.82); });
-  byId("ZoomOut").addEventListener("click", () => { userZoomed = true; zoomBy(1.22); });
-  byId("Fit").addEventListener("click", () => { userZoomed = true; fitMap(); });
-  byId("Origin").addEventListener("click", () => { userZoomed = true; originMap(); });
-  const resizeMap = () => {
-    const nextPortrait = window.matchMedia("(max-width: 900px) and (orientation: portrait)").matches;
-    if (nextPortrait !== portrait || !userZoomed) {
-      defaultView();
-      if (view) renderBoard();
-    } else positionSlotOverlay();
-  };
-  window.addEventListener("resize", resizeMap);
-  if (typeof ResizeObserver !== "undefined") new ResizeObserver(resizeMap).observe(frame);
+  window.addEventListener("resize", positionSlotOverlay);
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(positionSlotOverlay).observe(frame);
   function toggleDock(open) {
     byId("Dock").classList.toggle("open", open);
     byId("DockBtn").setAttribute("aria-expanded", String(open));
@@ -1287,14 +1089,13 @@
     hideTip();
     explainWidget?.exit();
     ["Track", "Alpaca", "AlpacaGoals", "Hand", "Fairies", "Markaya", "Offer",
-     "Players", "Results", "Log", "Map"].forEach(id => byId(id)?.replaceChildren());
+     "Players", "Results", "Log", "Map", "SeaPearls", "SeaSlot", "Village"].forEach(id => byId(id)?.replaceChildren());
     overlay.replaceChildren();
     overlay.classList.add("hidden");
     byId("Review").classList.add("hidden");
     byId("Next").classList.add("hidden");
     toggleDock(false);
     text("Status", "Waiting to start");
-    defaultView();
   }
 
   window.renderTwelveRiversGameState = data => {
@@ -1331,7 +1132,6 @@
         if (room.game_type !== GAME || room.status === "lobby") clearState();
       });
     }
-    defaultView();
     if (typeof lastGameStatePayload !== "undefined"
         && lastGameStatePayload?.game_type === GAME) {
       window.renderTwelveRiversGameState(lastGameStatePayload);

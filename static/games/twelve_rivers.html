@@ -13,15 +13,20 @@
       <div class="tr12-section-heading">
         <h3>THE VALLEY</h3>
         <div class="tr12-map-controls">
-          <button id="twelveRiversZoomOut" type="button" aria-label="Zoom out" data-tr12-explain="zoom">−</button>
-          <button id="twelveRiversZoomIn" type="button" aria-label="Zoom in" data-tr12-explain="zoom">+</button>
-          <button id="twelveRiversFit" type="button" data-tr12-explain="zoom">Fit</button>
-          <button id="twelveRiversOrigin" type="button" data-tr12-explain="zoom">1:1</button>
           <button id="twelveRiversDockBtn" type="button" data-tr12-explain="dock" aria-controls="twelveRiversDock" aria-expanded="false">🧺 My camp</button>
         </div>
       </div>
-      <div id="twelveRiversMapFrame" class="tr12-map-frame" data-tr12-explain="board" tabindex="0">
-        <svg id="twelveRiversMap" viewBox="0 0 1000 646" role="img" aria-label="Twelve rivers flowing towards the sea and village"></svg>
+      <div id="twelveRiversMapFrame" class="tr12-map-frame" data-tr12-explain="board">
+        <div id="twelveRiversMap" class="tr12-river-grid" role="group" aria-label="Rivers merging from left to right"></div>
+        <div class="tr12-sea-area" role="group" aria-label="Sea">
+          <span class="tr12-area-label">SEA</span>
+          <div id="twelveRiversSeaPearls" class="tr12-pool"></div>
+          <div id="twelveRiversSeaSlot"></div>
+        </div>
+        <div class="tr12-village-area" role="group" aria-label="Village">
+          <span class="tr12-area-label">VILLAGE</span>
+          <div id="twelveRiversVillage" class="tr12-village-grid"></div>
+        </div>
         <div id="twelveRiversSlotOverlay" class="tr12-slot-overlay hidden"></div>
       </div>
       <div id="twelveRiversTrack" class="tr12-track" data-tr12-explain="track" tabindex="0"></div>

@@ -156,7 +156,7 @@
 - **珍珠流动用离散模拟**：每个河段维护一个「珍珠池」。行 1 各段初始 1 颗；结算完一段后，剩余珍珠按汇流表并入下游段（或海）。这与实物滚珠等价，且可确定性复现。
 - **交付阶段并发**：所有玩家同时操作，各自 deliver 动作互不影响；全员 done 后进入 round_end。
 - **动作列表**：place_marker、play_pairs、take_pearl、take_sea_pearls、befriend、deliver、next_round。
-- **UI 布局**：主体是一张可缩放的河谷版图（SVG），右侧 dock 放自己的羊驼 / 手牌 / 玛卡雅；收集阶段用「原地蒙版」选择珍珠；不在主界面写规则文字，全部进 Help / Explain。
+- **UI 布局**：主体是按可用屏宽重排的原生河段网格，无需缩放或平移（2026-11-20 重做，取代早期 SVG 方案）。右侧 dock 放自己的羊驼 / 手牌 / 玛卡雅；收集在对应河段和海洋点选珍珠并原地确认；不在主界面写规则文字，全部进 Help / Explain。
 - **命名前缀**：所有浏览器全局符号使用 twelveRivers / TwelveRivers 前缀。
 
 ## 11. AI 设计
@@ -196,3 +196,21 @@ tests/test_twelve_rivers.py：
 - 检查命令：`node --check static/games/twelve_rivers.js`、`node --check tests/twelve_rivers.browser.cjs`、`node scripts/smoke_load.cjs twelve_rivers`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`、`node tests/twelve_rivers.browser.cjs`、`git diff --check`。
 - 结果：上述语法、初始化、13 项前端合同检查及游戏浏览器回归均通过。额外运行 `node tests/game_assets.browser.cjs`，在首页资源断言处失败：旧断言只允许 `shared.js`，当前首页还加载 `shared_help.js` 和 `shared_effects.js`，与本次河谷资源改动无关，未扩大范围修复。
 - 验收范围为桌面 Chrome 和移动端触摸仿真，未检查 iOS Safari、Android 真机或 Windows 字体/Emoji；不能将仿真结果表述为跨平台全面验收。UI 改动不运行游戏逻辑测试，浏览器测试中的 Python 只生成场景。
+
+## 14. 2026-11-20 无缩放地图重做
+
+本节取代 §13 的旋转 SVG 与贴屏地图。根据反馈，保留较小的屏幕边距，不再为了占满宽度而取消 padding，也不依赖整幅图缩放才能操作。
+
+- **原生排布**：使用 CSS Grid 表示河流汇流关系。河流编号从上到下，五档河段从左向右按费用 −3 / −2 / −1 / 0 / +1 排列，合并河段跨越其覆盖的河流行；海洋和村庄在下方。只显示 2/3/4 人局中启用的 6/9/12 条河，不为未启用河流预留空白。
+- **边距与尺寸**：地图保持在 Game 内容区内，取消 `100vw` 与负边距。手机地图内保留 6px padding，外侧沿用页面和 Game 的窄边距（320/390px 浏览器验收至少 8px）。插槽固定 28px，不随屏宽缩小；河段、珠池和仙子数量变化由布局自行换行或增高，不裁掉内容。桌面使用相同原生网格和常驻营地。
+- **无需地图缩放**：移除缩放、Fit、1:1、viewBox 与平移代码。此项为用户明确要求的游戏特例，优先于 `DEV_GUIDE.md` 中通用地图缩放要求；仍保留浏览器页面缩放。需要更多高度时正常滚动页面，而非在地图中拖拽找位置。
+- **交互**：改用原生 button 表示落点和可收集珍珠，支持键盘激活。地图内滑动交给页面滚动，以 8px 手势阈值及 pointercancel 抑制滚动后的误点。付费仍在营地选牌并回到原位确认；确认条基于目标 DOM 定位，收珠时避开珠池，不再依赖旋转坐标。Help/Explain 同步新方向、正常滚动和无缩放操作。
+- **范围**：不修改游戏规则、动作 payload、私有状态或 AI。仅修改 `static/games/twelve_rivers.js`、`static/games/twelve_rivers.css`、`static/games/twelve_rivers.html`、现有浏览器回归、本设计文档及资源清单/首页版本；保留其他正在进行的本地改动。
+
+### 验收记录
+
+- Chrome 检查 320px、390px、1024px、1440px，人工复核四档截图；手机另检查横竖屏切换。覆盖边距、页面与元素无横向溢出、插槽不缩小、所有落点和确认条、营地付费/关闭、键盘 Enter、Help/Explain/Escape、收珠、Next Round、触摸滚动与取消后不误放。
+- 额外检查 2/3/4 人、珍珠池堆积、65 颗海洋珍珠和多枚仙子叠放，截图保存在忽略目录 `tmp/twelve-rivers-ui/`。
+- 检查命令：`node --check static/games/twelve_rivers.js`、`node --check tests/twelve_rivers.browser.cjs`、`node scripts/smoke_load.cjs twelve_rivers`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`、`node tests/twelve_rivers.browser.cjs`、`git diff --check`。本次为 UI 重做，不运行游戏逻辑测试。
+- 结果：语法、初始化、13 项前端合同检查、四档浏览器回归和 diff 检查均通过，浏览器无运行错误。堆积场景通过正常页面增高完整显示，不以隐藏或缩小按钮规避溢出。
+- 不宣称全面遵守无例外：地图缩放是本次用户指定的例外。尚未验证 iOS Safari、Android 真机、Windows 字体/Emoji；验收范围为 Chrome 桌面及触摸仿真。

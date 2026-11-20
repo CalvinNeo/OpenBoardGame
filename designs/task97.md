@@ -64,6 +64,6 @@
 - 修改文件：`static/games/castles_of_burgundy.js`、`static/games/castles_of_burgundy.html`、`static/castles_of_burgundy.css`、`static/game_assets.js`、`static/index.html`、本设计文档及 `tests/castles_of_burgundy_ui.browser.cjs`、`tests/castles_of_burgundy_ui_fixtures.py`。资源版本同步更新，未修改公共 CSS 或规则模块，保留工作区其他游戏的并行改动。
 - 自动验收命令：启动本地服务器后，运行 `PLAYWRIGHT_MODULE=<playwright module> node tests/castles_of_burgundy_ui.browser.cjs`。测试通过 Python UI fixture 生成器构造可重复的公开视图，不将运行数据纳入补丁。
 - 已检查 320px、390px、1024px、1440px 的领地、货站和就地确认截图，未见横向滚动、文本溢出或面板覆盖。截图保存在忽略目录 `tmp/burgundy-ui/`。
-- 已验证真实房间创建、机器人加入、开始游戏、拿板块及刷新重连，以及公开视图驱动的放置／卖货／知识 6 购买／满仓替换／船只选货、轮末确认、旁观、地图拖动并跨边界释放、Fit / Origin、双语分章 Help、禁用按钮 Explain 与触屏提示。
+- 已验证真实房间创建、机器人加入、开始游戏、拿板块及刷新重连，以及公开视图驱动的放置／卖货／知识 6 购买／满仓替换／船只选货、四人和终局布局、轮末确认、旁观、地图拖动并跨边界释放／触摸取消、地图内不滚页与地图外可滚页、Fit / Origin、双语分章 Help 与焦点恢复、禁用按钮 Explain、触屏提示及日志展开状态保留。
 - 检查：`node --check static/games/castles_of_burgundy.js`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names`（14 项）及 `git diff --check` 通过。按纯 UI 变更范围不运行游戏逻辑测试。
 - 验收范围符合本次涉及的 `DEV_GUIDE.md` 布局与交互要求，无刻意保留的布局例外。真实 iOS / Windows 设备、其他浏览器与完整真人对局未实机验证，触屏交互使用 Chrome 模拟。
