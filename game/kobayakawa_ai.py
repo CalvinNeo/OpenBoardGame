@@ -88,6 +88,8 @@ def _fight_gain(hand: int, center: int, unseen: Tuple[int, ...], model: Tuple[fl
 
 def choose_action(view: Dict) -> Optional[Dict]:
     legal = view.get("legal_actions", [])
+    if not view.get("game_over") and "next_round" in legal:
+        return {"type": "next_round", "round": view["round"]}
     if view.get("game_over") or not legal or view.get("current_turn") != view.get("you"):
         return None
     if len(legal) == 1:

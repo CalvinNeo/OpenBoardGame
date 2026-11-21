@@ -186,7 +186,9 @@ class KobayakawaAiTests(unittest.TestCase):
                             for step in range(2000):
                                 if state["game_over"]:
                                     break
-                                actor = state["current_turn"]
+                                actor = state["current_turn"] or next(
+                                    player_id for player_id in state["players"]
+                                    if Game.get_legal_actions(state, player_id))
                                 action = Game.bot_move(state, actor)
                                 self.assertIsNotNone(action)
                                 self.assertIn(action["type"], Game.get_legal_actions(state, actor))

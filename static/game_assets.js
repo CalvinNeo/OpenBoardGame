@@ -890,12 +890,14 @@ const GAME_ASSETS = {
   },
   "kobayakawa": {
     "scripts": [
-      "/static/games/kobayakawa.js?v=app_v4_h1"
+      "/static/games/kobayakawa.js?v=app_v5"
     ],
     "styles": [],
     "panel": "kobayakawaPanel",
-    "markup": "/static/games/kobayakawa.html?v=1_h1",
-    "styleFragments": "/static/games/kobayakawa.css?v=1"
+    "header": "showKobayakawaHeaderActions",
+    "panelTitle": "Kobayakawa",
+    "markup": "/static/games/kobayakawa.html?v=2",
+    "styleFragments": "/static/games/kobayakawa.css?v=2"
   },
   "high_society": {
     "scripts": [

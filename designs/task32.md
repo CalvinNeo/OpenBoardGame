@@ -230,3 +230,29 @@ def resolve_round(active_players, kobayakawa_card):
 * 自动检查目录标识不重叠、游戏无横向溢出，并人工核对手机和桌面截图；截图保存在 `build/kobayakawa-ai/`。
 * 通用 `tests/game_ai_catalog.browser.cjs` 的 320px 检查通过，但 390px 的 Abraca 重连部分报 `currentAbracaView is not defined`，属于其他游戏的测试问题，本次未修改。小早川专用浏览器测试四种宽度均通过。
 * 未改动原游戏布局、回合结算流程或规则；未验证 Safari、Firefox 与实体移动设备。
+
+## 2026-11-21 UI 与结算可读性优化
+
+### 问题定位
+
+* 原结算公式里的 `+3` 指公共小早川牌的牌力加成，不是奖励 3 枚筹码。最终牌力只用于决定本轮胜者，筹码只按下注与底池结算。
+* 原流程在分配底池后立即洗牌进入下一轮，`last_round_summary` 仍显示上一轮，而 Bot 可以继续行动、下注，玩家余额已经可能属于下一轮。新界面不再把旧轮牌力与新轮余额混在一起。
+* 未发现奖池漏发；保留原来的下注、分池和破产判定规则，破产仍在发放底池之后检查。
+
+### 实现
+
+* 主体直接放在 Game 中，以公共牌、底池和私有手牌为中心。Replace 位于公共牌下，抽牌与保留按钮位于手牌区，Fight / Pass 仅在下注阶段显示，不再设置独立 Actions 面板。
+* Help / Explain 放入公共标题栏，保留 Reconnect 同行。双语 Help 解释所有图标、牌力与筹码的区别；Explain 支持当前牌值、disabled 按钮和 Escape；非操作元素提供桌面 hover / 手机点击后 3 秒消失的提示。
+* 结算新增逐人筹码流水：`before − paid + received = after`，并显示净变化。`received` 是整个底池，包含赢家自己的下注。牌力单列 `Strength`，本人和赢家分别高亮。
+* 每轮进入 `round_end`，保留本轮公共牌、下注结果、筹码流水与应战者亮牌，所有玩家确认 `next_round` 后才重新发牌。Bot 自动确认，观察者无需确认；每次确认携带轮数，拒绝重复或过期确认。
+* 新的暂停、确认名单和下一轮起始玩家均支持原生保存恢复，旧存档无需新增初始化字段也可继续结算。Pass 的手牌不公开，独赢不亮牌。轮末隐藏无关操作区，避免用户把已结算底池 0 误当成未发奖。
+* 手机选牌时把两张牌和保留按钮放在同一区域。玩家列表支持 6 人、长名字换行；轮末明细限高滚动；轮到自己时隐藏的 RC 用红边提示。
+
+### 验收记录
+
+* 修改范围：`game/kobayakawa.py`、`game/kobayakawa_ai.py`、`game/definitions.py` 的本游戏 action schema；`static/games/kobayakawa.{html,css,js}`、资源清单及首页 header 占位/资源版本；3 个本游戏 Python 测试文件、专用浏览器测试和本文档。未修改共享游戏逻辑或共享样式。
+* Chrome 检查 320、390、1024、1440px：正常行动、两张牌选择、6 人长名字、结算、标题栏不换行与无横向溢出，人工复核手机和桌面截图。
+* 专用浏览器测试覆盖真人 + 2 Bot 完成两轮、Bot 自动确认但等真人 Next Round、牌力与筹码流水一致、旁观者不可确认、双语 Help、disabled 按钮 Explain 不触发行动、动态牌值解释、Escape、悬停/触摸提示自动消失、390px 抽牌及轮末刷新重连。截图输出到忽略目录 `build/kobayakawa-ai/`。
+* `python3 -m unittest tests.test_kobayakawa tests.test_kobayakawa_ai tests.test_kobayakawa_integration tests.test_frontend_style_assets tests.test_help_contract`、JS 语法检查、`node scripts/smoke_load.cjs kobayakawa` 和 `git diff --check` 通过。
+* 按 `DEV_GUIDE.md` 完成上述本游戏 UI 验收，无游戏规则例外。未验证 Safari、Firefox 或实体移动设备。
+* 通用 `tests/game_assets.browser.cjs` 在首页静态资源断言处失败：测试只允许 `shared.js`，但现有首页也加载 `shared_help.js`、`shared_effects.js`。本次未修改这两个脚本或其引用，保留该既有问题，不能宣称通用懒加载浏览器测试通过。

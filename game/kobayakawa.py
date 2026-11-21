@@ -75,6 +75,7 @@ def _start_round(state: Dict, start_player: Optional[str], round_number: int, ca
     state["current_turn"] = start_player
     state["phase"] = "action"
     state["round"] = round_number
+    state["round_ready"] = []
 
 
 def _finalize_winner(state: Dict) -> None:
@@ -171,10 +172,25 @@ def _complete_action_turn(state: Dict, player_id: str) -> None:
 
 
 def _finish_round(state: Dict, next_start_player: Optional[str], carry_pot: bool) -> None:
+    summary = state["last_round_summary"]
+    summary["tokens"] = []
+    for pid, pdata in state["players"].items():
+        paid = 1 if state["betting_choices"].get(pid) == "fight" else 0
+        received = summary["pot"] if summary.get("winner") == pid else 0
+        summary["tokens"].append({
+            "player_id": pid,
+            "before": pdata["tokens"] + paid - received,
+            "paid": paid,
+            "received": received,
+            "after": pdata["tokens"],
+        })
     if _check_game_over(state):
         return
-    next_round = int(state.get("round", 0)) + 1
-    _start_round(state, next_start_player, next_round, carry_pot)
+    state["phase"] = "round_end"
+    state["current_turn"] = None
+    state["round_ready"] = []
+    state["next_start_player"] = next_start_player
+    state["carry_pot"] = carry_pot
 
 
 def _resolve_betting(state: Dict) -> None:
@@ -270,6 +286,8 @@ class KobayakawaGame:
             return []
 
         phase = state.get("phase")
+        if phase == "round_end":
+            return [] if player_id in state.get("round_ready", []) else ["next_round"]
         if phase == "action":
             if player_id != state.get("current_turn"):
                 return []
@@ -298,6 +316,21 @@ class KobayakawaGame:
             return [], "unknown player"
 
         action_type = action.get("type")
+        if state.get("phase") == "round_end":
+            if action_type != "next_round":
+                return [], "only next_round allowed"
+            if action.get("round") != state.get("round"):
+                return [], "round changed"
+            ready = state.setdefault("round_ready", [])
+            if player_id in ready:
+                return [], "already ready"
+            ready.append(player_id)
+            events = [{"type": "kobayakawa:ready", "payload": {"player_id": player_id}}]
+            if all(pid in ready for pid in state["players"]):
+                _start_round(state, state.get("next_start_player"), state["round"] + 1,
+                             state.get("carry_pot", False))
+                events.append({"type": "kobayakawa:next_round", "payload": {"round": state["round"]}})
+            return events, None
         phase = state.get("phase")
         events: List[Dict] = []
 
@@ -449,6 +482,7 @@ class KobayakawaGame:
             "players": players_view,
             "legal_actions": KobayakawaGame.get_legal_actions(state, viewer_id),
             "last_round_summary": state.get("last_round_summary"),
+            "round_ready": list(state.get("round_ready", [])),
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
             "config": {

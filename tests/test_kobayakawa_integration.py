@@ -60,7 +60,11 @@ class KobayakawaIntegrationTests(unittest.IsolatedAsyncioTestCase):
                     break
                 state = self.room.game_state
                 human_id = self.room.players[0].player_id
-                self.assertEqual(state["current_turn"], human_id)
+                if state["phase"] == "round_end":
+                    self.assertEqual(set(state["round_ready"]), {
+                        player.player_id for player in self.room.players if player.is_bot})
+                else:
+                    self.assertEqual(state["current_turn"], human_id)
                 action = Game.bot_move(state, human_id)
                 self.assertIsNotNone(action)
                 await app.on_game_action("human", {"action": action})

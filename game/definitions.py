@@ -2198,6 +2198,12 @@ TREKKING_HISTORY_CONFIG_SCHEMA = {
 KOBAYAKAWA_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}, "round": {"type": "integer", "minimum": 1}},
+            "required": ["type", "round"],
+            "additionalProperties": False,
+        },
         {"type": "object", "properties": {"type": {"const": "draw_card"}}, "required": ["type"], "additionalProperties": False},
         {
             "type": "object",
