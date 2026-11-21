@@ -41,6 +41,42 @@ async function render(page, name, {reset = true, view = views[name], config = {}
 
 async function actionCount(page) { return page.evaluate(() => window.manilaQaActions.length); }
 async function lastAction(page) { return page.evaluate(() => window.manilaQaActions.at(-1)); }
+async function playerNames(page, width) {
+    const view = structuredClone(views.long_names);
+    view.board.port = {A: 'p0', B: 'p1', C: 'p2'};
+    view.board.shipyard = {A: 'p3', B: 'p4', C: null};
+    view.board.pirates = {captain: 'p1', pirate: 'p2'};
+    view.board.pilots = {big: 'p3', small: 'p4'};
+    view.board.insurance = 'p0';
+    const labels = playerIds => playerIds.map(playerId => {
+        const player = view.players.find(player => player.player_id === playerId);
+        return `👤 ${player.name}${playerId === view.you ? ' · YOU' : ''}`;
+    });
+    await render(page, 'long_names', {view});
+    assert.deepEqual(await page.locator('.manila-occupant > span:first-child').allTextContents(), labels(['p1', 'p0', 'p2', 'p3']));
+    assert.deepEqual(await page.locator('.manila-owner').allTextContents(), labels(['p0', 'p1', 'p2', 'p3', 'p4', 'p1', 'p2', 'p3', 'p4', 'p0']));
+    await page.locator('#manilaPlayersDetails > summary').click();
+    for (const player of view.players) {
+        const heading = await page.locator('.manila-player > strong').filter({hasText: player.name}).innerText();
+        assert(heading.startsWith(player.name));
+    }
+    assert.equal(await page.locator('#manilaPanel img').count(), 0);
+    assert.equal(await page.evaluate(() => window.manilaInjected), undefined);
+    assert.doesNotMatch(await page.locator('#manilaPanel').innerText(), /\bP[1-5]\b/);
+    await bounds(page, `${width}px player names`);
+    await page.screenshot({path: path.join(output, `player-names-${width}.png`), fullPage: true});
+    await render(page, 'auction', {view: {...view, ...structuredClone(views.auction), players: view.players}});
+    assert.deepEqual(await page.locator('.manila-bid-row > span:first-child').allTextContents(), labels(view.players.map(player => player.player_id)).map(label => label.replace(/^👤 /, '')));
+    await bounds(page, `${width}px auction names`);
+    await render(page, 'review', {view: {...structuredClone(views.review), players: view.players}});
+    assert.deepEqual(await page.locator('.manila-result-name').allTextContents(), labels(view.players.map(player => player.player_id)).map(label => label.replace(/^👤 /, '')));
+    await bounds(page, `${width}px result names`);
+    await render(page, 'spectator', {view: {...view, you: 'visitor', legal_actions: []}});
+    assert.deepEqual(await page.locator('.manila-occupant > span:first-child').allTextContents(), ['p1', 'p0', 'p2', 'p3'].map(playerId => `👤 ${view.players.find(player => player.player_id === playerId).name}`));
+    assert.doesNotMatch(await page.locator('.manila-owner').first().innerText(), /YOU/);
+    await bounds(page, `${width}px spectator names`);
+}
+
 async function startingPositionBounds(page, width) {
     await render(page, 'positions');
     const count = await actionCount(page);
@@ -337,6 +373,7 @@ async function swipe(page, locator) {
 
         for (const width of [320, 390, 1024, 1440]) {
             await page.setViewportSize({width, height: 1000});
+            await playerNames(page, width);
             await startingPositionBounds(page, width);
             for (const name of Object.keys(views)) {
                 await render(page, name);

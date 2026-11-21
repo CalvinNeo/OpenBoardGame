@@ -23,23 +23,34 @@
     </div>
     <div class="marrakech-market-layout">
       <div class="marrakech-board-column">
+        <div id="marrakechPlacement" class="marrakech-placement hidden">
+          <div class="marrakech-placement-head"><span id="marrakechRugLabel" data-marrakech-explain="place" data-marrakech-tip="place" tabindex="0"></span><span id="marrakechPlacementStep"></span></div>
+          <div id="marrakechPlacementHint" class="marrakech-placement-hint" role="status" aria-live="polite"></div>
+        </div>
         <div id="marrakechViewport" class="marrakech-viewport">
           <div id="marrakechWorld" class="marrakech-world">
             <svg id="marrakechRoutes" class="marrakech-routes" viewBox="0 0 800 800" aria-hidden="true"></svg>
             <div id="marrakechBoard" class="marrakech-board" role="group" aria-label="Seven by seven market"></div>
           </div>
         </div>
-        <div id="marrakechPlacement" class="marrakech-placement hidden">
-          <div class="marrakech-placement-head"><span id="marrakechRugLabel"></span><span id="marrakechPlacementHint" role="status"></span></div>
-          <div class="marrakech-placement-tools">
+        <div id="marrakechSelection" class="marrakech-selection hidden">
+          <div class="marrakech-confirm-row">
+            <span id="marrakechSelectionLabel"></span>
+            <div class="marrakech-confirm-buttons">
+              <button id="marrakechPlace" class="marrakech-primary" type="button" data-marrakech-explain="place">Place rug</button>
+              <button id="marrakechCancel" type="button" data-marrakech-explain="cancel">Cancel</button>
+            </div>
+          </div>
+          <details id="marrakechAdjust" class="marrakech-adjust hidden">
+            <summary>Move / rotate</summary>
+            <div class="marrakech-placement-tools">
             <button type="button" data-marrakech-shift="0,-1" data-marrakech-explain="shift" aria-label="Move rug up">↑</button>
             <button type="button" data-marrakech-shift="-1,0" data-marrakech-explain="shift" aria-label="Move rug left">←</button>
             <button type="button" data-marrakech-shift="0,1" data-marrakech-explain="shift" aria-label="Move rug down">↓</button>
             <button type="button" data-marrakech-shift="1,0" data-marrakech-explain="shift" aria-label="Move rug right">→</button>
             <button id="marrakechRotate" type="button" data-marrakech-explain="rotate">Rotate ↻</button>
-            <button id="marrakechPlace" class="marrakech-primary" type="button" data-marrakech-explain="place">Place rug</button>
-            <button id="marrakechCancel" type="button" data-marrakech-explain="cancel">Cancel</button>
-          </div>
+            </div>
+          </details>
         </div>
       </div>
       <aside class="marrakech-side">

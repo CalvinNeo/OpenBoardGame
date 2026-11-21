@@ -130,7 +130,7 @@
     .manila-investment-name { font-weight: 700; font-size: 12px; }
     .manila-investment-cost { font-size: 12px; white-space: nowrap; flex-shrink: 0; }
     .manila-investment-reward { font-size: 11px; color: #376348; }
-    .manila-investment .manila-owner { font-size: 11px; color: #4f6053; }
+    .manila-investment .manila-owner { display: block; overflow-wrap: anywhere; font-size: 11px; color: #4f6053; }
     .manila-panel .manila-investment.is-you { border-color: #6e9464; background: #e3eddc; }
     .manila-action-title { font-size: 15px; margin-bottom: 5px; font-weight: 700; }
     .manila-action-note { font-size: 12px; color: var(--manila-muted); margin-bottom: 9px !important; }

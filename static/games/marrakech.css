@@ -38,9 +38,17 @@
 .marrakech-rug-pattern { position: absolute; inset: 17%; display: grid; place-items: center; border: 1px solid #fff8; font: 600 clamp(12px, 2.5vw, 28px) Georgia, serif; pointer-events: none; }
 #marrakechPanel .marrakech-cell.same-right { border-right: 0; margin-right: -2px; }
 #marrakechPanel .marrakech-cell.same-down { border-bottom: 0; margin-bottom: -2px; }
-#marrakechPanel .marrakech-cell.is-neighbor::after { content: ""; position: absolute; inset: 4px; border: 2px dashed #246c68a0; pointer-events: none; }
-#marrakechPanel .marrakech-cell.is-preview { box-shadow: inset 0 0 0 4px #fff9ca; filter: brightness(1.13); background-color: var(--preview-color); }
-#marrakechPanel .marrakech-cell.is-invalid { box-shadow: inset 0 0 0 4px #b63030; }
+#marrakechPanel .marrakech-cell.is-start::after { content: ""; position: absolute; inset: 4px; border: 2px dashed #246c68; background: #effff333; pointer-events: none; }
+#marrakechPanel .marrakech-cell.is-anchor { box-shadow: inset 0 0 0 3px #fff8de; outline: 2px solid #246c68; outline-offset: -2px; }
+#marrakechPanel .marrakech-cell.is-endpoint { box-shadow: inset 0 0 0 3px #246c68; }
+#marrakechPanel .marrakech-cell.is-anchor::after, #marrakechPanel .marrakech-cell.is-endpoint::after { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; display: grid; place-items: center; border: 2px solid #fff8de; border-radius: 50%; background: #246c68; color: #fff; font: 700 12px/1 system-ui, sans-serif; box-shadow: 0 1px 3px #0005; pointer-events: none; }
+#marrakechPanel .marrakech-cell.is-anchor::after { content: "1"; }
+#marrakechPanel .marrakech-cell.is-endpoint::after { content: "2"; }
+.marrakech-rug-preview { position: absolute; z-index: 2; display: flex; pointer-events: none; background: var(--preview-color); color: #fff8de; border: 3px double #fff8de; border-radius: 4px; box-shadow: 0 0 0 2px #234b43, 0 3px 7px #0005; background-image: repeating-linear-gradient(0deg, transparent 0 6px, #ffffff20 6px 8px); }
+.marrakech-rug-preview.is-vertical { flex-direction: column; }
+.marrakech-rug-preview.is-invalid { box-shadow: 0 0 0 3px #ab2a2a; }
+.marrakech-preview-half { position: relative; flex: 1; display: grid; place-items: center; min-width: 0; min-height: 0; font-size: clamp(14px, 3vw, 30px); }
+.marrakech-preview-number { position: absolute; left: 1px; top: 1px; width: 14px; height: 14px; display: grid; place-items: center; border-radius: 50%; background: #fff8de; color: #234b43; font: 700 10px/1 system-ui, sans-serif; }
 #marrakechPanel .marrakech-cell.is-paid { outline: 2px dotted #453d30; outline-offset: -4px; }
 .marrakech-assam { position: absolute; inset: 9%; display: grid; place-items: center; color: #fff; background: #263b3b; border: 2px solid #fff3cb; border-radius: 45% 45% 28% 28%; font-size: clamp(16px, 3.3vw, 34px); box-shadow: 0 2px 3px #0005; pointer-events: none; }
 .marrakech-side { display: grid; gap: 12px; padding-top: 4px; }
@@ -50,8 +58,18 @@
 .marrakech-message { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .marrakech-last-move { border-left: 3px solid #b98b44; padding-left: 10px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .marrakech-last-move:empty { display: none; }
-.marrakech-placement { padding-top: 9px; }
-.marrakech-placement-head { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+.marrakech-placement { padding: 7px 0 9px; }
+.marrakech-placement-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+#marrakechRugLabel { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; text-transform: capitalize; }
+.marrakech-next-rug { display: inline-flex; align-items: center; justify-content: space-around; width: 40px; height: 21px; background: var(--rug-color); color: #fff8de; border: 2px double #fff8de; outline: 1px solid var(--rug-color); border-radius: 2px; font-size: 12px; }
+#marrakechPlacementStep { color: var(--mq-muted); white-space: nowrap; font-size: 11px; }
+.marrakech-placement-hint { font-size: 13px; line-height: 1.4; color: #24534c; min-height: 19px; }
+.marrakech-selection { padding-top: 9px; }
+.marrakech-confirm-row { display: flex; justify-content: space-between; align-items: center; gap: 7px; flex-wrap: wrap; }
+#marrakechSelectionLabel { font-size: 12px; font-weight: 600; }
+.marrakech-confirm-buttons { display: flex; gap: 5px; margin-left: auto; }
+.marrakech-adjust { font-size: 12px; margin-top: 6px; }
+.marrakech-adjust summary { cursor: pointer; width: fit-content; padding: 5px 0; color: var(--mq-muted); }
 .marrakech-placement-tools { display: flex; gap: 5px; flex-wrap: wrap; }
 .marrakech-results { background: #ecf1df; border-radius: 7px; padding: 12px; font-size: 14px; overflow-wrap: anywhere; }
 .marrakech-results p { margin: 5px 0; }

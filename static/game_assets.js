@@ -879,14 +879,14 @@ const GAME_ASSETS = {
   },
   "manila": {
     "scripts": [
-      "/static/games/manila.js?v=app_v7"
+      "/static/games/manila.js?v=app_v8"
     ],
     "styles": [],
     "panel": "manilaPanel",
     "panelTitle": "Manila · 马尼拉",
     "header": "showManilaHeaderActions",
     "markup": "/static/games/manila.html?v=2",
-    "styleFragments": "/static/games/manila.css?v=2"
+    "styleFragments": "/static/games/manila.css?v=3"
   },
   "kobayakawa": {
     "scripts": [
@@ -1285,17 +1285,17 @@ const GAME_ASSETS = {
     "header": "showFactoryFunnerHeaderActions"
   },
   "marrakech": {
-    "scripts": ["/static/games/marrakech.js?v=1"],
-    "styles": ["/static/games/marrakech.css?v=1"],
-    "markup": "/static/games/marrakech.html?v=1",
+    "scripts": ["/static/games/marrakech.js?v=2"],
+    "styles": ["/static/games/marrakech.css?v=2"],
+    "markup": "/static/games/marrakech.html?v=2",
     "panel": "marrakechPanel",
     "panelTitle": "Marrakech",
     "header": "showMarrakechHeaderActions"
   },
   "thats_life": {
-    "scripts": ["/static/games/thats_life.js?v=1"],
-    "styles": ["/static/games/thats_life.css?v=1"],
-    "markup": "/static/games/thats_life.html?v=1",
+    "scripts": ["/static/games/thats_life.js?v=2"],
+    "styles": ["/static/games/thats_life.css?v=2"],
+    "markup": "/static/games/thats_life.html?v=2",
     "panel": "thatsLifePanel",
     "panelTitle": "糟了个糕！",
     "header": "showThatsLifeHeaderActions"

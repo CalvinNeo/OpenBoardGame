@@ -11,7 +11,7 @@
     score: { zh: "得分(★)：正分相加、负分相减。每块幸运板块(🍀)把一块负分翻成等值正分，系统优先转换绝对值最大的负分。多余幸运板块为零分。最高分获胜，同分时幸运板块较少者胜，仍相同则并列。", en: "Score (★): add positive and negative tile values. Each lucky tile (🍀) converts one negative to an equal positive. The most negative tiles are converted first. Spare lucky tiles score zero. Highest score wins, with fewer lucky tiles breaking ties, then shared victory." },
     round: { zh: "局数：每局所有玩家棋子到终点(🏁)后结算。多局累计得分，同分累计幸运板块较少者获胜。局间暂停，全员点击 Next Round 后才开始下一局。", en: "Round: score when every player's pawns reach the finish (🏁). Multiple rounds add scores and use total lucky tiles to break ties. Everyone must press Next Round before play resumes." },
     next: { zh: "Next Round：确认已查看结算。全员确认后才开下一局，不再弹确认窗口。", en: "Next Round: acknowledge the result. The next round starts only after every player is ready, without an extra confirmation dialog." },
-    pile: { zh: "收集板块：查看该玩家所有板块和幸运转换明细。当前分数包含本局幸运转换，累计得分只包含已结算的局。", en: "Collected tiles: inspect this player's tiles and lucky conversions. Current score includes this round's conversions, while total score includes completed rounds only." },
+    pile: { zh: "玩家摘要：点击查看其所有板块和幸运转换。得分(★)包含本局幸运转换，终点(🏁)显示已完成的棋子数，幸运(🍀)显示幸运板块数。多局时累计得分只包含已结算的局。", en: "Player summary: click to inspect collected tiles and lucky conversions. Score (★) includes current lucky conversions, finish (🏁) counts completed pawns, and luck (🍀) counts lucky tiles. In multi-round games, Total includes completed rounds only." },
     confirm: { zh: "Move：确认这枚棋子的移动和预览的落点。若离开后原板块变空，就必须收集它。", en: "Move: confirm this piece and the previewed destination. Collect the source tile if it becomes empty." },
     cancel: { zh: "Cancel：取消预览而不消耗回合。也可以点击棋盘空白或按 Escape。", en: "Cancel: dismiss the preview without spending your turn. You may also tap blank space or press Escape." }
   };
@@ -23,9 +23,9 @@
   let gesture = null;
   let suppressClick = false;
   let activeRoom = null;
+  let boardColumns = 0;
   let help = null;
   let explain = null;
-  const text = value => typeof value === "string" ? value : value[window.obgHelpLang()];
   const signed = value => value > 0 ? `+${value}` : String(value).replace("-", "−");
   const tileLabel = tile => tile.kind === "lucky" ? "🍀" : tile.kind === "start" ? "Start" : tile.kind === "finish" ? "🏁 Finish" : signed(tile.value);
   const name = playerId => view?.players.find(player => player.player_id === playerId)?.name || playerId;
@@ -77,7 +77,7 @@
     const top = node("div", "tl-tile-head");
     top.append(describe(node("span", "tl-value", tileLabel(tile)), tile.kind === "lucky" ? "score" : "track",
       tile.kind === "lucky" ? "🍀 Lucky tile · turns one negative tile positive" : `${signed(tile.value)} points · collected when leaving alone`));
-    if (index != null) top.append(describe(node("span", "tl-order", `${index} →`), "track", `Position ${index} · continue in reading order`));
+    if (index != null) top.append(describe(node("span", "tl-order", String(index)), "track", `Position ${index} · follow → in reading order`));
     item.append(top);
     return item;
   }
@@ -93,7 +93,7 @@
       const piece = pieces[0];
       const option = view.move_options.find(option => pieces.some(candidate => candidate.id === option.piece_id));
       const key = piece.kind === "guard" ? "guard" : "pawn";
-      const label = piece.kind === "guard" ? `◆${pieces.length > 1 ? ` ×${pieces.length}` : ""}` : `● ×${pieces.length}`;
+      const label = piece.kind === "guard" ? `◆${pieces.length > 1 ? ` ×${pieces.length}` : ""}` : pieces.length > 1 ? `×${pieces.length}` : "";
       const item = option ? button(label, key, () => { selection = option.piece_id; renderBoard(); }) : describe(node("span", "tl-piece", label), key,
         piece.kind === "guard" ? "◆ Guard · movable only alongside a player's pawn" : `${name(piece.owner)} · ${pieces.length} pawn(s)`);
       item.classList.add("tl-piece");
@@ -109,12 +109,13 @@
       }
       list.append(item);
     }
-    container.append(list);
+    if (list.childElementCount) container.append(list);
   }
   function confirmation(option) {
     const box = node("div", "tl-confirm");
     const target = view.track.find(tile => tile.id === option.to);
-    box.append(node("span", "", `→ ${tileLabel(target)} · ${option.collect ? `take ${tileLabel(option.collect)}` : "no tile collected"}`));
+    const destination = target.kind === "finish" ? tileLabel(target) : `#${view.track.indexOf(target)} ${tileLabel(target)}`;
+    box.append(node("span", "", `→ ${destination} · ${option.collect ? `take ${tileLabel(option.collect)}` : "no tile taken"}`));
     const buttons = node("div", "tl-confirm-buttons");
     const move = button("Move", "confirm", () => send({ type: "move", piece_id: selection }));
     move.disabled = pending;
@@ -125,6 +126,9 @@
   function renderBoard() {
     const option = view.move_options.find(option => option.piece_id === selection);
     const track = byId("Track");
+    boardColumns = window.getComputedStyle(track).gridTemplateColumns.split(/\s+/).length;
+    const sourceIndex = option ? view.track.findIndex(tile => tile.id === option.from) : -1;
+    const confirmAfter = Math.min(Math.ceil(sourceIndex / boardColumns) * boardColumns, view.track.length - 2);
     track.replaceChildren();
     for (const [index, tile] of view.track.entries()) {
       const terminal = tile.kind === "start" || tile.kind === "finish";
@@ -139,10 +143,8 @@
         item.classList.toggle("tl-origin", option?.from === tile.id);
         track.append(item);
       }
-      if (option?.from === tile.id) {
-        if (terminal) item.append(confirmation(option));
-        else track.append(confirmation(option));
-      }
+      if (option?.from === tile.id && terminal) item.append(confirmation(option));
+      if (option && sourceIndex > 0 && !terminal && index === confirmAfter) track.append(confirmation(option));
     }
     explain?.refresh?.();
   }
@@ -166,23 +168,29 @@
     if (!view) return;
     byId("Lobby").classList.add("hidden");
     byId("Table").classList.remove("hidden");
-    byId("Round").textContent = `ROUND ${view.round_number} / ${view.config.rounds} · TURN ${view.turn_number}`;
+    byId("Round").textContent = `Round ${view.round_number}/${view.config.rounds} · Turn ${view.turn_number}`;
     byId("Die").textContent = `🎲 ${view.die || "—"}`;
+    byId("Die").classList.toggle("hidden", !view.die);
     byId("Roll").disabled = pending || !view.legal_actions.includes("roll");
-    byId("Status").textContent = view.game_over ? `${view.winner_ids.map(name).join(" & ")} wins!` : view.phase === "round_summary" ? "Round complete" : `${view.current_turn === view.you ? "Your turn" : name(view.current_turn)} · ${view.phase === "roll" ? "roll the die" : "choose a piece"}`;
-    byId("LastMove").textContent = moveMessage(view.last_move) || "Follow → in reading order. Choose a piece after rolling.";
+    byId("Status").textContent = view.game_over ? `${view.winner_ids.map(name).join(" & ")} wins!` : view.phase === "round_summary" ? "Round complete" : `${view.current_turn === view.you ? "Your turn" : name(view.current_turn)}${view.phase === "move" ? " · choose a piece" : ""}`;
+    byId("Status").title = byId("Status").textContent;
+    byId("LastMove").textContent = moveMessage(view.last_move);
+    byId("LastMove").classList.toggle("hidden", !view.last_move);
     renderBoard();
     byId("Players").replaceChildren();
     for (const player of view.players) {
-      const item = node("div", `tl-player${player.player_id === view.current_turn ? " is-current" : ""}`);
+      const item = button("", "pile", () => openPile(player));
+      item.className = `tl-player${player.player_id === view.current_turn ? " is-current" : ""}`;
+      item.setAttribute("aria-label", `${player.name} · ${signed(player.score)} points · view ${player.tiles.length} collected tiles`);
       item.style.setProperty("--tl-player", color(player.player_id));
-      const top = node("div", "tl-player-top");
+      const top = node("span", "tl-player-top");
       const title = node("span", "tl-player-name", `${player.name}${player.player_id === view.you ? " · You" : ""}`);
       title.title = player.name;
-      top.append(node("span", "tl-dot"), title, describe(node("span", "tl-player-score", signed(player.score)), "score", "★ Current round score, including lucky conversions"));
+      top.append(node("span", "tl-dot"), title, node("span", "tl-player-score", signed(player.score)));
       const finished = view.pieces.filter(piece => piece.owner === player.player_id && piece.position === "finish").length;
       const count = view.pieces.filter(piece => piece.owner === player.player_id).length;
-      item.append(top, describe(node("div", "tl-player-meta", `🏁 ${finished}/${count} · 🍀 ${player.lucky_count} · Total ${signed(player.total_score)}`), "round", "🏁 Finished pawns · 🍀 Lucky tiles · Total from completed rounds"), button(`Tiles (${player.tiles.length})`, "pile", () => openPile(player)));
+      item.append(top, node("span", "tl-player-meta", `🏁 ${finished}/${count} · 🍀 ${player.lucky_count} · ${player.tiles.length} tiles`));
+      if (view.config.rounds > 1) item.append(node("span", "tl-player-total", `Total ${signed(player.total_score)}`));
       byId("Players").append(item);
     }
     const summary = view.game_over || view.phase === "round_summary";
@@ -196,6 +204,16 @@
   }
   function init() {
     const panel = byId("Panel");
+    panel.querySelectorAll("span[data-thats-life-explain]").forEach(item => {
+      const key = item.getAttribute("data-thats-life-explain");
+      describe(item, key, explanations[key].en);
+    });
+    const boardResize = new ResizeObserver(() => {
+      if (!view || !selection) return;
+      const columns = window.getComputedStyle(byId("Track")).gridTemplateColumns.split(/\s+/).length;
+      if (columns !== boardColumns) renderBoard();
+    });
+    boardResize.observe(panel);
     help = window.obgCreateHelp({
       gameId: "thats_life", title: { zh: "糟了个糕！ · 经典守卫版", en: "That's Life! · Classic guards" },
       basic: {
@@ -211,11 +229,20 @@
         { id: "scoring", label: { zh: "计分与版本", en: "Scoring & edition" }, html: {
           zh: `<p>${explanations.score.zh}</p><p>例如 −8、−3、+5 和一块幸运板块(🍀)，得分为 +8−3+5＝10。</p><p>${explanations.round.zh}</p><p>本实现为经典守卫玩法，可选随机路线和 1–3 局累计赛。不包含新版赠送／偷取行动板块，也不包含幸运板块只影响下方一块的计分变体。</p>`,
           en: `<p>${explanations.score.en}</p><p>For example, −8, −3, +5 and one lucky tile (🍀) score +8−3+5 = 10.</p><p>${explanations.round.en}</p><p>This is the classic guards game with optional shuffled track and 1–3 cumulative rounds. Gift/Steal action tiles and the tower-order scoring variant are not included.</p>`
+        } },
+        { id: "icons", label: { zh: "图标", en: "Symbols" }, html: {
+          zh: "<p>棋子(●)的颜色和玩家姓名对应。守卫(◆)为中立棋子，幸运板块(🍀)转换负分，骰子(🎲)决定步数，终点(🏁)停止移动。得分(★)越高越好，箭头(→)表示阅读顺序，数量(×)表示同格同色棋子数。</p>",
+          en: "<p>Pawn (●) colors match player names. Guards (◆) are neutral. Lucky tiles (🍀) turn negatives positive. The die (🎲) sets movement. The finish (🏁) stops pieces. Higher score (★) wins. Arrows (→) follow reading order and count (×) groups identical pawns on one tile.</p>"
         } }
       ]
     });
     explain = window.obgCreateExplain({ gameId: "thats_life", root: () => document,
-      attribute: "data-thats-life-explain", explanations,
+      attribute: "data-thats-life-explain", explanations: {
+        settings: explanations.settings, round: explanations.round, roll: explanations.roll,
+        score: explanations.score, track: explanations.track, next: explanations.next,
+        pawn: explanations.pawn, guard: explanations.guard, pile: explanations.pile,
+        confirm: explanations.confirm, cancel: explanations.cancel
+      },
       bypass: ["#thatsLifeHelpBtn", "#thatsLifeExplainBtn", ".obg-help-dialog", "#thatsLifePileClose"],
       onChange: active => byId("ExplainBtn").setAttribute("aria-pressed", String(active)) });
     byId("HelpBtn").addEventListener("click", () => { explain.exit(); help.open(); });

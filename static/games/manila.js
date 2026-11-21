@@ -44,7 +44,7 @@
         <p>在马尼拉投资货船（⛵）、股票和港湾职位。任一股价达到 💰30 时游戏结束；现金 + 未抵押股票市值 − 抵押债务最高者获胜，可以并列。</p>
         <h3>货物与资源</h3>
         <p>肉豆蔻 Nutmeg（🟫）：总收益 💰24，3 个座位；丝绸 Silk（🟨）：💰18，3 个座位；人参 Ginseng（🟩）：💰36，4 个座位；翡翠 Jade（🟦）：💰30，3 个座位。颜色与文字同时标识货物。</p>
-        <p>现金（💰）、工人（👤）、股票（📜）、抵押债务（🏦）、骰子（🎲）、隐藏持仓（🔒）。P1–P5 对应座次，YOU 是自己，Winner（🏆）是胜者。收益 + 与入场费分开显示。股票种类对其他玩家保密。</p>
+        <p>现金（💰）、工人（👤）、股票（📜）、抵押债务（🏦）、骰子（🎲）、隐藏持仓（🔒）。工人和职位直接显示玩家姓名，姓名后的 YOU 标记自己，Winner（🏆）是胜者。收益 + 与入场费分开显示。股票种类对其他玩家保密。</p>
         <h3>每一航次</h3>
         <ol><li><strong>拍卖：</strong>轮流提高出价或 Pass。竞得者支付费用成为港务长，现金不足时先抵押股票。</li>
         <li><strong>备航：</strong>港务长可买一张股票（价格至少 💰5），再选三种货物；三船起点合计 9，每船 0–5 格，可以为 0。</li>
@@ -82,7 +82,7 @@
     const escape = value => String(value ?? "").replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
     const own = () => view?.players?.find(player => player.player_id === view.you);
     const playerName = playerId => view?.players?.find(player => player.player_id === playerId)?.name || playerId || "—";
-    const playerToken = playerId => playerId === view?.you ? "YOU" : `P${Math.max(0, view?.players?.findIndex(player => player.player_id === playerId)) + 1}`;
+    const playerLabel = playerId => `${playerName(playerId)}${playerId === view?.you ? " · YOU" : ""}`;
     const connected = () => typeof socket !== "undefined" && socket.connected && (typeof roomSessionReady === "undefined" || roomSessionReady);
     const can = type => !!view && !pending && connected() && !!own() && view.legal_actions?.includes(type);
     const hasAction = type => !!view?.legal_actions?.includes(type);
@@ -247,7 +247,7 @@
             const track = Array.from({length: 14}, (_, index) => `<span aria-hidden="true" class="manila-track-cell${knownPosition && index < position ? " is-passed" : ""}${knownPosition && index === position ? " is-boat" : ""}${index === 13 ? " is-port" : ""}${[0, 3, 6, 9, 13].includes(index) ? " is-landmark" : ""}${delta && index === position ? " is-draft" : ""}">${knownPosition && index === position ? vessel : index}</span>`).join("");
             const seats = preview ? "" : `<div class="manila-seats" style="--seats:${boat.seats.length}">${boat.seats.map((occupant, seat) => {
                 const cost = boat.seat_costs[seat];
-                if (occupant) return `<div class="manila-occupant${occupant === view.you ? " is-you" : ""}" ${tip(`👤 ${playerName(occupant)} · ${meta.name}第 ${seat + 1} 个座位`, "ship")}><span>👤 ${playerToken(occupant)}</span><span>座位 ${seat + 1}</span></div>`;
+                if (occupant) return `<div class="manila-occupant${occupant === view.you ? " is-you" : ""}" ${tip(`👤 ${playerName(occupant)} · ${meta.name}第 ${seat + 1} 个座位`, "ship")}><span>👤 ${escape(playerLabel(occupant))}</span><span>座位 ${seat + 1}</span></div>`;
                 return button(`<span class="manila-seat-cost">💰 ${cost}</span><span>座位 ${seat + 1}</span>`, "seat", {
                     key: "ship", disabled: !canPlace(cost) || boat.plundered,
                     className: `manila-seat${selection?.key === `seat-${cargo}-${seat}` ? " manila-selected" : ""}`,
@@ -312,7 +312,8 @@
         const info = locationInfo(type, slot);
         const selected = selection?.key === `${type}-${slot}`;
         const name = ["port", "shipyard"].includes(type) ? slot : info.title;
-        const content = `<span class="manila-investment-top"><span class="manila-investment-name">${name}${info.occupant ? ` <span class="manila-owner">👤 ${playerToken(info.occupant)}</span>` : ""}</span><span class="manila-investment-cost">💰${info.cost}</span></span>
+        const content = `<span class="manila-investment-top"><span class="manila-investment-name">${name}</span><span class="manila-investment-cost">💰${info.cost}</span></span>
+            ${info.occupant ? `<span class="manila-owner">👤 ${escape(playerLabel(info.occupant))}</span>` : ""}
             <span class="manila-investment-reward">${info.reward}</span>`;
         const detail = `${info.title} · 入场费 💰${info.cost} · ${info.reward}${info.occupant ? ` · ${playerName(info.occupant)}` : ""}`;
         if (info.occupant) return `<div class="manila-investment${info.occupant === view.you ? " is-you" : ""}" ${tip(detail, info.key)}>${content}</div>`;
@@ -362,7 +363,7 @@
             contents += `<div class="manila-bid-list" data-manila-scroll="auction">${(view.players || []).map(player => {
                 const passed = !(auction.active || []).includes(player.player_id);
                 const leader = auction.leader === player.player_id;
-                return `<div class="manila-bid-row${leader ? " is-leader" : ""}${passed ? " is-passed" : ""}"><span>${escape(playerToken(player.player_id))} · ${escape(player.name || player.player_id)}</span><span>${passed ? "Pass" : `💰${auction.bids?.[player.player_id] || 0}`}</span></div>`;
+                return `<div class="manila-bid-row${leader ? " is-leader" : ""}${passed ? " is-passed" : ""}"><span>${escape(playerLabel(player.player_id))}</span><span>${passed ? "Pass" : `💰${auction.bids?.[player.player_id] || 0}`}</span></div>`;
             }).join("")}</div>`;
         } else if (phase === "harbormaster_pay") {
             const harborPlayer = view.players.find(player => player.player_id === view.harbormaster);
@@ -437,7 +438,7 @@
                 const spent = total(ledger.spend);
                 const net = earned - spent;
                 const lines = ["earn", "spend"].flatMap(kind => Object.entries(ledger[kind] || {}).map(([label, amount]) => `<div class="manila-ledger-line"><span>${escape(ledgerLabel(label))}</span><span class="${kind === "earn" ? "manila-gain" : "manila-loss"}">${kind === "earn" ? "+" : "−"}${amount}</span></div>`)).join("");
-                return `<article class="manila-result-card${player.player_id === view.you ? " is-you" : ""}"><div class="manila-result-name">${escape(playerToken(player.player_id))} · ${escape(player.name || player.player_id)}</div>
+                return `<article class="manila-result-card${player.player_id === view.you ? " is-you" : ""}"><div class="manila-result-name">${escape(playerLabel(player.player_id))}</div>
                     <div class="manila-result-total" ${tip(`本航次收入 💰${earned}，支出 💰${spent}，净额 ${net >= 0 ? "+" : ""}${net}。`, "result")}><span>净额</span><strong class="${net >= 0 ? "manila-gain" : "manila-loss"}">${net >= 0 ? "+" : "−"}💰${Math.abs(net)}</strong></div>
                     <div class="manila-result-total"><span ${tip(`当前现金 💰${player.cash}`, "cash")}>💰 ${player.cash}</span><span>${view.game_over ? view.winner?.includes(player.player_id) ? "🏆 Winner" : "Finished" : player.round_ready ? "Ready ✓" : "Waiting"}</span></div>
                     <details data-manila-detail-id="ledger-${escape(player.player_id)}"><summary>Details · +${earned} / −${spent}</summary>${lines || '<p class="manila-small">No transactions</p>'}</details></article>`;
@@ -450,7 +451,7 @@
             const mine = player.player_id === view.you;
             const stocks = mine ? total(player.stocks) : player.stock_count || 0;
             const pledged = mine ? total(player.pledged) : player.pledged_count || 0;
-            return `<article class="manila-player${mine ? " is-you" : ""}"><strong>${escape(playerToken(player.player_id))} · ${escape(player.name || player.player_id)}${player.player_id === view.harbormaster ? " · 港务长" : ""}</strong>
+            return `<article class="manila-player${mine ? " is-you" : ""}"><strong>${escape(playerLabel(player.player_id))}${player.player_id === view.harbormaster ? " · 港务长" : ""}</strong>
                 <div class="manila-player-resources"><span ${tip(`现金 💰${player.cash}`, "cash")}>💰${player.cash}</span><span ${tip(`工人剩余 ${player.workers_available} / ${player.workers_total}`, "workers")}>👤${player.workers_available}/${player.workers_total}</span><span ${tip(`股票 ${stocks} 张；${mine ? "自己的各类持股见上方市场。" : "种类保密。"}`, "market")}>📜${stocks}${mine ? "" : " 🔒"}</span><span ${tip(`已抵押 ${pledged} 张股票`, "pledge")}>🏦${pledged}</span></div></article>`;
         }).join("");
     }

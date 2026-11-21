@@ -206,3 +206,18 @@
 * 临时内存包装仅排除共享 `#roomControlsPanel` 的内部溢出扫描后，完整 **27 状态 × 4 宽度** 浏览器测试通过，包含买股、竞拍、配置、领航、海盗、贷款、回合确认、触控、断线重连和按需加载；页面宽度及游戏区域溢出／重叠检查保留。此为带明确例外的辅助验收，不替代原始套件全绿。
 * 合法起点修复后重新运行 `python scripts/benchmark_manila_ai.py --seeds 10 --json tmp/manila-start-rules/legal-start-benchmark.json`，轮换座位共 120 局：3 人 29/30、4 人 39/40、5 人 49/50，合计 **117/120（97.5%）**，没有非法动作或卡局。旧版仍使用合法的 `[0,4,5]` 起点；不沿用修复前 99.58% 的胜率。
 * 按照 `DEV_GUIDE.md` 完成本次对应规则与 UI 检查；由于原始浏览器套件存在上述共享 RC 失败，**不声称完整通过全部 UI 验收门槛**。未运行无关游戏全量逻辑测试、真实多人服务端浏览器用例或实体移动设备／Safari／Firefox 检查；不追溯修改已出航的旧存档位置。
+
+## 7. 玩家姓名显示（2026-11-21）
+
+船上工人、码头、修船厂、海盗、领航员、保险职位直接显示玩家姓名，不再使用 P1–P5 代号。竞拍列表、玩家列表和结算卡也移除编号前缀，统一使用姓名；本人姓名后保留 `· YOU` 和原有高亮，旁观者不显示本人标记。缺失姓名时沿用玩家 ID 回退，不推断座位编号。Help 同步说明新的姓名标识。
+
+姓名在插入 HTML 前统一转义，包含 HTML 的名字仅显示为文字。港湾职位中的姓名独占一行，保留职位标题、成本和收益各自的位置；长中文／无空格英文可完整换行，不以截断或重新显示 P 编号规避溢出。
+
+修改文件：`static/games/manila.js`（姓名标签与 Help）、`static/games/manila.css`（职位姓名行）、`static/game_assets.js`（Manila JS／CSS 版本）、`static/index.html`（加载器版本）、`tests/manila.browser.cjs`（姓名及安全回归），以及本节。保留其他游戏的并发改动，不修改规则、后端和共享 CSS。
+
+验收记录：
+
+* `node --check static/games/manila.js`、`node --check tests/manila.browser.cjs`、`node scripts/smoke_load.cjs manila` 通过；`python -m unittest tests.test_frontend_style_assets tests.test_help_contract` 共 13 项通过。UI-only 改动不运行游戏逻辑测试。
+* 真实 Chrome 检查 **320、390、1024、1440px**，覆盖船上工人、全部 10 个港湾职位、竞拍、玩家列表、结算卡和旁观者；验证实际姓名、YOU、无 P 编号、长英文／中文换行、HTML 安全转义及页面／容器无溢出。四种宽度的姓名截图已逐一查看，保存在忽略的 `build/manila-ui/player-names-<width>.png`。
+* 完整 27 状态 × 4 宽度浏览器回归，在临时内存包装中仅排除既有共享 RC 内部溢出扫描后通过，包含起点边界、Help／Explain／Escape、触控、各类派遣及确认、错误恢复、重连、回合等待与按需加载。正式测试仍保留原断言，直接运行时仍在 `Help desktop` 遇到上一节记录的共享 RC `panel-header` 28/30px 溢出，未修改无关共享样式。
+* 遵守 `DEV_GUIDE.md` 对应开发、响应式与交互检查要求，但因该共享 RC 失败，不声称完整 UI 门槛全部通过。未测真实多人服务端流程、实体设备、Safari／Firefox；保留原有原生 Help 对话框机制，本次不扩展语言切换或重构 Help。

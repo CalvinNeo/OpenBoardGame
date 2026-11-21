@@ -6,7 +6,6 @@
   <div id="thatsLifeLobby" class="tl-lobby">
     <div class="tl-lobby-art" aria-hidden="true">−8 &nbsp; 🍀 &nbsp; +8</div>
     <h3>糟了个糕！ · That's Life!</h3>
-    <p>Take the good. Turn the bad.</p>
     <div class="tl-settings" data-thats-life-explain="settings">
       <label>Track <select id="thatsLifeSetup"><option value="standard">Classic · sorted</option><option value="random">Shuffled</option></select></label>
       <label>Rounds <select id="thatsLifeRounds"><option>1</option><option>2</option><option>3</option></select></label>
@@ -14,18 +13,17 @@
     <p>Ready up, then Start in Room Control.</p>
   </div>
   <div id="thatsLifeTable" class="hidden">
-    <div class="tl-status"><span id="thatsLifeRound" data-thats-life-explain="round" tabindex="0"></span><strong id="thatsLifeStatus" role="status" aria-live="polite"></strong><button id="thatsLifeRoll" type="button" data-thats-life-explain="roll">Roll 🎲</button></div>
+    <div class="tl-status"><div class="tl-turn"><strong id="thatsLifeStatus" role="status" aria-live="polite"></strong><span id="thatsLifeRound" data-thats-life-explain="round" tabindex="0"></span></div><span id="thatsLifeDie" data-thats-life-explain="roll" tabindex="0">🎲 —</span><button id="thatsLifeRoll" type="button" data-thats-life-explain="roll">Roll 🎲</button></div>
     <div class="tl-layout">
       <section class="tl-course" aria-label="Track">
-        <div class="tl-caption"><h3>The road ahead</h3><span id="thatsLifeDie" data-thats-life-explain="roll" tabindex="0">🎲 —</span></div>
+        <div class="tl-caption"><h3>Track</h3><span data-thats-life-explain="track" tabindex="0">→ Reading order</span></div>
         <div id="thatsLifeStart" class="tl-terminal"></div>
         <div id="thatsLifeTrack" class="tl-track"></div>
         <div id="thatsLifeFinish" class="tl-terminal"></div>
         <p id="thatsLifeLastMove" class="tl-last-move" data-thats-life-explain="track" tabindex="0"></p>
       </section>
       <aside class="tl-sidebar">
-        <div class="tl-caption"><h3>The travellers</h3><span data-thats-life-explain="score" tabindex="0">★ Score</span></div>
-        <div id="thatsLifePlayers" class="tl-players"></div>
+        <div id="thatsLifePlayers" class="tl-players" aria-label="Players and scores"></div>
         <section id="thatsLifeSummary" class="tl-summary hidden" aria-label="Round results"><h3>Round results</h3><div id="thatsLifeResults"></div><button id="thatsLifeNext" type="button" data-thats-life-explain="next">Next Round</button></section>
         <details class="tl-log"><summary>Move history</summary><ol id="thatsLifeHistory"></ol></details>
       </aside>
