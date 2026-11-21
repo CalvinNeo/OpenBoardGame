@@ -166,6 +166,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "find_diff": ("filler", "puzzle"),
     "factory_funner": ("puzzle", "euro", "abstract"),
     "for_northwood": ("puzzle", "trick_taking"),
+    "thats_life": ("filler", "push_your_luck"),
 }
 
 

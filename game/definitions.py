@@ -1,3 +1,5 @@
+from game.marrakech import MarrakechGame, ACTION_SCHEMA as MARRAKECH_ACTION_SCHEMA, CONFIG_SCHEMA as MARRAKECH_CONFIG_SCHEMA
+from game.thats_life import ThatsLifeGame, ACTION_SCHEMA as THATS_LIFE_ACTION_SCHEMA, CONFIG_SCHEMA as THATS_LIFE_CONFIG_SCHEMA
 from game.dice_throne import DiceThroneGame, ACTION_SCHEMA as DICE_THRONE_ACTION_SCHEMA, CONFIG_SCHEMA as DICE_THRONE_CONFIG_SCHEMA
 from game.colt_express import ColtExpressGame, ACTION_SCHEMA as COLT_EXPRESS_ACTION_SCHEMA, CONFIG_SCHEMA as COLT_EXPRESS_CONFIG_SCHEMA
 from game.dnd_starter_set import DndStarterSetGame, ACTION_SCHEMA as DND_STARTER_ACTION_SCHEMA, CONFIG_SCHEMA as DND_STARTER_CONFIG_SCHEMA
@@ -89,7 +91,7 @@ from game.love_letter import (
     ACTION_SCHEMA as LOVE_LETTER_ACTION_SCHEMA,
     CONFIG_SCHEMA as LOVE_LETTER_CONFIG_SCHEMA,
 )
-from game.manila import ManilaGame
+from game.manila import ManilaGame, START_POSITION_MAX
 from game.nine_upper import NineUpperGame
 from game.no_thanks import NoThanksGame, ACTION_SCHEMA as NO_THANKS_ACTION_SCHEMA, CONFIG_SCHEMA as NO_THANKS_CONFIG_SCHEMA
 from game.not_a_hat import NotAHatGame, ACTION_SCHEMA as NOT_A_HAT_ACTION_SCHEMA, CONFIG_SCHEMA as NOT_A_HAT_CONFIG_SCHEMA
@@ -115,6 +117,22 @@ from game.take_time_data import ACTION_SCHEMA as TAKE_TIME_ACTION_SCHEMA, CONFIG
 from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
+
+register_game(
+    GameDefinition(
+        game_id=ThatsLifeGame.game_id,
+        name="That's Life! (Verflixxt!)",
+        name_zh="糟了个糕",
+        min_players=ThatsLifeGame.min_players,
+        max_players=ThatsLifeGame.max_players,
+        turn_mode="turn",
+        action_schema=THATS_LIFE_ACTION_SCHEMA,
+        config_schema=THATS_LIFE_CONFIG_SCHEMA,
+        module=ThatsLifeGame,
+        serialize=ThatsLifeGame.serialize,
+        deserialize=ThatsLifeGame.deserialize,
+    )
+)
 from game.chromino import ChrominoGame, ACTION_SCHEMA as CHROMINO_ACTION_SCHEMA, CONFIG_SCHEMA as CHROMINO_CONFIG_SCHEMA
 from game.splendor import SplendorGame
 from game.splendor_pokemon import PokemonSplendorGame
@@ -208,6 +226,22 @@ from game.for_northwood import (
     ForNorthwoodGame,
     ACTION_SCHEMA as FOR_NORTHWOOD_ACTION_SCHEMA,
     CONFIG_SCHEMA as FOR_NORTHWOOD_CONFIG_SCHEMA,
+)
+
+register_game(
+    GameDefinition(
+        game_id=MarrakechGame.game_id,
+        name="Marrakech",
+        name_zh="马拉喀什",
+        min_players=MarrakechGame.min_players,
+        max_players=MarrakechGame.max_players,
+        turn_mode="turn",
+        action_schema=MARRAKECH_ACTION_SCHEMA,
+        config_schema=MARRAKECH_CONFIG_SCHEMA,
+        module=MarrakechGame,
+        serialize=MarrakechGame.serialize,
+        deserialize=MarrakechGame.deserialize,
+    )
 )
 
 register_game(
@@ -4386,7 +4420,7 @@ MANILA_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "set_positions"},
-                "positions": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 13}, "minItems": 3, "maxItems": 3},
+                "positions": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": START_POSITION_MAX}, "minItems": 3, "maxItems": 3},
             },
             "required": ["type", "positions"],
             "additionalProperties": False,

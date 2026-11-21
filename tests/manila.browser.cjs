@@ -41,6 +41,31 @@ async function render(page, name, {reset = true, view = views[name], config = {}
 
 async function actionCount(page) { return page.evaluate(() => window.manilaQaActions.length); }
 async function lastAction(page) { return page.evaluate(() => window.manilaQaActions.at(-1)); }
+async function startingPositionBounds(page, width) {
+    await render(page, 'positions');
+    const count = await actionCount(page);
+    const stepper = (cargo, delta) => page.locator(`[data-manila-op="position"][data-cargo="${cargo}"][data-delta="${delta}"]`);
+    for (let step = 0; step < 3; step++) await stepper('nutmeg', -1).click();
+    assert.equal(await stepper('nutmeg', -1).isDisabled(), true);
+    assert.equal(await page.locator('[data-manila-op="positions-confirm"]').isDisabled(), true);
+    await stepper('ginseng', 1).click();
+    for (let step = 0; step < 2; step++) await stepper('jade', 1).click();
+    assert.equal(await stepper('jade', 1).isDisabled(), true);
+    assert.equal(await page.locator('.manila-ship[data-cargo="nutmeg"] output').innerText(), '0');
+    assert.equal(await page.locator('.manila-ship[data-cargo="jade"] output').innerText(), '5');
+    await stepper('jade', 1).evaluate(node => { node.disabled = false; node.click(); });
+    assert.equal(await page.locator('.manila-ship[data-cargo="jade"] output').innerText(), '5');
+    await stepper('nutmeg', -1).evaluate(node => { node.disabled = false; node.click(); });
+    assert.equal(await page.locator('.manila-ship[data-cargo="nutmeg"] output').innerText(), '0');
+    assert.equal(await actionCount(page), count);
+    assert.equal(await page.locator('[data-manila-op="positions-confirm"]').isDisabled(), false);
+    await page.locator('#manilaSeaTitle').scrollIntoViewIfNeeded();
+    await bounds(page, `${width}px initial positions 0–5`);
+    await page.screenshot({path: path.join(output, `starting-positions-${width}.png`), fullPage: true});
+    await page.locator('[data-manila-op="positions-confirm"]').click();
+    assert.deepEqual(await lastAction(page), {type: 'set_positions', positions: [0, 4, 5]});
+}
+
 async function bounds(page, label) {
     const result = await page.evaluate(() => {
         const nodes = [...document.querySelectorAll('#manilaPanel *, .manila-dialog[open] *, .game-panel[data-game-theme="manila"] > .panel-header *')];
@@ -118,6 +143,7 @@ async function swipe(page, locator) {
         await page.locator('#manilaHelpBtn').click();
         assert.equal(await page.locator('#manilaHelpModal').evaluate(node => node.open), true);
         assert.match(await page.locator('#manilaHelpBody').innerText(), /Next Round/);
+        assert.match(await page.locator('#manilaHelpBody').innerText(), /每船 0–5 格，可以为 0/);
         await bounds(page, 'Help desktop');
         await page.keyboard.press('Escape');
         assert.equal(await page.locator('#manilaHelpModal').evaluate(node => node.open), false);
@@ -311,6 +337,7 @@ async function swipe(page, locator) {
 
         for (const width of [320, 390, 1024, 1440]) {
             await page.setViewportSize({width, height: 1000});
+            await startingPositionBounds(page, width);
             for (const name of Object.keys(views)) {
                 await render(page, name);
                 await bounds(page, `${width}px ${name}`);

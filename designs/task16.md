@@ -136,3 +136,45 @@
 * 在 Flip 7 面板新增 **Last Round** 区块（放在 Players 面板下方）。
 * Last Round 需要展示每位玩家上一轮的翻牌列表（包含数字牌、功能牌、修正牌），并标注是否爆牌（如状态 `busted`），可同时标出 Flip 7 达成者。
 * 后端应在每次翻牌时记录本轮翻牌序列，并在回合结束时写入 `last_round_summary.flips`，供前端渲染。
+
+## 5. 策略 AI 与 UI 优化（2026-11-21）
+
+### AI
+
+- `game/flip7_ai.py` 提供专用策略，通过 `Flip7Game.bot_move` 接入，战略 AI 目录中标记 `flip7`，选游戏时显示 🤖。
+- 根据标准牌组减去公开弃牌、所有玩家的公开牌面及待结算功能牌，推断剩余牌的多重集合，不读取真实牌库内容或顺序。
+- 每次抽停决策进行 128 次确定性洗牌模拟，每条模拟最多推进 24 次自己的行动，使用现有规则引擎处理重复数字、Second Chance、修正牌、Flip Three 和 Flip 7 奖励。模拟后续行动通过下一张牌的期望增益决定是否继续。
+- 使用本轮可保分数与模拟得分比较，并在达到目标总分、追赶已达到目标的对手时调整效用。此策略不是全员博弈搜索，不能保证最优。
+- Second Chance 优先留给自己，否则交给总分加当前牌面较低的合法对手。Freeze 根据继续抽牌的预期收益与总分威胁选择对手，必要时给自己保分。Flip Three 延续当前实现，只由抽到它的人承受，不改变游戏规则。
+- AI 使用自己的随机数生成器，模拟洗回弃牌也不改变真实游戏的随机数状态。正式行动保留约 550ms 展示间隔，轮末确认不额外延时。不需要模型、额外 Python 依赖或下载资源。
+
+### 轮末与公开状态
+
+- 不再自动跳过轮末。`round_ready` 保存已确认玩家，`next_round` 必须经所有玩家分别确认后才重新发牌，机器人自动确认一次，不阻塞真人看结果。
+- `round_ready` 随存档保存，重复确认被拒绝，已经确认的玩家不再拥有该合法行动。旧存档没有此字段时按空列表处理。
+- 公开状态增加 `potential_score` 和显式 `busted` 标识，分别用于保分预览与区分“保住 0 分”和“爆牌得 0 分”。轮末 `round_breakdown.busted` 保留爆牌原因。
+
+### UI
+
+- 直接在 Game 主区域展示牌桌，不增加外层面板。标题改为 Flip 7，Help 与 Reconnect 同行，Explain 沿用共享 RC 在手机端的停靠行为。
+- 优先展示自己牌面与可保分数，Flip / Stay 就地放在自己的牌区。待结算功能牌通过目标玩家牌区按钮选择，不另设 Actions 面板或 Clear Selection。
+- 数字牌、修正牌和功能牌采用自绘样式与不同配色，Second Chance(🛡)、Freeze(❄)、Flip Three(↻) 的符号与名称在双语 Help / Explain 中对应说明。
+- 卡牌桌面悬停和键盘焦点可读说明，手机轻点显示 3 秒提示，移动超过阈值或触摸取消不打开提示。Explain 支持具体卡牌、目标、禁用按钮与 Next Round，弹窗支持 Escape。
+- Last Round 默认折叠且内部限高滚动。进入轮末或整局结束时自动展开，显示每人本轮翻牌、所得分、总分、爆牌或 Flip 7，自己的结果高亮；轮末隐藏重复牌桌以缩短页面。
+- 保留两个既有 CSS media 占位组和按需加载，更新游戏 JS / HTML / CSS 资源版本及首页 manifest 版本，不新增商业素材。
+
+### 验收记录
+
+- 自动化：`python3 -m unittest tests.test_flip7 tests.test_frontend_style_assets tests.test_help_contract tests.test_ai_metadata`，33 项测试通过，覆盖公开状态、AI 决策与不读暗牌、不修改原状态、洗牌随机数隔离、牌数守恒、全机器人完整对局、轮末确认与存档恢复。
+- 前端：`node --check static/games/flip7.js`、`node scripts/smoke_load.cjs flip7` 和 `tests/flip7.browser.cjs`。浏览器脚本通过 `PLAYWRIGHT_MODULE` / `ROOM_TEST_URL` 选择已有 Playwright 与独立测试服务。
+- 桌面 Chrome 检查 320px、390px、1024px、1440px，无页面横向滚动、卡牌内容溢出，Help / Reconnect 保持同行；检查长玩家名、六种数字、×2、+10、Second Chance 和轮末结果截图。
+- 交互检查：真实房间加入机器人、开局与刷新重连，真人保分后机器人自动完成并确认，真人确认后才进入下一轮。构造公开状态检查目标选择、保分、终局、轮末展开、双语 Help / Escape、具体卡牌及禁用按钮 Explain、旁观视图、触摸提示自动消失和滑动不误触。
+- DEV_GUIDE 对应要求在以上验收范围内通过。未在真机 iOS Safari、Android 或 Windows 浏览器上复测，未做穷举牌局或 AI 胜率基准。共享 RC 的停靠条允许覆盖页面，沿用既有规范行为。
+- 既有 BGG weight 未改变，未新增游戏注册，因此无需重排 development order。未修改根 README、提交或切换分支；工作区其他游戏的改动保持原样。
+
+### 修改文件
+
+- 规则与策略：`game/flip7.py`、`game/flip7_ai.py`、`game/ai_metadata.py`。
+- 游戏前端：`static/games/flip7.html`、`static/games/flip7.css`、`static/games/flip7.js`。
+- 资源集成：`static/game_assets.js` 中 Flip 7 条目，`static/index.html` 中 Header 容器与 manifest 版本。
+- 测试与说明：`tests/test_flip7.py`、`tests/flip7.browser.cjs`、`designs/task16.md`。截图与独立服务数据仅存于忽略目录 `tmp/flip7-qa/`。

@@ -604,14 +604,14 @@ const GAME_ASSETS = {
   },
   "flip7": {
     "scripts": [
-      "/static/games/flip7.js?v=app_v5"
+      "/static/games/flip7.js?v=app_v6"
     ],
     "styles": [],
     "panel": "flip7Panel",
     "panelTitle": "Flip 7",
     "header": "showFlip7HeaderActions",
     "markup": "/static/games/flip7.html?v=2",
-    "styleFragments": "/static/games/flip7.css?v=2"
+    "styleFragments": "/static/games/flip7.css?v=3"
   },
   "hot_streak": {
     "scripts": [
@@ -676,13 +676,13 @@ const GAME_ASSETS = {
   },
   "bubble_shooter": {
     "scripts": [
-      "/static/games/bubble_shooter.js?v=11"
+      "/static/games/bubble_shooter.js?v=12"
     ],
-    "styles": ["/static/games/bubble_shooter.css?v=10"],
+    "styles": ["/static/games/bubble_shooter.css?v=11"],
     "panel": "bubbleShooterPanel",
     "panelTitle": "Bubble Shooter",
     "header": "showBubbleShooterHeaderActions",
-    "markup": "/static/games/bubble_shooter.html?v=7"
+    "markup": "/static/games/bubble_shooter.html?v=8"
   },
   "coyote": {
     "scripts": [
@@ -879,7 +879,7 @@ const GAME_ASSETS = {
   },
   "manila": {
     "scripts": [
-      "/static/games/manila.js?v=app_v6"
+      "/static/games/manila.js?v=app_v7"
     ],
     "styles": [],
     "panel": "manilaPanel",
@@ -1283,6 +1283,22 @@ const GAME_ASSETS = {
     "panel": "factoryFunnerPanel",
     "panelTitle": "🏭 工厂乐翻天",
     "header": "showFactoryFunnerHeaderActions"
+  },
+  "marrakech": {
+    "scripts": ["/static/games/marrakech.js?v=1"],
+    "styles": ["/static/games/marrakech.css?v=1"],
+    "markup": "/static/games/marrakech.html?v=1",
+    "panel": "marrakechPanel",
+    "panelTitle": "Marrakech",
+    "header": "showMarrakechHeaderActions"
+  },
+  "thats_life": {
+    "scripts": ["/static/games/thats_life.js?v=1"],
+    "styles": ["/static/games/thats_life.css?v=1"],
+    "markup": "/static/games/thats_life.html?v=1",
+    "panel": "thatsLifePanel",
+    "panelTitle": "糟了个糕！",
+    "header": "showThatsLifeHeaderActions"
   },
   "for_northwood": {
     "scripts": ["/static/games/for_northwood.js?v=2"],

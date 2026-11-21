@@ -133,3 +133,5 @@
 - AI：闭式概率对照、骰面概率归一化、匹配耗骰与服务端一致、合法行动、不可变性、家族补齐、夺取与锁定、序列化恢复，以及 2 / 4 / 6 人整局测试。额外运行 30 个固定种子、2–6 人对局，均在 167–791 个行动内结束。
 - 浏览器：`tests/age_of_war.browser.cjs` 覆盖 320×668、390×844、1024×900、1440×1000，无页面横向溢出，骰子和放置确认无需翻动页面即可同时看到。检查分页、原地确认与取消、放置/弃骰、观战、六人分数、额外大名战线、终局、Help 语言/章节、Explain、Escape、滑动防误触、真实 Socket.IO Bot 回合和刷新重连。
 - 截图保存在忽略目录 `tmp/age-of-war-ui/`。按 DEV_GUIDE 的布局、交互、Help/Explain 和按需加载要求实现，真实 iOS / Android 设备尚未验证。低矮窗口或大量玩家城池允许列表局部滚动，不保证所有信息绝对一屏展示。
+- 定向 Python 测试共 41 项通过，JS syntax / stub smoke 与 `git diff --check` 通过。额外检查手机被动提示三秒消失、连续点击更新、交互骰子不弹提示，以及选择城池不改变局部滚动位置。
+- 本次修改文件：`game/age_of_war.py`、`game/age_of_war_ai.py`、`game/ai_metadata.py`、`static/games/age_of_war.html`、`static/games/age_of_war.js`、`static/games/age_of_war.css`、`static/game_assets.js`、`static/index.html`、`tests/test_age_of_war_ai.py`、`tests/age_of_war.browser.cjs` 和本设计文档。共享文件仅调整本游戏登记与缓存版本，其他并行任务的更改保持原样。

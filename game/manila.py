@@ -17,6 +17,8 @@ CARGO_LIST = list(ASSETS.get("cargo_list", []))
 CARGO_DATA = ASSETS.get("cargo", {})
 BOARD_DATA = ASSETS.get("board", {})
 PRICE_TRACK = ASSETS.get("price_track", [0, 5, 10, 20, 30])
+START_POSITION_MAX = 5
+START_POSITION_TOTAL = 9
 
 DEFAULT_CONFIG: Dict = {
     "starting_cash": 30,
@@ -756,13 +758,13 @@ class ManilaGame:
             positions = action.get("positions")
             if not isinstance(positions, list) or len(positions) != 3:
                 return [], "invalid positions"
-            if sum(int(p) for p in positions) != 9:
+            if any(type(position) is not int or not 0 <= position <= START_POSITION_MAX for position in positions):
+                return [], "starting positions must be integers from 0 to 5"
+            if sum(positions) != START_POSITION_TOTAL:
                 return [], "positions must sum to 9"
             boats: Dict[str, Dict] = {}
             for cargo_id, pos in zip(state.get("cargo_slots", []), positions):
-                if int(pos) < 0 or int(pos) > 13:
-                    return [], "invalid position"
-                boats[cargo_id] = _init_boat(cargo_id, int(pos))
+                boats[cargo_id] = _init_boat(cargo_id, pos)
             state["boats"] = boats
             state["board"] = _init_board_state()
             state["port_arrivals"] = _init_arrivals_state()

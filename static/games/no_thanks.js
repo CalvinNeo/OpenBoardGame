@@ -376,6 +376,8 @@
     text("Status", "Waiting to start"); text("CardValue", "?"); text("Pot", "0");
     ["YourCardCount", "YourTotal", "MoveCount"].forEach(suffix => text(suffix, ""));
     text("Remaining", "🂠 — left"); text("Decision", "Waiting for the first deal.");
+    tip(byId("Status"), byId("Status").textContent);
+    tip(byId("Decision"), byId("Decision").textContent);
     text("PersonalTitle", "Your position"); text("PlayersTitle", "At the table");
     text("Projection", "Net —"); text("PassLabel", "Pay 1 🔴"); text("TakeLabel", "Collect the offer");
     byId("Delta").className = "";

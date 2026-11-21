@@ -88,7 +88,11 @@ async function render(page, view, reset = true) {
 }
 
 async function settled(page) {
-  await page.waitForFunction(() => !document.getElementById('bsFireBtn').disabled);
+  await page.waitForFunction(() => !document.getElementById('bsBoard').matches('.is-locked, .is-watching, .is-hammer'));
+}
+
+async function canShoot(page) {
+  return page.locator('#bsBoard').evaluate(node => !node.matches('.is-locked, .is-watching, .is-hammer'));
 }
 
 async function assertGrid(page, view) {
@@ -101,15 +105,15 @@ async function assertGrid(page, view) {
 }
 
 async function assertLayout(page, label) {
+  assert.equal(await page.locator('#bsFireBtn, #bsAngleInput, #bsLeftBtn, #bsRightBtn, .bs-controls').count(), 0);
   const layout = await page.evaluate(() => {
-    const selectors = ['#bsBoard', '.bs-run', '.bs-side', '.bs-loadout', '.bs-controls', '.bs-tools', '#bsFireBtn', '#bsAngleInput', '#bsHammerBtn', '#bsAimBtn', '.game-panel > .panel-header'];
+    const selectors = ['#bsBoard', '.bs-run', '.bs-side', '.bs-loadout', '.bs-tools', '#bsHammerBtn', '#bsAimBtn', '.game-panel > .panel-header'];
     const bad = selectors.filter(selector => {
       const node = document.querySelector(selector);
       const rect = node.getBoundingClientRect();
       return rect.left < -1 || rect.right > innerWidth + 1 || node.scrollWidth > node.clientWidth + 2;
     });
     const board = document.getElementById('bsBoard').getBoundingClientRect();
-    const fire = document.getElementById('bsFireBtn').getBoundingClientRect();
     const items = document.querySelector('.bs-board-items').getBoundingClientRect();
     const reconnect = document.getElementById('gameReconnectBtn').getBoundingClientRect();
     const help = document.getElementById('bubbleShooterHelpBtn').getBoundingClientRect();
@@ -117,31 +121,31 @@ async function assertLayout(page, label) {
       overflow: document.documentElement.scrollWidth > innerWidth,
       bad,
       boardVisible: board.top >= 0 && board.bottom <= innerHeight,
-      fireVisible: fire.bottom <= innerHeight,
+      itemsVisible: items.bottom <= innerHeight,
       itemsOutside: items.left >= board.right || items.top >= board.bottom,
       headerOneLine: Math.abs((help.top + help.height / 2) - (reconnect.top + reconnect.height / 2)) < 5
     };
   });
-  assert.deepEqual(layout, { overflow: false, bad: [], boardVisible: true, fireVisible: true, itemsOutside: true, headerOneLine: true }, label);
+  assert.deepEqual(layout, { overflow: false, bad: [], boardVisible: true, itemsVisible: true, itemsOutside: true, headerOneLine: true }, label);
 }
 
 async function pointerChecks(page) {
   await render(page, fixtures.initial);
-  await page.locator('#bsRightBtn').click();
-  assert.equal(await page.locator('#bsAngleValue').textContent(), '+0.5°');
-  await page.locator('#bsLeftBtn').click();
-  assert.equal(await page.locator('#bsAngleValue').textContent(), '0°');
-  await page.locator('#bsAngleInput').fill('35.5');
-  assert.equal(await page.locator('#bsAngleValue').textContent(), '+35.5°');
+  const board = await page.locator('#bsBoard').boundingBox();
+  const target = {
+    x: board.x + board.width * (5.5 + Math.tan(35.5 * Math.PI / 180) * 5) / 11,
+    y: board.y + board.height * 7.95 / 14
+  };
+  await page.mouse.move(target.x, target.y);
+  await page.waitForFunction(() => Math.abs(parseFloat(document.getElementById('bsLauncher').style.getPropertyValue('--bs-angle')) + 54.5) < .1);
   assert.equal(await page.evaluate(() => bsTestActions.length), 0);
-  await page.evaluate(() => { document.getElementById('bsFireBtn').click(); document.getElementById('bsFireBtn').click(); });
+  await page.mouse.dblclick(target.x, target.y);
   assert.deepEqual(await page.evaluate(() => bsTestActions), [{ type: 'shoot', angle: 35.5 }]);
-  assert.equal(await page.locator('#bsFireBtn').isDisabled(), true);
+  assert.equal(await canShoot(page), false);
   await page.evaluate(() => socket.listeners('system:error').at(-1)({ message: 'Rejected shot' }));
-  assert.equal(await page.locator('#bsFireBtn').isEnabled(), true);
+  assert.equal(await canShoot(page), true);
 
   await render(page, fixtures.initial);
-  const board = await page.locator('#bsBoard').boundingBox();
   await page.mouse.move(board.x + board.width / 2, board.y + board.height * .65);
   await page.mouse.down();
   await page.mouse.move(board.x - 6, board.y + board.height * .5);
@@ -153,14 +157,14 @@ async function pointerChecks(page) {
   await render(page, fixtures.initial);
   await page.locator('#bsBoard').focus();
   await page.keyboard.press('Shift+ArrowRight');
-  assert.equal(await page.locator('#bsAngleValue').textContent(), '+0.5°');
+  assert.equal(await page.locator('#bsLauncher').evaluate(node => node.style.getPropertyValue('--bs-angle')), '-89.5deg');
   await page.keyboard.press('Space');
-  assert.equal(await page.evaluate(() => bsTestActions[0].type), 'shoot');
+  assert.deepEqual(await page.evaluate(() => bsTestActions[0]), { type: 'shoot', angle: .5 });
   await render(page, fixtures.initial);
   await page.locator('#bsHammerBtn').click();
-  assert.equal(await page.locator('#bsFireBtn').isDisabled(), true);
+  assert.equal(await canShoot(page), false);
   await page.keyboard.press('Escape');
-  assert.equal(await page.locator('#bsFireBtn').isEnabled(), true);
+  assert.equal(await canShoot(page), true);
 
   await page.locator('#bsSoundBtn').click();
   assert.equal(await page.locator('#bsSoundBtn').getAttribute('aria-pressed'), 'true');
@@ -208,15 +212,14 @@ async function effectsChecks(page) {
   await render(page, fixtures.wall, false);
   await page.locator('.bs-fly:not([hidden])').waitFor();
   await page.locator('.bs-score').nth(1).click();
-  assert.equal(await page.locator('#bsFireBtn').isDisabled(), true);
-  assert.equal(await page.locator('#bsAngleInput').isDisabled(), true);
+  assert.equal(await canShoot(page), false);
   assert.equal(await page.locator('#bsHammerBtn').isDisabled(), true);
   assert.equal(await page.locator('#bsFly').isVisible(), false);
   await page.locator('#bsBackBtn').click();
   await assertGrid(page, fixtures.wall);
   await page.waitForTimeout(650);
   await assertGrid(page, fixtures.wall);
-  assert.equal(await page.locator('#bsFireBtn').isEnabled(), true);
+  assert.equal(await canShoot(page), true);
 
   await render(page, fixtures.initial);
   await render(page, fixtures.wall, false);
@@ -225,7 +228,7 @@ async function effectsChecks(page) {
   await page.waitForTimeout(650);
   await assertGrid(page, fixtures.initial);
   assert.equal(await page.locator('#bsFly').isVisible(), false);
-  assert.equal(await page.locator('#bsFireBtn').isEnabled(), true);
+  assert.equal(await canShoot(page), true);
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await render(page, fixtures.clear_before);
@@ -243,16 +246,17 @@ async function helpChecks(page) {
   await page.locator('.obg-help-dialog[open]').waitFor();
   await page.locator('[data-obg-help-lang="en"]').click();
   await page.locator('[data-obg-help-tab="controls"]').click();
-  assert.match(await page.locator('.obg-help-content').textContent(), /slider only aims/);
+  assert.match(await page.locator('.obg-help-content').textContent(), /Aim and fire directly on the board/);
   await page.keyboard.press('Escape');
   await settled(page);
-  assert.equal(await page.locator('#bsFireBtn').isEnabled(), true);
+  assert.equal(await canShoot(page), true);
   await page.locator('#bubbleShooterExplainBtn').click({ force: true });
-  assert.equal(await page.locator('#bsFireBtn').isDisabled(), true);
-  const fire = await page.locator('#bsFireBtn').boundingBox();
-  await page.mouse.click(fire.x + fire.width / 2, fire.y + fire.height / 2);
+  assert.equal(await canShoot(page), false);
+  assert.equal(await page.locator('#bsHammerBtn').isDisabled(), true);
+  const hammer = await page.locator('#bsHammerBtn').boundingBox();
+  await page.mouse.click(hammer.x + hammer.width / 2, hammer.y + hammer.height / 2);
   await page.locator('.obg-explain-dialog[open]').waitFor();
-  assert.match(await page.locator('.obg-explain-text').textContent(), /loaded bubble/);
+  assert.match(await page.locator('.obg-explain-text').textContent(), /Hammer/);
   assert.equal(await page.evaluate(() => bsTestActions.length), 0);
   await page.keyboard.press('Escape');
 }
@@ -331,12 +335,13 @@ async function touchChecks(browser, width) {
     assert.deepEqual(await page.evaluate(() => bsTestActions[0]), { type: 'use_item', item: 'hammer', row: 0, col: 5 });
 
     await render(page, fixtures.initial);
-    const slider = await page.locator('#bsAngleInput').boundingBox();
-    await touch('touchStart', [{ x: slider.x + slider.width / 2, y: slider.y + slider.height / 2 }]);
-    await touch('touchMove', [{ x: slider.x + slider.width * .8, y: slider.y + slider.height / 2 }]);
-    await touch('touchEnd', []);
+    await touch('touchStart', [origin]);
+    await touch('touchMove', [{ x: origin.x - 30, y: origin.y - 35 }]);
     assert.equal(await page.evaluate(() => bsTestActions.length), 0);
-    await page.locator('#bsFireBtn').tap();
+    await touch('touchEnd', []);
+    assert.equal(await page.evaluate(() => bsTestActions.length), 1);
+    assert((await page.evaluate(() => bsTestActions[0].angle)) < 0);
+    await page.touchscreen.tap(origin.x, origin.y);
     assert.equal(await page.evaluate(() => bsTestActions.length), 1);
 
     await render(page, fixtures.initial);
@@ -359,7 +364,7 @@ async function touchChecks(browser, width) {
     await page.setViewportSize({ width, height: 844 });
     await page.evaluate(() => { document.querySelector('.bs-history').open = false; window.scrollTo(0, 0); });
     await page.screenshot({ path: `${output}/touch-${width}.png`, fullPage: true });
-    console.log(`Touch ${width}: aim, cancel, hammer, slider, hints and outside scroll passed.`);
+    console.log(`Touch ${width}: board aim/release, cancel, hammer, one-shot lock, hints and outside scroll passed.`);
   } finally {
     await page.evaluate(() => socket.emit('room:leave', { room_id: roomId })).catch(() => {});
     await context.close();
@@ -376,11 +381,11 @@ async function liveChecks(browser) {
     await page.evaluate(() => emitRoomStart());
     await page.waitForFunction(() => lastGameStatePayload?.game_type === 'bubble_shooter');
     await page.evaluate(() => setRoomControlsCollapsed(true));
-    await page.locator('#bsRightBtn').click();
-    await page.evaluate(() => { document.getElementById('bsFireBtn').click(); document.getElementById('bsFireBtn').click(); });
+    const board = await page.locator('#bsBoard').boundingBox();
+    await page.mouse.dblclick(board.x + board.width / 2, board.y + board.height * .65);
     await page.waitForFunction(() => lastGameStatePayload.view.shots === 1);
     await settled(page);
-    assert.equal(await page.evaluate(() => lastGameStatePayload.view.last_shot.angle), .5);
+    assert.equal(await page.evaluate(() => lastGameStatePayload.view.last_shot.angle), 0);
     await page.locator('#bsAimBtn').click();
     await page.waitForFunction(() => lastGameStatePayload.view.aim_left > 0);
     assert.equal(await page.locator('#bsGhost').isVisible(), true);

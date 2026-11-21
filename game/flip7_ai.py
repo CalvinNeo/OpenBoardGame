@@ -139,6 +139,8 @@ def choose_move(state: Dict, bot_id: str) -> Optional[Dict]:
     for _ in range(samples):
         simulation = copy.deepcopy({key: value for key, value in state.items() if key != "deck"})
         simulation["deck"] = list(pool)
+        if not state["deck"]:
+            simulation["discard"] = []
         generator.shuffle(simulation["deck"])
         action = {"type": "flip"}
         for _ in range(24):

@@ -31,7 +31,7 @@
         insurance: ["🛡️ 保险", "派一名工人，入场费 💰0，立即获得 💰10。结算时每艘失败的船需赔付 💰10，现金不足可能强制抵押股票。"],
         pledge: ["🏦 抵押股票", "抵押一张自己持有的股票获得现金。默认贷款 💰12、终局扣除 💰15，以房间设置为准。已抵押的股票不再按股价计分，也不能赎回。"],
         bid: ["竞选港务长", "出价必须是高于当前最高价的整数。竞得后支付出价，可先抵押股票补款。Pass 后本次拍卖不能重新参与。港务长可以买股、选择货物和安排起点。"],
-        position: ["安排起点", "三艘船的起点各在 0–13 格，合计必须为 9。用船旁 + / − 调整，航道实时预览，Confirm 后才发送。"],
+        position: ["安排起点", "三艘船的起点各在 0–5 格（可以为 0），合计必须为 9。用船旁 + / − 调整，航道实时预览，Confirm 后才发送。"],
         pass: ["Pass", "放弃这一次派遣机会，不花钱、不消耗工人。本次派遣轮仍会继续，已派遣的工人保留在原位。"],
         next: ["Next Round", "确认已看完结算。所有玩家准备后才开始下一航次；准备状态会实时显示。点击只发送一次，不再弹出确认。"],
         cash: ["现金（💰）", "可用于竞拍、买股和派遣工人的现金。收益与费用分开显示；抵押股票可以补充现金。"],
@@ -47,7 +47,7 @@
         <p>现金（💰）、工人（👤）、股票（📜）、抵押债务（🏦）、骰子（🎲）、隐藏持仓（🔒）。P1–P5 对应座次，YOU 是自己，Winner（🏆）是胜者。收益 + 与入场费分开显示。股票种类对其他玩家保密。</p>
         <h3>每一航次</h3>
         <ol><li><strong>拍卖：</strong>轮流提高出价或 Pass。竞得者支付费用成为港务长，现金不足时先抵押股票。</li>
-        <li><strong>备航：</strong>港务长可买一张股票（价格至少 💰5），再选三种货物；三船起点合计 9，每船 0–13 格。</li>
+        <li><strong>备航：</strong>港务长可买一张股票（价格至少 💰5），再选三种货物；三船起点合计 9，每船 0–5 格，可以为 0。</li>
         <li><strong>出航：</strong>共三次派遣。每位玩家依次放一名工人或 Pass，每次派遣结束后各船掷 🎲1–6 前进。三人游戏每人 4 名工人，四至五人每人 3 名。</li>
         <li><strong>结算：</strong>各职位支付收益，成功货物股价按 0 → 5 → 10 → 20 → 30 上升。账本保留，所有玩家点击 Next Round 后才继续。</li></ol>
         <h3>船、码头和修船厂</h3>
@@ -256,10 +256,10 @@
                 });
             }).join("")}</div>`;
             let controls = "";
-            if (settingPositions) controls = `<div class="manila-move-controls"><span class="manila-position-label">起点</span><div class="manila-stepper">
+            if (settingPositions) controls = `<div class="manila-move-controls"><span class="manila-position-label">起点 0–5</span><div class="manila-stepper">
                 ${button("−", "position", {key: "position", disabled: !can("set_positions") || position <= 0, extra: `data-cargo="${cargo}" data-delta="-1" aria-label="${meta.name}起点减一" data-manila-focus="position-${cargo}-minus"`})}
                 <output aria-label="${meta.name}起点">${position}</output>
-                ${button("+", "position", {key: "position", disabled: !can("set_positions") || position >= 13, extra: `data-cargo="${cargo}" data-delta="1" aria-label="${meta.name}起点加一" data-manila-focus="position-${cargo}-plus"`})}
+                ${button("+", "position", {key: "position", disabled: !can("set_positions") || position >= 5, extra: `data-cargo="${cargo}" data-delta="1" aria-label="${meta.name}起点加一" data-manila-focus="position-${cargo}-plus"`})}
             </div></div>`;
             if (view.phase === "pilot" && !boat.arrived) controls = `<div class="manila-move-controls"><span class="manila-position-label">领航预览</span><div class="manila-stepper">
                 ${button("−", "pilot", {key: "pilot", disabled: !pilotAllowed(cargo, delta - 1), extra: `data-cargo="${cargo}" data-delta="-1" aria-label="${meta.name}后退一格" data-manila-focus="pilot-${cargo}-minus"`})}
@@ -283,7 +283,8 @@
         }).join("");
         if (settingPositions) {
             const sum = cargos.reduce((amount, cargo) => amount + positions[cargo], 0);
-            byId("Boats").insertAdjacentHTML("beforeend", `<div class="manila-setup-footer"><strong>起点合计 ${sum} / 9</strong>${button("Confirm", "positions-confirm", {key: "position", className: "manila-primary", disabled: !can("set_positions") || sum !== 9})}</div>`);
+            const valid = cargos.every(cargo => Number.isInteger(positions[cargo]) && positions[cargo] >= 0 && positions[cargo] <= 5);
+            byId("Boats").insertAdjacentHTML("beforeend", `<div class="manila-setup-footer"><strong>起点合计 ${sum} / 9</strong>${button("Confirm", "positions-confirm", {key: "position", className: "manila-primary", disabled: !can("set_positions") || !valid || sum !== 9})}</div>`);
         }
         if (view.phase === "pilot" && view.board?.pilots?.[activePilot()] === view.you) {
             const used = Object.values(pilotMoves).reduce((sum, delta) => sum + Math.abs(delta), 0);
@@ -374,7 +375,7 @@
             contents += `<p class="manila-action-note">${acting ? `已选 ${selectedCargo.length} / 3 · 点击上方货物，船只实时预览。` : `等待 ${escape(playerName(view.harbormaster))} 选择出航货物。`}</p>`;
             if (acting) contents += `<div class="manila-action-buttons">${button("Confirm", "cargo-confirm", {key: "cargo", className: "manila-primary", disabled: !can("select_cargo") || selectedCargo.length !== 3})}</div>`;
         } else if (phase === "harbormaster_position") {
-            contents += `<p class="manila-action-note">${acting ? "在船旁调整起点，合计 9 格后确认。" : `等待 ${escape(playerName(view.harbormaster))} 安排三船起点。`}</p>`;
+            contents += `<p class="manila-action-note">${acting ? "在船旁调整起点，每船 0–5 格，合计 9 后确认。" : `等待 ${escape(playerName(view.harbormaster))} 安排三船起点。`}</p>`;
         } else if (phase === "placement") {
             const note = !acting ? `等待 ${escape(playerName(view.current_player))} 派遣。` : own().workers_available <= 0 ? "没有剩余工人，请 Pass。" : "点选船位或港湾职位，在原处确认。";
             contents = `<div class="manila-placement-line"><p class="manila-action-note">${note}</p>${acting ? button("Pass", "pass", {key: "pass", disabled: !can("pass")}) : ""}</div>`;
@@ -535,11 +536,11 @@
         } else if (operation === "cargo-confirm" && selectedCargo.length === 3) {
             dispatch({type: "select_cargo", cargo: [...selectedCargo]});
         } else if (operation === "position" && can("set_positions")) {
-            positions[cargo] = Math.max(0, Math.min(13, positions[cargo] + Number(target.dataset.delta)));
+            positions[cargo] = Math.max(0, Math.min(5, positions[cargo] + Number(target.dataset.delta)));
             render();
         } else if (operation === "positions-confirm") {
             const draft = view.cargo_slots.map(item => positions[item]);
-            if (draft.every(Number.isInteger) && total(draft) === 9) dispatch({type: "set_positions", positions: draft});
+            if (draft.every(position => Number.isInteger(position) && position >= 0 && position <= 5) && total(draft) === 9) dispatch({type: "set_positions", positions: draft});
         } else if (operation === "seat" && cargoData[cargo]) {
             const seat = Number(target.dataset.seat);
             const boat = view.boats[cargo];

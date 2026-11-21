@@ -4,7 +4,7 @@ from functools import lru_cache
 from itertools import combinations, product
 from typing import Dict, List, Optional, Tuple
 
-from game.manila import BOARD_DATA, CARGO_DATA, CARGO_LIST, PRICE_TRACK, _price_for_cargo
+from game.manila import BOARD_DATA, CARGO_DATA, CARGO_LIST, PRICE_TRACK, START_POSITION_MAX, START_POSITION_TOTAL, _price_for_cargo
 
 
 @lru_cache(maxsize=256)
@@ -143,9 +143,12 @@ def _plan(state: Dict, player_id: str, cargo_options: Optional[List[str]] = None
     total_score = 0.0
     plans = 0
     for cargo in selections:
-        for first in range(10):
-            for second in range(10 - first):
-                positions = [first, second, 9 - first - second]
+        for first in range(START_POSITION_MAX + 1):
+            for second in range(START_POSITION_MAX + 1):
+                third = START_POSITION_TOTAL - first - second
+                if not 0 <= third <= START_POSITION_MAX:
+                    continue
+                positions = [first, second, third]
                 chances = [_voyage(position, 3, False)[0] for position in positions]
                 dividends = [CARGO_DATA[cargo_id]["total_value"] / len(CARGO_DATA[cargo_id]["seat_costs"]) for cargo_id in cargo]
                 score = sum(

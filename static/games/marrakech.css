@@ -1,0 +1,74 @@
+#marrakechPanel { --mq-ink: #403126; --mq-muted: #806e59; --mq-sand: #f6efdf; color: var(--mq-ink); min-width: 0; }
+#marrakechPanel * { box-sizing: border-box; }
+#marrakechPanel button { color: var(--mq-ink); background: #fffaf0; border: 1px solid #cfbfa4; border-radius: 7px; min-height: 36px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; touch-action: manipulation; }
+#marrakechPanel button:hover:not(:disabled) { background-color: #efe0c4; }
+#marrakechPanel button:focus-visible { outline: 3px solid #237c81; outline-offset: 2px; }
+#marrakechPanel button:disabled { opacity: .5; cursor: default; }
+#marrakechPanel .marrakech-primary { background: #246c68; color: white; border-color: #246c68; }
+#marrakechPanel .marrakech-primary:hover:not(:disabled) { background: #175451; }
+.marrakech-lobby { padding: 35px 12px; text-align: center; background: linear-gradient(135deg, #f8edda, #f5f0e6); border-radius: 8px; }
+.marrakech-lobby h3 { font: 600 clamp(20px, 4vw, 30px) Georgia, serif; margin: 16px 0; }
+.marrakech-lobby p { font-size: 14px; overflow-wrap: anywhere; }
+.marrakech-lobby-pattern { color: #ab7145; font-size: 32px; letter-spacing: 8px; }
+.marrakech-muted { color: var(--mq-muted); }
+.marrakech-turnline { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0; font-size: 13px; }
+#marrakechTurn { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+#marrakechPhase { color: var(--mq-muted); flex-shrink: 0; }
+.marrakech-players { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.marrakech-player { padding: 8px; border-bottom: 3px solid transparent; background: #f6f0e6; border-radius: 6px; font-size: 12px; min-width: 0; }
+.marrakech-player.is-current { border-bottom-color: #246c68; background: #e9f0e7; }
+.marrakech-player.is-out { opacity: .6; }
+.marrakech-player-name { display: flex; gap: 4px; align-items: center; margin-bottom: 5px; font-weight: 700; min-width: 0; }
+.marrakech-player-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.marrakech-player-stats { display: flex; flex-wrap: wrap; gap: 4px 9px; line-height: 1.6; }
+.marrakech-swatch { display: inline-block; width: 10px; height: 10px; border: 1px solid #0003; border-radius: 2px; flex-shrink: 0; background: var(--rug-color); }
+.marrakech-market-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 10px 0 5px; }
+#marrakechPanel h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.marrakech-zoom { display: flex; gap: 4px; }
+#marrakechPanel .marrakech-zoom button { min-height: 30px; padding: 3px 8px; font-size: 12px; }
+.marrakech-market-layout { display: grid; grid-template-columns: minmax(0, 1fr) 235px; gap: 16px; align-items: start; }
+.marrakech-board-column, .marrakech-side { min-width: 0; }
+.marrakech-viewport { width: 100%; max-height: 72vh; overflow: auto; touch-action: none; overscroll-behavior: contain; background: #f5e8d1; border-radius: 9px; }
+.marrakech-world { position: relative; aspect-ratio: 1; margin: 0 auto; width: 100%; flex-shrink: 0; }
+.marrakech-routes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.marrakech-board { position: absolute; inset: 6.25%; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); border: 2px solid #96764e; background: #b89566; gap: 2px; }
+#marrakechPanel .marrakech-cell { padding: 0; min-height: 0; min-width: 0; border: 0; border-radius: 0; position: relative; background: #f0dfbf; aspect-ratio: 1; color: #fffdf4; overflow: hidden; }
+#marrakechPanel .marrakech-cell:nth-child(even) { background-color: #ead6b1; }
+#marrakechPanel .marrakech-cell.has-rug { background-color: var(--rug-color); background-image: repeating-linear-gradient(0deg, transparent 0 15%, #fff3 15% 18%, transparent 18% 82%, #fff3 82% 85%, transparent 85%); }
+.marrakech-rug-pattern { position: absolute; inset: 17%; display: grid; place-items: center; border: 1px solid #fff8; font: 600 clamp(12px, 2.5vw, 28px) Georgia, serif; pointer-events: none; }
+#marrakechPanel .marrakech-cell.same-right { border-right: 0; margin-right: -2px; }
+#marrakechPanel .marrakech-cell.same-down { border-bottom: 0; margin-bottom: -2px; }
+#marrakechPanel .marrakech-cell.is-neighbor::after { content: ""; position: absolute; inset: 4px; border: 2px dashed #246c68a0; pointer-events: none; }
+#marrakechPanel .marrakech-cell.is-preview { box-shadow: inset 0 0 0 4px #fff9ca; filter: brightness(1.13); background-color: var(--preview-color); }
+#marrakechPanel .marrakech-cell.is-invalid { box-shadow: inset 0 0 0 4px #b63030; }
+#marrakechPanel .marrakech-cell.is-paid { outline: 2px dotted #453d30; outline-offset: -4px; }
+.marrakech-assam { position: absolute; inset: 9%; display: grid; place-items: center; color: #fff; background: #263b3b; border: 2px solid #fff3cb; border-radius: 45% 45% 28% 28%; font-size: clamp(16px, 3.3vw, 34px); box-shadow: 0 2px 3px #0005; pointer-events: none; }
+.marrakech-side { display: grid; gap: 12px; padding-top: 4px; }
+.marrakech-assam-controls h3 { margin-bottom: 8px !important; }
+.marrakech-orient { display: flex; gap: 5px; margin-bottom: 7px; }
+#marrakechPanel .marrakech-direction.is-selected { background: #246c68; color: #fff; }
+.marrakech-message { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.marrakech-last-move { border-left: 3px solid #b98b44; padding-left: 10px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.marrakech-last-move:empty { display: none; }
+.marrakech-placement { padding-top: 9px; }
+.marrakech-placement-head { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+.marrakech-placement-tools { display: flex; gap: 5px; flex-wrap: wrap; }
+.marrakech-results { background: #ecf1df; border-radius: 7px; padding: 12px; font-size: 14px; overflow-wrap: anywhere; }
+.marrakech-results p { margin: 5px 0; }
+.marrakech-journal { font-size: 12px; color: var(--mq-muted); }
+.marrakech-journal summary { cursor: pointer; padding: 8px 0; }
+.marrakech-journal ol { max-height: 190px; overflow-y: auto; padding-left: 22px; line-height: 1.65; margin: 4px 0; overflow-wrap: anywhere; }
+.marrakech-tooltip { position: fixed; z-index: 15000; width: max-content; max-width: min(300px, calc(100vw - 24px)); background: #253535; color: #fff; border-radius: 7px; padding: 9px 11px; pointer-events: none; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .marrakech-market-layout { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .marrakech-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .marrakech-player { padding: 6px 8px; }
+  .marrakech-player-stats { gap: 3px 8px; }
+  .marrakech-side { gap: 9px; padding-top: 0; }
+  .marrakech-assam-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .marrakech-assam-controls h3 { display: none; }
+  .marrakech-orient { margin: 0; }
+  .marrakech-turnline { font-size: 12px; }
+  .marrakech-viewport { max-height: 68vh; }
+  #marrakechPanel .marrakech-placement-tools button { padding: 6px 9px; }
+}

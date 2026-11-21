@@ -47,12 +47,18 @@
     next_round: { zh: "确认已看过结算。所有玩家确认后才发新牌，不需要再次确认。", en: "Confirm you have reviewed the reveal. A new deal waits for every player. No extra confirmation is needed." },
     reset: { zh: "玩家可在整局结束后，用同一批玩家开始新局。", en: "Players can start a fresh game with the same players after game over." }
   };
-  const coyoteHelpWidget = window.obgCreateHelp(COYOTE_HELP_CONFIG);
-  const coyoteExplainWidget = window.obgCreateExplain({
-    gameId: "coyote", attribute: "data-coyote-explain", explanations: COYOTE_EXPLAIN,
-    button: byId("ExplainBtn"), root: () => panel,
-    bypass: ["#coyoteHelpBtn", "#coyoteExplainBtn"]
-  });
+  let coyoteHelpWidget = null;
+  let coyoteExplainWidget = null;
+  function initCoyoteHelpExplain() {
+    if (coyoteHelpWidget || typeof window.obgCreateHelp !== "function" || typeof window.obgCreateExplain !== "function") return;
+    coyoteHelpWidget = window.obgCreateHelp(COYOTE_HELP_CONFIG);
+    coyoteExplainWidget = window.obgCreateExplain({
+      gameId: "coyote", attribute: "data-coyote-explain", explanations: COYOTE_EXPLAIN,
+      button: byId("ExplainBtn"), root: () => panel,
+      bypass: ["#coyoteHelpBtn", "#coyoteExplainBtn"]
+    });
+  }
+  initCoyoteHelpExplain();
 
   function name(playerId) { return view?.players.find(player => player.player_id === playerId)?.name || playerId || "—"; }
   function minimumBid() { return view?.last_bid == null ? 1 : view.last_bid + 1; }
@@ -82,7 +88,7 @@
     byId("Tooltip").classList.add("hidden");
   }
   function showTip(target, autoHide = false) {
-    if (!target || target.closest("button, input, summary") || coyoteExplainWidget.isActive() || coyoteHelpWidget.isOpen()) return;
+    if (!target || target.closest("button, input, summary") || coyoteExplainWidget?.isActive() || coyoteHelpWidget?.isOpen()) return;
     hideTip();
     const tooltip = byId("Tooltip");
     tooltip.textContent = target.dataset.coyoteTip;
@@ -148,7 +154,7 @@
       card.append(playerName, playerTag, face, penalties);
       byId("Players").append(card);
     }
-    coyoteExplainWidget.refresh();
+    coyoteExplainWidget?.refresh();
   }
   function summaryText(summary) {
     let result = `${name(summary.challenger)} challenged ${name(summary.bidder)}. Bid ${summary.bid}, total ${summary.actual_total}. ${name(summary.loser)} takes a penalty.`;
@@ -209,7 +215,7 @@
   function clearState() {
     view = null; signature = null; pending = false;
     panel.classList.remove("is-revealed");
-    clearTimeout(pendingTimer); hideTip(); coyoteExplainWidget.exit(); coyoteHelpWidget.close();
+    clearTimeout(pendingTimer); hideTip(); coyoteExplainWidget?.exit(); coyoteHelpWidget?.close();
     text("Status", "Waiting for the deal"); text("Round", "Round —"); text("Bid", "—"); text("Bidder", "No bid yet"); text("Phase", ""); text("Survivors", "");
     byId("Players").replaceChildren();
     for (const suffix of ["Result", "Review", "History", "ResetBtn"]) byId(suffix).classList.add("hidden");
@@ -217,8 +223,8 @@
     renderControls();
   }
 
-  byId("HelpBtn").addEventListener("click", () => { hideTip(); coyoteExplainWidget.exit(); coyoteHelpWidget.open(); });
-  byId("ExplainBtn").addEventListener("click", () => { hideTip(); coyoteExplainWidget.toggle(); });
+  byId("HelpBtn").addEventListener("click", () => { hideTip(); initCoyoteHelpExplain(); coyoteExplainWidget?.exit(); coyoteHelpWidget?.open(); });
+  byId("ExplainBtn").addEventListener("click", () => { hideTip(); initCoyoteHelpExplain(); coyoteExplainWidget?.toggle(); });
   for (const [suffix, kind] of [["BidBtn", "bid"], ["ChallengeBtn", "challenge"], ["NextBtn", "next_round"]]) byId(suffix).addEventListener("click", () => dispatch(kind));
   for (const [suffix, delta] of [["BidMinusBtn", -1], ["BidPlusBtn", 1]]) byId(suffix).addEventListener("click", () => {
     if (!can("bid")) return;
@@ -248,6 +254,7 @@
     if (!visible) clearState();
   };
   function sync() {
+    initCoyoteHelpExplain();
     socket.on("system:error", () => { pending = false; clearTimeout(pendingTimer); renderControls(); });
     socket.on("disconnect", () => { pending = false; clearTimeout(pendingTimer); hideTip(); renderControls(); });
     socket.on("connect", renderControls);

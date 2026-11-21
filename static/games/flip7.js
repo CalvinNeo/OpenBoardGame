@@ -202,7 +202,9 @@ function flip7Card(card) {
   element.addEventListener("pointerenter", (event) => {
     if (event.pointerType === "mouse") showFlip7Tooltip(element);
   });
-  element.addEventListener("pointerleave", hideFlip7Tooltip);
+  element.addEventListener("pointerleave", (event) => {
+    if (event.pointerType === "mouse") hideFlip7Tooltip();
+  });
   element.addEventListener("focus", () => showFlip7Tooltip(element));
   element.addEventListener("blur", hideFlip7Tooltip);
   return element;
@@ -319,8 +321,10 @@ function clearFlip7State() {
   hideFlip7Tooltip();
   document.getElementById("flip7PlayerActionStash")?.append(flip7FlipBtn, flip7StayBtn);
   flip7Players.replaceChildren();
+  flip7Players.classList.remove("hidden");
   flip7LastRound.replaceChildren();
   flip7Results.open = false;
+  document.getElementById("flip7ResultCaption").textContent = "";
   document.getElementById("flip7Status").textContent = "Waiting for the game to start.";
   document.getElementById("flip7RoundContinue").classList.add("hidden");
   ["flip7Round", "flip7Deck", "flip7Discard", "flip7TargetScore"].forEach((id) => { document.getElementById(id).textContent = "—"; });

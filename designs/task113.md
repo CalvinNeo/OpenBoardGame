@@ -52,3 +52,15 @@
 - JS 语法检查与本次文件 `git diff --check` 通过。`scripts/gen_dev_order.py` 已运行，保留共享工作区的其他游戏注册。
 - 实际 Chrome 验收通过：从大厅加载新游戏、白骰选项在加机器人／Ready 时保持、真实掷骰、刷新同骰面、选点确认、空白／Esc 取消、完整四轮人机对局、四次轮末暂停、最终排名；Help／Esc、禁用控件 Explain；基础五人／白骰三人的 8 份状态在 1440／390／320px 下无页面及内部水平溢出。截图在 `tmp/las_vegas/`。
 - 手机触屏验收通过：连续点击更换 tooltip，3 秒后自动关闭；Explain 拦截原行动且解释后退出；五人大厅自动取消／禁用白骰，并成功以基础模式开局。浏览器验证脚本：`tmp/las_vegas/browser_smoke.cjs`、`tmp/las_vegas/mobile_lobby_smoke.cjs`。
+
+## Royale 豪华版与 UI 优化（2026-11-21）
+
+- 豪华版通过大厅 `Edition → Royale · 豪华版` 选择，复用已实现的 `edition: "royale"` 引擎：2–5 人、3 轮、7 小骰与 1 大骰、每轮 2 筹码、16 种赌场小游戏。基础版与白骰变体保持独立，旧存档缺省仍采用基础版。具体规则及线上边界见现有 `designs/las_vegas_royale.md`。
+- 按 `DEV_GUIDE.md` 将掷骰栏并入棋盘，选中赌场内直接确认投放，小游戏选择也位于对应赌场内，不再使用独立 Action 面板。保留投放前奖金预览、秘密选择权限、轮末全员确认和原有重连机制。
+- 桌面六赌场为三列，手机为两列。缩小板块标题、保持游戏标题与 Reconnect／Help 控件同行，版本选择标签与下拉框同行。Double Down／Knockout 仅显示实际占位玩家，避免空名单撑高棋盘。Activity 默认折叠，展开后独立滚动，点选骰子及刷新状态时保留展开状态。
+- Help 支持中英文切换及快速上手、回合结算、图标操作、16 种小游戏章节，先讲胜利条件、每回合行动与策略重点。图标说明包含名字与符号，线上免费 Pass、奖金供应和现金找零例外均披露。Explain 在抬手时确认点击，超过 10px 移动或取消手势不弹解释，禁用按钮仍可解释，后续正常点击不会被误吞。
+- 涉及文件：`static/games/las_vegas.js`、`static/games/las_vegas.html`、`static/las_vegas.css`、`static/game_assets.js`、`static/index.html`、`tests/las_vegas_royale.browser.cjs`、`tests/las_vegas_royale_fixtures.py` 及本设计文档。资源清单同步更新脚本、样式、模板与首页清单版本，不更改公共样式或规则引擎。
+- 验收：Chrome 在 320、390、600、768、1024、1440px 检查基础版、白骰与豪华版共 31 份真实公开视图（186 组合），无页面或游戏元素水平溢出。目视检查 320／390／1024／1440px 截图及 Black Box 秘密分组，截图保存在忽略目录 `build/las-vegas-royale-qa/`。
+- 交互验收：版本选项及开局载荷、放置和大骰预览、封锁、Pass、小游戏及秘密分组、旁观权限、轮末确认、双语章节与 Esc、禁用 Explain、日志折叠保留、取消选择。Chrome 触屏模拟检查点选／确认、连续 tooltip 更新与 3 秒关闭、Explain 滑动不触发及点击后退出。
+- 检查：`node --check static/games/las_vegas.js`、`node --check tests/las_vegas_royale.browser.cjs`、`node scripts/smoke_load.cjs las_vegas`、`python3 -m unittest tests.test_las_vegas tests.test_las_vegas_royale tests.test_las_vegas_integration tests.test_frontend_style_assets tests.test_help_contract`（74 项）、`node tests/las_vegas_royale.browser.cjs`（配合已有 Playwright 和 `PYTHON=python3`）、`git diff --check`。
+- 已覆盖本次 `DEV_GUIDE.md` 的桌面／移动布局与交互验收要求。未进行 iOS Safari／Windows 真机测试，不能将 Chrome 触屏模拟等同于跨平台真机验收。本次未改全局行为，不运行全部游戏逻辑测试。共享工作区其他游戏的修改保持不动。

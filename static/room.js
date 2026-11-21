@@ -1395,6 +1395,8 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  thats_life: 1.32,
+  marrakech: 1.33,
   werewolf: 1.38,
   word_sync: null,
   // No BGG entry exists yet: 上山捡菌 is an unreleased Chinese original, still in

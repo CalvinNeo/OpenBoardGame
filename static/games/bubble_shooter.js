@@ -93,11 +93,6 @@
   const hammerCount = el("bsHammerCount");
   const aimBtn = el("bsAimBtn");
   const aimCount = el("bsAimCount");
-  const angleValue = el("bsAngleValue");
-  const angleInput = el("bsAngleInput");
-  const leftBtn = el("bsLeftBtn");
-  const rightBtn = el("bsRightBtn");
-  const fireBtn = el("bsFireBtn");
   const soundBtn = el("bsSoundBtn");
   const restartBtn = el("bsRestartBtn");
   const statusBox = el("bsStatus");
@@ -847,31 +842,6 @@
     if (backBtn) backBtn.hidden = isMine();
   }
 
-  function renderControls() {
-    if (angleValue) {
-      const formatted = Number(angle.toFixed(1));
-      angleValue.textContent = isMine()
-        ? (angle > 0 ? "+" : "") + formatted + "°"
-        : "—";
-    }
-    const playable = canAct() && !hammerArmed;
-    if (angleInput) {
-      angleInput.min = String(-geo().max_angle);
-      angleInput.max = String(geo().max_angle);
-      angleInput.value = String(angle);
-      angleInput.disabled = !playable;
-      angleInput.setAttribute("aria-valuetext", isMine() ? angleValue.textContent : "Watching");
-    }
-    if (leftBtn) leftBtn.disabled = !playable || angle <= -geo().max_angle;
-    if (rightBtn) rightBtn.disabled = !playable || angle >= geo().max_angle;
-    if (fireBtn) {
-      fireBtn.disabled = !playable;
-      const label = fireBtn.querySelector("span");
-      if (label) label.textContent = !isMine() ? "Watching" : hammerArmed ? "Pick target" : animating || pendingAction ? "In flight" : "Fire";
-    }
-    if (restartBtn) restartBtn.disabled = false;
-  }
-
   function renderStatus() {
     if (!statusBox || !view) return;
     const snapshot = activeBoard();
@@ -895,7 +865,7 @@
     } else if (snapshot && snapshot.push_interval > 0) {
       text = "Ceiling drops in " + snapshot.push_countdown + " shot(s).";
     } else {
-      text = "Drag to aim · release or press Fire to shoot.";
+      text = "Aim on the board · click or release to shoot.";
     }
     statusBox.textContent = text;
   }
@@ -1013,7 +983,6 @@
     renderQueue();
     renderShooter();
     renderItems();
-    renderControls();
     renderStatus();
     renderLastShot();
     renderOverlay();
@@ -1142,7 +1111,6 @@
 
   function refreshInput() {
     renderItems();
-    renderControls();
     renderStatus();
     renderAim();
   }
@@ -1201,7 +1169,6 @@
     const dy = py - g.shooter[1];
     if (py >= g.shooter[1] - .15) return;
     angle = clampAngle((Math.atan2(dx, -dy) * 180) / Math.PI);
-    renderControls();
     renderAim();
   }
 
@@ -1354,12 +1321,10 @@
       const step = event.shiftKey ? 0.5 : 2;
       if (event.key === "ArrowLeft") {
         angle = clampAngle(angle - step);
-        renderControls();
         renderAim();
         event.preventDefault();
       } else if (event.key === "ArrowRight") {
         angle = clampAngle(angle + step);
-        renderControls();
         renderAim();
         event.preventDefault();
       } else if (event.key === " " || event.key === "Enter") {
@@ -1390,28 +1355,6 @@
     }
     hammerArmed = false;
     requestBoardAction({ type: "use_item", item: "aim" });
-  });
-
-  function nudge(direction) {
-    if (!canAct() || hammerArmed) return;
-    cancelPointer();
-    angle = clampAngle(angle + direction * .5);
-    renderControls();
-    renderAim();
-  }
-
-  leftBtn?.addEventListener("click", () => nudge(-1));
-  rightBtn?.addEventListener("click", () => nudge(1));
-  fireBtn?.addEventListener("click", shoot);
-  angleInput?.addEventListener("input", () => {
-    if (!canAct() || hammerArmed) {
-      renderControls();
-      return;
-    }
-    cancelPointer();
-    angle = clampAngle(Number(angleInput.value));
-    renderControls();
-    renderAim();
   });
 
   soundBtn?.addEventListener("click", () => {
@@ -1476,8 +1419,8 @@
         en: "Everybody plays their own board at the same time. Once every board is out, the highest score wins and equal scores share the win."
       },
       turn: {
-        zh: "鼠标移到棋盘上瞄准，点击发射。触摸时拖动瞄准，棋盘内松手发射，移出棋盘松手取消。也可以拖动角度滑杆或点左右微调，再按 Fire 发射。",
-        en: "Move over the board to aim and click to fire. On touch, drag to aim and release inside the board to fire, or outside to cancel. You can also adjust the angle with the slider or arrow buttons, then press Fire."
+        zh: "直接在棋盘上控制方向和发射。鼠标移动瞄准、点击发射，触摸时按住拖动瞄准，在棋盘内松手发射，移出棋盘松手取消。",
+        en: "Aim and fire directly on the board. Move the mouse to aim and click to fire. On touch, press and drag to aim, release inside the board to fire, or release outside to cancel."
       },
       key: {
         zh: "所有人用同一个种子，所以地图、泡泡序列和天花板下压完全一致，比的是谁打得更好。关键是把泡泡送到同色堆里凑够三颗，让上方失去连接的泡泡整片掉下来。",
@@ -1489,12 +1432,12 @@
         id: "controls",
         label: { zh: "操作与反馈", en: "Controls" },
         html: {
-          zh: "<p>Fine aim 滑杆只负责瞄准，不会在松手时发射。左右按钮每次微调 0.5°，适合手机上精确打反弹球。调整后点 Fire 发射。</p>"
+          zh: "<p>瞄准和发射都直接在棋盘上完成，没有独立的方向按钮、滑杆或发射按钮。鼠标移动时炮管跟随指针，点击即可发射。手机上按住拖动瞄准，在棋盘内松手发射，移到棋盘外松手取消。</p>"
             + "<p>键盘聚焦棋盘后，左右方向键每次调整 2°，按住 Shift 时调整 0.5°，Space 或 Enter 发射。按 Escape 取消拖动或收起待用的锤子(🔨)。</p>"
             + "<p>飞行、墙面反弹和命中反馈都重放服务器确认的轨迹，不改变命中判定或计分。等待结果时发射与道具会暂时锁定，防止误连发。</p>"
             + "<p>Sound 可开启合成音效，默认关闭。系统启用减少动态效果时，不播放飞行、震动和粒子动画。</p>"
             + "<p>统计中的总分(⭐)、波次(♾️)、连击(🔥)、下压倒计时(⬇️)和发射次数(🎯)都对应当前观看的棋盘。普通泡泡的颜色符号是红色(✕)、橙色(▲)、黄色(★)、绿色(✚)、蓝色(●)和紫色(◆)。</p>",
-          en: "<p>The Fine aim slider only aims and never fires on release. Each arrow button adjusts by 0.5°, making bank shots easier on a phone. Press Fire when ready.</p>"
+          en: "<p>Aim and fire directly on the board without a separate control bar. Move the mouse to aim and click to fire. On a phone, press and drag to aim, release inside the board to fire, or release outside to cancel.</p>"
             + "<p>Focus the board to aim with the left and right keys in 2° steps, or 0.5° while holding Shift. Space or Enter fires. Escape cancels a drag or disarms the hammer(🔨).</p>"
             + "<p>Flight, wall bounces and impact effects replay the server-confirmed path without changing collisions or scoring. Shooting and items briefly lock while awaiting the result to prevent accidental double shots.</p>"
             + "<p>Sound enables synthesized effects and is off by default. The system reduced-motion setting skips flight, shake and particle animations.</p>"
@@ -1616,18 +1559,6 @@
     queue: {
       zh: "发射队列。最大的一颗是当前要射的，后面两颗是接下来两颗，其中可能混有炸弹(💣)和彩虹(🌈)。",
       en: "The firing queue. The large one is loaded now and the two smaller ones come next, and they may include bombs(💣) and rainbows(🌈)."
-    },
-    angle: {
-      zh: "0° 朝正上方，正数偏右，负数偏左。可移动棋盘上的指针瞄准，也可用滑杆设置角度，滑杆松手不会发射。观战时不能调整。",
-      en: "0° aims straight up, positive angles right and negative angles left. Aim on the board or set the angle with the slider, which never fires on release. Aiming is disabled while spectating."
-    },
-    nudge: {
-      zh: "每次向左或向右微调 0.5°，最大角度为 ±82°。微调不会发射，调整完点 Fire。",
-      en: "Adjust left or right by 0.5°, up to ±82°. Fine adjustments never fire a shot. Press Fire when ready."
-    },
-    fire: {
-      zh: "按当前角度发射已装填的泡泡。请求等待或飞行动画期间不能重复发射，观战和锤子待用时也不能发射。",
-      en: "Fire the loaded bubble at the current angle. Repeat shots are blocked while awaiting the server or replaying a shot, while spectating and while the hammer is armed."
     },
     sound: {
       zh: "开启或关闭本机合成的发射、反弹、命中和消球音效，默认关闭。这个设置不会影响其他玩家。",

@@ -221,6 +221,24 @@ class Flip7GameTests(unittest.TestCase):
         self.assertEqual(random.getstate(), random_state)
         self.assertEqual(state, snapshot)
 
+    def test_ai_empty_deck_does_not_duplicate_discard_cards(self):
+        state = self._make_state()
+        state["players"]["p1"]["tableau"] = [{"type": CARD_NUMBER, "value": 12}]
+        self._set_unseen_cards(state, [])
+        apply_action = Flip7Game.apply_action
+
+        def checked_action(simulation, player_id, action, rng=None):
+            cards = list(simulation["deck"]) + list(simulation["discard"])
+            cards.extend(card for player in simulation["players"].values() for card in player["tableau"])
+            if simulation.get("pending_action"):
+                cards.append(simulation["pending_action"]["card"])
+            cards.extend(entry["card"] for entry in simulation.get("action_queue", []))
+            self.assertEqual(len(cards), 94)
+            return apply_action(simulation, player_id, action, rng=rng)
+
+        with patch.object(Flip7Game, "apply_action", side_effect=checked_action):
+            self.assertIn(choose_move(state, "p1")["type"], ["flip", "stay"])
+
     def test_all_bot_games_finish_with_legal_moves(self):
         for seed in range(3):
             random.seed(seed)
