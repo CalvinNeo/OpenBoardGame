@@ -1,50 +1,51 @@
+<template data-game-target="coyoteHeaderActions" data-game-mode="contents">
+  <button id="coyoteHelpBtn" type="button">Help</button>
+  <button id="coyoteExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
 <template data-game-target="coyotePanel" data-game-mode="contents">
-              <div class="coyote-toolbar">
-                <h3>🐺 Coyote</h3>
-                <div class="coyote-tools">
-                  <button id="coyoteHelpBtn" type="button">Help</button>
-                  <button id="coyoteExplainBtn" type="button" aria-pressed="false">Explain</button>
-                </div>
-              </div>
-              <div class="row">
-                <div data-coyote-explain="phase">Phase: <span id="coyotePhase">-</span></div>
-                <div data-coyote-explain="round">Round: <span id="coyoteRound">-</span></div>
-                <div data-coyote-explain="turn">Current Turn: <span id="coyoteTurn">-</span></div>
-              </div>
-              <div id="coyoteRoundNotice" class="round-notice hidden" data-coyote-explain="round_notice">
-                <div id="coyoteRoundNoticeTitle" class="round-notice-title">Last Round</div>
-                <div id="coyoteRoundNoticeBody" class="round-notice-body">-</div>
-              </div>
-
-              <h3>Table</h3>
-              <div id="coyoteTable" class="coyote-table">
-                <div id="coyotePlayers" class="coyote-players" data-coyote-explain="players"></div>
-                <div class="coyote-bid-center">
-                  <div class="coyote-bid-status" role="status" aria-live="polite">
-                    <div class="coyote-bid-line" data-coyote-explain="last_bid">
-                      <span class="coyote-bid-label">Last Bid:</span>
-                      <span id="coyoteBid" class="coyote-bid-highlight">-</span>
-                    </div>
-                    <div class="coyote-bid-line" data-coyote-explain="bidder">
-                      <span class="coyote-bid-label">Bidder:</span>
-                      <span id="coyoteBidder" class="coyote-bidder-name">-</span>
-                    </div>
-                    <div class="coyote-bid-line coyote-winner-line" data-coyote-explain="winner">
-                      <span class="coyote-bid-label">Winner:</span>
-                      <span id="coyoteWinner">-</span>
-                    </div>
-                  </div>
-                  <div class="coyote-center-actions">
-                    <button id="coyoteBidMinusBtn" data-coyote-explain="bid_minus">-</button>
-                    <input id="coyoteBidInput" type="number" min="1" step="1" placeholder="Bid" data-coyote-explain="bid_input" />
-                    <button id="coyoteBidPlusBtn" data-coyote-explain="bid_plus">+</button>
-                    <button id="coyoteBidBtn" data-coyote-explain="bid">Bid</button>
-                    <button id="coyoteChallengeBtn" data-coyote-explain="challenge">Challenge</button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="row actions coyote-actions">
-                <button id="coyoteResetBtn" data-coyote-explain="reset">Reset Game</button>
-              </div>
-            </template>
+  <div class="coyote-statusbar">
+    <span id="coyoteStatus" role="status" aria-live="polite">Waiting for the deal</span>
+    <span id="coyoteRound" tabindex="0" data-coyote-explain="round" data-coyote-tip="Each challenge ends a round. Everyone reviews the reveal before the next deal.">Round —</span>
+  </div>
+  <section id="coyoteResult" class="coyote-result hidden" aria-label="Round result" aria-live="polite">
+    <div class="coyote-result-heading"><strong id="coyoteResultTitle"></strong><span id="coyoteResultTotal"></span></div>
+    <p id="coyoteResultBody"></p>
+    <div id="coyoteRevealed" class="coyote-revealed"></div>
+    <div id="coyoteReview" class="coyote-review hidden">
+      <span id="coyoteReady"></span>
+      <button id="coyoteNextBtn" type="button" data-coyote-explain="next_round">Next Round</button>
+    </div>
+  </section>
+  <div class="coyote-play">
+    <section class="coyote-bidding" aria-label="Current bid">
+      <div class="coyote-bid-heading"><h3>Current bid</h3><span id="coyotePhase" tabindex="0" data-coyote-explain="phase"></span></div>
+      <div class="coyote-bid-display" tabindex="0" data-coyote-explain="last_bid">
+        <strong id="coyoteBid">—</strong>
+        <span id="coyoteBidder">No bid yet</span>
+      </div>
+      <div class="coyote-bid-controls">
+        <label for="coyoteBidInput">Your bid</label>
+        <div class="coyote-stepper">
+          <button id="coyoteBidMinusBtn" type="button" aria-label="Decrease bid" data-coyote-explain="bid_minus">−</button>
+          <input id="coyoteBidInput" type="number" min="1" step="1" inputmode="numeric" value="1" data-coyote-explain="bid_input" />
+          <button id="coyoteBidPlusBtn" type="button" aria-label="Increase bid" data-coyote-explain="bid_plus">+</button>
+        </div>
+      </div>
+      <div class="coyote-moves">
+        <button id="coyoteBidBtn" type="button" data-coyote-explain="bid">Raise bid</button>
+        <button id="coyoteChallengeBtn" type="button" data-coyote-explain="challenge">Challenge!</button>
+      </div>
+      <p id="coyoteDecision" class="coyote-decision">Waiting to start</p>
+    </section>
+    <section class="coyote-table" aria-label="Players and visible cards">
+      <div class="coyote-table-heading"><h3>At the table</h3><span id="coyoteSurvivors" tabindex="0" data-coyote-explain="players"></span></div>
+      <div id="coyotePlayers" class="coyote-players"></div>
+    </section>
+  </div>
+  <details id="coyoteHistory" class="coyote-history hidden">
+    <summary>Last round <span id="coyoteHistoryCaption"></span></summary>
+    <div id="coyoteHistoryBody"></div>
+  </details>
+  <button id="coyoteResetBtn" class="coyote-reset hidden" type="button" data-coyote-explain="reset">Play Again</button>
+  <div id="coyoteTooltip" class="coyote-tooltip hidden" role="tooltip" popover="manual"></div>
+</template>

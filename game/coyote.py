@@ -183,6 +183,8 @@ def _start_new_round(state: Dict, start_player: Optional[str]) -> None:
     state["phase"] = "bidding"
     state["last_bid"] = None
     state["last_bidder"] = None
+    state["round_ready"] = []
+    state["next_start_player"] = None
     state["round"] += 1
 
 
@@ -232,6 +234,8 @@ class CoyoteGame:
             "last_round_summary": None,
             "winner": None,
             "game_over": False,
+            "round_ready": [],
+            "next_start_player": None,
         }
 
     @staticmethod
@@ -239,7 +243,11 @@ class CoyoteGame:
         if state.get("game_over"):
             return []
         pdata = state["players"].get(player_id)
-        if not pdata or pdata["eliminated"]:
+        if not pdata:
+            return []
+        if state.get("phase") == "round_end":
+            return [] if player_id in state.get("round_ready", []) else ["next_round"]
+        if pdata["eliminated"]:
             return []
         if player_id != state.get("current_turn"):
             return []
@@ -252,8 +260,22 @@ class CoyoteGame:
         if state.get("game_over"):
             return [], "game over"
         pdata = state["players"].get(player_id)
-        if not pdata or pdata["eliminated"]:
+        if not pdata:
             return [], "unknown player"
+        if state.get("phase") == "round_end":
+            if action.get("type") != "next_round":
+                return [], "only next_round allowed"
+            ready = state.setdefault("round_ready", [])
+            if player_id in ready:
+                return [], "already ready"
+            ready.append(player_id)
+            events = [{"type": "coyote:ready", "payload": {"player_id": player_id}}]
+            if all(pid in ready for pid in state["players"]):
+                _start_new_round(state, state.get("next_start_player"))
+                events.append({"type": "coyote:next_round", "payload": {"round": state["round"]}})
+            return events, None
+        if pdata["eliminated"]:
+            return [], "player eliminated"
         if player_id != state.get("current_turn"):
             return [], "not your turn"
 
@@ -262,7 +284,7 @@ class CoyoteGame:
 
         if action_type == "bid":
             bid = action.get("bid")
-            if not isinstance(bid, int):
+            if not isinstance(bid, int) or isinstance(bid, bool):
                 return [], "invalid bid"
             if bid < 1:
                 return [], "bid must be positive"
@@ -334,7 +356,10 @@ class CoyoteGame:
                 start_player = _next_active_after(state, loser)
             else:
                 start_player = loser
-            _start_new_round(state, start_player)
+            state["phase"] = "round_end"
+            state["current_turn"] = None
+            state["round_ready"] = []
+            state["next_start_player"] = start_player
             return events, None
 
         return [], "invalid action"
@@ -358,7 +383,7 @@ class CoyoteGame:
         for pid in player_ids:
             pdata = state["players"][pid]
             meta = state["player_meta"][pid]
-            card_hidden = bool(pid == viewer_id and not state.get("game_over") and not pdata["eliminated"])
+            card_hidden = bool(pid == viewer_id and state.get("phase") == "bidding" and not pdata["eliminated"])
             card_label = None
             if not card_hidden:
                 card_label = _card_label(pdata.get("card"))
@@ -389,28 +414,17 @@ class CoyoteGame:
             "last_round_summary": last_summary,
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
+            "round_ready": list(state.get("round_ready", [])),
             "config": {"max_penalties": state["config"]["max_penalties"]},
         }
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
-            return None
-        pdata = state["players"].get(bot_id)
-        if not pdata or pdata["eliminated"]:
-            return None
-        if bot_id != state.get("current_turn"):
-            return None
+        from game.coyote_ai import choose_action
 
-        last_bid = state.get("last_bid")
-        min_bid = int(last_bid) + 1 if last_bid is not None else 1
-        if last_bid is None:
-            guess = random.randint(min_bid, min_bid + 5)
-            return {"type": "bid", "bid": guess}
-        if random.random() < 0.25:
-            return {"type": "challenge"}
-        raise_by = random.randint(1, 3)
-        return {"type": "bid", "bid": min_bid + raise_by - 1}
+        if not CoyoteGame.get_legal_actions(state, bot_id):
+            return None
+        return choose_action(CoyoteGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

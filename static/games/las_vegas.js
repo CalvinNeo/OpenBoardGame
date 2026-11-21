@@ -33,7 +33,7 @@
         total: "胜者(🏆)为 4 轮后累计奖金(💵)最多的玩家；金额相同则钞票张数更多者胜，再相同则并列获胜。",
         bot: "机器人(🤖)只根据自己的公开视图选择行动，不读取其他人的私有钞票或未来牌库；轮末只确认自己的席位。",
         round: "整场共 4 轮，每轮所有人重新取得自己的 8 枚骰子(🎲)。首轮先手随机，之后每轮先手按座位轮转；用完骰子的玩家自动跳过。",
-        log: "Activity 保留已经公开的掷骰、放置和奖金分配记录，不公开未来牌库。此区域可以单独滚动。",
+        log: "Activity 保留已经公开的掷骰、放置和奖金分配记录，不公开未来牌库。点击标题展开或收起，展开后可以单独滚动。",
     };
     const classicExplanations = {...explanations};
     const royaleExplanations = {
@@ -70,10 +70,30 @@
         tile_my_choice: "激活后掷两枚黑骰并选一个结果：1 = 1💰；2 = 2💰；3 = $30K；4 = 激活另一小游戏；5 = 转一枚剩余骰子到任意赌场或取回一枚赌场骰子（不触发小游戏）；6 = 一枚剩余骰子占据 $60K 金色奖励格，原占位骰子还给主人。",
     };
     const tileNames = {lucky_punch: "Lucky Punch · 猜拳", jackpot: "Jackpot · 累积大奖", prime_time: "Prime Time · 黄金时段", fifty_fifty: "Fifty Fifty · 猜大小", high_five: "High Five · 五骰大奖", bad_luck: "Bad Luck · 厄运", pay_day: "Pay Day · 发薪日", power_play: "Power Play · 强势行动", no_entry: "No Entry! · 禁止入内", knockout: "Knockout? · 出局酒吧", block_it: "Block It! · 灰骰阻挡", handicap: "Handicap · 移除障碍", black_box: "Black Box · 神秘盒", double_down: "Double Down · 另开赌局", nice_dice: "Nice Dice · 骰子奖励", my_choice: "My Choice · 我的选择"};
+    const englishTiles = {
+        lucky_punch: "Secretly hide 1, 2 or 3 markers. The next player to your left guesses the number. A wrong guess awards you 2 chips, $30K or $40K respectively. A correct guess awards nothing. Choices remain secret until both players finish.",
+        jackpot: "Roll two black dice. A double or a sum of seven wins the current jackpot and resets it to $30K. Otherwise increase it by $10K, up to $80K.",
+        prime_time: "Before casino payouts, the winner of this casino's largest note rolls two black dice and may add zero, one or both to their matching casinos as their own dice. A double can be split. These placements do not activate bonus games.",
+        fifty_fifty: "Roll two black dice and predict whether the next total is higher or lower. Each correct prediction increases the reward through 1 chip, $30K, $40K and $60K. Stop to collect the current reward. A wrong guess or equal total loses this attempt's reward.",
+        high_five: "The first player to activate this game with at least five dice strength in its casino takes the marker. Biggy counts twice. The marker cannot be stolen and pays $100K at round end.",
+        bad_luck: "At round end, all players tied for the lowest dice strength in this casino, including zero, pay $50K after all rewards. Biggy counts twice. If necessary, chips pay at $10K each. A player with insufficient assets pays everything they have.",
+        pay_day: "Receive $10K for each casino containing at least one of your dice. Dice on bonus boards do not count. One or two casinos pay 1 or 2 chips. Three to six casinos pay a $30K–$60K note.",
+        power_play: "On activation, take the marker if you have the sole highest dice strength here. Before rolling on a later turn, its holder may instead place one remaining die on any chosen face and activate that casino's game. Return the marker when you lose the sole majority.",
+        no_entry: "You may close any other casino, preventing dice from being added or removed. Moving the closure advances the reward track through 2 chips, nothing, $30K, nothing, 1 chip and nothing, then repeats. Keeping the same closure does not advance or pay.",
+        knockout: "Retrieve all your dice from the bar. Each other player with fewer than two physical dice in the bar must send one remaining die there, choosing which die if necessary. Biggy occupies one space. Bar dice do not count for casino payouts.",
+        block_it: "Choose an unused gray-dice group of 1, 1, 2, 2 or 3 dice and put the whole group in any open casino. Gray dice form one virtual participant for casino rankings and ties, separate from the two-player neutral set.",
+        handicap: "Start with one gray die in casinos 1–3 and two in casinos 4–6. On activation, you may remove a gray die from an open casino and use an available reward: 1 chip (two spaces), $30K (three) or adjust one of your dice (four). Adjust by placing a remaining die on a chosen face or retrieving a casino die. Do not activate a game or move bonus-board dice.",
+        black_box: "At round end, the large-note winner's left neighbor secretly splits markers worth $60K, $20K, $20K, $0, $0, $0 into two nonempty groups. The winner sees only group sizes and selects one group to collect its total. Each $20K marker pays 2 chips.",
+        double_down: "Move any number of your dice from this casino, including earlier placements, to this board. At round end it ranks separately, eliminating all equal positive strengths, and awards $60K and $30K to the top two eligible players. Biggy counts twice. Other effects cannot move these dice.",
+        nice_dice: "Place one just-rolled unplaced die or one die just placed in this casino in the matching reward space. Move its previous occupant to the matching casino without activating a game. Replacement is forbidden if that casino is closed. At round end, spaces 1 and 2 pay 1 and 2 chips, while 3–6 pay $30K–$60K. Biggy earns only one reward.",
+        my_choice: "Roll two black dice and choose one result. A 1 pays 1 chip, 2 pays 2 chips and 3 pays $30K. A 4 activates another bonus game. A 5 places a remaining die on any chosen face or retrieves one casino die, without activation. A 6 puts a remaining die in the $60K golden space and returns its previous occupant to its owner."
+    };
     const pipPositions = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
     let view = null, selected = null, signature = null, configSignature = null;
     let pending = false, pendingTimer = null, explaining = false, tipTimer = null;
     let returnFocus = null, suppressUntil = 0, blackMask = 0, lobbyPlayers = 0;
+    let helpLanguage = typeof obgHelpLang === "function" ? obgHelpLang() : "zh", helpTab = "basics";
+    let logOpen = false, explainGesture = null;
     const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
     const money = value => `$${(Number(value) || 0).toLocaleString("en-US")}`;
     const shortMoney = value => `$${(Number(value) || 0) / 1000}K`;
@@ -107,6 +127,7 @@
 
     function setExplain(enabled) {
         explaining = enabled;
+        explainGesture = null;
         panel.classList.toggle("lv-explaining", enabled);
         explainButton.setAttribute("aria-pressed", String(enabled));
         explainButton.title = enabled ? "Choose an item to explain · Esc to exit" : "Explain";
@@ -115,26 +136,23 @@
 
     function openDialog(title, html) {
         hideTip();
-        returnFocus = document.activeElement;
+        if (!dialog.open) returnFocus = document.activeElement;
         document.getElementById("lasVegasDialogTitle").textContent = title;
         document.getElementById("lasVegasDialogBody").innerHTML = html;
         if (!dialog.open) dialog.showModal();
         closeButton.focus();
     }
 
-    function openHelp() {
-        setExplain(false);
+    function helpRulesZh() {
         if (royale()) {
-            openDialog("Help · Las Vegas Royale", `<p>豪华版支持 2–5 人，共 3 轮，每轮在 1、2、3 号赌场各启用一块随机小游戏板。8 块双面板共 16 种玩法，同一块板的两面不会同时出现。</p>
+            return `<p>豪华版支持 2–5 人，共 3 轮，每轮在 1、2、3 号赌场各启用一块随机小游戏板。8 块双面板共 16 种玩法，同一块板的两面不会同时出现。</p>
                 <h3>骰子、筹码和奖池</h3><p>${explanations.dice} ${explanations.chips}</p><p>${explanations.casino} 两张总额相同时，大钞面额较高的组合放到较高编号赌场。每回合 Roll Dice → 选择点数 → Place Dice。也可在掷出后使用 Pass。</p>
                 <h3>结算与胜利</h3><p>${classicExplanations.ties} ${explanations.neutral} ${explanations.total} ${explanations.next}</p>
                 <p>${explanations.round} 玩家颜色对应骰子，🎲×2 表示大骰，💰 表示筹码，⬜ 表示灰骰。小游戏先完成当前选择，再继续下一位玩家；秘密选择仅对操作者可见。</p>
-                ${Object.entries(tileNames).map(([id, name]) => `<h3>${esc(name)}</h3><p>${esc(explanations[`tile_${id}`])}</p>`).join("")}
                 <h3>线上边界处理</h3><p>${explanations.closed} 银行奖金按面额记账，不受实体钞票数量限制；罚金找零保留为现金，不转换成可用于 Pass 的筹码。</p>
-                <h3>Controls</h3><p>Help 查看全部规则；Explain 后点选元素查看解释。悬停、聚焦或手机轻点信息可查看提示。确认后才提交选择；Esc 可取消未提交的赌场选择或关闭弹窗。</p>`);
-            return;
+                <p>Prime Time 在赌场派奖前结算。Black Box 和其他奖励全部完成后才扣除 Bad Luck 罚金。本轮收入从开轮发放两枚筹码后开始计算资产净变化，包括花费、奖励和罚金。</p>`;
         }
-        openDialog("Help · 拉斯维加斯", `
+        return `
             <p>在 6 个赌场(🎰)投放骰子(🎲)，争取钞票(💵)。玩 4 轮，累计奖金最多者获胜。采用 Ravensburger / alea 2012 基础版规则，支持 2–5 人。</p>
             <h3>准备与回合</h3><p>每人每轮 8 枚自己的骰子，首轮先手随机，以后每轮先手按座位轮转。54 张钞票洗混：$10,000／$40,000／$50,000 各 6 张，$20,000／$30,000 各 8 张，$60,000／$70,000／$80,000／$90,000 各 5 张。每轮按赌场 1–6 顺序发钞票，直到各赌场至少有 $50,000。</p>
             <p>轮到你时，Roll Dice 掷出全部剩余骰子，选择一个点数，再用 Place Dice 把该点数的全部骰子放入同号赌场。不能只放一部分，也不能重新掷骰或跳过。轮到下一位仍有骰子的玩家，直至所有人放完。</p>
@@ -143,7 +161,43 @@
             <p>钞票面朝下保留，自己可查看面额和总额，其他人只见张数。公开领取奖金的历史仍可查看。${explanations.next} ${explanations.total}</p>
             <h3>可选白骰变体 · 2–4 人</h3><p>${explanations.neutral} 白骰与自己的骰子一起掷，同点数必须一起放；允许只放白骰。白骰不属于投放它的玩家，所有白骰合并成一个中立参与者。</p>
             <h3>图标与 Controls</h3><p>骰子(🎲)表示剩余数量，钞票(💵)表示奖金，私有奖金(🔒)只对自己可见，平手取消(✕)不能领奖，回收(↩)表示回牌库，胜者(🏆)表示最终第一名。K 表示千美元。${explanations.bot}</p>
-            <p>选择掷骰区的点数或相应赌场，再点击 Place Dice。点击空白处或按 Esc 取消未提交的点数。Help 查看规则；Explain 后点选虚线元素查看解释，禁用按钮也支持。鼠标悬停、键盘聚焦或手机点击信息可查看提示；手机提示 3 秒后消失。Esc 或点击弹窗外侧可关闭弹窗。</p>`);
+            <p>选择掷骰区的点数或相应赌场，再点击 Place Dice。点击空白处或按 Esc 取消未提交的点数。Help 查看规则，Explain 后点选虚线元素查看解释，禁用按钮也支持。鼠标悬停、键盘聚焦或手机点击信息可查看提示，手机提示 3 秒后消失。Esc 或点击弹窗外侧可关闭弹窗。</p>`;
+    }
+
+    function openHelp() {
+        setExplain(false);
+        syncExplanations();
+        const english = helpLanguage === "en";
+        const text = (zh, en) => english ? en : zh;
+        const paragraphs = values => values.map(value => `<p>${esc(value)}</p>`).join("");
+        const rounds = royale() ? 3 : 4;
+        const sections = {
+            basics: {label: text("快速上手", "Quick Start"), html: paragraphs([
+                text(`${rounds} 轮后总资产最高者获胜，豪华版剩余筹码每枚计 $10K。`, `Win by having the most wealth after ${rounds} rounds, including $10K per unused chip in Royale.`),
+                text("每回合掷出全部剩余骰子，选一个点数，把该点数全部骰子放入同号赌场。", "On your turn, roll all remaining dice, choose one face and place every die of that face in its matching casino."),
+                text("重点是避开同数平手，同时用尽量少的骰子争取高面额钞票。", "The key is to avoid tied dice counts and win valuable notes with as few dice as possible."),
+                text(royale() ? "豪华版支持 2–5 人，8 块双面板共 16 种玩法。每轮选三块不同板的各一面放在赌场 1–3。" : "基础版支持 2–5 人，采用 2012 年规则，也可为 2–4 人启用白骰变体。", royale() ? "Royale supports 2–5 players and all 16 bonus games. Each round, three different double-sided boards contribute one random side each to casinos 1–3." : "Classic supports 2–5 players with the 2012 rules and an optional neutral-dice variant for 2–4 players.")
+            ])},
+            rules: {label: text("回合与结算", "Turns & Payouts"), html: english ? paragraphs([
+                royale() ? "Each round gives you seven small dice, one Biggy and two new chips. Biggy is one physical die with casino strength two. Unspent chips carry over. After rolling, you may spend one chip to pass and keep your dice for a later turn." : "Each player receives eight dice every round. The shuffled 54-note deck contains $10K/$40K/$50K six times each, $20K/$30K eight times each and $60K/$70K/$80K/$90K five times each. Deal to casinos 1–6 until each holds at least $50K. You cannot reroll, split a face group or pass.",
+                royale() ? "The 90-note deck contains $30K–$100K notes. Sort six pairs by total value, breaking ties by the highest note, and assign them to casinos 1–6 in ascending order. Reserve 24 notes for rounds two and three. The remaining notes form the bonus bank." : "Optional white dice roll with your own dice and must be placed with matching faces. Two players each receive four white dice. Three or four players each receive two, with two extra white dice placed randomly at round start in a three-player game. You may place only white dice. All white dice belong to one neutral participant.",
+                "At each casino, every participant sharing a positive dice count is eliminated, including lower-place ties. The remaining participants rank by descending count, each winning at most one note, highest value first. For counts 5, 3, 3, 1, only 5 and 1 receive notes. Unclaimed and neutral winnings return to the bank.",
+                royale() ? "In a two-player game, one neutral set of seven small dice and a Biggy is placed randomly each round. Gray dice belong to a separate virtual player. Both participate independently in rankings and ties. Bonus games can change the board after a placement, so casino previews exclude bonus rewards." : "White dice join casino rankings and ties as one neutral participant, not as the player who placed them.",
+                royale() ? "Prime Time resolves before casino payouts. Black Box and other bonus rewards resolve before Bad Luck fines. Cash denominations and totals stay private, while chip and note counts are public. Final ties compare note count plus remaining chip count, then share the win." : "Winnings remain face down. You see your own denominations and total, while others see only your note count until game end. Final ties compare note count, then share the win.",
+                royale() ? "The first starting player is random. Later rounds start with the winner of the highest casino's large note, searching lower casinos if necessary. Round income measures the change in total assets after the initial two-chip grant, including spending, bonuses and fines." : "The first starting player is random and rotates by seat each round.",
+                "Every player must confirm Next Round after reviewing the settlement, including the final round. Bots confirm only their own seats. Disconnected human players must reconnect. Placed dice and payout records remain visible until everyone confirms."
+            ]) : helpRulesZh().replace(/；/g, "。")},
+            controls: {label: text("图标与操作", "Icons & Controls"), html: paragraphs([
+                text("骰子(🎲)表示剩余数量，大骰(🎲×2)计两点实力。赌场(🎰)对应点数，钞票(💵)表示奖金，筹码(💰)每枚价值 $10K，白骰(⚪)与灰骰(⬜)分别是独立中立方。", "Dice (🎲) show remaining pieces. Biggy (🎲×2) has strength two. Casinos (🎰) match die faces, banknotes (💵) are prizes and chips (💰) are worth $10K each. White dice (⚪) and gray dice (⬜) are separate neutral participants."),
+                text("私有资产(🔒)只对自己可见，平手取消(✕)不能领奖，回收(↩)表示返回银行，胜者(🏆)表示最终第一名，机器人(🤖)只使用自己的公开视图。封锁(⛔)禁止增减骰子，强势行动(⚡)允许持标记者指定投放。K 表示千美元。", "Private assets (🔒) are visible only to you. Ties (✕) cannot win, returns (↩) go to the bank, the trophy (🏆) marks the winner and bots (🤖) use only their own public view. Closure (⛔) prevents adding or removing dice. Power Play (⚡) lets its holder place a chosen die. K means thousand dollars."),
+                text("先 Roll Dice，再点选掷骰区或对应赌场，最后 Place Dice 确认。点击周围空白或按 Esc 取消尚未提交的选择。小游戏在对应赌场内完成，秘密选择只向操作者展示。", "Use Roll Dice, select a face in the dice tray or matching casino, then confirm with Place Dice. Click empty space or press Esc to cancel an unsubmitted selection. Resolve bonus choices inside their casino. Secret choices are visible only to their actor."),
+                text("Help 可切换中英文与章节。Explain 后点选虚线元素查看解释，禁用按钮也支持，查看后自动退出，也可按 Esc 退出。悬停或聚焦信息显示说明，手机轻点提示在 3 秒后关闭，滑动不会触发解释。Esc 或点击弹窗外侧关闭弹窗。Activity 可展开并独立滚动。", "Help provides language and chapter switches. Explain highlights described elements, including disabled buttons, and exits after an explanation or Esc. Hover or focus information for a tooltip. Phone taps show it for three seconds and scrolling never opens an explanation. Esc or the backdrop closes dialogs. Expand Activity to read its independently scrollable public log."),
+                ...(royale() ? [text("线上边界：若只掷出封锁点数，可免费跳过并保留骰子。小游戏奖金不受实体钞票数量限制。罚金找零保留为现金，不会变成可用于 Pass 的筹码。", "Digital conventions: if every rolled die matches the closed casino, a free pass preserves those dice. Bonus awards are not limited by physical note supply. Fine change remains cash and never becomes spendable pass chips.")] : [])
+            ])}
+        };
+        if (royale()) sections.tiles = {label: text("16 种小游戏", "16 Bonus Games"), html: Object.entries(tileNames).map(([id, name]) => `<h3>${esc(english ? name.split(" · ")[0] : name)}</h3><p>${esc(english ? englishTiles[id] : royaleExplanations[`tile_${id}`]).replace(/；/g, "。")}</p>`).join("")};
+        if (!sections[helpTab]) helpTab = "basics";
+        openDialog(royale() ? "Help · Las Vegas Royale" : "Help · Las Vegas", `<div class="lv-help-nav"><div class="lv-help-languages" role="group" aria-label="Language">${["zh", "en"].map(language => `<button type="button" data-lv-language="${language}" aria-pressed="${language === helpLanguage}">${language === "zh" ? "中文" : "EN"}</button>`).join("")}</div><div class="lv-help-tabs" role="tablist" aria-label="Help chapters">${Object.entries(sections).map(([id, section]) => `<button type="button" id="lasVegasHelpTab-${id}" role="tab" aria-controls="lasVegasHelpSection" aria-selected="${id === helpTab}" data-lv-help-tab="${id}">${section.label}</button>`).join("")}</div></div><section id="lasVegasHelpSection" role="tabpanel" aria-labelledby="lasVegasHelpTab-${helpTab}" lang="${helpLanguage}">${sections[helpTab].html}</section>`);
     }
 
     function projectedCasino(casino) {
@@ -193,6 +247,8 @@
             }).join("") || `<div class="lv-empty-casino">${settled ? "本轮无人投骰" : "等待骰子入场"}</div>`}</div>
             ${settled && snapshot?.returned.length ? `<div class="lv-returned">${info(`↩ 回收 ${snapshot.returned.map(shortMoney).join(" · ")}`, "returned")}</div>` : ""}
             ${royale() ? renderTile(casino.face) : ""}
+            ${view.decision?.face === casino.face ? renderDecision() : ""}
+            ${preview ? `<div class="lv-casino-confirm"><button type="button" class="lv-primary" data-lv-action="place" data-lv-explain="place">${pending ? "Sending…" : `Place Dice · ${rollCount(casino.face)}🎲`}</button></div>` : ""}
         </article>`;
     }
 
@@ -210,10 +266,10 @@
         if (tile.id === "no_entry") body = `<strong>${view.closed_casino ? `⛔ 赌场 ${view.closed_casino}` : "尚未封锁"}</strong><div class="lv-track">${["○", "2💰", "○", "$30K", "○", "1💰"].map((label, i) => `<span class="${tile.track === i ? "is-current" : ""}">${label}</span>`).join("")}</div>`;
         if (tile.id === "block_it") body = `<div class="lv-track">${tile.groups.map(n => `<span>${n ? `${n}⬜` : "✓"}</span>`).join("")}</div>`;
         if (tile.id === "handicap") body = `<span>剩余奖励：${tile.spaces.chip} × 1💰</span><span>${tile.spaces.cash} × $30K · ${tile.spaces.move} × 调整骰子</span>`;
-        if (["double_down", "knockout"].includes(tile.id)) body = `<div class="lv-tile-players">${view.players.map(p => {
+        if (["double_down", "knockout"].includes(tile.id)) body = `<div class="lv-tile-players">${view.players.filter(p => held(tile.id).some(d => d.player_id === p.player_id)).map(p => {
             const own = held(tile.id).filter(d => d.player_id === p.player_id);
             return `<span>${esc(p.name)} <b>${tile.id === "double_down" ? sum(own.map(d => d.big ? 2 : 1)) : own.length}🎲</b></span>`;
-        }).join("")}</div><span>${tile.id === "double_down" ? "独立派奖 · $60K / $30K" : "最多 2 枚实体骰 / 人"}</span>`;
+        }).join("") || '<span class="lv-muted">暂无骰子</span>'}</div><span>${tile.id === "double_down" ? "独立派奖 · $60K / $30K" : "最多 2 枚实体骰 / 人"}</span>`;
         if (tile.id === "nice_dice") body = `<div class="lv-reward-slots">${[1, 2, 3, 4, 5, 6].map(n => `<div><b>🎲${n} · ${n < 3 ? `${n}💰` : `$${n * 10}K`}</b><span>${holder(`nice:${n}`)}</span></div>`).join("")}</div>`;
         if (tile.id === "my_choice") body = `${diceRow}<div class="lv-golden-slot"><b>💵 $60K</b><span>${holder("golden")}</span></div>`;
         if (tile.id === "prime_time") body = `${diceRow}<span>轮末大钞得主 · 可加 0–2 骰</span>`;
@@ -240,10 +296,10 @@
 
     function renderControls() {
         if (view.phase === "round_end" || view.game_over) return "";
-        if (view.decision) return renderDecision();
+        if (view.decision) return "";
         const hasRoll = view.phase === "place";
         const own = player(view.you);
-        return `<section class="lv-box lv-controls"><div class="lv-section-heading"><h3>${hasRoll ? "Choose Your Dice" : "Your Next Move"}</h3>${info(`${view.current_turn === view.you ? "Your turn" : esc(playerName(view.current_turn))}`, "round")}</div>
+        return `<div class="lv-dice-bar">
             ${hasRoll ? `<div class="lv-roll-tray">${[1, 2, 3, 4, 5, 6].filter(face => rollCount(face)).map(face => {
                 const ownCount = view.roll.own.filter(value => value === face).length;
                 const neutralCount = view.roll.neutral.filter(value => value === face).length;
@@ -251,10 +307,10 @@
                 const closed = royale() && view.closed_casino === face;
                 return `<button type="button" class="lv-roll-group ${selected === face ? "is-selected" : ""}" data-lv-face="${face}" data-lv-explain="face" aria-label="点数 ${face}，${ownCount} 枚玩家骰子${big ? '，含一枚大骰' : ''}，${neutralCount} 枚白骰${closed ? '，已封锁' : ''}" aria-pressed="${selected === face}" ${!allowed("place") || closed ? "disabled" : ""}>${dice(face, playerColor(view.current_turn))}<span class="lv-roll-counts">${ownCount ? `<b>${ownCount}🎲</b>` : ""}${big ? '<b class="lv-big-badge">含大骰 ×2</b>' : ""}${neutralCount ? `<b class="lv-neutral-count">${neutralCount}⚪</b>` : ""}${closed ? "⛔" : ""}</span></button>`;
             }).join("")}</div>` : `<div class="lv-roll-rest">${dice(5, playerColor(view.current_turn))}<div><strong>${view.current_turn === view.you ? `${(own?.remaining || 0) + (own?.neutral_remaining || 0)} 枚骰子待掷` : "轮流投骰，争夺奖金"}</strong><span>${view.config.neutral_dice ? "彩色骰子与白骰一起掷出" : "每次掷出全部剩余骰子"}</span></div></div>`}
-            <div class="lv-action-line"><span class="lv-choice-label">${selected !== null ? `已选 ${selected} 点 · 放置 ${rollCount(selected)} 枚` : hasRoll ? (allowed("place") ? "选择一个点数" : "等待玩家选择点数") : own ? "🎲 你的幸运回合" : "Spectating"}</span><button type="button" class="lv-primary" data-lv-action="${hasRoll ? "place" : "roll"}" data-lv-explain="${hasRoll ? "place" : "roll"}" ${hasRoll ? (!allowed("place") || selected === null ? "disabled" : "") : (!allowed("roll") ? "disabled" : "")}>${pending ? "Sending…" : hasRoll ? "Place Dice" : "Roll Dice"}</button></div>
+            <div class="lv-action-line"><span class="lv-choice-label">${selected !== null ? `已选 ${selected} 点 · 在对应赌场确认` : hasRoll ? (allowed("place") ? "选择骰子或对应赌场" : "等待玩家选择点数") : own ? (view.current_turn === view.you ? "🎲 轮到你了" : `等待 ${esc(playerName(view.current_turn))}`) : "Spectating"}</span>${!hasRoll ? `<button type="button" class="lv-primary" data-lv-action="roll" data-lv-explain="roll" ${!allowed("roll") ? "disabled" : ""}>${pending ? "Sending…" : "Roll Dice"}</button>` : ""}</div>
             ${allowed("royale_pass") ? `<div class="lv-secondary-action"><span>${info(`${own.chips}💰`, "chips")}</span><button type="button" class="lv-option" data-lv-action="royale_pass" data-lv-explain="${allowed("place") ? "chips" : "closed"}">${allowed("place") ? "Pass · 支付 1💰" : "Pass · 无法投放，免费跳过"}</button></div>` : ""}
             ${allowed("royale_power") ? '<div class="lv-secondary-action"><button type="button" class="lv-option" data-lv-action="royale_power" data-lv-explain="tile_power_play">Power Play · 指定一枚骰子</button></div>' : ""}
-        </section>`;
+        </div>`;
     }
 
     function renderReview() {
@@ -295,10 +351,12 @@
 
     function render() {
         if (!view) return;
+        const previousLog = content.querySelector(".lv-log-box");
+        if (previousLog) logOpen = previousLog.open;
         const scroll = content.querySelector(".lv-log")?.scrollTop || 0;
         content.innerHTML = `<div class="lv-surface"><div class="lv-banner"><span class="lv-eyebrow">${royale() ? "✨ ROYALE" : "🎲 CLASSIC"}</span><div class="lv-round-marker">${info(`<span>ROUND</span><b>${view.round}<small> / ${view.total_rounds}</small></b>`, "round")}</div></div>
             <div class="lv-status" role="status" aria-live="polite"><span>${esc(statusText())}</span>${info(royale() ? "✨ 豪华版 · 随机小游戏" : view.config.neutral_dice ? "⚪ 白骰变体" : "🎲 基础模式", royale() ? "edition" : view.config.neutral_dice ? "neutral" : "dice")}</div>
-            <div class="lv-layout"><div class="lv-main">${renderFinal()}${renderReview()}${renderControls()}<section class="lv-board"><div class="lv-section-heading"><h3>The Strip <small>六大赌场</small></h3>${info(view.phase === "round_end" || view.game_over || view.payouts_complete ? "Final payouts" : "💵 Payout preview", "payout")}</div><div class="lv-casinos">${view.casinos.map(renderCasino).join("")}</div></section></div><aside class="lv-sidebar">${renderPlayers()}${renderWallet()}<section class="lv-box lv-log-box"><div class="lv-section-heading"><h3>Activity</h3>${info("Public log", "log")}</div><div class="lv-log">${view.log.slice().reverse().map(entry => `<p>${typeof entry === "string" ? esc(entry) : `${entry.round ? `<small>${info(`R${entry.round}`, "round", `R 表示 Round：这条记录发生在第 ${entry.round} 轮。整场共 ${view.total_rounds} 轮。`)}</small>` : ""}<span>${esc(entry.text || entry.message || "")}</span>`}</p>`).join("") || '<p class="lv-muted">No activity yet.</p>'}</div></section></aside></div></div>`;
+            <div class="lv-layout"><div class="lv-main">${renderFinal()}${renderReview()}<section class="lv-board"><div class="lv-section-heading"><h3>The Strip <small>六大赌场</small></h3>${info(view.phase === "round_end" || view.game_over || view.payouts_complete ? "Final payouts" : "💵 Payout preview", "payout")}</div>${renderControls()}<div class="lv-casinos">${view.casinos.map(renderCasino).join("")}</div></section></div><aside class="lv-sidebar">${renderPlayers()}${renderWallet()}<details class="lv-box lv-log-box" ${logOpen ? "open" : ""}><summary data-lv-explain="log">Activity <small>Public log · ${view.log.length}</small></summary><div class="lv-log">${view.log.slice().reverse().map(entry => `<p>${typeof entry === "string" ? esc(entry) : `${entry.round ? `<small>${info(`R${entry.round}`, "round", `R 表示 Round：这条记录发生在第 ${entry.round} 轮。整场共 ${view.total_rounds} 轮。`)}</small>` : ""}<span>${esc(entry.text || entry.message || "")}</span>`}</p>`).join("") || '<p class="lv-muted">No activity yet.</p>'}</div></details></aside></div></div>`;
         content.querySelector(".lv-log").scrollTop = scroll;
     }
 
@@ -343,9 +401,9 @@
     });
 
     function explainAt(event) {
-        const control = event.target.closest("button, input, select, a");
+        const control = event.target.closest("button, input, select, a, summary");
         let element = control ? (control.matches("[data-lv-explain]") ? control : null) : event.target.closest("[data-lv-explain]");
-        if (event.type === "pointerdown") {
+        if (event.type === "pointerup") {
             const disabled = [...panel.querySelectorAll(":disabled[data-lv-explain]")].find(item => {
                 const rect = item.getBoundingClientRect();
                 return rect.width > 0 && rect.height > 0 && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
@@ -357,15 +415,29 @@
         if (element && explanations[element.dataset.lvExplain]) {
             const detail = explanations[element.dataset.lvExplain];
             setExplain(false);
-            if (event.type === "pointerdown") suppressUntil = performance.now() + 700;
+            if (event.type === "pointerup") suppressUntil = performance.now() + 700;
             openDialog("Explain", `<p>${esc(detail)}</p>`);
         }
     }
 
     document.addEventListener("pointerdown", event => {
+        suppressUntil = 0;
         if (!explaining || event.target.closest("#lasVegasHelpBtn, #lasVegasExplainBtn, #lasVegasDialog")) return;
+        if (!event.isPrimary || event.button !== 0) return;
+        explainGesture = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
+        event.stopPropagation();
+    }, true);
+    document.addEventListener("pointermove", event => {
+        if (explainGesture?.id === event.pointerId && Math.hypot(event.clientX - explainGesture.x, event.clientY - explainGesture.y) > 10) explainGesture.moved = true;
+    }, true);
+    document.addEventListener("pointerup", event => {
+        const gesture = explainGesture;
+        if (!gesture || gesture.id !== event.pointerId) return;
+        explainGesture = null;
+        if (!explaining || gesture.moved || Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 10) return;
         explainAt(event);
     }, true);
+    document.addEventListener("pointercancel", () => { explainGesture = null; }, true);
     document.addEventListener("click", event => {
         if (performance.now() < suppressUntil) {
             suppressUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return;
@@ -375,7 +447,7 @@
     }, true);
     document.addEventListener("click", event => {
         if (!view || selected === null || pending || explaining || dialog.open || !panel.getClientRects().length) return;
-        if (event.target.closest("button, input, select, a, label, [data-lv-tip], #lasVegasDialog")) return;
+        if (event.target.closest("button, input, select, a, label, summary, [data-lv-tip], #lasVegasDialog")) return;
         selected = null; hideTip(); render();
     });
     panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-lv-tip]")); });
@@ -398,6 +470,18 @@
     explainButton.addEventListener("click", () => setExplain(!explaining));
     closeButton.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => {
+        const language = event.target.closest("[data-lv-language]");
+        const tab = event.target.closest("[data-lv-help-tab]");
+        if (language || tab) {
+            if (language) {
+                helpLanguage = language.dataset.lvLanguage;
+                if (typeof obgHelpSetLang === "function") obgHelpSetLang(helpLanguage);
+            }
+            if (tab) helpTab = tab.dataset.lvHelpTab;
+            openHelp();
+            dialog.querySelector(language ? `[data-lv-language="${helpLanguage}"]` : `[data-lv-help-tab="${helpTab}"]`)?.focus();
+            return;
+        }
         if (event.target !== dialog) return;
         const rect = dialog.getBoundingClientRect();
         if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();

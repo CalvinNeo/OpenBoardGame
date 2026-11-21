@@ -1,3 +1,4 @@
+import json
 import random
 import unittest
 
@@ -56,6 +57,175 @@ class AzulGameTests(unittest.TestCase):
 
         self.assertIsNone(error)
         self.assertEqual(state["players"]["p1"]["floor"].count("blue"), 2)
+
+    def test_first_center_pick_records_next_round_starter(self):
+        state = AzulGame.init_game({}, self._players())
+        state["current_turn"] = "p2"
+        state["factories"] = [["yellow"]] + [[] for _ in range(4)]
+        state["center"] = ["blue", "red"]
+
+        _, error = AzulGame.apply_action(
+            state,
+            "p2",
+            {
+                "type": "take_tiles",
+                "source": "center",
+                "color": "blue",
+                "target_row": 0,
+            },
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(state["next_start_player"], "p2")
+        self.assertEqual(state["current_turn"], "p1")
+        self.assertFalse(state["first_player_token_in_center"])
+        self.assertTrue(state["players"]["p2"]["has_first_player_token"])
+        self.assertEqual(state["players"]["p2"]["floor"], ["first_player"])
+
+        _, error = AzulGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "take_tiles",
+                "source": "center",
+                "color": "red",
+                "target_row": 0,
+            },
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(state["next_start_player"], "p2")
+        self.assertFalse(state["players"]["p1"]["has_first_player_token"])
+
+    def test_token_holder_starts_next_round_after_save_and_load(self):
+        for player_count in (2, 3, 4):
+            players = self._players() + [
+                {"player_id": "p3", "name": "Carol", "seat": 2},
+                {"player_id": "p4", "name": "Dave", "seat": 3},
+            ]
+            players = players[:player_count]
+            for holder_index in range(player_count):
+                for floor_full in (False, True):
+                    with self.subTest(
+                        player_count=player_count,
+                        holder_index=holder_index,
+                        floor_full=floor_full,
+                    ):
+                        state = AzulGame.init_game({}, players)
+                        holder_id = players[holder_index]["player_id"]
+                        following_id = players[(holder_index + 1) % player_count]["player_id"]
+                        state["current_turn"] = holder_id
+                        state["factories"] = [["red"]] + [
+                            [] for _ in state["factories"][1:]
+                        ]
+                        state["center"] = ["blue"]
+                        if floor_full:
+                            state["players"][holder_id]["floor"] = ["yellow"] * 7
+
+                        _, error = AzulGame.apply_action(
+                            state,
+                            holder_id,
+                            {
+                                "type": "take_tiles",
+                                "source": "center",
+                                "color": "blue",
+                                "target_row": 0,
+                            },
+                        )
+                        self.assertIsNone(error)
+                        self.assertEqual(state["current_turn"], following_id)
+                        state = AzulGame.deserialize(json.loads(json.dumps(AzulGame.serialize(state))))
+
+                        _, error = AzulGame.apply_action(
+                            state,
+                            following_id,
+                            {
+                                "type": "take_tiles",
+                                "source": "factory",
+                                "source_index": 0,
+                                "color": "red",
+                                "target_row": 0,
+                            },
+                        )
+
+                        self.assertIsNone(error)
+                        self.assertEqual(state["round"], 2)
+                        self.assertEqual(state["current_turn"], holder_id)
+                        self.assertIsNone(state["next_start_player"])
+                        self.assertTrue(state["first_player_token_in_center"])
+                        for player in players:
+                            player_id = player["player_id"]
+                            view = AzulGame.get_public_view(state, player_id)
+                            self.assertEqual(view["current_turn"], holder_id)
+                            self.assertEqual(
+                                view["legal_actions"],
+                                ["take_tiles"] if player_id == holder_id else [],
+                            )
+                            self.assertFalse(state["players"][player_id]["has_first_player_token"])
+                            self.assertEqual(state["players"][player_id]["floor"], [])
+
+                        _, error = AzulGame.apply_action(
+                            state,
+                            holder_id,
+                            {
+                                "type": "take_tiles",
+                                "source": "factory",
+                                "source_index": 0,
+                                "color": state["factories"][0][0],
+                                "target_row": -1,
+                            },
+                        )
+                        self.assertIsNone(error)
+                        self.assertEqual(state["current_turn"], following_id)
+
+    def test_token_claimed_on_last_draft_starts_next_round(self):
+        state = AzulGame.init_game({}, self._players())
+        state["current_turn"] = "p2"
+        state["factories"] = [[] for _ in state["factories"]]
+        state["center"] = ["blue"]
+
+        _, error = AzulGame.apply_action(
+            state,
+            "p2",
+            {
+                "type": "take_tiles",
+                "source": "center",
+                "color": "blue",
+                "target_row": 0,
+            },
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(state["round"], 2)
+        self.assertEqual(state["current_turn"], "p2")
+
+    def test_round_resolution_recovers_starter_from_floor_token(self):
+        state = AzulGame.init_game({}, self._players())
+        state["current_turn"] = "p1"
+        state["factories"] = [["red"]] + [[] for _ in range(4)]
+        state["center"] = []
+        state["first_player_token_in_center"] = False
+        state["players"]["p2"]["floor"] = ["first_player"]
+        state["players"]["p2"].pop("has_first_player_token")
+
+        _, error = AzulGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "take_tiles",
+                "source": "factory",
+                "source_index": 0,
+                "color": "red",
+                "target_row": 0,
+            },
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(state["round"], 2)
+        self.assertEqual(state["current_turn"], "p2")
+        self.assertFalse(state["players"]["p2"]["has_first_player_token"])
+        self.assertEqual(state["players"]["p2"]["floor"], [])
+        self.assertNotIn("first_player", state["discard"])
 
     def test_bot_finishes_nearly_complete_pattern_line(self):
         random.seed(1)

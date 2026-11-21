@@ -53,7 +53,7 @@ async function render(page, key) {
 }
 async function bounds(page, label) {
   const result = await page.evaluate(() => {
-    const bad = [...document.querySelectorAll('#noThanksPanel *, #noThanksDialog *, #noThanksHeaderActions *, #mobileExplainSlot *')].filter(el => {
+    const bad = [...document.querySelectorAll('#noThanksPanel *, dialog[open] *, #noThanksHeaderActions *, #mobileExplainSlot *')].filter(el => {
       const r = el.getBoundingClientRect();
       const style = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && (r.left < -1 || r.right > innerWidth + 1 ||
@@ -119,6 +119,35 @@ async function checkDecisionLayout(page, width) {
   assert(result.hasHandBeforeActions && result.sameButtonRow && result.targetsLargeEnough && result.panelsSeparated && result.panelIsFrameless,
     `${width}: decision layout ${JSON.stringify(result)}`);
   if (width <= 390) assert(result.decisionHeight < 460, `${width}: card, hand and actions fit together`);
+}
+
+async function checkMobileViewport(page, label) {
+  await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo(0, 0); });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const result = await page.evaluate(() => {
+    const rect = selector => document.querySelector(selector).getBoundingClientRect();
+    const players = document.getElementById('noThanksPlayers');
+    const actions = rect('.no-thanks-actions');
+    const collections = rect('.no-thanks-collections');
+    const footer = rect('.no-thanks-footer');
+    return {
+      viewport: innerHeight,
+      pageHeight: document.documentElement.scrollHeight,
+      actionsBottom: actions.bottom,
+      collectionsTop: collections.top,
+      playersHeight: players.clientHeight,
+      playersBottom: players.getBoundingClientRect().bottom,
+      footerTop: footer.top,
+      footerBottom: footer.bottom,
+      keyboardAccessible: players.tabIndex === 0,
+      scrollsLocally: getComputedStyle(players).overflowY === 'auto'
+    };
+  });
+  assert(result.pageHeight <= result.viewport + 1, `${label}: no page scrolling ${JSON.stringify(result)}`);
+  assert(result.actionsBottom <= result.collectionsTop && result.playersBottom <= result.footerTop,
+    `${label}: decision controls and player list do not overlap ${JSON.stringify(result)}`);
+  assert(result.playersHeight >= 40 && result.footerBottom <= result.viewport && result.keyboardAccessible && result.scrollsLocally,
+    `${label}: player cards remain accessible within the screen ${JSON.stringify(result)}`);
 }
 
 async function swipe(page, locator) {
@@ -200,24 +229,28 @@ async function swipe(page, locator) {
     await page.locator('#noThanksPanel').screenshot({path: `${output}/desktop.png`});
     await page.locator('.game-panel').screenshot({path: `${output}/desktop-header.png`});
     await page.locator('#noThanksHelpBtn').click();
-    assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), true);
-    assert.match(await page.locator('#noThanksDialogBody').textContent(), /仍由你行动/);
+    assert.equal(await page.locator('[data-obg-help-game="no_thanks"]').evaluate(el => el.open), true);
+    await page.locator('[data-obg-help-tab="turn"]').click();
+    assert.match(await page.locator('.obg-help-body').textContent(), /仍由你行动/);
+    await page.locator('[data-obg-help-lang="en"]').click();
+    assert.match(await page.locator('.obg-help-body').textContent(), /still act/);
+    await page.locator('[data-obg-help-lang="zh"]').click();
     await page.keyboard.press('Escape');
-    assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), false);
+    assert.equal(await page.locator('dialog[open]').count(), 0);
 
     // Both live controls and disabled controls explain without submitting actions.
     await page.locator('#noThanksExplainBtn').click();
     await page.locator('#noThanksTake').click();
-    assert.match(await page.locator('#noThanksDialogBody').textContent(), /仍由你继续行动/);
+    assert.match(await page.locator('.obg-explain-text').textContent(), /仍由你继续行动/);
     assert.equal(await page.evaluate(() => noThanksTestActions.length), 0);
     assert.equal(await page.locator('#noThanksExplainBtn').getAttribute('aria-pressed'), 'false');
-    await page.locator('#noThanksDialogClose').click();
+    await page.locator('.obg-explain-dialog .obg-help-close').click();
     await render(page, 'forced');
     assert.equal(await page.locator('#noThanksPass').isDisabled(), true);
     assert.equal(await page.locator('#noThanksPassLabel').textContent(), 'No chips left');
     await page.locator('#noThanksExplainBtn').click();
     await pointClick(page, page.locator('#noThanksPass'));
-    assert.match(await page.locator('#noThanksDialogBody').textContent(), /没有筹码/);
+    assert.match(await page.locator('.obg-explain-text').textContent(), /没有筹码/);
     await page.keyboard.press('Escape');
     await page.locator('#noThanksExplainBtn').click();
     await page.evaluate(() => { window.noThanksProbeCount = 0; const button = document.createElement('button'); button.id = 'noThanksProbe'; button.textContent = 'Probe'; button.onclick = () => noThanksProbeCount++; document.getElementById('noThanksPanel').append(button); });
@@ -228,8 +261,8 @@ async function swipe(page, locator) {
 
     await page.locator('#noThanksExplainBtn').click();
     await page.locator('#noThanksRemaining').click();
-    assert.match(await page.locator('#noThanksDialogTitle').textContent(), /Deck/);
-    assert.match(await page.locator('#noThanksDialogBody').textContent(), /不包括桌面当前牌/);
+    assert.match(await page.locator('.obg-explain-text').textContent(), /Deck/);
+    assert.match(await page.locator('.obg-explain-text').textContent(), /不包括桌面当前牌/);
     assert.equal(await page.evaluate(() => noThanksTestActions.length), 0);
     await page.keyboard.press('Escape');
 
@@ -276,6 +309,9 @@ async function swipe(page, locator) {
           assert.equal(await page.locator('.no-thanks-player').count(), 7);
         }
         if (['opening', 'playing', 'long_hand'].includes(key)) await checkDecisionLayout(page, width);
+        if (width <= 390 && ['opening', 'playing', 'long_waiting', 'long_hand', 'spectator'].includes(key)) {
+          await checkMobileViewport(page, `${width} ${key}`);
+        }
         if (key === 'long_hand' && width <= 390) {
           const hand = await page.locator('#noThanksYourRuns').evaluate(el => {
             el.scrollTop = 36;
@@ -301,7 +337,7 @@ async function swipe(page, locator) {
         await page.screenshot({path: `${output}/mobile-header-${width}.png`});
         await page.locator('#noThanksHelpBtn').click();
         await bounds(page, `${width} help`);
-        if (width === 390) await page.locator('#noThanksDialog').screenshot({path: `${output}/help.png`});
+        if (width === 390) await page.locator('[data-obg-help-game="no_thanks"]').screenshot({path: `${output}/help.png`});
         await page.keyboard.press('Escape');
       } else {
         await render(page, 'playing');
@@ -310,12 +346,12 @@ async function swipe(page, locator) {
     }
     for (const viewport of [{width: 320, height: 568}, {width: 390, height: 844}]) {
       await page.setViewportSize(viewport);
+      for (const key of ['opening', 'playing', 'long_waiting', 'long_hand', 'spectator']) {
+        await render(page, key);
+        await bounds(page, `short screen ${viewport.width} ${key}`);
+        await checkMobileViewport(page, `${viewport.width} × ${viewport.height} ${key}`);
+      }
       await render(page, 'playing');
-      await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo(0, 0); });
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      await bounds(page, `short screen ${viewport.width}`);
-      const actions = await page.locator('.no-thanks-actions').boundingBox();
-      assert(actions.y + actions.height <= viewport.height, `Both actions fit on ${viewport.width} × ${viewport.height}`);
       await page.screenshot({path: `${output}/compact-${viewport.width}.png`});
     }
     await page.setViewportSize({width: 390, height: 950});
@@ -334,19 +370,22 @@ async function swipe(page, locator) {
     assert(await page.locator('#noThanksLog').evaluate(el => el.clientHeight <= 160 && el.scrollHeight > el.clientHeight));
     await render(page, 'playing');
     assert.equal(await page.locator('#noThanksLog').evaluate(el => el.scrollTop), historyScroll);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await swipe(page, page.locator('#noThanksCard'));
+    assert(await page.evaluate(() => scrollY > 0), 'Outside the player list, an expanded log still allows page scrolling');
     await page.locator('#noThanksMoveHistory summary').click();
     await page.evaluate(() => window.scrollTo(0, 0));
     const beforeSwipe = await page.evaluate(() => ({scroll: scrollY, actions: noThanksTestActions.length}));
     await swipe(page, page.locator('#noThanksCard'));
-    assert(await page.evaluate(previous => scrollY > previous, beforeSwipe.scroll), 'Ordinary card swipes scroll the page');
+    assert.equal(await page.evaluate(() => scrollY), beforeSwipe.scroll, 'The compact table needs no page scrolling');
     assert.equal(await page.locator('#noThanksTooltip').isVisible(), false);
-    assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), false);
+    assert.equal(await page.locator('dialog[open]').count(), 0);
     assert.equal(await page.evaluate(() => noThanksTestActions.length), beforeSwipe.actions);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.locator('#noThanksExplainBtn').tap();
     await swipe(page, page.locator('#noThanksCard'));
     assert.equal(await page.locator('#noThanksExplainBtn').getAttribute('aria-pressed'), 'true');
-    assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), false);
+    assert.equal(await page.locator('dialog[open]').count(), 0);
     assert.equal(await page.evaluate(() => noThanksTestActions.length), beforeSwipe.actions);
     await page.keyboard.press('Escape');
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -356,13 +395,30 @@ async function swipe(page, locator) {
     await page.locator('#noThanksExplainBtn').tap();
     await swipe(page, page.locator('#noThanksPass'));
     assert.equal(await page.locator('#noThanksExplainBtn').getAttribute('aria-pressed'), 'true');
-    assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), false);
+    assert.equal(await page.locator('dialog[open]').count(), 0);
     await page.keyboard.press('Escape');
     await render(page, 'playing');
+    await page.setViewportSize({width: 390, height: 700});
+    await page.locator('#noThanksPlayers').evaluate(el => { el.scrollTop = 0; });
+    await swipe(page, page.locator('#noThanksPlayers'));
+    const playerScroll = await page.locator('#noThanksPlayers').evaluate(el => el.scrollTop);
+    assert(playerScroll > 0, 'Player cards scroll locally with a real touch gesture');
+    assert.equal(await page.evaluate(() => noThanksTestActions.length), beforeSwipe.actions);
+    assert.equal(await page.locator('#noThanksTooltip').isVisible(), false);
+    await render(page, 'playing');
+    assert.equal(await page.locator('#noThanksPlayers').evaluate(el => el.scrollTop), playerScroll, 'Turn updates preserve the player-list scroll');
+    await checkMobileViewport(page, 'after scrolling player cards');
     await page.locator('.no-thanks-player').last().scrollIntoViewIfNeeded();
     assert.equal(await page.locator('#roomControlsPanel').evaluate(el => getComputedStyle(el).position), 'fixed');
     const docked = await page.locator('#noThanksExplainBtn').boundingBox();
     assert(docked.y >= 0 && docked.y + docked.height < 100, 'Explain stays in the fixed mobile Room Controls bar when scrolling');
+    await page.locator('#noThanksPlayers').evaluate(el => { el.scrollTop = 0; });
+    await pointClick(page, page.locator('.no-thanks-player-heading strong').first(), true);
+    assert.equal(await page.locator('#noThanksTooltip').textContent(), views.playing.players[1].name);
+    await render(page, 'long_waiting');
+    await pointClick(page, page.locator('#noThanksStatus'), true);
+    assert.match(await page.locator('#noThanksTooltip').textContent(), /VeryLongUnbrokenPlayerNameToCheckContainerOverflow/);
+    await render(page, 'playing');
     await pointClick(page, page.locator('#noThanksPot'), true);
     assert.equal(await page.locator('#noThanksTooltip').isVisible(), true);
     assert.match(await page.locator('#noThanksTooltip').textContent(), /Pot/);
@@ -373,8 +429,8 @@ async function swipe(page, locator) {
     await render(page, 'forced');
     await page.locator('#noThanksExplainBtn').tap();
     await pointClick(page, page.locator('#noThanksPass'), true);
-    assert.match(await page.locator('#noThanksDialogBody').textContent(), /没有筹码/);
-    await page.locator('#noThanksDialogClose').tap();
+    assert.match(await page.locator('.obg-explain-text').textContent(), /没有筹码/);
+    await page.locator('.obg-explain-dialog .obg-help-close').tap();
 
     await page.locator('#noThanksExplainBtn').tap();
     const collapsed = await page.locator('#roomControlsPanel').evaluate(el => el.classList.contains('collapsed'));
@@ -387,11 +443,8 @@ async function swipe(page, locator) {
     await page.locator('#noThanksRemaining').hover();
     assert.equal(await page.locator('#noThanksTooltip').isVisible(), true);
     assert.match(await page.locator('#noThanksTooltip').textContent(), /Deck/);
-    await page.locator('#noThanksExplainBtn').click();
     await page.locator('#noThanksRemaining').focus();
-    await page.keyboard.press('Enter');
-    assert.match(await page.locator('#noThanksDialogTitle').textContent(), /Deck/);
-    await page.keyboard.press('Escape');
+    assert.match(await page.locator('#noThanksTooltip').textContent(), /Deck/);
     assert.equal(await page.locator('#noThanksRemaining').evaluate(el => document.activeElement === el), true);
     await page.setViewportSize({width: 390, height: 950});
 
@@ -402,7 +455,7 @@ async function swipe(page, locator) {
     assert.equal(await page.locator('#roomControlsPanel').evaluate(el => el.classList.contains('no-thanks-turn')), false);
     assert.equal(await page.locator('#noThanksTooltip').isVisible(), false);
     assert.equal(await page.locator('#noThanksConfigBox').isVisible(), false);
-    assert.equal(await page.locator('#noThanksDialog').evaluate(el => el.open), false);
+    assert.equal(await page.locator('dialog[open]').count(), 0);
     assert.equal(await page.locator('#noThanksHeaderActions').isVisible(), false);
     assert.equal(await page.locator('#noThanksExplainBtn').isVisible(), false);
     assert.equal(await page.locator('#mobileExplainSlot #noThanksExplainBtn').count(), 0);

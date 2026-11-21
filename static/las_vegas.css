@@ -20,6 +20,10 @@
     border-color: var(--lv-gold);
     background: #3d392b;
 }
+.game-panel[data-game-theme="las_vegas"] > .panel-header { flex-wrap: nowrap; gap: 6px; }
+.game-panel[data-game-theme="las_vegas"] > .panel-header h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-panel[data-game-theme="las_vegas"] > .panel-header .panel-header-actions { flex: 0 0 auto; flex-wrap: nowrap; gap: 4px; }
+.game-panel[data-game-theme="las_vegas"] > .panel-header button { white-space: nowrap; padding-inline: 8px; }
 #lasVegasPanel *, .lv-dialog *, .lv-tooltip { box-sizing: border-box; }
 #lasVegasPanel [hidden], .lv-tooltip[hidden] { display: none !important; }
 #lasVegasPanel, .lv-surface, .lv-setup {
@@ -45,7 +49,7 @@
 .lv-main, .lv-sidebar { display: grid; gap: 15px; min-width: 0; }
 .lv-box { min-width: 0; border: 1px solid var(--lv-line); border-radius: 12px; background: rgba(24, 44, 56, .68); padding: 13px; }
 .lv-section-heading { margin-bottom: 12px; }
-.lv-section-heading h3 { font-size: .88rem; font-weight: 600; line-height: 1.5; min-width: 0; }
+.lv-section-heading h3 { font-size: .76rem; font-weight: 600; line-height: 1.5; min-width: 0; }
 .lv-section-heading h3 small { display: inline-block; color: var(--lv-muted); font-size: .72rem; font-weight: 400; }
 .lv-section-heading > span { color: var(--lv-muted); font-size: .66rem; text-align: right; }
 .lv-board { min-width: 0; }
@@ -71,7 +75,7 @@
 .lv-color-4 { --lv-player: #c2a0e1; }
 .lv-color-neutral { --lv-player: #e7e7df; }
 .lv-color-gray { --lv-player: #a7b1b9; }
-.lv-edition { display: grid; gap: 5px; min-width: 0; max-width: 100%; color: var(--lv-muted); font-size: .76rem; }
+.lv-edition { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; color: var(--lv-muted); font-size: .76rem; }
 .lv-edition select { width: 100%; max-width: 100%; background: #203941; border: 1px solid #6b8078; border-radius: 7px; color: #edf4ef; padding: 9px; }
 .lv-variant[hidden] { display: none; }
 .lv-casino.is-closed { border-color: #af8583; }
@@ -132,6 +136,16 @@
 .lv-empty-casino { min-height: 32px; display: grid; place-items: center; color: #7e959f; font-size: .67rem; }
 .lv-returned { color: var(--lv-muted); font-size: .61rem; line-height: 1.5; border-top: 1px solid var(--lv-line); margin-top: 7px; padding-top: 6px; }
 .lv-controls { background: linear-gradient(115deg, #1c3940, #1b2b37); border-color: #3b635e; }
+.lv-dice-bar { min-width: 0; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--lv-line); }
+.lv-dice-bar .lv-action-line { border: 0; padding-top: 0; }
+.lv-dice-bar .lv-roll-rest { padding-bottom: 7px; }
+.lv-casino-confirm { display: flex; justify-content: flex-end; margin-top: 10px; }
+.lv-casino-confirm button { width: 100%; white-space: normal; }
+.lv-casino .lv-controls { margin-top: 10px; padding: 9px; border-radius: 8px; }
+.lv-casino .lv-controls .lv-section-heading { flex-wrap: wrap; gap: 4px; }
+.lv-casino .lv-controls .lv-options { grid-template-columns: minmax(0, 1fr); max-height: 260px; }
+.lv-casino .lv-controls .lv-action-line { flex-wrap: wrap; }
+.lv-casino .lv-controls .lv-secret-tokens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .lv-roll-rest { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 4px 0 13px; }
 .lv-roll-rest > div { display: grid; min-width: 0; gap: 4px; }
 .lv-roll-rest strong { font-size: .85rem; }
@@ -161,6 +175,9 @@
 .lv-wallet-notes { max-height: 117px; overflow: auto; padding: 3px 2px; }
 .lv-muted { color: var(--lv-muted); font-size: .73rem; }
 .lv-log { max-height: 180px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-right: 4px; }
+.lv-log-box > summary { cursor: pointer; font-size: .76rem; }
+.lv-log-box > summary small { color: var(--lv-muted); font-size: .62rem; margin-left: 6px; }
+.lv-log-box[open] > summary { margin-bottom: 10px; }
 .lv-log p { display: flex; align-items: baseline; gap: 6px; margin: 0; padding: 7px 0; border-top: 1px solid var(--lv-line); font-size: .67rem; line-height: 1.65; overflow-wrap: anywhere; }
 .lv-log p:first-child { border-top: 0; padding-top: 0; }
 .lv-log small { color: var(--lv-gold); flex-shrink: 0; font-size: .57rem; }
@@ -194,12 +211,17 @@
 .lv-dialog-body { padding: 4px 19px 17px; font-size: .84rem; line-height: 1.9; overflow-wrap: anywhere; }
 .lv-dialog-body h3 { margin: 17px 0 3px; color: #edca79; font-size: .91rem; }
 .lv-dialog-body p { margin: 11px 0; }
+.lv-help-nav { position: sticky; top: 0; background: #152b37; padding-block: 10px; border-bottom: 1px solid #3c5057; z-index: 1; }
+.lv-help-languages, .lv-help-tabs { display: flex; flex-wrap: wrap; gap: 5px; }
+.lv-help-languages { margin-bottom: 8px; }
+.lv-help-nav button { background: #253f45; color: #edf4ef; border: 1px solid #526e70; border-radius: 5px; padding: 5px 9px; font-size: .74rem; }
+.lv-help-nav button[aria-selected="true"], .lv-help-nav button[aria-pressed="true"] { background: #50472f; border-color: #edca79; color: #ffe4a5; }
 @media (min-width: 1300px) {
     .lv-occupant { grid-template-columns: 7px minmax(0, 1fr) auto auto; grid-template-areas: "dot name count payout"; gap: 5px; }
 }
 @media (max-width: 1050px) {
     .lv-layout { grid-template-columns: minmax(0, 1fr) minmax(185px, .42fr); gap: 12px; }
-    .lv-casinos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lv-casinos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
     .lv-layout { grid-template-columns: minmax(0, 1fr); }

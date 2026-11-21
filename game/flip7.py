@@ -179,6 +179,7 @@ def _handle_bust(state: Dict, player_id: str, drawn_card: Dict, extra_discards: 
     pdata["banked"] = True
     pdata["round_score"] = 0
     pdata["round_breakdown"] = {
+        "busted": True,
         "numbers": [],
         "numbers_sum": 0,
         "modifier_points": 0,
@@ -195,14 +196,14 @@ def _eligible_targets(state: Dict, action_type: str) -> List[str]:
     return active
 
 
-def _ensure_deck(state: Dict) -> bool:
+def _ensure_deck(state: Dict, rng: Optional[random.Random] = None) -> bool:
     if state["deck"]:
         return True
     if not state["discard"]:
         return False
     state["deck"] = state["discard"]
     state["discard"] = []
-    random.shuffle(state["deck"])
+    (rng or random).shuffle(state["deck"])
     return True
 
 
@@ -266,6 +267,7 @@ def _end_round(state: Dict, reason: str) -> None:
         "breakdowns": summary_breakdowns,
         "flips": summary_flips,
     }
+    state["round_ready"] = []
 
     for pdata in state["players"].values():
         if pdata["tableau"]:
@@ -297,13 +299,10 @@ def _end_round(state: Dict, reason: str) -> None:
 def _finalize_round(state: Dict, events: List[Dict], reason: str) -> None:
     _end_round(state, reason)
     events.append({"type": "flip7:round_end", "payload": {"reason": reason}})
-    if not state.get("game_over"):
-        Flip7Game.start_new_round(state)
-        events.append({"type": "flip7:next_round", "payload": {"round": state["round"]}})
 
 
-def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict]] = None) -> Tuple[List[Dict], bool, bool, Optional[str]]:
-    if not _ensure_deck(state):
+def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict]] = None, rng: Optional[random.Random] = None) -> Tuple[List[Dict], bool, bool, Optional[str]]:
+    if not _ensure_deck(state, rng):
         return [], False, False, "deck empty"
     card = state["deck"].pop()
     pdata = state["players"][player_id]
@@ -353,7 +352,7 @@ def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict
                 {"type": "flip7:action_drawn", "payload": {"player_id": player_id, "action": action_type}}
             )
             state["discard"].append(card)
-            draw_events, error, queued_actions = _resolve_flip_three(state, player_id)
+            draw_events, error, queued_actions = _resolve_flip_three(state, player_id, rng)
             events.extend(draw_events)
             if error:
                 return events, False, False, error
@@ -389,12 +388,12 @@ def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict
     return events, False, False, None
 
 
-def _resolve_flip_three(state: Dict, target_id: str) -> Tuple[List[Dict], Optional[str], List[Dict]]:
+def _resolve_flip_three(state: Dict, target_id: str, rng: Optional[random.Random] = None) -> Tuple[List[Dict], Optional[str], List[Dict]]:
     events: List[Dict] = []
     deferred_actions: List[Dict] = []
     for _ in range(3):
         draw_events, busted, flip7_hit, error = _draw_card(
-            state, target_id, deferred_actions=deferred_actions
+            state, target_id, deferred_actions=deferred_actions, rng=rng
         )
         events.extend(draw_events)
         if error:
@@ -408,6 +407,7 @@ def _resolve_flip_three(state: Dict, target_id: str) -> Tuple[List[Dict], Option
 
 
 def _start_round(state: Dict) -> None:
+    state["round_ready"] = []
     state["flip7_winner"] = None
     state["pending_action"] = None
     state["action_queue"] = []
@@ -493,7 +493,7 @@ class Flip7Game:
             return []
         phase = state.get("phase")
         if phase == "round_end":
-            return ["next_round"]
+            return [] if player_id in state.get("round_ready", []) else ["next_round"]
         if phase == "action_target":
             pending = state.get("pending_action")
             if pending and pending.get("actor_id") == player_id:
@@ -508,7 +508,7 @@ class Flip7Game:
         return ["flip", "stay"]
 
     @staticmethod
-    def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
+    def apply_action(state: Dict, player_id: str, action: Dict, rng: Optional[random.Random] = None) -> Tuple[List[Dict], Optional[str]]:
         if player_id not in state["players"]:
             return [], "unknown player"
 
@@ -521,8 +521,14 @@ class Flip7Game:
         if state.get("phase") == "round_end":
             if action_type != "next_round":
                 return [], "only next_round allowed"
-            Flip7Game.start_new_round(state)
-            events.append({"type": "flip7:next_round", "payload": {"round": state["round"]}})
+            ready = state.setdefault("round_ready", [])
+            if player_id in ready:
+                return [], "already ready"
+            ready.append(player_id)
+            events.append({"type": "flip7:ready", "payload": {"player_id": player_id}})
+            if all(pid in ready for pid in state["players"]):
+                Flip7Game.start_new_round(state)
+                events.append({"type": "flip7:next_round", "payload": {"round": state["round"]}})
             return events, None
 
         if state.get("phase") == "action_target":
@@ -565,7 +571,7 @@ class Flip7Game:
                 )
             elif pending_action == ACTION_FLIP_THREE:
                 state["discard"].append(card)
-                draw_events, error, deferred_actions = _resolve_flip_three(state, target_id)
+                draw_events, error, deferred_actions = _resolve_flip_three(state, target_id, rng)
                 events.extend(draw_events)
                 if error:
                     return events, error
@@ -607,7 +613,7 @@ class Flip7Game:
             return events, None
 
         if action_type == "flip":
-            draw_events, busted, flip7_hit, error = _draw_card(state, player_id)
+            draw_events, busted, flip7_hit, error = _draw_card(state, player_id, rng=rng)
             events.extend(draw_events)
             if error:
                 return events, error
@@ -639,6 +645,8 @@ class Flip7Game:
                     "status": pdata.get("status"),
                     "score": pdata.get("score", 0),
                     "round_score": pdata.get("round_score"),
+                    "busted": bool((pdata.get("round_breakdown") or {}).get("busted")),
+                    "potential_score": _score_breakdown(pdata.get("tableau", []), pdata.get("flip7", False))["total"],
                     "flip7": pdata.get("flip7", False),
                     "has_second_chance": _has_second_chance(pdata),
                     "numbers_count": len(_unique_numbers(pdata)),
@@ -676,6 +684,7 @@ class Flip7Game:
             "players": players_view,
             "legal_actions": Flip7Game.get_legal_actions(state, viewer_id),
             "last_round_summary": state.get("last_round_summary"),
+            "round_ready": list(state.get("round_ready", [])),
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
             "config": {"target_score": state["config"]["target_score"]},
@@ -683,36 +692,12 @@ class Flip7Game:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
-            return None
-        if bot_id not in state["players"]:
-            return None
-        if state.get("phase") == "round_end":
-            return {"type": "next_round"}
-        if state.get("phase") == "action_target":
-            pending = state.get("pending_action")
-            if pending and pending.get("actor_id") == bot_id:
-                action_type = (pending.get("card") or {}).get("action")
-                if action_type == ACTION_FLIP_THREE:
-                    return {"type": "choose_target", "target_player_id": bot_id}
-                eligible = _eligible_targets(state, action_type)
-                if not eligible:
-                    return None
-                return {"type": "choose_target", "target_player_id": random.choice(eligible)}
-            return None
-        if state.get("phase") != "playing":
-            return None
-        if bot_id != state.get("current_turn"):
-            return None
-        pdata = state["players"][bot_id]
-        if pdata.get("status") != "active":
-            return None
-        unique_count = len(_unique_numbers(pdata))
-        if unique_count >= 5 and random.random() < 0.6:
-            return {"type": "stay"}
-        if random.random() < 0.2:
-            return {"type": "stay"}
-        return {"type": "flip"}
+        from game.flip7_ai import choose_move
+
+        action = choose_move(state, bot_id)
+        if action and action["type"] != "next_round":
+            action["delay_ms"] = 550
+        return action
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

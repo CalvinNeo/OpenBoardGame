@@ -137,10 +137,6 @@ h1 {
   outline: none;
 }
 
-.room-controls-explain-placeholder {
-  display: none;
-}
-
 body.room-controls-dragging,
 body.room-controls-dragging * {
   cursor: grabbing !important;
@@ -2561,13 +2557,6 @@ button.splendor-card {
     z-index: 30003;
   }
 
-  /* The compact desktop dock gives the placeholder its own display rule. Keep
-     the semantic hidden state authoritative so it cannot sit beside a real
-     game Explain button. */
-  .room-controls-explain-placeholder[hidden] {
-    display: none !important;
-  }
-
   body.room-controls-drawer-closed .layout,
   body.room-controls-desktop-popover .layout {
     gap: 0;
@@ -2698,20 +2687,6 @@ button.splendor-card {
     line-height: 1;
     cursor: pointer;
     touch-action: manipulation;
-  }
-
-  body.room-controls-drawer-closed #roomControlsPanel .panel-header-actions > .room-controls-explain-placeholder {
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    border: 1px solid rgba(148, 163, 184, 0.52);
-    border-radius: 7px;
-    background: rgba(255, 255, 255, 0.34);
-    color: #64748b;
-    font-size: 17px;
-    line-height: 1;
-    cursor: not-allowed;
   }
 
   body.room-controls-drawer-closed #roomControlsPanel .collapse-btn {
@@ -2869,21 +2844,6 @@ button.splendor-card {
     color: #334155;
     cursor: pointer;
     touch-action: manipulation;
-  }
-
-  body.room-controls-desktop-popover #roomControlsPanel .panel-header-actions > .room-controls-explain-placeholder {
-    display: grid;
-    place-items: center;
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
-    border: 1px solid rgba(148, 163, 184, 0.52);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.30);
-    color: #64748b;
-    font-size: 18px;
-    line-height: 1;
-    cursor: not-allowed;
   }
 
   body.room-controls-desktop-popover #roomControlsPanel .room-controls-body {

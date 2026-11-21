@@ -243,11 +243,14 @@ def _resolve_round(state: Dict) -> None:
         # the displayed components still add up to the player's total.
         breakdown["floor_clamp"] += max(0, -score_after_penalty)
 
+        has_first_player_token = (
+            pdata.get("has_first_player_token") or "first_player" in pdata["floor"]
+        )
         for tile in pdata["floor"]:
             if tile != "first_player":
                 state["discard"].append(tile)
         pdata["floor"] = []
-        if pdata.get("has_first_player_token"):
+        if has_first_player_token:
             state["next_start_player"] = pid
             pdata["has_first_player_token"] = False
 
@@ -618,6 +621,7 @@ class AzulGame:
             state["center"] = [tile for tile in state["center"] if tile != color]
             if state.get("first_player_token_in_center"):
                 state["first_player_token_in_center"] = False
+                state["next_start_player"] = player_id
                 pdata = state["players"][player_id]
                 pdata["has_first_player_token"] = True
                 if len(pdata["floor"]) < 7:

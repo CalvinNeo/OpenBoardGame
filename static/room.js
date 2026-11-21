@@ -148,7 +148,6 @@ const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 const roomControlsCollapseBtn = document.getElementById("roomControlsCollapseBtn");
 const roomControlsBackdrop = document.getElementById("roomControlsBackdrop");
 const roomControlsDragHandle = document.getElementById("roomControlsDragHandle");
-const roomControlsExplainPlaceholder = document.getElementById("roomControlsExplainPlaceholder");
 const roomControlsMain = document.querySelector(".layout > .main");
 const mobileExplainSlot = document.getElementById("mobileExplainSlot");
 const gameReconnectBtn = document.getElementById("gameReconnectBtn");
@@ -2777,7 +2776,6 @@ function restoreRoomControlsExplainButton() {
   }
   roomControlsExplainButton = null;
   roomControlsExplainAnchor = null;
-  if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = roomControlsDockQuery.matches;
 }
 
 function roomControlsExplainSourceIsVisible() {
@@ -2797,17 +2795,12 @@ function syncRoomControlsExplainButton() {
   const shouldDockExplain = roomControlsDockQuery.matches ||
     roomControlsPanel?.classList.contains("collapsed") ||
     document.body.classList.contains("room-controls-desktop-popover");
-  if (roomControlsExplainPlaceholder) {
-    roomControlsExplainPlaceholder.hidden = roomControlsDockQuery.matches || !shouldDockExplain || Boolean(roomControlsExplainButton);
-  }
   if (!mobileExplainSlot || !shouldDockExplain) {
     restoreRoomControlsExplainButton();
-    if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = true;
     updateRoomControlsDock();
     return;
   }
   if (roomControlsExplainSourceIsVisible()) {
-    if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = true;
     updateRoomControlsDock();
     return;
   }
@@ -2828,7 +2821,6 @@ function syncRoomControlsExplainButton() {
     explainButton.classList.add("room-controls-mobile-explain");
     mobileExplainSlot.appendChild(explainButton);
     roomControlsExplainButton = explainButton;
-    if (roomControlsExplainPlaceholder) roomControlsExplainPlaceholder.hidden = true;
   }
   updateRoomControlsDock();
 }

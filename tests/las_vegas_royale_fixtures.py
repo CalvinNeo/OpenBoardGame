@@ -66,6 +66,18 @@ def views():
     for pid in sample["turn_order"]:
         Game.apply_action(sample, pid, {"type": "next_round", "round": 3})
     result["final"] = Game.get_public_view(sample, "p0")
+    for edition, config in (("classic", {}), ("neutral", {"neutral_dice": True})):
+        sample = Game.init_game(config, players[:3])
+        sample["current_turn"] = "p0"
+        result[f"{edition}_initial"] = Game.get_public_view(sample, "p0")
+        Game.apply_action(sample, "p0", {"type": "roll", "round": 1, "turn": 1})
+        result[f"{edition}_playing"] = Game.get_public_view(sample, "p0")
+        for _ in range(300):
+            if sample["phase"] == "round_end":
+                break
+            actor = sample["current_turn"]
+            Game.apply_action(sample, actor, Game.bot_move(sample, actor))
+        result[f"{edition}_settled"] = Game.get_public_view(sample, "p0")
     return result
 
 

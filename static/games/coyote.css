@@ -1,323 +1,119 @@
-/* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-coyote-1 {
-
-#coyoteRoundNoticeBody {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.coyote-bid-highlight {
-  color: #dc2626;
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.coyote-table {
-  position: relative;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: #f8fafc;
-  width: 100%;
-  max-width: 840px;
-  margin: 0 auto;
-}
-
-.coyote-players {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(140px, 1fr));
-  grid-template-rows: repeat(4, minmax(90px, 1fr));
-  gap: 10px;
-  align-items: stretch;
-}
-
-.coyote-player-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px;
-  margin-bottom: 0;
-  min-height: 86px;
-  text-align: center;
-}
-
-.coyote-player-meta {
-  text-align: center;
-  line-height: 1.2;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.coyote-player-meta-line {
-  display: block;
-}
-
-.coyote-card-value {
-  color: #dc2626;
-  font-weight: 700;
-}
+  #coyotePanel {
+    --coyote-ink: #392b23;
+    --coyote-muted: #79675a;
+    --coyote-red: #ac352d;
+    --coyote-line: #e3d7c8;
+    color: var(--coyote-ink);
+    min-width: 0;
+  }
+  #coyotePanel *, #coyotePanel *::before, #coyotePanel *::after { box-sizing: border-box; }
+  #coyotePanel button { min-height: 40px; border-radius: 9px; font-weight: 650; }
+  #coyotePanel button:disabled { opacity: .48; cursor: not-allowed; }
+  #coyotePanel button:focus-visible, #coyotePanel [tabindex]:focus-visible, #coyoteBidInput:focus-visible {
+    outline: 3px solid #b36926; outline-offset: 3px;
+  }
+  .coyote-statusbar, .coyote-table-heading, .coyote-bid-heading, .coyote-result-heading, .coyote-review {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .coyote-statusbar { padding: 4px 0 14px; font-size: 13px; }
+  #coyoteStatus { min-width: 0; overflow-wrap: anywhere; font-weight: 650; }
+  #coyoteRound { flex-shrink: 0; padding: 5px 9px; background: #f4ede3; border-radius: 6px; color: #715238; font-size: 12px; }
+  .coyote-play { display: grid; grid-template-columns: minmax(0, 1fr) 260px; grid-template-areas: "table bidding"; gap: 24px; align-items: start; }
+  .coyote-table { grid-area: table; min-width: 0; }
+  .coyote-table-heading { margin-bottom: 10px; }
+  #coyotePanel h3 { margin: 0; font-size: 12px; color: var(--coyote-muted); font-weight: 650; letter-spacing: .04em; }
+  #coyoteSurvivors, #coyotePhase { font-size: 11px; color: var(--coyote-muted); }
+  .coyote-players { display: grid; grid-template-columns: repeat(var(--coyote-columns, 3), minmax(0, 1fr)); gap: 10px; }
+  .coyote-player {
+    min-width: 0; padding: 10px; border: 1px solid var(--coyote-line); border-radius: 12px;
+    background: linear-gradient(155deg, #fffdf9, #faf4ea); display: flex; flex-direction: column; gap: 5px;
+  }
+  .coyote-player.is-current { border: 2px solid #b56626; padding: 9px; box-shadow: 0 0 0 2px #b5662614; }
+  .coyote-player.is-you { background: linear-gradient(155deg, #f8f5ff, #eee8f5); border-color: #c6b7d8; }
+  .coyote-player.is-you.is-current { border-color: #b56626; }
+  .coyote-player.is-out { background: #f3f2ef; color: #77716b; }
+  .coyote-player-name { font-weight: 650; font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .coyote-player-tag { min-height: 15px; font-size: 10px; color: var(--coyote-muted); overflow-wrap: anywhere; }
+  .coyote-card-face { display: grid; place-items: center; min-height: 65px; font-size: 42px; line-height: 1.2; font-weight: 750; color: #86521d; border-block: 1px solid #e4d8c66b; }
+  .coyote-card-face.is-negative { color: #226d69; }
+  .coyote-card-face.is-special { font-size: 26px; color: #755195; }
+  .coyote-card-face.is-hidden { color: #8a6eab; letter-spacing: 6px; background: repeating-linear-gradient(135deg, transparent, transparent 8px, #7f62920b 8px, #7f62920b 10px); }
+  .coyote-penalties { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 10px; color: var(--coyote-muted); }
+  .coyote-penalties strong { font-size: 12px; color: var(--coyote-red); }
+  .coyote-bidding { grid-area: bidding; min-width: 0; background: #f9f2e7; border-radius: 13px; padding: 16px; }
+  #coyotePanel.is-revealed .coyote-bidding { display: none; }
+  #coyotePanel.is-revealed .coyote-play { grid-template-columns: minmax(0, 1fr); grid-template-areas: "table"; }
+  .coyote-bid-display { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 15px 0; }
+  #coyoteBid { font-size: 64px; line-height: 1.05; color: var(--coyote-red); overflow-wrap: anywhere; max-width: 100%; }
+  #coyoteBidder { color: var(--coyote-red); font-size: 14px; font-weight: 700; text-align: center; overflow-wrap: anywhere; max-width: 100%; }
+  .coyote-bid-controls { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+  .coyote-bid-controls label { font-size: 12px; font-weight: 600; }
+  .coyote-stepper { display: grid; grid-template-columns: 38px minmax(0, 1fr) 38px; gap: 4px; width: 155px; }
+  .coyote-stepper button { padding: 3px; font-size: 21px; background: #fffdf9; color: var(--coyote-ink); border: 1px solid #d8c9b8; }
+  #coyoteBidInput { min-width: 0; width: 100%; padding: 4px; text-align: center; font-size: 18px; border: 1px solid #d8c9b8; border-radius: 7px; background: #fffdf9; color: var(--coyote-ink); appearance: textfield; }
+  #coyoteBidInput::-webkit-inner-spin-button, #coyoteBidInput::-webkit-outer-spin-button { appearance: none; margin: 0; }
+  .coyote-moves { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+  #coyoteBidBtn { padding: 9px 4px; background: #865424; color: #fff; border: 1px solid #865424; }
+  #coyoteChallengeBtn { padding: 9px 4px; background: #fff8ef; color: #a2352c; border: 1px solid #c48071; }
+  .coyote-decision { margin: 9px 0 0; font-size: 11px; line-height: 1.5; color: var(--coyote-muted); overflow-wrap: anywhere; }
+  .coyote-result { background: #eef4eb; border-left: 4px solid #658150; padding: 12px 14px; margin-bottom: 16px; border-radius: 8px; }
+  .coyote-result.is-loss { background: #fff0e9; border-color: #b66143; }
+  .coyote-result-heading { flex-wrap: wrap; font-size: 14px; }
+  #coyoteResultTotal { font-variant-numeric: tabular-nums; font-weight: 700; }
+  #coyoteResultBody { margin: 7px 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+  .coyote-revealed { display: flex; flex-wrap: wrap; gap: 5px; }
+  .coyote-reveal-chip { max-width: 100%; background: #ffffffa6; border: 1px solid #00000010; padding: 4px 7px; border-radius: 5px; font-size: 11px; overflow-wrap: anywhere; }
+  .coyote-reveal-chip.is-you { border-color: #9c79b7; background: #f6edff; font-weight: 700; }
+  .coyote-review { margin-top: 10px; font-size: 12px; }
+  #coyoteNextBtn { background: #526b3e; color: white; border: 0; padding: 8px 14px; }
+  .coyote-history { margin-top: 18px; border-top: 1px solid var(--coyote-line); font-size: 12px; color: var(--coyote-muted); }
+  .coyote-history summary { padding: 11px 0; cursor: pointer; }
+  #coyoteHistoryCaption { margin-left: 8px; font-size: 11px; }
+  #coyoteHistoryBody { max-height: 180px; overflow-y: auto; padding: 0 5px 10px; line-height: 1.7; overflow-wrap: anywhere; }
+  .coyote-reset { display: block; margin: 14px auto 0; padding: 8px 22px; }
+  .coyote-tooltip {
+    position: fixed; inset: auto; margin: 0; z-index: 2000; pointer-events: none;
+    width: max-content; max-width: min(280px, calc(100vw - 24px)); border: 0; border-radius: 8px;
+    padding: 9px 11px; background: #302820; color: white; font-size: 12px; line-height: 1.5;
+    overflow-wrap: anywhere; box-shadow: 0 4px 16px #0003;
+  }
+  #roomControlsPanel.collapsed.coyote-turn { border-color: #b34535; box-shadow: 0 0 0 2px #b3453533; }
 }
 
 @media all, obg-game-coyote-2 {
-
-.coyote-seat-1 {
-  grid-area: 1 / 1;
-}
-
-.coyote-seat-2 {
-  grid-area: 1 / 2;
-}
-
-.coyote-seat-3 {
-  grid-area: 1 / 3;
-}
-
-.coyote-seat-4 {
-  grid-area: 2 / 3;
-}
-
-.coyote-seat-5 {
-  grid-area: 3 / 3;
-}
-
-.coyote-seat-6 {
-  grid-area: 4 / 3;
-}
-
-.coyote-seat-7 {
-  grid-area: 4 / 2;
-}
-
-.coyote-seat-8 {
-  grid-area: 4 / 1;
-}
-
-.coyote-seat-9 {
-  grid-area: 3 / 1;
-}
-
-.coyote-seat-10 {
-  grid-area: 2 / 1;
-}
-
-.coyote-bid-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: calc(33.333% - 8px);
-  max-width: 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
-  text-align: center;
-  background: #fff;
-  border-radius: 12px;
-  border: 2px solid #e5e7eb;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
-}
-
-.coyote-bid-status {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.coyote-bid-line {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  font-size: 13px;
-  color: #374151;
-}
-
-.coyote-winner-line {
-  display: none;
-}
-
-.coyote-center-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.coyote-center-actions #coyoteBidInput {
-  width: 72px;
-  text-align: center;
-}
-
-.coyote-bidder-name {
-  color: #dc2626;
-  font-weight: 700;
-}
-
-.coyote-bid-label {
-  font-weight: 600;
-  color: #4b5563;
-}
-
-.coyote-bid-center .coyote-bid-highlight {
-  font-size: 20px;
-}
-
-.coyote-actions {
-  justify-content: center;
-}
-
-@media (max-width: 900px) {
-  .coyote-table {
-    max-width: 100%;
-    padding: 10px;
+  @media (max-width: 900px) {
+    .coyote-play { gap: 16px; grid-template-columns: minmax(0, 1fr) 235px; }
+    .coyote-bidding { padding: 12px; }
   }
-
-  .coyote-players {
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
-    grid-template-rows: repeat(4, minmax(80px, 1fr));
-    gap: 8px;
+  @media (max-width: 640px) {
+    .coyote-statusbar { padding-bottom: 10px; font-size: 12px; }
+    .coyote-play { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bidding" "table"; gap: 14px; }
+    .coyote-bidding { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.3fr); gap: 7px 12px; padding: 12px; }
+    .coyote-bid-heading { grid-column: 1 / -1; }
+    .coyote-bid-display { grid-column: 1; grid-row: 2 / 4; padding: 2px 0; justify-content: center; }
+    #coyoteBid { font-size: 48px; }
+    #coyoteBidder { font-size: 12px; }
+    .coyote-bid-controls { flex-direction: column; gap: 4px; align-items: stretch; }
+    .coyote-bid-controls label { font-size: 10px; }
+    .coyote-stepper { width: 100%; grid-template-columns: 34px minmax(0, 1fr) 34px; }
+    .coyote-moves { gap: 5px; margin-top: 0; }
+    #coyoteBidBtn, #coyoteChallengeBtn { font-size: 11px; padding: 6px 2px; }
+    .coyote-decision { grid-column: 1 / -1; margin: 0; font-size: 11px; }
+    .coyote-players { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .coyote-player { padding: 8px; gap: 4px; }
+    .coyote-player.is-current { padding: 7px; }
+    .coyote-player-name { font-size: 12px; }
+    .coyote-card-face { min-height: 58px; font-size: 36px; }
+    .coyote-card-face.is-special { font-size: 21px; }
+    .coyote-penalties { font-size: 9px; }
+    .coyote-penalties strong { font-size: 11px; }
+    .coyote-result { padding: 10px; }
+    .coyote-result-heading { font-size: 12px; gap: 5px; }
   }
-
-  .coyote-player-card {
-    min-height: 74px;
-    padding: 6px;
+  @media (max-width: 359px) {
+    .coyote-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .coyote-bidding { gap: 7px 8px; padding: 10px; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr); }
+    #coyoteBid { font-size: 42px; }
   }
-
-  .coyote-player-meta {
-    font-size: 11px;
-  }
-
-  .coyote-bid-center {
-    max-width: 200px;
-    padding: 8px 10px;
-  }
-
-  .coyote-bid-line {
-    font-size: 12px;
-  }
-
-  .coyote-bid-center .coyote-bid-highlight {
-    font-size: 18px;
-  }
-
-  .coyote-center-actions #coyoteBidInput {
-    width: 64px;
-  }
-}
-
-@media (max-width: 640px) {
-  .coyote-players {
-    grid-template-columns: repeat(3, minmax(98px, 1fr));
-    grid-template-rows: repeat(4, minmax(68px, 1fr));
-    gap: 6px;
-  }
-
-  .coyote-player-card {
-    min-height: 64px;
-    padding: 5px;
-    gap: 3px;
-  }
-
-  .coyote-player-meta {
-    font-size: 10px;
-  }
-
-  .coyote-bid-center {
-    max-width: 180px;
-    padding: 6px 8px;
-  }
-
-  .coyote-bid-line {
-    font-size: 11px;
-    gap: 4px;
-  }
-
-  .coyote-bid-center .coyote-bid-highlight {
-    font-size: 16px;
-  }
-
-  .coyote-center-actions {
-    gap: 4px;
-    width: 100%;
-  }
-
-  .coyote-center-actions #coyoteBidMinusBtn,
-  .coyote-center-actions #coyoteBidPlusBtn {
-    order: 1;
-  }
-
-  .coyote-center-actions #coyoteBidMinusBtn {
-    margin-right: 12px;
-  }
-
-  .coyote-center-actions #coyoteBidInput {
-    order: 2;
-    flex: 0 0 100%;
-    width: 100%;
-  }
-
-  .coyote-center-actions #coyoteBidBtn,
-  .coyote-center-actions #coyoteChallengeBtn {
-    order: 3;
-  }
-
-  .coyote-center-actions button {
-    padding: 4px 6px;
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 420px) {
-  .coyote-players {
-    grid-template-columns: repeat(3, minmax(78px, 1fr));
-    grid-template-rows: repeat(4, minmax(58px, 1fr));
-    gap: 4px;
-  }
-
-  .coyote-player-card {
-    min-height: 56px;
-    padding: 4px;
-  }
-
-  .coyote-player-meta {
-    font-size: 9px;
-  }
-
-  .coyote-bid-center {
-    max-width: 170px;
-    padding: 5px 6px;
-  }
-
-  .coyote-bid-line {
-    font-size: 10px;
-  }
-
-  .coyote-bid-center .coyote-bid-highlight {
-    font-size: 14px;
-  }
-
-  .coyote-center-actions {
-    gap: 3px;
-  }
-
-  .coyote-center-actions #coyoteBidMinusBtn {
-    margin-right: 10px;
-  }
-
-  .coyote-center-actions button {
-    padding: 3px 5px;
-    font-size: 11px;
-  }
-}
 }

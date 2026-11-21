@@ -114,6 +114,7 @@
 .no-thanks-panel.is-spectator .no-thanks-table { grid-template-columns: minmax(0, 1fr); }
 .no-thanks-panel.is-spectator .no-thanks-offer { border: 0; padding: 0; }
 .no-thanks-collections { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--nt-border); }
+.no-thanks-scroll-hint { display: none; }
 .no-thanks-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 218px), 1fr)); gap: 10px; margin-top: 10px; }
 .no-thanks-player { padding: 12px; border: 1px solid var(--nt-border); border-radius: 9px; background: #fffdf7; }
 .no-thanks-player.is-current { border-color: #bd4c3b; box-shadow: inset 3px 0 #bd4c3b; }
@@ -154,26 +155,64 @@
 .no-thanks-config-row { display: flex; gap: 10px; align-items: center; }
 .no-thanks-config-row select { flex: 1; max-width: 220px; }
 @container no-thanks (max-width: 620px) {
-    .no-thanks-table { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .no-thanks-table { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; }
     .no-thanks-offer { padding: 0; border: 0; }
-    .no-thanks-offer-content { grid-template-columns: minmax(0, 104px) minmax(0, 1fr); max-width: 290px; gap: 22px; margin: 12px auto 4px; }
-    .no-thanks-card { padding: 10px; }
-    .no-thanks-card > strong { font-size: 48px; }
-    .no-thanks-offer-info { gap: 10px; }
-    .no-thanks-pot-value > strong { font-size: 30px; }
-    .no-thanks-stats { margin: 7px 0 8px; }
-    .no-thanks-stats > div { padding: 6px 4px; }
-    .no-thanks-stats strong { font-size: 25px; margin-top: 3px; }
+    .no-thanks-offer-content { grid-template-columns: minmax(0, 78px) minmax(0, 1fr); max-width: none; gap: 8px; margin: 6px 0 0; }
+    .no-thanks-card { padding: 7px; border-width: 3px; border-radius: 10px; }
+    .no-thanks-card > strong { font-size: 40px; }
+    .no-thanks-card-corner, .no-thanks-card-foot { font-size: 8px; letter-spacing: .06em; }
+    .no-thanks-offer-info { display: contents; }
+    .no-thanks-pot { align-items: center; }
+    .no-thanks-eyebrow { font-size: 9px; letter-spacing: 0; }
+    .no-thanks-pot-value { flex-wrap: wrap; justify-content: center; gap: 5px; }
+    .no-thanks-chip { flex-basis: 20px; height: 20px; border-width: 3px; }
+    .no-thanks-pot-value > strong { font-size: 26px; }
+    .no-thanks-pot > span:last-child { display: none; }
+    .no-thanks-preview { grid-column: 1 / -1; padding-top: 6px; gap: 2px 5px; }
+    .no-thanks-preview > strong { font-size: 21px; }
+    .no-thanks-personal > .no-thanks-section-heading { display: none; }
+    .no-thanks-stats { gap: 2px; margin: 0 0 8px; }
+    .no-thanks-stats > div { padding: 4px 1px; }
+    .no-thanks-stats span { font-size: 10px; }
+    .no-thanks-stats strong { font-size: 23px; margin-top: 3px; }
+    .no-thanks-hand-heading { gap: 2px 5px; }
+    .no-thanks-hand-heading h4 { font-size: 11px; }
+    #noThanksYourCardCount { margin-left: 1px; }
+    #noThanksYourTotal { font-size: 10px; }
     #noThanksYourRuns { max-height: 90px; }
+    .no-thanks-personal .no-thanks-run { gap: 2px; padding: 2px; }
+    .no-thanks-personal .no-thanks-run span { width: 23px; height: 29px; font-size: 12px; }
     .no-thanks-action-area { margin-top: 0; }
-    .no-thanks-decision { margin-bottom: 6px; }
-    .no-thanks-actions button { min-height: 58px; padding: 8px 5px; }
-    .no-thanks-collections { margin-top: 18px; padding-top: 12px; }
+    .no-thanks-decision { margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .no-thanks-actions button { min-height: 56px; padding: 7px 5px; }
+    .no-thanks-panel.is-spectator .no-thanks-offer-content { grid-template-columns: minmax(0, 104px) minmax(0, 1fr); max-width: 260px; margin-inline: auto; }
 }
 @media (max-width: 900px) {
-    .game-panel[data-game-theme="no_thanks"] { padding: 12px; }
-    .game-panel[data-game-theme="no_thanks"] > .panel-header { padding-bottom: 10px; }
-    .no-thanks-statusbar { padding: 10px 0; }
+    .game-panel[data-game-theme="no_thanks"] { padding: 10px; }
+    .game-panel[data-game-theme="no_thanks"] > .panel-header { flex-shrink: 0; padding-bottom: 8px; }
+    .game-panel[data-game-theme="no_thanks"]:has(.no-thanks-panel.is-playing) { display: flex; flex-direction: column; height: max(520px, calc(100dvh - var(--room-controls-bar-height, 34px) - 8px)); box-sizing: border-box; }
+    .game-panel[data-game-theme="no_thanks"]:has(.no-thanks-panel.is-playing .no-thanks-history[open]) { height: auto; }
+    .game-panel[data-game-theme="no_thanks"]:has(.no-thanks-panel.is-playing) > .panel-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .no-thanks-panel.is-playing { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .no-thanks-statusbar { flex-shrink: 0; padding: 8px 0; }
+    #noThanksStatus { display: block; position: relative; padding-left: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #noThanksStatus::before { position: absolute; left: 0; top: calc(50% - 3.5px); width: 7px; }
+    .no-thanks-table, .no-thanks-footer { flex-shrink: 0; }
+    .no-thanks-panel.is-playing .no-thanks-collections { display: flex; flex-direction: column; flex: 1; min-height: 76px; margin-top: 10px; padding-top: 8px; }
+    .no-thanks-panel.is-playing .no-thanks-desktop-hint { display: none; }
+    .no-thanks-panel.is-playing .no-thanks-scroll-hint { display: inline; }
+    .no-thanks-panel.is-playing .no-thanks-players { flex: 1; min-height: 40px; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 6px; margin-top: 6px; padding: 3px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+    .no-thanks-panel.is-playing:has(.no-thanks-history[open]) .no-thanks-players { flex: auto; max-height: 35dvh; }
+    .no-thanks-panel.is-playing .no-thanks-player { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 7px 8px; }
+    .no-thanks-panel.is-playing .no-thanks-player-heading { align-items: center; gap: 4px; }
+    .no-thanks-panel.is-playing .no-thanks-player-heading strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+    .no-thanks-panel.is-playing .no-thanks-badges span:not(.no-thanks-turn-badge) { display: none; }
+    .no-thanks-panel.is-playing .no-thanks-player-scores { justify-content: flex-end; gap: 3px 6px; margin: 0; font-size: 10px; }
+    .no-thanks-panel.is-playing .no-thanks-player > .no-thanks-runs { grid-column: 1 / -1; gap: 4px; margin: 0; }
+    .no-thanks-panel.is-playing .no-thanks-run span { width: 23px; height: 28px; font-size: 12px; }
+    .no-thanks-panel.is-playing .no-thanks-empty { padding: 0; }
+    .no-thanks-footer { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+    .no-thanks-history summary { display: list-item; min-height: 44px; padding: 12px 0; }
 }
 @media (max-width: 480px) {
     .no-thanks-players { grid-template-columns: minmax(0, 1fr); gap: 8px; }

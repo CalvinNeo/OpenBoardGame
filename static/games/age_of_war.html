@@ -4,6 +4,12 @@
         <h2>Age of War - Game Rules</h2>
         <button id="ageOfWarHelpModalCloseBtn" type="button">Close</button>
       </div>
+      <div class="age-of-war-help-nav">
+        <button id="ageOfWarHelpEnglishBtn" type="button" aria-pressed="true">English</button>
+        <button id="ageOfWarHelpChineseBtn" type="button" aria-pressed="false">中文</button>
+        <button id="ageOfWarHelpBasicsBtn" type="button" aria-pressed="true">Basics</button>
+        <button id="ageOfWarHelpDetailsBtn" type="button" aria-pressed="false">Details</button>
+      </div>
       <div class="modal-body age-of-war-help-content" id="ageOfWarHelpContent"></div>
     </div>
   </section></template>
@@ -19,30 +25,46 @@
     </div>
   </section></template>
 <template data-game-target="ageOfWarPanel" data-game-mode="contents">
-              <div class="row">
-                <div>Phase: <span id="ageOfWarPhase">-</span></div>
-                <div>Current Turn: <span id="ageOfWarTurn">-</span></div>
-                <div>Target: <span id="ageOfWarTarget">-</span></div>
+              <div class="age-of-war-status">
+                <strong id="ageOfWarPhase">-</strong>
+                <span>Turn: <span id="ageOfWarTurn">-</span></span>
+                <span>🎲 <span id="ageOfWarDiceLeft">-</span></span>
               </div>
-              <div class="row">
-                <div>Dice Left: <span id="ageOfWarDiceLeft">-</span></div>
-                <div>Winner: <span id="ageOfWarWinner">-</span></div>
-              </div>
+              <div id="ageOfWarWinnerRow" hidden>Winner: <span id="ageOfWarWinner">-</span></div>
+              <div id="ageOfWarScores" class="age-of-war-scores" aria-label="Scores"></div>
 
-              <h3>Dice</h3>
-              <div id="ageOfWarDice" class="age-of-war-dice"></div>
-              <div class="row actions age-of-war-actions">
-                <button id="ageOfWarRollBtn">Roll Dice</button>
-                <button id="ageOfWarDiscardBtn" type="button" disabled>Discard Selected Die</button>
-                <button id="ageOfWarPlayAgainBtn">Play Again</button>
-              </div>
+              <section class="age-of-war-battle" aria-label="Battle">
+                <div class="age-of-war-caption">
+                  <h3>Dice</h3>
+                  <div class="age-of-war-actions">
+                    <button id="ageOfWarRollBtn" type="button">Roll Dice</button>
+                    <button id="ageOfWarDiscardBtn" type="button" disabled>Discard 1</button>
+                    <button id="ageOfWarPlayAgainBtn" type="button" hidden>Play Again</button>
+                  </div>
+                </div>
+                <div id="ageOfWarDice" class="age-of-war-dice"></div>
+                <div class="age-of-war-caption age-of-war-target-caption">
+                  <h3>Target</h3><span id="ageOfWarTarget">-</span>
+                  <button id="ageOfWarBrowseBtn" class="age-of-war-board-toggle" type="button" aria-expanded="false">Castles</button>
+                </div>
+                <div id="ageOfWarTargetLines" class="age-of-war-lines"></div>
+              </section>
 
-              <h3>Target Lines</h3>
-              <div id="ageOfWarTargetLines" class="age-of-war-lines"></div>
-
-              <h3>Central Castles</h3>
-              <div id="ageOfWarCentral" class="age-of-war-castles"></div>
-
-              <h3>Players</h3>
-              <div id="ageOfWarPlayers"></div>
+              <section class="age-of-war-supply" aria-label="Castles and players">
+                <div class="age-of-war-caption age-of-war-browser">
+                  <div class="age-of-war-tabs" role="group" aria-label="Castle supply">
+                    <button id="ageOfWarCentralTab" type="button" aria-pressed="true">Central</button>
+                    <button id="ageOfWarPlayersTab" type="button" aria-pressed="false">Players</button>
+                  </div>
+                  <div class="age-of-war-pager">
+                    <button id="ageOfWarPrevBtn" type="button" aria-label="Previous castles">‹</button>
+                    <span id="ageOfWarPage" aria-live="polite">1 / 3</span>
+                    <button id="ageOfWarNextBtn" type="button" aria-label="Next castles">›</button>
+                  </div>
+                </div>
+                <div class="age-of-war-supply-scroll">
+                  <div id="ageOfWarCentral" class="age-of-war-castles"></div>
+                  <div id="ageOfWarPlayers" hidden></div>
+                </div>
+              </section>
             </template>

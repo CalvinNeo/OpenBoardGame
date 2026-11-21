@@ -45,6 +45,19 @@ const output = 'build/room-controls-drawer';
     try {
         await page.goto(base);
         await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+        for (const width of [320, 390, 1024, 1440]) {
+            await page.setViewportSize({ width, height: 900 });
+            for (const collapsed of [true, false]) {
+                await page.evaluate(collapsed => setRoomControlsCollapsed(collapsed), collapsed);
+                assert.equal(await page.locator('#roomControlsExplainPlaceholder').count(), 0, 'No nonfunctional Explain placeholder before a game');
+                assert.equal(await page.locator('#mobileExplainSlot > button').count(), 0, 'No Explain control without an active game');
+                assert.equal(await page.locator('#settingsBtn').isVisible(), true, 'Settings remains available without Explain');
+                assert.equal((await geometry()).overflow, false);
+                await page.screenshot({ path: `${output}/idle-${width}-${collapsed ? 'collapsed' : 'expanded'}.png`, animations: 'disabled' });
+            }
+            console.log(`No-game controls: ${width}px passed`);
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
         await page.locator('#createBtn').click();
         await page.locator('#nameInput').fill('Crystal drawer mobile player');
         await page.locator('#playerNameForm button[type=submit]').click();
@@ -154,13 +167,18 @@ const output = 'build/room-controls-drawer';
         assert.equal(await explain.count(), 1);
         await explain.click();
         assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'Explain must not open the collapsed bar');
-        await page.locator('#citadelsExplainModal').waitFor({ state: 'visible' });
+        assert.equal(await explain.getAttribute('aria-pressed'), 'true', 'The real Explain control enters explain mode');
+        await page.locator('#citadelsPhase').click();
+        await page.locator('.obg-explain-dialog').waitFor({ state: 'visible' });
+        assert.equal(await explain.getAttribute('aria-pressed'), 'false', 'Selecting a target exits explain mode');
         await page.keyboard.press('Escape');
         await setOpen(true);
         await explain.click();
         assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'Explain exposes the game');
         assert.equal(await page.locator('.main').evaluate(element => element.inert), false);
+        assert.equal(await explain.getAttribute('aria-pressed'), 'true');
         await page.keyboard.press('Escape');
+        assert.equal(await explain.getAttribute('aria-pressed'), 'false', 'Escape exits explain mode');
 
         // Tapping the title or outer padding toggles the drawer in both directions.
         for (const point of [{ x: 16, y: 17 }, { x: 6, y: 2 }, { x: 200, y: 32 }]) {
@@ -184,7 +202,7 @@ const output = 'build/room-controls-drawer';
         await page.keyboard.press('Escape');
         assert.equal(await page.evaluate(() => scrollY), scrolledY, 'Closing preserves page scroll');
 
-        for (const width of [901, 1280]) {
+        for (const width of [901, 1024, 1280, 1440]) {
             await page.setViewportSize({ width, height: 900 });
             await page.waitForFunction(() => document.querySelector('.room-controls-layer')?.matches(':popover-open'));
             await page.evaluate(() => setRoomControlsCollapsed(false));
@@ -193,7 +211,7 @@ const output = 'build/room-controls-drawer';
             assert.equal(await page.locator('#roomControlsPanel').evaluate(element => getComputedStyle(element).position), 'fixed');
             assert.equal(await page.locator('#roomControlsPanel').evaluate(element => element.parentElement.classList.contains('room-controls-layer')), true);
             assert.equal(await page.locator('#mobileExplainSlot > button').count(), 1, 'Explain stays in RC when resizing to desktop');
-            assert.equal(await page.locator('#roomControlsExplainPlaceholder').isVisible(), false, 'Only one Explain control is visible');
+            assert.equal(await page.locator('#roomControlsExplainPlaceholder').count(), 0, 'The nonfunctional Explain placeholder is removed');
             assert.equal(await collapse.isVisible(), false);
             if (width === 1280) await page.screenshot({ path: `${output}/desktop-expanded.png` });
             await toggle.click();
@@ -203,6 +221,13 @@ const output = 'build/room-controls-drawer';
             assert.equal(await expandHint.isVisible(), false, 'Desktop uses the labeled Show RC tab');
             assert.equal(await explain.isVisible(), true, 'The collapsed desktop dock keeps Explain');
             assert.equal((await geometry()).overflow, false);
+            await explain.click();
+            assert.equal(await explain.getAttribute('aria-pressed'), 'true');
+            await page.locator('#citadelsPhase').click();
+            await page.locator('.obg-explain-dialog').waitFor({ state: 'visible' });
+            await page.keyboard.press('Escape');
+            assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'Desktop Explain does not expand RC');
+            await page.screenshot({ path: `${output}/desktop-${width}-collapsed.png` });
         }
         await page.setViewportSize({ width: 390, height: 844 });
         await page.reload();

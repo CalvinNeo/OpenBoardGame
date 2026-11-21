@@ -187,9 +187,9 @@ const GAME_ASSETS = {
     "header": "showDiceThroneHeaderActions"
   },
   "no_thanks": {
-    "scripts": ["/static/games/no_thanks.js?v=3"],
-    "styles": ["/static/games/no_thanks.css?v=3"],
-    "markup": "/static/games/no_thanks.html?v=3",
+    "scripts": ["/static/games/no_thanks.js?v=4"],
+    "styles": ["/static/games/no_thanks.css?v=4"],
+    "markup": "/static/games/no_thanks.html?v=4",
     "panel": "noThanksPanel",
     "panelTitle": "No Thanks!",
     "header": "showNoThanksHeaderActions"
@@ -239,12 +239,12 @@ const GAME_ASSETS = {
   },
   "las_vegas": {
     "scripts": [
-      "/static/games/las_vegas.js?v=5"
+      "/static/games/las_vegas.js?v=6"
     ],
     "styles": [
-      "/static/las_vegas.css?v=4"
+      "/static/las_vegas.css?v=5"
     ],
-    "markup": "/static/games/las_vegas.html?v=3",
+    "markup": "/static/games/las_vegas.html?v=4",
     "panel": "lasVegasPanel",
     "panelTitle": "🎲 拉斯维加斯",
     "header": "showLasVegasHeaderActions"
@@ -604,12 +604,14 @@ const GAME_ASSETS = {
   },
   "flip7": {
     "scripts": [
-      "/static/games/flip7.js?v=app_v4_h1"
+      "/static/games/flip7.js?v=app_v5"
     ],
     "styles": [],
     "panel": "flip7Panel",
-    "markup": "/static/games/flip7.html?v=1_h1",
-    "styleFragments": "/static/games/flip7.css?v=1"
+    "panelTitle": "Flip 7",
+    "header": "showFlip7HeaderActions",
+    "markup": "/static/games/flip7.html?v=2",
+    "styleFragments": "/static/games/flip7.css?v=2"
   },
   "hot_streak": {
     "scripts": [
@@ -684,12 +686,14 @@ const GAME_ASSETS = {
   },
   "coyote": {
     "scripts": [
-      "/static/games/coyote.js?v=app_v4_h1"
+      "/static/games/coyote.js?v=2"
     ],
     "styles": [],
     "panel": "coyotePanel",
-    "markup": "/static/games/coyote.html?v=1_h1",
-    "styleFragments": "/static/games/coyote.css?v=1"
+    "panelTitle": "Coyote",
+    "header": "showCoyoteHeaderActions",
+    "markup": "/static/games/coyote.html?v=2",
+    "styleFragments": "/static/games/coyote.css?v=2"
   },
   "in_a_grove": {
     "scripts": [
@@ -831,14 +835,15 @@ const GAME_ASSETS = {
     "styleFragments": "/static/games/gold_rush.css?v=1"
   },
   "age_of_war": {
+    "panelTitle": "Age of War",
     "scripts": [
-      "/static/games/age_of_war.js?v=app_v5"
+      "/static/games/age_of_war.js?v=app_v6"
     ],
     "styles": [],
     "panel": "ageOfWarPanel",
     "header": "showAgeOfWarHeaderActions",
-    "markup": "/static/games/age_of_war.html?v=1",
-    "styleFragments": "/static/games/age_of_war.css?v=1"
+    "markup": "/static/games/age_of_war.html?v=2",
+    "styleFragments": "/static/games/age_of_war.css?v=2"
   },
   "wandering_towers": {
     "scripts": [

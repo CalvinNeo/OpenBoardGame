@@ -67,11 +67,20 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         assert.equal(await page.locator('#lasVegasNeutralOption').isVisible(), false);
         await page.locator('#lasVegasHelpBtn').click();
         assert.match(await page.locator('#lasVegasDialogBody').innerText(), /16 种玩法/);
+        await page.locator('[data-lv-language="en"]').click();
+        assert.match(await page.locator('#lasVegasHelpSection').innerText(), /Win by having/);
+        await page.locator('[data-lv-help-tab="tiles"]').click();
+        assert.equal(await page.locator('#lasVegasHelpSection h3').count(), 16);
+        assert.match(await page.locator('#lasVegasHelpSection').innerText(), /Biggy counts twice/);
+        await page.locator('[data-lv-language="zh"]').click();
+        await page.locator('[data-lv-help-tab="basics"]').click();
         await page.keyboard.press('Escape');
         await render(page, 'playing');
+        assert.equal(await page.locator('.lv-log-box').getAttribute('open'), null);
         assert.match(await page.locator('.lv-big-badge').innerText(), /大骰/);
         assert.equal(await page.locator('.lv-roll-group[data-lv-face="6"]').isDisabled(), true);
         await page.locator('.lv-roll-group[data-lv-face="1"]').click();
+        assert.equal(await page.locator('.lv-casino.is-selected [data-lv-action="place"]').count(), 1);
         assert.match(await page.locator('.lv-casino').first().locator('.lv-dice-count').innerText(), /4🎲/);
         await page.locator('[data-lv-action="place"]').click();
         assert.deepEqual(await lastAction(page), {type: 'place', round: 1, turn: 1, face: 1});
@@ -97,7 +106,7 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         await render(page, 'spectator');
         assert.equal(await page.locator('.lv-wallet').count(), 0);
         assert.equal(await page.locator('[data-lv-action="royale_pass"]').count(), 0);
-        for (const width of [320, 360, 393, 600, 768, 1024, 1280, 1600]) {
+        for (const width of [320, 390, 600, 768, 1024, 1440]) {
             await page.setViewportSize({width, height: 1000});
             for (const key of Object.keys(views)) {
                 await render(page, key);
@@ -108,23 +117,111 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
                 }).map(node => `${node.className}: ${node.textContent.slice(0, 35)}`));
                 assert.deepEqual(issues, [], `${width}px ${key}`);
             }
+            await render(page, 'playing');
+            await page.locator('#lasVegasHelpBtn').click();
+            for (const language of ['en', 'zh']) {
+                await page.locator(`[data-lv-language="${language}"]`).click();
+                for (const tab of ['basics', 'rules', 'controls', 'tiles']) {
+                    await page.locator(`[data-lv-help-tab="${tab}"]`).click();
+                    assert.equal(await page.locator('#lasVegasDialog').evaluate(node => node.scrollWidth > node.clientWidth + 1), false, `${width}px Help ${language}/${tab}`);
+                }
+            }
+            await page.keyboard.press('Escape');
+            const header = await page.locator('.game-panel[data-game-theme="las_vegas"] > .panel-header').evaluate(node => {
+                const box = node.getBoundingClientRect();
+                return {width: box.width, overflow: node.scrollWidth > node.clientWidth + 1};
+            });
+            assert.equal(header.overflow, false, `${width}px header`);
+            if ([320, 390, 1024, 1440].includes(width)) {
+                await page.locator('.lv-roll-group[data-lv-face="1"]').click();
+                await page.screenshot({path: path.join(output, `board-${width}.png`), fullPage: true});
+            }
         }
-        await page.setViewportSize({width: 1280, height: 1000});
+        await page.setViewportSize({width: 1440, height: 1000});
         await render(page, 'playing');
         await page.screenshot({path: path.join(output, 'desktop.png'), fullPage: true});
         await page.locator('#lasVegasExplainBtn').click();
         await page.locator('.lv-tile h4 > span').first().click();
         assert.ok((await page.locator('#lasVegasDialogBody').innerText()).length > 25);
         await page.keyboard.press('Escape');
+        await render(page, 'playing');
+        await page.locator('.lv-log-box > summary').click();
+        assert.equal(await page.locator('.lv-log-box').getAttribute('open'), '');
+        await page.locator('.lv-roll-group[data-lv-face="1"]').click();
+        assert.equal(await page.locator('.lv-log-box').getAttribute('open'), '');
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('.lv-casino.is-selected').count(), 0);
+        await page.locator('#lasVegasExplainBtn').click();
+        const disabledBox = await page.locator('.lv-roll-group[data-lv-face="6"]').boundingBox();
+        const beforeExplain = await page.evaluate(() => vegasActions.length);
+        await page.mouse.click(disabledBox.x + disabledBox.width / 2, disabledBox.y + disabledBox.height / 2);
+        assert.equal(await page.locator('#lasVegasDialog').evaluate(node => node.open), true);
+        assert.equal(await page.evaluate(() => vegasActions.length), beforeExplain);
+        await page.keyboard.press('Escape');
         await render(page, 'black_split');
         await page.screenshot({path: path.join(output, 'secret-split.png'), fullPage: true});
-        await page.setViewportSize({width: 393, height: 852});
+        await page.setViewportSize({width: 390, height: 852});
         await render(page, 'playing');
         await page.screenshot({path: path.join(output, 'mobile.png'), fullPage: true});
         await render(page, 'final');
         assert.match(await page.locator('.lv-final').innerText(), /3 轮奖金/);
+        await render(page, 'settled');
+        await page.locator('[data-lv-action="next"]').click();
+        assert.equal((await lastAction(page)).type, 'next_round');
+        for (const edition of ['classic', 'neutral']) {
+            await render(page, `${edition}_playing`);
+            assert.equal(await page.locator('.lv-tile').count(), 0);
+            assert.equal(await page.locator('[data-lv-action="royale_pass"]').count(), 0);
+            await page.locator('.lv-roll-group').first().click();
+            await page.locator('.lv-casino.is-selected [data-lv-action="place"]').click();
+            assert.equal((await lastAction(page)).type, 'place');
+            await page.locator('#lasVegasHelpBtn').click();
+            await page.locator('[data-lv-language="en"]').click();
+            await page.locator('[data-lv-help-tab="basics"]').click();
+            assert.match(await page.locator('#lasVegasHelpSection').innerText(), /4 rounds/);
+            assert.equal(await page.locator('[data-lv-help-tab="tiles"]').count(), 0);
+            await page.keyboard.press('Escape');
+        }
+        const mobile = await browser.newContext({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true});
+        const touchPage = await mobile.newPage();
+        touchPage.on('pageerror', error => errors.push(error.message));
+        await touchPage.goto(`http://127.0.0.1:${server.address().port}`);
+        await touchPage.evaluate(async () => {
+            socket.disconnect();
+            await ensureGameAssets('las_vegas');
+            window.vegasActions = [];
+            sendAction = action => vegasActions.push(action);
+        });
+        await render(touchPage, 'playing');
+        await touchPage.locator('.lv-roll-group[data-lv-face="1"]').tap();
+        assert.equal(await touchPage.locator('.lv-casino.is-selected').count(), 1);
+        await touchPage.locator('.lv-casino.is-selected [data-lv-action="place"]').tap();
+        assert.equal((await lastAction(touchPage)).face, 1);
+        assert.equal(await touchPage.locator('#lasVegasTooltip').isVisible(), false);
+        await render(touchPage, 'playing');
+        await touchPage.locator('.lv-status [data-lv-tip]').tap();
+        assert.equal(await touchPage.locator('#lasVegasTooltip').isVisible(), true);
+        const oldTip = await touchPage.locator('#lasVegasTooltip').innerText();
+        await touchPage.locator('.lv-round-marker [data-lv-tip]').tap();
+        assert.notEqual(await touchPage.locator('#lasVegasTooltip').innerText(), oldTip);
+        await touchPage.waitForTimeout(3200);
+        assert.equal(await touchPage.locator('#lasVegasTooltip').isVisible(), false);
+        await touchPage.locator('#lasVegasExplainBtn').tap();
+        const touchBox = await touchPage.locator('.lv-roll-group[data-lv-face="6"]').boundingBox();
+        const touchSession = await mobile.newCDPSession(touchPage);
+        const touchX = touchBox.x + touchBox.width / 2, touchY = touchBox.y + touchBox.height / 2;
+        await touchSession.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: touchX, y: touchY}]});
+        await touchSession.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: touchX, y: touchY - 75}]});
+        await touchSession.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+        assert.equal(await touchPage.locator('#lasVegasDialog').evaluate(node => node.open), false);
+        assert.equal(await touchPage.locator('#lasVegasExplainBtn').getAttribute('aria-pressed'), 'true');
+        await touchPage.locator('.lv-status [data-lv-tip]').tap();
+        assert.equal(await touchPage.locator('#lasVegasDialog').evaluate(node => node.open), true);
+        assert.equal(await touchPage.locator('#lasVegasExplainBtn').getAttribute('aria-pressed'), 'false');
+        assert.deepEqual(await touchPage.evaluate(() => vegasActions), [{type: 'place', round: 1, turn: 1, face: 1}]);
+        await mobile.close();
         assert.deepEqual(errors, []);
-        console.log(`PASS: Royale configuration, actions, Biggy preview, closure, secrets, payouts, Help/Explain; 8 widths × ${Object.keys(views).length} views.`);
+        console.log(`PASS: Classic/neutral/Royale, actions, Biggy, secrets, payouts, bilingual Help, disabled Explain, log, cancellation, touch scroll/tooltips; 6 widths × ${Object.keys(views).length} views.`);
     } finally {
         await browser?.close();
         await new Promise(resolve => server.close(resolve));

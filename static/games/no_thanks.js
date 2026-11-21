@@ -140,8 +140,8 @@
         id: "online",
         label: { zh: "线上操作", en: "Online notes" },
         html: {
-          zh: "<p>首局随机起始玩家，后续局按座位轮转。AI 只依据可见信息判断连号、筹码和竞争，不读取暗牌或他人的隐藏筹码。轮到你时收起的房间控制会显示红边。</p><p>点击 Explain 再点牌、数值或按钮即可查看解释，灰色按钮也可以解释，滑动只滚动不会打开解释。按 Esc 退出解释或关闭弹窗，电脑悬停可查看提示，手机点击后的提示在 3 秒后消失。</p>",
-          en: "<p>The first round starts with a random player and later rounds rotate by seat. The AI only reads visible information about runs, chips and competition, and never peeks at the removed cards or another player's hidden chips. The collapsed room controls show a red edge on your turn.</p><p>Press Explain and then tap a card, a number or a button to read its rule, greyed out buttons can be explained too, and swiping only scrolls without opening an explanation. Esc leaves Explain or closes a dialog, hovering shows a tip on desktop, and a tip from a tap on a phone disappears after 3 seconds.</p>"
+          zh: "<p>首局随机起始玩家，后续局按座位轮转。AI 只依据可见信息判断连号、筹码和竞争，不读取暗牌或他人的隐藏筹码。轮到你时收起的房间控制会显示红边。</p><p>手机牌桌把当前牌、自己的筹码与牌列和行动按钮留在同一屏。在其他玩家列表内上下滑动即可查看他们的牌，不会移走行动按钮，省略的姓名和状态可点击查看完整提示。</p><p>点击 Explain 再点牌、数值或按钮即可查看解释，灰色按钮也可以解释，滑动只滚动不会打开解释。按 Esc 退出解释或关闭弹窗，电脑悬停可查看提示，手机点击后的提示在 3 秒后消失。</p>",
+          en: "<p>The first round starts with a random player and later rounds rotate by seat. The AI only reads visible information about runs, chips and competition, and never peeks at the removed cards or another player's hidden chips. The collapsed room controls show a red edge on your turn.</p><p>On phones the offer, your chips and cards, and both actions stay on the same screen. Scroll inside the other players list to inspect their cards without moving the action buttons. Tap a shortened name or status to read it in full.</p><p>Press Explain and then tap a card, a number or a button to read its rule, greyed out buttons can be explained too, and swiping only scrolls without opening an explanation. Esc leaves Explain or closes a dialog, hovering shows a tip on desktop, and a tip from a tap on a phone disappears after 3 seconds.</p>"
         }
       }
     ]
@@ -224,6 +224,7 @@
       : pending ? "Sending your move…"
       : yourTurn ? own?.chips === 0 ? "No chips left. Take this card." : "Pay a chip or collect the offer."
       : lastMove || (own ? "Waiting for the next move." : "Watching this table."));
+    tip(byId("Decision"), byId("Decision").textContent);
   }
   function renderRuns(container, player) {
     const previousScroll = container.scrollTop;
@@ -238,6 +239,7 @@
   }
   function renderPlayers() {
     const container = byId("Players");
+    const previousScroll = container.scrollTop;
     container.replaceChildren();
     const playing = view.phase === "playing";
     const players = view.players.filter(player => !playing || player.player_id !== view.you);
@@ -252,7 +254,7 @@
       card.classList.toggle("is-you", player.player_id === view.you);
       card.classList.toggle("is-winner", view.winner_ids.includes(player.player_id));
       const heading = element("div", "no-thanks-player-heading");
-      heading.append(element("strong", "", player.name || player.player_id));
+      heading.append(tip(element("strong", "", player.name || player.player_id), player.name || player.player_id));
       const badges = element("div", "no-thanks-badges");
       if (player.player_id === view.you) badges.append(element("span", "", "You"));
       if (player.is_bot) badges.append(element("span", "", "Bot"));
@@ -269,6 +271,7 @@
       card.append(heading, scores, runs);
       container.append(card);
     }
+    container.scrollTop = previousScroll;
   }
   function renderHistory() {
     const log = byId("Log");
@@ -299,6 +302,7 @@
     const playing = view.phase === "playing";
     const yourTurn = playing && view.current_turn === view.you;
     panel.classList.toggle("is-your-turn", yourTurn);
+    panel.classList.toggle("is-playing", playing);
     panel.classList.toggle("is-ended", !playing);
     panel.classList.toggle("is-spectator", !own);
     text("Round", `Round ${view.round_number} / ${view.total_rounds}`);
@@ -330,6 +334,7 @@
     } else {
       text("Status", yourTurn ? "Your turn" : `Waiting for ${playerName(view.current_turn)}`);
     }
+    tip(byId("Status"), byId("Status").textContent);
     byId("Result").classList.toggle("hidden", playing);
     byId("Review").classList.toggle("hidden", view.phase !== "round_summary");
     text("Ready", `${view.next_round_ready.length} / ${view.players.length} ready`);
@@ -379,7 +384,7 @@
     byId("Card").removeAttribute("aria-label");
     byId("MoveHistory").open = false;
     byId("ScoreHistory").open = false;
-    panel.classList.remove("is-your-turn", "is-ended", "is-spectator");
+    panel.classList.remove("is-your-turn", "is-playing", "is-ended", "is-spectator");
     renderActions();
   }
   function syncConfig(state) {

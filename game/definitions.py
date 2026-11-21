@@ -1705,6 +1705,7 @@ COYOTE_ACTION_SCHEMA = {
             "additionalProperties": False,
         },
         {"type": "object", "properties": {"type": {"const": "challenge"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
     ],
 }
 

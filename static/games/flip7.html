@@ -1,36 +1,27 @@
 <template data-game-target="flip7Panel" data-game-mode="contents">
-              <div class="flip7-toolbar">
-                <h3>🃏 Flip 7</h3>
-                <div class="flip7-tools">
-                  <button id="flip7HelpBtn" type="button">Help</button>
-                  <button id="flip7ExplainBtn" type="button" aria-pressed="false">Explain</button>
-                </div>
-              </div>
-              <div class="row">
-                <div data-flip7-explain="phase">Phase: <span id="flip7Phase">-</span></div>
-                <div data-flip7-explain="round">Round: <span id="flip7Round">-</span></div>
-                <div data-flip7-explain="turn">Current Turn: <span id="flip7Turn">-</span></div>
-              </div>
-              <div class="row">
-                <div data-flip7-explain="deck">Deck: <span id="flip7Deck">-</span></div>
-                <div data-flip7-explain="discard">Discard: <span id="flip7Discard">-</span></div>
-                <div data-flip7-explain="target_score">Target Score: <span id="flip7TargetScore">-</span></div>
-              </div>
-              <div class="row">
-                <div data-flip7-explain="pending">Pending Action: <span id="flip7Pending">-</span></div>
-                <div data-flip7-explain="flip7_winner">flip7flash Winner: <span id="flip7FlipWinner">-</span></div>
-              </div>
-
-              <h3>Actions</h3>
-              <div id="flip7PlayerActionStash" class="hidden">
-                <button id="flip7FlipBtn" data-flip7-explain="flip">Flip</button>
-                <button id="flip7StayBtn" data-flip7-explain="stay">Stay</button>
-              </div>
-
-              <h3>Players</h3>
-              <div id="flip7Players" data-flip7-explain="players"></div>
-
-              <h3>Last Round</h3>
-              <div id="flip7LastRound" data-flip7-explain="last_round"></div>
-
-            </template>
+  <div class="flip7-scoreline">
+    <span data-flip7-explain="round">Round <strong id="flip7Round">—</strong></span>
+    <span data-flip7-explain="deck">Deck <strong id="flip7Deck">—</strong></span>
+    <span data-flip7-explain="discard">Discard <strong id="flip7Discard">—</strong></span>
+    <span data-flip7-explain="target_score">Goal <strong id="flip7TargetScore">200</strong></span>
+  </div>
+  <p id="flip7Status" class="flip7-status" aria-live="polite" data-flip7-explain="phase">Waiting for the game to start.</p>
+  <div id="flip7PlayerActionStash" class="hidden">
+    <button id="flip7FlipBtn" type="button" data-flip7-explain="flip">Flip</button>
+    <button id="flip7StayBtn" type="button" data-flip7-explain="stay">Stay</button>
+  </div>
+  <div id="flip7Players" data-flip7-explain="players"></div>
+  <details id="flip7Results" class="flip7-results">
+    <summary data-flip7-explain="last_round">Last Round <span id="flip7ResultCaption"></span></summary>
+    <div id="flip7LastRound"></div>
+  </details>
+  <div id="flip7RoundContinue" class="flip7-continue hidden">
+    <span id="flip7ReadyCount" aria-live="polite"></span>
+    <button id="flip7NextRoundBtn" type="button" data-flip7-explain="next_round">Next Round</button>
+  </div>
+  <div id="flip7Tooltip" class="flip7-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="flip7HeaderActions" data-game-mode="contents">
+  <button id="flip7HelpBtn" type="button">Help</button>
+  <button id="flip7ExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>

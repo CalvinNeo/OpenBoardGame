@@ -30,7 +30,7 @@
         </div>
         <div class="no-thanks-offer-info">
           <div class="no-thanks-pot" tabindex="0" data-no-thanks-explain="pot" data-no-thanks-tip="Pot（🔴）：当前牌上的筹码，拿牌时一并收走，每枚在结算时抵 1 分。">
-            <span class="no-thanks-eyebrow">COMES WITH</span>
+            <span class="no-thanks-eyebrow">Chips 🔴</span>
             <div class="no-thanks-pot-value"><span class="no-thanks-chip" aria-hidden="true"></span><strong id="noThanksPot">0</strong></div>
             <span>chips to collect</span>
           </div>
@@ -45,7 +45,7 @@
       <div class="no-thanks-section-heading"><h3 id="noThanksPersonalTitle">Your position</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-explain="score" data-no-thanks-tip="Lower is better（↓）：牌是罚分，筹码抵分，负分也有效。">↓ Lower is better</span></div>
       <div class="no-thanks-stats">
         <div tabindex="0" data-no-thanks-explain="chips" data-no-thanks-tip="Chips（🔴）：只有你可查看自己的筹码，结算时全部公开。"><span>Chips 🔴</span><strong id="noThanksYourChips">—</strong></div>
-        <div tabindex="0" data-no-thanks-explain="cards" data-no-thanks-tip="Cards（🃏）：各连续段的最小数字之和，不是牌的张数。"><span>Card points 🃏</span><strong id="noThanksYourCards">—</strong></div>
+        <div tabindex="0" data-no-thanks-explain="cards" data-no-thanks-tip="Cards（🃏）：各连续段的最小数字之和，不是牌的张数。"><span>Points 🃏</span><strong id="noThanksYourCards">—</strong></div>
         <div class="no-thanks-net" tabindex="0" data-no-thanks-explain="score" data-no-thanks-tip="Net（＝）：本局牌面分 − 剩余筹码数。"><span>Net ＝</span><strong id="noThanksYourNet">—</strong></div>
       </div>
       <div class="no-thanks-hand-heading">
@@ -63,8 +63,8 @@
     </div>
   </div>
   <section class="no-thanks-collections" aria-label="Players and cards">
-    <div class="no-thanks-section-heading"><h3 id="noThanksPlayersTitle">At the table</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-explain="runs" data-no-thanks-tip="Runs（🔗）：相邻数字组成一段，只有段首的深色数字计分。">🔗 Runs count once</span></div>
-    <div id="noThanksPlayers" class="no-thanks-players"></div>
+    <div class="no-thanks-section-heading"><h3 id="noThanksPlayersTitle">At the table</h3><span class="no-thanks-small" tabindex="0" data-no-thanks-explain="runs" data-no-thanks-tip="Runs（🔗）：相邻数字组成一段，只有段首的深色数字计分。"><span class="no-thanks-desktop-hint">🔗 Runs count once</span><span class="no-thanks-scroll-hint">↕ Scroll players</span></span></div>
+    <div id="noThanksPlayers" class="no-thanks-players" tabindex="0" role="region" aria-label="Players and their cards"></div>
   </section>
   <footer class="no-thanks-footer">
     <details id="noThanksMoveHistory" class="no-thanks-history"><summary>Recent moves <span id="noThanksMoveCount"></span></summary><ol id="noThanksLog" aria-label="Recent moves" tabindex="0"></ol></details>

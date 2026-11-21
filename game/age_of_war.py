@@ -571,42 +571,9 @@ class AgeOfWarGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        if state.get("game_over"):
-            return None
-        if bot_id not in state.get("players", {}):
-            return None
-        if bot_id != state.get("current_player"):
-            return None
-        phase = state.get("phase")
-        if phase == "select_target":
-            central, opponents = _available_targets(state, bot_id)
-            if central:
-                castle_id = random.choice(central)
-                return {"type": "select_target", "target_type": "central", "castle_id": castle_id}
-            if opponents:
-                defender_id, castle_id = random.choice(opponents)
-                return {
-                    "type": "select_target",
-                    "target_type": "player",
-                    "defender_id": defender_id,
-                    "castle_id": castle_id,
-                }
-            return None
-        if phase == "roll":
-            return {"type": "roll"}
-        if phase == "assign":
-            lines = state.get("target_lines", [])
-            fillable = []
-            for idx, line in enumerate(lines):
-                if idx in state.get("filled_lines", []):
-                    continue
-                if _match_line(state.get("dice_pool", []), line.get("requirements", [])) is not None:
-                    fillable.append(idx)
-            if fillable:
-                return {"type": "fill_line", "line_index": random.choice(fillable)}
-            if state.get("dice_pool"):
-                return {"type": "discard_die", "die_index": random.randrange(len(state["dice_pool"]))}
-        return None
+        from game.age_of_war_ai import choose_move
+
+        return choose_move(state, bot_id)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

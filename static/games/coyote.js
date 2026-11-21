@@ -1,451 +1,260 @@
-// --- Help & Explain (designs/task40.md, designs/task185.md) -------------
-const coyoteHelpButton = document.getElementById("coyoteHelpBtn");
-const coyoteExplainButton = document.getElementById("coyoteExplainBtn");
+(() => {
+  "use strict";
+  const panel = document.getElementById("coyotePanel");
+  const header = document.getElementById("coyoteHeaderActions");
+  const byId = suffix => document.getElementById(`coyote${suffix}`);
+  const text = (suffix, value) => { byId(suffix).textContent = value; };
+  let view = null;
+  let pending = false;
+  let pendingTimer = null;
+  let signature = null;
+  let tipTimer = null;
+  let touchStart = null;
 
-const COYOTE_HELP_CONFIG = {
-  gameId: "coyote",
-  title: { zh: "郊狼 · Coyote", en: "Coyote" },
-  basic: {
-    win: {
-      zh: "每轮质疑结算之后会有一方记一次惩罚，惩罚累计到上限就被淘汰，最后仍留在场上的那位玩家赢下整局。",
-      en: "Every showdown gives one penalty to the losing side, and reaching the penalty limit knocks a player out, so the last player left in the game wins it all."
-    },
-    turn: {
-      zh: "轮到你时，你要么报一个比当前数字更大的价来赌总和足够大，要么在已经有人报价之后直接质疑他。",
-      en: "On your turn you either name a number higher than the current bid to bet that the total is big enough, or you challenge the player who bid before you."
-    },
-    key: {
-      zh: "你只看得见自己面前的那一张牌，必须靠别人报出的数字去推断所有人的牌加起来究竟是多少。",
-      en: "You can only see the single card in front of you, so you have to read the bids around the table to work out what every card really adds up to."
-    }
-  },
-  sections: [
-    {
-      id: "cards",
-      label: { zh: "牌与信息", en: "Cards and information" },
-      html: {
-        zh: "<p>牌堆里绝大多数是数字牌：0 到 5 各四张，10 三张，15 两张，20 一张，另外还有 -5 两张和 -10 一张，所以总和既可能被抬高也可能被压低。</p>"
-          + "<p>每轮开始时，仍在场上的每位玩家都会拿到一张牌，牌面朝向别人而背朝向你，也就是说你只看得到自己的那一张。</p>"
-          + "<p>牌堆里还混着三张特殊牌：Max->0、? 和 x2，它们只有在质疑结算时才会露面。</p>",
-        en: "<p>The deck is mostly number cards: four each of 0 through 5, three 10s, two 15s, one 20, plus two -5s and one -10, so the total can be pushed up or pulled down.</p>"
-          + "<p>At the start of a round every surviving player is dealt one card facing outward, which means the only card you can read is your own.</p>"
-          + "<p>Three special cards are shuffled in as well, namely Max->0, ? and x2, and they only show themselves when a challenge is settled.</p>"
-      }
-    },
-    {
-      id: "bidding",
-      label: { zh: "报价与质疑", en: "Bidding and challenging" },
-      html: {
-        zh: "<p>第一位行动的玩家必须先开价，因为场上还没有任何数字可供质疑。</p>"
-          + "<p>此后轮到的每位玩家都有两个选择：报出一个比当前更大的数字，或者按下 Challenge 质疑上一个报价。</p>"
-          + "<p>报价没有硬性上限，但数字越夸张，被质疑时输掉的机会也越大。</p>"
-          + "<p>郊狼(🐺)的全部乐趣就在这里，你要在虚张声势和见好就收之间反复权衡。</p>",
-        en: "<p>The first player to act has to open with a bid, because there is no number on the table to challenge yet.</p>"
-          + "<p>Every player after that faces exactly two options: name a number higher than the current bid, or press Challenge against the bid before them.</p>"
-          + "<p>There is no hard ceiling on a bid, but the more outrageous the number, the more likely you lose when someone calls it.</p>"
-          + "<p>That tension is the whole of Coyote(🐺), a constant balance between bluffing big and settling early.</p>"
-      }
-    },
-    {
-      id: "specials",
-      label: { zh: "三张特殊牌", en: "The three special cards" },
-      html: {
-        zh: "<p>Max->0 会把当前总和里最大的那个正数直接抹掉，每有一张就抹掉一个，已经没有正数时它什么也不做。</p>"
-          + "<p>? 会从牌堆里再翻一张牌并立刻结算它，如果翻到的还是 ?，就继续往下翻，直到翻出别的牌为止。</p>"
-          + "<p>x2 会把最后算出的总和翻倍，场上出现两张 x2 时总和会变成四倍。</p>"
-          + "<p>这三张牌在下注阶段完全看不见，所以任何一次报价都带着它们带来的不确定性。</p>",
-        en: "<p>Max->0 wipes the largest positive number out of the running total, once for each copy on the table, and does nothing when no positive number is left.</p>"
-          + "<p>? draws one more card from the deck and resolves it immediately, and if that card is another ? it keeps drawing until something else turns up.</p>"
-          + "<p>x2 doubles the final total, so two copies on the table make the total four times as large.</p>"
-          + "<p>None of the three is visible while you are bidding, which is why every bid carries their uncertainty with it.</p>"
-      }
-    },
-    {
-      id: "total",
-      label: { zh: "总和怎么算", en: "How the total is counted" },
-      html: {
-        zh: "<p>质疑发生后，所有还在场上的玩家的牌同时公开，并按一个固定顺序算出真实总和。</p>"
-          + "<p>先把所有数字牌相加，再按 Max->0 的张数依次抹掉最大的正数，接着结算 ? 翻出来的每一张牌，最后才乘上 x2 的倍数。</p>"
-          + "<p>如果真实总和小于被质疑的报价，质疑成功，报价的人受罚。只要总和达到或者超过报价，质疑的人受罚。</p>"
-          + "<p>Last Round 面板会把这轮的总和、每张牌和特殊牌的效果全部列出来。</p>",
-        en: "<p>Once a challenge happens, every surviving player's card is revealed at the same time and the true total is counted in a fixed order.</p>"
-          + "<p>First all number cards are added up, then Max->0 removes the largest positive numbers one by one, then every card drawn by ? is resolved, and only at the end is the total multiplied by x2.</p>"
-          + "<p>If the true total is lower than the bid being challenged, the challenge succeeds and the bidder is punished. If the total reaches or beats the bid, the challenger is punished instead.</p>"
-          + "<p>The Last Round panel lists the total, every card, and what each special card did.</p>"
-      }
-    },
-    {
-      id: "penalty",
-      label: { zh: "惩罚与淘汰", en: "Penalties and elimination" },
-      html: {
-        zh: "<p>输掉的一方立刻记一次惩罚，默认上限是三次惩罚，Players 里的 penalties 会显示当前的进度。</p>"
-          + "<p>惩罚达到上限的玩家被淘汰，之后他的牌不再参与任何一轮的总和计算。</p>"
-          + "<p>下一轮由输掉的一方先行动，如果他刚被淘汰，就改由他的下家开始。</p>"
-          + "<p>当场上只剩一位玩家时整局结束，他就是 Winner。</p>",
-        en: "<p>The losing side immediately takes one penalty, the limit is three by default, and the penalties counter on each player card shows how far along you are.</p>"
-          + "<p>A player who reaches the limit is eliminated, and from then on their card never counts toward a total again.</p>"
-          + "<p>The next round is opened by the player who lost, or by the next player in seat order when that loser has just been eliminated.</p>"
-          + "<p>As soon as a single player remains, the game ends and that player is the Winner.</p>"
-      }
-    }
-  ]
-};
-
-const COYOTE_EXPLAIN = {
-  phase: { zh: "当前阶段。bidding 是报价阶段，game_over 表示整局已经结束。", en: "Current phase: bidding is the auction, game_over means the whole game has ended." },
-  round: { zh: "当前是第几轮。每一次质疑结算之后就会进入新一轮。", en: "Which round is being played. Every settled challenge starts a new round." },
-  turn: { zh: "现在轮到谁报价或者质疑。", en: "Whose turn it is to bid or to challenge." },
-  round_notice: { zh: "上一轮的结算结果，包括报价、真实总和、输家以及特殊牌的效果，最下面还会提醒你上轮自己那张牌是什么。", en: "The previous round's result with the bid, the true total, the loser and every special card effect, plus a reminder of what your own card was." },
-  players: { zh: "所有玩家围坐在牌桌上。card 是这位玩家面前的牌，你只能看见自己的，其余显示为 Hidden。penalties 是他已经吃到的惩罚次数，达到上限就会被淘汰。", en: "Every player seated at the table. The card line shows the card in front of them, and you can only read your own while the rest stay Hidden. The penalties line counts the punishments taken so far, and hitting the limit means elimination." },
-  last_bid: { zh: "当前场上的最高报价，也就是所有人正在赌的那个总和数字。", en: "The highest bid on the table, meaning the total that everyone is currently betting on." },
-  bidder: { zh: "报出这个数字的玩家。质疑成功时受罚的就是他。", en: "The player who named that number. He is the one punished when a challenge succeeds." },
-  winner: { zh: "整局游戏最后的获胜者，也就是唯一没有被淘汰的玩家。", en: "The winner of the whole game, meaning the only player never eliminated." },
-  bid_minus: { zh: "把输入框里的报价减一，最低只能减到当前报价加一。", en: "Lower the bid in the input by one, never below the current bid plus one." },
-  bid_input: { zh: "输入你要报出的数字，必须比当前报价更大。", en: "Type the number you want to bid. It has to be higher than the current bid." },
-  bid_plus: { zh: "把输入框里的报价加一。", en: "Raise the bid in the input by one." },
-  bid: { zh: "确认报价。你的报价会被所有人看到，并且成为别人质疑的目标。", en: "Confirm the bid. Everyone sees your number, and it becomes the target of the next challenge." },
-  challenge: { zh: "质疑上一个报价，立刻公开所有人的牌并结算总和。猜小了由报价者受罚，猜大了由你受罚。", en: "Challenge the last bid, which reveals every card and counts the total at once. If the total is lower the bidder is punished, and if it is high enough you are punished." },
-  reset: { zh: "整局结束后用同一批玩家重新开一局。", en: "Start a fresh game with the same players once the game is over." }
-};
-
-let coyoteHelpWidget = null;
-let coyoteExplainWidget = null;
-
-function initCoyoteHelpExplain() {
-  if (coyoteHelpWidget || typeof window.obgCreateHelp !== "function") return;
-  coyoteHelpWidget = window.obgCreateHelp(COYOTE_HELP_CONFIG);
-  coyoteExplainWidget = window.obgCreateExplain({
+  const COYOTE_HELP_CONFIG = {
     gameId: "coyote",
-    attribute: "data-coyote-explain",
-    explanations: COYOTE_EXPLAIN,
-    button: coyoteExplainButton,
-    root: () => document.getElementById("coyotePanel"),
+    title: { zh: "郊狼 · Coyote", en: "Coyote" },
+    basic: {
+      win: { zh: "每轮输家获得一次惩罚，达到上限即淘汰，最后留在场上的玩家获胜。", en: "The loser of each round takes a penalty, reaching the limit eliminates a player, and the last survivor wins." },
+      turn: { zh: "轮到你时，报一个更大的数字，或者质疑上一个报价超过所有牌的真实总和。", en: "On your turn, raise the bid or challenge that the previous bid exceeds the true total of all cards." },
+      key: { zh: "你能看到所有对手的牌，唯独看不到自己的牌，需要结合牌堆组成、特殊牌和对手报价判断总和。", en: "You can see every opponent's card but not your own, so use the deck composition, special effects and other bids to judge the total." }
+    },
+    sections: [
+      { id: "cards", label: { zh: "牌与信息", en: "Cards & information" }, html: {
+        zh: "<p>每位未淘汰玩家获得一张朝外的牌。你只能看到别人的牌，自己的牌始终隐藏。观察者可以看到整张牌桌。</p><p>牌堆共 36 张，每轮重新洗牌。0 到 5 各四张，10 三张，15 两张，20 一张，-5 两张，-10 一张，另有 Max→0、?、×2 各一张。牌堆中未发出的牌不计入总和，问号抽牌除外。</p><p>玩家牌标注已受惩罚次数和上限。You 表示你自己，Bot(🤖)表示电脑玩家，Turn 表示当前行动者，Out 表示已淘汰。</p>",
+        en: "<p>Each survivor gets one outward-facing card. You see the others' cards, never your own. Spectators can see the whole table.</p><p>The 36-card deck is reshuffled each round. There are four each of 0 through 5, three 10s, two 15s, one 20, two -5s, one -10, and one each of Max→0, ? and ×2. Undealt cards do not count, except a mystery draw.</p><p>Player cards show penalties taken and their limit. You marks your seat, Bot(🤖) marks a computer player, Turn marks the current player and Out means eliminated.</p>"
+      } },
+      { id: "specials", label: { zh: "特殊牌", en: "Special cards" }, html: {
+        zh: "<p>先把所有数字牌相加，再处理已发出的 Max→0：消去一个最大的正数，没有正数则无效果。</p><p>然后处理问号(?)，从剩余牌堆翻一张牌。数字加入总和，翻到 Max→0 则消去当前最大的正数，翻到 ×2 则留到最后翻倍。已经处理的 Max→0 不会回头消去问号后来抽出的数字。</p><p>最后，每张翻倍牌(×2)把结果乘二。特殊牌与普通牌一样，别人头上的都可见，只有自己头上的未知。</p><p>例如 20、Max→0、5 的总和是 5。若为 10、Max→0、? 且问号抽出 20，先消去 10，再加上 20，最终总和是 20。</p>",
+        en: "<p>Add the number cards, then resolve dealt Max→0 cards by removing the largest positive number. Nothing is removed if no positive number remains.</p><p>Next, Mystery(?) draws a card from the remaining deck. Add a number, remove the current largest positive number for a drawn Max→0, or save a drawn ×2 for the final step. An already resolved Max→0 does not remove a later mystery number.</p><p>Finally, each Double(×2) multiplies the result by two. Special cards on opponents are visible just like numbers. Only your own card is unknown.</p><p>For example, 20, Max→0 and 5 total 5. With 10, Max→0 and ?, if Mystery draws 20, first remove 10 and then add 20 for a total of 20.</p>"
+      } },
+      { id: "showdown", label: { zh: "报价与结算", en: "Bidding & reveal" }, html: {
+        zh: "<p>首位玩家必须报正整数。之后的报价必须严格大于上一个报价。用加减按钮或数字框调整，再按 Raise bid 提交。</p><p>Challenge! 会立即揭牌。当真实总和小于报价时，报价者受罚，否则由质疑者受罚。总和等于报价时，报价仍然成立。</p><p>结算区突出你的牌并列出问号抽牌、归零数值和倍数。所有玩家，包括已淘汰玩家，都点击 Next Round 后才会发下一轮牌。电脑玩家自动确认，观察者不需要确认。</p><p>下一轮由输家先行动，若其被淘汰，则由其后第一位存活玩家开始。最后一位存活者是赢家(🏆)。玩家可在结束后用 Play Again 开始新局。</p>",
+        en: "<p>The opener must bid a positive integer. Each later bid must be strictly higher. Adjust the stepper or number field and press Raise bid.</p><p>Challenge! reveals the table. If the true total is below the bid, the bidder takes a penalty. Otherwise the challenger takes one, including when total and bid are equal.</p><p>The result highlights your own card and lists mystery draws, removed values and multipliers. Everyone, including eliminated players, must press Next Round before the next deal. Bots confirm automatically and spectators do not confirm.</p><p>The loser opens the next round, or the next survivor in seat order if that loser was eliminated. The final survivor is the winner(🏆). Players can use Play Again after the game ends.</p>"
+      } }
+    ]
+  };
+  const COYOTE_EXPLAIN = {
+    round: { zh: "当前轮次。每轮质疑后暂停，所有玩家确认后重新洗牌。", en: "The current round. A challenge pauses play until everyone confirms a freshly shuffled deal." },
+    phase: { zh: "Bidding 为报价阶段，Reveal 为结算暂停，Finished 为整局结束。", en: "Bidding is live play, Reveal is the review pause, and Finished is game over." },
+    players: { zh: "显示存活人数。只能看到其他人的牌，自己的牌在质疑后揭开。惩罚达到上限即淘汰。", en: "Shows survivors. You see opponents' cards but your own is revealed only after a challenge. Reaching the penalty limit eliminates a player." },
+    last_bid: { zh: "红色数字是当前报价，下面是报价者。质疑时若真实总和小于报价，报价者受罚，否则质疑者受罚。", en: "The red number is the current bid and the name below is its bidder. A total below the bid penalizes the bidder, otherwise it penalizes the challenger." },
+    bid_minus: { zh: "报价减一，最低为当前报价加一，没有报价时最低为一。", en: "Decrease your bid by one, down to the current bid plus one or an opening bid of one." },
+    bid_plus: { zh: "报价加一，不会自动提交。", en: "Increase your bid by one without submitting it." },
+    bid_input: { zh: "输入正整数，必须严格高于当前报价，点击 Raise bid 才提交。", en: "Enter a positive whole number strictly above the current bid, then press Raise bid to submit." },
+    bid: { zh: "提交新的报价并轮到下一位玩家。所有未淘汰玩家的牌都计入总和，包括你自己未知的牌。", en: "Submit your bid and pass the turn. Every survivor's card counts toward the total, including your unknown card." },
+    challenge: { zh: "质疑上一个报价。揭牌后总和小于报价则报价者受罚，否则你受罚。等于报价时质疑失败。", en: "Challenge the previous bid. If the revealed total is lower, the bidder takes a penalty. Otherwise you do, including on equality." },
+    next_round: { zh: "确认已看过结算。所有玩家确认后才发新牌，不需要再次确认。", en: "Confirm you have reviewed the reveal. A new deal waits for every player. No extra confirmation is needed." },
+    reset: { zh: "玩家可在整局结束后，用同一批玩家开始新局。", en: "Players can start a fresh game with the same players after game over." }
+  };
+  const coyoteHelpWidget = window.obgCreateHelp(COYOTE_HELP_CONFIG);
+  const coyoteExplainWidget = window.obgCreateExplain({
+    gameId: "coyote", attribute: "data-coyote-explain", explanations: COYOTE_EXPLAIN,
+    button: byId("ExplainBtn"), root: () => panel,
     bypass: ["#coyoteHelpBtn", "#coyoteExplainBtn"]
   });
-  coyoteHelpButton?.addEventListener("click", () => {
-    coyoteExplainWidget?.exit();
-    coyoteHelpWidget.open();
-  });
-  coyoteExplainButton?.addEventListener("click", () => coyoteExplainWidget?.toggle());
-}
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initCoyoteHelpExplain);
-} else {
-  initCoyoteHelpExplain();
-}
-
-let currentCoyoteView = null;
-
-const coyotePhaseLabel = document.getElementById("coyotePhase");
-const coyoteRoundLabel = document.getElementById("coyoteRound");
-const coyoteTurnLabel = document.getElementById("coyoteTurn");
-const coyoteBidLabel = document.getElementById("coyoteBid");
-const coyoteBidderLabel = document.getElementById("coyoteBidder");
-const coyoteWinnerLabel = document.getElementById("coyoteWinner");
-const coyoteRoundNotice = document.getElementById("coyoteRoundNotice");
-const coyoteRoundNoticeTitle = document.getElementById("coyoteRoundNoticeTitle");
-const coyoteRoundNoticeBody = document.getElementById("coyoteRoundNoticeBody");
-const coyoteBidInput = document.getElementById("coyoteBidInput");
-const coyoteBidMinusBtn = document.getElementById("coyoteBidMinusBtn");
-const coyoteBidPlusBtn = document.getElementById("coyoteBidPlusBtn");
-const coyoteBidBtn = document.getElementById("coyoteBidBtn");
-const coyoteChallengeBtn = document.getElementById("coyoteChallengeBtn");
-const coyoteResetBtn = document.getElementById("coyoteResetBtn");
-const coyotePlayers = document.getElementById("coyotePlayers");
-
-const coyoteActionButtons = {
-  bid: coyoteBidBtn,
-  challenge: coyoteChallengeBtn,
-};
-
-function formatCoyoteSummary(view) {
-  const summary = view.last_round_summary;
-  if (!summary) {
-    return "-";
+  function name(playerId) { return view?.players.find(player => player.player_id === playerId)?.name || playerId || "—"; }
+  function minimumBid() { return view?.last_bid == null ? 1 : view.last_bid + 1; }
+  function can(kind) { return Boolean(!pending && socket.connected && view?.legal_actions.includes(kind)); }
+  function element(tag, className, content) {
+    const node = document.createElement(tag);
+    node.className = className;
+    if (content != null) node.textContent = content;
+    return node;
   }
-  const bidder = findPlayerName(view, summary.bidder);
-  const challenger = findPlayerName(view, summary.challenger);
-  const loser = findPlayerName(view, summary.loser);
-  const result = summary.success ? "challenge success" : "challenge fail";
-  let text = `${result}: bid ${summary.bid}, total ${summary.actual_total}, loser ${loser}`;
-  if (Array.isArray(summary.mystery_draws)) {
-    const draws = summary.mystery_draws.filter((item) => item);
-    if (draws.length) {
-      text += ` | ? draws ${draws.join(", ")}`;
+  function tip(node, description, key) {
+    node.dataset.coyoteTip = description;
+    node.tabIndex = 0;
+    if (key) node.dataset.coyoteExplain = key;
+    return node;
+  }
+  function cardDescription(label) {
+    if (label === "Max->0") return "Max→0: remove the largest positive number before mystery draws.";
+    if (label === "?") return "Mystery (?): draw one more card from the undealt deck during the reveal.";
+    if (label === "x2") return "Double (×2): double the final total after all other effects.";
+    return `Number ${label}: ${Number(label) < 0 ? "subtracts from" : "adds to"} the table total.`;
+  }
+  function displayCard(label) { return label === "Max->0" ? "Max→0" : label === "x2" ? "×2" : label; }
+  function hideTip() {
+    clearTimeout(tipTimer);
+    byId("Tooltip").hidePopover?.();
+    byId("Tooltip").classList.add("hidden");
+  }
+  function showTip(target, autoHide = false) {
+    if (!target || target.closest("button, input, summary") || coyoteExplainWidget.isActive() || coyoteHelpWidget.isOpen()) return;
+    hideTip();
+    const tooltip = byId("Tooltip");
+    tooltip.textContent = target.dataset.coyoteTip;
+    tooltip.classList.remove("hidden");
+    tooltip.showPopover?.();
+    const rect = target.getBoundingClientRect();
+    const bounds = tooltip.getBoundingClientRect();
+    tooltip.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - bounds.width - 12))}px`;
+    tooltip.style.top = `${rect.bottom + bounds.height + 12 < innerHeight ? rect.bottom + 6 : Math.max(12, rect.top - bounds.height - 6)}px`;
+    if (autoHide) tipTimer = setTimeout(hideTip, 3000);
+  }
+  function renderControls() {
+    byId("BidBtn").disabled = !can("bid") || !Number.isSafeInteger(byId("BidInput").valueAsNumber) || byId("BidInput").valueAsNumber < minimumBid();
+    byId("ChallengeBtn").disabled = !can("challenge");
+    byId("NextBtn").disabled = !can("next_round");
+    byId("BidInput").disabled = !can("bid");
+    byId("BidMinusBtn").disabled = !can("bid") || byId("BidInput").valueAsNumber <= minimumBid();
+    byId("BidPlusBtn").disabled = !can("bid");
+    text("NextBtn", view?.round_ready?.includes(view.you) ? "Ready ✓" : "Next Round");
+    const seated = view?.players.some(player => player.player_id === view.you);
+    byId("ResetBtn").classList.toggle("hidden", !view?.game_over || !seated);
+    const yourTurn = view?.phase === "bidding" && view.current_turn === view.you;
+    document.getElementById("roomControlsPanel")?.classList.toggle("coyote-turn", Boolean(yourTurn && socket.connected));
+    if (!view) return;
+    text("Decision", !socket.connected ? "Disconnected. Use Reconnect to rejoin." : pending ? "Sending your move…"
+      : view.phase === "round_end" ? "Review the reveal, then continue together."
+      : view.game_over ? "The final cards are revealed."
+      : yourTurn ? view.last_bid == null ? "Open with a bid of 1 or more." : `Raise to ${minimumBid()} or challenge the bid.`
+      : `Waiting for ${name(view.current_turn)}.`);
+  }
+  function dispatch(kind) {
+    if (!can(kind)) return;
+    const action = { type: kind };
+    if (kind === "bid") {
+      action.bid = byId("BidInput").valueAsNumber;
+      if (!Number.isSafeInteger(action.bid) || action.bid < minimumBid()) return;
     }
+    pending = true;
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(() => { pending = false; renderControls(); }, 2500);
+    renderControls();
+    sendAction(action);
   }
-  if (Array.isArray(summary.max_zero_applied) && summary.max_zero_applied.length) {
-    text += ` | max->0 ${summary.max_zero_applied.join(", ")}`;
-  }
-  if (summary.x2_count) {
-    text += ` | x${2 ** summary.x2_count}`;
-  }
-  text += ` | bidder ${bidder}, challenger ${challenger}`;
-  return text;
-}
-
-function getCoyoteMinBid(view) {
-  if (!view || view.last_bid === null || view.last_bid === undefined) {
-    return 1;
-  }
-  return Number(view.last_bid) + 1;
-}
-
-function updateCoyoteBidInput(view, previousView) {
-  if (!coyoteBidInput) {
-    return;
-  }
-  const minBid = getCoyoteMinBid(view);
-  coyoteBidInput.min = String(minBid);
-  const current = Number.parseInt(coyoteBidInput.value, 10);
-  const newRound = !previousView || previousView.round !== view.round;
-  const shouldUpdate = !Number.isInteger(current) || current < minBid || (newRound && current !== minBid);
-  if (shouldUpdate && document.activeElement !== coyoteBidInput) {
-    coyoteBidInput.value = minBid;
-  }
-}
-
-function updateCoyoteBidControls(view) {
-  if (!coyoteBidInput || !coyoteBidMinusBtn || !coyoteBidPlusBtn) {
-    return;
-  }
-  const canEdit =
-    view &&
-    Array.isArray(view.legal_actions) &&
-    view.legal_actions.includes("bid") &&
-    view.phase !== "game_over";
-  coyoteBidInput.disabled = !canEdit;
-  coyoteBidMinusBtn.disabled = !canEdit;
-  coyoteBidPlusBtn.disabled = !canEdit;
-  if (canEdit) {
-    const minBid = getCoyoteMinBid(view);
-    const current = Number.parseInt(coyoteBidInput.value, 10);
-    coyoteBidMinusBtn.disabled = !Number.isInteger(current) || current <= minBid;
-  }
-}
-
-function adjustCoyoteBid(delta) {
-  if (!coyoteBidInput) {
-    return;
-  }
-  const minBid = getCoyoteMinBid(currentCoyoteView);
-  let current = Number.parseInt(coyoteBidInput.value, 10);
-  if (!Number.isInteger(current)) {
-    current = minBid;
-  }
-  const next = Math.max(minBid, current + delta);
-  coyoteBidInput.value = next;
-  updateCoyoteActionButtons();
-}
-
-function renderCoyoteRoundNotice(view) {
-  if (!coyoteRoundNotice || !coyoteRoundNoticeBody) {
-    return;
-  }
-  coyoteRoundNotice.classList.remove("hidden");
-  while (coyoteRoundNoticeBody.firstChild) {
-    coyoteRoundNoticeBody.removeChild(coyoteRoundNoticeBody.firstChild);
-  }
-  const summaryText = view.last_round_summary ? formatCoyoteSummary(view) : "No previous round yet.";
-  const summaryLine = document.createElement("div");
-  summaryLine.textContent = summaryText;
-  coyoteRoundNoticeBody.appendChild(summaryLine);
-
-  const yourCard = view.your_card || "-";
-  const cardLine = document.createElement("div");
-  cardLine.textContent = `Your hidden card: ${yourCard}`;
-  coyoteRoundNoticeBody.appendChild(cardLine);
-}
-
-function renderCoyotePlayers(view) {
-  if (!coyotePlayers) {
-    return;
-  }
-  coyotePlayers.innerHTML = "";
-  view.players.forEach((p, index) => {
-    const card = document.createElement("div");
-    card.className = "player-card coyote-player-card";
-    const seatIndex = (index % 10) + 1;
-    card.classList.add(`coyote-seat-${seatIndex}`);
-    if (p.player_id === view.current_turn) {
-      card.classList.add("current");
+  function renderPlayers() {
+    byId("Players").replaceChildren();
+    const count = view.players.length;
+    byId("Players").style.setProperty("--coyote-columns", String(count <= 3 ? count : Math.ceil(count / 2)));
+    for (const player of view.players) {
+      const own = player.player_id === view.you;
+      const card = element("article", `coyote-player${own ? " is-you" : ""}${player.eliminated ? " is-out" : ""}${player.player_id === view.current_turn ? " is-current" : ""}`);
+      const playerName = tip(element("div", "coyote-player-name", player.name), player.name);
+      const tags = [own ? "You" : "", player.is_bot ? "Bot 🤖" : "", player.eliminated ? "Out" : player.player_id === view.current_turn ? "Turn" : ""].filter(Boolean).join(" · ");
+      const playerTag = tip(element("div", "coyote-player-tag", tags || "In play"), player.eliminated ? "Out: this player's card will not count in future rounds." : `${own ? "You cannot see your own card. " : ""}${player.is_bot ? "Bot (🤖): a probability-based computer opponent. " : ""}Turn marks the current player.`);
+      const label = player.card_hidden ? "•••" : displayCard(player.card) || "—";
+      const face = element("div", `coyote-card-face${player.card_hidden ? " is-hidden" : ""}${["?", "x2", "Max->0"].includes(player.card) ? " is-special" : ""}${Number(player.card) < 0 ? " is-negative" : ""}`, label);
+      const description = player.card_hidden ? "Your hidden card: only the other players can see it until a challenge."
+        : player.card == null ? "Eliminated players are not dealt a card." : cardDescription(player.card);
+      const explainKey = `card_${player.player_id}`;
+      COYOTE_EXPLAIN[explainKey] = { zh: description, en: description };
+      tip(face, description, explainKey);
+      const penalties = tip(element("div", "coyote-penalties"), `Penalties: ${player.penalties} of ${view.config.max_penalties}. Reaching the limit eliminates this player.`);
+      penalties.append(element("span", "", "Penalties"), element("strong", "", `${player.penalties} / ${view.config.max_penalties}`));
+      card.append(playerName, playerTag, face, penalties);
+      byId("Players").append(card);
     }
-    if (p.eliminated) {
-      card.classList.add("disabled");
+    coyoteExplainWidget.refresh();
+  }
+  function summaryText(summary) {
+    let result = `${name(summary.challenger)} challenged ${name(summary.bidder)}. Bid ${summary.bid}, total ${summary.actual_total}. ${name(summary.loser)} takes a penalty.`;
+    if (summary.mystery_draws?.length) result += ` Mystery (?) drew ${summary.mystery_draws.map(displayCard).join(", ")}.`;
+    if (summary.max_zero_applied?.length) result += ` Max→0 removed ${summary.max_zero_applied.join(", ")}.`;
+    if (summary.x2_count) result += ` Final multiplier ×${2 ** summary.x2_count}.`;
+    return result;
+  }
+  function renderResult() {
+    const summary = view.last_round_summary;
+    const reveal = Boolean(summary && (view.phase === "round_end" || view.game_over));
+    panel.classList.toggle("is-revealed", reveal);
+    byId("Result").classList.toggle("hidden", !reveal);
+    byId("Review").classList.toggle("hidden", view.phase !== "round_end");
+    byId("History").classList.toggle("hidden", !summary || reveal);
+    if (!summary) return;
+    const description = summaryText(summary);
+    text("HistoryCaption", `Bid ${summary.bid} · Total ${summary.actual_total}`);
+    const ownCard = summary.cards.find(entry => entry.player_id === view.you)?.card;
+    text("HistoryBody", `${description}${ownCard != null ? ` Your card was ${displayCard(ownCard)}.` : ""} Cards: ${summary.cards.map(entry => `${name(entry.player_id)} ${displayCard(entry.card)}`).join(" · ")}.`);
+    text("ResultTitle", view.game_over ? `🏆 ${name(view.winner)} wins!` : summary.success ? "Challenge succeeds" : "The bid holds");
+    text("ResultTotal", `Bid ${summary.bid} / Total ${summary.actual_total}`);
+    text("ResultBody", description);
+    byId("Result").classList.toggle("is-loss", summary.loser === view.you);
+    byId("Revealed").replaceChildren();
+    for (const entry of summary.cards) {
+      const own = entry.player_id === view.you;
+      byId("Revealed").append(tip(element("span", `coyote-reveal-chip${own ? " is-you" : ""}`, `${own ? "You" : name(entry.player_id)}: ${displayCard(entry.card)}`), cardDescription(entry.card)));
     }
-    const name = document.createElement("div");
-    name.className = "player-name";
-    name.textContent = p.name;
-    const meta = document.createElement("div");
-    meta.className = "player-meta coyote-player-meta";
-    let cardLabel = p.card;
-    if (!cardLabel && p.card_hidden) {
-      cardLabel = "Hidden";
-    } else if (!cardLabel) {
-      cardLabel = "-";
-    }
-    const maxPenalties = view.config ? view.config.max_penalties : "-";
-    const status = p.eliminated ? "out" : "in";
-    const cardLine = document.createElement("div");
-    cardLine.className = "coyote-player-meta-line";
-    cardLine.append("card ");
-    const cardValue = document.createElement("span");
-    cardValue.textContent = cardLabel;
-    if (cardLabel !== "-") {
-      cardValue.className = "coyote-card-value";
-    }
-    cardLine.appendChild(cardValue);
+    text("Ready", `${view.round_ready?.length || 0} / ${view.players.length} ready`);
+  }
+  function render(data) {
+    if (data?.view?.game_id !== "coyote" || currentGameType !== "coyote") return;
+    if (data.room_id && currentRoomState?.room_id !== data.room_id) return;
+    const next = data.view;
+    const nextSignature = JSON.stringify([data.room_id, next.round, next.phase, next.last_bid, next.round_ready, next.you]);
+    const resetInput = !view || view.round !== next.round || view.last_bid !== next.last_bid;
+    if (signature !== nextSignature) { pending = false; clearTimeout(pendingTimer); hideTip(); }
+    signature = nextSignature;
+    view = next;
+    const minimum = minimumBid();
+    byId("BidInput").min = String(minimum);
+    if (resetInput) byId("BidInput").value = String(minimum);
+    text("Round", `Round ${view.round}`);
+    text("Phase", view.game_over ? "Finished" : view.phase === "round_end" ? "Reveal" : "Bidding");
+    text("Bid", view.last_bid ?? "—");
+    text("Bidder", view.last_bidder ? name(view.last_bidder) : "No bid yet");
+    const bidDescription = view.last_bid == null ? "No bid yet. The first player must bid a positive integer." : `Current bid: ${view.last_bid}, by ${name(view.last_bidder)}. A challenge succeeds only if the total is lower.`;
+    tip(byId("Bid").parentElement, bidDescription, "last_bid");
+    text("Survivors", `${view.players.filter(player => !player.eliminated).length} / ${view.players.length} in play`);
+    tip(byId("Survivors"), "Survivors: players below the penalty limit. Only their cards count in a live round.", "players");
+    tip(byId("Phase"), view.phase === "round_end" ? "Reveal: all players review the result and confirm Next Round." : "Bidding: raise the bid or challenge when it is your turn.", "phase");
+    text("Status", view.game_over ? "Game complete" : view.phase === "round_end" ? "Round complete · cards revealed"
+      : view.current_turn === view.you ? "Your turn" : `${name(view.current_turn)}'s turn`);
+    renderPlayers(); renderResult(); renderControls();
+    logGameEvents(data);
+  }
+  function clearState() {
+    view = null; signature = null; pending = false;
+    panel.classList.remove("is-revealed");
+    clearTimeout(pendingTimer); hideTip(); coyoteExplainWidget.exit(); coyoteHelpWidget.close();
+    text("Status", "Waiting for the deal"); text("Round", "Round —"); text("Bid", "—"); text("Bidder", "No bid yet"); text("Phase", ""); text("Survivors", "");
+    byId("Players").replaceChildren();
+    for (const suffix of ["Result", "Review", "History", "ResetBtn"]) byId(suffix).classList.add("hidden");
+    byId("History").open = false;
+    renderControls();
+  }
 
-    const penaltiesLine = document.createElement("div");
-    penaltiesLine.className = "coyote-player-meta-line";
-    penaltiesLine.textContent = `penalties ${p.penalties}/${maxPenalties}`;
-
-    const statusLine = document.createElement("div");
-    statusLine.className = "coyote-player-meta-line";
-    statusLine.textContent = status;
-
-    meta.append(cardLine, penaltiesLine, statusLine);
-    card.appendChild(name);
-    card.appendChild(meta);
-    coyotePlayers.appendChild(card);
+  byId("HelpBtn").addEventListener("click", () => { hideTip(); coyoteExplainWidget.exit(); coyoteHelpWidget.open(); });
+  byId("ExplainBtn").addEventListener("click", () => { hideTip(); coyoteExplainWidget.toggle(); });
+  for (const [suffix, kind] of [["BidBtn", "bid"], ["ChallengeBtn", "challenge"], ["NextBtn", "next_round"]]) byId(suffix).addEventListener("click", () => dispatch(kind));
+  for (const [suffix, delta] of [["BidMinusBtn", -1], ["BidPlusBtn", 1]]) byId(suffix).addEventListener("click", () => {
+    if (!can("bid")) return;
+    byId("BidInput").value = String(Math.max(minimumBid(), (byId("BidInput").valueAsNumber || minimumBid()) + delta));
+    renderControls();
   });
-}
-
-function isCoyoteActionAvailable(actionType) {
-  if (!currentCoyoteView || !Array.isArray(currentCoyoteView.legal_actions)) {
-    return false;
-  }
-  if (!currentCoyoteView.legal_actions.includes(actionType)) {
-    return false;
-  }
-  if (actionType === "bid") {
-    const bid = Number.parseInt(coyoteBidInput.value, 10);
-    if (!Number.isInteger(bid) || bid < 1) {
-      return false;
-    }
-    const lastBid = currentCoyoteView.last_bid;
-    if (lastBid !== null && lastBid !== undefined && bid <= lastBid) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function updateCoyoteActionButtons() {
-  if (currentGameType !== "coyote") {
-    Object.values(coyoteActionButtons).forEach((button) => {
-      button.classList.remove("action-allowed");
-      button.disabled = true;
-    });
-    updateCoyoteBidControls(null);
-    return;
-  }
-  Object.entries(coyoteActionButtons).forEach(([actionType, button]) => {
-    const allowed = isCoyoteActionAvailable(actionType);
-    if (allowed) {
-      button.classList.add("action-allowed");
-    } else {
-      button.classList.remove("action-allowed");
-    }
-    button.disabled = !allowed;
+  byId("BidInput").addEventListener("input", renderControls);
+  byId("ResetBtn").addEventListener("click", () => { if (view?.game_over) emitRoomStart(); });
+  panel.addEventListener("pointerover", event => { if (event.pointerType === "mouse") showTip(event.target.closest("[data-coyote-tip]")); });
+  panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
+  panel.addEventListener("focusin", event => showTip(event.target.closest("[data-coyote-tip]")));
+  panel.addEventListener("focusout", hideTip);
+  panel.addEventListener("pointerdown", event => { touchStart = { x: event.clientX, y: event.clientY }; });
+  panel.addEventListener("click", event => {
+    if (touchStart && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 10) return;
+    const target = event.target.closest("[data-coyote-tip]");
+    if (target) showTip(target, true); else hideTip();
   });
-  updateCoyoteBidControls(currentCoyoteView);
-}
-
-function clearCoyoteState() {
-  currentCoyoteView = null;
-  coyotePhaseLabel.textContent = "-";
-  coyoteRoundLabel.textContent = "-";
-  coyoteTurnLabel.textContent = "-";
-  coyoteBidLabel.textContent = "-";
-  coyoteBidderLabel.textContent = "-";
-  coyoteWinnerLabel.textContent = "-";
-  if (coyoteRoundNotice) {
-    coyoteRoundNotice.classList.add("hidden");
+  document.addEventListener("keydown", event => { if (event.key === "Escape") hideTip(); }, true);
+  document.addEventListener("scroll", hideTip, true);
+  window.addEventListener("resize", hideTip);
+  window.addEventListener("blur", hideTip);
+  window.renderCoyoteGameState = render;
+  window.clearCoyoteState = clearState;
+  window.showCoyoteHeaderActions = visible => {
+    header.style.display = visible ? "flex" : "none";
+    if (!visible) clearState();
+  };
+  function sync() {
+    socket.on("system:error", () => { pending = false; clearTimeout(pendingTimer); renderControls(); });
+    socket.on("disconnect", () => { pending = false; clearTimeout(pendingTimer); hideTip(); renderControls(); });
+    socket.on("connect", renderControls);
+    socket.on("room:state", state => { if (state.game_type !== "coyote" || state.status === "lobby") clearState(); else renderControls(); });
+    if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "coyote" && currentRoomState.status === "lobby") clearState();
+    if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "coyote") render(lastGameStatePayload);
   }
-  if (coyoteRoundNoticeBody) {
-    coyoteRoundNoticeBody.textContent = "-";
-  }
-  if (coyoteBidInput) {
-    coyoteBidInput.value = "";
-  }
-  if (coyoteResetBtn) {
-    coyoteResetBtn.disabled = true;
-  }
-  coyotePlayers.innerHTML = "";
-  updateCoyoteActionButtons();
-}
-
-function renderCoyoteGameState(data) {
-  const view = data.view;
-  const previousView = currentCoyoteView;
-  currentCoyoteView = view;
-  if (currentGameType !== "coyote") {
-    currentGameType = "coyote";
-    setGamePanelVisibility("coyote");
-  }
-
-  coyotePhaseLabel.textContent = view.phase || "-";
-  coyoteRoundLabel.textContent = view.round ?? "-";
-  const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
-  coyoteTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
-  coyoteBidLabel.textContent = view.last_bid ?? "-";
-  coyoteBidderLabel.textContent = view.last_bidder ? findPlayerName(view, view.last_bidder) : "-";
-  coyoteWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
-
-  if (coyoteRoundNoticeTitle) {
-    coyoteRoundNoticeTitle.textContent = "Last Round";
-  }
-  renderCoyoteRoundNotice(view);
-  updateCoyoteBidInput(view, previousView);
-  updateCoyoteBidControls(view);
-
-  renderCoyotePlayers(view);
-  logGameEvents(data);
-  updateCoyoteActionButtons();
-  if (coyoteResetBtn) {
-    coyoteResetBtn.disabled = !(view && view.game_over);
-  }
-}
-
-if (coyoteBidInput) {
-  coyoteBidInput.addEventListener("input", () => {
-    updateCoyoteActionButtons();
-  });
-}
-
-if (coyoteBidMinusBtn) {
-  coyoteBidMinusBtn.addEventListener("click", () => {
-    adjustCoyoteBid(-1);
-  });
-}
-
-if (coyoteBidPlusBtn) {
-  coyoteBidPlusBtn.addEventListener("click", () => {
-    adjustCoyoteBid(1);
-  });
-}
-
-if (coyoteBidBtn) {
-  coyoteBidBtn.addEventListener("click", () => {
-    const bid = Number.parseInt(coyoteBidInput.value, 10);
-    if (!Number.isInteger(bid)) {
-      log("Enter a bid number");
-      return;
-    }
-    sendAction({ type: "bid", bid });
-  });
-}
-
-if (coyoteChallengeBtn) {
-  coyoteChallengeBtn.addEventListener("click", () => {
-    sendAction({ type: "challenge" });
-  });
-}
-
-if (coyoteResetBtn) {
-  coyoteResetBtn.addEventListener("click", () => {
-    emitRoomStart();
-  });
-}
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sync, { once: true });
+  else sync();
+})();

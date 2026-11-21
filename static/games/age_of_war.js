@@ -3,6 +3,14 @@ let ageOfWarSelectedLine = null;
 let ageOfWarSelectedDice = new Set();
 let ageOfWarSelectionKey = null;
 let ageOfWarHintTimer = null;
+let ageOfWarCastlePage = 0;
+let ageOfWarSupplyTab = "central";
+let ageOfWarHelpLanguage = "en";
+let ageOfWarHelpSection = "basics";
+let ageOfWarBrowseOpen = false;
+let ageOfWarPointerStart = null;
+let ageOfWarPointerMoved = false;
+let ageOfWarExplainClickPending = false;
 
 const ageOfWarHeaderActions = document.getElementById("ageOfWarHeaderActions");
 const ageOfWarHelpBtn = document.getElementById("ageOfWarHelpBtn");
@@ -37,19 +45,38 @@ const AGE_OF_WAR_HELP_TEXT = `
   <li>Once you select a target, you must continue the attack against that target for the rest of the turn.</li>
   <li>Choose a highlighted battle line to preview a suggested dice combination. Click dice to select or deselect them, then click Place Dice to confirm. The preview uses the fewest dice: for Infantry (⚔️) 3, it prefers one ⚔️3 die over ⚔️1 + ⚔️2.</li>
   <li>Infantry (⚔️) dice add up to meet or exceed the required sum. Archery (🏹), Cavalry (🐎), and Daimyo (👑) must match the required counts exactly. Only the selected dice are used; reroll the remaining dice next.</li>
-  <li>If you cannot or choose not to fill a line, select exactly one die and click Discard Selected Die, then reroll the rest. Clicking a die only changes your selection.</li>
+  <li>If you cannot or choose not to fill a line, select exactly one die and click Discard 1, then reroll the rest. Clicking a die only changes your selection.</li>
   <li>Click empty space or press Esc to cancel the selection.</li>
 </ol>
 
 <h3>Capture</h3>
-<p>Fill all lines to capture the castle. If attacking a player, you must also complete an extra Daimyo line.</p>
+<p>Fill all lines to capture the castle. If attacking a player, you must also complete an extra Daimyo (👑) line.</p>
 
 <h3>Clan Lock</h3>
-<p>When you own all castles of a clan, that clan locks. Locked clans score their set bonus instead of the sum of castle points.</p>
+<p>When you own all castles of a clan, that clan locks (🔒) and cannot be attacked. Locked clans score their set bonus instead of the sum of castle points.</p>
 
 <h3>Game End</h3>
 <p>The game ends immediately when the last central castle is captured.</p>
 `;
+
+const AGE_OF_WAR_HELP_BASICS = {
+  en: `<h3>Win with castles</h3><p>Have the most points when the last central castle is captured.</p>
+    <h3>Your turn</h3><p>Roll your dice, choose a castle, and fill one battle line per roll until you capture it or run out of dice.</p>
+    <h3>What matters</h3><p>Save dice for the remaining lines and collect complete clans for protected bonus points.</p>
+    <p>Choose a castle, then confirm Attack on that card. Choose a highlighted line, adjust the suggested dice, and confirm Place Dice beside it. Select one die and Discard 1 if you cannot fill a line.</p>
+    <p>Use Central and Players to browse targets without leaving your dice. The arrows show more central castles on phones. Tap empty space or press Escape to cancel a selection.</p>`,
+  zh: `<h3>如何获胜</h3><p>中央最后一座城池被攻占时，总分最高的玩家获胜。</p>
+    <h3>每回合做什么</h3><p>掷骰后选择城池，每次掷骰填一条战线，直到攻占城池或耗尽骰子。</p>
+    <h3>游戏重点</h3><p>尽量节省骰子应付剩余战线，并集齐家族获得不会被夺取的奖励分。</p>
+    <p>点城池后，在卡牌上按 Attack 确认。点高亮战线预选骰子，可以调整后按 Place Dice 放置。无法填线时，选择一颗骰子再按 Discard 1 弃掉。</p>
+    <p>用 Central 和 Players 切换中央城池与玩家城池，手机上用箭头翻页，骰子和战线始终留在附近。点击空白或按 Escape 取消选择。</p>`,
+};
+
+const AGE_OF_WAR_HELP_DETAILS_ZH = `<h3>骰子与战线</h3>
+  <p>步兵（⚔️）有 1、2、3 点战力，多颗可以相加，达到或超过战线要求即可。弓箭（🏹）、骑兵（🐎）和大名（👑）必须精确匹配数量。预选组合优先使用最少颗骰子。</p>
+  <p>每次只能完成一条战线，使用的骰子移出本回合，剩余骰子需要重新掷。也可以主动弃掉一颗骰子后重掷。目标选定后，本回合不能更换。</p>
+  <h3>夺城与锁定</h3><p>攻击对手未锁定的城池，需要额外完成一条大名（👑）战线。集齐家族后立即锁定（🔒），不能再被夺取。该家族按整套奖励总分计分，取代其单卡分数。</p>
+  <h3>终局与 AI</h3><p>中央最后一座城被攻占时立即计分，同分玩家共同获胜。AI 先掷骰再选择目标，比较攻城概率、家族奖励与夺取领先玩家城池的收益。</p>`;
 
 const AGE_OF_WAR_BUTTON_EXPLANATIONS = {
   ageOfWarRollBtn: {
@@ -61,13 +88,18 @@ const AGE_OF_WAR_BUTTON_EXPLANATIONS = {
     description: "Restart the game after it ends.",
   },
   ageOfWarDiscardBtn: {
-    name: "Discard Selected Die",
+    name: "Discard 1",
     description: "Select exactly one die, then discard it and reroll the rest. Clicking a die only selects it; it does not discard it.",
   },
   ageOfWarPlaceDiceBtn: {
     name: "Place Dice",
     description: "Fill the chosen battle line using exactly the highlighted dice. Click any die to change the suggestion before confirming. Infantry (⚔️) must meet or exceed the total; Archery (🏹), Cavalry (🐎), and Daimyo (👑) must match their counts exactly.",
   },
+  ageOfWarCentralTab: { name: "Central castles", description: "Browse unclaimed castles. Capturing the last one ends the game immediately." },
+  ageOfWarPlayersTab: { name: "Players", description: "Inspect scores and owned castles. Unlocked opponent castles can be attacked, but require an extra Daimyo (👑) line. Locked clans (🔒) are protected and score their set total instead of individual castle points." },
+  ageOfWarPrevBtn: { name: "Previous castles", description: "Show the previous page of central castles without scrolling away from the dice." },
+  ageOfWarNextBtn: { name: "Next castles", description: "Show the next page of central castles without scrolling away from the dice." },
+  ageOfWarBrowseBtn: { name: "Inspect castles", description: "Expand or collapse the castle browser on phones while keeping this attack and dice selection unchanged." },
 };
 
 const AGE_OF_WAR_ICONS = {
@@ -128,8 +160,9 @@ function formatAgeOfWarDieTitle(code) {
 function addAgeOfWarSymbolHint(element, text) {
   element.title = text;
   element.setAttribute("aria-label", text);
-  element.addEventListener("pointerdown", (event) => {
-    if (event.pointerType !== "touch" || ageOfWarExplainMode) return;
+  element.addEventListener("click", (event) => {
+    if (event.pointerType !== "touch" || ageOfWarExplainMode || ageOfWarPointerMoved) return;
+    if (element.closest("button, [role='button'], .age-of-war-castle-card.selectable")) return;
     let hint = document.getElementById("ageOfWarSymbolHint");
     if (!hint) {
       hint = document.createElement("div");
@@ -362,6 +395,9 @@ function updateAgeOfWarActionButtons() {
 
 function clearAgeOfWarState() {
   currentAgeOfWarView = null;
+  ageOfWarCastlePage = 0;
+  ageOfWarSupplyTab = "central";
+  ageOfWarBrowseOpen = false;
   resetAgeOfWarSelection();
   ageOfWarSelectionKey = null;
   if (ageOfWarPhaseLabel) {
@@ -409,19 +445,21 @@ function renderAgeOfWarDice(view) {
   }
   const canSelect = isAgeOfWarActionAvailable("fill_line") || isAgeOfWarActionAvailable("discard_die");
   dicePool.forEach((code, index) => {
-    const die = document.createElement("button");
-    die.type = "button";
+    const die = document.createElement(canSelect ? "button" : "span");
+    if (canSelect) die.type = "button";
     const parsed = parseAgeOfWarDie(code);
     die.className = `age-of-war-die ${parsed.type}`;
     die.textContent = formatAgeOfWarDieLabel(code);
     addAgeOfWarSymbolHint(die, formatAgeOfWarDieTitle(code));
     die.dataset.dieIndex = index;
+    die.dataset.ageOfWarExplanationTitle = formatAgeOfWarDieTitle(code);
+    die.dataset.ageOfWarExplanationBody = "Select or deselect this die for the chosen battle line. Only the selected dice are spent when you confirm Place Dice. Select exactly one die to discard it instead.";
     die.classList.toggle("selected", ageOfWarSelectedDice.has(index));
     die.setAttribute("aria-pressed", String(ageOfWarSelectedDice.has(index)));
     if (canSelect) {
       die.classList.add("clickable");
       die.addEventListener("click", () => {
-        if (ageOfWarExplainMode) {
+        if (ageOfWarExplainMode || ageOfWarPointerMoved) {
           return;
         }
         if (!isAgeOfWarActionAvailable("fill_line") && !isAgeOfWarActionAvailable("discard_die")) {
@@ -435,8 +473,6 @@ function renderAgeOfWarDice(view) {
         refreshAgeOfWarSelection();
         ageOfWarDice.querySelector(`[data-die-index="${index}"]`)?.focus({ preventScroll: true });
       });
-    } else {
-      die.disabled = true;
     }
     ageOfWarDice.appendChild(die);
   });
@@ -474,6 +510,8 @@ function renderAgeOfWarTargetLines(view) {
     const row = document.createElement("div");
     row.className = "age-of-war-line";
     row.dataset.lineIndex = line.index;
+    row.dataset.ageOfWarExplanationTitle = `Battle line ${line.index + 1}`;
+    row.dataset.ageOfWarExplanationBody = `${(line.requirements || []).map(formatAgeOfWarRequirementTitle).join(" + ")}. ${line.filled ? "Already completed." : line.can_fill ? "Your current dice can fill this line. Choose it to preview the fewest dice, adjust them, and confirm Place Dice." : "Your current dice cannot fill this line."} ${line.bonus ? "This extra Daimyo (👑) is required because you are attacking another player." : "Complete every line to capture the castle."}`;
     const selected = ageOfWarSelectedLine === line.index;
     row.classList.toggle("selected", selected);
     if (line.filled) {
@@ -528,7 +566,7 @@ function renderAgeOfWarTargetLines(view) {
 
     if (fillable) {
       const chooseLine = () => {
-        if (ageOfWarExplainMode) {
+        if (ageOfWarExplainMode || ageOfWarPointerMoved) {
           return;
         }
         if (!isAgeOfWarActionAvailable("fill_line")) {
@@ -621,6 +659,9 @@ function buildAgeOfWarCastleCard(castle, options = {}) {
     card.classList.add("locked");
   }
 
+  card.dataset.ageOfWarExplanationTitle = formatAgeOfWarCastleLabel(castle);
+  card.dataset.ageOfWarExplanationBody = `${formatAgeOfWarClanLabel(castle)} · ${castle.points} points. Battle lines: ${(castle.battle_lines || []).map((line) => line.map(formatAgeOfWarRequirementTitle).join(" + ")).join(" / ")}. ${castle.locked ? "This clan is locked (🔒) and cannot be attacked." : castle.owner_id ? "Attacking this castle requires an extra Daimyo (👑) line." : "Capturing the last central castle ends the game."}`;
+
   const title = document.createElement("div");
   title.className = "age-of-war-castle-title";
   title.title = formatAgeOfWarCastleLabel(castle);
@@ -659,11 +700,81 @@ function buildAgeOfWarCastleCard(castle, options = {}) {
     card.appendChild(tag);
   }
 
-  if (options.onClick) {
-    card.addEventListener("click", options.onClick);
+  if (options.action) {
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `Attack ${formatAgeOfWarCastleLabel(castle)}`);
+    const choose = () => {
+      if (ageOfWarExplainMode || ageOfWarPointerMoved || !isAgeOfWarActionAvailable("select_target")) return;
+      if (card.querySelector(".age-of-war-confirm")) return;
+      closeAgeOfWarCastleConfirmation();
+      const confirmation = document.createElement("div");
+      confirmation.className = "age-of-war-confirm";
+      const label = document.createElement("strong");
+      label.textContent = castle.name_zh || castle.name;
+      confirmation.appendChild(label);
+      const attack = document.createElement("button");
+      attack.type = "button";
+      attack.textContent = "Attack";
+      attack.dataset.ageOfWarExplanationTitle = "Confirm attack";
+      attack.dataset.ageOfWarExplanationBody = "Commit to this castle for the rest of this turn. Use dice to fill all of its battle lines to capture it.";
+      attack.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (!ageOfWarExplainMode && isAgeOfWarActionAvailable("select_target")) sendAction(options.action);
+      });
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.textContent = "Cancel";
+      cancel.addEventListener("click", (event) => {
+        event.stopPropagation();
+        closeAgeOfWarCastleConfirmation();
+        card.focus({ preventScroll: true });
+      });
+      confirmation.append(attack, cancel);
+      card.appendChild(confirmation);
+      card.setAttribute("aria-expanded", "true");
+      updateAgeOfWarExplainModeClasses(ageOfWarExplainMode);
+    };
+    card.addEventListener("click", choose);
+    card.addEventListener("keydown", (event) => {
+      if (event.target !== card || !["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      ageOfWarPointerMoved = false;
+      choose();
+    });
   }
 
   return card;
+}
+
+function closeAgeOfWarCastleConfirmation() {
+  document.querySelectorAll("#ageOfWarPanel .age-of-war-confirm").forEach((element) => {
+    element.parentElement.setAttribute("aria-expanded", "false");
+    element.remove();
+  });
+}
+
+function updateAgeOfWarSupply() {
+  const count = currentAgeOfWarView?.central_castles?.length || 0;
+  const pageSize = window.innerWidth <= 640 ? (window.innerHeight < 740 ? 4 : 6) : 14;
+  const pageCount = Math.max(1, Math.ceil(count / pageSize));
+  ageOfWarCastlePage = Math.min(ageOfWarCastlePage, pageCount - 1);
+  ageOfWarCentral.querySelectorAll(".age-of-war-castle-card").forEach((card, index) => {
+    card.hidden = index < ageOfWarCastlePage * pageSize || index >= (ageOfWarCastlePage + 1) * pageSize;
+  });
+  ageOfWarCentral.hidden = ageOfWarSupplyTab !== "central";
+  ageOfWarPlayers.hidden = ageOfWarSupplyTab !== "players";
+  document.getElementById("ageOfWarCentralTab").setAttribute("aria-pressed", String(ageOfWarSupplyTab === "central"));
+  document.getElementById("ageOfWarPlayersTab").setAttribute("aria-pressed", String(ageOfWarSupplyTab === "players"));
+  document.getElementById("ageOfWarPage").textContent = `${ageOfWarCastlePage + 1} / ${pageCount}`;
+  document.getElementById("ageOfWarPrevBtn").disabled = ageOfWarCastlePage === 0;
+  document.getElementById("ageOfWarNextBtn").disabled = ageOfWarCastlePage >= pageCount - 1;
+  document.querySelector("#ageOfWarPanel .age-of-war-pager").hidden = ageOfWarSupplyTab !== "central" || pageCount === 1;
+  const panel = document.getElementById("ageOfWarPanel");
+  panel.classList.toggle("has-target", Boolean(currentAgeOfWarView?.target));
+  panel.classList.toggle("supply-open", ageOfWarBrowseOpen);
+  panel.classList.toggle("game-over", Boolean(currentAgeOfWarView?.game_over));
+  document.getElementById("ageOfWarBrowseBtn").setAttribute("aria-expanded", String(ageOfWarBrowseOpen));
 }
 
 function renderAgeOfWarCentral(view) {
@@ -687,17 +798,7 @@ function renderAgeOfWarCentral(view) {
     const card = buildAgeOfWarCastleCard(castle, {
       selectable,
       selected,
-      onClick: selectable
-        ? () => {
-            if (ageOfWarExplainMode) {
-              return;
-            }
-            if (!isAgeOfWarActionAvailable("select_target")) {
-              return;
-            }
-            sendAction({ type: "select_target", target_type: "central", castle_id: castle.id });
-          }
-        : null,
+      action: selectable ? { type: "select_target", target_type: "central", castle_id: castle.id } : null,
     });
     ageOfWarCentral.appendChild(card);
   });
@@ -783,22 +884,9 @@ function renderAgeOfWarPlayers(view) {
         const cardEl = buildAgeOfWarCastleCard(castle, {
           selectable,
           selected,
-          onClick: selectable
-            ? () => {
-                if (ageOfWarExplainMode) {
-                  return;
-                }
-                if (!isAgeOfWarActionAvailable("select_target")) {
-                  return;
-                }
-                sendAction({
-                  type: "select_target",
-                  target_type: "player",
-                  defender_id: player.player_id,
-                  castle_id: castle.id,
-                });
-              }
-            : null,
+          action: selectable ? {
+            type: "select_target", target_type: "player", defender_id: player.player_id, castle_id: castle.id,
+          } : null,
         });
         castlesWrap.appendChild(cardEl);
       });
@@ -810,6 +898,7 @@ function renderAgeOfWarPlayers(view) {
 
 function renderAgeOfWarGameState(data) {
   const view = data && data.view ? data.view : data;
+  if (view?.target?.id !== currentAgeOfWarView?.target?.id) ageOfWarBrowseOpen = false;
   const selectionKey = JSON.stringify(view && [
     view.you, view.current_player, view.phase, view.target, view.dice_pool,
     view.target_lines, view.legal_actions,
@@ -842,11 +931,26 @@ function renderAgeOfWarGameState(data) {
   if (ageOfWarWinnerLabel) {
     ageOfWarWinnerLabel.textContent = formatAgeOfWarWinner(view);
   }
+  document.getElementById("ageOfWarWinnerRow").hidden = !view.game_over;
+  ageOfWarRollBtn.hidden = !view.legal_actions.includes("roll");
+  ageOfWarDiscardBtn.hidden = view.phase !== "assign";
+  ageOfWarPlayAgainBtn.hidden = !view.game_over;
+  const scores = document.getElementById("ageOfWarScores");
+  scores.replaceChildren();
+  (view.players || []).forEach((player) => {
+    const score = document.createElement("span");
+    score.className = "age-of-war-score";
+    score.classList.toggle("current", player.player_id === view.current_player);
+    score.textContent = `${player.name || player.player_id}${player.player_id === view.you ? " (you)" : ""} ${player.is_bot ? "🤖 " : ""}${player.score} pts`;
+    addAgeOfWarSymbolHint(score, `${player.castles.length} castles · ${player.locked_clans.length} locked clans (🔒). Clan set totals replace individual castle points.`);
+    scores.appendChild(score);
+  });
 
   renderAgeOfWarDice(view);
   renderAgeOfWarTargetLines(view);
   renderAgeOfWarCentral(view);
   renderAgeOfWarPlayers(view);
+  updateAgeOfWarSupply();
   updateAgeOfWarActionButtons();
   updateAgeOfWarExplainModeClasses(ageOfWarExplainMode);
 }
@@ -869,10 +973,18 @@ function showAgeOfWarHelpModal() {
   if (!ageOfWarHelpModal) {
     return;
   }
-  if (ageOfWarHelpContent) {
-    ageOfWarHelpContent.innerHTML = AGE_OF_WAR_HELP_TEXT;
-  }
+  renderAgeOfWarHelp();
   setModalVisible(ageOfWarHelpModal, true);
+}
+
+function renderAgeOfWarHelp() {
+  ageOfWarHelpContent.innerHTML = ageOfWarHelpSection === "basics" ? AGE_OF_WAR_HELP_BASICS[ageOfWarHelpLanguage]
+    : ageOfWarHelpLanguage === "zh" ? AGE_OF_WAR_HELP_DETAILS_ZH : AGE_OF_WAR_HELP_TEXT;
+  ageOfWarHelpContent.scrollTop = 0;
+  [["English", ageOfWarHelpLanguage === "en"], ["Chinese", ageOfWarHelpLanguage === "zh"],
+    ["Basics", ageOfWarHelpSection === "basics"], ["Details", ageOfWarHelpSection === "details"]].forEach(([key, active]) => {
+    document.getElementById(`ageOfWarHelp${key}Btn`).setAttribute("aria-pressed", String(active));
+  });
 }
 
 function closeAgeOfWarHelpModal() {
@@ -887,6 +999,9 @@ function updateAgeOfWarExplainModeClasses(enabled) {
     if (btn) {
       btn.classList.toggle("has-explanation", enabled);
     }
+  });
+  document.querySelectorAll("#ageOfWarPanel [data-age-of-war-explanation-body]").forEach((element) => {
+    element.classList.toggle("has-explanation", enabled);
   });
 }
 
@@ -961,7 +1076,8 @@ if (ageOfWarDiscardBtn) {
 
 document.addEventListener("click", (event) => {
   if (currentGameType !== "age_of_war" || ageOfWarExplainMode) return;
-  if (event.target.closest("button, .age-of-war-die, .age-of-war-line, .age-of-war-placement, .modal")) return;
+  if (event.target.closest("button, .age-of-war-die, .age-of-war-line, .age-of-war-placement, .age-of-war-castle-card, .modal")) return;
+  closeAgeOfWarCastleConfirmation();
   if (ageOfWarSelectedLine === null && !ageOfWarSelectedDice.size) return;
   resetAgeOfWarSelection();
   refreshAgeOfWarSelection();
@@ -996,16 +1112,33 @@ if (ageOfWarExplainModalCloseBtn) {
   ageOfWarExplainModalCloseBtn.addEventListener("click", closeAgeOfWarExplainModal);
 }
 
-// Capture pointer events in explain mode (works on disabled buttons too)
+document.addEventListener("pointerdown", (event) => {
+  if (currentGameType !== "age_of_war") return;
+  ageOfWarExplainClickPending = false;
+  ageOfWarPointerStart = { x: event.clientX, y: event.clientY };
+  ageOfWarPointerMoved = false;
+}, true);
+
 document.addEventListener(
   "pointerdown",
   (e) => {
     if (!ageOfWarExplainMode) return;
 
+    const dynamic = e.target.closest("[data-age-of-war-explanation-body]");
+    if (dynamic) {
+      e.preventDefault();
+      e.stopPropagation();
+      ageOfWarExplainClickPending = true;
+      showAgeOfWarElementExplanation(dynamic);
+      exitAgeOfWarExplainMode();
+      return;
+    }
+
     const buttonId = findAgeOfWarButtonAtPoint(e.clientX, e.clientY);
     if (buttonId) {
       e.preventDefault();
       e.stopPropagation();
+      ageOfWarExplainClickPending = true;
       showAgeOfWarButtonExplanation(buttonId);
       exitAgeOfWarExplainMode();
       return;
@@ -1014,6 +1147,7 @@ document.addEventListener(
     const button = e.target.closest("button");
     if (button === ageOfWarExplainBtn || button === ageOfWarHelpBtn) return;
     if (button === ageOfWarHelpModalCloseBtn || button === ageOfWarExplainModalCloseBtn) return;
+    if (button?.closest("#ageOfWarHelpModal")) return;
 
     if (button) {
       e.preventDefault();
@@ -1026,16 +1160,36 @@ document.addEventListener(
 document.addEventListener(
   "click",
   (e) => {
+    if (ageOfWarExplainClickPending) {
+      ageOfWarExplainClickPending = false;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     if (!ageOfWarExplainMode) return;
+
+    const dynamic = e.target.closest("[data-age-of-war-explanation-body]");
+    if (dynamic) {
+      e.preventDefault();
+      e.stopPropagation();
+      showAgeOfWarElementExplanation(dynamic);
+      exitAgeOfWarExplainMode();
+      return;
+    }
 
     const button = e.target.closest("button");
     if (!button) return;
 
     if (button === ageOfWarExplainBtn || button === ageOfWarHelpBtn) return;
     if (button === ageOfWarHelpModalCloseBtn || button === ageOfWarExplainModalCloseBtn) return;
+    if (button.closest("#ageOfWarHelpModal")) return;
 
     e.preventDefault();
     e.stopPropagation();
+    if (AGE_OF_WAR_BUTTON_EXPLANATIONS[button.id]) {
+      showAgeOfWarButtonExplanation(button.id);
+      exitAgeOfWarExplainMode();
+    }
   },
   true
 );
@@ -1044,6 +1198,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") {
     return;
   }
+  if (currentGameType === "age_of_war") closeAgeOfWarCastleConfirmation();
   if (ageOfWarExplainMode) {
     exitAgeOfWarExplainMode();
     e.preventDefault();
@@ -1068,3 +1223,61 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
   }
 });
+
+function showAgeOfWarElementExplanation(element) {
+  ageOfWarExplainContent.replaceChildren();
+  const title = document.createElement("h4");
+  title.textContent = element.dataset.ageOfWarExplanationTitle;
+  const body = document.createElement("p");
+  body.textContent = element.dataset.ageOfWarExplanationBody;
+  ageOfWarExplainContent.append(title, body);
+  setModalVisible(ageOfWarExplainModal, true);
+}
+
+[["Central", "central"], ["Players", "players"]].forEach(([label, tab]) => {
+  document.getElementById(`ageOfWar${label}Tab`).addEventListener("click", () => {
+    closeAgeOfWarCastleConfirmation();
+    ageOfWarSupplyTab = tab;
+    updateAgeOfWarSupply();
+  });
+});
+[["Prev", -1], ["Next", 1]].forEach(([label, step]) => {
+  document.getElementById(`ageOfWar${label}Btn`).addEventListener("click", () => {
+    closeAgeOfWarCastleConfirmation();
+    ageOfWarCastlePage = Math.max(0, ageOfWarCastlePage + step);
+    updateAgeOfWarSupply();
+  });
+});
+document.getElementById("ageOfWarBrowseBtn").addEventListener("click", () => {
+  ageOfWarBrowseOpen = !ageOfWarBrowseOpen;
+  updateAgeOfWarSupply();
+});
+[["English", "en"], ["Chinese", "zh"]].forEach(([label, language]) => {
+  document.getElementById(`ageOfWarHelp${label}Btn`).addEventListener("click", () => {
+    ageOfWarHelpLanguage = language;
+    renderAgeOfWarHelp();
+  });
+});
+["Basics", "Details"].forEach((section) => {
+  document.getElementById(`ageOfWarHelp${section}Btn`).addEventListener("click", () => {
+    ageOfWarHelpSection = section.toLowerCase();
+    renderAgeOfWarHelp();
+  });
+});
+document.addEventListener("pointermove", (event) => {
+  if (!ageOfWarPointerStart) return;
+  if (Math.hypot(event.clientX - ageOfWarPointerStart.x, event.clientY - ageOfWarPointerStart.y) > 9) {
+    ageOfWarPointerMoved = true;
+  }
+}, true);
+document.addEventListener("pointerup", () => { ageOfWarPointerStart = null; }, true);
+document.addEventListener("pointercancel", () => {
+  ageOfWarPointerStart = null;
+  ageOfWarPointerMoved = true;
+}, true);
+window.addEventListener("resize", () => {
+  if (currentAgeOfWarView && currentGameType === "age_of_war") updateAgeOfWarSupply();
+});
+document.addEventListener("keydown", (event) => {
+  if (["Enter", " "].includes(event.key)) ageOfWarPointerMoved = false;
+}, true);

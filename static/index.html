@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v156" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v157" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -533,14 +533,6 @@
             <div class="panel-header-actions">
               <span class="room-controls-expand-hint" aria-hidden="true">Tap to show RC <span class="room-controls-expand-arrow"></span></span>
               <div id="mobileExplainSlot" class="mobile-explain-slot"></div>
-              <span
-                id="roomControlsExplainPlaceholder"
-                class="room-controls-explain-placeholder"
-                role="img"
-                aria-label="Explain unavailable until a game is active"
-                aria-disabled="true"
-                title="Explain unavailable until a game is active"
-              >ⓘ</span>
               <button id="settingsBtn" class="room-settings-btn" type="button" title="Settings" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsModal" aria-expanded="false"><span aria-hidden="true">⚙️</span></button>
               <button class="collapse-btn" id="roomControlsToggleBtn" type="button" aria-expanded="true" aria-controls="roomControlsBody" aria-label="Hide Room Controls">Hide</button>
             </div>
@@ -1210,6 +1202,8 @@
               <button id="rebelHelpBtn" type="button" aria-label="Help">Help</button>
               <button id="rebelExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="flip7HeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="coyoteHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="incanGoldHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="sixNimmtHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="bubbleShooterHeaderActions" style="display: none;"></div>
@@ -1823,7 +1817,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=293" defer></script>
+  <script src="/static/game_assets.js?v=297" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v46" defer></script>
   <script src="/static/games/shared_help.js?v=3" defer></script>
@@ -1866,6 +1860,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v71" defer></script>
-  <script src="/static/room.js?v=app_v109" defer></script>
+  <script src="/static/room.js?v=app_v110" defer></script>
 </body>
 </html>

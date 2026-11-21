@@ -52,14 +52,14 @@ const FLIP7_HELP_CONFIG = {
       id: "actions",
       label: { zh: "三种行动牌", en: "The three action cards" },
       html: {
-        zh: "<p>Second Chance 让你把它交给任意一位还在场并且手上没有这张牌的玩家，你也可以留给自己。之后这个人第一次爆掉时会被救回来，这张牌随即消失。</p>"
-          + "<p>Freeze 让你指定任意一位还在场上的玩家，他立刻结算当前分数并退出本轮，既可能是救命也可能是截断。</p>"
-          + "<p>Flip Three 只能由抽到它的人自己承受，他要连续翻三张牌，中途爆掉或者集齐七张就提前停止。</p>"
-          + "<p>抽到行动牌时游戏会暂停，Pending Action 一栏显示这张牌和抽到它的人，由他点选目标玩家。</p>",
-        en: "<p>Second Chance lets you hand it to any player still in the round who does not already hold one, yourself included. The next time that player would bust they are saved instead, and the card is used up.</p>"
-          + "<p>Freeze lets you pick any player still in the round, who immediately banks their current score and leaves the round, which can rescue them or cut them short.</p>"
-          + "<p>Flip Three always lands on the player who drew it, who has to flip three cards in a row and stops early on a bust or on collecting seven numbers.</p>"
-          + "<p>Drawing an action card pauses the game, the Pending Action field names the card and the player who drew it, and that player clicks a target to resolve it.</p>"
+        zh: "<p>Second Chance(🛡) 让你把它交给任意一位还在场并且手上没有这张牌的玩家，你也可以留给自己。之后这个人第一次爆掉时会被救回来，这张牌随即消失。</p>"
+          + "<p>Freeze(❄) 让你指定任意一位还在场上的玩家，他立刻结算当前分数并退出本轮，既可能是救命也可能是截断。</p>"
+          + "<p>Flip Three(↻) 只能由抽到它的人自己承受，他要连续翻三张牌，中途爆掉或者集齐七张就提前停止。</p>"
+          + "<p>Second Chance 或 Freeze 等待结算时，顶部会提示抽到它的玩家，在目标玩家的牌区点击对应按钮即可使用。</p>",
+        en: "<p>Second Chance(🛡) lets you hand it to any player still in the round who does not already hold one, yourself included. The next time that player would bust they are saved instead, and the card is used up.</p>"
+          + "<p>Freeze(❄) lets you pick any player still in the round, who immediately banks their current score and leaves the round, which can rescue them or cut them short.</p>"
+          + "<p>Flip Three(↻) always lands on the player who drew it, who has to flip three cards in a row and stops early on a bust or on collecting seven numbers.</p>"
+          + "<p>When Second Chance or Freeze needs a target, the status line names the player choosing. That player clicks the action button in the target player's tableau.</p>"
       }
     },
     {
@@ -81,10 +81,10 @@ const FLIP7_HELP_CONFIG = {
       label: { zh: "回合与整局结束", en: "Rounds and the endgame" },
       html: {
         zh: "<p>每轮结束后 Last Round 会列出每个人本轮翻到的所有牌和拿到的分数。</p>"
-          + "<p>只要还没有人达到 Target Score，就会自动开始新的一轮，所有人重新回到场上。</p>"
+          + "<p>只要还没有人达到 Target Score，所有玩家点击 Next Round 确认结果后才会开始新的一轮，机器人会自动确认。</p>"
           + "<p>一旦有人达到或者超过 Target Score，整局结束，总分最高的玩家获胜。</p>",
         en: "<p>After each round the Last Round panel lists every card each player flipped and the score they took from it.</p>"
-          + "<p>As long as nobody has reached the Target Score a fresh round starts automatically with everyone back in play.</p>"
+          + "<p>As long as nobody has reached the Target Score, everyone must click Next Round to acknowledge the results before a fresh round starts. Bots acknowledge automatically.</p>"
           + "<p>The moment somebody reaches or passes the Target Score the game ends and the highest total score wins.</p>"
       }
     }
@@ -92,6 +92,9 @@ const FLIP7_HELP_CONFIG = {
 };
 
 const FLIP7_EXPLAIN = {
+  next_round: { zh: "确认本轮结果。全员确认后才会开始下一轮，机器人会自动确认。", en: "Acknowledge this round's results. The next round starts only after everyone is ready. Bots acknowledge automatically." },
+  card: { zh: "数字牌累加分数，重复数字会爆牌。分数牌增加分数，功能牌改变抽牌或停手机会。点击或悬停具体卡牌可查看其效果。", en: "Number cards add points but duplicates bust you. Modifiers increase your score and action cards change your options. Hover or tap a card outside Explain mode for its exact effect." },
+  target: { zh: "将当前功能牌交给此玩家。Second Chance 防止一次爆牌，Freeze 立即替目标保分并结束其本轮。", en: "Give the pending action to this player. Second Chance prevents one bust. Freeze banks the target's points immediately and ends their round." },
   phase: { zh: "当前阶段。playing 是正常翻牌，action_target 是等待某位玩家为行动牌选择目标，round_end 是等待下一轮，game_over 表示整局结束。", en: "Current phase: playing is normal flipping, action_target waits for a player to pick a target for an action card, round_end waits for the next round, and game_over means the game has ended." },
   round: { zh: "当前是第几轮。每一轮都会重新发牌并清空所有人的牌面。", en: "Which round is being played. Every round deals fresh cards and clears every tableau." },
   turn: { zh: "现在轮到谁 Flip 或者 Stay。", en: "Whose turn it is to Flip or to Stay." },
@@ -102,12 +105,34 @@ const FLIP7_EXPLAIN = {
   flip7_winner: { zh: "本轮触发 flip7flash(🃏) 的玩家。他集齐了七张不同数字牌，本轮立刻结束并额外获得 15 分。", en: "The player who triggered flip7flash(🃏) this round by collecting seven different number cards, which ends the round at once and adds a 15 point bonus." },
   flip: { zh: "翻一张牌。翻到新的数字牌会扩大你的牌面，翻到重复数字则会爆掉(busted)。", en: "Flip one card. A new number card grows your tableau, while a number you already hold busts you." },
   stay: { zh: "收手，把当前牌面结算成本轮分数存进总分，然后退出本轮。", en: "Stay, which banks your current tableau as the round score and takes you out of the round." },
-  players: { zh: "所有玩家的牌面和状态。score 是累计总分，numbers 是你手上不同数字牌的张数，busted 表示本轮爆掉记 0 分，second chance 表示你还留着一张保险牌。有行动牌挂起时，点击带高亮的玩家卡片就是把它选为目标。", en: "Every player's tableau and state. The score badge is the running total, numbers counts your distinct number cards, busted means a bust worth zero this round, and second chance means you still hold a safety card. While an action card is pending, clicking a highlighted player card chooses them as its target." },
+  players: { zh: "显示每人的累计总分、可保的本轮分数和不同数字张数。Busted 表示本轮爆牌得 0 分。Second Chance(🛡) 表示仍有一次保护。待结算的功能牌通过目标牌区中的按钮使用。", en: "Shows each player's total, bankable round points and distinct number count. Busted means zero for this round. Second Chance(🛡) protects against one duplicate. Use a pending action through the button in the target player's tableau." },
   last_round: { zh: "上一轮的结果，按玩家列出本轮翻到的每一张牌和最终拿到的分数。", en: "The previous round's result, listing every card each player flipped and the score they ended up with." }
 };
 
 let flip7HelpWidget = null;
 let flip7ExplainWidget = null;
+let currentFlip7View = null;
+let flip7ResultRound = null;
+let flip7TooltipTimer = null;
+let flip7TouchStart = null;
+
+const flip7Players = document.getElementById("flip7Players");
+const flip7LastRound = document.getElementById("flip7LastRound");
+const flip7Results = document.getElementById("flip7Results");
+const flip7FlipBtn = document.getElementById("flip7FlipBtn");
+const flip7StayBtn = document.getElementById("flip7StayBtn");
+const flip7NextRoundBtn = document.getElementById("flip7NextRoundBtn");
+const flip7ActionButtons = { flip: flip7FlipBtn, stay: flip7StayBtn, next_round: flip7NextRoundBtn };
+
+function showFlip7HeaderActions(show) {
+  const header = document.getElementById("flip7HeaderActions");
+  if (header) header.style.display = show ? "flex" : "none";
+  if (!show) {
+    flip7ExplainWidget?.exit();
+    flip7HelpWidget?.close();
+    hideFlip7Tooltip();
+  }
+}
 
 function initFlip7HelpExplain() {
   if (flip7HelpWidget || typeof window.obgCreateHelp !== "function") return;
@@ -121,443 +146,255 @@ function initFlip7HelpExplain() {
     bypass: ["#flip7HelpBtn", "#flip7ExplainBtn"]
   });
   flip7HelpButton?.addEventListener("click", () => {
+    hideFlip7Tooltip();
     flip7ExplainWidget?.exit();
     flip7HelpWidget.open();
   });
-  flip7ExplainButton?.addEventListener("click", () => flip7ExplainWidget?.toggle());
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initFlip7HelpExplain);
-} else {
-  initFlip7HelpExplain();
-}
-
-const flip7PhaseLabel = document.getElementById("flip7Phase");
-const flip7RoundLabel = document.getElementById("flip7Round");
-const flip7TurnLabel = document.getElementById("flip7Turn");
-const flip7DeckLabel = document.getElementById("flip7Deck");
-const flip7DiscardLabel = document.getElementById("flip7Discard");
-const flip7TargetScoreLabel = document.getElementById("flip7TargetScore");
-const flip7PendingLabel = document.getElementById("flip7Pending");
-const flip7FlipWinnerLabel = document.getElementById("flip7FlipWinner");
-const flip7Tableau = document.getElementById("flip7Tableau");
-const flip7TargetSelection = document.getElementById("flip7TargetSelection");
-const flip7ClearTargetBtn = document.getElementById("flip7ClearTarget");
-const flip7Targets = document.getElementById("flip7Targets");
-const flip7LastRound = document.getElementById("flip7LastRound");
-const flip7Players = document.getElementById("flip7Players");
-const flip7FlipBtn = document.getElementById("flip7FlipBtn");
-const flip7StayBtn = document.getElementById("flip7StayBtn");
-
-const flip7ActionButtons = {
-  flip: flip7FlipBtn,
-  stay: flip7StayBtn,
-};
-
-let currentFlip7View = null;
-let flip7SelectedTarget = null;
-
-function clearFlip7TargetSelection() {
-  flip7SelectedTarget = null;
-  if (currentFlip7View) {
-    updateFlip7TargetSelection(currentFlip7View);
-    renderFlip7Players(currentFlip7View);
-  } else {
-    updateFlip7TargetSelection(null);
-  }
-  updateFlip7ActionButtons();
-}
-
-function updateFlip7TargetSelection(view) {
-  if (!flip7TargetSelection) {
-    return;
-  }
-  if (!flip7SelectedTarget || !view) {
-    flip7TargetSelection.textContent = "-";
-    return;
-  }
-  const target = view.players.find((p) => p.player_id === flip7SelectedTarget);
-  flip7TargetSelection.textContent = target ? target.name : "-";
-}
-
-function renderFlip7Tableau(view) {
-  if (!flip7Tableau) {
-    return;
-  }
-  flip7Tableau.innerHTML = "";
-  const you = view.players.find((p) => p.player_id === view.you);
-  if (!you || !Array.isArray(you.tableau) || !you.tableau.length) {
-    flip7Tableau.textContent = "-";
-    return;
-  }
-  you.tableau.forEach((card) => {
-    const slot = document.createElement("div");
-    slot.className = "slot";
-    slot.textContent = card.label || "?";
-    flip7Tableau.appendChild(slot);
+  flip7ExplainButton?.addEventListener("click", () => {
+    hideFlip7Tooltip();
+    flip7ExplainWidget?.toggle();
   });
 }
 
+function flip7Element(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+
+function flip7PlayerName(view, playerId) {
+  return view.players.find((player) => player.player_id === playerId)?.name || playerId || "—";
+}
+
+function flip7CardDescription(card) {
+  if (card.type === "number") return "Number " + card.value + ": adds " + card.value + " points. A duplicate busts you unless protected by Second Chance.";
+  if (card.multiplier === 2) return "×2: doubles number-card points, not bonus points or the Flip 7 bonus.";
+  if (card.type === "modifier") return "+" + card.points + ": adds bonus points after multipliers.";
+  if (card.action === "second_chance") return "Second Chance (🛡): prevents one bust, then is discarded with the duplicate card.";
+  if (card.action === "freeze") return "Freeze (❄): banks the chosen active player's points and ends their round.";
+  if (card.action === "flip_three") return "Flip Three (↻): the player who draws it must flip three more cards. A bust or Flip 7 stops the draw.";
+  return card.label || "Card";
+}
+
+function flip7Card(card) {
+  const element = flip7Element("div", "flip7-card");
+  element.dataset.kind = card.type || "number";
+  element.dataset.flip7Tip = flip7CardDescription(card);
+  const explainKey = card.action || (card.type === "number" ? "number_" + card.value : card.multiplier === 2 ? "multiplier" : "modifier_" + card.points);
+  const descriptions = {
+    second_chance: "Second Chance(🛡) 防止一次因重复数字导致的爆牌，然后与重复数字牌一起弃掉。",
+    freeze: "Freeze(❄) 令选中的活跃玩家立即保分并结束本轮。",
+    flip_three: "Flip Three(↻) 令抽到它的人连抽三张，爆牌或达成 Flip 7 时提前停止。",
+    multiplier: "×2 只将数字牌之和翻倍，不翻倍分数修正牌和 Flip 7 奖励。"
+  };
+  FLIP7_EXPLAIN[explainKey] = {
+    en: element.dataset.flip7Tip,
+    zh: descriptions[explainKey] || (card.type === "number" ? "数字 " + card.value + " 贡献 " + card.value + " 分并计入七种不同数字。同值数字再次出现会爆牌，除非有 Second Chance 保护。" : "+" + card.points + " 在数字倍数结算后增加本轮分数，不会导致爆牌。")
+  };
+  element.dataset.flip7Explain = explainKey;
+  element.setAttribute("aria-label", element.dataset.flip7Tip);
+  element.setAttribute("tabindex", "0");
+  const symbols = { second_chance: "🛡", freeze: "❄", flip_three: "↻" };
+  const labels = { second_chance: "Second chance", freeze: "Freeze", flip_three: "Flip three" };
+  element.appendChild(flip7Element("span", "", symbols[card.action] || card.label || String(card.value ?? "?")));
+  if (card.type === "action") element.appendChild(flip7Element("small", "", labels[card.action] || "Action"));
+  element.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse") showFlip7Tooltip(element);
+  });
+  element.addEventListener("pointerleave", hideFlip7Tooltip);
+  element.addEventListener("focus", () => showFlip7Tooltip(element));
+  element.addEventListener("blur", hideFlip7Tooltip);
+  return element;
+}
+
+function showFlip7Tooltip(element) {
+  if (flip7ExplainWidget?.isActive()) return;
+  const tooltip = document.getElementById("flip7Tooltip");
+  if (!tooltip) return;
+  clearTimeout(flip7TooltipTimer);
+  tooltip.textContent = element.dataset.flip7Tip;
+  tooltip.classList.remove("hidden");
+  const box = element.getBoundingClientRect();
+  const tip = tooltip.getBoundingClientRect();
+  tooltip.style.left = Math.max(12, Math.min(box.left, window.innerWidth - tip.width - 12)) + "px";
+  tooltip.style.top = Math.max(8, box.top - tip.height - 8) + "px";
+  flip7TooltipTimer = setTimeout(hideFlip7Tooltip, 3000);
+}
+
+function hideFlip7Tooltip() {
+  clearTimeout(flip7TooltipTimer);
+  document.getElementById("flip7Tooltip")?.classList.add("hidden");
+}
+
 function renderFlip7Players(view) {
-  if (!flip7Players) {
-    return;
-  }
-  flip7Players.innerHTML = "";
+  document.getElementById("flip7PlayerActionStash")?.append(flip7FlipBtn, flip7StayBtn);
+  flip7Players.replaceChildren();
   const pending = view.pending_action;
-  const eligible = new Set((pending && pending.eligible_targets) || []);
-  const isPendingActor = pending && view.you && pending.actor_id === view.you;
-  if (flip7SelectedTarget && !eligible.has(flip7SelectedTarget)) {
-    flip7SelectedTarget = null;
-  }
-  view.players.forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "player-card";
-    if (player.player_id === view.current_turn) {
-      card.classList.add("current");
-    }
-    if (player.player_id === view.you) {
-      card.classList.add("self");
-    }
-    const isEligible = eligible.has(player.player_id);
-    if (pending && isEligible) {
-      card.classList.add("flip7-target-eligible");
-    }
-    if (pending && isEligible && isPendingActor) {
-      card.classList.add("flip7-target-selectable");
-      card.addEventListener("click", () => {
-        flip7SelectedTarget = player.player_id;
-        updateFlip7TargetSelection(view);
-        updateFlip7ActionButtons();
-        renderFlip7Players(view);
-        sendAction({ type: "choose_target", target_player_id: player.player_id });
-      });
-    }
-    if (flip7SelectedTarget === player.player_id) {
-      card.classList.add("flip7-target-selected");
-    }
-    if (player.status !== "active") {
-      card.classList.add("disabled");
-    }
-
-    const header = document.createElement("div");
-    header.className = "player-header";
-    const name = document.createElement("div");
-    name.className = "player-name";
-    name.textContent = player.name || player.player_id;
-    header.appendChild(name);
-
-    const badges = document.createElement("div");
-    badges.className = "player-badges";
-    const score = document.createElement("span");
-    score.className = "badge";
-    score.textContent = `score ${player.score ?? 0}`;
-    badges.appendChild(score);
-    const status = document.createElement("span");
-    status.className = "badge";
-    const isBusted = player.status === "out" && player.round_score === 0;
-    const displayStatus =
-      isBusted ? "busted" : (player.status === "out" ? "out" : (player.status || "-"));
-    status.textContent = displayStatus;
-    if (isBusted) {
-      status.classList.add("danger");
-    }
-    badges.appendChild(status);
-    if (player.round_score !== null && player.round_score !== undefined) {
-      const roundScore = document.createElement("span");
-      roundScore.className = "badge";
-      roundScore.textContent = `round ${player.round_score}`;
-      badges.appendChild(roundScore);
-    }
-    if (player.flip7) {
-      const flip7 = document.createElement("span");
-      flip7.className = "badge highlight";
-      flip7.textContent = "flip7flash";
-      badges.appendChild(flip7);
-    }
-    if (player.has_second_chance) {
-      const chance = document.createElement("span");
-      chance.className = "badge";
-      chance.textContent = "second chance";
-      badges.appendChild(chance);
-    }
-    if (player.player_id === view.you) {
-      const you = document.createElement("span");
-      you.className = "badge";
-      you.textContent = "you";
-      badges.appendChild(you);
-    }
-    if (player.is_bot) {
-      const bot = document.createElement("span");
-      bot.className = "badge";
-      bot.textContent = "bot";
-      badges.appendChild(bot);
-    }
-    header.appendChild(badges);
-
-    const tableauRow = document.createElement("div");
-    tableauRow.className = "player-hand";
-    if (Array.isArray(player.tableau) && player.tableau.length) {
-      player.tableau.forEach((cardData) => {
-        const slot = document.createElement("div");
-        slot.className = "player-slot";
-        slot.textContent = cardData.label || "?";
-        tableauRow.appendChild(slot);
-      });
-    } else {
-      const slot = document.createElement("div");
-      slot.className = "player-slot empty";
-      slot.textContent = "-";
-      tableauRow.appendChild(slot);
-    }
-
-    const meta = document.createElement("div");
-    meta.className = "player-meta";
-    meta.textContent = `numbers ${player.numbers_count ?? 0}`;
-
+  const targets = new Set(pending?.eligible_targets || []);
+  const ordered = [...view.players].sort((first, second) => Number(second.player_id === view.you) - Number(first.player_id === view.you));
+  ordered.forEach((player) => {
+    const self = player.player_id === view.you;
+    const card = flip7Element("section", "flip7-player");
+    card.classList.toggle("self", self);
+    card.classList.toggle("current", view.phase === "playing" && player.player_id === view.current_turn);
+    const header = flip7Element("div", "flip7-player-head");
+    header.appendChild(flip7Element("div", "flip7-player-name", (player.name || player.player_id) + (self ? " · You" : "") + (player.is_bot ? " · Bot" : "")));
+    const total = flip7Element("div", "flip7-total", String(player.score ?? 0));
+    total.appendChild(flip7Element("small", "", " pts"));
+    header.appendChild(total);
     card.appendChild(header);
-    card.appendChild(tableauRow);
+    const meta = flip7Element("div", "flip7-player-meta");
+    const busted = player.busted;
+    const status = player.flip7 ? "Flip 7 · +15" : busted ? "Busted · +0" : player.status === "active" ? "In play" : "Banked · +" + (player.round_score ?? 0);
+    meta.appendChild(flip7Element("span", busted ? "flip7-busted" : "", status));
+    meta.appendChild(flip7Element("span", "", player.numbers_count + "/7 numbers · " + (player.round_score ?? player.potential_score ?? 0) + " round pts"));
     card.appendChild(meta);
-    if (player.player_id === view.you) {
-      const actionsRow = document.createElement("div");
-      actionsRow.className = "flip7-player-actions row actions";
-      if (flip7FlipBtn) {
-        actionsRow.appendChild(flip7FlipBtn);
-      }
-      if (flip7StayBtn) {
-        actionsRow.appendChild(flip7StayBtn);
-      }
-      if (actionsRow.children.length) {
-        card.appendChild(actionsRow);
-      }
+    const hand = flip7Element("div", "flip7-hand");
+    hand.setAttribute("data-flip7-explain", "card");
+    player.tableau.forEach((entry) => hand.appendChild(flip7Card(entry)));
+    if (!player.tableau.length) hand.appendChild(flip7Element("span", "hint", view.phase === "round_end" || view.game_over ? "See round results below." : "No cards"));
+    card.appendChild(hand);
+    if (self) {
+      const actions = flip7Element("div", "flip7-player-actions");
+      actions.append(flip7FlipBtn, flip7StayBtn);
+      card.appendChild(actions);
+    }
+    if (pending?.actor_id === view.you && targets.has(player.player_id)) {
+      card.classList.add("flip7-target-eligible");
+      const target = flip7Element("button", "flip7-target-button", pending.label + " → " + (self ? "You" : player.name || player.player_id));
+      target.type = "button";
+      target.dataset.flip7Explain = "target";
+      target.addEventListener("click", () => sendAction({ type: "choose_target", target_player_id: player.player_id }));
+      card.appendChild(target);
     }
     flip7Players.appendChild(card);
   });
 }
 
 function renderFlip7LastRound(view) {
-  if (!flip7LastRound) {
-    return;
-  }
-  flip7LastRound.innerHTML = "";
   const summary = view.last_round_summary;
+  flip7LastRound.replaceChildren();
+  document.getElementById("flip7ResultCaption").textContent = summary ? "· Round " + summary.round : "";
   if (!summary) {
-    const empty = document.createElement("div");
-    empty.className = "hint";
-    empty.textContent = "No previous round yet.";
-    flip7LastRound.appendChild(empty);
+    flip7LastRound.appendChild(flip7Element("p", "hint", "No previous round yet."));
     return;
   }
-
-  const meta = document.createElement("div");
-  meta.className = "hint";
-  const roundText = Number.isInteger(summary.round) ? `Round ${summary.round}` : "Last round";
-  const reasonText = summary.reason ? ` (${summary.reason})` : "";
-  meta.textContent = `${roundText}${reasonText}`;
-  flip7LastRound.appendChild(meta);
-
-  const flipsByPlayer = summary.flips || {};
-  const statusByPlayer = summary.status || {};
-  const roundScoresByPlayer = summary.round_scores || {};
+  if (summary.round !== flip7ResultRound) {
+    flip7ResultRound = summary.round;
+    flip7Results.open = view.phase === "round_end" || view.game_over;
+  }
   view.players.forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "player-card";
-
-    const header = document.createElement("div");
-    header.className = "player-header";
-    const name = document.createElement("div");
-    name.className = "player-name";
-    name.textContent = player.name || player.player_id;
-    header.appendChild(name);
-
-    const badges = document.createElement("div");
-    badges.className = "player-badges";
-    const status = statusByPlayer[player.player_id] || "-";
-    const roundScore = roundScoresByPlayer[player.player_id];
-    const isBusted = status === "out" && roundScore === 0;
-    const displayStatus = isBusted ? "busted" : status;
-    const statusBadge = document.createElement("span");
-    statusBadge.className = "badge";
-    statusBadge.textContent = displayStatus;
-    if (isBusted) {
-      statusBadge.classList.add("danger");
-    }
-    badges.appendChild(statusBadge);
-    if (summary.flip7_winner === player.player_id) {
-      const flip7 = document.createElement("span");
-      flip7.className = "badge highlight";
-      flip7.textContent = "flip7flash";
-      badges.appendChild(flip7);
-    }
-    header.appendChild(badges);
-    card.appendChild(header);
-
-    const flipsRow = document.createElement("div");
-    flipsRow.className = "player-hand";
-    const flips = Array.isArray(flipsByPlayer[player.player_id])
-      ? flipsByPlayer[player.player_id]
-      : [];
-    if (flips.length) {
-      flips.forEach((flip) => {
-        const slot = document.createElement("div");
-        slot.className = "player-slot";
-        const label = typeof flip === "string" ? flip : flip.label;
-        slot.textContent = label || "?";
-        flipsRow.appendChild(slot);
-      });
-    } else {
-      const slot = document.createElement("div");
-      slot.className = "player-slot empty";
-      slot.textContent = "-";
-      flipsRow.appendChild(slot);
-    }
-
-    card.appendChild(flipsRow);
-    flip7LastRound.appendChild(card);
+    const points = summary.round_scores?.[player.player_id] ?? 0;
+    const row = flip7Element("div", "flip7-result" + (player.player_id === view.you ? " self" : ""));
+    const header = flip7Element("div", "flip7-player-head");
+    header.appendChild(flip7Element("span", "flip7-player-name", player.name || player.player_id));
+    header.appendChild(flip7Element("strong", "", "+" + points + " · " + (summary.total_scores?.[player.player_id] ?? player.score) + " total"));
+    row.appendChild(header);
+    const hand = flip7Element("div", "flip7-hand");
+    const flips = summary.flips?.[player.player_id] || [];
+    flips.forEach((entry) => hand.appendChild(flip7Card(typeof entry === "string" ? { label: entry } : entry)));
+    row.appendChild(hand);
+    const result = summary.flip7_winner === player.player_id ? "Flip 7 · +15 bonus" : summary.breakdowns?.[player.player_id]?.busted ? "Busted" : "Banked";
+    row.appendChild(flip7Element("small", "", result));
+    flip7LastRound.appendChild(row);
   });
 }
 
 function isFlip7ActionAvailable(actionType) {
-  if (!currentFlip7View || !Array.isArray(currentFlip7View.legal_actions)) {
-    return false;
-  }
-  if (!currentFlip7View.legal_actions.includes(actionType)) {
-    return false;
-  }
-  if (actionType === "choose_target") {
-    return !!flip7SelectedTarget;
-  }
-  return true;
+  return currentGameType === "flip7" && !!currentFlip7View?.legal_actions?.includes(actionType);
 }
 
 function updateFlip7ActionButtons() {
-  if (currentGameType !== "flip7") {
-    Object.values(flip7ActionButtons).forEach((button) => {
-      button.classList.remove("action-allowed");
-      button.disabled = true;
-    });
-    return;
-  }
   Object.entries(flip7ActionButtons).forEach(([actionType, button]) => {
-    const allowed = isFlip7ActionAvailable(actionType);
-    if (allowed) {
-      button.classList.add("action-allowed");
-    } else {
-      button.classList.remove("action-allowed");
-    }
-    button.disabled = !allowed;
+    if (!button) return;
+    button.disabled = !isFlip7ActionAvailable(actionType);
+    button.classList.toggle("action-allowed", !button.disabled);
   });
 }
 
 function clearFlip7State() {
   currentFlip7View = null;
-  flip7SelectedTarget = null;
-  if (flip7PhaseLabel) {
-    flip7PhaseLabel.textContent = "-";
-  }
-  if (flip7RoundLabel) {
-    flip7RoundLabel.textContent = "-";
-  }
-  if (flip7TurnLabel) {
-    flip7TurnLabel.textContent = "-";
-  }
-  if (flip7DeckLabel) {
-    flip7DeckLabel.textContent = "-";
-  }
-  if (flip7DiscardLabel) {
-    flip7DiscardLabel.textContent = "-";
-  }
-  if (flip7TargetScoreLabel) {
-    flip7TargetScoreLabel.textContent = "-";
-  }
-  if (flip7PendingLabel) {
-    flip7PendingLabel.textContent = "-";
-  }
-  if (flip7FlipWinnerLabel) {
-    flip7FlipWinnerLabel.textContent = "-";
-  }
-  if (flip7Tableau) {
-    flip7Tableau.innerHTML = "";
-  }
-  if (flip7TargetSelection) {
-    flip7TargetSelection.textContent = "-";
-  }
-  if (flip7Targets) {
-    flip7Targets.innerHTML = "";
-  }
-  if (flip7LastRound) {
-    flip7LastRound.innerHTML = "";
-  }
-  if (flip7Players) {
-    flip7Players.innerHTML = "";
-  }
+  flip7ResultRound = null;
+  hideFlip7Tooltip();
+  document.getElementById("flip7PlayerActionStash")?.append(flip7FlipBtn, flip7StayBtn);
+  flip7Players.replaceChildren();
+  flip7LastRound.replaceChildren();
+  flip7Results.open = false;
+  document.getElementById("flip7Status").textContent = "Waiting for the game to start.";
+  document.getElementById("flip7RoundContinue").classList.add("hidden");
+  ["flip7Round", "flip7Deck", "flip7Discard", "flip7TargetScore"].forEach((id) => { document.getElementById(id).textContent = "—"; });
   updateFlip7ActionButtons();
 }
 
 function renderFlip7GameState(data) {
   const view = data.view;
+  if (view.phase !== currentFlip7View?.phase && (view.phase === "round_end" || view.game_over)) {
+    flip7ResultRound = null;
+  }
   currentFlip7View = view;
-  if (currentGameType !== "flip7") {
-    currentGameType = "flip7";
-    setGamePanelVisibility("flip7");
+  if (currentGameType !== "flip7") currentGameType = "flip7";
+  setGamePanelVisibility("flip7");
+  hideFlip7Tooltip();
+  document.getElementById("flip7Round").textContent = view.round;
+  document.getElementById("flip7Deck").textContent = view.deck_count;
+  document.getElementById("flip7Discard").textContent = view.discard_count;
+  document.getElementById("flip7TargetScore").textContent = view.config?.target_score ?? 200;
+  let status;
+  if (view.game_over) {
+    status = "Winner: " + (view.winner || []).map((playerId) => flip7PlayerName(view, playerId)).join(", ");
+  } else if (view.phase === "round_end") {
+    status = "Round complete · review the results, then continue.";
+  } else if (view.pending_action) {
+    const pending = view.pending_action;
+    status = pending.actor_id === view.you ? "Choose a player for " + pending.label + "." : flip7PlayerName(view, pending.actor_id) + " is choosing a target for " + pending.label + ".";
+  } else {
+    status = view.you === view.current_turn ? "Your turn · flip again or bank your points." : flip7PlayerName(view, view.current_turn) + " is playing.";
   }
-  if (flip7PhaseLabel) {
-    flip7PhaseLabel.textContent = view.phase || "-";
-  }
-  if (flip7RoundLabel) {
-    flip7RoundLabel.textContent = view.round ?? "-";
-  }
-  if (flip7TurnLabel) {
-    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
-    flip7TurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
-  }
-  if (flip7DeckLabel) {
-    flip7DeckLabel.textContent = view.deck_count ?? "-";
-  }
-  if (flip7DiscardLabel) {
-    flip7DiscardLabel.textContent = view.discard_count ?? "-";
-  }
-  if (flip7TargetScoreLabel) {
-    flip7TargetScoreLabel.textContent = view.config ? view.config.target_score ?? "-" : "-";
-  }
-  if (flip7FlipWinnerLabel) {
-    flip7FlipWinnerLabel.textContent = view.flip7_winner
-      ? findPlayerName(view, view.flip7_winner)
-      : "-";
-  }
-  if (flip7PendingLabel) {
-    if (view.pending_action) {
-      const actorName = view.pending_action.actor_id
-        ? findPlayerName(view, view.pending_action.actor_id)
-        : "-";
-      flip7PendingLabel.textContent = `${view.pending_action.label} (${actorName})`;
-    } else {
-      flip7PendingLabel.textContent = "-";
-    }
-  }
-
-  renderFlip7Tableau(view);
-  updateFlip7TargetSelection(view);
-  renderFlip7LastRound(view);
+  document.getElementById("flip7Status").textContent = status;
   renderFlip7Players(view);
+  renderFlip7LastRound(view);
+  const paused = view.phase === "round_end";
+  flip7Players.classList.toggle("hidden", paused || view.game_over);
+  document.getElementById("flip7RoundContinue").classList.toggle("hidden", !paused);
+  document.getElementById("flip7ReadyCount").textContent = (view.round_ready || []).length + "/" + view.players.length + " ready";
+  flip7NextRoundBtn.textContent = (view.round_ready || []).includes(view.you) ? "Waiting for others…" : "Next Round";
+  flip7StayBtn.textContent = "Stay · bank " + (view.players.find((player) => player.player_id === view.you)?.potential_score ?? 0);
   logGameEvents(data);
   updateFlip7ActionButtons();
 }
 
-if (flip7ClearTargetBtn) {
-  flip7ClearTargetBtn.addEventListener("click", () => {
-    clearFlip7TargetSelection();
+Object.entries(flip7ActionButtons).forEach(([actionType, button]) => {
+  button?.addEventListener("click", () => {
+    if (isFlip7ActionAvailable(actionType)) sendAction({ type: actionType });
   });
+});
+
+const flip7PanelElement = document.getElementById("flip7Panel");
+flip7PanelElement?.addEventListener("pointerdown", (event) => {
+  flip7TouchStart = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY, id: event.pointerId } : null;
+});
+flip7PanelElement?.addEventListener("pointermove", (event) => {
+  if (flip7TouchStart && Math.hypot(event.clientX - flip7TouchStart.x, event.clientY - flip7TouchStart.y) > 10) flip7TouchStart = null;
+});
+flip7PanelElement?.addEventListener("pointerup", (event) => {
+  const start = flip7TouchStart;
+  flip7TouchStart = null;
+  if (!start || start.id !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10) return;
+  const card = event.target.closest("[data-flip7-tip]");
+  if (card) showFlip7Tooltip(card);
+});
+flip7PanelElement?.addEventListener("pointercancel", () => { flip7TouchStart = null; });
+window.addEventListener("scroll", hideFlip7Tooltip, true);
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") hideFlip7Tooltip(); });
+
+function initFlip7Interface() {
+  initFlip7HelpExplain();
+  if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "flip7") {
+    showFlip7HeaderActions(true);
+    if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "flip7") renderFlip7GameState(lastGameStatePayload);
+  }
 }
 
-if (flip7FlipBtn) {
-  flip7FlipBtn.addEventListener("click", () => {
-    sendAction({ type: "flip" });
-  });
-}
-
-if (flip7StayBtn) {
-  flip7StayBtn.addEventListener("click", () => {
-    sendAction({ type: "stay" });
-  });
-}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initFlip7Interface);
+else initFlip7Interface();
