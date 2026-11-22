@@ -5,6 +5,7 @@ let wordDecodeGuessDrafts = {};
 let wordDecodeGuessTimerHandle = null;
 let wordDecodeDraftSyncHandle = null;
 let wordDecodeLastDraftFingerprint = "";
+const wordDecodeComposingInputs = new Set();
 
 const wordDecodeConfigBox = document.getElementById("wordDecodeConfigBox");
 const wordDecodeGuessTimeSelect = document.getElementById("wordDecodeGuessTimeSelect");
@@ -190,7 +191,7 @@ function getWordDecodeDraftPayload() {
 
 function flushWordDecodeGuessDraft() {
   wordDecodeDraftSyncHandle = null;
-  if (!currentWordDecodeView || currentWordDecodeView.phase !== "guess") {
+  if (!currentWordDecodeView || currentWordDecodeView.phase !== "guess" || wordDecodeComposingInputs.size) {
     return;
   }
   if (!Array.isArray(currentWordDecodeView.legal_actions) || !currentWordDecodeView.legal_actions.includes("submit_guesses")) {
@@ -211,8 +212,39 @@ function flushWordDecodeGuessDraft() {
 function scheduleWordDecodeGuessDraftSync() {
   if (wordDecodeDraftSyncHandle) {
     clearTimeout(wordDecodeDraftSyncHandle);
+    wordDecodeDraftSyncHandle = null;
+  }
+  if (wordDecodeComposingInputs.size) {
+    return;
   }
   wordDecodeDraftSyncHandle = setTimeout(flushWordDecodeGuessDraft, 500);
+}
+
+function bindWordDecodeDraftInput(input, updateDraft) {
+  input.addEventListener("compositionstart", () => {
+    wordDecodeComposingInputs.add(input);
+    if (wordDecodeDraftSyncHandle) {
+      clearTimeout(wordDecodeDraftSyncHandle);
+      wordDecodeDraftSyncHandle = null;
+    }
+    updateWordDecodeActionButtons();
+  });
+  input.addEventListener("compositionend", () => {
+    wordDecodeComposingInputs.delete(input);
+    updateDraft();
+  });
+  input.addEventListener("input", (event) => {
+    if (!event.isComposing && !wordDecodeComposingInputs.has(input)) {
+      updateDraft();
+    }
+  });
+}
+
+function updateWordDecodeInput(input, value, disabled) {
+  input.disabled = disabled;
+  if (!wordDecodeComposingInputs.has(input) && input.value !== value) {
+    input.value = value;
+  }
 }
 
 function isSingleChineseChar(value) {
@@ -235,26 +267,27 @@ function isSingleChineseChar(value) {
 }
 
 function resetWordDecodeDrafts() {
+  wordDecodeComposingInputs.clear();
   wordDecodeHintDrafts = ["", ""];
   wordDecodeBaseDraft = "";
   wordDecodeGuessDrafts = {};
 }
 
 function captureWordDecodeDrafts() {
-  if (wordDecodeHint1Input) {
+  if (wordDecodeHint1Input && !wordDecodeComposingInputs.has(wordDecodeHint1Input)) {
     wordDecodeHintDrafts[0] = wordDecodeHint1Input.value || "";
   }
-  if (wordDecodeHint2Input) {
+  if (wordDecodeHint2Input && !wordDecodeComposingInputs.has(wordDecodeHint2Input)) {
     wordDecodeHintDrafts[1] = wordDecodeHint2Input.value || "";
   }
-  if (wordDecodeBaseGuessInput) {
+  if (wordDecodeBaseGuessInput && !wordDecodeComposingInputs.has(wordDecodeBaseGuessInput)) {
     wordDecodeBaseDraft = wordDecodeBaseGuessInput.value || "";
   }
   if (wordDecodeGuessList) {
     const inputs = wordDecodeGuessList.querySelectorAll("input[data-target]");
     inputs.forEach((input) => {
       const targetId = input.getAttribute("data-target");
-      if (targetId) {
+      if (targetId && !wordDecodeComposingInputs.has(input)) {
         wordDecodeGuessDrafts[targetId] = input.value || "";
       }
     });
@@ -298,20 +331,40 @@ function renderWordDecodeGuessList(view) {
   if (!wordDecodeGuessList) {
     return;
   }
-  wordDecodeGuessList.innerHTML = "";
   const canSubmit = Array.isArray(view.legal_actions) && view.legal_actions.includes("submit_guesses");
   const targets = view.players.filter((player) => player.player_id !== view.you);
-  targets.forEach((player) => {
-    const row = document.createElement("div");
-    row.className = "word-decode-guess-row";
+  const existingRows = new Map(Array.from(wordDecodeGuessList.children, (row) => [row.dataset.target, row]));
+  targets.forEach((player, index) => {
+    let row = existingRows.get(player.player_id);
+    if (!row) {
+      row = document.createElement("div");
+      row.className = "word-decode-guess-row";
+      row.dataset.target = player.player_id;
 
-    const label = document.createElement("div");
-    label.className = "word-decode-guess-label";
+      const label = document.createElement("div");
+      label.className = "word-decode-guess-label";
+      row.appendChild(label);
+
+      const hintWrap = document.createElement("div");
+      hintWrap.className = "word-decode-guess-hints";
+      row.appendChild(hintWrap);
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.setAttribute("data-target", player.player_id);
+      bindWordDecodeDraftInput(input, () => {
+        wordDecodeGuessDrafts[player.player_id] = input.value || "";
+        updateWordDecodeActionButtons();
+        scheduleWordDecodeGuessDraftSync();
+      });
+      row.appendChild(input);
+    }
+
+    const label = row.querySelector(".word-decode-guess-label");
     label.textContent = player.name;
-    row.appendChild(label);
 
-    const hintWrap = document.createElement("div");
-    hintWrap.className = "word-decode-guess-hints";
+    const hintWrap = row.querySelector(".word-decode-guess-hints");
+    hintWrap.replaceChildren();
     const hints = view.hints ? view.hints[player.player_id] : null;
     if (hints && hints.length) {
       hints.forEach((hintText) => {
@@ -326,22 +379,17 @@ function renderWordDecodeGuessList(view) {
       chip.textContent = "Hints pending";
       hintWrap.appendChild(chip);
     }
-    row.appendChild(hintWrap);
-
-    const input = document.createElement("input");
-    input.type = "text";
+    const input = row.querySelector("input[data-target]");
     input.placeholder = `Guess ${player.name}`;
-    input.setAttribute("data-target", player.player_id);
-    input.value = wordDecodeGuessDrafts[player.player_id] || "";
-    input.disabled = !canSubmit;
-    input.addEventListener("input", () => {
-      wordDecodeGuessDrafts[player.player_id] = input.value || "";
-      updateWordDecodeActionButtons();
-      scheduleWordDecodeGuessDraftSync();
-    });
-    row.appendChild(input);
-
-    wordDecodeGuessList.appendChild(row);
+    updateWordDecodeInput(input, wordDecodeGuessDrafts[player.player_id] || "", !canSubmit);
+    if (wordDecodeGuessList.children[index] !== row) {
+      wordDecodeGuessList.insertBefore(row, wordDecodeGuessList.children[index] || null);
+    }
+    existingRows.delete(player.player_id);
+  });
+  existingRows.forEach((row) => {
+    wordDecodeComposingInputs.delete(row.querySelector("input[data-target]"));
+    row.remove();
   });
 }
 
@@ -478,6 +526,9 @@ function isWordDecodeActionAvailable(actionType) {
   if (!currentWordDecodeView.legal_actions.includes(actionType)) {
     return false;
   }
+  if ((actionType === "submit_hints" || actionType === "submit_guesses") && wordDecodeComposingInputs.size) {
+    return false;
+  }
   if (actionType === "submit_hints") {
     const hint1 = wordDecodeHint1Input ? wordDecodeHint1Input.value.trim() : "";
     const hint2 = wordDecodeHint2Input ? wordDecodeHint2Input.value.trim() : "";
@@ -543,6 +594,8 @@ function renderWordDecodeGameState(data) {
   if (!previousView || previousView.round !== view.round) {
     resetWordDecodeDrafts();
     wordDecodeLastDraftFingerprint = "";
+  } else if (previousView.phase !== view.phase) {
+    wordDecodeComposingInputs.clear();
   }
 
   if (wordDecodePhaseLabel) {
@@ -581,16 +634,14 @@ function renderWordDecodeGameState(data) {
 
   const canSubmitHints = Array.isArray(view.legal_actions) && view.legal_actions.includes("submit_hints");
   if (wordDecodeHint1Input) {
-    wordDecodeHint1Input.disabled = !canSubmitHints;
-    wordDecodeHint1Input.value = wordDecodeHintDrafts[0] || "";
+    updateWordDecodeInput(wordDecodeHint1Input, wordDecodeHintDrafts[0] || "", !canSubmitHints);
   }
   if (wordDecodeHint2Input) {
-    wordDecodeHint2Input.disabled = !canSubmitHints;
-    wordDecodeHint2Input.value = wordDecodeHintDrafts[1] || "";
+    updateWordDecodeInput(wordDecodeHint2Input, wordDecodeHintDrafts[1] || "", !canSubmitHints);
   }
   if (wordDecodeBaseGuessInput) {
-    wordDecodeBaseGuessInput.disabled = !Array.isArray(view.legal_actions) || !view.legal_actions.includes("submit_guesses");
-    wordDecodeBaseGuessInput.value = wordDecodeBaseDraft || "";
+    const canSubmitGuesses = Array.isArray(view.legal_actions) && view.legal_actions.includes("submit_guesses");
+    updateWordDecodeInput(wordDecodeBaseGuessInput, wordDecodeBaseDraft || "", !canSubmitGuesses);
   }
 
   renderWordDecodeHintsList(view);
@@ -607,21 +658,21 @@ function renderWordDecodeGameState(data) {
 }
 
 if (wordDecodeHint1Input) {
-  wordDecodeHint1Input.addEventListener("input", () => {
+  bindWordDecodeDraftInput(wordDecodeHint1Input, () => {
     wordDecodeHintDrafts[0] = wordDecodeHint1Input.value || "";
     updateWordDecodeActionButtons();
   });
 }
 
 if (wordDecodeHint2Input) {
-  wordDecodeHint2Input.addEventListener("input", () => {
+  bindWordDecodeDraftInput(wordDecodeHint2Input, () => {
     wordDecodeHintDrafts[1] = wordDecodeHint2Input.value || "";
     updateWordDecodeActionButtons();
   });
 }
 
 if (wordDecodeBaseGuessInput) {
-  wordDecodeBaseGuessInput.addEventListener("input", () => {
+  bindWordDecodeDraftInput(wordDecodeBaseGuessInput, () => {
     wordDecodeBaseDraft = wordDecodeBaseGuessInput.value || "";
     updateWordDecodeActionButtons();
     scheduleWordDecodeGuessDraftSync();
@@ -630,6 +681,9 @@ if (wordDecodeBaseGuessInput) {
 
 if (wordDecodeSubmitHintsBtn) {
   wordDecodeSubmitHintsBtn.addEventListener("click", () => {
+    if (!isWordDecodeActionAvailable("submit_hints")) {
+      return;
+    }
     const hint1 = wordDecodeHint1Input ? wordDecodeHint1Input.value.trim() : "";
     const hint2 = wordDecodeHint2Input ? wordDecodeHint2Input.value.trim() : "";
     if (!isSingleChineseChar(hint1) || !isSingleChineseChar(hint2)) {
@@ -642,6 +696,9 @@ if (wordDecodeSubmitHintsBtn) {
 
 if (wordDecodeSubmitGuessesBtn) {
   wordDecodeSubmitGuessesBtn.addEventListener("click", () => {
+    if (!isWordDecodeActionAvailable("submit_guesses")) {
+      return;
+    }
     const baseGuess = wordDecodeBaseGuessInput ? wordDecodeBaseGuessInput.value : "";
     if (!wordDecodeGuessList) {
       return;

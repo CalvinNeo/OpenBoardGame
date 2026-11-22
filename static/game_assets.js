@@ -449,7 +449,7 @@ const GAME_ASSETS = {
   },
   "word_decode": {
     "scripts": [
-      "/static/games/word_decode.js?v=app_v4"
+      "/static/games/word_decode.js?v=app_v5"
     ],
     "styles": [],
     "panel": "wordDecodePanel",
