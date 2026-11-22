@@ -1,20 +1,20 @@
 <template data-game-target="subtextPanel" data-game-mode="contents">
-  <div class="subtext-round-strip" aria-label="Round overview">
-    <div class="subtext-round-count"><span>Round</span><strong><span id="subtextRound">-</span><span class="subtext-round-divider"> / </span><span id="subtextTotalRounds">-</span></strong></div>
-    <div><span>Stage</span><strong id="subtextPhase" data-subtext-explain="phase">-</strong></div>
-    <div class="subtext-dealer-name"><span>Dealer</span><strong id="subtextDealer" data-subtext-explain="dealer">-</strong></div>
-    <div><span>Progress</span><strong id="subtextProgress">-</strong></div>
+  <div class="subtext-overview">
+    <div class="subtext-round-strip" aria-label="Round overview">
+      <div class="subtext-round-count"><span>Round</span><strong><span id="subtextRound">-</span><span class="subtext-round-divider"> / </span><span id="subtextTotalRounds">-</span></strong></div>
+      <div><span>Stage</span><strong id="subtextPhase" data-subtext-explain="phase">-</strong></div>
+      <div class="subtext-dealer-name"><span>Dealer</span><strong id="subtextDealer" data-subtext-explain="dealer">-</strong></div>
+    </div>
+    <aside id="subtextWordCard" class="subtext-word-card hidden" data-subtext-explain="word">
+      <span data-subtext-tip="Only you can see this word. Keep it secret.">🔒 Your word</span>
+      <strong id="subtextYourWord">-</strong>
+    </aside>
   </div>
   <div id="subtextStatus" class="subtext-status" role="status" aria-live="polite">
     <span class="subtext-status-icon" aria-hidden="true">✏️</span>
     <div id="subtextStatusBody">Waiting for game state…</div>
   </div>
   <div class="subtext-workspace">
-    <aside id="subtextWordCard" class="subtext-word-card hidden" data-subtext-explain="word">
-      <span data-subtext-tip="Only you can see this word. Keep it secret.">🔒 Your word</span>
-      <strong id="subtextYourWord">-</strong>
-      <small>Draw a connection, not the answer.</small>
-    </aside>
     <section id="subtextDrawingArea" class="subtext-stage hidden" aria-label="Drawing studio">
       <div class="subtext-stage-heading"><h3>Your sketch</h3><span id="subtextDrawingCounter" class="subtext-progress-pill">0/0 ready</span></div>
       <div class="subtext-canvas-shell">
@@ -49,9 +49,9 @@
       </div>
       <details class="subtext-reveal-gallery" open><summary>Round drawings</summary><div id="subtextResultDrawings" class="subtext-result-grid"></div></details>
       <div id="subtextNextRoundRow" class="subtext-next-row"><span id="subtextReadyStatus">Ready 0/0</span><button id="subtextNextRoundBtn" class="subtext-primary-btn" type="button" data-subtext-explain="nextRound">Next Round</button></div>
-      <div id="subtextGameOverActions" class="subtext-next-row hidden"><span id="subtextWinnerText">-</span><button id="subtextPlayAgainBtn" class="subtext-primary-btn" type="button" data-subtext-explain="playAgain">Play Again</button></div>
+      <div id="subtextGameOverActions" class="subtext-next-row hidden"><div><span id="subtextWinnerText">-</span><div id="subtextPlayAgainStatus" aria-live="polite">Ready 0/0</div></div><button id="subtextPlayAgainBtn" class="subtext-primary-btn" type="button" data-subtext-explain="playAgain">Ready</button></div>
     </section>
-    <details class="subtext-scoreboard" open><summary><span>Players &amp; scores</span><span id="subtextPlayerCount" class="subtext-player-count"></span></summary><div id="subtextPlayers" class="subtext-player-grid" data-subtext-explain="players"></div></details>
+    <details class="subtext-scoreboard"><summary><span>Players &amp; scores</span><span id="subtextPlayerCount" class="subtext-player-count"></span></summary><div id="subtextPlayers" class="subtext-player-grid" data-subtext-explain="players"></div></details>
   </div>
   <div id="subtextTooltip" class="subtext-tooltip hidden" role="tooltip"></div>
   <dialog id="subtextPreviewDialog" class="subtext-preview-dialog" aria-labelledby="subtextPreviewTitle">

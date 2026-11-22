@@ -433,7 +433,7 @@ winner_ids = [pid for pid if player.score == max_score]
 
 - 最高分玩家获胜。
 - 最高分并列时共同获胜，没有额外决胜条件。
-- `Play Again` 使用相同 `word_column` 开新局，所有分数归零、题目牌重新洗牌、第一主持人重新随机，并递增 `game_index`。
+- 最终结算提供 `Ready`，沿用 `play_again` 动作登记自己的准备状态。只有所有玩家都准备后才使用相同 `word_column` 开新局，所有分数归零、题目牌重新洗牌、第一主持人重新随机，并递增 `game_index`。此前保留最终分数、冠军及画作。
 
 ## 推荐服务端状态
 
@@ -568,6 +568,8 @@ additionalProperties: false
 ### `play_again` 校验
 
 - 只能在 `game_over` 执行。
+- 玩家必须尚未准备，复用 `next_round_ready` 记录准备与 `next_round_progress` 展示进度。重复准备不改变状态。机器人在最终结算自动准备，旧存档恢复时补齐机器人准备状态，不依赖已停止的终局 Bot runner。
+- 未全员准备时只记录 Ready，不重置结算。全员准备后才执行以下重置。
 - 完整重置比分、牌堆、历史和所有当前轮秘密数据。
 - 保留合法的房间配置和玩家座位信息。
 
@@ -583,7 +585,7 @@ if phase == guessing and player has not voted:
 if phase == round_result and player is not ready:
   ["next_round"]
 
-if phase == game_over:
+if phase == game_over and player not ready:
   ["play_again"]
 ```
 
@@ -674,7 +676,7 @@ subtext:play_again
 - `drawing`：根据机器人自己的私有词生成合法的归一化轨迹。
 - `guessing`：只分析猜测阶段已经公开的主持人画和候选画，返回一个有效槽位。
 - `round_result`：自动 `next_round`。
-- `game_over`：不自动重开。
+- `game_over`：机器人自动准备，但仍等待所有真人点击 Ready，不自动重开。
 
 建议的无模型初版：
 
@@ -710,7 +712,7 @@ Round 3/8   Phase: Drawing   Dealer: Alice   ✏️ Submitted 2/4
 
 - 私有词卡置于最醒目位置，使用 `🔒 Your Word` 标识。
 - 词卡下方反复提示 `Draw a hint. No letters or numbers.`。
-- 画布固定内部比例 `4:3`，CSS 宽度为 `min(100%, 640px)`。
+- 画布固定内部比例 `4:3`，内部坐标保持 `640×480`，CSS 显示尺寸以文末最新布局记录为准，不再限制为 640px。
 - 只使用黑色画笔和统一线宽。
 - 提供 `Undo`、`Reset Canvas`、`Submit Drawing`。
 - `Submit Drawing` 在没有有效轨迹时禁用。
@@ -989,3 +991,31 @@ python -m unittest
 - 运行 `node --check static/games/subtext.js`、`node scripts/smoke_load.cjs subtext`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names` 和 `git diff --check`。UI 改动不运行游戏逻辑或全局套件。
 - 未检查项目：iOS Safari、Windows 与实体触屏/触控笔的硬件行为，以及多真人跨设备网络时序。浏览器响应式检查与指针回归不等同这些硬件验收。未运行整个跨游戏 `tests/game_assets.browser.cjs`，本游戏按需加载与刷新重连已实测。
 - 本次覆盖的布局、Help/Explain、交互与暂停遵循 `DEV_GUIDE.md`，无刻意保留的布局例外。因上述跨设备项目未实测，不宣称全平台完全验收。
+
+## 2026-11-22 绘画与选图空间优化
+
+### 布局调整
+
+- 去除固定的秘密词和玩家侧栏，游戏工作区使用全宽。秘密词移入紧凑顶部信息条，玩家与分数默认折叠到底部，展开后按列排列并独立滚动，不隐藏访问入口。
+- 轮数、阶段和主持人改为同行展示，去除重复的 Progress 区域，保留各阶段标题右侧的提交人数。压缩标题、提示、工具栏间距，保留绘画限制和既有帮助说明。
+- 绘画保留 640×480 内部坐标、4:3 比例及自由线条协议，CSS 显示上限改为随可用视口高度增长，最大 1120px。在 900px 高桌面视口实测显示约 785×588，而不是原先最多 640×480；手机仍占满面板宽度。
+- 桌面猜图不再在 1100px 以下把主持人参考图单独堆在候选区上方，1024px 保持参考图与两列候选并排，1440px 使用三列候选。手机参考图压成横向卡片，候选区在 844px 高视口实测获得 404px 高的独立滚动空间，提交按钮保持屏内可见。
+- 保留 320px 单列、390px 双列候选、Zoom 放大、猜测锁定、轮末全员确认暂停和已有 Help/Explain，不改规则、隐私、后端或机器人。只更新本游戏 HTML/CSS 资源版本及首页清单版本，保留工作区其他改动。
+
+### 验收记录
+
+- 新增 `tests/subtext.browser.cjs`，在本地 Chrome 实际创建一真人加七 Bot 房间，覆盖 320px、390px、1024px、1440px，手机高度 844px，桌面高度 900px。检查 Drawing、Secret Guess、Round Reveal，无页面横向溢出、按钮内容截断或 Help/Reconnect 换行，并保存各阶段截图到忽略目录 `tmp/subtext/`。
+- 交互覆盖玩家栏折叠、Undo、Reset Canvas、绘画确认及 Esc 取消、禁用按钮 Explain、七张候选、触摸滑动不选中、选择及状态刷新后保留列表滚动、Zoom 与 Esc、Help 中英切换和章节、轮末暂停、Next Round 与刷新重连。
+- 检查通过：`node tests/subtext_ui.cjs`、`node --check static/games/subtext.js`、`node --check tests/subtext.browser.cjs`、`node scripts/smoke_load.cjs subtext`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names`、`git diff --check`，以及指定 `PLAYWRIGHT_MODULE` 的上述浏览器回归。
+- 本次覆盖范围遵守 `DEV_GUIDE.md`，无刻意保留的布局例外。未检查 iOS Safari、Windows、实体触屏/触控笔和多真人跨设备网络时序，未重跑整局最终胜者流程或跨游戏 `tests/game_assets.browser.cjs`，因此不宣称全平台完全验收。纯 UI 改动不运行游戏逻辑或全局套件。
+
+## 2026-11-22 最终结算全员 Ready 后重开
+
+- 最后一轮结算仍停留在 `game_over`，保留最终计分表、冠军与画作。原 Play Again 按钮改为 Ready，并显示 `Ready X/N`。本人准备后按钮显示 `Ready ✓` 且禁用，玩家栏同时显示每人的 Ready/Reviewing 和 Winner，重复请求由服务端拒绝。
+- 沿用 `play_again` 协议与 `next_round_ready` 存档字段，只有全体准备后才重置比分和历史、保留 Word Set、递增 `game_index` 并从第一轮开始。保持原有人数对应轮数，八轮制下一局仍为八轮，不改变五人或六人局规则。
+- 机器人在最终计分时自动准备，旧终局存档恢复时补齐机器人准备状态。准备期间保存、刷新或重连不会丢失已准备状态，也不会提前清空结算。
+- 房间控制的 Start 在 Subtext 终局同样转为当前玩家的准备请求，不能利用上局大厅 Ready 状态绕过全员确认。显式 Reopen 房间管理功能不变。中英文 Help 与 Explain 同步说明新流程。
+- 修改文件：`app.py`、`game/subtext.py`、`static/games/subtext.js`、`static/games/subtext.html`、`static/game_assets.js`、`static/index.html`、`tests/test_subtext_game.py`、`tests/test_subtext_room.py`、`tests/subtext_ui.cjs`、`tests/subtext.browser.cjs`、本设计文档。保留前次布局改动和其他游戏的未提交改动。
+- 自动检查通过：`python3 -m unittest tests.test_subtext_game tests.test_subtext_room tests.test_room_session tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names` 共 87 项，另通过 `node tests/subtext_ui.cjs`、两份 JS 语法检查、`node scripts/smoke_load.cjs subtext` 和 `git diff --check`。房间集成测试覆盖 Start 入口、重复准备、私有状态广播、持久化恢复、终局重连和最后一人确认后的房间状态转换。
+- 浏览器在独立本地服务及临时数据目录运行 `tests/subtext.browser.cjs`，两个人类客户端加六个 Bot 实际完成八轮。确认六 Bot 自动准备、一人准备仍保留结算与赢家、刷新后仍为 `Ready 7/8`，另一人点击 Ready 后才进入 `game_index=2`、`round=1`、`total_rounds=8`，所有分数归零。
+- Chrome 检查 320px、390px、1024px、1440px 的绘画、猜图、轮末、最终结算与已准备状态，没有页面横向溢出、按钮截断或 Help/Reconnect 换行。截图位于忽略目录 `tmp/subtext/`。本次已覆盖范围符合 `DEV_GUIDE.md`，未实测 iOS Safari、Windows、实体触控及跨设备网络，不宣称全平台完全验收，未运行跨游戏完整逻辑或浏览器套件。

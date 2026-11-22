@@ -353,13 +353,13 @@ def _end_game(state: Dict) -> None:
 
 
 def _prepare_refill(state: Dict) -> None:
+    previous_starter = state["start_player"]
     _cleanup_arena(state)
     richest = max(player["coins"] for player in state["players"].values())
     candidates = [pid for pid in state["turn_order"] if state["players"][pid]["coins"] == richest]
-    state["next_starter"] = candidates[0]
-    state.update(phase="refill", current_turn=state["start_player"])
-    for player in state["players"].values():
-        player["refill_done"] = False
+    state["round"] += 1
+    _start_round(state, candidates[0])
+    state.update(phase="refill", current_turn=previous_starter)
 
 
 def _discard_action(state: Dict, pid: str, action: Dict) -> None:
@@ -382,9 +382,11 @@ def _discard_action(state: Dict, pid: str, action: Dict) -> None:
     remaining = [candidate for candidate in _clockwise(state, pid) if not state["players"][candidate]["refill_done"]]
     if remaining:
         state["current_turn"] = remaining[0]
-    else:
+    elif "next_starter" in state:
         state["round"] += 1
         _start_round(state, state.pop("next_starter"))
+    else:
+        state.update(phase="betting", current_turn=state["start_player"])
 
 
 def _apply(state: Dict, pid: str, action: Dict) -> None:

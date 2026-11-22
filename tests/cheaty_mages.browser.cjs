@@ -37,6 +37,19 @@ views['review'] = Game.get_public_view(state, 'p0')
 for pid in state['turn_order']:
     helper.act(state, pid, 'next_round')
 views['refill'] = Game.get_public_view(state, 'p0')
+views['refillWaiting'] = Game.get_public_view(state, 'p1')
+for round_number in (2, 3):
+    while state['phase'] == 'refill':
+        helper.act(state, state['current_turn'], 'discard', cards=[])
+    views[f'bettingRound{round_number}'] = Game.get_public_view(state, state['current_turn'])
+    while state['phase'] == 'betting':
+        helper.act(state, state['current_turn'], 'bet', slots=[2])
+    while state['phase'] == 'casting':
+        helper.act(state, state['current_turn'], 'pass')
+    if round_number == 2:
+        for pid in state['turn_order']:
+            helper.act(state, pid, 'next_round')
+        views['refillRound3'] = Game.get_public_view(state, state['current_turn'])
 state = helper.scene(3)
 helper.cast(state, 'amnesia', 'p1', player_id='p0')
 views['discard'] = Game.get_public_view(state, 'p0')
@@ -71,6 +84,106 @@ async function render(page, name) {
     window.scrollTo(0, 0);
   }, fixtures[name]);
   await page.keyboard.press('Escape');
+}
+
+async function verifyLiveRounds(browser) {
+  const contexts = [];
+  const pages = [];
+  try {
+    for (const width of [320, 390, 1440]) {
+      const context = await browser.newContext({ viewport: { width, height: 1000 }, hasTouch: width < 640 });
+      contexts.push(context);
+      const page = await context.newPage();
+      pages.push(page);
+      page.on('pageerror', error => errors.push(error.message));
+      await page.route('https://fonts.googleapis.com/**', route => route.abort());
+      await page.goto(base);
+      await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+    }
+    await pages[0].evaluate(() => socket.emit('room:create', { name: 'Mage round QA 0', game_type: 'cheaty_mages' }));
+    await pages[0].waitForFunction(() => roomSessionReady && isGameAssetsLoaded('cheaty_mages'));
+    const room = await pages[0].evaluate(() => roomId);
+    for (let index = 1; index < pages.length; index += 1) {
+      await pages[index].evaluate(({ room, index }) => socket.emit('room:join', {
+        room_id: room, name: `Mage round QA ${index}`,
+      }), { room, index });
+      await pages[index].waitForFunction(() => roomSessionReady && isGameAssetsLoaded('cheaty_mages'));
+    }
+    for (const page of pages) await page.evaluate(() => socket.emit('room:ready', { ready: true }));
+    await pages[0].waitForFunction(() => !document.getElementById('startBtn').disabled);
+    await pages[0].locator('#startBtn').click();
+    for (const page of pages) {
+      await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'betting');
+      await page.evaluate(() => setRoomControlsCollapsed(true));
+    }
+    const pageByPlayer = new Map();
+    for (const page of pages) pageByPlayer.set(await page.evaluate(() => lastGameStatePayload.view.you), page);
+    let previousJudge = null;
+    for (const roundNumber of [1, 2, 3]) {
+      for (const page of pages) {
+        await page.waitForFunction(round => lastGameStatePayload?.view?.round === round &&
+          lastGameStatePayload.view.phase === 'betting', roundNumber);
+        const view = await page.evaluate(() => lastGameStatePayload.view);
+        assert.notEqual(view.judge.id, previousJudge);
+        assert.deepEqual(view.your_bets, []);
+        assert.equal(view.players.every(player => !player.bet_ready && !player.passed), true);
+      }
+      for (const phase of ['betting', 'casting']) {
+        for (let index = 0; index < pages.length; index += 1) {
+          const view = await pages[0].evaluate(() => lastGameStatePayload.view);
+          assert.equal(view.phase, phase);
+          const actor = pageByPlayer.get(view.current_turn);
+          await actor.waitForFunction(turn => lastGameStatePayload?.view?.turn === turn, view.turn);
+          if (phase === 'betting') {
+            await actor.locator(`[data-cm-fighter="${roundNumber}"]`).click();
+            await actor.locator('[data-cm-action="bet"]').click();
+          } else {
+            await actor.locator('[data-cm-action="pass"]').click();
+          }
+          for (const page of pages) await page.waitForFunction(turn => lastGameStatePayload?.view?.turn > turn, view.turn);
+        }
+      }
+      for (const page of pages) await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'round_end');
+      previousJudge = await pages[0].evaluate(() => lastGameStatePayload.view.judge.id);
+      for (let index = 0; index < pages.length; index += 1) {
+        await pages[index].locator('[data-cm-action="next_round"]').click();
+        if (index < pages.length - 1) {
+          await pages[index].waitForFunction(() => lastGameStatePayload.view.next_ready.includes(lastGameStatePayload.view.you));
+          assert.equal(await pages[index].evaluate(() => lastGameStatePayload.view.phase), 'round_end');
+        }
+      }
+      if (roundNumber === 3) {
+        for (const page of pages) await page.waitForFunction(() => lastGameStatePayload?.view?.game_over);
+        continue;
+      }
+      for (const page of pages) {
+        await page.waitForFunction(() => lastGameStatePayload?.view?.phase === 'refill');
+        const view = await page.evaluate(() => lastGameStatePayload.view);
+        assert.equal(view.round, roundNumber + 1);
+        assert.notEqual(view.judge.id, previousJudge);
+        assert.equal(view.players.every(player => !player.bet_ready && !player.passed), true);
+      }
+      if (roundNumber === 1) {
+        const actorId = await pages[0].evaluate(() => lastGameStatePayload.view.current_turn);
+        const actor = pageByPlayer.get(actorId);
+        await actor.reload();
+        await actor.waitForFunction(() => roomSessionReady && isGameAssetsLoaded('cheaty_mages') &&
+          lastGameStatePayload?.view?.phase === 'refill');
+        assert.equal(await actor.evaluate(() => lastGameStatePayload.view.round), 2);
+        await actor.evaluate(() => setRoomControlsCollapsed(true));
+      }
+      for (let index = 0; index < pages.length; index += 1) {
+        const view = await pages[0].evaluate(() => lastGameStatePayload.view);
+        const actor = pageByPlayer.get(view.current_turn);
+        await actor.waitForFunction(turn => lastGameStatePayload?.view?.turn === turn, view.turn);
+        await actor.locator('[data-cm-action="discard"]').click();
+        for (const page of pages) await page.waitForFunction(turn => lastGameStatePayload?.view?.turn > turn, view.turn);
+      }
+    }
+  } finally {
+    for (const page of pages) await page.evaluate(() => socket.emit('room:leave', {})).catch(() => {});
+    for (const context of contexts) await context.close();
+  }
 }
 
 async function bounds(page, label) {
@@ -127,7 +240,7 @@ async function bounds(page, label) {
           assert(result.arenaHeight <= 270, 'Empty mobile arena should fit in 270px');
           assert(result.handTop < 660, 'Mobile hand should be near the arena');
         }
-        if (['betting6', 'casting', 'spells', 'review'].includes(name)) {
+        if (['betting6', 'casting', 'spells', 'review', 'refill', 'refillWaiting', 'bettingRound2', 'bettingRound3'].includes(name)) {
           await page.screenshot({ path: `${output}/${width}-${name}.png`, fullPage: true });
         }
       }
@@ -189,8 +302,28 @@ async function bounds(page, label) {
     await page.locator('[data-cm-action="discard"]').tap();
     assert.equal(await page.evaluate(() => cheatyMagesTestActions.at(-1).cards.length), 1);
     await render(page, 'refill');
+    assert.match(await page.locator('.cm-status').innerText(), /Your turn · Refresh hand, then bet again/);
+    assert.notEqual(fixtures.refill.judge.id, fixtures.review.judge.id);
+    assert.equal(fixtures.refill.round, 2);
+    assert.equal(await page.locator('.cm-fighter.is-bet').count(), 0);
+    assert.equal(await page.locator('.cm-player').filter({ hasText: 'Pass' }).count(), 0);
+    assert.equal(await page.locator('.cm-hand-area').evaluate(area =>
+      area.querySelector('.cm-bet-bar').compareDocumentPosition(area.querySelector('.cm-hand')) & Node.DOCUMENT_POSITION_FOLLOWING), 4);
     await page.locator('[data-cm-action="discard"]').tap();
     assert.deepEqual(await page.evaluate(() => cheatyMagesTestActions.at(-1).cards), []);
+    await render(page, 'refillWaiting');
+    assert.match(await page.locator('.cm-status').innerText(), /Waiting for .+ to refresh hand/);
+    assert.equal(await page.locator('[data-cm-action="discard"]').count(), 0);
+    for (const roundNumber of [2, 3]) {
+      await render(page, `bettingRound${roundNumber}`);
+      assert.match(await page.locator('.cm-status').innerText(), /Your turn · Place your secret bet/);
+      assert.equal(await page.locator('.cm-fighter.is-bet').count(), 0);
+      assert.equal(await page.locator('[data-cm-action="bet"]').isDisabled(), true);
+      await page.locator('[data-cm-fighter="2"]').tap();
+      await page.locator('[data-cm-action="bet"]').tap();
+      assert.deepEqual(await page.evaluate(() => cheatyMagesTestActions.at(-1)),
+        fixtures[`bettingRound${roundNumber}`].legal_moves.find(move => move.type === 'bet' && move.slots.length === 1 && move.slots[0] === 2));
+    }
     await render(page, 'review');
     await page.locator('[data-cm-action="next_round"]').tap();
     assert.equal(await page.evaluate(() => cheatyMagesTestActions.at(-1).type), 'next_round');
@@ -239,9 +372,11 @@ async function bounds(page, label) {
     await render(page, 'casting');
     await page.locator('.cm-fighter-stats [data-cm-tip]').first().hover();
     assert.equal(await page.locator('#cheatyMagesTooltip').isVisible(), true);
+    await verifyLiveRounds(browser);
     assert.deepEqual(errors, []);
     fs.writeFileSync(`${output}/metrics.json`, JSON.stringify(metrics, null, 2));
-    console.log(JSON.stringify({ scenes: metrics.length, errors, screenshots: output, metrics }, null, 2));
+    console.log(JSON.stringify({ scenes: metrics.length, liveRounds: 3, reconnectedDuringRefill: true,
+      errors, screenshots: output, metrics }, null, 2));
   } catch (error) {
     await page.screenshot({ path: `${output}/failure.png`, fullPage: true });
     throw error;

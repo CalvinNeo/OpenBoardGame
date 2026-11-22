@@ -13,7 +13,7 @@
 
 ## 后端与信息边界
 
-新增 `game/cheaty_mages.py` 和 `game/cheaty_mages_data.py`。实现标准 `init_game / get_legal_actions / apply_action / get_public_view / bot_move / serialize / deserialize` 接口，配置默认为基础规则。阶段为 `betting → casting → round_end → betting / game_over`；需要指定玩家弃牌时暂入 `discarding`，补牌超上限时使用 `refill`。
+新增 `game/cheaty_mages.py` 和 `game/cheaty_mages_data.py`。实现标准 `init_game / get_legal_actions / apply_action / get_public_view / bot_move / serialize / deserialize` 接口，配置默认为基础规则。首轮从 `betting` 开始，之后按 `betting → casting → round_end → refill → betting` 推进，最终轮确认后从 `round_end` 直接进入 `game_over`；需要指定玩家弃牌时暂入 `discarding`。
 
 - 内部保存玩家手牌、秘密押注、窥探知识、咒语牌库／弃牌、裁判牌库、斗士、法术实例及附件、轮数／行动序号、确认名单、公开日志与结算快照。每张牌有稳定独立 ID。
 - 公共视图固定字段：`game_id, you, config, phase, round, turn, total_rounds, current_turn, start_player, game_over, winner, next_ready, legal_actions, legal_moves, players, fighters, judge, effects, your_hand, your_bets, discard, round_summary, final_results, log, deck_count`。`players` 包含 ID、姓名、座位、机器人标记、金币、手牌数、公开押注张数、已押注／已放弃状态，未揭示的他人押注号码为 null。`fighters` 包含 `slot`(1–5)、斗士属性、`spells`、已知强度与魔力。暗法术只下发匿名槽位、施放者和公开附件，施放者或已窥探者才见牌面；轮末全部揭示。未揭示暗牌不参与公共精确总数。旁观者无手牌、押注或窥探内容。
@@ -66,3 +66,17 @@
 - 人工复核 320／390px 手机和 1024／1440px 桌面截图，包含六人押注、施法、暗牌、选中目标、长姓名结算和 Help。截图与测量保存在忽略目录 `tmp/cheaty-mages-ui/`，不进入补丁。
 - `node --check`（游戏脚本、资源清单、浏览器检查脚本）、`node scripts/smoke_load.cjs cheaty_mages`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`（13 项）及 `git diff --check` 通过。UI 改动不运行游戏逻辑或全量测试。
 - 本次按 `DEV_GUIDE.md` 的相关布局与交互要求验收，没有刻意保留的游戏专属例外。手机采用 Chrome 触屏模拟，未验证 iOS Safari／Windows 真机，也未重跑多人完整对局、真实断线重连及全部特殊牌的端到端流程，不宣称覆盖这些未检查项目。
+
+## 2026-11-22 轮间状态与重新押注
+
+- 修复轮间补牌阶段仍展示上一轮裁判、押注和 Pass 状态的问题。原实现直到最后一人补牌后才初始化新轮，导致点击 Next Round 后看起来没有重抽裁判，也没有重新押注。全员确认非最终轮结果后，立即递增轮号、重洗五名斗士、抽新裁判，并清空押注、Pass、窥探知识和确认名单。
+- 保留所有席位确认结果的暂停。补牌仍按上一轮起始玩家顺时针进行，全部补牌结束后由新轮金币最多者开始秘密押注；所有人重新押注后才能施法。最终轮确认后直接结束，不再补牌或抽裁判。旧版处于补牌中的存档沿用原有 `next_starter` 完成下一轮初始化，避免重复递增轮号或丢失存档。
+- 补牌状态明确显示轮到谁，并提示补牌后重新押注。将弃牌／Keep All & Draw 确认按钮移到手牌前方，避免手机端需要滚过整副手牌才看到必需操作。Help 中英说明同步更新，没有新增规则说明面板、弹窗或商业素材。
+- 增加第二／第三轮裁判变化、清空旧注、全员重新押注、旧轮请求拒绝、组件守恒、补牌存档恢复与逐接收者广播回归。浏览器检查增加轮间等待、第二／第三轮重新押注与操作按钮顺序。
+
+### 验收记录
+
+- `python3 -m unittest tests.test_cheaty_mages tests.test_cheaty_mages_room`：54 项通过。`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`：13 项通过。游戏脚本、资源清单和浏览器检查脚本的 `node --check`，以及 `node scripts/smoke_load.cjs cheaty_mages`、`git diff --check` 均通过。
+- Chrome 检查 320／390／1024／1440px 共 72 个布局／选中场景，补牌按钮、第二／第三轮押注、等待状态及原有 Help／Explain／Escape／触屏交互通过，没有页面横向溢出或脚本错误。人工复核四种宽度的新轮补牌与押注截图。
+- 使用独立端口和临时存档目录，通过三个真实浏览器会话完成三轮对局：实际点击押注、Pass、全员 Next Round 和 Keep All & Draw，核对每轮新裁判、旧押注／Pass 清空、补牌后强制全员重新押注、最后一轮确认后结束。第二轮补牌中刷新当前玩家页面，重连后继续完成三轮。现有服务和本地房间存档未修改。
+- 本次按 `DEV_GUIDE.md` 相关布局、轮末暂停、Help／Explain 与交互要求验收，无新增专属例外。手机为 Chrome 触屏模拟，未验证 iOS Safari／Windows 真机或所有特殊法术的多人端到端组合；不宣称覆盖这些项目。截图和测量保存在忽略目录 `tmp/cheaty-mages-ui/`。

@@ -227,7 +227,7 @@ const GAME_ASSETS = {
   },
   "cheaty_mages": {
     "scripts": [
-      "/static/games/cheaty_mages.js?v=4"
+      "/static/games/cheaty_mages.js?v=5"
     ],
     "styles": [
       "/static/cheaty_mages.css?v=3"
@@ -1117,13 +1117,13 @@ const GAME_ASSETS = {
   "subtext": {
     "panelTitle": "Subtext",
     "scripts": [
-      "/static/games/subtext.js?v=app_v2"
+      "/static/games/subtext.js?v=app_v3"
     ],
     "styles": [],
     "panel": "subtextPanel",
     "header": "showSubtextHeaderActions",
-    "markup": "/static/games/subtext.html?v=2",
-    "styleFragments": "/static/games/subtext.css?v=2"
+    "markup": "/static/games/subtext.html?v=4",
+    "styleFragments": "/static/games/subtext.css?v=3"
   },
   "tucano": {
     "panelTitle": "🌴 Tucano",
@@ -1303,8 +1303,8 @@ const GAME_ASSETS = {
     "header": "showThatsLifeHeaderActions"
   },
   "machi_koro": {
-    "scripts": ["/static/games/machi_koro.js?v=1"],
-    "styles": ["/static/games/machi_koro.css?v=1"],
+    "scripts": ["/static/games/machi_koro.js?v=2"],
+    "styles": ["/static/games/machi_koro.css?v=2"],
     "markup": "/static/games/machi_koro.html?v=1",
     "panel": "machiKoroPanel",
     "panelTitle": "🎲 骰子街",

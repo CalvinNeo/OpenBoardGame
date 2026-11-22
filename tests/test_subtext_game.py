@@ -1,3 +1,4 @@
+import copy
 import json
 import re
 import unittest
@@ -272,17 +273,71 @@ class SubtextGameTests(unittest.TestCase):
         self.assertTrue(self.state["game_over"])
         self.assertTrue(self.state["winner_ids"])
         previous_index = self.state["game_index"]
+        final_scores = copy.deepcopy(self.state["players"])
+        final_summary = copy.deepcopy(self.state["last_round_summary"])
+        final_winners = list(self.state["winner_ids"])
+        final_history = copy.deepcopy(self.state["round_history"])
 
-        _, error = SubtextGame.apply_action(
-            self.state,
-            self.state["turn_order"][0],
-            {"type": "play_again"},
-        )
-        self.assertIsNone(error)
+        for index, player_id in enumerate(self.state["turn_order"]):
+            events, error = SubtextGame.apply_action(self.state, player_id, {"type": "play_again"})
+            self.assertIsNone(error)
+            self.assertEqual(events[0]["type"], "subtext:play_again_ready")
+            if index == len(self.state["turn_order"]) - 1:
+                self.assertEqual(events[-1]["type"], "subtext:game_restarted")
+                break
+            self.assertEqual(self.state["phase"], "game_over")
+            self.assertTrue(self.state["game_over"])
+            self.assertEqual(self.state["game_index"], previous_index)
+            self.assertEqual(self.state["players"], final_scores)
+            self.assertEqual(self.state["last_round_summary"], final_summary)
+            self.assertEqual(self.state["winner_ids"], final_winners)
+            self.assertEqual(self.state["round_history"], final_history)
+            view = SubtextGame.get_public_view(self.state, player_id)
+            self.assertEqual(view["next_round_progress"], {"done": index + 1, "total": 4})
+            self.assertNotIn("play_again", view["legal_actions"])
+            self.assertTrue(next(player for player in view["players"] if player["player_id"] == player_id)["next_round_ready"])
+            snapshot = copy.deepcopy(self.state)
+            _, error = SubtextGame.apply_action(self.state, player_id, {"type": "play_again"})
+            self.assertEqual(error, "invalid action")
+            self.assertEqual(self.state, snapshot)
+            self.state = SubtextGame.deserialize(json.loads(json.dumps(SubtextGame.serialize(self.state))))
+            self.assertEqual(self.state, snapshot)
         self.assertEqual(self.state["game_index"], previous_index + 1)
         self.assertEqual(self.state["phase"], "drawing")
+        self.assertFalse(self.state["game_over"])
+        self.assertEqual(self.state["round"], 1)
+        self.assertEqual(self.state["total_rounds"], 8)
+        self.assertEqual(self.state["config"]["word_column"], 1)
         self.assertTrue(all(player["score"] == 0 for player in self.state["players"].values()))
         self.assertEqual(self.state["round_history"], [])
+        self.assertEqual(self.state["next_round_ready"], [])
+        self.assertEqual(self.state["winner_ids"], [])
+
+    def test_finished_game_bots_ready_automatically_but_wait_for_all_humans(self):
+        players = make_players(4)
+        players[-1]["is_bot"] = True
+        self.state = SubtextGame.init_game({"word_column": 3, "seed": "ready-bot"}, players)
+        self.state["round"] = self.state["total_rounds"]
+        self.submit_all_drawings()
+        partner_slot = self.state["slot_by_player"][self.state["partner_id"]]
+        self.submit_votes({player_id: partner_slot for player_id in self.state["turn_order"]})
+        self.assertEqual(self.state["next_round_ready"], ["p4"])
+        self.assertIsNone(SubtextGame.bot_move(self.state, "p4"))
+        self.assertEqual(SubtextGame.get_legal_actions(self.state, "p4"), [])
+        for player_id in ("p1", "p2"):
+            _, error = SubtextGame.apply_action(self.state, player_id, {"type": "play_again"})
+            self.assertIsNone(error)
+            self.assertEqual(self.state["phase"], "game_over")
+        legacy = copy.deepcopy(self.state)
+        legacy["next_round_ready"].remove("p4")
+        restored = SubtextGame.deserialize(json.loads(json.dumps(legacy)))
+        self.assertEqual(set(restored["next_round_ready"]), {"p1", "p2", "p4"})
+        self.assertEqual(SubtextGame.get_public_view(restored, "p3")["next_round_progress"], {"done": 3, "total": 4})
+        _, error = SubtextGame.apply_action(restored, "p3", {"type": "play_again"})
+        self.assertIsNone(error)
+        self.assertEqual(restored["phase"], "drawing")
+        self.assertEqual(restored["game_index"], 2)
+        self.assertEqual(restored["config"]["word_column"], 3)
 
     def test_seed_reproduces_dealer_partner_and_word_assignments(self):
         repeated = SubtextGame.init_game(

@@ -103,8 +103,7 @@ class CheatyMagesTest(unittest.TestCase):
         fighter_ids += state["fighter_deck"] + state["fighter_discard"]
         self.assertEqual(Counter(fighter_ids), Counter(FIGHTERS.keys()))
         judges = [state["judge"]["id"]] + state["judge_deck"] + state["judge_discard"]
-        # During refill the outgoing judge is recorded until the next one is drawn.
-        if state["phase"] == "refill":
+        if state["phase"] == "refill" and "next_starter" in state:
             judges.remove(state["judge"]["id"])
         self.assertEqual(Counter(judges), Counter(JUDGES.keys()))
 
@@ -595,6 +594,63 @@ class CheatyMagesTest(unittest.TestCase):
         while state["phase"] == "refill":
             self.act(state, state["current_turn"], "discard", cards=[])
         self.assertEqual((state["round"], state["total_rounds"], state["phase"]), (2, 4, "betting"))
+        self.assert_conserved(state)
+
+    def test_new_round_refreshes_judge_and_requires_fresh_bets_after_refill(self):
+        state = CheatyMagesGame.init_game({}, players())
+        old_bets = []
+        while state["phase"] == "betting":
+            actor = state["current_turn"]
+            old_bets.append((actor, self.act(state, actor, "bet", slots=[1])))
+        for round_number in (2, 3):
+            old_judge = state["judge"]["id"]
+            while state["phase"] == "casting":
+                self.act(state, state["current_turn"], "pass")
+            summary = copy.deepcopy(state["round_summary"])
+            for actor in state["turn_order"][:-1]:
+                self.act(state, actor, "next_round")
+                self.assertEqual(state["round_summary"], summary)
+                self.assertEqual(state["judge"]["id"], old_judge)
+            self.act(state, state["turn_order"][-1], "next_round")
+            self.assertEqual((state["round"], state["phase"]), (round_number, "refill"))
+            self.assertNotEqual(state["judge"]["id"], old_judge)
+            self.assertIn(old_judge, state["judge_discard"])
+            self.assertIsNone(state["round_summary"])
+            self.assertEqual(state["next_ready"], [])
+            self.assertTrue(all(player["bets"] is None and not player["passed"] and not player["known"]
+                                for player in state["players"].values()))
+            self.assert_conserved(state)
+            judge = copy.deepcopy(state["judge"])
+            fighters = copy.deepcopy(state["fighters"])
+            for actor in state["turn_order"]:
+                self.assertNotIn("bet", CheatyMagesGame.get_legal_actions(state, actor))
+            while state["phase"] == "refill":
+                self.act(state, state["current_turn"], "discard", cards=[])
+                self.assert_conserved(state)
+            self.assertEqual(state["phase"], "betting")
+            self.assertEqual(state["judge"], judge)
+            self.assertEqual(state["fighters"], fighters)
+            for actor, action in old_bets:
+                self.assert_rejected(state, actor, action)
+            old_bets = []
+            for index in range(len(state["players"])):
+                actor = state["current_turn"]
+                view = CheatyMagesGame.get_public_view(state, actor)
+                self.assertEqual(view["your_bets"], [])
+                old_bets.append((actor, self.act(state, actor, "bet", slots=[2])))
+                self.assertEqual(state["phase"], "casting" if index == len(state["players"]) - 1 else "betting")
+
+    def test_legacy_refill_save_still_starts_next_round_and_clears_bets(self):
+        state = self.scene()
+        old_judge = state["judge"]["id"]
+        state["judge_discard"].append(old_judge)
+        state.update(phase="refill", next_starter="p1")
+        state = CheatyMagesGame.deserialize(CheatyMagesGame.serialize(state))
+        while state["phase"] == "refill":
+            self.act(state, state["current_turn"], "discard", cards=[])
+        self.assertEqual((state["round"], state["phase"], state["current_turn"]), (2, "betting", "p1"))
+        self.assertNotEqual(state["judge"]["id"], old_judge)
+        self.assertTrue(all(player["bets"] is None for player in state["players"].values()))
         self.assert_conserved(state)
 
     def test_refill_uses_discard_before_draw_caps_and_richest_next_starter(self):

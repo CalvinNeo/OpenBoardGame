@@ -269,6 +269,7 @@ class CheatyMagesRoomTests(unittest.IsolatedAsyncioTestCase):
         })
         self.assertNotEqual(room.game_state["phase"], "round_end")
         self.assertEqual(room.game_state["phase"], "refill")
+        self.assertEqual(room.game_state["round"], round_number + 1)
         for _ in room.players:
             player = self.acting_player(room)
             await app.on_game_action(player.socket_id, {
@@ -277,6 +278,50 @@ class CheatyMagesRoomTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.sleep(0)
         self.assertEqual(room.game_state["phase"], "betting")
         self.assertEqual(room.game_state["round"], round_number + 1)
+
+    async def test_second_and_third_round_broadcast_new_judge_and_require_new_bets(self):
+        room = await self.make_room()
+        await self.finish_first_contest(room)
+        for round_number in (2, 3):
+            old_judge = room.game_state["judge"]["id"]
+            for player in room.players:
+                await app.on_game_action(player.socket_id, {
+                    "action": self.legal_move(room, player.player_id, "next_round"),
+                })
+                await asyncio.sleep(0)
+            self.assertEqual((room.game_state["round"], room.game_state["phase"]), (round_number, "refill"))
+            self.assertNotEqual(room.game_state["judge"]["id"], old_judge)
+            room.game_state = Game.deserialize(Game.serialize(room.game_state))
+            while room.game_state["phase"] == "refill":
+                player = self.acting_player(room)
+                action = next(move for move in Game.get_public_view(room.game_state, player.player_id)["legal_moves"]
+                              if move["type"] == "discard" and not move["cards"])
+                app.sio.emits.clear()
+                await app.on_game_action(player.socket_id, {"action": action})
+                await asyncio.sleep(0)
+            updates = self.state_updates()
+            self.assertEqual(len(updates), len(room.players))
+            for item in updates:
+                view = item["payload"]["view"]
+                self.assertEqual((view["round"], view["phase"]), (round_number, "betting"))
+                self.assertNotEqual(view["judge"]["id"], old_judge)
+                self.assertEqual(view["your_bets"], [])
+                self.assertTrue(all(not player["bet_ready"] and not player["passed"] for player in view["players"]))
+                self.assertEqual(view["legal_actions"], ["bet"] if view["you"] == view["current_turn"] else [])
+            for index in range(len(room.players)):
+                player = self.acting_player(room)
+                await app.on_game_action(player.socket_id, {
+                    "action": self.legal_move(room, player.player_id, "bet"),
+                })
+                await asyncio.sleep(0)
+                self.assertEqual(room.game_state["phase"], "casting" if index == len(room.players) - 1 else "betting")
+            while room.game_state["phase"] == "casting":
+                player = self.acting_player(room)
+                await app.on_game_action(player.socket_id, {
+                    "action": self.legal_move(room, player.player_id, "pass"),
+                })
+                await asyncio.sleep(0)
+            self.assertEqual(room.game_state["phase"], "round_end")
 
     async def test_live_save_download_and_cold_restore_preserve_state(self):
         room = await self.make_room()

@@ -63,12 +63,24 @@ const output = 'tmp/machi_koro/qa';
           const [left, right] = footer.children;
           return left.getBoundingClientRect().right > right.getBoundingClientRect().left - 2;
         }).map(footer => footer.textContent);
-        return { width: innerWidth, scroll: document.documentElement.scrollWidth, left: panel.left, right: panel.right, controls, collisions };
+        return { width: innerWidth, scroll: document.documentElement.scrollWidth, left: panel.left, right: panel.right, controls, collisions,
+          diceHeight: document.querySelector('.mk-dice-row').getBoundingClientRect().height,
+          landmarkHeight: document.getElementById('machiKoroLandmarks').getBoundingClientRect().height,
+          filterHeight: document.getElementById('machiKoroFilters').getBoundingClientRect().height,
+          cardHeight: document.querySelector('.mk-card').getBoundingClientRect().height };
       });
       assert(layout.scroll <= width + 1, `Page overflow: ${JSON.stringify(layout)}`);
       assert(layout.left >= 0 && layout.right <= width + 1, `Panel overflow at ${width}`);
       assert.deepEqual(layout.controls, [], `Clipped controls at ${width}`);
       assert.deepEqual(layout.collisions, [], `Card labels overlap at ${width}`);
+      assert(layout.diceHeight <= 48, `Roll toolbar is too tall at ${width}: ${layout.diceHeight}`);
+      assert(await page.locator('#machiKoroDice').isHidden(), 'No placeholder die before rolling');
+      if (width < 500) {
+        assert(layout.landmarkHeight <= 105, `Landmarks are too tall at ${width}: ${layout.landmarkHeight}`);
+        assert(layout.cardHeight <= 110, `Market cards are too tall at ${width}: ${layout.cardHeight}`);
+        assert(layout.filterHeight <= 34, `Market filters should fit one row at ${width}`);
+        console.log(`Compact ${width}px: roll ${layout.diceHeight}px, landmarks ${layout.landmarkHeight}px, card ${layout.cardHeight}px.`);
+      }
       await page.screenshot({ path: `${output}/machi-koro-${width}.png`, fullPage: true });
     }
     await page.setViewportSize({ width: 390, height: 844 });
@@ -89,14 +101,14 @@ const output = 'tmp/machi_koro/qa';
     await page.locator('.obg-explain-dialog[open]').waitFor();
     assert.equal(await page.evaluate(() => lastGameStatePayload.view.phase), 'roll');
     await page.keyboard.press('Escape');
-    await page.locator('#machiKoroDice').tap();
-    await page.locator('#machiKoroTooltip').waitFor({ state: 'visible' });
-    await page.waitForTimeout(3100);
-    assert(await page.locator('#machiKoroTooltip').isHidden());
     await page.locator('#machiKoroTurnButtons button').first().click();
     await page.waitForFunction(() => lastGameStatePayload.view.phase !== 'roll');
     await resolveIncome(page);
     assert.equal(await page.evaluate(() => lastGameStatePayload.view.phase), 'build');
+    await page.locator('#machiKoroDice').tap();
+    await page.locator('#machiKoroTooltip').waitFor({ state: 'visible' });
+    await page.waitForTimeout(3100);
+    assert(await page.locator('#machiKoroTooltip').isHidden());
     await page.setViewportSize({ width: 320, height: 844 });
     await page.locator('#machiKoroMarketGrid').scrollIntoViewIfNeeded();
     const marketBounds = await page.locator('#machiKoroMarketGrid').boundingBox();
@@ -174,8 +186,63 @@ const output = 'tmp/machi_koro/qa';
     await page.keyboard.press('Escape');
     await page.locator('[data-mk-landmark="harbor"]').click();
     assert.equal(await page.locator('.mk-landmark .mk-confirm').count(), 1);
+    for (const width of [320, 390, 1024, 1440]) {
+      await page.setViewportSize({ width, height: width < 500 ? 844 : 1000 });
+      const confirmation = await page.locator('.mk-landmark .mk-confirm').evaluate(overlay => {
+        const bounds = overlay.getBoundingClientRect();
+        const buttons = [...overlay.querySelectorAll('button')].map(button => button.getBoundingClientRect());
+        return {
+          clipped: [...overlay.querySelectorAll('button, strong')].some(node => node.scrollWidth > node.clientWidth + 1 || node.scrollHeight > node.clientHeight + 1),
+          contained: buttons.every(button => button.left >= bounds.left && button.right <= bounds.right && button.top >= bounds.top && button.bottom <= bounds.bottom),
+          overlap: buttons[0].right > buttons[1].left,
+          bounds: bounds.toJSON(), buttons: buttons.map(bounds => bounds.toJSON())
+        };
+      });
+      assert(!confirmation.clipped && confirmation.contained && !confirmation.overlap, `Landmark confirmation clipped at ${width}: ${JSON.stringify(confirmation)}`);
+    }
     await page.locator('#machiKoroRound').click();
     assert.equal(await page.locator('.mk-confirm').count(), 0, 'Blank space cancels the selection');
+    for (const phase of ['roll', 'reroll', 'harbor', 'invest']) {
+      const payload = structuredClone(snapshot);
+      payload.view.current_turn = payload.view.you;
+      payload.view.phase = phase;
+      payload.view.legal_actions = { roll: ['roll'], reroll: ['reroll', 'keep'], harbor: ['harbor'], invest: ['invest'] }[phase];
+      payload.view.dice = phase === 'roll' ? [] : [5, 6];
+      payload.view.total = phase === 'roll' ? null : 11;
+      payload.view.players.find(player => player.player_id === payload.view.you).landmarks = ['train_station', 'radio_tower', 'harbor'];
+      await page.evaluate(payload => renderMachiKoroGameState(payload), payload);
+      for (const width of [320, 390, 1024, 1440]) {
+        await page.setViewportSize({ width, height: width < 500 ? 844 : 1000 });
+        await page.locator('.mk-dice-row').scrollIntoViewIfNeeded();
+        const toolbar = await page.locator('.mk-dice-row').evaluate(element => ({
+          height: element.getBoundingClientRect().height,
+          overflow: element.scrollWidth > element.clientWidth + 1,
+          clipped: [...element.querySelectorAll('button')].some(button => button.scrollWidth > button.clientWidth + 1 || button.scrollHeight > button.clientHeight + 1)
+        }));
+        assert(toolbar.height <= 48, `${phase} toolbar too tall at ${width}: ${JSON.stringify(toolbar)}`);
+        assert(!toolbar.overflow && !toolbar.clipped, `${phase} toolbar clipped at ${width}`);
+        await page.screenshot({ path: `${output}/${phase}-${width}.png`, fullPage: true });
+      }
+    }
+    await page.evaluate(payload => {
+      payload.view.current_turn = payload.view.players.find(player => player.player_id !== payload.view.you).player_id;
+      payload.view.phase = 'reroll';
+      payload.view.legal_actions = [];
+      payload.view.dice = [5, 6];
+      payload.view.total = 11;
+      renderMachiKoroGameState(payload);
+    }, structuredClone(snapshot));
+    assert(await page.locator('#machiKoroTurnButtons').isHidden(), 'No disabled action row on another player\'s turn');
+    assert(await page.locator('#machiKoroMessage').innerText().then(text => text.startsWith('Waiting for')));
+    const crowded = structuredClone(snapshot);
+    for (let index = crowded.view.players.length; index < 5; index += 1) {
+      crowded.view.players.push({ ...structuredClone(crowded.view.players[0]), player_id: `layout-${index}`, name: `A very long mayor name ${index}`, coins: 123, investment: 123 });
+    }
+    await page.evaluate(payload => renderMachiKoroGameState(payload), crowded);
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Five-city overflow at ${width}`);
+    }
     await page.evaluate(payload => renderMachiKoroGameState(payload), snapshot);
     const botPage = await newPage();
     await botPage.evaluate(() => socket.emit('room:create', { name: 'Bot QA', game_type: 'machi_koro', config: { seed: 9 } }));
@@ -196,7 +263,7 @@ const output = 'tmp/machi_koro/qa';
     await botPage.locator('#machiKoroSummary button').click();
     await botPage.waitForFunction(() => lastGameStatePayload.view.round_number === 2);
     assert.deepEqual(errors, []);
-    console.log('Machi Koro browser QA passed: 320/390/1024/1440, Help languages/tabs/Escape, disabled Explain, tooltip timeout, buy/cancel, two-player round pause, reload/reconnect, city inspection, trade selectors, touch scrolling without selection, preserved scroll, local landmark confirmation, blank cancellation, bot turns, ten-type variable market.');
+    console.log('Machi Koro browser QA passed: 320/390/1024/1440, compact roll/reroll/harbor/invest toolbars, mobile card/landmark heights, five-city layout, Help languages/tabs/Escape, disabled Explain, tooltip timeout, buy/cancel, two-player round pause, reload/reconnect, city inspection, trade selectors, touch scrolling without selection, preserved scroll, local landmark confirmation, blank cancellation, bot turns, ten-type variable market.');
   } finally {
     await Promise.all(contexts.map(context => context.close()));
     await browser.close();

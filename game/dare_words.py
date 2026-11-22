@@ -4,6 +4,7 @@ import copy
 import random
 import secrets
 import unicodedata
+from collections import Counter
 from typing import Dict, List, Optional, Tuple
 
 from jsonschema import Draft7Validator
@@ -37,6 +38,29 @@ SHORT_DECK_CHARACTERS: Tuple[str, ...] = (
     "人", "中", "里", "下", "猫", "狗", "猪", "鸡", "牛", "羊", "马", "鸟",
     "花", "草", "树", "果", "米", "饭", "菜", "肉", "鱼", "车", "门", "家",
     "国", "城", "路", "书", "日", "月", "风", "火", "水", "山", "太", "很",
+)
+
+EXTRA_DECK_CHARACTERS: Tuple[str, ...] = tuple(
+    "他她它们这那个些谁哪"
+    "来去看听说读写想做玩"
+    "买卖拿放开关坐站走到"
+    "回过给让把被能可就还"
+    "吗呢吧啊着得地和与或"
+    "又再才只最真更多高长"
+    "新旧快慢冷热红黄蓝绿"
+    "白黑金银光电雪冰海河"
+    "湖江石土沙竹叶林森木"
+    "春夏秋冬早晚年时分秒"
+    "今明昨午夜空阳亮温暖"
+    "手脚头眼耳口鼻牙脸发"
+    "身体面皮肚背足指血骨"
+    "哥姐弟妹爷奶儿子朋友"
+    "学文字语词话诗歌画笔"
+    "纸本包衣裤鞋帽床桌椅"
+    "窗灯钟杯碗筷锅刀盘瓶"
+    "茶酒汤蛋糖盐油醋饼饺"
+    "桃梨瓜豆麦橙橘葡萄蕉"
+    "一二三四五六七八九十"
 )
 
 # Bot vocabulary. Every character must exist in the full deck; a unit test keeps
@@ -156,7 +180,12 @@ def normalize_phrase(value: str) -> str:
 
 def build_deck(deck_size: str) -> List[str]:
     source = SHORT_DECK_CHARACTERS if deck_size == "short" else DECK_CHARACTERS
-    deck = list(source)
+    counts = Counter(source)
+    common = [character for character in source if counts[character] > 1]
+    candidates = [character for character in source if counts[character] == 1]
+    candidates.extend(EXTRA_DECK_CHARACTERS)
+    random.shuffle(candidates)
+    deck = common + candidates[:DECK_SIZES[deck_size] - len(common)]
     random.shuffle(deck)
     return deck
 
@@ -344,6 +373,7 @@ class DareWordsGame:
             raise ValueError(f"Dare to Make Words needs {DareWordsGame.min_players} to {DareWordsGame.max_players} players.")
         if len(set(ids)) != len(ids) or len({player["seat"] for player in metadata}) != len(ids):
             raise ValueError("Player IDs and seats must be unique.")
+        deck = build_deck(deck_size)
         return {
             "game_id": DareWordsGame.game_id, "version": 1,
             "config": {"deck_size": deck_size, "min_chars": min_chars},
@@ -351,7 +381,8 @@ class DareWordsGame:
             "game_token": secrets.token_hex(16), "window_id": 0, "revision": 0,
             "turn_order": ids, "players": {player["player_id"]: player for player in metadata},
             "phase": "flipping", "round": 1,
-            "deck": build_deck(deck_size), "row": [], "next_card_id": 1, "flips": 0,
+            "deck": deck, "initial_deck": list(deck),
+            "row": [], "next_card_id": 1, "flips": 0,
             "flipper": ids[0], "claim": None, "last_result": None,
             "history": [], "ready": [], "blocked": {},
             "game_over": False, "winner": [],
@@ -572,6 +603,20 @@ class DareWordsGame:
             if type(state["flips"]) is not int or state["flips"] < 0 or state["flips"] > DECK_SIZES[deck_size]:
                 raise ValueError("Invalid saved flips.")
             source = list(SHORT_DECK_CHARACTERS if deck_size == "short" else DECK_CHARACTERS)
+            if "initial_deck" in state:
+                initial_deck = state["initial_deck"]
+                if (not isinstance(initial_deck, list) or len(initial_deck) != DECK_SIZES[deck_size]
+                        or any(not isinstance(character, str) or len(character) != 1
+                               for character in initial_deck)):
+                    raise ValueError("Invalid saved initial deck.")
+                source_counts = Counter(source)
+                initial_counts = Counter(initial_deck)
+                common_counts = Counter({character: count for character, count in source_counts.items()
+                                         if count > 1})
+                if (initial_counts - Counter(source + list(EXTRA_DECK_CHARACTERS))
+                        or common_counts - initial_counts):
+                    raise ValueError("Invalid saved initial deck.")
+                source = initial_deck
             drawn = [card["char"] for card in state["row"]]
             for entry in state["history"]:
                 # Rejected claims leave their cards on the table, so they are already in the row.

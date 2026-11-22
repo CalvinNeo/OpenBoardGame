@@ -300,6 +300,9 @@ def _score_round(state: Dict) -> None:
         state["phase"] = "game_over"
         state["game_over"] = True
         state["game_end_time"] = time.time()
+        state["next_round_ready"] = [
+            pid for pid in order if state["players"][pid].get("is_bot")
+        ]
     else:
         state["phase"] = "round_result"
 
@@ -461,7 +464,7 @@ class SubtextGame:
             return ["submit_guess"]
         if phase == "round_result" and player_id not in set(state.get("next_round_ready", [])):
             return ["next_round"]
-        if phase == "game_over":
+        if phase == "game_over" and player_id not in set(state.get("next_round_ready", [])):
             return ["play_again"]
         return []
 
@@ -504,8 +507,12 @@ class SubtextGame:
             return events, None
 
         if action_type == "play_again":
-            _reset_for_play_again(state)
-            return [{"type": "subtext:game_restarted", "payload": {"game_index": state["game_index"]}}], None
+            state.setdefault("next_round_ready", []).append(player_id)
+            events = [{"type": "subtext:play_again_ready", "payload": {"player_id": player_id}}]
+            if len(state["next_round_ready"]) == len(state["turn_order"]):
+                _reset_for_play_again(state)
+                events.append({"type": "subtext:game_restarted", "payload": {"game_index": state["game_index"]}})
+            return events, None
 
         return [], "invalid action"
 
@@ -605,6 +612,11 @@ class SubtextGame:
 
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
+        if payload.get("phase") == "game_over":
+            ready = payload.setdefault("next_round_ready", [])
+            for player_id in payload.get("turn_order", []):
+                if payload["players"][player_id].get("is_bot") and player_id not in ready:
+                    ready.append(player_id)
         return payload
 
     @staticmethod

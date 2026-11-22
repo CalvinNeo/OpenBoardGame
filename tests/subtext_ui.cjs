@@ -205,6 +205,22 @@ render({...drawingView, phase: 'game_over', legal_actions: ['play_again'], winne
 assert.equal(elements.subtextNextRoundRow.classList.contains('hidden'), true);
 assert.equal(elements.subtextGameOverActions.classList.contains('hidden'), false);
 assert.match(elements.subtextWinnerText.textContent, /Shared winners/);
+assert.equal(elements.subtextPlayAgainBtn.textContent, 'Ready');
+assert.equal(elements.subtextPlayAgainStatus.textContent, 'Ready 0/4');
+assert.equal(document.body.classList.contains('subtext-needs-action'), true);
 click('subtextPlayAgainBtn');
 assert.equal(actions.at(-1).type, 'play_again');
+render({...drawingView, phase: 'game_over', legal_actions: [],
+  players: players.map(player => ({...player, next_round_ready: player.player_id === 'self'})),
+  next_round_progress: {done: 1, total: 4}, winner_ids: ['self', 'partner'], last_round_summary: summary});
+assert.equal(elements.subtextPlayAgainBtn.textContent, 'Ready ✓');
+assert.equal(elements.subtextPlayAgainBtn.disabled, true);
+assert.equal(elements.subtextPlayAgainStatus.textContent, 'Ready 1/4');
+assert.match(elements.subtextStatusBody.textContent, /after everyone is ready/);
+assert.match(elements.subtextWinnerText.textContent, /Shared winners/);
+assert.equal(elements.subtextResultArea.classList.contains('hidden'), false);
+assert.equal(document.body.classList.contains('subtext-needs-action'), false);
+const actionCount = actions.length;
+click('subtextPlayAgainBtn');
+assert.equal(actions.length, actionCount, 'already-ready players cannot submit again');
 console.log('Subtext UI: confirmation, draft, pointer cancellation, selection, scroll, preview, Help and Explain regressions passed.');

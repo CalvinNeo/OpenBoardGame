@@ -50,6 +50,7 @@
   const gameOverActions = document.getElementById("subtextGameOverActions");
   const winnerText = document.getElementById("subtextWinnerText");
   const playAgainBtn = document.getElementById("subtextPlayAgainBtn");
+  const playAgainStatus = document.getElementById("subtextPlayAgainStatus");
   const playersContainer = document.getElementById("subtextPlayers");
 
   const helpConfig = {
@@ -70,8 +71,8 @@
         en: "<p>Misses means the number of incorrect guesses. The Dealer and Partner each score that many points only if both correctly identify the Partner card. Otherwise both score zero.</p><p>Every correct outsider scores misses + 1, independently of the pair. An incorrect outsider scores zero. For example, in a six-player round with three correct guesses, a successful pair scores three each and a correct outsider scores four.</p><p>If everyone guesses correctly, the pair scores zero and each outsider scores one. With 4–5 players everyone deals twice, and with 6–8 players everyone deals once. The highest total wins (🏆), sharing victory if tied.</p>",
       } },
       { id: "controls", label: { zh: "操作", en: "Controls" }, html: {
-        zh: "<p>Undo(↶) 撤销最后一笔，Reset Canvas 清空本地画布。Submit Drawing 在画布内显示确认，Confirm 锁定作品，Keep Drawing、点击周围空白或 Esc 取消。提交后不能修改，等待其他人完成。</p><p>点画作选择，再点 Submit Guess 锁定。点候选区空白或 Esc 取消未提交的选择。候选区可以独立滚动，选图不会跳回顶部，Zoom 可以放大而不改变选择。放大窗口可用 Close、遮罩或 Esc 关闭。</p><p>揭晓后所有人都点击 Next Round 才开始下一轮。Play Again 重置分数，保留题目难度。Help 可切换中英文和章节，Explain 开启后点画作、指标或按钮查看含义，禁用按钮也可解释，Esc 退出。</p>",
-        en: "<p>Undo (↶) removes the last stroke and Reset Canvas clears your draft. Submit Drawing opens an inline confirmation. Confirm locks it, while Keep Drawing, surrounding blank space or Esc cancels. A submitted drawing cannot be edited.</p><p>Select a drawing, then use Submit Guess to lock it. Click empty candidate space or press Esc to deselect an unlocked card. Scroll candidates without losing your position. Zoom enlarges a drawing without selecting it. Close previews with Close, the backdrop or Esc.</p><p>After the reveal, everyone must press Next Round before play continues. Play Again resets scores with the same word difficulty. Help offers language and chapter buttons. Explain describes drawings, indicators and controls, including disabled buttons, without performing their actions. Press Esc to leave it.</p>",
+        zh: "<p>Undo(↶) 撤销最后一笔，Reset Canvas 清空本地画布。Submit Drawing 在画布内显示确认，Confirm 锁定作品，Keep Drawing、点击周围空白或 Esc 取消。提交后不能修改，等待其他人完成。</p><p>点画作选择，再点 Submit Guess 锁定。点候选区空白或 Esc 取消未提交的选择。候选区可以独立滚动，选图不会跳回顶部，Zoom 可以放大而不改变选择。放大窗口可用 Close、遮罩或 Esc 关闭。</p><p>揭晓后所有人都点击 Next Round 才开始下一轮。整局结束后，所有人都点击 Ready 才重置分数并开始新局，题目难度保持不变，机器人自动准备。等待期间保留最终结算与画作。Help 可切换中英文和章节，Explain 开启后点画作、指标或按钮查看含义，禁用按钮也可解释，Esc 退出。</p>",
+        en: "<p>Undo (↶) removes the last stroke and Reset Canvas clears your draft. Submit Drawing opens an inline confirmation. Confirm locks it, while Keep Drawing, surrounding blank space or Esc cancels. A submitted drawing cannot be edited.</p><p>Select a drawing, then use Submit Guess to lock it. Click empty candidate space or press Esc to deselect an unlocked card. Scroll candidates without losing your position. Zoom enlarges a drawing without selecting it. Close previews with Close, the backdrop or Esc.</p><p>After the reveal, everyone must press Next Round before play continues. After the final round, everyone must press Ready before scores reset and a new game starts with the same word difficulty. Bots are ready automatically, and final scores and drawings remain visible while waiting. Help offers language and chapter buttons. Explain describes drawings, indicators and controls, including disabled buttons, without performing their actions. Press Esc to leave it.</p>",
       } },
     ],
   };
@@ -85,7 +86,7 @@
     submitDrawing: "Review and confirm this drawing on the canvas. A confirmed drawing is locked for this round.",
     submitGuess: "Lock the selected A–G card as your secret guess. No one sees your choice until everyone submits.",
     nextRound: "Confirm you finished reviewing. The next round starts only when everyone is ready. This button needs no second confirmation.",
-    playAgain: "Start a new game with the same word difficulty and reset every score.",
+    playAgain: "Ready for a new game. Final scores stay visible until everyone is ready, then scores reset with the same word difficulty. Bots are ready automatically.",
     zoom: "Enlarge this drawing without selecting it or changing your guess. Close the preview with Close, the backdrop or Esc.",
     scoring: "The pair must both guess correctly to score the number of misses. Correct outsiders score misses + 1. Highest total wins (🏆).",
     players: "Shows cumulative points and each player's public submission or readiness status. You is your seat. No private words or guesses are exposed here.",
@@ -385,9 +386,10 @@
         tags.push(player.drawing_submitted ? "Drawing ready" : "Drawing…");
       } else if (view.phase === "guessing") {
         tags.push(player.guess_submitted ? "Vote locked" : "Choosing…");
-      } else if (view.phase === "round_result") {
+      } else if (view.phase === "round_result" || view.phase === "game_over") {
         tags.push(player.next_round_ready ? "Ready" : "Reviewing");
-      } else if ((view.winner_ids || []).includes(player.player_id)) {
+      }
+      if ((view.winner_ids || []).includes(player.player_id)) {
         tags.push("Winner");
       }
       const meta = document.createElement("small");
@@ -429,8 +431,9 @@
     }
     if (playAgainBtn) {
       playAgainBtn.disabled = !hasLegalAction("play_again");
+      playAgainBtn.textContent = hasLegalAction("play_again") ? "Ready" : "Ready ✓";
     }
-    const needsAction = canDraw || canGuess || hasLegalAction("next_round");
+    const needsAction = canDraw || canGuess || hasLegalAction("next_round") || hasLegalAction("play_again");
     document.body.classList.toggle("subtext-needs-action", needsAction && !panel?.classList.contains("hidden"));
   }
 
@@ -509,7 +512,9 @@
         }
       }
     } else if (view.phase === "game_over") {
-      statusBody.textContent = "The final scores are in. Review the last reveal or start another game.";
+      statusBody.textContent = me?.next_round_ready
+        ? "You are ready. The new game begins after everyone is ready."
+        : "Review the final scores, then press Ready. A new game begins only when everyone is ready.";
       statusBox.classList.add("reveal");
       if (statusIcon) {
         statusIcon.textContent = "🏆";
@@ -700,6 +705,10 @@
       winnerText.textContent = winners.length > 1
         ? "🏆 Shared winners: " + winners.join(", ")
         : "🏆 Winner: " + (winners[0] || "-");
+    }
+    if (playAgainStatus) {
+      playAgainStatus.textContent = "Ready " + String(view.next_round_progress.done)
+        + "/" + String(view.next_round_progress.total);
     }
   }
 

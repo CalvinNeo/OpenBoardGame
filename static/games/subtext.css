@@ -16,6 +16,11 @@
     white-space: nowrap;
   }
 
+  .game-panel[data-game-theme="subtext"] > .panel-header {
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+  }
+
   #subtextHeaderActions {
     flex-shrink: 0;
     flex-wrap: nowrap;
@@ -25,6 +30,7 @@
     --subtext-ink: #243344;
     --subtext-accent: #236a60;
     --subtext-paper: #fffef9;
+    --subtext-canvas-width: clamp(640px, calc((100dvh - 310px) * 4 / 3), 1120px);
     color: var(--subtext-ink);
     font-size: 14px;
   }
@@ -49,17 +55,24 @@
     outline-offset: 3px;
   }
 
+  .subtext-overview {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
   .subtext-round-strip {
     display: flex;
     align-items: center;
-    gap: 14px 24px;
-    padding: 4px 0 12px;
-    border-bottom: 1px solid #e8e4da;
+    flex: 1 1 300px;
+    flex-wrap: wrap;
+    gap: 4px 16px;
   }
 
   .subtext-round-strip > div {
-    display: grid;
-    gap: 3px;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
     min-width: 0;
   }
 
@@ -77,7 +90,7 @@
 
   .subtext-round-count strong {
     color: #236a60;
-    font-size: 20px;
+    font-size: 15px;
   }
   .subtext-round-divider {
     color: #9aa6a0;
@@ -93,7 +106,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 11px 0;
+    padding: 6px 0;
     color: #3c655b;
     font-size: 13px;
     line-height: 1.45;
@@ -106,11 +119,10 @@
   }
   .subtext-workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 210px;
-    grid-template-rows: auto 1fr;
-    grid-template-areas: "board word" "board players";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "board" "players";
     align-items: start;
-    gap: 16px 22px;
+    gap: 8px;
   }
 
   .subtext-stage {
@@ -122,7 +134,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
   .subtext-stage-heading h3 {
     margin: 0;
@@ -133,10 +145,11 @@
     white-space: nowrap;
   }
   .subtext-word-card {
-    grid-area: word;
-    display: grid;
+    display: flex;
+    align-items: center;
     gap: 8px;
-    padding: 16px;
+    max-width: 100%;
+    padding: 5px 10px;
     border-left: 3px solid #d5a651;
     border-radius: 0 10px 10px 0;
     background: #f4efdc;
@@ -144,19 +157,17 @@
   }
   .subtext-word-card > span {
     color: #7f6225;
+    flex-shrink: 0;
   }
   .subtext-word-card > strong {
     color: #57401b;
-    font-size: clamp(22px, 2.7vw, 32px);
+    font-size: 21px;
     line-height: 1.25;
-  }
-  .subtext-word-card small {
-    color: #7c6b43;
-    line-height: 1.5;
   }
   .subtext-canvas-shell {
     position: relative;
-    max-width: 640px;
+    width: 100%;
+    max-width: var(--subtext-canvas-width);
     margin: 0 auto;
     border: 1px solid #d6d3c7;
     border-radius: 10px;
@@ -186,8 +197,8 @@
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    max-width: 640px;
-    margin: 12px auto 0;
+    max-width: var(--subtext-canvas-width);
+    margin: 6px auto 0;
   }
   .subtext-tools {
     display: flex;
@@ -205,7 +216,7 @@
     opacity: 0.55;
   }
   .subtext-drawing-warning {
-    margin: 10px 0 0;
+    margin: 5px 0 0;
     color: #7b7159;
     font-size: 12px;
     text-align: center;
@@ -246,7 +257,7 @@
   }
   .subtext-guess-layout {
     display: grid;
-    grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.5fr);
+    grid-template-columns: minmax(200px, 0.8fr) minmax(0, 2.4fr);
     align-items: start;
     gap: 12px;
   }
@@ -309,6 +320,10 @@
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
   }
+  .subtext-candidate-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: clamp(360px, calc(100dvh - 260px), 800px);
+  }
   .subtext-drawing-card {
     min-width: 0;
     padding: 8px;
@@ -362,8 +377,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 12px;
-    padding-top: 10px;
+    margin-top: 6px;
+    padding-top: 6px;
     border-top: 1px solid #e1e5db;
   }
   .subtext-guess-actions {
@@ -454,8 +469,9 @@
   }
   .subtext-player-grid {
     display: grid;
-    gap: 0;
-    max-height: 430px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 12px;
+    max-height: 200px;
     overflow: auto;
   }
   .subtext-player-card {
@@ -529,62 +545,42 @@
   }
 
   @media (max-width: 1100px) {
-    .subtext-workspace {
-      grid-template-columns: minmax(0, 1fr) 180px;
-      gap: 14px;
-    }
     .subtext-guess-layout {
-      grid-template-columns: 1fr;
-    }
-    .subtext-dealer-drawing {
-      width: min(100%, 240px);
-      margin: 0 auto;
+      grid-template-columns: minmax(180px, 0.8fr) minmax(0, 2fr);
     }
     .subtext-candidate-grid {
-      max-height: 390px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 760px) {
     .subtext-round-strip {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 8px 14px;
-      padding-bottom: 9px;
-    }
-    .subtext-round-strip > div:last-child {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      flex-basis: 100%;
+      gap: 4px 12px;
       font-size: 12px;
     }
+    .subtext-round-strip > div > span {
+      font-size: 10px;
+    }
     .subtext-workspace {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto;
-      grid-template-areas: "word" "board" "players";
-      gap: 12px;
+      gap: 6px;
     }
     .subtext-word-card {
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-      gap: 6px 12px;
-      padding: 10px 12px;
+      width: 100%;
+      justify-content: space-between;
+      padding: 4px 8px;
     }
     .subtext-word-card > strong {
       text-align: right;
-      font-size: 25px;
-    }
-    .subtext-word-card > small {
-      display: none;
+      font-size: 21px;
     }
     .subtext-status {
-      padding: 9px 0;
+      padding: 5px 0;
       font-size: 12px;
     }
     .subtext-drawing-toolbar {
       flex-wrap: wrap;
-      margin-top: 9px;
+      margin-top: 6px;
     }
     .subtext-drawing-toolbar > .subtext-primary-btn {
       flex: 1;
@@ -601,23 +597,31 @@
       font-size: 12px;
     }
     .subtext-guess-layout {
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
     }
     .subtext-dealer-drawing {
-      width: min(100%, 180px);
-      padding: 7px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 140px);
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+    }
+    .subtext-dealer-drawing .subtext-drawing-label {
+      flex-wrap: wrap;
+      padding-bottom: 0;
     }
     .subtext-candidate-grid {
-      max-height: clamp(160px, calc(100dvh - 590px), 340px);
+      max-height: clamp(280px, calc(100dvh - 440px), 650px);
       gap: 8px;
     }
     .subtext-drawing-card {
-      padding: 6px;
+      padding: 5px;
     }
     .subtext-player-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 0 10px;
-      max-height: 250px;
+      max-height: 200px;
     }
     .subtext-scoreboard summary {
       padding: 8px 0;
@@ -630,10 +634,6 @@
   @media (max-width: 359px) {
     .game-panel[data-game-theme="subtext"] .game-panel-title h2 {
       font-size: 15px;
-    }
-    #subtextDrawingArea .subtext-drawing-toolbar {
-      display: grid;
-      grid-template-columns: 1fr;
     }
     .subtext-candidate-grid,
     .subtext-result-grid {

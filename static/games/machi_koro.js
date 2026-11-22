@@ -298,10 +298,13 @@
       byId("Turn").textContent = view.game_over ? `${view.winner.map(playerName).join(" & ")} wins!` : `${playerName(view.current_turn)}${view.current_turn === view.you ? " · your turn" : "'s turn"}`;
       byId("Round").textContent = `Round ${view.round_number} · ${view.config.edition === "all" ? "Both expansions" : view.config.edition}`;
       renderPlayers();
-      byId("Dice").innerHTML = view.dice.length ? `${view.dice.map((die) => `<span class="mk-die">${dieFaces[die]}</span>`).join("")}<span class="mk-total">${view.total === null ? "" : `= ${view.total}`}</span>` : '<span class="mk-die">⚄</span>';
+      byId("Dice").classList.toggle("hidden", !view.dice.length);
+      byId("Dice").innerHTML = `${view.dice.map((die) => `<span class="mk-die">${dieFaces[die]}</span>`).join("")}<span class="mk-total">${view.total === null ? "" : `= ${view.total}`}</span>`;
       byId("Message").textContent = view.game_over ? "All landmarks complete. A city worth celebrating." : ({ roll: "Choose your dice.", reroll: "Keep this roll or use Radio Tower.", harbor: "Use your Harbor bonus?", income: "Resolve your establishments.", choose: "Choose a target for this effect.", build: "Build one establishment or landmark.", invest: "Invest in your Tech Startup?", round_summary: "Round complete. Review everyone's cities." })[view.phase];
       if (!view.game_over && !view.legal_actions.length && view.phase !== "round_summary") byId("Message").textContent = `Waiting for ${playerName(view.current_turn)} · ${view.phase}.`;
+      byId("Message").classList.toggle("mk-visually-hidden", Boolean(view.legal_actions.length && ["roll", "reroll", "harbor", "invest"].includes(view.phase)));
       const controls = byId("TurnButtons");
+      controls.classList.toggle("hidden", !view.legal_actions.length);
       controls.replaceChildren();
       if (["roll", "reroll"].includes(view.phase)) {
         const type = view.phase;

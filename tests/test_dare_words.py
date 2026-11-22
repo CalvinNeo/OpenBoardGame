@@ -8,9 +8,12 @@ from game.dare_words import (
     BOT_PHRASES,
     BOT_PHRASES_LONG,
     DECK_CHARACTERS,
+    DECK_SIZES,
+    EXTRA_DECK_CHARACTERS,
     MIN_PHRASE_CHOICES,
     SHORT_DECK_CHARACTERS,
     DareWordsGame as Game,
+    build_deck,
     validate_phrase,
 )
 
@@ -119,6 +122,31 @@ class DareWordsTests(unittest.TestCase):
                           if len(pattern) >= minimum and "verb" not in pattern
                           and all(len(slot) > 1 or short_counts[slot] >= 1 for slot in pattern)]
                 self.assertTrue(usable)
+
+    def test_expansion_adds_exactly_200_distinct_single_characters(self):
+        self.assertEqual(len(EXTRA_DECK_CHARACTERS), 200)
+        self.assertEqual(len(set(EXTRA_DECK_CHARACTERS)), 200)
+        self.assertTrue(set(EXTRA_DECK_CHARACTERS).isdisjoint(DECK_CHARACTERS))
+        for character in EXTRA_DECK_CHARACTERS:
+            with self.subTest(character=character):
+                self.assertEqual(len(character), 1)
+                self.assertTrue("\u4e00" <= character <= "\u9fff")
+
+    def test_both_deck_sizes_draw_from_the_expanded_pool(self):
+        for deck_size, source in (("full", DECK_CHARACTERS), ("short", SHORT_DECK_CHARACTERS)):
+            with self.subTest(deck_size=deck_size):
+                with patch("game.dare_words.random.shuffle", new=lambda sequence: sequence.reverse()):
+                    deck = build_deck(deck_size)
+                counts = Counter(deck)
+                source_counts = Counter(source)
+                self.assertEqual(len(deck), DECK_SIZES[deck_size])
+                self.assertFalse(counts - Counter(source + EXTRA_DECK_CHARACTERS))
+                for character, count in source_counts.items():
+                    if count > 1:
+                        self.assertEqual(counts[character], count)
+                extra = [character for character in deck if character in EXTRA_DECK_CHARACTERS]
+                common_count = sum(count for count in source_counts.values() if count > 1)
+                self.assertEqual(len(extra), DECK_SIZES[deck_size] - common_count)
 
     # --- flipping ----------------------------------------------------------
 
@@ -429,6 +457,55 @@ class DareWordsTests(unittest.TestCase):
 
     # --- saves -------------------------------------------------------------
 
+    def test_expanded_deck_claims_and_saves_roundtrip(self):
+        for deck_size in DECK_SIZES:
+            with self.subTest(deck_size=deck_size):
+                with patch("game.dare_words.random.shuffle", new=lambda sequence: sequence.reverse()):
+                    self.state = Game.init_game({"deck_size": deck_size}, players(3))
+                self.flip(3)
+                phrase = "".join(card["char"] for card in self.state["row"])
+                self.assertTrue(set(phrase) <= set(EXTRA_DECK_CHARACTERS))
+                self.play("p0", "claim", phrase=phrase)
+                self.vote_all(True)
+                self.assertEqual(self.state["players"]["p0"]["score"], 3)
+                self.next_round()
+                self.assertEqual(Game.deserialize(Game.serialize(self.state)), self.state)
+                self.assertNotIn("initial_deck", Game.get_public_view(self.state, "p0"))
+                payload = Game.serialize(self.state)
+                payload.pop("initial_deck")
+                with self.assertRaises(ValueError):
+                    Game.deserialize(payload)
+
+    def test_legacy_fixed_deck_saves_still_load(self):
+        for deck_size, source in (("full", DECK_CHARACTERS), ("short", SHORT_DECK_CHARACTERS)):
+            with self.subTest(deck_size=deck_size):
+                state = Game.init_game({"deck_size": deck_size}, players(3))
+                state.pop("initial_deck")
+                self.assertEqual(state["deck"], list(source))
+                Game.apply_action(state, "p0", action(state, "flip"))
+                self.assertEqual(Game.deserialize(Game.serialize(state)), state)
+                state["deck"][0] = EXTRA_DECK_CHARACTERS[0]
+                with self.assertRaises(ValueError):
+                    Game.deserialize(state)
+
+    def test_initial_deck_rejects_invalid_pool_contents(self):
+        for replacement in ("A", "\u9fff", "字词", None, "的"):
+            with self.subTest(replacement=replacement):
+                payload = Game.serialize(self.state)
+                payload["initial_deck"][-1] = replacement
+                payload["deck"][-1] = replacement
+                with self.assertRaises(ValueError):
+                    Game.deserialize(payload)
+
+    def test_initial_deck_requires_the_common_repeated_characters(self):
+        for deck_size in DECK_SIZES:
+            with self.subTest(deck_size=deck_size):
+                payload = Game.init_game({"deck_size": deck_size}, players(3))
+                payload["initial_deck"][0] = EXTRA_DECK_CHARACTERS[0]
+                payload["deck"][0] = EXTRA_DECK_CHARACTERS[0]
+                with self.assertRaises(ValueError):
+                    Game.deserialize(payload)
+
     def test_save_roundtrip_and_tamper_checks(self):
         self.flip(4)
         self.play("p0", "claim", phrase="的了的")
@@ -441,6 +518,8 @@ class DareWordsTests(unittest.TestCase):
 
         for mutate in (
             lambda payload: payload.update(deck=payload["deck"][:-1]),
+            lambda payload: payload.update(initial_deck=payload["initial_deck"][:-1]),
+            lambda payload: payload.update(initial_deck=None),
             lambda payload: payload.update(row=payload["row"] + [{"card_id": 99, "char": "龙"}]),
             lambda payload: payload["players"]["p0"].update(score=payload["players"]["p0"]["score"] + 1),
             lambda payload: payload.update(phase="voting"),

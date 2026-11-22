@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import app
-from game.dare_words import DareWordsGame as Game
+from game.dare_words import DECK_SIZES, EXTRA_DECK_CHARACTERS, DareWordsGame as Game
 from tests.test_room_session import DummySio
 
 
@@ -66,6 +66,24 @@ class DareWordsRoomTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(room.status, "lobby")
         self.assertIsNone(room.game_state)
         self.assertEqual(app.sio.emits[-1]["event"], "system:error")
+
+    async def test_start_draws_expansion_characters_without_exposing_the_deck(self):
+        for deck_size in DECK_SIZES:
+            with self.subTest(deck_size=deck_size):
+                with patch("game.dare_words.random.shuffle", new=lambda sequence: sequence.reverse()):
+                    room = await self.make_room(config={"deck_size": deck_size})
+                self.assertEqual(len(room.game_state["deck"]), DECK_SIZES[deck_size])
+                self.assertIn(room.game_state["deck"][0], EXTRA_DECK_CHARACTERS)
+                app.sio.emits.clear()
+                await app.on_game_action("s0", {"action": action(room, "flip")})
+                views = self.views()
+                self.assertEqual(len(views), len(room.players))
+                for view in views:
+                    self.assertIn(view["row"][0]["char"], EXTRA_DECK_CHARACTERS)
+                    self.assertEqual(view["deck_total"], DECK_SIZES[deck_size])
+                    self.assertEqual(view["deck_remaining"], DECK_SIZES[deck_size] - 1)
+                    self.assertNotIn("deck", view)
+                    self.assertNotIn("initial_deck", view)
 
     async def test_start_applies_the_phrase_minimum(self):
         room = await self.make_room(config={"min_chars": 5})

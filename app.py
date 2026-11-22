@@ -2267,6 +2267,9 @@ async def on_room_start(sid, data):
     if room.status not in ("lobby", "game_over"):
         await _send_error(sid, "game already started")
         return
+    if room.game_type == "subtext" and room.status == "game_over":
+        await on_game_action(sid, {"action": {"type": "play_again"}})
+        return
     if room.game_type == "the_crew":
         if session.get("player_id") != _room_host_player_id(room):
             await _send_error(sid, "Only the host can choose and start a mission.")
