@@ -21,15 +21,15 @@
 .marrakech-player-name { display: flex; gap: 4px; align-items: center; margin-bottom: 5px; font-weight: 700; min-width: 0; }
 .marrakech-player-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .marrakech-player-stats { display: flex; flex-wrap: wrap; gap: 4px 9px; line-height: 1.6; }
+.marrakech-player-rugs { white-space: nowrap; }
 .marrakech-swatch { display: inline-block; width: 10px; height: 10px; border: 1px solid #0003; border-radius: 2px; flex-shrink: 0; background: var(--rug-color); }
 .marrakech-market-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 10px 0 5px; }
+.marrakech-rugs-left { color: #24534c; font-size: 12px; font-weight: 600; white-space: nowrap; }
 #marrakechPanel h3 { margin: 0; font-size: 12px; font-weight: 600; }
-.marrakech-zoom { display: flex; gap: 4px; }
-#marrakechPanel .marrakech-zoom button { min-height: 30px; padding: 3px 8px; font-size: 12px; }
 .marrakech-market-layout { display: grid; grid-template-columns: minmax(0, 1fr) 235px; gap: 16px; align-items: start; }
 .marrakech-board-column, .marrakech-side { min-width: 0; }
-.marrakech-viewport { width: 100%; max-height: 72vh; overflow: auto; touch-action: none; overscroll-behavior: contain; background: #f5e8d1; border-radius: 9px; }
-.marrakech-world { position: relative; aspect-ratio: 1; margin: 0 auto; width: 100%; flex-shrink: 0; }
+.marrakech-viewport { width: 100%; touch-action: pan-y; background: #f5e8d1; border-radius: 9px; }
+.marrakech-world { position: relative; aspect-ratio: 1; margin: 0 auto; width: min(100%, 72vh); }
 .marrakech-routes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .marrakech-board { position: absolute; inset: 6.25%; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); border: 2px solid #96764e; background: #b89566; gap: 2px; }
 #marrakechPanel .marrakech-cell { padding: 0; min-height: 0; min-width: 0; border: 0; border-radius: 0; position: relative; background: #f0dfbf; aspect-ratio: 1; color: #fffdf4; overflow: hidden; }
@@ -87,6 +87,6 @@
   .marrakech-assam-controls h3 { display: none; }
   .marrakech-orient { margin: 0; }
   .marrakech-turnline { font-size: 12px; }
-  .marrakech-viewport { max-height: 68vh; }
+  .marrakech-world { width: min(100%, 68vh); }
   #marrakechPanel .marrakech-placement-tools button { padding: 6px 9px; }
 }

@@ -33,8 +33,8 @@
     },
     sections: [
       {id: "controls", label: {zh: "行动与操作", en: "Turns & controls"}, html: {
-        zh: `<p>先选一颗未使用的骰子(🎲)，再直接点击货站板块、仓储板块或自己的货物。选择仓储板块后点击高亮的领地格。确认区就在所选目标旁，列出所需工人(👷)与银币(🪙)，点击 Confirm 才提交。点击空白或按 Esc 取消未提交的选择。</p><p>货站与领地格需要匹配骰点。每名工人调整一点，1 与 6 相邻，系统按最小费用计算。取得工人行动消耗所选骰子并获得两名工人。仓储有三格，满时必须明确选一块旧板块丢弃。出售一种货物(🟫🟥🟧🟩🟦🟪)的全部货物，获得一枚银币，每件得玩家人数那么多的分数(⭐)。</p><p>黑市购买每回合一次，不使用骰子，花两枚银币。知识 6 允许购买编号货站板块，先打开货站内的 Buy 开关。两颗骰子用完仍可购买，再点 End Turn。即时奖励必须先处理，可跳过的建筑奖励会显示 Skip Bonus。每轮结束暂停，所有玩家点 Next Round 才继续。</p><p>手机通过 Estate / Depots 切换。地图支持缩放、拖动、Fit 全图和 Origin 原始尺寸。拖动不算选择，地图外仍可正常滚动。</p>`,
-        en: `<p>Select an unused die (🎲), then click a depot tile, a stored tile or your own goods. After choosing a stored tile, click a highlighted estate hex. The confirmation beside your target shows the worker (👷) and silverling (🪙) cost. Only Confirm submits it. Click blank space or press Esc to cancel an unsubmitted choice.</p><p>Match the die to a depot or estate hex. Each worker adjusts it by one step, with 1 adjacent to 6, and the server calculates the minimum cost. Gain Workers spends the selected die for two workers. Storage holds three tiles, so choose an old tile to discard when full. Sell every goods tile of one type (🟫🟥🟧🟩🟦🟪) for one silverling and points (⭐) per tile equal to the player count.</p><p>Buy once per turn for two silverlings without a die. Knowledge 6 also permits numbered depots using their Buy toggle. You may buy after using both dice, before End Turn. Resolve immediate bonuses first, or use Skip Bonus when offered. Every round pauses until all players select Next Round.</p><p>On phones, switch Estate / Depots. Zoom and drag the map, use Fit for the full estate or Origin for its original size. Dragging never selects a hex, and the page scrolls normally outside the map.</p>`}},
+        zh: `<p>先选一颗未使用的骰子(🎲)，再直接点击货站板块、仓储板块或自己的货物。选择仓储板块后点击高亮的领地格。确认区就在所选目标旁，列出所需工人(👷)与银币(🪙)，点击 Confirm 才提交。点击空白或按 Esc 取消未提交的选择。</p><p>货站与领地格需要匹配骰点。每名工人调整一点，1 与 6 相邻，系统按最小费用计算。取得工人行动消耗所选骰子并获得两名工人。仓储有三格，满时必须明确选一块旧板块丢弃。出售一种货物(🟫🟥🟧🟩🟦🟪)的全部货物，获得一枚银币，每件得玩家人数那么多的分数(⭐)。</p><p>黑市购买每回合一次，不使用骰子，花两枚银币。知识 6 允许购买编号货站板块，先打开货站内的 Buy 开关。两颗骰子用完仍可购买，再点 End Turn。即时奖励必须先处理，可跳过的建筑奖励会显示 Skip Bonus。每轮结束暂停，所有玩家点 Next Round 才继续。</p><p>手机通过 Estate / Depots 切换。领地自动适配可用宽度，始终完整显示。可直接在领地上滑动页面，不会误选格子。</p>`,
+        en: `<p>Select an unused die (🎲), then click a depot tile, a stored tile or your own goods. After choosing a stored tile, click a highlighted estate hex. The confirmation beside your target shows the worker (👷) and silverling (🪙) cost. Only Confirm submits it. Click blank space or press Esc to cancel an unsubmitted choice.</p><p>Match the die to a depot or estate hex. Each worker adjusts it by one step, with 1 adjacent to 6, and the server calculates the minimum cost. Gain Workers spends the selected die for two workers. Storage holds three tiles, so choose an old tile to discard when full. Sell every goods tile of one type (🟫🟥🟧🟩🟦🟪) for one silverling and points (⭐) per tile equal to the player count.</p><p>Buy once per turn for two silverlings without a die. Knowledge 6 also permits numbered depots using their Buy toggle. You may buy after using both dice, before End Turn. Resolve immediate bonuses first, or use Skip Bonus when offered. Every round pauses until all players select Next Round.</p><p>On phones, switch Estate / Depots. The complete estate automatically fits the available width. Swipe over the estate to scroll the page without selecting a hex.</p>`}},
       {id: "tiles", label: {zh: "板块效果", en: "Tile effects"}, html: {
         zh: `<p>板块必须放在同色空格并邻接已建板块。同一城市(🏘️)不能有重复建筑，知识 1 例外。城堡(🏰)提供一个任意骰值的额外行动。船只(⛵)推进下轮顺序并从一个货站取货，同位置后来者优先。货物最多存三种，同种数量不限。矿山(⛏️)在每个阶段末生产一枚银币(🪙)。知识(📜)提供永久能力或终局奖励。</p><p>牧场(🐑)放置动物时，计入本板块及同一牧场已有同类动物，牛(🐄)、羊(🐑)、猪(🐖)、鸡(🐔)分开计算。</p><p>仓库(🏚️)免费卖一种货物，木工坊(🪚)免费拿建筑，教堂(⛪)免费拿城堡、矿山或知识，市场(🏪)免费拿船只或动物，市政厅(🏛️)免费放仓储板块。旅馆(🏡)给四名工人(👷)，银行(🏦)给两枚银币(🪙)，瞭望塔(🗼)给四分(⭐)。免费拿取只限编号货站。连锁效果逐步处理。</p>`,
         en: `<p>Place on a matching empty hex adjacent to your built estate. A city (🏘️) cannot repeat a building unless you have knowledge 1. A castle (🏰) grants an extra action with any die value. A ship (⛵) advances next round's order and collects goods from a depot, with later arrivals taking priority on tied positions. Store up to three goods types, with unlimited tiles of each. A mine (⛏️) produces one silverling (🪙) at every phase end. Knowledge (📜) grants a permanent ability or end-game bonus.</p><p>A pasture (🐑) scores the new tile plus matching animals already in that pasture. Cows (🐄), sheep (🐑), pigs (🐖) and chickens (🐔) score separately.</p><p>A warehouse (🏚️) sells one goods type, a workshop (🪚) takes a building, a church (⛪) takes a castle, mine or knowledge tile, a market (🏪) takes a ship or animal, and a city hall (🏛️) places a stored tile, all without a die. A boarding house (🏡) grants four workers (👷), a bank (🏦) grants two silverlings (🪙), and a watchtower (🗼) grants four points (⭐). Free tile-taking uses numbered depots only. Resolve chained effects one step at a time.</p>`}},
@@ -46,10 +46,10 @@
   };
   const explanations = {
     phase: "Five phases A–E, each with five rounds. Completing a region earlier earns a larger phase bonus.",
-    estate: "Estate 1: match the tile colour and hex number, adjacent to a built tile. Use zoom, Fit and Origin to inspect it."
+    estate: "Estate 1: match the tile colour and hex number, adjacent to a built tile. The complete estate automatically fits the available width."
   };
   let view = null;
-  let ui = {zoom: 1, panX: 0, panY: 0};
+  let ui = {};
   let explanationIndex = 0;
   let tooltipTimer = null;
   let gesture = null;
@@ -134,8 +134,7 @@
         `burgundy-hex burgundy-${cell.kind} ${cell.tile ? "is-built" : ""} ${legal ? "is-legal" : ""} ${ui.cell === cell.id ? "is-selected" : ""}`, !legal, `${attr("cell", cell.id)} aria-label="${esc(description)}"`)}</div>`;
     }).join("");
     return `<section class="burgundy-estate-section"><div class="burgundy-section-heading"><h3>🏰 ${esc(owner.name)}’s estate</h3>${tip(`${owner.estate.filter(cell => cell.tile).length} / 37`, "Built hexes out of the 37 spaces on estate 1.")}</div>
-      <div class="burgundy-map-tools" role="group" aria-label="Estate zoom">${button("−", "zoom-out", "Zoom out the estate.", "", ui.zoom <= 1)}${tip(`${Math.round(ui.zoom * 100)}%`, "Estate zoom level.")}${button("+", "zoom-in", "Zoom in the estate.", "", ui.zoom >= 3)}${button("Fit", "fit", "Fit the complete estate into the viewport.")}${button("Origin", "origin", "Show the estate at its original 560 pixel size.")}</div>
-      <div class="burgundy-map" data-burgundy-explain="estate" aria-label="Estate map. Drag to pan when zoomed."><div class="burgundy-estate">${cells}</div></div>
+      <div class="burgundy-map" data-burgundy-explain="estate" aria-label="Complete estate map"><div class="burgundy-estate">${cells}</div></div>
       ${active() && ownEstate && ui.mode === "place" && ui.tile ? renderConfirmation() : ""}
       <div class="burgundy-legend">${Object.values(kinds).map(([icon, label]) => tip(`${icon} ${label}`, `${label} (${icon}): place tiles of this kind on matching estate hexes.`)).join("")}</div>
       <div class="burgundy-supplies"><section><div class="burgundy-section-heading"><h3>Storage</h3><small>${owner.storage.length} / 3</small></div><div class="burgundy-storage">${[0, 1, 2].map(index => {
@@ -173,15 +172,6 @@
     if (view.phase !== "round_end") return "";
     return `<section class="burgundy-review-section"><div class="burgundy-section-heading"><h3>Round complete</h3><span>${view.ready.length} / ${view.players.length} ready</span></div>${view.players.map(owner => `<div class="burgundy-review ${owner.player_id === view.you ? "is-you" : ""}"><span>${esc(owner.name)}${owner.player_id === view.you ? " · You" : ""} ${view.ready.includes(owner.player_id) ? "✓" : ""}</span><b>⭐ +${view.review.delta[owner.player_id].score}</b>${view.review.income[owner.player_id] ? `<small>Income: 🪙 +${view.review.income[owner.player_id].silver} · 👷 +${view.review.income[owner.player_id].workers}</small>` : ""}</div>`).join("")}${button("Next Round", "next", "Continue only after every player has reviewed this round and confirmed readiness.", "burgundy-primary", !options("next_round").length)}</section>`;
   }
-  function applyMapTransform() {
-    const map = panel.querySelector(".burgundy-map");
-    const estate = map?.querySelector(".burgundy-estate");
-    if (!map || !estate) return;
-    ui.panX = Math.max(-map.clientWidth * (ui.zoom - 1) / 2, Math.min(map.clientWidth * (ui.zoom - 1) / 2, ui.panX));
-    ui.panY = Math.max(-map.clientHeight * (ui.zoom - 1) / 2, Math.min(map.clientHeight * (ui.zoom - 1) / 2, ui.panY));
-    estate.style.transform = `translate(${ui.panX}px, ${ui.panY}px) scale(${ui.zoom})`;
-    map.classList.toggle("is-zoomed", ui.zoom > 1);
-  }
   function render() {
     if (!view) return;
     const focused = document.activeElement?.dataset.focusKey;
@@ -196,7 +186,6 @@
     const log = content.querySelector(".burgundy-log");
     if (log) log.scrollTop = logScroll;
     if (focused) [...content.querySelectorAll("[data-focus-key]")].find(element => element.dataset.focusKey === focused)?.focus({preventScroll: true});
-    applyMapTransform();
     explain.refresh();
   }
   function submit(option) {
@@ -217,7 +206,7 @@
     if (performance.now() < suppressClickUntil) { event.preventDefault(); return; }
     const target = event.target.closest("button[data-burgundy]");
     if (!target) {
-      if (!event.target.closest("button, summary, details, [data-burgundy-tip], .burgundy-map-tools")) { resetSelection(); render(); }
+      if (!event.target.closest("button, summary, details, [data-burgundy-tip]")) { resetSelection(); render(); }
       return;
     }
     if (target.disabled) return;
@@ -232,11 +221,7 @@
     else if (command === "discard") ui.discard = target.dataset.tile;
     else if (command === "sell") { resetSelection(); ui.mode = "sell"; ui.goods = Number(target.dataset.goods); }
     else if (command === "cancel") resetSelection();
-    else if (["zoom-in", "zoom-out", "fit", "origin"].includes(command)) {
-      const width = panel.querySelector(".burgundy-map").clientWidth;
-      ui.zoom = command === "fit" ? 1 : command === "origin" ? Math.min(3, Math.max(1, 560 / width)) : Math.min(3, Math.max(1, ui.zoom * (command === "zoom-in" ? 1.25 : .8)));
-      if (command === "fit" || command === "origin") ui.panX = ui.panY = 0;
-    } else if (command === "ship-depot") {
+    else if (command === "ship-depot") {
       const depot = Number(target.dataset.depot);
       if (ui.shipDepots.includes(depot)) ui.shipDepots = ui.shipDepots.filter(id => id !== depot);
       else if (self().knowledge.includes(5) && ui.shipDepots.length === 1 && [1, 5].includes(Math.abs(depot - ui.shipDepots[0]))) ui.shipDepots.push(depot);
@@ -269,34 +254,26 @@
   panel.addEventListener("focusout", hideTip);
   panel.addEventListener("pointerdown", event => {
     if (!event.isPrimary || event.button !== 0 || explain.isActive()) return;
-    const map = event.target.closest(".burgundy-map");
-    gesture = {id: event.pointerId, x: event.clientX, y: event.clientY, panX: ui.panX, panY: ui.panY, map, moved: false, tip: event.target.closest("[data-burgundy-tip]")};
+    gesture = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, tip: event.target.closest("[data-burgundy-tip]")};
   });
   document.addEventListener("pointermove", event => {
     if (!gesture || gesture.id !== event.pointerId) return;
     if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 9) { gesture.moved = true; hideTip(); }
-    if (!gesture.moved || !gesture.map || ui.zoom <= 1) return;
-    if (!gesture.map.hasPointerCapture(event.pointerId)) gesture.map.setPointerCapture(event.pointerId);
-    ui.panX = gesture.panX + event.clientX - gesture.x;
-    ui.panY = gesture.panY + event.clientY - gesture.y;
-    applyMapTransform();
   });
   function endGesture(event) {
     if (!gesture || gesture.id !== event.pointerId) return;
     const previous = gesture;
     gesture = null;
-    if (previous.map?.hasPointerCapture(event.pointerId)) previous.map.releasePointerCapture(event.pointerId);
     if (previous.moved || event.type !== "pointerup") { suppressClickUntil = performance.now() + 400; return; }
     if (event.pointerType !== "mouse") showTip(previous.tip);
   }
   document.addEventListener("pointerup", endGesture);
   document.addEventListener("pointercancel", endGesture);
-  panel.addEventListener("lostpointercapture", endGesture);
   document.addEventListener("keydown", event => {
     if (panel.classList.contains("hidden")) return;
     if (event.key === "Escape") { hideTip(); if (!document.querySelector("dialog[open]")) { explain.exit(); resetSelection(); render(); } }
   });
-  window.addEventListener("resize", () => { hideTip(); applyMapTransform(); });
+  window.addEventListener("resize", hideTip);
   window.renderBurgundyGameState = payload => {
     const oldStored = self()?.storage.length || 0;
     view = payload.view || payload.state || payload;
@@ -317,6 +294,6 @@
     document.getElementById("burgundyHeaderActions").style.display = visible ? "flex" : "none";
     if (!visible) { explain.exit(); help.close(); hideTip(); }
   };
-  window.clearBurgundyState = () => { view = null; ui = {zoom: 1, panX: 0, panY: 0}; explain.exit(); help.close(); hideTip(); content.replaceChildren(); phaseLabel.replaceChildren(); };
+  window.clearBurgundyState = () => { view = null; ui = {}; explain.exit(); help.close(); hideTip(); content.replaceChildren(); phaseLabel.replaceChildren(); };
   if (typeof currentRoomState !== "undefined" && currentRoomState?.game_type === "castles_of_burgundy" && typeof lastGameStatePayload !== "undefined" && lastGameStatePayload) window.renderBurgundyGameState(lastGameStatePayload);
 })();

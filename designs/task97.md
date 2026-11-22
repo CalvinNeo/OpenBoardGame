@@ -67,3 +67,12 @@
 - 已验证真实房间创建、机器人加入、开始游戏、拿板块及刷新重连，以及公开视图驱动的放置／卖货／知识 6 购买／满仓替换／船只选货、四人和终局布局、轮末确认、旁观、地图拖动并跨边界释放／触摸取消、地图内不滚页与地图外可滚页、Fit / Origin、双语分章 Help 与焦点恢复、禁用按钮 Explain、触屏提示及日志展开状态保留。
 - 检查：`node --check static/games/castles_of_burgundy.js`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract tests.test_frontend_script_names`（14 项）及 `git diff --check` 通过。按纯 UI 变更范围不运行游戏逻辑测试。
 - 验收范围符合本次涉及的 `DEV_GUIDE.md` 布局与交互要求，无刻意保留的布局例外。真实 iOS / Windows 设备、其他浏览器与完整真人对局未实机验证，触屏交互使用 Chrome 模拟。
+
+## 领地全图自适应（2026-11-22）
+
+- 按当前 `DEV_GUIDE.md` 的“能完整显示就不引入放缩”要求，取代上次验收中的地图缩放方案。37 格标准领地继续按可用宽度等比完整显示，保留少量边缘留白，删除缩放比例、加减、Fit / Origin 工具栏及平移状态、变换和指针捕获代码，不改变棋盘尺寸或游戏规则。
+- 领地不再接管拖动，手机可直接在地图上纵向滚动页面；保留点击与滑动的位移区分、取消手势处理，滑动和取消不会选中格子或提交放置，后续正常轻点仍可选择并确认。浏览器原生页面缩放不受限制。
+- 同步更新双语 Help 与 Explain，说明全图自动适配宽度；更新游戏 JS / CSS 资源版本及首页清单版本，保留其他游戏的本地改动。
+- 修改文件：`static/games/castles_of_burgundy.js`、`static/castles_of_burgundy.css`、`static/game_assets.js`、`static/index.html`、`tests/castles_of_burgundy_ui.browser.cjs`、本设计文档。
+- 验收：320px、390px、1024px、1440px 检查完整 37 格均处于地图容器内、无 transform、无缩放按钮，截图复核未见裁切、横向溢出或重叠。浏览器回归覆盖地图内／外滚页、滑动不误选、取消后正常触屏放置，以及既有拿取／购买／卖货／换仓／船只取货、重连、四人和终局布局、Help / Explain。
+- 检查：JS 语法、前端样式资源／Help／全局脚本命名契约（14 项）、浏览器回归及 `git diff --check`。本次符合涉及的 `DEV_GUIDE.md` 要求，无额外布局例外；未实测 iOS / Windows 真机或其他浏览器，不运行与纯 UI 变更无关的游戏逻辑测试。

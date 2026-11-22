@@ -49,13 +49,8 @@
 .burgundy-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
 #burgundyPanel h3 { font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
 .burgundy-section-heading > span, .burgundy-section-heading small { color: var(--burgundy-muted); font-size: 11px; }
-.burgundy-map-tools { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 5px; }
-#burgundyPanel .burgundy-map-tools button { min-width: 30px; min-height: 28px; padding: 4px 7px; font-size: 11px; }
-.burgundy-map-tools > span { font-size: 10px; width: 34px; text-align: center; }
-.burgundy-map { position: relative; width: 100%; max-width: 560px; margin: 0 auto; aspect-ratio: 1.12; overflow: hidden; touch-action: none; user-select: none; background: radial-gradient(ellipse, #e9e1cc, #f8f4ec 72%); border-radius: 10px; isolation: isolate; }
-.burgundy-map.is-zoomed { cursor: grab; }
-.burgundy-map.is-zoomed:active { cursor: grabbing; }
-.burgundy-estate { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: center; }
+.burgundy-map { position: relative; width: 100%; max-width: 560px; margin: 0 auto; aspect-ratio: 1.12; overflow: hidden; touch-action: pan-y pinch-zoom; user-select: none; background: radial-gradient(ellipse, #e9e1cc, #f8f4ec 72%); border-radius: 10px; isolation: isolate; }
+.burgundy-estate { position: absolute; inset: 0; width: 100%; height: 100%; }
 .burgundy-hex-slot { position: absolute; width: 13.2%; height: 15.1%; transform: translate(-50%, -50%); }
 #burgundyPanel .burgundy-hex {
   width: 100%; height: 100%; border: 0; padding: 2px 0; border-radius: 0;
@@ -154,7 +149,6 @@
   #burgundyPanel[data-mobile-tab="depots"] .burgundy-estate-section { display: none; }
   #burgundyPanel .burgundy-hex { font-size: clamp(19px, 7vw, 38px); }
   #burgundyPanel .burgundy-hex small { font-size: clamp(7px, 2vw, 11px); }
-  .burgundy-map-tools { margin-top: -2px; }
   .burgundy-legend { gap: 5px 9px; padding-bottom: 10px; }
   .burgundy-supplies { gap: 10px; }
   .burgundy-tile-name { font-size: 11px; }

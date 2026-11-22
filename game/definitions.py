@@ -2200,8 +2200,12 @@ KOBAYAKAWA_ACTION_SCHEMA = {
     "oneOf": [
         {
             "type": "object",
-            "properties": {"type": {"const": "next_round"}, "round": {"type": "integer", "minimum": 1}},
-            "required": ["type", "round"],
+            "properties": {
+                "type": {"const": "next_round"},
+                "round": {"type": "integer", "minimum": 1},
+                "review_id": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "round", "review_id"],
             "additionalProperties": False,
         },
         {"type": "object", "properties": {"type": {"const": "draw_card"}}, "required": ["type"], "additionalProperties": False},

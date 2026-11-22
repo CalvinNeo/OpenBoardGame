@@ -5,7 +5,7 @@ from itertools import combinations
 from unittest.mock import patch
 
 from game.kobayakawa import KobayakawaGame as Game, _compute_showdown
-from game.kobayakawa_ai import _showdown_equity, choose_action
+from game.kobayakawa_ai import _outcome_value, _showdown_equity, choose_action
 from tests.test_kobayakawa import _players
 
 
@@ -53,12 +53,40 @@ class KobayakawaAiTests(unittest.TestCase):
                     with self.subTest(hand=hand, center=center, opponents=count):
                         self.assertAlmostEqual(_showdown_equity(hand, center, pool, count), wins / total)
 
-    def test_equity_uses_raw_hand_to_break_ties(self):
-        self.assertEqual(_showdown_equity(3, 12, (15,), 1), 0.0)
+    def test_equity_uses_round_order_to_break_ties(self):
+        self.assertEqual(_showdown_equity(3, 12, (15,), 1), 1.0)
         self.assertEqual(_showdown_equity(15, 12, (3,), 1), 1.0)
+        self.assertEqual(_showdown_equity(3, 12, (15,), 1, 0.0), 0.0)
+        self.assertEqual(_showdown_equity(15, 12, (3,), 1, 0.0), 0.0)
         self.assertEqual(_showdown_equity(8, 12, (2, 15), 2), 0.0)
         self.assertEqual(_showdown_equity(1, 2, (), 0), 1.0)
         self.assertEqual(_showdown_equity(1, 2, (), 1), 0.0)
+
+    def test_equity_for_last_actor_matches_engine(self):
+        for hand, center in ((3, 12), (15, 12), (4, 7), (11, 7)):
+            pool = tuple(card for card in range(1, 16) if card not in (hand, center))
+            for count in range(1, 4):
+                fighters = [f"p{index}" for index in range(count + 1)]
+                state = {"kobayakawa": center, "players": {"p0": {"hand": hand}},
+                         "turn_order": fighters, "start_player": "p1"}
+                wins, total = 0, 0
+                for cards in combinations(pool, count):
+                    for player_id, card in zip(fighters[1:], cards):
+                        state["players"][player_id] = {"hand": card}
+                    wins += _compute_showdown(state, fighters)[0] == "p0"
+                    total += 1
+                self.assertAlmostEqual(_showdown_equity(hand, center, pool, count, 0.0), wins / total)
+
+    def test_reserve_reward_changes_lead_and_final_stakes_are_priced(self):
+        view = _betting_view(2, 3)
+        view.update(round=7, reserve=2, round_reward=2, final_round=True, pot=1)
+        balances = {"p0": 4, "p1": 4, "p2": 4}
+        self.assertEqual(_outcome_value(view, balances, 1, "p0"), 1.0)
+        self.assertEqual(_outcome_value(view, balances, 1, "p1"), 0.0)
+        for player in view["players"][1:]:
+            player["bet_choice"] = "pass"
+        view["players"][0]["tokens"] = 1
+        self.assertEqual(choose_action(view), {"type": "fight"})
 
     def test_keeps_low_card_when_bonus_beats_larger_draw(self):
         self.assertEqual(choose_action(_view(3, 12, 9)), {"type": "discard_drawn"})
@@ -98,11 +126,11 @@ class KobayakawaAiTests(unittest.TestCase):
         view["pot"] = 3
         self.assertEqual(choose_action(view), {"type": "fight"})
 
-    def test_zero_token_players_pass_and_are_not_future_fighters(self):
+    def test_zero_token_players_cannot_act_and_are_not_future_fighters(self):
         state = _state()
         state.update(phase="betting", kobayakawa=3)
         state["players"]["p0"].update(tokens=0, hand=2)
-        self.assertEqual(Game.bot_move(state, "p0"), {"type": "pass"})
+        self.assertIsNone(Game.bot_move(state, "p0"))
         state["players"]["p0"]["tokens"] = 4
         for player in ("p1", "p2"):
             state["players"][player]["tokens"] = 0
@@ -110,9 +138,9 @@ class KobayakawaAiTests(unittest.TestCase):
 
     def test_final_round_protects_lead_or_chases_possible_win(self):
         view = _betting_view(8, 1)
-        view.update(round=7, pot=1)
+        view.update(round=7, pot=1, reserve=2, round_reward=2, final_round=True)
         view["config"].update(end_mode="rounds", round_limit=7)
-        view["players"][0]["tokens"] = 6
+        view["players"][0]["tokens"] = 10
         view["players"][1].update(bet_choice="fight", tokens=4)
         view["players"][2].update(bet_choice="pass", tokens=4)
         self.assertEqual(choose_action(view), {"type": "pass"})
@@ -195,10 +223,10 @@ class KobayakawaAiTests(unittest.TestCase):
                                 self.assertIsNone(Game.apply_action(state, actor, action)[1])
                                 balances = [player["tokens"] for player in state["players"].values()]
                                 self.assertTrue(all(tokens >= 0 for tokens in balances))
-                                self.assertEqual(sum(balances) + state["pot"], count * 4)
+                                self.assertEqual(sum(balances) + state["pot"] + state["reserve"], count * 4 + 8)
                             self.assertTrue(state["game_over"])
                             self.assertTrue(state["winner"])
-                            if end_mode == "rounds":
+                            if end_mode == "rounds" and state["reserve"] == 0:
                                 self.assertEqual(state["round"], 7)
 
 

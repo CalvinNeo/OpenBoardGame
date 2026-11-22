@@ -30,6 +30,7 @@
   .kobayakawa-drawn-card { border: 2px dashed #648774; background: #f4faef; }
   .kobayakawa-pot { display: grid; justify-items: center; gap: 8px; font-size: 12px; }
   .kobayakawa-pot strong { font-size: 28px; white-space: nowrap; }
+  .kobayakawa-prizes { display: grid; gap: 18px; }
   .kobayakawa-hand { display: flex; justify-content: center; align-items: start; gap: 12px; margin: 18px 0 12px; }
   .kobayakawa-hand-area > button { display: block; margin: 0 auto; }
   .kobayakawa-betting { display: flex; justify-content: center; gap: 8px; }
@@ -65,6 +66,7 @@
     .kobayakawa-number-card small { font-size: 8px; }
     .kobayakawa-pot { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
     .kobayakawa-pot strong { font-size: 19px; }
+    .kobayakawa-prizes { gap: 8px; }
     .kobayakawa-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .kobayakawa-hand { gap: 6px; flex-wrap: wrap; margin-top: 24px; }
     .kobayakawa-hand-area.kobayakawa-choosing { grid-column: 1 / -1; grid-row: 1; }

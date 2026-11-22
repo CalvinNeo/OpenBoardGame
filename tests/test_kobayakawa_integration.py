@@ -70,6 +70,9 @@ class KobayakawaIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 await app.on_game_action("human", {"action": action})
             self.assertEqual(self.room.status, "game_over")
             self.assertEqual(self.room.game_state["round"], 2)
+            self.assertEqual(self.room.game_state["reserve"], 0)
+            self.assertEqual(sum(player["tokens"] for player in self.room.game_state["players"].values()), 15)
+            self.assertEqual(self.room.game_state["last_round_summary"]["reserve_reward"], 2)
         self.assertFalse(any(message["event"] == "system:error" for message in app.sio.emits))
         updates = [message["payload"] for message in app.sio.emits if message["event"] == "game:state"]
         bot_actions = [event["payload"]["action"]["type"] for update in updates
@@ -77,6 +80,8 @@ class KobayakawaIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(set(bot_actions) & {"draw_card", "replace_kobayakawa"})
         self.assertTrue(set(bot_actions) & {"fight", "pass"})
         for update in updates:
+            view = update["view"]
+            self.assertEqual(sum(player["tokens"] for player in view["players"]) + view["pot"] + view["reserve"], 15)
             self.assertNotIn("deck", update["view"])
             for player in update["view"]["players"]:
                 self.assertNotIn("hand", player)

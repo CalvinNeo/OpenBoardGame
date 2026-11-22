@@ -14,6 +14,24 @@ const output = 'tmp/burgundy-ui';
   page.on('pageerror', error => errors.push(error.message));
   const control = command => page.locator(`#burgundyPanel [data-burgundy="${command}"]:visible`);
   const show = async key => page.evaluate(payload => renderBurgundyGameState(payload), fixtures[key]);
+  async function completeEstate(width) {
+    const layout = await page.locator('.burgundy-map').evaluate(map => {
+      const bounds = map.getBoundingClientRect();
+      const estate = map.querySelector('.burgundy-estate');
+      const cells = [...map.querySelectorAll('.burgundy-hex-slot')];
+      return {
+        count: cells.length,
+        transform: getComputedStyle(estate).transform,
+        clipped: cells.some(cell => {
+          const box = cell.getBoundingClientRect();
+          return box.left < bounds.left - 1 || box.right > bounds.right + 1 ||
+            box.top < bounds.top - 1 || box.bottom > bounds.bottom + 1;
+        })
+      };
+    });
+    assert.deepEqual(layout, {count: 37, transform: 'none', clipped: false}, `complete estate ${width}`);
+    assert.equal(await page.locator('#burgundyPanel [data-burgundy="zoom-in"], #burgundyPanel [data-burgundy="zoom-out"], #burgundyPanel [data-burgundy="fit"], #burgundyPanel [data-burgundy="origin"], .burgundy-map-tools').count(), 0);
+  }
   async function fits(label) {
     const overflow = await page.evaluate(() => {
       const offenders = [];
@@ -54,6 +72,7 @@ const output = 'tmp/burgundy-ui';
       await page.setViewportSize({width, height: width < 800 ? 844 : 1000});
       await show('storage');
       if (width < 800) await control('tab').filter({hasText: 'Estate'}).click();
+      await completeEstate(width);
       await fits(`estate ${width}`);
       await page.screenshot({path: `${output}/estate-${width}.png`, fullPage: true});
       if (width < 800) await control('tab').filter({hasText: 'Depots'}).click();
@@ -112,46 +131,43 @@ const output = 'tmp/burgundy-ui';
 
     await show('storage');
     await control('tab').filter({hasText: 'Estate'}).click();
-    await control('zoom-in').click();
+    await page.locator('#burgundyPanel [data-burgundy="storage"]:not(:disabled)').first().click();
+    const legalHex = await page.locator('.burgundy-hex.is-legal').first().boundingBox();
     const map = await page.locator('.burgundy-map').boundingBox();
-    const before = await page.locator('.burgundy-estate').getAttribute('style');
-    await page.mouse.move(map.x + map.width / 2, map.y + map.height / 2);
+    await page.mouse.move(legalHex.x + legalHex.width / 2, legalHex.y + legalHex.height / 2);
     await page.mouse.down();
-    await page.mouse.move(map.x + map.width / 2 + 45, map.y + map.height / 2 + 20, {steps: 5});
     await page.mouse.move(map.x + map.width + 30, map.y + map.height / 2, {steps: 5});
     await page.mouse.up();
-    const after = await page.locator('.burgundy-estate').getAttribute('style');
-    assert.notEqual(after, before);
-    await page.mouse.move(map.x + map.width / 2, map.y + map.height / 2);
-    assert.equal(await page.locator('.burgundy-estate').getAttribute('style'), after);
+    assert.equal(await page.locator('.burgundy-hex.is-selected').count(), 0);
+    await completeEstate(390);
     await page.waitForTimeout(450);
-    await control('fit').click();
 
     const session = await context.newCDPSession(page);
     await page.locator('.burgundy-map').scrollIntoViewIfNeeded();
-    const touchMap = await page.locator('.burgundy-map').boundingBox();
+    const touchHex = await page.locator('.burgundy-hex.is-legal').first().boundingBox();
     const scrollBeforeMapDrag = await page.evaluate(() => scrollY);
-    await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: touchMap.x + touchMap.width / 2, y: touchMap.y + touchMap.height / 2}]});
-    await session.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: touchMap.x + touchMap.width / 2, y: touchMap.y + touchMap.height / 2 - 60}]});
+    const touchStart = {x: touchHex.x + touchHex.width / 2, y: touchHex.y + touchHex.height / 2};
+    await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [touchStart]});
+    for (const distance of [15, 30, 45, 60, 75]) {
+      await session.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: touchStart.x, y: touchStart.y - distance}]});
+    }
     await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+    await page.waitForFunction(previous => scrollY > previous, scrollBeforeMapDrag);
     assert.equal(await page.locator('.burgundy-hex.is-selected').count(), 0);
-    assert.equal(await page.evaluate(() => scrollY), scrollBeforeMapDrag);
+    assert.equal(await page.locator('.burgundy-estate-section > .burgundy-confirm').count(), 0);
+    assert.equal(await page.locator('.burgundy-selection-hint').count(), 1);
+    await completeEstate(390);
     await page.waitForTimeout(450);
-    await control('zoom-in').click();
     await page.locator('.burgundy-map').scrollIntoViewIfNeeded();
     const cancelMap = await page.locator('.burgundy-map').boundingBox();
     await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: cancelMap.x + cancelMap.width / 2, y: cancelMap.y + cancelMap.height / 2}]});
-    await session.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: cancelMap.x + cancelMap.width / 2 + 40, y: cancelMap.y + cancelMap.height / 2}]});
     await session.send('Input.dispatchTouchEvent', {type: 'touchCancel', touchPoints: []});
-    const cancelledTransform = await page.locator('.burgundy-estate').getAttribute('style');
-    await page.mouse.move(cancelMap.x + 20, cancelMap.y + 20);
-    assert.equal(await page.locator('.burgundy-estate').getAttribute('style'), cancelledTransform);
+    assert.equal(await page.locator('.burgundy-hex.is-selected').count(), 0);
     await page.waitForTimeout(450);
-    await control('fit').click();
-    assert.equal(await page.locator('.burgundy-map.is-zoomed').count(), 0);
-    await control('origin').click();
-    assert.equal(await page.locator('.burgundy-map.is-zoomed').count(), 1);
-    await control('fit').click();
+    await page.locator('.burgundy-hex.is-legal').first().tap();
+    assert.equal(await page.locator('.burgundy-hex.is-selected').count(), 1);
+    await control('confirm').tap();
+    assert.equal(await page.evaluate(() => burgundySubmitted.at(-1).type), 'place');
 
     const count = await page.evaluate(() => burgundySubmitted.length);
     await page.locator('#burgundyExplainBtn').click();
@@ -164,6 +180,9 @@ const output = 'tmp/burgundy-ui';
     const helpDialog = page.locator('[data-obg-help-game="castles_of_burgundy"]');
     await helpDialog.locator('[data-obg-help-lang="en"]').click();
     assert.match(await helpDialog.innerText(), /How you win/);
+    await helpDialog.locator('[data-obg-help-tab="controls"]').click();
+    assert.match(await helpDialog.innerText(), /complete estate automatically fits/);
+    assert.doesNotMatch(await helpDialog.innerText(), /Origin|Zoom and drag/);
     await helpDialog.locator('[data-obg-help-tab="knowledge"]').click();
     assert.match(await helpDialog.innerText(), /Knowledge 26/);
     await helpDialog.locator('[data-obg-help-lang="zh"]').click();
@@ -192,7 +211,7 @@ const output = 'tmp/burgundy-ui';
     await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
     await page.waitForFunction(previous => scrollY > previous, scrollStart);
     assert.deepEqual(errors, []);
-    console.log('Passed: live take/reload, four widths, four players/final scoring, local take/place/sell/buy/replace/ship confirmation, round pause, spectator, map pan/release/cancel/Fit/Origin, bilingual Help/focus, disabled Explain, touch tips, outside-map scrolling.');
+    console.log('Passed: live take/reload, four widths with all 37 estate hexes visible and no zoom controls, four players/final scoring, local take/place/sell/buy/replace/ship confirmation, round pause, spectator, map swipe/scroll/cancel without selection, bilingual Help/focus, disabled Explain, touch tips, outside-map scrolling.');
   } catch (error) {
     await page.screenshot({path: `${output}/failure.png`, fullPage: true});
     throw error;

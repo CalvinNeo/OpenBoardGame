@@ -20,8 +20,6 @@
     let inFlight = false;
     let requestTimer = null;
     let tooltipTimer = null;
-    let boardWidth = null;
-    let fitBoard = true;
     let gesture = null;
     let suppressClick = false;
     const explanations = {
@@ -32,9 +30,9 @@
       shift: { zh: "将预览地毯移动一格，红框表示非法位置。按钮只调整预览，不会提交。", en: "Move the rug preview one square. Red outlines indicate an illegal placement. These buttons never submit the move." },
       rotate: { zh: "围绕地毯几何中心旋转九十度，再吸附到最近的棋盘格。格点中心不兼容时优先选择最近的合法位置，确认前仍可移动。", en: "Rotate 90 degrees around the rug's geometric center, then snap to the nearest grid-aligned position. Prefer a legal placement when grid parity requires a half-square adjustment. You can still move before confirming." },
       cancel: { zh: "取消未确认的预览，也可以点击棋盘外的空白或按 Escape。不会撤销已提交的行动。", en: "Cancel an unconfirmed preview. You can also tap blank space outside the board or press Escape. Submitted moves cannot be undone." },
-      zoom: { zh: "加减按钮缩放棋盘，Fit 显示完整棋盘，Origin 恢复六百像素原始尺寸。放大后可拖动，棋盘外仍可正常滚动页面。", en: "Zoom in or out, use Fit to show the whole board, or Origin for its 600-pixel native size. Drag to pan after zooming. Page scrolling still works outside the board." },
       payment: { zh: "落在对手地毯上，要按该格所在的同色共边连通区域格数支付金币(💰)，落点也计算。不同颜色即使同属一人也不连通。不能付清时交出全部余额并出局，恰好付清到零元不会出局。", en: "Landing on an opponent's rug costs dirhams (💰) equal to its edge-connected region of the same color, including the landing square. Different colors never merge, even with the same owner. If you cannot pay in full, pay your remaining coins and leave the game. Paying exactly down to zero does not eliminate you." },
-      score: { zh: "分数(★)为金币(💰)加可见半毯格数(◇)。毯子(▰)显示剩余数量。双人时每人两种颜色。总分平手比较金币，仍相同则并列获胜。", en: "Score (★) is dirhams (💰) plus visible rug squares (◇). Rugs (▰) shows the remaining supply. In two-player games each merchant owns two colors. Break score ties with coins, then share victory if still tied." }
+      score: { zh: "分数(★)为金币(💰)加可见半毯格数(◇)。毯子(▰)显示剩余数量。双人时每人两种颜色。总分平手比较金币，仍相同则并列获胜。", en: "Score (★) is dirhams (💰) plus visible rug squares (◇). Rugs (▰) shows the remaining supply. In two-player games each merchant owns two colors. Break score ties with coins, then share victory if still tied." },
+      remaining: { zh: "待放地毯(▰)按整张计算，每张覆盖两格，不是棋盘空格数。玩家名下显示该玩家的余量，棋盘上方显示所有未出局玩家的合计。每铺一张减少一张，选择或预览不消耗。若仅剩一人，游戏会提前结束，即使仍有未铺的库存。", en: "Rugs left (▰) counts whole unplaced rugs, each covering two squares, not empty board squares. Each merchant shows their own supply, and the market header totals supplies of all non-eliminated merchants. Placing a rug uses one. Selecting or previewing does not. The game ends early with one survivor even if some rugs remain unused." }
     };
     const MARRAKECH_HELP = {
       gameId: GAME_ID,
@@ -50,12 +48,12 @@
           en: "<h3>Choose before rolling</h3><p>Each merchant starts with 30 dirhams (💰). Assam (↑) starts in the center facing north. Keep his direction or turn 90 degrees left or right, never reverse. The die (🎲) has faces 1, 2, 2, 3, 3 and 4. Follow the border loops when leaving the board. The loop itself costs no step.</p><h3>Pay for a connected color</h3><p>Landing on empty ground or your own rugs is free. On an opponent's rug, pay one coin for each square in its edge-connected region of that exact color, including the landing square. Diagonals do not connect. Only the final landing square triggers payment.</p>"
         } },
         { id: "rugs", label: { zh: "铺毯与操作", en: "Rugs & controls" }, html: {
-          zh: "<h3>铺放两格地毯</h3><p>至少一格要与阿萨姆所在格共边，不能盖住他。可覆盖空格、单张旧毯的一半，或两张不同旧毯各一半。不能一次完整盖住同一张旧毯，无论旧毯属于谁。</p><h3>选择两格，再确认</h3><p>先点击一个虚线格，它会标记为一。再点击标记为二的相邻格，预览整张地毯。此时可以改点另一个二号格调整方向，也可点击其他虚线范围内的格子重新选起点。点击第一格、空白、Cancel 或 Escape 可取消。点击棋盘旁的 Place rug 才提交，不会自动猜测方向或提交。</p><h3>微调与查看</h3><p>需要时展开 Move / rotate，用方向按钮移动整张预览，或用 Rotate 围绕几何中心旋转并吸附到棋盘。红框表示位置非法，不能提交。缩放后可拖动查看，Fit 恢复全图。滑动不会选择格子。</p>",
-          en: "<h3>Lay two squares</h3><p>At least one half of the new rug must share an edge with Assam's square. Never cover Assam. Cover empty squares, one half of an old rug, or halves of two different old rugs. Never cover both halves of the same old rug in one move, even your own.</p><h3>Choose two squares, then confirm</h3><p>Tap a dashed square to mark the first half as 1. Tap a neighbor marked 2 to preview the whole rug. Choose another 2 to change direction, or another eligible square to start again. Tap the first square, blank space, Cancel, or Escape to cancel. Only Place rug beside the board submits. The interface never guesses your direction or submits automatically.</p><h3>Fine-tune and inspect</h3><p>Expand Move / rotate for direction buttons and Rotate, which turns around the geometric center and snaps to the grid. Red means illegal and cannot be submitted. Drag a zoomed board to pan and use Fit to restore the full view. Swiping never selects a square.</p>"
+          zh: "<h3>铺放两格地毯</h3><p>至少一格要与阿萨姆所在格共边，不能盖住他。可覆盖空格、单张旧毯的一半，或两张不同旧毯各一半。不能一次完整盖住同一张旧毯，无论旧毯属于谁。</p><h3>选择两格，再确认</h3><p>先点击一个虚线格，它会标记为一。再点击标记为二的相邻格，预览整张地毯。此时可以改点另一个二号格调整方向，也可点击其他虚线范围内的格子重新选起点。点击第一格、空白、Cancel 或 Escape 可取消。点击棋盘旁的 Place rug 才提交，不会自动猜测方向或提交。</p><h3>微调与查看</h3><p>需要时展开 Move / rotate，用方向按钮移动整张预览，或用 Rotate 围绕几何中心旋转并吸附到棋盘。红框表示位置非法，不能提交。棋盘随屏幕尺寸自动完整显示，直接上下滑动即可滚动页面，不会选择格子。</p>",
+          en: "<h3>Lay two squares</h3><p>At least one half of the new rug must share an edge with Assam's square. Never cover Assam. Cover empty squares, one half of an old rug, or halves of two different old rugs. Never cover both halves of the same old rug in one move, even your own.</p><h3>Choose two squares, then confirm</h3><p>Tap a dashed square to mark the first half as 1. Tap a neighbor marked 2 to preview the whole rug. Choose another 2 to change direction, or another eligible square to start again. Tap the first square, blank space, Cancel, or Escape to cancel. Only Place rug beside the board submits. The interface never guesses your direction or submits automatically.</p><h3>Fine-tune and inspect</h3><p>Expand Move / rotate for direction buttons and Rotate, which turns around the geometric center and snaps to the grid. Red means illegal and cannot be submitted. The whole board automatically fits your screen. Swipe vertically to scroll the page without selecting a square.</p>"
         } },
         { id: "ending", label: { zh: "人数与结算", en: "Setup & ending" }, html: {
-          zh: "<h3>地毯供应</h3><p>三人时每人十五张同色毯，四人时每人十二张。双人时每人两种颜色各十二张，混洗为固定顺序的二十四张供应堆，每次只能使用顶端颜色。双人两种颜色分别计算连通费用，不能混色连成大区域。</p><h3>破产与最终得分</h3><p>不能付清时先交出全部金币(💰)，随后出局，不再铺毯。其余地毯保留在棋盘但不再收取费用。恰好付清到零元不会出局。所有存活玩家的毯子铺完，或仅余一人时结束。分数(★)为金币加可见半毯格数(◇)，总分相同时金币更多者获胜，仍平手则共享胜利。毯子(▰)表示剩余供应。本游戏是连续轮流行动的一局，没有自动清盘的新一轮。</p>",
-          en: "<h3>Rug supplies</h3><p>Three merchants receive 15 rugs each in one color. Four receive 12 each. With two players, each owns 12 rugs in each of two colors, shuffled into a fixed 24-rug stack. Always play the top color. The two colors remain separate for connected-area fees.</p><h3>Bankruptcy and scoring</h3><p>If you cannot pay in full, give up your remaining dirhams (💰) and leave without laying a rug. Your rugs stay on the board but no longer collect fees. Paying exactly down to zero does not eliminate you. Finish when every surviving merchant runs out of rugs, or only one survives. Score (★) is coins plus visible rug squares (◇). Break ties with coins, then share victory if still tied. Rugs (▰) indicates the remaining supply. This is one continuous turn-based game, not a series of automatically resetting rounds.</p>"
+          zh: "<h3>地毯供应</h3><p>三人时每人十五张同色毯，四人时每人十二张。双人时每人两种颜色各十二张，混洗为固定顺序的二十四张供应堆，每次只能使用顶端颜色。双人两种颜色分别计算连通费用，不能混色连成大区域。待放地毯(▰)按整张计算，每张两格，玩家名下显示个人余量，棋盘上方显示未出局玩家的合计。每铺一张减一，预览不消耗。</p><h3>破产与最终得分</h3><p>不能付清时先交出全部金币(💰)，随后出局，不再铺毯。其余地毯保留在棋盘但不再收取费用。恰好付清到零元不会出局。所有存活玩家的毯子铺完，或仅余一人时结束。分数(★)为金币加可见半毯格数(◇)，总分相同时金币更多者获胜，仍平手则共享胜利。毯子(▰)表示剩余供应，提前结束时可能仍有库存。本游戏是连续轮流行动的一局，没有自动清盘的新一轮。</p>",
+          en: "<h3>Rug supplies</h3><p>Three merchants receive 15 rugs each in one color. Four receive 12 each. With two players, each owns 12 rugs in each of two colors, shuffled into a fixed 24-rug stack. Always play the top color. The two colors remain separate for connected-area fees. Rugs left (▰) counts whole rugs of two squares each. Each merchant shows their own supply, and the market header totals supplies of all non-eliminated merchants. Placing uses one rug, but previewing does not.</p><h3>Bankruptcy and scoring</h3><p>If you cannot pay in full, give up your remaining dirhams (💰) and leave without laying a rug. Your rugs stay on the board but no longer collect fees. Paying exactly down to zero does not eliminate you. Finish when every surviving merchant runs out of rugs, or only one survives. Score (★) is coins plus visible rug squares (◇). Break ties with coins, then share victory if still tied. Rugs (▰) indicates the remaining supply, which may be unused when the game ends early. This is one continuous turn-based game, not a series of automatically resetting rounds.</p>"
         } }
       ]
     };
@@ -112,7 +110,7 @@
     function renderPlayers() {
       byId("Players").innerHTML = view.players.map((player) => `<div class="marrakech-player ${player.player_id === view.current_turn ? "is-current" : ""} ${player.eliminated ? "is-out" : ""}" data-marrakech-explain="score" data-marrakech-tip="score" tabindex="0">
         <div class="marrakech-player-name">${player.colors.map((color) => `<span class="marrakech-swatch" style="--rug-color:${palette[color]}" aria-hidden="true"></span>`).join("")}<strong>${escapeHtml(player.name)}${player.player_id === view.you ? " · you" : ""}</strong></div>
-        <div class="marrakech-player-stats"><span>💰 ${player.coins}</span><span>◇ ${player.visible}</span><span>▰ ${player.rugs_left}</span><span>★ ${player.total}${player.eliminated ? " · out" : ""}</span></div></div>`).join("");
+        <div class="marrakech-player-stats"><span>💰 ${player.coins}</span><span>◇ ${player.visible}</span><span class="marrakech-player-rugs" data-marrakech-explain="remaining" data-marrakech-tip="remaining" tabindex="0">▰ ${player.rugs_left} rugs left</span><span>★ ${player.total}${player.eliminated ? " · out" : ""}</span></div></div>`).join("");
       byId("Players").style.gridTemplateColumns = view.players.length === 2 ? "repeat(2,minmax(0,1fr))" : "";
     }
 
@@ -246,14 +244,6 @@
       renderBoard();
     }
 
-    function resizeBoard() {
-      const viewport = byId("Viewport");
-      const width = Math.max(180, viewport.clientWidth);
-      if (fitBoard || boardWidth === null) boardWidth = Math.min(width, Math.floor(innerHeight * (innerWidth <= 700 ? 0.68 : 0.72)));
-      byId("World").style.width = `${boardWidth}px`;
-      renderRugPreview();
-    }
-
     function render() {
       if (!view) return;
       byId("Lobby").classList.add("hidden");
@@ -261,6 +251,8 @@
       byId("Turn").textContent = view.game_over ? "The market is closed" : `${playerName(view.current_turn)}${view.current_turn === view.you ? " · your turn" : "'s turn"}`;
       byId("Phase").textContent = view.game_over ? "Final scores" : `Turn ${view.turn_number} · ${{ orient: "Orient", roll: "Roll", place: "Weave" }[view.phase]}`;
       renderPlayers();
+      const rugsLeft = view.players.reduce((total, player) => total + (player.eliminated ? 0 : player.rugs_left), 0);
+      byId("RugsLeft").textContent = `▰ ${rugsLeft} rugs left`;
       byId("Placement").classList.toggle("hidden", !view.legal_actions.includes("place"));
       byId("RugLabel").innerHTML = view.next_color ? `<span class="marrakech-next-rug" style="--rug-color:${palette[view.next_color]}" aria-hidden="true">${patterns[view.next_color]} ${patterns[view.next_color]}</span>${escapeHtml(view.next_color)} rug` : "";
       const active = view.current_turn === view.you && !view.game_over;
@@ -289,7 +281,6 @@
       if (view.game_over) byId("Results").innerHTML = `<h3>Market winners</h3><p>${escapeHtml(view.winner.map(playerName).join(" & "))}</p>${[...view.players].sort((first, second) => Number(first.eliminated) - Number(second.eliminated) || second.total - first.total || second.coins - first.coins).map((player) => `<p>${escapeHtml(player.name)} · ${player.total} pts${player.eliminated ? " · eliminated" : ""}</p>`).join("")}`;
       byId("Log").innerHTML = [...view.history].reverse().map((entry) => `<li>${escapeHtml(playerName(entry.player_id))} ${entry.type === "place" ? `laid ${entry.color} at ${entry.cells.map((cell) => `${String.fromCharCode(65 + cell[0])}${cell[1] + 1}`).join("–")}` : `rolled ${entry.roll}${entry.payment.due ? `, paid ${entry.payment.paid}/${entry.payment.due}` : ", no fee"}`}.</li>`).join("");
       renderBoard();
-      resizeBoard();
     }
 
     byId("HelpBtn").addEventListener("click", () => { explain.exit(); hideTooltip(); help.open(); });
@@ -308,30 +299,20 @@
       placementNotice = "";
       renderBoard();
     }));
-    byId("ZoomIn").addEventListener("click", () => { fitBoard = false; boardWidth = Math.min(1400, boardWidth * 1.25); resizeBoard(); });
-    byId("ZoomOut").addEventListener("click", () => { fitBoard = false; boardWidth = Math.max(byId("Viewport").clientWidth, boardWidth / 1.25); resizeBoard(); });
-    byId("Fit").addEventListener("click", () => { fitBoard = true; resizeBoard(); byId("Viewport").scrollTo(0, 0); });
-    byId("Origin").addEventListener("click", () => { fitBoard = false; boardWidth = 600; resizeBoard(); });
 
     document.addEventListener("pointerdown", (event) => {
       if (!panel.contains(event.target) || explain.isActive()) return;
-      gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, touch: event.pointerType === "touch", board: byId("Viewport").contains(event.target), left: byId("Viewport").scrollLeft, top: byId("Viewport").scrollTop };
+      gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, touch: event.pointerType === "touch" };
       suppressClick = false;
     }, true);
     document.addEventListener("pointermove", (event) => {
       if (!gesture || gesture.id !== event.pointerId) return;
       if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 8) gesture.moved = true;
-      if (gesture.moved && gesture.board) {
-        byId("Viewport").setPointerCapture(event.pointerId);
-        byId("Viewport").scrollLeft = gesture.left - (event.clientX - gesture.x);
-        byId("Viewport").scrollTop = gesture.top - (event.clientY - gesture.y);
-      }
     }, true);
     document.addEventListener("pointerup", (event) => {
       if (gesture?.id !== event.pointerId) return;
       suppressClick = gesture.moved;
       if (!gesture.moved && gesture.touch) showTooltip(event.target.closest("[data-marrakech-tip]"));
-      if (byId("Viewport").hasPointerCapture(event.pointerId)) byId("Viewport").releasePointerCapture(event.pointerId);
       gesture = null;
     }, true);
     document.addEventListener("pointercancel", () => { suppressClick = Boolean(gesture?.moved); gesture = null; }, true);
@@ -349,7 +330,7 @@
       if (event.key === "Escape") { resetPlacement(); selectedDirection = null; hideTooltip(); if (view) render(); }
     });
     window.addEventListener("scroll", hideTooltip, true);
-    new ResizeObserver(resizeBoard).observe(byId("Viewport"));
+    new ResizeObserver(renderRugPreview).observe(byId("World"));
 
     function syncRoom(room) {
       if (room?.game_type !== GAME_ID) { explain.exit(); help.close(); hideTooltip(); return; }

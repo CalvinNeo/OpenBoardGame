@@ -5,7 +5,7 @@ from game.kobayakawa_ai import choose_action
 
 DEFAULT_CONFIG = {
     "starting_tokens": 4,
-    "end_mode": "bankrupt",
+    "end_mode": "rounds",
     "round_limit": 7,
 }
 
@@ -16,7 +16,7 @@ def _merge_config(config: Optional[Dict]) -> Dict:
         for key, value in config.items():
             cfg[key] = value
     if cfg.get("end_mode") not in ("bankrupt", "rounds"):
-        cfg["end_mode"] = "bankrupt"
+        cfg["end_mode"] = DEFAULT_CONFIG["end_mode"]
     try:
         cfg["starting_tokens"] = int(cfg.get("starting_tokens", DEFAULT_CONFIG["starting_tokens"]))
     except (TypeError, ValueError):
@@ -55,7 +55,12 @@ def _next_player_id(state: Dict, current_pid: str) -> Optional[str]:
 
 
 def _start_round(state: Dict, start_player: Optional[str], round_number: int, carry_pot: bool) -> None:
+    state["turn_order"] = [pid for pid in _sorted_player_ids(state)
+                           if int(state["players"][pid].get("tokens", 0)) > 0]
     deck = _build_deck()
+    for pdata in state["players"].values():
+        pdata["hand"] = None
+        pdata["drawn_card"] = None
     for pid in state.get("turn_order", []):
         pdata = state["players"][pid]
         pdata["hand"] = deck.pop()
@@ -66,6 +71,7 @@ def _start_round(state: Dict, start_player: Optional[str], round_number: int, ca
     state["discard_pile"] = []
     state["actions_taken"] = []
     state["betting_choices"] = {}
+    state["bets"] = {}
     if not carry_pot:
         state["pot"] = 0
     order = state.get("turn_order", [])
@@ -92,20 +98,24 @@ def _finalize_winner(state: Dict) -> None:
 
 def _check_game_over(state: Dict) -> bool:
     cfg = state.get("config", {})
-    end_mode = cfg.get("end_mode", "bankrupt")
+    if (sum(int(player.get("tokens", 0)) > 0 for player in state["players"].values()) <= 1
+            or int(state.get("reserve", 0)) == 0):
+        _finalize_winner(state)
+        return True
+    end_mode = cfg.get("end_mode", "rounds")
     if end_mode == "bankrupt":
         for pdata in state.get("players", {}).values():
             if int(pdata.get("tokens", 0)) <= 0:
                 _finalize_winner(state)
                 return True
-    elif end_mode == "rounds":
-        if int(state.get("round", 0)) >= int(cfg.get("round_limit", 0)):
-            _finalize_winner(state)
-            return True
     return False
 
 
 def _compute_showdown(state: Dict, fighters: List[str]) -> Tuple[str, List[Dict], str]:
+    order = state.get("turn_order", fighters)
+    start = order.index(state["start_player"]) if state.get("start_player") in order else 0
+    ranks = {pid: index for index, pid in enumerate(order[start:] + order[:start])}
+    fighters = sorted(fighters, key=lambda pid: ranks.get(pid, len(order)))
     min_hand = None
     for pid in fighters:
         value = state["players"][pid]["hand"]
@@ -117,7 +127,6 @@ def _compute_showdown(state: Dict, fighters: List[str]) -> Tuple[str, List[Dict]
     bonus_holder = min_holders[0]
     winner = None
     winner_score = None
-    winner_hand = None
     fighters_summary: List[Dict] = []
     for pid in fighters:
         hand_value = state["players"][pid]["hand"]
@@ -136,11 +145,6 @@ def _compute_showdown(state: Dict, fighters: List[str]) -> Tuple[str, List[Dict]
         if winner is None or final_score > winner_score:
             winner = pid
             winner_score = final_score
-            winner_hand = hand_value
-        elif final_score == winner_score and hand_value > winner_hand:
-            winner = pid
-            winner_score = final_score
-            winner_hand = hand_value
     if winner is None:
         raise ValueError("critical error: unable to determine showdown winner")
     return winner, fighters_summary, bonus_holder
@@ -172,16 +176,19 @@ def _complete_action_turn(state: Dict, player_id: str) -> None:
 
 
 def _finish_round(state: Dict, next_start_player: Optional[str], carry_pot: bool) -> None:
+    state["review_id"] = state.get("review_id", 0) + 1
     summary = state["last_round_summary"]
     summary["tokens"] = []
     for pid, pdata in state["players"].items():
-        paid = 1 if state["betting_choices"].get(pid) == "fight" else 0
+        paid = state.get("bets", {}).get(pid, 1 if state["betting_choices"].get(pid) == "fight" else 0)
         received = summary["pot"] if summary.get("winner") == pid else 0
+        reward = summary.get("reserve_reward", 0) if summary.get("winner") == pid else 0
         summary["tokens"].append({
             "player_id": pid,
-            "before": pdata["tokens"] + paid - received,
+            "before": pdata["tokens"] + paid - received - reward,
             "paid": paid,
             "received": received,
+            "reward": reward,
             "after": pdata["tokens"],
         })
     if _check_game_over(state):
@@ -193,6 +200,24 @@ def _finish_round(state: Dict, next_start_player: Optional[str], carry_pot: bool
     state["carry_pot"] = carry_pot
 
 
+def _round_reward(state: Dict) -> int:
+    reserve = int(state.get("reserve", 0))
+    return min(reserve, 2 if reserve <= 2 else 1)
+
+
+def _fight_cost(state: Dict, player_id: str) -> int:
+    return min(int(state["players"][player_id].get("tokens", 0)),
+               2 if int(state.get("reserve", 0)) <= 2 else 1)
+
+
+def _award_pot(state: Dict, summary: Dict, winner: str) -> None:
+    reward = _round_reward(state)
+    state["players"][winner]["tokens"] += summary["pot"] + reward
+    state["pot"] = 0
+    state["reserve"] -= reward
+    summary.update(reserve_reward=reward, reserve_after=state["reserve"])
+
+
 def _resolve_betting(state: Dict) -> None:
     fighters = [pid for pid, choice in state.get("betting_choices", {}).items() if choice == "fight"]
     pot_value = int(state.get("pot", 0))
@@ -200,6 +225,9 @@ def _resolve_betting(state: Dict) -> None:
         "round": state.get("round"),
         "pot": pot_value,
         "kobayakawa": state.get("kobayakawa"),
+        "reserve_before": state["reserve"],
+        "reserve_after": state["reserve"],
+        "reserve_reward": 0,
     }
 
     if not fighters:
@@ -212,8 +240,7 @@ def _resolve_betting(state: Dict) -> None:
     if len(fighters) == 1:
         winner = fighters[0]
         summary.update({"result": "solo", "winner": winner})
-        state["players"][winner]["tokens"] += pot_value
-        state["pot"] = 0
+        _award_pot(state, summary, winner)
         state["last_round_summary"] = summary
         _finish_round(state, winner, carry_pot=False)
         return
@@ -227,8 +254,7 @@ def _resolve_betting(state: Dict) -> None:
             "fighters": fighters_summary,
         }
     )
-    state["players"][winner]["tokens"] += pot_value
-    state["pot"] = 0
+    _award_pot(state, summary, winner)
     state["last_round_summary"] = summary
     _finish_round(state, winner, carry_pot=False)
 
@@ -262,6 +288,9 @@ class KobayakawaGame:
             "phase": "action",
             "round": 1,
             "pot": 0,
+            "reserve": cfg["round_limit"] + 1,
+            "bets": {},
+            "review_id": 0,
             "kobayakawa": None,
             "deck": [],
             "discard_pile": [],
@@ -275,6 +304,7 @@ class KobayakawaGame:
         }
         if player_ids:
             _start_round(state, start_player, 1, carry_pot=False)
+            _check_game_over(state)
         return state
 
     @staticmethod
@@ -288,6 +318,8 @@ class KobayakawaGame:
         phase = state.get("phase")
         if phase == "round_end":
             return [] if player_id in state.get("round_ready", []) else ["next_round"]
+        if int(pdata.get("tokens", 0)) <= 0:
+            return []
         if phase == "action":
             if player_id != state.get("current_turn"):
                 return []
@@ -321,16 +353,21 @@ class KobayakawaGame:
                 return [], "only next_round allowed"
             if action.get("round") != state.get("round"):
                 return [], "round changed"
+            if action.get("review_id") != state.get("review_id", 0):
+                return [], "review changed"
             ready = state.setdefault("round_ready", [])
             if player_id in ready:
                 return [], "already ready"
             ready.append(player_id)
             events = [{"type": "kobayakawa:ready", "payload": {"player_id": player_id}}]
             if all(pid in ready for pid in state["players"]):
-                _start_round(state, state.get("next_start_player"), state["round"] + 1,
+                next_round = state["round"] + (state["last_round_summary"]["result"] != "all_pass")
+                _start_round(state, state.get("next_start_player"), next_round,
                              state.get("carry_pot", False))
                 events.append({"type": "kobayakawa:next_round", "payload": {"round": state["round"]}})
             return events, None
+        if int(pdata.get("tokens", 0)) <= 0:
+            return [], "player eliminated"
         phase = state.get("phase")
         events: List[Dict] = []
 
@@ -406,8 +443,10 @@ class KobayakawaGame:
             if action_type == "fight":
                 if int(pdata.get("tokens", 0)) <= 0:
                     return [], "no tokens"
-                pdata["tokens"] -= 1
-                state["pot"] = int(state.get("pot", 0)) + 1
+                cost = _fight_cost(state, player_id)
+                pdata["tokens"] -= cost
+                state["pot"] = int(state.get("pot", 0)) + cost
+                state.setdefault("bets", {})[player_id] = cost
                 state.setdefault("betting_choices", {})[player_id] = "fight"
                 events.append(
                     {
@@ -457,6 +496,9 @@ class KobayakawaGame:
                     "tokens": pdata.get("tokens", 0),
                     "bet_choice": betting_choices.get(pid),
                     "action_done": pid in actions_taken,
+                    "bet_amount": state.get("bets", {}).get(pid, 1 if betting_choices.get(pid) == "fight" else 0),
+                    "eliminated": int(pdata.get("tokens", 0)) <= 0 and not (
+                        state.get("phase") == "betting" and betting_choices.get(pid) == "fight"),
                 }
             )
 
@@ -474,6 +516,10 @@ class KobayakawaGame:
             "current_turn": state.get("current_turn"),
             "start_player": state.get("start_player"),
             "pot": state.get("pot", 0),
+            "reserve": state["reserve"],
+            "round_reward": _round_reward(state),
+            "final_round": state["reserve"] <= 2,
+            "fight_cost": _fight_cost(state, viewer_id) if viewer_id in state["players"] else 0,
             "kobayakawa": state.get("kobayakawa"),
             "deck_count": len(state.get("deck", [])),
             "discard_pile": list(state.get("discard_pile", [])),
@@ -483,6 +529,7 @@ class KobayakawaGame:
             "legal_actions": KobayakawaGame.get_legal_actions(state, viewer_id),
             "last_round_summary": state.get("last_round_summary"),
             "round_ready": list(state.get("round_ready", [])),
+            "review_id": state.get("review_id", 0),
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
             "config": {
@@ -502,4 +549,48 @@ class KobayakawaGame:
 
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
+        legacy = "reserve" not in payload
+        if legacy:
+            limit = int(payload.get("config", {}).get("round_limit", 7))
+            payload["reserve"] = max(2, limit - int(payload.get("round", 1)) + 2)
+            if payload.get("phase") == "round_end" and payload.get("last_round_summary", {}).get("winner"):
+                payload["reserve"] = max(0, payload["reserve"] - (2 if payload["reserve"] <= 2 else 1))
+            if payload.get("game_over"):
+                payload["reserve"] = 0
+        payload.setdefault("bets", {pid: 1 for pid, choice in payload.get("betting_choices", {}).items()
+                                    if choice == "fight"})
+        payload.setdefault("review_id", 0)
+        if legacy and payload.get("phase") in ("action", "betting"):
+            previous_turn = payload.get("current_turn")
+            previous_order = payload.get("turn_order", [])
+            choices = payload.get("betting_choices", {})
+            payload["turn_order"] = [
+                pid for pid in previous_order if payload["players"][pid]["tokens"] > 0
+                or (payload["phase"] == "betting" and choices.get(pid) == "fight")
+            ]
+            order = payload["turn_order"]
+            if payload.get("start_player") not in order:
+                payload["start_player"] = order[0] if order else None
+            payload["actions_taken"] = [pid for pid in payload.get("actions_taken", []) if pid in order]
+            if payload["phase"] == "action" and len(payload["actions_taken"]) == len(order):
+                payload["phase"] = "betting"
+                payload["betting_choices"] = {}
+                payload["bets"] = {}
+                payload["current_turn"] = payload["start_player"]
+            elif previous_turn not in order:
+                start = previous_order.index(previous_turn) if previous_turn in previous_order else 0
+                rotated = previous_order[start:] + previous_order[:start]
+                payload["current_turn"] = next((pid for pid in rotated if pid in order), None)
+            if payload["phase"] == "action":
+                _check_game_over(payload)
+            elif payload["phase"] == "betting":
+                start = previous_order.index(payload["current_turn"]) if payload["current_turn"] in previous_order else 0
+                rotated = previous_order[start:] + previous_order[:start]
+                pending = [pid for pid in rotated if pid in order and pid not in payload["betting_choices"]]
+                if pending:
+                    payload["current_turn"] = pending[0]
+                else:
+                    _resolve_betting(payload)
+        elif legacy and payload.get("phase") == "round_end":
+            _check_game_over(payload)
         return payload

@@ -17,7 +17,10 @@
           <div class="kobayakawa-number-card kobayakawa-public-card" data-kobayakawa-explain="kobayakawa_card" data-kobayakawa-tip="The smallest hand among fighters adds this card to its strength, not its tokens."><span>🎴</span><strong id="kobayakawaCard">—</strong><small>STRENGTH BONUS</small></div>
           <button id="kobayakawaReplaceBtn" type="button" data-kobayakawa-explain="replace">Replace</button>
         </div>
-        <div class="kobayakawa-pot" data-kobayakawa-explain="pot" data-kobayakawa-tip="Tokens in the pot. The winner collects these after all bets."><span>Pot</span><strong>🪙 <span id="kobayakawaPot">0</span></strong><small>tokens</small></div>
+        <div class="kobayakawa-prizes">
+          <div class="kobayakawa-pot" data-kobayakawa-explain="pot" data-kobayakawa-tip="Player bets only. The winner collects the pot plus a separate reserve reward."><span>Bet pot</span><strong>🪙 <span id="kobayakawaPot">0</span></strong></div>
+          <div class="kobayakawa-pot" data-kobayakawa-explain="reserve" data-kobayakawa-tip="Public reserve, separate from bets. Each winner takes 1, or the last 2 in the final round."><span>Reserve</span><strong>🪙 <span id="kobayakawaReserve">8</span></strong><small id="kobayakawaReward">Winner +1</small></div>
+        </div>
       </div>
       <div class="kobayakawa-caption"><h3>Discard pile</h3><span id="kobayakawaDiscardCount">0 cards</span></div>
       <div id="kobayakawaDiscard" class="kobayakawa-discard" data-kobayakawa-explain="discard" data-kobayakawa-tip="Public discarded cards cannot be drawn again this round."></div>

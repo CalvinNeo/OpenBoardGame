@@ -57,12 +57,13 @@ async function checkPresentation(page, width, finalView) {
         sendAction = action => kobayakawaQaSent.push(action);
         const players = Array.from({ length: 6 }, (_, index) => ({
             player_id: `qa${index}`, name: index === 0 ? 'You' : index === 1 ? 'VeryLongUnbrokenPlayerNameForLayoutChecks' : `Player ${index + 1}`,
-            tokens: index === 0 ? 5 : index === 1 ? 3 : 4, is_bot: false, action_done: false, bet_choice: null,
+            tokens: index === 0 ? 6 : index === 1 ? 3 : 4, is_bot: false, action_done: false, bet_choice: null,
         }));
         window.kobayakawaQaView = {
             game_id: 'kobayakawa', you: 'qa0', phase: 'action', round: 1, current_turn: 'qa1', start_player: 'qa0',
             kobayakawa: 3, pot: 0, deck_count: 8, discard_pile: [], your_hand: 2, your_drawn: null, players,
             legal_actions: [], last_round_summary: null, winner: null, game_over: false,
+            reserve: 8, round_reward: 1, final_round: false, fight_cost: 1,
         };
         renderKobayakawaGameState({ view: kobayakawaQaView });
     });
@@ -86,7 +87,7 @@ async function checkPresentation(page, width, finalView) {
     await page.locator('#kobayakawaCard').click();
     assert.match(await page.locator('dialog.obg-explain-dialog[open]').textContent(), /3/);
     await page.keyboard.press('Escape');
-    const tooltipTarget = page.locator('.kobayakawa-pot');
+    const tooltipTarget = page.locator('.kobayakawa-pot').first();
     if (width < 600) await tooltipTarget.tap();
     else await tooltipTarget.hover();
     assert.equal(await page.locator('#kobayakawaTooltip').isVisible(), true);
@@ -99,12 +100,33 @@ async function checkPresentation(page, width, finalView) {
     await page.screenshot({ path: `${output}/choice-${width}.png`, fullPage: true });
     await page.evaluate(() => {
         Object.assign(kobayakawaQaView, {
+            phase: 'betting', your_drawn: null, round: 7, reserve: 2,
+            round_reward: 2, final_round: true, fight_cost: 2, legal_actions: ['fight', 'pass'],
+        });
+        renderKobayakawaGameState({ view: kobayakawaQaView });
+    });
+    await checkLayout(page, width, 'final round');
+    assert.equal(await page.locator('#kobayakawaReserve').textContent(), '2');
+    assert.match(await page.locator('#kobayakawaFightBtn').textContent(), /−2/);
+    assert.equal(await page.locator('#kobayakawaReward').textContent(), 'Winner +2');
+    await page.mouse.move(0, 0);
+    await page.keyboard.press('Escape');
+    await page.screenshot({ path: `${output}/final-bet-${width}.png`, fullPage: true });
+    await page.evaluate(() => {
+        kobayakawaQaView.fight_cost = 1;
+        renderKobayakawaGameState({ view: kobayakawaQaView });
+    });
+    assert.match(await page.locator('#kobayakawaFightBtn').textContent(), /−1/);
+    await page.evaluate(() => {
+        Object.assign(kobayakawaQaView, {
+            round: 1, reserve: 7, round_reward: 1, final_round: false, fight_cost: 1, review_id: 1,
             phase: 'round_end', current_turn: null, your_drawn: null, round_ready: ['qa1', 'qa2'], legal_actions: ['next_round'],
             last_round_summary: {
-                round: 1, result: 'showdown', winner: 'qa0', pot: 2, kobayakawa: 3,
+                round: 1, result: 'showdown', winner: 'qa0', pot: 2, kobayakawa: 3, reserve_reward: 1,
                 fighters: [{ player_id: 'qa0', hand: 2, final_score: 5, got_bonus: true }, { player_id: 'qa1', hand: 4, final_score: 4, got_bonus: false }],
                 tokens: kobayakawaQaView.players.map((player, index) => ({
-                    player_id: player.player_id, before: 4, paid: index < 2 ? 1 : 0, received: index === 0 ? 2 : 0, after: player.tokens,
+                    player_id: player.player_id, before: 4, paid: index < 2 ? 1 : 0, received: index === 0 ? 2 : 0,
+                    reward: index === 0 ? 1 : 0, after: player.tokens,
                 })),
             },
         });
@@ -112,10 +134,10 @@ async function checkPresentation(page, width, finalView) {
     });
     await checkLayout(page, width, 'settlement');
     assert.match(await page.locator('.kobayakawa-summary-item.winner').textContent(), /Strength: 2 \+ 3 bonus = 5/);
-    assert.match(await page.locator('.kobayakawa-summary-item.winner').textContent(), /Tokens: 4 − 1 bet \+ 2 pot = 5 \(net \+1\)/);
+    assert.match(await page.locator('.kobayakawa-summary-item.winner').textContent(), /Tokens: 4 − 1 bet \+ 2 pot \+ 1 reward = 6 \(net \+2\)/);
     await page.screenshot({ path: `${output}/settlement-${width}.png`, fullPage: true });
     await page.locator('#kobayakawaNextBtn').click();
-    assert.deepEqual(await page.evaluate(() => kobayakawaQaSent), [{ type: 'next_round', round: 1 }]);
+    assert.deepEqual(await page.evaluate(() => kobayakawaQaSent), [{ type: 'next_round', round: 1, review_id: 1 }]);
     assert.equal(await page.locator('#kobayakawaNextBtn').isDisabled(), true);
     await page.evaluate(() => {
         Object.assign(kobayakawaQaView, { you: 'spectator', legal_actions: [], your_hand: null });

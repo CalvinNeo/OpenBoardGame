@@ -7,8 +7,8 @@ const KOBAYAKAWA_HELP_CONFIG = {
   title: { zh: "小早川 · Kobayakawa", en: "Kobayakawa" },
   basic: {
     win: {
-      zh: "整局在回合结算后有人筹码(🪙)耗尽，或达到房间设置的轮数时结束，筹码最多的玩家获胜。",
-      en: "After settlement, the game ends if a player has no tokens(🪙) left or the configured round limit is reached, and the most tokens wins."
+      zh: "默认七轮结束后筹码(🪙)最多者获胜，零筹码玩家淘汰，只剩一人时提前结束。",
+      en: "By default, the most tokens(🪙) after seven rounds wins. Zero-token players are eliminated, and one remaining player ends the game early."
     },
     turn: {
       zh: "每轮先轮流做一次行动，可以抽牌来调整自己的手牌，也可以换掉场中央的小早川牌，之后所有人再轮流决定要不要 Fight。",
@@ -50,13 +50,13 @@ const KOBAYAKAWA_HELP_CONFIG = {
       id: "betting",
       label: { zh: "Fight 与 Pass", en: "Fight and Pass" },
       html: {
-        zh: "<p>按下 Fight 要先付出一个筹码放进底池(Pot)，然后你就有资格参加本轮的争夺。</p>"
+        zh: "<p>普通轮 Fight 支付 1 枚筹码进下注底池。末轮支付 2 枚，只有 1 枚时可押最后 1 枚。</p>"
           + "<p>按下 Pass 不花任何东西，代价是你这一轮完全退出，底池与你无关。</p>"
-          + "<p>只有还剩筹码的玩家才能 Fight，筹码已经归零的玩家只能 Pass。</p>"
+          + "<p>结算后零筹码玩家淘汰，后续不再发牌或下注，但仍可看结算并点击 Next Round。</p>"
           + "<p>你的决定会在玩家区公开，所以后面行动的人能看见前面所有人的选择。</p>",
-        en: "<p>Pressing Fight costs you one token, which goes straight into the pot, and it buys you a seat in this round's showdown.</p>"
+        en: "<p>Fight costs one token normally and two in the final round. With only one token left, you may bet that last token in the final round.</p>"
           + "<p>Pressing Pass costs nothing, and the price is that you are out of the round and the pot has nothing to do with you.</p>"
-          + "<p>Only a player who still holds tokens may Fight, and a player with no tokens left can only Pass.</p>"
+          + "<p>Players with no tokens after settlement are eliminated and skip future deals and bets, but still review results and press Next Round.</p>"
           + "<p>Your decision is public at the table, so everyone acting later sees what the earlier players chose.</p>"
       }
     },
@@ -67,12 +67,12 @@ const KOBAYAKAWA_HELP_CONFIG = {
         zh: "<p>如果没有任何人 Fight，这一轮的底池原样留到下一轮，谁也拿不到它。</p>"
           + "<p>如果只有一位玩家 Fight，他不必比牌就直接赢走整个底池。</p>"
           + "<p>如果两位以上玩家 Fight 就进入争夺。手牌数字最小的那位玩家获得小早川牌的加成，他的最终点数等于自己的手牌加上小早川牌。</p>"
-          + "<p>其他人的最终点数就是自己的手牌。最终点数最高的玩家赢下底池，点数打平时手牌数字更大的那位获胜。</p>"
+          + "<p>其他人的最终点数就是自己的手牌。最终点数最高者获胜，同点时从本轮起始玩家顺时针算，先行动者获胜。</p>"
           + "<p>这意味着最小的牌反而可能翻身，而一张中等偏大的牌往往两头不讨好。</p>",
         en: "<p>If nobody fights, the pot simply stays on the table for the next round and no one collects it.</p>"
           + "<p>If exactly one player fights, that player takes the whole pot without any comparison.</p>"
           + "<p>When two or more players fight the showdown begins. The fighter holding the smallest hand card receives the Kobayakawa bonus, making their final score their own card plus the Kobayakawa card.</p>"
-          + "<p>Everyone else scores just their own hand card. The highest final score takes the pot, and a tie is broken in favour of the larger hand card.</p>"
+          + "<p>Everyone else scores their own hand card. The highest score wins. A tie goes to the player earlier in this round's order, clockwise from the start player.</p>"
           + "<p>That is why the smallest card can suddenly be the strongest one, while a middling large card tends to please nobody.</p>"
       }
     },
@@ -81,15 +81,15 @@ const KOBAYAKAWA_HELP_CONFIG = {
       label: { zh: "结束与胜负", en: "Ending and winning" },
       html: {
         zh: "<p>赢下底池的玩家拿走全部筹码，并由他在下一轮先行动。全员 Pass 时，下一轮由本轮起始玩家的下家开始。</p>"
-          + "<p>牌力加成不是筹码奖励。Strength 的 +3 只表示比牌时加 3 点。筹码(🪙)单独按本轮开始余额减下注再加赢得的底池计算，底池包含赢家自己的下注。</p>"
+          + "<p>牌力加成不是筹码奖励。Strength 的 +3 只表示比牌时加 3 点。默认每人 4 枚，另有 8 枚公共储备。前六轮赢家拿走下注底池，再从储备拿 1 枚。末轮拿剩下 2 枚，所以独赢也能净赚公共奖励。</p>"
           + "<p>每轮结算后会暂停，所有玩家点击 Next Round 后才重新发牌，电脑自动确认，观察者无需确认。</p>"
-          + "<p>默认在分配底池后检查是否有人筹码归零，再按筹码多少决定整局胜负，同分时可以并列。投入最后一枚筹码但赢回底池，不算破产。</p>"
-          + "<p>另一种房间设置是打满固定轮数之后结束，胜负同样按筹码多少决定。赢家(🏆)标记同时用于本轮和整局的胜者。</p>",
+          + "<p>先发放底池和储备奖励，再淘汰零筹码者。储备用完或只剩一位玩家时结束，同筹码可并列获胜。全员 Pass 不发奖励，不推进轮数，确认后本轮重发。</p>"
+          + "<p>兼容旧房间的破产制房规会在有人归零时结束。自定义 N 轮时使用 N+1 枚储备，末轮仍奖励 2 枚。赢家(🏆)标记用于本轮和整局胜者。</p>",
         en: "<p>The winner collects the pot and opens the next round. If everyone passes, the next player clockwise opens instead.</p>"
-          + "<p>A strength bonus is not a token reward. Strength +3 adds three only when comparing cards. Tokens(🪙) are tracked separately as the starting balance minus your bet plus the collected pot, which includes your own bet.</p>"
+          + "<p>A strength bonus is not a token reward. Strength +3 only affects card comparison. By default, each player starts with four tokens(🪙), with eight more in a public reserve. Winners collect the bet pot plus one reserve token in the first six rounds, then the last two reserve tokens in the final round. Even an unopposed winner gains a reserve reward.</p>"
           + "<p>Each round pauses for review. All players press Next Round before the next deal. Bots confirm automatically, and spectators do not need to confirm.</p>"
-          + "<p>Bankruptcy is checked after awarding the pot, and the highest token balance wins, sharing tied victories. Betting your last token is not bankruptcy if you win the pot back.</p>"
-          + "<p>An alternative room setting ends the game after a fixed number of rounds, and the winner is decided by token count just the same. Winner(🏆)marks both round and game winners.</p>"
+          + "<p>Award the pot and reserve reward before eliminating zero-token players. The game ends when the reserve runs out or only one player remains, with tied token leaders sharing victory. If everyone passes, award nothing and replay the same round after review.</p>"
+          + "<p>Legacy bankruptcy rooms end when anyone runs out of tokens. A custom N-round game uses N+1 reserve tokens and still awards two in its final round. Winner(🏆)marks round and game winners.</p>"
       }
     }
   ]
@@ -97,13 +97,14 @@ const KOBAYAKAWA_HELP_CONFIG = {
 
 const KOBAYAKAWA_EXPLAIN = {
   phase: { zh: "Action 为行动，Betting 为下注，Review 为结算暂停，Finished 为整局结束。", en: "Action adjusts cards, Betting chooses Fight or Pass, Review pauses on settlement, and Finished ends the game." },
-  tokens: { zh: "筹码(🪙)用于下注和整局计分，不等于牌力。结算余额等于本轮开始筹码减下注，再加赢得的底池。", en: "Tokens(🪙) pay bets and decide the overall winner, unlike card strength. Settlement is starting tokens minus your bet plus the pot you collect." },
+  tokens: { zh: "筹码(🪙)用于下注和整局计分，不等于牌力。余额等于期初减下注，加赢得的底池和公共储备奖励。", en: "Tokens(🪙) pay bets and decide the winner, unlike strength. Balance is starting tokens minus your bet plus the pot and reserve reward you collect." },
+  reserve: { zh: "公共储备(🪙)独立于下注底池，普通轮赢家额外拿 1 枚，末轮拿剩余 2 枚。", en: "The public reserve(🪙) is separate from bets. The winner gains one extra token normally, or the final two tokens in the last round." },
   next_round: { zh: "确认已看完结算。所有玩家确认后开始下一轮，电脑自动确认，观察者无需确认。", en: "Confirm you have reviewed the settlement. The next deal waits for every player. Bots confirm automatically, and spectators do not confirm." },
   round: { zh: "当前是第几轮。", en: "Which round is being played." },
   turn: { zh: "现在轮到谁行动或者表态。", en: "Whose turn it is to act or to declare." },
   start_player: { zh: "本轮的起始玩家。行动阶段和下注阶段都从他开始。", en: "The player who opens this round. Both the action phase and the betting phase start with them." },
   kobayakawa_card: { zh: "场中央的小早川牌(🎴)。争夺时手牌最小的玩家可以把它的点数加到自己的最终点数上。", en: "The Kobayakawa card(🎴) in the middle. In a showdown the fighter with the smallest hand card adds its value to their final score." },
-  pot: { zh: "当前底池里的筹码数量。每位 Fight 的玩家都往里放一个，赢的人一次拿走全部。", en: "How many tokens sit in the pot right now. Every fighter adds one, and the winner takes all of them at once." },
+  pot: { zh: "下注底池只含玩家投入。普通轮每人 1 枚，末轮 2 枚（只剩 1 枚可全押），赢家另拿公共储备奖励。", en: "The bet pot contains player stakes only: one each normally, two in the final round (one-token all-in allowed). The winner also gains a separate reserve reward." },
   deck: { zh: "牌堆里还剩多少张牌。它决定你还能不能抽牌或者更换小早川牌。", en: "How many cards are left in the deck. It decides whether you can still draw or replace the Kobayakawa card." },
   winner: { zh: "整局结束时筹码最多的玩家，同分时会并列显示。", en: "The player holding the most tokens when the game ends, shown together when several players tie." },
   round_notice: { zh: "上一轮的结果，包括底池归属、谁拿到了小早川牌加成，以及每位参战者的手牌与最终点数。", en: "The previous round's result, including who took the pot, who received the Kobayakawa bonus, and the hand card and final score of every fighter." },
@@ -113,7 +114,7 @@ const KOBAYAKAWA_EXPLAIN = {
   replace: { zh: "不动自己的手牌，把场中央的小早川牌换成牌堆顶的新牌。这会改变争夺时的加成大小。", en: "Leave your hand alone and swap the Kobayakawa card in the middle for a fresh card off the deck, which changes how big the bonus will be." },
   keep_drawn: { zh: "留下刚抽到的牌作为新手牌，把原来的手牌丢进弃牌堆。", en: "Keep the freshly drawn card as your new hand and throw your old card onto the discard pile." },
   discard_drawn: { zh: "保留原来的手牌，把刚抽到的那张丢进弃牌堆。", en: "Keep your existing hand card and throw the freshly drawn one onto the discard pile." },
-  fight: { zh: "支付一个筹码进入本轮争夺。手牌最小的玩家会获得小早川牌(🎴)加成，最终点数最高的人赢走底池。", en: "Pay one token to enter this round's showdown. The smallest hand card gets the Kobayakawa card(🎴) bonus, and the highest final score takes the pot." },
+  fight: { zh: "普通轮支付 1 枚筹码，末轮支付 2 枚（只剩 1 枚可全押）。赢家拿下注底池和公共奖励。最小手牌获得小早川牌(🎴)牌力加成。", en: "Bet one token normally, or two in the final round (all-in with one is allowed). The winner collects the bet pot plus a reserve reward. The smallest hand gets the Kobayakawa card(🎴) strength bonus." },
   pass: { zh: "不花筹码，直接退出本轮争夺。底池会与你无关地留给别人。", en: "Spend nothing and drop out of this round's showdown, leaving the pot to the others." },
   discard: { zh: "公开的弃牌堆。这里的每一张牌都不会再出现，是你推算别人手牌的关键信息。", en: "The public discard pile. None of these cards can come back, which makes it the key information for working out what other players hold." },
   players: { zh: "所有玩家的筹码数量和当前状态。acted(✅) 表示行动阶段已完成，bet 一栏显示他选了 Fight 还是 Pass。", en: "Every player's token count and current state. The acted(✅) mark means the action phase is done for them, and the bet column shows whether they chose Fight or Pass." }
@@ -211,7 +212,7 @@ function clearKobayakawaState() {
   hideKobayakawaTip();
   kobayakawaText("Status", "Waiting for the deal");
   kobayakawaText("Decision", "Waiting to start");
-  ["Phase", "Round", "StartPlayer", "Card", "Pot", "Deck", "Hand", "Drawn"].forEach(suffix => kobayakawaText(suffix, "—"));
+  ["Phase", "Round", "StartPlayer", "Card", "Pot", "Reserve", "Reward", "Deck", "Hand", "Drawn"].forEach(suffix => kobayakawaText(suffix, "—"));
   ["RoundNotice", "Review", "DrawnSlot", "Betting"].forEach(suffix => document.getElementById("kobayakawa" + suffix).classList.add("hidden"));
   document.getElementById("kobayakawaDiscardDrawnBtn").classList.add("hidden");
   document.getElementById("kobayakawaDrawBtn").classList.remove("hidden");
@@ -236,9 +237,9 @@ function renderKobayakawaRoundNotice(view) {
   kobayakawaText("RoundNoticeTitle", view.game_over ? "Game over · " + formatKobayakawaWinner(view, view.winner) : "Round settled");
   kobayakawaText("ResultRound", "Round " + summary.round);
   kobayakawaText("RoundNoticeBody", summary.result === "all_pass" ?
-    "Everyone passed. Pot carries over: 🪙 " + summary.pot :
+    "Everyone passed. No reserve reward · replay this round. Bet pot: 🪙 " + summary.pot :
     formatKobayakawaWinner(view, summary.winner) + (summary.result === "solo" ? " wins unopposed" : " wins the showdown") +
-    " · Collected 🪙 " + summary.pot + " from the pot (includes their own bet).");
+    " · Bet pot 🪙 " + summary.pot + " + reserve reward 🪙 " + (summary.reserve_reward ?? 0) + ".");
   const list = document.getElementById("kobayakawaRoundNoticeList");
   list.replaceChildren();
   const settlements = summary.tokens || [];
@@ -258,7 +259,7 @@ function renderKobayakawaRoundNotice(view) {
     tokens.className = "kobayakawa-token-change";
     if (balance) {
       const delta = balance.after - balance.before;
-      tokens.textContent = "🪙 Tokens: " + balance.before + " − " + balance.paid + " bet + " + balance.received + " pot = " + balance.after +
+      tokens.textContent = "🪙 Tokens: " + balance.before + " − " + balance.paid + " bet + " + balance.received + " pot + " + (balance.reward ?? 0) + " reward = " + balance.after +
         " (net " + (delta > 0 ? "+" : "") + delta + ")";
     } else {
       tokens.textContent = "🪙 Tokens now: " + player.tokens + " · earlier balance unavailable";
@@ -310,13 +311,13 @@ function renderKobayakawaPlayers(view) {
     tokens.className = "kobayakawa-player-tokens";
     tokens.textContent = "🪙 " + (player.tokens ?? 0);
     tokens.dataset.kobayakawaExplain = "tokens";
-    tokens.dataset.kobayakawaTip = "Token balance, not card strength. Fight costs one token. The pot is awarded once.";
+    tokens.dataset.kobayakawaTip = "Token balance, not strength. Fight costs 1 normally, or 2 in the final round (1-token all-in allowed). Winners also gain a reserve reward.";
     const status = document.createElement("span");
     status.textContent = view.phase === "round_end" ? ((view.round_ready || []).includes(player.player_id) ? "Ready" : "Reviewing") :
       view.game_over ? ((view.winner || []).includes(player.player_id) ? "🏆 Winner" : "Finished") :
-      player.player_id === view.current_turn ? "Turn" : view.phase === "betting" ? (player.bet_choice === "fight" ? "Fight · −1" : player.bet_choice === "pass" ? "Passed" : "Deciding") :
+      player.eliminated ? "Out" : player.player_id === view.current_turn ? "Turn" : view.phase === "betting" ? (player.bet_choice === "fight" ? "Fight · −" + (player.bet_amount ?? 1) : player.bet_choice === "pass" ? "Passed" : "Deciding") :
       player.action_done ? "✅ Acted" : "Waiting";
-    status.dataset.kobayakawaTip = "Turn: acting now. Acted: finished the action. Fight: paid one token. Ready: reviewed the result.";
+    status.dataset.kobayakawaTip = "Turn: acting now. Acted: finished the action. Fight: bet paid. Out: eliminated. Ready: reviewed the result.";
     meta.append(tokens, status);
     card.append(name, meta);
     container.appendChild(card);
@@ -325,6 +326,7 @@ function renderKobayakawaPlayers(view) {
 }
 
 function renderKobayakawaGameState(data) {
+  hideKobayakawaTip();
   const view = data.view;
   currentKobayakawaView = view;
   kobayakawaPending = false;
@@ -357,6 +359,10 @@ function renderKobayakawaGameState(data) {
   kobayakawaText("StartPlayer", findPlayerName(view, view.start_player) || "—");
   kobayakawaText("Card", view.kobayakawa ?? "—");
   kobayakawaText("Pot", view.pot ?? 0);
+  kobayakawaText("Reserve", view.reserve ?? "—");
+  kobayakawaText("Reward", "Winner +" + (view.round_reward ?? 0));
+  kobayakawaText("FightBtn", "Fight · 🪙 −" + (view.fight_cost ?? 1));
+  if (view.final_round && !view.game_over) kobayakawaText("Phase", "Final · " + (names[view.phase] || view.phase));
   kobayakawaText("Deck", view.deck_count ?? "—");
   kobayakawaText("Hand", view.your_hand ?? "?");
   kobayakawaText("Drawn", view.your_drawn ?? "—");
@@ -382,7 +388,10 @@ Object.entries(kobayakawaActionIds).forEach(([action, id]) => {
   document.getElementById(id).addEventListener("click", () => {
     if (!isKobayakawaActionAvailable(action) || !socket.connected) return;
     const payload = { type: action };
-    if (action === "next_round") payload.round = currentKobayakawaView.round;
+    if (action === "next_round") {
+      payload.round = currentKobayakawaView.round;
+      payload.review_id = currentKobayakawaView.review_id ?? 0;
+    }
     kobayakawaPending = true;
     updateKobayakawaActionButtons();
     sendAction(payload);

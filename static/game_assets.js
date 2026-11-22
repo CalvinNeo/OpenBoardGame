@@ -890,14 +890,14 @@ const GAME_ASSETS = {
   },
   "kobayakawa": {
     "scripts": [
-      "/static/games/kobayakawa.js?v=app_v5"
+      "/static/games/kobayakawa.js?v=app_v6"
     ],
     "styles": [],
     "panel": "kobayakawaPanel",
     "header": "showKobayakawaHeaderActions",
     "panelTitle": "Kobayakawa",
-    "markup": "/static/games/kobayakawa.html?v=2",
-    "styleFragments": "/static/games/kobayakawa.css?v=2"
+    "markup": "/static/games/kobayakawa.html?v=3",
+    "styleFragments": "/static/games/kobayakawa.css?v=3"
   },
   "high_society": {
     "scripts": [
@@ -1193,10 +1193,10 @@ const GAME_ASSETS = {
   },
   "castles_of_burgundy": {
     "scripts": [
-      "/static/games/castles_of_burgundy.js?v=4"
+      "/static/games/castles_of_burgundy.js?v=5"
     ],
     "styles": [
-      "/static/castles_of_burgundy.css?v=4"
+      "/static/castles_of_burgundy.css?v=5"
     ],
     "markup": "/static/games/castles_of_burgundy.html?v=1",
     "panel": "burgundyPanel",
@@ -1287,9 +1287,9 @@ const GAME_ASSETS = {
     "header": "showFactoryFunnerHeaderActions"
   },
   "marrakech": {
-    "scripts": ["/static/games/marrakech.js?v=2"],
-    "styles": ["/static/games/marrakech.css?v=2"],
-    "markup": "/static/games/marrakech.html?v=2",
+    "scripts": ["/static/games/marrakech.js?v=4"],
+    "styles": ["/static/games/marrakech.css?v=4"],
+    "markup": "/static/games/marrakech.html?v=4",
     "panel": "marrakechPanel",
     "panelTitle": "Marrakech",
     "header": "showMarrakechHeaderActions"
