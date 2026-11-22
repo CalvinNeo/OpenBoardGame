@@ -37,6 +37,7 @@
         cash: ["现金（💰）", "可用于竞拍、买股和派遣工人的现金。收益与费用分开显示；抵押股票可以补充现金。"],
         workers: ["工人（👤）", "显示本航次剩余 / 总工人数。每次派遣使用一名工人，下一航次全部收回。"],
         result: ["航次账本", "绿色 + 是本航次收入，红色 − 是支出，净额是两者之差，不是最终得分。终局胜者由服务器按现金、股票市值和抵押债务计算。"],
+        score: ["最终总分", "每位玩家的总分 = 现金（💰）+ 未抵押股票（📜）市值 − 抵押债务（🏦）。股票逐类按张数 × 终局股价计算，债务按已抵押张数 × 每股还款额计算，房间自定义还款额同样适用。所有人的计分明细只在游戏结束后公开，航次净额不会重复计入总分。"],
         confirm: ["Confirm / Cancel", "Confirm 提交当前预览，Cancel 或点击周围空白取消。确认前不会发送行动；等待服务器响应时不能重复提交。"],
     };
     const help = `
@@ -44,7 +45,7 @@
         <p>在马尼拉投资货船（⛵）、股票和港湾职位。任一股价达到 💰30 时游戏结束；现金 + 未抵押股票市值 − 抵押债务最高者获胜，可以并列。</p>
         <h3>货物与资源</h3>
         <p>肉豆蔻 Nutmeg（🟫）：总收益 💰24，3 个座位；丝绸 Silk（🟨）：💰18，3 个座位；人参 Ginseng（🟩）：💰36，4 个座位；翡翠 Jade（🟦）：💰30，3 个座位。颜色与文字同时标识货物。</p>
-        <p>现金（💰）、工人（👤）、股票（📜）、抵押债务（🏦）、骰子（🎲）、隐藏持仓（🔒）。工人和职位直接显示玩家姓名，姓名后的 YOU 标记自己，Winner（🏆）是胜者。收益 + 与入场费分开显示。股票种类对其他玩家保密。</p>
+        <p>现金（💰）、工人（👤）、股票（📜）、抵押债务（🏦）、骰子（🎲）、隐藏持仓（🔒）。工人和职位直接显示玩家姓名，姓名后的 YOU 标记自己，Winner（🏆）是胜者。收益 + 与入场费分开显示。游戏中股票种类对其他玩家保密，终局公开所有人的计分明细。</p>
         <h3>每一航次</h3>
         <ol><li><strong>拍卖：</strong>轮流提高出价或 Pass。竞得者支付费用成为港务长，现金不足时先抵押股票。</li>
         <li><strong>备航：</strong>港务长可买一张股票（价格至少 💰5），再选三种货物；三船起点合计 9，每船 0–5 格，可以为 0。</li>
@@ -59,7 +60,7 @@
         <p>🛡️ 保险：入场费 💰0，立即领 💰10，每艘失败船赔 💰10。🏦 抵押：默认每股借 💰12、终局扣 💰15，房间可配置；不再计入持股，不能赎回。</p>
         <h3>操作与查看</h3>
         <p>点选座位或职位，在原处 Confirm；Cancel 或点空白处撤销。货物再次点击可以取消，三个起点和领航移动均可预览。规则不挡住棋盘；Help 查看规则，Explain 再点目标查看解释，灰色按钮也可解释。Esc 退出解释或关闭对话框。静态图标可悬停查看，手机轻点后的提示 3 秒消失，滑动不会选择。</p>
-        <p>轮到你时收起的 Room Controls 显示红色边框。Players 可展开查看公开现金、工人和持股总数；航次结算突出 YOU，Details 可查看收支。终局保留棋盘与胜者，重新开局使用 Room Controls。</p>`;
+        <p>轮到你时收起的 Room Controls 显示红色边框。Players 可展开查看公开现金、工人和持股总数；航次结算突出 YOU，Details 可查看收支。终局为每位玩家展示现金 + 股票市值 − 债务 = 总分，逐类列出股票张数、终局股价和抵押扣款，航次账本另外保留。重新开局使用 Room Controls。</p>`;
 
     let view = null;
     let roomKey = null;
@@ -416,6 +417,23 @@
         return translated.replace(/^Buy /, "购买 ").replace(/^Seat /, "船位 ").replace(/^Ship /, "货船 ");
     }
 
+    function renderFinalScore(player) {
+        const score = player.score_breakdown;
+        if (!score) return '<p class="manila-small">等待终局计分数据…</p>';
+        const stocks = cargoOrder.map(cargo => {
+            const stock = score.stocks[cargo];
+            return `<div class="manila-score-row"><span>${cargoLabel(cargo)}</span><span>${stock.count} × 💰${stock.price} = ${stock.value}</span></div>`;
+        }).join("");
+        return `<div class="manila-final-total" ${tip("最终总分 = 现金 + 未抵押股票市值 − 抵押债务。", "score")}><span>总分</span><strong>${score.total}</strong></div>
+            <div class="manila-score-breakdown" ${explanation("score")}>
+                <div class="manila-score-row"><span>💰 现金</span><strong>${score.cash}</strong></div>
+                ${stocks}
+                <div class="manila-score-row manila-score-subtotal"><span>📜 股票合计</span><strong>${score.stock_value}</strong></div>
+                <div class="manila-score-row"><span>🏦 抵押债务</span><span>${score.pledged_count} × 💰${score.loan_repay} = ${score.debt}</span></div>
+                <p class="manila-score-formula">现金 ${score.cash} + 股票 ${score.stock_value} − 债务 ${score.debt} = <strong>${score.total}</strong></p>
+            </div>`;
+    }
+
     function renderReview() {
         const reviewing = view.phase === "round_end" || view.game_over;
         visible(byId("Review"), reviewing);
@@ -424,21 +442,17 @@
         const ready = players.filter(player => player.round_ready).length;
         const winners = (view.winner || []).map(playerName).join(" · ");
         const title = view.game_over ? `🏆 ${winners || "Game over"}` : `第 ${view.round} 航次 · 结算`;
-        let subtitle = view.game_over ? "最终胜者 · 航次账本保留" : `${ready} / ${players.length} Ready · 所有人确认后继续`;
-        if (view.game_over && own()) {
-            const stockValue = cargoOrder.reduce((sum, cargo) => sum + (own().stocks?.[cargo] || 0) * (view.price_track?.[cargo] || 0), 0);
-            const debt = total(own().pledged) * loanConfig("loan_repay", 15);
-            subtitle = `你的资产：现金 ${own().cash} + 股票 ${stockValue} − 债务 ${debt} = ${own().cash + stockValue - debt}`;
-        }
+        const subtitle = view.game_over ? "全员总分 · 现金 + 股票市值 − 抵押债务 · 航次账本保留" : `${ready} / ${players.length} Ready · 所有人确认后继续`;
         byId("Review").innerHTML = `<div class="manila-review-heading"><div><h3>${escape(title)}</h3><span class="manila-small">${escape(subtitle)}</span></div>
             ${!view.game_over && own() ? button(own().round_ready ? "Ready ✓" : pending ? "Sending…" : "Next Round", "next-round", {key: "next", className: "manila-primary", disabled: !can("next_round")}) : ""}</div>
-            <div class="manila-results" data-manila-scroll="results">${players.map(player => {
+            <div class="manila-results${view.game_over ? " is-final" : ""}" data-manila-scroll="results">${players.map(player => {
                 const ledger = view.round_ledger?.[player.player_id] || {};
                 const earned = total(ledger.earn);
                 const spent = total(ledger.spend);
                 const net = earned - spent;
                 const lines = ["earn", "spend"].flatMap(kind => Object.entries(ledger[kind] || {}).map(([label, amount]) => `<div class="manila-ledger-line"><span>${escape(ledgerLabel(label))}</span><span class="${kind === "earn" ? "manila-gain" : "manila-loss"}">${kind === "earn" ? "+" : "−"}${amount}</span></div>`)).join("");
-                return `<article class="manila-result-card${player.player_id === view.you ? " is-you" : ""}"><div class="manila-result-name">${escape(playerLabel(player.player_id))}</div>
+                return `<article class="manila-result-card${player.player_id === view.you ? " is-you" : ""}" data-player-id="${escape(player.player_id)}"><div class="manila-result-name">${escape(playerLabel(player.player_id))}</div>
+                    ${view.game_over ? renderFinalScore(player) : ""}
                     <div class="manila-result-total" ${tip(`本航次收入 💰${earned}，支出 💰${spent}，净额 ${net >= 0 ? "+" : ""}${net}。`, "result")}><span>净额</span><strong class="${net >= 0 ? "manila-gain" : "manila-loss"}">${net >= 0 ? "+" : "−"}💰${Math.abs(net)}</strong></div>
                     <div class="manila-result-total"><span ${tip(`当前现金 💰${player.cash}`, "cash")}>💰 ${player.cash}</span><span>${view.game_over ? view.winner?.includes(player.player_id) ? "🏆 Winner" : "Finished" : player.round_ready ? "Ready ✓" : "Waiting"}</span></div>
                     <details data-manila-detail-id="ledger-${escape(player.player_id)}"><summary>Details · +${earned} / −${spent}</summary>${lines || '<p class="manila-small">No transactions</p>'}</details></article>`;
@@ -452,7 +466,7 @@
             const stocks = mine ? total(player.stocks) : player.stock_count || 0;
             const pledged = mine ? total(player.pledged) : player.pledged_count || 0;
             return `<article class="manila-player${mine ? " is-you" : ""}"><strong>${escape(playerLabel(player.player_id))}${player.player_id === view.harbormaster ? " · 港务长" : ""}</strong>
-                <div class="manila-player-resources"><span ${tip(`现金 💰${player.cash}`, "cash")}>💰${player.cash}</span><span ${tip(`工人剩余 ${player.workers_available} / ${player.workers_total}`, "workers")}>👤${player.workers_available}/${player.workers_total}</span><span ${tip(`股票 ${stocks} 张；${mine ? "自己的各类持股见上方市场。" : "种类保密。"}`, "market")}>📜${stocks}${mine ? "" : " 🔒"}</span><span ${tip(`已抵押 ${pledged} 张股票`, "pledge")}>🏦${pledged}</span></div></article>`;
+                <div class="manila-player-resources"><span ${tip(`现金 💰${player.cash}`, "cash")}>💰${player.cash}</span><span ${tip(`工人剩余 ${player.workers_available} / ${player.workers_total}`, "workers")}>👤${player.workers_available}/${player.workers_total}</span><span ${tip(`股票 ${stocks} 张；${view.game_over ? "终局计分明细已公开。" : mine ? "自己的各类持股见上方市场。" : "种类保密。"}`, "market")}>📜${stocks}${mine || view.game_over ? "" : " 🔒"}</span><span ${tip(`已抵押 ${pledged} 张股票`, "pledge")}>🏦${pledged}</span></div></article>`;
         }).join("");
     }
 

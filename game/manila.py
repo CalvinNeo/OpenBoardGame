@@ -494,16 +494,31 @@ def _check_game_end(state: Dict) -> bool:
     return False
 
 
+def _score_breakdown(state: Dict, player_id: str) -> Dict:
+    pdata = state["players"][player_id]
+    cash = int(pdata.get("cash", 0))
+    stocks = {}
+    for cargo_id in CARGO_LIST:
+        count = int(pdata.get("stocks", {}).get(cargo_id, 0))
+        price = int(state.get("price_track", {}).get(cargo_id, 0))
+        stocks[cargo_id] = {"count": count, "price": price, "value": count * price}
+    stock_value = sum(stock["value"] for stock in stocks.values())
+    pledged_count = sum(int(pdata.get("pledged", {}).get(cargo_id, 0)) for cargo_id in CARGO_LIST)
+    loan_repay = int(state.get("config", {}).get("loan_repay", 15))
+    debt = pledged_count * loan_repay
+    return {
+        "cash": cash,
+        "stocks": stocks,
+        "stock_value": stock_value,
+        "pledged_count": pledged_count,
+        "loan_repay": loan_repay,
+        "debt": debt,
+        "total": cash + stock_value - debt,
+    }
+
+
 def _finalize_game(state: Dict) -> None:
-    scores: Dict[str, int] = {}
-    for pid, pdata in state.get("players", {}).items():
-        cash = int(pdata.get("cash", 0))
-        score = cash
-        for cargo_id in CARGO_LIST:
-            price = int(state["price_track"].get(cargo_id, 0))
-            score += int(pdata["stocks"].get(cargo_id, 0)) * price
-            score -= int(pdata["pledged"].get(cargo_id, 0)) * state["config"].get("loan_repay", 15)
-        scores[pid] = score
+    scores = {pid: _score_breakdown(state, pid)["total"] for pid in state.get("players", {})}
     if scores:
         max_score = max(scores.values())
         winners = [pid for pid, score in scores.items() if score == max_score]
@@ -548,6 +563,8 @@ def _player_view(state: Dict, player_id: str, viewer_id: str) -> Dict:
     else:
         view["stock_count"] = sum(pdata.get("stocks", {}).values())
         view["pledged_count"] = sum(pdata.get("pledged", {}).values())
+    if state.get("game_over"):
+        view["score_breakdown"] = _score_breakdown(state, player_id)
     return view
 
 
@@ -649,6 +666,9 @@ class ManilaGame:
 
         action_type = action.get("type")
         events: List[Dict] = []
+
+        if state.get("game_over") and action_type != "play_again":
+            return [], "game over"
 
         if action_type == "pledge_stock":
             cargo_id = action.get("cargo")

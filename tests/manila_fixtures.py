@@ -2,7 +2,7 @@ import copy
 import json
 import random
 
-from game.manila import ManilaGame, _init_boat
+from game.manila import ManilaGame, _finalize_game, _init_boat
 
 
 def build_views() -> dict:
@@ -113,12 +113,26 @@ def build_views() -> dict:
     state["players"]["p0"]["round_ready"] = True
     save("ready")
     save("review_spectator", "visitor")
-    state["phase"] = "game_over"
-    state["game_over"] = True
-    state["winner"] = ["p0", "p3"]
     state["price_track"]["ginseng"] = 30
+    for player in state["players"].values():
+        player["stocks"] = dict.fromkeys(state["price_track"], 0)
+        player["pledged"] = dict.fromkeys(state["price_track"], 0)
+    state["players"]["p0"].update(cash=26, stocks={"nutmeg": 1, "silk": 2, "ginseng": 0, "jade": 1})
+    state["players"]["p0"]["pledged"]["ginseng"] = 1
+    state["players"]["p1"].update(cash=12, stocks={"nutmeg": 0, "silk": 2, "ginseng": 0, "jade": 0})
+    state["players"]["p2"].update(cash=15, stocks={"nutmeg": 1, "silk": 0, "ginseng": 0, "jade": 1})
+    state["players"]["p3"].update(cash=1, stocks={"nutmeg": 1, "silk": 0, "ginseng": 1, "jade": 1})
+    state["players"]["p4"]["cash"] = 30
+    _finalize_game(state)
     save("finished")
     save("finished_spectator", "visitor")
+    state["config"]["loan_repay"] = 13
+    state["players"]["p4"]["cash"] = -4
+    state["players"]["p4"]["stocks"] = dict.fromkeys(state["price_track"], 0)
+    state["players"]["p4"]["pledged"] = {"nutmeg": 1, "silk": 1, "ginseng": 0, "jade": 0}
+    _finalize_game(state)
+    save("finished_custom")
+    save("finished_custom_spectator", "visitor")
     return views
 
 

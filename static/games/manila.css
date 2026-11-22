@@ -171,9 +171,17 @@
     .manila-review-heading > div { display: grid; gap: 4px; }
     .manila-review-heading h3 { font-size: 16px; }
     .manila-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; max-height: 330px; overflow-y: auto; scrollbar-width: thin; }
+    .manila-results.is-final { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); max-height: none; overflow: visible; align-items: start; }
     .manila-result-card { background: #fffdf6; border: 1px solid #d2dbc4; border-radius: 7px; padding: 8px; }
     .manila-result-card.is-you { border-color: #6e9464; background: #f2f6e8; }
     .manila-result-name { font-weight: 700; font-size: 13px; }
+    .manila-final-total { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 7px 0; color: var(--manila-teal); font-weight: 700; }
+    .manila-final-total strong { font-size: 24px; }
+    .manila-score-breakdown { display: grid; gap: 4px; font-size: 12px; }
+    .manila-score-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 8px; }
+    .manila-score-row > :last-child { margin-left: auto; }
+    .manila-score-subtotal { border-top: 1px solid var(--manila-line); padding-top: 4px; }
+    .manila-score-formula { padding: 6px 0; border-top: 1px solid var(--manila-line); border-bottom: 1px solid var(--manila-line); }
     .manila-result-total { display: flex; justify-content: space-between; gap: 6px; margin-top: 5px; font-size: 12px; }
     .manila-gain { color: #256445; }
     .manila-loss { color: #9b3f26; }

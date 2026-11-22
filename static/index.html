@@ -641,6 +641,7 @@
                     <option value="bubble_shooter">Bubble Shooter · 泡泡龙</option>
                     <option value="factory_funner">Factory Funner · 工厂乐翻天 🤖</option>
                     <option value="for_northwood">For Northwood! · 为了北境森林</option>
+                    <option value="rummikub">Rummikub · 拉密 🤖</option>
                     <option value="machi_koro">Machi Koro · 骰子街 🤖</option>
                     <option value="thats_life">That's Life! · 糟了个糕</option>
                   </select>
@@ -672,6 +673,7 @@
                   <div id="catanStarfarersRoomSetupRow" class="hidden">Setup <span id="catanStarfarersRoomSetup">-</span> · Language <span id="catanStarfarersRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
+                  <div class="game-config-card hidden" id="rummikubConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="semanticGuessConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="dareWordsConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="blokusConfigBox" aria-hidden="true"></div>
@@ -1211,6 +1213,7 @@
             <div class="panel-header-actions" id="sixNimmtHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="bubbleShooterHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="felixHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="rummikubHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="chrominoHeaderActions" style="display: none;">
               <button id="chrominoHelpBtn" type="button" aria-label="Help">Help</button>
               <button id="chrominoExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
@@ -1636,6 +1639,7 @@
             <div id="diceThronePanel" class="hidden"></div>
             <div id="hivePanel" class="hidden hive-panel"></div>
             <div id="chrominoPanel" class="hidden chromino-panel"></div>
+            <div id="rummikubPanel" class="hidden"></div>
 
             <div id="semanticGuessPanel" class="hidden semantic-guess-panel"></div>
             <div id="dareWordsPanel" class="hidden dare-words-panel"></div>
@@ -1826,9 +1830,9 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=316" defer></script>
+  <script src="/static/game_assets.js?v=320" defer></script>
   <template id="incanGoldGuide"></template>
-  <script src="/static/games/shared.js?v=app_v48" defer></script>
+  <script src="/static/games/shared.js?v=app_v49" defer></script>
   <script src="/static/games/shared_help.js?v=3" defer></script>
   <script src="/static/games/shared_effects.js?v=1" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
@@ -1868,7 +1872,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v73" defer></script>
-  <script src="/static/room.js?v=app_v112" defer></script>
+  <script src="/static/app.js?v=app_v74" defer></script>
+  <script src="/static/room.js?v=app_v113" defer></script>
 </body>
 </html>

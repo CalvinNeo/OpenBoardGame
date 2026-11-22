@@ -41,6 +41,48 @@ async function render(page, name, {reset = true, view = views[name], config = {}
 
 async function actionCount(page) { return page.evaluate(() => window.manilaQaActions.length); }
 async function lastAction(page) { return page.evaluate(() => window.manilaQaActions.at(-1)); }
+async function finalScores(page, width) {
+    for (const name of ['finished', 'finished_spectator', 'finished_custom', 'finished_custom_spectator']) {
+        const view = views[name];
+        await render(page, name);
+        assert.equal(await page.locator('.manila-final-total').count(), view.players.length);
+        for (const player of view.players) {
+            const card = page.locator(`.manila-result-card[data-player-id="${player.player_id}"]`);
+            const score = player.score_breakdown;
+            assert.equal(await card.locator('.manila-final-total strong').innerText(), String(score.total));
+            assert.equal(await card.locator('.manila-score-formula').innerText(), `现金 ${score.cash} + 股票 ${score.stock_value} − 债务 ${score.debt} = ${score.total}`);
+            const rows = await card.locator('.manila-score-row').allTextContents();
+            for (const cargo of ['nutmeg', 'silk', 'ginseng', 'jade']) {
+                const stock = score.stocks[cargo];
+                assert(rows.some(row => row.includes(`${stock.count} × 💰${stock.price} = ${stock.value}`)));
+            }
+            assert(rows.some(row => row.includes(`${score.pledged_count} × 💰${score.loan_repay} = ${score.debt}`)));
+            assert.equal(await card.locator('strong').filter({hasText: String(score.total)}).first().isVisible(), true);
+            assert.equal((await card.innerText()).includes('🏆 Winner'), view.winner.includes(player.player_id));
+        }
+        await bounds(page, `${width}px ${name} final calculations`);
+    }
+    const longNames = structuredClone(views.finished_custom_spectator);
+    for (const player of longNames.players) player.name = views.long_names.players.find(other => other.player_id === player.player_id).name;
+    await render(page, 'finished_custom_spectator', {view: longNames});
+    assert.equal(await page.locator('#manilaReview img').count(), 0);
+    assert.equal(await page.evaluate(() => window.manilaInjected), undefined);
+    await bounds(page, `${width}px final score long names`);
+    await render(page, 'finished_custom');
+    await page.locator('#manilaReview').scrollIntoViewIfNeeded();
+    await page.screenshot({path: path.join(output, `final-scores-${width}.png`), fullPage: true});
+    await page.locator('.manila-result-card[data-player-id="p4"] details summary').click();
+    assert.equal(await page.locator('.manila-result-card[data-player-id="p4"] details').evaluate(node => node.open), true);
+    await page.locator('#manilaExplainBtn').click();
+    await page.locator('.manila-result-card[data-player-id="p4"] .manila-final-total').click();
+    assert.match(await page.locator('#manilaExplainBody').innerText(), /张数 × 终局股价/);
+    assert.match(await page.locator('#manilaExplainBody').innerText(), /房间自定义还款额/);
+    await dismissExplanation(page);
+    await render(page, 'review');
+    assert.equal(await page.locator('.manila-final-total').count(), 0);
+    assert.equal(await page.locator('.manila-score-breakdown').count(), 0);
+}
+
 async function playerNames(page, width) {
     const view = structuredClone(views.long_names);
     view.board.port = {A: 'p0', B: 'p1', C: 'p2'};
@@ -373,6 +415,7 @@ async function swipe(page, locator) {
 
         for (const width of [320, 390, 1024, 1440]) {
             await page.setViewportSize({width, height: 1000});
+            await finalScores(page, width);
             await playerNames(page, width);
             await startingPositionBounds(page, width);
             for (const name of Object.keys(views)) {

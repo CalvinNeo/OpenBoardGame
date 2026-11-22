@@ -35,6 +35,10 @@
 .mk-caption { margin: 12px 0 7px; font-size: 11px; color: var(--mk-muted); }
 .mk-caption h3 { color: var(--mk-ink); font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .02em; }
 .mk-caption span { text-align: right; }
+.mk-landmark-caption h3, .mk-landmark-tools { flex-shrink: 0; }
+.mk-landmark-tools { display: flex; align-items: center; gap: 8px; }
+.mk-landmark-tools > span, #machiKoroRollSlot button { white-space: nowrap; }
+#machiKoroRollSlot .mk-buttons { flex-wrap: nowrap; }
 .mk-landmarks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
 .mk-landmark { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; border: 1px dashed #c8d5ce; border-radius: 9px; padding: 9px; background: #f5f4ec; min-height: 97px; }
 .mk-landmark.is-built { background: #fbefd0; border: 1px solid #d9bb66; }

@@ -81,6 +81,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "ponzi_scheme",
     "power_grid",
     "rebel_princess",
+    "rummikub",
     "red_doors",
     "sagrada",
     "scout",

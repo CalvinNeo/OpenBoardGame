@@ -304,6 +304,10 @@
       if (!view.game_over && !view.legal_actions.length && view.phase !== "round_summary") byId("Message").textContent = `Waiting for ${playerName(view.current_turn)} · ${view.phase}.`;
       byId("Message").classList.toggle("mk-visually-hidden", Boolean(view.legal_actions.length && ["roll", "reroll", "harbor", "invest"].includes(view.phase)));
       const controls = byId("TurnButtons");
+      const headerRoll = view.phase === "roll" && view.legal_actions.includes("roll");
+      byId(headerRoll ? "RollSlot" : "TurnControls").append(controls);
+      byId("RollSlot").classList.toggle("hidden", !headerRoll);
+      byId("DiceRow").classList.toggle("hidden", headerRoll);
       controls.classList.toggle("hidden", !view.legal_actions.length);
       controls.replaceChildren();
       if (["roll", "reroll"].includes(view.phase)) {

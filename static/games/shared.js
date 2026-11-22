@@ -43,6 +43,8 @@ function emitRoomStart() {
     payload.config = getMachiKoroConfig();
   } else if (currentGameType === "for_northwood" && typeof getForNorthwoodConfig === "function") {
     payload.config = getForNorthwoodConfig();
+  } else if (currentGameType === "rummikub" && typeof getRummikubConfig === "function") {
+    payload.config = getRummikubConfig();
   } else if (currentGameType === "draw_guess") {
     const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";

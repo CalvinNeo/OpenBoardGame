@@ -1,0 +1,69 @@
+#rummikubPanel { --rk-ink: #173c42; --rk-felt: #e7f1ed; color: var(--rk-ink); min-width: 0; }
+.game-panel[data-game-theme="rummikub"] > .panel-header { flex-wrap: nowrap; }
+.game-panel[data-game-theme="rummikub"] .game-panel-title { flex: 1 1 auto; flex-wrap: nowrap; min-width: 0; }
+.game-panel[data-game-theme="rummikub"] .game-panel-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-panel[data-game-theme="rummikub"] #gameReconnectBtn { flex-shrink: 0; }
+.game-panel[data-game-theme="rummikub"] #rummikubHeaderActions { flex: 0 0 auto; flex-wrap: nowrap; }
+.game-panel[data-game-theme="rummikub"] #rummikubHelpBtn { width: auto; min-width: 38px; padding: 3px 7px; white-space: nowrap; }
+#rummikubPanel * { box-sizing: border-box; }
+#rummikubPanel button { font: inherit; cursor: pointer; touch-action: manipulation; }
+#rummikubPanel button:disabled { cursor: default; opacity: .45; }
+#rummikubPanel button:focus-visible { outline: 3px solid #a27116; outline-offset: 2px; }
+.rummikub-status { font-weight: 700; font-size: 16px; padding: 6px 0 10px; overflow-wrap: anywhere; }
+.rummikub-players { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.rummikub-player { border-bottom: 3px solid #c3d4cf; padding: 7px 8px; min-width: 0; background: #f2f6f4; border-radius: 7px 7px 0 0; }
+.rummikub-player.is-current { border-color: #a56b0a; background: #fff1d5; }
+.rummikub-player strong { display: block; overflow-wrap: anywhere; font-size: 14px; }
+.rummikub-player span { display: block; font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+.rummikub-caption { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+.rummikub-caption h3 { margin: 0; font-size: 13px; font-weight: 700; }
+#rummikubDraftLabel, #rummikubPool { font-size: 12px; font-weight: 400; }
+.rummikub-table { background: var(--rk-felt); border-radius: 10px; padding: 12px; min-height: 230px; }
+.rummikub-melds { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; gap: 12px 16px; min-height: 125px; max-height: 46svh; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+.rummikub-empty { align-self: center; text-align: center; width: 100%; color: #47645e; font-size: 14px; padding: 18px 5px; }
+.rummikub-meld { display: flex; flex-direction: column; min-width: 0; max-width: 100%; gap: 5px; }
+.rummikub-meld-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
+.rummikub-meld-meta button { padding: 4px 8px; min-height: 30px; border: 1px solid #92b6aa; background: #fff; border-radius: 5px; }
+.rummikub-meld.is-invalid .rummikub-meld-meta { color: #9c2424; }
+.rummikub-meld-tiles { display: flex; flex-wrap: wrap; gap: 4px; max-width: 100%; padding: 3px; border-bottom: 2px solid #a9beb5; }
+#rummikubPanel .rummikub-tile { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; flex: 0 0 43px; width: 43px; height: 58px; padding: 2px; border: 1px solid #d4cbb9; border-bottom: 4px solid #c4bba9; border-radius: 5px; background: #fffdf5; color: #25353b; box-shadow: 0 1px 2px #23433c20; font-size: 25px; font-weight: 800; line-height: 1.05; }
+#rummikubPanel .rummikub-tile small { font-size: 10px; line-height: 1.2; font-weight: 700; }
+#rummikubPanel .rummikub-tile:disabled { opacity: 1; }
+#rummikubPanel .rummikub-tile[data-color="red"] { color: #b82935; }
+#rummikubPanel .rummikub-tile[data-color="blue"] { color: #1855a8; }
+#rummikubPanel .rummikub-tile[data-color="orange"] { color: #995400; }
+#rummikubPanel .rummikub-tile[data-color="joker"] { color: #6b339c; }
+#rummikubPanel .rummikub-tile.is-selected { outline: 3px solid #248879; outline-offset: 0; background: #d4f5e8; }
+#rummikubPanel .rummikub-tile.is-new { border-top: 3px solid #248879; }
+.rummikub-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.rummikub-tools button, .rummikub-sort button, .rummikub-result button { min-height: 36px; border: 1px solid #9db6ac; background: #fff; color: #214a42; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+#rummikubPanel .rummikub-primary { background: #215e51; border-color: #215e51; color: #fff; font-weight: 700; }
+.rummikub-validation { font-size: 12px; margin: 8px 0 0; min-height: 17px; overflow-wrap: anywhere; }
+.rummikub-validation.is-error { color: #992d2d; }
+.rummikub-rack-area { padding-top: 14px; }
+.rummikub-sort { display: flex; gap: 5px; }
+.rummikub-sort button { min-height: 30px; font-size: 12px; padding: 4px 8px; }
+.rummikub-rack { display: flex; flex-wrap: wrap; gap: 6px; background: #f2e4cd; border-bottom: 5px solid #b28a56; border-radius: 7px; padding: 12px 8px; min-height: 90px; max-height: 28svh; overflow-y: auto; overflow-x: hidden; align-content: flex-start; scrollbar-gutter: stable; }
+.rummikub-selection { font-size: 12px; line-height: 1.5; color: #4d6560; margin: 7px 0; }
+.rummikub-result { padding: 12px 0; border-top: 2px solid #abc8bc; margin-top: 10px; }
+.rummikub-result h3 { font-size: 17px; margin: 0 0 8px; }
+.rummikub-result p { font-size: 13px; overflow-wrap: anywhere; }
+.rummikub-result-row { margin: 8px 0; overflow-wrap: anywhere; }
+.rummikub-result-rack { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.rummikub-log { margin-top: 14px; font-size: 12px; }
+.rummikub-log ol { max-height: 150px; overflow-y: auto; padding-left: 22px; overflow-wrap: anywhere; }
+.rummikub-log li { padding: 3px 0; }
+.rummikub-tooltip { position: fixed; z-index: 10000; bottom: 18px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 30px); background: #173c42; color: #fff; padding: 10px 14px; border-radius: 7px; font-size: 13px; pointer-events: none; }
+@media (max-width: 600px) {
+  .rummikub-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 8px; }
+  .rummikub-player { padding: 5px 7px; }
+  .rummikub-player span { margin-top: 2px; }
+  .rummikub-table { padding: 9px; min-height: 240px; }
+  .rummikub-melds { min-height: 125px; gap: 10px; }
+  #rummikubPanel .rummikub-tile { flex-basis: 38px; width: 38px; height: 53px; font-size: 24px; }
+  .rummikub-meld-tiles { gap: 3px; }
+  .rummikub-tools { gap: 5px; }
+  .rummikub-tools button { flex: 1 1 auto; padding: 6px 8px; min-height: 38px; }
+  .rummikub-rack { gap: 5px; padding: 10px 7px; min-height: 140px; }
+  .rummikub-status { font-size: 14px; padding-bottom: 8px; }
+}

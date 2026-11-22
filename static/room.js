@@ -1395,6 +1395,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  rummikub: 1.71,
   machi_koro: 1.52,
   thats_life: 1.32,
   marrakech: 1.33,

@@ -1,5 +1,13 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "rummikub": {
+    "scripts": ["/static/games/rummikub.js?v=2"],
+    "styles": ["/static/games/rummikub.css?v=2"],
+    "markup": "/static/games/rummikub.html?v=2",
+    "panel": "rummikubPanel",
+    "panelTitle": "Rummikub · 拉密",
+    "header": "showRummikubHeaderActions"
+  },
   "word_sync": {
     "loadOnStart": true,
     "scripts": ["/static/games/word_sync.js?v=4_h2"],
@@ -879,14 +887,14 @@ const GAME_ASSETS = {
   },
   "manila": {
     "scripts": [
-      "/static/games/manila.js?v=app_v8"
+      "/static/games/manila.js?v=app_v9"
     ],
     "styles": [],
     "panel": "manilaPanel",
     "panelTitle": "Manila · 马尼拉",
     "header": "showManilaHeaderActions",
     "markup": "/static/games/manila.html?v=2",
-    "styleFragments": "/static/games/manila.css?v=3"
+    "styleFragments": "/static/games/manila.css?v=4"
   },
   "kobayakawa": {
     "scripts": [
@@ -1303,9 +1311,9 @@ const GAME_ASSETS = {
     "header": "showThatsLifeHeaderActions"
   },
   "machi_koro": {
-    "scripts": ["/static/games/machi_koro.js?v=2"],
-    "styles": ["/static/games/machi_koro.css?v=2"],
-    "markup": "/static/games/machi_koro.html?v=1",
+    "scripts": ["/static/games/machi_koro.js?v=3"],
+    "styles": ["/static/games/machi_koro.css?v=3"],
+    "markup": "/static/games/machi_koro.html?v=2",
     "panel": "machiKoroPanel",
     "panelTitle": "🎲 骰子街",
     "header": "showMachiKoroHeaderActions"

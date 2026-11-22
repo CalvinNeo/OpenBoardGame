@@ -1,3 +1,4 @@
+from game.rummikub import RummikubGame, ACTION_SCHEMA as RUMMIKUB_ACTION_SCHEMA, CONFIG_SCHEMA as RUMMIKUB_CONFIG_SCHEMA
 from game.machi_koro import MachiKoroGame, ACTION_SCHEMA as MACHI_KORO_ACTION_SCHEMA, CONFIG_SCHEMA as MACHI_KORO_CONFIG_SCHEMA
 from game.marrakech import MarrakechGame, ACTION_SCHEMA as MARRAKECH_ACTION_SCHEMA, CONFIG_SCHEMA as MARRAKECH_CONFIG_SCHEMA
 from game.thats_life import ThatsLifeGame, ACTION_SCHEMA as THATS_LIFE_ACTION_SCHEMA, CONFIG_SCHEMA as THATS_LIFE_CONFIG_SCHEMA
@@ -118,6 +119,22 @@ from game.take_time_data import ACTION_SCHEMA as TAKE_TIME_ACTION_SCHEMA, CONFIG
 from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
+
+register_game(
+    GameDefinition(
+        game_id=RummikubGame.game_id,
+        name="Rummikub",
+        name_zh="拉密",
+        min_players=RummikubGame.min_players,
+        max_players=RummikubGame.max_players,
+        turn_mode="turn",
+        action_schema=RUMMIKUB_ACTION_SCHEMA,
+        config_schema=RUMMIKUB_CONFIG_SCHEMA,
+        module=RummikubGame,
+        serialize=RummikubGame.serialize,
+        deserialize=RummikubGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

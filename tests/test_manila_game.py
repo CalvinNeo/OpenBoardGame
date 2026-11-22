@@ -5,7 +5,7 @@ import unittest
 from jsonschema import Draft7Validator
 
 from game.definitions import MANILA_ACTION_SCHEMA
-from game.manila import ManilaGame as Game
+from game.manila import CARGO_LIST, ManilaGame as Game, _finalize_game, _init_boat, _resolve_round
 
 
 def make_setup_state():
@@ -98,6 +98,110 @@ class ManilaStartingPositionTests(unittest.TestCase):
         state["boats"]["ginseng"]["position"] = 9
         restored = Game.deserialize(copy.deepcopy(Game.serialize(state)))
         self.assertEqual(restored["boats"]["ginseng"]["position"], 9)
+
+
+class ManilaFinalScoreTests(unittest.TestCase):
+    def make_score_state(self, loan_repay=15):
+        state = make_setup_state()
+        state["config"]["loan_repay"] = loan_repay
+        state["price_track"] = {"nutmeg": 5, "silk": 10, "ginseng": 30, "jade": 0}
+        for player in state["players"].values():
+            player.update(cash=0, stocks=dict.fromkeys(CARGO_LIST, 0), pledged=dict.fromkeys(CARGO_LIST, 0))
+        state["players"]["p0"].update(cash=20, stocks={"nutmeg": 2, "silk": 1, "ginseng": 1, "jade": 1})
+        state["players"]["p0"]["pledged"]["jade"] = 1
+        state["players"]["p1"].update(cash=5, stocks={"nutmeg": 0, "silk": 0, "ginseng": 2, "jade": 0})
+        state["players"]["p1"]["pledged"]["nutmeg"] = 1
+        state["players"]["p2"].update(cash=-2, pledged={"nutmeg": 0, "silk": 2, "ginseng": 0, "jade": 0})
+        return state
+
+    def test_all_viewers_see_every_final_score_and_calculation(self):
+        state = self.make_score_state()
+        _finalize_game(state)
+        original = copy.deepcopy(state)
+        for viewer_id in ("p0", "p1", "p2", "visitor"):
+            with self.subTest(viewer=viewer_id):
+                players = {player["player_id"]: player for player in Game.get_public_view(state, viewer_id)["players"]}
+                score = players["p0"]["score_breakdown"]
+                self.assertEqual(score, {
+                    "cash": 20,
+                    "stocks": {
+                        "nutmeg": {"count": 2, "price": 5, "value": 10},
+                        "silk": {"count": 1, "price": 10, "value": 10},
+                        "ginseng": {"count": 1, "price": 30, "value": 30},
+                        "jade": {"count": 1, "price": 0, "value": 0},
+                    },
+                    "stock_value": 50, "pledged_count": 1, "loan_repay": 15, "debt": 15, "total": 55,
+                })
+                self.assertEqual(players["p1"]["score_breakdown"]["total"], 50)
+                self.assertEqual(players["p2"]["score_breakdown"]["total"], -32)
+                self.assertEqual(state["winner"], ["p0"])
+                score["stocks"]["nutmeg"]["count"] = 100
+                self.assertEqual(state, original)
+
+    def test_custom_repayment_and_tied_winners_use_same_calculation(self):
+        state = self.make_score_state(loan_repay=13)
+        state["players"]["p1"]["cash"] = 10
+        _finalize_game(state)
+        self.assertEqual(state["winner"], ["p0", "p1"])
+        for player in Game.get_public_view(state, "visitor")["players"]:
+            score = player["score_breakdown"]
+            self.assertEqual(score["loan_repay"], 13)
+            self.assertEqual(score["debt"], score["pledged_count"] * 13)
+            self.assertEqual(score["total"], score["cash"] + score["stock_value"] - score["debt"])
+        self.assertEqual(Game.get_public_view(state, "p1")["players"][0]["score_breakdown"]["total"], 57)
+
+    def test_hidden_stocks_and_scores_remain_private_until_game_over(self):
+        state = self.make_score_state()
+        for phase in ("placement", "round_end"):
+            state["phase"] = phase
+            for viewer_id in ("p0", "visitor"):
+                for player in Game.get_public_view(state, viewer_id)["players"]:
+                    self.assertNotIn("score_breakdown", player)
+                    if player["player_id"] == viewer_id:
+                        self.assertIn("stocks", player)
+                    else:
+                        self.assertNotIn("stocks", player)
+                        self.assertNotIn("pledged", player)
+
+    def test_terminal_legacy_save_generates_scores_without_stored_breakdown(self):
+        state = self.make_score_state()
+        state.update(game_over=True, phase="game_over", winner=["p0"])
+        state = Game.deserialize(copy.deepcopy(Game.serialize(state)))
+        self.assertEqual(Game.get_public_view(state, "visitor")["players"][0]["score_breakdown"]["total"], 55)
+
+    def test_scores_use_updated_prices_after_final_voyage(self):
+        state = self.make_score_state()
+        state["phase"] = "placement"
+        state["price_track"]["ginseng"] = 20
+        state["boats"] = {cargo_id: _init_boat(cargo_id, 0) for cargo_id in state["cargo_slots"]}
+        state["boats"]["ginseng"].update(position=13, arrived=True)
+        _resolve_round(state)
+        self.assertTrue(state["game_over"])
+        self.assertEqual(Game.get_public_view(state, "visitor")["players"][1]["score_breakdown"]["stocks"]["ginseng"]["price"], 30)
+
+    def test_terminal_state_cannot_be_changed_by_pledging(self):
+        state = self.make_score_state()
+        _finalize_game(state)
+        original = copy.deepcopy(state)
+        _, error = Game.apply_action(state, "p0", {"type": "pledge_stock", "cargo": "silk"})
+        self.assertEqual(error, "game over")
+        self.assertEqual(state, original)
+
+    def test_final_score_does_not_add_voyage_income_twice(self):
+        state = self.make_score_state()
+        state["round_ledger"]["p0"] = {"earn": {"Ship Silk": 500}, "spend": {"Bid": 300}}
+        _finalize_game(state)
+        self.assertEqual(Game.get_public_view(state, "visitor")["players"][0]["score_breakdown"]["total"], 55)
+
+    def test_new_game_hides_opponent_scores_again(self):
+        state = self.make_score_state()
+        _finalize_game(state)
+        _, error = Game.apply_action(state, "p0", {"type": "play_again"})
+        self.assertIsNone(error)
+        self.assertFalse(state["game_over"])
+        for player in Game.get_public_view(state, "visitor")["players"]:
+            self.assertNotIn("score_breakdown", player)
+            self.assertNotIn("stocks", player)
 
 
 if __name__ == "__main__":

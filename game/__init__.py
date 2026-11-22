@@ -117,6 +117,7 @@ from game.ticket_to_ride import TicketToRideGame
 from game.twelve_rivers import TwelveRiversGame
 from game.dadada import DadadaGame
 from game.trio import TrioGame
+from game.rummikub import RummikubGame
 from game.mushroom_picking import MushroomPickingGame
 from game.find_diff import FindDiffGame
 from game.factory_funner import FactoryFunnerGame
@@ -242,6 +243,7 @@ __all__ = [
     "TwelveRiversGame",
     "DadadaGame",
     "TrioGame",
+    "RummikubGame",
     "MushroomPickingGame",
     "FindDiffGame",
     "FactoryFunnerGame",

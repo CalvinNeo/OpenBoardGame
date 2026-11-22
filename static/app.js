@@ -611,6 +611,10 @@ function renderGameState(data) {
     if (typeof renderDadadaGameState === "function") renderDadadaGameState(data);
     return;
   }
+  if (gameType === "rummikub") {
+    if (typeof renderRummikubGameState === "function") renderRummikubGameState(data);
+    return;
+  }
   if (gameType === "trio") {
     if (typeof renderTrioGameState === "function") renderTrioGameState(data);
     return;

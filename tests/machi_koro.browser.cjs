@@ -74,6 +74,8 @@ const output = 'tmp/machi_koro/qa';
       assert.deepEqual(layout.controls, [], `Clipped controls at ${width}`);
       assert.deepEqual(layout.collisions, [], `Card labels overlap at ${width}`);
       assert(layout.diceHeight <= 48, `Roll toolbar is too tall at ${width}: ${layout.diceHeight}`);
+      assert(await page.locator('#machiKoroDiceRow').isHidden(), 'Roll must not reserve a separate toolbar');
+      assert.equal(await page.locator('#machiKoroRollSlot #machiKoroTurnButtons button').count(), 1);
       assert(await page.locator('#machiKoroDice').isHidden(), 'No placeholder die before rolling');
       if (width < 500) {
         assert(layout.landmarkHeight <= 105, `Landmarks are too tall at ${width}: ${layout.landmarkHeight}`);
@@ -213,14 +215,30 @@ const output = 'tmp/machi_koro/qa';
       await page.evaluate(payload => renderMachiKoroGameState(payload), payload);
       for (const width of [320, 390, 1024, 1440]) {
         await page.setViewportSize({ width, height: width < 500 ? 844 : 1000 });
-        await page.locator('.mk-dice-row').scrollIntoViewIfNeeded();
-        const toolbar = await page.locator('.mk-dice-row').evaluate(element => ({
+        const toolbarLocator = page.locator(phase === 'roll' ? '.mk-landmark-caption' : '.mk-dice-row');
+        await toolbarLocator.scrollIntoViewIfNeeded();
+        const toolbar = await toolbarLocator.evaluate(element => ({
           height: element.getBoundingClientRect().height,
           overflow: element.scrollWidth > element.clientWidth + 1,
           clipped: [...element.querySelectorAll('button')].some(button => button.scrollWidth > button.clientWidth + 1 || button.scrollHeight > button.clientHeight + 1)
         }));
         assert(toolbar.height <= 48, `${phase} toolbar too tall at ${width}: ${JSON.stringify(toolbar)}`);
         assert(!toolbar.overflow && !toolbar.clipped, `${phase} toolbar clipped at ${width}`);
+        if (phase === 'roll') {
+          assert(await page.locator('#machiKoroDiceRow').isHidden());
+          assert.equal(await page.locator('#machiKoroRollSlot button').count(), 2);
+          const header = await page.locator('.mk-landmark-caption').evaluate(element => {
+            const title = element.querySelector('h3').getBoundingClientRect();
+            const tools = element.querySelector('.mk-landmark-tools').getBoundingClientRect();
+            const goal = element.querySelector('#machiKoroGoal').getBoundingClientRect();
+            const roll = element.querySelector('#machiKoroRollSlot').getBoundingClientRect();
+            return { titleRight: title.right, toolsLeft: tools.left, goalRight: goal.right, rollLeft: roll.left,
+              aligned: Math.abs((title.top + title.height / 2) - (roll.top + roll.height / 2)) < 1 };
+          });
+          assert(header.titleRight < header.toolsLeft && header.goalRight < header.rollLeft && header.aligned, `Roll buttons must stay right of Landmarks at ${width}: ${JSON.stringify(header)}`);
+        } else {
+          assert.equal(await page.locator('#machiKoroRollSlot button').count(), 0);
+        }
         await page.screenshot({ path: `${output}/${phase}-${width}.png`, fullPage: true });
       }
     }

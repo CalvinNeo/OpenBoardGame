@@ -78,6 +78,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "blitz_sketch": ("filler", "creative"),
     "blokus": ("abstract",),
     "chromino": ("filler", "abstract"),
+    "rummikub": ("abstract", "puzzle"),
     "hive": ("abstract",),
     "bohnanza_dice": ("filler", "push_your_luck"),
     "bomb_busters": ("puzzle", "cooperative"),
