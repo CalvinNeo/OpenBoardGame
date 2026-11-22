@@ -193,10 +193,11 @@ def _available_bet_ids(state: Dict, player_id: str) -> List[str]:
         return []
     if len(player_state.get("bets", [])) >= 2 or player_id in state.get("betting_passed", []):
         return []
+    placed_bet_ids = {bet["bet_id"] for bet in player_state.get("bets", [])}
     available = []
     for spec in BET_SPECS:
         stack = state.get("bet_stacks", {}).get(spec["bet_id"], [])
-        if len(stack) < len(spec["payouts"]):
+        if spec["bet_id"] not in placed_bet_ids and len(stack) < len(spec["payouts"]):
             available.append(spec["bet_id"])
     return available
 

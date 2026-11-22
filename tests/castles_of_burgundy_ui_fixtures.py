@@ -16,6 +16,27 @@ def build_fixtures() -> dict:
     for kind in ("ship", "building", "knowledge"):
         state["players"][viewer]["storage"].append(state["supply"][kind].pop())
     fixtures["storage"] = Game.get_public_view(state, viewer)
+    other_die = copy.deepcopy(state)
+    other_die["players"][viewer].update(
+        workers=0, dice=[1, 2], used=[False, False],
+        storage=[{"id": "test-ship", "kind": "ship"}],
+    )
+    fixtures["other_die"] = Game.get_public_view(other_die, viewer)
+    no_workers = copy.deepcopy(other_die)
+    no_workers["players"][viewer]["dice"] = [1, 6]
+    fixtures["no_workers"] = Game.get_public_view(no_workers, viewer)
+    no_adjacent = copy.deepcopy(other_die)
+    no_adjacent["players"][viewer]["storage"] = [
+        {"id": "test-sheep", "kind": "animal", "animal": "sheep", "count": 2},
+    ]
+    fixtures["no_adjacent"] = Game.get_public_view(no_adjacent, viewer)
+    no_dice = copy.deepcopy(other_die)
+    no_dice["players"][viewer]["used"] = [True, True]
+    fixtures["no_dice"] = Game.get_public_view(no_dice, viewer)
+    free_place = copy.deepcopy(other_die)
+    free_place["players"][viewer]["used"] = [True, True]
+    free_place["pending"] = {"kind": "city_hall"}
+    fixtures["free_place"] = Game.get_public_view(free_place, viewer)
     full = copy.deepcopy(state)
     full["players"][viewer]["estate"][0]["tile"] = {
         "id": "test-knowledge-6", "kind": "knowledge", "number": 6,

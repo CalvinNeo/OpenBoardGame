@@ -9,7 +9,7 @@ const output = 'tmp/emerald-skulls-ui';
 fs.mkdirSync(output, { recursive: true });
 const views = JSON.parse(execFileSync(process.env.PYTHON || 'python3', ['-c', `
 import copy, json
-from game.emerald_skulls import EmeraldSkullsGame as Game
+from game.emerald_skulls import EmeraldSkullsGame as Game, _payout_options
 from tests.test_emerald_skulls_game import make_players
 players = make_players(6, ('p2','p3','p4','p5','p6'))
 players[0]['name'] = 'AlexandertheGreatVeryLongName'
@@ -81,6 +81,27 @@ views['full'] = full
 over = copy.deepcopy(full)
 over.update(game_over=True, phase='game_over', winner_ids=['p1'], legal_actions=['play_again'])
 views['over'] = over
+for bet_id, result, placements in (
+    ('mad_nargash', 'gem_out', [('skull', 5)]),
+    ('grim_grin', 'run_out', [(1, 1), (1, 1), (2, 2)]),
+    ('emerald_skull', 'double_out', [(1, 1), (1, 1), (2, 2), (3, 3), (4, 4), (4, 4), (5, 5)]),
+):
+    jackpot = Game.init_game({'seed':'jackpot-ui'}, players)
+    jackpot['active_player_id'] = 'p1'
+    _, error = Game.apply_action(jackpot, 'p1', {'type':'buy_dice', 'count':3})
+    assert error is None, error
+    _, error = Game.apply_action(jackpot, 'p2', {'type':'place_bet', 'bet_id':bet_id})
+    assert error is None, error
+    for die in jackpot['dice']:
+        die.update(zone='supply', face=None, level=None)
+    for die, (face, level) in zip(jackpot['dice'], placements):
+        die.update(zone='board', face=face, level=level)
+    jackpot.update(result=result, phase='choose_payout')
+    jackpot['payout_options'] = _payout_options(jackpot)
+    views['choose_' + bet_id] = Game.get_public_view(jackpot, 'p1')
+    _, error = Game.apply_action(jackpot, 'p1', {'type':'choose_payout', 'option_id':bet_id})
+    assert error is None, error
+    views['review_' + bet_id] = Game.get_public_view(jackpot, 'p1')
 print(json.dumps(views))
 `], { encoding: 'utf8' }));
 
@@ -174,15 +195,18 @@ const reviewTipCases = [
     });
     for (const width of [320, 360, 390, 393, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
-      for (const key of ['buy', 'waiting', 'roll', 'bets', 'bet_once', 'bet_passed', 'next_bets', 'press', 'review', 'review_rewards', 'review_confirmed', 'review_exhausted', 'full', 'over']) {
+      for (const key of ['buy', 'waiting', 'roll', 'bets', 'bet_once', 'bet_passed', 'next_bets', 'press', 'review', 'review_rewards', 'review_confirmed', 'review_exhausted', 'full', 'over', 'choose_mad_nargash', 'review_mad_nargash', 'choose_grim_grin', 'review_grim_grin', 'choose_emerald_skull', 'review_emerald_skull']) {
         await render(page, key);
         await page.locator('#emeraldSkullsPlayerSection').evaluate((el, expanded) => { el.open = expanded; }, width > 940);
         await bounds(page, `${width}px ${key}`);
+        if ([320, 390, 1024, 1440].includes(width) && ['choose_emerald_skull', 'review_emerald_skull'].includes(key)) {
+          await page.locator('.emerald-skulls-game-panel').screenshot({ path: `${output}/${key}-${width}.png` });
+        }
       }
       await page.locator('#emeraldSkullsPlayerSection').evaluate(el => { el.open = true; });
       await bounds(page, `${width}px expanded players`);
     }
-    console.log('PASS layout: 98 viewport/phase combinations, expanded players, long names and seven dice');
+    console.log('PASS layout: 140 viewport/phase combinations, expanded players, long names, jackpots and seven dice');
     await render(page, 'waiting');
     assert.equal(await page.locator('#emeraldSkullsRollBtn').isDisabled(), true, 'Tumbler cannot roll before all gamblers decide');
     assert.match(await page.locator('#emeraldSkullsStatus').textContent(), /不会超时跳过/);
@@ -193,6 +217,23 @@ const reviewTipCases = [
       const card = page.locator(`[data-bet-id="${bet.bet_id}"]`);
       assert.match(await card.locator('strong').textContent(), new RegExp(bet.name_zh));
       assert.equal(await card.locator('.emerald-skulls-bet-english').textContent(), bet.name);
+    }
+    for (const [betId, resultName] of [['final_jewel', 'Gem Out'], ['empty_hands', 'Run Out'], ['empty_shiny', 'Double Out']]) {
+      assert.match(await page.locator(`[data-bet-id="${betId}"] .emerald-skulls-bet-description`).textContent(), new RegExp(resultName));
+    }
+    for (const betId of ['mad_nargash', 'grim_grin', 'emerald_skull']) {
+      const bet = views.bets.betting_options.find(option => option.bet_id === betId);
+      await render(page, `choose_${betId}`);
+      const choice = page.locator('#emeraldSkullsPayoutOptions button').last();
+      const label = await choice.locator('strong').textContent();
+      assert(label.includes(bet.name_zh) && label.includes(bet.name), 'Jackpot choice matches the bet card name');
+      await choice.click();
+      assert.deepEqual(await page.evaluate(() => emeraldSkullsQAActions.pop()), { type: 'choose_payout', option_id: betId });
+      await render(page, `review_${betId}`);
+      assert((await page.locator('#emeraldSkullsResultBody .is-tumbler > span').textContent()).includes(label), 'Jackpot payout keeps the chosen name');
+      const award = await page.locator('#emeraldSkullsResultBody .emerald-skulls-result-item:not(.is-tumbler) > strong').first().textContent();
+      assert(award.includes(bet.name_zh) && award.includes(bet.name), 'Bet award matches the card and jackpot names');
+      await bounds(page, `bilingual jackpot ${betId}`);
     }
     await render(page, 'roll');
     const dice = page.locator('#emeraldSkullsDiceTray button');
@@ -332,6 +373,13 @@ const reviewTipCases = [
     assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Bet markers inside an actionable button must not show tips');
     await render(mobile, 'bet_once');
     assert.equal(await mobile.locator('#emeraldSkullsPassBetBtn').textContent(), '不再下注');
+    assert.equal(await mobile.locator('[data-bet-id="pick_bust"]').isDisabled(), true, 'Cannot bet on the same side twice');
+    assert.equal(await mobile.locator('[data-bet-id="mad_nargash"]').isEnabled(), true, 'The other side of the same card remains available');
+    await mobile.locator('#emeraldSkullsExplainBtn').tap();
+    await pointTap(mobile, mobile.locator('[data-bet-id="pick_bust"]'));
+    assert.match(await mobile.locator('#emeraldSkullsExplainContent').textContent(), /同一个下注位置每人每回合只能放一枚/);
+    assert.equal(await mobile.evaluate(() => emeraldSkullsQAActions.length), 0);
+    await mobile.keyboard.press('Escape');
     await mobile.locator('#emeraldSkullsPassBetBtn').tap();
     assert.deepEqual(await mobile.evaluate(() => emeraldSkullsQAActions.pop()), { type: 'pass_bet' });
     assert.equal(await mobile.locator('#emeraldSkullsTip').isVisible(), false, 'Passing must not show a tooltip');
@@ -340,6 +388,7 @@ const reviewTipCases = [
     assert.equal(await mobile.locator('.emerald-skulls-bet:not(:disabled)').count(), 0);
     await mobile.locator('[data-emerald-skulls-tab="skull"]').tap();
     await render(mobile, 'next_bets');
+    assert.equal(await mobile.locator('[data-bet-id="pick_bust"]').isDisabled(), true, 'Reopening betting does not reset the per-turn side limit');
     assert.equal(await mobile.locator('#emeraldSkullsBetting').isVisible(), true, 'A new roll reopens the betting tab');
     assert.equal(await mobile.locator('#emeraldSkullsPassBetBtn').isEnabled(), true);
     assert.equal(await mobile.locator('#emeraldSkullsBetPreview').isVisible(), true);

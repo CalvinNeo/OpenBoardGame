@@ -76,3 +76,12 @@
 - 修改文件：`static/games/castles_of_burgundy.js`、`static/castles_of_burgundy.css`、`static/game_assets.js`、`static/index.html`、`tests/castles_of_burgundy_ui.browser.cjs`、本设计文档。
 - 验收：320px、390px、1024px、1440px 检查完整 37 格均处于地图容器内、无 transform、无缩放按钮，截图复核未见裁切、横向溢出或重叠。浏览器回归覆盖地图内／外滚页、滑动不误选、取消后正常触屏放置，以及既有拿取／购买／卖货／换仓／船只取货、重连、四人和终局布局、Help / Explain。
 - 检查：JS 语法、前端样式资源／Help／全局脚本命名契约（14 项）、浏览器回归及 `git diff --check`。本次符合涉及的 `DEV_GUIDE.md` 要求，无额外布局例外；未实测 iOS / Windows 真机或其他浏览器，不运行与纯 UI 变更无关的游戏逻辑测试。
+
+## 仓储放置可用性与颜色图例（2026-11-22）
+
+- 复现界面问题：放置合法动作在前端按当前选中骰子过滤，当前骰子无法放置时直接禁用仓储板块，即使另一颗未使用骰子存在合法落点。改为根据服务端返回的全部放置动作判断仓储可用性，优先保留当前合法骰子，仅当当前骰子不可用时自动切换到另一颗合法骰子，并在板块、落点提示和确认费用中明确标记骰子。不改变规则或服务端合法动作生成。
+- 对真正无法放置的仓储板块显示简短原因，例如 No dice left、Need workers、No adjacent hex、Duplicate building；悬停、触屏点选或 Explain 可查看具体说明。拿板块与放板块仍是两个独立的骰子行动，放置仍要求同色空格、邻接已建板块、足够工人及城市建筑不重复。城堡／市政厅等奖励的免骰放置继续可用。
+- 图例文字使用与领地底色对应的深色，并在文字前显示完全同色的小色块：Castle 为绿、Ship 为蓝、Mine 为灰、Knowledge 为黄、City 为棕、Pasture 为浅绿。图例、板块和格子通过共用颜色变量保持一致，双语 Help 解释颜色含义与仓储使用方式。
+- 修改文件：`static/games/castles_of_burgundy.js`、`static/castles_of_burgundy.css`、`static/game_assets.js`、`static/index.html`、`tests/castles_of_burgundy_ui.browser.cjs`、`tests/castles_of_burgundy_ui_fixtures.py` 及本设计文档；同步更新资源版本。
+- 验收：320px、390px、1024px、1440px 截图复核无溢出或重叠，六种图例文字颜色各不相同且色块与对应领地底色完全一致。浏览器回归新增零工人、首颗骰子不可用／第二颗骰子可放的实际合法动作视图，验证自动切骰和提交 die=1，以及无工人、无相邻格、骰子用完提示与无骰奖励放置；原有交互回归继续通过。
+- 检查：JS 语法、前端样式资源／Help／脚本命名契约（14 项）、浏览器回归、`git diff --check`。本次涉及的 `DEV_GUIDE.md` 验收通过；未实测真机 iOS / Windows 和其他浏览器，纯 UI 修改未运行游戏逻辑测试。

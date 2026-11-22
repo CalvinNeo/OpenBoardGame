@@ -934,7 +934,7 @@ const GAME_ASSETS = {
   },
   "emerald_skulls": {
     "scripts": [
-      "/static/games/emerald_skulls.js?v=app_v7"
+      "/static/games/emerald_skulls.js?v=app_v8"
     ],
     "styles": [],
     "panel": "emeraldSkullsPanel",
@@ -1193,10 +1193,10 @@ const GAME_ASSETS = {
   },
   "castles_of_burgundy": {
     "scripts": [
-      "/static/games/castles_of_burgundy.js?v=5"
+      "/static/games/castles_of_burgundy.js?v=6"
     ],
     "styles": [
-      "/static/castles_of_burgundy.css?v=5"
+      "/static/castles_of_burgundy.css?v=6"
     ],
     "markup": "/static/games/castles_of_burgundy.html?v=1",
     "panel": "burgundyPanel",

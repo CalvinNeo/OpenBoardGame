@@ -77,15 +77,15 @@
   };
   const EMERALD_SKULLS_BET_DESCRIPTIONS = {
     pick_bust: {
-      summary: "至少挖鼻一次后爆掉",
+      summary: "挖鼻后爆掉 · Bust Out",
       detail: "本回合至少使用过一次挖鼻（Pick a Nose 👃），最后因骰子无处可放而爆掉（Bust Out 💥），才算押中。主动收手不算。",
     },
     mad_nargash: {
-      summary: "全骷髅骰到达宝石层",
+      summary: "全骷髅宝石出局 · Gem Out",
       detail: "到达宝石层（Gem Out 💎），且头骨板上放置的所有骰子都是百搭骷髅骰（💀），即可押中。手中可以还有骰子；同时放完全部骰子（Double Out ✨）也算。",
     },
     grim_grin: {
-      summary: "骰子放完，且只占牙齿层",
+      summary: "仅牙齿空手出局 · Run Out",
       detail: "放完手中全部骰子（Run Out 🏃），且所有骰子都只放在牙齿区域（🦷，第 1、2 层上下颚），即可押中。可以使用百搭骷髅骰（💀）。",
     },
     emerald_skull: {
@@ -93,19 +93,19 @@
       detail: "放完全部 7 颗骰子并到达宝石层（Double Out ✨），组成完整头骨（Full Skull 💚💀）：上下颚合计 3 颗（🦷）、鼻子 1 颗（👃）、眼睛 2 颗（👁️）、宝石 1 颗（💎）。可以使用百搭骷髅骰（💀）。",
     },
     busted_fowl: {
-      summary: "爆掉或主动收手",
+      summary: "爆掉 / 主动收手 · Bust / Chicken Out",
       detail: "因骰子无处可放而爆掉（Bust Out 💥），或手中还有骰子时主动收手（Chicken Out 🐔），任一结果都算押中。",
     },
     final_jewel: {
-      summary: "到达宝石层即可",
+      summary: "宝石出局 · Gem Out（含 Double Out）",
       detail: "在宝石层（💎，第 5 层）放入骰子，达成 Gem Out，即可押中。同时放完全部骰子（Double Out ✨）也算；放入百搭骷髅骰（💀）同样有效。",
     },
     empty_hands: {
-      summary: "全部骰子放完即可",
+      summary: "空手出局 · Run Out（含 Double Out）",
       detail: "将手中全部骰子放到头骨板上（Run Out 🏃），即可押中。同时到达宝石层（Double Out ✨）也算。",
     },
     empty_shiny: {
-      summary: "骰子放完且到达宝石层",
+      summary: "双重出局 · Double Out",
       detail: "将最后一颗骰子放入宝石层（💎），同时满足放完全部骰子和到达宝石层（Double Out ✨），才算押中。不要求摆出完整头骨。",
     },
   };
@@ -119,11 +119,11 @@
     game_over: "Game Over",
   };
   const EMERALD_SKULLS_RESULTS = {
-    bust_out: "💥 Bust Out",
-    chicken_out: "🐔 Chicken Out",
-    gem_out: "💎 Gem Out",
-    run_out: "🏃 Run Out",
-    double_out: "✨ Double Out",
+    bust_out: "💥 爆掉 · Bust Out",
+    chicken_out: "🐔 主动收手 · Chicken Out",
+    gem_out: "💎 宝石出局 · Gem Out",
+    run_out: "🏃 空手出局 · Run Out",
+    double_out: "✨ 双重出局 · Double Out",
   };
   const EMERALD_SKULLS_RESULT_TIPS = {
     bust_out: "爆掉 · Bust Out（💥）：骰子无处可放，掷骰者不获奖励。",
@@ -179,7 +179,7 @@
     },
     bets: {
       title: "Standard Bets",
-      body: "每位押注者每回合有两枚押注标记（🎟️），可在开放押注时使用，也可都押在同一结果上。越早下注，占据的奖励位置越靠前，押中后获得的齿轮（⚙️）越多。下注后不能移动或撤回；当前掷骰玩家不能下注。用完两枚标记，或点击“不下注 / 不再下注”，才结束本次下注决定；不会超时跳过。",
+      body: "每位押注者每回合有两枚押注标记（🎟️），可在同次或不同次掷骰前使用，但同一个下注位置每人只能放一枚。越早下注，占据的奖励位置越靠前，押中后获得的齿轮（⚙️）越多。下注后不能移动或撤回；当前掷骰玩家不能下注。用完两枚标记，或点击“不下注 / 不再下注”，才结束本次下注决定；不会超时跳过。",
     },
     pass: {
       title: "不下注 · Pass",
@@ -187,7 +187,7 @@
     },
     bet: {
       title: "Bet Outcome",
-      body: "Click during Bets Open to lock one marker here. It cannot be moved. The number of payout values is also this stack's capacity.",
+      body: "Click during Bets Open to lock one marker here. Each gambler may bet only once on each side of a card per turn. It cannot be moved. The number of payout values is also this stack's capacity.",
     },
     payout: {
       title: "Payout Choice",
@@ -228,11 +228,11 @@
       <h3>Placement</h3>
       <p>Levels match faces 1–5; <strong>💀 is wild</strong>. Later placements must be on the current <strong>floor (↑)</strong> or higher. Teeth (🦷) and nose (👃) have no practical limit, eyes (👁️) hold 2 dice, and the gem (💎) holds 1.</p>
       <div class="emerald-skulls-rule-grid">
-        <article><strong>💥 Bust Out</strong><span>No legal placement; tumbler earns nothing.</span></article>
-        <article><strong>🐔 Chicken Out</strong><span>Stop with dice still in hand.</span></article>
-        <article><strong>💎 Gem Out</strong><span>Reach level 5 with dice left.</span></article>
-        <article><strong>🏃 Run Out</strong><span>Place every die without reaching the gem.</span></article>
-        <article><strong>✨ Double Out</strong><span>Reach the gem and place every die.</span></article>
+        <article><strong>${EMERALD_SKULLS_RESULTS.bust_out}</strong><span>No legal placement; tumbler earns nothing.</span></article>
+        <article><strong>${EMERALD_SKULLS_RESULTS.chicken_out}</strong><span>Stop with dice still in hand.</span></article>
+        <article><strong>${EMERALD_SKULLS_RESULTS.gem_out}</strong><span>Reach level 5 with dice left.</span></article>
+        <article><strong>${EMERALD_SKULLS_RESULTS.run_out}</strong><span>Place every die without reaching the gem.</span></article>
+        <article><strong>${EMERALD_SKULLS_RESULTS.double_out}</strong><span>Reach the gem and place every die.</span></article>
       </div>
       <h3>Tumbler payout</h3>
       <table>
@@ -253,9 +253,9 @@
       </ul>
       <h3>Jackpots</h3>
       <ul>
-        <li><strong>Mad Nargash:</strong> Gem Out using only 💀 dice — 5 ⚙️ per placed die.</li>
-        <li><strong>Grim Grin:</strong> Run Out using only teeth — 3 ⚙️ per ordinary 1/2 die; wilds pay nothing.</li>
-        <li><strong>Emerald Skull:</strong> Double Out with 3 teeth, 1 nose, 2 eyes, and 1 gem — 30 ⚙️.</li>
+        <li><strong>疯狂纳迦什 · Mad Nargash (💀💎):</strong> Gem Out using only 💀 dice — 5 ⚙️ per placed die.</li>
+        <li><strong>狰狞笑容 · Grim Grin (🦷):</strong> Run Out using only teeth — 3 ⚙️ per ordinary 1/2 die; wilds pay nothing.</li>
+        <li><strong>翡翠骷髅 · Emerald Skull (💚💀):</strong> Double Out with 3 teeth, 1 nose, 2 eyes, and 1 gem — 30 ⚙️.</li>
       </ul>
       <h3>Bets and game end</h3>
       <ul>
@@ -268,7 +268,7 @@
         <li><strong>两手空空 · Empty Hands (🏃):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.empty_hands.detail}</li>
         <li><strong>空手闪耀 · Empty n' Shiny (✨):</strong> ${EMERALD_SKULLS_BET_DESCRIPTIONS.empty_shiny.detail}</li>
       </ul>
-      <p>每位押注者每回合有两枚押注标记（🎟️），也可都押在同一结果上；当前掷骰玩家不能下注。下注后不能移动或撤回。奖励格从左到右对应下注先后，越早下注，押中后获得的齿轮（⚙️）越多。Double Out（✨）也同时满足 Final Jewel（💎）和 Empty Hands（🏃）。先结算掷骰玩家，再按第 1–4 张牌、每张先左后右的顺序结算押注。中央齿轮池耗尽即停止支付并结束游戏，齿轮最多者获胜；平手依次比较重掷方块（🟩）数量、最近担任掷骰玩家的顺序。</p>
+      <p>每位押注者每回合有两枚押注标记（🎟️），可在同次或不同次掷骰前押在不同位置，同一张牌的左右两侧也可以各押一枚，但同一个下注位置每人只能放一枚；当前掷骰玩家不能下注。下注后不能移动或撤回。奖励格从左到右对应下注先后，越早下注，押中后获得的齿轮（⚙️）越多。下注牌名称与出局结果名称不同：最终宝石 · Final Jewel（💎）押宝石出局 · Gem Out，两手空空 · Empty Hands（🏃）押空手出局 · Run Out，空手闪耀 · Empty n' Shiny（✨）押双重出局 · Double Out。Double Out 也同时满足 Final Jewel 和 Empty Hands。先结算掷骰玩家，再按第 1–4 张牌、每张先左后右的顺序结算押注。中央齿轮池耗尽即停止支付并结束游戏，齿轮最多者获胜；平手依次比较重掷方块（🟩）数量、最近担任掷骰玩家的顺序。</p>
       <h3>Playing with AI</h3>
       <p>每次掷骰前，所有押注者必须用完两枚标记（🎟️），或明确点击“不下注 / 不再下注”。只押一枚后仍需决定另一枚是否保留。没有下注倒计时；跳过只影响本次掷骰，之后继续掷骰、重掷或挖鼻时，仍可使用剩余标记。</p>
       <p>Add a Bot (🤖) in the room before starting. AI players buy dice, place dice, manage rerolls, choose payouts and bet using the public board. AI tumblers wait for every gambler to finish betting or explicitly pass, with no timeout. Turns pause for every human to confirm Next Turn; bots confirm automatically.</p>
@@ -388,6 +388,17 @@
 
   function emeraldSkullsResultText(result) {
     return EMERALD_SKULLS_RESULTS[result] || String(result || "Pending").replaceAll("_", " ");
+  }
+
+  function emeraldSkullsBetText(bet) {
+    const icon = EMERALD_SKULLS_BET_ICONS[bet.bet_id] || "🎟️";
+    return `${icon} ${bet.name_zh || bet.name}${bet.name_zh ? ` · ${bet.name}` : ""}`;
+  }
+
+  function emeraldSkullsPayoutText(view, optionId, fallback) {
+    const bet = (view.betting_options || []).find((option) => option.bet_id === optionId);
+    if (bet) return `${emeraldSkullsBetText(bet)} · Jackpot`;
+    return optionId === "standard" ? "标准结算 · Standard Payout" : fallback;
   }
 
   function emeraldSkullsMakeDie(die, options = {}) {
@@ -620,12 +631,12 @@
         button.dataset.betId = bet.bet_id;
         button.dataset.emeraldSkullsExplain = "bet";
         const icon = EMERALD_SKULLS_BET_ICONS[bet.bet_id] || "🎟️";
-        const label = `${icon} ${bet.name_zh || bet.name}${bet.name_zh ? ` · ${bet.name}` : ""}`;
+        const label = emeraldSkullsBetText(bet);
         const text = EMERALD_SKULLS_BET_DESCRIPTIONS[bet.bet_id];
         const summary = text ? text.summary : bet.description;
         button.dataset.emeraldSkullsExplainTitle = label;
-        button.dataset.emeraldSkullsExplainBody = `${text ? text.detail : bet.description} 按下注先后，押中后依次获得 ${bet.payouts.join(" / ")} 齿轮（⚙️）；最多容纳 ${bet.payouts.length} 枚押注标记（🎟️）。开放押注时点击放入一枚标记，下注后不能移动或撤回。`;
-        emeraldSkullsSetTip(button, `${label} · ${summary}。${bet.available ? "点击放入一枚押注标记（🎟️）。" : "当前不可下注，或此处已满。"}`);
+        button.dataset.emeraldSkullsExplainBody = `${text ? text.detail : bet.description} 按下注先后，押中后依次获得 ${bet.payouts.join(" / ")} 齿轮（⚙️）；最多容纳 ${bet.payouts.length} 枚押注标记（🎟️）。开放押注时点击放入一枚标记，同一个下注位置每人每回合只能放一枚，下注后不能移动或撤回。`;
+        emeraldSkullsSetTip(button, `${label} · ${summary}。${bet.available ? "点击放入一枚押注标记（🎟️）。" : "当前不可下注、已在此下注，或此处已满。"}`);
         if (bet.won === true) button.classList.add("is-winner");
         if (bet.won === false && view.result) button.classList.add("is-loser");
         button.disabled = !bet.available || !emeraldSkullsHasAction("place_bet") || emeraldSkullsPending;
@@ -758,13 +769,14 @@
       button.dataset.emeraldSkullsExplain = "payout";
       button.disabled = !emeraldSkullsHasAction("choose_payout") || emeraldSkullsPending;
       const title = document.createElement("strong");
-      title.textContent = option.label;
+      const label = emeraldSkullsPayoutText(view, option.option_id, option.label);
+      title.textContent = label;
       const reward = document.createElement("span");
       const parts = [];
       if (Number(option.gears || 0)) parts.push(`${option.gears} ⚙️`);
       if (Number(option.reroll_cubes || 0)) parts.push(`${option.reroll_cubes} 🟩`);
       reward.textContent = parts.join(" + ") || "No reward";
-      emeraldSkullsSetTip(button, `${option.label}: ${option.gears || 0} gears (⚙️), ${option.reroll_cubes || 0} reroll cubes (🟩). Choose one payout.`);
+      emeraldSkullsSetTip(button, `${label}: ${option.gears || 0} gears (⚙️), ${option.reroll_cubes || 0} reroll cubes (🟩). Choose one payout.`);
       button.append(title, reward);
       button.addEventListener("click", () => emeraldSkullsDispatch({ type: "choose_payout", option_id: option.option_id }));
       emeraldSkullsPayoutOptions.appendChild(button);
@@ -805,7 +817,7 @@
       const outcomePay = document.createElement("span");
       const tumblerParts = [`${summary.tumbler_gears_paid}/${summary.tumbler_gears_due} ⚙️`];
       if (Number(summary.tumbler_reroll_cubes || 0)) tumblerParts.push(`${summary.tumbler_reroll_cubes} 🟩`);
-      outcomePay.textContent = `${summary.payout_label} · ${tumblerParts.join(" + ")}`;
+      outcomePay.textContent = `${emeraldSkullsPayoutText(view, summary.payout_option_id, summary.payout_label)} · ${tumblerParts.join(" + ")}`;
       emeraldSkullsSetTip(outcomePay, `齿轮 · Gears（⚙️）：${summary.tumbler_gears_paid}/${summary.tumbler_gears_due} 表示实得 / 应得。重掷方块 · Reroll cubes（🟩）：本回合获得 ${summary.tumbler_reroll_cubes || 0}，可用于重掷。`);
       outcome.append(outcomeTitle, outcomePay);
       emeraldSkullsResultBody.appendChild(outcome);
@@ -814,7 +826,7 @@
         item.className = "emerald-skulls-result-item";
         const title = document.createElement("strong");
         const bet = (view.betting_options || []).find((option) => option.bet_id === award.bet_id);
-        title.textContent = `${emeraldSkullsPlayerName(view, award.player_id)} · ${bet ? bet.name_zh || bet.name : award.bet_id}`;
+        title.textContent = `${emeraldSkullsPlayerName(view, award.player_id)} · ${bet ? emeraldSkullsBetText(bet) : award.bet_id}`;
         if (bet) emeraldSkullsSetTip(title, `${EMERALD_SKULLS_BET_ICONS[bet.bet_id] || "🎟️"} ${bet.name_zh || bet.name} · ${bet.name}：${EMERALD_SKULLS_BET_DESCRIPTIONS[bet.bet_id]?.summary || bet.description}。`);
         const reward = document.createElement("span");
         reward.textContent = `${award.paid}/${award.due} ⚙️ · stack #${award.position}`;

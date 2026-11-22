@@ -31,6 +31,13 @@ const output = 'tmp/burgundy-ui';
     });
     assert.deepEqual(layout, {count: 37, transform: 'none', clipped: false}, `complete estate ${width}`);
     assert.equal(await page.locator('#burgundyPanel [data-burgundy="zoom-in"], #burgundyPanel [data-burgundy="zoom-out"], #burgundyPanel [data-burgundy="fit"], #burgundyPanel [data-burgundy="origin"], .burgundy-map-tools').count(), 0);
+    const legend = await page.locator('.burgundy-legend').evaluate(element => [...element.children].map(entry => {
+      const kind = [...entry.classList].find(className => className.startsWith('burgundy-'));
+      const cell = document.querySelector(`.burgundy-hex.${kind}`);
+      return {text: getComputedStyle(entry).color, swatch: getComputedStyle(entry, '::before').backgroundColor, fill: getComputedStyle(cell).backgroundColor};
+    }));
+    assert.equal(new Set(legend.map(entry => entry.text)).size, 6);
+    assert(legend.every(entry => entry.swatch === entry.fill), `legend matches estate colours ${width}`);
   }
   async function fits(label) {
     const overflow = await page.evaluate(() => {
@@ -91,6 +98,39 @@ const output = 'tmp/burgundy-ui';
     }
 
     await page.setViewportSize({width: 390, height: 844});
+    await show('other_die');
+    await control('tab').filter({hasText: 'Estate'}).click();
+    assert.equal(await page.locator('[data-burgundy="die"][data-die="0"]').getAttribute('aria-pressed'), 'true');
+    assert.equal(await control('storage').isEnabled(), true);
+    assert.match(await control('storage').innerText(), /Die 2/);
+    await control('die').nth(1).click();
+    assert.equal(await control('storage').locator('.burgundy-storage-status').count(), 0);
+    await control('die').first().click();
+    await control('storage').click();
+    assert.equal(await page.locator('[data-burgundy="die"][data-die="1"]').getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('.burgundy-hex.is-legal').count(), 1);
+    await page.locator('.burgundy-hex.is-legal').click();
+    await control('confirm').click();
+    assert.deepEqual(await page.evaluate(() => burgundySubmitted.at(-1)), {type: 'place', die: 1, tile: 'test-ship', cell: 17});
+    for (const [fixture, label] of [['no_workers', 'Need workers'], ['no_adjacent', 'No adjacent hex'], ['no_dice', 'No dice left']]) {
+      await show(fixture);
+      assert.equal(await control('storage').isDisabled(), true);
+      assert.match(await control('storage').innerText(), new RegExp(label));
+      await fits(`storage restriction ${fixture}`);
+    }
+    const disabledStorage = await control('storage').boundingBox();
+    await page.touchscreen.tap(disabledStorage.x + disabledStorage.width / 2, disabledStorage.y + disabledStorage.height / 2);
+    assert.match(await page.locator('#burgundyTooltip').innerText(), /Taking and placing a tile are separate actions/);
+    await page.screenshot({path: `${output}/storage-restriction-390.png`, fullPage: true});
+    await show('free_place');
+    assert.equal(await control('storage').isEnabled(), true);
+    await control('storage').click();
+    await page.locator('.burgundy-hex.is-legal').first().click();
+    await control('confirm').click();
+    const freePlacement = await page.evaluate(() => burgundySubmitted.at(-1));
+    assert.equal(freePlacement.type, 'place');
+    assert.equal(Object.hasOwn(freePlacement, 'die'), false);
+
     await show('storage');
     if (await control('tab').count()) await control('tab').filter({hasText: 'Estate'}).click();
     await page.locator('#burgundyPanel [data-burgundy="storage"]:not(:disabled)').first().click();
@@ -211,7 +251,7 @@ const output = 'tmp/burgundy-ui';
     await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
     await page.waitForFunction(previous => scrollY > previous, scrollStart);
     assert.deepEqual(errors, []);
-    console.log('Passed: live take/reload, four widths with all 37 estate hexes visible and no zoom controls, four players/final scoring, local take/place/sell/buy/replace/ship confirmation, round pause, spectator, map swipe/scroll/cancel without selection, bilingual Help/focus, disabled Explain, touch tips, outside-map scrolling.');
+    console.log('Passed: live take/reload, four widths with full estate and colour-matched legends, storage placement with alternate die/free bonus/restriction labels, four players/final scoring, local take/place/sell/buy/replace/ship confirmation, round pause, spectator, map swipe/scroll/cancel without selection, bilingual Help/focus, disabled Explain, touch tips, outside-map scrolling.');
   } catch (error) {
     await page.screenshot({path: `${output}/failure.png`, fullPage: true});
     throw error;

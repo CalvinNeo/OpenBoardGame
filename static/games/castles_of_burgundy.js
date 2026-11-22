@@ -33,11 +33,11 @@
     },
     sections: [
       {id: "controls", label: {zh: "行动与操作", en: "Turns & controls"}, html: {
-        zh: `<p>先选一颗未使用的骰子(🎲)，再直接点击货站板块、仓储板块或自己的货物。选择仓储板块后点击高亮的领地格。确认区就在所选目标旁，列出所需工人(👷)与银币(🪙)，点击 Confirm 才提交。点击空白或按 Esc 取消未提交的选择。</p><p>货站与领地格需要匹配骰点。每名工人调整一点，1 与 6 相邻，系统按最小费用计算。取得工人行动消耗所选骰子并获得两名工人。仓储有三格，满时必须明确选一块旧板块丢弃。出售一种货物(🟫🟥🟧🟩🟦🟪)的全部货物，获得一枚银币，每件得玩家人数那么多的分数(⭐)。</p><p>黑市购买每回合一次，不使用骰子，花两枚银币。知识 6 允许购买编号货站板块，先打开货站内的 Buy 开关。两颗骰子用完仍可购买，再点 End Turn。即时奖励必须先处理，可跳过的建筑奖励会显示 Skip Bonus。每轮结束暂停，所有玩家点 Next Round 才继续。</p><p>手机通过 Estate / Depots 切换。领地自动适配可用宽度，始终完整显示。可直接在领地上滑动页面，不会误选格子。</p>`,
-        en: `<p>Select an unused die (🎲), then click a depot tile, a stored tile or your own goods. After choosing a stored tile, click a highlighted estate hex. The confirmation beside your target shows the worker (👷) and silverling (🪙) cost. Only Confirm submits it. Click blank space or press Esc to cancel an unsubmitted choice.</p><p>Match the die to a depot or estate hex. Each worker adjusts it by one step, with 1 adjacent to 6, and the server calculates the minimum cost. Gain Workers spends the selected die for two workers. Storage holds three tiles, so choose an old tile to discard when full. Sell every goods tile of one type (🟫🟥🟧🟩🟦🟪) for one silverling and points (⭐) per tile equal to the player count.</p><p>Buy once per turn for two silverlings without a die. Knowledge 6 also permits numbered depots using their Buy toggle. You may buy after using both dice, before End Turn. Resolve immediate bonuses first, or use Skip Bonus when offered. Every round pauses until all players select Next Round.</p><p>On phones, switch Estate / Depots. The complete estate automatically fits the available width. Swipe over the estate to scroll the page without selecting a hex.</p>`}},
+        zh: `<p>先选一颗未使用的骰子(🎲)，再直接点击货站板块、仓储板块或自己的货物。拿取和放置板块是两次独立行动，各消耗一颗骰子。选择仓储板块后点击高亮的领地格。如果当前骰子无法放置但另一颗可以，点选板块会自动改用另一颗骰子。板块下方会提示没有剩余骰子、缺工人或没有相邻同色空格等限制。确认区就在所选目标旁，列出所需工人(👷)与银币(🪙)，点击 Confirm 才提交。点击空白或按 Esc 取消未提交的选择。</p><p>货站与领地格需要匹配骰点。每名工人调整一点，1 与 6 相邻，系统按最小费用计算。取得工人行动消耗所选骰子并获得两名工人。仓储有三格，满时必须明确选一块旧板块丢弃。出售一种货物(🟫🟥🟧🟩🟦🟪)的全部货物，获得一枚银币，每件得玩家人数那么多的分数(⭐)。</p><p>黑市购买每回合一次，不使用骰子，花两枚银币。知识 6 允许购买编号货站板块，先打开货站内的 Buy 开关。两颗骰子用完仍可购买，再点 End Turn。即时奖励必须先处理，可跳过的建筑奖励会显示 Skip Bonus。每轮结束暂停，所有玩家点 Next Round 才继续。</p><p>手机通过 Estate / Depots 切换。领地自动适配可用宽度，始终完整显示。可直接在领地上滑动页面，不会误选格子。</p>`,
+        en: `<p>Select an unused die (🎲), then click a depot tile, a stored tile or your own goods. Taking and placing a tile are separate actions, each spending a die. After choosing a stored tile, click a highlighted estate hex. If only the other unused die can place it, selecting the tile switches to that die. A label on an unavailable tile explains whether you need dice, workers or an adjacent matching hex. The confirmation beside your target shows the worker (👷) and silverling (🪙) cost. Only Confirm submits it. Click blank space or press Esc to cancel an unsubmitted choice.</p><p>Match the die to a depot or estate hex. Each worker adjusts it by one step, with 1 adjacent to 6, and the server calculates the minimum cost. Gain Workers spends the selected die for two workers. Storage holds three tiles, so choose an old tile to discard when full. Sell every goods tile of one type (🟫🟥🟧🟩🟦🟪) for one silverling and points (⭐) per tile equal to the player count.</p><p>Buy once per turn for two silverlings without a die. Knowledge 6 also permits numbered depots using their Buy toggle. You may buy after using both dice, before End Turn. Resolve immediate bonuses first, or use Skip Bonus when offered. Every round pauses until all players select Next Round.</p><p>On phones, switch Estate / Depots. The complete estate automatically fits the available width. Swipe over the estate to scroll the page without selecting a hex.</p>`}},
       {id: "tiles", label: {zh: "板块效果", en: "Tile effects"}, html: {
-        zh: `<p>板块必须放在同色空格并邻接已建板块。同一城市(🏘️)不能有重复建筑，知识 1 例外。城堡(🏰)提供一个任意骰值的额外行动。船只(⛵)推进下轮顺序并从一个货站取货，同位置后来者优先。货物最多存三种，同种数量不限。矿山(⛏️)在每个阶段末生产一枚银币(🪙)。知识(📜)提供永久能力或终局奖励。</p><p>牧场(🐑)放置动物时，计入本板块及同一牧场已有同类动物，牛(🐄)、羊(🐑)、猪(🐖)、鸡(🐔)分开计算。</p><p>仓库(🏚️)免费卖一种货物，木工坊(🪚)免费拿建筑，教堂(⛪)免费拿城堡、矿山或知识，市场(🏪)免费拿船只或动物，市政厅(🏛️)免费放仓储板块。旅馆(🏡)给四名工人(👷)，银行(🏦)给两枚银币(🪙)，瞭望塔(🗼)给四分(⭐)。免费拿取只限编号货站。连锁效果逐步处理。</p>`,
-        en: `<p>Place on a matching empty hex adjacent to your built estate. A city (🏘️) cannot repeat a building unless you have knowledge 1. A castle (🏰) grants an extra action with any die value. A ship (⛵) advances next round's order and collects goods from a depot, with later arrivals taking priority on tied positions. Store up to three goods types, with unlimited tiles of each. A mine (⛏️) produces one silverling (🪙) at every phase end. Knowledge (📜) grants a permanent ability or end-game bonus.</p><p>A pasture (🐑) scores the new tile plus matching animals already in that pasture. Cows (🐄), sheep (🐑), pigs (🐖) and chickens (🐔) score separately.</p><p>A warehouse (🏚️) sells one goods type, a workshop (🪚) takes a building, a church (⛪) takes a castle, mine or knowledge tile, a market (🏪) takes a ship or animal, and a city hall (🏛️) places a stored tile, all without a die. A boarding house (🏡) grants four workers (👷), a bank (🏦) grants two silverlings (🪙), and a watchtower (🗼) grants four points (⭐). Free tile-taking uses numbered depots only. Resolve chained effects one step at a time.</p>`}},
+        zh: `<p>板块必须放在同色空格并邻接已建板块。领地底色表示板块类型，图例文字使用同色系深色并带相同底色色块，城堡为绿、船只为蓝、矿山为灰、知识为黄、城市为棕、牧场为浅绿。同一城市(🏘️)不能有重复建筑，知识 1 例外。城堡(🏰)提供一个任意骰值的额外行动。船只(⛵)推进下轮顺序并从一个货站取货，同位置后来者优先。货物最多存三种，同种数量不限。矿山(⛏️)在每个阶段末生产一枚银币(🪙)。知识(📜)提供永久能力或终局奖励。</p><p>牧场(🐑)放置动物时，计入本板块及同一牧场已有同类动物，牛(🐄)、羊(🐑)、猪(🐖)、鸡(🐔)分开计算。</p><p>仓库(🏚️)免费卖一种货物，木工坊(🪚)免费拿建筑，教堂(⛪)免费拿城堡、矿山或知识，市场(🏪)免费拿船只或动物，市政厅(🏛️)免费放仓储板块。旅馆(🏡)给四名工人(👷)，银行(🏦)给两枚银币(🪙)，瞭望塔(🗼)给四分(⭐)。免费拿取只限编号货站。连锁效果逐步处理。</p>`,
+        en: `<p>Place on a matching empty hex adjacent to your built estate. Estate colours identify tile types, and the legend pairs matching swatches with darker text in the same hue: green castles, blue ships, grey mines, yellow knowledge, brown cities and light-green pastures. A city (🏘️) cannot repeat a building unless you have knowledge 1. A castle (🏰) grants an extra action with any die value. A ship (⛵) advances next round's order and collects goods from a depot, with later arrivals taking priority on tied positions. Store up to three goods types, with unlimited tiles of each. A mine (⛏️) produces one silverling (🪙) at every phase end. Knowledge (📜) grants a permanent ability or end-game bonus.</p><p>A pasture (🐑) scores the new tile plus matching animals already in that pasture. Cows (🐄), sheep (🐑), pigs (🐖) and chickens (🐔) score separately.</p><p>A warehouse (🏚️) sells one goods type, a workshop (🪚) takes a building, a church (⛪) takes a castle, mine or knowledge tile, a market (🏪) takes a ship or animal, and a city hall (🏛️) places a stored tile, all without a die. A boarding house (🏡) grants four workers (👷), a bank (🏦) grants two silverlings (🪙), and a watchtower (🗼) grants four points (⭐). Free tile-taking uses numbered depots only. Resolve chained effects one step at a time.</p>`}},
       {id: "scoring", label: {zh: "计分与图标", en: "Scoring & icons"}, html: {
         zh: `<p>完整区域按 1–8 格得 1、3、6、10、15、21、28、36 分，另加阶段 A–E 的 10、8、6、4、2 分。每色首位完成全部格子的玩家得人数加三分，第二位得人数分。</p><p>终局每件未售货物与每枚银币(🪙)各一分，每两工人(👷)一分，再加知识(📜)奖励。仓储板块不计分。同分时空格更多者胜，再同分则最终顺序更靠后者胜。</p><p>分数(⭐)表示胜利点，奖杯(🏆)表示胜者，机器人(🤖)表示自动玩家。公共白骰(🎲)只决定新货物进入哪个货站。货物颜色(🟫🟥🟧🟩🟦🟪)分别代表 1–6，界面同时显示数字。颜色奖励旁数字表示已领取人数，Next goods 是本阶段余下的公开货物。</p><p>本实现为 2011 基础版，2–4 人，标准 1 号领地，无扩展与单人模式。<a href="https://cdn.1j1ju.com/medias/04/f5/f9-the-castles-of-burgundy-rulebook.pdf" target="_blank" rel="noopener noreferrer">原版规则</a>与<a href="https://www.yucata.de/en/Rules/CastlesOfBurgundy" target="_blank" rel="noopener noreferrer">平局勘误</a>。</p>`,
         en: `<p>Completed regions of 1–8 hexes score 1, 3, 6, 10, 15, 21, 28 or 36 points, plus 10, 8, 6, 4 or 2 points in phases A–E. The first player to complete an entire colour scores the player count plus three, and the second scores the player count.</p><p>At game end, each unsold goods tile and silverling (🪙) scores one point, every two workers (👷) score one, and knowledge (📜) adds its bonuses. Stored tiles score nothing. Ties favour more empty estate hexes, then the player later in the final turn order.</p><p>Points (⭐) are victory points, a trophy (🏆) marks the winner, and a robot (🤖) marks a bot. The white die (🎲) only routes arriving goods. Goods colours (🟫🟥🟧🟩🟦🟪) represent types 1–6 and always include numbers. Colour bonus counters show claims already taken. Next goods lists the remaining public goods for this phase.</p><p>This is the 2011 base game for 2–4 players on estate 1, without expansions or solo mode. See the <a href="https://cdn.1j1ju.com/medias/04/f5/f9-the-castles-of-burgundy-rulebook.pdf" target="_blank" rel="noopener noreferrer">original rules</a> and <a href="https://www.yucata.de/en/Rules/CastlesOfBurgundy" target="_blank" rel="noopener noreferrer">tie-break correction</a>.</p>`}},
@@ -85,6 +85,33 @@
     return (view?.options || []).filter(option => option.action.type === type &&
       (!Object.hasOwn(option.action, "die") || option.action.die === ui.die));
   }
+  function placementOptions(tileId) {
+    return (view?.options || []).filter(option => option.action.type === "place" && option.action.tile === tileId);
+  }
+  function storageStatus(owner, tile) {
+    const placements = placementOptions(tile.id);
+    if (owner.player_id !== view.you) return {label: "Other estate", description: "You can only place tiles from your own storage."};
+    if (view.game_over) return {label: "Game complete", description: "The game has ended. Stored tiles cannot be placed or scored."};
+    if (view.phase === "round_end") return {label: "Round review", description: "Review this round and wait for everyone to choose Next Round before placing tiles."};
+    if (!active()) return {label: "Wait for turn", description: "Place stored tiles during your own turn."};
+    if (placements.length) {
+      const currentDie = placements.some(option => !Object.hasOwn(option.action, "die") || option.action.die === ui.die);
+      const alternate = placements.slice().sort((left, right) => left.workers - right.workers)[0];
+      return {label: currentDie ? "" : `Die ${alternate.action.die + 1} ${dice[owner.dice[alternate.action.die] - 1]}`,
+        description: currentDie ? "Select to place on a highlighted estate hex." : "Select to use another available die and highlight its legal estate hexes."};
+    }
+    if (view.pending) return {label: "Resolve bonus", description: `Resolve the current bonus first. ${effects[view.pending.kind] || ""}`};
+    if (owner.used.every(Boolean)) return {label: "No dice left", description: "Taking and placing a tile are separate actions. Both dice are used, so wait until your next turn to place this tile."};
+    const empty = owner.estate.filter(cell => cell.kind === tile.kind && !cell.tile);
+    if (!empty.length) return {label: "Colour complete", description: "There are no empty estate hexes of this tile's colour."};
+    const adjacent = empty.filter(cell => cell.neighbors.some(index => owner.estate[index].tile));
+    if (!adjacent.length) return {label: "No adjacent hex", description: "This tile needs an empty hex of the same colour next to an already built tile. Expand your estate toward that colour first."};
+    if (tile.kind === "building" && !owner.knowledge.includes(1) && adjacent.every(cell => owner.estate.some(existing =>
+      existing.region === cell.region && existing.tile?.building === tile.building))) {
+      return {label: "Duplicate building", description: "Every adjacent city already contains this building. Each city may contain only one of each building unless you have knowledge 1."};
+    }
+    return {label: "Need workers", description: "No unused die can reach a legal hex with your current workers. Match the hex's die value or gain workers to adjust a die."};
+  }
   function selectionOptions() {
     if (view.pending?.kind === "ship") return options("ship_goods").filter(option => same(option.action.depots, ui.shipDepots) && same(option.action.goods, ui.shipGoods));
     return options(ui.mode).filter(({action}) =>
@@ -113,11 +140,12 @@
     const selected = selectionOptions()[0];
     const tile = findTile(ui.tile);
     let text = tile ? `${tile.emoji} ${tile.name}` : "";
-    if (ui.mode === "place" && tile && ui.cell === null) return `<p class="burgundy-selection-hint" role="status">${esc(text)} · choose a highlighted hex</p>`;
+    const placementDie = ui.mode === "place" && !view.pending ? ` · Die ${ui.die + 1} ${dice[self().dice[ui.die] - 1]}` : "";
+    if (ui.mode === "place" && tile && ui.cell === null) return `<p class="burgundy-selection-hint" role="status">${esc(text + placementDie)} · choose a highlighted hex</p>`;
     if (ui.mode === "sell") text = `${colours[ui.goods - 1]} Sell all type ${ui.goods} goods`;
     if (view.pending?.kind === "ship") text = `⛵ Collect from depot ${ui.shipDepots.join(" + ")}`;
     if (selected) text += selected.action.type === "buy" ? " · 2 🪙" : ` · ${selected.workers || 0} 👷`;
-    if (selected?.action.type === "place") text += ` · hex ${selected.action.cell + 1}`;
+    if (selected?.action.type === "place") text += `${placementDie} · hex ${selected.action.cell + 1}`;
     const replacement = ["take", "buy"].includes(ui.mode) && tile && self()?.storage.length === 3
       ? `<div class="burgundy-replacement"><span>Storage full · replace one tile:</span><div class="burgundy-inline">${self().storage.map(stored => button(`${stored.emoji} ${esc(stored.name)}`, "discard", `Discard ${stored.name} to make room. This cannot be undone.`, ui.discard === stored.id ? "is-selected" : "", false, attr("tile", stored.id))).join("")}</div></div>` : "";
     return `<div class="burgundy-confirm" role="region" aria-label="Confirm selection"><p role="status">${esc(text)}</p>${tile ? `<small>${esc(tile.description)}</small>` : ""}${replacement}<div class="burgundy-inline">${button("Confirm", "confirm", "Submit this selection and pay the displayed cost.", "burgundy-primary", !selected)}${button("Cancel", "cancel", "Cancel this unsubmitted selection.")}</div></div>`;
@@ -136,11 +164,12 @@
     return `<section class="burgundy-estate-section"><div class="burgundy-section-heading"><h3>🏰 ${esc(owner.name)}’s estate</h3>${tip(`${owner.estate.filter(cell => cell.tile).length} / 37`, "Built hexes out of the 37 spaces on estate 1.")}</div>
       <div class="burgundy-map" data-burgundy-explain="estate" aria-label="Complete estate map"><div class="burgundy-estate">${cells}</div></div>
       ${active() && ownEstate && ui.mode === "place" && ui.tile ? renderConfirmation() : ""}
-      <div class="burgundy-legend">${Object.values(kinds).map(([icon, label]) => tip(`${icon} ${label}`, `${label} (${icon}): place tiles of this kind on matching estate hexes.`)).join("")}</div>
+      <div class="burgundy-legend">${Object.entries(kinds).map(([kind, [icon, label]]) => tip(`${icon} ${label}`, `${label} (${icon}): this legend colour matches the estate hexes for this tile type.`, `burgundy-${kind}`)).join("")}</div>
       <div class="burgundy-supplies"><section><div class="burgundy-section-heading"><h3>Storage</h3><small>${owner.storage.length} / 3</small></div><div class="burgundy-storage">${[0, 1, 2].map(index => {
         const tile = owner.storage[index];
         if (!tile) return '<div class="burgundy-empty-slot">Empty</div>';
-        return button(tileMarkup(tile), "storage", `${tile.name} (${tile.emoji}): ${tile.description} Select to place on your estate.`, `burgundy-tile burgundy-${tile.kind} ${ui.tile === tile.id ? "is-selected" : ""}`, !ownEstate || !options("place").some(option => option.action.tile === tile.id), attr("tile", tile.id));
+        const status = storageStatus(owner, tile);
+        return button(`${tileMarkup(tile)}${status.label ? `<small class="burgundy-storage-status">${esc(status.label)}</small>` : ""}`, "storage", `${tile.name} (${tile.emoji}): ${tile.description} ${status.description}`, `burgundy-tile burgundy-${tile.kind} ${ui.tile === tile.id ? "is-selected" : ""}`, !ownEstate || !placementOptions(tile.id).length, attr("tile", tile.id));
       }).join("")}</div></section><section><div class="burgundy-section-heading"><h3>Goods</h3>${tip("3 types max", "Store up to three different goods types. Each type can hold any number of tiles.")}</div><div class="burgundy-goods">${ownEstate && active() ? owner.goods.map((count, index) => count ? button(`${colours[index]} ${index + 1} <b>×${count}</b>`, "sell", `Sell all ${count} type ${index + 1} goods. Normally gain 1 silverling and ${view.players.length * count} points. Knowledge may add bonuses.`, ui.mode === "sell" && ui.goods === index + 1 ? "is-selected" : "", !options("sell").some(option => option.action.goods === index + 1), attr("goods", index + 1)) : "").join("") || '<span class="burgundy-muted">No goods</span>' : goodsMarkup(owner.goods)}</div>${active() && ownEstate && ui.mode === "sell" && ui.goods ? renderConfirmation() : ""}</section></div>
       <details class="burgundy-details" data-detail="knowledge"><summary>📜 Knowledge (${owner.knowledge.length}) & progress</summary>${owner.knowledge.map(number => `<p><b>#${number}</b> ${esc(view.knowledge[number])}</p>`).join("") || '<p>No knowledge tiles yet.</p>'}<p>Sold: ${goodsMarkup(owner.sold)}</p><p>Colour bonuses: ${owner.bonus_tiles.map(bonus => `${kinds[bonus.kind][0]} +${bonus.points}`).join(" · ") || "None"}</p><p>Next order: ${view.next_order.map(id => esc(name(id))).join(" → ")}</p></details></section>`;
   }
@@ -216,7 +245,15 @@
     else if (command === "die") { resetSelection(); ui.die = Number(target.dataset.die); }
     else if (command === "buy-mode") { resetSelection(); ui.buyMode = !ui.buyMode; }
     else if (command === "tile") { resetSelection(); Object.assign(ui, {tile: target.dataset.tile, depot: Number(target.dataset.depot), mode: target.dataset.mode}); }
-    else if (command === "storage") { resetSelection(); Object.assign(ui, {tile: target.dataset.tile, mode: "place", viewed: view.you}); }
+    else if (command === "storage") {
+      const placements = placementOptions(target.dataset.tile);
+      const selected = placements.find(option => !Object.hasOwn(option.action, "die") || option.action.die === ui.die) ||
+        placements.slice().sort((left, right) => left.workers - right.workers)[0];
+      if (!selected) return;
+      resetSelection();
+      Object.assign(ui, {tile: target.dataset.tile, mode: "place", viewed: view.you, tab: "estate"});
+      if (Object.hasOwn(selected.action, "die")) ui.die = selected.action.die;
+    }
     else if (command === "cell") ui.cell = Number(target.dataset.cell);
     else if (command === "discard") ui.discard = target.dataset.tile;
     else if (command === "sell") { resetSelection(); ui.mode = "sell"; ui.goods = Number(target.dataset.goods); }

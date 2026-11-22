@@ -39,6 +39,11 @@ view includes a compact board/hand preview and an explicit 不下注 / 不再下
 button. All eight bet names retain English below their Chinese names. Players
 collapse into a resource summary on mobile without hiding the current decision.
 Results and payout choices appear above the board, and the log is collapsible.
+Each gambler can use both markers before one roll, but may bet only once on each
+side of a standard card per turn. The authoritative available-bet list excludes
+already chosen sides, including after betting reopens, so bots follow the same
+restriction. Bet awards and jackpot choices reuse the cards' bilingual names;
+result conditions explicitly distinguish card titles from out names.
 Dice use pip symbols, and bets/resources include emoji and short descriptions.
 Desktop hover and keyboard focus show tips; touch tips replace the previous tip
 and disappear after three seconds. Help contains the full rules. Explain blocks

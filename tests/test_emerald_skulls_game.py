@@ -77,28 +77,81 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         self.assertEqual(len([die for die in state["dice"] if die["zone"] == "pool"]), 5)
         self.assertEqual(state["phase"], "await_roll")
 
-    def test_bets_are_ordered_limited_and_allow_the_same_location(self):
-        state = self.make_state(4)
+    def test_bets_are_ordered_limited_and_allow_other_players_on_the_same_location(self):
+        state = self.make_state(5)
         active = state["active_player_id"]
         gamblers = [pid for pid in state["turn_order"] if pid != active]
         self.assertNotIn("place_bet", EmeraldSkullsGame.get_legal_actions(state, gamblers[0]))
         self.assertEqual(EmeraldSkullsGame.get_public_view(state, gamblers[0])["available_bet_ids"], [])
         self.act(state, active, {"type": "buy_dice", "count": 3})
-        self.act(state, gamblers[0], {"type": "place_bet", "bet_id": "pick_bust"})
-        self.act(state, gamblers[0], {"type": "place_bet", "bet_id": "pick_bust"})
-        self.act(state, gamblers[1], {"type": "place_bet", "bet_id": "pick_bust"})
+        for gambler in gamblers[:3]:
+            self.act(state, gambler, {"type": "place_bet", "bet_id": "pick_bust"})
         self.assertEqual(
             [bet["player_id"] for bet in state["bet_stacks"]["pick_bust"]],
-            [gamblers[0], gamblers[0], gamblers[1]],
+            gamblers[:3],
         )
         _, error = EmeraldSkullsGame.apply_action(
-            state, gamblers[2], {"type": "place_bet", "bet_id": "pick_bust"}
+            state, gamblers[3], {"type": "place_bet", "bet_id": "pick_bust"}
         )
         self.assertIsNotNone(error)
         _, error = EmeraldSkullsGame.apply_action(
             state, active, {"type": "place_bet", "bet_id": "final_jewel"}
         )
         self.assertIsNotNone(error)
+
+    def test_each_gambler_can_bet_only_once_on_each_card_side_per_turn(self):
+        state = self.make_state(2)
+        active = state["active_player_id"]
+        gambler = next(player_id for player_id in state["turn_order"] if player_id != active)
+        self.act(state, active, {"type": "buy_dice", "count": 3})
+        self.act(state, gambler, {"type": "place_bet", "bet_id": "pick_bust"})
+        view = EmeraldSkullsGame.get_public_view(state, gambler)
+        self.assertNotIn("pick_bust", view["available_bet_ids"])
+        self.assertFalse(next(bet for bet in view["betting_options"] if bet["bet_id"] == "pick_bust")["available"])
+        before = copy.deepcopy(state)
+        _, error = EmeraldSkullsGame.apply_action(state, gambler, {"type": "place_bet", "bet_id": "pick_bust"})
+        self.assertIsNotNone(error)
+        self.assertEqual(state, before)
+        restored = EmeraldSkullsGame.deserialize(EmeraldSkullsGame.serialize(state))
+        self.assertNotIn("pick_bust", EmeraldSkullsGame.get_public_view(restored, gambler)["available_bet_ids"])
+        self.act(state, gambler, {"type": "place_bet", "bet_id": "mad_nargash"})
+        self.assertEqual(EmeraldSkullsGame.get_legal_actions(state, gambler), [])
+        before = copy.deepcopy(state)
+        _, error = EmeraldSkullsGame.apply_action(state, gambler, {"type": "place_bet", "bet_id": "busted_fowl"})
+        self.assertIsNotNone(error)
+        self.assertEqual(state, before)
+
+    def test_bet_side_limit_survives_a_new_roll_and_resets_next_turn(self):
+        state = self.make_state(2)
+        active = state["active_player_id"]
+        gambler = next(player_id for player_id in state["turn_order"] if player_id != active)
+        self.act(state, active, {"type": "buy_dice", "count": 3})
+        self.act(state, gambler, {"type": "place_bet", "bet_id": "pick_bust"})
+        self.roll(state)
+        dice = self.set_rolled_faces(state, [1, 2, 3])
+        self.act(state, active, {"type": "place_dice", "level": 1, "die_ids": [dice[0]]})
+        self.act(state, active, {"type": "continue_roll"})
+        self.assertNotIn("pick_bust", EmeraldSkullsGame.get_public_view(state, gambler)["available_bet_ids"])
+        before = copy.deepcopy(state)
+        _, error = EmeraldSkullsGame.apply_action(state, gambler, {"type": "place_bet", "bet_id": "pick_bust"})
+        self.assertIsNotNone(error)
+        self.assertEqual(state, before)
+        self.roll(state)
+        dice = self.set_rolled_faces(state, [1, 2])
+        self.act(state, active, {"type": "place_dice", "level": 1, "die_ids": [dice[0]]})
+        self.act(state, active, {"type": "chicken_out"})
+        for _ in range(2):
+            for player_id in state["turn_order"]:
+                self.act(state, player_id, {"type": "next_turn"})
+            self.act(state, state["active_player_id"], {"type": "buy_dice", "count": 3})
+            if state["active_player_id"] == active:
+                break
+            self.roll(state)
+            dice = self.set_rolled_faces(state, [1, 2, 3])
+            self.act(state, state["active_player_id"], {"type": "place_dice", "level": 1, "die_ids": [dice[0]]})
+            self.act(state, state["active_player_id"], {"type": "chicken_out"})
+        self.assertIn("pick_bust", EmeraldSkullsGame.get_public_view(state, gambler)["available_bet_ids"])
+        self.act(state, gambler, {"type": "place_bet", "bet_id": "pick_bust"})
 
     def test_placement_uses_one_level_and_respects_capacity_and_floor(self):
         state = self.make_state()
@@ -355,7 +408,7 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         self.assertIsNotNone(error)
         self.assertEqual(state, before)
         self.act(state, gamblers[0], {"type": "place_bet", "bet_id": "pick_bust"})
-        self.act(state, gamblers[0], {"type": "place_bet", "bet_id": "pick_bust"})
+        self.act(state, gamblers[0], {"type": "place_bet", "bet_id": "mad_nargash"})
         self.assertNotIn("roll", EmeraldSkullsGame.get_legal_actions(state, active))
         self.assertEqual(EmeraldSkullsGame.get_legal_actions(state, gamblers[0]), [])
         self.act(state, gamblers[1], {"type": "place_bet", "bet_id": "busted_fowl"})
