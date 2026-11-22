@@ -1302,6 +1302,14 @@ const GAME_ASSETS = {
     "panelTitle": "糟了个糕！",
     "header": "showThatsLifeHeaderActions"
   },
+  "machi_koro": {
+    "scripts": ["/static/games/machi_koro.js?v=1"],
+    "styles": ["/static/games/machi_koro.css?v=1"],
+    "markup": "/static/games/machi_koro.html?v=1",
+    "panel": "machiKoroPanel",
+    "panelTitle": "🎲 骰子街",
+    "header": "showMachiKoroHeaderActions"
+  },
   "for_northwood": {
     "scripts": ["/static/games/for_northwood.js?v=2"],
     "styles": ["/static/games/for_northwood.css?v=2"],

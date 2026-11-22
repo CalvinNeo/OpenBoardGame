@@ -39,6 +39,8 @@ function emitRoomStart() {
     payload.config = getBlokusRoomConfig();
   } else if (currentGameType === "thats_life" && typeof getThatsLifeConfig === "function") {
     payload.config = getThatsLifeConfig();
+  } else if (currentGameType === "machi_koro" && typeof getMachiKoroConfig === "function") {
+    payload.config = getMachiKoroConfig();
   } else if (currentGameType === "for_northwood" && typeof getForNorthwoodConfig === "function") {
     payload.config = getForNorthwoodConfig();
   } else if (currentGameType === "draw_guess") {

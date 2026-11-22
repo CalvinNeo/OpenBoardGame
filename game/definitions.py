@@ -1,3 +1,4 @@
+from game.machi_koro import MachiKoroGame, ACTION_SCHEMA as MACHI_KORO_ACTION_SCHEMA, CONFIG_SCHEMA as MACHI_KORO_CONFIG_SCHEMA
 from game.marrakech import MarrakechGame, ACTION_SCHEMA as MARRAKECH_ACTION_SCHEMA, CONFIG_SCHEMA as MARRAKECH_CONFIG_SCHEMA
 from game.thats_life import ThatsLifeGame, ACTION_SCHEMA as THATS_LIFE_ACTION_SCHEMA, CONFIG_SCHEMA as THATS_LIFE_CONFIG_SCHEMA
 from game.dice_throne import DiceThroneGame, ACTION_SCHEMA as DICE_THRONE_ACTION_SCHEMA, CONFIG_SCHEMA as DICE_THRONE_CONFIG_SCHEMA
@@ -226,6 +227,22 @@ from game.for_northwood import (
     ForNorthwoodGame,
     ACTION_SCHEMA as FOR_NORTHWOOD_ACTION_SCHEMA,
     CONFIG_SCHEMA as FOR_NORTHWOOD_CONFIG_SCHEMA,
+)
+
+register_game(
+    GameDefinition(
+        game_id=MachiKoroGame.game_id,
+        name="Machi Koro",
+        name_zh="骰子街",
+        min_players=MachiKoroGame.min_players,
+        max_players=MachiKoroGame.max_players,
+        turn_mode="turn",
+        action_schema=MACHI_KORO_ACTION_SCHEMA,
+        config_schema=MACHI_KORO_CONFIG_SCHEMA,
+        module=MachiKoroGame,
+        serialize=MachiKoroGame.serialize,
+        deserialize=MachiKoroGame.deserialize,
+    )
 )
 
 register_game(

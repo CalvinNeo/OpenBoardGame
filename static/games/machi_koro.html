@@ -1,0 +1,34 @@
+<template data-game-target="machiKoroHeaderActions" data-game-mode="contents">
+  <button id="machiKoroHelpBtn" type="button">Help</button>
+  <button id="machiKoroExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="machiKoroPanel" data-game-mode="contents">
+  <div id="machiKoroLobby" class="mk-lobby">
+    <div class="mk-skyline" aria-hidden="true"><span>▥</span><span>▤</span><span>▥</span><span>▦</span><span>▤</span></div>
+    <h3>A little town. Endless possibilities.</h3>
+    <p>Roll the dice, grow your city, complete your skyline.</p>
+    <div class="mk-settings" data-machi-koro-explain="settings">
+      <label>Edition <select id="machiKoroEdition"><option value="all">Base + Harbor + Millionaire's Row</option><option value="harbor">Base + Harbor</option><option value="millionaires">Base + Millionaire's Row</option><option value="base">Base game</option></select></label>
+      <label>Market <select id="machiKoroMarket"><option value="variable">Variable · 10 types</option><option value="all">All establishments</option></select></label>
+    </div>
+    <p class="mk-muted">2–5 players · Ready up, then Start in Room Control.</p>
+  </div>
+  <div id="machiKoroTable" class="hidden">
+    <div class="mk-status"><span id="machiKoroTurn"></span><span id="machiKoroRound"></span></div>
+    <div id="machiKoroPlayers" class="mk-players" aria-label="Cities"></div>
+    <div class="mk-dice-row">
+      <div id="machiKoroDice" class="mk-dice" data-machi-koro-explain="dice" data-mk-tip="dice" tabindex="0"></div>
+      <div class="mk-turn-content"><p id="machiKoroMessage" role="status" aria-live="polite"></p><div id="machiKoroTurnButtons" class="mk-buttons"></div></div>
+    </div>
+    <div id="machiKoroSummary" class="mk-summary hidden"></div>
+    <div class="mk-caption"><h3>Your landmarks</h3><span id="machiKoroGoal" data-machi-koro-explain="landmarks" data-mk-tip="landmarks" tabindex="0"></span></div>
+    <div id="machiKoroLandmarks" class="mk-landmarks"></div>
+    <div id="machiKoroChoice" class="mk-choice hidden"><div class="mk-caption"><h3 id="machiKoroChoiceTitle"></h3></div><div id="machiKoroChoiceContent"></div></div>
+    <div class="mk-caption mk-market-caption"><h3>Town market</h3><span id="machiKoroMarketCount" data-machi-koro-explain="market" data-mk-tip="market" tabindex="0"></span></div>
+    <div id="machiKoroFilters" class="mk-filters" role="group" aria-label="Market filter"></div>
+    <div id="machiKoroMarketGrid" class="mk-market" aria-label="Available establishments"></div>
+    <details class="mk-city" id="machiKoroCity"><summary id="machiKoroCityTitle">Your city</summary><div id="machiKoroCityCards" class="mk-city-cards"></div></details>
+    <details class="mk-log"><summary>History</summary><ol id="machiKoroLog"></ol></details>
+  </div>
+  <div id="machiKoroTooltip" class="mk-tooltip hidden" role="status"></div>
+</template>

@@ -747,6 +747,10 @@ function renderGameState(data) {
     if (typeof renderForNorthwoodGameState === "function") renderForNorthwoodGameState(data);
     return;
   }
+  if (gameType === "machi_koro") {
+    if (typeof renderMachiKoroGameState === "function") renderMachiKoroGameState(data);
+    return;
+  }
   if (gameType === "marrakech") {
     if (typeof renderMarrakechGameState === "function") renderMarrakechGameState(data);
     return;

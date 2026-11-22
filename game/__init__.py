@@ -1,5 +1,6 @@
 from game.thats_life import ThatsLifeGame
 from game.marrakech import MarrakechGame
+from game.machi_koro import MachiKoroGame
 from game.dice_throne import DiceThroneGame
 from game.colt_express import ColtExpressGame
 from game.dnd_starter_set import DndStarterSetGame
@@ -125,6 +126,7 @@ from game import definitions as _definitions
 
 __all__ = [
     "MarrakechGame",
+    "MachiKoroGame",
     "ChrominoGame",
     "ColtExpressGame",
     "DndStarterSetGame",
