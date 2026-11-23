@@ -21,16 +21,17 @@
         en: "<p>Play with 2–4 players. There are 106 tiles: two copies of 1–13 in red, blue, orange and black, plus two jokers (★). Deal 14 tiles to each rack and keep the rest in the pool. Seat one starts the first round, and the starting seat rotates each round.</p><p>A group has 3–4 tiles of the same number in different colors. A run has 3–13 consecutive numbers in one color. One is always low and never follows 13. Circles, diamonds, triangles and squares also identify colors.</p><p>Your initial melds must use only your rack and total at least 30 points. A joker counts as the number it represents. You cannot extend, split or borrow from the table on your opening turn. Several new melds may be submitted together.</p>"
       } },
       { id: "joker", label: { zh: "重排与百搭", en: "Rearrange & jokers" }, html: {
-        zh: "<p>破冰后可以添加、拆分、合并和重新组合桌面牌组，但原来桌面上的牌一张也不能拿回手牌，而且每回合至少放下一张手牌。结束时所有牌组都必须合法。</p><p>本实现采用经典替换百搭牌规则：保留原牌组并保持百搭牌含义时可以正常延长牌组。若要取出桌面百搭牌，必须用它代表的实体牌替换，保留原牌组其余实体牌，并立即将百搭牌与至少两张自己的手牌组成合法新牌组。四张同数牌组不允许直接抽走百搭牌。不能把百搭牌收进手牌。</p><p>没有倒计时和超时罚牌。试摆可以反复撤销，不能完成时 Reset 恢复本回合，或摸一张结束。摸到的牌本回合不能再打出。牌池为空时按钮变成 Pass，所有人连续跳过后本轮结束。</p>",
-        en: "<p>After opening, extend, split, merge and rebuild the table. Every existing table tile must remain on the table, and you must add at least one rack tile each turn. All final melds must be legal.</p><p>This implementation uses classic replacement-joker rules. You may extend a joker meld while keeping its natural tiles together and its joker meaning unchanged. To retrieve a table joker, replace it with the natural tile it represents while keeping the original natural tiles together. Immediately reuse the joker in a legal meld with at least two tiles from your rack. You cannot simply remove it from a four-tile group or return it to your rack.</p><p>There is no turn timer or time penalty. Experiment freely, reset the turn, or draw one tile and finish if you cannot complete your move. A drawn tile cannot be played that turn. With an empty pool, draw becomes Pass and a full cycle of consecutive passes ends the round.</p>"
+        zh: "<p>破冰后可以添加、拆分、合并和重新组合桌面牌组，但原来桌面上的牌一张也不能拿回手牌，而且每回合至少放下一张手牌。结束时所有牌组都必须合法。</p><p>开局前可在 Room Control 选择百搭牌(★)规则，默认 Classic replacement（经典替换）。经典规则下，保留原牌组并保持百搭牌含义时可以延长牌组。若要取出百搭牌，必须用它代表的实体牌替换，保留原牌组其余实体牌，并立即将百搭牌与至少两张自己的手牌组成合法新组。四张同数组不能直接抽走百搭牌。</p><p>Free rearrangement（自由重排）下，破冰后可自由移动百搭牌并改变其代表值，无须先用实体牌替换，也不要求与两张手牌成组。所有原桌面牌仍须留在桌面，最终各组合法且至少打出一张手牌。两种规则都不能把桌面百搭牌收进手牌。当前规则显示在 Table 标题旁。</p><p>没有倒计时和超时罚牌。试摆可以反复撤销，不能完成时 Reset 恢复本回合，或摸一张结束。摸到的牌本回合不能再打出。牌池为空时按钮变成 Pass，所有人连续跳过后本轮结束。</p>",
+        en: "<p>After opening, extend, split, merge and rebuild the table. Every existing table tile must remain on the table, and you must add at least one rack tile each turn. All final melds must be legal.</p><p>Choose the joker (★) rule in Room Control before starting. Classic replacement is the default. Extend a joker meld without changing its meaning or separating its natural tiles. To retrieve a joker, replace it with the natural tile it represents, keep the original natural tiles together, and immediately reuse the joker with at least two rack tiles. You cannot simply remove it from a four-tile group.</p><p>With Free rearrangement, after opening you may move table jokers and change their represented values without a natural replacement or two rack tiles. Keep every existing table tile on the table, leave all melds legal, and play at least one rack tile. Neither rule allows taking a table joker back to your rack. The current rule appears beside the Table heading.</p><p>There is no turn timer or time penalty. Experiment freely, reset the turn, or draw one tile and finish if you cannot complete your move. A drawn tile cannot be played that turn. With an empty pool, draw becomes Pass and a full cycle of consecutive passes ends the round.</p>"
       } },
       { id: "controls", label: { zh: "操作与计分", en: "Controls & scoring" }, html: {
-        zh: "<p>手牌和紧凑按钮固定在屏幕底部，桌面牌组随页面展开，不需要在牌桌内部拖动。点选若干牌，然后点 New meld 组成新组，或点已有牌组的 Add 按钮。破冰后也能选择桌面牌移动到其他组。To rack 只退回本回合自己的手牌。点击牌桌空白或按 Esc 取消选择。Undo 撤销一步，Reset 撤销本回合。Draw 摸一张并结束回合。</p><p>试摆公开给其他玩家观看，但其他手牌和牌池顺序始终隐藏。End turn 由服务器检查所有牌组。Help 支持中英文切换，Explain 解释控件而不会执行行动。</p><p>有人出完牌时，其他人按手牌数字扣分，百搭牌每张扣 30 分，赢家加上所有对手扣分之和。堵局时最低手牌点数者赢，各输家扣除与最低点数的差额，赢家分享这些分数，除不尽时按座位分配多出的 1 分。结算时公开所有手牌。非最终轮等待每位玩家点击 Next Round，机器人自动确认。可在房间配置中设置 1–8 轮。</p>",
-        en: "<p>Your rack and compact controls stay docked at the bottom of the screen. The table expands with the page instead of scrolling inside the board. Select tiles, then choose New meld or an existing meld’s Add button. After opening you may also select table tiles to move them between melds. To rack returns only tiles from your own rack played this turn. Tap empty table space or press Esc to deselect. Undo reverses one edit and Reset reverses the whole turn. Draw takes one tile and ends your turn.</p><p>Your trial layout is public so others can follow your turn, but other racks and the pool order stay hidden. End turn asks the server to validate all melds. Help switches between English and Chinese, and Explain describes controls without performing actions.</p><p>When someone goes out, opponents lose the sum of their rack numbers, counting each joker as 30. The winner gains all opponents’ losses. In a blocked round, the lowest rack total wins. Others lose the difference from that total, shared among tied winners with spare points assigned in seat order. All racks are revealed at settlement. Before another round, every player presses Next Round and bots confirm automatically. Room configuration supports 1–8 rounds.</p>"
+        zh: "<p>手牌和紧凑按钮默认展开并固定在屏幕底部。Hide rack 收起为窄条，Show rack 重新展开，不会出牌、取消选牌或结束回合。桌面随页面展开，不需要内部拖动。点选牌后点 New meld 组成新组，或点已有牌组的 Add 按钮。破冰后也能移动桌面牌。To rack 只退回本回合自己的手牌。点击空白或按 Esc 取消选择。Undo 撤销一步，Reset 撤销本回合。Draw 摸一张并结束回合。</p><p>试摆公开给其他玩家观看，但其他手牌和牌池顺序始终隐藏。End turn 由服务器检查所有牌组。Help 支持中英文切换，Explain 解释控件而不会执行行动。</p><p>有人出完牌时，其他人按手牌数字扣分，百搭牌每张扣 30 分，赢家加上所有对手扣分之和。堵局时最低手牌点数者赢，各输家扣除与最低点数的差额，赢家分享这些分数，除不尽时按座位分配多出的 1 分。结算时公开所有手牌。非最终轮等待每位玩家点击 Next Round，机器人自动确认。可在房间配置中设置 1–8 轮。</p>",
+        en: "<p>Your rack and compact controls start open and stay docked at the bottom. Hide rack folds them into a narrow bar, and Show rack opens them again without playing tiles, clearing selections or ending your turn. The table expands with the page instead of scrolling inside the board. Select tiles, then choose New meld or a meld’s Add button. After opening you may also move table tiles. To rack returns only tiles from your current-turn rack. Tap empty space or press Esc to deselect. Undo reverses one edit and Reset reverses the whole turn. Draw takes one tile and ends your turn.</p><p>Your trial layout is public so others can follow your turn, but other racks and the pool order stay hidden. End turn asks the server to validate all melds. Help switches between English and Chinese, and Explain describes controls without performing actions.</p><p>When someone goes out, opponents lose the sum of their rack numbers, counting each joker as 30. The winner gains all opponents’ losses. In a blocked round, the lowest rack total wins. Others lose the difference from that total, shared among tied winners with spare points assigned in seat order. All racks are revealed at settlement. Before another round, every player presses Next Round and bots confirm automatically. Room configuration supports 1–8 rounds.</p>"
       } }
     ]
   };
   const explanations = {
+    rule: { zh: "本局的百搭牌规则在开局前选择，开始后不可更改。", en: "The joker rule is chosen before starting and cannot be changed during play." },
     pool: { zh: "牌池中剩余的暗牌张数。摸一张后立即结束回合，牌池为空则跳过。", en: "Number of hidden tiles left in the pool. Draw one and end your turn, or pass when it is empty." },
     new: { zh: "将选中的牌组成新牌组。最终需要 3–4 张不同色同数牌，或至少 3 张同色连续数字。", en: "Move selected tiles into a new meld. End with 3–4 different colors of one number or at least 3 consecutive numbers in one color." },
     return: { zh: "将选中的本回合手牌退回牌架。原本在桌面上的牌不能退回。", en: "Return selected tiles from your current-turn rack to the rack. Existing table tiles cannot be taken back." },
@@ -39,6 +40,7 @@
     commit: { zh: "确认整个牌桌并结束回合。首次出牌必须用自己的牌达到 30 点。之后至少出一张手牌，全部牌组都要合法。", en: "Validate the entire table and end your turn. Initially play 30 points from your rack. Later add at least one rack tile and leave every meld legal." },
     draw: { zh: "撤销试摆，摸一张暗牌并结束回合。牌池为空则跳过。", en: "Discard the trial layout, draw one hidden tile and end your turn. Pass if the pool is empty." },
     sort: { zh: "仅调整自己牌架的显示顺序，不会透露手牌或消耗回合。", en: "Sort only your own rack display without revealing tiles or spending a turn." },
+    rackToggle: { zh: "折叠或打开底部手牌与按钮，默认打开。不会改变选牌、试摆或回合。", en: "Hide or show the bottom rack and controls. Starts open and preserves selections, trial layouts and your turn." },
     tile: { zh: "数字牌用颜色和形状共同标记。点选后可以组新组或添加到其他牌组。百搭牌(★)可代替一个数字。", en: "Tiles use both color and shape. Select tiles to create or extend melds. A joker (★) can represent a missing number." },
     add: { zh: "将选中的牌移动到此牌组。可先试摆，再统一检查并结束回合。", en: "Move selected tiles into this meld. Experiment first, then validate the whole table with End turn." },
     next: { zh: "确认已看完结算。所有人都确认后才发下一轮，机器人自动确认。", en: "Confirm that you have reviewed the result. The next round starts only after everyone confirms. Bots confirm automatically." },
@@ -62,6 +64,9 @@
   let requestKind = null;
   let requestTable = null;
   let passiveTile = null;
+  let rackCollapsed = false;
+  let rackScrollTop = 0;
+  let rackOwner = "";
 
   function initWidgets() {
     if (help || typeof window.obgCreateHelp !== "function") return;
@@ -105,11 +110,18 @@
   function me() { return view?.players.find((player) => player.player_id === view.you); }
   function editable() { return !!view?.legal_actions.includes("commit") && !pending; }
   function tableEditable() { return editable() && !!me()?.opened; }
+  function freeJokers() { return view?.joker_rule === "free"; }
   function syncDock() {
     const area = element("RackArea");
     const docked = view?.phase === "play" && !!me() && panel.getClientRects().length > 0;
     area.classList.toggle("is-docked", docked);
     area.classList.toggle("hidden", !!view && !me());
+    const collapsed = docked && rackCollapsed;
+    area.classList.toggle("is-collapsed", collapsed);
+    element("RackBody").hidden = collapsed;
+    element("RackToggle").hidden = !docked;
+    element("RackToggle").textContent = collapsed ? "Show rack" : "Hide rack";
+    element("RackToggle").setAttribute("aria-expanded", String(!collapsed));
     if (docked) {
       const bounds = panel.getBoundingClientRect();
       panel.style.setProperty("--rk-dock-left", Math.round(bounds.left) + "px");
@@ -125,8 +137,8 @@
     const explanationKey = "tile_" + tile;
     const colorName = { red: "红色", blue: "蓝色", orange: "橙色", black: "黑色" }[info.color];
     explanations[explanationKey] = info.color === "joker" ? {
-      zh: "百搭牌(★)可以替代缺少的数字。破冰时按所代表数字计分，结算时留在手里扣 30 分。替换桌面百搭牌后，必须立即与至少两张本回合手牌重新成组。",
-      en: "Joker (★) replaces a missing number and counts as that number for opening. Left on a rack, it costs 30 points. Retrieve a table joker by replacing it, then reuse it with at least two rack tiles."
+      zh: "百搭牌(★)代替缺少的数字，破冰按代表数字计分，留在手里扣 30 分。" + (freeJokers() ? "当前自由重排：破冰后可自由移动并改变代表值，最终各组合法且至少出一张手牌。" : "当前经典替换：替换桌面百搭牌后，必须立即与至少两张本回合手牌重新成组。"),
+      en: "Joker (★) represents a missing number for opening and costs 30 penalty points on your rack. " + (freeJokers() ? "Free rearrangement: after opening, move it freely and change its value. Leave all melds legal and play at least one rack tile." : "Classic replacement: replace a table joker with its natural tile, then reuse it with at least two rack tiles.")
     } : {
       zh: `${colorName} ${info.number}，以${marks[info.color]}辅助识别花色，留在手里扣 ${info.number} 分。可以组成不同色同数牌组或同色连续顺子。点选后使用 New meld 或 Add。`,
       en: `${label}, also marked ${marks[info.color]} for color identification. Worth ${info.number} penalty points on a rack. Combine it with different colors of the same number or consecutive numbers of this color. Select it, then use New meld or Add.`
@@ -136,7 +148,7 @@
 
   function render() {
     if (!view) return;
-    const positions = ["Rack", "Log"].map((suffix) => [suffix, element(suffix).scrollTop]);
+    const positions = ["Rack", "Log"].map((suffix) => [suffix, suffix === "Rack" && rackCollapsed ? rackScrollTop : element(suffix).scrollTop]);
     const focusTile = panel.contains(document.activeElement) ? document.activeElement.dataset.tile : null;
     const active = view.players.find((player) => player.player_id === view.current_player);
     element("Status").textContent = view.phase === "play"
@@ -145,6 +157,11 @@
     element("Players").innerHTML = view.players.map((player) => `<div class="rummikub-player${player.player_id === view.current_player ? " is-current" : ""}" data-rummikub-explain="player" tabindex="0" title="${esc(player.name)}: ${player.count} tiles, ${player.score} points, ${player.opened ? "opened" : "not opened"}"><strong>${esc(player.name)}${player.player_id === view.you ? " · You" : ""}</strong><span>${player.count} tiles · ${player.score} pts · ${player.opened ? "Opened" : "Not opened"}</span></div>`).join("");
     element("Pool").textContent = `Pool · ${view.pool_count}`;
     element("Pool").title = `${view.pool_count} hidden tiles remain in the pool`;
+    element("Rule").textContent = freeJokers() ? "Joker · Free" : "Joker · Classic";
+    explanations.rule = freeJokers()
+      ? { zh: "本局为自由重排。破冰后百搭牌可自由移动、改变代表值，无须实体替换或两张手牌配合。原桌面牌必须保留，最终各组合法且至少出一张手牌。", en: "Free rearrangement: after opening, move jokers and change their values without a replacement or two rack tiles. Keep all table tiles, leave every meld legal and play at least one rack tile." }
+      : { zh: "本局为经典替换。取出桌面百搭牌须以代表的实体牌替换，原组其余牌保持在一起，再立即与至少两张手牌成组。", en: "Classic replacement: replace a table joker with its represented natural tile, keep the original natural tiles together, then immediately reuse it with at least two rack tiles." };
+    element("Rule").title = explanations.rule.en;
     element("DraftLabel").textContent = view.draft !== null ? "· Trial layout" : "";
     const rack = new Set(me()?.hand || []);
     element("Melds").innerHTML = table.length ? table.map((meld, index) => `<div class="rummikub-meld${meldValid(meld) ? "" : " is-invalid"}"><div class="rummikub-meld-meta"><span>Meld ${index + 1} · ${meldValid(meld) ? "Valid" : "Incomplete"}</span><button type="button" data-add="${index}" data-rummikub-explain="add" ${editable() && selected.size && (tableEditable() || !meld.some((tile) => !rack.has(tile))) ? "" : "disabled"}>Add</button></div><div class="rummikub-meld-tiles">${orderedMeld(meld).map((tile) => tileHTML(tile, editable() && (rack.has(tile) || tableEditable()), rack.has(tile))).join("")}</div></div>`).join("") : '<div class="rummikub-empty">Build your first meld<br><small>Groups of one number · Runs of one color</small></div>';
@@ -247,7 +264,12 @@
       return;
     }
     if (button.disabled) return;
-    if (button.dataset.tile) {
+    if (button.id === "rummikubRackToggle") {
+      if (!rackCollapsed) rackScrollTop = element("Rack").scrollTop;
+      rackCollapsed = !rackCollapsed;
+      syncDock();
+      if (!rackCollapsed) element("Rack").scrollTop = rackScrollTop;
+    } else if (button.dataset.tile) {
       const tile = button.dataset.tile;
       if (selected.has(tile)) selected.delete(tile); else selected.add(tile);
       render();
@@ -270,6 +292,8 @@
     const next = data?.view || data;
     if (next?.game_id !== "rummikub") return;
     if (typeof currentRoomState !== "undefined" && currentRoomState?.room_id && data.room_id && data.room_id !== currentRoomState.room_id) return;
+    const nextOwner = JSON.stringify([data.room_id, next.you]);
+    if (rackOwner !== nextOwner) { rackCollapsed = false; rackScrollTop = 0; rackOwner = nextOwner; }
     const nextSignature = JSON.stringify([data.room_id, next.turn, next.phase, next.you]);
     const sameTurn = pending && requestTurn === next.turn && signature === nextSignature;
     const acknowledged = !sameTurn
@@ -291,7 +315,7 @@
     if (!visible) { view = null; signature = ""; selected.clear(); undo = []; pending = false; explain?.exit(); help?.close(); window.clearTimeout(pendingTimer); element("ConfigBox").classList.add("hidden"); element("Tooltip").classList.add("hidden"); }
     syncDock();
   };
-  window.getRummikubConfig = () => ({ rounds: Number(element("Rounds").value) });
+  window.getRummikubConfig = () => ({ rounds: Number(element("Rounds").value), joker_rule: element("JokerRule").value });
   function syncRoom(room) {
     const visible = room?.game_type === "rummikub" && room.status === "lobby";
     element("ConfigBox").classList.toggle("hidden", !visible);
@@ -299,10 +323,13 @@
     if (room?.game_type !== "rummikub") return;
     if (activeRoom !== room.room_id) {
       element("Rounds").value = String(room.game_config?.rounds || 1);
+      element("JokerRule").value = room.game_config?.joker_rule || "classic";
       activeRoom = room.room_id;
     }
     if (visible) {
       view = null;
+      rackCollapsed = false;
+      rackScrollTop = 0;
       pending = false;
       signature = "";
       undo = [];
@@ -317,6 +344,7 @@
       element("Selection").textContent = "Ready up, then start in Room Control.";
       element("Validation").textContent = "";
       element("Pool").textContent = "";
+      element("Rule").textContent = "";
       element("DraftLabel").textContent = "";
       element("Log").replaceChildren();
       element("RackTitle").textContent = "Your rack";

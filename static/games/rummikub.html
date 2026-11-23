@@ -1,6 +1,7 @@
 <template data-game-target="rummikubConfigBox" data-game-mode="contents">
   <div class="game-config-title">Rummikub</div>
   <div class="row"><label for="rummikubRounds">Rounds</label><select id="rummikubRounds"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></div>
+  <div class="row"><label for="rummikubJokerRule">Joker rule</label><select id="rummikubJokerRule"><option value="classic">Classic replacement</option><option value="free">Free rearrangement</option></select></div>
 </template>
 <template data-game-target="rummikubHeaderActions" data-game-mode="contents">
   <button id="rummikubHelpBtn" type="button">Help</button>
@@ -12,6 +13,7 @@
   <section class="rummikub-table" aria-label="Shared table">
     <div class="rummikub-caption">
       <h3>Table <span id="rummikubDraftLabel"></span></h3>
+      <span id="rummikubRule" data-rummikub-explain="rule" tabindex="0"></span>
       <span id="rummikubPool" data-rummikub-explain="pool" tabindex="0"></span>
     </div>
     <div id="rummikubMelds" class="rummikub-melds"></div>
@@ -20,18 +22,20 @@
   <section id="rummikubRackArea" class="rummikub-rack-area" aria-label="Your rack">
     <div class="rummikub-caption">
       <h3 id="rummikubRackTitle">Your rack</h3>
-      <div class="rummikub-sort"><button type="button" id="rummikubSortColor" data-rummikub-explain="sort">By color</button><button type="button" id="rummikubSortNumber" data-rummikub-explain="sort">By number</button></div>
+      <div class="rummikub-rack-controls"><div class="rummikub-sort"><button type="button" id="rummikubSortColor" data-rummikub-explain="sort">By color</button><button type="button" id="rummikubSortNumber" data-rummikub-explain="sort">By number</button></div><button type="button" id="rummikubRackToggle" aria-expanded="true" aria-controls="rummikubRackBody" data-rummikub-explain="rackToggle">Hide rack</button></div>
     </div>
-    <div id="rummikubRack" class="rummikub-rack"></div>
-    <div class="rummikub-tools" id="rummikubTools">
-      <button type="button" id="rummikubNew" data-rummikub-explain="new">New meld</button>
-      <button type="button" id="rummikubReturn" data-rummikub-explain="return">To rack</button>
-      <button type="button" id="rummikubUndo" data-rummikub-explain="undo">Undo</button>
-      <button type="button" id="rummikubReset" data-rummikub-explain="reset">Reset</button>
-      <button type="button" id="rummikubCommit" class="rummikub-primary" data-rummikub-explain="commit">End turn</button>
-      <button type="button" id="rummikubDraw" data-rummikub-explain="draw">Draw</button>
+    <div id="rummikubRackBody">
+      <div id="rummikubRack" class="rummikub-rack"></div>
+      <div class="rummikub-tools" id="rummikubTools">
+        <button type="button" id="rummikubNew" data-rummikub-explain="new">New meld</button>
+        <button type="button" id="rummikubReturn" data-rummikub-explain="return">To rack</button>
+        <button type="button" id="rummikubUndo" data-rummikub-explain="undo">Undo</button>
+        <button type="button" id="rummikubReset" data-rummikub-explain="reset">Reset</button>
+        <button type="button" id="rummikubCommit" class="rummikub-primary" data-rummikub-explain="commit">End turn</button>
+        <button type="button" id="rummikubDraw" data-rummikub-explain="draw">Draw</button>
+      </div>
+      <p id="rummikubSelection" class="rummikub-selection" aria-live="polite">Select tiles → New meld / Add</p>
     </div>
-    <p id="rummikubSelection" class="rummikub-selection" aria-live="polite">Select tiles → New meld / Add</p>
   </section>
   <section id="rummikubResult" class="rummikub-result hidden" aria-label="Round result"></section>
   <details class="rummikub-log"><summary>Turn log</summary><ol id="rummikubLog"></ol></details>

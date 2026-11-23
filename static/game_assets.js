@@ -1,9 +1,9 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "rummikub": {
-    "scripts": ["/static/games/rummikub.js?v=3"],
-    "styles": ["/static/games/rummikub.css?v=3"],
-    "markup": "/static/games/rummikub.html?v=3",
+    "scripts": ["/static/games/rummikub.js?v=4"],
+    "styles": ["/static/games/rummikub.css?v=4"],
+    "markup": "/static/games/rummikub.html?v=4",
     "panel": "rummikubPanel",
     "panelTitle": "Rummikub · 拉密",
     "header": "showRummikubHeaderActions"

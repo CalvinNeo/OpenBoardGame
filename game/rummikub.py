@@ -23,6 +23,7 @@ CONFIG_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
         "rounds": {"type": "integer", "minimum": 1, "maximum": 8, "default": 1},
+        "joker_rule": {"type": "string", "enum": ["classic", "free"], "default": "classic"},
         "seed": {"type": "integer"},
     },
 }
@@ -87,6 +88,8 @@ def _structure_error(state: Dict, player_id: str, table: List[List[str]]) -> Opt
 
 
 def _joker_error(state: Dict, player_id: str, table: List[List[str]]) -> Optional[str]:
+    if state["config"].get("joker_rule", "classic") == "free":
+        return None
     rack = set(state["players"][player_id]["hand"])
     for old_meld in state["table"]:
         for joker in (tile for tile in old_meld if TILES[tile]["joker"]):
@@ -310,7 +313,8 @@ def _layout_value(hand: List[str], table: List[List[str]], urgent: bool) -> Tupl
 def _search_layout(state: Dict, bot_id: str, table: List[List[str]], hand: List[str],
                    fixed: List[List[str]], consider: Callable[[List[List[str]]], None], limit: int = 80000) -> None:
     opened = state["players"][bot_id]["opened"]
-    locked = [meld for meld in table if any(TILES[tile]["joker"] for tile in meld)] if opened else []
+    classic = state["config"].get("joker_rule", "classic") == "classic"
+    locked = [meld for meld in table if any(TILES[tile]["joker"] for tile in meld)] if opened and classic else []
     board = [tile for meld in table if meld not in locked for tile in meld] if opened else []
     prefix = fixed if opened else fixed + table
     pools = {}
@@ -475,7 +479,8 @@ def _choose_layout(state: Dict, bot_id: str) -> Optional[List[List[str]]]:
     if best_value[0] == len(hand):
         return best
     _search_layout(state, bot_id, state["table"], list(hand), [], consider)
-    if state["players"][bot_id]["opened"] and best_value[0] != len(hand):
+    if (state["players"][bot_id]["opened"] and best_value[0] != len(hand)
+            and state["config"].get("joker_rule", "classic") == "classic"):
         for table, remaining, fixed in _retrieval_plans(state, bot_id):
             consider(table + fixed)
             _search_layout(state, bot_id, table, remaining, fixed, consider, limit=20000)
@@ -503,7 +508,8 @@ class RummikubGame:
         rng = random.Random(cfg.get("seed"))
         rounds = cfg.get("rounds", 1)
         state = {
-            "game_id": "rummikub", "version": 1, "config": {"rounds": rounds},
+            "game_id": "rummikub", "version": 1,
+            "config": {"rounds": rounds, "joker_rule": cfg.get("joker_rule", "classic")},
             "players": {pid: {"hand": [], "opened": False, "score": 0} for pid in ids},
             "player_meta": {player["player_id"]: copy.deepcopy(player) for player in ordered},
             "turn_order": ids, "round": 1, "turn": 1,
@@ -583,6 +589,7 @@ class RummikubGame:
         return copy.deepcopy({
             "game_id": "rummikub", "you": viewer_id, "phase": state["phase"], "turn": state["turn"],
             "round": state["round"], "rounds": state["config"]["rounds"],
+            "joker_rule": state["config"].get("joker_rule", "classic"),
             "current_player": actor if state["phase"] == "play" else None,
             "players": [{"player_id": pid, "name": state["player_meta"][pid]["name"],
                          "count": len(state["players"][pid]["hand"]),
