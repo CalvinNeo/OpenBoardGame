@@ -591,6 +591,7 @@ async function testStartupLoading(browser, errors) {
     await leaving.waitForFunction(() => gameAssetProgress.get('word_sync')?.completed === 2);
     await leaving.locator('#roomControlsToggleBtn').click();
     await leaving.locator('#leaveBtn').click();
+    await leaving.locator('#leaveConfirmBtn').click();
     await leaving.waitForFunction(() => !roomId);
     releaseScript();
     await leaving.waitForFunction(() => isGameAssetsLoaded('word_sync'));

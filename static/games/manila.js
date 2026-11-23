@@ -453,7 +453,7 @@
                 const lines = ["earn", "spend"].flatMap(kind => Object.entries(ledger[kind] || {}).map(([label, amount]) => `<div class="manila-ledger-line"><span>${escape(ledgerLabel(label))}</span><span class="${kind === "earn" ? "manila-gain" : "manila-loss"}">${kind === "earn" ? "+" : "−"}${amount}</span></div>`)).join("");
                 return `<article class="manila-result-card${player.player_id === view.you ? " is-you" : ""}" data-player-id="${escape(player.player_id)}"><div class="manila-result-name">${escape(playerLabel(player.player_id))}</div>
                     ${view.game_over ? renderFinalScore(player) : ""}
-                    <div class="manila-result-total" ${tip(`本航次收入 💰${earned}，支出 💰${spent}，净额 ${net >= 0 ? "+" : ""}${net}。`, "result")}><span>净额</span><strong class="${net >= 0 ? "manila-gain" : "manila-loss"}">${net >= 0 ? "+" : "−"}💰${Math.abs(net)}</strong></div>
+                    <div class="manila-result-total" ${tip(`本航次收入 💰${earned}，支出 💰${spent}，净额 ${net >= 0 ? "+" : ""}${net}。`, "result")}><span>本航次净额</span><strong class="${net >= 0 ? "manila-gain" : "manila-loss"}">${net >= 0 ? "+" : "−"}💰${Math.abs(net)}</strong></div>
                     <div class="manila-result-total"><span ${tip(`当前现金 💰${player.cash}`, "cash")}>💰 ${player.cash}</span><span>${view.game_over ? view.winner?.includes(player.player_id) ? "🏆 Winner" : "Finished" : player.round_ready ? "Ready ✓" : "Waiting"}</span></div>
                     <details data-manila-detail-id="ledger-${escape(player.player_id)}"><summary>Details · +${earned} / −${spent}</summary>${lines || '<p class="manila-small">No transactions</p>'}</details></article>`;
             }).join("")}</div>`;

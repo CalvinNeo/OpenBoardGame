@@ -348,6 +348,7 @@ const widths = [320, 390, 1024, 1440];
         completed.push('five round reviews, no extra confirmation, all-player barrier and final results');
         await host.evaluate(() => setRoomControlsCollapsed(false));
         await host.locator('#leaveBtn').click();
+        await host.locator('#leaveConfirmBtn').click();
         await host.waitForFunction(() => !currentRoomState);
         await host.evaluate(() => socket.emit('room:create', {name: 'Lobby reset', game_type: 'terra_nova'}));
         await host.waitForFunction(() => roomSessionReady && currentRoomState.status === 'lobby' && isGameAssetsLoaded('terra_nova'));

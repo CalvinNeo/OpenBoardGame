@@ -316,6 +316,7 @@ async function nextAll(pages) {
         await page.waitForFunction(() => socket.connected);
         await page.evaluate(() => setRoomControlsCollapsed(false));
         await page.locator("#leaveBtn").click();
+        await page.locator("#leaveConfirmBtn").click();
         await page.waitForFunction(() => !currentRoomState);
         await page.evaluate(() =>
             socket.emit("room:create", { name: "New table", game_type: "moshimo_yusha" }),

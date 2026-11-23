@@ -82,7 +82,7 @@ function decodeAccessKey(key) {
       await page.locator('#roomIdInput').fill(identity.room);
       await page.locator('#joinRoomForm button[type=submit]').click();
     } else {
-      await page.locator(`[data-room-id="${identity.room}"]`).getByRole('button', { name: 'Reconnect', exact: true }).click();
+      await page.locator(`[data-room-id="${identity.room}"]`).getByRole('button', { name: 'Enter', exact: true }).click();
     }
     await page.waitForFunction(expected => roomSessionReady && !pendingRoomRequest
       && roomId === expected.room && playerId === expected.player, identity);
@@ -327,16 +327,18 @@ function decodeAccessKey(key) {
     await submitKey(returning, multiRoomKey, identity);
     assert.deepEqual(await returning.evaluate(() => Object.keys(loadRoomAuthMap()).sort()), expectedRooms);
     for (const savedIdentity of allIdentities) {
-      assert.equal(await returning.locator(`[data-room-id="${savedIdentity.room}"] .room-reconnect-btn`).count(), 1);
+      assert.equal(await returning.locator(`[data-room-id="${savedIdentity.room}"] .room-enter-btn`).isEnabled(), true);
     }
     await switchSavedRoom(returning, thirdIdentity, true);
     await returning.locator('#readyBtn').click();
     await returning.waitForFunction(() => !pendingRoomRequest && !currentRoomState.players[0].ready);
     await switchSavedRoom(returning, secondIdentity);
     await openControls(returning);
-    await returning.locator(`[data-room-id="${thirdIdentity.room}"]`).getByRole('button', { name: 'Join Ready', exact: true }).click();
+    await returning.locator('#autoReadyToggle').check();
+    await returning.locator(`[data-room-id="${thirdIdentity.room}"]`).getByRole('button', { name: 'Enter', exact: true }).click();
     await returning.waitForFunction(expected => roomSessionReady && !pendingRoomRequest
       && roomId === expected.room && currentRoomState.players[0].ready, thirdIdentity);
+    await returning.locator('#autoReadyToggle').uncheck();
     assert.deepEqual(await getIdentity(returning), thirdIdentity);
     assert.equal(await returning.evaluate(() => currentRoomState.players.length), 1);
     await switchSavedRoom(returning, identity);

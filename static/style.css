@@ -234,6 +234,32 @@ body.room-controls-dragging * {
   gap: 6px;
 }
 
+#roomControlsPanel #roomListPanel > .panel-header {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.room-list-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#roomControlsPanel .room-auto-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.room-auto-ready input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
 #roomControlsPanel .room-settings-btn {
   position: relative;
   z-index: 2;
@@ -419,9 +445,11 @@ body.room-controls-dragging * {
 
 #roomPanel .room-header-actions {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
 }
 
@@ -430,6 +458,14 @@ body.room-controls-dragging * {
   width: 28px;
   min-height: 28px;
   font-size: 15px;
+}
+
+#roomPanel #startBtn {
+  flex-basis: 88px;
+  width: 88px;
+  padding-inline: 8px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 #roomPanel .room-header-actions .auto-save-row {
@@ -1021,7 +1057,6 @@ body.settings-open {
   white-space: nowrap;
 }
 
-.room-item-actions .room-reconnect-btn,
 .room-item-actions .room-memories-btn,
 .room-item-actions .room-delete-btn {
   flex: 0 0 28px;
@@ -1298,24 +1333,28 @@ body.settings-open {
   overflow-wrap: anywhere;
 }
 
-.reopen-confirm-modal {
+.reopen-confirm-modal,
+.leave-confirm-modal {
   max-width: 420px;
 }
 
-.reopen-confirm-modal p {
+.reopen-confirm-modal p,
+.leave-confirm-modal p {
   margin: 0;
   color: #475569;
   line-height: 1.5;
 }
 
-.reopen-confirm-actions {
+.reopen-confirm-actions,
+.leave-confirm-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
 
-.reopen-confirm-actions button {
+.reopen-confirm-actions button,
+.leave-confirm-actions button {
   min-height: 42px;
 }
 
@@ -1329,6 +1368,18 @@ body.settings-open {
 .reopen-confirm-actions .reopen-confirm-submit:focus-visible {
   border-color: #92400e;
   background: #92400e;
+}
+
+.leave-confirm-actions .leave-confirm-submit {
+  border-color: #b42318;
+  background: #b42318;
+  color: #fff;
+}
+
+.leave-confirm-actions .leave-confirm-submit:hover,
+.leave-confirm-actions .leave-confirm-submit:focus-visible {
+  border-color: #912018;
+  background: #912018;
 }
 
 .create-room-modal {

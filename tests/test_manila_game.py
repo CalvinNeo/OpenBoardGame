@@ -203,6 +203,15 @@ class ManilaFinalScoreTests(unittest.TestCase):
             self.assertNotIn("score_breakdown", player)
             self.assertNotIn("stocks", player)
 
+    def test_zero_assets_show_zero_total_without_inventing_stock_value(self):
+        state = self.make_score_state()
+        state["players"]["p2"].update(cash=0, pledged=dict.fromkeys(CARGO_LIST, 0))
+        _finalize_game(state)
+        score = Game.get_public_view(state, "visitor")["players"][2]["score_breakdown"]
+        self.assertEqual(score["total"], 0)
+        self.assertEqual(score["stock_value"], 0)
+        self.assertEqual(score["debt"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

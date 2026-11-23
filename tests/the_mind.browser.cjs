@@ -391,6 +391,7 @@ async function testLive(browser, errors) {
 
   if (!await page.locator('#leaveBtn').isVisible()) await page.locator('#roomControlsToggleBtn').click();
   await page.locator('#leaveBtn').click();
+  await page.locator('#leaveConfirmBtn').click();
   await page.waitForFunction(() => !roomId);
   assert.equal(await page.locator('#theMindPanel').isVisible(), false);
   assert.equal(await page.evaluate(() => document.body.classList.contains('tm-needs-action')), false);

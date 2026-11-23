@@ -98,6 +98,8 @@
 
 总资产（比索）最多的玩家获胜。若平局，则共享胜利。
 
+终局面板向所有玩家和旁观者显示每个人的总分及「现金 + 未抵押股票市值 − 抵押债务」计算式，并逐类列出股票张数、终局股价、乘积和债务扣款。游戏进行中及普通航次结算不公开对手的持股种类或期末计分；本航次净额单独保留，不再重复加入现金或总分。
+
 ---
 
 ## 4. 缺失的游戏资源清单
@@ -221,3 +223,22 @@
 * 真实 Chrome 检查 **320、390、1024、1440px**，覆盖船上工人、全部 10 个港湾职位、竞拍、玩家列表、结算卡和旁观者；验证实际姓名、YOU、无 P 编号、长英文／中文换行、HTML 安全转义及页面／容器无溢出。四种宽度的姓名截图已逐一查看，保存在忽略的 `build/manila-ui/player-names-<width>.png`。
 * 完整 27 状态 × 4 宽度浏览器回归，在临时内存包装中仅排除既有共享 RC 内部溢出扫描后通过，包含起点边界、Help／Explain／Escape、触控、各类派遣及确认、错误恢复、重连、回合等待与按需加载。正式测试仍保留原断言，直接运行时仍在 `Help desktop` 遇到上一节记录的共享 RC `panel-header` 28/30px 溢出，未修改无关共享样式。
 * 遵守 `DEV_GUIDE.md` 对应开发、响应式与交互检查要求，但因该共享 RC 失败，不声称完整 UI 门槛全部通过。未测真实多人服务端流程、实体设备、Safari／Firefox；保留原有原生 Help 对话框机制，本次不扩展语言切换或重构 Help。
+
+## 8. 全员终局总分与计算明细（2026-11-22）
+
+### 实现与信息边界
+
+* `game/manila.py` 新增统一 `_score_breakdown`，同时用于胜负判定和终局公开数据，避免界面公式与服务器赢家计算不一致。公开字段包含现金、四类未抵押股票的张数／终局单价／市值、股票总市值、已抵押张数、房间实际每股还款额、债务合计和最终总分。
+* 仅 `game_over` 后向每个玩家及旁观者附带 `score_breakdown`；未结束时继续隐藏对手持股。终局数据按当前状态即时生成，不要求旧存档预先存储新字段；重新开局后再次隐藏。结束后拒绝抵押等非重开动作，避免展示中的总分被改写而赢家不变。
+* `static/games/manila.js` 对每位玩家使用完全相同的终局卡：姓名、总分、现金、各类股票「张数 × 终局股价 = 市值」、股票小计、抵押「张数 × 实际每股还款额 = 扣款」，以及完整总分计算式。保留本人 YOU、并列胜者、负分和本航次账本；航次净额明确标为「本航次净额」，不会重复计入最终资产。总分解释和 Help 同步更新。
+* `static/games/manila.css` 为终局卡设置响应式列宽，移动端单列、桌面端多列；终局取消普通账本 330px 内部滚动上限，所有玩家的公式默认展开，无需先逐个打开 Details。Details 只保留航次流水，名字和公式可换行。
+* 资源版本同步更新于 `static/game_assets.js`（Manila JS `app_v9`、CSS `v=4`）和 `static/index.html`（加载器版本）；保留其他并发编辑，不改共享规则或样式。
+* `tests/test_manila_game.py` 增加计分、终局隐私、定制还款、负分／零分、并列赢家、终局股价更新、旧存档、重开及冻结终局状态回归。`tests/manila_fixtures.py` 的终局数据改由真实计分函数生成，增加定制还款和旁观状态；`tests/manila.browser.cjs` 新增逐玩家公式核对。
+
+### 验收记录
+
+* `python -m unittest tests.test_manila_game tests.test_manila_ai tests.test_frontend_style_assets tests.test_help_contract`：58 项通过。`node --check static/games/manila.js`、`node --check tests/manila.browser.cjs`、`node scripts/smoke_load.cjs manila` 和 `git diff --check` 通过。
+* Chrome **320、390、1024、1440px** 检查自身、全部对手、旁观者、默认／13 比索自定义还款、负分、并列赢家、长中英文姓名和 HTML 转义。逐卡核对总分、四类股票乘积、债务及最终算式，检查展开航次 Details、Explain／Escape 和普通回合不显示终局明细。
+* 四种宽度的终局截图逐一查看，计分区域没有文字溢出、相邻卡片重叠或页面横向滚动；输出在忽略目录 `build/manila-ui/final-scores-<width>.png`。手机端使用页面纵向滚动展示全部五人的明细，不做嵌套账本滚动。
+* 原始 `node tests/manila.browser.cjs` 仍被既有共享 RC `panel-header` 28/30px 内部溢出在 `Help desktop` 拦住。临时内存包装仅排除 `#roomControlsPanel` 的内部溢出扫描后，完整 **29 状态 × 4 宽度** 回归通过，页面宽度和马尼拉容器溢出／重叠检查保留；正式测试断言和共享 CSS 未放宽。
+* 按 `DEV_GUIDE.md` 完成本次相关实现和检查，但不声称完整遵守全部 UI 验收门槛：上述共享 RC 问题仍存在；现有 Room Controls 重开流程及「全员确认后才可 Play Again」未在本次计分展示改动中重构。未运行真实多人服务端浏览器流程、实体手机或 Safari／Firefox；没有运行无关游戏全量逻辑测试。

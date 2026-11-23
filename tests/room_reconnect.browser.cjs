@@ -49,10 +49,10 @@ const output = 'build/room-reconnect';
       && currentRoomState?.room_id === expected && lastGameStatePayload?.room_id === expected, target);
   }
 
-  async function switchRoom(page, target, icon = false) {
+  async function switchRoom(page, target) {
     await openControls(page);
     const row = page.locator(`[data-room-id="${target}"]`);
-    const button = icon ? row.locator('.room-reconnect-btn') : row.getByRole('button', { name: 'Reconnect', exact: true });
+    const button = row.getByRole('button', { name: 'Enter', exact: true });
     assert.equal(await button.isEnabled(), true);
     await button.click();
     await waitRoom(page, target);
@@ -99,7 +99,7 @@ const output = 'build/room-reconnect';
   async function checkLayout(page, width, oldRoomId, newRoomId) {
     await page.setViewportSize({ width, height: width < 500 ? 844 : 900 });
     await switchRoom(page, oldRoomId);
-    await switchRoom(page, newRoomId, true);
+    await switchRoom(page, newRoomId);
     await openControls(page);
     await page.locator(`[data-room-id="${newRoomId}"]`).scrollIntoViewIfNeeded();
     assert.equal(await page.locator('#roomList').evaluate(list => list.scrollWidth > list.clientWidth + 1), false);
@@ -179,7 +179,7 @@ const output = 'build/room-reconnect';
     const newView = await returning.evaluate(() => lastGameStatePayload.view);
     assert.equal(newView.game_over, false);
     for (const target of [oldRoomId, newRoomId, oldRoomId, newRoomId]) {
-      await switchRoom(returning, target, true);
+      await switchRoom(returning, target);
       assert.equal(await returning.evaluate(() => playerId), identities[1]);
       assert.equal(await returning.evaluate(() => currentRoomState.players.find(player => player.player_id === playerId).seat), original.seat);
       assert.deepEqual(await returning.evaluate(() => lastGameStatePayload.view), target === oldRoomId ? oldView : newView);
@@ -198,7 +198,7 @@ const output = 'build/room-reconnect';
     await returning.waitForFunction(() => window.reconnectTestHeldLists.some(data => data.request_id != null));
     assert.equal(await returning.locator('#gameReconnectBtn').isDisabled(), true);
     await openControls(returning);
-    assert.equal(await returning.locator(`[data-room-id="${newRoomId}"]`).getByRole('button', { name: 'Join', exact: true }).isDisabled(), true);
+    assert.equal(await returning.locator(`[data-room-id="${newRoomId}"]`).getByRole('button', { name: 'Enter', exact: true }).isDisabled(), true);
     await releaseRoomList(returning);
     await returning.waitForFunction(target => Boolean(getRoomAuth(target)), newRoomId);
     assert.equal(await returning.evaluate(() => roomId), newRoomId);
@@ -235,7 +235,7 @@ const output = 'build/room-reconnect';
     await switchRoom(imported, newRoomId);
 
     const stranger = await newPage();
-    assert.equal(await stranger.locator(`[data-room-id="${newRoomId}"] .room-reconnect-btn`).count(), 0);
+    assert.equal(await stranger.locator(`[data-room-id="${newRoomId}"] .room-enter-btn`).isDisabled(), true);
     const rejected = await stranger.evaluate(async ({ target, auth }) => {
       const wrong = { player_id: auth.player_id, reconnect_token: 'wrong-token', name: 'yz' };
       const nameOnly = await requestRoomList({ [target]: { name: 'yz' } });
@@ -275,7 +275,7 @@ const output = 'build/room-reconnect';
     await releaseRoomList(imported);
     assert.equal(await imported.evaluate(() => readRoomStorage(ROOM_AUTH_KEY)), null);
     assert.equal(await imported.locator('#gameReconnectBtn').isDisabled(), true);
-    assert.equal(await imported.locator(`[data-room-id="${newRoomId}"] .room-reconnect-btn`).count(), 0);
+    assert.equal(await imported.locator(`[data-room-id="${newRoomId}"] .room-enter-btn`).isDisabled(), true);
     assert.equal(await imported.evaluate(() => roomId), null);
     console.log('Canceled import and late discovery replies after logout do not restore credentials or join any room.');
     assert.deepEqual(errors, []);

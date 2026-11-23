@@ -468,6 +468,7 @@ async function swipe(page, locator) {
     assert.equal(await page.locator('#noThanksExplainBtn').isVisible(), false);
     await page.evaluate(() => setRoomControlsCollapsed(false));
     await page.locator('#leaveBtn').click();
+    await page.locator('#leaveConfirmBtn').click();
     await page.waitForFunction(() => !roomId);
     assert.equal(await page.locator('#mobileExplainSlot button').count(), 0);
     assert.deepEqual(errors, []);

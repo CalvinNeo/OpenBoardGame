@@ -139,7 +139,7 @@ fs.mkdirSync(output, {recursive:true});
     for(const q of pages)await phase(q,'game_over');
     assert.equal((await view(p)).end_reason,'three_rounds');await layout(p,'game-over-desktop');
     await p.setViewportSize({width:320,height:960});await layout(p,'game-over-320');
-    for(const q of pages){await q.evaluate(()=>setRoomControlsCollapsed(false));await q.locator('#leaveBtn').click();await q.waitForFunction(()=>!currentRoomState);}
+    for(const q of pages){await q.evaluate(()=>setRoomControlsCollapsed(false));await q.locator('#leaveBtn').click();await q.locator('#leaveConfirmBtn').click();await q.waitForFunction(()=>!currentRoomState);}
     await newPage();await newPage();
     game=await create(pages,true);roles=game.roles;ids=game.ids;
     const answer=await chooseCrime(roles.murderer), accuser=roles.investigator;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v157" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v158" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -170,6 +170,21 @@
         <div class="reopen-confirm-actions">
           <button id="reopenConfirmCancelBtn" type="button">Cancel</button>
           <button id="reopenConfirmBtn" class="reopen-confirm-submit" type="button">Reopen</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="leaveConfirmModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="leaveConfirmTitle" aria-describedby="leaveConfirmDescription">
+    <div class="modal-content leave-confirm-modal">
+      <div class="modal-header">
+        <h2 id="leaveConfirmTitle">Leave room?</h2>
+      </div>
+      <div class="modal-body">
+        <p id="leaveConfirmDescription">Are you sure you want to leave the current room?</p>
+        <div class="leave-confirm-actions">
+          <button id="leaveConfirmCancelBtn" type="button">Cancel</button>
+          <button id="leaveConfirmBtn" class="leave-confirm-submit" type="button">Leave Room</button>
         </div>
       </div>
     </div>
@@ -540,7 +555,13 @@
           <div class="panel-body room-controls-body" id="roomControlsBody">
             <section class="room-controls-section" id="roomListPanel">
               <div class="panel-header">
-                <h3>Rooms</h3>
+                <div class="room-list-heading">
+                  <h3>Rooms</h3>
+                  <label class="room-auto-ready" title="Automatically mark ready when entering a room lobby.">
+                    <input id="autoReadyToggle" type="checkbox" />
+                    <span>auto ready</span>
+                  </label>
+                </div>
                 <div class="panel-header-actions">
                   <button id="createBtn" class="room-icon-btn room-icon-btn-primary" type="button" title="Create room" aria-label="Create room" disabled>➕</button>
                   <button id="joinBtn" class="room-icon-btn" type="button" title="Join room by ID" aria-label="Join room by ID">🔗</button>
@@ -655,7 +676,7 @@
                 <h3>Room</h3>
                 <div class="panel-header-actions room-header-actions">
                   <button id="readyBtn" class="room-icon-btn" type="button" title="Toggle Ready" aria-label="Toggle Ready" disabled>✅</button>
-                  <button id="startBtn" class="room-icon-btn room-icon-btn-primary" type="button" title="Start Game" aria-label="Start Game" disabled>▶️</button>
+                  <button id="startBtn" class="room-icon-btn room-icon-btn-primary" type="button" title="Start Game" aria-label="Start Game" disabled>▶️ Start</button>
                   <button id="reopenBtn" class="room-icon-btn hidden" type="button" title="Reopen" aria-label="Reopen" aria-hidden="true" disabled>↩️</button>
                   <button id="leaveBtn" class="room-icon-btn room-icon-btn-danger" type="button" title="Leave Room" aria-label="Leave Room" disabled>🚪</button>
                   <div class="row hidden toggle-row auto-save-row" id="autoSaveRow">
@@ -1873,6 +1894,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v74" defer></script>
-  <script src="/static/room.js?v=app_v113" defer></script>
+  <script src="/static/room.js?v=app_v114" defer></script>
 </body>
 </html>

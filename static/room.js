@@ -39,6 +39,8 @@ let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
 let pendingReopenRoomId = null;
 let reopenConfirmReturnFocus = null;
+let pendingLeaveRoomId = null;
+let leaveConfirmReturnFocus = null;
 let catanStarfarersSelectedLanguage = null;
 let playerName = "";
 let pendingPlayerNameAction = null;
@@ -76,6 +78,7 @@ const roomFeedbackTooltip = document.getElementById("roomFeedbackTooltip");
 const createRoomStatus = document.getElementById("createRoomStatus");
 const gameListRetryBtn = document.getElementById("gameListRetryBtn");
 const roomListEl = document.getElementById("roomList");
+const autoReadyToggle = document.getElementById("autoReadyToggle");
 const refreshRoomsBtn = document.getElementById("refreshRoomsBtn");
 const cleanupEmptyRoomsBtn = document.getElementById("cleanupEmptyRoomsBtn");
 const loadBtn = document.getElementById("loadBtn");
@@ -114,6 +117,9 @@ const createRoomModalCloseBtn = document.getElementById("createRoomModalCloseBtn
 const reopenConfirmModal = document.getElementById("reopenConfirmModal");
 const reopenConfirmCancelBtn = document.getElementById("reopenConfirmCancelBtn");
 const reopenConfirmBtn = document.getElementById("reopenConfirmBtn");
+const leaveConfirmModal = document.getElementById("leaveConfirmModal");
+const leaveConfirmCancelBtn = document.getElementById("leaveConfirmCancelBtn");
+const leaveConfirmBtn = document.getElementById("leaveConfirmBtn");
 const createRoomGameStep = document.getElementById("createRoomGameStep");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
@@ -155,7 +161,7 @@ const roomControlsLayer = document.createElement("div");
 roomControlsLayer.className = "room-controls-layer";
 const roomControlsLayerNodes = [
   roomControlsPanel, settingsModal, logPanel, playerNameModal, joinRoomModal,
-  createRoomModal, loadModal, seatClaimModal, reopenConfirmModal, logoutModal,
+  createRoomModal, loadModal, seatClaimModal, reopenConfirmModal, leaveConfirmModal, logoutModal,
 ].filter(Boolean).map((element) => {
   const anchor = document.createComment("Room controls layout anchor");
   element.before(anchor);
@@ -170,6 +176,7 @@ const GAME_SORT_KEY = "openboardgame:game_sort";
 const RECENT_GAMES_KEY = "openboardgame:recent_games";
 const DISABLE_DOUBLE_TAP_ZOOM_KEY = "openboardgame:disable_double_tap_zoom";
 const TURN_SOUND_KEY = "openboardgame:turn_sound";
+const AUTO_READY_KEY = "openboardgame:auto_ready";
 const RECENT_GAMES_LIMIT = 50;
 const PLAYER_ACCESS_KEY_MAX_LENGTH = 1048576;
 const GAME_SORT_KEYS = new Set(["alpha", "recent", "updated", "dev_order", "difficulty_asc", "difficulty_desc"]);
@@ -199,6 +206,11 @@ function applyDoubleTapZoomPreference(disabled) {
   document.documentElement.classList.toggle("disable-double-tap-zoom", disabled);
   disableDoubleTapZoomToggle.checked = disabled;
 }
+
+autoReadyToggle.checked = readRoomStorage(AUTO_READY_KEY) === "true";
+autoReadyToggle.addEventListener("change", () => {
+  writeRoomStorage(AUTO_READY_KEY, autoReadyToggle.checked.toString());
+});
 
 applyDoubleTapZoomPreference(readRoomStorage(DISABLE_DOUBLE_TAP_ZOOM_KEY) !== "false");
 
@@ -2234,6 +2246,8 @@ function renderSeatList(payload) {
       requirePlayerName(() => {
         if (pendingLogoutRequest) return;
         roomLogoutRequested = false;
+        pendingReadyAfterJoin = autoReadyToggle.checked;
+        pendingReadyRoomId = pendingReadyAfterJoin ? payload.room_id : null;
         socket.emit("room:claim_seat", { room_id: payload.room_id, seat: seat.seat, name: getPlayerName() });
       });
     });
@@ -2510,7 +2524,7 @@ function updateRoomActionButtons() {
   const startBtn = document.getElementById("startBtn");
   const starting = pendingRoomRequest?.event === "room:start" || initializing;
   startBtn.disabled = !available || Boolean(reason);
-  startBtn.textContent = starting ? "⏳" : "▶️";
+  startBtn.textContent = starting ? "⏳ Starting" : "▶️ Start";
   const startLabel = starting ? "Starting..." : reason || "Start Game";
   startBtn.title = startLabel;
   startBtn.setAttribute("aria-label", startLabel);
@@ -2675,6 +2689,24 @@ function updateReopenButton() {
   reopenBtn.title = reopenLabel;
   reopenBtn.setAttribute("aria-label", reopenLabel);
   reopenBtn.disabled = !showButton || (theCrew && currentRoomState.host_player_id !== playerId);
+}
+
+function closeLeaveConfirmModal(restoreFocus = true) {
+  setModalVisible(leaveConfirmModal, false);
+  const returnFocus = leaveConfirmReturnFocus;
+  pendingLeaveRoomId = null;
+  leaveConfirmReturnFocus = null;
+  if (restoreFocus && returnFocus && typeof returnFocus.focus === "function") {
+    returnFocus.focus();
+  }
+}
+
+function openLeaveConfirmModal() {
+  if (!roomId) return;
+  pendingLeaveRoomId = roomId;
+  leaveConfirmReturnFocus = document.activeElement;
+  setModalVisible(leaveConfirmModal, true);
+  leaveConfirmCancelBtn.focus();
 }
 
 function closeReopenConfirmModal(restoreFocus = true) {
@@ -2914,7 +2946,7 @@ function getRoomSummary(roomId) {
   return currentRoomList.find((room) => room.room_id === roomId) || null;
 }
 
-function attemptJoinRoom(rid, options = {}) {
+function attemptJoinRoom(rid, options = { readyAfterJoin: autoReadyToggle.checked }) {
   const name = getPlayerName();
   if (!rid) {
     log("Room ID required");
@@ -3047,30 +3079,14 @@ function renderRoomList(rooms) {
       : room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers));
     const joinBtn = document.createElement("button");
     joinBtn.type = "button";
-    joinBtn.textContent = canReconnect ? "Reconnect" : isLoaded ? "Claim Seat" : "Join";
+    joinBtn.className = "room-enter-btn";
+    joinBtn.textContent = "Enter";
+    joinBtn.title = canReconnect ? "Reconnect to room" : isLoaded ? "Choose a seat in this room" : "Join room";
     joinBtn.disabled = joinDisabled;
     joinBtn.addEventListener("click", () => {
-      if (canReconnect) {
-        attemptReconnect(room.room_id, auth);
-      } else if (isLoaded) {
-        requestSeatClaim(room.room_id, room.source_room_id, true);
-      } else {
-        attemptJoinRoom(room.room_id);
-      }
+      attemptJoinRoom(room.room_id);
     });
     actions.appendChild(joinBtn);
-
-    if (!isLoaded) {
-      const joinReadyBtn = document.createElement("button");
-      joinReadyBtn.type = "button";
-      joinReadyBtn.textContent = "Join Ready";
-      joinReadyBtn.title = "Join room and mark ready";
-      joinReadyBtn.disabled = joinDisabled || room.status !== "lobby";
-      joinReadyBtn.addEventListener("click", () => {
-        attemptJoinRoom(room.room_id, { readyAfterJoin: true });
-      });
-      actions.appendChild(joinReadyBtn);
-    }
 
     const memoriesBtn = document.createElement("button");
     memoriesBtn.type = "button";
@@ -3089,19 +3105,6 @@ function renderRoomList(rooms) {
       downloadMemoriesFile(room.room_id, memoriesBtn);
     });
     actions.appendChild(memoriesBtn);
-
-    if (canReconnect) {
-      const reconnectBtn = document.createElement("button");
-      reconnectBtn.type = "button";
-      reconnectBtn.className = "room-reconnect-btn";
-      reconnectBtn.textContent = "🔄";
-      reconnectBtn.setAttribute("aria-label", "Reconnect to room");
-      reconnectBtn.title = "Reconnect to room";
-      reconnectBtn.addEventListener("click", () => {
-        attemptReconnect(room.room_id, auth);
-      });
-      actions.appendChild(reconnectBtn);
-    }
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
@@ -3143,6 +3146,9 @@ function resetRoomState() {
   resetRoomTurnSound();
   hideRoomFeedbackTooltip();
   roomSessionReady = false;
+  pendingReadyAfterJoin = false;
+  pendingReadyRoomId = null;
+  closeLeaveConfirmModal(false);
   closeReopenConfirmModal(false);
   roomId = null;
   currentRoomState = null;
@@ -3988,7 +3994,41 @@ if (reopenConfirmModal) {
   });
 }
 
+leaveConfirmCancelBtn.addEventListener("click", () => closeLeaveConfirmModal());
+leaveConfirmModal.addEventListener("click", (event) => {
+  if (event.target === leaveConfirmModal) closeLeaveConfirmModal();
+});
+leaveConfirmBtn.addEventListener("click", () => {
+  const targetRoomId = pendingLeaveRoomId;
+  closeLeaveConfirmModal(false);
+  if (!targetRoomId || targetRoomId !== roomId) {
+    log("Room changed before leave confirmation");
+    return;
+  }
+  if (socket.connected) socket.emit("room:leave", { room_id: targetRoomId });
+  removeRoomStorage(LAST_ROOM_ID_KEY);
+  resetRoomState();
+  setRoomFeedback("Left room.");
+  closeSeatClaimModal();
+  createBtn.focus();
+  log("Left room");
+});
+
 document.addEventListener("keydown", (event) => {
+  if (!leaveConfirmModal.classList.contains("hidden")) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeLeaveConfirmModal();
+    } else if (event.key === "Tab") {
+      event.preventDefault();
+      const focusCancel = event.shiftKey
+        ? document.activeElement !== leaveConfirmCancelBtn
+        : document.activeElement === leaveConfirmBtn;
+      (focusCancel ? leaveConfirmCancelBtn : leaveConfirmBtn).focus();
+    }
+    return;
+  }
   if (!settingsModal.classList.contains("hidden")) {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -4093,18 +4133,7 @@ if (removeBotBtn) {
 }
 
 if (leaveBtn) {
-  leaveBtn.addEventListener("click", () => {
-    if (!roomId) {
-      log("Not in a room");
-      return;
-    }
-    if (socket.connected) socket.emit("room:leave", { room_id: roomId });
-    removeRoomStorage(LAST_ROOM_ID_KEY);
-    resetRoomState();
-    setRoomFeedback("Left room.");
-    closeSeatClaimModal();
-    log("Left room");
-  });
+  leaveBtn.addEventListener("click", openLeaveConfirmModal);
 }
 
 // Game panels may be inserted after the room controls have initialized.
