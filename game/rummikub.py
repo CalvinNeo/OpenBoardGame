@@ -2,7 +2,7 @@ import copy
 import itertools
 import random
 from collections import Counter
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from jsonschema import Draft7Validator
 
@@ -237,6 +237,253 @@ def _best_melds(hand: List[str], opening: bool) -> List[List[str]]:
     return best
 
 
+def _tile_kind(tile: str) -> int:
+    value = TILES[tile]
+    return 52 + int(tile[-1]) if value["joker"] else COLORS.index(value["color"]) * 13 + value["number"] - 1
+
+
+def _meld_patterns(tiles: List[str]) -> List[Tuple[Tuple[int, ...], int]]:
+    present = {_tile_kind(tile) for tile in tiles}
+    jokers = sorted(present & {52, 53})
+    patterns = {}
+    for number in range(13):
+        available = [color * 13 + number for color in range(4) if color * 13 + number in present]
+        for size in (3, 4):
+            for wild_count in range(min(len(jokers), size - 1) + 1):
+                for natural in itertools.combinations(available, size - wild_count):
+                    for wild in itertools.combinations(jokers, wild_count):
+                        patterns[natural + wild] = (number + 1) * size
+    for color in range(4):
+        for start in range(1, 12):
+            for end in range(start + 2, 14):
+                interval = tuple(color * 13 + number - 1 for number in range(start, end + 1))
+                natural = tuple(kind for kind in interval if kind in present)
+                missing = len(interval) - len(natural)
+                if missing > len(jokers):
+                    break
+                for extra in range(min(len(jokers) - missing, len(natural) - 1) + 1):
+                    for replaced in itertools.combinations(natural, extra):
+                        kept = tuple(kind for kind in natural if kind not in replaced)
+                        for wild in itertools.combinations(jokers, missing + extra):
+                            kinds = kept + wild
+                            patterns[kinds] = max(patterns.get(kinds, 0), sum(range(start, end + 1)))
+    return list(patterns.items())
+
+
+def _greedy_layout(state: Dict, bot_id: str) -> List[List[str]]:
+    hand = list(state["players"][bot_id]["hand"])
+    table = copy.deepcopy(state["table"])
+    opened = state["players"][bot_id]["opened"]
+    if opened:
+        progress = True
+        while progress:
+            progress = False
+            for tile in list(hand):
+                if TILES[tile]["joker"]:
+                    continue
+                for index, meld in enumerate(table):
+                    proposal = table[:index] + [meld + [tile]] + table[index + 1:]
+                    if meld_options(meld + [tile]) and not _joker_error(state, bot_id, proposal):
+                        table[index] = meld + [tile]
+                        hand.remove(tile)
+                        progress = True
+                        break
+    table.extend(_best_melds(hand, not opened))
+    return table
+
+
+def _layout_value(hand: List[str], table: List[List[str]], urgent: bool) -> Tuple[int, int]:
+    played = set(tile for meld in table for tile in meld) & set(hand)
+    remaining = [tile for tile in hand if tile not in played]
+    penalty = sum(30 if TILES[tile]["joker"] else TILES[tile]["number"] for tile in played)
+    potential = sum(18 for tile in remaining if TILES[tile]["joker"])
+    natural = [TILES[tile] for tile in remaining if not TILES[tile]["joker"]]
+    for first, second in itertools.combinations(natural, 2):
+        if first["number"] == second["number"] and first["color"] != second["color"]:
+            potential += 4
+        elif first["color"] == second["color"]:
+            gap = abs(first["number"] - second["number"])
+            potential += 5 if gap == 1 else 2 if gap == 2 else 0
+    return len(played), penalty * (3 if urgent else 1) + potential
+
+
+def _search_layout(state: Dict, bot_id: str, table: List[List[str]], hand: List[str],
+                   fixed: List[List[str]], consider: Callable[[List[List[str]]], None], limit: int = 80000) -> None:
+    opened = state["players"][bot_id]["opened"]
+    locked = [meld for meld in table if any(TILES[tile]["joker"] for tile in meld)] if opened else []
+    board = [tile for meld in table if meld not in locked for tile in meld] if opened else []
+    prefix = fixed if opened else fixed + table
+    pools = {}
+    for tile in board + sorted(hand):
+        pools.setdefault(_tile_kind(tile), []).append(tile)
+    size = 54 + len(locked)
+    remaining = [len(pools.get(kind, [])) for kind in range(size)]
+    rack_counts = Counter(_tile_kind(tile) for tile in hand)
+    required = Counter(_tile_kind(tile) for tile in board)
+    candidates = []
+    for kinds, points in _meld_patterns(board + hand):
+        candidates.append((sum(1 << kind for kind in kinds), kinds, points, ()))
+    for index, meld in enumerate(locked):
+        token = 54 + index
+        remaining[token] = 1
+        required[token] = 1
+        base = {_tile_kind(tile) for tile in meld}
+        old_options = meld_options(meld)
+        own_pools = {}
+        for tile in hand:
+            own_pools.setdefault(_tile_kind(tile), []).append(tile)
+        for kinds, points in _meld_patterns(meld + hand):
+            if not base <= set(kinds):
+                continue
+            extras = tuple(kind for kind in kinds if kind not in base)
+            if any(kind not in own_pools for kind in extras):
+                continue
+            extended = meld + [own_pools[kind][0] for kind in extras]
+            options = meld_options(extended)
+            if any(not any(old["bindings"][joker] == new["bindings"][joker]
+                           for old in old_options for new in options)
+                   for joker in meld if TILES[joker]["joker"]):
+                continue
+            consumed = extras + (token,)
+            candidates.append((sum(1 << kind for kind in consumed), consumed, points, tuple(meld)))
+    by_kind = [[] for _ in range(size)]
+    candidates.sort(key=lambda candidate: (
+        sum(required[kind] == 0 for kind in candidate[1]), len(candidate[1]), candidate[2]), reverse=True)
+    for index, candidate in enumerate(candidates):
+        for kind in candidate[1]:
+            by_kind[kind].append(index)
+    budget = {"checks": limit, "nodes": 6000}
+    visited = set()
+    selected = []
+    initial = tuple(remaining)
+    initial_required = sum(1 << kind for kind, count in required.items() if count)
+    initial_present = sum(1 << kind for kind, count in enumerate(remaining) if count)
+
+    def materialize() -> List[List[str]]:
+        offsets = Counter()
+        result = [list(meld) for meld in prefix]
+        for index in selected:
+            meld = list(candidates[index][3])
+            for kind in candidates[index][1]:
+                if kind < 54:
+                    meld.append(pools[kind][offsets[kind]])
+                    offsets[kind] += 1
+            result.append(meld)
+        return result
+
+    def search(present: int, needed: int, blocked: int, points: int) -> None:
+        if budget["checks"] <= 0 or budget["nodes"] <= 0:
+            return
+        budget["nodes"] -= 1
+        key = (tuple(remaining), blocked, min(points, 30) if not opened else 0)
+        if key in visited:
+            return
+        visited.add(key)
+        if not needed and (opened or points >= 30):
+            consider(materialize())
+            if not any(remaining[kind] for kind in rack_counts):
+                return
+        available = present & ~blocked
+        choices = None
+        pivot = None
+        kinds = needed or available
+        while kinds:
+            bit = kinds & -kinds
+            kind = bit.bit_length() - 1
+            kinds ^= bit
+            feasible = []
+            for index in by_kind[kind]:
+                budget["checks"] -= 1
+                if budget["checks"] < 0:
+                    return
+                if candidates[index][0] & available == candidates[index][0]:
+                    feasible.append(index)
+            if needed and not feasible:
+                return
+            if choices is None or len(feasible) < len(choices):
+                choices, pivot = feasible, kind
+                if len(choices) <= 1:
+                    break
+        if pivot is None:
+            return
+        for index in choices:
+            changed_present, changed_needed = present, needed
+            for kind in candidates[index][1]:
+                remaining[kind] -= 1
+                if remaining[kind] == 0:
+                    changed_present &= ~(1 << kind)
+                if remaining[kind] <= rack_counts[kind]:
+                    changed_needed &= ~(1 << kind)
+            selected.append(index)
+            search(changed_present, changed_needed, blocked, points + candidates[index][2])
+            selected.pop()
+            for kind in candidates[index][1]:
+                remaining[kind] += 1
+        if not needed:
+            search(present, needed, blocked | (1 << pivot), points)
+
+    search(initial_present, initial_required, 0, 0)
+    assert tuple(remaining) == initial
+
+
+def _retrieval_plans(state: Dict, bot_id: str) -> List[Tuple[List[List[str]], List[str], List[List[str]]]]:
+    hand = state["players"][bot_id]["hand"]
+    plans = []
+    for index, meld in enumerate(state["table"]):
+        for joker in (tile for tile in meld if TILES[tile]["joker"]):
+            meanings = {option["bindings"][joker] for option in meld_options(meld)}
+            for replacement in hand:
+                value = TILES[replacement]
+                if (value["color"], value["number"]) not in meanings:
+                    continue
+                available = [tile for tile in hand if tile != replacement]
+                own_pools = {}
+                for tile in available + [joker]:
+                    own_pools.setdefault(_tile_kind(tile), []).append(tile)
+                for kinds, _ in _meld_patterns(available + [joker]):
+                    if _tile_kind(joker) not in kinds:
+                        continue
+                    new_meld = [own_pools[kind][0] for kind in kinds]
+                    if len(set(new_meld) & set(hand)) < 2:
+                        continue
+                    restored = [tile if tile != joker else replacement for tile in meld]
+                    fixed = [restored, new_meld]
+                    rest = [list(group) for position, group in enumerate(state["table"]) if position != index]
+                    if validate_table(state, bot_id, rest + fixed):
+                        continue
+                    remaining = [tile for tile in available if tile not in new_meld]
+                    plans.append((rest, remaining, fixed))
+    plans.sort(key=lambda plan: _layout_value(hand, plan[0] + plan[2], False), reverse=True)
+    return plans[:4]
+
+
+def _choose_layout(state: Dict, bot_id: str) -> Optional[List[List[str]]]:
+    hand = state["players"][bot_id]["hand"]
+    opponents = [len(player["hand"]) for pid, player in state["players"].items() if pid != bot_id]
+    urgent = min(opponents, default=14) <= 3 or len(state["pool"]) <= len(state["players"])
+    best = None
+    best_value = (-1, -1)
+
+    def consider(table: List[List[str]]) -> None:
+        nonlocal best, best_value
+        value = _layout_value(hand, table, urgent)
+        if value <= best_value or validate_table(state, bot_id, table):
+            return
+        best, best_value = table, value
+
+    consider(_greedy_layout(state, bot_id))
+    if best_value[0] == len(hand):
+        return best
+    _search_layout(state, bot_id, state["table"], list(hand), [], consider)
+    if state["players"][bot_id]["opened"] and best_value[0] != len(hand):
+        for table, remaining, fixed in _retrieval_plans(state, bot_id):
+            consider(table + fixed)
+            _search_layout(state, bot_id, table, remaining, fixed, consider, limit=20000)
+            if best_value[0] == len(hand):
+                break
+    return best
+
+
 class RummikubGame:
     game_id = "rummikub"
     min_players = 2
@@ -356,25 +603,8 @@ class RummikubGame:
             return None
         if "next_round" in legal:
             return {"type": "next_round", "turn": state["turn"]}
-        hand = list(state["players"][bot_id]["hand"])
-        table = copy.deepcopy(state["table"])
-        opened = state["players"][bot_id]["opened"]
-        if opened:
-            progress = True
-            while progress:
-                progress = False
-                for tile in list(hand):
-                    if TILES[tile]["joker"]:
-                        continue
-                    for index, meld in enumerate(table):
-                        proposal = table[:index] + [meld + [tile]] + table[index + 1:]
-                        if meld_options(meld + [tile]) and not _joker_error(state, bot_id, proposal):
-                            table[index] = meld + [tile]
-                            hand.remove(tile)
-                            progress = True
-                            break
-        table.extend(_best_melds(hand, not opened))
-        if validate_table(state, bot_id, table) is None:
+        table = _choose_layout(state, bot_id)
+        if table is not None:
             return {"type": "commit", "turn": state["turn"], "table": table}
         return {"type": "draw", "turn": state["turn"]}
 

@@ -15,7 +15,7 @@ from jsonschema import Draft7Validator
 MIN_PHRASE_CHOICES: Tuple[int, ...] = (3, 4, 5)
 DEFAULT_MIN_PHRASE_CHARS = 3
 MAX_PHRASE_CHARS = 24
-DECK_SIZES = {"short": 60, "full": 100}
+DECK_SIZES = {"short": 60, "full": 100, "extended": 200, "endless": 100}
 DEFAULT_DECK_SIZE = "full"
 
 # Single-character cards. Common function characters repeat so the table can
@@ -233,7 +233,8 @@ def _voter_ids(state: Dict, claimer_id: str) -> List[str]:
 
 
 def _is_game_over(state: Dict) -> bool:
-    return not state["deck"] and len(state["row"]) < _min_chars(state)
+    return (state["deck_size"] != "endless" and not state["deck"]
+            and len(state["row"]) < _min_chars(state))
 
 
 def _finish(state: Dict) -> None:
@@ -349,7 +350,7 @@ class DareWordsGame:
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         config = config if isinstance(config, dict) else {}
         if not _CONFIG_VALIDATOR.is_valid(config):
-            raise ValueError("Dare to Make Words only accepts a full or short deck "
+            raise ValueError("Dare to Make Words only accepts a short, full, extended or endless deck "
                              "and a 3, 4 or 5 character phrase minimum.")
         deck_size = config.get("deck_size", DEFAULT_DECK_SIZE)
         min_chars = config.get("min_chars", DEFAULT_MIN_PHRASE_CHARS)
@@ -397,11 +398,11 @@ class DareWordsGame:
         phase = state["phase"]
         if phase == "flipping":
             actions: List[str] = []
-            if player_id == state["flipper"] and state["deck"]:
+            if player_id == state["flipper"] and (state["deck"] or state["deck_size"] == "endless"):
                 actions.append("flip")
             if len(state["row"]) >= _min_chars(state) and not _blocked(state, player_id):
                 actions.append("claim")
-            if not state["deck"]:
+            if not state["deck"] or state["deck_size"] == "endless":
                 actions.append("finish_game")
             return actions
         if phase == "voting":
@@ -444,6 +445,9 @@ class DareWordsGame:
             state["next_card_id"] += 1
             state["row"].append({"card_id": card_id, "char": character})
             state["flips"] += 1
+            if not state["deck"] and state["deck_size"] == "endless":
+                state["deck"] = build_deck("endless")
+                state["initial_deck"].extend(state["deck"])
             state["flipper"] = state["turn_order"][(state["turn_order"].index(player_id) + 1) % len(state["turn_order"])]
             state["window_id"] += 1
             events = [{"type": "dare_words:flip", "payload": {"player_id": player_id, "char": character}}]
@@ -528,7 +532,8 @@ class DareWordsGame:
             "game_token": state["game_token"], "window_id": state["window_id"],
             "revision": state["revision"], "phase": state["phase"], "round": state["round"],
             "config": dict(state["config"]), "deck_size": state["deck_size"],
-            "deck_remaining": len(state["deck"]), "deck_total": DECK_SIZES[state["deck_size"]],
+            "deck_remaining": len(state["deck"]),
+            "deck_total": None if state["deck_size"] == "endless" else DECK_SIZES[state["deck_size"]],
             "row": [dict(card) for card in state["row"]],
             "flipper": state["flipper"], "current_turn": state["flipper"],
             "min_chars": _min_chars(state), "max_chars": MAX_PHRASE_CHARS,
@@ -561,7 +566,7 @@ class DareWordsGame:
             return {**base, "type": "claim", "phrase": phrase, "delay_ms": random.randint(900, 1800)}
         if "flip" in actions:
             return {**base, "type": "flip", "delay_ms": random.randint(600, 1200)}
-        if "finish_game" in actions:
+        if "finish_game" in actions and state["deck_size"] != "endless":
             return {**base, "type": "finish_game", "delay_ms": random.randint(1200, 2000)}
         return None
 
@@ -600,23 +605,32 @@ class DareWordsGame:
                 raise ValueError("Invalid saved claim.")
             if state["phase"] != "voting" and state.get("claim") is not None:
                 raise ValueError("Invalid saved claim.")
-            if type(state["flips"]) is not int or state["flips"] < 0 or state["flips"] > DECK_SIZES[deck_size]:
+            if (type(state["flips"]) is not int or state["flips"] < 0
+                    or (deck_size != "endless" and state["flips"] > DECK_SIZES[deck_size])):
                 raise ValueError("Invalid saved flips.")
             source = list(SHORT_DECK_CHARACTERS if deck_size == "short" else DECK_CHARACTERS)
             if "initial_deck" in state:
                 initial_deck = state["initial_deck"]
-                if (not isinstance(initial_deck, list) or len(initial_deck) != DECK_SIZES[deck_size]
+                batch_size = DECK_SIZES[deck_size]
+                expected_size = ((state["flips"] // batch_size + 1) * batch_size
+                                 if deck_size == "endless" else batch_size)
+                if (not isinstance(initial_deck, list) or len(initial_deck) != expected_size
                         or any(not isinstance(character, str) or len(character) != 1
                                for character in initial_deck)):
                     raise ValueError("Invalid saved initial deck.")
                 source_counts = Counter(source)
-                initial_counts = Counter(initial_deck)
                 common_counts = Counter({character: count for character, count in source_counts.items()
                                          if count > 1})
-                if (initial_counts - Counter(source + list(EXTRA_DECK_CHARACTERS))
-                        or common_counts - initial_counts):
-                    raise ValueError("Invalid saved initial deck.")
+                pool_counts = Counter(source + list(EXTRA_DECK_CHARACTERS))
+                for offset in range(0, len(initial_deck), batch_size):
+                    batch_counts = Counter(initial_deck[offset:offset + batch_size])
+                    if batch_counts - pool_counts or common_counts - batch_counts:
+                        raise ValueError("Invalid saved initial deck.")
                 source = initial_deck
+                if state["flips"] + len(state["deck"]) != len(source):
+                    raise ValueError("Invalid saved deck count.")
+            elif deck_size not in ("short", "full"):
+                raise ValueError("Missing saved initial deck.")
             drawn = [card["char"] for card in state["row"]]
             for entry in state["history"]:
                 # Rejected claims leave their cards on the table, so they are already in the row.

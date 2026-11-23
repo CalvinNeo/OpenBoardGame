@@ -558,7 +558,7 @@
                 <div class="room-list-heading">
                   <h3>Rooms</h3>
                   <label class="room-auto-ready" title="Automatically mark ready when entering a room lobby.">
-                    <input id="autoReadyToggle" type="checkbox" />
+                    <input id="autoReadyToggle" type="checkbox" checked />
                     <span>auto ready</span>
                   </label>
                 </div>
@@ -694,6 +694,10 @@
                   <div id="catanStarfarersRoomSetupRow" class="hidden">Setup <span id="catanStarfarersRoomSetup">-</span> · Language <span id="catanStarfarersRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
+                  <div class="game-config-card hidden" id="lasVegasConfigBox" aria-hidden="true"></div>
+                  <div class="game-config-card hidden" id="machiKoroConfigBox" aria-hidden="true"></div>
+                  <div class="game-config-card hidden" id="forNorthwoodConfigBox" aria-hidden="true"></div>
+                  <div class="game-config-card hidden" id="thatsLifeConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="rummikubConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="semanticGuessConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="dareWordsConfigBox" aria-hidden="true"></div>
@@ -1851,7 +1855,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=320" defer></script>
+  <script src="/static/game_assets.js?v=323" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v49" defer></script>
   <script src="/static/games/shared_help.js?v=3" defer></script>
@@ -1894,6 +1898,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v74" defer></script>
-  <script src="/static/room.js?v=app_v114" defer></script>
+  <script src="/static/room.js?v=app_v115" defer></script>
 </body>
 </html>

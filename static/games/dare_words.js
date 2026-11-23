@@ -28,7 +28,7 @@ const DARE_WORDS_HELP_CONFIG = {
           + "<li>抢答者以外的所有玩家投票，认可(✅)或不认可(❌)。</li>"
           + "<li>结算(📣)之后所有人点 Next 才进入下一轮。</li>"
           + "</ol>"
-          + "<p>牌堆可以选择 Full 共 100 张，或者 Short 共 60 张。字卡越少，一局结束得越快。</p>"
+          + "<p>牌堆可以选择 Short 共 60 张、Full 共 100 张、Extended 共 200 张，或 Endless 无尽模式。无尽模式每翻完一批自动续牌，桌面字卡和分数保留，可在翻牌阶段点击结束本局(🏁)。</p>"
           + "<p>房间设置里还能选择抢答词句的最短字数：3 个字是经典规则，4 个字和 5 个字明显更难凑。</p>",
         en: "<p>The deck holds nothing but single-character cards. Characters reach the table one at a time, and the first player to build a readable phrase out of them takes those cards.</p>"
           + "<ol>"
@@ -37,7 +37,7 @@ const DARE_WORDS_HELP_CONFIG = {
           + "<li>Every player except the claimer votes accept (✅) or reject (❌).</li>"
           + "<li>After the result (📣) everyone presses Next before the next round begins.</li>"
           + "</ol>"
-          + "<p>The deck comes in Full with 100 cards or Short with 60 cards. A smaller deck simply makes the game shorter.</p>"
+          + "<p>Choose Short with 60 cards, Full with 100, Extended with 200, or Endless. Endless automatically refills the deck after each batch, keeping table cards and scores. During flipping, anyone may press Finish (🏁).</p>"
           + "<p>The room settings also pick the shortest legal phrase: three characters is the classic rule, while four and five are noticeably harder to reach.</p>"
       }
     },
@@ -75,12 +75,14 @@ const DARE_WORDS_HELP_CONFIG = {
       id: "ending",
       label: { zh: "结束与胜负", en: "Ending" },
       html: {
-        zh: "<p>牌堆翻完而且桌面上剩下的字不足 3 个时，本局自动结束。</p>"
+        zh: "<p>有限牌堆翻完且桌面字数低于房间设置的最短词句字数时，游戏自动结束。</p>"
           + "<p>牌堆已经空了但桌上还够凑词时，可以按结束本局(🏁)提前结算。</p>"
+          + "<p>无尽模式不会因牌堆耗尽自动结束，翻牌阶段任何玩家都能点击结束本局(🏁)，投票和结算暂停期间不能提前结束。</p>"
           + "<p>结束时字卡最多的玩家获胜，出现并列时这些人共享胜利。</p>"
           + "<p>本局结束后可以按 Play Again 用同样的牌堆配置立刻再来一局。</p>",
-        en: "<p>The game ends automatically once the deck is empty and fewer than three characters remain on the table.</p>"
+        en: "<p>A finite game ends automatically once the deck is empty and the table has fewer characters than the room's minimum phrase length.</p>"
           + "<p>When the deck is empty but the table can still form a phrase, anyone may press Finish (🏁) to score the game early.</p>"
+          + "<p>Endless never ends because the deck runs out. Anyone may press Finish (🏁) during flipping, but not during voting or the result pause.</p>"
           + "<p>The player holding the most character cards wins, and several players share the victory when they tie.</p>"
           + "<p>After the game ends you may press Play Again to start a fresh game with the same deck setting.</p>"
       }
@@ -90,9 +92,9 @@ const DARE_WORDS_HELP_CONFIG = {
       label: { zh: "图标速查", en: "Icons" },
       html: {
         zh: "<p>字卡与牌堆(🀄) · 抢答(🗣) · 认可(✅) · 不认可(❌) · 结算(📣) · 结束本局(🏁) · 获胜(🏆) · 当前翻牌玩家(▶) · 机器人(🤖)</p>"
-          + "<p>牌堆图标后面的数字是还没翻开的字卡数量，桌面字列标题后面的数字是桌上现有的字卡数量。</p>",
+          + "<p>牌堆图标后面的数字是还没翻开的字卡数量，无尽模式显示 ∞ 和累计翻牌数。桌面字列标题后面的数字是桌上现有的字卡数量。</p>",
         en: "<p>Cards and deck (🀄) · Claim (🗣) · Accept (✅) · Reject (❌) · Result (📣) · Finish (🏁) · Winner (🏆) · Current flipper (▶) · Bot (🤖)</p>"
-          + "<p>The number beside the deck icon counts cards that are still face down, and the number beside the table heading counts the cards currently on the table.</p>"
+          + "<p>The deck icon shows face-down cards, or ∞ and total cards flipped in Endless. The table heading counts cards currently on the table.</p>"
       }
     }
   ]
@@ -112,8 +114,8 @@ const DARE_WORDS_EXPLAIN = {
     en: "Flip one character card onto the end of the table row, then pass the flipping duty to the next seat."
   },
   finish: {
-    zh: "牌堆已经翻完时，如果桌面上再也凑不出合法词句，可以结束本局并结算分数。",
-    en: "Once the deck is empty and the table can no longer form a legal phrase, end the game and score it."
+    zh: "有限模式在牌堆翻完后可结束本局并结算分数；无尽模式在翻牌阶段随时可结束。投票和结算暂停期间不可结束。",
+    en: "End and score a finite game after its deck runs out, or end Endless at any time during flipping. Unavailable during voting and the result pause."
   },
   claim: {
     zh: "凑出房间设置要求的最少字数（3、4 或 5 个字）、只用桌面上的字的词语、短语或短句，就可以抢答。是否通顺由其他玩家投票决定。",
@@ -268,7 +270,7 @@ if (document.readyState === "loading") {
     const minValue = minCharsValue(config);
     const signature = JSON.stringify([state.room_id, config.deck_size || "full", minValue]);
     if (signature !== configSignature) {
-      deckSelect.value = config.deck_size === "short" ? "short" : "full";
+      deckSelect.value = ["short", "full", "extended", "endless"].includes(config.deck_size) ? config.deck_size : "full";
       minSelect.value = minValue;
       configSignature = signature;
     }
@@ -279,6 +281,7 @@ if (document.readyState === "loading") {
 
   function renderRow() {
     const container = id("Row");
+    const scrollTop = container.scrollTop;
     const cards = rowCards();
     const claimable = can("claim");
     id("RowEmpty").hidden = cards.length > 0;
@@ -307,6 +310,7 @@ if (document.readyState === "loading") {
       button.setAttribute("aria-pressed", String(order >= 0));
       button.classList.toggle("is-locked", !claimable && order < 0);
     });
+    container.scrollTop = scrollTop;
   }
 
   function renderStatus() {
@@ -332,7 +336,10 @@ if (document.readyState === "loading") {
     setText("Status", status);
     id("Status").parentElement.classList.toggle("is-your-turn",
       Boolean(view && view.phase === "flipping" && flipper === ownId()));
-    setText("DeckCount", view ? `🀄 牌堆 ${view.deck_remaining} / ${view.deck_total}` : "🀄 牌堆 —");
+    setText("DeckCount", !view ? "🀄 牌堆 —" : view.deck_size === "endless"
+      ? `🀄 ∞ · 已翻 ${view.flips}` : `🀄 牌堆 ${view.deck_remaining} / ${view.deck_total}`);
+    id("DeckCount").dataset.dwTip = view?.deck_size === "endless"
+      ? "无尽模式自动续牌，数字为累计翻开的字卡数。" : "牌堆里还没翻开的字卡数量。";
   }
 
   function renderFlip() {
@@ -431,7 +438,7 @@ if (document.readyState === "loading") {
     section.classList.toggle("is-lose", !result.accepted && !result.ended);
     if (result.ended) {
       setText("ResultTitle", "🏁 本局结束");
-      id("ResultPhrase").textContent = "牌堆已空";
+      id("ResultPhrase").textContent = view.deck_size === "endless" ? "无尽模式已结束" : "牌堆已空";
       setText("ResultScore", "");
     } else {
       setText("ResultTitle", result.accepted ? "✅ 抢答成功" : "❌ 抢答失败");
@@ -673,7 +680,7 @@ if (document.readyState === "loading") {
     hideTip();
   }, true);
   window.getDareWordsConfig = () => ({
-    deck_size: id("DeckSelect").value === "short" ? "short" : "full",
+    deck_size: ["short", "full", "extended", "endless"].includes(id("DeckSelect").value) ? id("DeckSelect").value : "full",
     min_chars: selectedMinChars(),
   });
   window.renderDareWordsGameState = (data) => {

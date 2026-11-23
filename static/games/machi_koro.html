@@ -2,15 +2,17 @@
   <button id="machiKoroHelpBtn" type="button">Help</button>
   <button id="machiKoroExplainBtn" type="button" aria-pressed="false">Explain</button>
 </template>
+<template data-game-target="machiKoroConfigBox" data-game-mode="contents">
+  <div class="game-config-title">Machi Koro</div>
+  <div class="row"><label for="machiKoroEdition">Edition</label><select id="machiKoroEdition"><option value="all">Both expansions</option><option value="harbor">Harbor</option><option value="millionaires">Millionaire's Row</option><option value="base">Base game</option></select></div>
+  <div class="row"><label for="machiKoroMarket">Market</label><select id="machiKoroMarket"><option value="variable">Variable · 10 types</option><option value="all">All establishments</option></select></div>
+  <p class="hint">Every edition includes the base game.</p>
+</template>
 <template data-game-target="machiKoroPanel" data-game-mode="contents">
   <div id="machiKoroLobby" class="mk-lobby">
     <div class="mk-skyline" aria-hidden="true"><span>▥</span><span>▤</span><span>▥</span><span>▦</span><span>▤</span></div>
     <h3>A little town. Endless possibilities.</h3>
     <p>Roll the dice, grow your city, complete your skyline.</p>
-    <div class="mk-settings" data-machi-koro-explain="settings">
-      <label>Edition <select id="machiKoroEdition"><option value="all">Base + Harbor + Millionaire's Row</option><option value="harbor">Base + Harbor</option><option value="millionaires">Base + Millionaire's Row</option><option value="base">Base game</option></select></label>
-      <label>Market <select id="machiKoroMarket"><option value="variable">Variable · 10 types</option><option value="all">All establishments</option></select></label>
-    </div>
     <p class="mk-muted">2–5 players · Ready up, then Start in Room Control.</p>
   </div>
   <div id="machiKoroTable" class="hidden">

@@ -207,7 +207,7 @@ function applyDoubleTapZoomPreference(disabled) {
   disableDoubleTapZoomToggle.checked = disabled;
 }
 
-autoReadyToggle.checked = readRoomStorage(AUTO_READY_KEY) === "true";
+autoReadyToggle.checked = readRoomStorage(AUTO_READY_KEY) !== "false";
 autoReadyToggle.addEventListener("change", () => {
   writeRoomStorage(AUTO_READY_KEY, autoReadyToggle.checked.toString());
 });

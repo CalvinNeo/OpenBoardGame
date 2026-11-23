@@ -64,3 +64,13 @@
 - 交互验收：版本选项及开局载荷、放置和大骰预览、封锁、Pass、小游戏及秘密分组、旁观权限、轮末确认、双语章节与 Esc、禁用 Explain、日志折叠保留、取消选择。Chrome 触屏模拟检查点选／确认、连续 tooltip 更新与 3 秒关闭、Explain 滑动不触发及点击后退出。
 - 检查：`node --check static/games/las_vegas.js`、`node --check tests/las_vegas_royale.browser.cjs`、`node scripts/smoke_load.cjs las_vegas`、`python3 -m unittest tests.test_las_vegas tests.test_las_vegas_royale tests.test_las_vegas_integration tests.test_frontend_style_assets tests.test_help_contract`（74 项）、`node tests/las_vegas_royale.browser.cjs`（配合已有 Playwright 和 `PYTHON=python3`）、`git diff --check`。
 - 已覆盖本次 `DEV_GUIDE.md` 的桌面／移动布局与交互验收要求。未进行 iOS Safari／Windows 真机测试，不能将 Chrome 触屏模拟等同于跨平台真机验收。本次未改全局行为，不运行全部游戏逻辑测试。共享工作区其他游戏的修改保持不动。
+
+## 2026-11-23 开局配置移入 Room
+
+- 将 Edition 与白骰选项从主板移到 Room Control → Room 配置卡；模板继续懒加载，首页只提供空挂载点。Royale 隐藏白骰选项，五人仍自动取消并禁用白骰，Ready 更新不重置选择。
+- 配置卡仅在本游戏大厅显示，开局、离房或切换游戏后隐藏，沿用既有 `room:start` 载荷及重连配置。游戏规则、CSS、Help / Explain 的局内行为未变。
+- 本游戏修改：`static/games/las_vegas.html`、`static/games/las_vegas.js`、`tests/las_vegas_royale.browser.cjs`、本文件；共同修改：`DEV_GUIDE.md`、`designs/room_control.md`、`static/index.html`、`static/game_assets.js`，新增 `tests/game_setup_location.browser.cjs`。
+- Chrome 检查配置区 320 / 390 / 1024 / 1440px 并目视复核截图，无配置内容溢出或整页横向滚动。新增回归通过：首次懒加载、Ready 保留、跨游戏切换、回到原房、实际 Royale 开局载荷、开局后隐藏及刷新重连。
+- `tests/las_vegas_royale.browser.cjs` 通过：六档宽度、31 种视图，覆盖基础／白骰／豪华版、放置、大骰、秘密决策、轮末、双语 Help、禁用 Explain、Escape 与触摸交互。
+- `tests.test_frontend_style_assets`、`tests.test_help_contract` 共 13 项通过；相关 JS 的 `node --check`、`node scripts/smoke_load.cjs las_vegas`、`git diff --check` 通过。纯 UI 未运行游戏逻辑或全量套件。
+- 本次涉及的 DEV_GUIDE 布局与交互验收通过，无新增 UI 例外；截图在忽略目录 `tmp/game-setup-location/`。未实测实体 iOS / Android、Windows 字体，不宣称跨平台真机全部验收。

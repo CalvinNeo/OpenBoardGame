@@ -9,9 +9,11 @@
     <select id="dareWordsDeckSelect" aria-describedby="dareWordsDeckHint">
       <option value="full" selected>Full · 100 张</option>
       <option value="short">Short · 60 张</option>
+      <option value="extended">Extended · 200 张</option>
+      <option value="endless">Endless · 无尽</option>
     </select>
   </div>
-  <div class="hint" id="dareWordsDeckHint">字卡越少，一局越短。</div>
+  <div class="hint" id="dareWordsDeckHint">字卡越少，一局越短；无尽模式自动续牌，可随时结束。</div>
   <div class="row">
     <label for="dareWordsMinCharsSelect">最短词句 Min chars</label>
     <select id="dareWordsMinCharsSelect" aria-describedby="dareWordsMinCharsHint">
@@ -32,7 +34,7 @@
       <span id="dareWordsRowTitle" class="dare-words-eyebrow">🀄 桌面字列</span>
       <span id="dareWordsRowCount" class="dare-words-muted">0 张</span>
     </div>
-    <div id="dareWordsRow" class="dare-words-row"></div>
+    <div id="dareWordsRow" class="dare-words-row" tabindex="0" role="group" aria-label="桌面字卡，可滚动查看"></div>
     <p id="dareWordsRowEmpty" class="dare-words-empty">还没有翻牌，轮到的人先翻一张。</p>
   </section>
   <div class="dare-words-flip">

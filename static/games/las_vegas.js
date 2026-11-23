@@ -9,7 +9,7 @@
     const dialog = document.getElementById("lasVegasDialog");
     const closeButton = document.getElementById("lasVegasDialogClose");
     const tip = document.getElementById("lasVegasTooltip");
-    const setup = document.getElementById("lasVegasSetup");
+    const setup = document.getElementById("lasVegasConfigBox");
     const neutralCheckbox = document.getElementById("lasVegasNeutralDice");
     const editionSelect = document.getElementById("lasVegasEdition");
     if (!panel || !content || !header || !helpButton || !explainButton || !dialog) return;
@@ -91,7 +91,7 @@
     const pipPositions = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
     let view = null, selected = null, signature = null, configSignature = null;
     let pending = false, pendingTimer = null, explaining = false, tipTimer = null;
-    let returnFocus = null, suppressUntil = 0, blackMask = 0, lobbyPlayers = 0;
+    let returnFocus = null, suppressUntil = 0, blackMask = 0, lobbyPlayers = 0, setupLocked = true;
     let helpLanguage = typeof obgHelpLang === "function" ? obgHelpLang() : "zh", helpTab = "basics";
     let logOpen = false, explainGesture = null;
     const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
@@ -493,20 +493,21 @@
 
     function syncSetup() {
         const isRoyale = editionSelect.value === "royale";
-        document.getElementById("lasVegasNeutralOption").hidden = isRoyale;
-        neutralCheckbox.disabled = isRoyale || lobbyPlayers > 4;
+        document.getElementById("lasVegasNeutralOption").classList.toggle("hidden", isRoyale);
+        editionSelect.disabled = setupLocked;
+        neutralCheckbox.disabled = setupLocked || isRoyale || lobbyPlayers > 4;
         if (lobbyPlayers > 4) neutralCheckbox.checked = false;
-        neutralCheckbox.dataset.lvExplain = "neutral";
-        document.getElementById("lasVegasSetupHint").textContent = isRoyale ? "3 轮 · 7 小骰 + 1 大骰 · 每轮 2💰 · 赌场 1–3 随机小游戏" : lobbyPlayers > 4 ? "5 人使用基础模式 · 白骰变体限 2–4 人" : "每人 8 枚骰子 · 4 轮争夺赌场奖金";
+        document.getElementById("lasVegasSetupHint").textContent = isRoyale ? "3 rounds · 7 small dice + 1 Biggy · 2 chips each round" : lobbyPlayers > 4 ? "5 players: Classic only. Neutral dice require 2–4 players." : "4 rounds · 8 dice each";
         syncExplanations();
     }
     editionSelect.addEventListener("change", syncSetup);
     window.getLasVegasConfig = () => ({edition: editionSelect.value, neutral_dice: editionSelect.value === "classic" && neutralCheckbox.checked});
 
     function syncRoom(state) {
+        const lobby = state?.game_type === "las_vegas" && state.status === "lobby";
+        setup.classList.toggle("hidden", !lobby);
+        setup.setAttribute("aria-hidden", String(!lobby));
         if (!state || state.game_type !== "las_vegas") return;
-        const lobby = state.status === "lobby";
-        setup.hidden = !lobby;
         if (lobby) {
             view = null; selected = null; signature = null; content.innerHTML = "";
             pending = false; clearTimeout(pendingTimer);
@@ -518,6 +519,7 @@
         }
         configSignature = nextConfigSignature;
         lobbyPlayers = state.players?.length || 0;
+        setupLocked = !lobby;
         syncSetup();
     }
 
@@ -534,7 +536,8 @@
         if (selected !== null && !rollCount(selected)) selected = null;
         pending = false;
         clearTimeout(pendingTimer);
-        setup.hidden = true;
+        setup.classList.add("hidden");
+        setup.setAttribute("aria-hidden", "true");
         render();
     };
     window.showLasVegasHeaderActions = visible => {
@@ -545,7 +548,8 @@
             setExplain(false); hideTip();
             if (dialog.open) dialog.close();
             content.innerHTML = "";
-            setup.hidden = true;
+            setup.classList.add("hidden");
+            setup.setAttribute("aria-hidden", "true");
         }
     };
 

@@ -283,7 +283,7 @@ function decodeAccessKey(key) {
     await partner.locator('#nameInput').fill('Transfer partner');
     await partner.locator('#playerNameForm button[type=submit]').click();
     await partner.waitForFunction(() => roomSessionReady && !pendingRoomRequest);
-    await partner.locator('#readyBtn').click();
+    assert.equal(await partner.locator('#autoReadyToggle').isChecked(), true);
     await returning.waitForFunction(() => currentRoomState.players.length === 2 && currentRoomState.players.every(player => player.ready));
     await returning.locator('#startBtn').click();
     await returning.waitForFunction(() => lastGameStatePayload?.view?.phase === 'initial_peek');

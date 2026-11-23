@@ -1,9 +1,9 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "rummikub": {
-    "scripts": ["/static/games/rummikub.js?v=2"],
-    "styles": ["/static/games/rummikub.css?v=2"],
-    "markup": "/static/games/rummikub.html?v=2",
+    "scripts": ["/static/games/rummikub.js?v=3"],
+    "styles": ["/static/games/rummikub.css?v=3"],
+    "markup": "/static/games/rummikub.html?v=3",
     "panel": "rummikubPanel",
     "panelTitle": "Rummikub · 拉密",
     "header": "showRummikubHeaderActions"
@@ -247,12 +247,12 @@ const GAME_ASSETS = {
   },
   "las_vegas": {
     "scripts": [
-      "/static/games/las_vegas.js?v=6"
+      "/static/games/las_vegas.js?v=7"
     ],
     "styles": [
       "/static/las_vegas.css?v=5"
     ],
-    "markup": "/static/games/las_vegas.html?v=4",
+    "markup": "/static/games/las_vegas.html?v=5",
     "panel": "lasVegasPanel",
     "panelTitle": "🎲 拉斯维加斯",
     "header": "showLasVegasHeaderActions"
@@ -1231,9 +1231,9 @@ const GAME_ASSETS = {
     "header": "showSemanticGuessHeaderActions"
   },
   "dare_words": {
-    "scripts": ["/static/games/dare_words.js?v=5"],
-    "styles": ["/static/games/dare_words.css?v=2"],
-    "markup": "/static/games/dare_words.html?v=3",
+    "scripts": ["/static/games/dare_words.js?v=6"],
+    "styles": ["/static/games/dare_words.css?v=3"],
+    "markup": "/static/games/dare_words.html?v=4",
     "panel": "dareWordsPanel",
     "panelTitle": "🀄 胆敢造词",
     "header": "showDareWordsHeaderActions"
@@ -1303,25 +1303,25 @@ const GAME_ASSETS = {
     "header": "showMarrakechHeaderActions"
   },
   "thats_life": {
-    "scripts": ["/static/games/thats_life.js?v=2"],
+    "scripts": ["/static/games/thats_life.js?v=3"],
     "styles": ["/static/games/thats_life.css?v=2"],
-    "markup": "/static/games/thats_life.html?v=2",
+    "markup": "/static/games/thats_life.html?v=3",
     "panel": "thatsLifePanel",
     "panelTitle": "糟了个糕！",
     "header": "showThatsLifeHeaderActions"
   },
   "machi_koro": {
-    "scripts": ["/static/games/machi_koro.js?v=3"],
+    "scripts": ["/static/games/machi_koro.js?v=4"],
     "styles": ["/static/games/machi_koro.css?v=3"],
-    "markup": "/static/games/machi_koro.html?v=2",
+    "markup": "/static/games/machi_koro.html?v=3",
     "panel": "machiKoroPanel",
     "panelTitle": "🎲 骰子街",
     "header": "showMachiKoroHeaderActions"
   },
   "for_northwood": {
-    "scripts": ["/static/games/for_northwood.js?v=2"],
+    "scripts": ["/static/games/for_northwood.js?v=3"],
     "styles": ["/static/games/for_northwood.css?v=2"],
-    "markup": "/static/games/for_northwood.html?v=1",
+    "markup": "/static/games/for_northwood.html?v=2",
     "panel": "forNorthwoodPanel",
     "panelTitle": "🌲 For Northwood!",
     "header": "showForNorthwoodHeaderActions"

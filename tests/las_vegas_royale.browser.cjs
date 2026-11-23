@@ -53,6 +53,8 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
             socket.emitEvent(['room:state', room]);
         });
         await page.locator('#lasVegasEdition').selectOption('royale');
+        assert.equal(await page.locator('#roomPanel #lasVegasEdition').count(), 1);
+        assert.equal(await page.locator('#lasVegasPanel select').count(), 0);
         assert.deepEqual(await page.evaluate(() => getLasVegasConfig()), {edition: 'royale', neutral_dice: false});
         const start = await page.evaluate(() => {
             const original = ensureRoomConnection, originalRequest = sendRoomRequest;

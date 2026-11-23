@@ -80,6 +80,13 @@ class DareWordsTests(unittest.TestCase):
         self.assertEqual(len(short["deck"]), 60)
         self.assertEqual(short["config"], {"deck_size": "short", "min_chars": 3})
         self.assertEqual(short["min_chars"], 3)
+        for deck_size in ("extended", "endless"):
+            with self.subTest(deck_size=deck_size):
+                state = Game.init_game({"deck_size": deck_size}, players(2))
+                self.assertEqual(len(state["deck"]), DECK_SIZES[deck_size])
+                self.assertEqual(state["config"]["deck_size"], deck_size)
+                view = Game.get_public_view(state, "p0")
+                self.assertEqual(view["deck_total"], None if deck_size == "endless" else 200)
         for minimum in MIN_PHRASE_CHOICES:
             with self.subTest(min_chars=minimum):
                 state = Game.init_game({"min_chars": minimum}, players(2))
@@ -133,7 +140,8 @@ class DareWordsTests(unittest.TestCase):
                 self.assertTrue("\u4e00" <= character <= "\u9fff")
 
     def test_both_deck_sizes_draw_from_the_expanded_pool(self):
-        for deck_size, source in (("full", DECK_CHARACTERS), ("short", SHORT_DECK_CHARACTERS)):
+        for deck_size in DECK_SIZES:
+            source = SHORT_DECK_CHARACTERS if deck_size == "short" else DECK_CHARACTERS
             with self.subTest(deck_size=deck_size):
                 with patch("game.dare_words.random.shuffle", new=lambda sequence: sequence.reverse()):
                     deck = build_deck(deck_size)
@@ -147,6 +155,72 @@ class DareWordsTests(unittest.TestCase):
                 extra = [character for character in deck if character in EXTRA_DECK_CHARACTERS]
                 common_count = sum(count for count in source_counts.values() if count > 1)
                 self.assertEqual(len(extra), DECK_SIZES[deck_size] - common_count)
+
+    def test_extended_deck_runs_out_after_exactly_200_flips(self):
+        self.state = Game.init_game({"deck_size": "extended"}, players(3))
+        self.flip(199)
+        self.assertEqual(len(self.state["deck"]), 1)
+        self.assertNotIn("finish_game", Game.get_legal_actions(self.state, "p0"))
+        self.flip()
+        self.assertEqual(self.state["deck"], [])
+        self.assertEqual(len(self.state["row"]), 200)
+        self.assertNotIn("flip", Game.get_legal_actions(self.state, self.state["flipper"]))
+        self.assertEqual(Game.deserialize(Game.serialize(self.state)), self.state)
+        self.play("p1", "finish_game")
+        self.assertTrue(self.state["game_over"])
+
+    def test_endless_refills_without_losing_cards_scores_or_turns(self):
+        self.state = Game.init_game({"deck_size": "endless"}, players(3))
+        self.flip(3)
+        self.play("p0", "claim", phrase="的的了")
+        self.vote_all(True)
+        self.assertEqual(self.state["phase"], "reveal")
+        self.assertNotIn("finish_game", Game.get_legal_actions(self.state, "p1"))
+        self.next_round()
+        self.flip(96)
+        phrase = "".join(card["char"] for card in self.state["row"][:3])
+        self.play("p0", "claim", phrase=phrase)
+        self.vote_all(False)
+        self.next_round()
+        self.assertNotIn("claim", Game.get_legal_actions(self.state, "p0"))
+        for boundary in (100, 200, 300):
+            self.flip(boundary - self.state["flips"])
+            self.assertFalse(self.state["game_over"])
+            self.assertEqual(self.state["phase"], "flipping")
+            self.assertEqual(len(self.state["deck"]), 100)
+            self.assertEqual(len(self.state["initial_deck"]), boundary + 100)
+            self.assertEqual(len(self.state["row"]), boundary - 3)
+            self.assertEqual(self.state["players"]["p0"]["score"], 3)
+            self.assertEqual(self.state["flipper"], f"p{boundary % 3}")
+            self.assertIn("claim", Game.get_legal_actions(self.state, "p0"))
+            self.assertEqual(Game.deserialize(Game.serialize(self.state)), self.state)
+        self.flip()
+        self.assertEqual(Game.deserialize(Game.serialize(self.state)), self.state)
+        self.assertEqual(len({card["card_id"] for card in self.state["row"]}), 298)
+
+    def test_endless_can_finish_manually_and_restart_with_same_config(self):
+        self.state = Game.init_game({"deck_size": "endless", "min_chars": 5}, players(3))
+        self.assertIn("finish_game", Game.get_legal_actions(self.state, "p2"))
+        self.flip(5)
+        self.play("p0", "claim", phrase="的的了了不")
+        self.assertNotIn("finish_game", Game.get_legal_actions(self.state, "p2"))
+        self.vote_all(True)
+        self.assertEqual(self.state["phase"], "reveal")
+        self.assertFalse(self.state["game_over"])
+        self.next_round()
+        self.play("p2", "finish_game")
+        self.assertEqual(self.state["winner"], ["p0"])
+        self.assertEqual(Game.deserialize(Game.serialize(self.state)), self.state)
+        self.play("p0", "play_again")
+        self.assertEqual(self.state["config"], {"deck_size": "endless", "min_chars": 5})
+        self.assertEqual(self.state["flips"], 0)
+        self.assertEqual(len(self.state["initial_deck"]), 100)
+        self.assertEqual(self.state["players"]["p0"]["score"], 0)
+
+    def test_endless_bot_does_not_finish_on_behalf_of_humans(self):
+        self.state = Game.init_game({"deck_size": "endless"}, players(3))
+        self.assertIsNone(Game.bot_move(self.state, "p1"))
+        self.assertEqual(Game.bot_move(self.state, "p0")["type"], "flip")
 
     # --- flipping ----------------------------------------------------------
 
@@ -420,7 +494,7 @@ class DareWordsTests(unittest.TestCase):
 
     def test_bots_keep_claiming_with_a_longer_minimum(self):
         for minimum in (4, 5):
-            for deck_size in ("full", "short"):
+            for deck_size in ("full", "short", "extended"):
                 with self.subTest(min_chars=minimum, deck_size=deck_size):
                     state = Game.init_game({"deck_size": deck_size, "min_chars": minimum}, [
                         {"player_id": f"p{index}", "name": f"Bot {index}", "seat": index, "is_bot": True}
@@ -503,6 +577,22 @@ class DareWordsTests(unittest.TestCase):
                 payload = Game.init_game({"deck_size": deck_size}, players(3))
                 payload["initial_deck"][0] = EXTRA_DECK_CHARACTERS[0]
                 payload["deck"][0] = EXTRA_DECK_CHARACTERS[0]
+                with self.assertRaises(ValueError):
+                    Game.deserialize(payload)
+
+    def test_endless_saves_reject_invalid_refill_counts_and_contents(self):
+        self.state = Game.init_game({"deck_size": "endless"}, players(3))
+        self.flip(100)
+        for mutate in (
+            lambda payload: payload.update(flips=99, next_card_id=100),
+            lambda payload: payload["initial_deck"].pop(),
+            lambda payload: payload["initial_deck"].__setitem__(100, "龘"),
+            lambda payload: payload["deck"].pop(),
+            lambda payload: payload.pop("initial_deck"),
+        ):
+            with self.subTest(mutate=mutate):
+                payload = Game.serialize(self.state)
+                mutate(payload)
                 with self.assertRaises(ValueError):
                     Game.deserialize(payload)
 

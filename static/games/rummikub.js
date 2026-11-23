@@ -21,12 +21,12 @@
         en: "<p>Play with 2–4 players. There are 106 tiles: two copies of 1–13 in red, blue, orange and black, plus two jokers (★). Deal 14 tiles to each rack and keep the rest in the pool. Seat one starts the first round, and the starting seat rotates each round.</p><p>A group has 3–4 tiles of the same number in different colors. A run has 3–13 consecutive numbers in one color. One is always low and never follows 13. Circles, diamonds, triangles and squares also identify colors.</p><p>Your initial melds must use only your rack and total at least 30 points. A joker counts as the number it represents. You cannot extend, split or borrow from the table on your opening turn. Several new melds may be submitted together.</p>"
       } },
       { id: "joker", label: { zh: "重排与百搭", en: "Rearrange & jokers" }, html: {
-        zh: "<p>破冰后可以添加、拆分、合并和重新组合桌面牌组，但原来桌面上的牌一张也不能拿回手牌，而且每回合至少放下一张手牌。结束时所有牌组都必须合法。</p><p>本实现采用经典替换百搭牌规则：保留原牌组并保持百搭牌含义时可以正常延长牌组。若要取出桌面百搭牌，必须用它代表的实体牌替换，保留原牌组其余实体牌，并立即将百搭牌与至少两张自己的手牌组成合法新牌组。四张同数牌组不允许直接抽走百搭牌。不能把百搭牌收进手牌。</p><p>没有倒计时和超时罚牌。试摆可以反复撤销，不能完成时 Reset turn 恢复本回合，或摸一张结束。摸到的牌本回合不能再打出。牌池为空时按钮变成 Pass，所有人连续跳过后本轮结束。</p>",
+        zh: "<p>破冰后可以添加、拆分、合并和重新组合桌面牌组，但原来桌面上的牌一张也不能拿回手牌，而且每回合至少放下一张手牌。结束时所有牌组都必须合法。</p><p>本实现采用经典替换百搭牌规则：保留原牌组并保持百搭牌含义时可以正常延长牌组。若要取出桌面百搭牌，必须用它代表的实体牌替换，保留原牌组其余实体牌，并立即将百搭牌与至少两张自己的手牌组成合法新牌组。四张同数牌组不允许直接抽走百搭牌。不能把百搭牌收进手牌。</p><p>没有倒计时和超时罚牌。试摆可以反复撤销，不能完成时 Reset 恢复本回合，或摸一张结束。摸到的牌本回合不能再打出。牌池为空时按钮变成 Pass，所有人连续跳过后本轮结束。</p>",
         en: "<p>After opening, extend, split, merge and rebuild the table. Every existing table tile must remain on the table, and you must add at least one rack tile each turn. All final melds must be legal.</p><p>This implementation uses classic replacement-joker rules. You may extend a joker meld while keeping its natural tiles together and its joker meaning unchanged. To retrieve a table joker, replace it with the natural tile it represents while keeping the original natural tiles together. Immediately reuse the joker in a legal meld with at least two tiles from your rack. You cannot simply remove it from a four-tile group or return it to your rack.</p><p>There is no turn timer or time penalty. Experiment freely, reset the turn, or draw one tile and finish if you cannot complete your move. A drawn tile cannot be played that turn. With an empty pool, draw becomes Pass and a full cycle of consecutive passes ends the round.</p>"
       } },
       { id: "controls", label: { zh: "操作与计分", en: "Controls & scoring" }, html: {
-        zh: "<p>点选若干牌，然后点 New meld 组成新组，或点已有牌组的 Add 按钮。破冰后也能选择桌面牌移动到其他组。To rack 只退回本回合自己的手牌。点击牌桌空白或按 Esc 取消选择。Undo 撤销一步，Reset turn 撤销本回合。</p><p>试摆公开给其他玩家观看，但其他手牌和牌池顺序始终隐藏。End turn 由服务器检查所有牌组。Help 支持中英文切换，Explain 解释控件而不会执行行动。</p><p>有人出完牌时，其他人按手牌数字扣分，百搭牌每张扣 30 分，赢家加上所有对手扣分之和。堵局时最低手牌点数者赢，各输家扣除与最低点数的差额，赢家分享这些分数，除不尽时按座位分配多出的 1 分。结算时公开所有手牌。非最终轮等待每位玩家点击 Next Round，机器人自动确认。可在房间配置中设置 1–8 轮。</p>",
-        en: "<p>Select tiles, then choose New meld or an existing meld’s Add button. After opening you may also select table tiles to move them between melds. To rack returns only tiles from your own rack played this turn. Tap empty table space or press Esc to deselect. Undo reverses one edit and Reset turn reverses the whole turn.</p><p>Your trial layout is public so others can follow your turn, but other racks and the pool order stay hidden. End turn asks the server to validate all melds. Help switches between English and Chinese, and Explain describes controls without performing actions.</p><p>When someone goes out, opponents lose the sum of their rack numbers, counting each joker as 30. The winner gains all opponents’ losses. In a blocked round, the lowest rack total wins. Others lose the difference from that total, shared among tied winners with spare points assigned in seat order. All racks are revealed at settlement. Before another round, every player presses Next Round and bots confirm automatically. Room configuration supports 1–8 rounds.</p>"
+        zh: "<p>手牌和紧凑按钮固定在屏幕底部，桌面牌组随页面展开，不需要在牌桌内部拖动。点选若干牌，然后点 New meld 组成新组，或点已有牌组的 Add 按钮。破冰后也能选择桌面牌移动到其他组。To rack 只退回本回合自己的手牌。点击牌桌空白或按 Esc 取消选择。Undo 撤销一步，Reset 撤销本回合。Draw 摸一张并结束回合。</p><p>试摆公开给其他玩家观看，但其他手牌和牌池顺序始终隐藏。End turn 由服务器检查所有牌组。Help 支持中英文切换，Explain 解释控件而不会执行行动。</p><p>有人出完牌时，其他人按手牌数字扣分，百搭牌每张扣 30 分，赢家加上所有对手扣分之和。堵局时最低手牌点数者赢，各输家扣除与最低点数的差额，赢家分享这些分数，除不尽时按座位分配多出的 1 分。结算时公开所有手牌。非最终轮等待每位玩家点击 Next Round，机器人自动确认。可在房间配置中设置 1–8 轮。</p>",
+        en: "<p>Your rack and compact controls stay docked at the bottom of the screen. The table expands with the page instead of scrolling inside the board. Select tiles, then choose New meld or an existing meld’s Add button. After opening you may also select table tiles to move them between melds. To rack returns only tiles from your own rack played this turn. Tap empty table space or press Esc to deselect. Undo reverses one edit and Reset reverses the whole turn. Draw takes one tile and ends your turn.</p><p>Your trial layout is public so others can follow your turn, but other racks and the pool order stay hidden. End turn asks the server to validate all melds. Help switches between English and Chinese, and Explain describes controls without performing actions.</p><p>When someone goes out, opponents lose the sum of their rack numbers, counting each joker as 30. The winner gains all opponents’ losses. In a blocked round, the lowest rack total wins. Others lose the difference from that total, shared among tied winners with spare points assigned in seat order. All racks are revealed at settlement. Before another round, every player presses Next Round and bots confirm automatically. Room configuration supports 1–8 rounds.</p>"
       } }
     ]
   };
@@ -105,6 +105,20 @@
   function me() { return view?.players.find((player) => player.player_id === view.you); }
   function editable() { return !!view?.legal_actions.includes("commit") && !pending; }
   function tableEditable() { return editable() && !!me()?.opened; }
+  function syncDock() {
+    const area = element("RackArea");
+    const docked = view?.phase === "play" && !!me() && panel.getClientRects().length > 0;
+    area.classList.toggle("is-docked", docked);
+    area.classList.toggle("hidden", !!view && !me());
+    if (docked) {
+      const bounds = panel.getBoundingClientRect();
+      panel.style.setProperty("--rk-dock-left", Math.round(bounds.left) + "px");
+      panel.style.setProperty("--rk-dock-width", Math.floor(bounds.width) + "px");
+      panel.style.setProperty("--rk-dock-space", Math.ceil(area.getBoundingClientRect().height + 12) + "px");
+    } else {
+      panel.style.removeProperty("--rk-dock-space");
+    }
+  }
   function tileHTML(tile, interactive, fresh = false) {
     const info = tileInfo(tile);
     const label = info.color === "joker" ? "Joker" : info.color + " " + info.number;
@@ -122,7 +136,7 @@
 
   function render() {
     if (!view) return;
-    const positions = ["Melds", "Rack", "Log"].map((suffix) => [suffix, element(suffix).scrollTop]);
+    const positions = ["Rack", "Log"].map((suffix) => [suffix, element(suffix).scrollTop]);
     const focusTile = panel.contains(document.activeElement) ? document.activeElement.dataset.tile : null;
     const active = view.players.find((player) => player.player_id === view.current_player);
     element("Status").textContent = view.phase === "play"
@@ -138,19 +152,20 @@
     const available = (me()?.hand || []).filter((tile) => !used.has(tile));
     element("Rack").innerHTML = sortTiles(available).map((tile) => tileHTML(tile, editable())).join("") || `<span class="rummikub-selection">${me() ? "No tiles left on your rack." : "Spectating · racks are private."}</span>`;
     element("RackTitle").textContent = `Your rack${me() ? " · " + available.length + " tiles" : ""}`;
-    element("Selection").textContent = view.phase !== "play" ? "Round settled · all racks are revealed." : selected.size ? `${selected.size} selected · Choose New meld, Add, or To rack. Tap empty space to deselect.` : "Select tiles, then choose New meld or a table’s Add button.";
+    element("Selection").textContent = view.phase !== "play" ? "Round settled · all racks revealed" : selected.size ? `${selected.size} selected → New meld / Add / To rack` : "Select tiles → New meld / Add";
     element("New").disabled = !editable() || !selected.size;
     element("Return").disabled = !editable() || !selected.size || [...selected].some((tile) => !rack.has(tile)) || ![...selected].some((tile) => used.has(tile));
     element("Undo").disabled = !editable() || !undo.length;
     element("Reset").disabled = !editable() || JSON.stringify(table) === JSON.stringify(view.table);
     element("Commit").disabled = !editable() || !table.every(meldValid) || !table.flat().some((tile) => rack.has(tile));
     element("Draw").disabled = !editable();
-    element("Draw").textContent = view.pool_count ? "Draw & end" : "Pass";
+    element("Draw").textContent = view.pool_count ? "Draw" : "Pass";
     element("Tools").classList.toggle("hidden", view.phase !== "play");
     element("Validation").textContent = view.draft_error || (pending ? "Sending…" : view.draft !== null ? "Trial layout shared. End turn to validate and commit." : "");
     element("Validation").classList.toggle("is-error", !!view.draft_error);
     element("Log").innerHTML = view.log.slice().reverse().map((text) => `<li>${esc(text)}</li>`).join("");
     renderResult();
+    syncDock();
     positions.forEach(([suffix, top]) => { element(suffix).scrollTop = top; });
     if (focusTile) panel.querySelector(`[data-tile="${focusTile}"]`)?.focus({ preventScroll: true });
     explain?.refresh();
@@ -274,6 +289,7 @@
   window.showRummikubHeaderActions = (visible) => {
     header.style.display = visible ? "flex" : "none";
     if (!visible) { view = null; signature = ""; selected.clear(); undo = []; pending = false; explain?.exit(); help?.close(); window.clearTimeout(pendingTimer); element("ConfigBox").classList.add("hidden"); element("Tooltip").classList.add("hidden"); }
+    syncDock();
   };
   window.getRummikubConfig = () => ({ rounds: Number(element("Rounds").value) });
   function syncRoom(room) {
@@ -304,6 +320,7 @@
       element("DraftLabel").textContent = "";
       element("Log").replaceChildren();
       element("RackTitle").textContent = "Your rack";
+      syncDock();
     }
   }
   function connect() {
@@ -324,4 +341,10 @@
   }
   if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", connect, { once: true });
   else connect();
+  window.addEventListener("resize", syncDock);
+  if (typeof ResizeObserver === "function") {
+    const dockObserver = new ResizeObserver(syncDock);
+    dockObserver.observe(element("RackArea"));
+    dockObserver.observe(panel);
+  }
 })();

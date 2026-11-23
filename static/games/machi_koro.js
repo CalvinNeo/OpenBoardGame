@@ -368,8 +368,11 @@
     window.addEventListener("scroll", hideTooltip, true);
     document.addEventListener("keydown", (event) => { if (event.key === "Escape") { selected = null; hideTooltip(); if (view) { renderCards(); renderLandmarks(); } } });
     function syncRoom(room) {
+      const lobby = room?.game_type === GAME_ID && room.status === "lobby";
+      byId("ConfigBox").classList.toggle("hidden", !lobby);
+      byId("ConfigBox").setAttribute("aria-hidden", String(!lobby));
       if (room?.game_type !== GAME_ID) { explain.exit(); help.close(); hideTooltip(); return; }
-      if (room.room_id !== activeRoom || room.status === "lobby") {
+      if (lobby) {
         activeRoom = room.room_id;
         view = null; selected = null; inFlight = false;
         clearTimeout(requestTimer);
@@ -380,28 +383,35 @@
           byId("Edition").value = room.game_config?.edition || "all";
           byId("Market").value = room.game_config?.market || "variable";
         }
-        const host = room.players?.[0];
-        const locked = Boolean(host && host.player_id !== (typeof playerId !== "undefined" ? playerId : null));
-        byId("Edition").disabled = locked;
-        byId("Market").disabled = locked;
       }
+      const host = room.players?.[0];
+      const locked = !lobby || Boolean(host && host.player_id !== (typeof playerId !== "undefined" ? playerId : null));
+      byId("Edition").disabled = locked;
+      byId("Market").disabled = locked;
     }
     byId("Edition").addEventListener("change", () => { byId("Market").value = byId("Edition").value === "base" ? "all" : "variable"; });
     window.getMachiKoroConfig = () => ({ edition: byId("Edition").value, market: byId("Market").value });
     window.renderMachiKoroGameState = (data) => {
       if (data?.game_type !== GAME_ID || !data.view || (typeof currentRoomState !== "undefined" && currentRoomState?.room_id && currentRoomState.room_id !== data.room_id)) return;
       activeRoom = data.room_id;
+      byId("ConfigBox").classList.add("hidden");
+      byId("ConfigBox").setAttribute("aria-hidden", "true");
       clearTimeout(requestTimer);
       inFlight = false; selected = null;
       view = data.view;
+      byId("Edition").value = view.config.edition;
+      byId("Market").value = view.config.market;
       if (!view.players.some((player) => player.player_id === cityOwner)) cityOwner = view.you;
       hideTooltip(); render();
     };
     window.showMachiKoroHeaderActions = (show) => {
       byId("HeaderActions").style.display = show ? "flex" : "none";
-      if (!show) { explain.exit(); help.close(); hideTooltip(); }
+      if (!show) { byId("ConfigBox").classList.add("hidden"); byId("ConfigBox").setAttribute("aria-hidden", "true"); explain.exit(); help.close(); hideTooltip(); }
     };
     socket.on("room:state", syncRoom);
+    socket.on("system:info", (data) => {
+      if (data.player_id && data.room_id === currentRoomState?.room_id) syncRoom(currentRoomState);
+    });
     socket.on("system:error", () => { if (inFlight) { clearTimeout(requestTimer); inFlight = false; if (view) render(); } });
     if (typeof currentRoomState !== "undefined") syncRoom(currentRoomState);
     if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === GAME_ID && lastGameStatePayload.room_id === activeRoom && currentRoomState?.status !== "lobby") window.renderMachiKoroGameState(lastGameStatePayload);

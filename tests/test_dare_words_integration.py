@@ -80,10 +80,37 @@ class DareWordsRoomTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(views), len(room.players))
                 for view in views:
                     self.assertIn(view["row"][0]["char"], EXTRA_DECK_CHARACTERS)
-                    self.assertEqual(view["deck_total"], DECK_SIZES[deck_size])
+                    self.assertEqual(view["deck_total"], None if deck_size == "endless" else DECK_SIZES[deck_size])
                     self.assertEqual(view["deck_remaining"], DECK_SIZES[deck_size] - 1)
                     self.assertNotIn("deck", view)
                     self.assertNotIn("initial_deck", view)
+
+    async def test_endless_refill_reconnect_finish_and_replay(self):
+        room = await self.make_room(config={"deck_size": "endless"})
+        for _ in range(101):
+            seat = next(index for index, player in enumerate(room.players)
+                        if player.player_id == room.game_state["flipper"])
+            await app.on_game_action(f"s{seat}", {"action": action(room, "flip")})
+        self.assertEqual(room.game_state["flips"], 101)
+        self.assertEqual(len(room.game_state["deck"]), 99)
+        room.game_state = Game.deserialize(Game.serialize(room.game_state))
+        app.sio.emits.clear()
+        await app.on_room_reconnect("s1", {
+            "room_id": room.room_id,
+            "player_id": room.players[1].player_id,
+            "reconnect_token": room.players[1].reconnect_token,
+        })
+        view = self.views()[-1]
+        self.assertEqual(view["deck_size"], "endless")
+        self.assertIsNone(view["deck_total"])
+        self.assertEqual(view["flips"], 101)
+        self.assertIn("finish_game", view["legal_actions"])
+        await app.on_game_action("s1", {"action": action(room, "finish_game")})
+        self.assertTrue(room.game_state["game_over"])
+        await app.on_game_action("s1", {"action": action(room, "play_again")})
+        self.assertFalse(room.game_state["game_over"])
+        self.assertEqual(room.game_state["deck_size"], "endless")
+        self.assertEqual(room.game_state["flips"], 0)
 
     async def test_start_applies_the_phrase_minimum(self):
         room = await self.make_room(config={"min_chars": 5})

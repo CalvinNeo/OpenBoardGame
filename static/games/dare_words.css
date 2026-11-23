@@ -13,7 +13,7 @@
 .dare-words-eyebrow{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--dw-muted)}
 .dare-words-table{border:1px solid var(--dw-line);border-radius:14px;background:#fffdf7;padding:14px 16px 16px}
 .dare-words-table-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
-.dare-words-row{display:flex;flex-wrap:wrap;gap:10px}
+.dare-words-row{display:flex;flex-wrap:wrap;gap:10px;max-height:clamp(180px,38dvh,360px);overflow-y:auto;overscroll-behavior:contain;padding:4px 3px;touch-action:pan-y;scrollbar-width:thin}
 .dare-words-row:empty{display:none}
 .dare-words-card{flex:0 0 auto;width:58px;height:76px;display:grid;place-items:center;border:1px solid #d9c8ab;border-radius:10px;background:linear-gradient(180deg,#fffefb,#f7efe0);box-shadow:0 2px 0 #e6d8bf;font-size:32px;font-weight:600;color:#33261a;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;padding:0}
 .dare-words-card:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 0 #e0d0b3}

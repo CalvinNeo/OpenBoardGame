@@ -2,14 +2,15 @@
   <button id="thatsLifeHelpBtn" type="button">Help</button>
   <button id="thatsLifeExplainBtn" type="button" aria-pressed="false">Explain</button>
 </template>
+<template data-game-target="thatsLifeConfigBox" data-game-mode="contents">
+  <div class="game-config-title">That's Life!</div>
+  <div class="row"><label for="thatsLifeSetup">Track</label><select id="thatsLifeSetup"><option value="standard">Classic · sorted</option><option value="random">Shuffled</option></select></div>
+  <div class="row"><label for="thatsLifeRounds">Rounds</label><select id="thatsLifeRounds"><option>1</option><option>2</option><option>3</option></select></div>
+</template>
 <template data-game-target="thatsLifePanel" data-game-mode="contents">
   <div id="thatsLifeLobby" class="tl-lobby">
     <div class="tl-lobby-art" aria-hidden="true">−8 &nbsp; 🍀 &nbsp; +8</div>
     <h3>糟了个糕！ · That's Life!</h3>
-    <div class="tl-settings" data-thats-life-explain="settings">
-      <label>Track <select id="thatsLifeSetup"><option value="standard">Classic · sorted</option><option value="random">Shuffled</option></select></label>
-      <label>Rounds <select id="thatsLifeRounds"><option>1</option><option>2</option><option>3</option></select></label>
-    </div>
     <p>Ready up, then Start in Room Control.</p>
   </div>
   <div id="thatsLifeTable" class="hidden">

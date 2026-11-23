@@ -2,15 +2,16 @@
   <button id="forNorthwoodHelpBtn" type="button">Help</button>
   <button id="forNorthwoodExplainBtn" type="button" aria-pressed="false">Explain</button>
 </template>
+<template data-game-target="forNorthwoodConfigBox" data-game-mode="contents">
+  <div class="game-config-title">For Northwood!</div>
+  <div class="row"><label for="forNorthwoodSetup">Setup</label><select id="forNorthwoodSetup"><option value="introductory">Introductory · four Jacks</option><option value="standard">Standard · all 24 characters</option></select></div>
+  <div class="row"><label for="forNorthwoodGoal">Win target</label><select id="forNorthwoodGoal"><option value="16">16 / 20 stars</option><option value="18">18 / 20 stars</option><option value="20">20 / 20 stars</option></select></div>
+</template>
 <template data-game-target="forNorthwoodPanel" data-game-mode="contents">
   <div id="forNorthwoodLobby" class="nw-lobby">
     <div class="nw-lobby-art" aria-hidden="true">🌲 🦊 🌲</div>
     <h3>For Northwood!</h3>
     <p>One envoy. Eight rulers. A forest to unite.</p>
-    <div class="nw-settings" data-for-northwood-explain="settings">
-      <label>Setup <select id="forNorthwoodSetup"><option value="introductory">Introductory · four Jacks</option><option value="standard">Standard · all 24 characters</option></select></label>
-      <label>Win target <select id="forNorthwoodGoal"><option value="16">16 / 20 stars</option><option value="18">18 / 20 stars</option><option value="20">20 / 20 stars</option></select></label>
-    </div>
     <p class="nw-muted">Ready up, then use Start in Room Control.</p>
   </div>
   <div id="forNorthwoodTable" class="hidden">

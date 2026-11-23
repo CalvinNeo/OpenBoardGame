@@ -524,6 +524,9 @@
     }
 
     function syncRoom(room) {
+      const lobby = room?.game_type === GAME_ID && room.status === "lobby";
+      byId("ConfigBox").classList.toggle("hidden", !lobby);
+      byId("ConfigBox").setAttribute("aria-hidden", String(!lobby));
       if (room?.game_type !== GAME_ID) {
         explain?.exit();
         help?.close();
@@ -550,6 +553,8 @@
       if (!data?.view || data.game_type !== GAME_ID) return;
       if (typeof currentRoomState !== "undefined" && currentRoomState?.room_id && data.room_id !== currentRoomState.room_id) return;
       activeRoom = data.room_id;
+      byId("ConfigBox").classList.add("hidden");
+      byId("ConfigBox").setAttribute("aria-hidden", "true");
       clearTimeout(requestTimer);
       inFlight = false;
       resetSelection();
@@ -638,6 +643,8 @@
     window.showForNorthwoodHeaderActions = (show) => {
       byId("HeaderActions").style.display = show ? "flex" : "none";
       if (!show) {
+        byId("ConfigBox").classList.add("hidden");
+        byId("ConfigBox").setAttribute("aria-hidden", "true");
         explain?.exit();
         help?.close();
         byId("PileDialog").close();

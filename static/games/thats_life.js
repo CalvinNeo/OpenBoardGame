@@ -298,6 +298,9 @@
     });
     window.addEventListener("scroll", hideTip, true);
     function syncRoom(room) {
+      const lobby = room?.game_type === "thats_life" && room.status === "lobby";
+      byId("ConfigBox").classList.toggle("hidden", !lobby);
+      byId("ConfigBox").setAttribute("aria-hidden", String(!lobby));
       if (room?.game_type !== "thats_life") {
         explain.exit(); help.close(); byId("PileDialog").close(); hideTip();
         return;
@@ -318,6 +321,8 @@
       if (currentRoomState?.room_id && currentRoomState.room_id !== data.room_id) return;
       clearTimeout(pendingTimer);
       activeRoom = data.room_id;
+      byId("ConfigBox").classList.add("hidden");
+      byId("ConfigBox").setAttribute("aria-hidden", "true");
       view = data.view; pending = false; selection = null;
       hideTip(); render();
     }
@@ -325,7 +330,7 @@
     window.renderThatsLifeGameState = renderState;
     window.showThatsLifeHeaderActions = show => {
       byId("HeaderActions").style.display = show ? "flex" : "none";
-      if (!show) { explain.exit(); help.close(); byId("PileDialog").close(); hideTip(); }
+      if (!show) { byId("ConfigBox").classList.add("hidden"); byId("ConfigBox").setAttribute("aria-hidden", "true"); explain.exit(); help.close(); byId("PileDialog").close(); hideTip(); }
     };
     socket.on("room:state", syncRoom);
     socket.on("system:error", () => { if (pending) { clearTimeout(pendingTimer); pending = false; render(); } });
