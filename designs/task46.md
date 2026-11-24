@@ -122,8 +122,8 @@
 
 ### 手机与桌面布局
 - 主体直接放在 Game 中并显示游戏名。桌面左右排列攻城和城池供应，手机将骰子、战线及原地放置确认集中在同一区域。
-- 手机中央城池每页 6 张，屏高不足 740px 时每页 4 张，箭头翻页不移动页面。Central / Players 切换城池来源，顶部始终显示紧凑分数。
-- 选定目标后，手机默认收起不再参与本次决策的城池列表，按 Castles 可展开查看。玩家城池过多时只在列表内部滚动，保留滚动位置，不重置到顶部。
+- 手机中央城池的早期分页和列表限高已由第 9 节的完整展开布局替代。Central / Players 切换城池来源，顶部始终显示紧凑分数。
+- 选定目标后，手机默认收起不再参与本次决策的城池列表，按 Castles 可展开查看。城池列表随页面自然滚动，不额外嵌套滚动区域。
 - 点城池仅显示该卡上的 Attack / Cancel 蒙层，不立即发送行动。空白和 Escape 均可取消，滑动超过阈值不会选城或选骰。
 - Help 提供中英文与 Basics / Details 章节。Explain 覆盖骰子、城池、战线与按钮，包括 disabled 按钮，解释时不发送游戏行动。被动图标提供悬停说明与手机三秒提示，交互控件正常操作时不弹提示。
 - 保留原有按回合轮流攻城规则，没有新增需要 Next Round 确认的独立轮末阶段。
@@ -135,3 +135,20 @@
 - 截图保存在忽略目录 `tmp/age-of-war-ui/`。按 DEV_GUIDE 的布局、交互、Help/Explain 和按需加载要求实现，真实 iOS / Android 设备尚未验证。低矮窗口或大量玩家城池允许列表局部滚动，不保证所有信息绝对一屏展示。
 - 定向 Python 测试共 41 项通过，JS syntax / stub smoke 与 `git diff --check` 通过。额外检查手机被动提示三秒消失、连续点击更新、交互骰子不弹提示，以及选择城池不改变局部滚动位置。
 - 本次修改文件：`game/age_of_war.py`、`game/age_of_war_ai.py`、`game/ai_metadata.py`、`static/games/age_of_war.html`、`static/games/age_of_war.js`、`static/games/age_of_war.css`、`static/game_assets.js`、`static/index.html`、`tests/test_age_of_war_ai.py`、`tests/age_of_war.browser.cjs` 和本设计文档。共享文件仅调整本游戏登记与缓存版本，其他并行任务的更改保持原样。
+
+## 9. 手机城池完整展开（2026-11-24）
+
+### 布局与交互
+- 删除按屏高固定每页 4 / 6 张的分页逻辑、翻页按钮及其 Explain 文案，不再把 14 座中央城池分散到多个页面。
+- 删除城池列表的 `48dvh / 370px` 限高和内部纵向滚动。主板自然展开，320px 两列，390px 三列，更宽手机按实际可用宽度自动增加列数；桌面保持原有左右布局。
+- 手机卡牌保留城名、家族、分数和全部战线，最低高度 88px。Attack / Cancel 仍在选中卡牌内确认，三列布局同步缩紧确认按钮的间距，避免溢出。
+- 未选定目标时省去空 Target 区域，骰子栏 dock 在 Room Control 窄条下面。320px 窄屏可以随页面浏览全部城池，同时继续看到骰面；390×844 的六人初始选城局面可完整显示 14 座城。
+- Central / Players 切换、锁定目标后收起城池、Castles 展开查看、放置与弃骰、Help / Explain / Escape 和触摸防误选保持不变。无规则、AI、服务端或公共 CSS 改动。
+
+### 验收记录
+- 修改文件：`static/games/age_of_war.js`、`static/games/age_of_war.html`、`static/games/age_of_war.css`、`static/game_assets.js`、`static/index.html`、`tests/age_of_war.browser.cjs` 和本设计文档。保留其他本地改动，共享文件仅更新本游戏资源和首页加载器缓存版本。
+- Chrome 检查 320×668、390×844、1024×900、1440×1000，包括未掷骰、14 座城、仅剩 3 座城、六人分数、分配骰子、额外大名战线、观战与终局；目视复核桌面和手机截图，无页面横向滚动、卡牌文字或原地确认溢出。
+- 浏览器回归检查全部城池无分页、无嵌套滚动、手机自适应列数、窄屏滚动时骰面可见、首尾城池原地确认、取消与 Escape、点击不改变页面滚动位置、Players 城池、Castles 展开/收起、放置/弃骰、Help 语言与章节、Explain 拦截、被动提示、滑动防误触、真实 Socket.IO Bot 回合和刷新重连。
+- `tests.test_frontend_style_assets` 与 `tests.test_help_contract` 共 13 项通过，JS syntax、stub smoke、游戏浏览器回归及 `git diff --check` 通过。截图保存在忽略目录 `tmp/age-of-war-ui/`。
+- 本游戏的主板展开、手机屏幕利用率、原地确认、Help / Explain 和资源加载检查通过。额外运行 `tests/game_assets.browser.cjs`，其首页初始资源断言仍仅允许 `shared.js`，但当前首页还加载既有的 `shared_help.js` 和 `shared_effects.js`，因此在进入游戏之前失败；该无关测试未修改，不声称全部验收通过。
+- 320px 保留主页面纵向滚动，骰子栏为 `DEV_GUIDE.md` 允许覆盖的 dock；真实 iOS / Android 设备未验证。

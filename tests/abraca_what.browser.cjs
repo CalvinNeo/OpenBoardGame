@@ -15,6 +15,11 @@ function makeView(overrides = {}) {
     allowed_spells: [2, 3, 4, 5, 6, 7], winner: [], game_over: false,
     config: { target_score: 8 }, round_result: null,
     last_action: { player_id: 'p0', spell_type: 2, success: true, dice: 2 },
+    activity: Array.from({ length: 45 }, (_, index) => ({
+      player_id: `p${index % 5}`, spell_type: index % 8, success: index % 3 !== 0,
+      dice: index % 8 === 2 ? 2 : null, turn: Math.floor(index / 5) + 1,
+    })),
+    round_history: [], next_round_ready: [], result_ready: [], results_confirmed: false,
     players: ['Alex', 'Nova', 'Sage', 'Luna', 'Kai'].map((name, index) => ({
       player_id: `p${index}`, name, seat: index, is_bot: index > 1,
       hp: 6 - index, score: index, secret_count: index === 0 ? 2 : 0,
@@ -37,6 +42,7 @@ async function checkBounds(page, label) {
   const result = await page.evaluate(() => {
     const bad = [...document.querySelectorAll('#abracaPanel *, #abracaHelpModal *, #abracaExplainModal *')]
       .filter(element => {
+        if (element.closest('.abraca-activity-guesses')) return false;
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
         return rect.width > 0 && rect.height > 0 && (rect.left < -1 || rect.right > innerWidth + 1 ||
@@ -126,7 +132,7 @@ async function checkLiveSession(browser, errors) {
       await page.evaluate(() => socket.emit('room:ready', { room_id: roomId, ready: true }));
     }
     await pages[0].waitForFunction(() => currentRoomState.players.every(player => player.ready));
-    await pages[0].evaluate(() => socket.emit('room:start', { room_id: roomId }));
+    await pages[0].evaluate(() => socket.emit('room:start', { room_id: roomId, config: { target_score: 2 } }));
     for (const page of pages) {
       await page.waitForFunction(() => lastGameStatePayload?.game_type === 'abraca_what' && currentAbracaView?.players.length === 2);
       await page.evaluate(() => setRoomControlsCollapsed(true));
@@ -148,7 +154,72 @@ async function checkLiveSession(browser, errors) {
     assert.equal(await pages[0].evaluate(() => roomId), createdRoom);
     assert.equal(await pages[0].locator('#abracaSpellButtons button').count(), 8);
     assert.equal(await pages[0].locator('script[src*="/abraca_what.js"]').count(), 1);
-    console.log('Live two-player cast and reload/reconnect passed.');
+    assert.equal(await pages[0].evaluate(() => currentAbracaView.activity.length), 1);
+    let reviewedRounds = 0;
+    for (let step = 0; step < 180; step++) {
+      const view = await pages[0].evaluate(() => currentAbracaView);
+      if (view.phase === 'round_end' || view.game_over) {
+        for (const page of pages) {
+          await page.waitForFunction(round => currentAbracaView.round === round && !!currentAbracaView.round_result, view.round);
+          assert.equal(await page.locator('.abraca-card-hidden').count(), 0, 'Everyone sees their own revealed hand');
+          assert.equal(await page.locator('#abracaSettlement').isVisible(), true);
+          assert.equal(await page.locator('.abraca-score-line').count() > 0, true);
+          await checkBounds(page, 'Live round review');
+        }
+        if (view.game_over) break;
+        reviewedRounds++;
+        await activate(pages[0], '#abracaNextRoundBtn', true);
+        await pages[0].waitForFunction(() => currentAbracaView.next_round_ready.includes(playerId));
+        assert.equal(await pages[1].evaluate(() => currentAbracaView.round), view.round);
+        await pages[0].reload();
+        await pages[0].waitForFunction(() => typeof currentAbracaView !== 'undefined' && currentAbracaView?.next_round_ready.includes(playerId));
+        assert.equal(await pages[0].locator('#abracaNextRoundBtn').isDisabled(), true);
+        await activate(pages[1], '#abracaNextRoundBtn', false);
+        for (const page of pages) await page.waitForFunction(round => currentAbracaView.round === round + 1, view.round);
+        assert.equal(await pages[0].evaluate(() => currentAbracaView.round_history.length), reviewedRounds);
+        assert.equal(await pages[0].locator('.abraca-card-hidden').count(), 5);
+        continue;
+      }
+      const actorIndex = await pages[0].evaluate(() => playerId) === view.current_turn ? 0 : 1;
+      const actorPage = pages[actorIndex];
+      const legal = await actorPage.evaluate(() => currentAbracaView.legal_actions);
+      let action;
+      if (legal.includes('end_turn')) action = { type: 'end_turn' };
+      else if (legal.includes('roll_dice')) action = { type: 'roll_dice' };
+      else if (legal.includes('take_secret')) action = { type: 'take_secret' };
+      else {
+        const cards = (await pages[1 - actorIndex].evaluate(() => currentAbracaView)).players
+          .find(player => player.player_id === view.current_turn).hand;
+        const absent = [1, 2, 3, 4, 5, 6, 7].find(spell => !cards.some(card => card.spell === spell));
+        assert.notEqual(absent, undefined);
+        action = { type: 'cast_spell', spell_type: absent };
+      }
+      const before = await actorPage.evaluate(() => JSON.stringify(currentAbracaView));
+      await actorPage.evaluate(action => sendAction(action), action);
+      await actorPage.waitForFunction(previous => JSON.stringify(currentAbracaView) !== previous, before);
+      const expected = await actorPage.evaluate(() => ({ phase: currentAbracaView.phase, turn: currentAbracaView.current_turn, count: currentAbracaView.activity.length }));
+      await pages[1 - actorIndex].waitForFunction(expected => currentAbracaView.phase === expected.phase &&
+        currentAbracaView.current_turn === expected.turn && currentAbracaView.activity.length === expected.count, expected);
+    }
+    assert(reviewedRounds > 0, 'A non-final round was reviewed');
+    assert.equal(await pages[0].evaluate(() => currentAbracaView.game_over), true);
+    await pages[0].evaluate(() => socket.emit('room:start', { room_id: roomId }));
+    await pages[0].waitForFunction(() => currentAbracaView.result_ready.includes(playerId));
+    assert.equal(await pages[0].evaluate(() => currentAbracaView.results_confirmed), false);
+    assert.equal(await pages[0].locator('#abracaNewGameBtn').isDisabled(), true);
+    await pages[0].reload();
+    await pages[0].waitForFunction(() => typeof currentAbracaView !== 'undefined' && currentAbracaView?.game_over && currentAbracaView.result_ready.includes(playerId));
+    await pages[1].waitForFunction(() => currentAbracaView.result_ready.length === 1);
+    await activate(pages[1], '#abracaNewGameBtn', false);
+    for (const page of pages) await page.waitForFunction(() => currentAbracaView.results_confirmed);
+    assert.equal(await pages[0].locator('#abracaNewGameBtn').textContent(), 'Play Again');
+    await activate(pages[1], '#abracaNewGameBtn', false);
+    for (const page of pages) {
+      await page.waitForFunction(() => currentAbracaView && !currentAbracaView.game_over && currentAbracaView.round === 1);
+      assert.equal(await page.evaluate(() => currentAbracaView.config.target_score), 2);
+      assert.equal(await page.locator('.abraca-card-hidden').count(), 5);
+    }
+    console.log('Live two-player history, revealed hands, readiness, reconnect and final confirmation passed.');
   } finally {
     await Promise.all(contexts.map(context => context.close()));
   }
@@ -336,23 +407,74 @@ async function checkInteractions(page, width) {
   await render(page, { you: 'spectator', legal_actions: [], allowed_spells: [] });
   assert.equal(await page.locator('#abracaSpellButtons button:enabled').count(), 0);
 
-  const result = { type: 'empty_hand', actor_id: 'p0', add_scores: { p0: 3, p1: 1, p2: 1, p3: 1, p4: 1 } };
-  await render(page, { phase: 'round_end', round_result: result, legal_actions: ['start_next_round'], allowed_spells: [] });
+  await render(page);
+  if (!await page.locator('#abracaActivity').evaluate(element => element.open)) {
+    await activate(page, '#abracaActivity summary', mobile);
+  }
+  assert.equal(await page.locator('.abraca-activity-row').count(), 5);
+  assert.equal(await page.locator('.abraca-activity-guess').count(), 45);
+  const colors = await page.locator('.abraca-activity-guess').evaluateAll(elements =>
+    [...new Set(elements.map(element => getComputedStyle(element).backgroundColor))]);
+  assert.equal(colors.length, 8, 'Activity uses each spell color');
+  const row = page.locator('.abraca-activity-guesses').first();
+  await row.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+  if (mobile) assert(await row.evaluate(element => element.scrollLeft > 0));
+  await row.evaluate(element => { element.scrollLeft = 0; });
+  await checkBounds(page, `${width}px long activity rows`);
+  await panelScreenshot(page, `activity-${width}`);
+  await activate(page, '#abracaActivity summary', mobile);
+
+  const revealed = makeView().players.map(player => ({ ...player, score: player.player_id === 'p0' ? 5 : 0,
+    hand: Array.from({ length: 5 }, (_, index) => ({ spell: index, number: index + 1 })),
+  }));
+  const result = { round: 2, type: 'empty_hand', actor_id: 'p0',
+    add_scores: { p0: 5, p1: 0, p2: 0, p3: 0, p4: 0 }, activity: makeView().activity,
+    players: Object.fromEntries(revealed.map(player => [player.player_id, {
+      base: player.player_id === 'p0' ? 3 : 0, secrets: player.player_id === 'p0' ? 2 : 0,
+      total: player.player_id === 'p0' ? 5 : 0, score: player.player_id === 'p0' ? 5 : player.score,
+    }])),
+  };
+  await render(page, { phase: 'round_end', players: revealed, round_result: result, round_history: [result],
+    next_round_ready: ['p2', 'p3', 'p4'], legal_actions: ['start_next_round'], allowed_spells: [] });
   assert.equal(await page.locator('#abracaRoundNotice').isVisible(), true);
+  assert.equal(await page.locator('#abracaSettlementTitle').textContent(), 'Round 2 Results');
+  assert.equal(await page.locator('.abraca-card-hidden').count(), 0);
+  assert.match(await page.locator('.abraca-score-breakdown').first().textContent(), /\+3 round · \+2 secrets = \+5/);
+  await panelScreenshot(page, `round-result-${width}`);
   const beforeNext = await actionCount();
   await activate(page, '#abracaNextRoundBtn', mobile);
   assert.equal(await actionCount(), beforeNext + 1, 'Next Round sends immediately');
   assert.equal(await confirmation.isVisible(), false);
   await checkBounds(page, `${width}px round result`);
+  await render(page, { phase: 'round_end', players: revealed, round_result: result,
+    next_round_ready: ['p0', 'p2', 'p3', 'p4'], legal_actions: [], allowed_spells: [] });
+  assert.equal(await page.locator('#abracaNextRoundBtn').isDisabled(), true);
+  assert.match(await page.locator('#abracaReviewStatus').textContent(), /Waiting for Nova/);
   await render(page, { round: 3, phase: 'wait_use', legal_actions: ['cast_spell'], allowed_spells: [0, 1, 2, 3, 4, 5, 6, 7] });
   assert.equal(await page.locator('#abracaRoundNotice').isVisible(), false, 'Old results move to Activity');
   assert.match(await page.locator('#abracaRoundResult').textContent(), /Round 2/);
   await activate(page, '#abracaSpellBtn0', mobile);
   await checkBounds(page, `${width}px longest spell confirmation`);
   await page.keyboard.press('Escape');
-  await render(page, { phase: 'game_over', game_over: true, winner: ['p0'], round_result: result, legal_actions: [], allowed_spells: [] });
+  const final = { phase: 'game_over', game_over: true,
+    players: revealed.map(player => ({ ...player, score: player.player_id === 'p0' ? 10 : 0 })),
+    winner: ['p0'], round_result: result,
+    round_history: [{ ...result, round: 1 }, result], result_ready: ['p2', 'p3', 'p4'], legal_actions: ['play_again'], allowed_spells: [] };
+  await render(page, final);
   assert.equal(await page.locator('#abracaNewGameBtn').isVisible(), true);
   assert.equal(await page.locator('#abracaNextRoundBtn').isVisible(), false);
+  assert.equal(await page.locator('#abracaSettlementTitle').textContent(), 'Final Results');
+  assert.equal(await page.locator('.abraca-score-line').count(), 10);
+  assert.equal(await page.locator('.abraca-score-total').first().textContent(), 'Total: 10 points');
+  const beforeConfirm = await actionCount();
+  await activate(page, '#abracaNewGameBtn', mobile);
+  assert.equal(await actionCount(), beforeConfirm + 1);
+  assert.equal(await page.evaluate(() => abracaTestActions.at(-1).type), 'play_again');
+  await render(page, { ...final, result_ready: ['p0', 'p2', 'p3', 'p4'], legal_actions: [] });
+  assert.equal(await page.locator('#abracaNewGameBtn').isDisabled(), true);
+  await render(page, { ...final, results_confirmed: true, result_ready: revealed.map(player => player.player_id) });
+  assert.equal(await page.locator('#abracaNewGameBtn').textContent(), 'Play Again');
+  await panelScreenshot(page, `final-result-${width}`);
   await checkBounds(page, `${width}px game over`);
 
   await page.evaluate(() => clearAbracaState());

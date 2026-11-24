@@ -35,6 +35,7 @@
                 <div id="abracaRoundNoticeBody" class="round-notice-body">-</div>
               </div>
 
+              <div id="abracaPlayArea">
               <div class="abraca-section-heading">
                 <h3>Spells</h3>
                 <span data-abraca-tip="Used / total: discarded copies versus all copies of that spell. Cards in hands and the secret pool are not counted as used." tabindex="0">Used / total</span>
@@ -68,19 +69,30 @@
               <div class="abraca-turn-actions" id="abracaTurnActions">
                 <button id="abracaRollBtn" type="button" class="hidden">🎲 Roll Dice</button>
                 <button id="abracaSecretBtn" type="button" class="hidden">🔒 Take Secret</button>
-                <button id="abracaNextRoundBtn" type="button" class="hidden">Next Round</button>
               </div>
-              <div class="abraca-turn-actions hidden" id="abracaNewGameRow">
-                <button id="abracaNewGameBtn" type="button">Start New Game</button>
               </div>
 
-              <h3>Players</h3>
+              <section id="abracaSettlement" class="hidden" aria-labelledby="abracaSettlementTitle">
+                <h3 id="abracaSettlementTitle">Round Results</h3>
+                <p id="abracaSettlementDescription"></p>
+              </section>
+              <h3 id="abracaPlayersHeading">Players</h3>
               <div id="abracaPlayers"></div>
+              <div id="abracaReviewActions" class="abraca-review-actions hidden">
+                <p id="abracaReviewStatus" role="status" aria-live="polite"></p>
+                <div class="abraca-turn-actions">
+                  <button id="abracaNextRoundBtn" type="button" class="hidden">Next Round</button>
+                  <div id="abracaNewGameRow" class="hidden">
+                    <button id="abracaNewGameBtn" type="button">Confirm Results</button>
+                  </div>
+                </div>
+              </div>
               <details id="abracaActivity" class="abraca-activity">
                 <summary>Activity <span id="abracaActivitySummary">No spells cast yet</span></summary>
                 <div class="abraca-activity-body">
                   <div>Last Action: <span id="abracaLastAction">-</span></div>
                   <div>Round Result: <span id="abracaRoundResult">-</span></div>
+                  <div id="abracaActivityHistory"></div>
                 </div>
               </details>
               <div id="abracaTooltip" class="abraca-tooltip hidden" role="tooltip"></div>

@@ -14,6 +14,9 @@ state = G.init_game({}, players)
 views = {'start': G.get_public_view(state, 'p0')}
 state['dice_pool'] = ['I1', 'I2', 'I3', 'A', 'A', 'C', 'D']
 views['select'] = G.get_public_view(state, 'p0')
+small_supply = copy.deepcopy(state)
+small_supply['central_castles'] = list(CASTLE_ORDER[-3:])
+views['small_supply'] = G.get_public_view(small_supply, 'p0')
 state.update(phase='assign', target={'type':'central', 'castle_id':'kiyosu'}, target_lines=_castle_lines('kiyosu', False))
 views['assign'] = G.get_public_view(state, 'p0')
 views['spectator'] = G.get_public_view(state, 'visitor')
@@ -72,9 +75,10 @@ async function bounds(page, label) {
     await page.evaluate(() => { window.ageOfWarTestActions = []; sendAction = action => window.ageOfWarTestActions.push(action); });
     for (const [width, height] of [[320, 668], [390, 844], [1024, 900], [1440, 1000]]) {
       await page.setViewportSize({ width, height });
-      for (const key of ['select', 'assign', 'bonus', 'owned', 'spectator', 'over']) {
+      for (const key of ['start', 'select', 'small_supply', 'assign', 'bonus', 'owned', 'spectator', 'over']) {
         await render(page, key);
         await bounds(page, `${width}: ${key}`);
+        assert.equal(await page.locator('#ageOfWarCentral .age-of-war-castle-card:not([hidden])').count(), fixtures[key].central_castles.length);
       }
       await render(page, 'assign');
       await page.locator('.age-of-war-line.fillable').first().click();
@@ -85,14 +89,30 @@ async function bounds(page, label) {
       assert(battle.y + battle.height <= height, `${width}: dice and confirmation fit in viewport ${JSON.stringify(battle)}`);
       await page.keyboard.press('Escape');
       await render(page, 'select');
+      const cards = page.locator('#ageOfWarCentral .age-of-war-castle-card:visible');
+      assert.equal(await cards.count(), 14);
+      assert.equal(await page.locator('.age-of-war-pager').count(), 0);
+      const supply = page.locator('.age-of-war-supply-scroll');
+      assert(await supply.evaluate(element => element.scrollHeight <= element.clientHeight + 1), `${width}: castles have no nested vertical scrolling`);
       if (width <= 640) {
-        const cards = page.locator('#ageOfWarCentral .age-of-war-castle-card:visible');
-        assert.equal(await cards.count(), height < 740 ? 4 : 6);
-        await page.locator('#ageOfWarNextBtn').click();
-        assert.match(await page.locator('#ageOfWarPage').innerText(), /^2/);
-        await bounds(page, `${width}: page 2`);
-        await page.locator('#ageOfWarPrevBtn').click();
+        const columns = await page.locator('#ageOfWarCentral').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+        assert.equal(columns, width < 380 ? 2 : 3);
+        if (width === 390) {
+          const last = await cards.last().boundingBox();
+          assert(last.y + last.height <= height, `390: all 14 castles use the phone viewport ${JSON.stringify(last)}`);
+        }
+        await cards.last().scrollIntoViewIfNeeded();
+        const dice = await page.locator('#ageOfWarDice').boundingBox();
+        const last = await cards.last().boundingBox();
+        assert(dice.y >= 0 && dice.y + dice.height < last.y, `${width}: docked dice stay visible above the last castle`);
+        await cards.last().click();
+        await bounds(page, `${width}: last castle confirmation`);
+        assert.equal(await page.locator('.age-of-war-confirm').count(), 1);
+        await page.screenshot({ path: `${output}/scrolled-confirmation-${width}.png` });
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => window.scrollTo(0, 0));
       }
+      await page.screenshot({ path: `${output}/select-${width}.png`, fullPage: true });
       const firstCard = page.locator('#ageOfWarCentral .age-of-war-castle-card:visible').first();
       const before = await page.evaluate(() => ageOfWarTestActions.length);
       await firstCard.click();
@@ -101,7 +121,28 @@ async function bounds(page, label) {
       await firstCard.click();
       await firstCard.getByRole('button', { name: 'Attack', exact: true }).click();
       assert.equal(await page.evaluate(() => ageOfWarTestActions.at(-1).type), 'select_target');
-      await page.screenshot({ path: `${output}/select-${width}.png`, fullPage: true });
+      await bounds(page, `${width}: confirmation`);
+      await page.screenshot({ path: `${output}/confirmation-${width}.png`, fullPage: true });
+      await page.keyboard.press('Escape');
+      await render(page, 'small_supply');
+      assert.equal(await page.locator('#ageOfWarCentral .age-of-war-castle-card:visible').count(), 3);
+      await page.screenshot({ path: `${output}/small-supply-${width}.png`, fullPage: true });
+      await render(page, 'owned');
+      await page.locator('#ageOfWarPlayersTab').click();
+      await bounds(page, `${width}: player castles`);
+      assert.equal(await page.locator('#ageOfWarPlayers .age-of-war-castle-card:visible').count(), 9);
+      assert.equal(await page.locator('#ageOfWarCentral').isVisible(), false);
+      await page.screenshot({ path: `${output}/players-${width}.png`, fullPage: true });
+      await page.locator('#ageOfWarCentralTab').click();
+      await render(page, 'assign');
+      if (width <= 640) {
+        assert.equal(await page.locator('.age-of-war-supply').isVisible(), false);
+        await page.locator('#ageOfWarBrowseBtn').click();
+        assert.equal(await page.locator('#ageOfWarCentral .age-of-war-castle-card:visible').count(), 14);
+        assert.equal(await page.locator('#ageOfWarDice .age-of-war-die').count(), 7);
+        await page.locator('#ageOfWarBrowseBtn').click();
+        assert.equal(await page.locator('.age-of-war-supply').isVisible(), false);
+      }
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await render(page, 'assign');
@@ -149,11 +190,11 @@ async function bounds(page, label) {
     await card.dispatchEvent('pointerup', { pointerType: 'touch', clientX: 100, clientY: 420 });
     await card.dispatchEvent('click');
     assert.equal(await page.locator('.age-of-war-confirm').count(), 0);
-    const supply = page.locator('.age-of-war-supply-scroll');
-    await supply.evaluate(element => { element.scrollTop = 20; });
-    const scrollBefore = await supply.evaluate(element => element.scrollTop);
-    await page.locator('#ageOfWarCentral .age-of-war-castle-card:visible').last().click();
-    assert.equal(await supply.evaluate(element => element.scrollTop), scrollBefore);
+    const lastCard = page.locator('#ageOfWarCentral .age-of-war-castle-card:visible').last();
+    await lastCard.scrollIntoViewIfNeeded();
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    await lastCard.click();
+    assert.equal(await page.evaluate(() => window.scrollY), scrollBefore);
     await page.keyboard.press('Escape');
 
     const live = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -215,7 +256,7 @@ async function bounds(page, label) {
     });
     await live.waitForFunction(() => !currentRoomState);
     assert.deepEqual(errors, []);
-    console.log('Age of War UI passed: 320 / 390 / 1024 / 1440, six players, target confirmation, dice placement/discard, Help, Explain, Escape, swipe guard, live bot turn and reconnect.');
+    console.log('Age of War UI passed: 320 / 390 / 1024 / 1440, all 14 castles without pagination or nested scrolling, docked dice, six players, target confirmation, dice placement/discard, Help, Explain, Escape, swipe guard, live bot turn and reconnect.');
   } finally {
     await browser.close();
   }

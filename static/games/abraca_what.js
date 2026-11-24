@@ -37,6 +37,7 @@ const abracaCastBtn = document.getElementById("abracaCastBtn");
 const abracaCancelCastBtn = document.getElementById("abracaCancelCastBtn");
 const abracaActionHint = document.getElementById("abracaActionHint");
 const abracaActivitySummary = document.getElementById("abracaActivitySummary");
+const abracaActivityHistory = document.getElementById("abracaActivityHistory");
 const abracaTooltip = document.getElementById("abracaTooltip");
 
 const abracaSpellData = [
@@ -118,7 +119,8 @@ const ABRACA_HELP_TEXT = `
   </ul>
 
   <h3>Hidden Info</h3>
-  <p>You cannot see your own hand; other players can. Secret cards are private.</p>
+  <p>You cannot see your own hand during play; other players can. All remaining hands are revealed at round end. Secret cards stay private.</p>
+  <p>Review the revealed hands and score breakdown, then click Next Round. Play resumes only when everyone is ready; bots confirm automatically. After the final round, everyone must Confirm Results before Play Again becomes available. Ties among players reaching the target are decided by points gained in the final round, not cumulative score.</p>
 
   <h3>Spells</h3>
   <ul>
@@ -127,7 +129,7 @@ const ABRACA_HELP_TEXT = `
   <h3>Symbols & Controls</h3>
   <p>Health (❤️) is shown out of a maximum of 6. Score (⭐) counts toward the target score. Secrets (🔒) score if you survive. Deck (🃏) refills hands; Discarded (♻️) counts spent spells. Roll Dice (🎲) resolves a pending roll. Chain minimum (↑ / Cast ≥) is the lowest spell number you may cast.</p>
   <p>Each spell shows used / total copies. Used counts discarded cards, not cards in hands or the secret pool. Dimmed spells cannot currently be cast; Explain still describes them.</p>
-  <p>Select a spell, then Cast or Cancel in place. Click empty space or press Esc to cancel. End Turn and Next Round act immediately. Hover a symbol or card for details; on a phone, tap for a three-second tip. Activity holds the last action and round result. Help shows these rules; Explain lets you inspect controls without playing.</p>
+  <p>Select a spell, then Cast or Cancel in place. Click empty space or press Esc to cancel. End Turn and Next Round act immediately. Hover a symbol or card for details; on a phone, tap for a three-second tip. Activity groups everyone's guesses in order on one row per player per round, using each spell's color: ✓ means success, × means miscast, and 🎲 shows the roll. Scroll a long row sideways to see more guesses. Help shows these rules; Explain lets you inspect controls without playing.</p>
 `;
 
 const ABRACA_BUTTON_EXPLANATIONS = {
@@ -147,11 +149,11 @@ const ABRACA_BUTTON_EXPLANATIONS = {
   },
   abracaNextRoundBtn: {
     name: "Next Round",
-    description: "Begin the next round after a round has ended.",
+    description: "Confirm that you have reviewed the revealed hands and scores. The next round starts only when everyone is ready.",
   },
   abracaNewGameBtn: {
-    name: "Start New Game",
-    description: "Restart the game after someone reaches 8 points.",
+    name: "Confirm Results / Play Again",
+    description: "Confirm the final score breakdown. Once everyone has confirmed, Play Again starts a fresh game with the same settings.",
   },
   abracaCastBtn: {
     name: "Cast",
@@ -278,6 +280,11 @@ function clearAbracaState() {
   }
   renderAbracaSpells({});
   if (abracaActivitySummary) abracaActivitySummary.textContent = "No spells cast yet";
+  abracaActivityHistory?.replaceChildren();
+  document.getElementById("abracaPlayArea")?.classList.remove("hidden");
+  document.getElementById("abracaSettlement")?.classList.add("hidden");
+  document.getElementById("abracaReviewActions")?.classList.add("hidden");
+  document.getElementById("abracaPlayersHeading").textContent = "Players";
   document.getElementById("abracaActivity")?.removeAttribute("open");
   if (abracaPlayers) {
     abracaPlayers.innerHTML = "";
@@ -445,9 +452,11 @@ function renderAbracaPlayers(view) {
     setAbracaTip(slot, `${number}. ${fullName} (${spell?.icon || "✨"}). ${spell?.desc || ""}`);
     return slot;
   };
-  view.players.forEach((player) => {
+  view.players.forEach((player, index) => {
     const card = document.createElement("div");
     card.className = "player-card";
+    card.classList.toggle("abraca-player-you", player.player_id === view.you);
+    card.classList.toggle("abraca-player-winner", (view.winner || []).includes(player.player_id));
     if (player.player_id === view.current_turn) {
       card.classList.add("current");
       card.setAttribute("aria-current", "true");
@@ -458,8 +467,10 @@ function renderAbracaPlayers(view) {
     const name = document.createElement("div");
     name.className = "player-name";
     name.textContent = player.name || player.player_id;
+    name.prepend(buildAbracaPlayerMarker(index));
     const labels = [];
     if (player.player_id === view.you) labels.push("You");
+    if ((view.winner || []).includes(player.player_id)) labels.push("Winner");
     if (player.is_bot) labels.push("Bot");
     if (player.player_id === view.current_turn && !view.game_over && view.phase !== "round_end") labels.push("Turn");
     if (labels.length) {
@@ -489,6 +500,45 @@ function renderAbracaPlayers(view) {
     badges.appendChild(secrets);
     header.appendChild(badges);
     card.appendChild(header);
+
+    if (view.round_result) {
+      const rounds = view.game_over && view.round_history?.length ? view.round_history : [view.round_result];
+      const breakdown = document.createElement("div");
+      breakdown.className = "abraca-score-breakdown";
+      rounds.forEach((result) => {
+        const score = result.players?.[player.player_id];
+        const line = document.createElement("div");
+        line.className = "abraca-score-line";
+        const label = document.createElement("span");
+        label.textContent = `Round ${result.round || view.round}`;
+        const reason = result.type === "kill" ? (result.actor_id === player.player_id ? "Elimination bonus" : "Survival bonus")
+          : result.type === "self_death" ? "Survival bonus" : "Empty-hand bonus";
+        if (score) setAbracaTip(label, `${reason}: +${score.base}. Surviving secret cards (🔒): +${score.secrets}.`);
+        const points = document.createElement("span");
+        points.textContent = score
+          ? `+${score.base} round · +${score.secrets} secrets = +${score.total}`
+          : `+${result.add_scores?.[player.player_id] || 0} points`;
+        line.append(label, points);
+        breakdown.appendChild(line);
+      });
+      if (view.game_over) {
+        const opening = player.score - rounds.reduce((total, result) => total + (result.add_scores?.[player.player_id] || 0), 0);
+        if (opening > 0) {
+          const carry = document.createElement("div");
+          carry.textContent = `Earlier rounds (legacy save): ${opening} points`;
+          breakdown.prepend(carry);
+        }
+      }
+      const total = document.createElement("strong");
+      total.className = "abraca-score-total";
+      total.textContent = `Total: ${player.score} points`;
+      breakdown.appendChild(total);
+      card.appendChild(breakdown);
+      const handLabel = document.createElement("div");
+      handLabel.className = "abraca-revealed-label";
+      handLabel.textContent = `Revealed hand · ${player.hand?.length || 0} cards`;
+      card.appendChild(handLabel);
+    }
 
     const handRow = document.createElement("div");
     handRow.className = "player-hand";
@@ -591,6 +641,84 @@ function updateAbracaNewGameRow(view) {
     return;
   }
   abracaNewGameRow.classList.toggle("hidden", !(view && view.game_over));
+  if (abracaNewGameBtn) {
+    const confirmed = view.result_ready?.includes(view.you);
+    abracaNewGameBtn.textContent = view.results_confirmed ? "Play Again" : confirmed ? "Waiting for others…" : "Confirm Results";
+    abracaNewGameBtn.disabled = !isAbracaActionAvailable("play_again");
+  }
+}
+
+function buildAbracaPlayerMarker(index) {
+  const marker = document.createElement("span");
+  marker.className = "abraca-player-marker";
+  marker.dataset.playerColor = String(index % 5);
+  marker.textContent = ["●", "◆", "■", "▲", "⬟"][index % 5];
+  marker.setAttribute("aria-hidden", "true");
+  return marker;
+}
+
+function renderAbracaActivity(view) {
+  if (!abracaActivityHistory) return;
+  abracaActivityHistory.replaceChildren();
+  const rounds = [...(view.round_history || [])];
+  if (!rounds.some((result) => result.round === view.round)) {
+    rounds.push({ round: view.round, activity: view.activity || [] });
+  }
+  rounds.forEach((result) => {
+    const heading = document.createElement("h4");
+    heading.textContent = `Round ${result.round}`;
+    abracaActivityHistory.appendChild(heading);
+    view.players.forEach((player, index) => {
+      const row = document.createElement("div");
+      row.className = "abraca-activity-row";
+      row.classList.toggle("abraca-activity-you", player.player_id === view.you);
+      const name = document.createElement("span");
+      name.className = "abraca-activity-name";
+      name.textContent = `${player.name || player.player_id}${player.player_id === view.you ? " (You)" : ""}`;
+      name.prepend(buildAbracaPlayerMarker(index));
+      setAbracaTip(name, `${player.name || player.player_id} · Round ${result.round}`);
+      const guesses = document.createElement("div");
+      guesses.className = "abraca-activity-guesses";
+      guesses.tabIndex = 0;
+      guesses.setAttribute("role", "group");
+      guesses.setAttribute("aria-label", `${player.name || player.player_id}'s guesses, Round ${result.round}`);
+      const entries = (result.activity || []).filter((entry) => entry.player_id === player.player_id);
+      entries.forEach((entry) => {
+        const spell = abracaSpellData[entry.spell_type];
+        if (!spell) return;
+        const guess = document.createElement("span");
+        guess.className = "abraca-activity-guess";
+        guess.dataset.spell = String(entry.spell_type);
+        const dice = Number.isInteger(entry.dice) ? ` 🎲${entry.dice}` : "";
+        guess.textContent = `${spell.number} ${spell.icon} ${entry.success ? "✓" : "×"}${dice}`;
+        setAbracaTip(guess, `Turn ${entry.turn || "?"}: ${spell.number}. ${spell.name} (${spell.icon}) · ${entry.success ? "Success" : "Miscast"}${dice}. ${spell.desc}`);
+        guesses.appendChild(guess);
+      });
+      if (!entries.length) guesses.textContent = "No guesses";
+      row.append(name, guesses);
+      abracaActivityHistory.appendChild(row);
+    });
+  });
+}
+
+function renderAbracaSettlement(view) {
+  const review = view.phase === "round_end" || view.game_over;
+  document.getElementById("abracaPlayArea")?.classList.toggle("hidden", review);
+  document.getElementById("abracaSettlement")?.classList.toggle("hidden", !review);
+  document.getElementById("abracaReviewActions")?.classList.toggle("hidden", !review);
+  document.getElementById("abracaPlayersHeading").textContent = review ? "Scores & Revealed Hands" : "Players";
+  if (!review) return;
+  document.getElementById("abracaSettlementTitle").textContent = view.game_over ? "Final Results" : `Round ${view.round} Results`;
+  const winners = (view.winner || []).map((playerId) => findPlayerName(view, playerId)).join(", ");
+  document.getElementById("abracaSettlementDescription").textContent = view.game_over
+    ? `${winners ? `Winner: ${winners}. ` : ""}Round points + surviving secret cards = total score. Final-round gains break ties at the target.`
+    : "All remaining hands are now visible. Review your cards and points before continuing.";
+  const ready = view.game_over ? view.result_ready || [] : view.next_round_ready || [];
+  const waiting = view.players.filter((player) => !ready.includes(player.player_id));
+  document.getElementById("abracaReviewStatus").textContent = view.results_confirmed
+    ? "Everyone confirmed. You can now play again."
+    : `${ready.length} / ${view.players.length} confirmed · Waiting for ${waiting.map((player) => player.name || player.player_id).join(", ")}`;
+  if (abracaNextRoundBtn) abracaNextRoundBtn.textContent = ready.includes(view.you) ? "Waiting for others…" : "Next Round";
 }
 
 function renderAbracaGameState(data) {
@@ -654,6 +782,8 @@ function renderAbracaGameState(data) {
 
   renderAbracaSpells(view);
   renderAbracaPlayers(view);
+  renderAbracaActivity(view);
+  renderAbracaSettlement(view);
   logGameEvents(data);
   updateAbracaActionButtons();
 }
@@ -819,7 +949,7 @@ if (abracaNextRoundBtn) {
 
 if (abracaNewGameBtn) {
   abracaNewGameBtn.addEventListener("click", () => {
-    emitRoomStart();
+    if (isAbracaActionAvailable("play_again")) sendAction({ type: "play_again" });
   });
 }
 
@@ -920,22 +1050,22 @@ document.addEventListener("click", (event) => {
   }
 }, true);
 
-abracaPanel?.addEventListener("pointerover", (event) => {
+document.getElementById("abracaPanel")?.addEventListener("pointerover", (event) => {
   if (event.pointerType !== "mouse" || abracaExplainMode) return;
   const target = event.target.closest("[data-abraca-tip]");
   if (target && !target.contains(event.relatedTarget)) showAbracaTooltip(target);
 });
 
-abracaPanel?.addEventListener("pointerout", (event) => {
+document.getElementById("abracaPanel")?.addEventListener("pointerout", (event) => {
   const target = event.target.closest("[data-abraca-tip]");
   if (target && !target.contains(event.relatedTarget)) hideAbracaTooltip();
 });
 
-abracaPanel?.addEventListener("focusin", (event) => {
+document.getElementById("abracaPanel")?.addEventListener("focusin", (event) => {
   if (!abracaExplainMode && event.target.matches("[data-abraca-tip]:focus-visible")) showAbracaTooltip(event.target);
 });
 
-abracaPanel?.addEventListener("focusout", hideAbracaTooltip);
+document.getElementById("abracaPanel")?.addEventListener("focusout", hideAbracaTooltip);
 window.addEventListener("resize", hideAbracaTooltip);
 document.addEventListener("scroll", () => {
   hideAbracaTooltip();

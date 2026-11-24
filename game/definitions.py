@@ -3126,6 +3126,7 @@ ABRACA_WHAT_ACTION_SCHEMA = {
         {"type": "object", "properties": {"type": {"const": "roll_dice"}}, "required": ["type"], "additionalProperties": False},
         {"type": "object", "properties": {"type": {"const": "take_secret"}}, "required": ["type"], "additionalProperties": False},
         {"type": "object", "properties": {"type": {"const": "end_turn"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
         {
             "type": "object",
             "properties": {"type": {"const": "start_next_round"}},

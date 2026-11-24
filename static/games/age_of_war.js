@@ -3,7 +3,6 @@ let ageOfWarSelectedLine = null;
 let ageOfWarSelectedDice = new Set();
 let ageOfWarSelectionKey = null;
 let ageOfWarHintTimer = null;
-let ageOfWarCastlePage = 0;
 let ageOfWarSupplyTab = "central";
 let ageOfWarHelpLanguage = "en";
 let ageOfWarHelpSection = "basics";
@@ -97,8 +96,6 @@ const AGE_OF_WAR_BUTTON_EXPLANATIONS = {
   },
   ageOfWarCentralTab: { name: "Central castles", description: "Browse unclaimed castles. Capturing the last one ends the game immediately." },
   ageOfWarPlayersTab: { name: "Players", description: "Inspect scores and owned castles. Unlocked opponent castles can be attacked, but require an extra Daimyo (👑) line. Locked clans (🔒) are protected and score their set total instead of individual castle points." },
-  ageOfWarPrevBtn: { name: "Previous castles", description: "Show the previous page of central castles without scrolling away from the dice." },
-  ageOfWarNextBtn: { name: "Next castles", description: "Show the next page of central castles without scrolling away from the dice." },
   ageOfWarBrowseBtn: { name: "Inspect castles", description: "Expand or collapse the castle browser on phones while keeping this attack and dice selection unchanged." },
 };
 
@@ -395,7 +392,6 @@ function updateAgeOfWarActionButtons() {
 
 function clearAgeOfWarState() {
   currentAgeOfWarView = null;
-  ageOfWarCastlePage = 0;
   ageOfWarSupplyTab = "central";
   ageOfWarBrowseOpen = false;
   resetAgeOfWarSelection();
@@ -755,21 +751,10 @@ function closeAgeOfWarCastleConfirmation() {
 }
 
 function updateAgeOfWarSupply() {
-  const count = currentAgeOfWarView?.central_castles?.length || 0;
-  const pageSize = window.innerWidth <= 640 ? (window.innerHeight < 740 ? 4 : 6) : 14;
-  const pageCount = Math.max(1, Math.ceil(count / pageSize));
-  ageOfWarCastlePage = Math.min(ageOfWarCastlePage, pageCount - 1);
-  ageOfWarCentral.querySelectorAll(".age-of-war-castle-card").forEach((card, index) => {
-    card.hidden = index < ageOfWarCastlePage * pageSize || index >= (ageOfWarCastlePage + 1) * pageSize;
-  });
   ageOfWarCentral.hidden = ageOfWarSupplyTab !== "central";
   ageOfWarPlayers.hidden = ageOfWarSupplyTab !== "players";
   document.getElementById("ageOfWarCentralTab").setAttribute("aria-pressed", String(ageOfWarSupplyTab === "central"));
   document.getElementById("ageOfWarPlayersTab").setAttribute("aria-pressed", String(ageOfWarSupplyTab === "players"));
-  document.getElementById("ageOfWarPage").textContent = `${ageOfWarCastlePage + 1} / ${pageCount}`;
-  document.getElementById("ageOfWarPrevBtn").disabled = ageOfWarCastlePage === 0;
-  document.getElementById("ageOfWarNextBtn").disabled = ageOfWarCastlePage >= pageCount - 1;
-  document.querySelector("#ageOfWarPanel .age-of-war-pager").hidden = ageOfWarSupplyTab !== "central" || pageCount === 1;
   const panel = document.getElementById("ageOfWarPanel");
   panel.classList.toggle("has-target", Boolean(currentAgeOfWarView?.target));
   panel.classList.toggle("supply-open", ageOfWarBrowseOpen);
@@ -1238,13 +1223,6 @@ function showAgeOfWarElementExplanation(element) {
   document.getElementById(`ageOfWar${label}Tab`).addEventListener("click", () => {
     closeAgeOfWarCastleConfirmation();
     ageOfWarSupplyTab = tab;
-    updateAgeOfWarSupply();
-  });
-});
-[["Prev", -1], ["Next", 1]].forEach(([label, step]) => {
-  document.getElementById(`ageOfWar${label}Btn`).addEventListener("click", () => {
-    closeAgeOfWarCastleConfirmation();
-    ageOfWarCastlePage = Math.max(0, ageOfWarCastlePage + step);
     updateAgeOfWarSupply();
   });
 });

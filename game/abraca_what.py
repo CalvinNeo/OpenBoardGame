@@ -72,6 +72,11 @@ def _spell_type(card_id: int) -> int:
     return CARD_TO_SPELL[card_id]
 
 
+def _card_view(card_id: int) -> Dict:
+    spell = _spell_type(card_id)
+    return {"spell": spell, "number": spell + 1, "name": SPELL_NAMES[spell]}
+
+
 def _remove_spell_from_hand(hand: List[int], spell_type: int) -> Optional[int]:
     for idx, card_id in enumerate(hand):
         if _spell_type(card_id) == spell_type:
@@ -99,6 +104,7 @@ def _advance_turn(state: Dict) -> None:
     state["casts_this_turn"] = 0
     state["turn_spells"] = []
     state["pending"] = None
+    state["turn_number"] = state.get("turn_number", 1) + 1
 
 
 def _apply_damage(state: Dict, player_id: str, amount: int) -> bool:
@@ -127,6 +133,7 @@ def _finish_round(state: Dict, result_type: str, actor_id: str, victims: Optiona
     elif result_type == "empty_hand":
         add_scores[actor_id] += 3
 
+    base_scores = dict(add_scores)
     for pid in survivors:
         add_scores[pid] += len(players[pid]["secret_cards"])
 
@@ -138,7 +145,25 @@ def _finish_round(state: Dict, result_type: str, actor_id: str, victims: Optiona
         "actor_id": actor_id,
         "victims": victims or [],
         "add_scores": add_scores,
+        "round": state["round"],
+        "players": {
+            pid: {
+                "base": base_scores[pid],
+                "secrets": add_scores[pid] - base_scores[pid],
+                "total": add_scores[pid],
+                "score": pdata["score"],
+                "hp": pdata["hp"],
+                "hand": [_card_view(card_id) for card_id in pdata["hand"]],
+            }
+            for pid, pdata in players.items()
+        },
+        "activity": [dict(entry) for entry in state.get("activity", [])],
     }
+    state.setdefault("round_history", []).append(state["round_result"])
+    humans = [pid for pid in players if not state["player_meta"].get(pid, {}).get("is_bot")]
+    state["next_round_ready"] = [pid for pid in players if pid not in humans and (humans or pid != actor_id)]
+    state["result_ready"] = [pid for pid in players if pid not in humans]
+    state["results_confirmed"] = not humans
     state["round_end_by"] = actor_id
     state["pending"] = None
     state["last_spell"] = None
@@ -183,6 +208,11 @@ def _setup_round(state: Dict, start_player_id: Optional[str], increment_round: b
     state["casts_this_turn"] = 0
     state["turn_spells"] = []
     state["phase"] = "wait_use"
+    state["turn_number"] = 1
+    state["activity"] = []
+    state["next_round_ready"] = []
+    state["result_ready"] = []
+    state["results_confirmed"] = False
     state["current_turn"] = start_player_id or (state["turn_order"][0] if state["turn_order"] else None)
 
 
@@ -231,10 +261,12 @@ class AbracaWhatGame:
 
     @staticmethod
     def _legal_actions(state: Dict, viewer_id: str) -> List[str]:
-        if state.get("game_over"):
+        if viewer_id not in state["players"]:
             return []
+        if state.get("game_over"):
+            return ["play_again"] if state.get("results_confirmed") or viewer_id not in state.get("result_ready", []) else []
         if state.get("phase") == "round_end":
-            return ["start_next_round"]
+            return [] if viewer_id in state.get("next_round_ready", []) else ["start_next_round"]
         if viewer_id != state.get("current_turn"):
             return []
         phase = state.get("phase")
@@ -264,15 +296,37 @@ class AbracaWhatGame:
 
     @staticmethod
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
-        if state.get("game_over"):
-            return [], "game over"
         if player_id not in state.get("players", {}):
             return [], "unknown player"
 
         action_type = action.get("type")
+        if state.get("game_over"):
+            if action_type != "play_again":
+                return [], "game over"
+            if state.get("results_confirmed"):
+                restarted = AbracaWhatGame.init_game(state["config"], list(state["player_meta"].values()))
+                state.clear()
+                state.update(restarted)
+                return [], None
+            ready = state.setdefault("result_ready", [
+                pid for pid, meta in state["player_meta"].items() if meta.get("is_bot")
+            ])
+            if player_id in ready:
+                return [], "results already confirmed"
+            ready.append(player_id)
+            state["results_confirmed"] = all(pid in ready for pid in state["players"])
+            return [], None
         if state.get("phase") == "round_end":
             if action_type != "start_next_round":
                 return [], "round ended"
+            ready = state.setdefault("next_round_ready", [
+                pid for pid, meta in state["player_meta"].items() if meta.get("is_bot")
+            ])
+            if player_id in ready:
+                return [], "already ready"
+            ready.append(player_id)
+            if not all(pid in ready for pid in state["players"]):
+                return [], None
             end_by = state.get("round_end_by") or state.get("current_turn")
             order = state["turn_order"]
             start_player = end_by
@@ -297,24 +351,21 @@ class AbracaWhatGame:
             pdata = state["players"][player_id]
             state["casts_this_turn"] += 1
             card_id = _remove_spell_from_hand(pdata["hand"], spell_type)
+            state["last_action"] = {
+                "player_id": player_id,
+                "spell_type": spell_type,
+                "success": card_id is not None,
+                "dice": None,
+            }
+            state.setdefault("activity", []).append({
+                **state["last_action"], "turn": state.get("turn_number", 1),
+            })
             if card_id is None:
                 if spell_type == 0:
                     state["pending"] = {"spell": spell_type, "success": False}
                     state["phase"] = "wait_dice"
-                    state["last_action"] = {
-                        "player_id": player_id,
-                        "spell_type": spell_type,
-                        "success": False,
-                        "dice": None,
-                    }
                     return [], None
                 died = _apply_damage(state, player_id, 1)
-                state["last_action"] = {
-                    "player_id": player_id,
-                    "spell_type": spell_type,
-                    "success": False,
-                    "dice": None,
-                }
                 if died:
                     _finish_round(state, "self_death", player_id, [player_id])
                 else:
@@ -324,12 +375,6 @@ class AbracaWhatGame:
             state["discard"].append(card_id)
             state["last_spell"] = spell_type
             state.setdefault("turn_spells", []).append(spell_type)
-            state["last_action"] = {
-                "player_id": player_id,
-                "spell_type": spell_type,
-                "success": True,
-                "dice": None,
-            }
 
             if spell_type == 0:
                 state["pending"] = {"spell": spell_type, "success": True}
@@ -409,6 +454,8 @@ class AbracaWhatGame:
                 "success": pending.get("success", False),
                 "dice": roll,
             }
+            if state.get("activity"):
+                state["activity"][-1]["dice"] = roll
             if pending["spell"] == 0:
                 if pending.get("success"):
                     killed = False
@@ -532,6 +579,11 @@ class AbracaWhatGame:
             "last_action": last_action,
             "turn_spells": list(state.get("turn_spells", [])),
             "round_result": round_result,
+            "activity": [dict(entry) for entry in state.get("activity", [])],
+            "round_history": state.get("round_history", []),
+            "next_round_ready": list(state.get("next_round_ready", [])),
+            "result_ready": list(state.get("result_ready", [])),
+            "results_confirmed": bool(state.get("results_confirmed")),
             "legal_actions": AbracaWhatGame._legal_actions(state, viewer_id),
             "allowed_spells": AbracaWhatGame._allowed_spells(state, viewer_id),
             "min_spell": state["last_spell"] if state.get("phase") == "wait_goon" else None,

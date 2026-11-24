@@ -653,7 +653,6 @@ body.age-of-war-explain-mode button.has-explanation:hover {
 .age-of-war-status,
 .age-of-war-caption,
 .age-of-war-tabs,
-.age-of-war-pager,
 .age-of-war-help-nav {
   display: flex;
   align-items: center;
@@ -899,6 +898,23 @@ body.age-of-war-explain-mode #ageOfWarPanel .has-explanation {
     margin-top: 8px;
   }
 
+  #ageOfWarPanel:not(.has-target) .age-of-war-battle {
+    position: sticky;
+    top: calc(var(--room-controls-bar-height, 0px) + 4px);
+    z-index: 2;
+    padding: 4px 0;
+    background: #fff;
+  }
+
+  #ageOfWarPanel:not(.has-target) .age-of-war-target-caption,
+  #ageOfWarPanel:not(.has-target) #ageOfWarTargetLines {
+    display: none;
+  }
+
+  .age-of-war-castle-card {
+    scroll-margin-top: 110px;
+  }
+
   .age-of-war-actions button {
     min-height: 32px;
     padding: 5px 8px;
@@ -949,13 +965,13 @@ body.age-of-war-explain-mode #ageOfWarPanel .has-explanation {
   }
 
   .age-of-war-castles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
     gap: 6px;
   }
 
   .age-of-war-castle-card {
     padding: 6px;
-    min-height: 96px;
+    min-height: 88px;
     box-sizing: border-box;
   }
 
@@ -973,11 +989,18 @@ body.age-of-war-explain-mode #ageOfWarPanel .has-explanation {
   }
 
   .age-of-war-supply-scroll {
-    max-height: min(48dvh, 370px);
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
     padding: 2px;
-    scrollbar-gutter: stable;
+  }
+
+  .age-of-war-confirm {
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .age-of-war-confirm button {
+    min-height: 32px;
+    padding: 6px;
+    font-size: 11px;
   }
 
   #ageOfWarPanel.has-target:not(.game-over) .age-of-war-board-toggle {
@@ -986,18 +1009,6 @@ body.age-of-war-explain-mode #ageOfWarPanel .has-explanation {
 
   #ageOfWarPanel.has-target:not(.supply-open):not(.game-over) .age-of-war-supply {
     display: none;
-  }
-
-  .age-of-war-pager {
-    gap: 5px;
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  .age-of-war-pager button {
-    min-width: 32px;
-    padding: 4px 8px;
-    font-size: 18px;
   }
 
   #ageOfWarPlayers {

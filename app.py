@@ -2267,7 +2267,7 @@ async def on_room_start(sid, data):
     if room.status not in ("lobby", "game_over"):
         await _send_error(sid, "game already started")
         return
-    if room.game_type == "subtext" and room.status == "game_over":
+    if room.game_type in ("subtext", "abraca_what") and room.status == "game_over":
         await on_game_action(sid, {"action": {"type": "play_again"}})
         return
     if room.game_type == "the_crew":

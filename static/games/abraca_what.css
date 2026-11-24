@@ -276,7 +276,7 @@
   #abracaActionHint { font-size: 12px; }
 
   .abraca-turn-actions { display: flex; flex-wrap: wrap; gap: 5px; }
-  .abraca-turn-actions:not(:has(> button:not(.hidden))) { display: none; }
+  #abracaTurnActions:not(:has(> button:not(.hidden))) { display: none; }
 
   .abraca-turn-actions button,
   #abracaEndTurnBtn {
@@ -303,6 +303,27 @@
   .abraca-activity summary { padding: 8px 0 2px; cursor: pointer; overflow-wrap: anywhere; }
   #abracaActivitySummary { margin-left: 8px; font-size: 11px; }
   .abraca-activity-body { max-height: 150px; overflow: auto; padding: 7px 0 2px; line-height: 1.6; overflow-wrap: anywhere; }
+  #abracaActivityHistory h4 { margin: 8px 0 4px; font-size: 12px; }
+  .abraca-activity-row { display: grid; grid-template-columns: minmax(65px, 24%) minmax(0, 1fr); gap: 6px; align-items: center; margin: 4px 0; padding: 3px; }
+  .abraca-activity-you { background: #f1eaf8; border-radius: 5px; }
+  .abraca-activity-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #4c3f61; }
+  .abraca-activity-guesses { display: flex; gap: 4px; min-width: 0; overflow-x: auto; padding: 3px 0; overscroll-behavior-x: contain; }
+  .abraca-activity-guess { flex: 0 0 auto; padding: 2px 5px; border: 1px solid var(--abraca-edge); border-radius: 5px; background: var(--abraca-tint); color: var(--abraca-ink); white-space: nowrap; font-weight: 600; }
+  .abraca-player-marker { display: inline-block; margin-right: 4px; }
+  .abraca-player-marker[data-player-color="0"] { color: #7c3a99; }
+  .abraca-player-marker[data-player-color="1"] { color: #166b9a; }
+  .abraca-player-marker[data-player-color="2"] { color: #b54b19; }
+  .abraca-player-marker[data-player-color="3"] { color: #287348; }
+  .abraca-player-marker[data-player-color="4"] { color: #b22e68; }
+  #abracaPlayers .abraca-player-you { border-color: #9b7ac5; box-shadow: inset 3px 0 #8b5fb5; }
+  #abracaPlayers .abraca-player-winner { background: #fffbeb; border-color: #d7b35c; }
+  #abracaSettlement p, #abracaReviewStatus { margin: 5px 0 8px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .abraca-score-breakdown { margin: 4px 0 8px; font-size: 12px; line-height: 1.6; }
+  .abraca-score-line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 8px; }
+  .abraca-score-total { display: block; margin-top: 3px; color: #4c3f61; }
+  .abraca-revealed-label { margin-bottom: 4px; font-size: 11px; color: #746486; }
+  .abraca-review-actions { margin-top: 8px; }
+  #abracaNewGameRow { display: flex; flex: 1; min-width: 0; }
 
   #abracaPanel [data-abraca-tip] { cursor: help; }
 

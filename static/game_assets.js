@@ -644,14 +644,14 @@ const GAME_ASSETS = {
   },
   "abraca_what": {
     "scripts": [
-      "/static/games/abraca_what.js?v=app_v5"
+      "/static/games/abraca_what.js?v=app_v6"
     ],
     "styles": [],
     "panel": "abracaPanel",
     "panelTitle": "Abraca What",
     "header": "showAbracaHeaderActions",
-    "markup": "/static/games/abraca_what.html?v=3",
-    "styleFragments": "/static/games/abraca_what.css?v=3"
+    "markup": "/static/games/abraca_what.html?v=4",
+    "styleFragments": "/static/games/abraca_what.css?v=4"
   },
   "fang_niao": {
     "scripts": [
@@ -845,13 +845,13 @@ const GAME_ASSETS = {
   "age_of_war": {
     "panelTitle": "Age of War",
     "scripts": [
-      "/static/games/age_of_war.js?v=app_v6"
+      "/static/games/age_of_war.js?v=app_v7"
     ],
     "styles": [],
     "panel": "ageOfWarPanel",
     "header": "showAgeOfWarHeaderActions",
-    "markup": "/static/games/age_of_war.html?v=2",
-    "styleFragments": "/static/games/age_of_war.css?v=2"
+    "markup": "/static/games/age_of_war.html?v=3",
+    "styleFragments": "/static/games/age_of_war.css?v=3"
   },
   "wandering_towers": {
     "scripts": [
