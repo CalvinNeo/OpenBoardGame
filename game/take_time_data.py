@@ -1,9 +1,7 @@
-"""Verified introductory clock and explicitly original Take Time exercises.
+"""Official forty-clock campaign and separately labelled original exercises."""
 
-Rules: Libellud TT_RULES_EN_WEB.pdf and TT_LEAFLET_EN.pdf (2025).
-Only awakening_1 reproduces an official clock, shown on rulebook pages 8–9.
-"""
-
+import json
+from pathlib import Path
 from typing import Dict, List
 
 
@@ -23,9 +21,29 @@ def _clock(clock_id: str, name: str, rules: Dict = None, **options) -> Dict:
     }
 
 
-CLOCKS: List[Dict] = [
-    _clock("awakening_1", "苏醒 · 官方入门", {0: {"colors": ["solar"]}, 5: {"count": 3}},
-           source="official_1_1", cap=None),
+def _official_clocks() -> List[Dict]:
+    data = json.loads((Path(__file__).parent / "assets/take_time/clocks.json").read_text())
+    clocks = []
+    for chapter in data["chapters"]:
+        number = chapter["number"]
+        for position, definition in enumerate(chapter["clocks"], 1):
+            options = dict(definition)
+            rules = {int(index): rule for index, rule in options.pop("segments", {}).items()}
+            if number in (5, 6):
+                rules = {index: {"count": 2, **rules.get(index, {})} for index in range(6)}
+            clock_id = options.pop("id", f"official_{number}_{position}")
+            clocks.append(_clock(
+                clock_id, f"{number}.{position} · {chapter['name']}", rules,
+                **{"source": f"official_{number}_{position}", "chapter": number,
+                   "chapter_name": chapter["name"], "number": position,
+                   "movable_hand": number >= 3, "metric": "difference" if number == 6 else "sum",
+                   **options}))
+    return clocks
+
+
+OFFICIAL_CLOCKS = _official_clocks()
+OFFICIAL_CLOCK_IDS = [clock["id"] for clock in OFFICIAL_CLOCKS]
+PRACTICE_CLOCKS: List[Dict] = [
     _clock("open_sky", "晴空", {}),
     _clock("sun_and_moon", "日月相伴", {0: {"colors": ["solar"]},
            3: {"colors": ["solar", "lunar"]}, 5: {"count": 3}}),
@@ -41,8 +59,15 @@ CLOCKS: List[Dict] = [
     _clock("differences", "光与影", {i: {"count": 2} for i in range(6)},
            movable_hand=True, metric="difference"),
 ]
+CLOCKS = OFFICIAL_CLOCKS + PRACTICE_CLOCKS
 CLOCK_BY_ID = {clock["id"]: clock for clock in CLOCKS}
 CLOCK_IDS = list(CLOCK_BY_ID)
+PRACTICE_CLOCK_IDS = [clock["id"] for clock in PRACTICE_CLOCKS]
+
+
+def clock_route(clock_id: str) -> List[str]:
+    route = OFFICIAL_CLOCK_IDS if clock_id in OFFICIAL_CLOCK_IDS else PRACTICE_CLOCK_IDS
+    return route[route.index(clock_id):]
 
 
 def segment_rule_labels(rule: Dict) -> List[str]:
@@ -58,6 +83,20 @@ def segment_rule_labels(rule: Dict) -> List[str]:
         labels.append(f"全盘最接近 {rule['closest']}（可并列）")
     if "extreme" in rule:
         labels.append("含全场最小牌" if rule["extreme"] == "lowest" else "含全场最大牌")
+    if "forbidden" in rule:
+        labels.append("禁止牌值 " + ", ".join(map(str, rule["forbidden"])))
+    if "suit_extreme" in rule:
+        labels.append({"solar_lowest": "含最小太阳 ☀️", "lunar_highest": "含最大月亮 🌙",
+                       "both": "含最小太阳 ☀️ 与最大月亮 🌙"}[rule["suit_extreme"]])
+    if rule.get("draw"):
+        labels.append("放牌后补一张 📥")
+    if "rotate" in rule:
+        labels.append("钟盘顺时针旋转 ↻" if rule["rotate"] == 1 else "钟盘逆时针旋转 ↺")
+    if rule.get("blocked"):
+        labels.append("禁止直接放牌 ⛔")
+    if "boundary" in rule:
+        boundary = rule["boundary"]
+        labels.append("与前一段总和相等" if boundary.get("equal") else f"与前一段总和相差 ≥ {boundary['gap']}")
     return labels
 
 
@@ -75,6 +114,7 @@ ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
         _action("ready"),
+        _action("select_clock", {"clock_id": {"enum": CLOCK_IDS}}),
         _action("set_plan", {"segment": {"type": "integer", "minimum": 0, "maximum": 5},
                              "target": {"type": "integer", "minimum": 0, "maximum": 36}}),
         _action("set_hand", {"segment": {"type": "integer", "minimum": 0, "maximum": 5}}),

@@ -6,7 +6,8 @@ const output = 'tmp/game-favorites';
 const favoritesKey = 'openboardgame:favorite_games';
 
 (async () => {
-  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const browser = await chromium.launch({ channel: 'chrome', headless: true,
+    args: ['--host-resolver-rules=MAP favorites-http.test 127.0.0.1', '--no-proxy-server'] });
   const errors = [];
   fs.mkdirSync(output, { recursive: true });
 
@@ -216,8 +217,21 @@ const favoritesKey = 'openboardgame:favorite_games';
         });
         await page.locator('#favoriteGamesImportBtn').click();
         await page.waitForFunction(() => !favoriteGamesImportBtn.disabled);
-        assert.match(await page.locator('#favoriteGamesStatus').textContent(), /Import failed: Allow clipboard access/);
+        assert.equal(await page.locator('#favoriteGamesPasteForm').isVisible(), true);
+        assert.equal(await page.locator('#favoriteGamesPasteInput').evaluate(element => element === document.activeElement), true);
+        assert.match(await page.locator('#favoriteGamesStatus').textContent(), /Paste your backup/);
         assert.equal(await page.evaluate(() => localStorage.getItem('openboardgame:favorite_games')), merged);
+        await checkLayout(page, width, 'manual-paste');
+        await page.locator('#favoriteGamesPasteInput').fill('{');
+        await page.locator('#favoriteGamesPasteForm button[type="submit"]').click();
+        assert.match(await page.locator('#favoriteGamesStatus').textContent(), /Import failed:/);
+        assert.equal(await page.locator('#favoriteGamesPasteInput').inputValue(), '{');
+        assert.equal(await page.evaluate(() => localStorage.getItem('openboardgame:favorite_games')), merged);
+        await page.locator('#favoriteGamesPasteInput').fill(JSON.stringify({ ...backup, game_ids: ['cabo'] }));
+        await page.locator('#favoriteGamesPasteForm button[type="submit"]').click();
+        assert.match(await page.locator('#favoriteGamesStatus').textContent(), /Imported 0 new favorites/);
+        assert.equal(await page.locator('#favoriteGamesPasteForm').isVisible(), false);
+        assert.equal(await page.locator('#favoriteGamesImportBtn').evaluate(element => element === document.activeElement), true);
         await page.locator('#favoriteGamesExportBtn').click();
         await page.waitForFunction(() => !favoriteGamesExportBtn.disabled);
         assert.match(await page.locator('#favoriteGamesStatus').textContent(), /Backup failed:/);
@@ -226,7 +240,22 @@ const favoritesKey = 'openboardgame:favorite_games';
         });
         await page.locator('#favoriteGamesImportBtn').click();
         await page.waitForFunction(() => !favoriteGamesImportBtn.disabled);
-        assert.match(await page.locator('#favoriteGamesStatus').textContent(), /requires HTTPS or localhost/);
+        assert.equal(await page.locator('#favoriteGamesPasteForm').isVisible(), true);
+        await page.keyboard.press('Tab');
+        assert.equal(await page.locator('#favoriteGamesPasteForm button[type="submit"]').evaluate(element => element === document.activeElement), true);
+        await page.keyboard.press('Shift+Tab');
+        assert.equal(await page.locator('#favoriteGamesPasteInput').evaluate(element => element === document.activeElement), true);
+        await page.locator('#favoriteGamesPasteInput').fill('discarded');
+        await page.locator('#favoriteGamesPasteCancelBtn').click();
+        assert.equal(await page.locator('#favoriteGamesPasteForm').isVisible(), false);
+        assert.equal(await page.locator('#favoriteGamesPasteInput').inputValue(), '');
+        await page.locator('#favoriteGamesImportBtn').click();
+        await page.waitForFunction(() => !favoriteGamesImportBtn.disabled);
+        await page.locator('#favoriteGamesPasteInput').fill('discarded on close');
+        await page.keyboard.press('Escape');
+        await page.locator('#settingsBtn').click();
+        assert.equal(await page.locator('#favoriteGamesPasteForm').isVisible(), false);
+        assert.equal(await page.locator('#favoriteGamesPasteInput').inputValue(), '');
         await page.evaluate(() => {
           delete navigator.clipboard;
           document.execCommand = window.favoritesTestExecCommand;
@@ -284,6 +313,32 @@ const favoritesKey = 'openboardgame:favorite_games';
       } finally {
         await context.close();
       }
+    }
+    const httpContext = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
+    try {
+      const httpPage = await httpContext.newPage();
+      httpPage.on('pageerror', error => errors.push(error.message));
+      await httpPage.goto(base);
+      const httpBackup = { type: 'openboardgame:favorites', version: 1, game_ids: ['cabo'] };
+      await httpPage.evaluate(text => navigator.clipboard.writeText(text), JSON.stringify(httpBackup));
+      const httpUrl = new URL(base);
+      httpUrl.hostname = 'favorites-http.test';
+      await httpPage.goto(httpUrl.href);
+      await httpPage.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+      assert.equal(await httpPage.evaluate(() => window.isSecureContext), false, 'Actual HTTP origin is insecure');
+      assert.equal(await httpPage.evaluate(() => typeof navigator.clipboard), 'undefined');
+      await httpPage.locator('#settingsBtn').click();
+      await httpPage.locator('#favoriteGamesImportBtn').click();
+      await httpPage.locator('#favoriteGamesPasteInput').waitFor({ state: 'visible' });
+      await httpPage.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V');
+      assert.equal(await httpPage.locator('#favoriteGamesPasteInput').inputValue(), JSON.stringify(httpBackup));
+      await checkLayout(httpPage, 390, 'http-paste');
+      await httpPage.locator('#favoriteGamesPasteForm button[type="submit"]').click();
+      assert.match(await httpPage.locator('#favoriteGamesStatus').textContent(), /Imported 1 new favorites/);
+      assert.deepEqual(await httpPage.evaluate(() => JSON.parse(localStorage.getItem('openboardgame:favorite_games'))), ['cabo']);
+      console.log('Insecure HTTP origin: native clipboard paste and favorites import passed');
+    } finally {
+      await httpContext.close();
     }
     assert.deepEqual(errors, [], 'Browser errors');
   } finally {

@@ -3,7 +3,7 @@ import json
 import unittest
 
 from game.take_time import TakeTimeGame, _evaluate
-from game.take_time_data import CLOCK_IDS
+from game.take_time_data import CLOCK_BY_ID, CLOCK_IDS, OFFICIAL_CLOCK_IDS, PRACTICE_CLOCK_IDS
 
 
 class TakeTimeTests(unittest.TestCase):
@@ -293,7 +293,7 @@ class TakeTimeTests(unittest.TestCase):
         self.assertEqual(state["phase"], "round_end")
         self.act(state, "p2", "next_round")
         self.assertEqual(state["phase"], "discussion")
-        self.assertEqual(state["clock_id"], "open_sky")
+        self.assertEqual(state["clock_id"], "official_1_2")
         self.assertEqual(state["regrets"], ["awakening_1"])
         self.assertEqual(state["bonus"], 0)
 
@@ -411,19 +411,196 @@ class TakeTimeTests(unittest.TestCase):
                 with self.subTest(clock=clock, count=count):
                     state = self.make_game(count, clock)
                     self.ready_all(state)
-                    for _ in range(12):
+                    for _ in range(24):
+                        if state["phase"] != "placement":
+                            break
                         pid = state["current_turn"] or "p0"
                         action = TakeTimeGame.bot_move(state, pid)
                         self.assertIsNotNone(action)
                         _, error = TakeTimeGame.apply_action(state, pid, action)
                         self.assertIsNone(error)
                     self.assertEqual(state["phase"], "round_end")
-                    self.assertEqual(sum(len(cards) for cards in state["board"]), 12)
+                    self.assertEqual(sum(len(cards) for cards in state["board"]), state["placed_count"])
+                    self.assertGreaterEqual(state["placed_count"], 12)
                     self.assertTrue(all(not player["hand"] and not player["reserve"] for player in state["players"].values()))
                     self.assertTrue(all(card["value"] is not None for cards in TakeTimeGame.get_public_view(state, "observer")["board"] for card in cards))
                     self.assertEqual(TakeTimeGame.bot_move(state, "p1"), {"type":"next_round"})
                     self.act(state, "p1", "next_round")
                     self.assertEqual(state["phase"], "round_end")
+
+    def test_official_campaign_contains_ten_chapters_and_separate_practice(self):
+        self.assertEqual(len(OFFICIAL_CLOCK_IDS), 40)
+        self.assertEqual(len(PRACTICE_CLOCK_IDS), 11)
+        self.assertEqual(len(set(CLOCK_IDS)), 51)
+        for chapter in range(1, 11):
+            clocks = [CLOCK_BY_ID[clock_id] for clock_id in OFFICIAL_CLOCK_IDS
+                      if CLOCK_BY_ID[clock_id]["chapter"] == chapter]
+            self.assertEqual([clock["number"] for clock in clocks], [1, 2, 3, 4])
+        self.assertEqual(self.make_game()["itinerary"], OFFICIAL_CLOCK_IDS)
+        self.assertEqual(self.make_game(clock="open_sky")["itinerary"], PRACTICE_CLOCK_IDS)
+        self.assertEqual(self.make_game(clock="official_10_4")["itinerary"], ["official_10_4"])
+
+    def test_setup_selects_a_shared_clock_and_locks_after_anyone_looks(self):
+        players = [{"player_id": name, "name": name, "seat": index} for index, name in enumerate(("Alice", "Bob"))]
+        state = TakeTimeGame.init_game({"seed": 1}, players)
+        self.assertEqual(state["phase"], "setup")
+        self.assertEqual(TakeTimeGame.get_legal_actions(state, "Alice"), ["select_clock"])
+        self.assertIsNone(TakeTimeGame.bot_move(state, "Bob"))
+        self.act(state, "Bob", "select_clock", clock_id="official_6_4")
+        self.assertEqual(state["phase"], "discussion")
+        self.assertEqual(state["clock_id"], "official_6_4")
+        self.assertEqual(TakeTimeGame.get_public_view(state, "Alice")["clock"]["id"], "official_6_4")
+        self.act(state, "Alice", "ready")
+        for player_id in ("Alice", "Bob", "observer"):
+            before = copy.deepcopy(state)
+            _, error = TakeTimeGame.apply_action(state, player_id, {"type": "select_clock", "clock_id": "awakening_1"})
+            self.assertIsNotNone(error)
+            self.assertEqual(state, before)
+
+    def test_review_clock_selection_requires_every_confirmation_and_survives_save(self):
+        state = self.make_game()
+        self.finish_round(state)
+        self.act(state, "p0", "select_clock", clock_id="official_8_3")
+        self.act(state, "p1", "next_round")
+        self.assertEqual(state["phase"], "round_end")
+        self.act(state, "p0", "select_clock", clock_id="official_10_4")
+        self.assertEqual(state["next_ready"], [])
+        loaded = TakeTimeGame.deserialize(TakeTimeGame.serialize(state))
+        for game in (state, loaded):
+            self.confirm_all(game)
+            self.assertEqual(game["clock_id"], "official_10_4")
+            self.assertEqual(game["phase"], "discussion")
+            self.assertEqual(game["completed"], [])
+            self.assertEqual(game["regrets"], [])
+            self.assertNotIn("pending_clock", game)
+        self.assertEqual(state, loaded)
+
+    def test_review_regular_choice_cancels_proposed_clock(self):
+        state = self.make_game()
+        self.finish_round(state)
+        self.act(state, "p0", "select_clock", clock_id="official_8_1")
+        self.act(state, "p1", "choose_next", choice="retry")
+        self.assertNotIn("pending_clock", state)
+        self.confirm_all(state)
+        self.assertEqual(state["clock_id"], "awakening_1")
+
+    def test_official_forbidden_cards_only_affect_reveal(self):
+        state = self.make_game(clock="official_2_1")
+        self.ready_all(state)
+        self.assertEqual(TakeTimeGame.get_public_view(state, "p0")["legal_segments"], list(range(6)))
+        self.set_board(state, [[(value, "solar")] for value in (1, 4, 5, 6, 7, 8)])
+        result = _evaluate(state)
+        self.assertFalse(result["segments"][0]["passed"])
+        self.assertTrue(all(segment["passed"] for segment in result["segments"][1:]))
+
+    def test_two_lowest_cards_must_be_split_between_marked_segments(self):
+        state = self.make_game(clock="official_3_2")
+        self.set_board(state, [[(7, "solar")], [(8, "solar")], [(2, "solar")],
+                               [(3, "solar")], [(5, "solar")], [(1, "solar")]])
+        result = _evaluate(state)
+        for index in (2, 5):
+            check = next(check for check in result["segments"][index]["checks"] if "最小牌" in check["label"])
+            self.assertTrue(check["passed"])
+        state["board"][5].append({"value": 1, "color": "lunar"})
+        result = _evaluate(state)
+        for index in (2, 5):
+            check = next(check for check in result["segments"][index]["checks"] if "最小牌" in check["label"])
+            self.assertFalse(check["passed"])
+
+    def test_leftmost_rule_preserves_hand_order_and_rejects_other_cards(self):
+        state = self.make_game(clock="official_4_3")
+        self.ready_all(state)
+        view = TakeTimeGame.get_public_view(state, "p0")
+        self.assertEqual(view["legal_card_ids"], [state["players"]["p0"]["hand"][0]["id"]])
+        before = copy.deepcopy(state)
+        _, error = TakeTimeGame.apply_action(state, "p0", {
+            "type": "place", "card_id": state["players"]["p0"]["hand"][1]["id"], "segment": 0, "face_up": False})
+        self.assertIsNotNone(error)
+        self.assertEqual(state, before)
+
+    def test_intrusion_draws_private_cards_and_waits_until_all_hands_empty(self):
+        state = self.make_game(count=3, clock="official_7_1")
+        self.ready_all(state)
+        self.place(state, segment=0)
+        self.assertEqual(len(state["players"]["p0"]["hand"]), 4)
+        self.assertEqual(len(state["deck"]), 11)
+        view = TakeTimeGame.get_public_view(state, "p1")
+        self.assertNotIn("deck", view)
+        self.assertEqual(view["deck_count"], 11)
+        self.assertTrue(all(card["value"] is None for card in view["players"][0]["hand"]))
+        while state["placed_count"] < 12:
+            self.place(state, segment=0)
+        self.assertEqual(state["phase"], "placement")
+        self.assertEqual(state["deck"], [])
+        while state["phase"] == "placement":
+            self.place(state, segment=0)
+        self.assertEqual(state["placed_count"], 24)
+
+    def test_intrusion_last_card_rule_uses_actual_final_placement(self):
+        state = self.make_game(clock="official_7_2")
+        self.ready_all(state)
+        for player in state["players"].values():
+            player["hand"] = []
+            player["reserve"] = []
+        state["players"]["p0"]["hand"] = [{"id": "last", "color": "solar", "value": 9}]
+        view = TakeTimeGame.get_public_view(state, "p0")
+        self.assertEqual(view["legal_segments"], [2, 3, 5])
+        self.act(state, "p0", "place", card_id="last", segment=2, face_up=False)
+        self.assertEqual(state["phase"], "placement")
+        self.assertEqual(state["current_turn"], "p0")
+        state["deck"] = []
+        self.assertEqual(TakeTimeGame.get_public_view(state, "p0")["legal_segments"], [3])
+
+    def test_rotation_moves_rules_but_not_cards_or_movable_hand(self):
+        state = self.make_game(clock="official_8_1")
+        self.ready_all(state)
+        self.assertNotIn(1, TakeTimeGame.get_public_view(state, "p0")["legal_segments"])
+        self.place(state, segment=5)
+        view = TakeTimeGame.get_public_view(state, "p1")
+        self.assertEqual(state["rotation"], 1)
+        self.assertEqual(len(state["board"][5]), 1)
+        self.assertEqual(state["hand_segment"], 0)
+        self.assertNotIn(2, view["legal_segments"])
+        self.assertEqual(view["clock"]["segments"][4]["range"], [16, 20])
+        state = self.make_game(clock="official_8_4")
+        self.ready_all(state)
+        self.place(state, segment=5)
+        self.assertEqual(state["rotation"], 5)
+        self.assertEqual(state["hand_segment"], 5)
+
+    def test_unity_boundary_rules_do_not_require_all_segments_equal(self):
+        state = self.make_game(clock="official_9_1")
+        self.set_board(state, [[(1, "solar")], [(2, "solar")], [(3, "solar")],
+                               [(3, "lunar"), (1, "lunar")], [(5, "solar")], [(6, "solar")]])
+        result = _evaluate(state)
+        boundary = next(check for check in result["segments"][3]["checks"] if "相等" in check["label"])
+        self.assertFalse(boundary["passed"])
+        state["board"][3].pop()
+        boundary = next(check for check in _evaluate(state)["segments"][3]["checks"] if "相等" in check["label"])
+        self.assertTrue(boundary["passed"])
+        self.assertEqual(sum("相等" in check["label"] for segment in result["segments"] for check in segment["checks"]), 1)
+
+    def test_cohesiveness_checks_first_cards_from_separate_hand(self):
+        state = self.make_game(clock="official_10_1")
+        self.set_board(state, [[(3, "solar")], [(4, "solar")], [(5, "solar")],
+                               [(6, "solar")], [(7, "solar")], [(2, "solar")]])
+        result = _evaluate(state)
+        first_checks = [check for segment in result["segments"] for check in segment["checks"] if "首张" in check["label"]]
+        self.assertEqual(len(first_checks), 5)
+        self.assertTrue(all(check["passed"] for check in first_checks))
+        state["board"][0][0]["value"] = 8
+        first_checks = [check for segment in _evaluate(state)["segments"] for check in segment["checks"] if "首张" in check["label"]]
+        self.assertFalse(all(check["passed"] for check in first_checks))
+
+    def test_second_hand_only_on_final_clock_and_advances_after_each_play(self):
+        for clock in ("official_10_1", "official_10_2", "official_10_3"):
+            self.assertIsNone(self.make_game(clock=clock)["second_hand"])
+        state = self.make_game(clock="official_10_4")
+        self.ready_all(state)
+        self.assertEqual(TakeTimeGame.get_public_view(state, "p0")["legal_segments"], [0, 1, 3, 4])
+        self.place(state, segment=0)
+        self.assertEqual(state["second_hand"], 3)
+        self.assertEqual(TakeTimeGame.get_public_view(state, "p1")["legal_segments"], [1, 2, 4, 5])
 
 
 if __name__ == "__main__":

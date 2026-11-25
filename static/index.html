@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v160" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v161" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -504,6 +504,15 @@
             <button id="favoriteGamesExportBtn" type="button">Copy backup</button>
             <button id="favoriteGamesImportBtn" type="button">Paste &amp; import</button>
           </div>
+          <form id="favoriteGamesPasteForm" class="settings-favorites-paste hidden">
+            <label for="favoriteGamesPasteInput">Paste favorites backup</label>
+            <p id="favoriteGamesPasteHint" class="settings-hint">Press Ctrl+V / ⌘V, or touch and hold to paste, then choose Import.</p>
+            <textarea id="favoriteGamesPasteInput" rows="3" required spellcheck="false" autocomplete="off" autocapitalize="none" aria-describedby="favoriteGamesPasteHint"></textarea>
+            <div class="settings-tool-actions">
+              <button type="submit">Import</button>
+              <button id="favoriteGamesPasteCancelBtn" type="button">Cancel</button>
+            </div>
+          </form>
           <p id="favoriteGamesStatus" class="settings-hint" role="status" aria-live="polite"></p>
         </div>
         <div class="settings-tools">
@@ -905,27 +914,6 @@
                       </select>
                     </div>
                   </div>
-                  <div class="game-config-card hidden" id="takeTimeConfigBox" aria-hidden="true">
-                    <div class="game-config-title">Take Time</div>
-                    <div class="row">
-                      <label for="takeTimeStartClock">Start Clock</label>
-                      <select id="takeTimeStartClock">
-                        <option value="awakening_1">苏醒 · Official 1.1</option>
-                        <option value="open_sky">晴空 · Practice</option>
-                        <option value="sun_and_moon">日月相伴 · Practice</option>
-                        <option value="windows">时光之窗 · Practice</option>
-                        <option value="echoes">回声 · Practice</option>
-                        <option value="first_and_last">始与终 · Practice</option>
-                        <option value="silent_night">静夜 · Practice</option>
-                        <option value="high_tide">潮起 · Practice</option>
-                        <option value="low_tide">潮落 · Practice</option>
-                        <option value="orbit">星轨 · Practice</option>
-                        <option value="pairs">双星 · Practice</option>
-                        <option value="differences">光与影 · Practice</option>
-                      </select>
-                    </div>
-                    <p class="hint">1 official introductory clock + 11 original practice clocks.</p>
-                  </div>
                   <div class="game-config-card hidden" id="eternalDecksConfigBox" aria-hidden="true">
                     <div class="game-config-title">Eternal Decks · Stage A</div>
                     <p class="hint">Prototype card data · 2 or 4 seats, including bots. Other stages and the 3-player jewel card are not available.</p>
@@ -1245,6 +1233,7 @@
             <div class="game-panel-title">
               <h2>Game</h2>
               <button id="gameReconnectBtn" class="game-reconnect-btn" type="button">Reconnect</button>
+              <template id="takeTimeClockButtonMount"></template>
             </div>
             <div class="panel-header-actions" id="rebelPrincessHeaderActions" style="display: none;">
               <button id="rebelHelpBtn" type="button" aria-label="Help">Help</button>
@@ -1876,7 +1865,8 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=329" defer></script>
+  <script src="/static/game_assets.js?v=332" defer></script>
+  <template id="boomerangAustraliaDialog"></template>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v49" defer></script>
   <script src="/static/games/shared_help.js?v=4" defer></script>
@@ -1919,6 +1909,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v75" defer></script>
-  <script src="/static/room.js?v=app_v118" defer></script>
+  <script src="/static/room.js?v=app_v119" defer></script>
 </body>
 </html>

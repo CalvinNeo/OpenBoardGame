@@ -299,13 +299,13 @@ const GAME_ASSETS = {
   },
   "azul": {
     "scripts": [
-      "/static/games/azul.js?v=app_v8"
+      "/static/games/azul.js?v=app_v9"
     ],
     "styles": [],
     "panel": "azulPanel",
     "header": "showAzulHeaderActions",
     "markup": "/static/games/azul.html?v=4",
-    "styleFragments": "/static/games/azul.css?v=5"
+    "styleFragments": "/static/games/azul.css?v=6"
   },
   "sagrada": {
     "scripts": ["/static/games/sagrada.js?v=5"],
@@ -983,15 +983,15 @@ const GAME_ASSETS = {
   },
   "take_time": {
     "scripts": [
-      "/static/games/take_time.js?v=2_h3"
+      "/static/games/take_time.js?v=3"
     ],
     "styles": [
-      "/static/take_time.css?v=3"
+      "/static/take_time.css?v=4"
     ],
     "panel": "takeTimePanel",
     "panelTitle": "⏳ 时序谜局",
     "header": "showTakeTimeHeaderActions",
-    "markup": "/static/games/take_time.html?v=1_h3"
+    "markup": "/static/games/take_time.html?v=2"
   },
   "eternal_decks": {
     "scripts": [
@@ -1061,12 +1061,13 @@ const GAME_ASSETS = {
   },
   "boomerang_australia": {
     "scripts": [
-      "/static/games/boomerang_australia.js?v=4"
+      "/static/games/boomerang_australia.js?v=5"
     ],
     "styles": [
-      "/static/boomerang_australia.css?v=2"
+      "/static/boomerang_australia.css?v=3"
     ],
     "panel": "boomerangAustraliaPanel",
+    "markup": "/static/games/boomerang_australia.html?v=1",
     "panelTitle": "🪃 世界巡游 · 澳洲",
     "header": "showBoomerangAustraliaHeaderActions"
   },

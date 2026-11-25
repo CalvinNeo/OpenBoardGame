@@ -1,0 +1,70 @@
+{
+  "sources": {
+    "rules": "https://cdn.svc.asmodee.net/production-libellud/uploads/2025/09/PRESS-KIT-EN.zip",
+    "rules_file": "PRESS KIT EN/03_CONTENT/_RULES/TT_LEAFLET_EN.pdf",
+    "clock_reference": "https://github.com/JuggerC/taketime-web/tree/main/public/img/clocks",
+    "note": "Rule facts transcribed from clock faces and checked against the publisher's chapter sheets. No third-party code or commercial artwork is included. Segments are zero-indexed clockwise from twelve o'clock. Boundaries name the segment immediately clockwise of the boundary."
+  },
+  "chapters": [
+    {"number": 1, "name": "Awakening", "clocks": [
+      {"id": "awakening_1", "cap": null, "segments": {"0": {"colors": ["solar"]}, "5": {"count": 3}}},
+      {"cap": null, "segments": {"2": {"range": [8, 12]}, "3": {"count": 3}}},
+      {"cap": null, "segments": {"5": {"range": [20, 30]}}, "required_plays": {"1": 2, "2": 1}},
+      {"segments": {"0": {"closest": 9}, "3": {"colors": ["lunar"]}}}
+    ]},
+    {"number": 2, "name": "Limitation", "clocks": [
+      {"segments": {"0": {"forbidden": [1, 2, 3]}, "1": {"forbidden": [1, 2, 3]}, "2": {"forbidden": [1, 2, 3]}}},
+      {"segments": {"2": {"forbidden": [7, 8, 9]}, "3": {"forbidden": [7, 8, 9]}}},
+      {"segments": {"0": {"forbidden": [1, 2, 3]}, "2": {"forbidden": [4, 5, 6]}, "3": {"forbidden": [7, 8, 9]}, "5": {"forbidden": [10, 11, 12]}}},
+      {"no_face_up": true}
+    ]},
+    {"number": 3, "name": "As Within, So Without", "clocks": [
+      {"segments": {"1": {"extreme": "highest"}, "3": {"closest": 20}}},
+      {"segments": {"2": {"extreme": "lowest"}, "5": {"extreme": "lowest"}}, "required_plays": {"last": 3}},
+      {"segments": {"0": {"extreme": "highest"}, "2": {"extreme": "lowest"}}, "required_plays": {"1": 3, "2": 3}},
+      {"segments": {"0": {"suit_extreme": "lunar_highest"}, "2": {"count": 2}, "3": {"closest": 6}, "4": {"suit_extreme": "solar_lowest"}}}
+    ]},
+    {"number": 4, "name": "Roar", "clocks": [
+      {"play_order": "highest", "segments": {"4": {"count": 1}}, "required_plays": {"1": 1}},
+      {"play_order": "lowest", "segments": {"0": {"extreme": "highest"}}, "required_plays": {"1": 5}},
+      {"play_order": "leftmost", "segments": {"0": {"forbidden": [1, 2, 3]}, "2": {"forbidden": [1, 2, 3]}, "4": {"forbidden": [1, 2, 3]}}},
+      {"play_order": "leftmost", "segments": {"2": {"closest": 12}, "3": {"extreme": "lowest"}, "4": {"extreme": "highest"}}}
+    ]},
+    {"number": 5, "name": "Tranquility", "clocks": [
+      {},
+      {"segments": {"3": {"closest": 15}, "5": {"extreme": "lowest"}}},
+      {"segments": {"0": {"extreme": "highest"}, "5": {"extreme": "lowest"}}},
+      {"segments": {"2": {"colors": ["solar", "lunar"]}, "3": {"colors": ["solar", "lunar"]}}, "required_plays": {"2": 4, "3": 1}}
+    ]},
+    {"number": 6, "name": "As Above, So Below", "clocks": [
+      {"segments": {"2": {"extreme": "highest"}}},
+      {"segments": {"3": {"forbidden": [1, 2, 3]}, "4": {"colors": ["solar", "lunar"]}}},
+      {"segments": {"1": {"closest": 12}}, "required_plays": {"2": 4, "3": 4}},
+      {"segments": {"0": {"suit_extreme": "solar_lowest"}, "1": {"closest": 14}, "3": {"suit_extreme": "lunar_highest"}}}
+    ]},
+    {"number": 7, "name": "Intrusion", "clocks": [
+      {"segments": {"0": {"draw": true}, "2": {"forbidden": [7, 8, 9]}, "3": {"forbidden": [7, 8, 9]}}},
+      {"segments": {"2": {"draw": true}, "5": {"draw": true}}, "required_plays": {"last": 3}},
+      {"segments": {"3": {"suit_extreme": "both"}, "4": {"draw": true}, "5": {"colors": ["solar", "lunar"]}}},
+      {"segments": {"0": {"draw": true}, "2": {"draw": true}, "4": {"draw": true}}}
+    ]},
+    {"number": 8, "name": "Revolution", "clocks": [
+      {"segments": {"1": {"blocked": true}, "3": {"range": [16, 20]}, "5": {"rotate": 1}}},
+      {"segments": {"0": {"rotate": 1}, "1": {"blocked": true}, "2": {"blocked": true}, "3": {"rotate": 1}, "5": {"blocked": true}}},
+      {"segments": {"0": {"count": 2}, "2": {"count": 1}, "3": {"rotate": 1}, "4": {"rotate": 1}, "5": {"rotate": 1}}},
+      {"movable_hand": false, "segments": {"0": {"rotate": 1}, "1": {"rotate": 1}, "4": {"rotate": -1}, "5": {"rotate": -1}}}
+    ]},
+    {"number": 9, "name": "Unity", "clocks": [
+      {"segments": {"3": {"extreme": "highest"}}, "boundaries": {"3": {"equal": true}}},
+      {"boundaries": {"0": {"gap": 2}, "1": {"gap": 2}, "2": {"gap": 2}, "3": {"gap": 2}, "4": {"gap": 2}, "5": {"gap": 2}}},
+      {"segments": {"0": {"extreme": "lowest"}, "3": {"extreme": "lowest"}}, "boundaries": {"1": {"equal": true}, "4": {"equal": true}}},
+      {"spread": 4}
+    ]},
+    {"number": 10, "name": "Cohesiveness", "clocks": [
+      {"movable_hand": false, "first_hand": 5},
+      {"movable_hand": false, "first_hand": 4, "segments": {"1": {"count": 3}}},
+      {"movable_hand": false, "first_hand": 3, "required_plays": {"1": 1, "last": 4}},
+      {"movable_hand": false, "first_hand": 1, "second_hand": 2}
+    ]}
+  ]
+}

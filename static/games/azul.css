@@ -476,6 +476,9 @@
 }
 
 .azul-wall-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: 100%;
   max-width: 32px;
   aspect-ratio: 1;
@@ -487,6 +490,21 @@
 .azul-wall-cell.filled {
   opacity: 1;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+.azul-wall-score {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-width: 1.2em;
+  border-radius: 3px;
+  background: #111827;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
 }
 
 .azul-floor {

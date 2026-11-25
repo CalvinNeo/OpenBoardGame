@@ -71,6 +71,7 @@ const AZUL_HELP_TEXT = `
 
   <h3>Scoring</h3>
   <p>Click any player's name and score in Players to see the current score components. The banner disappears automatically.</p>
+  <p>Numbers on filled wall tiles show the points earned when that tile was placed, before floor penalties and end-game bonuses. Later connections do not change these numbers. A question mark (?) means an older save did not record that tile's score.</p>
   <ul>
     <li>When all factories and the center are empty, move one tile from each full pattern line to the wall and score.</li>
     <li>New tile scores 1 if isolated, otherwise score connected row + column lengths.</li>
@@ -585,7 +586,7 @@ function renderAzulCenter(view) {
   azulCenter.appendChild(wrap);
 }
 
-function buildAzulWallGrid(wall, compact) {
+function buildAzulWallGrid(wall, compact, wallScores) {
   const grid = document.createElement("div");
   grid.className = "azul-wall-grid";
   if (compact) {
@@ -599,11 +600,23 @@ function buildAzulWallGrid(wall, compact) {
       if (color) {
         cell.classList.add(color);
       }
-      if (wall && wall[row] && wall[row][col]) {
+      const filled = !!(wall && wall[row] && wall[row][col]);
+      let scoreTip = "";
+      if (filled) {
         cell.classList.add("filled");
+        const points = wallScores?.[row]?.[col];
+        const hasScore = Number.isInteger(points) && points > 0;
+        const score = document.createElement("span");
+        score.className = "azul-wall-score";
+        score.textContent = hasScore ? String(points) : "?";
+        score.setAttribute("aria-hidden", "true");
+        cell.appendChild(score);
+        scoreTip = hasScore
+          ? ` Earned ${points} ${points === 1 ? "point" : "points"} when placed, before floor penalties and end-game bonuses.`
+          : " Placement score unavailable in this older save (?).";
       }
       cell.tabIndex = 0;
-      setAzulTip(cell, `Wall row ${row + 1}, ${azulColorLabel(color)}: ${cell.classList.contains("filled") ? "filled" : "empty"}. A full matching pattern line places one tile here.`);
+      setAzulTip(cell, `Wall row ${row + 1}, ${azulColorLabel(color)}: ${filled ? "filled" : "empty"}.${scoreTip}${filled ? "" : " A full matching pattern line places one tile here."}`);
       grid.appendChild(cell);
     }
   }
@@ -692,7 +705,7 @@ function renderAzulYourBoard(view) {
     patternCol.appendChild(lineWrap);
   });
   main.appendChild(patternCol);
-  const wallGrid = buildAzulWallGrid(you.wall, false);
+  const wallGrid = buildAzulWallGrid(you.wall, false, you.wall_scores);
   main.appendChild(wallGrid);
   board.appendChild(main);
   const floorTargetWrap = document.createElement("div");
@@ -797,7 +810,7 @@ function renderAzulPlayers(view) {
     });
     card.appendChild(patternSummary);
 
-    const wallGrid = buildAzulWallGrid(player.wall, true);
+    const wallGrid = buildAzulWallGrid(player.wall, true, player.wall_scores);
     card.appendChild(wallGrid);
 
     const floorInfo = document.createElement("div");

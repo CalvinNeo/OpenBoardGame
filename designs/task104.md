@@ -118,3 +118,24 @@ PLAYWRIGHT_MODULE=<playwright> ROOM_TEST_URL=http://127.0.0.1:8000 node tests/bo
 新增 `tests/boomerang_australia.browser.cjs`：1 真人 + 2 机器人完整四轮到终局，在 1440／1024／390／320px 采集 6 个阶段共 24 组布局指标与截图，并断言选牌、Esc 取消选择、Help 的 Esc 关闭、Explain 对 disabled 控件生效且不提交动作、桌面悬停提示。结果：24 组均无页面／面板横向溢出、无同类元素重叠；仅 `.boomerang-opponents`、`.boomerang-log ul`、`.boomerang-score-history` 三个刻意保留的滚动区被标记为内部滚动。截图与 `report.json` 位于 `build/boomerang-australia-ui/`。
 
 390px 首屏高度由 1401px 降到 1186px，Confirm 回到首屏内。纯 UI 改动，未触碰规则与协议。
+
+## 2026-11-25 图标语义与 UI 复核
+
+### 改动
+
+- 解决回旋镖同时代表投掷数字和文化活动的歧义：投掷接回保留 🪃，原住民文化统一改为 🎨。牌面上方的橙色数字带 🪃，下方蓝色活动用 🎨，手牌、本轮牌、活动选择、已用活动、轮末结果、历史、Help 和 Explain 保持一致。只改变显示，不改牌表、规则、计分或协议。
+- 移除主手牌区额外的白色边框，游戏主体直接展示。手机手牌和本轮牌统一三列，数字与收益图标分别放在上方和下方；玩家保留全名断行，补充稳定的形状标记。
+- 卡牌选择改为手牌容器内的半透明原地确认，保留所选地点、地区、数字和全部收益图标。Confirm / Cancel 紧邻显示，不再设置独立行动条。活动确认紧跟所选活动，Skip 保留独立直接操作，Next Round 不二次确认。
+- 支持 Cancel、空白及 Esc 取消未提交选择，键盘选择后聚焦 Confirm，取消后焦点返回原卡牌。统一根据指针移动和 pointercancel 排除滚动误选，正常页面滚动不受阻。
+- 移除各区重复的 ⓘ 按钮，改由 Explain 点选计分、旅行记录、活动、轮末结果与具体卡牌。卡牌解释包含实际地点、投掷数字、收藏品原值、动物配对分和活动；未知秘密牌只说明隐藏规则，不读取牌面。
+- Help 增加中文 / English 切换，划分上手、计分、操作与变体三个章节。先解释获胜、每次行动、策略重点，再讲进阶规则，明确 🎨 与 🪃 的不同含义。对话框移入按需加载的 `static/games/boomerang_australia.html`，保留 Esc / Close 关闭。
+- 更新游戏脚本、样式、模板与首页清单版本。保留工作区原有收藏相关改动，不调整共享样式、房间控制或后端逻辑。
+
+### 验收
+
+- 修改文件：`static/games/boomerang_australia.js`、`static/games/boomerang_australia.html`、`static/boomerang_australia.css`、`static/game_assets.js`、`static/index.html`、`tests/boomerang_australia.browser.cjs`、本文件。
+- Chrome 桌面 / 触摸上下文检查 320、390、1024、1440px。四人局（1 真人 + 3 Bot）完整四轮，通过 8 个状态共 32 组布局断言，包括首轮选牌、原地确认、后续选牌、活动、活动确认、轮末、次轮、终局。无页面 / 面板横向溢出、非预期内容裁切、同级组件重叠或顶栏按钮换行。人工复核桌面、窄屏、原地确认、Help、活动与终局截图。
+- 交互通过：图标区分、无重复说明按钮、Confirm / Cancel、Esc / 空白取消、键盘焦点、CDP 触摸滑动不误选、不发送动作、活动选择不提前提交、Skip、逐轮等待真人确认、轮末刷新重连、双语 Help 及三个章节、Help 的 Esc、具体卡牌 Explain、禁用活动 Explain 不提交、桌面 hover、手机三秒提示及连续替换。浏览器无脚本或控制台错误。
+- `python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`：13 项通过。游戏 JS、资源清单及浏览器回归 JS 的 `node --check`、`node scripts/smoke_load.cjs boomerang_australia`、`git diff --check` 均通过。
+- 浏览器命令：`ROOM_TEST_URL=http://127.0.0.1:8766 PLAYWRIGHT_MODULE=<playwright> node tests/boomerang_australia.browser.cjs`。截图、`report.json` 与日志位于忽略目录 `tmp/task104/icon-ui/` 和 `tmp/task104/icon-ui-run.log`。
+- 已通过本次涉及的 DEV_GUIDE 布局和交互验收。未实测实体 iOS / Android、Windows 的字体和 Emoji，未重跑通用资源加载脚本或其他游戏回归，因此不声称跨设备、全项目的 DEV_GUIDE 全项验收完成。纯 UI 改动按规范未跑游戏逻辑或全量测试。

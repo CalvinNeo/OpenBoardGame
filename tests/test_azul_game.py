@@ -381,6 +381,79 @@ class AzulGameTests(unittest.TestCase):
         self.assertEqual(public_player["score_breakdown"]["wall_points_by_round"], [])
         self.assertTrue(public_player["score_breakdown"]["legacy"])
 
+    def test_wall_scores_start_empty_for_every_player(self):
+        state = AzulGame.init_game({}, self._players())
+
+        for pdata in state["players"].values():
+            self.assertEqual(pdata["wall_scores"], [[None] * 5 for _ in range(5)])
+        state["players"]["p1"]["wall_scores"][0][0] = 1
+        self.assertIsNone(state["players"]["p1"]["wall_scores"][1][0])
+        self.assertIsNone(state["players"]["p2"]["wall_scores"][0][0])
+
+    def test_wall_scores_record_placement_time_points_in_top_to_bottom_order(self):
+        state = AzulGame.init_game({}, self._players())
+        pdata = state["players"]["p1"]
+        pdata["pattern_lines"][0] = {"color": "blue", "tiles": ["blue"]}
+        pdata["pattern_lines"][1] = {"color": "white", "tiles": ["white"] * 2}
+        pdata["pattern_lines"][2] = {"color": "black", "tiles": ["black"] * 3}
+        state["players"]["p2"]["pattern_lines"][0] = {"color": "red", "tiles": ["red"]}
+
+        _resolve_round(state)
+
+        self.assertEqual([pdata["wall_scores"][row][0] for row in range(3)], [1, 2, 3])
+        self.assertIsNone(pdata["wall_scores"][0][1])
+        self.assertEqual(state["players"]["p2"]["wall_scores"][0][2], 1)
+
+        state["round"] = 2
+        pdata["pattern_lines"][0] = {"color": "yellow", "tiles": ["yellow"]}
+        pdata["pattern_lines"][1] = {"color": "blue", "tiles": ["blue"] * 2}
+        pdata["pattern_lines"][2] = {"color": "red", "tiles": ["red"]}
+        pdata["floor"] = ["black"] * 3
+
+        _resolve_round(state)
+
+        self.assertEqual(pdata["wall_scores"][0][:2], [1, 2])
+        self.assertEqual(pdata["wall_scores"][1][:2], [2, 4])
+        self.assertEqual(pdata["wall_scores"][2][0], 3)
+        self.assertIsNone(pdata["wall_scores"][2][4])
+        self.assertEqual(pdata["score"], 8)
+        for viewer in ["p1", "p2", "spectator"]:
+            public_player = AzulGame.get_public_view(state, viewer)["players"][0]
+            self.assertEqual(public_player["wall_scores"], pdata["wall_scores"])
+        public_player["wall_scores"][0][0] = 99
+        self.assertEqual(pdata["wall_scores"][0][0], 1)
+
+    def test_wall_scores_survive_save_load_and_end_game_bonuses(self):
+        state = AzulGame.init_game({}, self._players())
+        pdata = state["players"]["p1"]
+        pdata["wall"][0][:4] = [True] * 4
+        pdata["wall_scores"][0][:4] = [1, 2, 3, 4]
+        pdata["pattern_lines"][0] = {"color": "white", "tiles": ["white"]}
+
+        _resolve_round(state)
+        _apply_end_game_bonuses(state)
+        restored = AzulGame.deserialize(json.loads(json.dumps(AzulGame.serialize(state))))
+
+        self.assertEqual(restored["players"]["p1"]["wall_scores"][0], [1, 2, 3, 4, 5])
+        self.assertEqual(restored["players"]["p1"]["score"], 7)
+
+    def test_legacy_wall_scores_stay_unknown_while_new_tiles_are_recorded(self):
+        state = AzulGame.init_game({}, self._players())
+        for pdata in state["players"].values():
+            pdata.pop("wall_scores")
+        pdata = state["players"]["p1"]
+        pdata["wall"][0][0] = True
+        pdata["pattern_lines"][0] = {"color": "yellow", "tiles": ["yellow"]}
+        state = AzulGame.deserialize(json.loads(json.dumps(state)))
+
+        public_player = AzulGame.get_public_view(state, "p2")["players"][0]
+        self.assertIsNone(public_player["wall_scores"][0][0])
+
+        _resolve_round(state)
+
+        public_player = AzulGame.get_public_view(state, "p2")["players"][0]
+        self.assertEqual(public_player["wall_scores"][0][:2], [None, 2])
+
 
 if __name__ == "__main__":
     unittest.main()

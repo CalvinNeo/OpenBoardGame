@@ -1172,7 +1172,8 @@ body.settings-open {
 }
 
 .settings-content button:focus-visible,
-.settings-content input:focus-visible {
+.settings-content input:focus-visible,
+.settings-content textarea:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
@@ -1219,6 +1220,28 @@ body.settings-open {
 
 .settings-favorites .settings-hint {
   margin-bottom: 10px;
+}
+
+.settings-favorites-paste {
+  margin-top: 12px;
+}
+
+.settings-favorites-paste label {
+  color: #334155;
+  font-size: 14px;
+}
+
+.settings-favorites-paste textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  font: 16px/1.4 Arial, sans-serif;
+  overflow-wrap: anywhere;
+  resize: vertical;
 }
 
 .settings-tool-actions {

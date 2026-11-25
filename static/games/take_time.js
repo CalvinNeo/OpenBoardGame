@@ -9,7 +9,8 @@
     const dialogTitle = document.getElementById("takeTimeDialogTitle");
     const dialogBody = document.getElementById("takeTimeDialogBody");
     const dialogClose = document.getElementById("takeTimeDialogClose");
-    const configBox = document.getElementById("takeTimeConfigBox");
+    const clocksButton = document.getElementById("takeTimeClocksBtn");
+    let choosingClock = false;
     let view = null;
     let version = null;
     let selectedCard = null;
@@ -139,14 +140,30 @@
                 id: "clocks",
                 label: { zh: "钟盘与特殊规则", en: "Clocks and special rules" },
                 html: {
-                    zh: "<p>路线一共 12 个钟盘。第一个是官方入门的苏醒，其余 11 个是本项目的原创练习配置。当前钟盘会把条件直接写在界面上。</p>"
+                    zh: "<p>官方路线共 10 章，每章 4 关，共 40 个钟盘。点击 Reconnect 右侧的 Levels 选关。另有 11 个独立标记的原创练习，不会混入官方路线。</p>"
                         + "<p>禁止明牌(🙈)表示这一关只能暗置。先出最大(⬆️)和先出最小(⬇️)表示每次都要从自己当前手牌里选最大或最小的牌。</p>"
                         + "<p>自由指针(🧭)允许你在看牌之前选择比较起点。结算时如果所选起点不成立，会自动改用第一个可行的起点。</p>"
                         + "<p>有些钟盘规定第几张牌必须落在哪个时段。公共目标(🎯)只是讨论时的参考数值，不参与胜负判定，并在第一位玩家按下 Ready 后锁定。</p>",
-                    en: "<p>The route holds twelve clocks. The first one is the official introduction, Awakening, and the other eleven are original practice configurations written for this project. The current clock prints its conditions on screen.</p>"
+                    en: "<p>The official campaign has ten chapters with four clocks each, forty in total. Open Levels to the right of Reconnect to choose a clock. Eleven separately labelled original exercises never join the official route.</p>"
                         + "<p>No face-up (🙈) means this clock only allows face down cards. Highest first (⬆️) and lowest first (⬇️) mean you must always play the largest or smallest card in your current hand.</p>"
                         + "<p>A movable hand (🧭) lets you choose the starting segment before you look at your cards. If your choice turns out to be impossible at scoring time, the first workable start is used instead.</p>"
                         + "<p>Some clocks dictate which segment a given placement must go to. The shared target (🎯) is only a reference for discussion, never part of the result, and it locks as soon as the first player presses Ready.</p>"
+                }
+            },
+            {
+                id: "advanced",
+                label: { zh: "进阶章节", en: "Later chapters" },
+                html: {
+                    zh: "<p>咆哮关卡可能要求先出最大牌(⬆️)、最小牌(⬇️)或固定手牌顺序的最左牌(⬅️)。宁静关卡每段恰好两张，光影关卡也每段两张，但按差值(Δ)而非总和(Σ)排序。其余条件和 24 上限仍按总和判断。</p>"
+                        + "<p>入侵的补牌(📥)时段在出牌后立即从剩余牌堆补一张。全体手牌用完才结算，因此可能超过 12 张，空手玩家自动跳过。最后一张限制以真正的最后一次出牌为准。</p>"
+                        + "<p>旋转时段的顺时针(↻)或逆时针(↺)效果只移动钟盘规则，已放的牌留在原处。禁止直接放牌(⛔)的时段需要借助旋转取得牌。第八章第四关的印刷指针随钟盘旋转。</p>"
+                        + "<p>统一关卡只在标有条件的相邻边界比较相等或最小差距，不是所有时段都要相等。凝聚关卡额外从首牌指针起比较各段第一张牌。秒针(⏱)仅出现在第十章第四关，禁止向其两端放牌，并在每次出牌后顺时针前进一段。</p>"
+                        + "<p>开局先选择关卡。看牌前可以切关，轮末选择新关卡后仍须全员点击 Next Round 才会进入。切关开始一条新路线并清空本次路线进度。Rebirth 是可选组合模式，不属于这 40 关。</p>",
+                    en: "<p>Roar may require your highest (⬆️), lowest (⬇️) or leftmost card (⬅️) in fixed hand order. Tranquility requires two cards per segment. As Above, So Below also requires two, but orders their differences (Δ), while other conditions and the cap of 24 still use sums (Σ).</p>"
+                        + "<p>Intrusion draw segments (📥) immediately refill your hand from the undealt deck. Play ends only when every hand is empty, so more than twelve cards may be played. Empty hands are skipped. A final-card restriction applies to the actual final placement.</p>"
+                        + "<p>Clockwise (↻) and counterclockwise (↺) segments rotate the printed rules, not the placed cards. Blocked segments (⛔) can only receive cards through rotation. The printed hand on clock 8.4 rotates with the clock.</p>"
+                        + "<p>Unity constrains only the marked boundaries, not every adjacent pair. Cohesiveness also orders the first card placed in each segment from its separate first-card hand. Only clock 10.4 has a second hand (⏱), blocking its two endpoints and advancing clockwise after every placement.</p>"
+                        + "<p>Choose a clock after Start. You can switch before anyone looks, or propose a clock during review and wait for every Next Round confirmation. Switching starts a new route and clears route progress. The optional Rebirth combination mode is separate from the forty clocks.</p>"
                 }
             },
             {
@@ -167,6 +184,7 @@
     };
 
     const TAKE_TIME_EXPLAIN = {
+        clocks: { zh: "打开选关。官方 10 章共 40 关，原创练习单独列出。仅看牌前或轮末可切关，轮末仍需全员确认。切关清空本次路线进度。", en: "Browse forty official clocks in ten chapters, with original exercises listed separately. Switch before looking, or propose a change during review and wait for all confirmations. Switching clears route progress." },
         card: { zh: "你的手牌。太阳(☀️)和月亮(🌙)各有 1 到 12，未知数值(?)在按下 Ready 之前隐藏。点击选中一张自己的牌，再选一个时段。", en: "Your hand. Solar (☀️) and lunar (🌙) each run from 1 to 12, and unknown values (?) stay hidden until you press Ready. Click one of your cards to select it, then pick a segment." },
         sector: { zh: "钟盘上的六个时段。从指针起点(🧭 / START)开始按顺时针(↻)编号比较。每段至少一张，总和(Σ)允许相等。颜色、数量和目标条件在揭牌时判定。", en: "The six segments of the clock. They are compared clockwise (↻) starting from the clock hand (🧭 / START). Each needs at least one card and equal sums (Σ) are allowed. Colour, count and target conditions are judged at the reveal." },
         ready: { zh: "先讨论(💬)并商量目标。按下 Ready 才会看见自己的手牌，并且此后保持静默(🤫)，不能撤销。全员准备后才允许出牌，第一位玩家按下 Ready 后公共目标(🎯)锁定。", en: "Discuss (💬) and agree on a plan first. Ready reveals your own hand and starts the silence (🤫), and it cannot be undone. Cards may only be placed once everyone is ready, and the shared target (🎯) locks when the first player presses Ready." },
@@ -197,7 +215,7 @@
             attribute: "data-tt-explain",
             explanations: TAKE_TIME_EXPLAIN,
             button: explainButton,
-            root: () => panel,
+            root: () => document.querySelector('.game-panel[data-game-theme="take_time"]'),
             bypass: ["#takeTimeHelpBtn", "#takeTimeExplainBtn"],
             onChange: active => { if (active) hideTip(); }
         });
@@ -282,7 +300,7 @@
         }).join("");
         return `<div class="take-time-clock" aria-label="Six clock segments, clockwise from the hand">${sectors}
             <div class="take-time-clock-center"><div class="take-time-dial" aria-hidden="true"><span>🕰️</span></div><strong>${view.clock.metric === "difference" ? "DIFFERENCES" : "TAKE TIME"}</strong>
-            <span>${view.placed_count} / 12 cards</span>${info(`↻ ${view.clock.metric === "difference" ? "Δ 差值" : "Σ 总和"}递增 · 可相等`, explanations.metric[1], "metric")}
+            <span>${view.clock.chapter === 7 ? `${view.placed_count} cards placed` : `${view.placed_count} / 12 cards`}</span>${info(`↻ ${view.clock.metric === "difference" ? "Δ 差值" : "Σ 总和"}递增 · 可相等`, explanations.metric[1], "metric")}
             ${info(view.clock.cap === null ? "∞ 无总和上限" : `Σ ≤ ${view.clock.cap}`, explanations.metric[1], "metric")}</div></div>`;
     }
 
@@ -311,7 +329,7 @@
         const own = view.players.find(player => player.player_id === view.you);
         if (!own) return '<p class="take-time-notice">Spectating · Private card values are hidden.</p>';
         if (view.result) {
-            const choices = {retry: "🔁 Retry", advance: "→ Next Clock", skip: "✉️ Skip to Regrets", finish: "End Journey"};
+            const choices = {retry: "🔁 Retry", advance: "→ Next Clock", skip: "✉️ Skip to Regrets", finish: "End Journey", select_clock: `Level ${view.catalog.find(clock => clock.id === view.pending_clock)?.name || ""}`};
             if (view.game_over) {
                 return `<div class="take-time-result-title">${view.journey_complete ? "🏆 Journey complete" : "Journey ended"}</div><p>${view.completed.length} / ${view.itinerary.length} clocks passed${view.journey_complete ? "." : ` · ${view.itinerary.length - view.completed.length} unfinished.`}</p>`;
             }
@@ -346,6 +364,15 @@
     function render() {
         if (!view || !panel) return;
         hideTip();
+        if (choosingClock && dialog.open) {
+            const scrollTop = dialog.scrollTop;
+            dialogBody.innerHTML = clockPickerHTML();
+            dialog.scrollTop = scrollTop;
+        }
+        if (view.phase === "setup") {
+            panel.innerHTML = `<div class="take-time-shell take-time-setup"><h2>Choose your clock</h2><p>40 official clocks · 10 chapters</p>${clockPickerHTML()}</div>`;
+            return;
+        }
         const own = view.players.some(player => player.player_id === view.you);
         let status;
         if (view.game_over) status = "Journey ended";
@@ -355,10 +382,14 @@
         else status = view.current_turn === view.you ? "▶ Your turn · Keep silent" : `🤫 ${playerName(view.current_turn)}'s turn`;
         const rules = [];
         if (view.clock.no_face_up) rules.push("🙈 禁止明牌");
-        if (view.clock.play_order !== "any") rules.push(view.clock.play_order === "highest" ? "⬆️ 每次出手中最大牌" : "⬇️ 每次出手中最小牌");
+        if (view.clock.play_order !== "any") rules.push({highest: "⬆️ 每次出手中最大牌", lowest: "⬇️ 每次出手中最小牌", leftmost: "⬅️ 按手牌顺序出最左牌"}[view.clock.play_order]);
         if (view.clock.movable_hand) rules.push("🧭 自由指针");
         if (view.clock.metric === "difference") rules.push("每段两张 · 按差值排序");
-        const origin = view.clock.source === "official_1_1" ? "Official · Chapter 1 / Clock 1" : "Original practice";
+        if (view.clock.spread) rules.push(`全盘总和极差 ≤ ${view.clock.spread}`);
+        if (view.clock.first_hand !== undefined) rules.push(`首牌起点 · ${view.clock.first_hand + 1}`);
+        if (view.second_hand != null) rules.push(`⏱ 禁放 ${view.second_hand + 1} / ${(view.second_hand + 3) % 6 + 1}`);
+        if (view.clock.chapter === 7) rules.push(`📥 Deck · ${view.deck_count}`);
+        const origin = view.clock.source.startsWith("official_") ? `Official · Chapter ${view.clock.chapter || 1} / Clock ${view.clock.number || 1}` : "Original practice";
         panel.innerHTML = `<div class="take-time-shell"><div class="take-time-title-row"><div><span class="take-time-eyebrow">A MOMENT, TOGETHER</span><h2>${esc(view.clock.name)}</h2><span class="take-time-origin">${origin}</span></div><div class="take-time-progress"><strong>${view.completed.length}<small> / ${view.itinerary.length}</small></strong><span>clocks passed</span></div></div>
             <div class="take-time-status"><strong role="status">${info(esc(status), explanations.players[1], "players")}</strong><span>Attempt ${view.attempt} · ${info(`👁 ${view.face_up_used}/${view.face_up_limit}`, explanations.quota[1], "quota", 'aria-label="Face-up allowance used and total"')}</span></div>
             ${rules.length ? `<div class="take-time-clock-rules">${rules.map(rule => info(rule, explanations.rules[1], "rules")).join("")}</div>` : ""}
@@ -420,6 +451,39 @@
         dialogClose.focus();
     }
 
+    function clockPickerHTML() {
+        const canSelect = available("select_clock");
+        const groups = new Map();
+        for (const clock of view.catalog) {
+            const label = clock.chapter ? `Chapter ${clock.chapter} · ${clock.chapter_name}` : "Original practice";
+            if (!groups.has(label)) groups.set(label, []);
+            groups.get(label).push(clock);
+        }
+        const message = view.phase === "round_end" ? "Choose a clock, then everyone confirms with Next Round. This starts a new route."
+            : canSelect ? "Choose a clock to start a new route. Current route progress resets."
+                : "Browse only. Switch clocks before anyone looks at their cards, or during review.";
+        return `<p class="take-time-picker-note" role="status">${message}</p>${[...groups].map(([label, clocks]) => `<section class="take-time-chapter"><h3>${esc(label)}</h3><div class="take-time-clock-grid">${clocks.map(clock => `<button type="button" data-tt-clock="${esc(clock.id)}" data-tt-explain="clocks" ${canSelect ? "" : "disabled"} aria-current="${view.clock.id === clock.id ? "step" : "false"}"><strong>${clock.number || "Practice"}</strong><span>${esc(clock.name)}</span><small>${view.completed.includes(clock.id) ? "✓ Passed" : view.pending_clock === clock.id ? "Proposed" : view.clock.id === clock.id ? "Current" : ""}</small></button>`).join("")}</div></section>`).join("")}`;
+    }
+
+    function openClockPicker() {
+        if (!view) return;
+        takeTimeExplainWidget?.exit();
+        choosingClock = true;
+        openDialog("Select Level · 40 Official Clocks", clockPickerHTML(), true);
+    }
+
+    clocksButton.addEventListener("click", () => { if (!explaining()) openClockPicker(); });
+    function chooseClock(event) {
+        const target = event.target.closest("[data-tt-clock]");
+        if (!target || target.disabled || !available("select_clock") || explaining()) return;
+        const clockId = target.dataset.ttClock;
+        choosingClock = false;
+        if (dialog.open) dialog.close();
+        submit({type: "select_clock", clock_id: clockId});
+    }
+    dialogBody.addEventListener("click", chooseClock);
+    panel.addEventListener("click", chooseClock);
+
     function submit(action) {
         if (pending || !view || typeof sendAction !== "function") return;
         pending = true;
@@ -437,7 +501,8 @@
             || event.target.closest(".take-time-sector")?.querySelector('[data-tt-action="sector"]');
         if (!target || target.disabled || explaining()) return;
         const kind = target.dataset.ttAction;
-        if (kind === "card") {
+        if (kind === "clocks") openClockPicker();
+        else if (kind === "card") {
             selectedCard = selectedCard === target.dataset.card ? null : target.dataset.card;
             render();
         } else if (kind === "sector") {
@@ -462,7 +527,7 @@
         const box = dialog.getBoundingClientRect();
         if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close();
     });
-    dialog.addEventListener("close", () => { if (returnFocus?.isConnected) returnFocus.focus(); });
+    dialog.addEventListener("close", () => { choosingClock = false; if (returnFocus?.isConnected) returnFocus.focus(); });
 
     document.addEventListener("pointerdown", event => {
         if (explaining() || !view || !panel.contains(event.target)) return;
@@ -561,15 +626,12 @@
     };
     window.showTakeTimeHeaderActions = visible => {
         header.style.display = visible ? "flex" : "none";
+        clocksButton.classList.toggle("hidden", !visible);
         if (!visible) clearState();
     };
     window.clearTakeTimeState = clearState;
-    window.getTakeTimeConfig = () => ({start_clock: document.getElementById("takeTimeStartClock").value});
-    window.updateTakeTimeConfigRow = () => {
-        const visible = currentGameType === "take_time" && currentRoomState?.status === "lobby";
-        configBox.classList.toggle("hidden", !visible);
-        configBox.setAttribute("aria-hidden", String(!visible));
-    };
+    window.getTakeTimeConfig = () => ({});
+    window.updateTakeTimeConfigRow = () => {};
     if (typeof socket !== "undefined") socket.on("system:error", () => {
         if (pending) { pending = false; window.clearTimeout(pendingTimer); render(); }
     });

@@ -76,6 +76,9 @@ const disableDoubleTapZoomToggle = document.getElementById("disableDoubleTapZoom
 const turnSoundToggle = document.getElementById("turnSoundToggle");
 const favoriteGamesExportBtn = document.getElementById("favoriteGamesExportBtn");
 const favoriteGamesImportBtn = document.getElementById("favoriteGamesImportBtn");
+const favoriteGamesPasteForm = document.getElementById("favoriteGamesPasteForm");
+const favoriteGamesPasteInput = document.getElementById("favoriteGamesPasteInput");
+const favoriteGamesPasteCancelBtn = document.getElementById("favoriteGamesPasteCancelBtn");
 const favoriteGamesStatus = document.getElementById("favoriteGamesStatus");
 const roomActionStatus = document.getElementById("roomActionStatus");
 const roomFeedbackTooltip = document.getElementById("roomFeedbackTooltip");
@@ -595,6 +598,7 @@ function openSettingsModal() {
 
 function closeSettingsModal() {
   if (settingsModal.classList.contains("hidden")) return;
+  closeFavoriteGamesPasteForm();
   setModalVisible(settingsModal, false);
   settingsBtn.setAttribute("aria-expanded", "false");
   document.body.classList.remove("settings-open");
@@ -668,41 +672,71 @@ favoriteGamesExportBtn.addEventListener("click", async () => {
   }
 });
 
+function closeFavoriteGamesPasteForm() {
+  favoriteGamesPasteForm.classList.add("hidden");
+  favoriteGamesPasteInput.value = "";
+}
+
+function importFavoriteGames(text) {
+  if (!text.trim()) throw new Error("Clipboard is empty. Copy a favorites backup first.");
+  if (new Blob([text]).size > FAVORITE_GAMES_MAX_BYTES) throw new Error("Backup must be 1 MB or smaller.");
+  let backup;
+  try {
+    backup = JSON.parse(text);
+  } catch {
+    throw new Error("Clipboard does not contain a valid favorites JSON backup.");
+  }
+  if (!backup || backup.type !== FAVORITE_GAMES_BACKUP_TYPE || backup.version !== 1
+    || !Array.isArray(backup.game_ids) || backup.game_ids.length > 10000
+    || !backup.game_ids.every(isFavoriteGameId)) {
+    throw new Error("Unsupported favorites backup. Create one using Copy backup.");
+  }
+  const favorites = loadFavoriteGames();
+  const previousCount = favorites.size;
+  backup.game_ids.forEach((gameId) => favorites.add(gameId));
+  const persisted = saveFavoriteGames(favorites);
+  favoriteGamesStatus.textContent = `Imported ${favorites.size - previousCount} new favorites. ${favorites.size} total.`
+    + (persisted ? "" : " Saved for this tab only; browser storage is unavailable.");
+  closeFavoriteGamesPasteForm();
+  if (!createRoomModal.classList.contains("hidden")) void applyGameFilters();
+}
+
 favoriteGamesImportBtn.addEventListener("click", async () => {
   favoriteGamesImportBtn.disabled = true;
   try {
-    if (!navigator.clipboard?.readText) throw new Error("Clipboard access requires HTTPS or localhost and a supported browser.");
     let text;
     try {
       text = await navigator.clipboard.readText();
     } catch {
-      throw new Error("Allow clipboard access and try again.");
+      if (settingsModal.classList.contains("hidden")) return;
+      favoriteGamesPasteForm.classList.remove("hidden");
+      favoriteGamesStatus.textContent = "Paste your backup in the box above to import.";
+      favoriteGamesPasteInput.focus();
+      return;
     }
-    if (!text.trim()) throw new Error("Clipboard is empty. Copy a favorites backup first.");
-    if (new Blob([text]).size > FAVORITE_GAMES_MAX_BYTES) throw new Error("Backup must be 1 MB or smaller.");
-    let backup;
-    try {
-      backup = JSON.parse(text);
-    } catch {
-      throw new Error("Clipboard does not contain a valid favorites JSON backup.");
-    }
-    if (!backup || backup.type !== FAVORITE_GAMES_BACKUP_TYPE || backup.version !== 1
-      || !Array.isArray(backup.game_ids) || backup.game_ids.length > 10000
-      || !backup.game_ids.every(isFavoriteGameId)) {
-      throw new Error("Unsupported favorites backup. Create one using Copy backup.");
-    }
-    const favorites = loadFavoriteGames();
-    const previousCount = favorites.size;
-    backup.game_ids.forEach((gameId) => favorites.add(gameId));
-    const persisted = saveFavoriteGames(favorites);
-    favoriteGamesStatus.textContent = `Imported ${favorites.size - previousCount} new favorites. ${favorites.size} total.`
-      + (persisted ? "" : " Saved for this tab only; browser storage is unavailable.");
-    if (!createRoomModal.classList.contains("hidden")) await applyGameFilters();
+    if (settingsModal.classList.contains("hidden")) return;
+    importFavoriteGames(text);
   } catch (error) {
     favoriteGamesStatus.textContent = `Import failed: ${error.message}`;
   } finally {
     favoriteGamesImportBtn.disabled = false;
   }
+});
+
+favoriteGamesPasteForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  try {
+    importFavoriteGames(favoriteGamesPasteInput.value);
+    favoriteGamesImportBtn.focus({ preventScroll: true });
+  } catch (error) {
+    favoriteGamesStatus.textContent = `Import failed: ${error.message}`;
+  }
+});
+
+favoriteGamesPasteCancelBtn.addEventListener("click", () => {
+  closeFavoriteGamesPasteForm();
+  favoriteGamesStatus.textContent = "";
+  favoriteGamesImportBtn.focus({ preventScroll: true });
 });
 
 window.addEventListener("storage", (event) => {
@@ -4186,7 +4220,7 @@ document.addEventListener("keydown", (event) => {
       event.stopImmediatePropagation();
       closeSettingsModal();
     } else if (event.key === "Tab") {
-      const controls = [...settingsModal.querySelectorAll("input:not(:disabled), button:not(:disabled)")]
+      const controls = [...settingsModal.querySelectorAll("input:not(:disabled), textarea:not(:disabled), button:not(:disabled)")]
         .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
       const first = controls[0];
       const last = controls[controls.length - 1];

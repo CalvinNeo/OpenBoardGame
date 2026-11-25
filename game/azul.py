@@ -209,6 +209,7 @@ def _resolve_round(state: Dict) -> None:
         pdata = state["players"][pid]
         breakdown = _ensure_score_breakdown(pdata)
         wall = pdata["wall"]
+        wall_scores = pdata.setdefault("wall_scores", [[None for _ in range(5)] for _ in range(5)])
         round_wall_points = 0
         for row in range(5):
             line = pdata["pattern_lines"][row]
@@ -219,6 +220,7 @@ def _resolve_round(state: Dict) -> None:
                 if col is not None and not wall[row][col]:
                     wall[row][col] = True
                     placement_points = _score_placement(wall, row, col)
+                    wall_scores[row][col] = placement_points
                     pdata["score"] += placement_points
                     breakdown["wall_points"] += placement_points
                     round_wall_points += placement_points
@@ -553,6 +555,7 @@ class AzulGame:
                     {"color": None, "tiles": []},
                 ],
                 "wall": [[False for _ in range(5)] for _ in range(5)],
+                "wall_scores": [[None for _ in range(5)] for _ in range(5)],
                 "floor": [],
                 "has_first_player_token": False,
             }
@@ -701,6 +704,9 @@ class AzulGame:
                     "score_breakdown": score_breakdown,
                     "pattern_lines": pattern_lines,
                     "wall": pdata["wall"],
+                    "wall_scores": copy.deepcopy(
+                        pdata.get("wall_scores", [[None for _ in range(5)] for _ in range(5)])
+                    ),
                     "floor": list(pdata["floor"]),
                     "has_first_player_token": bool(pdata.get("has_first_player_token")),
                 }

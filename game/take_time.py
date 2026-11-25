@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 from jsonschema import Draft7Validator
 
 from game.take_time_data import (
-    ACTION_SCHEMA, CLOCK_BY_ID, CLOCK_IDS, CLOCKS, CONFIG_SCHEMA, segment_rule_labels,
+    ACTION_SCHEMA, CLOCK_BY_ID, CLOCK_IDS, CLOCKS, CONFIG_SCHEMA, clock_route, segment_rule_labels,
 )
 
 _ACTION_VALIDATOR = Draft7Validator(ACTION_SCHEMA)
@@ -17,7 +17,12 @@ _CONFIG_VALIDATOR = Draft7Validator(CONFIG_SCHEMA)
 
 
 def _clock(state: Dict) -> Dict:
-    return CLOCK_BY_ID[state["clock_id"]]
+    clock = copy.deepcopy(CLOCK_BY_ID[state["clock_id"]])
+    rotation = state.get("rotation", 0)
+    clock["segments"] = [clock["segments"][(index - rotation) % 6] for index in range(6)]
+    for index, boundary in clock.get("boundaries", {}).items():
+        clock["segments"][(int(index) + rotation) % 6]["boundary"] = boundary
+    return clock
 
 
 def _log(state: Dict, message: str) -> None:
@@ -26,12 +31,14 @@ def _log(state: Dict, message: str) -> None:
 
 
 def _deal(state: Dict) -> None:
+    state.pop("pending_clock", None)
     state["deal_number"] += 1
     rng = random.Random(f"{state['seed']}:{state['deal_number']}")
     # IDs are independent random nonces, never suit/value encodings or sorted ranks.
     deck = [{"id": f"c{rng.getrandbits(128):032x}", "color": color, "value": value}
             for color in ("solar", "lunar") for value in range(1, 13)]
     rng.shuffle(deck)
+    state["deck"] = deck[12:]
     count = len(state["turn_order"])
     size = 12 // count
     state["players"] = {}
@@ -44,6 +51,7 @@ def _deal(state: Dict) -> None:
         "targets": [4, 8, 12, 16, 20, 24], "result": None,
         "next_ready": [], "next_choice": None,
         "attempt_bonus": state["bonus"],
+        "rotation": 0, "second_hand": CLOCK_BY_ID[state["clock_id"]].get("second_hand"),
     })
     if _clock(state)["metric"] == "difference":
         state["targets"] = [0, 1, 2, 4, 6, 8]
@@ -66,10 +74,31 @@ def _legal_cards(view: Dict) -> List[Dict]:
         return []
     cards = [card for card in own["hand"] if card.get("value") is not None]
     mode = view["clock"]["play_order"]
+    if mode == "leftmost":
+        return cards[:1]
     if cards and mode in ("highest", "lowest"):
         extreme = (max if mode == "highest" else min)(card["value"] for card in cards)
         cards = [card for card in cards if card["value"] == extreme]
     return cards
+
+
+def _legal_segments(state: Dict) -> List[int]:
+    clock = _clock(state)
+    required = clock["required_plays"].get(str(state["placed_count"] + 1))
+    remaining = sum(len(player["hand"]) + len(player["reserve"]) for player in state["players"].values())
+    segments = []
+    for index, rule in enumerate(clock["segments"]):
+        if rule.get("blocked") or (required is not None and required != index):
+            continue
+        second_hand = state.get("second_hand")
+        if second_hand is not None and index in (second_hand, (second_hand + 3) % 6):
+            continue
+        final = remaining == 1 and not (rule.get("draw") and state.get("deck"))
+        last = clock["required_plays"].get("last")
+        if final and last is not None and last != index:
+            continue
+        segments.append(index)
+    return segments
 
 
 def _evaluate(state: Dict) -> Dict:
@@ -86,6 +115,7 @@ def _evaluate(state: Dict) -> Dict:
     if clock["movable_hand"] and start not in possible_starts and possible_starts:
         start = possible_starts[0]
     all_values = [card["value"] for cards in board for card in cards]
+    low_segments = [index for index, rule in enumerate(clock["segments"]) if rule.get("extreme") == "lowest"]
     segments = []
     for index, cards in enumerate(board):
         rule = clock["segments"][index]
@@ -107,10 +137,44 @@ def _evaluate(state: Dict) -> Dict:
             distance = abs(sums[index] - rule["closest"])
             predicates.append(all(distance <= abs(total - rule["closest"]) for total in sums))
         if "extreme" in rule:
-            extreme = (min if rule["extreme"] == "lowest" else max)(all_values)
-            predicates.append(any(card["value"] == extreme for card in cards))
+            if rule["extreme"] == "lowest" and len(low_segments) > 1:
+                minima = [min((card["value"] for card in board[segment]), default=13) for segment in low_segments]
+                remaining = []
+                for segment, pile in enumerate(board):
+                    values_in_pile = sorted(card["value"] for card in pile)
+                    remaining.extend(values_in_pile[1:] if segment in low_segments else values_in_pile)
+                predicates.append(all(board[segment] for segment in low_segments)
+                                  and max(minima) <= min(remaining, default=13))
+            else:
+                extreme = (min if rule["extreme"] == "lowest" else max)(all_values, default=0)
+                predicates.append(any(card["value"] == extreme for card in cards))
+        if "forbidden" in rule:
+            predicates.append(not any(card["value"] in rule["forbidden"] for card in cards))
+        if "suit_extreme" in rule:
+            modes = ("solar_lowest", "lunar_highest") if rule["suit_extreme"] == "both" else (rule["suit_extreme"],)
+            passed = True
+            for mode in modes:
+                color, extreme_mode = mode.split("_")
+                candidates = [card["value"] for pile in board for card in pile if card["color"] == color]
+                extreme = (min if extreme_mode == "lowest" else max)(candidates, default=0)
+                passed = passed and any(card["color"] == color and card["value"] == extreme for card in cards)
+            predicates.append(passed)
+        resolution_rule = {key: value for key, value in rule.items()
+                           if key not in ("draw", "rotate", "blocked", "boundary")}
         checks.extend({"label": label, "passed": passed}
-                      for label, passed in zip(segment_rule_labels(rule), predicates))
+                      for label, passed in zip(segment_rule_labels(resolution_rule), predicates))
+        boundary = rule.get("boundary")
+        if boundary:
+            difference = abs(sums[index] - sums[(index - 1) % 6])
+            checks.append({"label": segment_rule_labels({"boundary": boundary})[0],
+                           "passed": difference == 0 if boundary.get("equal") else difference >= boundary["gap"]})
+        if "spread" in clock:
+            checks.append({"label": f"全盘总和极差 ≤ {clock['spread']}",
+                           "passed": max(sums) - min(sums) <= clock["spread"]})
+        if "first_hand" in clock and index != clock["first_hand"]:
+            previous = (index - 1) % 6
+            checks.append({"label": f"首张牌 ≥ 时段 {previous + 1} 首张牌",
+                           "passed": bool(cards and board[previous]) and cards[0]["value"] >= board[previous][0]["value"]})
         segments.append({"index": index, "sum": sums[index], "value": values[index],
                          "checks": checks, "passed": all(check["passed"] for check in checks)})
     return {"success": all(segment["passed"] for segment in segments), "segments": segments,
@@ -137,6 +201,9 @@ def _resolve(state: Dict) -> None:
 
 def _continue(state: Dict) -> None:
     choice = state["next_choice"]
+    if choice == "select_clock":
+        _select_clock(state, state.pop("pending_clock"))
+        return
     if choice == "finish":
         state["phase"] = "game_over"
         state["game_over"] = True
@@ -161,6 +228,13 @@ def _continue(state: Dict) -> None:
     _deal(state)
 
 
+def _select_clock(state: Dict, clock_id: str) -> None:
+    itinerary = clock_route(clock_id)
+    state.update({"clock_id": clock_id, "itinerary": itinerary, "queue": itinerary[1:],
+                  "attempt": 1, "bonus": 0, "completed": [], "regrets": []})
+    _deal(state)
+
+
 class TakeTimeGame:
     game_id = "take_time"
     min_players = 2
@@ -178,7 +252,7 @@ class TakeTimeGame:
             raise ValueError("player IDs must be unique nonempty strings")
         ordered = sorted(players, key=lambda player: player.get("seat", 0))
         first = config.get("start_clock", CLOCK_IDS[0])
-        itinerary = CLOCK_IDS[CLOCK_IDS.index(first):]
+        itinerary = clock_route(first)
         state = {
             "game_id": TakeTimeGame.game_id, "config": copy.deepcopy(config),
             "seed": config.get("seed", secrets.token_hex(16)), "deal_number": 0,
@@ -192,23 +266,27 @@ class TakeTimeGame:
             "history": [], "log": [], "game_over": False,
         }
         _deal(state)
+        if "start_clock" not in config:
+            state["phase"] = "setup"
         return state
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
         if player_id not in state["players"] or state["game_over"]:
             return []
+        if state["phase"] == "setup":
+            return ["select_clock"]
         if state["phase"] == "discussion":
             actions = [] if state["players"][player_id]["ready"] else ["ready"]
             if not any(player["ready"] for player in state["players"].values()):
-                actions.append("set_plan")
+                actions.extend(["set_plan", "select_clock"])
                 if _clock(state)["movable_hand"]:
                     actions.append("set_hand")
             return actions
         if state["phase"] == "placement":
             return ["place"] if state["current_turn"] in (None, player_id) else []
         if state["phase"] == "round_end":
-            return [] if player_id in state["next_ready"] else ["choose_next", "next_round"]
+            return [] if player_id in state["next_ready"] else ["choose_next", "next_round", "select_clock"]
         return []
 
     @staticmethod
@@ -228,11 +306,12 @@ class TakeTimeGame:
                 return [], "select a card from your own hand"
             if action["face_up"] and state["face_up_used"] >= _face_up_limit(state):
                 return [], "no face-up cards remaining"
-            required = clock["required_plays"].get(str(state["placed_count"] + 1))
-            if required is not None and required != action["segment"]:
-                return [], f"this card must be placed at segment {required + 1}"
+            if action["segment"] not in _legal_segments(state):
+                return [], "this segment is not available for this placement"
             mode = clock["play_order"]
-            if mode != "any":
+            if mode == "leftmost" and card["id"] != state["players"][player_id]["hand"][0]["id"]:
+                return [], "play your leftmost card"
+            if mode in ("highest", "lowest"):
                 extreme = (max if mode == "highest" else min)(
                     item["value"] for item in state["players"][player_id]["hand"])
                 if card["value"] != extreme:
@@ -240,7 +319,14 @@ class TakeTimeGame:
         if kind == "choose_next" and action["choice"] not in _choices(state):
             return [], "this continuation is not available"
 
-        if kind == "ready":
+        if kind == "select_clock":
+            if state["phase"] == "round_end":
+                state["pending_clock"] = action["clock_id"]
+                state["next_choice"] = "select_clock"
+                state["next_ready"] = []
+            else:
+                _select_clock(state, action["clock_id"])
+        elif kind == "ready":
             state["players"][player_id]["ready"] = True
             if all(player["ready"] for player in state["players"].values()):
                 state["phase"] = "placement"
@@ -265,15 +351,29 @@ class TakeTimeGame:
                     player["hand"].extend(player["reserve"])
                     player["reserve"] = []
                 _log(state, "✉️ Both players picked up their two reserve cards.")
-            if state["placed_count"] == 12:
+            rule = clock["segments"][action["segment"]]
+            if rule.get("draw") and state.get("deck"):
+                state["players"][player_id]["hand"].append(state["deck"].pop(0))
+                _log(state, f"📥 {name} drew a card.")
+            if "rotate" in rule:
+                state["rotation"] = (state.get("rotation", 0) + rule["rotate"]) % 6
+                if not clock["movable_hand"]:
+                    state["hand_segment"] = (state["hand_segment"] + rule["rotate"]) % 6
+                _log(state, "↻ Clock rotated clockwise." if rule["rotate"] == 1 else "↺ Clock rotated counterclockwise.")
+            if state.get("second_hand") is not None:
+                state["second_hand"] = (state["second_hand"] + 1) % 6
+            if not any(player["hand"] or player["reserve"] for player in state["players"].values()):
                 _resolve(state)
             else:
                 turn_index = state["turn_order"].index(player_id)
-                state["current_turn"] = state["turn_order"][(turn_index + 1) % len(state["turn_order"])]
+                following = state["turn_order"][turn_index + 1:] + state["turn_order"][:turn_index + 1]
+                state["current_turn"] = next(
+                    candidate for candidate in following if state["players"][candidate]["hand"])
         elif kind == "choose_next":
             if state["next_choice"] != action["choice"]:
                 state["next_choice"] = action["choice"]
                 state["next_ready"] = []
+                state.pop("pending_clock", None)
         elif kind == "next_round":
             state["next_ready"].append(player_id)
             if len(state["next_ready"]) == len(state["turn_order"]):
@@ -302,7 +402,7 @@ class TakeTimeGame:
             rule["labels"] = segment_rule_labels(rule)
             for order, segment in clock["required_plays"].items():
                 if segment == index:
-                    rule["labels"].append(f"第 {order} 张必须放这里")
+                    rule["labels"].append("最后一张必须放这里" if order == "last" else f"第 {order} 张必须放这里")
         view = {
             "game_id": TakeTimeGame.game_id, "you": viewer_id, "phase": state["phase"],
             "clock": clock, "players": players, "current_turn": state["current_turn"],
@@ -315,16 +415,18 @@ class TakeTimeGame:
             "bonus": state["bonus"], "attempt": state["attempt"],
             "result": copy.deepcopy(state["result"]) if review else None,
             "next_choice": state["next_choice"], "next_choices": _choices(state),
+            "pending_clock": state.get("pending_clock"), "second_hand": state.get("second_hand"),
+            "rotation": state.get("rotation", 0), "deck_count": len(state.get("deck", [])),
             "next_ready": list(state["next_ready"]), "legal_actions": TakeTimeGame.get_legal_actions(state, viewer_id),
             "completed": list(state["completed"]), "regrets": list(state["regrets"]),
             "itinerary": list(state["itinerary"]),
-            "catalog": [{"id": item["id"], "name": item["name"], "source": item["source"]} for item in CLOCKS],
+            "catalog": [{key: item[key] for key in ("id", "name", "source", "chapter", "chapter_name", "number") if key in item}
+                        for item in CLOCKS],
             "log": list(state["log"]), "game_over": state["game_over"],
             "journey_complete": all(cid in state["completed"] for cid in state["itinerary"]),
         }
         view["legal_card_ids"] = [card["id"] for card in _legal_cards(view)] if "place" in view["legal_actions"] else []
-        required = clock["required_plays"].get(str(state["placed_count"] + 1))
-        view["legal_segments"] = ([required] if required is not None else list(range(6))) if "place" in view["legal_actions"] else []
+        view["legal_segments"] = _legal_segments(state) if "place" in view["legal_actions"] else []
         return view
 
     @staticmethod
@@ -380,7 +482,7 @@ def _bot_from_view(view: Dict) -> Optional[Dict]:
                 old = existing[0]["value"] if existing[0]["value"] is not None else 6.5
                 score = abs(abs(old - card["value"]) - target)
             empty = sum(not pile for pile in view["board"])
-            remaining = 12 - view["placed_count"]
+            remaining = sum(len(player["hand"]) + len(player["reserve"]) for player in view["players"])
             if existing and remaining <= empty:
                 score += 1000
             candidates.append((score, card["value"], index, card["id"]))

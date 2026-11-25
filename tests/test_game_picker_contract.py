@@ -67,6 +67,13 @@ class GamePickerContractTests(unittest.TestCase):
         self.assertIn("navigator.clipboard.readText()", self.room)
         self.assertIn("copyTextToClipboard(JSON.stringify(backup, null, 2))", self.room)
 
+    def test_favorites_import_offers_manual_paste_when_clipboard_is_unavailable(self):
+        for control_id in ("favoriteGamesPasteForm", "favoriteGamesPasteInput", "favoriteGamesPasteCancelBtn"):
+            self.assertIn(f'id="{control_id}"', self.index)
+        self.assertIn('favoriteGamesPasteForm.addEventListener("submit"', self.room)
+        self.assertIn('favoriteGamesPasteForm.classList.remove("hidden")', self.room)
+        self.assertNotIn("Clipboard access requires HTTPS", self.room)
+
 
 if __name__ == "__main__":
     unittest.main()

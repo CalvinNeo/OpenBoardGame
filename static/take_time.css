@@ -140,8 +140,26 @@
 .take-time-tooltip { position: fixed; z-index: 1200; box-sizing: border-box; width: max-content; max-width: min(350px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; padding: 12px 14px; border: 1px solid #79948a; border-radius: 10px; background: #fff8e8; color: #203e45; box-shadow: 0 7px 28px #00171f55; font: 13px/1.65 system-ui, sans-serif; overflow-wrap: anywhere; }
 .take-time-tooltip[hidden] { display: none; }
 .take-time-tooltip.is-touch { pointer-events: none; }
-#takeTimeConfigBox .row { flex-wrap: wrap; gap: 8px; }
-#takeTimeStartClock { flex: 1; min-width: 0; max-width: 100%; }
+.take-time-setup { padding: 12px 0; }
+.take-time-picker-note { line-height: 1.6; font-size: 13px; overflow-wrap: anywhere; }
+.take-time-chapter { margin: 20px 0; min-width: 0; }
+.take-time-chapter h3 { font-size: 13px; margin: 0 0 8px; overflow-wrap: anywhere; }
+.take-time-clock-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.take-time-clock-grid > button { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 10px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.take-time-clock-grid > button > strong { font-size: 20px; }
+.take-time-clock-grid > button > span, .take-time-clock-grid > button > small { font-size: 11px; }
+.take-time-clock-grid > button[aria-current="step"] { outline: 2px solid #c79c43; outline-offset: -2px; }
+.game-panel[data-game-theme="take_time"] > .panel-header { flex-wrap: nowrap; gap: 4px; }
+.game-panel[data-game-theme="take_time"] .game-panel-title { flex: 1; flex-wrap: nowrap; gap: 4px; overflow: hidden; }
+.game-panel[data-game-theme="take_time"] .game-panel-title h2 { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-panel[data-game-theme="take_time"] > .panel-header button { flex-shrink: 0; white-space: nowrap; }
+#takeTimeHeaderActions { flex-shrink: 0; flex-wrap: nowrap; gap: 4px; }
+#takeTimeClocksBtn { min-height: 28px; }
+@media (max-width: 480px) {
+    .take-time-clock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .game-panel[data-game-theme="take_time"] > .panel-header button { padding: 3px 5px; min-height: 28px; font-size: 11px; }
+    .game-panel[data-game-theme="take_time"] .game-panel-title h2 { font-size: 13px; }
+}
 @media (max-width: 1050px) {
     .game-panel[data-game-theme="take_time"] { padding: 12px; border-radius: 12px; }
 }

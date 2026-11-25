@@ -159,7 +159,10 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         await app.on_room_ready("sid-tt-1", {"ready": True})
         await app.on_room_ready("sid-tt-2", {"ready": True})
         await app.on_room_start("sid-tt-1", {})
+        self.assertEqual(app.ROOMS[room_id].game_state["phase"], "setup")
+        await app.on_game_action("sid-tt-2", {"action": {"type": "select_clock", "clock_id": "official_6_4"}})
         self.assertEqual(app.ROOMS[room_id].game_state["phase"], "discussion")
+        self.assertEqual(app.ROOMS[room_id].game_state["clock_id"], "official_6_4")
         await app.on_game_action("sid-tt-1", {"action": {"type": "ready"}})
         payloads = [item for item in app.sio.emits if item["event"] == "game:state"]
         alice_view = next(item["payload"]["view"] for item in reversed(payloads) if item["to"] == "sid-tt-1")
