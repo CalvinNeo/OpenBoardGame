@@ -1438,6 +1438,10 @@ body.settings-open {
   overflow: hidden;
 }
 
+.create-room-step:has(.game-filter-menu[open]) {
+  min-height: min(440px, calc(100dvh - 190px));
+}
+
 .forest-shuffle-language-step {
   display: flex;
   min-height: 300px;
@@ -1545,6 +1549,7 @@ body.settings-open {
 }
 
 .create-room-controls {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(180px, 1fr) 150px 170px;
   gap: 8px;
@@ -1592,7 +1597,6 @@ body.settings-open {
 }
 
 .game-filter-menu {
-  position: relative;
   min-width: 0;
 }
 
@@ -1636,11 +1640,16 @@ body.settings-open {
 .game-filter-options {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  right: 0;
   z-index: 2;
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
   gap: 14px;
-  width: min(260px, calc(100vw - 64px));
+  width: min(560px, 100%);
+  max-height: min(480px, calc(100dvh - 220px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px;
   border: 1px solid #cbd5e1;
   border-radius: 12px;
@@ -1655,6 +1664,8 @@ body.settings-open {
 .create-room-type-filter {
   grid-column: 1 / -1;
   min-width: 0;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
 }
 
 .create-room-type-filter-heading {
@@ -1662,37 +1673,11 @@ body.settings-open {
   min-height: 28px;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
   padding: 4px 2px;
-  border-radius: 6px;
   color: #4b5563;
   font-size: 12px;
   line-height: 1.3;
-  list-style: none;
-  cursor: pointer;
-}
-
-.create-room-type-filter-heading::-webkit-details-marker {
-  display: none;
-}
-
-.create-room-type-filter-heading::before {
-  content: "›";
-  flex: 0 0 auto;
-  font-size: 18px;
-  line-height: 1;
-}
-
-.create-room-type-filter[open] > .create-room-type-filter-heading::before {
-  transform: rotate(90deg);
-}
-
-.create-room-type-filter-heading:hover {
-  background: #f8fafc;
-}
-
-.create-room-type-filter-heading:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.16);
-  outline-offset: 1px;
 }
 
 .create-room-type-filter-heading .hint {
@@ -2008,29 +1993,33 @@ body.settings-open {
     grid-column: 1 / -1;
   }
 
+  .game-filter-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .game-type-filters {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 4px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .game-type-filter-chip {
     justify-content: center;
     width: 100%;
     min-width: 0;
-    min-height: 26px;
+    min-height: 36px;
     gap: 0;
-    padding: 3px 2px;
+    padding: 6px 4px;
     overflow: hidden;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .game-type-filter-label {
-    gap: 1px;
+    gap: 4px;
   }
 
   .game-type-filter-icon {
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .game-type-filter-count {

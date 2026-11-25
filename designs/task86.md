@@ -1638,8 +1638,12 @@ git diff --check
 - 52 项 Hot Streak 规则/房间保存重连/前端样式/Help 合约测试通过，JS 语法、stub smoke 与
   `git diff --check` 通过。共享 Help/Explain 浏览器 35/35 通过，女巫的佳酿跨游戏 Explain
   回归通过，含 320 / 390 / 1024 / 1440px 的 24 组弹窗布局。
+- 因涉及共享 Explain，另运行 `python3 -m unittest`：5052 项、728.762 秒，15 个失败。
+  失败包含 Ark Nova 旧前端字符串契约、Bomb Busters 第 45 关选项、Marrakech 标签缺失、
+  Halli Galli 翻牌/响铃契约；这些模块的 14 个失败在单独重跑时仍可复现，未修无关逻辑。
+  全量运行启动早于新增房间测试，最终代码另经上述 52 项专项套件复核通过。
 - `tests/game_assets.browser.cjs:50` 仍因既有首页脚本白名单只允许 `shared.js` 失败，
   实际改动前已包含 `shared_help.js` 与 `shared_effects.js`；失败发生在 Hot Streak 加载前，
   本次不修改该无关契约。Hot Streak 自身真实懒加载、缓存复用与游戏切换已通过专属浏览器检查。
 - 未实测实体 iOS/Android/Windows、Safari/Firefox。保留 prototype-compatible 组件数据说明。
-  因通用加载验收仍失败，不能宣称 DEV_GUIDE 全项验收完成。
+  因全量与通用加载验收仍有失败，不能宣称 DEV_GUIDE 全项验收完成。

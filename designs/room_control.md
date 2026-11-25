@@ -47,8 +47,8 @@
 
 ## Select Game
 
-- 顶部提供搜索（名称 / 中文名 / game_id / 标签）、Filter 菜单和 Sort 排序，以及 Types 标签多选（取交集）。Filter 内包含 Players 人数与 Favor（仅收藏），菜单显示已启用的筛选项数；所有筛选条件取交集。
-- 每款游戏右侧的 ☆ / ★ 独立切换本地收藏，不触发游戏选择或建房；收藏与玩家身份无关，改名或退出登录不清除。Settings 的 Favorite games 提供 JSON 备份和合并导入。格式、安全限制与 UI 验收记录见 `designs/tag_favorite.md`。
+- 顶部提供搜索（名称 / 中文名 / game_id / 标签）、Filters 菜单和 Sort 排序。Filters 内统一包含 Players 人数、Favor（仅收藏）和 Types 标签多选，显示已启用的人数、收藏和类型标签总数；所有筛选条件取交集。菜单桌面端最大宽度 560px，手机端占满控件区域可用宽度，类型标签按三列排列。
+- 每款游戏右侧的 ☆ / ★ 独立切换本地收藏，不触发游戏选择或建房；收藏与玩家身份无关，改名或退出登录不清除。Settings 的 Favorite games 将 JSON 备份复制到剪贴板，或从剪贴板粘贴并合并导入，不使用文件。格式与安全限制见 `designs/tag_favorite.md`。
 - 游戏列表的 Grid 行顶部对齐；手机端列表仍占满剩余空间并独立滚动，但搜索或筛选后只有少量结果时，不得把条目拉高来填满列表。
 - Players 支持 1-10 的精确人数，另有 `11+`：匹配所有仍能容纳 11 人及以上的游戏，即 `max_players >= 11` 或 `supported_player_counts` 中存在 `>= 11` 的取值，而不是恰好 11 人。精确人数仍按原有语义匹配。
 - Sort 选项：Alphabet、Recently Played（当前浏览器最近开过的房间，来自 localStorage）、Recently Updated（游戏代码最近一次改动）、Development Order、Weight Asc / Weight Desc。所选排序保存在 localStorage。

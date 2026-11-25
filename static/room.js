@@ -76,7 +76,6 @@ const disableDoubleTapZoomToggle = document.getElementById("disableDoubleTapZoom
 const turnSoundToggle = document.getElementById("turnSoundToggle");
 const favoriteGamesExportBtn = document.getElementById("favoriteGamesExportBtn");
 const favoriteGamesImportBtn = document.getElementById("favoriteGamesImportBtn");
-const favoriteGamesImportInput = document.getElementById("favoriteGamesImportInput");
 const favoriteGamesStatus = document.getElementById("favoriteGamesStatus");
 const roomActionStatus = document.getElementById("roomActionStatus");
 const roomFeedbackTooltip = document.getElementById("roomFeedbackTooltip");
@@ -132,7 +131,6 @@ const gameFilterDetails = document.getElementById("gameFilterDetails");
 const gameFilterCount = document.getElementById("gameFilterCount");
 const favoriteGamesFilter = document.getElementById("favoriteGamesFilter");
 const gameSortSelect = document.getElementById("gameSortSelect");
-const gameTypeFilterDetails = document.getElementById("gameTypeFilterDetails");
 const gameTypeFilterSummary = document.getElementById("gameTypeFilterSummary");
 const gameTypeFilters = document.getElementById("gameTypeFilters");
 const gameListCount = document.getElementById("gameListCount");
@@ -657,40 +655,41 @@ function toggleFavoriteGame(gameId, button) {
   if (favoriteGamesFilter.checked) applyGameFilters();
 }
 
-favoriteGamesExportBtn.addEventListener("click", () => {
+favoriteGamesExportBtn.addEventListener("click", async () => {
   const backup = { type: FAVORITE_GAMES_BACKUP_TYPE, version: 1, game_ids: [...loadFavoriteGames()].sort() };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = objectUrl;
-  link.download = "openboardgame-favorites.json";
-  link.target = "_blank";
-  link.rel = "noopener";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-  favoriteGamesStatus.textContent = `Backup ready: ${backup.game_ids.length} favorite games.`;
+  favoriteGamesExportBtn.disabled = true;
+  try {
+    if (!await copyTextToClipboard(JSON.stringify(backup, null, 2))) throw new Error("Clipboard unavailable");
+    favoriteGamesStatus.textContent = `Copied ${backup.game_ids.length} favorite games to clipboard.`;
+  } catch {
+    favoriteGamesStatus.textContent = "Backup failed: allow clipboard access and try again.";
+  } finally {
+    favoriteGamesExportBtn.disabled = false;
+  }
 });
 
-favoriteGamesImportBtn.addEventListener("click", () => favoriteGamesImportInput.click());
-favoriteGamesImportInput.addEventListener("change", async () => {
-  const file = favoriteGamesImportInput.files[0];
-  favoriteGamesImportInput.value = "";
-  if (!file) return;
+favoriteGamesImportBtn.addEventListener("click", async () => {
   favoriteGamesImportBtn.disabled = true;
   try {
-    if (file.size > FAVORITE_GAMES_MAX_BYTES) throw new Error("Backup must be 1 MB or smaller.");
+    if (!navigator.clipboard?.readText) throw new Error("Clipboard access requires HTTPS or localhost and a supported browser.");
+    let text;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      throw new Error("Allow clipboard access and try again.");
+    }
+    if (!text.trim()) throw new Error("Clipboard is empty. Copy a favorites backup first.");
+    if (new Blob([text]).size > FAVORITE_GAMES_MAX_BYTES) throw new Error("Backup must be 1 MB or smaller.");
     let backup;
     try {
-      backup = JSON.parse(await file.text());
+      backup = JSON.parse(text);
     } catch {
-      throw new Error("Choose a valid favorites JSON backup.");
+      throw new Error("Clipboard does not contain a valid favorites JSON backup.");
     }
     if (!backup || backup.type !== FAVORITE_GAMES_BACKUP_TYPE || backup.version !== 1
       || !Array.isArray(backup.game_ids) || backup.game_ids.length > 10000
       || !backup.game_ids.every(isFavoriteGameId)) {
-      throw new Error("Unsupported favorites backup. Export one using Back up favorites.");
+      throw new Error("Unsupported favorites backup. Create one using Copy backup.");
     }
     const favorites = loadFavoriteGames();
     const previousCount = favorites.size;
@@ -2138,9 +2137,6 @@ async function openCreateRoomModal() {
     gameSortSelect.value = loadStoredGameSort();
   }
   selectedGameTagIds.clear();
-  if (gameTypeFilterDetails) {
-    gameTypeFilterDetails.open = false;
-  }
   if (gameTypeFilters) {
     gameTypeFilters.innerHTML = "";
     delete gameTypeFilters.dataset.ready;
@@ -4090,10 +4086,10 @@ if (playerCountFilter) {
 }
 
 function syncGameFilterCount() {
-  const count = Number(Boolean(playerCountFilter.value)) + Number(favoriteGamesFilter.checked);
+  const count = Number(Boolean(playerCountFilter.value)) + Number(favoriteGamesFilter.checked) + selectedGameTagIds.size;
   gameFilterCount.textContent = count ? String(count) : "";
   gameFilterCount.classList.toggle("hidden", !count);
-  gameFilterDetails.querySelector("summary").setAttribute("aria-label", count ? `Filter, ${count} active` : "Filter");
+  gameFilterDetails.querySelector("summary").setAttribute("aria-label", count ? `Filters, ${count} active` : "Filters");
 }
 
 favoriteGamesFilter.addEventListener("change", applyGameFilters);

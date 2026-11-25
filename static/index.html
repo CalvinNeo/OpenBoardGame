@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v159" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v160" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -64,7 +64,7 @@
               />
             </div>
             <details id="gameFilterDetails" class="game-filter-menu">
-              <summary>Filter <span id="gameFilterCount" class="game-filter-count hidden"></span></summary>
+              <summary>Filters <span id="gameFilterCount" class="game-filter-count hidden"></span></summary>
               <div class="game-filter-options">
                 <div class="create-room-filter-control">
                   <label for="playerCountFilter">Players</label>
@@ -87,6 +87,13 @@
                   <input id="favoriteGamesFilter" type="checkbox" />
                   <span>Favor <span class="hint">· Favorites only</span></span>
                 </label>
+                <div class="create-room-type-filter">
+                  <div class="create-room-type-filter-heading">
+                    <span id="gameTypeFilterLabel">Types</span>
+                    <span id="gameTypeFilterSummary" class="hint">Match all selected</span>
+                  </div>
+                  <div id="gameTypeFilters" class="game-type-filters" role="group" aria-labelledby="gameTypeFilterLabel"></div>
+                </div>
               </div>
             </details>
             <div class="create-room-filter-control">
@@ -100,13 +107,6 @@
                 <option value="difficulty_desc">Weight Desc</option>
               </select>
             </div>
-            <details id="gameTypeFilterDetails" class="create-room-type-filter">
-              <summary class="create-room-type-filter-heading">
-                <span id="gameTypeFilterLabel">Types</span>
-                <span id="gameTypeFilterSummary" class="hint">Match all selected</span>
-              </summary>
-              <div id="gameTypeFilters" class="game-type-filters" role="group" aria-labelledby="gameTypeFilterLabel"></div>
-            </details>
           </div>
           <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Loading games...</div>
           <button id="gameListRetryBtn" class="hidden" type="button">Retry loading games</button>
@@ -499,12 +499,11 @@
         <p id="turnSoundHint" class="settings-hint">A short chime when it is your turn to act. Off by default; saved in this browser.</p>
         <div class="settings-favorites" role="group" aria-labelledby="favoriteGamesHeading">
           <h3 id="favoriteGamesHeading">★ Favorite games</h3>
-          <p class="settings-hint">Saved in this browser, independently of your player. Import merges favorites without removing existing ones.</p>
+          <p class="settings-hint">Saved in this browser, independently of your player. Back up copies to your clipboard; import pastes and merges without removing existing favorites.</p>
           <div class="settings-tool-actions">
-            <button id="favoriteGamesExportBtn" type="button">Back up favorites</button>
-            <button id="favoriteGamesImportBtn" type="button">Import favorites</button>
+            <button id="favoriteGamesExportBtn" type="button">Copy backup</button>
+            <button id="favoriteGamesImportBtn" type="button">Paste &amp; import</button>
           </div>
-          <input id="favoriteGamesImportInput" class="hidden" type="file" accept="application/json,.json" tabindex="-1" />
           <p id="favoriteGamesStatus" class="settings-hint" role="status" aria-live="polite"></p>
         </div>
         <div class="settings-tools">
@@ -1920,6 +1919,6 @@
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
   <script src="/static/app.js?v=app_v75" defer></script>
-  <script src="/static/room.js?v=app_v117" defer></script>
+  <script src="/static/room.js?v=app_v118" defer></script>
 </body>
 </html>
