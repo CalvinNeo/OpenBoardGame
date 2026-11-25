@@ -1,3 +1,4 @@
+from game.cockroach_poker import CockroachPokerGame, ACTION_SCHEMA as COCKROACH_POKER_ACTION_SCHEMA, CONFIG_SCHEMA as COCKROACH_POKER_CONFIG_SCHEMA
 from game.rummikub import RummikubGame, ACTION_SCHEMA as RUMMIKUB_ACTION_SCHEMA, CONFIG_SCHEMA as RUMMIKUB_CONFIG_SCHEMA
 from game.machi_koro import MachiKoroGame, ACTION_SCHEMA as MACHI_KORO_ACTION_SCHEMA, CONFIG_SCHEMA as MACHI_KORO_CONFIG_SCHEMA
 from game.marrakech import MarrakechGame, ACTION_SCHEMA as MARRAKECH_ACTION_SCHEMA, CONFIG_SCHEMA as MARRAKECH_CONFIG_SCHEMA
@@ -119,6 +120,22 @@ from game.take_time_data import ACTION_SCHEMA as TAKE_TIME_ACTION_SCHEMA, CONFIG
 from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
+
+register_game(
+    GameDefinition(
+        game_id=CockroachPokerGame.game_id,
+        name="Cockroach Poker",
+        name_zh="德国蟑螂",
+        min_players=CockroachPokerGame.min_players,
+        max_players=CockroachPokerGame.max_players,
+        turn_mode="turn",
+        action_schema=COCKROACH_POKER_ACTION_SCHEMA,
+        config_schema=COCKROACH_POKER_CONFIG_SCHEMA,
+        module=CockroachPokerGame,
+        serialize=CockroachPokerGame.serialize,
+        deserialize=CockroachPokerGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

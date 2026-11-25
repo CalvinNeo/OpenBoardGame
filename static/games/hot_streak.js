@@ -178,10 +178,10 @@
         html: {
           zh: `<p>每张票单独算出收益或罚款，先把这一场的全部金额相加，再让现金(💵)最低停在 0。数字版采用这一裁定，避免结算顺序影响结果。</p>
 <p>并列出局时，这几名角色共享一段名次，下注按其中较差的名次赔付。</p>
-<p>第一、二场结束后会停在结果页，所有玩家都点击 Next Race 才会开始下一场。第三场结束后现金(💵)最多的玩家获胜。</p>`,
+<p>第一、二场结束后会停在结果页，所有玩家都点击 Next Race 才会开始下一场。第三场结束后现金(💵)最多的玩家获胜，展开玩家账单可查看三场逐票明细。所有真人玩家都点击 Play Again 后才会重开，机器人自动确认。</p>`,
           en: `<p>Every ticket is scored on its own, the whole race is summed first, and only then is the cash (💵) floor of 0 applied. This digital version uses that ruling so the order of tickets never changes the result.</p>
 <p>When racers are knocked out at the same moment they share a range of places, and bets pay on the worse place in that range.</p>
-<p>After races one and two the game waits on the result page until every player clicks Next Race. After race three the richest player in cash (💵) wins.</p>`,
+<p>After races one and two the game waits on the result page until every player clicks Next Race. After race three the richest player in cash (💵) wins. Expand a player's account for all three races and every ticket. A new game starts only after every human clicks Play Again, and bots confirm automatically.</p>`,
         },
       },
     ],
@@ -257,8 +257,8 @@
       en: "The state of all four racers: the places already claimed (🥇🥈🥉), where the rest are still running, and why any racer is out (🚫).",
     },
     result: {
-      zh: "本场逐票结算。展开可查看每张票是否命中、现金(💵)变化以及加倍(×2)。自己的明细默认展开，所有玩家确认 Next Race 前不会开始下一场。",
-      en: "This race's ticket-by-ticket payout. Expand to see hits, cash (💵) changes and doubles (×2). Your own breakdown opens automatically. The next race waits until every player confirms Next Race.",
+      zh: "展开玩家账单可查看每张票的命中、现金(💵)变化和已包含的加倍(×2)，以及余额最低为 0 的调整。自己的明细默认展开，终局会列出全部三场。所有玩家确认 Next Race 前不会开始下一场，所有真人确认 Play Again 前不会重开。",
+      en: "Expand a player's account for each ticket's hit, cash (💵) change, included double (×2), and any adjustment to the cash floor of 0. Your own account opens automatically, and the final account lists all three races. Every player must confirm Next Race to continue, and every human must confirm Play Again to restart.",
     },
     side: {
       zh: "本场的公开边注(🎲)。成立(✅ YES)与不成立(❌ NO)的票都在这里结算，结果会在条件达成或比赛结束时锁定。",
@@ -281,8 +281,8 @@
       en: "Mark yourself ready after reading the result. The next race starts only after every player is ready.",
     },
     again: {
-      zh: "用同样的玩家重新开始一局三场的比赛。",
-      en: "Start a fresh three-race game with the same players.",
+      zh: "确认已看完最终账单。所有真人玩家都确认后才会用同样的玩家重开三场比赛，机器人自动确认。",
+      en: "Confirm that you have reviewed the final account. A fresh three-race game starts with the same players only after every human confirms. Bots confirm automatically.",
     },
   };
 
@@ -297,6 +297,12 @@
   function hotStreakPlayerName(view, playerId) {
     const player = hotStreakFindPlayer(view, playerId);
     return (player && player.name) || playerId || "-";
+  }
+
+  function hotStreakPlayerLabel(view, player) {
+    const markers = ["🔴", "🔵", "🟢", "🟡", "🟣", "🟠", "🟤", "⚪"];
+    const index = (view.players || []).findIndex((entry) => entry.player_id === player.player_id);
+    return `${markers[Math.max(0, index) % markers.length]} ${player.name || "Guest"}${player.player_id === view.you ? " (you)" : ""}`;
   }
 
   function hotStreakFindRacer(view, racerId) {
@@ -504,9 +510,9 @@
       const heading = document.createElement("div");
       heading.className = "hot-streak-player-heading";
       const name = document.createElement("strong");
-      name.textContent = player.name || player.player_id;
+      name.textContent = hotStreakPlayerLabel(view, player);
       name.dataset.hotStreakTip = "";
-      name.dataset.hotStreakTipText = `${player.name}${player.player_id === view.you ? " (you)" : ""}`;
+      name.dataset.hotStreakTipText = name.textContent;
       const money = document.createElement("span");
       money.textContent = `💵 ${player.money}`;
       heading.append(name, money);
@@ -535,7 +541,7 @@
       status.className = "hot-streak-player-status";
       if (view.phase === "card_selection") {
         status.textContent = player.submitted ? `Submitted ${player.submitted_count} ✓` : "Choosing a card…";
-      } else if (view.phase === "race_result") {
+      } else if (view.phase === "race_result" || view.phase === "game_over") {
         status.textContent = player.ready ? "Ready ✓" : "Reviewing…";
       } else if (player.is_bot) {
         status.textContent = "🤖 Bot";
@@ -1086,7 +1092,8 @@
     const visible = view.phase === "race_result" || view.phase === "game_over";
     hotStreakSetHidden(hotStreakResult, !visible);
     if (!visible) return;
-    const key = JSON.stringify([view.last_race_summary, view.you, view.game_over, view.winner_ids]);
+    const key = JSON.stringify([view.last_race_summary, view.race_history, view.you, view.game_over, view.winner_ids,
+      (view.players || []).map((player) => [player.player_id, player.name, player.money])]);
     if (hotStreakResultsKey === key) return;
     hotStreakResultsKey = key;
     hotStreakResultBody.replaceChildren();
@@ -1142,18 +1149,46 @@
       head.className = "hot-streak-payout-head";
       head.dataset.hotStreakExplain = "result";
       const name = document.createElement("strong");
-      name.textContent = player.player_id === view.you ? `${player.name} (you)` : player.name;
-      name.title = name.textContent;
+      name.textContent = hotStreakPlayerLabel(view, player);
+      row.setAttribute("aria-label", name.textContent);
       const delta = document.createElement("span");
-      delta.textContent = `${result.net >= 0 ? "+" : "−"}${Math.abs(result.net)} → ${hotStreakMoney(result.money_after)}`;
+      delta.textContent = view.game_over
+        ? hotStreakMoney(player.money)
+        : `${result.net >= 0 ? "+" : "−"}${Math.abs(result.net)} → ${hotStreakMoney(result.money_after)}`;
       head.append(name, delta);
       row.appendChild(head);
 
-      (result.tickets || []).forEach((ticket) => {
-        const line = document.createElement("span");
-        line.className = "hot-streak-payout-ticket";
-        line.textContent = `${hotStreakTargetLabel(view, ticket.bet.target)} · ${ticket.hit ? "Hit ✓" : "Miss ✕"} · ${hotStreakMoney(ticket.delta)}${ticket.multiplier === 2 ? " ×2" : ""}`;
-        row.appendChild(line);
+      const history = view.game_over && view.race_history?.length ? view.race_history : [summary];
+      history.forEach((race) => {
+        const payout = race.payouts?.[player.player_id];
+        if (!payout) return;
+        const account = document.createElement("div");
+        account.className = "hot-streak-race-account";
+        const balance = document.createElement("strong");
+        balance.className = "hot-streak-account-balance";
+        balance.textContent = `Race ${race.race_number} · ${hotStreakMoney(payout.money_before)} → ${hotStreakMoney(payout.money_after)}`;
+        account.appendChild(balance);
+        const net = document.createElement("span");
+        net.className = "hot-streak-account-net";
+        net.textContent = `Tickets · ${Number(payout.net) >= 0 ? "+" : ""}${hotStreakMoney(payout.net)}`;
+        account.appendChild(net);
+        (payout.tickets || []).forEach((ticket) => {
+          const line = document.createElement("span");
+          line.className = "hot-streak-payout-ticket";
+          const amount = ticket.multiplier === 2
+            ? `${hotStreakMoney(ticket.base)} ×2 = ${hotStreakMoney(ticket.delta)}`
+            : hotStreakMoney(ticket.delta);
+          line.textContent = `${hotStreakTargetLabel(view, ticket.bet.target)} · ${ticket.bet.mode === "risky" ? "🔥 Risky" : "🛡️ Safe"} · ${ticket.hit ? "Hit ✓" : "Miss ✕"} · ${amount}`;
+          account.appendChild(line);
+        });
+        const adjustment = Number(payout.money_after) - Number(payout.money_before) - Number(payout.net);
+        if (adjustment > 0) {
+          const floor = document.createElement("span");
+          floor.className = "hot-streak-payout-ticket";
+          floor.textContent = `Cash floor · +${hotStreakMoney(adjustment)} · Balance cannot fall below 0.`;
+          account.appendChild(floor);
+        }
+        row.appendChild(account);
       });
       payouts.appendChild(row);
     });
@@ -1184,10 +1219,13 @@
     if (hotStreakPlayAgainBtn) {
       hotStreakPlayAgainBtn.hidden = view.phase !== "game_over";
       hotStreakPlayAgainBtn.disabled = !hotStreakHasAction("play_again");
+      const me = hotStreakFindPlayer(view, view.you);
+      hotStreakPlayAgainBtn.textContent = me?.ready ? "Ready ✓" : "Play Again";
     }
     if (hotStreakReadyProgress) {
       if (view.game_over) {
-        hotStreakReadyProgress.textContent = "Game over";
+        const progress = view.replay_progress || {};
+        hotStreakReadyProgress.textContent = `Replay ${progress.done || 0}/${progress.total || 0}`;
       } else {
         const progress = view.next_round_progress || {};
         hotStreakReadyProgress.textContent = `Ready ${progress.done || 0}/${progress.total || 0}`;

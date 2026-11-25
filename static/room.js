@@ -22,6 +22,7 @@ let pendingReadyRoomId = null;
 let cachedGameList = null;
 let gameListRequest = null;
 let gameFilterRevision = 0;
+let favoriteGamesStoragePending = false;
 let pendingGameSetupSelection = null;
 let roomSessionReady = false;
 let pendingRoomRequest = null;
@@ -73,6 +74,10 @@ const settingsModal = document.getElementById("settingsModal");
 const settingsCloseBtn = document.getElementById("settingsCloseBtn");
 const disableDoubleTapZoomToggle = document.getElementById("disableDoubleTapZoomToggle");
 const turnSoundToggle = document.getElementById("turnSoundToggle");
+const favoriteGamesExportBtn = document.getElementById("favoriteGamesExportBtn");
+const favoriteGamesImportBtn = document.getElementById("favoriteGamesImportBtn");
+const favoriteGamesImportInput = document.getElementById("favoriteGamesImportInput");
+const favoriteGamesStatus = document.getElementById("favoriteGamesStatus");
 const roomActionStatus = document.getElementById("roomActionStatus");
 const roomFeedbackTooltip = document.getElementById("roomFeedbackTooltip");
 const createRoomStatus = document.getElementById("createRoomStatus");
@@ -123,6 +128,9 @@ const leaveConfirmBtn = document.getElementById("leaveConfirmBtn");
 const createRoomGameStep = document.getElementById("createRoomGameStep");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
+const gameFilterDetails = document.getElementById("gameFilterDetails");
+const gameFilterCount = document.getElementById("gameFilterCount");
+const favoriteGamesFilter = document.getElementById("favoriteGamesFilter");
 const gameSortSelect = document.getElementById("gameSortSelect");
 const gameTypeFilterDetails = document.getElementById("gameTypeFilterDetails");
 const gameTypeFilterSummary = document.getElementById("gameTypeFilterSummary");
@@ -174,6 +182,9 @@ const NAME_STORAGE_KEY = "openboardgame:name";
 const LAST_ROOM_ID_KEY = "openboardgame:last_room_id";
 const GAME_SORT_KEY = "openboardgame:game_sort";
 const RECENT_GAMES_KEY = "openboardgame:recent_games";
+const FAVORITE_GAMES_KEY = "openboardgame:favorite_games";
+const FAVORITE_GAMES_BACKUP_TYPE = "openboardgame:favorites";
+const FAVORITE_GAMES_MAX_BYTES = 1048576;
 const DISABLE_DOUBLE_TAP_ZOOM_KEY = "openboardgame:disable_double_tap_zoom";
 const TURN_SOUND_KEY = "openboardgame:turn_sound";
 const AUTO_READY_KEY = "openboardgame:auto_ready";
@@ -597,6 +608,109 @@ settingsBtn.addEventListener("click", openSettingsModal);
 settingsCloseBtn.addEventListener("click", closeSettingsModal);
 settingsModal.addEventListener("click", (event) => {
   if (event.target === settingsModal) closeSettingsModal();
+});
+
+function isFavoriteGameId(value) {
+  return typeof value === "string" && /^[a-z0-9][a-z0-9_-]{0,99}$/.test(value);
+}
+
+function loadFavoriteGames() {
+  try {
+    const stored = favoriteGamesStoragePending
+      ? roomStorageCache.get(FAVORITE_GAMES_KEY) : readRoomStorage(FAVORITE_GAMES_KEY);
+    const parsed = JSON.parse(stored || "[]");
+    return new Set(Array.isArray(parsed) ? parsed.filter(isFavoriteGameId) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveFavoriteGames(favorites) {
+  const serialized = JSON.stringify([...favorites].sort());
+  writeRoomStorage(FAVORITE_GAMES_KEY, serialized);
+  try {
+    favoriteGamesStoragePending = localStorage.getItem(FAVORITE_GAMES_KEY) !== serialized;
+  } catch {
+    favoriteGamesStoragePending = true;
+  }
+  return !favoriteGamesStoragePending;
+}
+
+function syncFavoriteGameButton(button, favorites) {
+  const isFavorite = favorites.has(button.dataset.favoriteGameId);
+  button.textContent = isFavorite ? "★" : "☆";
+  button.setAttribute("aria-pressed", String(isFavorite));
+  button.title = `${isFavorite ? "Remove" : "Add"} ${button.dataset.gameName} ${isFavorite ? "from" : "to"} favorites`;
+  button.setAttribute("aria-label", `${button.dataset.gameName} favorite`);
+}
+
+function toggleFavoriteGame(gameId, button) {
+  const favorites = loadFavoriteGames();
+  if (favorites.has(gameId)) {
+    favorites.delete(gameId);
+  } else {
+    favorites.add(gameId);
+  }
+  const persisted = saveFavoriteGames(favorites);
+  favoriteGamesStatus.textContent = persisted ? "" : "Favorites are saved for this tab only. Back up to keep them.";
+  syncFavoriteGameButton(button, favorites);
+  if (favoriteGamesFilter.checked) applyGameFilters();
+}
+
+favoriteGamesExportBtn.addEventListener("click", () => {
+  const backup = { type: FAVORITE_GAMES_BACKUP_TYPE, version: 1, game_ids: [...loadFavoriteGames()].sort() };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = "openboardgame-favorites.json";
+  link.target = "_blank";
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+  favoriteGamesStatus.textContent = `Backup ready: ${backup.game_ids.length} favorite games.`;
+});
+
+favoriteGamesImportBtn.addEventListener("click", () => favoriteGamesImportInput.click());
+favoriteGamesImportInput.addEventListener("change", async () => {
+  const file = favoriteGamesImportInput.files[0];
+  favoriteGamesImportInput.value = "";
+  if (!file) return;
+  favoriteGamesImportBtn.disabled = true;
+  try {
+    if (file.size > FAVORITE_GAMES_MAX_BYTES) throw new Error("Backup must be 1 MB or smaller.");
+    let backup;
+    try {
+      backup = JSON.parse(await file.text());
+    } catch {
+      throw new Error("Choose a valid favorites JSON backup.");
+    }
+    if (!backup || backup.type !== FAVORITE_GAMES_BACKUP_TYPE || backup.version !== 1
+      || !Array.isArray(backup.game_ids) || backup.game_ids.length > 10000
+      || !backup.game_ids.every(isFavoriteGameId)) {
+      throw new Error("Unsupported favorites backup. Export one using Back up favorites.");
+    }
+    const favorites = loadFavoriteGames();
+    const previousCount = favorites.size;
+    backup.game_ids.forEach((gameId) => favorites.add(gameId));
+    const persisted = saveFavoriteGames(favorites);
+    favoriteGamesStatus.textContent = `Imported ${favorites.size - previousCount} new favorites. ${favorites.size} total.`
+      + (persisted ? "" : " Saved for this tab only; browser storage is unavailable.");
+    if (!createRoomModal.classList.contains("hidden")) await applyGameFilters();
+  } catch (error) {
+    favoriteGamesStatus.textContent = `Import failed: ${error.message}`;
+  } finally {
+    favoriteGamesImportBtn.disabled = false;
+  }
+});
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== FAVORITE_GAMES_KEY && event.key !== null) return;
+  favoriteGamesStoragePending = false;
+  roomStorageCache.delete(FAVORITE_GAMES_KEY);
+  if (!createRoomModal.classList.contains("hidden")) applyGameFilters();
 });
 
 function loadStoredName() {
@@ -1301,8 +1415,9 @@ function matchesPlayerCountFilter(game, playerFilter) {
     : counts.includes(playerFilter.count);
 }
 
-function filterGames(games, searchText, playerFilter, selectedTagIds = []) {
+function filterGames(games, searchText, playerFilter, selectedTagIds = [], favoritesOnly = false) {
   const normalizedSearch = searchText.toLowerCase();
+  const favorites = favoritesOnly ? loadFavoriteGames() : null;
   const selectedTags =
     selectedTagIds instanceof Set ? selectedTagIds : new Set(selectedTagIds || []);
   return games.filter((g) => {
@@ -1321,7 +1436,8 @@ function filterGames(games, searchText, playerFilter, selectedTagIds = []) {
     const matchesType = [...selectedTags].every((tagId) =>
       tags.some((tag) => tag.id === tagId)
     );
-    return matchesSearch && matchesPlayers && matchesType;
+    const matchesFavorite = !favoritesOnly || favorites.has(g.game_id);
+    return matchesSearch && matchesPlayers && matchesType && matchesFavorite;
   });
 }
 
@@ -1407,6 +1523,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  cockroach_poker: 1.10,
   rummikub: 1.71,
   machi_koro: 1.52,
   thats_life: 1.32,
@@ -1682,15 +1799,23 @@ function renderGameList(games) {
   if (!gameListEl || !gameListEmpty) {
     return;
   }
+  const scrollTop = gameListEl.scrollTop;
+  const focusedFavorite = document.activeElement?.closest(".game-favorite-btn");
+  const focusedGameId = focusedFavorite?.dataset.favoriteGameId;
+  const focusedIndex = [...gameListEl.querySelectorAll(".game-favorite-btn")].indexOf(focusedFavorite);
+  const favorites = loadFavoriteGames();
   gameListEl.innerHTML = "";
   if (!games || !games.length) {
     gameListEl.classList.add("hidden");
     gameListEmpty.classList.remove("hidden");
+    if (focusedGameId) gameFilterDetails.querySelector("summary").focus({ preventScroll: true });
     return;
   }
   gameListEl.classList.remove("hidden");
   gameListEmpty.classList.add("hidden");
   games.forEach((g) => {
+    const entry = document.createElement("div");
+    entry.className = "game-list-entry";
     const item = document.createElement("button");
     item.className = "game-item";
     item.type = "button";
@@ -1748,8 +1873,23 @@ function renderGameList(games) {
     item.addEventListener("click", () => {
       selectGameFromModal(g.game_id);
     });
-    gameListEl.appendChild(item);
+    const favoriteButton = document.createElement("button");
+    favoriteButton.type = "button";
+    favoriteButton.className = "game-favorite-btn";
+    favoriteButton.dataset.favoriteGameId = g.game_id;
+    favoriteButton.dataset.gameName = displayName;
+    syncFavoriteGameButton(favoriteButton, favorites);
+    favoriteButton.addEventListener("click", () => toggleFavoriteGame(g.game_id, favoriteButton));
+    entry.append(item, favoriteButton);
+    gameListEl.appendChild(entry);
   });
+  gameListEl.scrollTop = scrollTop;
+  if (focusedGameId) {
+    const buttons = [...gameListEl.querySelectorAll(".game-favorite-btn")];
+    const nextFocus = buttons.find((button) => button.dataset.favoriteGameId === focusedGameId)
+      || buttons[Math.min(focusedIndex, buttons.length - 1)];
+    nextFocus?.focus({ preventScroll: true });
+  }
 }
 
 function updateGameListCount(count) {
@@ -1951,6 +2091,7 @@ async function selectGameFromModal(gameId) {
 }
 
 async function applyGameFilters() {
+  syncGameFilterCount();
   const revision = ++gameFilterRevision;
   gameListRetryBtn.classList.add("hidden");
   if (!cachedGameList) {
@@ -1973,7 +2114,7 @@ async function applyGameFilters() {
   }
   const searchText = gameSearchInput ? gameSearchInput.value.trim() : "";
   const playerFilter = parsePlayerCountFilter(playerCountFilter ? playerCountFilter.value : "");
-  const filtered = filterGames(games, searchText, playerFilter, selectedGameTagIds);
+  const filtered = filterGames(games, searchText, playerFilter, selectedGameTagIds, favoriteGamesFilter.checked);
   const sortKey = getGameSortKey();
   const sorted = sortGames(filtered, sortKey);
   updateGameListCount(sorted.length);
@@ -1991,6 +2132,8 @@ async function openCreateRoomModal() {
   if (playerCountFilter) {
     playerCountFilter.value = "";
   }
+  favoriteGamesFilter.checked = false;
+  gameFilterDetails.open = false;
   if (gameSortSelect) {
     gameSortSelect.value = loadStoredGameSort();
   }
@@ -3946,6 +4089,18 @@ if (playerCountFilter) {
   });
 }
 
+function syncGameFilterCount() {
+  const count = Number(Boolean(playerCountFilter.value)) + Number(favoriteGamesFilter.checked);
+  gameFilterCount.textContent = count ? String(count) : "";
+  gameFilterCount.classList.toggle("hidden", !count);
+  gameFilterDetails.querySelector("summary").setAttribute("aria-label", count ? `Filter, ${count} active` : "Filter");
+}
+
+favoriteGamesFilter.addEventListener("change", applyGameFilters);
+document.addEventListener("click", (event) => {
+  if (gameFilterDetails.open && !gameFilterDetails.contains(event.target)) gameFilterDetails.open = false;
+});
+
 if (gameSortSelect) {
   gameSortSelect.addEventListener("change", () => {
     saveStoredGameSort(gameSortSelect.value);
@@ -4035,7 +4190,8 @@ document.addEventListener("keydown", (event) => {
       event.stopImmediatePropagation();
       closeSettingsModal();
     } else if (event.key === "Tab") {
-      const controls = settingsModal.querySelectorAll("input:not(:disabled), button:not(:disabled)");
+      const controls = [...settingsModal.querySelectorAll("input:not(:disabled), button:not(:disabled)")]
+        .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
       const first = controls[0];
       const last = controls[controls.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -4082,6 +4238,11 @@ document.addEventListener("keydown", (event) => {
   }
   event.preventDefault();
   event.stopImmediatePropagation();
+  if (gameFilterDetails.open) {
+    gameFilterDetails.open = false;
+    gameFilterDetails.querySelector("summary").focus({ preventScroll: true });
+    return;
+  }
   closeCreateRoomModal();
   if (createBtn) {
     createBtn.focus();

@@ -792,6 +792,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "cockroach_poker":
+        return {"type": action.get("type")}
     if game_type == "criminal_dance":
         return {"type": action.get("type")}
     if game_type == "compress":
@@ -1742,7 +1744,11 @@ async def _maybe_run_bots(room: Room) -> None:
                 events = [bot_event] + events
                 room.state_version += 1
                 if state.get("game_over"):
+                    notify_cockroach_end = room.game_type == "cockroach_poker" and room.status != "game_over"
                     room.status = "game_over"
+                    if notify_cockroach_end:
+                        await _emit_room_state(room)
+                        await _emit_room_list_update()
                 _schedule_halli_flip_reveal(room)
                 _schedule_halli_flip_wait(room)
                 _save_room_state(room)

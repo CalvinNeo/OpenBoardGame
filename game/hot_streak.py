@@ -1188,6 +1188,15 @@ def _bot_choose_race_cards(state: Dict, bot_id: str) -> List[str]:
     return list(best_cards or tuple(hand[:required]))
 
 
+def _replay_ready_players(state: Dict) -> List[str]:
+    confirmed = set(state.get("replay_ready", []))
+    return [
+        player_id
+        for player_id in state.get("turn_order", [])
+        if player_id in confirmed or state.get("player_meta", {}).get(player_id, {}).get("is_bot")
+    ]
+
+
 class HotStreakGame:
     game_id = "hot_streak"
     min_players = 2
@@ -1232,6 +1241,7 @@ class HotStreakGame:
             "current_side_bet_id": None,
             "last_race_summary": None,
             "race_history": [],
+            "replay_ready": [],
             "winner_ids": [],
             "game_over": False,
         }
@@ -1257,7 +1267,7 @@ class HotStreakGame:
         if phase == "race_result":
             return [] if player_id in set(state.get("next_round_ready", [])) else ["next_round"]
         if phase == "game_over":
-            return ["play_again"]
+            return [] if player_id in _replay_ready_players(state) else ["play_again"]
         return []
 
     @staticmethod
@@ -1410,6 +1420,13 @@ class HotStreakGame:
             return events, None
 
         if action_type == "play_again":
+            ready = _replay_ready_players(state)
+            ready.append(player_id)
+            state["replay_ready"] = ready
+            if len(ready) < len(state["turn_order"]):
+                return [
+                    {"type": "hot_streak:replay_ready", "payload": {"player_id": player_id}}
+                ], None
             players = [copy.deepcopy(state["player_meta"][pid]) for pid in state["turn_order"]]
             game_index = int(state.get("game_index", 1)) + 1
             replacement = HotStreakGame.init_game({}, players)
@@ -1424,7 +1441,8 @@ class HotStreakGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
-        ready = set(state.get("next_round_ready", []))
+        replay_ready = _replay_ready_players(state) if state.get("game_over") else []
+        ready = set(replay_ready if state.get("game_over") else state.get("next_round_ready", []))
         submitted = state.get("submitted_cards_by_player", {})
         players = []
         for player_id in state.get("turn_order", []):
@@ -1499,6 +1517,7 @@ class HotStreakGame:
             "last_race_summary": copy.deepcopy(state.get("last_race_summary")),
             "race_history": copy.deepcopy(state.get("race_history", [])),
             "next_round_progress": {"done": len(ready), "total": len(state.get("turn_order", []))},
+            "replay_progress": {"done": len(replay_ready), "total": len(state.get("turn_order", []))},
             "winner_ids": list(state.get("winner_ids", [])),
             "game_over": bool(state.get("game_over")),
             "legal_actions": HotStreakGame.get_legal_actions(state, viewer_id),

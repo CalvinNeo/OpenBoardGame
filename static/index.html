@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v158" />
+  <link id="coreStyles" rel="stylesheet" href="/static/style.css?v=app_v159" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -63,23 +63,32 @@
                 enterkeyhint="search"
               />
             </div>
-            <div class="create-room-filter-control">
-              <label for="playerCountFilter">Players</label>
-              <select id="playerCountFilter">
-                <option value="">Any number</option>
-                <option value="1">1 player</option>
-                <option value="2">2 players</option>
-                <option value="3">3 players</option>
-                <option value="4">4 players</option>
-                <option value="5">5 players</option>
-                <option value="6">6 players</option>
-                <option value="7">7 players</option>
-                <option value="8">8 players</option>
-                <option value="9">9 players</option>
-                <option value="10">10 players</option>
-                <option value="11+">11+ players</option>
-              </select>
-            </div>
+            <details id="gameFilterDetails" class="game-filter-menu">
+              <summary>Filter <span id="gameFilterCount" class="game-filter-count hidden"></span></summary>
+              <div class="game-filter-options">
+                <div class="create-room-filter-control">
+                  <label for="playerCountFilter">Players</label>
+                  <select id="playerCountFilter">
+                    <option value="">Any number</option>
+                    <option value="1">1 player</option>
+                    <option value="2">2 players</option>
+                    <option value="3">3 players</option>
+                    <option value="4">4 players</option>
+                    <option value="5">5 players</option>
+                    <option value="6">6 players</option>
+                    <option value="7">7 players</option>
+                    <option value="8">8 players</option>
+                    <option value="9">9 players</option>
+                    <option value="10">10 players</option>
+                    <option value="11+">11+ players</option>
+                  </select>
+                </div>
+                <label class="settings-option" for="favoriteGamesFilter">
+                  <input id="favoriteGamesFilter" type="checkbox" />
+                  <span>Favor <span class="hint">· Favorites only</span></span>
+                </label>
+              </div>
+            </details>
             <div class="create-room-filter-control">
               <label for="gameSortSelect">Sort</label>
               <select id="gameSortSelect">
@@ -488,6 +497,16 @@
           <span>Play a sound on my turn</span>
         </label>
         <p id="turnSoundHint" class="settings-hint">A short chime when it is your turn to act. Off by default; saved in this browser.</p>
+        <div class="settings-favorites" role="group" aria-labelledby="favoriteGamesHeading">
+          <h3 id="favoriteGamesHeading">★ Favorite games</h3>
+          <p class="settings-hint">Saved in this browser, independently of your player. Import merges favorites without removing existing ones.</p>
+          <div class="settings-tool-actions">
+            <button id="favoriteGamesExportBtn" type="button">Back up favorites</button>
+            <button id="favoriteGamesImportBtn" type="button">Import favorites</button>
+          </div>
+          <input id="favoriteGamesImportInput" class="hidden" type="file" accept="application/json,.json" tabindex="-1" />
+          <p id="favoriteGamesStatus" class="settings-hint" role="status" aria-live="polite"></p>
+        </div>
         <div class="settings-tools">
           <label class="settings-option" for="skipValidationToggle" title="Skip schema validation for room start and actions">
             <input id="skipValidationToggle" type="checkbox" />
@@ -663,6 +682,7 @@
                     <option value="factory_funner">Factory Funner · 工厂乐翻天 🤖</option>
                     <option value="for_northwood">For Northwood! · 为了北境森林</option>
                     <option value="rummikub">Rummikub · 拉密 🤖</option>
+                    <option value="cockroach_poker">Cockroach Poker · 德国蟑螂 🤖</option>
                     <option value="machi_koro">Machi Koro · 骰子街 🤖</option>
                     <option value="thats_life">That's Life! · 糟了个糕</option>
                   </select>
@@ -1252,6 +1272,7 @@
               <button id="factoryFunnerExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="forNorthwoodHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="cockroachPokerHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="marrakechHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="machiKoroHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="thatsLifeHeaderActions" style="display: none;"></div>
@@ -1797,6 +1818,7 @@
 
             <div id="factoryFunnerPanel" class="hidden"></div>
             <div id="forNorthwoodPanel" class="hidden"></div>
+            <div id="cockroachPokerPanel" class="hidden"></div>
             <div id="marrakechPanel" class="hidden"></div>
             <div id="machiKoroPanel" class="hidden"></div>
             <div id="thatsLifePanel" class="hidden"></div>
@@ -1855,10 +1877,10 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=326" defer></script>
+  <script src="/static/game_assets.js?v=329" defer></script>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v49" defer></script>
-  <script src="/static/games/shared_help.js?v=3" defer></script>
+  <script src="/static/games/shared_help.js?v=4" defer></script>
   <script src="/static/games/shared_effects.js?v=1" defer></script>
   <template id="yahtzeeGuideOverlay"></template>
   <template id="startupsDialog"></template>
@@ -1897,7 +1919,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v74" defer></script>
-  <script src="/static/room.js?v=app_v115" defer></script>
+  <script src="/static/app.js?v=app_v75" defer></script>
+  <script src="/static/room.js?v=app_v117" defer></script>
 </body>
 </html>

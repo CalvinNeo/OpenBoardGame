@@ -1,0 +1,82 @@
+.game-panel[data-game-theme="cockroach_poker"] { background: #1c2c24; color: #eee7d7; }
+.game-panel[data-game-theme="cockroach_poker"] > .panel-header { flex-wrap: nowrap; align-items: center; }
+.game-panel[data-game-theme="cockroach_poker"] .game-panel-title { flex: 1; min-width: 0; flex-wrap: nowrap; }
+.game-panel[data-game-theme="cockroach_poker"] .game-panel-title h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-panel[data-game-theme="cockroach_poker"] #gameReconnectBtn { flex: 0 0 auto; }
+.game-panel[data-game-theme="cockroach_poker"] > .panel-header > .panel-header-actions { flex: 0 0 auto; flex-wrap: nowrap; }
+#cockroachPokerPanel { --cp-gold: #edc77d; --cp-ink: #eee7d7; color: var(--cp-ink); min-width: 0; }
+#cockroachPokerPanel * { box-sizing: border-box; }
+#cockroachPokerPanel button { min-height: 40px; min-width: 0; white-space: normal; overflow-wrap: anywhere; border: 1px solid #6b685c; border-radius: 9px; background: #29352f; color: var(--cp-ink); padding: 8px 10px; font: inherit; cursor: pointer; touch-action: manipulation; }
+#cockroachPokerPanel button:disabled { opacity: .5; cursor: default; }
+#cockroachPokerPanel button[aria-pressed="true"] { border-color: var(--cp-gold); background: #554731; box-shadow: inset 0 0 0 1px var(--cp-gold); }
+#cockroachPokerPanel button:focus-visible { outline: 2px solid var(--cp-gold); outline-offset: 2px; }
+#cockroachPokerPanel .cp-primary { background: #e8c17c; color: #232a23; font-weight: 700; border-color: #e8c17c; }
+.cp-lobby { text-align: center; padding: 48px 12px; }
+.cp-lobby-art { font-size: 52px; letter-spacing: 8px; }
+.cp-muted, .cp-caption span { color: #b6bcaf; }
+.cp-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 0 14px; font-size: 12px; }
+#cockroachPokerStatus { color: #edc77d; overflow-wrap: anywhere; }
+.cp-caption { margin: 12px 0 8px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.cp-caption span { font-weight: 400; }
+.cp-players { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cp-player { min-width: 0; border-bottom: 2px solid #505d50; padding: 9px; background: #25312b; border-radius: 8px; }
+.cp-player.cp-active { border-color: #edc77d; background: #354035; }
+.cp-player-heading { display: flex; gap: 6px; align-items: baseline; font-size: 13px; }
+.cp-player-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-player-meta { font-size: 11px; color: #c3c8b9; white-space: nowrap; }
+.cp-counts { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; margin-top: 8px; }
+.cp-count { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; border-radius: 5px; padding: 3px 0; font-size: 12px; color: #c3c8b9; }
+.cp-count.cp-danger { background: #753d38; color: #fff1d2; }
+.cp-count .cp-icon { width: 19px; height: 22px; font-size: 18px; }
+.cp-icon { display: inline-flex; justify-content: center; align-items: center; width: 32px; height: 34px; font-size: 28px; flex: 0 0 auto; line-height: 1.15; }
+.cp-icon svg { width: 100%; height: 100%; }
+.cp-exchange { margin: 15px 0 10px; border-block: 1px solid #535e50; padding: 14px 0; }
+.cp-message { text-align: center; font-size: 15px; overflow-wrap: anywhere; }
+.cp-center { display: flex; justify-content: center; gap: 14px; align-items: center; margin: 12px 0; }
+.cp-offering .cp-center { display: none; }
+.cp-card { width: 94px; min-height: 116px; border: 1px solid #b39d70; border-radius: 12px; background: #ece2c8; color: #28332c; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; gap: 7px; text-align: center; }
+.cp-card .cp-icon { width: 46px; height: 48px; font-size: 42px; }
+.cp-card small { font-size: 11px; }
+.cp-card.cp-back { background: repeating-linear-gradient(45deg, #394c3f, #394c3f 7px, #2e4034 7px, #2e4034 14px); color: #edc77d; font-size: 32px; }
+.cp-secret { max-width: 135px; font-size: 12px; color: #ccc6b6; }
+.cp-secret strong { display: block; margin-bottom: 5px; color: #edc77d; }
+.cp-decisions { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; }
+.cp-trail { margin-top: 10px; font-size: 11px; text-align: center; color: #b6bcaf; overflow-wrap: anywhere; }
+.cp-composer { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 5px 14px; margin-bottom: 15px; }
+.cp-claims { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.cp-claims button { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px !important; }
+.cp-claims .cp-icon { width: 22px; height: 25px; font-size: 21px; }
+.cp-targets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+#cockroachPokerPanel .cp-targets button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#cockroachPokerSendBtn { grid-column: 1 / -1; justify-self: center; margin-top: 8px; min-width: 165px; }
+.cp-hand { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 7px; }
+#cockroachPokerPanel .cp-hand-card { padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; border-color: var(--cp-color); }
+.cp-hand-card small { font-size: 11px; }
+.cp-hand-card strong { font-size: 12px; }
+.cp-history { margin-top: 16px; color: #bbc3b4; font-size: 12px; }
+.cp-history summary { cursor: pointer; padding: 8px 0; }
+.cp-history ol { max-height: 180px; overflow: auto; margin: 8px 0; padding-left: 22px; }
+.cp-history li { padding-bottom: 7px; overflow-wrap: anywhere; }
+#cockroachPokerFinal { border-top: 1px solid #6c6a56; padding: 12px 0; overflow-wrap: anywhere; }
+#cockroachPokerFinal h3 { font-size: 17px; color: #edc77d; }
+#cockroachPokerFinal p { font-size: 13px; }
+#cockroachPokerFinal > button { margin-top: 12px; }
+.cp-final-row { padding: 8px 0; border-bottom: 1px solid #465445; font-size: 12px; }
+.cp-tooltip { position: fixed; z-index: 20000; max-width: min(290px, calc(100vw - 20px)); padding: 10px 12px; background: #19251f; border: 1px solid #b5a471; color: #f0e7ce; border-radius: 8px; box-shadow: 0 6px 25px #0006; font-size: 13px; pointer-events: none; overflow-wrap: anywhere; }
+@media (max-width: 650px) {
+  .cp-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .cp-player { padding: 7px 5px; }
+  .cp-player-heading { font-size: 12px; gap: 4px; }
+  .cp-player-meta { font-size: 10px; }
+  .cp-counts { gap: 0; }
+  .cp-count .cp-icon { width: 16px; font-size: 15px; }
+  .cp-status { gap: 6px 12px; padding-bottom: 8px; }
+  #cockroachPokerStatus { flex-basis: 100%; }
+  .cp-exchange { margin-top: 11px; padding: 11px 0; }
+  .cp-composer { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .cp-claims button { flex-direction: column; padding: 6px 2px !important; gap: 2px; }
+  .cp-hand { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+  #cockroachPokerPanel .cp-hand-card { padding: 8px 2px; }
+  .cp-hand-card .cp-icon { width: 30px; height: 32px; }
+  .cp-caption { margin-top: 10px; }
+}

@@ -289,9 +289,21 @@
     function atPoint(x, y) {
       const hits = targets().filter((node) => {
         const box = node.getBoundingClientRect();
-        return box.width && box.height
-          && x >= box.left && x <= box.right
-          && y >= box.top && y <= box.bottom;
+        if (!box.width || !box.height || x < box.left || x > box.right || y < box.top || y > box.bottom) return false;
+        if (getComputedStyle(node).visibility !== "visible") return false;
+        for (let ancestor = node.parentElement; ancestor; ancestor = ancestor.parentElement) {
+          const style = getComputedStyle(ancestor);
+          const clip = ancestor.getBoundingClientRect();
+          const scaleX = ancestor.offsetWidth ? clip.width / ancestor.offsetWidth : 1;
+          const scaleY = ancestor.offsetHeight ? clip.height / ancestor.offsetHeight : 1;
+          const left = clip.left + ancestor.clientLeft * scaleX;
+          const top = clip.top + ancestor.clientTop * scaleY;
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowX)
+            && (x < left || x > left + ancestor.clientWidth * scaleX)) return false;
+          if (/(auto|scroll|hidden|clip)/.test(style.overflowY)
+            && (y < top || y > top + ancestor.clientHeight * scaleY)) return false;
+        }
+        return true;
       });
       if (!hits.length) return null;
       const deepest = hits.find(

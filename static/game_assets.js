@@ -1,9 +1,17 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "cockroach_poker": {
+    "scripts": ["/static/games/cockroach_poker.js?v=1"],
+    "styles": ["/static/games/cockroach_poker.css?v=1"],
+    "markup": "/static/games/cockroach_poker.html?v=1",
+    "panel": "cockroachPokerPanel",
+    "panelTitle": "Cockroach Poker · 德国蟑螂",
+    "header": "showCockroachPokerHeaderActions"
+  },
   "rummikub": {
-    "scripts": ["/static/games/rummikub.js?v=4"],
-    "styles": ["/static/games/rummikub.css?v=4"],
-    "markup": "/static/games/rummikub.html?v=4",
+    "scripts": ["/static/games/rummikub.js?v=5"],
+    "styles": ["/static/games/rummikub.css?v=5"],
+    "markup": "/static/games/rummikub.html?v=5",
     "panel": "rummikubPanel",
     "panelTitle": "Rummikub · 拉密",
     "header": "showRummikubHeaderActions"
@@ -623,14 +631,14 @@ const GAME_ASSETS = {
   },
   "hot_streak": {
     "scripts": [
-      "/static/games/hot_streak.js?v=app_v8"
+      "/static/games/hot_streak.js?v=app_v9"
     ],
     "styles": [],
     "panel": "hotStreakPanel",
     "panelTitle": "🔥 Hot Streak",
     "header": "showHotStreakHeaderActions",
     "markup": "/static/games/hot_streak.html?v=6",
-    "styleFragments": "/static/games/hot_streak.css?v=7"
+    "styleFragments": "/static/games/hot_streak.css?v=8"
   },
   "acquire": {
     "scripts": [

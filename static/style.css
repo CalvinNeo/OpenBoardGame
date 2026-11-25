@@ -1206,6 +1206,21 @@ body.settings-open {
   border-top: 1px solid #e5e7eb;
 }
 
+.settings-favorites {
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.settings-favorites h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 14px;
+}
+
+.settings-favorites .settings-hint {
+  margin-bottom: 10px;
+}
+
 .settings-tool-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1576,6 +1591,67 @@ body.settings-open {
   line-height: 1;
 }
 
+.game-filter-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.game-filter-menu > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  list-style: none;
+  cursor: pointer;
+}
+
+.game-filter-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.game-filter-menu > summary::after {
+  content: "▾";
+}
+
+.game-filter-menu[open] > summary,
+.game-filter-menu > summary:focus-visible {
+  border-color: #2563eb;
+  outline: 3px solid rgba(37, 99, 235, 0.15);
+}
+
+.game-filter-count {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+}
+
+.game-filter-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 2;
+  display: grid;
+  gap: 14px;
+  width: min(260px, calc(100vw - 64px));
+  padding: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+}
+
+.game-filter-options .hint {
+  font-size: 12px;
+}
+
 .create-room-type-filter {
   grid-column: 1 / -1;
   min-width: 0;
@@ -1731,7 +1807,7 @@ body.settings-open {
 
 .game-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   grid-auto-rows: minmax(50px, auto);
   align-content: start;
   gap: 8px;
@@ -1743,6 +1819,17 @@ body.settings-open {
   -webkit-overflow-scrolling: touch;
 }
 
+.game-list-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: center;
+  min-width: 0;
+  padding-right: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
 .game-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1752,9 +1839,9 @@ body.settings-open {
   min-width: 0;
   min-height: 50px;
   padding: 6px 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: #f9fafb;
+  background: transparent;
   color: #111827;
   font: inherit;
   text-align: left;
@@ -1776,6 +1863,34 @@ body.settings-open {
   border-color: #2563eb;
   outline: 3px solid rgba(37, 99, 235, 0.18);
   outline-offset: 1px;
+}
+
+.game-favorite-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font: 26px/1 Arial, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.game-favorite-btn[aria-pressed="true"] {
+  color: #a16207;
+}
+
+.game-favorite-btn:hover {
+  background: #fef3c7;
+}
+
+.game-favorite-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
 }
 
 .game-item-name {

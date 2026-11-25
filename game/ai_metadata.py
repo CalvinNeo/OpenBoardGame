@@ -31,6 +31,7 @@ STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
     "chromino",
     "citadels",
     "colt_express",
+    "cockroach_poker",
     "criminal_dance",
     "coyote",
     "cryptid",

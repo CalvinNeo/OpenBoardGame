@@ -117,6 +117,7 @@ from game.ticket_to_ride import TicketToRideGame
 from game.twelve_rivers import TwelveRiversGame
 from game.dadada import DadadaGame
 from game.trio import TrioGame
+from game.cockroach_poker import CockroachPokerGame
 from game.rummikub import RummikubGame
 from game.mushroom_picking import MushroomPickingGame
 from game.find_diff import FindDiffGame
@@ -126,6 +127,7 @@ from game.werewolf import WerewolfGame
 from game import definitions as _definitions
 
 __all__ = [
+    "CockroachPokerGame",
     "MarrakechGame",
     "MachiKoroGame",
     "ChrominoGame",

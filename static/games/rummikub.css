@@ -34,8 +34,13 @@
 #rummikubPanel .rummikub-tile[data-color="blue"] { color: #1855a8; }
 #rummikubPanel .rummikub-tile[data-color="orange"] { color: #995400; }
 #rummikubPanel .rummikub-tile[data-color="joker"] { color: #6b339c; }
-#rummikubPanel .rummikub-tile.is-selected { outline: 3px solid #248879; outline-offset: 0; background: #d4f5e8; }
 #rummikubPanel .rummikub-tile.is-new { border-top: 3px solid #248879; }
+#rummikubPanel .rummikub-tile.is-drawn, #rummikubPanel .rummikub-tile.is-added { border-color: #b47a08; background: #fff0b5; box-shadow: inset 0 0 0 1px #d5a12a; }
+#rummikubPanel .rummikub-tile.is-changed { border-color: #3779bd; border-style: dashed; background: #e0eeff; box-shadow: inset 0 0 0 1px #94b9df; }
+#rummikubPanel .rummikub-tile.is-selected { outline: 3px solid #248879; outline-offset: 0; background: #d4f5e8; }
+.rummikub-changes { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 3px 0 6px; font-size: 11px; overflow-wrap: anywhere; }
+.rummikub-change-added { color: #795000; }
+.rummikub-change-changed { color: #245c96; }
 .rummikub-tools { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
 #rummikubPanel .rummikub-tools button, #rummikubPanel .rummikub-sort button, #rummikubPanel .rummikub-meld-meta button, #rummikubPanel #rummikubRackToggle { min-height: 24px; border: 1px solid #9db6ac; background: #fff; color: #214a42; border-radius: 4px; padding: 2px 6px; font-size: 11px; line-height: 18px; white-space: nowrap; }
 #rummikubPanel .rummikub-meld-meta button { min-height: 20px; padding: 0 5px; font-size: 10px; }

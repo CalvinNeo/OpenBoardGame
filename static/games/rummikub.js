@@ -24,6 +24,10 @@
         zh: "<p>破冰后可以添加、拆分、合并和重新组合桌面牌组，但原来桌面上的牌一张也不能拿回手牌，而且每回合至少放下一张手牌。结束时所有牌组都必须合法。</p><p>开局前可在 Room Control 选择百搭牌(★)规则，默认 Classic replacement（经典替换）。经典规则下，保留原牌组并保持百搭牌含义时可以延长牌组。若要取出百搭牌，必须用它代表的实体牌替换，保留原牌组其余实体牌，并立即将百搭牌与至少两张自己的手牌组成合法新组。四张同数组不能直接抽走百搭牌。</p><p>Free rearrangement（自由重排）下，破冰后可自由移动百搭牌并改变其代表值，无须先用实体牌替换，也不要求与两张手牌成组。所有原桌面牌仍须留在桌面，最终各组合法且至少打出一张手牌。两种规则都不能把桌面百搭牌收进手牌。当前规则显示在 Table 标题旁。</p><p>没有倒计时和超时罚牌。试摆可以反复撤销，不能完成时 Reset 恢复本回合，或摸一张结束。摸到的牌本回合不能再打出。牌池为空时按钮变成 Pass，所有人连续跳过后本轮结束。</p>",
         en: "<p>After opening, extend, split, merge and rebuild the table. Every existing table tile must remain on the table, and you must add at least one rack tile each turn. All final melds must be legal.</p><p>Choose the joker (★) rule in Room Control before starting. Classic replacement is the default. Extend a joker meld without changing its meaning or separating its natural tiles. To retrieve a joker, replace it with the natural tile it represents, keep the original natural tiles together, and immediately reuse the joker with at least two rack tiles. You cannot simply remove it from a four-tile group.</p><p>With Free rearrangement, after opening you may move table jokers and change their represented values without a natural replacement or two rack tiles. Keep every existing table tile on the table, leave all melds legal, and play at least one rack tile. Neither rule allows taking a table joker back to your rack. The current rule appears beside the Table heading.</p><p>There is no turn timer or time penalty. Experiment freely, reset the turn, or draw one tile and finish if you cannot complete your move. A drawn tile cannot be played that turn. With an empty pool, draw becomes Pass and a full cycle of consecutive passes ends the round.</p>"
       } },
+      { id: "highlights", label: { zh: "变化高亮", en: "Highlights" }, html: {
+        zh: "<p>金色手牌是自己最近摸到的牌。排序、折叠和对手行动不会清除标记，下次摸牌或这张牌打出时才会更新。</p><p>桌面金色标记本次新增的牌，蓝色虚线标记被移组、拆组或改变百搭含义的牌。试摆相对本回合开始的正式桌面累计比较，提交后保留标记，直到下一次桌面变化。悬停或用 Explain 点牌可查看原牌组和位置。撤销和重置会同步恢复对应标记。换轮、换房或换身份时会清空旧标记。</p>",
+        en: "<p>Gold on your rack marks your most recently drawn tile. Sorting, hiding the rack and other players’ turns keep the mark until your next draw or that tile is played.</p><p>On the table, gold marks newly added tiles and blue dashed borders mark regrouped tiles or changed joker values. Trial layouts are compared with the committed table at the start of the turn. Marks remain after committing until the next table change. Hover or use Explain on a tile to see its previous meld and position. Undo and Reset restore the corresponding marks. A new round, room or viewer clears old marks.</p>"
+      } },
       { id: "controls", label: { zh: "操作与计分", en: "Controls & scoring" }, html: {
         zh: "<p>手牌和紧凑按钮默认展开并固定在屏幕底部。Hide rack 收起为窄条，Show rack 重新展开，不会出牌、取消选牌或结束回合。桌面随页面展开，不需要内部拖动。点选牌后点 New meld 组成新组，或点已有牌组的 Add 按钮。破冰后也能移动桌面牌。To rack 只退回本回合自己的手牌。点击空白或按 Esc 取消选择。Undo 撤销一步，Reset 撤销本回合。Draw 摸一张并结束回合。</p><p>试摆公开给其他玩家观看，但其他手牌和牌池顺序始终隐藏。End turn 由服务器检查所有牌组。Help 支持中英文切换，Explain 解释控件而不会执行行动。</p><p>有人出完牌时，其他人按手牌数字扣分，百搭牌每张扣 30 分，赢家加上所有对手扣分之和。堵局时最低手牌点数者赢，各输家扣除与最低点数的差额，赢家分享这些分数，除不尽时按座位分配多出的 1 分。结算时公开所有手牌。非最终轮等待每位玩家点击 Next Round，机器人自动确认。可在房间配置中设置 1–8 轮。</p>",
         en: "<p>Your rack and compact controls start open and stay docked at the bottom. Hide rack folds them into a narrow bar, and Show rack opens them again without playing tiles, clearing selections or ending your turn. The table expands with the page instead of scrolling inside the board. Select tiles, then choose New meld or a meld’s Add button. After opening you may also move table tiles. To rack returns only tiles from your current-turn rack. Tap empty space or press Esc to deselect. Undo reverses one edit and Reset reverses the whole turn. Draw takes one tile and ends your turn.</p><p>Your trial layout is public so others can follow your turn, but other racks and the pool order stay hidden. End turn asks the server to validate all melds. Help switches between English and Chinese, and Explain describes controls without performing actions.</p><p>When someone goes out, opponents lose the sum of their rack numbers, counting each joker as 30. The winner gains all opponents’ losses. In a blocked round, the lowest rack total wins. Others lose the difference from that total, shared among tied winners with spare points assigned in seat order. All racks are revealed at settlement. Before another round, every player presses Next Round and bots confirm automatically. Room configuration supports 1–8 rounds.</p>"
@@ -67,6 +71,67 @@
   let rackCollapsed = false;
   let rackScrollTop = 0;
   let rackOwner = "";
+  let highlightScope = "";
+  let highlightSnapshot = null;
+  let drawnTiles = new Set();
+  let committedChanges = new Map();
+  let tableChanges = new Map();
+
+  function resetHighlights() {
+    highlightScope = "";
+    highlightSnapshot = null;
+    drawnTiles.clear();
+    committedChanges.clear();
+    tableChanges.clear();
+  }
+
+  function meldLocations(layout) {
+    const locations = new Map();
+    layout.forEach((meld, meldIndex) => {
+      const ordered = orderedMeld(meld);
+      const natural = meld.map(tileInfo).filter((tile) => tile.color !== "joker");
+      const valid = meldValid(meld);
+      const run = valid && new Set(natural.map((tile) => tile.number)).size > 1;
+      const start = run ? Math.max(1, Math.max(...natural.map((tile) => tile.number)) - meld.length + 1) : 0;
+      ordered.forEach((tile, tileIndex) => locations.set(tile, {
+        meld: meldIndex + 1, position: tileIndex + 1, members: [...meld].sort().join(","),
+        jokerValue: tileInfo(tile).color !== "joker" || !valid ? "" : run ? `${natural[0].color} ${start + tileIndex}` : String(natural[0].number)
+      }));
+    });
+    return locations;
+  }
+
+  function tableDiff(before, after) {
+    const previous = meldLocations(before);
+    const current = meldLocations(after);
+    const changes = new Map();
+    after.forEach((meld) => {
+      const retained = meld.filter((tile) => previous.has(tile)).sort().join(",");
+      meld.forEach((tile) => {
+        const origin = previous.get(tile), destination = current.get(tile);
+        if (!origin) {
+          changes.set(tile, { kind: "added", zh: `本次新增到桌面，位于牌组 ${destination.meld} 的第 ${destination.position} 张。`, en: `New on table · Meld ${destination.meld}, position ${destination.position}.` });
+        } else if (origin.members !== retained || origin.jokerValue !== destination.jokerValue) {
+          changes.set(tile, { kind: "changed", zh: `牌组或百搭含义发生变化，原为牌组 ${origin.meld} 的第 ${origin.position} 张，现为牌组 ${destination.meld} 的第 ${destination.position} 张。`, en: `Regrouped or joker value changed · was Meld ${origin.meld}, position ${origin.position}; now Meld ${destination.meld}, position ${destination.position}.` });
+        }
+      });
+    });
+    return changes;
+  }
+
+  function updateHighlights(next, scope) {
+    if (highlightScope !== scope) { resetHighlights(); highlightScope = scope; }
+    const hand = next.players.find((player) => player.player_id === next.you)?.hand || [];
+    if (highlightSnapshot) {
+      const previousHand = new Set(highlightSnapshot.hand);
+      const added = hand.filter((tile) => !previousHand.has(tile));
+      if (next.phase === "play" && highlightSnapshot.phase === "play" && added.length) drawnTiles = new Set(added);
+      else drawnTiles = new Set([...drawnTiles].filter((tile) => hand.includes(tile)));
+      const layoutKey = (layout) => JSON.stringify(layout.map((meld) => [...meld].sort()).sort((first, second) => JSON.stringify(first).localeCompare(JSON.stringify(second))));
+      if (layoutKey(highlightSnapshot.table) !== layoutKey(next.table)) committedChanges = tableDiff(highlightSnapshot.table, next.table);
+    }
+    highlightSnapshot = { hand: [...hand], table: next.table.map((meld) => [...meld]), phase: next.phase };
+  }
 
   function initWidgets() {
     if (help || typeof window.obgCreateHelp !== "function") return;
@@ -131,7 +196,7 @@
       panel.style.removeProperty("--rk-dock-space");
     }
   }
-  function tileHTML(tile, interactive, fresh = false) {
+  function tileHTML(tile, interactive, fresh = false, change = null) {
     const info = tileInfo(tile);
     const label = info.color === "joker" ? "Joker" : info.color + " " + info.number;
     const explanationKey = "tile_" + tile;
@@ -143,11 +208,18 @@
       zh: `${colorName} ${info.number}，以${marks[info.color]}辅助识别花色，留在手里扣 ${info.number} 分。可以组成不同色同数牌组或同色连续顺子。点选后使用 New meld 或 Add。`,
       en: `${label}, also marked ${marks[info.color]} for color identification. Worth ${info.number} penalty points on a rack. Combine it with different colors of the same number or consecutive numbers of this color. Select it, then use New meld or Add.`
     };
-    return `<button type="button" class="rummikub-tile${selected.has(tile) ? " is-selected" : ""}${fresh ? " is-new" : ""}" data-tile="${tile}" data-color="${info.color}" data-rummikub-explain="${explanationKey}" aria-label="${label}" aria-pressed="${selected.has(tile)}" ${interactive ? "" : `disabled title="${label}${info.color === "joker" ? " · Replaces a missing tile. Worth 30 penalty points on a rack." : " · Number is its value. Shape also identifies its color."}"`}><span>${info.number || "★"}</span><small aria-hidden="true">${marks[info.color]}</small></button>`;
+    if (change) {
+      explanations[explanationKey].zh += " " + change.zh;
+      explanations[explanationKey].en += " " + change.en;
+    }
+    const title = `${label} · ${change ? change.en : info.color === "joker" ? "Replaces a missing tile. Worth 30 penalty points on a rack." : "Number is its value. Shape also identifies its color."}`;
+    return `<button type="button" class="rummikub-tile${selected.has(tile) ? " is-selected" : ""}${fresh ? " is-new" : ""}${change ? " is-" + change.kind : ""}" data-tile="${tile}" data-color="${info.color}" data-rummikub-explain="${explanationKey}" aria-label="${esc(label + (change ? " · " + change.en : ""))}" aria-pressed="${selected.has(tile)}" title="${esc(title)}" ${interactive ? "" : "disabled"}><span>${info.number || "★"}</span><small aria-hidden="true">${marks[info.color]}</small></button>`;
   }
 
   function render() {
     if (!view) return;
+    tableChanges = (pending && requestKind === "reset") ? committedChanges
+      : view.draft !== null || (pending && requestKind === "preview") ? tableDiff(view.table, table) : committedChanges;
     const positions = ["Rack", "Log"].map((suffix) => [suffix, suffix === "Rack" && rackCollapsed ? rackScrollTop : element(suffix).scrollTop]);
     const focusTile = panel.contains(document.activeElement) ? document.activeElement.dataset.tile : null;
     const active = view.players.find((player) => player.player_id === view.current_player);
@@ -164,10 +236,14 @@
     element("Rule").title = explanations.rule.en;
     element("DraftLabel").textContent = view.draft !== null ? "· Trial layout" : "";
     const rack = new Set(me()?.hand || []);
-    element("Melds").innerHTML = table.length ? table.map((meld, index) => `<div class="rummikub-meld${meldValid(meld) ? "" : " is-invalid"}"><div class="rummikub-meld-meta"><span>Meld ${index + 1} · ${meldValid(meld) ? "Valid" : "Incomplete"}</span><button type="button" data-add="${index}" data-rummikub-explain="add" ${editable() && selected.size && (tableEditable() || !meld.some((tile) => !rack.has(tile))) ? "" : "disabled"}>Add</button></div><div class="rummikub-meld-tiles">${orderedMeld(meld).map((tile) => tileHTML(tile, editable() && (rack.has(tile) || tableEditable()), rack.has(tile))).join("")}</div></div>`).join("") : '<div class="rummikub-empty">Build your first meld<br><small>Groups of one number · Runs of one color</small></div>';
+    element("Melds").innerHTML = table.length ? table.map((meld, index) => `<div class="rummikub-meld${meldValid(meld) ? "" : " is-invalid"}"><div class="rummikub-meld-meta"><span>Meld ${index + 1} · ${meldValid(meld) ? "Valid" : "Incomplete"}</span><button type="button" data-add="${index}" data-rummikub-explain="add" ${editable() && selected.size && (tableEditable() || !meld.some((tile) => !rack.has(tile))) ? "" : "disabled"}>Add</button></div><div class="rummikub-meld-tiles">${orderedMeld(meld).map((tile) => tileHTML(tile, editable() && (rack.has(tile) || tableEditable()), rack.has(tile), tableChanges.get(tile))).join("")}</div></div>`).join("") : '<div class="rummikub-empty">Build your first meld<br><small>Groups of one number · Runs of one color</small></div>';
+    const addedCount = [...tableChanges.values()].filter((change) => change.kind === "added").length;
+    const changedCount = tableChanges.size - addedCount;
+    element("Changes").classList.toggle("hidden", !tableChanges.size);
+    element("Changes").innerHTML = `${addedCount ? `<span class="rummikub-change-added">Gold: ${addedCount} added</span>` : ""}${changedCount ? `<span class="rummikub-change-changed">Blue dashed: ${changedCount} regrouped</span>` : ""}`;
     const used = new Set(table.flat());
     const available = (me()?.hand || []).filter((tile) => !used.has(tile));
-    element("Rack").innerHTML = sortTiles(available).map((tile) => tileHTML(tile, editable())).join("") || `<span class="rummikub-selection">${me() ? "No tiles left on your rack." : "Spectating · racks are private."}</span>`;
+    element("Rack").innerHTML = sortTiles(available).map((tile) => tileHTML(tile, editable(), false, drawnTiles.has(tile) ? { kind: "drawn", zh: "这是你最近摸到的牌，金色标记会保留到下次摸牌或这张牌离开手牌。", en: "Most recently drawn tile. Gold stays until your next draw or this tile leaves your rack." } : null)).join("") || `<span class="rummikub-selection">${me() ? "No tiles left on your rack." : "Spectating · racks are private."}</span>`;
     element("RackTitle").textContent = `Your rack${me() ? " · " + available.length + " tiles" : ""}`;
     element("Selection").textContent = view.phase !== "play" ? "Round settled · all racks revealed" : selected.size ? `${selected.size} selected → New meld / Add / To rack` : "Select tiles → New meld / Add";
     element("New").disabled = !editable() || !selected.size;
@@ -301,6 +377,7 @@
       || (requestKind === "reset" && next.draft === null)
       || (requestKind === "next_round" && next.ready.includes(next.you));
     if (pending && !acknowledged) return;
+    updateHighlights(next, JSON.stringify([data.room_id, next.round, next.you]));
     if (signature !== nextSignature) { selected.clear(); undo = []; }
     signature = nextSignature;
     view = next;
@@ -312,7 +389,7 @@
   };
   window.showRummikubHeaderActions = (visible) => {
     header.style.display = visible ? "flex" : "none";
-    if (!visible) { view = null; signature = ""; selected.clear(); undo = []; pending = false; explain?.exit(); help?.close(); window.clearTimeout(pendingTimer); element("ConfigBox").classList.add("hidden"); element("Tooltip").classList.add("hidden"); }
+    if (!visible) { view = null; signature = ""; selected.clear(); undo = []; pending = false; resetHighlights(); explain?.exit(); help?.close(); window.clearTimeout(pendingTimer); element("ConfigBox").classList.add("hidden"); element("Tooltip").classList.add("hidden"); }
     syncDock();
   };
   window.getRummikubConfig = () => ({ rounds: Number(element("Rounds").value), joker_rule: element("JokerRule").value });
@@ -328,6 +405,7 @@
     }
     if (visible) {
       view = null;
+      resetHighlights();
       rackCollapsed = false;
       rackScrollTop = 0;
       pending = false;
@@ -346,6 +424,7 @@
       element("Pool").textContent = "";
       element("Rule").textContent = "";
       element("DraftLabel").textContent = "";
+      element("Changes").classList.add("hidden");
       element("Log").replaceChildren();
       element("RackTitle").textContent = "Your rack";
       syncDock();

@@ -50,6 +50,18 @@ class GamePickerContractTests(unittest.TestCase):
         self.assertIsNotNone(game_list, "static/style.css has no .game-list rule")
         self.assertRegex(game_list.group(1), r"\balign-content:\s*start\s*;")
 
+    def test_filter_menu_contains_player_and_favorite_controls(self):
+        menu = re.search(r'<details id="gameFilterDetails".*?</details>', self.index, re.S)
+        self.assertIsNotNone(menu)
+        self.assertIn('id="playerCountFilter"', menu.group())
+        self.assertIn('id="favoriteGamesFilter"', menu.group())
+
+    def test_settings_offer_favorites_backup_and_import(self):
+        settings = re.search(r'<section id="settingsModal".*?</section>', self.index, re.S)
+        self.assertIsNotNone(settings)
+        for control_id in ("favoriteGamesExportBtn", "favoriteGamesImportBtn", "favoriteGamesImportInput"):
+            self.assertIn(f'id="{control_id}"', settings.group())
+
 
 if __name__ == "__main__":
     unittest.main()

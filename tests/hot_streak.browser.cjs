@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const base = process.env.ROOM_TEST_URL || 'http://127.0.0.1:8766';
-const output = path.join(root, 'tmp/hot-streak-ui-20261110');
+const output = path.join(root, 'tmp/hot-streak-ui-20261125');
 const fixtures = JSON.parse(execFileSync(process.env.PYTHON || 'python3', [
   path.join(__dirname, 'hot_streak_ui_fixtures.py'),
 ], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
@@ -250,8 +250,43 @@ async function interactions(page, width) {
   await render(page, 'race_ready');
   assert.equal(await page.locator('#hotStreakNextRaceBtn').isDisabled(), true);
   await render(page, 'game_over');
+  const ownAccount = page.locator('.hot-streak-payout-player.is-self');
+  assert.equal(await ownAccount.locator('.hot-streak-race-account').count(), 3);
+  assert.equal(await ownAccount.locator('.hot-streak-payout-ticket').count(), 6);
+  assert.match(await ownAccount.locator('summary').textContent(), /Player 1 \(you\)/);
+  for (const race of fixtures.game_over.race_history) {
+    const account = ownAccount.locator('.hot-streak-race-account').nth(race.race_number - 1);
+    const payout = race.payouts[fixtures.game_over.you];
+    assert.match(await account.textContent(), new RegExp(`Race ${race.race_number}`));
+    assert.match(await account.textContent(), new RegExp(`💵${payout.money_before} → 💵${payout.money_after}`));
+  }
+  assert.match(await ownAccount.textContent(), /×2 = 💵/);
+  assert.match(await page.locator('#hotStreakReadyProgress').textContent(), /Replay 0\/4/);
+  await page.locator('#hotStreakExplainBtn').click();
+  await page.locator('#hotStreakPlayAgainBtn').click();
+  await page.locator('.obg-explain-dialog[open]').waitFor();
+  assert.match(await page.locator('.obg-explain-dialog[open]').textContent(), /every human|真人玩家/);
+  assert.equal(await page.evaluate(() => window.__hotStreakActions.length), 0);
+  await page.keyboard.press('Escape');
   await page.locator('#hotStreakPlayAgainBtn').click();
   assert.deepEqual(await page.evaluate(() => window.__hotStreakActions), [{ type: 'play_again' }]);
+  const openAccounts = await page.locator('.hot-streak-payout-player[open]').count();
+  await render(page, 'replay_ready', false);
+  assert.equal(await page.locator('#hotStreakPlayAgainBtn').isDisabled(), true);
+  assert.equal(await page.locator('#hotStreakPlayAgainBtn').textContent(), 'Ready ✓');
+  assert.equal(await page.locator('.hot-streak-payout-player[open]').count(), openAccounts);
+  assert.match(await page.locator('#hotStreakReadyProgress').textContent(), /Replay 1\/4/);
+  await render(page, 'replay_waiting');
+  assert.equal(await page.locator('#hotStreakPlayAgainBtn').isEnabled(), true);
+  await render(page, 'game_over_spectator');
+  assert.equal(await page.locator('#hotStreakPlayAgainBtn').isDisabled(), true);
+  await render(page, 'game_over_cash_floor');
+  assert.match(await page.locator('.hot-streak-payout-player.is-self').textContent(), /Cash floor · \+💵7/);
+  await render(page, 'game_over_eight_long');
+  assert.match(await page.locator('.hot-streak-payout-player.is-self summary').textContent(), /Alexandra Featherstonehaugh \(you\)/);
+  await page.locator('.hot-streak-payout-player:not(.is-self) summary').first().click();
+  await audit(page, 'expanded_final_long_names', width);
+  await page.screenshot({ path: path.join(output, `${width}-final-accounts.png`), fullPage: true });
 }
 
 async function touchChecks(page) {

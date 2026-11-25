@@ -249,6 +249,46 @@ const fixture = `<!DOCTYPE html>
   await page.waitForTimeout(150);
   check('Esc exits Explain mode', !(await page.evaluate(() => window.__explain.isActive())));
 
+  await page.evaluate(() => {
+    const root = document.getElementById('skullPanel');
+    const scroll = document.createElement('div');
+    scroll.style.cssText = 'height:44px;overflow:auto';
+    const spacer = document.createElement('div');
+    spacer.style.height = '44px';
+    const clipped = document.createElement('button');
+    clipped.dataset.skullExplain = 'start_bid';
+    clipped.textContent = 'Clipped explanation';
+    clipped.style.height = '44px';
+    scroll.append(spacer, clipped);
+    root.append(scroll, document.getElementById('skullPlayBtn'));
+  });
+  await page.click('#skullExplainBtn');
+  await page.click('#skullPlayBtn');
+  check('Clipped scroll content cannot shadow a visible Explain target',
+    (await page.textContent('.obg-explain-dialog[open] .obg-explain-text')).includes('手牌'));
+  check('Clipped target does not execute the visible action', await page.evaluate(() => window.__playClicks === 0));
+  await page.keyboard.press('Escape');
+
+  await page.evaluate(() => {
+    const scroll = document.createElement('div');
+    scroll.style.cssText = 'height:80px;width:200px;overflow:hidden;transform:scale(2);transform-origin:top left;margin-bottom:100px';
+    const disabled = document.createElement('button');
+    disabled.id = 'skullScaledDisabled';
+    disabled.disabled = true;
+    disabled.dataset.skullExplain = 'start_bid';
+    disabled.textContent = 'Scaled disabled control';
+    disabled.style.marginTop = '50px';
+    scroll.appendChild(disabled);
+    document.getElementById('skullPanel').appendChild(scroll);
+  });
+  await page.click('#skullExplainBtn');
+  const scaledDisabled = await page.locator('#skullScaledDisabled').boundingBox();
+  await page.mouse.click(scaledDisabled.x + scaledDisabled.width / 2, scaledDisabled.y + scaledDisabled.height / 2);
+  check('Scaled clipped container preserves disabled Explain targets',
+    (await page.textContent('.obg-explain-dialog[open] .obg-explain-text')).includes('竞价'));
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => document.getElementById('skullScaledDisabled').parentElement.remove());
+
   // Mobile layout: no horizontal overflow at 320px
   await page.setViewportSize({ width: 320, height: 720 });
   await page.click('#skullHelpBtn');

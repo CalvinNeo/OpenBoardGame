@@ -1,0 +1,37 @@
+<template data-game-target="cockroachPokerHeaderActions" data-game-mode="contents">
+  <button id="cockroachPokerHelpBtn" type="button">Help</button>
+  <button id="cockroachPokerExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="cockroachPokerPanel" data-game-mode="contents">
+  <div id="cockroachPokerLobby" class="cp-lobby">
+    <div class="cp-lobby-art" aria-hidden="true">🦇 🕷️ 🦂</div>
+    <h3>Cockroach Poker</h3>
+    <p>A straight face. A very suspicious gift.</p>
+    <p class="cp-muted">2–6 players · Classic rules · Ready, then Start in Room Control.</p>
+  </div>
+  <div id="cockroachPokerTable" class="hidden">
+    <div class="cp-status"><span id="cockroachPokerRound"></span><span id="cockroachPokerLimit" data-cockroach-explain="collection" tabindex="0"></span><span id="cockroachPokerStatus" role="status" aria-live="polite"></span></div>
+    <section aria-label="Players and face-up collections">
+      <h3 class="cp-caption">The table <span>Face-up collections</span></h3>
+      <div id="cockroachPokerPlayers" class="cp-players"></div>
+    </section>
+    <section id="cockroachPokerExchange" class="cp-exchange" aria-label="Current exchange" data-cockroach-explain="exchange">
+      <div id="cockroachPokerMessage" class="cp-message"></div>
+      <div id="cockroachPokerCenter" class="cp-center"></div>
+      <div id="cockroachPokerDecisions" class="cp-decisions"></div>
+      <div id="cockroachPokerTrail" class="cp-trail"></div>
+    </section>
+    <section id="cockroachPokerHandSection" aria-label="Your private hand" data-cockroach-explain="hand">
+      <h3 class="cp-caption">Your hand <span id="cockroachPokerHandCount"></span></h3>
+      <div id="cockroachPokerHand" class="cp-hand"></div>
+    </section>
+    <section id="cockroachPokerComposer" class="cp-composer hidden" aria-label="Offer a creature">
+      <div><h3 class="cp-caption">Tell them it is…</h3><div id="cockroachPokerClaims" class="cp-claims"></div></div>
+      <div><h3 class="cp-caption">Send to</h3><div id="cockroachPokerTargets" class="cp-targets"></div></div>
+      <button id="cockroachPokerSendBtn" class="cp-primary" type="button" data-cockroach-explain="send">Offer face down</button>
+    </section>
+    <section id="cockroachPokerFinal" class="hidden" aria-label="Final results" data-cockroach-explain="final"></section>
+    <details class="cp-history"><summary>History</summary><ol id="cockroachPokerLog"></ol></details>
+  </div>
+  <div id="cockroachPokerTooltip" class="cp-tooltip hidden" role="tooltip"></div>
+</template>

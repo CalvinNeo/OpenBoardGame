@@ -1,0 +1,10 @@
+[
+    {"id": "cockroach", "en": "Cockroach", "zh": "蟑螂", "icon": "🪳", "color": "#b8834a"},
+    {"id": "bat", "en": "Bat", "zh": "蝙蝠", "icon": "🦇", "color": "#9d87cd"},
+    {"id": "fly", "en": "Fly", "zh": "苍蝇", "icon": "🪰", "color": "#81acb6"},
+    {"id": "frog", "en": "Toad", "zh": "蟾蜍", "icon": "🐸", "color": "#8bb96b"},
+    {"id": "rat", "en": "Rat", "zh": "老鼠", "icon": "🐀", "color": "#b0a5a2"},
+    {"id": "scorpion", "en": "Scorpion", "zh": "蝎子", "icon": "🦂", "color": "#d29a59"},
+    {"id": "spider", "en": "Spider", "zh": "蜘蛛", "icon": "🕷️", "color": "#c8808c"},
+    {"id": "stinkbug", "en": "Stink bug", "zh": "椿象", "icon": "🐞", "color": "#a5b65c"}
+]

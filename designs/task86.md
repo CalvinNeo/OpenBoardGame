@@ -590,7 +590,11 @@ UI 文案使用 `Next Race`，协议沿用通用语义名 `next_round`。
 {"type": "play_again"}
 ```
 
-只在 `game_over` 合法。第一个合法动作完整重置新局；旧动作重放不得二次重置。
+只在 `game_over` 合法。每名真人玩家点击后计入 `replay_ready`，确认过的玩家不能重复提交。
+Bot 自动计为已确认，但不会自动重开全 Bot 房间。所有真人确认后才完整重置新局并递增
+`game_index`；等待期间保留最终现金、胜者和三场账单。旧存档缺少 `replay_ready` 时按空列表处理，
+确认进度随存档保存并在重连后恢复。公开视图的 `replay_progress` 显示确认数量，
+`players[].ready` 在终局表示重开确认状态。
 
 ## 8. 服务端解析算法
 
@@ -1313,7 +1317,7 @@ build_race_summary
 
 - 第三场后进入 `game_over`。
 - 最高现金玩家获胜；同额并列。
-- `play_again` 完整重置且只执行一次。
+- `play_again` 等待所有真人确认后完整重置且只执行一次，Bot 自动确认但不触发全 Bot 自动重开。
 - 序列化/反序列化后牌守恒、隐私和 RNG 连续性不变。
 - Bot 在每个阶段只产生合法动作。
 - 全 Bot/混合房间不会卡在 betting、submission、racing 或 Ready。
@@ -1594,3 +1598,48 @@ git diff --check
 - 修改范围：`static/games/hot_streak.css`、`static/game_assets.js`、`static/index.html`、`tests/hot_streak.browser.cjs` 与本设计记录。CSS 版本升为 `7`，首页 manifest 引用升为 `238`。
 - 浏览器回归新增工具栏单行、高度上限、折叠条高度、实际赛道高度及下注预览展开/收起断言。320 / 390 / 1024 / 1440px 的 64 组视图与交互全部通过，并检查实际截图；13 项前端样式/Help 合同、测试脚本语法与 `git diff --check` 通过。
 - 本次满足已验证的紧凑布局、无溢出、触控和缩放要求；未测实体设备及 Safari/Firefox，23.4 中既有通用加载测试失败仍保留，不宣称全仓库验收全绿。
+
+## 24. DEV_GUIDE 终局与解释交互整改（2026-11-25）
+
+### 24.1 审计结果与实现
+
+现有阶段布局在 Chrome 四档宽度通过原有 64 组检查，但仍有三项缺口：终局仅展示第三场的账单、
+任一玩家能立即重开导致其他玩家失去查看结果的机会，以及结算名字缺少稳定的颜色标记。
+补充终局 Explain 检查时还发现，共享解释控件会按未裁剪的几何框命中账单滚动区域以外的内容，
+使 Play Again 错误显示另一个玩家账单的解释。
+
+- 终局按最终现金排序，展开每人账单即可查看三场的赛前/赛后现金、逐票 Safe/Risky、命中、
+  收益/罚款、第三场加倍公式与本场票面合计。现金触底时单列归零调整，避免金额对不上。
+  自己的账单默认展开，保留独立滚动和其他玩家展开状态，重开确认广播不重置阅读位置。
+- 玩家列表与账单共用按座位顺序稳定的彩色圆点及姓名，自己额外带 `(you)`。
+  账单长名允许换行，不使用 P1/P2 代称，也不依赖桌面 title 才能读取完整姓名。
+- `play_again` 改为服务端逐人确认。显示 `Replay X/Y` 与 `Ready ✓`，所有真人确认前保持
+  `game_over`、现金、胜者和三场历史不变。Bot 自动计入确认，不让全 Bot 房间自行循环重开。
+  重复确认与旁观者动作拒绝，不增加房间状态版本；旧存档兼容，确认进度可保存、重连恢复。
+- 共享 Explain 坐标命中排除不可见控件与各祖先滚动/裁剪区域外的部分，按 CSS 缩放换算裁剪边界，继续保留 disabled
+  控件可解释、最深控件优先、滚动不触发解释、解释不执行真实动作和 Escape 退出。
+- Help 中英结算章节及终局 Explain 同步说明三场账单、归零、全员重开与 Bot 自动确认。
+  无新增游戏主框、配置入口、商业美术或独立 ACTION 区，比赛规则和 AI 策略不变。
+
+### 24.2 文件与验收
+
+- 实现：`game/hot_streak.py`、`static/games/hot_streak.js`、`static/games/hot_streak.css`、
+  `static/games/shared_help.js`。
+- 资源：`static/game_assets.js` 中 Hot Streak JS/CSS 版本为 `app_v9` / `8`；
+  `static/index.html` manifest 为 `329`，共享 Help 为 `4`。保留这些文件原有的无关本地改动。
+- 测试：`tests/test_hot_streak_game.py`、`tests/test_hot_streak_room.py`、
+  `tests/hot_streak_ui_fixtures.py`、`tests/hot_streak.browser.cjs`、`tests/shared_help.browser.cjs`。
+  文档只更新本设计，不改根 README、公共样式、游戏数据或生成元数据。
+- Chrome 320 / 390px 触摸上下文与 1024 / 1440px 桌面上下文共 21 组状态、84 组组合通过。
+  检查长名八人、原地选票/取消/Escape、第三场加倍、选牌与滚动区分、移动提示 3 秒消失、
+  赛道缩放/Fit/Origin/键盘平移/区域外释放/取消、日志折叠、轮末暂停、终局账单与重开状态、
+  Help 中英 tab、disabled Explain、RC 展开/收起及缓存资源切换。截图人工复核四档无页面横向
+  滚动、无非预期重叠，Help/Reconnect 同行。截图与报告在忽略目录 `tmp/hot-streak-ui-20261125/`。
+- 52 项 Hot Streak 规则/房间保存重连/前端样式/Help 合约测试通过，JS 语法、stub smoke 与
+  `git diff --check` 通过。共享 Help/Explain 浏览器 35/35 通过，女巫的佳酿跨游戏 Explain
+  回归通过，含 320 / 390 / 1024 / 1440px 的 24 组弹窗布局。
+- `tests/game_assets.browser.cjs:50` 仍因既有首页脚本白名单只允许 `shared.js` 失败，
+  实际改动前已包含 `shared_help.js` 与 `shared_effects.js`；失败发生在 Hot Streak 加载前，
+  本次不修改该无关契约。Hot Streak 自身真实懒加载、缓存复用与游戏切换已通过专属浏览器检查。
+- 未实测实体 iOS/Android/Windows、Safari/Firefox。保留 prototype-compatible 组件数据说明。
+  因通用加载验收仍失败，不能宣称 DEV_GUIDE 全项验收完成。

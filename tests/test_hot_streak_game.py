@@ -677,6 +677,87 @@ class HotStreakLifecycleTests(unittest.TestCase):
         self.assertEqual(left["draw_pile"], right["draw_pile"])
         self.assertEqual(left["burned_card_ids"], right["burned_card_ids"])
 
+    def test_replay_waits_for_every_player_and_keeps_final_scores(self):
+        state = make_state(3)
+        state.update(phase="game_over", game_over=True, race_number=3)
+        first, second, third = state["turn_order"]
+        state["players"][first]["money"] = 30
+        state["winner_ids"] = [first]
+        state["race_history"] = [{"race_number": 3}]
+        final_scores = copy.deepcopy(state["players"])
+
+        for player_id in (first, second):
+            events, error = HotStreakGame.apply_action(state, player_id, {"type": "play_again"})
+            self.assertIsNone(error)
+            self.assertEqual(events[0]["type"], "hot_streak:replay_ready")
+            self.assertEqual(state["phase"], "game_over")
+            self.assertEqual(state["players"], final_scores)
+            self.assertEqual(state["winner_ids"], [first])
+            self.assertEqual(state["race_history"], [{"race_number": 3}])
+            self.assertEqual(HotStreakGame.get_legal_actions(state, player_id), [])
+
+        view = HotStreakGame.get_public_view(state, first)
+        self.assertEqual(view["replay_progress"], {"done": 2, "total": 3})
+        self.assertEqual([player["ready"] for player in view["players"]], [True, True, False])
+        _, error = HotStreakGame.apply_action(state, first, {"type": "play_again"})
+        self.assertEqual(error, "invalid action")
+
+        restored = HotStreakGame.deserialize(copy.deepcopy(HotStreakGame.serialize(state)))
+        self.assertEqual(HotStreakGame.get_public_view(restored, third)["replay_progress"], view["replay_progress"])
+        events, error = HotStreakGame.apply_action(restored, third, {"type": "play_again"})
+        self.assertIsNone(error)
+        self.assertEqual(events[0]["type"], "hot_streak:game_restarted")
+        self.assertEqual(restored["phase"], "betting")
+        self.assertFalse(restored["game_over"])
+        self.assertEqual(restored["race_number"], 1)
+        self.assertEqual(restored["game_index"], 2)
+        self.assertEqual(restored["replay_ready"], [])
+        self.assertEqual(restored["race_history"], [])
+        self.assertTrue(all(player["money"] == 10 for player in restored["players"].values()))
+
+    def test_replay_bots_confirm_without_restarting_before_humans(self):
+        state = make_state(3)
+        first, second, bot_id = state["turn_order"]
+        state["player_meta"][bot_id]["is_bot"] = True
+        state.update(phase="game_over", game_over=True, race_number=3)
+        state.pop("replay_ready")
+        view = HotStreakGame.get_public_view(state, first)
+        self.assertEqual(view["replay_progress"], {"done": 1, "total": 3})
+        self.assertTrue(view["players"][2]["ready"])
+        self.assertIsNone(HotStreakGame.bot_move(state, bot_id))
+
+        _, error = HotStreakGame.apply_action(state, first, {"type": "play_again"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "game_over")
+        self.assertEqual(HotStreakGame.get_public_view(state, second)["replay_progress"], {"done": 2, "total": 3})
+        _, error = HotStreakGame.apply_action(state, second, {"type": "play_again"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "betting")
+
+    def test_replay_spectator_cannot_confirm_and_all_bot_game_stays_finished(self):
+        state = make_state(2)
+        state.update(phase="game_over", game_over=True)
+        before = copy.deepcopy(state)
+        _, error = HotStreakGame.apply_action(state, "spectator", {"type": "play_again"})
+        self.assertEqual(error, "unknown player")
+        self.assertEqual(state, before)
+        self.assertEqual(HotStreakGame.get_public_view(state, "spectator")["legal_actions"], [])
+
+        for player_id in state["turn_order"]:
+            state["player_meta"][player_id]["is_bot"] = True
+            self.assertIsNone(HotStreakGame.bot_move(state, player_id))
+        self.assertEqual(state["phase"], "game_over")
+
+    def test_replay_one_human_can_restart_with_bots(self):
+        state = make_state(2)
+        human_id, bot_id = state["turn_order"]
+        state["player_meta"][bot_id]["is_bot"] = True
+        state.update(phase="game_over", game_over=True)
+        _, error = HotStreakGame.apply_action(state, human_id, {"type": "play_again"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "betting")
+        self.assertEqual(state["game_index"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

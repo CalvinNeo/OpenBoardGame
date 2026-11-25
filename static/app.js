@@ -751,6 +751,10 @@ function renderGameState(data) {
     if (typeof renderForNorthwoodGameState === "function") renderForNorthwoodGameState(data);
     return;
   }
+  if (gameType === "cockroach_poker") {
+    if (typeof renderCockroachPokerGameState === "function") renderCockroachPokerGameState(data);
+    return;
+  }
   if (gameType === "machi_koro") {
     if (typeof renderMachiKoroGameState === "function") renderMachiKoroGameState(data);
     return;

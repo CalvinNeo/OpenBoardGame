@@ -152,6 +152,24 @@ def fixtures() -> dict:
     submit_cards(state)
     finish_race(state)
     views["game_over"] = HotStreakGame.get_public_view(state, "p1")
+    views["game_over_spectator"] = HotStreakGame.get_public_view(state, "spectator")
+    apply(state, "p1", {"type": "play_again"})
+    views["replay_ready"] = HotStreakGame.get_public_view(state, "p1")
+    views["replay_waiting"] = HotStreakGame.get_public_view(state, "p2")
+
+    state = new_game(8, 23, long_names=True)
+    for race in range(3):
+        finish_draft(state)
+        submit_cards(state)
+        finish_race(state)
+        if race < 2:
+            ready_all(state)
+    views["game_over_eight_long"] = HotStreakGame.get_public_view(state, "p1")
+
+    floor = copy.deepcopy(views["game_over"])
+    payout = floor["race_history"][0]["payouts"]["p1"]
+    payout.update(money_before=3, net=-10, money_after=0)
+    views["game_over_cash_floor"] = floor
     return views
 
 

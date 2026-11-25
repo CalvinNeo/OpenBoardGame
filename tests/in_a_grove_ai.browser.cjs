@@ -60,7 +60,9 @@ function checkPrivacy(view) {
                     assert.equal(await item.locator('.game-item-ai').textContent(), '🤖');
                     assert.match(await item.getAttribute('aria-label'), /Strategic AI available/);
                     await page.locator('#gameSortSelect').selectOption('difficulty_desc');
+                    await page.locator('#gameFilterDetails > summary').click();
                     await page.locator('#playerCountFilter').selectOption(String(playerCount));
+                    await page.locator('#gameFilterDetails > summary').click();
                     assert.equal(await item.evaluate(element => {
                         const row = element.getBoundingClientRect();
                         const badge = element.querySelector('.game-item-ai').getBoundingClientRect();

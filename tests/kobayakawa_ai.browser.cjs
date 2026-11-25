@@ -179,7 +179,9 @@ async function checkPresentation(page, width, finalView) {
                 assert.equal(await item.locator('.game-item-ai').textContent(), '🤖');
                 assert.match(await item.getAttribute('aria-label'), /Strategic AI available/);
                 await page.locator('#gameSortSelect').selectOption('difficulty_desc');
+                await page.locator('#gameFilterDetails > summary').click();
                 await page.locator('#playerCountFilter').selectOption('3');
+                await page.locator('#gameFilterDetails > summary').click();
                 const catalogFits = await item.evaluate(element => {
                     const row = element.getBoundingClientRect();
                     const badge = element.querySelector('.game-item-ai').getBoundingClientRect();
