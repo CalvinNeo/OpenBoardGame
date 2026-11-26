@@ -133,11 +133,11 @@
     const kind = selection.card?.kind || selection.kind;
     if (kind === "special") return wire.status === "uncut";
     if (["equal", "not_equal"].includes(kind)) return own && !wire.reversed && !wire.unsorted;
-    if (kind === "single_label") return own && !wire.hidden && wire.kind === "blue" && !wire.reversed;
-    if (kind === "post_it") return own && !wire.hidden && wire.kind === "blue" && !wire.reversed && (wire.status === "uncut" || [24, 40].includes(bombBustersCampaignView.campaign.id));
+    if (kind === "single_label") return own && !wire.hidden && wire.kind === "blue" && !wire.reversed && !wire.unsorted;
+    if (kind === "post_it") return own && !wire.hidden && wire.kind === "blue" && !wire.reversed && !wire.unsorted && (wire.status === "uncut" || [24, 40].includes(bombBustersCampaignView.campaign.id));
     if (kind === "grappling_hook") return !own && wire.status === "uncut" && !wire.reversed && !wire.unsorted;
-    if (["walkie_talkies", "fast_pass"].includes(kind)) return wire.status === "uncut" && !wire.reversed && !wire.unsorted && (kind !== "fast_pass" || own);
-    if (["triple_detector", "super_detector", "x_or_y"].includes(kind)) return wire.status === "uncut" && !wire.reversed && !wire.unsorted && (!own || !wire.hidden && (kind === "x_or_y" || wire.kind === "blue"));
+    if (["walkie_talkies", "fast_pass"].includes(kind)) return own && wire.status === "uncut" && !wire.reversed && !wire.unsorted;
+    if (["triple_detector", "super_detector", "x_or_y"].includes(kind)) return wire.status === "uncut" && !wire.reversed && !wire.unsorted && (!own || !wire.hidden && (kind === "x_or_y" ? ["blue", "yellow"].includes(wire.kind) : wire.kind === "blue"));
     return false;
   }
 
@@ -147,7 +147,13 @@
     const ids = selection.wireIds;
     const index = ids.indexOf(wire.wire_id);
     if (index >= 0) ids.splice(index, 1);
-    else ids.push(wire.wire_id);
+    else {
+      const kind = selection.card?.kind || selection.kind;
+      const limit = ["post_it", "single_label", "grappling_hook", "walkie_talkies"].includes(kind) ? 1 : ["equal", "not_equal", "fast_pass"].includes(kind) ? 2 : Infinity;
+      if (limit === 1) ids.splice(0, ids.length);
+      if (ids.length >= limit) return;
+      ids.push(wire.wire_id);
+    }
     bombBustersCampaignRenderSelection();
     bombBustersCampaignRefresh?.();
   }
@@ -161,17 +167,28 @@
     const publicState = bombBustersCampaignView.campaign;
     const kind = selection.card?.kind || selection.kind;
     bombBustersCampaignElement("CampaignSelectionTitle").textContent = selection.card?.name || (kind === "special" ? publicState.special_action?.label : kind === "guess_link" ? "Identify the weakest link" : "Mission choice");
-    const selected = bombBustersCampaignWires().filter((wire) => selection.wireIds.includes(wire.wire_id));
+    const wires = bombBustersCampaignWires();
+    const selected = wires.filter((wire) => selection.wireIds.includes(wire.wire_id));
     bombBustersCampaignElement("CampaignSelectionSummary").textContent = selected.length
       ? selected.map((wire) => `${bombBustersCampaignPlayerName(wire.rack.owner_id)} · ${String.fromCharCode(65 + wire.rack.rack_index)} #${wire.slot_index + 1}`).join(" · ")
       : ["rewinder", "stabilizer", "radar", "batteries", "coffee"].includes(kind) ? selection.card.description : "Choose wires directly on the racks, then confirm here.";
     const options = bombBustersCampaignElement("CampaignSelectionOptions");
     options.replaceChildren();
     if (kind === "radar") options.appendChild(bombBustersCampaignSelect("Number", Array.from({length: 12}, (_, index) => index + 1), selection.value, (value) => { selection.value = Number(value); }));
-    if (["coffee", "guess_link"].includes(kind)) {
-      const players = bombBustersCampaignView.players.filter((player) => player.remaining_count).map((player) => ({value: player.player_id, label: player.name || player.player_id}));
+    if (["coffee", "guess_link", "walkie_talkies"].includes(kind)) {
+      const players = bombBustersCampaignView.players.filter((player) => {
+        if (!player.remaining_count) return false;
+        if (kind !== "walkie_talkies") return true;
+        return player.player_id !== bombBustersCampaignView.you && wires.some((wire) =>
+          wire.rack.owner_id === player.player_id && wire.status === "uncut" && !wire.reversed && !wire.unsorted);
+      }).map((player) => ({value: player.player_id, label: player.name || player.player_id}));
       if (!selection.recipientId) selection.recipientId = players[0]?.value || "";
-      options.appendChild(bombBustersCampaignSelect("Player", players, selection.recipientId, (value) => { selection.recipientId = value; }));
+      options.appendChild(bombBustersCampaignSelect(kind === "walkie_talkies" ? "Teammate" : "Player", players, selection.recipientId, (value) => { selection.recipientId = value; bombBustersCampaignRenderSelection(); }));
+      if (kind === "walkie_talkies") {
+        const instruction = document.createElement("span");
+        instruction.textContent = "Offer one of your wires. Your teammate chooses their return wire privately.";
+        options.appendChild(instruction);
+      }
     }
     if (kind === "guess_link") options.appendChild(bombBustersCampaignSelect("Constraint", Object.keys(publicState.constraint_texts).slice(0, 5).map((key) => ({value: key, label: `${key} · ${publicState.constraint_texts[key]}`})), selection.constraint, (value) => { selection.constraint = value; }));
     if (kind === "batteries") {
@@ -195,12 +212,26 @@
     const confirm = bombBustersCampaignElement("CampaignConfirm");
     let ready = true;
     if (kind === "special") ready = selection.wireIds.length === publicState.special_action.count;
-    else if (["equal", "not_equal", "walkie_talkies", "fast_pass"].includes(kind)) ready = selection.wireIds.length === 2;
-    else if (["post_it", "single_label", "grappling_hook"].includes(kind)) ready = selection.wireIds.length === 1;
-    else if (["triple_detector", "super_detector", "x_or_y"].includes(kind)) {
+    else if (["equal", "not_equal", "fast_pass"].includes(kind)) {
+      ready = selected.length === 2;
+      if (ready && kind !== "fast_pass") {
+        ready = selected[0].rack.rack_id === selected[1].rack.rack_id &&
+          Math.abs(selected[0].slot_index - selected[1].slot_index) === 1 && selected.some((wire) => wire.status === "uncut");
+      }
+      if (ready) {
+        const matching = selected[0].kind === selected[1].kind && (selected[0].kind !== "blue" || selected[0].blue_value === selected[1].blue_value);
+        ready = kind === "not_equal" ? !matching : matching;
+      }
+    } else if (kind === "walkie_talkies") ready = selected.length === 1 && Boolean(selection.recipientId);
+    else if (["post_it", "single_label", "grappling_hook"].includes(kind)) {
+      ready = selected.length === 1;
+      if (ready && kind === "single_label") ready = selected[0].rack.slots.filter((wire) => !wire.hidden && wire.blue_value === selected[0].blue_value).length === 1;
+    } else if (["triple_detector", "super_detector", "x_or_y"].includes(kind)) {
       const own = selected.filter((wire) => wire.rack.owner_id === bombBustersCampaignView.you);
       const targets = selected.filter((wire) => wire.rack.owner_id !== bombBustersCampaignView.you);
       ready = kind === "x_or_y" ? own.length === 2 && targets.length === 1 : own.length === 1 && (kind === "super_detector" ? targets.length >= 1 : targets.length === 3);
+      if (ready && kind !== "x_or_y") ready = targets.every((wire) => wire.rack.rack_id === targets[0].rack.rack_id);
+      if (ready && kind === "x_or_y") ready = own[0].kind !== own[1].kind || own[0].blue_value !== own[1].blue_value;
     } else if (kind === "batteries") ready = selection.playerIds.length >= 1;
     confirm.disabled = !ready;
   }
@@ -228,7 +259,7 @@
 
   function bombBustersCampaignConfirmSelection() {
     const selection = bombBustersCampaignSelection;
-    if (!selection) return;
+    if (!selection || bombBustersCampaignElement("CampaignConfirm").disabled) return;
     const kind = selection.card?.kind || selection.kind;
     const selected = bombBustersCampaignWires().filter((wire) => selection.wireIds.includes(wire.wire_id));
     const own = selected.filter((wire) => wire.rack.owner_id === bombBustersCampaignView.you);
@@ -236,8 +267,11 @@
     let action = {type: "use_equipment", equipment_id: selection.card?.id};
     if (kind === "special") action = {type: "special_cut", wire_ids: [...selection.wireIds]};
     else if (kind === "guess_link") action = {type: "mission_choice", choice: "guess_link", player_id: selection.recipientId, constraint: selection.constraint};
-    else if (["equal", "not_equal", "walkie_talkies", "fast_pass"].includes(kind)) action.wire_ids = [...selection.wireIds];
-    else if (["post_it", "single_label", "grappling_hook"].includes(kind)) {
+    else if (["equal", "not_equal", "fast_pass"].includes(kind)) action.wire_ids = [...selection.wireIds];
+    else if (kind === "walkie_talkies") {
+      action.own_wire_id = own[0]?.wire_id;
+      action.recipient_id = selection.recipientId;
+    } else if (["post_it", "single_label", "grappling_hook"].includes(kind)) {
       action.wire_id = selection.wireIds[0];
       if (kind === "grappling_hook") action.rack_id = selection.rackId;
     } else if (["triple_detector", "super_detector"].includes(kind)) {
@@ -384,9 +418,8 @@
     if (publicState.challenge_numbers.length) addStatus(`🏆 Numbers ${publicState.challenge_numbers.join(" + ")}`, "Challenge 8 requires these to be the first two validated numbers.");
     if (publicState.radar.length) publicState.radar.forEach((entry) => {
       const rack = view.racks.find((candidate) => candidate.rack_id === entry.rack_id);
-      addStatus(`📡 ${bombBustersCampaignPlayerName(rack?.owner_id)} ${String.fromCharCode(65 + (rack?.rack_index || 0))}: ${entry.has_value ? "Yes" : "No"}`, `Whether this rack has an uncut ${publicState.radar_value}.`);
+      addStatus(`📡 ${publicState.radar_value} · ${bombBustersCampaignPlayerName(rack?.owner_id)} ${String.fromCharCode(65 + (rack?.rack_index || 0))}: ${entry.has_value ? "Yes" : "No"}`, `At the time of the scan, whether this rack had an uncut ${publicState.radar_value}. This result does not update after later cuts.`);
     });
-    publicState.clue_notes.forEach((note) => addStatus(`${bombBustersCampaignPlayerName(note.player_id)} ${note.absent ? "≠" : "ℹ"} ${note.label}`, "A public clue beside the rack, rather than attached to a particular wire."));
     const equipment = bombBustersCampaignElement("EquipmentCards");
     equipment.replaceChildren();
     bombBustersCampaignElement("EquipmentCount").textContent = `${publicState.equipment.filter((card) => card.unlocked && !card.used).length} ready`;

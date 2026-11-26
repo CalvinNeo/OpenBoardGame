@@ -1,6 +1,141 @@
 /* Loaded into the matching style.css groups by loadGameStyleFragments. */
 @media all, obg-game-bomb_busters-1 {
 
+.bomb-busters-failure-effect {
+  position: fixed;
+  inset: 0;
+  z-index: 30510;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, #071526a6, transparent 70%);
+}
+
+.bomb-busters-failure-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(360px, calc(100vw - 24px));
+  height: min(390px, calc(100dvh - 32px));
+  min-width: 0;
+  color: #fff2cb;
+  text-align: center;
+  text-shadow: 0 2px 4px #000;
+}
+
+.bomb-busters-failure-scene {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bomb-busters-failure-person {
+  position: absolute;
+  bottom: 12px;
+  left: calc(50% - 42px);
+  width: 84px;
+  height: 190px;
+  transform-origin: bottom;
+  animation: bombBustersFailureWobble 220ms 650ms 7 alternate;
+}
+
+.bomb-busters-failure-face {
+  display: block;
+  font-size: 64px;
+  line-height: 76px;
+}
+
+.bomb-busters-failure-body {
+  height: 100px;
+  border: 4px solid #83c6e7;
+  border-radius: 24px 24px 10px 10px;
+  background: linear-gradient(90deg, #123f73 45%, #4690ba 46% 54%, #123f73 55%);
+  font-size: 32px;
+  line-height: 70px;
+  box-shadow: -20px 5px 0 -10px #4690ba, 20px 5px 0 -10px #4690ba;
+}
+
+.bomb-busters-failure-rain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.bomb-busters-failure-rain > span {
+  position: absolute;
+  top: -60px;
+  left: var(--bomb-drop-left);
+  font-size: var(--bomb-drop-size);
+  line-height: 1.2;
+  animation: bombBustersFailureFall 850ms var(--bomb-drop-delay) 2 ease-in both;
+}
+
+.bomb-busters-failure-pile {
+  position: absolute;
+  z-index: 3;
+  bottom: 0;
+  left: 2%;
+  display: grid;
+  place-items: center;
+  width: 96%;
+  height: 86%;
+  border-radius: 48% 52% 20px 20px;
+  background: radial-gradient(ellipse at 35% 25%, #ac6a32, transparent 48%),
+    radial-gradient(ellipse at 80% 65%, #51301e, transparent 60%), #754321;
+  box-shadow: inset 0 8px 0 #cb8940, 0 8px 20px #0008;
+  transform-origin: bottom;
+  animation: bombBustersFailureBury 2400ms 700ms ease-out both;
+}
+
+.bomb-busters-failure-pile > span {
+  font-size: 72px;
+}
+
+.bomb-busters-failure-name {
+  max-width: 100%;
+  max-height: 56px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.bomb-busters-failure-caption {
+  max-width: 100%;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.bomb-busters-failure-effect.is-reduced *,
+.bomb-busters-failure-effect.is-reduced *::before,
+.bomb-busters-failure-effect.is-reduced *::after {
+  animation: none !important;
+}
+
+.bomb-busters-failure-effect.is-reduced .bomb-busters-failure-rain {
+  display: none;
+}
+
+@keyframes bombBustersFailureFall {
+  from { transform: translateY(0) rotate(-12deg); }
+  to { transform: translateY(370px) rotate(24deg); }
+}
+
+@keyframes bombBustersFailureBury {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes bombBustersFailureWobble {
+  from { transform: rotate(-6deg); }
+  to { transform: rotate(6deg); }
+}
+
 .bomb-busters-mission-picker {
   box-sizing: border-box;
   width: min(600px, calc(100vw - 16px));
@@ -712,6 +847,40 @@
   min-width: 0;
   align-content: start;
   gap: 3px;
+}
+
+.bomb-busters-wire-links,
+.bomb-busters-player-annotations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bomb-busters-wire-link,
+.bomb-busters-player-annotations > span,
+.bomb-busters-radar-label {
+  padding: 2px 4px;
+  border: 1px solid #5abfb2;
+  border-radius: 5px;
+  background: #103b43;
+  color: #b9fff1;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  overflow-wrap: anywhere;
+}
+
+.bomb-busters-wire-link {
+  flex: 1 1 100%;
+  text-align: center;
+}
+
+.bomb-busters-radar-label {
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: middle;
+  text-transform: none;
 }
 
 .bomb-busters-wire-button {

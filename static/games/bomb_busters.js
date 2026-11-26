@@ -14,6 +14,7 @@
   let bombBustersPopoverFrame = null;
   let bombBustersTooltipTimer = null;
   let bombBustersEffectToken = null;
+  const BOMB_BUSTERS_FAILURE_EFFECTS = new Set();
   let bombBustersHelpWidget = null;
   let bombBustersExplainWidget = null;
   let bombBustersHelpMissionId = null;
@@ -165,8 +166,8 @@
       {
         id: "equipment", label: {zh: "装备与特殊机制", en: "Equipment"},
         html: {
-          zh: "<p>双重探测器(🔎)通常每关使用一次。用自己的蓝线数字指定队友同一线架的两条不同电线，不必相邻。有匹配就成功，多条匹配时由主人私下选一条。没有匹配时通常消耗一格并选择非红目标给线索，全部是红线则爆炸，不能声明黄线。</p><p>共享装备(🧰)通常在剪掉其数字的两条蓝线后解锁，每张用一次。三重探测器覆盖同架三条，超级探测器覆盖同架全部可用电线。雷达(📡)只报告每架有无某数字，不公开数量和位置。</p><p>对讲机交换电线，便利贴增加线索，相等与不等标签标记相邻电线的关系。回溯器恢复一格，电池恢复个人探测器，稳定器保护本回合剪线，X 或 Y 射线允许声明两个持有值，咖啡杯跳过回合并选择下一位。后期装备有各自的解锁条件，可在 Explain 中查看。</p><p>氧气(🫧)、纳诺机器人(🤖)、挑战(🏆)与约束(📋)按本关规则处理。反向电线对主人隐藏、对队友可见，剪线时需要明确声明。点装备后直接在线架选线，再确认，特殊电线能否使用装备以当前关卡为准。</p>",
-          en: "<p>The Double Detector (🔎) normally works once per mission. Declare your blue number and test two distinct wires on one teammate rack, adjacent or not. A match succeeds, with the owner privately choosing if several match. A miss normally costs one step and clues one non-red target. All-red targets explode. Yellow declarations are not allowed.</p><p>Shared equipment (🧰) normally unlocks after two blue wires of its number are cut and works once. Triple Detector tests three wires on one rack. Super Detector tests all eligible wires on one rack. Radar (📡) reports presence by rack, without revealing quantity or position.</p><p>Walkie-Talkies exchange wires, Post-It adds a clue, and equality labels describe adjacent wires. Rewinder restores a step, Batteries recharge personal detectors, Stabilizer protects a cut this turn, X or Y Ray declares two held values, and Coffee Mug skips to a chosen player. Late equipment has individual unlock conditions shown in Explain.</p><p>Oxygen (🫧), Nano (🤖), challenges (🏆), and constraints (📋) follow mission-specific rules. Reversed wires hide their face from the owner and require an explicit declaration. Select equipment, choose wires on the racks, then confirm. Special wires may ignore equipment.</p>"
+          zh: "<p>双重探测器(🔎)通常每关使用一次。用自己的蓝线数字指定队友同一线架的两条不同电线，不必相邻。有匹配就成功，多条匹配时由主人私下选一条。没有匹配时通常消耗一格并选择非红目标给线索，全部是红线则爆炸，不能声明黄线。</p><p>共享装备(🧰)通常在剪掉其数字的两条蓝线后解锁，每张用一次。三重探测器覆盖同架三条，超级探测器覆盖同架全部可用电线。雷达(📡)只报告扫描当时每架有无某数字，不公开数量和位置。结果标在线架标题，不随之后剪线自动更新。</p><p>对讲机先选择自己送出的电线和队友，确认后由队友私下选择回赠线，双方收到的线重新排序。便利贴增加线索，相等(=)与不等(≠)标签显示在两条电线下方，编号指向另一条线，跨行也能对应。单线标签(×1)显示在线上。回溯器恢复一格，电池恢复个人探测器，稳定器(🛡️)生效时显示在玩家线架上方。X 或 Y 射线允许声明两个持有值，咖啡杯跳过回合并选择下一位。后期装备有各自的解锁条件，可在 Explain 中查看。</p><p>氧气(🫧)、纳诺机器人(🤖)、挑战(🏆)与约束(📋)按本关规则处理。反向电线对主人隐藏、对队友可见，剪线时需要明确声明。点装备后直接在线架选线，再确认，特殊电线能否使用装备以当前关卡为准。</p>",
+          en: "<p>The Double Detector (🔎) normally works once per mission. Declare your blue number and test two distinct wires on one teammate rack, adjacent or not. A match succeeds, with the owner privately choosing if several match. A miss normally costs one step and clues one non-red target. All-red targets explode. Yellow declarations are not allowed.</p><p>Shared equipment (🧰) normally unlocks after two blue wires of its number are cut and works once. Triple Detector tests three wires on one rack. Super Detector tests all eligible wires on one rack. Radar (📡) reports presence by rack when scanned, without revealing quantity or position. Its rack-heading result does not update after later cuts.</p><p>For Walkie-Talkies, offer one of your wires and choose a teammate, who privately chooses the return wire. Both incoming wires are re-sorted. Post-It adds a clue. Equal (=) and not-equal (≠) labels sit below both wires and point to the other slot, including across rows. Single Wire Label (×1) appears on the wire. Rewinder restores a step, Batteries recharge personal detectors, and an active Stabilizer (🛡️) is marked above its player's racks. X or Y Ray declares two held values, and Coffee Mug skips to a chosen player. Late equipment has individual unlock conditions shown in Explain.</p><p>Oxygen (🫧), Nano (🤖), challenges (🏆), and constraints (📋) follow mission-specific rules. Reversed wires hide their face from the owner and require an explicit declaration. Select equipment, choose wires on the racks, then confirm. Special wires may ignore equipment.</p>"
         }
       },
       {
@@ -761,6 +762,28 @@
       button.classList.add("has-info");
       button.appendChild(info);
     }
+    const links = (view.campaign?.links || []).filter((link) => ["=", "≠"].includes(link.relation) && link.wire_ids.includes(wire.wire_id));
+    if (links.length) {
+      const markers = document.createElement("div");
+      markers.className = "bomb-busters-wire-links";
+      links.forEach((link) => {
+        const otherId = link.wire_ids.find((wireId) => wireId !== wire.wire_id);
+        const otherRack = bombBustersFindRack(view, otherId);
+        const other = bombBustersFindWire(view, otherId);
+        if (!other || !otherRack) return;
+        const marker = document.createElement("span");
+        marker.className = "bomb-busters-wire-link";
+        marker.textContent = `${link.relation} ${otherRack.rack_id === rack.rack_id ? "" : `${bombBustersRackLabel(otherRack)} `}#${other.slot_index + 1}`;
+        const explanation = `Label ${link.relation}: this wire ${link.relation === "=" ? "has the same cut value as" : "has a different cut value from"} ${bombBustersPlayerName(view, otherRack.owner_id)} · ${bombBustersRackLabel(otherRack)} slot ${other.slot_index + 1}. This public label stays attached to the marked wires.`;
+        marker.dataset.bombBustersTip = explanation;
+        marker.dataset.bombBustersExplain = "campaign";
+        marker.dataset.bombBustersExplanation = explanation;
+        marker.setAttribute("aria-label", explanation);
+        marker.tabIndex = 0;
+        markers.appendChild(marker);
+      });
+      slot.appendChild(markers);
+    }
     return slot;
   }
 
@@ -806,6 +829,23 @@
       count.dataset.bombBustersTip = `${player.remaining_count} uncut wires across this player's racks.`;
       heading.append(name, badges, count);
       card.appendChild(heading);
+      const notes = (view.campaign?.clue_notes || []).filter((note) => note.player_id === player.player_id);
+      if (notes.length || view.campaign?.stabilized === player.player_id) {
+        const annotations = document.createElement("div");
+        annotations.className = "bomb-busters-player-annotations";
+        const addAnnotation = (text, explanation) => {
+          const badge = document.createElement("span");
+          badge.textContent = text;
+          badge.dataset.bombBustersTip = explanation;
+          badge.dataset.bombBustersExplain = "campaign";
+          badge.dataset.bombBustersExplanation = explanation;
+          annotations.appendChild(badge);
+        };
+        notes.forEach((note) => addAnnotation(`${note.absent ? "≠" : "ℹ"} ${note.label === "yellow" ? "🟡" : note.label}`,
+          `${player.name || player.player_id}: ${note.absent ? "does not hold" : "has shared a clue for"} ${note.label}. This public clue belongs to the player's hand, not a particular wire.`));
+        if (view.campaign?.stabilized === player.player_id) addAnnotation("🛡️ Stabilizer", "Stabilizer is active for this player until the turn changes. Follow its cut restrictions in Help.");
+        card.appendChild(annotations);
+      }
       if (view.campaign && viewerSeat >= 0 && player.player_id !== view.you) {
         const isLeft = seatedPlayers[(viewerSeat + 1) % seatedPlayers.length] === player;
         const isRight = seatedPlayers[(viewerSeat + seatedPlayers.length - 1) % seatedPlayers.length] === player;
@@ -825,6 +865,16 @@
         rackSection.className = "bomb-busters-rack";
         const rackTitle = document.createElement("h4");
         rackTitle.textContent = bombBustersRackLabel(rack);
+        const radar = view.campaign?.radar?.find((entry) => entry.rack_id === rack.rack_id);
+        if (radar && view.campaign.radar_value != null) {
+          const badge = document.createElement("span");
+          badge.className = "bomb-busters-radar-label";
+          badge.textContent = `📡 ${view.campaign.radar_value}: ${radar.has_value ? "Yes" : "No"}`;
+          badge.dataset.bombBustersTip = `General Radar result when scanned: this rack ${radar.has_value ? "had" : "did not have"} an uncut blue ${view.campaign.radar_value}. It does not identify a wire or update after later cuts.`;
+          badge.dataset.bombBustersExplain = "campaign";
+          badge.dataset.bombBustersExplanation = badge.dataset.bombBustersTip;
+          rackTitle.appendChild(badge);
+        }
         const slots = document.createElement("div");
         slots.className = "bomb-busters-rack-slots";
         (rack.slots || []).forEach((wire) => slots.appendChild(bombBustersMakeWireSlot(view, rack, wire)));
@@ -1059,7 +1109,8 @@
       const completed = (result.completed_blue_values || []).length
         ? ` Validated 🔵: ${(result.completed_blue_values || []).join(", ")}.`
         : "";
-      bombBustersResultDetailEl.textContent = `${reasonLabels[result.reason] || "Mission complete."} Mistakes used: ${result.mistakes_used}.${completed}`;
+      const culprit = !success && result.failed_by ? ` Final failure: ${bombBustersPlayerName(view, result.failed_by)}.` : "";
+      bombBustersResultDetailEl.textContent = `${reasonLabels[result.reason] || "Mission complete."}${culprit} Mistakes used: ${result.mistakes_used}.${completed}`;
     }
     if (bombBustersReadyListEl) {
       bombBustersReadyListEl.innerHTML = "";
@@ -1122,9 +1173,6 @@
     bombBustersRefreshExplainTargets();
   }
 
-  // Wrong cuts are the moment the whole table reacts, so every miss event
-  // drives the shared poop splash. The effect labels the culprit itself, which
-  // keeps this call identical for every viewer.
   const BOMB_BUSTERS_MISS_EVENTS = new Set([
     "bomb_busters:duo_miss",
     "bomb_busters:detector_miss",
@@ -1132,13 +1180,26 @@
   ]);
 
   function bombBustersPlayMissEffect(data) {
-    if (typeof window.obgPlayPoopSplash !== "function") return;
     const events = data && data.events;
     if (!Array.isArray(events) || !events.length) return;
     // Assets can load after the first state, which replays the same payload.
     const token = `${data.state_version}|${events.length}|${events[0].type}`;
     if (token === bombBustersEffectToken) return;
     bombBustersEffectToken = token;
+    const failure = events.find((event) => event.type === "bomb_busters:mission_result" && event.payload?.result === "failure");
+    if (failure) {
+      const result = failure.payload;
+      const player = bombBustersFindPlayer(bombBustersView, result.failed_by);
+      if (!player) return;
+      const room = typeof roomId !== "undefined" ? roomId : "";
+      const key = `${room}:${data.state_version}:${result.mission_number}:${result.attempt_number}:${result.failed_by}`;
+      if (BOMB_BUSTERS_FAILURE_EFFECTS.has(key)) return;
+      BOMB_BUSTERS_FAILURE_EFFECTS.add(key);
+      if (BOMB_BUSTERS_FAILURE_EFFECTS.size > 100) BOMB_BUSTERS_FAILURE_EFFECTS.delete(BOMB_BUSTERS_FAILURE_EFFECTS.values().next().value);
+      window.bombBustersFailureEffectUI?.play(player.name || player.player_id, result.reason);
+      return;
+    }
+    if (typeof window.obgPlayPoopSplash !== "function") return;
     events.forEach((event) => {
       if (!BOMB_BUSTERS_MISS_EVENTS.has(event.type)) return;
       const playerId = (event.payload || {}).player_id;
@@ -1163,6 +1224,8 @@
         messages.push("Red wire. The bomb exploded.");
       } else if (event.type === "bomb_busters:validation_complete") {
         messages.push(`BLUE ${payload.blue_value} validated.`);
+      } else if (event.type === "bomb_busters:mission_result" && payload.result === "failure" && payload.failed_by) {
+        messages.push(`${bombBustersPlayerName(bombBustersView, payload.failed_by)} caused the final failure.`);
       }
     });
     if (messages.length) {
@@ -1186,6 +1249,7 @@
     bombBustersPendingTimer = null;
     bombBustersHideTooltip();
     bombBustersView = view;
+    if (view.phase !== "mission_result") window.bombBustersFailureEffectUI?.clear();
     if (typeof currentGameType !== "undefined" && currentGameType !== "bomb_busters") {
       currentGameType = "bomb_busters";
       setGamePanelVisibility("bomb_busters");
@@ -1224,6 +1288,7 @@
   }
 
   function bombBustersClearState() {
+    window.bombBustersFailureEffectUI?.clear();
     window.bombBustersMissionPickerUI?.clear();
     if (window.bombBustersCampaignUI) window.bombBustersCampaignUI.reset();
     bombBustersView = null;
@@ -1253,6 +1318,7 @@
     window.bombBustersMissionPickerUI?.show(show);
     if (bombBustersHeaderActionsEl) bombBustersHeaderActionsEl.style.display = show ? "flex" : "none";
     if (!show) {
+      window.bombBustersFailureEffectUI?.clear();
       bombBustersResetSelection(false);
       bombBustersHideWirePopover();
       bombBustersExplainWidget?.exit();
@@ -1390,6 +1456,7 @@
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    window.bombBustersFailureEffectUI?.clear();
     bombBustersHideTooltip();
     const hasSelection = bombBustersSelectedOwnWireId || bombBustersSelectedTargetWireIds.length || bombBustersSelectedSoloWireIds.length;
     if (hasSelection) bombBustersResetSelection(true);

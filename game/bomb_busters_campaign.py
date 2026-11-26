@@ -680,7 +680,7 @@ def _skip(state: Dict, actor_id: str, events: List[Dict]) -> None:
     if number == 34 and not data.get("roles_revealed") and actor_id == data["weakest_link"]:
         if can_cut:
             raise ValueError("you can obey your constraint")
-        _adjust_detonator(state, 2, events)
+        _adjust_detonator(state, 2, events, actor_id)
         _reveal_roles(state)
     elif number in (32, 37, 57, 61):
         data["skipped"].append(actor_id)
@@ -690,10 +690,10 @@ def _skip(state: Dict, actor_id: str, events: List[Dict]) -> None:
             if number in (57, 61):
                 _finish(state, "constraint_deadlock", events)
             elif number == 37:
-                _adjust_detonator(state, 1, events)
+                _adjust_detonator(state, 1, events, actor_id)
                 data["shared_constraint"] = data["constraint_deck"].pop() if data["constraint_deck"] else None
     elif number not in (26, 41):
-        _adjust_detonator(state, 1, events)
+        _adjust_detonator(state, 1, events, actor_id)
     if number == 59:
         data["nano"]["direction"] *= -1
     if number == 63:
@@ -738,16 +738,16 @@ def _mission_control(state: Dict, actor_id: str, action: Dict, events: List[Dict
         data["constraints"][actor_id] = _rng(state).choice(list("FGHIJKL"))
         ring_index = data["constraint_seats"].index(actor_id)
         data["constraint_ring"][ring_index] = data["constraints"][actor_id]
-        _adjust_detonator(state, 1, events)
+        _adjust_detonator(state, 1, events, actor_id)
     elif choice == "guess_link" and number == 34 and not data.get("roles_revealed"):
         if actor_id == data["weakest_link"]:
             raise ValueError("the weakest link cannot make this guess")
         if action.get("player_id") == data["weakest_link"] and action.get("constraint") == data["constraints"][data["weakest_link"]]:
             _reveal_roles(state)
         else:
-            _adjust_detonator(state, 1, events)
+            _adjust_detonator(state, 1, events, actor_id)
     elif choice == "speech_mistake" and number in (25, 44, 49, 63):
-        _adjust_detonator(state, 1, events)
+        _adjust_detonator(state, 1, events, actor_id)
     elif choice == "timer_expired" and number == 10:
         if data["clock"] and time.time() >= data["clock"]["deadline"]:
             _finish(state, "timer", events)
@@ -953,12 +953,13 @@ def _event(event_type: str, **payload) -> Dict:
     return {"type": f"bomb_busters:{event_type}", "payload": payload}
 
 
-def _finish(state: Dict, reason: str, events: List[Dict], success: bool = False) -> None:
-    result = _core()._finish_mission(state, "success" if success else "failure", reason)
+def _finish(state: Dict, reason: str, events: List[Dict], success: bool = False,
+            failed_by: Optional[str] = None) -> None:
+    result = _core()._finish_mission(state, "success" if success else "failure", reason, failed_by)
     events.append(_event("mission_result", **copy.deepcopy(result)))
 
 
-def _adjust_detonator(state: Dict, amount: int, events: List[Dict]) -> None:
+def _adjust_detonator(state: Dict, amount: int, events: List[Dict], actor_id: Optional[str] = None) -> None:
     data = _data(state)
     if _number(state) == 53:
         return
@@ -968,7 +969,7 @@ def _adjust_detonator(state: Dict, amount: int, events: List[Dict]) -> None:
     detonator["mistakes_used"] = max(0, int(detonator["mistakes_used"]) + amount)
     detonator["remaining"] = max(0, detonator["mistake_limit"] - detonator["mistakes_used"])
     if detonator["remaining"] == 0 and state["phase"] != "mission_result":
-        _finish(state, "detonator", events)
+        _finish(state, "detonator", events, failed_by=actor_id)
 
 
 def _cut(state: Dict, wire: Dict, secured: bool = False) -> None:
@@ -1158,7 +1159,7 @@ def _end_turn(state: Dict, actor_id: str, events: List[Dict], value: Optional[in
     if data.get("prediction"):
         prediction = data["prediction"]
         if success and value == prediction["value"]:
-            _adjust_detonator(state, 1, events)
+            _adjust_detonator(state, 1, events, prediction["predictor_id"])
         events.append(_event("prediction_revealed", value=prediction["value"]))
         data["number_hands"][actor_id].append(prediction["value"])
         data["prediction"] = None
@@ -1186,7 +1187,7 @@ def _end_turn(state: Dict, actor_id: str, events: List[Dict], value: Optional[in
         nano["position"] += -1 if success and value == nano["position"] else 1 if success else 2
         nano["position"] = max(0, nano["position"])
         if nano["position"] >= 12:
-            _finish(state, "nano", events)
+            _finish(state, "nano", events, failed_by=actor_id)
     if number == 63:
         recipient = _next_actor(state, actor_id)
         if recipient and recipient != actor_id:
@@ -1350,11 +1351,11 @@ def _miss(state: Dict, actor_id: str, targets: List[Dict], label: str, events: L
     stabilized = data.get("stabilized") == actor_id
     fatal = fatal_owner or _number(state) in (14, 28) and actor_id == data.get("special_player")
     if (red_fatal or fatal) and not stabilized:
-        _finish(state, "red_wire" if red_fatal else "fatal_mistake", events)
+        _finish(state, "red_wire" if red_fatal else "fatal_mistake", events, failed_by=actor_id)
         return True
     if not stabilized:
         amount = 2 if _constraint(state, actor_id) == "L" else 1
-        _adjust_detonator(state, amount, events)
+        _adjust_detonator(state, amount, events, actor_id)
     if state["phase"] != "mission_result":
         non_red = [wire for wire in targets if not _danger(wire)]
         if non_red:
@@ -1405,7 +1406,7 @@ def _cut_action(state: Dict, actor_id: str, action: Dict, events: List[Dict],
         state["players"][actor_id]["personal_detector_used"] = True
     state["action_number"] += 1
     if not detector_count and targets[0].get("reversed") and _number(state) in (56, 64):
-        _adjust_detonator(state, 1, events)
+        _adjust_detonator(state, 1, events, actor_id)
         if state["phase"] == "mission_result":
             return
     matches = [wire for wire in targets if _key(state, wire) == label and not _danger(wire)
@@ -1556,7 +1557,7 @@ def _handle_decision(state: Dict, actor_id: str, action: Dict, events: List[Dict
         state["current_turn"] = choice
         if not any(_value(state, wire) == data["forced_value"] or wire.get("reversed") for wire in _uncut(state, choice)) and not _only_danger(state, choice):
             if volunteering:
-                _adjust_detonator(state, 1, events)
+                _adjust_detonator(state, 1, events, actor_id)
                 _advance(state, actor_id, events)
                 return
             candidates = [wire["wire_id"] for wire in _uncut(state, choice) if wire["kind"] == "blue" and not wire.get("reversed")]
@@ -1566,7 +1567,7 @@ def _handle_decision(state: Dict, actor_id: str, action: Dict, events: List[Dict
         if choice != "none":
             wire = state["wires"][choice]
             events.extend(_clue_events(wire, _clue(state, wire), actor_id))
-        _adjust_detonator(state, 1, events)
+        _adjust_detonator(state, 1, events, actor_id)
     elif kind == "predict":
         data["number_hands"][actor_id].remove(choice)
         data["prediction"] = {"value": choice, "predictor_id": actor_id}
@@ -1652,7 +1653,7 @@ def _handle_decision(state: Dict, actor_id: str, action: Dict, events: List[Dict
             if 0 <= destination[0] <= 2 and 0 <= destination[1] <= 3 and not wall:
                 bunker["position"] = destination
         if bunker["position"] in ([0, 1], [1, 0]):
-            _adjust_detonator(state, 1, events)
+            _adjust_detonator(state, 1, events, actor_id)
         if decision["moves"] > 1 and state["phase"] != "mission_result":
             _decision(state, actor_id, "bunker_move", decision["choices"], resume_turn=resume,
                       value=value, success=decision["success"], moves=decision["moves"] - 1)
@@ -1680,9 +1681,9 @@ def _special_cut(state: Dict, actor_id: str, action: Dict, events: List[Dict]) -
     state["action_number"] += 1
     if not success:
         if _number(state) in (13, 23, 39, 46) or kind == "red_challenge" or any(_danger(wire) for wire in wires):
-            _finish(state, "special_cut", events)
+            _finish(state, "special_cut", events, failed_by=actor_id)
             return
-        _adjust_detonator(state, 1, events)
+        _adjust_detonator(state, 1, events, actor_id)
         for wire in wires:
             _clue(state, wire)
         if state["phase"] != "mission_result":

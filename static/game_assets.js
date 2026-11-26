@@ -9,9 +9,9 @@ const GAME_ASSETS = {
     "header": "showBohnanzaHeaderActions"
   },
   "modern_art": {
-    "scripts": ["/static/games/modern_art.js?v=2"],
-    "styles": ["/static/games/modern_art.css?v=2"],
-    "markup": "/static/games/modern_art.html?v=2",
+    "scripts": ["/static/games/modern_art.js?v=3"],
+    "styles": ["/static/games/modern_art.css?v=3"],
+    "markup": "/static/games/modern_art.html?v=3",
     "panel": "modernArtPanel",
     "panelTitle": "Modern Art",
     "header": "showModernArtHeaderActions"
@@ -1116,16 +1116,17 @@ const GAME_ASSETS = {
   },
   "bomb_busters": {
     "scripts": [
-      "/static/games/bomb_busters_campaign.js?v=3",
+      "/static/games/bomb_busters_campaign.js?v=4",
       "/static/games/bomb_busters_mission_picker.js?v=1",
-      "/static/games/bomb_busters.js?v=app_v10"
+      "/static/games/bomb_busters_effects.js?v=1",
+      "/static/games/bomb_busters.js?v=app_v12"
     ],
     "styles": [],
     "panel": "bombBustersPanel",
     "panelTitle": "💣 炸弹克星",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=8",
-    "styleFragments": "/static/games/bomb_busters.css?v=9"
+    "markup": "/static/games/bomb_busters.html?v=9",
+    "styleFragments": "/static/games/bomb_busters.css?v=11"
   },
   "felix": {
     "scripts": [

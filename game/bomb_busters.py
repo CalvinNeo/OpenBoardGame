@@ -409,7 +409,7 @@ def _advance_turn(state: Dict, actor_id: str) -> None:
     state["current_turn"] = None
 
 
-def _finish_mission(state: Dict, result: str, reason: str) -> Dict:
+def _finish_mission(state: Dict, result: str, reason: str, failed_by: Optional[str] = None) -> Dict:
     if state.get("phase") == "mission_result" and state.get("last_result"):
         return state["last_result"]
     bots = [
@@ -427,6 +427,7 @@ def _finish_mission(state: Dict, result: str, reason: str) -> Dict:
     state["last_result"] = {
         "result": result,
         "reason": reason,
+        "failed_by": failed_by if result == "failure" and failed_by in state["players"] else None,
         "mission_number": int(state.get("mission_number", 1)),
         "attempt_number": int(state.get("attempt_number", 1)),
         "mistakes_used": int(state.get("detonator", {}).get("mistakes_used", 0)),
@@ -889,7 +890,7 @@ class BombBustersGame:
 
             if target_wire.get("kind") == "red":
                 _cut_wire(state, target_wire)
-                result = _finish_mission(state, "failure", "red_wire")
+                result = _finish_mission(state, "failure", "red_wire", player_id)
                 _record_activity(state, "red_wire", player_id, f"{_player_name(state, player_id)} hit a red wire.")
                 events = [
                     {
@@ -921,7 +922,7 @@ class BombBustersGame:
                 }
             ] + _info_events(info, player_id)
             if state["detonator"]["remaining"] <= 0:
-                result = _finish_mission(state, "failure", "detonator")
+                result = _finish_mission(state, "failure", "detonator", player_id)
                 events.append({"type": "bomb_busters:mission_result", "payload": copy.deepcopy(result)})
             else:
                 _advance_turn(state, player_id)
@@ -1076,7 +1077,7 @@ class BombBustersGame:
 
             red_targets = [wire for wire in targets if wire.get("kind") == "red"]
             if len(red_targets) == 2:
-                result = _finish_mission(state, "failure", "red_wire")
+                result = _finish_mission(state, "failure", "red_wire", player_id)
                 _record_activity(state, "red_wire", player_id, f"{_player_name(state, player_id)} found two red wires with the detector.")
                 events = [
                     {
@@ -1108,7 +1109,7 @@ class BombBustersGame:
                 }
             ]
             if state["detonator"]["remaining"] <= 0:
-                result = _finish_mission(state, "failure", "detonator")
+                result = _finish_mission(state, "failure", "detonator", player_id)
                 events.append({"type": "bomb_busters:mission_result", "payload": copy.deepcopy(result)})
                 _record_activity(state, "detector_miss", player_id, f"{_player_name(state, player_id)} used the detector. Detonator -1.")
                 _assert_state_invariants(state)

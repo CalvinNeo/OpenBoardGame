@@ -86,18 +86,24 @@
       return `<svg class="ma-artwork" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="120" height="120" fill="#dfd1b4"/>${motifs[position]}</svg>`;
     }
 
+    function paintingExplanation(cardId) {
+      const card = view.card_catalog[cardId];
+      const painter = artist(card.artist);
+      const key = `painting-${cardId}`;
+      explanations[key] = {
+        zh: `${painter.name} 的画作。拍卖方式为 ${kinds[card.kind]}，当前人气 ${view.counts[card.artist]}。${explanations.auction.zh}`,
+        en: `${painter.name}. Auction: ${kinds[card.kind]}. Popularity this season: ${view.counts[card.artist]}. ${explanations.auction.en}`
+      };
+      return key;
+    }
+
     function painting(cardId, interactive = false) {
       const card = view.card_catalog[cardId];
       const painter = artist(card.artist);
       const node = document.createElement(interactive ? "button" : "div");
       node.className = `ma-painting${selection.includes(cardId) ? " ma-selected" : ""}`;
       node.innerHTML = `${artwork(cardId)}<span class="ma-painting-name">${esc(painter.symbol)} ${esc(painter.name)}</span><span class="ma-painting-kind">${esc(kinds[card.kind])}</span>`;
-      const key = `painting-${cardId}`;
-      explanations[key] = {
-        zh: `${painter.name} 的画作。拍卖方式为 ${kinds[card.kind]}，当前人气 ${view.counts[card.artist]}。${explanations.auction.zh}`,
-        en: `${painter.name}. Auction: ${kinds[card.kind]}. Popularity this season: ${view.counts[card.artist]}. ${explanations.auction.en}`
-      };
-      describe(node, key, !interactive);
+      describe(node, paintingExplanation(cardId), !interactive);
       if (interactive) {
         node.type = "button";
         node.dataset.maCard = cardId;
@@ -145,12 +151,29 @@
     }
 
     function renderHand() {
-      const scrollTop = byId("Hand").scrollTop;
-      byId("Hand").replaceChildren(...view.hand.map(cardId => painting(cardId, true)));
-      byId("Hand").scrollTop = scrollTop;
+      const hand = byId("Hand");
+      const controls = byId("Selection");
+      let cards = [...hand.querySelectorAll("[data-ma-card]")];
+      const anchor = cards.find(card => {
+        const bounds = card.getBoundingClientRect();
+        return bounds.bottom > 0 && bounds.top < window.innerHeight;
+      });
+      const anchorTop = anchor?.getBoundingClientRect().top;
+      const focusedId = controls.contains(document.activeElement) ? document.activeElement.id : null;
+      if (cards.length !== view.hand.length || cards.some((card, index) => card.dataset.maCard !== view.hand[index])) {
+        cards = view.hand.map(cardId => painting(cardId, true));
+        hand.replaceChildren(...cards, controls);
+      }
+      for (const card of cards) {
+        paintingExplanation(card.dataset.maCard);
+        const selected = selection.includes(card.dataset.maCard);
+        card.classList.toggle("ma-selected", selected);
+        card.setAttribute("aria-pressed", String(selected));
+        card.disabled = !allowed("offer") && !allowed("add");
+      }
       byId("HandCount").textContent = `${view.hand.length} private paintings`;
-      byId("Selection").replaceChildren();
-      byId("Selection").classList.toggle("hidden", !selection.length);
+      controls.replaceChildren();
+      controls.classList.toggle("hidden", !selection.length);
       if (selection.length) {
         const label = document.createElement("span");
         label.textContent = `${selection.length} selected${view.card_catalog[selection[0]].kind === "double" && selection.length === 1 ? " · Add a companion, or offer alone" : ""}`;
@@ -159,12 +182,19 @@
         confirm.id = "modernArtConfirmBtn";
         confirm.classList.add("ma-primary");
         const cancel = document.createElement("button");
+        cancel.id = "modernArtCancelBtn";
         cancel.type = "button";
         cancel.textContent = "Cancel";
         describe(cancel, "cancel");
         cancel.addEventListener("click", () => { selection = []; renderHand(); explain.refresh(); });
-        byId("Selection").append(label, confirm, cancel);
+        controls.append(label, confirm, cancel);
+        const columns = getComputedStyle(hand).gridTemplateColumns.split(" ").length;
+        const selectedIndex = view.hand.indexOf(selection[selection.length - 1]);
+        const rowEnd = Math.min(cards.length - 1, Math.floor(selectedIndex / columns) * columns + columns - 1);
+        hand.insertBefore(controls, cards[rowEnd].nextSibling);
       }
+      if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll: true });
+      if (anchor?.isConnected) window.scrollBy(0, anchor.getBoundingClientRect().top - anchorTop);
     }
 
     function renderMarket() {
@@ -397,7 +427,10 @@
       if (event.key === "Escape") { hideTip(); selection = []; if (view) { renderHand(); explain.refresh(); } }
     });
     window.addEventListener("scroll", hideTip, true);
-    window.addEventListener("resize", hideTip);
+    window.addEventListener("resize", () => {
+      hideTip();
+      if (view) { renderHand(); explain.refresh(); }
+    });
     socket.on("room:state", syncRoom);
     socket.on("system:error", () => { if (pending) { pending = false; clearTimeout(pendingTimer); render(); } });
     window.renderModernArtGameState = renderState;
