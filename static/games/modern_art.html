@@ -1,0 +1,43 @@
+<template data-game-target="modernArtHeaderActions" data-game-mode="contents">
+  <button id="modernArtHelpBtn" type="button">Help</button>
+  <button id="modernArtExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="modernArtPanel" data-game-mode="contents">
+  <div id="modernArtLobby" class="ma-lobby">
+    <div class="ma-lobby-art" aria-hidden="true"><span></span><span></span><span></span></div>
+    <h3>The art of the deal.</h3>
+    <p>Five artists. Four seasons. One very speculative market.</p>
+    <p class="ma-muted">3–5 players · Classic edition · Ready, then Start in Room Control.</p>
+  </div>
+  <div id="modernArtTable" class="hidden">
+    <div class="ma-status"><span id="modernArtSeason"></span><span id="modernArtStatus" role="status" aria-live="polite"></span><strong id="modernArtCash" data-ma-explain="cash" tabindex="0"></strong></div>
+    <section aria-label="Artist market">
+      <h3 class="ma-caption">The market <span>Popularity / season values in K</span></h3>
+      <div id="modernArtMarket" class="ma-market" data-ma-explain="market"></div>
+    </section>
+    <div class="ma-floor">
+      <section class="ma-auction" aria-label="Auction floor" data-ma-explain="auction">
+        <div class="ma-auction-heading"><h3 class="ma-caption">On the rostrum</h3><span id="modernArtAuctionKind"></span></div>
+        <div id="modernArtLot" class="ma-lot"></div>
+        <div id="modernArtAuctionInfo" class="ma-auction-info"></div>
+        <form id="modernArtBidForm" class="ma-bid-form hidden">
+          <label for="modernArtAmount">Offer · 💰 K</label>
+          <div class="ma-bid-controls"><input id="modernArtAmount" type="number" min="0" step="1" inputmode="numeric" required aria-label="Bid or fixed price in thousands"><button id="modernArtBidBtn" type="submit" class="ma-primary" data-ma-explain="bid">Bid</button></div>
+        </form>
+        <div id="modernArtAuctionButtons" class="ma-buttons"></div>
+      </section>
+      <section aria-label="Galleries" class="ma-galleries-section">
+        <h3 class="ma-caption">The galleries <span>Public collections</span></h3>
+        <div id="modernArtPlayers" class="ma-players" data-ma-explain="galleries"></div>
+      </section>
+    </div>
+    <section id="modernArtHandSection" class="ma-hand-section" aria-label="Your private paintings" data-ma-explain="hand">
+      <h3 class="ma-caption">Your collection <span id="modernArtHandCount"></span></h3>
+      <div id="modernArtHand" class="ma-hand"></div>
+      <div id="modernArtSelection" class="ma-selection hidden"></div>
+    </section>
+    <section id="modernArtResults" class="hidden ma-results" aria-label="Season results" data-ma-explain="results"></section>
+    <details class="ma-history"><summary>History</summary><ol id="modernArtLog"></ol></details>
+  </div>
+  <div id="modernArtTooltip" class="ma-tooltip hidden" role="tooltip"></div>
+</template>

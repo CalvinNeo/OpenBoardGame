@@ -28,7 +28,7 @@ ACTION_SCHEMA = {"oneOf": [
     for kind, fields, required in [
         ("bid", {"bid": {"type": "integer", "minimum": 0, "maximum": 10}}, ["bid"]),
         ("play", {"card_id": {"type": "string"}, "mode": {"enum": ["pirate", "escape"]}}, ["card_id"]),
-        ("next_trick", {}, []), ("next_round", {}, []),
+        ("next_trick", {}, []), ("next_round", {}, []), ("confirm_results", {}, []),
     ]
 ]}
 
@@ -173,9 +173,9 @@ def _finish_round(state: Dict) -> None:
         rows.append({"player_id": pid, **row, "total_score": player["total_score"]})
     state["round_summary"] = {"round_number": state["round_number"], "cards_dealt": state["cards_dealt"], "players": rows}
     state["score_history"].append(copy.deepcopy(state["round_summary"]))
-    state["game_over"] = state["round_number"] == state["total_rounds"]
-    state["phase"] = "game_over" if state["game_over"] else "round_review"
-    if state["game_over"]:
+    final_round = state["round_number"] == state["total_rounds"]
+    state["phase"] = "final_review" if final_round else "round_review"
+    if final_round:
         high = max(player["total_score"] for player in state["players"].values())
         state["winner_ids"] = [pid for pid in state["turn_order"] if state["players"][pid]["total_score"] == high]
 
@@ -241,6 +241,8 @@ class SkullKingGame:
             if player_id in state["ready"]:
                 return []
             return ["next_trick" if state["phase"] == "trick_review" else "next_round"]
+        if state["phase"] == "final_review":
+            return [] if player_id in state["ready"] else ["confirm_results"]
         return ["play"] if state["current_turn"] == player_id else []
 
     @staticmethod
@@ -258,7 +260,7 @@ class SkullKingGame:
         elif kind == "play":
             required.add("card_id")
             allowed.update(("card_id", "mode"))
-        elif kind not in ("next_trick", "next_round"):
+        elif kind not in ("next_trick", "next_round", "confirm_results"):
             return [], "unknown action"
         if not required <= set(action) <= allowed:
             return [], "invalid action fields"
@@ -266,7 +268,7 @@ class SkullKingGame:
                 any(type(action[key]) is not int or action[key] != state[key]
                     for key in ("round_number", "trick_number"))):
             return [], "stale action; refresh the game state"
-        review = {"next_trick": "trick_review", "next_round": "round_review"}
+        review = {"next_trick": "trick_review", "next_round": "round_review", "confirm_results": "final_review"}
         if kind in review and state["phase"] == review[kind] and player_id in state["ready"]:
             return [], None
         if kind not in SkullKingGame.get_legal_actions(state, player_id):
@@ -312,6 +314,8 @@ class SkullKingGame:
                     winner = state["trick_result"]["winner_id"]
                     state["trick_number"] += 1
                     _begin_trick(state, winner)
+                elif kind == "confirm_results":
+                    state.update(game_over=True, phase="game_over")
                 else:
                     order = state["turn_order"]
                     state["round_start"] = order[(order.index(state["round_start"]) + 1) % len(order)]

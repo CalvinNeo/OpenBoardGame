@@ -145,7 +145,12 @@
 .take-time-chapter { margin: 20px 0; min-width: 0; }
 .take-time-chapter h3 { font-size: 13px; margin: 0 0 8px; overflow-wrap: anywhere; }
 .take-time-clock-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.take-time-clock-grid > button { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 10px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.take-time-clock-grid > button { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 10px; border: 1px solid #a6b5ae; border-radius: 8px; background: #fffaf0; color: #25444a; font: inherit; text-align: left; white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+.take-time-clock-grid > button:hover:not(:disabled) { border-color: #a67b34; background: #f5e6c4; }
+.take-time-clock-grid > button:focus-visible { outline: 2px solid #bd8d38; outline-offset: 2px; }
+.take-time-clock-grid > button:disabled { cursor: default; opacity: .65; }
+.take-time-setup .take-time-clock-grid > button { background: #22414b; color: #edf1e8; border-color: #54737a; }
+.take-time-setup .take-time-clock-grid > button:hover:not(:disabled) { background: #314f54; border-color: #e5bf76; }
 .take-time-clock-grid > button > strong { font-size: 20px; }
 .take-time-clock-grid > button > span, .take-time-clock-grid > button > small { font-size: 11px; }
 .take-time-clock-grid > button[aria-current="step"] { outline: 2px solid #c79c43; outline-offset: -2px; }

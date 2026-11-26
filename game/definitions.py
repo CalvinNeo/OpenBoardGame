@@ -26,6 +26,7 @@ from game.a_feast_for_odin import AFeastForOdinGame, ACTION_SCHEMA as ODIN_ACTIO
 from game.orloj import OrlojGame, ACTION_SCHEMA as ORLOJ_ACTION_SCHEMA, CONFIG_SCHEMA as ORLOJ_CONFIG_SCHEMA
 from game.las_vegas import LasVegasGame, ACTION_SCHEMA as LAS_VEGAS_ACTION_SCHEMA, CONFIG_SCHEMA as LAS_VEGAS_CONFIG_SCHEMA
 from game.for_sale import ForSaleGame, ACTION_SCHEMA as FOR_SALE_ACTION_SCHEMA, CONFIG_SCHEMA as FOR_SALE_CONFIG_SCHEMA
+from game.modern_art import ModernArtGame, ACTION_SCHEMA as MODERN_ART_ACTION_SCHEMA, CONFIG_SCHEMA as MODERN_ART_CONFIG_SCHEMA
 from game.cheaty_mages import (
     CheatyMagesGame,
     ACTION_SCHEMA as CHEATY_MAGES_ACTION_SCHEMA,
@@ -97,6 +98,7 @@ from game.love_letter import (
 from game.manila import ManilaGame, START_POSITION_MAX
 from game.nine_upper import NineUpperGame
 from game.no_thanks import NoThanksGame, ACTION_SCHEMA as NO_THANKS_ACTION_SCHEMA, CONFIG_SCHEMA as NO_THANKS_CONFIG_SCHEMA
+from game.bohnanza import BohnanzaGame, ACTION_SCHEMA as BOHNANZA_ACTION_SCHEMA, CONFIG_SCHEMA as BOHNANZA_CONFIG_SCHEMA
 from game.not_a_hat import NotAHatGame, ACTION_SCHEMA as NOT_A_HAT_ACTION_SCHEMA, CONFIG_SCHEMA as NOT_A_HAT_CONFIG_SCHEMA
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
@@ -530,6 +532,16 @@ register_game(
 
 register_game(
     GameDefinition(
+        game_id=BohnanzaGame.game_id, name="Bohnanza", name_zh="种豆得金（纸牌版）",
+        min_players=BohnanzaGame.min_players, max_players=BohnanzaGame.max_players,
+        turn_mode="turn", action_schema=BOHNANZA_ACTION_SCHEMA,
+        config_schema=BOHNANZA_CONFIG_SCHEMA, module=BohnanzaGame,
+        serialize=BohnanzaGame.serialize, deserialize=BohnanzaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
         game_id=NotAHatGame.game_id, name="That's Not a Hat", name_zh="似帽非帽",
         min_players=NotAHatGame.min_players, max_players=NotAHatGame.max_players,
         turn_mode="turn", action_schema=NOT_A_HAT_ACTION_SCHEMA,
@@ -615,6 +627,22 @@ register_game(
         module=LasVegasGame,
         serialize=LasVegasGame.serialize,
         deserialize=LasVegasGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ModernArtGame.game_id,
+        name="Modern Art",
+        name_zh="现代艺术",
+        min_players=ModernArtGame.min_players,
+        max_players=ModernArtGame.max_players,
+        turn_mode="turn",
+        action_schema=MODERN_ART_ACTION_SCHEMA,
+        config_schema=MODERN_ART_CONFIG_SCHEMA,
+        module=ModernArtGame,
+        serialize=ModernArtGame.serialize,
+        deserialize=ModernArtGame.deserialize,
     )
 )
 

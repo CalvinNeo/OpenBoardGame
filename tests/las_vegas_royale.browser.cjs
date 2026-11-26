@@ -79,6 +79,8 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         await page.keyboard.press('Escape');
         await render(page, 'playing');
         assert.equal(await page.locator('.lv-log-box').getAttribute('open'), null);
+        assert.equal(await page.locator('.lv-wallet').getAttribute('open'), null);
+        assert.equal(await page.locator('.lv-roll-tray, .lv-sidebar').count(), 0);
         assert.match(await page.locator('.lv-big-badge').innerText(), /大骰/);
         assert.equal(await page.locator('.lv-roll-group[data-lv-face="6"]').isDisabled(), true);
         await page.locator('.lv-roll-group[data-lv-face="1"]').click();
@@ -118,6 +120,9 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
                         (node.clientWidth && node.scrollWidth > node.clientWidth + 1 && !['auto', 'hidden'].includes(s.overflowX)));
                 }).map(node => `${node.className}: ${node.textContent.slice(0, 35)}`));
                 assert.deepEqual(issues, [], `${width}px ${key}`);
+                assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${width}px ${key} page overflow`);
+                const playerHeights = await page.locator('.lv-player-heading').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+                assert.ok(playerHeights.every(height => height < 28), `${width}px ${key} player headings wrap: ${playerHeights}`);
             }
             await render(page, 'playing');
             await page.locator('#lasVegasHelpBtn').click();
@@ -136,7 +141,25 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
             assert.equal(header.overflow, false, `${width}px header`);
             if ([320, 390, 1024, 1440].includes(width)) {
                 await page.locator('.lv-roll-group[data-lv-face="1"]').click();
+                const metrics = await page.evaluate(() => {
+                    const bounds = selector => document.querySelector(selector).getBoundingClientRect();
+                    const board = bounds('.lv-casinos');
+                    const panel = bounds('.game-panel[data-game-theme="las_vegas"]');
+                    const confirm = bounds('[data-lv-action="place"]');
+                    const selected = bounds('.lv-casino.is-selected');
+                    return {width: innerWidth, panelHeight: Math.ceil(panel.height), boardHeight: Math.ceil(board.height), boardTop: Math.ceil(board.top), boardBottom: Math.ceil(board.bottom), confirmTop: Math.ceil(confirm.top - selected.top)};
+                });
+                assert.ok(metrics.panelHeight < (width < 500 ? 760 : 580), `${width}px compact height: ${JSON.stringify(metrics)}`);
+                assert.ok(metrics.boardTop < 275, `${width}px board should start near the top`);
+                assert.ok(metrics.confirmTop < 155, `${width}px confirmation should be beside the selection`);
+                fs.writeFileSync(path.join(output, `metrics-${width}.json`), JSON.stringify(metrics, null, 2));
                 await page.screenshot({path: path.join(output, `board-${width}.png`), fullPage: true});
+                await render(page, 'crowded');
+                await page.locator('.lv-wallet > summary').click();
+                assert.equal(await page.locator('.lv-wallet-notes > span').count(), 2);
+                await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo(0, 0); });
+                await page.screenshot({path: path.join(output, `crowded-${width}.png`), fullPage: true});
+                await page.locator('.lv-wallet > summary').click();
             }
         }
         await page.setViewportSize({width: 1440, height: 1000});
@@ -147,6 +170,10 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         assert.ok((await page.locator('#lasVegasDialogBody').innerText()).length > 25);
         await page.keyboard.press('Escape');
         await render(page, 'playing');
+        await page.locator('.lv-wallet > summary').click();
+        await page.locator('.lv-roll-group[data-lv-face="1"]').click();
+        assert.equal(await page.locator('.lv-wallet').getAttribute('open'), '');
+        await page.locator('.lv-wallet > summary').click();
         await page.locator('.lv-log-box > summary').click();
         assert.equal(await page.locator('.lv-log-box').getAttribute('open'), '');
         await page.locator('.lv-roll-group[data-lv-face="1"]').click();
@@ -160,6 +187,10 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         assert.equal(await page.locator('#lasVegasDialog').evaluate(node => node.open), true);
         assert.equal(await page.evaluate(() => vegasActions.length), beforeExplain);
         await page.keyboard.press('Escape');
+        await page.locator('#lasVegasExplainBtn').click();
+        await page.locator('.lv-banknotes [data-lv-tip]').first().click();
+        assert.match(await page.locator('#lasVegasDialogBody').innerText(), /50,000/);
+        await page.keyboard.press('Escape');
         await render(page, 'black_split');
         await page.screenshot({path: path.join(output, 'secret-split.png'), fullPage: true});
         await page.setViewportSize({width: 390, height: 852});
@@ -168,6 +199,7 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         await render(page, 'final');
         assert.match(await page.locator('.lv-final').innerText(), /3 轮奖金/);
         await render(page, 'settled');
+        await page.screenshot({path: path.join(output, 'settled-390.png'), fullPage: true});
         await page.locator('[data-lv-action="next"]').click();
         assert.equal((await lastAction(page)).type, 'next_round');
         for (const edition of ['classic', 'neutral']) {
@@ -201,6 +233,9 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         assert.equal((await lastAction(touchPage)).face, 1);
         assert.equal(await touchPage.locator('#lasVegasTooltip').isVisible(), false);
         await render(touchPage, 'playing');
+        await touchPage.locator('.lv-player .lv-identity').last().tap();
+        assert.match(await touchPage.locator('#lasVegasTooltip').innerText(), /LongPlayerName<&>/);
+        await touchPage.locator('.lv-banner').tap();
         await touchPage.locator('.lv-status [data-lv-tip]').tap();
         assert.equal(await touchPage.locator('#lasVegasTooltip').isVisible(), true);
         const oldTip = await touchPage.locator('#lasVegasTooltip').innerText();
@@ -208,6 +243,15 @@ async function lastAction(page) { return page.evaluate(() => vegasActions.at(-1)
         assert.notEqual(await touchPage.locator('#lasVegasTooltip').innerText(), oldTip);
         await touchPage.waitForTimeout(3200);
         assert.equal(await touchPage.locator('#lasVegasTooltip').isVisible(), false);
+        await touchPage.locator('.lv-banknotes [data-lv-tip]').first().tap();
+        assert.match(await touchPage.locator('#lasVegasTooltip').innerText(), /50,000/);
+        const noteBox = await touchPage.locator('.lv-roll-group[data-lv-face="1"]').boundingBox();
+        const scrollSession = await mobile.newCDPSession(touchPage);
+        const scrollX = noteBox.x + noteBox.width / 2, scrollY = noteBox.y + noteBox.height / 2;
+        await scrollSession.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: scrollX, y: scrollY}]});
+        await scrollSession.send('Input.dispatchTouchEvent', {type: 'touchMove', touchPoints: [{x: scrollX, y: scrollY - 60}]});
+        await scrollSession.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+        assert.equal(await touchPage.locator('.lv-casino.is-selected').count(), 0);
         await touchPage.locator('#lasVegasExplainBtn').tap();
         const touchBox = await touchPage.locator('.lv-roll-group[data-lv-face="6"]').boundingBox();
         const touchSession = await mobile.newCDPSession(touchPage);

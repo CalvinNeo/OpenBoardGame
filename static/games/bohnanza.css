@@ -1,0 +1,114 @@
+#bohnanzaPanel { --bn-ink: #284937; --bn-leaf: #36734d; --bn-paper: #faf7ee; color: var(--bn-ink); min-width: 0; }
+#bohnanzaPanel *, .bn-dialog * { box-sizing: border-box; }
+#bohnanzaPanel button, .bn-dialog button { white-space: normal; overflow-wrap: anywhere; cursor: pointer; touch-action: manipulation; }
+#bohnanzaPanel button:disabled, .bn-dialog button:disabled { cursor: default; }
+.bn-dialog { overflow-wrap: anywhere; }
+.game-panel[data-game-theme="bohnanza"] { background: #faf9f2; }
+.game-panel[data-game-theme="bohnanza"] > .panel-header { border-bottom: 1px solid #dce3d5; flex-wrap: nowrap; align-items: center; gap: 8px; }
+.game-panel[data-game-theme="bohnanza"] .game-panel-title { flex: 1; min-width: 0; flex-wrap: nowrap; }
+.game-panel[data-game-theme="bohnanza"] .game-panel-title h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-panel[data-game-theme="bohnanza"] #gameReconnectBtn { flex: 0 0 auto; }
+.game-panel[data-game-theme="bohnanza"] > .panel-header > .panel-header-actions { flex: 0 0 auto; flex-wrap: nowrap; }
+#bohnanzaHeaderActions { flex-wrap: nowrap; }
+.bn-lobby { text-align: center; padding: 50px 12px; }
+.bn-lobby h3 { font: 600 clamp(22px, 4vw, 36px) Georgia, serif; margin: 12px 0; }
+.bn-lobby p { color: #6b7869; font-size: 13px; }
+.bn-sprout { font-size: 62px; }
+.bn-status { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 18px; padding: 8px 0; font-size: 12px; }
+.bn-status strong { font-weight: 600; overflow-wrap: anywhere; }
+.bn-status > span { color: #61715c; font-variant-numeric: tabular-nums; }
+.bn-phase-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-bottom: 12px; }
+.bn-phase-track span { padding: 7px 3px; border-bottom: 2px solid #dbe1d3; color: #77816e; font-size: 11px; text-align: center; }
+.bn-phase-track .is-current { border-color: #458255; color: #285c38; font-weight: 700; background: #e7efdf; border-radius: 5px 5px 0 0; }
+.bn-caption { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; font-size: 12px; font-weight: 700; margin: 8px 0; min-width: 0; }
+.bn-caption > span { font-weight: 400; color: #65715c; font-size: 11px; min-width: 0; }
+.bn-caption > span:last-child { margin-left: auto; }
+.bn-caption button, .bn-opponent button { font-size: 11px; min-height: 34px; padding: 5px 10px; }
+.bn-market-section { padding-bottom: 12px; border-bottom: 1px solid #dce3d5; margin-bottom: 10px; }
+.bn-market { min-height: 46px; align-items: center; justify-content: center; }
+.bn-market:empty::after { content: "Waiting for the next reveal"; color: #8a907f; font-size: 12px; padding: 10px; }
+.bn-cards { display: flex; gap: 8px; max-width: 100%; min-width: 0; }
+.bn-card { flex: 0 0 94px; width: 94px; min-height: 130px; padding: 7px; color: #354235; background: #fffef8; border: 1px solid #d9ddce; border-top: 4px solid var(--bean-color); border-radius: 9px; display: flex; flex-direction: column; align-items: stretch; gap: 5px; position: relative; text-align: center; box-shadow: 0 2px 3px #3145250a; overflow-wrap: anywhere; }
+button.bn-card { cursor: pointer; font-family: inherit; }
+.bn-card.is-selected { outline: 3px solid #4c8457; outline-offset: -3px; background: #eef5e8; }
+.bn-card .bn-card-top { display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; color: #5f6b56; }
+.bn-card .bn-icon { font-size: 30px; line-height: 1.2; margin: 2px 0; }
+.bn-card .bn-bean-name { font-size: 11px; font-weight: 700; min-height: 26px; display: grid; place-items: center; line-height: 1.15; }
+.bn-meter { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; font-size: 10px; margin-top: auto; }
+.bn-meter span { display: flex; flex-direction: column; border-radius: 3px; background: #f0efe4; padding: 3px 0; line-height: 1.25; }
+.bn-meter small { font-size: 9px; color: #84692c; }
+.bn-hand { overflow-x: auto; padding: 4px 3px 9px; scrollbar-width: thin; touch-action: pan-x pan-y; overscroll-behavior-x: contain; }
+#bohnanzaPending { overflow-x: auto; padding: 4px 3px 9px; scrollbar-width: thin; }
+.bn-hand .bn-card { flex-basis: 88px; width: 88px; }
+.bn-main { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(210px, 1fr); gap: 22px; }
+.bn-personal { min-width: 0; }
+.bn-personal > section + section { margin-top: 15px; }
+.bn-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bn-fields.bn-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bn-field { position: relative; min-width: 0; min-height: 150px; padding: 10px 8px; background: linear-gradient(0deg, #ece5d3 0, #f3eddf 26%, #e9f0e1 26%, #f3f6ec 100%); border-radius: 8px; display: flex; align-items: center; flex-direction: column; gap: 7px; text-align: center; overflow-wrap: anywhere; }
+.bn-field .bn-field-index { font-size: 10px; color: #748168; align-self: flex-start; }
+.bn-field .bn-icon { font-size: 29px; }
+.bn-field strong { font-size: 12px; }
+.bn-field .bn-yield { font-size: 12px; }
+.bn-field button { max-width: 100%; min-height: 36px; padding: 6px; font-size: 11px; overflow-wrap: anywhere; white-space: normal; }
+.bn-field .bn-confirm { position: absolute; inset: 0; background: #f5f5eaf5; border-radius: inherit; display: flex; flex-direction: column; gap: 8px; justify-content: center; padding: 8px; }
+.bn-primary, #bohnanzaPanel .bn-primary { background: #386e47; color: #fff; border: 1px solid #386e47; }
+.bn-primary:disabled { opacity: .45; }
+.bn-opponents { min-width: 0; }
+#bohnanzaPlayers { display: grid; gap: 8px; max-height: 440px; overflow-y: auto; scrollbar-width: thin; }
+.bn-opponent { padding: 10px; border-left: 3px solid #bccbaf; background: #eff1e7; border-radius: 0 7px 7px 0; min-width: 0; }
+.bn-opponent.is-active { border-left-color: #578351; background: #e8efde; }
+.bn-player-header { display: flex; gap: 8px; align-items: center; justify-content: space-between; min-width: 0; font-size: 12px; }
+.bn-player-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bn-player-header > span:last-child { flex-shrink: 0; color: #6b785e; font-size: 11px; }
+.bn-small-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+.bn-small-field { font-size: 11px; background: #fcfcf6; padding: 5px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+.bn-review { padding: 12px; background: #eaf0da; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+.bn-review h3 { font: 600 21px Georgia, serif; margin: 0 0 8px; }
+.bn-review p { margin: 6px 0; overflow-wrap: anywhere; }
+.bn-history { margin-top: 16px; border-top: 1px solid #dce3d5; font-size: 11px; color: #6b7861; padding-top: 10px; }
+.bn-history summary { cursor: pointer; }
+.bn-history ol { max-height: 170px; overflow-y: auto; padding-left: 24px; }
+.bn-history li { padding: 3px 0; overflow-wrap: anywhere; }
+.bn-dialog { color: #284937; background: #faf9f2; border: 1px solid #bdcbb2; border-radius: 12px; padding: 0; width: min(610px, calc(100vw - 24px)); max-height: min(760px, calc(100dvh - 28px)); overflow: hidden; }
+.bn-dialog[open] { display: flex; flex-direction: column; }
+.bn-dialog::backdrop { background: #192a1c66; }
+.bn-dialog-header, .bn-dialog-footer { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 12px; flex-shrink: 0; }
+.bn-dialog-header h3 { margin: 0; font-size: 17px; min-width: 0; overflow-wrap: anywhere; }
+.bn-dialog-header button { flex-shrink: 0; white-space: nowrap; }
+.bn-dialog-body { overflow-y: auto; min-height: 0; padding: 0 12px 12px; }
+.bn-dialog h4 { margin: 12px 0 8px; font-size: 12px; }
+.bn-dialog h4 span { font-size: 10px; color: #6b785e; font-weight: 400; }
+.bn-target-label { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.bn-target-label select { min-width: 0; flex: 1; width: 100%; max-width: 330px; }
+.bn-trade-cards { display: flex; gap: 6px; overflow-x: auto; padding: 3px 3px 9px; }
+.bn-trade-cards .bn-card { flex-basis: 84px; width: 84px; }
+.bn-want { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.bn-counter { display: grid; grid-template-columns: minmax(0, 1fr) 32px 20px 32px; align-items: center; gap: 3px; background: #eff0e4; padding: 6px; border-radius: 6px; font-size: 11px; }
+.bn-counter span:first-child { overflow-wrap: anywhere; }
+.bn-counter button { min-width: 0; padding: 3px; height: 34px; }
+.bn-dialog-footer { border-top: 1px solid #dce3d5; font-size: 11px; }
+.bn-dialog-footer > span { min-width: 0; }
+.bn-dialog-footer button { min-height: 42px; }
+.bn-offer-return { position: fixed; bottom: 18px; right: 18px; z-index: 70; background: #386e47; color: #fff; padding: 12px 18px; border-radius: 24px; box-shadow: 0 3px 16px #213e2344; }
+.bn-offer-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.bn-offer-bean { border-left: 3px solid var(--bean-color); padding: 7px 9px; background: #f0f0e5; border-radius: 5px; font-size: 12px; }
+.bn-tooltip { position: fixed; z-index: 15000; background: #263d2c; color: #fff; max-width: min(300px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 7px; font-size: 12px; overflow-wrap: anywhere; pointer-events: none; }
+@media (max-width: 700px) {
+  .bn-main { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  #bohnanzaPlayers { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 260px; gap: 6px; }
+  .bn-opponent { padding: 8px; }
+  .bn-small-fields { margin: 6px 0; }
+  .bn-player-header { flex-wrap: wrap; gap: 3px; }
+  .bn-player-name { flex-basis: 100%; }
+  .bn-field { min-height: 146px; }
+  .bn-market .bn-card { min-height: 110px; }
+  .bn-market .bn-icon { font-size: 24px; }
+  .bn-caption { margin: 7px 0; }
+  .bn-personal > section + section { margin-top: 10px; }
+  .bn-status { padding-top: 5px; }
+  .bn-phase-track { margin-bottom: 6px; }
+  .bn-phase-track span { font-size: 10px; padding: 5px 1px; }
+  .bn-market-section { padding-bottom: 7px; margin-bottom: 5px; }
+  .bn-want { grid-template-columns: minmax(0, 1fr); }
+}

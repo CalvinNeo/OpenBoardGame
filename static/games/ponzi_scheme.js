@@ -264,11 +264,14 @@ let ponziSchemeExplainWidget = null;
     }
 
     function marketHTML() {
-        return `<section class="ponzi-scheme-market ponzi-scheme-box"><div class="ponzi-scheme-section-head"><h3>📈 资金市场</h3><span>本金 ↑ · ${view.deck_count} cards left</span></div>
+        const funding = available("fund");
+        return `<section class="ponzi-scheme-market"><div class="ponzi-scheme-section-head"><h3>📈 资金市场</h3><span>本金 ↑ · ${view.deck_count} cards left</span></div>
+            ${funding ? industryChoices(Object.keys(view.industry_defs), "fund") : ""}
             <div class="ponzi-scheme-market-rows">${[0, 1, 2].map(row => `<div class="ponzi-scheme-market-row ${selectedIndustry && own()?.industries[selectedIndustry] === row && available("fund") ? "is-eligible" : ""}">
                 <div class="ponzi-scheme-row-title"><b>${row + 1}</b><span>第 ${row + 1} 个<br />同类行业</span></div>
-                <div class="ponzi-scheme-market-cards">${view.market.slice(row * 3, row * 3 + 3).map((card, i) => cardHTML(card, row * 3 + i)).join("")}</div></div>`).join("")}</div>
-            <p class="ponzi-scheme-hint">先选行业，再选对应行资金牌；本金只收一次，利息循环支付。</p>
+                <div class="ponzi-scheme-market-cards">${view.market.slice(row * 3, row * 3 + 3).map((card, i) => cardHTML(card, row * 3 + i)).join("")}</div>
+                ${selectedCard && view.market.slice(row * 3, row * 3 + 3).some(card => card.id === selectedCard) ? actionHTML() : ""}</div>`).join("")}</div>
+            ${!selectedCard && ["funding", "market_remove"].includes(view.phase) ? actionHTML() : ""}
             <div class="ponzi-scheme-supply">${Object.entries(view.industry_defs).map(([key, spec]) => `<span class="ponzi-scheme-chip ponzi-scheme-${spec.color}">${spec.icon} ${spec.name} <b>${view.supply[key]}</b></span>`).join("")}</div></section>`;
     }
 
@@ -285,12 +288,12 @@ let ponziSchemeExplainWidget = null;
     function tradeHTML() {
         const targets = [...new Set(view.trade_targets.map(option => option.target))];
         const keys = [...new Set(view.trade_targets.filter(option => option.target === selectedTarget).map(option => option.industry))];
-        return `<p class="ponzi-scheme-hint">选择交易对象与共同拥有的行业。报价对方必须接受或同价反买。</p>
+        return `<div class="ponzi-scheme-trade-partners"><p class="ponzi-scheme-hint">选择交易对象与共同行业</p>
             <div class="ponzi-scheme-targets">${targets.map(pid => button(esc(name(pid)), "target", "trade", pending, `class="${selectedTarget === pid ? "is-selected" : ""}" data-target="${esc(pid)}" aria-pressed="${selectedTarget === pid}"`)).join("")}</div>
-            ${keys.length ? industryChoices(keys, "trade") : ""}
+            ${keys.length ? industryChoices(keys, "trade") : ""}</div><div class="ponzi-scheme-trade-quote">
             <label class="ponzi-scheme-price" for="ponziSchemeOfferAmount"><span>💵 秘密报价</span><input id="ponziSchemeOfferAmount" type="number" inputmode="numeric" min="0" max="${own().cash}" step="1" value="${esc(amount)}" ${pending ? "disabled" : ""} /></label>
             <div class="ponzi-scheme-price-buttons">${[-5, -1, 1, 5].map(delta => button(delta > 0 ? `+${delta}` : String(delta), "amount", "trade", pending, `data-delta="${delta}"`)).join("")}</div>
-            <p class="ponzi-scheme-hint ponzi-scheme-trade-budget">可用 💵 ${own().cash} · 报价先托管，只有双方可见。</p>`;
+            <p class="ponzi-scheme-hint ponzi-scheme-trade-budget">可用 💵 ${own().cash} · 报价先托管，只有双方可见。</p>${confirmHTML(true)}</div>`;
     }
 
     function offerHTML() {
@@ -314,25 +317,28 @@ let ponziSchemeExplainWidget = null;
         }).join("")}</div></div>`;
     }
 
+    function confirmHTML(selecting) {
+        return selecting || view.legal_actions.includes("pass") ? `<div class="ponzi-scheme-confirm-row">${selecting ? button(confirmLabel(), "confirm", "confirm", !candidate(), 'id="ponziSchemeConfirm" class="ponzi-scheme-primary"') : ""}
+            ${view.legal_actions.includes("pass") ? button("Pass", "pass", "pass", pending, 'class="ponzi-scheme-pass"') : ""}</div>` : "";
+    }
+
     function actionHTML() {
         let content = "";
-        if (available("fund")) content = industryChoices(Object.keys(view.industry_defs), "fund");
+        if (available("fund")) content = '<p class="ponzi-scheme-hint">选择行业 → 对应行资金牌</p>';
         else if (available("offer_trade")) content = tradeHTML();
-        else if (available("remove_fund")) content = '<p>从左侧市场点选一张资金牌，确认移除。</p>';
+        else if (available("remove_fund")) content = '<p class="ponzi-scheme-hint">点选市场资金牌，确认移除。</p>';
         else if (available("discard_industry")) content = `<p>归还一个数量最多的行业：</p>${industryChoices(view.crash_choices, "crash")}`;
         else if (view.phase === "round_end") {
             const ready = view.next_ready.includes(view.you);
-            content = `<p>请回顾本轮结算，所有人确认后继续。</p>${button(ready ? "✓ Ready" : "Next Round", "next", "next", !available("next_round"), 'class="ponzi-scheme-primary"')}
-                <p class="ponzi-scheme-hint">${view.next_ready.length} / ${view.players.length} ready<br />Waiting: ${view.players.filter(player => !view.next_ready.includes(player.player_id)).map(player => esc(player.name)).join(" · ") || "—"}</p>`;
-        } else if (view.game_over) content = '<p>本局结束。胜者由存活玩家的行业和财富／奢侈品总分决定。</p>';
-        else if (view.phase !== "trade_response") content = `<p>Waiting for ${esc(name(view.current_turn))}</p>`;
+            content = `<p class="ponzi-scheme-hint">${view.next_ready.length} / ${view.players.length} ready · Waiting: ${view.players.filter(player => !view.next_ready.includes(player.player_id)).map(player => esc(player.name)).join(" · ") || "—"}</p>
+                ${button(ready ? "✓ Ready" : "Next Round", "next", "next", !available("next_round"), 'class="ponzi-scheme-primary"')}`;
+        } else if (view.phase !== "trade_response" && !available("buy_luxury") && !view.legal_actions.includes("pass")) return "";
         const selecting = ["fund", "offer_trade", "remove_fund", "discard_industry"].some(type => view.legal_actions.includes(type));
-        return `<section class="ponzi-scheme-box ponzi-scheme-action"><div class="ponzi-scheme-section-head"><h3>${view.current_turn === view.you ? "Your turn" : "Action"}</h3><span>${phaseNames[view.phase]}</span></div>
+        return `<div class="ponzi-scheme-context ponzi-scheme-context-${view.phase}">
             ${view.phase === "trade_response" ? offerHTML() : content}
-            ${selecting ? button(confirmLabel(), "confirm", "confirm", !candidate(), 'id="ponziSchemeConfirm" class="ponzi-scheme-primary"') : ""}
-            ${view.legal_actions.includes("pass") ? button("Pass", "pass", "pass", pending, 'class="ponzi-scheme-pass"') : ""}
+            ${available("offer_trade") ? "" : confirmHTML(selecting)}
             ${view.phase === "trading" && !view.trade_targets.length && view.current_turn === view.you ? '<p class="ponzi-scheme-hint">没有可交易的共同行业。</p>' : ""}
-            ${luxuryHTML()}</section>`;
+            ${view.phase === "trading" ? luxuryHTML() : ""}</div>`;
     }
 
     function cashHTML() {
@@ -344,6 +350,7 @@ let ponziSchemeExplainWidget = null;
     }
 
     function debtsHTML(player) {
+        if (!player.debts.length) return '<p class="ponzi-scheme-no-debts">No debts</p>';
         return `<div class="ponzi-scheme-debt-track">${[1, 2, 3, 4, 5].map(step => {
             const cards = player.debts.filter(card => card.remaining === step);
             return `<div class="${step <= 2 && cards.length ? "is-due" : ""}"><small>${step} 格</small><b>${cards.reduce((sum, card) => sum + card.interest, 0)}</b></div>`;
@@ -353,6 +360,7 @@ let ponziSchemeExplainWidget = null;
 
     function playersHTML() {
         return `<section class="ponzi-scheme-portfolios"><div class="ponzi-scheme-section-head"><h3>🏢 产业与债务</h3><span>行业和债务公开 · 现金保密</span></div>
+            ${["trading", "trade_response", "crash_discard"].includes(view.phase) ? actionHTML() : ""}
             <div class="ponzi-scheme-players">${view.players.map(player => `<article class="ponzi-scheme-player ${player.player_id === view.current_turn ? "is-active" : ""} ${player.bankrupt ? "is-bankrupt" : ""}">
                 <div class="ponzi-scheme-player-heading"><h4>${esc(player.name)} ${player.player_id === view.you ? '<small>You</small>' : ""}</h4><span>${player.bankrupt ? "💥" : player.player_id === view.start_player ? "🖋️" : player.is_bot ? "🤖" : ""}</span></div>
                 <div class="ponzi-scheme-portfolio-value"><strong>${player.industry_points} <small>行业分</small></strong><span>${player.player_id === view.you ? `💵 ${player.cash}` : "🔒 Private"}</span></div>
@@ -367,7 +375,7 @@ let ponziSchemeExplainWidget = null;
         return `<section class="ponzi-scheme-box ponzi-scheme-review"><div class="ponzi-scheme-section-head"><h3>${view.game_over ? "🏁 最终结算" : "⏸ 本轮结算"}</h3><span>${summary.crashed ? "🐻 崩盘 · 前进 2 格" : "⏳ 前进 1 格"}</span></div>
             ${view.game_over ? `<p class="ponzi-scheme-winner">${view.winner.length ? `🏆 ${view.winner.map(pid => esc(name(pid))).join(" · ")}` : "全员破产 · 无人获胜"}</p><div class="ponzi-scheme-scoreboard">${view.results.map(result => `<div class="ponzi-scheme-result ${result.bankrupt ? "is-bankrupt" : ""}"><strong>${esc(name(result.player_id))}</strong><span>${result.bankrupt ? "💥 破产" : `⭐ ${result.total} 分`}</span><small>行业 ${result.industry_points} + ${view.advanced ? `奢侈品 ${result.luxury_points}` : `财富 ${result.wealth_points}`} · 最大资金 ${result.highest_fund}</small></div>`).join("")}</div>` : ""}
             <div class="ponzi-scheme-payments">${summary.payments.map(payment => `<span>${esc(name(payment.player_id))}<b>${payment.bankrupt ? "💥 无法支付" : "✓ 已付"} 💵 ${payment.due}</b></span>`).join("")}</div>
-            <details data-ps-details="review" ${openDetails.has("review") ? "open" : ""}><summary>Round details</summary><ol class="ponzi-scheme-log">${summary.notes.map(note => `<li>${esc(note)}</li>`).join("")}</ol></details></section>`;
+            <details data-ps-details="review" ${openDetails.has("review") ? "open" : ""}><summary>Round details</summary><ol class="ponzi-scheme-log">${summary.notes.map(note => `<li>${esc(note)}</li>`).join("")}</ol></details>${view.phase === "round_end" ? actionHTML() : ""}</section>`;
     }
 
     function historyHTML() {
@@ -379,11 +387,11 @@ let ponziSchemeExplainWidget = null;
     function render() {
         if (!view) return;
         hideImmediateTip();
+        const marketPhase = ["funding", "market_remove"].includes(view.phase);
         panel.innerHTML = `<div class="ponzi-scheme-shell">
-            <div class="ponzi-scheme-masthead"><span class="ponzi-scheme-eyebrow">${view.advanced ? "ADVANCED" : "BASIC"}</span><div class="ponzi-scheme-round"><span>Round</span><strong>${view.round}</strong></div></div>
-            <div class="ponzi-scheme-status" role="status"><div><b>${phaseNames[view.phase]}</b><span>${view.current_turn ? `${view.current_turn === view.you ? "Your turn" : "Waiting for"} · ${esc(name(view.current_turn))}` : view.game_over ? "Game over" : `${view.next_ready.length} / ${view.players.length} ready`}</span></div><span class="ponzi-scheme-bears ${view.bear_count >= view.players.length ? "is-danger" : ""}">🐻 ${view.bear_count} / ${view.players.length} 崩盘</span></div>
-            ${reviewHTML()}<div class="ponzi-scheme-layout"><div>${marketHTML()}</div><aside class="ponzi-scheme-sidebar">${cashHTML()}${actionHTML()}${historyHTML()}</aside></div>${playersHTML()}
-            <p class="ponzi-scheme-footer">72 张资金牌 · 16 张熊牌 · ${view.first_round_trading ? "首轮可交易" : "首轮跳过交易"} · ${view.advanced ? "进阶：现金不计分" : "基础：现金最多 4 分"}</p></div>`;
+            <div class="ponzi-scheme-status" role="status"><div><b>${phaseNames[view.phase]}</b><span>${view.current_turn ? `${view.current_turn === view.you ? "Your turn" : "Waiting for"} · ${esc(name(view.current_turn))}` : view.game_over ? "Game over" : `${view.next_ready.length} / ${view.players.length} ready`}</span></div><div class="ponzi-scheme-round"><span>${view.advanced ? "Advanced" : "Basic"} · Round</span><strong>${view.round}</strong></div><span class="ponzi-scheme-bears ${view.bear_count >= view.players.length ? "is-danger" : ""}">🐻 ${view.bear_count} / ${view.players.length} 崩盘</span></div>
+            ${cashHTML()}${reviewHTML()}<div class="ponzi-scheme-layout ${marketPhase ? "" : "ponzi-scheme-layout-overview"}">${marketPhase ? marketHTML() : ""}${playersHTML()}</div>
+            ${marketPhase ? "" : `<details class="ponzi-scheme-market-details" data-ps-details="market" ${openDetails.has("market") ? "open" : ""}><summary data-ps-explain="market">📈 资金市场 · ${view.market.length} cards · 🐻 ${view.bear_count}</summary>${marketHTML()}</details>`}${historyHTML()}</div>`;
         decorateTips();
     }
 

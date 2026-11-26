@@ -74,3 +74,24 @@
 - `tests/las_vegas_royale.browser.cjs` 通过：六档宽度、31 种视图，覆盖基础／白骰／豪华版、放置、大骰、秘密决策、轮末、双语 Help、禁用 Explain、Escape 与触摸交互。
 - `tests.test_frontend_style_assets`、`tests.test_help_contract` 共 13 项通过；相关 JS 的 `node --check`、`node scripts/smoke_load.cjs las_vegas`、`git diff --check` 通过。纯 UI 未运行游戏逻辑或全量套件。
 - 本次涉及的 DEV_GUIDE 布局与交互验收通过，无新增 UI 例外；截图在忽略目录 `tmp/game-setup-location/`。未实测实体 iOS / Android、Windows 字体，不宣称跨平台真机全部验收。
+
+## 2026-11-26 紧凑布局二次优化
+
+### 问题与调整
+
+- 重新逐条核对 `DEV_GUIDE.md`：此前独立骰盘、状态／模式／赌场标题多层占位，奖金面额、预计归属和人数限制在每个赌场重复展示，空赌场保留高度，玩家与钱包又各嵌套一层框，导致手机页面过长。此次调整信息结构，而非仅缩小字体。
+- 移除独立骰盘，掷骰结果直接出现在各赌场左上角：彩色骰子旁 `×N` 表示当前可放置的实体骰数，大骰额外标注两点实力。点选后在该赌场、小游戏信息之前显示 Place Dice，确认位置距赌场顶约 102px。Roll／Pass／Power Play 合入顶部状态行，保留选择预览、原地确认、空白／Escape 取消及封锁禁用。
+- 六赌场继续同时展示，桌面三列、手机两列，不引入切换赌场的 Tab 或额外 Action 区。取消卡片等高拉伸、空赌场提示和冗余标题。钞票改为紧凑面额签，排名用单行的颜色＋姓名前缀／骰数／奖金展示；具体钞票归属、已结算状态及规则保留在 tooltip／Explain，二者均读取当前元素的具体内容。
+- 玩家概况从侧栏嵌套卡片改成顶部紧凑列表。长姓名单行截断、保留颜色和姓名前缀，鼠标悬停／键盘聚焦／触屏轻点可查完整姓名，不使用 P1／P2。轮末确认使用紧凑状态符号及完整提示，避免长单词挤成多行。
+- 钱包与 Activity 移到棋盘底部，默认折叠，展开状态在局部渲染后保留。钱包摘要仍显示私有总资产，面额按数量合并，日志与面额区各自限高滚动。实际密集盘面允许自然向下滚动，不能为了固定一屏而裁剪玩家、奖金或小游戏选项。
+- Help 同步更新赌场内选骰、实体骰数／大骰计数与姓名提示说明。开局配置继续只出现在 RC → Room，本次未修改规则引擎、隐私合同或多人轮末确认。
+
+### 验收记录
+
+- 修改文件：`static/games/las_vegas.js`、`static/las_vegas.css`、`static/game_assets.js`、`static/index.html`、`tests/las_vegas_royale.browser.cjs`、`tests/las_vegas_royale_fixtures.py` 及本文件。共享清单和首页仅更新本游戏资源与清单版本，保留其他游戏已有修改。
+- Chrome 检查 320／390／600／768／1024／1440px × 32 种视图，共 192 种组合，覆盖基础版、白骰、Royale 全部小游戏、旁观、秘密选择、轮末、终局与新增五人满盘长姓名压力状态。无页面横向滚动或游戏内容溢出，玩家标题保持单行。
+- 对相同 Royale `playing` 选中视图测量：320px 游戏面板高 **720px**、六赌场高 **457px**；390px 游戏面板高 **696px**、六赌场高 **434px**；1024／1440px 游戏面板高 **526px**、六赌场高 **291px**。自动回归加入面板高度、棋盘起点和原地确认距离上限，避免仅检查不溢出却忽略纵向膨胀。
+- 目视核对 320／390／1024／1440px 主板与满盘截图，以及 Black Box 分组和 390px 轮末截图。截图、尺寸 JSON 在忽略目录 `build/las-vegas-royale-qa/`，修改前截图留存在 `tmp/las-vegas-compact-before/`。
+- 交互通过：大厅版本位置与开局载荷、赌场内选点／确认、大骰预览、封锁、Pass、秘密小游戏、旁观权限、轮末 Next Round、空白／Escape 取消、双语 Help 章节、禁用 Explain、不误发动作、具体面额 Explain、钱包面额合并与折叠保留、Activity 展开保留。Chrome 触屏检查长姓名全名提示、钞票提示、连续 tooltip 更新及 3 秒关闭、常规滑动不选中、Explain 滑动不弹窗与点选后退出。
+- 检查通过：`node --check static/games/las_vegas.js`、`node --check tests/las_vegas_royale.browser.cjs`、`node scripts/smoke_load.cjs las_vegas`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`（13 项）、`node tests/las_vegas_royale.browser.cjs`（使用已有 Playwright，`PYTHON=python3`）及 `git diff --check`。
+- 本次涉及的 DEV_GUIDE 布局与交互验收项通过，无新增 UI 例外。未实测实体 iOS／Android、Safari 与 Windows 字体，不宣称跨平台真机全部验收；本次纯 UI 修改，不运行游戏规则或全量测试。

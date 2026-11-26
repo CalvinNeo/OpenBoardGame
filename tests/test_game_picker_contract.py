@@ -67,6 +67,16 @@ class GamePickerContractTests(unittest.TestCase):
         self.assertIn("navigator.clipboard.readText()", self.room)
         self.assertIn("copyTextToClipboard(JSON.stringify(backup, null, 2))", self.room)
 
+    def test_filter_selections_are_saved_and_restored(self):
+        self.assertIn('const GAME_FILTERS_KEY = "openboardgame:game_filters";', self.room)
+        self.assertIn("function restoreStoredGameFilters()", self.room)
+        self.assertIn("function saveStoredGameFilters()", self.room)
+        self.assertIn("restoreStoredGameFilters();", self.room)
+        opening = self.room.split("async function openCreateRoomModal()", 1)[1].split("function closeCreateRoomModal()", 1)[0]
+        self.assertNotIn("selectedGameTagIds.clear()", opening)
+        self.assertNotIn("favoriteGamesFilter.checked = false", opening)
+        self.assertNotIn('playerCountFilter.value = ""', opening)
+
     def test_favorites_import_offers_manual_paste_when_clipboard_is_unavailable(self):
         for control_id in ("favoriteGamesPasteForm", "favoriteGamesPasteInput", "favoriteGamesPasteCancelBtn"):
             self.assertIn(f'id="{control_id}"', self.index)

@@ -34,10 +34,16 @@ const TURING_MACHINE_DIFFICULTY_NAMES = {
 
 let currentTuringMachineView = null;
 let turingMachineDraftCode = [1, 1, 1];
-let turingMachineExplainMode = false;
 let turingMachineDeductionExpanded = false;
 let turingMachineClueHistoryExpanded = false;
 let turingMachineNotesExpanded = false;
+let turingMachinePendingAction = null;
+let turingMachineTooltipTimer = null;
+let turingMachineHelpWidget = null;
+let turingMachineExplainWidget = null;
+let turingMachineNotebookOpen = false;
+let turingMachineTouchStart = null;
+let turingMachineTouchMoved = false;
 
 const turingMachineConfigBox = document.getElementById("turingMachineConfigBox");
 const turingMachineModeSelect = document.getElementById("turingMachineModeSelect");
@@ -51,12 +57,15 @@ const turingMachineSeedInput = document.getElementById("turingMachineSeedInput")
 const turingMachineHeaderActions = document.getElementById("turingMachineHeaderActions");
 const turingMachineHelpBtn = document.getElementById("turingMachineHelpBtn");
 const turingMachineExplainBtn = document.getElementById("turingMachineExplainBtn");
-const turingMachineHelpModal = document.getElementById("turingMachineHelpModal");
-const turingMachineHelpModalCloseBtn = document.getElementById("turingMachineHelpModalCloseBtn");
-const turingMachineHelpContent = document.getElementById("turingMachineHelpContent");
-const turingMachineExplainModal = document.getElementById("turingMachineExplainModal");
-const turingMachineExplainModalCloseBtn = document.getElementById("turingMachineExplainModalCloseBtn");
-const turingMachineExplainContent = document.getElementById("turingMachineExplainContent");
+const turingMachinePanelNode = document.getElementById("turingMachinePanel");
+const turingMachineNotebook = document.getElementById("turingMachineNotebook");
+const turingMachineNotebookToggle = document.getElementById("turingMachineNotebookToggle");
+const turingMachineNotebookClose = document.getElementById("turingMachineNotebookClose");
+const turingMachineTooltip = document.getElementById("turingMachineTooltip");
+const turingMachineConfirmation = document.getElementById("turingMachineConfirmation");
+const turingMachineConfirmationText = document.getElementById("turingMachineConfirmationText");
+const turingMachineConfirmBtn = document.getElementById("turingMachineConfirmBtn");
+const turingMachineCancelBtn = document.getElementById("turingMachineCancelBtn");
 
 const turingMachinePhaseLabel = document.getElementById("turingMachinePhase");
 const turingMachineRoundLabel = document.getElementById("turingMachineRound");
@@ -97,82 +106,104 @@ const turingMachinePlayers = document.getElementById("turingMachinePlayers");
 const turingMachineSolutionRow = document.getElementById("turingMachineSolutionRow");
 const turingMachineSolutionLabel = document.getElementById("turingMachineSolution");
 
-const TURING_MACHINE_HELP_TEXT = `
-  <h3>Goal</h3>
-  <p>Find the hidden 3-digit code in color order: 🟨 Yellow, 🟦 Blue, 🟣 Purple. Each digit ranges from 1 to 5.</p>
-
-  <h3>Verifiers</h3>
-  <ul>
-    <li>Each verifier card shows a public criterion and several possible hidden truths labeled A / B / C / D.</li>
-    <li>The room secretly binds exactly one truth on each card. A test returns only ✔ or ✖.</li>
-    <li>A ✔ means your proposed code matches that verifier's hidden truth. It does <strong>not</strong> mean your code is the final answer.</li>
-  </ul>
-
-  <h3>Round Flow</h3>
-  <ol>
-    <li>Pick one round code.</li>
-    <li>Test up to 3 different verifier cards with that same code.</li>
-    <li>When you are done, click <strong>Next Round</strong>. The next round starts only after every still-active player clicks it.</li>
-  </ol>
-
-  <h3>Final Guess</h3>
-  <ul>
-    <li>You may submit a final guess at any time, even mid-round.</li>
-    <li>A wrong final guess eliminates you immediately.</li>
-    <li>A correct final guess locks in your verifier count, but other players may continue playing or give up.</li>
-    <li>If multiple players solve it, the winner is the one with the fewest total verifier checks. Ties share the win.</li>
-  </ul>
-
-  <h3>Modes</h3>
-  <ul>
-    <li><strong>Simple</strong>: shows live candidate filtering, digit frequencies, and possible hidden truths.</li>
-    <li><strong>Expert</strong>: keeps the board close to the physical puzzle, with only manual notes.</li>
-  </ul>
-
-  <h3>Sources</h3>
-  <ul>
-    <li><strong>Preset</strong>: choose an internal scenario by difficulty.</li>
-    <li><strong>Random</strong>: generate a fresh puzzle from a shareable seed.</li>
-  </ul>
-`;
-
-const TURING_MACHINE_BUTTON_EXPLANATIONS = {
-  turingMachineUseCodeBtn: {
-    name: "Use As Round Code",
-    description: "Lock the draft code as this round's single testing code. Once you start testing, that round code cannot be changed.",
+const TURING_MACHINE_HELP_CONFIG = {
+  gameId: "turing_machine",
+  title: { zh: "图灵机 · Turing Machine", en: "Turing Machine" },
+  basic: {
+    win: { zh: "推导出唯一的三位密码，多人都答对时，验证总次数最少者获胜。", en: "Find the unique three-digit code, with the fewest total verifier checks breaking ties between solvers." },
+    turn: { zh: "每轮锁定一个密码，最多验证三张不同的法则卡，完成后点击 Next Round 等待所有仍在解题的玩家。", en: "Lock one code per round, test up to three different verifiers, then choose Next Round and wait for all active players." },
+    key: { zh: "对照法则卡的不同条件排除不可能的密码，绿色勾号只代表符合一条隐藏条件，而不是猜中了答案。", en: "Compare each card’s possible rules to eliminate codes, remembering that a green check confirms one hidden rule, not the final answer." }
   },
-  turingMachineGuessBtn: {
-    name: "Submit Final Guess",
-    description: "Submit the draft code as your final answer. A wrong guess eliminates you immediately.",
-  },
-  turingMachineEndRoundBtn: {
-    name: "Next Round",
-    description: "Finish your current round and wait. The next round starts only after every still-active player clicks Next Round.",
-  },
-  turingMachineGiveUpBtn: {
-    name: "Give Up",
-    description: "Leave the puzzle and concede this game.",
-  },
+  sections: [
+    { id: "verifiers", label: { zh: "密码与验证", en: "Codes & verifiers" }, html: {
+      zh: "<p>密码按黄色三角形(🟨 ▲)、蓝色方形(🟦 ■)、紫色圆形(🟣 ●)排列，每位数字都是 1 到 5，共有 125 种组合。点击数字设置草稿，再用 Lock code 锁定本轮密码。锁定后，草稿仍可用于最终猜测，不会改变本轮验证密码。</p><p>每张法则卡会秘密选定 A、B、C 等选项中的一条条件。点击 Test，以本轮锁定的密码验证该卡。符合(✔)与不符合(✖)只针对这条隐藏条件，每轮最多验证三张不同的卡。点击没有操作功能的条件可查看完整解释。</p>",
+      en: "<p>Read the code as Yellow triangle(🟨 ▲), Blue square(🟦 ■), Purple circle(🟣 ●). Every digit is 1 to 5, giving 125 possible codes. Select digits and choose Lock code. Changing the draft afterward only changes a potential final guess, not the locked round code.</p><p>Each verifier secretly selects one of its listed rules A, B, C and so on. Test checks the locked round code against that hidden rule. Pass(✔) and fail(✖) refer to this rule alone. You may test up to three different cards per round. Tap passive rule text for its full meaning.</p>"
+    } },
+    { id: "notebook", label: { zh: "笔记与辅助", en: "Notebook" }, html: {
+      zh: "<p>桌面端笔记位于主板右侧，手机端用 Notebook 打开，用 Dock 或 Escape 收起。数字笔记依次循环：未知(·)、排除(✖)、保留(○)、确认(★)。法则笔记可选择你认为正确的完整条件，或选择 Uncertain。笔记仅自己可见并保存在房间中。</p><p>Simple 模式额外提供候选密码、各数字出现次数和法则可能性，展开 Auto deduction 查看。Expert 模式不显示自动推理。验证历史按回合和密码归组，长列表可在内部滚动。悬停或轻触非操作性信息查看提示，手机提示三秒后消失。</p>",
+      en: "<p>The notebook sits beside the board on desktop. On mobile, open Notebook and use Dock or Escape to close it. Digit notes cycle through unknown(·), exclude(✖), keep(○), and confirm(★). Verifier notes let you select a full rule or Uncertain. Notes are private and saved in the room.</p><p>Simple mode adds candidate codes, digit frequencies and possible hidden rules under Auto deduction. Expert mode has manual notes only. Verifier history groups checks by round and code. Long lists scroll internally. Hover or tap passive information for a tip that disappears after three seconds on mobile.</p>"
+    } },
+    { id: "finish", label: { zh: "轮次与胜负", en: "Rounds & results" }, html: {
+      zh: "<p>点击 Next Round 表示本轮已完成，所有仍在解题的玩家都确认后才进入下一轮。不需要额外确认。已答对、淘汰或放弃的玩家不会阻挡进度。</p><p>任何时候都可用 Final guess 提交当前草稿。原地确认会显示将提交的密码，猜错立即出局。猜对后记录验证总次数，其他玩家继续解题或放弃。所有人结束后，验证总次数最少的答对者获胜，相同则共享胜利。终局保留答案、玩家验证次数、完成轮次以及答对时的统计。</p><p>模式、难度与固定关卡或随机种子仅在 Room 开局前选择。Puzzle details 可查看并分享本局种子。Help 提供双语分页，Explain 会解释卡片当前条件和灰色按钮，但不会执行操作。Escape 可关闭窗口、取消确认或退出解释。</p>",
+      en: "<p>Next Round marks you ready to advance. Play pauses until every still-active solver has chosen it, with no extra confirmation. Solved, eliminated and conceded players do not block the next round.</p><p>Use Final guess at any time to submit your draft. An inline confirmation shows the exact code. A wrong guess eliminates you immediately. A correct guess records your total checks while others continue or concede. Once everyone finishes, the solver with the fewest checks wins. Ties share victory. The final board keeps the solution, each player’s checks, completed rounds and solve statistics visible.</p><p>Choose assist mode, difficulty, presets or a random seed in Room before starting. Puzzle details keeps the share seed available. Help has bilingual tabs. Explain describes the actual card rules and disabled buttons without running actions. Escape closes dialogs, cancels confirmation or exits Explain.</p>"
+    } }
+  ]
 };
 
-const TURING_MACHINE_DYNAMIC_EXPLANATIONS = {
-  code_digit: {
-    name: "Draft Digits",
-    description: "These buttons set the draft code. You can use the same draft to lock a round code or submit a final guess.",
-  },
-  test_card: {
-    name: "Test Verifier",
-    description: "Run the current round code against that verifier. Each round allows at most 3 different verifier checks.",
-  },
-  note_chip: {
-    name: "Digit Note",
-    description: "Click to cycle a digit mark: unknown, exclude, keep, confirm. Notes are personal and saved to the room state.",
-  },
-  verifier_note_select: {
-    name: "Verifier Note",
-    description: "Choose Uncertain or the full verifier option you currently believe is correct. This note is personal and can be changed at any time.",
-  },
+const TURING_MACHINE_EXPLANATIONS = {
+  console: { zh: "按黄色三角形(🟨 ▲)、蓝色方形(🟦 ■)、紫色圆形(🟣 ●)选择 1 到 5 的数字。草稿可以更改，本轮验证始终使用已锁定的密码。", en: "Choose digits 1 to 5 for Yellow triangle(🟨 ▲), Blue square(🟦 ■), Purple circle(🟣 ●). The draft is editable, but tests always use the locked round code." },
+  lock: { zh: "将草稿锁定为本轮唯一的验证密码，锁定后本轮不可更改。", en: "Lock this draft as the round’s only test code. It cannot be replaced during this round." },
+  guess: { zh: "用草稿提交最终答案，原地确认后才会发送。猜错立即出局。", en: "Submit the draft as your final answer after inline confirmation. A wrong answer immediately eliminates you." },
+  next: { zh: "完成本轮并等待。所有仍在解题的玩家点击 Next Round 后才会继续。", en: "Finish this round and wait. The next round begins only when every active solver chooses Next Round." },
+  give_up: { zh: "放弃本局解题，原地确认后退出竞争，其他玩家仍可继续。", en: "Concede after inline confirmation. Other players may continue solving." },
+  code_digit: { zh: "设置草稿的一位数字，不会改变已经锁定的本轮密码。", en: "Set one draft digit without changing the already locked round code." },
+  test_card: { zh: "用本轮锁定密码验证这张卡的隐藏条件。每轮最多验证三张不同的卡。", en: "Test the locked code against this card’s hidden rule. You may check up to three different cards per round." },
+  note_chip: { zh: "循环标记：未知(·)、排除(✖)、保留(○)、确认(★)。标记是私人笔记，不会自动排除候选。", en: "Cycle through unknown(·), exclude(✖), keep(○), confirm(★). These private notes do not automatically filter candidates." },
+  verifier_note_select: { zh: "选择你认为正确的完整条件，或 Uncertain。这是私人记录，不是服务器给出的答案。", en: "Select the full rule you believe is true, or Uncertain. This is your private note, not a revealed answer." }
 };
+
+function describeTuringMachineNode(node, key, description, passive = true) {
+  if (description) TURING_MACHINE_EXPLANATIONS[key] = { zh: description, en: description };
+  node.dataset.turingMachineExplain = key;
+  if (passive) {
+    node.dataset.turingMachineTip = key;
+    node.tabIndex = 0;
+  }
+}
+
+function hideTuringMachineTooltip() {
+  clearTimeout(turingMachineTooltipTimer);
+  turingMachineTooltip?.classList.add("hidden");
+}
+
+function showTuringMachineTooltip(node) {
+  if (!node || !turingMachineTooltip || turingMachineExplainWidget?.isActive() || turingMachineHelpWidget?.isOpen()) return;
+  const entry = TURING_MACHINE_EXPLANATIONS[node.dataset.turingMachineTip];
+  if (!entry) return;
+  turingMachineTooltip.textContent = entry[window.obgHelpLang?.() === "en" ? "en" : "zh"];
+  turingMachineTooltip.classList.remove("hidden");
+  const bounds = node.getBoundingClientRect();
+  turingMachineTooltip.style.left = Math.max(12, Math.min(bounds.left, innerWidth - turingMachineTooltip.offsetWidth - 12)) + "px";
+  turingMachineTooltip.style.top = Math.max(12, Math.min(bounds.bottom + 6, innerHeight - turingMachineTooltip.offsetHeight - 12)) + "px";
+  clearTimeout(turingMachineTooltipTimer);
+  turingMachineTooltipTimer = setTimeout(hideTuringMachineTooltip, 3000);
+}
+
+function syncTuringMachineNotebook() {
+  const mobile = window.matchMedia("(max-width: 760px)").matches;
+  turingMachineNotebook?.classList.toggle("is-open", turingMachineNotebookOpen);
+  turingMachineNotebook?.setAttribute("aria-hidden", String(mobile && !turingMachineNotebookOpen));
+  turingMachineNotebookToggle?.setAttribute("aria-expanded", String(!mobile || turingMachineNotebookOpen));
+}
+
+function setTuringMachineNotebook(open) {
+  turingMachineNotebookOpen = open;
+  syncTuringMachineNotebook();
+  hideTuringMachineTooltip();
+  if (open) turingMachineNotebookClose?.focus();
+  else if (window.matchMedia("(max-width: 760px)").matches) turingMachineNotebookToggle?.focus();
+}
+
+function cancelTuringMachineConfirmation() {
+  turingMachinePendingAction = null;
+  turingMachineConfirmation?.classList.add("hidden");
+  turingMachineConfirmation?.setAttribute("aria-hidden", "true");
+}
+
+function confirmTuringMachineAction(type) {
+  if (!turingMachineCan(currentTuringMachineView, type)) return;
+  const anchor = type === "give_up" ? turingMachineGiveUpBtn.closest(".tm-bottom-bar") : turingMachineGuessBtn.closest(".tm-console-footer");
+  anchor.after(turingMachineConfirmation);
+  turingMachinePendingAction = { type };
+  if (type === "submit_guess") turingMachinePendingAction.code = turingMachineDraftCode.slice();
+  turingMachineConfirmationText.textContent = type === "submit_guess"
+    ? "Submit " + turingMachineCodeLabel(turingMachinePendingAction.code) + "? A wrong guess eliminates you."
+    : "Give up this puzzle? You will leave the competition.";
+  turingMachineConfirmation.classList.remove("hidden");
+  turingMachineConfirmation.setAttribute("aria-hidden", "false");
+  turingMachineConfirmation.scrollIntoView({ block: "nearest", behavior: "auto" });
+  turingMachineCancelBtn.focus({ preventScroll: true });
+}
 
 function turingMachineCan(view, action) {
   return Array.isArray(view && view.legal_actions) && view.legal_actions.includes(action);
@@ -202,6 +233,8 @@ function setTuringMachineCollapsibleExpanded(panel, toggle, content, expanded) {
   }
   if (toggle) {
     toggle.setAttribute("aria-expanded", isExpanded.toString());
+    const icon = toggle.querySelector(".tm-section-toggle-icon");
+    if (icon) icon.textContent = isExpanded ? "⌃" : "⌄";
   }
   if (content) {
     content.classList.toggle("hidden", !isExpanded);
@@ -296,6 +329,10 @@ function updateTuringMachineConfigRow() {
 }
 
 function clearTuringMachineState() {
+  cancelTuringMachineConfirmation();
+  hideTuringMachineTooltip();
+  turingMachineNotebookOpen = false;
+  syncTuringMachineNotebook();
   currentTuringMachineView = null;
   turingMachineDraftCode = [1, 1, 1];
   setTuringMachineDeductionExpanded(false);
@@ -342,9 +379,11 @@ function renderTuringMachineCodeBuilder(view) {
   TURING_MACHINE_SLOT_INFO.forEach((slotInfo, slotIndex) => {
     const column = document.createElement("div");
     column.className = "tm-code-column";
+    column.dataset.slot = slotInfo.key;
     const title = document.createElement("div");
     title.className = "tm-code-column-title";
     title.textContent = slotInfo.label;
+    describeTuringMachineNode(title, `digit_${slotInfo.key}`, `${slotInfo.label}: select a digit from 1 to 5. Color and shape identify this position in every code.`);
     column.appendChild(title);
     const buttons = document.createElement("div");
     buttons.className = "tm-code-buttons";
@@ -357,9 +396,16 @@ function renderTuringMachineCodeBuilder(view) {
       }
       btn.dataset.turingMachineExplain = "code_digit";
       btn.textContent = String(value);
+      btn.setAttribute("aria-label", `${slotInfo.label}: ${value}`);
+      btn.setAttribute("aria-pressed", String(turingMachineDraftCode[slotIndex] === value));
       btn.addEventListener("click", () => {
+        cancelTuringMachineConfirmation();
         turingMachineDraftCode[slotIndex] = value;
-        renderTuringMachineCodeBuilder(view);
+        buttons.querySelectorAll("button").forEach((button) => {
+          const selected = button === btn;
+          button.classList.toggle("active", selected);
+          button.setAttribute("aria-pressed", String(selected));
+        });
       });
       buttons.appendChild(btn);
     }
@@ -385,6 +431,7 @@ function renderTuringMachineCurrentTests(view) {
     const chip = document.createElement("div");
     chip.className = `tm-test-chip ${test.result ? "is-pass" : "is-fail"}`;
     chip.textContent = `${test.slot}: ${turingMachineCodeLabel(test.proposal)} ${test.result ? "✔" : "✖"}`;
+    describeTuringMachineNode(chip, `test_${test.slot}`, `Verifier ${test.slot}: ${test.result ? "✔ Pass" : "✖ Fail"}. Code ${turingMachineCodeLabel(test.proposal)} in Yellow triangle, Blue square, Purple circle order. A pass confirms only this verifier’s hidden rule.`);
     turingMachineCurrentTests.appendChild(chip);
   });
 }
@@ -410,6 +457,7 @@ function renderTuringMachineCriteria(view) {
     const slot = document.createElement("div");
     slot.className = "tm-verifier-slot";
     slot.textContent = `Verifier ${card.slot}`;
+    describeTuringMachineNode(slot, `card_${card.slot}`, `${card.title}. ${card.prompt} ${card.variants.map((variant) => `${variant.variant_id}: ${variant.description || variant.label}`).join(". ")}`);
     wrap.appendChild(slot);
 
     const title = document.createElement("div");
@@ -433,9 +481,7 @@ function renderTuringMachineCriteria(view) {
       const compactText = turingMachineVariantText(card, variant);
       const description = String(variant.description || "").trim();
       row.setAttribute("aria-label", `${variant.variant_id}: ${description || compactText}`);
-      if (description && description !== compactText) {
-        row.title = description;
-      }
+      describeTuringMachineNode(row, `variant_${card.slot}_${variant.variant_id}`, `${card.title}. ${variant.variant_id}: ${description || compactText}`);
       const variantId = document.createElement("span");
       variantId.className = "tm-verifier-variant-id";
       variantId.textContent = variant.variant_id;
@@ -459,6 +505,7 @@ function renderTuringMachineCriteria(view) {
     } else {
       result.textContent = "This round: —";
     }
+    describeTuringMachineNode(result, `result_${card.slot}`, `Verifier ${card.slot}: ${card.last_result === true ? "✔ Pass. The locked code matches this verifier’s hidden rule, not necessarily the solution." : card.last_result === false ? "✖ Fail. The locked code does not match this verifier’s hidden rule." : "Not tested this round."}`);
     footer.appendChild(result);
 
     const btn = document.createElement("button");
@@ -466,6 +513,7 @@ function renderTuringMachineCriteria(view) {
     btn.textContent = card.tested_this_round ? "Checked" : "Test";
     btn.disabled = !canTest || card.tested_this_round;
     btn.dataset.turingMachineExplain = "test_card";
+    btn.setAttribute("aria-label", `Test verifier ${card.slot}`);
     btn.addEventListener("click", () => {
       sendAction({ type: "test_criterion", slot: card.slot });
     });
@@ -507,6 +555,7 @@ function renderTuringMachineDeduction(view) {
       const chip = document.createElement("div");
       chip.className = "tm-candidate-chip";
       chip.textContent = turingMachineCodeLabel(candidate);
+      describeTuringMachineNode(chip, "candidate_code", "A code still compatible with your verifier results. Order: Yellow triangle(🟨 ▲), Blue square(🟦 ■), Purple circle(🟣 ●).");
       turingMachineCandidateGrid.appendChild(chip);
     });
   }
@@ -526,6 +575,7 @@ function renderTuringMachineDeduction(view) {
       const chip = document.createElement("div");
       chip.className = "tm-stat-chip";
       chip.textContent = `${entry.value}: ${entry.count}`;
+      describeTuringMachineNode(chip, `digit_count_${slotInfo.key}_${entry.value}`, `${slotInfo.label}: ${entry.count} remaining candidate codes have digit ${entry.value} at this position.`);
       values.appendChild(chip);
     });
     card.appendChild(values);
@@ -547,6 +597,7 @@ function renderTuringMachineDeduction(view) {
       const chip = document.createElement("div");
       chip.className = `tm-stat-chip ${option.status || ""}`;
       chip.textContent = `${option.variant_id}: ${option.count}`;
+      describeTuringMachineNode(chip, `variant_count_${entry.slot}_${option.variant_id}`, `Verifier ${entry.slot}, option ${option.variant_id}: ${option.count} remaining codes. Status: ${option.status || "possible"}.`);
       values.appendChild(chip);
     });
     card.appendChild(values);
@@ -558,10 +609,33 @@ function renderTuringMachineNotes(view) {
   if (!turingMachineNotes) {
     return;
   }
-  turingMachineNotes.innerHTML = "";
   const notes = view.notes || {};
   const digitMarks = notes.digit_marks || {};
   const variantMarks = notes.variant_marks || {};
+  const signature = JSON.stringify((view.criteria_cards || []).map((card) => [card.slot, card.variants]));
+  if (turingMachineNotes.dataset.signature === signature && turingMachineNotes.childElementCount) {
+    TURING_MACHINE_SLOT_INFO.forEach((slotInfo) => {
+      const marks = digitMarks[slotInfo.key] || [];
+      marks.forEach((mark, index) => {
+        const button = turingMachineNotes.querySelector(`[data-turing-machine-focus="${slotInfo.key}_${index}"]`);
+        if (!button) return;
+        button.className = `tm-note-chip is-${mark}`;
+        button.textContent = `${index + 1} ${TURING_MACHINE_NOTE_LABELS[mark] || "·"}`;
+        button.setAttribute("aria-label", `${slotInfo.label} ${index + 1}: ${mark}`);
+      });
+    });
+    (view.criteria_cards || []).forEach((card) => {
+      const select = document.getElementById(`turingMachineVerifierNote${card.slot}`);
+      const marks = variantMarks[card.slot] || [];
+      let selected = marks.indexOf("confirm");
+      if (selected < 0 && marks.filter((mark) => mark === "keep").length === 1) selected = marks.indexOf("keep");
+      select.value = selected >= 0 ? String(selected) : "";
+      select.classList.toggle("has-selection", select.value !== "");
+    });
+    return;
+  }
+  turingMachineNotes.innerHTML = "";
+  turingMachineNotes.dataset.signature = signature;
 
   const digitSection = document.createElement("div");
   digitSection.className = "tm-notes-section";
@@ -576,6 +650,7 @@ function renderTuringMachineNotes(view) {
     const label = document.createElement("div");
     label.className = "tm-note-label";
     label.textContent = slotInfo.label;
+    describeTuringMachineNode(label, `digit_${slotInfo.key}`, `${slotInfo.label}: this color and shape identify the digit’s position in the code.`);
     row.appendChild(label);
 
     const marksWrap = document.createElement("div");
@@ -587,9 +662,14 @@ function renderTuringMachineNotes(view) {
       btn.className = `tm-note-chip is-${mark}`;
       btn.dataset.turingMachineExplain = "note_chip";
       btn.textContent = `${index + 1} ${TURING_MACHINE_NOTE_LABELS[mark] || "·"}`;
+      btn.setAttribute("aria-label", `${slotInfo.label} ${index + 1}: ${mark}`);
+      btn.dataset.turingMachineFocus = `${slotInfo.key}_${index}`;
       btn.addEventListener("click", () => {
-        const nextNotes = turingMachineCloneNotes(notes);
-        nextNotes.digit_marks[slotInfo.key][index] = turingMachineNextMark(mark);
+        const nextNotes = turingMachineCloneNotes(currentTuringMachineView?.notes);
+        nextNotes.digit_marks = nextNotes.digit_marks || {};
+        const currentMarks = nextNotes.digit_marks[slotInfo.key] || Array(5).fill("unknown");
+        nextNotes.digit_marks[slotInfo.key] = currentMarks;
+        currentMarks[index] = turingMachineNextMark(currentMarks[index]);
         sendAction({ type: "update_notes", notes: nextNotes });
       });
       marksWrap.appendChild(btn);
@@ -651,7 +731,7 @@ function renderTuringMachineNotes(view) {
     select.value = selectedIndex >= 0 && selectedIndex < variants.length ? String(selectedIndex) : "";
     select.classList.toggle("has-selection", select.value !== "");
     select.addEventListener("change", () => {
-      const nextNotes = turingMachineCloneNotes(notes);
+      const nextNotes = turingMachineCloneNotes(currentTuringMachineView?.notes);
       if (!nextNotes.variant_marks || typeof nextNotes.variant_marks !== "object") {
         nextNotes.variant_marks = {};
       }
@@ -711,6 +791,7 @@ function renderTuringMachineClueHistory(view) {
     const codeLabel = document.createElement("span");
     codeLabel.className = "tm-history-code";
     codeLabel.textContent = group.code;
+    describeTuringMachineNode(codeLabel, "history_code", "The code tested in this round, in Yellow triangle(🟨 ▲), Blue square(🟦 ■), Purple circle(🟣 ●) order.");
     header.appendChild(codeLabel);
     wrap.appendChild(header);
 
@@ -720,6 +801,7 @@ function renderTuringMachineClueHistory(view) {
       const check = document.createElement("div");
       check.className = `tm-history-check ${clue.result ? "is-pass" : "is-fail"}`;
       check.textContent = `Verifier ${clue.slot} ${clue.result ? "✔" : "✖"}`;
+      describeTuringMachineNode(check, `history_${group.round}_${clue.slot}`, `Verifier ${clue.slot} ${clue.result ? "✔ Pass: this tested code matched the hidden rule." : "✖ Fail: this tested code did not match the hidden rule."}`);
       checks.appendChild(check);
     });
     wrap.appendChild(checks);
@@ -744,6 +826,7 @@ function renderTuringMachineGuessHistory(view) {
     const row = document.createElement("div");
     row.className = `tm-history-row ${guess.correct ? "is-pass" : "is-fail"}`;
     row.textContent = `R${guess.round} · ${turingMachineCodeLabel(guess.guess)} · ${guess.correct ? "Correct" : "Wrong"}`;
+    describeTuringMachineNode(row, `guess_${guess.round}`, `Final guess in round ${guess.round}, Yellow triangle(🟨 ▲), Blue square(🟦 ■), Purple circle(🟣 ●) order. ${guess.correct ? "Correct: your check count is locked in." : "Wrong: you are eliminated."}`);
     turingMachineGuessHistory.appendChild(row);
   });
 }
@@ -783,11 +866,11 @@ function renderTuringMachinePlayers(view) {
     }
     const name = document.createElement("div");
     name.className = "tm-player-name";
-    name.textContent = player.name || player.player_id;
+    name.textContent = `${player.name || "Player"}${player.you ? " · You" : ""}`;
     card.appendChild(name);
     const meta = document.createElement("div");
     meta.className = "tm-player-meta";
-    meta.textContent = `${player.status || "-"} · checks ${player.question_count ?? 0} · rounds ${player.rounds_completed ?? 0}`;
+    meta.textContent = `${player.status || "-"} · ${player.question_count ?? 0} checks · ${player.rounds_completed ?? 0} rounds completed`;
     card.appendChild(meta);
     if (player.solved_at_round) {
       const solved = document.createElement("div");
@@ -804,6 +887,7 @@ function renderTuringMachineGameState(data) {
     return;
   }
   const view = data.view || {};
+  if (turingMachinePendingAction && (!turingMachineCan(view, turingMachinePendingAction.type) || view.round !== currentTuringMachineView?.round)) cancelTuringMachineConfirmation();
   currentTuringMachineView = view;
 
   if (turingMachinePhaseLabel) turingMachinePhaseLabel.textContent = view.phase || "-";
@@ -831,6 +915,11 @@ function renderTuringMachineGameState(data) {
     turingMachineTestsRemaining.textContent = String((((view || {}).current_round || {}).tests_remaining) ?? 3);
   }
 
+  const notebookBody = turingMachineNotebook?.querySelector(".tm-notebook-body");
+  const scrollPositions = [notebookBody, turingMachineCandidateGrid, turingMachineClueHistory, turingMachineGuessHistory, turingMachinePublicLog]
+    .filter(Boolean).map((node) => [node, node.scrollTop]);
+  const focused = turingMachineNotes?.contains(document.activeElement) ? document.activeElement : null;
+  const focusSelector = focused?.id ? `#${focused.id}` : focused?.dataset.turingMachineFocus ? `[data-turing-machine-focus="${focused.dataset.turingMachineFocus}"]` : null;
   if (turingMachineSolutionRow && turingMachineSolutionLabel) {
     const showSolution = Array.isArray(view.solution) && view.solution.length === 3;
     turingMachineSolutionRow.classList.toggle("hidden", !showSolution);
@@ -850,115 +939,59 @@ function renderTuringMachineGameState(data) {
   renderTuringMachineGuessHistory(view);
   renderTuringMachinePublicLog(view);
   renderTuringMachinePlayers(view);
+  if (focusSelector) turingMachineNotes.querySelector(focusSelector)?.focus({ preventScroll: true });
+  scrollPositions.forEach(([node, scrollTop]) => { node.scrollTop = scrollTop; });
 
   if (turingMachineUseCodeBtn) turingMachineUseCodeBtn.disabled = !turingMachineCan(view, "set_proposal");
   if (turingMachineGuessBtn) turingMachineGuessBtn.disabled = !turingMachineCan(view, "submit_guess");
-  if (turingMachineEndRoundBtn) turingMachineEndRoundBtn.disabled = !turingMachineCan(view, "next_round");
+  if (turingMachineEndRoundBtn) {
+    turingMachineEndRoundBtn.disabled = !turingMachineCan(view, "next_round");
+    turingMachineEndRoundBtn.textContent = view.current_round?.ended ? "Waiting…" : "Next Round";
+  }
   if (turingMachineGiveUpBtn) turingMachineGiveUpBtn.disabled = !turingMachineCan(view, "give_up");
 
-  if (turingMachineExplainMode) {
-    updateTuringMachineExplainClasses(true);
-  }
+  document.getElementById("turingMachinePlayersTitle").textContent = view.phase === "game_over" ? "Final standings · Fewest checks wins" : "Players";
+  turingMachineExplainWidget?.refresh();
 }
 
 function showTuringMachineHeaderActions(show) {
-  if (turingMachineHeaderActions) {
-    turingMachineHeaderActions.style.display = show ? "flex" : "none";
-  }
+  if (turingMachineHeaderActions) turingMachineHeaderActions.style.display = show ? "flex" : "none";
   if (!show) {
-    closeTuringMachineHelpModal();
-    closeTuringMachineExplainModal();
-    exitTuringMachineExplainMode();
+    turingMachineHelpWidget?.close();
+    turingMachineExplainWidget?.exit();
+    hideTuringMachineTooltip();
+    cancelTuringMachineConfirmation();
+    turingMachineNotebookOpen = false;
+    syncTuringMachineNotebook();
   }
 }
 
-function showTuringMachineHelpModal() {
-  if (!turingMachineHelpModal || !turingMachineHelpContent) {
-    return;
-  }
-  turingMachineHelpContent.innerHTML = TURING_MACHINE_HELP_TEXT;
-  setModalVisible(turingMachineHelpModal, true);
-}
-
-function closeTuringMachineHelpModal() {
-  if (turingMachineHelpModal) {
-    setModalVisible(turingMachineHelpModal, false);
-  }
-}
-
-function updateTuringMachineExplainClasses(enabled) {
-  Object.keys(TURING_MACHINE_BUTTON_EXPLANATIONS).forEach((id) => {
-    const button = document.getElementById(id);
-    if (button) {
-      button.classList.toggle("has-explanation", enabled);
-    }
+function initTuringMachineInterface() {
+  if (turingMachineHelpWidget || typeof window.obgCreateHelp !== "function") return;
+  turingMachineHelpWidget = window.obgCreateHelp(TURING_MACHINE_HELP_CONFIG);
+  turingMachineExplainWidget = window.obgCreateExplain({
+    gameId: "turing_machine",
+    attribute: "data-turing-machine-explain",
+    explanations: TURING_MACHINE_EXPLANATIONS,
+    button: turingMachineExplainBtn,
+    root: () => turingMachinePanelNode,
+    bypass: ["#turingMachineHelpBtn", "#turingMachineExplainBtn"]
   });
-  document.querySelectorAll("[data-turing-machine-explain]").forEach((node) => {
-    node.classList.toggle("has-explanation", enabled);
+  turingMachineHelpBtn?.addEventListener("click", () => {
+    turingMachineExplainWidget.exit();
+    hideTuringMachineTooltip();
+    turingMachineHelpWidget.open();
   });
-}
-
-function findTuringMachineExplainTargetAtPoint(x, y) {
-  for (const id of Object.keys(TURING_MACHINE_BUTTON_EXPLANATIONS)) {
-    const button = document.getElementById(id);
-    if (!button) continue;
-    const rect = button.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return { type: "button", key: id };
-    }
-  }
-  const nodes = document.querySelectorAll("[data-turing-machine-explain]");
-  for (const node of nodes) {
-    const rect = node.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return { type: "dynamic", key: node.dataset.turingMachineExplain };
-    }
-  }
-  return null;
-}
-
-function showTuringMachineButtonExplanation(target) {
-  let explanation = null;
-  if (target.type === "button") {
-    explanation = TURING_MACHINE_BUTTON_EXPLANATIONS[target.key];
-  } else if (target.type === "dynamic") {
-    explanation = TURING_MACHINE_DYNAMIC_EXPLANATIONS[target.key];
-  }
-  if (!explanation || !turingMachineExplainContent || !turingMachineExplainModal) {
-    return;
-  }
-  turingMachineExplainContent.innerHTML = `
-    <h4>${explanation.name}</h4>
-    <p>${explanation.description}</p>
-  `;
-  setModalVisible(turingMachineExplainModal, true);
-}
-
-function closeTuringMachineExplainModal() {
-  if (turingMachineExplainModal) {
-    setModalVisible(turingMachineExplainModal, false);
-  }
-}
-
-function toggleTuringMachineExplainMode() {
-  turingMachineExplainMode = !turingMachineExplainMode;
-  document.body.classList.toggle("turing-machine-explain-mode", turingMachineExplainMode);
-  if (turingMachineExplainBtn) {
-    turingMachineExplainBtn.classList.toggle("active", turingMachineExplainMode);
-  }
-  updateTuringMachineExplainClasses(turingMachineExplainMode);
-}
-
-function exitTuringMachineExplainMode() {
-  if (!turingMachineExplainMode) {
-    return;
-  }
-  turingMachineExplainMode = false;
-  document.body.classList.remove("turing-machine-explain-mode");
-  if (turingMachineExplainBtn) {
-    turingMachineExplainBtn.classList.remove("active");
-  }
-  updateTuringMachineExplainClasses(false);
+  turingMachineExplainBtn?.addEventListener("click", () => {
+    hideTuringMachineTooltip();
+    turingMachineExplainWidget.toggle();
+  });
+  describeTuringMachineNode(turingMachineCurrentProposal, "round_code", "Yellow triangle(🟨 ▲), Blue square(🟦 ■), Purple circle(🟣 ●). This is the locked code used by all tests this round, not the editable draft.");
+  describeTuringMachineNode(turingMachineSolutionLabel, "solution_code", "The revealed solution, in Yellow triangle(🟨 ▲), Blue square(🟦 ■), Purple circle(🟣 ●) order.");
+  setTuringMachineNotesExpanded(true);
+  syncTuringMachineNotebook();
+  updateTuringMachineConfigRow();
+  if (typeof lastGameStatePayload !== "undefined" && lastGameStatePayload?.game_type === "turing_machine") renderTuringMachineGameState(lastGameStatePayload);
 }
 
 if (turingMachineSourceSelect) {
@@ -981,7 +1014,7 @@ if (turingMachineUseCodeBtn) {
 
 if (turingMachineGuessBtn) {
   turingMachineGuessBtn.addEventListener("click", () => {
-    sendAction({ type: "submit_guess", code: turingMachineDraftCode.slice(0, 3) });
+    confirmTuringMachineAction("submit_guess");
   });
 }
 
@@ -993,10 +1026,7 @@ if (turingMachineEndRoundBtn) {
 
 if (turingMachineGiveUpBtn) {
   turingMachineGiveUpBtn.addEventListener("click", () => {
-    const confirmed = window.confirm("Give up this puzzle?");
-    if (confirmed) {
-      sendAction({ type: "give_up" });
-    }
+    confirmTuringMachineAction("give_up");
   });
 }
 
@@ -1018,69 +1048,62 @@ if (turingMachineNotesToggle) {
   });
 }
 
-if (turingMachineHelpBtn) {
-  turingMachineHelpBtn.addEventListener("click", showTuringMachineHelpModal);
-}
+turingMachineNotebookToggle?.addEventListener("click", () => setTuringMachineNotebook(!turingMachineNotebookOpen));
+turingMachineNotebookClose?.addEventListener("click", () => setTuringMachineNotebook(false));
+turingMachineCancelBtn?.addEventListener("click", cancelTuringMachineConfirmation);
+turingMachineConfirmBtn?.addEventListener("click", () => {
+  const action = turingMachinePendingAction;
+  cancelTuringMachineConfirmation();
+  if (action && turingMachineCan(currentTuringMachineView, action.type)) sendAction(action);
+});
 
-if (turingMachineHelpModalCloseBtn) {
-  turingMachineHelpModalCloseBtn.addEventListener("click", closeTuringMachineHelpModal);
-}
+window.addEventListener("resize", () => {
+  syncTuringMachineNotebook();
+  hideTuringMachineTooltip();
+});
+window.addEventListener("scroll", hideTuringMachineTooltip, true);
 
-if (turingMachineExplainBtn) {
-  turingMachineExplainBtn.addEventListener("click", toggleTuringMachineExplainMode);
-}
-
-if (turingMachineExplainModalCloseBtn) {
-  turingMachineExplainModalCloseBtn.addEventListener("click", closeTuringMachineExplainModal);
-}
-
-document.addEventListener("pointerdown", (event) => {
-  if (!turingMachineExplainMode) {
-    return;
-  }
-  const target = findTuringMachineExplainTargetAtPoint(event.clientX, event.clientY);
-  if (target) {
-    event.preventDefault();
-    event.stopPropagation();
-    showTuringMachineButtonExplanation(target);
-    exitTuringMachineExplainMode();
-    return;
-  }
-  const button = event.target.closest("button");
-  if (button === turingMachineExplainBtn || button === turingMachineHelpBtn) {
-    return;
-  }
-  if (button === turingMachineHelpModalCloseBtn || button === turingMachineExplainModalCloseBtn) {
-    return;
-  }
-  if (button) {
-    event.preventDefault();
-    event.stopPropagation();
+turingMachinePanelNode?.addEventListener("pointerover", (event) => {
+  if (event.pointerType === "mouse") showTuringMachineTooltip(event.target.closest("[data-turing-machine-tip]"));
+});
+turingMachinePanelNode?.addEventListener("pointerout", (event) => {
+  if (event.pointerType === "mouse") hideTuringMachineTooltip();
+});
+turingMachinePanelNode?.addEventListener("focusin", (event) => showTuringMachineTooltip(event.target.closest("[data-turing-machine-tip]")));
+turingMachinePanelNode?.addEventListener("focusout", hideTuringMachineTooltip);
+turingMachinePanelNode?.addEventListener("pointerdown", (event) => {
+  turingMachineTouchStart = { x: event.clientX, y: event.clientY };
+  turingMachineTouchMoved = false;
+}, true);
+document.addEventListener("pointermove", (event) => {
+  if (turingMachineTouchStart && Math.hypot(event.clientX - turingMachineTouchStart.x, event.clientY - turingMachineTouchStart.y) > 8) {
+    turingMachineTouchMoved = true;
+    hideTuringMachineTooltip();
   }
 }, true);
-
-document.addEventListener("click", (event) => {
-  if (!turingMachineExplainMode) {
+document.addEventListener("pointerup", () => { turingMachineTouchStart = null; }, true);
+document.addEventListener("pointercancel", () => {
+  turingMachineTouchStart = null;
+  turingMachineTouchMoved = true;
+}, true);
+turingMachinePanelNode?.addEventListener("click", (event) => {
+  if (turingMachineTouchMoved) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    turingMachineTouchMoved = false;
     return;
   }
-  const button = event.target.closest("button");
-  if (!button) {
-    return;
-  }
-  if (button === turingMachineExplainBtn || button === turingMachineHelpBtn) {
-    return;
-  }
-  if (button === turingMachineHelpModalCloseBtn || button === turingMachineExplainModalCloseBtn) {
-    return;
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  if (event.target.closest("button, select, summary, a")) return;
+  if (turingMachinePendingAction && !event.target.closest("#turingMachineConfirmation")) cancelTuringMachineConfirmation();
+  showTuringMachineTooltip(event.target.closest("[data-turing-machine-tip]"));
 }, true);
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && turingMachineExplainMode) {
-    exitTuringMachineExplainMode();
-  }
+  if (event.key !== "Escape" || currentGameType !== "turing_machine") return;
+  hideTuringMachineTooltip();
+  if (document.querySelector("dialog[open]") || turingMachineExplainWidget?.isActive()) return;
+  if (turingMachinePendingAction) cancelTuringMachineConfirmation();
+  else if (turingMachineNotebookOpen) setTuringMachineNotebook(false);
 });
 
 populateTuringMachinePresetSelect();
@@ -1095,3 +1118,9 @@ window.populateTuringMachinePresetSelect = populateTuringMachinePresetSelect;
 window.clearTuringMachineState = clearTuringMachineState;
 window.renderTuringMachineGameState = renderTuringMachineGameState;
 window.showTuringMachineHeaderActions = showTuringMachineHeaderActions;
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initTuringMachineInterface);
+} else {
+  initTuringMachineInterface();
+}

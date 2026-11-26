@@ -66,6 +66,18 @@ def views():
     for pid in sample["turn_order"]:
         Game.apply_action(sample, pid, {"type": "next_round", "round": 3})
     result["final"] = Game.get_public_view(sample, "p0")
+    crowded = Game.init_game({"edition": "royale"}, players)
+    crowded.update(current_turn="p0", start_player="p0", tiles=[
+        royale._new_tile("nice_dice", 1), royale._new_tile("handicap", 2),
+        royale._new_tile("double_down", 3),
+    ])
+    for index, participant in enumerate(players):
+        for offset, die in enumerate(royale._pieces(crowded, participant["player_id"])[:6]):
+            face = (index + offset) % 6 + 1
+            royale._move(crowded, die, f"casino:{face}", face)
+    royale._move(crowded, royale._pieces(crowded, "p4", "supply")[0], "nice:6", 6)
+    crowded["players"]["p0"]["banknotes"] = [40000] * 8 + [60000] * 4
+    result["crowded"] = Game.get_public_view(crowded, "p0")
     for edition, config in (("classic", {}), ("neutral", {"neutral_dice": True})):
         sample = Game.init_game(config, players[:3])
         sample["current_turn"] = "p0"

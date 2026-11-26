@@ -9,7 +9,8 @@
 
 ## 实现
 
-- Select Game 顶部保留搜索和 Sort，Filters 下拉菜单统一提供 Players、Favor（Favorites only）和 Types，无需再次展开 Types。菜单显示启用的人数、收藏和类型标签总数；收藏、人数、搜索、Types 标签按交集筛选，现有排序不变。重新打开 Select Game 时重置筛选条件，但保留收藏和已保存的排序。
+- Select Game 顶部保留搜索和 Sort，Filters 下拉菜单统一提供 Players、Favor（Favorites only）和 Types，无需再次展开 Types。菜单显示启用的人数、收藏和类型标签总数；收藏、人数、搜索、Types 标签按交集筛选，现有排序不变。Players、Favor、Types 的选中状态实时保存在当前浏览器 `localStorage` 的 `openboardgame:game_filters`，重新打开、刷新或同浏览器重新进入页面后恢复；取消选择也会保存。搜索词仍在重新打开时清空，菜单默认收起，排序沿用原有独立记忆。
+- 筛选偏好与玩家身份解耦，不随改名或退出登录清除，也不写入收藏备份。无记录或记录损坏时使用默认筛选；非法人数、非布尔收藏标记和当前目录已不存在的类型标签不会生效。浏览器存储不可写时仍保留当前标签页内的选择，不影响筛选操作。
 - Filters 展开区域桌面端最大宽度为 560px，手机端占满控件区域可用宽度，Types 按三列排列。展开区域限制高度并支持内部滚动，避免遮出弹窗或横向溢出。
 - 每个游戏右侧提供独立的 ☆ / ★ 按钮，收藏操作不会触发游戏选择或创建房间。按钮支持 Tab、Space、Enter 与 `aria-pressed`，使用游戏名称提供可访问标签；取消收藏后立即更新仅收藏列表，并保留合理的键盘焦点。普通列表切换收藏不重建列表、不改变滚动位置，手机滑动星标区域只滚动、不切换收藏。
 - Filters 点击菜单外关闭；Escape 优先关闭 Filters，再次 Escape 关闭 Select Game。Settings 保留 Escape、遮罩关闭和键盘焦点循环。

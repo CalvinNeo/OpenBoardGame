@@ -165,3 +165,23 @@
 ## 10. 前端表现风格有什么要求？
 - 尽量还原实体版《图灵机》的卡片观感与整体氛围。
 - 不仅仅是功能可用，还应在视觉上接近实体桌游的法则卡、验证卡、密码构成区和推理记录体验。
+
+## 2026-11-26 UI 优化与验收
+
+### 布局与交互
+
+- 游戏主体直接放在 Game 面板，不再给控制台、验证卡区和笔记反复套框。沿用纸质卡片观感，采用奶油色卡面、深绿主操作与黄／蓝／紫色位置标记。
+- 顶部仅保留轮次、当前进度与手机 Notebook 入口。模式、难度、关卡、种子与等待名单收进 Puzzle details，开局配置仍只在 Room，开局后隐藏。
+- 桌面采用主板与私人笔记双栏，1440px 主板三列验证卡、1024px 两列。手机 320／390px 使用两列验证卡，数字按颜色各占一行，每行完整放下五个按钮。长标题与条件换行，保持 Help 与 Reconnect 同行。
+- 手机 Notebook 在右侧浮动，可用 Dock 或 Escape 收起，不占主板纵向空间。笔记、候选和历史独立滚动，公共日志默认折叠且限高。笔记更新复用控件，保留焦点和滚动位置，监听器始终读取最新笔记，避免覆盖其他标记。
+- Lock code、Final guess 位于密码区，Test 位于对应验证卡上，Next Round 紧邻本轮结果。最终猜测和放弃使用原地确认，确认内容保存确切密码，取消、Escape、点空白或改变草稿均不发送猜测。Next Round 无额外确认，并在等待时显示 Waiting。
+- Help／Explain 接入共享组件，补齐中英双语、三句入门和分页规则。Explain 可查看禁用按钮与当前卡的实际条件，不执行游戏操作。被动信息支持桌面悬停、手机轻触三秒提示，连续点击更新提示，交互控件不弹提示。触摸滑动不记笔记、不选择数字。
+- 保留多人同步轮次、私人笔记和 Simple／Expert 差异。终局保留答案、获胜者以及每人验证次数、完成轮次与答对时统计。不修改服务端规则、AI、公共 CSS 或其他游戏。
+
+### 验收记录
+
+- 修改文件：`static/games/turing_machine.html`、`static/games/turing_machine.css`、`static/games/turing_machine.js`、`static/game_assets.js`、`static/index.html`、`tests/turing_machine.browser.cjs`、本文件。资源版本同步更新，保留已有其他改动与暂存状态。
+- Chrome 检查 320、390、1024、1440px，自动断言与截图目视复核覆盖主板、笔记展开、长条件、长姓名、六人终局及全部中英 Help 分页，无页面横向滚动、文字溢出、按钮重叠或 Help／Reconnect 换行。Notebook 是规范允许的浮动覆盖。
+- 真实双人浏览器回归覆盖按需加载、Room 配置开局隐藏、锁定密码后修改草稿不影响验证、验证反馈、数字笔记完整循环、法则笔记与隐私、滚动和焦点保留、触摸滑动防误触、提示更新与三秒自动关闭、Explain 禁用按钮及非解释按钮拦截、Escape、猜测与放弃原地确认、轮末等待所有人、刷新重连、Simple／Expert 与终局展示。RC 展开／收起时只保留一个 Explain 入口。
+- 检查命令：`node --check static/games/turing_machine.js`、`node --check tests/turing_machine.browser.cjs`、`node scripts/smoke_load.cjs turing_machine`、`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`（13 项）与 `git diff --check`。浏览器用 `PLAYWRIGHT_MODULE=<playwright路径> ROOM_TEST_URL=<本地服务地址> node tests/turing_machine.browser.cjs`，截图默认写入忽略目录 `tmp/turing-machine-ui/`。
+- 本次涉及的 DEV_GUIDE 布局、交互、开发及桌面／手机浏览器验收通过。未实测实体 iOS／Android、Safari 或 Windows 字体，不宣称跨平台全部验收；未跑其他游戏完整回归或游戏逻辑测试（UI-only）。无新增游戏规则例外，未提交或推送代码。

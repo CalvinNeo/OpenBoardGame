@@ -15,7 +15,8 @@ const favoritesKey = 'openboardgame:favorite_games';
     await page.evaluate(() => setRoomControlsCollapsed(false));
     await page.locator('#roomControlsBody').evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished)));
     await page.locator('#createBtn').click();
-    await page.waitForFunction(() => cachedGameList && !gameListEl.classList.contains('hidden'));
+    await page.waitForFunction(() => cachedGameList && gameTypeFilters.dataset.ready === 'true'
+      && gameListCount.textContent.startsWith('Showing'));
   }
 
   async function openFilter(page) {
@@ -178,6 +179,56 @@ const favoritesKey = 'openboardgame:favorite_games';
         assert.equal(await page.locator('#gameFilterCount').textContent(), '2');
         await page.locator(`[data-tag-id="${tagId}"]`).click();
         await checkLayout(page, width, 'combined-filters');
+        const secondTagId = await page.evaluate(() => cachedGameList.find(game => game.game_id === 'cabo').tags[1].id);
+        await page.locator(`[data-tag-id="${secondTagId}"]`).click();
+        const rememberedFilters = { players: '2', favorites_only: true, tag_ids: [tagId, secondTagId].sort() };
+        async function checkRememberedFilters(target) {
+          assert.deepEqual(await target.evaluate(() => JSON.parse(localStorage.getItem('openboardgame:game_filters'))), rememberedFilters);
+          assert.equal(await target.locator('#playerCountFilter').inputValue(), '2');
+          assert.equal(await target.locator('#favoriteGamesFilter').isChecked(), true);
+          assert.equal(await target.locator('#gameFilterCount').textContent(), '4');
+          assert.equal(await target.locator('#gameSearchInput').inputValue(), '');
+          assert.equal(await target.locator('#gameFilterDetails').getAttribute('open'), null);
+          for (const selectedTag of rememberedFilters.tag_ids) {
+            assert.equal(await target.locator(`[data-tag-id="${selectedTag}"]`).getAttribute('aria-pressed'), 'true');
+          }
+          await expectGames(target, ['cabo']);
+        }
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Escape');
+        await openPicker(page);
+        await checkRememberedFilters(page);
+        await page.reload();
+        await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+        await openPicker(page);
+        await checkRememberedFilters(page);
+        await openFilter(page);
+        await checkLayout(page, width, 'remembered-filters');
+        await page.keyboard.press('Escape');
+        const rememberedTab = await context.newPage();
+        await rememberedTab.goto(base);
+        await rememberedTab.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+        await openPicker(rememberedTab);
+        await checkRememberedFilters(rememberedTab);
+        await rememberedTab.close();
+        await page.bringToFront();
+        await openFilter(page);
+        for (const selectedTag of rememberedFilters.tag_ids) await page.locator(`[data-tag-id="${selectedTag}"]`).click();
+        await page.locator('#playerCountFilter').selectOption('');
+        await page.locator('#favoriteGamesFilter').uncheck();
+        assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('openboardgame:game_filters'))),
+          { players: '', favorites_only: false, tag_ids: [] });
+        await page.reload();
+        await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+        await openPicker(page);
+        assert.equal(await page.locator('#playerCountFilter').inputValue(), '');
+        assert.equal(await page.locator('#favoriteGamesFilter').isChecked(), false);
+        assert.equal(await page.locator('.game-type-filter-chip[aria-pressed="true"]').count(), 0);
+        assert.equal(await page.locator('#gameFilterCount').isVisible(), false);
+        await openFilter(page);
+        await page.locator('#playerCountFilter').selectOption('2');
+        await page.locator('#favoriteGamesFilter').check();
+        await page.locator(`[data-tag-id="${tagId}"]`).click();
         await page.keyboard.press('Escape');
         await page.locator('[data-favorite-game-id="cabo"]').click();
         await expectGames(page, []);
@@ -271,9 +322,10 @@ const favoritesKey = 'openboardgame:favorite_games';
         await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
         await openPicker(page);
         assert.equal(await page.locator('[data-favorite-game-id="cabo"]').getAttribute('aria-pressed'), 'true');
-        assert.equal(await page.locator('#favoriteGamesFilter').isChecked(), false);
+        assert.equal(await page.locator('#favoriteGamesFilter').isChecked(), true);
         await openFilter(page);
-        await page.locator('#favoriteGamesFilter').check();
+        await page.locator('#playerCountFilter').selectOption('');
+        await page.locator(`[data-tag-id="${tagId}"]`).click();
         await expectGames(page, ['azul', 'cabo', 'splendor']);
         await page.keyboard.press('Escape');
         const otherTab = await context.newPage();
@@ -283,6 +335,10 @@ const favoritesKey = 'openboardgame:favorite_games';
         await otherTab.evaluate(key => localStorage.removeItem(key), favoritesKey);
         await expectGames(page, []);
         await otherTab.close();
+        await page.bringToFront();
+        await openFilter(page);
+        await page.locator('#favoriteGamesFilter').uncheck();
+        await page.keyboard.press('Escape');
         await page.keyboard.press('Escape');
         await page.evaluate(value => localStorage.setItem('openboardgame:favorite_games', value), saved);
         await page.evaluate(() => clearStoredName());
@@ -305,15 +361,66 @@ const favoritesKey = 'openboardgame:favorite_games';
         await openFilter(page);
         await page.locator('#favoriteGamesFilter').check();
         await expectGames(page, ['cabo']);
+        await page.locator('#playerCountFilter').selectOption('2');
+        await page.locator(`[data-tag-id="${tagId}"]`).click();
         await page.keyboard.press('Escape');
+        await page.keyboard.press('Escape');
+        await openPicker(page);
+        assert.equal(await page.locator('#playerCountFilter').inputValue(), '2');
+        assert.equal(await page.locator('#favoriteGamesFilter').isChecked(), true);
+        assert.equal(await page.locator(`[data-tag-id="${tagId}"]`).getAttribute('aria-pressed'), 'true');
+        await expectGames(page, ['cabo']);
         await page.keyboard.press('Escape');
         await page.locator('#settingsBtn').click();
         assert.match(await page.locator('#favoriteGamesStatus').textContent(), /this tab only/);
-        console.log(`${width}px: favorites, filters, backup/import, persistence, identity isolation, keyboard, touch scrolling and layout passed`);
+        console.log(`${width}px: favorites, remembered filters, reopen/reload/new tab, clearing, storage fallback, clipboard, keyboard, touch and layout passed`);
       } finally {
         await context.close();
       }
     }
+    const invalidFilterFixtures = [
+      { stored: '{broken', players: '', favorites: false, tags: [] },
+      { stored: '[]', players: '', favorites: false, tags: [] },
+      { stored: JSON.stringify({ players: '500', favorites_only: 'true', tag_ids: [null, 42, 'missing_type'] }),
+        players: '', favorites: false, tags: [] },
+      { stored: JSON.stringify({ players: '2', favorites_only: true, tag_ids: ['filler', 'missing_type', null, 'filler'] }),
+        players: '2', favorites: true, tags: ['filler'] },
+      { stored: JSON.stringify({ players: '11+', favorites_only: false, tag_ids: [] }),
+        players: '11+', favorites: false, tags: [] },
+    ];
+    for (const fixture of invalidFilterFixtures) {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      try {
+        await context.addInitScript(value => {
+          localStorage.setItem('openboardgame:name', 'Filter recovery tester');
+          localStorage.setItem('openboardgame:favorite_games', '["cabo"]');
+          localStorage.setItem('openboardgame:game_filters', value);
+        }, fixture.stored);
+        const page = await context.newPage();
+        page.on('pageerror', error => errors.push(error.message));
+        await page.goto(base);
+        await page.waitForFunction(() => typeof socket !== 'undefined' && socket.connected && cachedGameList);
+        await openPicker(page);
+        assert.equal(await page.locator('#playerCountFilter').inputValue(), fixture.players);
+        assert.equal(await page.locator('#favoriteGamesFilter').isChecked(), fixture.favorites);
+        assert.deepEqual(await page.evaluate(() => [...selectedGameTagIds]), fixture.tags);
+        assert.equal(await page.locator('.game-type-filter-chip[aria-pressed="true"]').count(), fixture.tags.length);
+        const expectedCount = Number(Boolean(fixture.players)) + Number(fixture.favorites) + fixture.tags.length;
+        assert.equal(await page.locator('#gameFilterCount').textContent(), expectedCount ? String(expectedCount) : '');
+        if (fixture.favorites) await expectGames(page, ['cabo']);
+        else if (fixture.players === '11+') {
+          const expected = await page.evaluate(() => cachedGameList
+            .filter(game => matchesPlayerCountFilter(game, { count: 11, isMinimum: true })).map(game => game.game_id));
+          assert(expected.length > 0);
+          await expectGames(page, expected);
+        } else {
+          assert.equal(await page.locator('#gameList .game-item').count(), await page.evaluate(() => cachedGameList.length));
+        }
+      } finally {
+        await context.close();
+      }
+    }
+    console.log('Stored filters: malformed JSON, invalid fields, stale/duplicate tags and 11+ restoration passed');
     const httpContext = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
     try {
       const httpPage = await httpContext.newPage();

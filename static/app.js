@@ -351,6 +351,10 @@ function renderGameState(data) {
     if (typeof renderNoThanksGameState === "function") renderNoThanksGameState(data);
     return;
   }
+  if (gameType === "bohnanza") {
+    if (typeof renderBohnanzaGameState === "function") renderBohnanzaGameState(data);
+    return;
+  }
   if (gameType === "challengers") {
     if (typeof renderChallengersGameState === "function") renderChallengersGameState(data);
     return;
@@ -365,6 +369,10 @@ function renderGameState(data) {
   }
   if (gameType === "hive") {
     if (typeof renderHiveGameState === "function") renderHiveGameState(data);
+    return;
+  }
+  if (gameType === "modern_art") {
+    if (typeof renderModernArtGameState === "function") renderModernArtGameState(data);
     return;
   }
   if (gameType === "for_sale") {

@@ -102,11 +102,11 @@ const SKULL_KING_HELP_CONFIG = {
         zh: "<p>点选手牌再按 Play Card 出牌，打出虎女(🐯)时要另外选择海盗(⚔️)或逃跑(🏳️)。点击面板空白处或按 Esc 可以取消选牌。</p>"
           + "<p>灰色的牌当前不能打出，通常是因为还没轮到你，或者你必须跟首引花色。</p>"
           + "<p>每墩结束后桌面会保留下来，全员点 Next Trick 才继续。最后一墩结束直接展示本轮计分，全员点 Next Round 才发下一轮的牌。</p>"
-          + "<p>断线的真人不会被自动确认，重连之后可以继续。游戏结束后结果会一直保留在界面上。</p>",
+          + "<p>断线的真人不会被自动确认，重连之后可以继续。终局展示全部轮次的基础分、奖励分和总分，所有玩家点 Confirm Results 后才完成对局。结果会一直保留在界面上。</p>",
         en: "<p>Select a card in your hand and press Play Card. Playing the Tigress (🐯) also asks you to choose Pirate (⚔️) or Escape (🏳️). Clicking empty space on the panel or pressing Esc clears the selection.</p>"
           + "<p>A greyed out card cannot be played right now, usually because it is not your turn or because you must follow the led suit.</p>"
           + "<p>The table stays visible after each trick and play resumes only once everyone presses Next Trick. The last trick leads straight into the round scores, and the next round is dealt only after everyone presses Next Round.</p>"
-          + "<p>Disconnected humans are never confirmed automatically and simply continue after reconnecting. The final result stays on screen once the game ends.</p>"
+          + "<p>Disconnected humans are never confirmed automatically and simply continue after reconnecting. Final standings break down base points, bonuses and totals across the voyage. Everyone presses Confirm Results to finish, and the results stay on screen afterwards.</p>"
       }
     }
   ]
@@ -154,8 +154,8 @@ const SKULL_KING_EXPLAIN = {
     en: "Tigress (🐯). Declare her as a Pirate (⚔️) or an Escape (🏳️) when playing, and she behaves as that card for the trick. A pirate mode Tigress captured by the Skull King (💀) is worth thirty bonus points."
   },
   next: {
-    zh: "确认已经看完本墩或本轮的结果。所有玩家都确认后才继续，不会再问一次。",
-    en: "Confirm that you have read the trick or round result. Play continues once every player confirms and you are never asked twice."
+    zh: "确认已经看完本墩、本轮或终局结果。所有玩家都确认后才继续或完成对局，不会再问一次。",
+    en: "Confirm that you have read the trick, round or final results. Play continues or finishes once every player confirms, without another prompt."
   },
   ghost: {
     zh: "灰胡子(👻)。双人局的幽灵第三手，自动翻暗牌顶牌且无需跟色，不叫墩也不计总分。",
@@ -252,6 +252,10 @@ if (document.readyState === "loading") {
     }
     function playerLabel(tag, className, pid) {
         const node = el(tag, className, name(pid));
+        const index = view.players.findIndex(player => player.player_id === pid);
+        const marker = el("span", `skull-king-player-marker sk-seat-${index}`, index < 0 ? "◇" : ["●", "◆", "▲", "■"][index % 4]);
+        marker.setAttribute("aria-hidden", "true");
+        node.prepend(marker);
         node.dataset.skTip = name(pid); node.tabIndex = 0;
         return node;
     }
@@ -274,7 +278,7 @@ if (document.readyState === "loading") {
             node.disabled = !can("play") || !view.legal_card_ids.includes(card.id);
             node.classList.toggle("is-selected", selectedCard === card.id);
             node.classList.toggle("is-illegal", view.phase === "playing" && view.current_turn === view.you && !view.legal_card_ids.includes(card.id));
-            node.dataset.skTip = `${cardLabel(card)}：${SKULL_KING_EXPLAIN[key].zh}`;
+            node.setAttribute("aria-description", SKULL_KING_EXPLAIN[key].zh);
         } else tip(node, key, `${cardLabel(card, mode)}：${SKULL_KING_EXPLAIN[key].zh}`);
         const top = el("span", "skull-king-card-top");
         top.append(el("span", "", card.rank || info[0]), el("span", "", card.rank === 14 ? "✨" : ""));
@@ -287,6 +291,7 @@ if (document.readyState === "loading") {
         const rows = [...view.players, ...(view.ghost ? [{...view.ghost, ghost: true}] : [])];
         rows.forEach(player => {
             const node = el("article", "skull-king-player");
+            node.classList.toggle("is-you", player.player_id === view.you);
             node.classList.toggle("is-current", player.player_id === view.current_turn);
             node.classList.toggle("is-winner", view.winner_ids.includes(player.player_id));
             const heading = el("div", "skull-king-player-heading");
@@ -313,6 +318,7 @@ if (document.readyState === "loading") {
     function renderTrick() {
         const container = byId("TrickCards"); container.replaceChildren();
         const order = view.trick_order.length ? view.trick_order : [...view.players.map(p => p.player_id), ...(view.ghost ? [view.ghost.player_id] : [])];
+        container.style.setProperty("--sk-seats", order.length);
         container.style.setProperty("--sk-mobile-seats", Math.min(order.length, 4));
         order.forEach(pid => {
             const slot = el("div", "skull-king-trick-slot");
@@ -352,21 +358,23 @@ if (document.readyState === "loading") {
         }
         byId("ConfirmBid").disabled = !can("bid") || selectedBid == null;
         text("ConfirmBid", me?.bid_locked ? "Locked ✓" : "Confirm Bid");
-        text("BidHint", !me ? "Waiting for the crew to bid." : me.bid_locked ? `Your bid: ${me.bid}. Waiting for the crew.` : "Choose how many tricks you will win.");
+        text("BidHint", !me ? "Waiting for the crew to bid." : me.bid_locked ? `Your bid: ${me.bid}. Waiting for the crew.` : selectedBid == null ? "Choose how many tricks you will win." : `Bid ${selectedBid} of ${view.cards_dealt} tricks · Confirm to lock.`);
     }
     function renderHand() {
         const container = byId("Hand"); container.replaceChildren();
         view.hand.forEach(card => container.append(cardNode(card, true)));
+        container.parentElement.classList.toggle("is-empty", !view.hand.length);
         text("HandTitle", own() ? "Your hand" : "Spectating");
         const me = own();
         text("Target", me ? `🎯 ${me.won} / ${me.bid ?? "—"}` : "🎯 —");
         text("HandHint", !me ? "Hands stay private." : view.phase === "bidding" ? `${view.hand.length} cards · Study your hand, then bid.` :
-            can("play") ? "Select a card, then confirm." : view.phase === "playing" ? `Waiting for ${name(view.current_turn)}.` : "Review the result before continuing.");
+            can("play") ? "Select a card, then confirm." : view.phase === "playing" ? `Waiting for ${name(view.current_turn)}.` : view.game_over ? "All cards played · Final standings below." : "Review the result before continuing.");
         renderSelection();
     }
     function renderSelection() {
         const card = view?.hand.find(c => c.id === selectedCard);
         byId("Selection").classList.toggle("hidden", !card);
+        byId("Hand").inert = !!card;
         if (!card) return;
         text("SelectedLabel", cardLabel(card));
         const tigress = card.kind === "tigress";
@@ -378,10 +386,26 @@ if (document.readyState === "loading") {
         byId("RoundSummary").classList.toggle("hidden", !view.round_summary);
         const container = byId("ScoreRows"); container.replaceChildren();
         if (!view.round_summary) return;
-        text("SummaryTitle", `Round ${view.round_number} · Scores`);
-        view.round_summary.players.forEach(row => {
-            const node = el("div", `skull-king-score-row ${row.exact ? "is-exact" : "is-miss"}`);
-            node.append(el("strong", "", name(row.player_id)),
+        const final = view.game_over || view.phase === "final_review";
+        text("SummaryTitle", final ? "Final standings · Full voyage" : `Round ${view.round_number} · Scores`);
+        const rows = [...view.round_summary.players];
+        if (final) rows.sort((first, second) => second.total_score - first.total_score);
+        rows.forEach(row => {
+            const node = el("div", `skull-king-score-row ${final ? "is-final" : row.exact ? "is-exact" : "is-miss"}`);
+            node.classList.toggle("is-winner", final && view.winner_ids.includes(row.player_id));
+            node.classList.toggle("is-you", row.player_id === view.you);
+            node.append(playerLabel("strong", "", row.player_id));
+            if (final) {
+                const rounds = view.score_history.map(round => round.players.find(player => player.player_id === row.player_id)).filter(Boolean);
+                const base = rounds.reduce((total, round) => total + round.base, 0);
+                const bonus = rounds.reduce((total, round) => total + round.bonus, 0);
+                node.append(el("span", "skull-king-final-total", `🏆 ${row.total_score}${view.winner_ids.includes(row.player_id) ? " · Winner" : ""}`),
+                    tip(el("span", "", `Base ${base} + Bonus ${bonus} = ${row.total_score}`), "score"),
+                    tip(el("span", "", `Exact bids ${rounds.filter(round => round.exact).length} / ${rounds.length}`), "target"));
+                container.append(node);
+                return;
+            }
+            node.append(
                 tip(el("span", "", `🎯 ${row.won} / ${row.bid} · ${row.exact ? "Exact" : "Missed"}`), "target"),
                 tip(el("span", "", `Base ${row.base} + Bonus ${row.bonus} = ${row.round_score}`), "score"),
                 tip(el("span", "", `🏆 Total ${row.total_score}${row.bonus_available && !row.exact ? ` · ${row.bonus_available} bonus lost` : ""}`), "bonus"));
@@ -401,7 +425,13 @@ if (document.readyState === "loading") {
         const scores = byId("ScoreHistory"), scoreScroll = scores.scrollTop; scores.replaceChildren();
         view.score_history.forEach(round => {
             const row = el("div", ""); row.append(el("strong", "", `Round ${round.round_number} · ${round.cards_dealt} cards`));
-            round.players.forEach(p => row.append(el("div", "", `${name(p.player_id)}: ${p.round_score > 0 ? "+" : ""}${p.round_score} → ${p.total_score}`)));
+            round.players.forEach(player => {
+                const entry = el("div", "skull-king-history-score");
+                entry.classList.toggle("is-you", player.player_id === view.you);
+                entry.append(playerLabel("strong", "", player.player_id),
+                    el("span", "", `Won / Bid ${player.won} / ${player.bid} · Base ${player.base} + Bonus ${player.bonus} = ${player.round_score} → Total ${player.total_score}`));
+                row.append(entry);
+            });
             scores.append(row);
         });
         if (!view.score_history.length) scores.append(el("div", "", "No scored rounds yet."));
@@ -412,20 +442,23 @@ if (document.readyState === "loading") {
         text("Round", `Round ${view.round_number} / ${view.total_rounds}`);
         text("Trick", `Trick ${view.trick_number} / ${view.cards_dealt}`);
         text("Lead", view.led_suit ? `Lead ${suits[view.led_suit][0]} ${suits[view.led_suit][1]}` : "Lead · Open");
-        let status = "Lock in your bid";
+        byId("Table").classList.toggle("hidden", view.phase === "bidding");
+        panel.classList.toggle("skull-king-your-turn", can("bid") || can("play"));
+        document.body.classList.toggle("skull-king-needs-action", view.legal_actions.length > 0 && socket.connected && !pending);
+        let status = own() ? own().bid_locked ? "Bid locked · Waiting for the crew" : "Study your hand · Lock in your bid" : "The crew is bidding";
         if (view.phase === "playing") status = view.current_turn === view.you ? "Your turn · Choose a card" : `${name(view.current_turn)} is playing`;
         if (view.phase === "trick_review") status = "Trick complete · Review the table";
         if (view.phase === "round_review") status = "Round complete · Scores are in";
-        if (view.game_over) status = `Winner${view.winner_ids.length > 1 ? "s" : ""}: ${view.winner_ids.map(name).join(" · ")}`;
+        if (view.game_over || view.phase === "final_review") status = `Winner${view.winner_ids.length > 1 ? "s" : ""}: ${view.winner_ids.map(name).join(" · ")}`;
         if (!socket.connected) status = "Disconnected · Reconnecting…";
         text("Status", status);
-        const review = ["trick_review", "round_review", "game_over"].includes(view.phase);
+        const review = ["trick_review", "round_review", "final_review", "game_over"].includes(view.phase);
         byId("Review").classList.toggle("hidden", !review);
-        text("ReviewTitle", view.game_over ? "Voyage complete" : view.phase === "trick_review" ? "Trick complete" : "Round complete");
+        text("ReviewTitle", view.game_over || view.phase === "final_review" ? "Voyage complete" : view.phase === "trick_review" ? "Trick complete" : "Round complete");
         text("Ready", view.game_over ? "Final scores are below." : `${view.ready.length} / ${view.players.length} ready`);
         byId("Next").classList.toggle("hidden", view.game_over);
-        text("Next", view.ready.includes(view.you) ? "Ready ✓" : view.phase === "trick_review" ? "Next Trick" : "Next Round");
-        byId("Next").disabled = !can(view.phase === "trick_review" ? "next_trick" : "next_round");
+        text("Next", view.ready.includes(view.you) ? "Ready ✓" : view.phase === "final_review" ? "Confirm Results" : view.phase === "trick_review" ? "Next Trick" : "Next Round");
+        byId("Next").disabled = !can(view.phase === "final_review" ? "confirm_results" : view.phase === "trick_review" ? "next_trick" : "next_round");
         renderPlayers(); renderTrick(); renderBids(); renderHand(); renderScores(); renderHistory();
     }
     function dispatch(kind, fields = {}) {
@@ -436,9 +469,12 @@ if (document.readyState === "loading") {
         render(); sendAction({type: kind, ...context, ...fields});
     }
     function deselect() {
+        const previousCard = selectedCard;
+        const restoreFocus = byId("Selection").contains(document.activeElement);
         selectedCard = null;
         panel.querySelectorAll("[data-card-id]").forEach(node => { node.classList.remove("is-selected"); node.setAttribute("aria-pressed", "false"); });
         renderSelection();
+        if (restoreFocus) panel.querySelector(`[data-card-id="${previousCard}"]`)?.focus({preventScroll: true});
     }
     byId("Bids").addEventListener("click", event => {
         const button = event.target.closest("[data-bid]");
@@ -451,13 +487,14 @@ if (document.readyState === "loading") {
         if (!button || !can("play") || !view.legal_card_ids.includes(button.dataset.cardId)) return;
         selectedCard = selectedCard === button.dataset.cardId ? null : button.dataset.cardId;
         renderHand();
+        if (selectedCard) byId(view.hand.find(card => card.id === selectedCard).kind === "tigress" ? "Pirate" : "Play").focus({preventScroll: true});
     });
     function play(mode) { if (selectedCard) dispatch("play", {card_id: selectedCard, ...(mode ? {mode} : {})}); }
     byId("Play").addEventListener("click", () => play());
     byId("Pirate").addEventListener("click", () => play("pirate"));
     byId("Escape").addEventListener("click", () => play("escape"));
     byId("Cancel").addEventListener("click", deselect);
-    byId("Next").addEventListener("click", () => dispatch(view?.phase === "trick_review" ? "next_trick" : "next_round"));
+    byId("Next").addEventListener("click", () => dispatch(view?.phase === "final_review" ? "confirm_results" : view?.phase === "trick_review" ? "next_trick" : "next_round"));
 
     function hideTip() { clearTimeout(tipTimer); tooltip.classList.add("hidden"); }
     function showTip(target, autoHide = false) {
@@ -479,11 +516,8 @@ if (document.readyState === "loading") {
     panel.addEventListener("pointerout", event => { if (event.pointerType === "mouse") hideTip(); });
     panel.addEventListener("focusin", event => showTip(event.target.closest("[data-sk-tip]")));
     panel.addEventListener("focusout", hideTip);
-    panel.addEventListener("pointerdown", event => {
-        const target = event.target.closest("button:disabled[data-sk-tip]");
-        if (target && event.pointerType !== "mouse") showTip(target, true);
-    });
     panel.addEventListener("click", event => {
+        if (event.target.closest("button, input, select, summary")) { hideTip(); return; }
         const target = event.target.closest("[data-sk-tip]");
         if (target) showTip(target, true); else hideTip();
     });
@@ -491,6 +525,11 @@ if (document.readyState === "loading") {
 
     function clearState() {
         view = null; selectedCard = null; selectedBid = null; pending = false; renderSignature = null;
+        byId("Hand").inert = false;
+        byId("Hand").parentElement.classList.remove("is-empty");
+        byId("Table").classList.remove("hidden");
+        panel.classList.remove("skull-king-your-turn");
+        document.body.classList.remove("skull-king-needs-action");
         clearTimeout(pendingTimer); hideTip();
         ["Hand", "Players", "TrickCards", "Bids", "ScoreRows", "History", "ScoreHistory"].forEach(s => byId(s).replaceChildren());
         ["BidBox", "Review", "RoundSummary", "TrickResult", "Selection"].forEach(s => byId(s).classList.add("hidden"));

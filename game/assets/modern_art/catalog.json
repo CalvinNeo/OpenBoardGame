@@ -1,0 +1,11 @@
+{
+  "artists": [
+    {"id": "lite_metal", "name": "Lite Metal", "color": "#d5a832", "symbol": "●", "counts": {"open": 3, "once": 2, "sealed": 3, "fixed": 2, "double": 2}},
+    {"id": "yoko", "name": "Yoko", "color": "#488b98", "symbol": "◆", "counts": {"open": 3, "once": 3, "sealed": 2, "fixed": 3, "double": 2}},
+    {"id": "christin_p", "name": "Christin P.", "color": "#d97169", "symbol": "▲", "counts": {"open": 3, "once": 3, "sealed": 3, "fixed": 3, "double": 2}},
+    {"id": "karl_gitter", "name": "Karl Gitter", "color": "#588c68", "symbol": "■", "counts": {"open": 3, "once": 3, "sealed": 3, "fixed": 3, "double": 3}},
+    {"id": "krypto", "name": "Krypto", "color": "#9875a7", "symbol": "✦", "counts": {"open": 4, "once": 3, "sealed": 3, "fixed": 3, "double": 3}}
+  ],
+  "deals": {"3": [10, 6, 6, 0], "4": [9, 4, 4, 0], "5": [8, 3, 3, 0]},
+  "auction_types": {"open": "Open", "once": "Once around", "sealed": "Sealed", "fixed": "Fixed price", "double": "Double"}
+}

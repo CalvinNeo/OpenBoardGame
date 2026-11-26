@@ -17,7 +17,7 @@ def choose_action(view: Dict) -> Optional[Dict]:
     if not actions:
         return None
     context = {key: view[key] for key in ("game_token", "round_number", "trick_number")}
-    for kind in ("next_trick", "next_round"):
+    for kind in ("next_trick", "next_round", "confirm_results"):
         if kind in actions:
             return {**context, "type": kind}
     if "bid" in actions:

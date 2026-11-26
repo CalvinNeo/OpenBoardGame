@@ -182,6 +182,7 @@ const ROOM_AUTH_KEY = "openboardgame:room_auth";
 const NAME_STORAGE_KEY = "openboardgame:name";
 const LAST_ROOM_ID_KEY = "openboardgame:last_room_id";
 const GAME_SORT_KEY = "openboardgame:game_sort";
+const GAME_FILTERS_KEY = "openboardgame:game_filters";
 const RECENT_GAMES_KEY = "openboardgame:recent_games";
 const FAVORITE_GAMES_KEY = "openboardgame:favorite_games";
 const FAVORITE_GAMES_BACKUP_TYPE = "openboardgame:favorites";
@@ -779,6 +780,34 @@ function loadStoredGameSort() {
 function saveStoredGameSort(sortKey) {
   if (!GAME_SORT_KEYS.has(sortKey)) return;
   writeRoomStorage(GAME_SORT_KEY, sortKey);
+}
+
+function restoreStoredGameFilters() {
+  let filters;
+  try {
+    filters = JSON.parse(readRoomStorage(GAME_FILTERS_KEY) || "null");
+  } catch {
+    return;
+  }
+  if (!filters || typeof filters !== "object" || Array.isArray(filters)) return;
+  playerCountFilter.value = [...playerCountFilter.options].some((option) => option.value === filters.players)
+    ? filters.players : "";
+  favoriteGamesFilter.checked = filters.favorites_only === true;
+  selectedGameTagIds.clear();
+  if (Array.isArray(filters.tag_ids)) {
+    filters.tag_ids.filter((tagId) => typeof tagId === "string" && tagId.length <= 100)
+      .forEach((tagId) => selectedGameTagIds.add(tagId));
+  }
+  syncGameTypeFilterButtons();
+  syncGameFilterCount();
+}
+
+function saveStoredGameFilters() {
+  writeRoomStorage(GAME_FILTERS_KEY, JSON.stringify({
+    players: playerCountFilter.value,
+    favorites_only: favoriteGamesFilter.checked,
+    tag_ids: [...selectedGameTagIds].sort(),
+  }));
 }
 
 // Most recent first; a game appears at most once.
@@ -1510,8 +1539,19 @@ function renderGameTypeFilters(games) {
   if (!gameTypeFilters) {
     return;
   }
+  const tags = collectGameTags(games);
+  const availableTagIds = new Set(tags.map((tag) => tag.id));
+  let removedTag = false;
+  selectedGameTagIds.forEach((tagId) => {
+    if (!availableTagIds.has(tagId)) {
+      selectedGameTagIds.delete(tagId);
+      removedTag = true;
+    }
+  });
+  if (removedTag) saveStoredGameFilters();
+  syncGameFilterCount();
   gameTypeFilters.innerHTML = "";
-  collectGameTags(games).forEach((tag) => {
+  tags.forEach((tag) => {
     const count = games.filter((game) => getGameTags(game).some((item) => item.id === tag.id)).length;
     const button = document.createElement("button");
     button.type = "button";
@@ -1546,6 +1586,7 @@ function renderGameTypeFilters(games) {
       } else {
         selectedGameTagIds.add(tag.id);
       }
+      saveStoredGameFilters();
       syncGameTypeFilterButtons();
       applyGameFilters();
     });
@@ -1589,6 +1630,7 @@ const GAME_WEIGHT = {
   challengers: 1.79,
   las_vegas: 1.17,
   for_sale: 1.25,
+  modern_art: 2.27,
   cheaty_mages: 1.61,
   love_letter: 1.18,
   spirit_island: 4.08,
@@ -1690,6 +1732,7 @@ const GAME_WEIGHT = {
   deception: 1.59,
   mind_the_lines: 1.10,
   no_thanks: 1.13,
+  bohnanza: 1.67,
   power_grid: 3.25,
   ticket_to_ride: 1.82,
   twelve_rivers: 2.00,
@@ -2162,15 +2205,10 @@ async function openCreateRoomModal() {
   if (gameSearchInput) {
     gameSearchInput.value = "";
   }
-  if (playerCountFilter) {
-    playerCountFilter.value = "";
-  }
-  favoriteGamesFilter.checked = false;
   gameFilterDetails.open = false;
   if (gameSortSelect) {
     gameSortSelect.value = loadStoredGameSort();
   }
-  selectedGameTagIds.clear();
   if (gameTypeFilters) {
     gameTypeFilters.innerHTML = "";
     delete gameTypeFilters.dataset.ready;
@@ -4115,6 +4153,7 @@ if (gameSearchInput) {
 
 if (playerCountFilter) {
   playerCountFilter.addEventListener("change", () => {
+    saveStoredGameFilters();
     applyGameFilters();
   });
 }
@@ -4126,7 +4165,10 @@ function syncGameFilterCount() {
   gameFilterDetails.querySelector("summary").setAttribute("aria-label", count ? `Filters, ${count} active` : "Filters");
 }
 
-favoriteGamesFilter.addEventListener("change", applyGameFilters);
+favoriteGamesFilter.addEventListener("change", () => {
+  saveStoredGameFilters();
+  applyGameFilters();
+});
 document.addEventListener("click", (event) => {
   if (gameFilterDetails.open && !gameFilterDetails.contains(event.target)) gameFilterDetails.open = false;
 });
@@ -4389,6 +4431,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 gameListRetryBtn.addEventListener("click", applyGameFilters);
+restoreStoredGameFilters();
 updateRoomActionButtons();
 // Start once at page load; filtering and opening the picker share this request.
 fetchGameList().catch(() => {});

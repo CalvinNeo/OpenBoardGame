@@ -1,5 +1,21 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "bohnanza": {
+    "scripts": ["/static/games/bohnanza.js?v=3"],
+    "styles": ["/static/games/bohnanza.css?v=3"],
+    "markup": "/static/games/bohnanza.html?v=3",
+    "panel": "bohnanzaPanel",
+    "panelTitle": "Bohnanza · 种豆得金",
+    "header": "showBohnanzaHeaderActions"
+  },
+  "modern_art": {
+    "scripts": ["/static/games/modern_art.js?v=2"],
+    "styles": ["/static/games/modern_art.css?v=2"],
+    "markup": "/static/games/modern_art.html?v=2",
+    "panel": "modernArtPanel",
+    "panelTitle": "Modern Art",
+    "header": "showModernArtHeaderActions"
+  },
   "cockroach_poker": {
     "scripts": ["/static/games/cockroach_poker.js?v=1"],
     "styles": ["/static/games/cockroach_poker.css?v=1"],
@@ -143,9 +159,9 @@ const GAME_ASSETS = {
     "header": "showStartupsHeaderActions"
   },
   "skull_king": {
-    "scripts": ["/static/games/skull_king.js?v=2_h2"],
-    "styles": ["/static/games/skull_king.css?v=2"],
-    "markup": "/static/games/skull_king.html?v=1_h2",
+    "scripts": ["/static/games/skull_king.js?v=3"],
+    "styles": ["/static/games/skull_king.css?v=3"],
+    "markup": "/static/games/skull_king.html?v=3",
     "panel": "skullKingPanel",
     "header": "showSkullKingHeaderActions"
   },
@@ -255,10 +271,10 @@ const GAME_ASSETS = {
   },
   "las_vegas": {
     "scripts": [
-      "/static/games/las_vegas.js?v=7"
+      "/static/games/las_vegas.js?v=8"
     ],
     "styles": [
-      "/static/las_vegas.css?v=5"
+      "/static/las_vegas.css?v=6"
     ],
     "markup": "/static/games/las_vegas.html?v=5",
     "panel": "lasVegasPanel",
@@ -779,13 +795,14 @@ const GAME_ASSETS = {
   },
   "turing_machine": {
     "scripts": [
-      "/static/games/turing_machine.js?v=app_v6"
+      "/static/games/turing_machine.js?v=app_v7"
     ],
     "styles": [],
     "panel": "turingMachinePanel",
+    "panelTitle": "Turing Machine",
     "header": "showTuringMachineHeaderActions",
-    "markup": "/static/games/turing_machine.html?v=1",
-    "styleFragments": "/static/games/turing_machine.css?v=1"
+    "markup": "/static/games/turing_machine.html?v=2",
+    "styleFragments": "/static/games/turing_machine.css?v=2"
   },
   "kronologic": {
     "scripts": [
@@ -983,10 +1000,10 @@ const GAME_ASSETS = {
   },
   "take_time": {
     "scripts": [
-      "/static/games/take_time.js?v=3"
+      "/static/games/take_time.js?v=5"
     ],
     "styles": [
-      "/static/take_time.css?v=4"
+      "/static/take_time.css?v=5"
     ],
     "panel": "takeTimePanel",
     "panelTitle": "⏳ 时序谜局",
@@ -1015,10 +1032,10 @@ const GAME_ASSETS = {
   },
   "ponzi_scheme": {
     "scripts": [
-      "/static/games/ponzi_scheme.js?v=4_h2"
+      "/static/games/ponzi_scheme.js?v=5"
     ],
     "styles": [
-      "/static/ponzi_scheme.css?v=4"
+      "/static/ponzi_scheme.css?v=5"
     ],
     "panel": "ponziSchemePanel",
     "panelTitle": "🏦 庞氏骗局",

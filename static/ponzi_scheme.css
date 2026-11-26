@@ -9,61 +9,82 @@
 .ponzi-scheme-shell button:disabled { cursor: default; opacity: .5; }
 .ponzi-scheme-shell button:focus-visible, .ponzi-scheme-shell summary:focus-visible, .ponzi-scheme-shell input:focus-visible, .ponzi-scheme-dialog button:focus-visible { outline: 3px solid #bc8e34; outline-offset: 3px; }
 .ponzi-scheme-shell button.is-selected { outline: 2px solid #376952; outline-offset: 2px; background: #dce9d3; }
-.ponzi-scheme-masthead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 14px; margin-bottom: 10px; }
-.ponzi-scheme-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #8c7145; }
-.ponzi-scheme-round { display: flex; align-items: baseline; gap: 6px; flex: 0 0 auto; }
+.ponzi-scheme-status > .ponzi-scheme-round { display: flex; align-items: baseline; gap: 6px; flex: 0 0 auto; }
 .ponzi-scheme-round span { font-size: 11px; color: var(--ps-muted); }
 .ponzi-scheme-round strong { font: 22px/1.2 Georgia, serif; }
-.ponzi-scheme-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; background: #203f37; color: #f7f5e8; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; }
+.ponzi-scheme-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; background: #203f37; color: #f7f5e8; border-radius: 10px; padding: 9px 12px; margin-bottom: 10px; }
 .ponzi-scheme-status > div { display: flex; flex: 1 1 180px; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
 .ponzi-scheme-status > div > span { color: #d3ddcf; font-size: 12px; }
 .ponzi-scheme-bears { font-size: 12px; padding: 3px 8px; border: 1px solid #5d7568; border-radius: 20px; }
-.ponzi-scheme-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.ponzi-scheme-sidebar { display: grid; gap: 12px; }
+.ponzi-scheme-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.ponzi-scheme-layout-overview { grid-template-columns: minmax(0, 1fr); }
+.ponzi-scheme-layout-overview .ponzi-scheme-players { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
 .ponzi-scheme-box { padding: 14px; border: 1px solid var(--ps-line); border-radius: 12px; background: #fbfbf4; }
-.ponzi-scheme-section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; margin-bottom: 12px; }
-.ponzi-scheme-section-head h3 { font-size: 15px; font-weight: 600; }
+.ponzi-scheme-section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; margin-bottom: 10px; }
+.ponzi-scheme-section-head h3 { font-size: 13px; font-weight: 600; }
 .ponzi-scheme-section-head > span { font-size: 10px; color: var(--ps-muted); }
-.ponzi-scheme-market-rows { display: grid; gap: 12px; }
-.ponzi-scheme-market-row { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 10px; align-items: center; }
+.ponzi-scheme-market-rows { display: grid; gap: 8px; }
+.ponzi-scheme-market-row { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; }
 .ponzi-scheme-row-title { text-align: center; color: #7a856e; }
 .ponzi-scheme-row-title b { display: block; font: 24px/1.3 Georgia, serif; }
-.ponzi-scheme-row-title span { font-size: 9px; line-height: 1.4; display: block; }
+.ponzi-scheme-row-title span { display: none; }
 .ponzi-scheme-market-row.is-eligible .ponzi-scheme-row-title { color: #23483b; background: #dae7d1; border-radius: 7px; padding: 5px 1px; }
+.ponzi-scheme-market-row > .ponzi-scheme-context { grid-column: 2; margin: 0 0 4px; }
 .ponzi-scheme-market-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.ponzi-scheme-shell .ponzi-scheme-fund { padding: 8px 6px 7px; display: flex; flex-direction: column; align-items: stretch; text-align: center; border: 1px solid #c8c7ad; background: #faf6e7; border-radius: 9px; min-height: 130px; box-shadow: 0 2px 0 #e7e6d9; }
+.ponzi-scheme-shell .ponzi-scheme-fund { padding: 8px; display: flex; flex-direction: column; align-items: stretch; text-align: center; border: 1px solid #c8c7ad; background: #faf6e7; border-radius: 9px; min-height: 104px; box-shadow: 0 2px 0 #e7e6d9; }
 .ponzi-scheme-shell .ponzi-scheme-fund:disabled { opacity: .72; }
 .ponzi-scheme-shell .ponzi-scheme-fund.is-starting { background: #eaf0f1; border-color: #b9ccd0; }
 .ponzi-scheme-shell .ponzi-scheme-fund.is-bear { background: #f6e3d9; border-color: #d9ae93; }
 .ponzi-scheme-card-kind { font-size: 9px; letter-spacing: .07em; color: #73735f; }
-.ponzi-scheme-principal { font: 600 clamp(26px, 3vw, 38px)/1.15 Georgia, serif; padding: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.ponzi-scheme-principal { font: 600 30px/1.15 Georgia, serif; padding: 4px 0 2px; font-variant-numeric: tabular-nums; }
 .ponzi-scheme-card-caption { font-size: 9px; color: #778379; }
-.ponzi-scheme-card-terms { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; border-top: 1px solid #cfcebc; margin-top: 7px; padding-top: 6px; font-size: 10px; }
+.ponzi-scheme-card-terms { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 6px; border-top: 1px solid #cfcebc; margin-top: 6px; padding-top: 5px; font-size: 11px; }
 .ponzi-scheme-card-terms > span { display: inline-block; }
 .ponzi-scheme-hint { font-size: 11px; color: var(--ps-muted); line-height: 1.6; }
-.ponzi-scheme-market > .ponzi-scheme-hint { margin: 12px 0 9px; }
+.ponzi-scheme-supply { margin-top: 10px; }
 .ponzi-scheme-supply, .ponzi-scheme-player-industries { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .ponzi-scheme-chip { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px 5px; padding: 6px; border-radius: 6px; font-size: 10px; text-align: center; }
 .ponzi-scheme-blue, .ponzi-scheme-shell button.ponzi-scheme-blue { background: #dce8ed; color: #365768; }
 .ponzi-scheme-gold, .ponzi-scheme-shell button.ponzi-scheme-gold { background: #eee6c7; color: #736028; }
 .ponzi-scheme-green, .ponzi-scheme-shell button.ponzi-scheme-green { background: #e0e8d3; color: #486042; }
 .ponzi-scheme-rose, .ponzi-scheme-shell button.ponzi-scheme-rose { background: #ecdddd; color: #764f52; }
-.ponzi-scheme-cash { background: #e5e9da; border: 1px solid #c6d0be; border-radius: 12px; padding: 15px; }
-.ponzi-scheme-cash > div:first-child { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: center; }
+.ponzi-scheme-cash { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; background: #e5e9da; border-radius: 8px; padding: 9px 12px; margin-bottom: 18px; }
+.ponzi-scheme-cash > div:first-child { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
 .ponzi-scheme-cash > div:first-child > span { font-size: 11px; color: #63755e; }
-.ponzi-scheme-cash strong { font: 30px/1.2 Georgia, serif; }
-.ponzi-scheme-pressure { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; border-top: 1px solid #c4cdbb; padding-top: 10px; margin-top: 11px; }
+.ponzi-scheme-cash strong { font: 26px/1.2 Georgia, serif; }
+.ponzi-scheme-pressure { display: flex; flex-wrap: wrap; gap: 6px 20px; }
 .ponzi-scheme-pressure > span { display: flex; flex-wrap: wrap; gap: 4px; justify-content: space-between; font-size: 11px; }
-.ponzi-scheme-cash > small { display: block; color: #6f7d66; font-size: 9px; margin-top: 9px; }
+.ponzi-scheme-cash > small { color: #6f7d66; font-size: 10px; margin-left: auto; }
 .ponzi-scheme-shell .is-danger { color: #b94a32; font-weight: 700; }
 .ponzi-scheme-status .is-danger { color: #ffe0a7; border-color: #f0aa73; }
 .ponzi-scheme-industry-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 .ponzi-scheme-industry { display: flex; flex-direction: column; text-align: left; gap: 5px; }
 .ponzi-scheme-industry small { font-size: 10px; font-weight: 400; }
-.ponzi-scheme-shell button.ponzi-scheme-primary { display: block; width: 100%; margin-top: 12px; background: #274f41; color: #fffef1; border-color: #274f41; font-weight: 600; padding: 11px; }
+.ponzi-scheme-shell button.ponzi-scheme-primary { background: #274f41; color: #fffef1; border-color: #274f41; font-weight: 600; padding: 10px 12px; }
 .ponzi-scheme-shell button.ponzi-scheme-primary:hover:not(:disabled) { background: #386b54; }
-.ponzi-scheme-shell button.ponzi-scheme-pass { display: block; width: 100%; margin-top: 7px; background: transparent; }
-.ponzi-scheme-action > .ponzi-scheme-hint { margin-top: 12px; }
+.ponzi-scheme-shell button.ponzi-scheme-pass { background: transparent; }
+.ponzi-scheme-confirm-row { display: flex; gap: 8px; margin-top: 8px; }
+.ponzi-scheme-confirm-row .ponzi-scheme-primary { flex: 1; }
+.ponzi-scheme-context { margin: 12px 0; }
+.ponzi-scheme-context-round_end { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 0; }
+.ponzi-scheme-context-round_end > p { flex: 1 1 200px; }
+.ponzi-scheme-portfolios > .ponzi-scheme-context { margin-top: 0; padding-bottom: 14px; border-bottom: 1px solid var(--ps-line); }
+.ponzi-scheme-context-trading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 14px 24px; }
+.ponzi-scheme-trade-quote .ponzi-scheme-price { margin-top: 0; }
+.ponzi-scheme-context-trading > .ponzi-scheme-luxuries { border: 0; margin: 0; padding: 0; }
+.ponzi-scheme-context-trading > .ponzi-scheme-wealth { align-self: center; }
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope { grid-template-columns: auto minmax(0, 1fr) minmax(180px, .8fr); text-align: left; align-items: center; justify-items: stretch; }
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope > .ponzi-scheme-envelope-icon { grid-row: 1 / span 3; align-self: center; }
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope > strong,
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope > span:not(.ponzi-scheme-envelope-icon),
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope > p { grid-column: 2; }
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope > .ponzi-scheme-offer-value { grid-column: 3; grid-row: 1; }
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope > .ponzi-scheme-two-buttons { grid-column: 3; grid-row: 2 / span 2; }
+.ponzi-scheme-context-trade_response .ponzi-scheme-envelope > small { grid-column: 2 / -1; }
+.ponzi-scheme-market-details { padding-top: 10px; }
+.ponzi-scheme-market-details > .ponzi-scheme-market { max-width: 700px; padding-top: 10px; }
+.ponzi-scheme-market > .ponzi-scheme-industry-choices { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 0 12px; }
+.ponzi-scheme-market .ponzi-scheme-industry { padding: 7px; gap: 3px; }
 .ponzi-scheme-targets { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
 .ponzi-scheme-targets button { flex: 1 1 75px; }
 .ponzi-scheme-price { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 12px; }
@@ -80,24 +101,23 @@
 .ponzi-scheme-luxury-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .ponzi-scheme-luxury-grid button { display: flex; flex-direction: column; gap: 5px; padding: 8px 5px; }
 .ponzi-scheme-luxury-grid small { font-size: 10px; }
-.ponzi-scheme-portfolios { margin-top: 18px; }
-.ponzi-scheme-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 10px; align-items: start; }
-.ponzi-scheme-player { padding: 12px; border: 1px solid var(--ps-line); border-radius: 10px; background: #fcfcf5; }
+.ponzi-scheme-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start; }
+.ponzi-scheme-player { padding: 10px; border: 1px solid var(--ps-line); border-radius: 8px; background: #fcfcf5; }
 .ponzi-scheme-player.is-active { border-color: #608971; box-shadow: inset 0 3px #608971; }
 .ponzi-scheme-player-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
 .ponzi-scheme-player-heading h4 { flex: 1 1 auto; font-size: 13px; line-height: 1.5; }
 .ponzi-scheme-player-heading > span { flex: 0 0 auto; }
 .ponzi-scheme-player-heading h4 small { display: inline-block; font-size: 9px; color: #547363; background: #e4ecdc; padding: 1px 4px; border-radius: 3px; }
-.ponzi-scheme-portfolio-value { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; align-items: center; margin: 10px 0; }
+.ponzi-scheme-portfolio-value { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; align-items: center; margin: 6px 0; }
 .ponzi-scheme-portfolio-value strong { font-size: 20px; }
 .ponzi-scheme-portfolio-value strong small { font-size: 10px; font-weight: 400; }
 .ponzi-scheme-portfolio-value > span { font-size: 10px; color: var(--ps-muted); }
 .ponzi-scheme-player-industries { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
-.ponzi-scheme-player-industries .ponzi-scheme-chip { font-size: 10px; padding: 4px; }
+.ponzi-scheme-player-industries .ponzi-scheme-chip { font-size: 11px; padding: 4px; }
 .ponzi-scheme-owned-luxuries { font-size: 12px; margin: 8px 0; }
-.ponzi-scheme-debt-track { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; margin: 11px 0 7px; }
-.ponzi-scheme-debt-track > div { text-align: center; background: #eef0e8; border-radius: 4px; padding: 5px 1px; }
-.ponzi-scheme-debt-track small { display: block; font-size: 8px; color: #78846e; }
+.ponzi-scheme-debt-track { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; margin: 8px 0 4px; }
+.ponzi-scheme-debt-track > div { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 3px; text-align: center; background: #eef0e8; border-radius: 4px; padding: 4px 1px; }
+.ponzi-scheme-debt-track small { font-size: 10px; color: #78846e; }
 .ponzi-scheme-debt-track b { font-size: 12px; }
 .ponzi-scheme-debt-track .is-due { background: #f3e1c5; color: #8b582f; }
 .ponzi-scheme-shell details { margin: 7px 0 0; }
@@ -107,7 +127,9 @@
 .ponzi-scheme-debt-list > div > span:nth-child(2) { flex: 1 1 85px; }
 .ponzi-scheme-log { margin: 8px 0 0; padding-left: 19px; font-size: 11px; line-height: 1.7; }
 .ponzi-scheme-log li { margin: 5px 0; padding-left: 2px; }
-.ponzi-scheme-history { padding: 7px 13px; }
+.ponzi-scheme-history { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; margin-top: 18px; padding: 10px 0 0; border: 0; border-top: 1px solid var(--ps-line); border-radius: 0; background: transparent; }
+.ponzi-scheme-history details { margin: 0; }
+.ponzi-scheme-no-debts { font-size: 11px; color: var(--ps-muted); padding-top: 6px; }
 .ponzi-scheme-review { margin-bottom: 16px; background: #eaf0df; border-color: #b7c9a6; }
 .ponzi-scheme-payments { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr)); gap: 8px; }
 .ponzi-scheme-payments > span { display: flex; flex-direction: column; gap: 4px; background: #fafcf3; padding: 8px; border-radius: 6px; font-size: 11px; }
@@ -116,7 +138,6 @@
 .ponzi-scheme-result { background: #fffdf0; padding: 10px; border: 1px solid #d2cbaa; border-radius: 7px; display: grid; gap: 5px; }
 .ponzi-scheme-result > small { font-size: 10px; }
 .ponzi-scheme-shell .is-bankrupt { background: #eee2dc; border-color: #d4b6a5; }
-.ponzi-scheme-footer { text-align: center; font-size: 10px; color: #7c846e; padding-top: 16px; }
 .ponzi-scheme-explaining [data-ps-explain] { outline: 2px dashed #548dbc !important; outline-offset: 2px; cursor: help !important; }
 .ponzi-scheme-dialog { width: min(670px, calc(100vw - 28px)); max-height: min(82vh, 780px); overflow-y: auto; border: 1px solid #a6b9a0; border-radius: 14px; background: #f8f8ee; padding: 20px; color: #284739; font: 14px/1.8 system-ui, sans-serif; }
 .ponzi-scheme-dialog::backdrop { background: rgb(8 24 19 / .65); }
@@ -135,50 +156,46 @@
 @media (max-width: 600px) {
     .game-panel[data-game-theme="ponzi_scheme"] { padding: 10px; border-radius: 12px; }
 }
-@container (max-width: 720px) {
+@container (max-width: 900px) {
     .ponzi-scheme-layout { grid-template-columns: minmax(0, 1fr); }
-    .ponzi-scheme-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-    .ponzi-scheme-action { grid-column: 2; grid-row: 1 / span 2; }
-    .ponzi-scheme-history { grid-column: 1; }
+    .ponzi-scheme-players { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ponzi-scheme-context-trading { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ponzi-scheme-context-trading > .ponzi-scheme-luxuries { grid-column: 1 / -1; }
+    .ponzi-scheme-context-trading .ponzi-scheme-luxury-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @container (max-width: 460px) {
     .ponzi-scheme-shell { font-size: 13px; }
-    .ponzi-scheme-masthead { gap: 8px; margin-bottom: 8px; }
-    .ponzi-scheme-footer { display: none; }
     .ponzi-scheme-round strong { font-size: 20px; }
     .ponzi-scheme-status { gap: 4px 8px; padding: 7px 8px; margin-bottom: 8px; }
     .ponzi-scheme-status > div { flex-basis: 150px; gap: 2px 8px; }
+    .ponzi-scheme-status > .ponzi-scheme-round { flex-basis: auto; }
     .ponzi-scheme-status > div > span, .ponzi-scheme-bears { font-size: 10px; }
     .ponzi-scheme-box { padding: 8px; border-radius: 9px; }
     .ponzi-scheme-section-head { gap: 3px 8px; margin-bottom: 7px; }
     .ponzi-scheme-section-head h3 { font-size: 13px; }
-    .ponzi-scheme-market > .ponzi-scheme-hint { margin: 7px 0 6px; }
-    /* The action controls are the tallest sidebar block. Keep cash and the
-       collapsed activity history in a slim rail beside it to avoid pushing
-       the action card below another full screen on phones. */
-    .ponzi-scheme-sidebar { grid-template-columns: minmax(100px, .58fr) minmax(0, 1fr); gap: 6px; }
-    .ponzi-scheme-action { grid-column: 2; grid-row: 1 / span 2; }
-    .ponzi-scheme-history { grid-column: 1; grid-row: 2; }
+    .ponzi-scheme-layout { gap: 18px; }
+    .ponzi-scheme-market > .ponzi-scheme-industry-choices { gap: 5px; margin-bottom: 10px; }
+    .ponzi-scheme-market .ponzi-scheme-industry { padding: 6px 4px; }
+    .ponzi-scheme-market .ponzi-scheme-industry small { font-size: 10px; }
     .ponzi-scheme-market-row { grid-template-columns: 24px minmax(0, 1fr); gap: 5px; }
     .ponzi-scheme-row-title span { display: none; }
     .ponzi-scheme-row-title b { font-size: 20px; }
     .ponzi-scheme-market-rows { gap: 5px; }
     .ponzi-scheme-market-cards { gap: 5px; }
-    .ponzi-scheme-shell .ponzi-scheme-fund { padding: 4px 3px; min-height: 80px; border-radius: 6px; }
-    .ponzi-scheme-principal { font-size: 24px; padding: 3px 0 1px; }
-    .ponzi-scheme-card-terms { flex-direction: column; font-size: 8px; gap: 1px; margin-top: 3px; padding-top: 3px; }
+    .ponzi-scheme-shell .ponzi-scheme-fund { padding: 5px 4px; min-height: 92px; border-radius: 6px; }
+    .ponzi-scheme-principal { font-size: 28px; padding: 3px 0 1px; }
+    .ponzi-scheme-card-terms { flex-direction: column; font-size: 11px; gap: 1px; margin-top: 3px; padding-top: 3px; }
     .ponzi-scheme-card-caption { display: none; }
     .ponzi-scheme-supply { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
     .ponzi-scheme-supply .ponzi-scheme-chip { flex-direction: column; gap: 1px; font-size: 9px; padding: 4px 2px; }
-    .ponzi-scheme-cash { padding: 8px; }
+    .ponzi-scheme-cash { padding: 8px; gap: 4px 12px; margin-bottom: 14px; }
+    .ponzi-scheme-cash > div:first-child { justify-content: space-between; flex: 1 1 100%; }
     .ponzi-scheme-cash strong { font-size: 24px; }
-    .ponzi-scheme-pressure { gap: 5px; padding-top: 6px; margin-top: 6px; }
-    .ponzi-scheme-cash > small { margin-top: 5px; }
+    .ponzi-scheme-pressure { flex: 1 1 100%; justify-content: space-between; gap: 8px; }
+    .ponzi-scheme-cash > small { margin: 0; font-size: 10px; }
     .ponzi-scheme-industry-choices { gap: 5px; margin: 6px 0; }
     .ponzi-scheme-industry { gap: 2px; padding: 6px 7px; }
-    .ponzi-scheme-shell button.ponzi-scheme-primary { margin-top: 7px; padding: 8px; }
-    .ponzi-scheme-shell button.ponzi-scheme-pass { margin-top: 4px; }
-    .ponzi-scheme-action > .ponzi-scheme-hint { margin-top: 6px; line-height: 1.35; }
+    .ponzi-scheme-shell button.ponzi-scheme-primary { padding: 9px; }
     .ponzi-scheme-targets { gap: 4px; margin: 6px 0; }
     .ponzi-scheme-price { gap: 5px; margin-top: 7px; }
     .ponzi-scheme-price input { padding: 6px; }
@@ -190,24 +207,21 @@
     .ponzi-scheme-luxuries { margin-top: 8px; padding-top: 7px; }
     .ponzi-scheme-luxury-grid { gap: 4px; }
     .ponzi-scheme-luxury-grid button { gap: 3px; padding: 6px 4px; }
-    .ponzi-scheme-portfolios { margin-top: 8px; }
-    .ponzi-scheme-portfolios > .ponzi-scheme-section-head > span { display: none; }
-    .ponzi-scheme-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
-    .ponzi-scheme-player-industries { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
-    .ponzi-scheme-player { padding: 6px; border-radius: 7px; }
-    .ponzi-scheme-player-heading { gap: 3px; }
-    .ponzi-scheme-player-heading h4 { font-size: 11px; line-height: 1.25; }
-    .ponzi-scheme-portfolio-value { margin: 5px 0; gap: 3px; }
-    .ponzi-scheme-portfolio-value strong { font-size: 16px; }
-    .ponzi-scheme-portfolio-value > span { font-size: 9px; }
-    .ponzi-scheme-player-industries .ponzi-scheme-chip { flex-direction: column; gap: 1px; font-size: 8px; padding: 3px 2px; }
-    .ponzi-scheme-player-industries .ponzi-scheme-chip b { font-size: 13px; }
-    .ponzi-scheme-debt-track { margin: 6px 0 4px; }
-    .ponzi-scheme-debt-track > div { padding: 3px 1px; }
-    .ponzi-scheme-debt-track small { font-size: 7px; }
-    .ponzi-scheme-debt-track b { font-size: 10px; }
-    .ponzi-scheme-shell summary { font-size: 10px; padding: 2px 0; }
-    .ponzi-scheme-history { padding: 5px 8px; }
+    .ponzi-scheme-players, .ponzi-scheme-layout-overview .ponzi-scheme-players { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .ponzi-scheme-context-trading { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .ponzi-scheme-context-trading .ponzi-scheme-luxury-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ponzi-scheme-context-trade_response .ponzi-scheme-envelope { display: flex; flex-direction: column; text-align: center; }
+    .ponzi-scheme-context-trade_response .ponzi-scheme-envelope > .ponzi-scheme-envelope-icon { align-self: center; }
+    .ponzi-scheme-player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; padding: 9px; }
+    .ponzi-scheme-player-heading { align-items: center; }
+    .ponzi-scheme-portfolio-value { margin: 0; }
+    .ponzi-scheme-portfolio-value strong { font-size: 15px; }
+    .ponzi-scheme-portfolio-value > span { display: none; }
+    .ponzi-scheme-player-industries { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    .ponzi-scheme-player-industries .ponzi-scheme-chip { gap: 2px; padding: 4px 2px; }
+    .ponzi-scheme-debt-track { grid-column: 1 / -1; margin: 0; }
+    .ponzi-scheme-player details, .ponzi-scheme-owned-luxuries, .ponzi-scheme-no-debts { grid-column: 1 / -1; margin: 0; padding-top: 0; }
+    .ponzi-scheme-history { grid-template-columns: minmax(0, 1fr); gap: 4px; margin-top: 14px; }
     .ponzi-scheme-review { margin-bottom: 8px; }
     .ponzi-scheme-review .ponzi-scheme-payments,
     .ponzi-scheme-review .ponzi-scheme-scoreboard { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }

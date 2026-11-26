@@ -1,0 +1,10 @@
+[
+  {"id":"garden","en":"Garden Bean","zh":"花园豆","icon":"🌿","color":"#398457","count":6,"thresholds":[null,2,3,null]},
+  {"id":"red","en":"Red Bean","zh":"红豆","icon":"🔴","color":"#b7474c","count":8,"thresholds":[2,3,4,5]},
+  {"id":"black_eyed","en":"Black-eyed Bean","zh":"黑眼豆","icon":"👁️","color":"#876648","count":10,"thresholds":[2,4,5,6]},
+  {"id":"soy","en":"Soy Bean","zh":"大豆","icon":"🟣","color":"#82619b","count":12,"thresholds":[2,4,6,7]},
+  {"id":"green","en":"Green Bean","zh":"绿豆","icon":"🟢","color":"#598645","count":14,"thresholds":[3,5,6,7]},
+  {"id":"stink","en":"Stink Bean","zh":"臭豆","icon":"💨","color":"#826346","count":16,"thresholds":[3,5,7,8]},
+  {"id":"chili","en":"Chili Bean","zh":"辣椒豆","icon":"🌶️","color":"#c36a32","count":18,"thresholds":[3,6,8,9]},
+  {"id":"blue","en":"Blue Bean","zh":"蓝豆","icon":"🔵","color":"#497fa8","count":20,"thresholds":[4,6,8,10]}
+]

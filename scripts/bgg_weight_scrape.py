@@ -14,6 +14,7 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "modern_art": "https://boardgamegeek.com/boardgame/118/modern-art",
     "cockroach_poker": "https://boardgamegeek.com/boardgame/11971/cockroach-poker",
     "rummikub": "https://boardgamegeek.com/boardgame/811/rummikub",
     "machi_koro": "https://boardgamegeek.com/boardgame/143884/machi-koro",
@@ -72,6 +73,7 @@ GAME_URLS = {
     "hot_streak": "https://boardgamegeek.com/boardgame/446497/hot-streak",
     "poison": "https://boardgamegeek.com/boardgame/17025/poison",
     "bohnanza_dice": "https://boardgamegeek.com/boardgame/368093/bohnanza-das-wurfelspiel",
+    "bohnanza": "https://boardgamegeek.com/boardgame/11/bohnanza",
     "emerald_skulls": "https://boardgamegeek.com/boardgame/421762/emerald-skulls",
     "wriggle_roulette": "https://boardgamegeek.com/boardgame/443829/wriggle-roulette",
     "catan_starfarers": "https://boardgamegeek.com/boardgame/282853/catan-starfarers",

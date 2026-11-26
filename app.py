@@ -186,6 +186,10 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "bohnanza"):
+        raise HTTPException(status_code=403, detail="This Bohnanza game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "modern_art"):
+        raise HTTPException(status_code=403, detail="This Modern Art game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "werewolf"):
         raise HTTPException(status_code=403, detail="This Werewolf game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "for_northwood"):
@@ -639,7 +643,7 @@ async def _emit_room_state(room: Room) -> None:
         "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
         "supports_memories": _game_supports_memories(game_def),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin", "ticket_to_ride", "witch_cauldron", "bubble_shooter", "machi_koro") or key != "seed"},
+                        if room.game_type not in ("bohnanza", "colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin", "ticket_to_ride", "witch_cauldron", "bubble_shooter", "machi_koro") or key != "seed"},
         "auto_save": room.auto_save,
         "initialization": dict(room.initialization) if room.initialization else None,
         "source_room_id": room.source_room_id,
@@ -792,6 +796,10 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "bohnanza":
+        return {"type": action.get("type")}
+    if game_type == "modern_art":
+        return {"type": action.get("type")}
     if game_type == "cockroach_poker":
         return {"type": action.get("type")}
     if game_type == "criminal_dance":
@@ -1744,9 +1752,9 @@ async def _maybe_run_bots(room: Room) -> None:
                 events = [bot_event] + events
                 room.state_version += 1
                 if state.get("game_over"):
-                    notify_cockroach_end = room.game_type == "cockroach_poker" and room.status != "game_over"
+                    notify_confirmed_end = room.game_type in ("cockroach_poker", "bohnanza") and room.status != "game_over"
                     room.status = "game_over"
-                    if notify_cockroach_end:
+                    if notify_confirmed_end:
                         await _emit_room_state(room)
                         await _emit_room_list_update()
                 _schedule_halli_flip_reveal(room)
@@ -1951,6 +1959,10 @@ async def on_room_reconnect(sid, data):
         await _send_error(sid, "room_id, player_id, reconnect_token required")
         return
     room = _get_room(room_id)
+    if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "modern_art")
+    if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "bohnanza")
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "werewolf")
     if not room:
@@ -2579,6 +2591,8 @@ async def on_room_load(sid, data):
         or _has_live_private_save(source_room_id, "challengers")
         or _has_live_private_save(source_room_id, "love_letter")
         or _has_live_private_save(source_room_id, "for_sale")
+        or _has_unfinished_private_save(source_room_id, "modern_art")
+        or _has_unfinished_private_save(source_room_id, "bohnanza")
         or _has_live_private_save(source_room_id, "cheaty_mages")
         or _has_live_private_save(source_room_id, "power_grid")
         or _has_live_private_save(source_room_id, "mind_the_lines")

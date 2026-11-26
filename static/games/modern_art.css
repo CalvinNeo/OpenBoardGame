@@ -1,0 +1,106 @@
+.game-panel[data-game-theme="modern_art"] { --ma-ink: #ede9dd; --ma-muted: #b6bdb5; --ma-accent: #e4bd78; background: #202923; color: var(--ma-ink); }
+.game-panel[data-game-theme="modern_art"] > .panel-header { flex-wrap: nowrap; gap: 8px; }
+.game-panel[data-game-theme="modern_art"] .game-panel-title { min-width: 0; gap: 8px; flex-wrap: nowrap; }
+.game-panel[data-game-theme="modern_art"] .game-panel-title h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#modernArtHeaderActions { flex-shrink: 0; gap: 5px; }
+#modernArtHeaderActions button, .game-panel[data-game-theme="modern_art"] #gameReconnectBtn { white-space: nowrap; }
+#modernArtPanel { color: var(--ma-ink); min-width: 0; }
+#modernArtPanel * { box-sizing: border-box; }
+#modernArtPanel button { min-height: 36px; touch-action: manipulation; }
+#modernArtPanel section { min-width: 0; }
+#modernArtPanel .ma-muted, #modernArtPanel small { color: var(--ma-muted); }
+.ma-lobby { padding: 32px 8px; text-align: center; }
+.ma-lobby h3 { font-family: Georgia, serif; font-size: clamp(24px, 4vw, 38px); font-weight: 400; }
+.ma-lobby-art { display: flex; justify-content: center; gap: 12px; height: 135px; }
+.ma-lobby-art span { width: 84px; border: 6px solid #bca780; background: radial-gradient(circle at 65% 35%, #e5b358 0 20%, transparent 21%), linear-gradient(35deg, #447d83 45%, #e5c2a1 46%); }
+.ma-lobby-art span:nth-child(2) { background: repeating-linear-gradient(45deg, #d58173 0 15px, #353f4c 16px 28px); }
+.ma-lobby-art span:nth-child(3) { background: radial-gradient(ellipse at 20% 70%, #5b9073 0 35%, transparent 36%), #cdb6d3; }
+.ma-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0 12px; font-size: 12px; }
+.ma-status > * { max-width: 100%; overflow-wrap: anywhere; }
+#modernArtCash { color: #efcf87; font-variant-numeric: tabular-nums; }
+.ma-caption { margin: 12px 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
+.ma-caption span { font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ma-muted); }
+.ma-market { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.ma-artist { border-top: 3px solid var(--artist); padding: 9px 8px; background: #ffffff06; min-width: 0; border-radius: 2px; }
+.ma-artist-name { display: block; font-size: 12px; min-height: 30px; overflow-wrap: anywhere; }
+.ma-popularity { display: flex; gap: 3px; margin: 7px 0; }
+.ma-popularity span { width: 9px; height: 9px; border: 1px solid var(--artist); border-radius: 50%; }
+.ma-popularity .ma-filled { background: var(--artist); }
+.ma-value-history { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.ma-value-history span { text-align: center; padding: 3px 0; background: #ffffff06; }
+.ma-artist-value { display: block; font-size: 12px; margin-top: 7px; color: #e8d5b1; }
+.ma-floor { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; margin-top: 6px; }
+.ma-auction { border-bottom: 1px solid #ffffff1c; padding-bottom: 14px; }
+.ma-auction-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#modernArtAuctionKind { font-size: 11px; color: #e4bd78; }
+.ma-lot { min-height: 166px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 0; }
+.ma-lot > .ma-painting { width: 114px; }
+.ma-empty-lot { font: italic 20px Georgia, serif; text-align: center; color: #c7baa3; padding: 30px 8px; }
+.ma-painting { display: flex; flex-direction: column; gap: 0; position: relative; padding: 0; border: 1px solid #8e8369; border-radius: 3px; overflow: hidden; min-width: 0; background: #eee5d4; color: #272925; text-align: left; }
+button.ma-painting { cursor: pointer; }
+.ma-painting.ma-selected { outline: 3px solid #edc783; outline-offset: -3px; }
+.ma-painting:disabled { opacity: .7; cursor: default; }
+.ma-painting .ma-artwork { width: 100%; height: 92px; display: block; background: #ddd3c0; }
+.ma-painting-name { padding: 7px 7px 3px; font: 12px Georgia, serif; overflow-wrap: anywhere; }
+.ma-painting-kind { display: block; padding: 3px 7px 6px; font-size: 10px; color: #5b5e55; }
+.ma-auction-info { font-size: 12px; line-height: 1.6; margin: 6px 0 10px; overflow-wrap: anywhere; }
+.ma-revealed-bids { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-top: 8px; }
+.ma-revealed-bids span { padding: 5px 7px; background: #ffffff08; }
+.ma-revealed-bids .ma-you { color: #efcf87; border-left: 2px solid #efcf87; }
+.ma-bid-form label { display: block; font-size: 11px; margin-bottom: 5px; }
+.ma-bid-controls { display: flex; gap: 7px; }
+.ma-bid-controls input { min-width: 0; width: 95px; flex: 1; padding: 7px; font-size: 16px; }
+.ma-bid-controls button { flex: 1; }
+#modernArtPanel .ma-primary { background: #d9b77e; border-color: #d9b77e; color: #252823; }
+.ma-buttons { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+.ma-buttons button { flex: 1; }
+.ma-players { display: grid; gap: 6px; }
+.ma-player { padding: 9px 0; border-bottom: 1px solid #ffffff14; min-width: 0; }
+.ma-player-top { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
+.ma-player-name { min-width: 0; overflow-wrap: anywhere; }
+.ma-player-meta { font-size: 10px; color: var(--ma-muted); flex-shrink: 0; }
+.ma-player.ma-you .ma-player-name { color: #efcf87; }
+.ma-player-gallery { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.ma-gallery-count { display: inline-block; padding: 3px 5px; background: #ffffff08; border-left: 2px solid var(--artist); font-size: 10px; }
+.ma-hand-section { position: relative; margin-top: 12px; }
+.ma-hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); align-content: start; align-items: start; gap: 9px; max-height: 370px; overflow-y: auto; padding: 4px; scrollbar-gutter: stable; }
+.ma-hand .ma-artwork { height: 90px; }
+.ma-selection { position: absolute; left: 4px; right: 4px; bottom: 4px; margin: 0; padding: 9px; background: #272d2bf5; border: 1px solid #d9b77e; border-radius: 6px; box-shadow: 0 5px 25px #0008; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; z-index: 2; }
+.ma-selection > span { font-size: 12px; flex: 1 1 100%; }
+.ma-selection button { flex: 1; min-width: 0; }
+.ma-results { margin-top: 15px; border-top: 1px solid #bba77c; padding-top: 8px; }
+.ma-result-row { padding: 9px 0; border-bottom: 1px solid #ffffff17; font-size: 12px; overflow-wrap: anywhere; line-height: 1.7; }
+.ma-result-row.ma-you { color: #efcf87; }
+.ma-history { margin-top: 16px; font-size: 11px; color: var(--ma-muted); }
+.ma-history ol { max-height: 160px; overflow-y: auto; padding-left: 22px; line-height: 1.8; }
+.ma-tooltip { position: fixed; z-index: 20000; max-width: min(320px, calc(100vw - 20px)); padding: 10px 12px; background: #1a211f; border: 1px solid #d1b986; box-shadow: 0 5px 20px #0008; border-radius: 6px; font-size: 12px; line-height: 1.5; color: #f3efdf; pointer-events: none; }
+@media (max-width: 650px) {
+  .game-panel[data-game-theme="modern_art"] > .panel-header { gap: 5px; }
+  .game-panel[data-game-theme="modern_art"] .game-panel-title { gap: 4px; flex: 1; }
+  .game-panel[data-game-theme="modern_art"] .game-panel-title h2 { font-size: 14px; }
+  #modernArtHeaderActions button, .game-panel[data-game-theme="modern_art"] #gameReconnectBtn { padding: 5px 6px; font-size: 10px; min-width: 0; }
+  .ma-status { gap: 6px; font-size: 11px; }
+  #modernArtStatus { order: 3; flex-basis: 100%; }
+  .ma-market { gap: 4px; }
+  .ma-artist { padding: 7px 3px; }
+  .ma-artist-name { font-size: 10px; min-height: 32px; }
+  .ma-popularity { gap: 2px; }
+  .ma-popularity span { width: 6px; height: 6px; }
+  .ma-value-history { gap: 1px; font-size: 9px; }
+  .ma-artist-value { font-size: 10px; }
+  .ma-floor { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .ma-galleries-section { order: 2; }
+  .ma-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; }
+  .ma-player-top { flex-wrap: wrap; font-size: 11px; }
+  .ma-player { padding: 6px 0; }
+  .ma-player-gallery { gap: 3px; margin-top: 4px; }
+  .ma-lot { min-height: 130px; padding: 5px 0; }
+  .ma-lot > .ma-painting { width: 100px; }
+  .ma-lot .ma-artwork { height: 72px; }
+  .ma-hand { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-height: 310px; padding: 3px; }
+  .ma-hand .ma-artwork { height: 68px; }
+  .ma-painting-name { font-size: 11px; padding: 5px 5px 2px; }
+  .ma-painting-kind { padding: 3px 5px 5px; font-size: 9px; }
+  .ma-caption { letter-spacing: .03em; font-size: 10px; }
+  .ma-caption span { font-size: 9px; }
+}

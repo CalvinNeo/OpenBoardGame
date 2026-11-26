@@ -21,6 +21,7 @@ from game.power_grid import PowerGridGame
 from game.a_feast_for_odin import AFeastForOdinGame
 from game.las_vegas import LasVegasGame
 from game.for_sale import ForSaleGame
+from game.modern_art import ModernArtGame
 from game.cheaty_mages import CheatyMagesGame
 from game.acquire import AcquireGame
 from game.abraca_what import AbracaWhatGame
@@ -75,6 +76,7 @@ from game.love_letter import LoveLetterGame
 from game.manila import ManilaGame
 from game.nine_upper import NineUpperGame
 from game.no_thanks import NoThanksGame
+from game.bohnanza import BohnanzaGame
 from game.not_a_hat import NotAHatGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
@@ -149,6 +151,7 @@ __all__ = [
     "AFeastForOdinGame",
     "LasVegasGame",
     "ForSaleGame",
+    "ModernArtGame",
     "CheatyMagesGame",
     "RedDoorsGame",
     "AbracaWhatGame",
@@ -204,6 +207,7 @@ __all__ = [
     "ManilaGame",
     "NineUpperGame",
     "NoThanksGame",
+    "BohnanzaGame",
     "NotAHatGame",
     "PatchworkGame",
     "PerfectMismatchGame",

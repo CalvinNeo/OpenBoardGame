@@ -67,8 +67,8 @@
         title: { zh: "Take Time · 时光共度", en: "Take Time" },
         basic: {
             win: {
-                zh: "这是一款全队合作游戏，你们要一起把 12 张牌放进六个时段，让每一段都满足钟盘上的全部条件，走完路线上的每一个钟盘就算赢。",
-                en: "This is a cooperative game. Together you place twelve cards into six segments so that every segment satisfies all of its clock conditions, and you win by clearing every clock on the route."
+                zh: "这是一款全队合作游戏，你们要把起始 12 张牌以及关卡要求的补牌放进六个时段，让每一段满足钟盘的全部条件，走完路线上的每一个钟盘就算赢。",
+                en: "This is a cooperative game. Together you place the twelve starting cards plus any cards drawn by the clock into six segments, and you win by satisfying every condition and clearing every clock on the route."
             },
             turn: {
                 zh: "讨论阶段按下 Ready 才会看到自己的手牌，放牌阶段轮到你时选一张手牌和一个时段，再决定暗置还是明置。",
@@ -81,14 +81,21 @@
         },
         sections: [
             {
+                id: "current_level",
+                label: { zh: "当前关卡", en: "Current level" },
+                get html() {
+                    return { zh: currentLevelHelp("zh"), en: currentLevelHelp("en") };
+                }
+            },
+            {
                 id: "flow",
                 label: { zh: "一关的流程", en: "Round flow" },
                 html: {
                     zh: "<p>每一关都从讨论阶段(💬)开始。所有玩家都按下 Ready 之后进入放牌阶段，第一张牌任何人都可以先放，之后按座位顺序轮流。</p>"
-                        + "<p>放满 12 张牌后自动揭牌，全队进入回顾阶段。所有玩家都按下 Next Round 之后，才会执行你们选定的继续方式。</p>"
+                        + "<p>全体手牌和备用牌用完后自动揭牌，全队进入回顾阶段。通常共放 12 张，有补牌规则的关卡可能更多。所有玩家都按下 Next Round 之后，才会执行你们选定的继续方式。</p>"
                         + "<p>只要还有人没确认，任何人都能改选继续方式。一旦有人改选，已经按下的确认会全部清空。</p>",
                     en: "<p>Every clock starts with a discussion phase (💬). Once every player has pressed Ready the placement phase begins. Anyone may place the first card, and play then continues in seat order.</p>"
-                        + "<p>When the twelfth card lands the clock is revealed and the team enters the review phase. The continuation you picked only happens after every player presses Next Round.</p>"
+                        + "<p>When all hands and reserves are empty the clock is revealed and the team enters the review phase. Usually twelve cards are played, but draw rules can add more. The continuation you picked only happens after every player presses Next Round.</p>"
                         + "<p>As long as somebody has not confirmed yet, anyone may change the continuation. Changing it clears every confirmation made so far.</p>"
                 }
             },
@@ -204,6 +211,24 @@
         dialog_close: { zh: "关闭当前对话框。对话框也可以按 Esc 或者点击外部区域关闭。", en: "Close the current dialog. You can also press Esc or click outside the dialog to dismiss it." },
     };
 
+    const TAKE_TIME_ADVANCED_RULES = {
+        zh: "最左牌(⬅️)按发牌顺序出牌。补牌(📥)时段出牌后从剩余牌堆补一张，全体手牌用完才结算。旋转(↻/↺)只移动钟盘规则，已放的牌留在原地，禁放(⛔)时段靠旋转取得牌。相邻条件只约束标记边界。首牌起点比较各段第一张牌，秒针(⏱)禁止向两端放牌，每次出牌后顺时针前进一段。",
+        en: "Leftmost (⬅️) follows the dealt hand order. Draw segments (📥) refill from the undealt deck until all hands are empty. Rotation (↻/↺) moves only the clock rules, leaving placed cards fixed. Blocked segments (⛔) receive cards through rotation. Boundary conditions apply only where marked. The first-card hand orders each segment's first card. The second hand (⏱) blocks its endpoints and advances clockwise after every placement."
+    };
+    TAKE_TIME_EXPLAIN.rules = {
+        zh: `${TAKE_TIME_EXPLAIN.rules.zh} ${TAKE_TIME_ADVANCED_RULES.zh}`,
+        en: `${TAKE_TIME_EXPLAIN.rules.en} ${TAKE_TIME_ADVANCED_RULES.en}`
+    };
+    hints.rules = TAKE_TIME_ADVANCED_RULES.zh;
+    for (let index = 0; index < 6; index += 1) {
+        Object.defineProperty(TAKE_TIME_EXPLAIN, `sector_${index}`, {
+            get: () => ({
+                zh: `${TAKE_TIME_EXPLAIN.sector.zh} ${view ? segmentDescription(index) : ""} ${TAKE_TIME_ADVANCED_RULES.zh}`,
+                en: `${TAKE_TIME_EXPLAIN.sector.en} Segment ${index + 1}: ${view?.clock.segments[index].labels.join(" / ") || "At least one card"}. ${TAKE_TIME_ADVANCED_RULES.en}`
+            })
+        });
+    }
+
     let takeTimeHelpWidget = null;
     let takeTimeExplainWidget = null;
 
@@ -238,6 +263,112 @@
         return String(value ?? "").replace(/[&<>"']/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[character]));
     }
 
+    function currentLevelHelp(language) {
+        const text = (zh, en) => language === "en" ? en : zh;
+        if (!view?.clock || view.phase === "setup") {
+            return `<p>${text("请先在选关界面选择钟盘，这里会显示所选关卡的特殊规则。", "Choose a clock in Levels first. Its special rules will appear here.")}</p>`;
+        }
+        const clock = view.clock;
+        const rules = [];
+        const addRule = (zh, en) => rules.push(text(zh, en));
+        const start = (view.result?.hand_segment ?? view.hand_segment ?? 0) + 1;
+        addRule(`每个时段至少放一张牌。当前从时段 ${start} 的指针起点(🧭 / START)开始，按顺时针(↻)比较六段，允许相等，不比较最后一段与起点。`,
+            `Every segment needs at least one card. Starting at the clock hand (🧭 / START), currently segment ${start}, compare all six clockwise (↻). Ties are allowed, and the last segment is not compared back to the start.`);
+        if (clock.metric === "difference") {
+            addRule("本关每段恰好两张牌，按差值(Δ)，即大数减小数，依次非递减排列。上限、区间、最近目标和相邻边界仍比较总和(Σ)。",
+                "Every segment must hold exactly two cards. Order their differences (Δ), larger minus smaller, from lowest to highest. Caps, ranges, closest targets and boundaries still use sums (Σ).");
+        } else {
+            addRule("六段按总和(Σ)依次非递减排列，也就是后一段总和不能小于前一段。",
+                "Order the six sums (Σ) from lowest to highest. Each sum must be at least the previous one.");
+        }
+        addRule(clock.cap == null ? "本关无总和上限(∞)，不受通常的 24 点上限限制。" : `每段的总和(Σ)不得超过 ${clock.cap}。`,
+            clock.cap == null ? "This clock has no sum cap (∞). The usual limit of 24 does not apply." : `Each segment's sum (Σ) must not exceed ${clock.cap}.`);
+        if (clock.movable_hand) {
+            addRule("自由指针(🧭)可以在首位玩家 Ready 前选择起点。揭牌时若原起点不能满足排列次序，会自动寻找可行起点，不会移动牌或改变各段的特殊条件。",
+                "Choose the movable hand (🧭) before anyone presses Ready. At the reveal, if that start cannot satisfy the ordering, another valid start is used if possible. Cards and segment conditions do not move.");
+        }
+        if (clock.no_face_up) {
+            addRule("禁止明牌(🙈)：本关只能暗置(🔒)，重试奖励也不能增加明置机会。",
+                "No face-up cards (🙈): only face-down placement (🔒) is allowed, even with retry bonuses.");
+        }
+        if (clock.play_order === "highest") {
+            addRule("先出最大(⬆️)：每次必须打出自己当前手牌中数值最大的一张，同值时可任选。它不要求你打出全队最大的牌。",
+                "Highest first (⬆️): play a highest-valued card from your own current hand on every turn. Choose either on a tie. This does not mean the highest card in the team.");
+        } else if (clock.play_order === "lowest") {
+            addRule("先出最小(⬇️)：每次必须打出自己当前手牌中数值最小的一张，同值时可任选。它不要求你打出全队最小的牌。",
+                "Lowest first (⬇️): play a lowest-valued card from your own current hand on every turn. Choose either on a tie. This does not mean the lowest card in the team.");
+        } else if (clock.play_order === "leftmost") {
+            addRule("先出最左牌(⬅️)：必须按发牌后固定的手牌顺序，从最左边开始出牌，不能按数值重新挑选。",
+                "Leftmost first (⬅️): play the leftmost card in your fixed dealt hand order. You cannot choose a different card by value.");
+        }
+        for (const [placement, segment] of Object.entries(clock.required_plays || {})) {
+            addRule(placement === "last" ? `全队真正的最后一张牌必须放在时段 ${segment + 1}，有补牌时不一定是第 12 张。` : `全队第 ${placement} 张牌必须放在时段 ${segment + 1}，按全队出牌次序而非个人回合计算。`,
+                placement === "last" ? `The team's actual final card must go to segment ${segment + 1}. With draws, this need not be card 12.` : `Placement ${placement} must go to segment ${segment + 1}. Count the whole team's placements, not an individual player's turns.`);
+        }
+        if (clock.segments.some(rule => rule.draw)) {
+            addRule("补牌(📥)只在下列标记时段触发。若未发牌堆尚有牌，出牌者立即补一张。牌堆用尽不再补牌，全体手牌和备用牌用完才揭牌，空手玩家自动跳过。",
+                "Draw (📥) triggers only in the marked segments below. If the undealt deck is not empty, the player immediately draws one replacement. Once it is empty, no more cards are drawn. Reveal only after all hands and reserves are empty, skipping empty hands.");
+        }
+        if (clock.segments.some(rule => rule.rotate)) {
+            addRule(`旋转(↻/↺)只移动钟盘上的规则，已放下的牌保持原位。${clock.movable_hand ? "自由指针留在原位。" : "本关印刷指针随钟盘一起旋转。"}下面按当前旋转后的实际时段位置列出规则。`,
+                `Rotation (↻/↺) moves the printed rules, not the placed cards. ${clock.movable_hand ? "The movable hand stays in place." : "This clock's printed hand rotates with the clock."} The segment rules below reflect the current rotated positions.`);
+        }
+        if (clock.spread != null) {
+            addRule(`全盘六段总和(Σ)的最大值减最小值不得超过 ${clock.spread}，不是只检查相邻两段。`,
+                `The largest of all six sums (Σ) minus the smallest must not exceed ${clock.spread}. This is not just an adjacent-pair check.`);
+        }
+        if (clock.first_hand != null) {
+            addRule(`除总和次序外，还要从首牌指针的时段 ${clock.first_hand + 1} 开始，顺时针比较每段最先放下那张牌的数值，依次非递减，允许相等。这个起点独立于总和指针。`,
+                `In addition to sum order, start at the first-card hand in segment ${clock.first_hand + 1} and compare the first card placed in each segment clockwise, from lowest to highest. Ties are allowed. This start is independent of the sum hand.`);
+        }
+        if (view.second_hand != null) {
+            addRule(`秒针(⏱)当前禁止向时段 ${view.second_hand + 1} 和 ${(view.second_hand + 3) % 6 + 1} 放牌。每次出牌后秒针顺时针前进一段，两个禁放落点也随之移动。`,
+                `The second hand (⏱) currently blocks segments ${view.second_hand + 1} and ${(view.second_hand + 3) % 6 + 1}. After every placement it advances one segment clockwise, moving both blocked endpoints.`);
+        }
+        const lowSegments = clock.segments.flatMap((rule, index) => rule.extreme === "lowest" ? [index + 1] : []);
+        if (lowSegments.length > 1) {
+            addRule(`全场最小牌标记在时段 ${lowSegments.join("、")}。将全场最小的 ${lowSegments.length} 张牌分开放到这些时段，每段一张，不能把它们都堆在同一段，数值相等允许并列。`,
+                `Lowest-card markers are in segments ${lowSegments.join(", ")}. Split the ${lowSegments.length} lowest cards on the entire clock between these segments, one in each, rather than putting them together. Ties in value are allowed.`);
+        }
+        const segments = clock.segments.map((rule, index) => {
+            const details = [];
+            const add = (zh, en) => details.push(text(zh, en));
+            if (rule.colors) {
+                const colors = rule.colors.map(color => color === "solar" ? text("一张太阳(☀️)", "one solar (☀️)") : text("一张月亮(🌙)", "one lunar (🌙)"));
+                add(`恰好放 ${colors.join(" + ")}，这是完整的牌色与张数组合，不能再加其他牌。`,
+                    `Hold exactly ${colors.join(" + ")}. This specifies the entire colour and card-count combination, with no extra cards.`);
+            }
+            if (rule.count != null) add(`恰好 ${rule.count} 张牌。`, `Hold exactly ${rule.count} ${rule.count === 1 ? "card" : "cards"}.`);
+            if (rule.range) add(`总和(Σ)在 ${rule.range[0]}–${rule.range[1]} 之间，包含两端。`, `The sum (Σ) must be from ${rule.range[0]} to ${rule.range[1]}, inclusive.`);
+            if (rule.closest != null) add(`总和(Σ)必须是全盘六段中最接近 ${rule.closest} 的，可以并列，不要求恰好等于目标。`, `The sum (Σ) must be closest to ${rule.closest} among all six segments. Ties are allowed and an exact match is not required.`);
+            if (rule.extreme === "highest") add("至少含一张全盘数值最大的牌，同值允许并列。", "Contain a highest-valued card on the entire clock. Ties are allowed.");
+            if (rule.extreme === "lowest") add(lowSegments.length > 1 ? "含一张分置的全盘最小牌，按上面的多段最小牌规则判定。" : "至少含一张全盘数值最小的牌，同值允许并列。", lowSegments.length > 1 ? "Contain one of the split lowest cards, following the multi-segment lowest-card rule above." : "Contain a lowest-valued card on the entire clock. Ties are allowed.");
+            if (rule.forbidden) add(`禁止牌值 ${rule.forbidden.join("、")}，太阳(☀️)和月亮(🌙)都受限。这限制单张牌值而非总和，在揭牌时验证。`, `No card may have value ${rule.forbidden.join(", ")}, whether solar (☀️) or lunar (🌙). This restricts individual card values, not the sum, and is checked at the reveal.`);
+            if (["solar_lowest", "both"].includes(rule.suit_extreme)) add("必须含有全盘最小的太阳牌(☀️)，同值允许并列，没有太阳牌不能通过。", "Contain a lowest solar card (☀️) on the entire clock. Ties are allowed, but having no solar card fails.");
+            if (["lunar_highest", "both"].includes(rule.suit_extreme)) add("必须含有全盘最大的月亮牌(🌙)，同值允许并列，没有月亮牌不能通过。", "Contain a highest lunar card (🌙) on the entire clock. Ties are allowed, but having no lunar card fails.");
+            if (rule.draw) add("在此出牌后触发补牌(📥)，仅在未发牌堆还有牌时补一张。", "After placing here, draw one replacement (📥) if the undealt deck still has a card.");
+            if (rule.rotate) add(`在此出牌后，钟盘规则向${rule.rotate === 1 ? "顺时针(↻)" : "逆时针(↺)"}旋转一段。`, `After placing here, rotate the printed rules one segment ${rule.rotate === 1 ? "clockwise (↻)" : "counterclockwise (↺)"}.`);
+            if (rule.blocked) add("禁止直接放牌(⛔)。需要让已放下的牌通过钟盘规则旋转进入这个规则所在的时段。", "Direct placement is blocked (⛔). Rotate this rule onto cards already placed on the board.");
+            if (rule.boundary) {
+                const previous = (index + 5) % 6 + 1;
+                add(rule.boundary.equal ? `与前一个时段 ${previous} 的总和(Σ)必须相等。` : `与前一个时段 ${previous} 的总和(Σ)绝对差至少为 ${rule.boundary.gap}。`,
+                    rule.boundary.equal ? `The sum (Σ) must equal segment ${previous}'s sum.` : `The absolute difference from segment ${previous}'s sum (Σ) must be at least ${rule.boundary.gap}.`);
+            }
+            return details.length ? `<li><strong>${text("时段", "Segment")} ${index + 1}</strong>${text("：", ": ")}${esc(details.join(" "))}</li>` : "";
+        }).join("");
+        return `<h3>${esc(clock.name)}</h3><p>${text("时段编号与棋盘一致，从顶部开始顺时针数 1–6，与指针的比较起点不同。这里只说明公开规则，不会显示任何暗牌数值。", "Segment numbers match the board, clockwise from 1 at the top to 6, independently of the hand's starting position. Only public rules are described, never hidden card values.")}</p>`
+            + `<h3>${text("本关整体规则", "Rules for this clock")}</h3><ul>${rules.map(rule => `<li>${esc(rule)}</li>`).join("")}</ul>`
+            + `<h3>${text("各时段特殊规则", "Special rules by segment")}</h3>${segments ? `<ul>${segments}</ul><p>${text("未列出的时段没有额外条件，仍须遵守上面的整体规则。", "Unlisted segments have no additional conditions, but still follow the rules above.")}</p>` : `<p>${text("本关没有额外的时段条件，只需满足上面的整体规则。", "There are no additional segment conditions on this clock. Follow the rules above.")}</p>`}`;
+    }
+
+    function syncCurrentLevelHelp() {
+        if (!takeTimeHelpWidget?.isOpen()) return;
+        const section = takeTimeHelpWidget.element()?.querySelector('[data-obg-help-section="current_level"]');
+        if (!section) return;
+        const content = currentLevelHelp(window.obgHelpLang?.() || "zh");
+        if (section.innerHTML !== content) section.innerHTML = content;
+    }
+
     function button(text, action, explanation, disabled = false, extra = "") {
         return `<button type="button" data-tt-action="${action}" data-tt-explain="${explanation}" ${disabled ? "disabled" : ""} ${extra}>${text}</button>`;
     }
@@ -245,10 +376,6 @@
     function info(text, description, explanation, extra = "") {
         if (description === explanations[explanation]?.[1]) description = hints[explanation] || description;
         return `<button type="button" class="take-time-info" data-tt-tip="${esc(description)}" data-tt-explain="${explanation}" ${extra}>${text}</button>`;
-    }
-
-    function infoIcon(description, explanation, label) {
-        return info("ⓘ", description, explanation, `aria-label="${esc(label)}"`);
     }
 
     function segmentDescription(index) {
@@ -292,8 +419,8 @@
             const failed = result?.checks.filter(check => !check.passed) || [];
             const checks = result ? `<div class="take-time-checks">${failed.map(check => `<span class="fail">✕ ${esc(check.label)}</span>`).join("")}${passed.length ? `<details><summary data-tt-explain="checks">✓ ${passed.length} passed checks</summary>${passed.map(check => `<span class="pass">✓ ${esc(check.label)}</span>`).join("")}</details>` : ""}</div>` : "";
             return `<div class="take-time-sector take-time-sector-${index} ${selected ? "selected" : ""} ${result ? result.passed ? "passed" : "failed" : ""}">
-                <div class="take-time-sector-heading">${button(`<strong>${index === start ? "🧭" : ""} ${index + 1}</strong><small>${order === 1 ? "START" : `↻ ${order}`}</small>`, "sector", "sector", disabled, `data-segment="${index}" aria-pressed="${selected}" aria-label="Select segment ${index + 1}, ${cards.length} cards"`)}${infoIcon(segmentDescription(index), "sector", `Segment ${index + 1} rules and order`)}</div>
-                <span class="take-time-sector-rules">${labels.length ? labels.map(label => `<span>${esc(label)}</span>`).join("") : "至少一张"}</span>
+                <div class="take-time-sector-heading">${button(`<strong>${index === start ? "🧭" : ""} ${index + 1}</strong><small>${order === 1 ? "START" : `↻ ${order}`}</small>`, "sector", `sector_${index}`, disabled, `data-segment="${index}" aria-pressed="${selected}" aria-label="Select segment ${index + 1}, ${cards.length} cards"`)}</div>
+                <span class="take-time-sector-rules">${info(labels.length ? labels.map(esc).join(" · ") : "至少一张", segmentDescription(index), `sector_${index}`)}</span>
                 <span class="take-time-pile">${cards.map(card => cardHTML(card, true)).join("") || '<span class="take-time-empty">＋</span>'}</span>
                 ${total}${checks}
             </div>`;
@@ -322,7 +449,7 @@
             <div class="take-time-plan-label">${info("🎯 Targets", explanations.plan[1], "plan")}<span>Optional reference</span></div><div class="take-time-plan-grid">${view.targets.map((target, index) => {
                 const segment = (index + view.hand_segment) % 6;
                 return `<div class="take-time-plan-cell"><span>Segment ${segment + 1}</span><div>${button("−", "plan", "plan", locked || target <= 0, `data-index="${index}" data-delta="-1" aria-label="Lower target ${segment + 1}"`)}<strong>${target}</strong>${button("+", "plan", "plan", locked || target >= 36, `data-index="${index}" data-delta="1" aria-label="Raise target ${segment + 1}"`)}</div></div>`;
-            }).join("")}</div>${view.clock.movable_hand ? `<div class="take-time-hand-picker"><span>Clock hand ${infoIcon(explanations.hand[1], "hand", "Clock hand and starting segment")}</span>${[0, 1, 2, 3, 4, 5].map(index => button(String(index + 1), "hand", "hand", !available("set_hand"), `data-segment="${index}" aria-pressed="${view.hand_segment === index}"`)).join("")}</div>` : ""}</details>`;
+            }).join("")}</div>${view.clock.movable_hand ? `<div class="take-time-hand-picker"><span>${info("Clock hand", explanations.hand[1], "hand")}</span>${[0, 1, 2, 3, 4, 5].map(index => button(String(index + 1), "hand", "hand", !available("set_hand"), `data-segment="${index}" aria-pressed="${view.hand_segment === index}"`)).join("")}</div>` : ""}</details>`;
     }
 
     function actionHTML() {
@@ -342,7 +469,7 @@
                 ${button(`Next Round · ${view.next_ready.length}/${view.players.length}`, "next", "next", !available("next_round"), 'class="take-time-primary take-time-next"')}
                 <p class="take-time-waiting">${own.next_ready ? "Your confirmation is saved. " : "Review the revealed cards before continuing. "}${waiting ? `Waiting: ${esc(waiting)}` : ""}</p>`;
         }
-        const handTitle = `<h3>Your hand ${infoIcon(explanations.card[1], "card", "Card colors, hidden values and selection")}</h3>`;
+        const handTitle = `<h3>${info("Your hand", explanations.card[1], "card")}</h3>`;
         const reserve = own.reserve.length ? `<div class="take-time-reserve">${info(`✉️ Reserve · ${own.reserve.length}`, explanations.reserve[1], "reserve")}${own.reserve.map(card => cardHTML(card, true)).join("")}</div>` : "";
         if (view.phase === "discussion") {
             return `${handTitle}<p class="take-time-hand-status">${own.ready ? "🤫 Keep silent · Waiting for everyone" : "💬 Discuss together before looking"}</p>
@@ -365,9 +492,9 @@
         if (!view || !panel) return;
         hideTip();
         if (choosingClock && dialog.open) {
-            const scrollTop = dialog.scrollTop;
+            const scrollTop = dialogBody.scrollTop;
             dialogBody.innerHTML = clockPickerHTML();
-            dialog.scrollTop = scrollTop;
+            dialogBody.scrollTop = scrollTop;
         }
         if (view.phase === "setup") {
             panel.innerHTML = `<div class="take-time-shell take-time-setup"><h2>Choose your clock</h2><p>40 official clocks · 10 chapters</p>${clockPickerHTML()}</div>`;
@@ -610,6 +737,7 @@
         touchStart = null;
         window.clearTimeout(pendingTimer);
         takeTimeExplainWidget?.exit();
+        takeTimeHelpWidget?.close();
         if (dialog.open) dialog.close();
         panel.innerHTML = "";
     }
@@ -623,6 +751,7 @@
         pending = false;
         window.clearTimeout(pendingTimer);
         render();
+        syncCurrentLevelHelp();
     };
     window.showTakeTimeHeaderActions = visible => {
         header.style.display = visible ? "flex" : "none";

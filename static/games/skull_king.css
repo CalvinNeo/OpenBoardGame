@@ -4,7 +4,7 @@
 }
 .skull-king-panel *, .skull-king-dialog *, .skull-king-config * { box-sizing: border-box; min-width: 0; }
 .skull-king-panel h2, .skull-king-panel h3, .skull-king-panel p { margin: 0; }
-.skull-king-panel h3 { font-size: 14px; letter-spacing: .025em; }
+.skull-king-panel h3 { font-size: 12px; letter-spacing: .04em; }
 .skull-king-panel button { font: inherit; white-space: normal; overflow-wrap: anywhere; min-height: 38px; border-radius: 8px; }
 .skull-king-panel button:focus-visible, .skull-king-panel [tabindex]:focus-visible { outline: 3px solid #d18a24; outline-offset: 3px; }
 .skull-king-panel button:disabled { cursor: default; }
@@ -14,6 +14,8 @@
 .skull-king-eyebrow { display: block; color: #60717a; font-size: 10px; letter-spacing: .16em; margin-bottom: 4px; }
 .skull-king-seal { font-size: 33px; padding: 4px 10px; border: 1px solid #c7b488; border-radius: 50%; flex-shrink: 0; }
 .skull-king-statusbar { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; background: #e7eef0; border-radius: 10px; margin-bottom: 12px; }
+.skull-king-your-turn .skull-king-statusbar { background: #f9edcf; box-shadow: inset 3px 0 #b98225; }
+body.skull-king-needs-action #roomControlsPanel.collapsed, body.skull-king-needs-action #roomControlsPanel.collapsed #roomControlsToggleBtn { border-color: #b34738; box-shadow: inset 0 0 0 1px #b34738; }
 #skullKingStatus { flex: 1 1 180px; overflow-wrap: anywhere; font-weight: 650; }
 .skull-king-counters { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
 .skull-king-counters span { padding: 4px 7px; background: #fff; border-radius: 5px; }
@@ -23,7 +25,7 @@
 .skull-king-section-heading > span { font-size: 12px; overflow-wrap: anywhere; }
 .skull-king-table { background: radial-gradient(ellipse at 50% 0, #24596a, var(--sk-ocean)); border: 1px solid #315a67; color: #f8f4e8; border-radius: 14px; padding: 14px; box-shadow: inset 0 0 0 4px #ffffff07; }
 .skull-king-table .skull-king-section-heading > span { color: #dddecf; }
-.skull-king-trick-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(75px, 1fr)); gap: 10px; align-items: start; min-height: 153px; }
+.skull-king-trick-cards { display: grid; grid-template-columns: repeat(var(--sk-seats, 4), minmax(0, 1fr)); gap: 10px; align-items: start; min-height: 153px; }
 .skull-king-trick-slot { display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center; }
 .skull-king-trick-name { font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .skull-king-panel .skull-king-card { min-height: 120px; height: 120px; }
@@ -50,7 +52,10 @@
 .skull-king-card.sk-back { border: 1px dashed #ffffff50; background: #ffffff09; color: #d5e3e6; box-shadow: none; justify-content: center; }
 .skull-king-card.sk-back .skull-king-card-icon { opacity: .6; }
 .skull-king-trick-result { margin-top: 12px; padding: 8px 10px; border-radius: 6px; background: #ffffff14; border-left: 3px solid var(--sk-gold); font-size: 13px; overflow-wrap: anywhere; }
-.skull-king-bid-box, .skull-king-hand-box, .skull-king-crew, .skull-king-round-summary { background: var(--sk-paper); padding: 12px; border: 1px solid #d8dfda; border-radius: 12px; }
+.skull-king-hand-box, .skull-king-crew, .skull-king-round-summary { padding: 12px 0; border-top: 1px solid #d8dfda; }
+.skull-king-bid-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid #d8dfda; }
+.skull-king-hand-stage { position: relative; min-height: 120px; }
+.skull-king-hand-stage.is-empty { min-height: 0; }
 .skull-king-bids { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .skull-king-bids button { min-width: 36px; flex: 1 0 36px; max-width: 60px; padding: 7px 5px; background: #fff; color: var(--sk-ink); border: 1px solid #c6d2d4; }
 .skull-king-bids button[aria-pressed="true"] { background: var(--sk-ocean); color: #fff; border-color: var(--sk-ocean); }
@@ -59,25 +64,36 @@
 #skullKingConfirmBid, #skullKingPlay, #skullKingPirate, #skullKingEscape, #skullKingNext { background: var(--sk-ocean); color: #fff; border: 1px solid var(--sk-ocean); padding: 8px 12px; }
 #skullKingConfirmBid:disabled, #skullKingNext:disabled, .skull-king-play-actions button:disabled { background: #dae1e1; color: #56656c; border-color: #ccd5d5; opacity: 1; }
 .skull-king-hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 7px; align-items: start; }
+.skull-king-hand[inert] { pointer-events: none; }
 .skull-king-hand > .skull-king-card { max-width: 100%; transition: box-shadow .15s; }
 .skull-king-hand > .skull-king-card:disabled { opacity: 1; }
 .skull-king-hand > .skull-king-card.is-illegal { opacity: .52; filter: saturate(.55); }
 .skull-king-hand > .skull-king-card.is-selected { outline: 3px solid #ba7e22; outline-offset: 1px; background: #fff1cf; }
 .skull-king-hand-hint { color: #5e7278; font-size: 12px; padding-top: 8px; overflow-wrap: anywhere; }
-.skull-king-selection { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; border-top: 1px solid #d7dace; padding-top: 10px; }
-.skull-king-selection > strong { font-size: 13px; overflow-wrap: anywhere; }
-.skull-king-play-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.skull-king-selection { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; padding: 10px; border: 1px solid #bd9450; border-radius: 10px; background: #fff8e9ed; box-shadow: 0 3px 12px #2434391a; }
+.skull-king-selection > strong { font-size: 14px; overflow-wrap: anywhere; text-align: center; }
+.skull-king-play-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 #skullKingCancel { border: 1px solid #c6d2d4; background: white; color: #344e58; padding: 8px 12px; }
 .skull-king-players { display: grid; gap: 7px; }
 .skull-king-player { border-radius: 8px; background: #fff; border: 1px solid #e0e2da; padding: 9px; }
 .skull-king-player.is-current { border-color: #3f7d88; box-shadow: inset 3px 0 #3f7d88; background: #eef6f4; }
 .skull-king-player.is-winner { border-color: #c39c48; background: #fff3d8; }
+.skull-king-player.is-you, .skull-king-score-row.is-you { box-shadow: inset 3px 0 #346b8d; }
+.skull-king-player-marker { color: #496b89; margin-right: 5px; font-size: 11px; }
+.skull-king-player-marker.sk-seat-1, .skull-king-player-marker.sk-seat-5 { color: #a44535; }
+.skull-king-player-marker.sk-seat-2, .skull-king-player-marker.sk-seat-6 { color: #34784e; }
+.skull-king-player-marker.sk-seat-3, .skull-king-player-marker.sk-seat-7 { color: #845794; }
+.skull-king-player-marker.sk-seat-4 { color: #98701c; }
+.skull-king-table .skull-king-player-marker { color: #efce8b; }
 .skull-king-player-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; margin-bottom: 7px; }
 .skull-king-player-heading strong { font-size: 13px; flex: 1 1 75px; overflow-wrap: anywhere; }
 .skull-king-player-heading small { font-size: 10px; color: #566e76; }
 .skull-king-player-stats { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; }
 .skull-king-player-stats span { white-space: nowrap; }
 .skull-king-review { padding: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-radius: 10px; border: 1px solid #d5b879; background: #faf0d7; }
+.skull-king-table .skull-king-review { margin-top: 10px; padding: 10px; border: 0; background: #ffffff12; color: #f8f4e8; }
+.skull-king-table #skullKingNext { background: var(--sk-gold); color: #162d3a; border-color: var(--sk-gold); }
+.skull-king-table #skullKingNext:disabled { background: #ffffff16; color: #e0e8e6; border-color: #ffffff26; }
 .skull-king-review > div { display: grid; gap: 4px; flex: 1 1 140px; overflow-wrap: anywhere; }
 #skullKingReady { font-size: 12px; }
 .skull-king-round-summary { margin-top: 12px; }
@@ -86,6 +102,10 @@
 .skull-king-score-row strong { overflow-wrap: anywhere; font-size: 13px; }
 .skull-king-score-row.is-exact { border-left: 3px solid #3d8467; }
 .skull-king-score-row.is-miss { border-left: 3px solid #b45c49; }
+.skull-king-score-row.is-winner { border-color: #c39c48; background: #fff3d8; }
+.skull-king-final-total { font: 750 20px/1.4 Georgia, serif; color: #78581c; }
+.skull-king-history-score { display: grid; gap: 3px; padding: 6px 0; }
+.skull-king-history-score.is-you { color: #285c7c; }
 .skull-king-history { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .skull-king-history details { border: 1px solid #d8dfda; border-radius: 8px; padding: 10px; background: #f7f9f7; }
 .skull-king-history summary { cursor: pointer; font-size: 12px; font-weight: 650; }
@@ -106,6 +126,9 @@
 .skull-king-rule-example { padding: 10px; background: #eaf0ec; border-left: 3px solid #679083; border-radius: 4px; }
 .skull-king-config { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .skull-king-config select { max-width: 100%; flex: 1 1 180px; }
+@media (min-width: 901px) and (max-width: 1200px) {
+  .skull-king-trick-cards { grid-template-columns: repeat(var(--sk-mobile-seats, 4), minmax(0, 1fr)); }
+}
 @media (max-width: 900px) {
   .skull-king-layout { grid-template-columns: minmax(0, 1fr); }
   .skull-king-players { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); }
@@ -118,7 +141,10 @@
   .skull-king-statusbar { padding: 8px; margin-bottom: 9px; }
   #skullKingStatus { font-size: 12px; }
   .skull-king-layout, .skull-king-main { gap: 8px; }
-  .skull-king-table, .skull-king-bid-box, .skull-king-hand-box, .skull-king-crew { padding: 10px; }
+  .skull-king-table { padding: 10px; }
+  .skull-king-hand-box, .skull-king-crew { padding: 10px 0; }
+  .skull-king-bid-box { margin-top: 10px; padding-top: 10px; }
+  .skull-king-hand-stage { min-height: 104px; }
   .skull-king-trick-cards { grid-template-columns: repeat(var(--sk-mobile-seats, 4), minmax(0, 1fr)); gap: 8px; min-height: 115px; }
   .skull-king-panel .skull-king-card { min-height: 104px; height: 104px; }
   .skull-king-card { min-height: 93px; padding: 5px 3px; border-top-width: 4px; gap: 3px; }

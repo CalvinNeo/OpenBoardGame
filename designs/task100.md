@@ -69,3 +69,24 @@
 - 浏览器验收脚本、结果和截图保留在 `tmp/task100/`，包括 `browser-qa-results.json`、`desktop-offer.png`、`desktop-review.png`、`layout-1440.png`、`layout-768.png`、`layout-375.png`、`layout-320.png`、`touch-banner.png`。临时规则书与资料仅用于查证，不作为游戏资产加载。
 
 牌表采用可追溯转录并核对规则示例和作者勘误；未逐张核验实体牌。机器人遵守信息可见范围，以近期付息压力和产业价值作启发式决策。
+
+## 2026-11-26 布局重排
+
+### 问题与调整
+
+- 原布局把市场、金库、独立 Action 框和玩家资产分开。手机端又把金库与操作强行挤成两栏，导致行业说明折行、确认距离远、空白与小字并存。此次按决策关联性重新分配空间，不改规则、AI 或服务端。
+- 阶段、轮数和熊市预警合为一条状态栏；私人现金与正常／崩盘付息预测合为横条。移除重复的模式标题、底部组件说明和市场外框，主体直接放在 Game 中。
+- 募资与移除资金牌都在市场内操作。行业选项紧邻市场顶部，选择卡牌之后确认按钮跟随到所选行下方；Pass 同行，不再设独立 Action 面板。现金本金、利息、周期仍分区显示。
+- 桌面募资阶段把市场与玩家资产并排；交易、崩盘弃置与结算阶段则让玩家资产占满宽度。非市场阶段将市场收起为可展开的参考内容，避免等待／交易框撑高一列、另一列留下大片空白。
+- 桌面交易对象、报价确认与奢侈品横排，手机改为全宽顺序展示。手机玩家卡采用横向行业汇总与紧凑债务轨道，不再把每名玩家压进半屏；没有债务时不展示五格全零轨道。
+- 日志与私密交易移至底部，默认折叠且保留内部滚动。保留 Help／Explain、即时提示、Escape、空白处取消选择、滑动不误选、全部席位确认后进入下一轮等现有交互。
+
+### 验收记录
+
+- 修改：`static/games/ponzi_scheme.js`、`static/ponzi_scheme.css`、`static/game_assets.js`、`static/index.html`、本设计文档。新增 `tests/ponzi_scheme_layout.browser.cjs` 与 `tests/ponzi_scheme_ui_fixtures.py`。清单仅更新本游戏脚本／样式版本，首页仅递增清单版本，保留工作区原有其他改动；没有修改公共样式、游戏模板或根 README。
+- Chrome 桌面与移动触摸上下文检查 320／390／1024／1440px，共 **70 项布局检查**通过，并人工复核四个宽度的截图。覆盖 3／5 人、募资、交易、私密报价参与者／旁观者、仅可卖出、仅可 Pass、移除资金、崩盘、回顾、最终计分、长名字／大金额／多债务，以及展开市场／日志／债务和选中卡牌／交易对象。
+- 布局断言检查页面横向滚动、内部文字溢出、区域重叠、Help／Reconnect 同行，以及确认按钮与所选牌行之间的距离。移动端不再使用金库／操作双窄栏；交易操作和相关资产不被市场隔开。
+- 真实三人房间完成开局、募资、Pass、市场移除、三人分别 Next Round 后进入第二轮。交易报价、反买／卖出、奢侈品确认／Escape 取消、Help 中英文／Escape、disabled 按钮 Explain／自动退出且不提交动作、空白取消选择、折叠状态保持、触屏滑动不误选、提示三秒消失均通过浏览器回归。崩盘和终局布局由引擎生成的确定性 public view 验证，不声称真实多人完整玩到终局。
+- 通过：`python3 -m unittest tests.test_frontend_style_assets tests.test_help_contract`（13 项）、改动 JS 的 `node --check`、`node scripts/smoke_load.cjs ponzi_scheme`、`git diff --check`。浏览器回归无脚本错误；测试环境 Python 3.9 的 urllib3／LibreSSL 兼容性警告不影响执行。
+- 截图和测量结果保存在忽略目录 `tmp/ponzi-layout/`，回归入口为 `PLAYWRIGHT_MODULE=<playwright路径> node tests/ponzi_scheme_layout.browser.cjs`，可用 `ROOM_TEST_URL`／`PYTHON` 指定环境。
+- 本次布局与交互通过上述 DEV_GUIDE 验收范围，无新增布局例外；UI-only 未运行游戏逻辑／全量 Python 套件，也未重跑跨游戏资源加载的完整浏览器套件。未实测实体 iOS／Android、Windows 字体与屏幕阅读器，不宣称所有平台和 DEV_GUIDE 全项均已验证。

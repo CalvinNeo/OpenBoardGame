@@ -37,6 +37,8 @@ v['round_review']=G.get_public_view(s,'p0')
 G.apply_action(s,'p0',action(s,'next_round'))
 v['ready']=G.get_public_view(s,'p0')
 while not s['game_over']:
+ if s['phase']=='final_review' and 'final_review' not in v:
+  v['final_review']=G.get_public_view(s,'p0')
  p=next(p for p in s['turn_order'] if G.get_legal_actions(s,p));a=G.bot_move(s,p);a.pop('delay_ms');G.apply_action(s,p,a)
 v['finished']=G.get_public_view(s,'p0')
 s=make_state(2,'quick');bid_all(s)
@@ -57,7 +59,7 @@ async function render(page, key) {
 }
 async function bounds(page, label) {
   const result = await page.evaluate(() => {
-    const bad = [...document.querySelectorAll('#skullKingPanel *, #skullKingDialog *, #skullKingHeaderActions *, #mobileExplainSlot *')].filter(el => {
+    const bad = [...document.querySelectorAll('#skullKingPanel *, .obg-help-dialog[open] > .obg-help-head *, .obg-help-dialog[open] > .obg-help-content *, #skullKingHeaderActions *, #mobileExplainSlot *')].filter(el => {
       const r=el.getBoundingClientRect(), s=getComputedStyle(el);
       return r.width > 0 && r.height > 0 && (r.left < -1 || r.right > innerWidth+1 ||
         (el.clientWidth && el.scrollWidth > el.clientWidth+1 && !['hidden','auto'].includes(s.overflowX)));
@@ -94,6 +96,7 @@ async function playVisibleCard(page) {
     assert.equal(await host.locator('script[src*="games/skull_king.js"]').count(),0);
     await host.evaluate(()=>socket.emit('room:create',{name:'Skull King QA',game_type:'skull_king'}));
     await host.waitForFunction(()=>currentGameType==='skull_king'&&isGameAssetsLoaded('skull_king'));
+    await host.evaluate(()=>setRoomControlsCollapsed(false));
     assert.equal(await host.locator('#skullKingConfigBox').isVisible(),true);
     await host.locator('#skullKingSchedule').selectOption('quick');
     const rid=await host.evaluate(()=>roomId);
@@ -150,57 +153,98 @@ async function playVisibleCard(page) {
     await render(host,'playing');await bounds(host,'desktop');
     await host.locator('#skullKingPanel').screenshot({path:`${output}/desktop.png`});
     await host.locator('#skullKingHelpBtn').click();
-    assert.match(await host.locator('#skullKingDialogBody').textContent(),/美人鱼|灰胡子|Rascal/);
-    await host.keyboard.press('Escape');assert.equal(await host.locator('#skullKingDialog').evaluate(e=>e.open),false);
+    const help=host.locator('[data-obg-help-game="skull_king"]');
+    await bounds(host,'desktop help');
+    await help.locator('[data-obg-help-tab="deck"]').click();
+    assert.match(await help.locator('.obg-help-content').textContent(),/美人鱼|灰胡子|Rascal/);
+    await help.locator('[data-obg-help-lang="en"]').click();
+    assert.match(await help.locator('.obg-help-content').textContent(),/Mermaid/);
+    await help.locator('[data-obg-help-lang="zh"]').click();
+    await host.keyboard.press('Escape');assert.equal(await help.evaluate(element=>element.open),false);
     await host.locator('#skullKingExplainBtn').click();await host.locator('[data-card-id="skull_king_1"]').click();
-    assert.match(await host.locator('#skullKingDialogBody').textContent(),/美人鱼/);
+    const explanation=host.locator('.obg-explain-dialog');
+    assert.match(await explanation.textContent(),/美人鱼/);
     assert.equal(await host.evaluate(()=>skullKingTestActions.length),0);await host.keyboard.press('Escape');
     await render(host,'follow');
     assert.equal(await host.locator('[data-card-id="black_14"]').isDisabled(),true);
     await host.locator('#skullKingExplainBtn').click();await pointClick(host,host.locator('[data-card-id="black_14"]'));
-    assert.match(await host.locator('#skullKingDialogBody').textContent(),/王牌/);await host.keyboard.press('Escape');
+    assert.match(await explanation.textContent(),/王牌/);await host.keyboard.press('Escape');
     await host.locator('#skullKingExplainBtn').click();
     await host.evaluate(()=>{window.skullKingProbeCount=0;const b=document.createElement('button');b.id='skullKingProbe';b.textContent='Probe';b.onclick=()=>skullKingProbeCount++;document.getElementById('skullKingPanel').append(b);});
     await host.locator('#skullKingProbe').click();assert.equal(await host.evaluate(()=>skullKingProbeCount),0);
     await host.keyboard.press('Escape');await host.locator('#skullKingProbe').evaluate(e=>e.remove());
     await render(host,'playing');
     await host.locator('[data-card-id="green_2"]').click();assert.equal(await host.locator('#skullKingSelection').isVisible(),true);
+    assert.equal(await host.locator('#skullKingTooltip').isVisible(),false);
+    assert.equal(await host.locator('#skullKingHand').evaluate(element=>element.inert),true);
+    assert.equal(await host.locator('#skullKingPlay').evaluate(element=>element===document.activeElement),true);
     await host.locator('.skull-king-heading h2').click();assert.equal(await host.locator('#skullKingSelection').isVisible(),false);
     await host.locator('[data-card-id="green_2"]').click();await host.keyboard.press('Escape');assert.equal(await host.locator('#skullKingSelection').isVisible(),false);
     await host.locator('[data-card-id="tigress_1"]').click();assert.equal(await host.locator('#skullKingPlay').isVisible(),false);
     await host.locator('#skullKingEscape').click();assert.equal(await host.evaluate(()=>skullKingTestActions.at(-1).mode),'escape');
     await render(host,'playing');await host.keyboard.press('Escape');await host.locator('[data-card-id="tigress_1"]').click();await host.locator('#skullKingPirate').click();
     assert.equal(await host.evaluate(()=>skullKingTestActions.at(-1).mode),'pirate');
-    for(const key of ['trick_review','round_review']) {
+    for(const key of ['trick_review','round_review','final_review']) {
       await render(host,key);
       if(key==='trick_review') await host.locator('#skullKingPanel').screenshot({path:`${output}/trick-review.png`});
       await host.locator('#skullKingNext').click();
-      assert.equal(await host.evaluate(()=>skullKingTestActions.at(-1).type),key==='trick_review'?'next_trick':'next_round');
+      assert.equal(await host.evaluate(()=>skullKingTestActions.at(-1).type),key==='final_review'?'confirm_results':key==='trick_review'?'next_trick':'next_round');
     }
     await render(host,'ready');assert.equal(await host.locator('#skullKingNext').isDisabled(),true);
-    for(const width of [320,390,768,1440]) {
+    for(const width of [320,390,1024,1440]) {
       await host.setViewportSize({width,height:950});
-      await host.waitForFunction(mobile=>document.getElementById('skullKingExplainBtn').parentElement.id===(mobile?'mobileExplainSlot':'skullKingHeaderActions'),width<=900);
+      await host.waitForFunction(()=>document.getElementById('skullKingExplainBtn').parentElement.id==='mobileExplainSlot');
       for(const key of Object.keys(views)) {
         await render(host,key);await bounds(host,`${width} ${key}`);
         if(key==='one_card') assert((await host.locator('#skullKingHand button').first().boundingBox()).width<120);
       }
       await render(host,'playing');
-      if(width<=390) {
-        await host.locator('#skullKingPanel').screenshot({path:`${output}/mobile-${width}.png`,style:'#roomControlsPanel { visibility: hidden; }'});
-        await host.evaluate(()=>window.scrollTo(0,0));
-        await host.screenshot({path:`${output}/mobile-page-${width}.png`});
+      await host.evaluate(()=>window.scrollTo(0,0));
+      await host.screenshot({path:`${output}/viewport-${width}.png`});
+      await host.locator('#skullKingPanel').screenshot({path:`${output}/playing-${width}.png`});
+      await host.locator('[data-card-id="tigress_1"]').click();
+      await bounds(host,`${width} selected`);
+      const selection=await host.locator('#skullKingSelection').boundingBox();
+      const hand=await host.locator('.skull-king-hand-stage').boundingBox();
+      assert(selection.y>=hand.y-1&&selection.y+selection.height<=hand.y+hand.height+1);
+      await host.locator('#skullKingPanel').screenshot({path:`${output}/selection-${width}.png`});
+      await host.locator('#skullKingCancel').click();
+      assert.equal(await host.locator('#skullKingHand').evaluate(element=>element.inert),false);
+      assert.equal(await host.locator('[data-card-id="tigress_1"]').evaluate(element=>element===document.activeElement),true);
+      await render(host,'bidding');
+      assert.equal(await host.locator('#skullKingTable').isVisible(),false);
+      await host.locator('#skullKingPanel').screenshot({path:`${output}/bidding-${width}.png`});
+      await render(host,'round_review');
+      await host.locator('#skullKingPanel').screenshot({path:`${output}/round-${width}.png`});
+      await render(host,'finished');
+      assert.match(await host.locator('#skullKingSummaryTitle').textContent(),/Final standings/);
+      for(const row of views.finished.round_summary.players) {
+        const card=host.locator('#skullKingScoreRows .skull-king-score-row').filter({hasText:views.finished.players.find(player=>player.player_id===row.player_id).name});
+        assert.match(await card.textContent(),new RegExp(`= ${row.total_score}`));
       }
-      await host.locator('#skullKingHelpBtn').click();await bounds(host,`${width} help`);
-      if(width===390) await host.locator('#skullKingDialog').screenshot({path:`${output}/help.png`});
+      await host.locator('#skullKingPanel').screenshot({path:`${output}/finished-${width}.png`});
+      await host.locator('#skullKingHelpBtn').click();
+      await bounds(host,`${width} help`);
+      if(width===390) await help.screenshot({path:`${output}/help.png`});
       await host.keyboard.press('Escape');
     }
     await host.setViewportSize({width:390,height:950});await render(host,'playing');
+    await host.locator('[data-card-id="green_2"]').scrollIntoViewIfNeeded();
+    const swipeCard=await host.locator('[data-card-id="green_2"]').boundingBox();
+    const touchSession=await host.context().newCDPSession(host);
+    const actionsBeforeSwipe=await host.evaluate(()=>skullKingTestActions.length);
+    await touchSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:swipeCard.x+swipeCard.width/2,y:swipeCard.y+swipeCard.height/2}]});
+    await touchSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:swipeCard.x+swipeCard.width/2,y:swipeCard.y+swipeCard.height/2-70}]});
+    await touchSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    assert.equal(await host.locator('#skullKingSelection').isVisible(),false);
+    assert.equal(await host.locator('#skullKingTooltip').isVisible(),false);
+    assert.equal(await host.evaluate(()=>skullKingTestActions.length),actionsBeforeSwipe);
+    await touchSession.detach();
     await pointClick(host,host.locator('#skullKingRound'),true);assert.equal(await host.locator('#skullKingTooltip').isVisible(),true);
     await pointClick(host,host.locator('#skullKingTrick'),true);assert.match(await host.locator('#skullKingTooltip').textContent(),/Trick/);
     await host.waitForTimeout(3200);assert.equal(await host.locator('#skullKingTooltip').isVisible(),false);
     await render(host,'waiting');await host.locator('#skullKingExplainBtn').tap();await pointClick(host,host.locator('#skullKingHand button').first(),true);
-    assert.equal(await host.locator('#skullKingDialog').evaluate(e=>e.open),true);await host.keyboard.press('Escape');
+    assert.equal(await explanation.evaluate(element=>element.open),true);await host.keyboard.press('Escape');
     await render(host,'spectator');assert.equal(await host.locator('#skullKingHand button').count(),0);
     await render(host,'finished');assert.equal(await host.locator('#skullKingNext').isVisible(),false);
     await host.locator('#skullKingPanel').screenshot({path:`${output}/finished.png`});

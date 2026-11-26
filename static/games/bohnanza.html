@@ -1,0 +1,57 @@
+<template data-game-target="bohnanzaHeaderActions" data-game-mode="contents">
+  <button id="bohnanzaHelpBtn" type="button">Help</button>
+  <button id="bohnanzaExplainBtn" type="button" aria-pressed="false" aria-label="Explain">Explain</button>
+</template>
+<template data-game-target="bohnanzaPanel" data-game-mode="contents">
+  <div id="bohnanzaLobby" class="bn-lobby">
+    <div class="bn-sprout" aria-hidden="true">🌱</div>
+    <h3>Good beans. Great deals.</h3>
+    <p>3–5 players · Classic card game</p>
+    <p>Ready, then Start in Room Control.</p>
+  </div>
+  <div id="bohnanzaTable" class="hidden">
+    <div class="bn-status"><span id="bohnanzaDeck"></span><strong id="bohnanzaStatus" role="status" aria-live="polite"></strong></div>
+    <div class="bn-phase-track" id="bohnanzaPhases" aria-label="Turn phases"></div>
+    <section id="bohnanzaReview" class="bn-review hidden" aria-label="Round review"></section>
+    <section id="bohnanzaMarketSection" class="bn-market-section" aria-label="Revealed beans" data-bohnanza-explain="market">
+      <h3 class="bn-caption">The market <span id="bohnanzaMarketNote"></span><span id="bohnanzaMarketButtons"></span></h3>
+      <div id="bohnanzaMarket" class="bn-cards bn-market"></div>
+    </section>
+    <div class="bn-main">
+      <div class="bn-personal">
+        <section aria-label="Your fields">
+          <h3 class="bn-caption"><span id="bohnanzaPersonalTitle">Your fields</span><span id="bohnanzaGold"></span></h3>
+          <div id="bohnanzaFields" class="bn-fields"></div>
+        </section>
+        <section id="bohnanzaPendingSection" class="hidden" aria-label="Beans to plant">
+          <h3 class="bn-caption">Plant these beans <span>Not for trading</span></h3>
+          <div id="bohnanzaPending" class="bn-cards"></div>
+        </section>
+        <section id="bohnanzaHandSection" aria-label="Your private ordered hand">
+          <h3 class="bn-caption">Your hand <span id="bohnanzaHandCount"></span><span id="bohnanzaHandButtons"></span></h3>
+          <div id="bohnanzaHand" class="bn-cards bn-hand"></div>
+        </section>
+      </div>
+      <aside aria-label="Other farmers" class="bn-opponents"><h3 class="bn-caption">At the table <span>Public fields</span></h3><div id="bohnanzaPlayers"></div></aside>
+    </div>
+    <details id="bohnanzaHistory" class="bn-history"><summary>History</summary><ol id="bohnanzaLog"></ol></details>
+  </div>
+  <dialog id="bohnanzaTradeDialog" class="bn-dialog" aria-labelledby="bohnanzaTradeTitle">
+    <div class="bn-dialog-header"><h3 id="bohnanzaTradeTitle">Make a deal</h3><button id="bohnanzaTradeClose" type="button" aria-label="Close">✕</button></div>
+    <div class="bn-dialog-body">
+      <label class="bn-target-label">Trade with <select id="bohnanzaTarget"></select></label>
+      <h4>You give <span id="bohnanzaGiveCount"></span></h4>
+      <div id="bohnanzaGive" class="bn-trade-cards"></div>
+      <h4>You ask for <span>Tap + or − to choose quantities</span></h4>
+      <div id="bohnanzaWant" class="bn-want"></div>
+    </div>
+    <div class="bn-dialog-footer"><span id="bohnanzaTradeHint">Both farmers must agree.</span><button id="bohnanzaSendOffer" class="bn-primary" type="button">Send offer</button></div>
+  </dialog>
+  <dialog id="bohnanzaOfferDialog" class="bn-dialog" aria-labelledby="bohnanzaOfferTitle">
+    <div class="bn-dialog-header"><h3 id="bohnanzaOfferTitle">Trade offer</h3><button id="bohnanzaOfferDock" type="button">Dock</button></div>
+    <div class="bn-dialog-body" id="bohnanzaOfferBody"></div>
+    <div class="bn-dialog-footer" id="bohnanzaOfferButtons"></div>
+  </dialog>
+  <button id="bohnanzaOfferReturn" class="bn-offer-return hidden" type="button">View trade</button>
+  <div id="bohnanzaTooltip" class="bn-tooltip hidden" role="tooltip"></div>
+</template>

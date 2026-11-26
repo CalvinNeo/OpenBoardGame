@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import unittest
 from tempfile import TemporaryDirectory
@@ -105,6 +106,62 @@ class SkullKingIntegrationTests(unittest.IsolatedAsyncioTestCase):
         app._save_room_state(room)
         response = await app.download_room_save(room.room_id)
         self.assertTrue(str(response.path).endswith(".save"))
+
+    async def test_human_and_room_bots_complete_quick_voyages(self):
+        original_sleep = asyncio.sleep
+        original_move = Game.bot_move
+
+        async def fast_sleep(delay):
+            await original_sleep(0)
+
+        def fast_move(state, player_id):
+            move = original_move(state, player_id)
+            if move:
+                move.pop("delay_ms", None)
+            return move
+
+        async def settle_bots(room):
+            async def wait_until_idle():
+                while room.bot_running:
+                    await original_sleep(0.001)
+            await asyncio.wait_for(wait_until_idle(), timeout=10)
+
+        with patch.object(Game, "bot_move", side_effect=fast_move), patch.object(app.asyncio, "sleep", side_effect=fast_sleep):
+            for count in (2, 3):
+                with self.subTest(players=count):
+                    await app.on_room_create("human", {"name": "Human Captain", "game_type": "skull_king",
+                                                       "config": {"schedule": "quick", "seed": count}})
+                    room = app.ROOMS[app.SESSIONS["human"]["room_id"]]
+                    for index in range(count - 1):
+                        await app.on_room_add_bot("human", {"name": f"Practice Bot {index + 1}"})
+                    room.players[0].ready = True
+                    await app.on_room_start("human", {})
+                    human_id = room.players[0].player_id
+                    await settle_bots(room)
+                    self.assertTrue(all(room.game_state["players"][player.player_id]["bid"] is not None
+                                        for player in room.players if player.is_bot))
+                    self.assertIsNone(room.game_state["players"][human_id]["bid"])
+                    seen_phases = set()
+                    for step in range(300):
+                        state = room.game_state
+                        seen_phases.add(state["phase"])
+                        if state["game_over"]:
+                            break
+                        move = fast_move(state, human_id)
+                        self.assertIsNotNone(move, (count, state["phase"], state["current_turn"]))
+                        if state["phase"] == "final_review":
+                            self.assertEqual(room.status, "in_game")
+                            self.assertFalse(state["game_over"])
+                            self.assertTrue(all(player.player_id in state["ready"]
+                                                for player in room.players if player.is_bot))
+                        await app.on_game_action("human", {"action": move})
+                        await settle_bots(room)
+                    self.assertTrue(room.game_state["game_over"])
+                    self.assertEqual(room.status, "game_over")
+                    self.assertEqual(len(room.game_state["score_history"]), 5)
+                    self.assertTrue({"bidding", "playing", "trick_review", "round_review", "final_review"} <= seen_phases)
+                    self.assertFalse(room.bot_running)
+                    self.assertFalse(any(message["event"] == "system:error" for message in app.sio.emits))
 
     async def test_invalid_cold_reconnect_is_read_only(self):
         self.assertIsNone(app._restore_skull_king_for_reconnect("../outside", "id", "token"))
