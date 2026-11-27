@@ -1,0 +1,37 @@
+<template data-game-target="codenamesHeaderActions" data-game-mode="contents">
+  <button id="codenamesHelpBtn" type="button">Help</button>
+  <button id="codenamesExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="codenamesPanel" data-game-mode="contents">
+  <div id="codenamesWaiting" class="cn-waiting"><span class="cn-eyebrow">CLASSIFIED / WORD INTELLIGENCE</span><h3>Every word is a lead.</h3><p>Waiting to start · 4–8 players</p></div>
+  <div id="codenamesContent" hidden>
+    <div class="cn-masthead"><div><span class="cn-eyebrow">FIELD OPERATIONS / 25 CODENAMES</span><h3 id="codenamesHeadline">Build your intelligence team.</h3></div><span id="codenamesTurn" class="cn-turn"></span></div>
+    <div id="codenamesSetup" hidden>
+      <div class="cn-section-heading"><h4>Team assignment</h4><span>Choose your own seat</span></div>
+      <div id="codenamesRoleChoices" class="cn-role-choices" data-cn-explain="roles"></div>
+      <div class="cn-setup-controls"><label for="codenamesLanguage">Word deck <select id="codenamesLanguage" data-cn-explain="language"><option value="zh">中文</option><option value="en">English</option></select></label><button id="codenamesBegin" type="button" class="cn-primary" data-cn-explain="begin">Begin mission</button></div>
+      <p id="codenamesSetupStatus" class="cn-muted" aria-live="polite"></p>
+    </div>
+    <div id="codenamesMission" hidden>
+      <div id="codenamesScores" class="cn-scores" data-cn-explain="scores"></div>
+      <div class="cn-briefing">
+        <div class="cn-section-heading"><h4 id="codenamesRole"></h4><span id="codenamesPhase" aria-live="polite"></span></div>
+        <div id="codenamesClueDisplay" class="cn-clue-display" data-cn-explain="clue"></div>
+        <form id="codenamesClueForm" class="cn-clue-form" autocomplete="off" hidden>
+          <label>One-word clue<input id="codenamesClueWord" maxlength="32" placeholder="Make the connection…" required data-cn-explain="clue" /></label>
+          <label>Agents<select id="codenamesClueNumber" data-cn-explain="number"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option value="0">0</option><option value="unlimited">∞</option></select></label>
+          <button type="submit" id="codenamesSendClue" class="cn-primary" data-cn-explain="clue">Send clue</button>
+        </form>
+      </div>
+      <div class="cn-section-heading cn-board-caption"><h4>Intelligence grid</h4><span id="codenamesKeyLabel" data-cn-explain="key" tabindex="0"></span></div>
+      <div id="codenamesBoard" class="cn-board" aria-label="Codenames board" data-cn-explain="card"></div>
+      <div id="codenamesSelection" class="cn-selection" hidden><strong id="codenamesSelectedWord"></strong><button id="codenamesConfirmGuess" type="button" class="cn-primary" data-cn-explain="guess">Confirm guess</button><button id="codenamesCancelGuess" type="button">Cancel</button></div>
+      <div class="cn-turn-controls"><button id="codenamesEndTurn" type="button" data-cn-explain="end">End turn</button><button id="codenamesNext" type="button" class="cn-primary" data-cn-explain="next" hidden>Next Round</button><span id="codenamesStatus" class="cn-muted" aria-live="polite"></span></div>
+      <section id="codenamesResult" class="cn-result" hidden data-cn-explain="result"><h4 id="codenamesResultTitle"></h4><p id="codenamesResultReason"></p><div id="codenamesResultTeams"></div></section>
+    </div>
+    <details id="codenamesRoster" class="cn-details" open><summary>Teams</summary><div id="codenamesTeams" class="cn-teams"></div></details>
+    <details id="codenamesHistory" class="cn-details"><summary data-cn-explain="history">Mission log</summary><ol id="codenamesHistoryRows" class="cn-history"></ol></details>
+    <p id="codenamesError" class="cn-error" role="alert" hidden></p>
+  </div>
+  <div id="codenamesTooltip" class="cn-tooltip" role="tooltip" hidden></div>
+</template>

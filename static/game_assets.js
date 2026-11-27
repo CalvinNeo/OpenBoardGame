@@ -1,5 +1,21 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "codenames": {
+    "scripts": ["/static/games/codenames.js?v=1"],
+    "styles": ["/static/games/codenames.css?v=1"],
+    "markup": "/static/games/codenames.html?v=1",
+    "panel": "codenamesPanel",
+    "panelTitle": "Codenames",
+    "header": "showCodenamesHeaderActions"
+  },
+  "town77": {
+    "scripts": ["/static/games/town77.js?v=1"],
+    "styles": ["/static/games/town77.css?v=1"],
+    "markup": "/static/games/town77.html?v=1",
+    "panel": "town77Panel",
+    "panelTitle": "Town 77",
+    "header": "showTown77HeaderActions"
+  },
   "bohnanza": {
     "scripts": ["/static/games/bohnanza.js?v=3"],
     "styles": ["/static/games/bohnanza.css?v=3"],
@@ -1344,6 +1360,14 @@ const GAME_ASSETS = {
     "panel": "machiKoroPanel",
     "panelTitle": "🎲 骰子街",
     "header": "showMachiKoroHeaderActions"
+  },
+  "bag_of_chips": {
+    "scripts": ["/static/games/bag_of_chips.js?v=2"],
+    "styles": ["/static/games/bag_of_chips.css?v=1"],
+    "markup": "/static/games/bag_of_chips.html?v=1",
+    "panel": "bagOfChipsPanel",
+    "panelTitle": "来包洋芋片",
+    "header": "showBagOfChipsHeaderActions"
   },
   "for_northwood": {
     "scripts": ["/static/games/for_northwood.js?v=3"],

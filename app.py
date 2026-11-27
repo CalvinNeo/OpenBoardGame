@@ -186,6 +186,12 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
+    if _has_unfinished_private_save(source_room_id, "town77"):
+        raise HTTPException(status_code=403, detail="This Town 77 game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "codenames"):
+        raise HTTPException(status_code=403, detail="This Codenames game is still active. Reconnect to the existing room.")
+    if _has_unfinished_private_save(source_room_id, "bag_of_chips"):
+        raise HTTPException(status_code=403, detail="This Bag of Chips game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "bohnanza"):
         raise HTTPException(status_code=403, detail="This Bohnanza game is still active. Reconnect to the existing room.")
     if _has_unfinished_private_save(source_room_id, "modern_art"):
@@ -643,7 +649,7 @@ async def _emit_room_state(room: Room) -> None:
         "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
         "supports_memories": _game_supports_memories(game_def),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("bohnanza", "colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin", "ticket_to_ride", "witch_cauldron", "bubble_shooter", "machi_koro") or key != "seed"},
+                        if room.game_type not in ("town77", "bag_of_chips", "bohnanza", "colt_express", "dnd_starter_set", "moshimo_yusha", "the_mind", "night_of_the_ninja", "exploding_kittens", "mall_of_horror", "gloomhaven", "the_crew", "maskmen", "startups", "sagrada", "dice_throne", "natsumemo", "skull_king", "deception", "mind_the_lines", "power_grid", "take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers", "orloj", "a_feast_for_odin", "ticket_to_ride", "witch_cauldron", "bubble_shooter", "machi_koro") or key != "seed"},
         "auto_save": room.auto_save,
         "initialization": dict(room.initialization) if room.initialization else None,
         "source_room_id": room.source_room_id,
@@ -796,6 +802,10 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "town77":
+        return {"type": action.get("type")}
+    if game_type == "bag_of_chips":
+        return {"type": action.get("type")}
     if game_type == "bohnanza":
         return {"type": action.get("type")}
     if game_type == "modern_art":
@@ -1752,7 +1762,7 @@ async def _maybe_run_bots(room: Room) -> None:
                 events = [bot_event] + events
                 room.state_version += 1
                 if state.get("game_over"):
-                    notify_confirmed_end = room.game_type in ("cockroach_poker", "bohnanza") and room.status != "game_over"
+                    notify_confirmed_end = room.game_type in ("cockroach_poker", "bohnanza", "bag_of_chips", "codenames", "town77") and room.status != "game_over"
                     room.status = "game_over"
                     if notify_confirmed_end:
                         await _emit_room_state(room)
@@ -2006,6 +2016,12 @@ async def on_room_reconnect(sid, data):
     if not room:
         room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "for_northwood")
     if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "town77")
+    if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "bag_of_chips")
+    if not room:
+        room = _restore_private_card_game_for_reconnect(room_id, player_id, reconnect_token, "codenames")
+    if not room:
         await _send_error(sid, "room not found")
         return
     player = _find_player(room, player_id)
@@ -2055,7 +2071,7 @@ async def on_room_reconnect(sid, data):
         to=sid,
     )
     await _emit_room_list_update()
-    if room.game_type in ("colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven", "semantic_guess", "word_sync", "dare_words"):
+    if room.game_type in ("town77", "bag_of_chips", "codenames", "colt_express", "dnd_starter_set", "moshimo_yusha", "mall_of_horror", "deception", "skull_king", "startups", "sagrada", "dice_throne", "natsumemo", "maskmen", "the_crew", "gloomhaven", "semantic_guess", "word_sync", "dare_words"):
         await _maybe_run_bots(room)
 
 
@@ -2568,6 +2584,9 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_unfinished_private_save(source_room_id, "town77")
+        or _has_unfinished_private_save(source_room_id, "codenames")
+        or _has_unfinished_private_save(source_room_id, "bag_of_chips")
         or _has_unfinished_private_save(source_room_id, "werewolf")
         or _has_unfinished_private_save(source_room_id, "for_northwood")
         or _has_unfinished_private_save(source_room_id, "colt_express")
@@ -2613,7 +2632,7 @@ async def on_room_load(sid, data):
     if not isinstance(game_state, dict):
         await sio.emit("room:load_result", {"ok": False, "message": "invalid game_state"}, to=sid)
         return
-    if game_type in ("boomerang_australia", "challengers", "dnd_starter_set", "colt_express", "werewolf"):
+    if game_type in ("boomerang_australia", "challengers", "dnd_starter_set", "colt_express", "werewolf", "codenames"):
         try:
             game_state = _get_game_definition(game_type).deserialize(game_state)
         except (ValueError, TypeError, KeyError):

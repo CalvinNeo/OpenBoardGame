@@ -690,6 +690,9 @@
                     <option value="bubble_shooter">Bubble Shooter · 泡泡龙</option>
                     <option value="factory_funner">Factory Funner · 工厂乐翻天 🤖</option>
                     <option value="for_northwood">For Northwood! · 为了北境森林</option>
+                    <option value="town77">Town 77 · 七彩小镇</option>
+                    <option value="bag_of_chips">Bag of Chips · 来包洋芋片</option>
+                    <option value="codenames">Codenames · 行动代号 🤖</option>
                     <option value="rummikub">Rummikub · 拉密 🤖</option>
                     <option value="cockroach_poker">Cockroach Poker · 德国蟑螂 🤖</option>
                     <option value="machi_koro">Machi Koro · 骰子街 🤖</option>
@@ -1236,6 +1239,7 @@
               <button id="gameReconnectBtn" class="game-reconnect-btn" type="button">Reconnect</button>
               <template id="takeTimeClockButtonMount"></template>
             </div>
+            <div class="panel-header-actions" id="codenamesHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="rebelPrincessHeaderActions" style="display: none;">
               <button id="rebelHelpBtn" type="button" aria-label="Help">Help</button>
               <button id="rebelExplainBtn" type="button" aria-label="Explain" aria-pressed="false">Explain</button>
@@ -1262,6 +1266,8 @@
               <button id="factoryFunnerExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="forNorthwoodHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="town77HeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="bagOfChipsHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="cockroachPokerHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="marrakechHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="machiKoroHeaderActions" style="display: none;"></div>
@@ -1579,6 +1585,7 @@
               <div id="gameAssetsProgress" class="game-assets-track" role="progressbar" aria-label="Game files" aria-describedby="gameAssetsMessage" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="gameAssetsFill"></span></div>
               <button id="gameAssetsRetryBtn" type="button" class="hidden">Retry loading game</button>
             </div>
+            <div id="bagOfChipsPanel" class="hidden"></div>
             <div id="caboPanel" class="hidden"></div>
 
             <div id="guandanPanel" class="hidden"></div>
@@ -1670,6 +1677,7 @@
             <div id="twelveRiversPanel" class="hidden twelve-rivers-panel"></div>
             <div id="theMindPanel" class="hidden tm-panel"></div>
             <div id="wordSyncPanel" class="hidden ws-panel"></div>
+            <div id="codenamesPanel" class="hidden cn-panel"></div>
             <div id="nightNinjaPanel" class="hidden nn-panel"></div>
             <div id="explodingKittensPanel" class="hidden ek-panel"></div>
             <div id="noThanksPanel" class="hidden no-thanks-panel"></div>
@@ -1811,6 +1819,7 @@
 
             <div id="factoryFunnerPanel" class="hidden"></div>
             <div id="forNorthwoodPanel" class="hidden"></div>
+            <div id="town77Panel" class="hidden"></div>
             <div id="cockroachPokerPanel" class="hidden"></div>
             <div id="marrakechPanel" class="hidden"></div>
             <div id="machiKoroPanel" class="hidden"></div>
@@ -1870,7 +1879,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=347" defer></script>
+  <script src="/static/game_assets.js?v=350" defer></script>
   <template id="boomerangAustraliaDialog"></template>
   <template id="incanGoldGuide"></template>
   <script src="/static/games/shared.js?v=app_v49" defer></script>
@@ -1913,7 +1922,7 @@
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v77" defer></script>
-  <script src="/static/room.js?v=app_v122" defer></script>
+  <script src="/static/app.js?v=app_v79" defer></script>
+  <script src="/static/room.js?v=app_v124" defer></script>
 </body>
 </html>

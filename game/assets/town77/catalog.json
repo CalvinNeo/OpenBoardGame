@@ -1,0 +1,20 @@
+{
+  "colors": [
+    {"name": "Coral", "zh": "珊瑚红", "hex": "#e56b62", "symbol": "●"},
+    {"name": "Amber", "zh": "琥珀黄", "hex": "#e5ac46", "symbol": "◆"},
+    {"name": "Lime", "zh": "青柠绿", "hex": "#b8cf66", "symbol": "✚"},
+    {"name": "Teal", "zh": "青碧色", "hex": "#51b5a5", "symbol": "≋"},
+    {"name": "Blue", "zh": "天蓝色", "hex": "#6aa8da", "symbol": "║"},
+    {"name": "Violet", "zh": "紫罗兰", "hex": "#ab87c8", "symbol": "×"},
+    {"name": "Ivory", "zh": "象牙白", "hex": "#e7dfc9", "symbol": "·"}
+  ],
+  "shapes": [
+    {"name": "Gable", "zh": "尖顶", "path": "M12 48 L40 14 L68 48 Z"},
+    {"name": "Dome", "zh": "圆顶", "path": "M12 48 V38 A28 28 0 0 1 68 38 V48 Z"},
+    {"name": "Twin", "zh": "双峰顶", "path": "M12 48 V30 Q12 6 26 17 L40 33 L54 17 Q68 6 68 30 V48 Z"},
+    {"name": "Crown", "zh": "三齿顶", "path": "M12 48 V16 H24 V30 H34 V16 H46 V30 H56 V16 H68 V48 Z"},
+    {"name": "Valley", "zh": "凹顶", "path": "M12 48 V14 H28 V27 Q40 47 52 27 V14 H68 V48 Z"},
+    {"name": "Shed", "zh": "斜顶", "path": "M12 48 V14 L68 37 V48 Z"},
+    {"name": "Steps", "zh": "阶梯顶", "path": "M12 48 V36 H30 V25 H49 V14 H68 V48 Z"}
+  ]
+}

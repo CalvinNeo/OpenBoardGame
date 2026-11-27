@@ -1,3 +1,4 @@
+from game.codenames import CodenamesGame
 from game.thats_life import ThatsLifeGame
 from game.marrakech import MarrakechGame
 from game.machi_koro import MachiKoroGame
@@ -90,6 +91,7 @@ from game.ra import RaGame
 from game.rebel_princess import RebelPrincessGame
 from game.scout import ScoutGame
 from game.registry import GameDefinition, get_game, list_games
+from game.town77 import Town77Game
 from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
 from game.splendor_pokemon import PokemonSplendorGame
@@ -125,10 +127,12 @@ from game.mushroom_picking import MushroomPickingGame
 from game.find_diff import FindDiffGame
 from game.factory_funner import FactoryFunnerGame
 from game.for_northwood import ForNorthwoodGame
+from game.bag_of_chips import BagOfChipsGame
 from game.werewolf import WerewolfGame
 from game import definitions as _definitions
 
 __all__ = [
+    "BagOfChipsGame",
     "CockroachPokerGame",
     "MarrakechGame",
     "MachiKoroGame",
@@ -244,6 +248,7 @@ __all__ = [
     "SemanticGuessGame",
     "DareWordsGame",
     "WordSyncGame",
+    "CodenamesGame",
     "GiveMeOrHimGame",
     "TicketToRideGame",
     "TwelveRiversGame",
@@ -256,6 +261,7 @@ __all__ = [
     "ForNorthwoodGame",
     "WerewolfGame",
     "GameDefinition",
+    "Town77Game",
     "get_game",
     "list_games",
 ]

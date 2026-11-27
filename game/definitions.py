@@ -1,3 +1,4 @@
+from game.codenames import CodenamesGame, ACTION_SCHEMA as CODENAMES_ACTION_SCHEMA, CONFIG_SCHEMA as CODENAMES_CONFIG_SCHEMA
 from game.cockroach_poker import CockroachPokerGame, ACTION_SCHEMA as COCKROACH_POKER_ACTION_SCHEMA, CONFIG_SCHEMA as COCKROACH_POKER_CONFIG_SCHEMA
 from game.rummikub import RummikubGame, ACTION_SCHEMA as RUMMIKUB_ACTION_SCHEMA, CONFIG_SCHEMA as RUMMIKUB_CONFIG_SCHEMA
 from game.machi_koro import MachiKoroGame, ACTION_SCHEMA as MACHI_KORO_ACTION_SCHEMA, CONFIG_SCHEMA as MACHI_KORO_CONFIG_SCHEMA
@@ -122,6 +123,16 @@ from game.take_time_data import ACTION_SCHEMA as TAKE_TIME_ACTION_SCHEMA, CONFIG
 from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
+from game.town77 import Town77Game, ACTION_SCHEMA as TOWN77_ACTION_SCHEMA, CONFIG_SCHEMA as TOWN77_CONFIG_SCHEMA
+
+register_game(
+    GameDefinition(
+        game_id=Town77Game.game_id, name="Town 77", name_zh="七彩小镇",
+        min_players=1, max_players=5, turn_mode="turn",
+        action_schema=TOWN77_ACTION_SCHEMA, config_schema=TOWN77_CONFIG_SCHEMA,
+        module=Town77Game, serialize=Town77Game.serialize, deserialize=Town77Game.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(
@@ -168,6 +179,14 @@ register_game(
         module=ThatsLifeGame,
         serialize=ThatsLifeGame.serialize,
         deserialize=ThatsLifeGame.deserialize,
+    )
+)
+register_game(
+    GameDefinition(
+        game_id=CodenamesGame.game_id, name="Codenames", name_zh="行动代号",
+        min_players=4, max_players=8, turn_mode="simultaneous",
+        action_schema=CODENAMES_ACTION_SCHEMA, config_schema=CODENAMES_CONFIG_SCHEMA,
+        module=CodenamesGame, serialize=CodenamesGame.serialize, deserialize=CodenamesGame.deserialize,
     )
 )
 from game.chromino import ChrominoGame, ACTION_SCHEMA as CHROMINO_ACTION_SCHEMA, CONFIG_SCHEMA as CHROMINO_CONFIG_SCHEMA
@@ -259,10 +278,31 @@ from game.factory_funner import (
     ACTION_SCHEMA as FACTORY_FUNNER_ACTION_SCHEMA,
     CONFIG_SCHEMA as FACTORY_FUNNER_CONFIG_SCHEMA,
 )
+from game.bag_of_chips import (
+    BagOfChipsGame,
+    ACTION_SCHEMA as BAG_OF_CHIPS_ACTION_SCHEMA,
+    CONFIG_SCHEMA as BAG_OF_CHIPS_CONFIG_SCHEMA,
+)
 from game.for_northwood import (
     ForNorthwoodGame,
     ACTION_SCHEMA as FOR_NORTHWOOD_ACTION_SCHEMA,
     CONFIG_SCHEMA as FOR_NORTHWOOD_CONFIG_SCHEMA,
+)
+
+register_game(
+    GameDefinition(
+        game_id=BagOfChipsGame.game_id,
+        name="Bag of Chips",
+        name_zh="来包洋芋片",
+        min_players=BagOfChipsGame.min_players,
+        max_players=BagOfChipsGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=BAG_OF_CHIPS_ACTION_SCHEMA,
+        config_schema=BAG_OF_CHIPS_CONFIG_SCHEMA,
+        module=BagOfChipsGame,
+        serialize=BagOfChipsGame.serialize,
+        deserialize=BagOfChipsGame.deserialize,
+    )
 )
 
 register_game(

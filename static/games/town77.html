@@ -1,0 +1,44 @@
+<template data-game-target="town77HeaderActions" data-game-mode="contents">
+  <button id="town77HelpBtn" type="button">Help</button>
+  <button id="town77ExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="town77Panel" data-game-mode="contents">
+  <div id="town77Lobby" class="town77-lobby">
+    <div class="town77-wordmark" aria-hidden="true">TOWN<span>77</span></div>
+    <h3>A small town. No two alike.</h3>
+    <p>Seven colors. Seven rooftops. A place for every possibility.</p>
+    <p class="town77-muted">1–5 players · Add bots or play the solo puzzle.</p>
+    <p class="town77-muted">Ready up, then Start in Room Control.</p>
+  </div>
+  <div id="town77Table" class="hidden">
+    <div class="town77-turnline"><span id="town77Turn" role="status" aria-live="polite"></span><span id="town77Supply" data-town77-explain="supply" data-town77-tip="supply" tabindex="0"></span></div>
+    <div class="town77-layout">
+      <div class="town77-town">
+        <div class="town77-caption"><h3>The neighborhood</h3><span id="town77Built" data-town77-explain="board" data-town77-tip="board" tabindex="0"></span></div>
+        <div id="town77Board" class="town77-board" role="group" aria-label="Seven by seven town"></div>
+        <div id="town77Preview" class="town77-preview hidden">
+          <div class="town77-preview-main"><span id="town77PreviewLabel"></span><button id="town77Place" class="town77-primary" type="button" data-town77-explain="place">Build here</button><button id="town77Cancel" type="button" data-town77-explain="cancel">Cancel</button></div>
+          <div class="town77-move-tools" aria-label="Move house preview">
+            <button type="button" data-town77-move="0,-1" data-town77-explain="move" aria-label="Move up">↑</button>
+            <button type="button" data-town77-move="-1,0" data-town77-explain="move" aria-label="Move left">←</button>
+            <button type="button" data-town77-move="0,1" data-town77-explain="move" aria-label="Move down">↓</button>
+            <button type="button" data-town77-move="1,0" data-town77-explain="move" aria-label="Move right">→</button>
+            <span>Fixed orientation</span>
+          </div>
+        </div>
+      </div>
+      <aside class="town77-sidebar">
+        <div class="town77-rack-head"><h3 id="town77RackTitle">Your rooftops</h3><button id="town77Keep" type="button" data-town77-explain="keep">Keep all</button><button id="town77Retire" type="button" data-town77-explain="retire">Retire</button></div>
+        <div id="town77Hint" class="town77-hint" role="status" aria-live="polite"></div>
+        <div id="town77Rack" class="town77-rack" role="group" aria-label="Available house tiles"></div>
+        <div id="town77DiscardPreview" class="town77-discard-preview hidden"><span id="town77DiscardLabel"></span><button id="town77Discard" class="town77-primary" type="button" data-town77-explain="discard">Return tile</button><button id="town77DiscardCancel" type="button" data-town77-explain="cancel">Cancel</button></div>
+        <details id="town77ExchangeBox" class="town77-exchanges hidden"><summary>Exchange three tiles</summary><div id="town77ExchangeGroups"></div><div id="town77ExchangeConfirm" class="hidden"><button id="town77Exchange" type="button" data-town77-explain="exchange">Exchange selected three</button></div></details>
+        <div class="town77-caption"><h3>Neighbors</h3><span class="town77-muted">Visible tile backs</span></div>
+        <div id="town77Players" class="town77-players"></div>
+        <div id="town77Results" class="town77-results hidden"></div>
+        <details class="town77-journal"><summary>Town journal</summary><ol id="town77Log"></ol></details>
+      </aside>
+    </div>
+  </div>
+  <div id="town77Tooltip" class="town77-tooltip hidden" role="tooltip"></div>
+</template>

@@ -247,6 +247,10 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "codenames") {
+    if (typeof renderCodenamesGameState === "function") renderCodenamesGameState(data);
+    return;
+  }
   if (gameType === "word_sync") {
     if (typeof renderWordSyncGameState === "function") renderWordSyncGameState(data);
     return;
@@ -755,8 +759,16 @@ function renderGameState(data) {
     if (typeof renderThatsLifeGameState === "function") renderThatsLifeGameState(data);
     return;
   }
+  if (gameType === "bag_of_chips") {
+    if (typeof renderBagOfChipsGameState === "function") renderBagOfChipsGameState(data);
+    return;
+  }
   if (gameType === "for_northwood") {
     if (typeof renderForNorthwoodGameState === "function") renderForNorthwoodGameState(data);
+    return;
+  }
+  if (gameType === "town77") {
+    if (typeof renderTown77GameState === "function") renderTown77GameState(data);
     return;
   }
   if (gameType === "cockroach_poker") {

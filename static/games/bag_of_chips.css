@@ -1,0 +1,101 @@
+#bagOfChipsPanel { --boc-ink: #35291d; --boc-paper: #fff9eb; color: var(--boc-ink); min-width: 0; }
+.game-panel[data-game-theme="bag_of_chips"] { background: #fffdf6; }
+.game-panel[data-game-theme="bag_of_chips"] .game-panel-title { min-width: 0; flex: 1 1 0; }
+.game-panel[data-game-theme="bag_of_chips"] .game-panel-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #74431e; }
+#bagOfChipsHeaderActions { flex-shrink: 0; flex-wrap: nowrap; }
+#bagOfChipsPanel *, #bagOfChipsPanel *::before, #bagOfChipsPanel *::after { box-sizing: border-box; }
+#bagOfChipsPanel button { touch-action: manipulation; }
+.boc-topline, .boc-caption, .boc-result-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.boc-topline { font-size: 12px; margin-bottom: 12px; font-weight: 700; }
+.boc-caption { margin: 12px 0 8px; font-size: 11px; color: #75664e; flex-wrap: wrap; }
+.boc-caption h3 { margin: 0; font-size: 10px; letter-spacing: 1.4px; color: #75664e; }
+.boc-caption span { overflow-wrap: anywhere; }
+.boc-draw-section { padding: 1px 0 12px; border-block: 1px solid #e4d7bc; }
+.boc-draws { display: grid; grid-template-columns: 5fr 4fr 3fr 2fr; gap: 8px; }
+.boc-draw-group { min-width: 0; background: #f5eddb; border-radius: 10px; padding: 8px; }
+.boc-draw-group.is-current { background: #ffedb6; box-shadow: inset 0 0 0 1px #d9a646; }
+.boc-draw-label { display: block; font-size: 10px; color: #776444; margin-bottom: 8px; white-space: nowrap; }
+.boc-draw-chips { display: flex; flex-wrap: wrap; align-content: center; align-items: center; gap: 6px; min-height: 49px; }
+.boc-chip { --chip: #dba72c; display: inline-block; flex-shrink: 0; width: 29px; height: 35px; border-radius: 48%; border: 1px solid #0002; background: repeating-linear-gradient(95deg, #fff3 0 2px, transparent 2px 5px), var(--chip); box-shadow: inset -3px -3px 0 #0001, 1px 2px 1px #0001; transform: rotate(-13deg); }
+.boc-yellow { --chip: #e9bf4a; }
+.boc-orange { --chip: #e99840; }
+.boc-red { --chip: #c95b4e; }
+.boc-green { --chip: #8baf60; }
+.boc-purple { --chip: #9a79b2; }
+.boc-chip.boc-unknown { --chip: #e7e0cf; border: 1px dashed #b7aa8d; box-shadow: none; text-align: center; line-height: 32px; color: #8e806a; transform: none; }
+.boc-chip.is-last { outline: 2px solid #594021; outline-offset: 2px; }
+.boc-counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+.boc-count { text-align: center; min-width: 0; font-size: 12px; }
+.boc-count strong { font-size: 17px; }
+.boc-count small { display: block; font-size: 10px; color: #7a6c57; margin-top: 3px; overflow-wrap: anywhere; }
+.boc-reveal { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.boc-reveal:not(:empty) { margin-top: 14px; }
+.boc-reveal button, .boc-confirm button, .boc-results > button { min-height: 40px; }
+.boc-hand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+#bagOfChipsPanel .boc-card { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; min-height: 160px; width: 100%; text-align: left; border: 1px solid #d8c9a9; border-radius: 12px; padding: 12px; background: var(--boc-paper); color: var(--boc-ink); white-space: normal; box-shadow: 0 2px 0 #d9c9a54d; overflow-wrap: anywhere; }
+#bagOfChipsPanel button.boc-card:hover:not(:disabled) { border-color: #a67b29; background: #fff2cf; }
+#bagOfChipsPanel .boc-card:disabled { opacity: .78; cursor: default; }
+#bagOfChipsPanel .boc-card.is-selected { background: #ffedbb; border: 2px solid #9c6a1b; padding: 11px; }
+.boc-card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10px; color: #7d6e53; }
+.boc-points { color: #71481a; font-size: 22px; font-weight: 800; line-height: 1.1; }
+.boc-condition { font-size: 22px; font-weight: 750; line-height: 1.4; flex: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.boc-card-bottom { font-size: 12px; line-height: 1.4; }
+.boc-card-role { color: #9b3f37; font-size: 11px; font-weight: 700; }
+.boc-card-role.is-positive { color: #486b32; }
+.boc-confirm { position: sticky; bottom: 8px; z-index: 3; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fff4d9f5; border: 1px solid #c49a50; border-radius: 10px; padding: 10px; margin-top: 10px; box-shadow: 0 3px 16px #5c43182b; }
+.boc-confirm > span { flex: 1 1 140px; font-size: 12px; }
+.boc-players { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.boc-player { border-left: 3px solid #b7a177; padding: 7px 10px; background: #f5efdf; border-radius: 0 8px 8px 0; min-width: 0; }
+.boc-player.is-you { border-left-color: #8c6627; background: #f4e6c5; }
+.boc-name { display: block; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.boc-player small { display: block; font-size: 11px; color: #7a694b; margin-top: 4px; }
+.boc-player-score { margin-top: 6px; font-size: 12px; }
+.boc-results { margin-top: 14px; border-block: 1px solid #d8c9a9; padding: 14px 0; }
+.boc-results h3 { margin: 0 0 6px; font-size: 17px; overflow-wrap: anywhere; }
+.boc-results > p { font-size: 12px; }
+.boc-result-row { padding: 10px 0; border-top: 1px dashed #ddcfb1; }
+.boc-result-row.is-you { background: #fff3d4; padding-inline: 9px; border-radius: 6px; }
+.boc-result-heading { font-size: 13px; align-items: start; }
+.boc-result-heading strong { overflow-wrap: anywhere; min-width: 0; }
+.boc-result-heading span { flex-shrink: 0; text-align: right; }
+.boc-result-cards { display: grid; gap: 5px; margin-top: 7px; }
+.boc-result-card { display: flex; align-items: start; justify-content: space-between; gap: 10px; font-size: 11px; line-height: 1.5; }
+.boc-result-card > span { min-width: 0; overflow-wrap: anywhere; }
+.boc-result-card > strong { flex-shrink: 0; }
+.boc-result-card.is-miss { color: #857c6c; }
+.boc-public-bets { font-size: 10px; line-height: 1.7; margin-top: 8px; overflow-wrap: anywhere; }
+.boc-journal { margin-top: 14px; font-size: 11px; color: #78694f; }
+.boc-journal summary { cursor: pointer; padding: 7px 0; }
+#bagOfChipsHistory { max-height: 200px; overflow: auto; }
+#bagOfChipsHistory p { margin: 8px 0; overflow-wrap: anywhere; }
+.boc-tooltip { position: fixed; z-index: 11000; width: max-content; max-width: min(300px, calc(100vw - 24px)); padding: 9px 12px; background: #35291df5; color: #fff9ed; border-radius: 8px; font-size: 12px; line-height: 1.5; pointer-events: none; overflow-wrap: anywhere; }
+.boc-lobby { text-align: center; padding: 36px 4px; }
+.boc-wordmark { font-size: clamp(22px, 5vw, 42px); letter-spacing: 3px; color: #946623; }
+.boc-wordmark strong { display: block; font-size: 1.8em; line-height: 1.1; letter-spacing: 6px; color: #b66a29; }
+.boc-lobby-chips { display: flex; justify-content: center; gap: 22px; margin: 28px 0; }
+.boc-lobby-chips .boc-chip { width: 45px; height: 57px; }
+.boc-lobby p { font-size: 12px; color: #847252; line-height: 1.6; }
+@media (min-width: 1100px) { .boc-hand { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .boc-hand { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .boc-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .boc-draws { gap: 5px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .boc-draw-group { padding: 7px 5px; }
+  .boc-draw-chips { gap: 4px; min-height: 64px; }
+  .boc-chip { width: 20px; height: 26px; }
+  .boc-chip.boc-unknown { line-height: 23px; }
+  #bagOfChipsPanel .boc-card { min-height: 153px; padding: 10px; }
+  #bagOfChipsPanel .boc-card.is-selected { padding: 9px; }
+  .boc-condition { font-size: 19px; gap: 3px; }
+  .boc-card-bottom { font-size: 11px; }
+  .boc-topline { font-size: 11px; }
+  .boc-counts { gap: 3px; }
+  .boc-count { font-size: 11px; }
+  .boc-count small { font-size: 9px; }
+  .boc-confirm { padding: 8px; gap: 6px; }
+  .boc-confirm > span { flex-basis: 100%; }
+  .boc-confirm button { flex: 1; }
+  .game-panel[data-game-theme="bag_of_chips"] .panel-header { gap: 5px; }
+  #bagOfChipsHeaderActions { gap: 4px; }
+  #bagOfChipsHeaderActions button { padding-inline: 8px; }
+}

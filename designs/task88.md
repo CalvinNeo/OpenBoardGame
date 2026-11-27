@@ -1813,3 +1813,50 @@ python -m unittest
 - `node --check`、两个游戏模块 `smoke_load` 与 `git diff --check` 通过。截图、测量与测试房间数据分别位于忽略目录 `build/bomb-busters-mission-picker/` 和 `tmp/bomb-busters-mission-picker-data/`。使用独立 8779 测试服务，不改动用户原有服务。
 - 额外运行 `tests.test_bomb_busters_missions` 时，既有第 45 关机器人在 3 / 4 / 5 人准备阶段返回不合法的 `mission_choice: pass`，导致 3 个子用例与累计数量断言失败；本次未改游戏 / 战役规则模块，不顺带修复此问题。未运行全站 314 个模块的完整套件，也未重新运行第 26 节已记录失败的公共懒加载测试。
 - 满足本次已验收的 `DEV_GUIDE.md` 标题栏、弹窗、触摸尺寸、资源版本和 Help / Explain 要求，但不声明全部规范验收无缺项：未做 iOS / Android 真机、全部 66 关通关、外部录音或资料独立复核。功能上线需要重启后端以加载新 API / Socket.IO 处理器，再刷新浏览器。
+
+## 28. 2026-11-26：装备标记与 Walkie-Talkies 交互修复
+
+### 28.1 原因与实现
+
+- 相等 / 不等装备的关系已保存在 `campaign.links` 并公开给所有玩家，但界面没有渲染。现在两条线上分别显示 `= #编号` / `≠ #编号`，按稳定 wire ID 找当前槽位，支持跨行及同一根线上的多个关系，不读取队友的隐藏线值。悬停、移动端三秒提示、Explain 与无障碍标签解释另一端位置。
+- Walkie-Talkies 之前错误提交双线 `wire_ids`，而服务端需要 `own_wire_id` 和 `recipient_id`，因此出现 `unknown wire`。现在只能选择自己送出的合资格未剪线并指定队友，确认后队友通过原有私有 `exchange_wire` 决策选择回赠线，客户端不能替队友选择。
+- 单线装备改选时替换旧选择，双线装备限制两根。确认前检查相邻同架的 = / ≠、Single Wire Label 的唯一值、探测器目标同架、X or Y 的两个不同非红声明；特殊线仍遵守既有装备限制，最终合法性以服务端为准。
+- 保留线上 Post-It 与 ×1 标记，在玩家线架旁显示公共手牌线索和生效中的 Stabilizer (🛡️)。General Radar (📡) 在线架标题标出数字及 Yes / No，明确是扫描当时的快照，不随之后剪线自动更新。双语 Help 同步说明。
+
+### 28.2 验收
+
+- `tests/bomb_busters_equipment.browser.cjs` 使用后端生成的三种公开视角检查 320、390、1024、1440px 共 12 组布局，截图人工检查；关系跨行、多关系、雷达、稳定器、线索、无隐藏值泄露、提示 / Explain / Esc、状态刷新后保留均通过。对讲机选择区四档宽度的控件无溢出或相互重叠。
+- 15 种主动装备的真实前端提交参数均逐一送入 Python `apply_action` 并被接受，包括 = / ≠、Walkie-Talkies、Post-It、Single Wire Label、Radar、Stabilizer、Triple / Super Detector、X or Y、Fast Pass、Rewinder、Batteries、Coffee Mug 和 Grappling Hook。Walkie-Talkies 还完成接收方私有回赠并验证双方归属交换。该检查是前端参数与规则回放，不等同于 15 种装备都做了双人 Socket.IO 端到端操作。
+- 新增 3 项 Python 装备回归，检查关系标记存档恢复及公开信息边界、对讲机两阶段参数与回赠隐私，以及持久线索 / 雷达 / 稳定器公开状态。第 29 节汇总本轮最终检查与修改文件。
+
+## 29. 2026-11-27：最终失败者落屎淹没特效
+
+### 29.1 失败归属
+
+- 在本游戏 `last_result`、历史记录及 `bomb_busters:mission_result` 事件增加可选 `failed_by` 玩家 ID。练习与战役的红线、耗尽最后容错、致命失误、特殊辨认失败、Nano 到达终点，以及玩家引起的弃权 / 约束 / 决策惩罚，记录实际责任玩家而非目标线主人。
+- 延后结算沿用原行动者；预测数字命中导致的最后一格记在预测者名下。场外更换约束导致最后一格，记录发起者而非当前回合玩家。录音指令、计时结束及团队僵局没有个人责任时保持空值，不把执行录音按钮或报告超时的玩家当成肇事者。
+- 不改变胜负判定、行动合法性、线值隐私或结果确认暂停。旧存档没有 `failed_by` 仍可加载，只不播放无法确认责任人的新特效。
+
+### 29.2 展示与生命周期
+
+- 新增游戏私有模块 `static/games/bomb_busters_effects.js`，只暴露 `bombBustersFailureEffectUI`。新失败事件先显示带失败者名字的修理工人偶，21 个 💩 从上方分批落下，棕色堆积由低到高完全淹没人偶；名字和失败说明保留在堆积下方。
+- 最终失败优先于同批事件的普通砸脸特效，不双重排队。普通非最终失误保留原特效，成功或无个人责任的失败不播放新动画。名字使用 `textContent`，不插入玩家 HTML。
+- 正常播放约 4.4 秒自动清理，Esc 可立即跳过；切换游戏、清空房间和下一次尝试开始时清理定时器及雨滴。重复事件去重，普通状态刷新 / 重连不重播历史失败。
+- 这是用户明确要求的短暂覆盖层，允许覆盖棋盘，但 `pointer-events: none`，不阻断结算和其他操作，不改变焦点。支持 `prefers-reduced-motion` 静态淹没结果，约 1.6 秒消失；不使用闪烁或商业图片素材。结算文字及现有播报区域同步指出最终失败者。
+
+### 29.3 修改文件与资源版本
+
+- 规则 / 状态：`game/bomb_busters.py`、`game/bomb_busters_campaign.py`，仅新增失败归属信息及传递。
+- 游戏界面：`static/games/bomb_busters.js`、`static/games/bomb_busters_campaign.js`、`static/games/bomb_busters_effects.js`、`static/games/bomb_busters.html`、`static/games/bomb_busters.css`。
+- 资源清单：`static/game_assets.js` 的本游戏脚本依赖按序注册，战役 v4、特效 v1、主脚本 app_v12、HTML v9、CSS v11；`static/index.html` 清单版本最终为 347，保留其他任务的已有修改。未修改共享 CSS 或共享特效。
+- 验证与说明：`tests/test_bomb_busters_missions.py`、`tests/bomb_busters_equipment.browser.cjs`、`tests/bomb_busters_failure.browser.cjs`、本设计文档。保留原有其他游戏、DEV_GUIDE 和未跟踪文件的并行工作，不修改 README，不自行创建分支或提交。
+
+### 29.4 最终验收记录
+
+- Python 69 项通过：练习规则、逐关 Help、选关房间、战役规则、3 项装备回归、8 项失败归属回归，以及前端样式 / 全局命名 / Help 契约。失败回归覆盖练习 / 战役的普通与双探测器红线及最后一格、场外惩罚、特殊辨认、Nano、预测者、非最终失误、计时 / 录音不归责和旧存档兼容。
+- Chrome / Playwright 特效回归通过：320、390、1024、1440px × 本人 / 队友 / 旁观公开视角，验证下落和完全淹没两个帧阶段，无页面横向溢出，名字不与堆积重叠，舞台在视口内。四档宽度截图已人工查看。还覆盖重复事件、无事件重连、Esc、自动清理、切换游戏及 reduced-motion。
+- 两个独立浏览器上下文通过真实 Socket.IO 建房、加入、选第 25 关、双方初始线索、推进至最后一格，验证双方收到同一失败责任 ID 并显示正确名字；刷新重连不重播。没有注入服务端状态或替换该流程的发送函数。
+- 装备 12 组视角布局与 15 种参数回放通过。既有浏览器套件通过：20 组基础布局 / 触摸滚动 / Double Detector 双选与取消 / 结果暂停，48 组战役布局 / 决策，56 组 Help 布局及全部 66 关双语说明，8 组选关 / 权限 / 重开 / 重连布局。新增 JS 与游戏模块 `node --check`、3 个模块 `smoke_load`、`git diff --check` 通过。
+- 全量战役模块仍有第 27 节已记录的第 45 关机器人准备问题：3 / 4 / 5 人子用例返回非法 `mission_choice: pass`，连带累计数断言，共 4 处失败，未顺带修复。未运行全站完整套件或既有失败的公共懒加载白名单测试。
+- 本次检查覆盖 `DEV_GUIDE.md` 的相关四档布局、触摸选择、标题栏、Help / Explain、Esc、按需资源、无横向溢出等要求；落屎覆盖层为用户指定效果例外，不声明全部规范验收无缺项。未测实体 iOS / Android、Safari / Windows 字体、66 关完整通关及外部录音。截图 / 测量在忽略目录 `build/bomb-busters-equipment/`、`build/bomb-busters-failure/`，独立测试数据在 `tmp/bomb-busters-equipment-data/`。
+- 最终版本新增了后端失败归属字段，上线需重启后端并刷新浏览器；只刷新无法让已运行的旧后端生成责任 ID。

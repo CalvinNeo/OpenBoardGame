@@ -6,6 +6,9 @@ from typing import FrozenSet
 # in game modules. Random/first-legal bots and simple fixed-threshold policies
 # are deliberately unmarked. Update this set when a game's strategy changes.
 STRATEGIC_AI_GAME_IDS: FrozenSet[str] = frozenset({
+    "town77",
+    "codenames",
+    "bag_of_chips",
     "modern_art",
     "machi_koro",
     "thats_life",

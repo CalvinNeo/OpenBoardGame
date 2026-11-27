@@ -1,0 +1,34 @@
+<template data-game-target="bagOfChipsHeaderActions" data-game-mode="contents">
+  <button id="bagOfChipsHelpBtn" type="button">Help</button>
+  <button id="bagOfChipsExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="bagOfChipsPanel" data-game-mode="contents">
+  <div id="bagOfChipsLobby" class="boc-lobby">
+    <div class="boc-wordmark">BAG OF <strong>CHIPS</strong></div>
+    <div class="boc-lobby-chips" aria-hidden="true"><span class="boc-chip boc-yellow"></span><span class="boc-chip boc-orange"></span><span class="boc-chip boc-purple"></span></div>
+    <p>A little crunch. A lot of hunch.</p>
+    <p>2–6 players · Ready up and use Start in Room Control.</p>
+  </div>
+  <div id="bagOfChipsTable" class="hidden">
+    <div class="boc-topline"><span id="bagOfChipsRound"></span><span id="bagOfChipsTarget" data-boc-explain="rewards" data-boc-tip="Rewards (🏅): reach 4 to trigger the final ranking. With two players, reach 3." tabindex="0"></span></div>
+    <section class="boc-draw-section" aria-label="Shared chips">
+      <div class="boc-caption"><h3>THE SHARED SPREAD</h3><span id="bagOfChipsBag" data-boc-explain="bag" tabindex="0"></span></div>
+      <div id="bagOfChipsDraws" class="boc-draws"></div>
+      <div id="bagOfChipsCounts" class="boc-counts"></div>
+      <div id="bagOfChipsReveal" class="boc-reveal"></div>
+    </section>
+    <section id="bagOfChipsHandSection" class="boc-hand-section" aria-label="Your objectives">
+      <div class="boc-caption"><h3>YOUR OBJECTIVES</h3><span id="bagOfChipsTask" aria-live="polite"></span></div>
+      <div id="bagOfChipsHand" class="boc-hand"></div>
+      <div id="bagOfChipsConfirm" class="boc-confirm hidden">
+        <span id="bagOfChipsSelection" aria-live="polite"></span>
+        <button id="bagOfChipsCommitBtn" type="button" data-boc-explain="commit">Confirm</button>
+        <button id="bagOfChipsCancelBtn" type="button">Cancel</button>
+      </div>
+    </section>
+    <section id="bagOfChipsResults" class="boc-results hidden" aria-label="Round results" data-boc-explain="results"></section>
+    <section aria-label="Players"><div class="boc-caption"><h3>AT THE TABLE</h3><span id="bagOfChipsWaiting" aria-live="polite"></span></div><div id="bagOfChipsPlayers" class="boc-players"></div></section>
+    <details class="boc-journal"><summary>Round journal</summary><div id="bagOfChipsHistory"></div></details>
+  </div>
+  <div id="bagOfChipsTooltip" class="boc-tooltip hidden" role="tooltip"></div>
+</template>

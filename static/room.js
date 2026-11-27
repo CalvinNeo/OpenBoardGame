@@ -1597,6 +1597,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  town77: 1.77,
   cockroach_poker: 1.10,
   rummikub: 1.71,
   machi_koro: 1.52,
@@ -1604,6 +1605,7 @@ const GAME_WEIGHT = {
   marrakech: 1.33,
   werewolf: 1.38,
   word_sync: null,
+  codenames: 1.25,
   // No BGG entry exists yet: 上山捡菌 is an unreleased Chinese original, still in
   // crowdfunding as of 2026-11-10. 1.40 follows the publisher's own 2/10
   // difficulty rating quoted in the Bilibili tutorial (designs/task193.md §2).
@@ -1613,6 +1615,7 @@ const GAME_WEIGHT = {
   // BGG boardgame/183284 (Factory Funner, Corné van Moorsel / Cwali).
   factory_funner: 2.40,
   for_northwood: 1.84,
+  bag_of_chips: 1.11,
   pokemon_adventure: 1.17,
   chromino: 1.24,
   skull_king: 1.73,
